@@ -10,55 +10,60 @@ mod font_service;
 
 use {
     self::font_service::{FontServiceBuilder, ProviderRequestStream},
-    anyhow::Error,
+    anyhow::{format_err, Error},
+    argh::FromArgs,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, *},
-    getopts,
     std::path::PathBuf,
 };
 
-const FONT_MANIFEST_PATH: &str = "/pkg/data/manifest.json";
-const VENDOR_FONT_MANIFEST_PATH: &str = "/config/data/fonts/manifest.json";
+const FONT_MANIFEST_PATH: &str = "/config/data/all.font_manifest.json";
+
+#[derive(FromArgs)]
+/// Font Server
+struct Args {
+    /// load fonts from the specified font manifest file instead of the default
+    #[argh(option, short = 'm')]
+    font_manifest: Option<String>,
+    /// no-op, deprecated
+    #[argh(switch, short = 'n')]
+    no_default_fonts: bool,
+}
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["fonts"])?;
 
-    let mut opts = getopts::Options::new();
+    // We have to convert legacy uses of "--font-manifest=<PATH>" to "--font-manifest <PATH>".
+    let arg_strings: Vec<String> = std::env::args()
+        .collect::<Vec<String>>()
+        .iter()
+        .flat_map(|s| s.split("=").map(|s| s.to_owned()))
+        .collect();
+    let arg_strs: Vec<&str> = arg_strings.iter().map(|s| s.as_str()).collect();
 
-    opts.optflag("h", "help", "")
-        .optmulti(
-            "m",
-            "font-manifest",
-            "Load fonts from the specified font manifest file.",
-            "MANIFEST",
-        )
-        .optflag("n", "no-default-fonts", "Don't load fonts from default location.");
+    let args: Args = Args::from_args(&[arg_strs[0]], &arg_strs[1..])
+        .map_err(|early_exit| format_err!("{}", early_exit.output))?;
 
-    let args: Vec<String> = std::env::args().collect();
-    let options = opts.parse(args)?;
+    if args.no_default_fonts {
+        fx_log_warn!("--no-default-fonts is deprecated and is treated as a no-op")
+    }
 
     let mut service_builder = FontServiceBuilder::new();
 
-    if !options.opt_present("n") {
-        let font_manifest_path = PathBuf::from(FONT_MANIFEST_PATH);
-        service_builder.add_manifest_from_file(&font_manifest_path);
+    let font_manifest_path = match args.font_manifest {
+        Some(path) => PathBuf::from(path),
+        None => PathBuf::from(FONT_MANIFEST_PATH),
+    };
 
-        let font_manifest_path = PathBuf::from(VENDOR_FONT_MANIFEST_PATH);
-        if font_manifest_path.exists() {
-            service_builder.add_manifest_from_file(&font_manifest_path);
-        }
-    } else {
-        fx_vlog!(1, "no-default-fonts set, not loading fonts from default location");
-    }
-
-    for m in options.opt_strs("m") {
-        let path_buf = PathBuf::from(m.as_str());
-        service_builder.add_manifest_from_file(&path_buf);
-    }
-
-    let service = service_builder.build().await?;
+    fx_vlog!(1, "Building service with manifest {:?}", &font_manifest_path);
+    service_builder.add_manifest_from_file(&font_manifest_path);
+    let service = service_builder.build().await.map_err(|err| {
+        fx_log_err!("Failed to build service with manifest {:?}: {:#?}", &font_manifest_path, &err);
+        err
+    })?;
+    fx_vlog!(1, "Built service with manifest {:?}", &font_manifest_path);
 
     fx_vlog!(1, "Adding FIDL services");
     let mut fs = ServiceFs::new();

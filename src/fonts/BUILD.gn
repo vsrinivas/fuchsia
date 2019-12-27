@@ -22,6 +22,16 @@ group("tests") {
   ]
 }
 
+# Group of all the dependencies needed for downstream tests that rely on fonts,
+# such as Chromium tests.
+group("downstream_test_deps") {
+  testonly = true
+  public_deps = [
+    ":fonts",
+    ":open-fonts-collection",
+  ]
+}
+
 rustc_binary("font_server") {
   name = "font_server"
   with_unit_tests = true
@@ -44,10 +54,10 @@ rustc_binary("font_server") {
     "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/lib/argh",
     "//src/sys/lib/fuchsia_url",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:getopts",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:libc",
@@ -80,30 +90,6 @@ package("fonts") {
       dest = "fonts.cmx"
     },
   ]
-
-  resources = [
-    # TODO(kpozin): Remove old manifest
-    {
-      path = rebase_path("manifest.json")
-      dest = "manifest.json"
-    },
-  ]
-
-  fonts = [
-    "material/MaterialIcons-Regular.ttf",
-    "roboto/Roboto-Light.ttf",
-    "roboto/Roboto-Medium.ttf",
-    "roboto/Roboto-Regular.ttf",
-  ]
-  foreach(font, fonts) {
-    resources += [
-      {
-        path = rebase_path("//prebuilt/third_party/fonts/${font}")
-        file_name = get_path_info(font, "file")
-        dest = "fonts/${file_name}"
-      },
-    ]
-  }
 }
 
 # Integration tests without a `main()` function.
@@ -128,6 +114,7 @@ rustc_test("font_provider_test") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
@@ -139,6 +126,9 @@ test_package("font_provider_tests") {
     ":font_provider_test_test",
     ":font_server_test",
     ":mock_font_resolver_bin",
+    ":test-fonts-large-collection",
+    ":test-fonts-medium-collection",
+    ":test-fonts-small-collection",
   ]
 
   meta = [
@@ -167,69 +157,14 @@ test_package("font_provider_tests") {
 
   resources = [
     {
-      path = rebase_path("tests/test_manifest_v1.json")
-      dest = "testdata/test_fonts/test_manifest_v1.json"
-    },
-    {
-      path = rebase_path("tests/all_fonts_manifest_v1.json")
-      dest = "testdata/test_fonts/all_fonts_manifest_v1.json"
-    },
-    {
       path = rebase_path("tests/ephemeral.font_manifest.json")
-      dest = "testdata/test_fonts/ephemeral.font_manifest.json"
+      dest = "testdata/ephemeral.font_manifest.json"
     },
     {
       path = rebase_path("tests/aliases.font_manifest.json")
-      dest = "testdata/test_fonts/aliases.font_manifest.json"
+      dest = "testdata/aliases.font_manifest.json"
     },
   ]
-
-  fonts = [
-    "material/MaterialIcons-Regular.ttf",
-    "noto-cjk/NotoSansCJK-Regular.ttc",
-    "noto-cjk/NotoSerifCJK-Regular.ttc",
-    "roboto/Roboto-Black.ttf",
-    "roboto/Roboto-BlackItalic.ttf",
-    "roboto/Roboto-Bold.ttf",
-    "roboto/Roboto-BoldItalic.ttf",
-    "roboto/Roboto-Italic.ttf",
-    "roboto/Roboto-Light.ttf",
-    "roboto/Roboto-LightItalic.ttf",
-    "roboto/Roboto-Medium.ttf",
-    "roboto/Roboto-MediumItalic.ttf",
-    "roboto/Roboto-Regular.ttf",
-    "roboto/Roboto-Thin.ttf",
-    "roboto/Roboto-ThinItalic.ttf",
-    "robotocondensed/RobotoCondensed-Bold.ttf",
-    "robotocondensed/RobotoCondensed-BoldItalic.ttf",
-    "robotocondensed/RobotoCondensed-Italic.ttf",
-    "robotocondensed/RobotoCondensed-Light.ttf",
-    "robotocondensed/RobotoCondensed-LightItalic.ttf",
-    "robotocondensed/RobotoCondensed-Regular.ttf",
-    "robotomono/RobotoMono-Bold.ttf",
-    "robotomono/RobotoMono-BoldItalic.ttf",
-    "robotomono/RobotoMono-Italic.ttf",
-    "robotomono/RobotoMono-Light.ttf",
-    "robotomono/RobotoMono-LightItalic.ttf",
-    "robotomono/RobotoMono-Medium.ttf",
-    "robotomono/RobotoMono-MediumItalic.ttf",
-    "robotomono/RobotoMono-Regular.ttf",
-    "robotomono/RobotoMono-Thin.ttf",
-    "robotomono/RobotoMono-ThinItalic.ttf",
-    "robotoslab/RobotoSlab-Bold.ttf",
-    "robotoslab/RobotoSlab-Light.ttf",
-    "robotoslab/RobotoSlab-Regular.ttf",
-    "robotoslab/RobotoSlab-Thin.ttf",
-  ]
-  foreach(font, fonts) {
-    resources += [
-      {
-        path = rebase_path("//prebuilt/third_party/fonts/${font}")
-        file_name = get_path_info(font, "file")
-        dest = "testdata/test_fonts/${file_name}"
-      },
-    ]
-  }
 }
 
 rustc_binary("mock_font_resolver_bin") {
@@ -263,16 +198,75 @@ group("open-fonts") {
     "//src/fonts/groups:noto-serif",
     "//src/fonts/groups:roboto",
     "//src/fonts/groups:roboto-mono",
+    "//src/fonts/groups:roboto-slab",
   ]
 }
 
 local_font_bundle("open-fonts-local") {
-  asset_names = [ "RobotoMono-Regular.ttf" ]
+  asset_names = [
+    "MaterialIcons-Regular.ttf",
+    "Roboto-Regular.ttf",
+    "Roboto-Light.ttf",
+    "Roboto-Medium.ttf",
+    "RobotoMono-Regular.ttf",
+    "RobotoSlab-Regular.ttf",
+  ]
 }
 
 # Font collection for open-source products. This should be added to
 # `base_package_labels` or `cache_package_labels`.
 font_collection("open-fonts-collection") {
+  # Ephemeral font packages are temporarily disabled because they break
+  # Chromium/Cast tests (fxb/43327).
+
+  # font_packages = [ ":open-fonts" ]
+  local_font_bundles = [ ":open-fonts-local" ]
+}
+
+local_font_bundle("test-fonts-small-local") {
+  testonly = true
+  asset_names = [
+    "MaterialIcons-Regular.ttf",
+    "Roboto-Regular.ttf",
+    "Roboto-Light.ttf",
+    "Roboto-Medium.ttf",
+    "RobotoMono-Regular.ttf",
+    "RobotoSlab-Regular.ttf",
+  ]
+}
+
+local_font_bundle("noto-cjk-test-fonts-local") {
+  testonly = true
+  asset_names = [
+    "NotoSerifCJK-Regular.ttc",
+    "NotoSansCJK-Regular.ttc",
+  ]
+}
+
+# Minimal font collection for some tests.
+# See out/default/obj/src/fonts/test_fonts_small.font_manifest.json
+font_collection("test-fonts-small-collection") {
+  testonly = true
+  prefix = "test_fonts_small"
+  local_font_bundles = [ ":test-fonts-small-local" ]
+}
+
+# Minimal font collection plus Noto CJK fonts, for tests.
+# See out/default/obj/src/fonts/test_fonts.font_manifest.json
+font_collection("test-fonts-medium-collection") {
+  testonly = true
+  prefix = "test_fonts_medium"
+  local_font_bundles = [
+    ":test-fonts-small-local",
+    ":noto-cjk-test-fonts-local",
+  ]
+}
+
+# Large font collection consisting of most of the open-source fonts we have.
+# See out/default/obj/src/fonts/test_fonts_large.font_manifest.json
+font_collection("test-fonts-large-collection") {
+  testonly = true
+  prefix = "test_fonts_large"
   font_packages = [ ":open-fonts" ]
   local_font_bundles = [ ":open-fonts-local" ]
 }
