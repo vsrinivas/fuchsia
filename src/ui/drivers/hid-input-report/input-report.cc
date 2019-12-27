@@ -134,6 +134,27 @@ const hid_input_report::ReportDescriptor* InputReport::GetDescriptors(size_t* si
   return descriptors_.data();
 }
 
+zx_status_t InputReport::SendOutputReport(fuchsia_input_report::OutputReport report) {
+  uint8_t hid_report[HID_MAX_DESC_LEN];
+  size_t size;
+  hid_input_report::ParseResult result = hid_input_report::kParseNotImplemented;
+  for (auto& device : devices_) {
+    result = device->SetOutputReport(&report, hid_report, sizeof(hid_report), &size);
+    if (result == hid_input_report::kParseOk) {
+      break;
+    }
+    // Returning an error other than kParseNotImplemented means the device was supposed
+    // to set the Output report but hit an error. When this happens we return the error.
+    if (result != hid_input_report::kParseNotImplemented) {
+      break;
+    }
+  }
+  if (result != hid_input_report::kParseOk) {
+    return ZX_ERR_INTERNAL;
+  }
+  return hiddev_.SetReport(HID_REPORT_TYPE_OUTPUT, hid_report[0], hid_report, size);
+}
+
 zx_status_t InputReport::Bind() {
   uint8_t report_desc[HID_MAX_DESC_LEN];
   size_t report_desc_size;

@@ -89,6 +89,15 @@ void InputReportInstance::GetReports(GetReportsCompleter::Sync _completer) {
   _completer.Reply(report_view);
 }
 
+void InputReportInstance::SendOutputReport(fuchsia_input_report::OutputReport report,
+                                           SendOutputReportCompleter::Sync completer) {
+  zx_status_t status = base_->SendOutputReport(std::move(report));
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  }
+  completer.ReplySuccess();
+}
+
 void InputReportInstance::ReceiveReport(const hid_input_report::ReportDescriptor& descriptor,
                                         const hid_input_report::InputReport& input_report) {
   fbl::AutoLock lock(&report_lock_);

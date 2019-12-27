@@ -17,6 +17,9 @@ class Keyboard : public Device {
 
   ParseResult ParseInputReport(const uint8_t* data, size_t len, InputReport* report) override;
 
+  ParseResult SetOutputReport(const fuchsia_input_report::OutputReport* report, uint8_t* data,
+                              size_t data_size, size_t* data_out_size) override;
+
   uint8_t InputReportId() const override { return input_report_id_; }
 
  private:

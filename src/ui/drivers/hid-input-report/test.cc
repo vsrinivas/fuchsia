@@ -118,8 +118,10 @@ class FakeHidDevice : public ddk::HidDeviceProtocol<FakeHidDevice> {
 
   zx_status_t HidDeviceSetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
                                  const uint8_t* report_list, size_t report_count) {
+    last_set_report_ = std::vector<uint8_t>(report_list, report_list + report_count);
     return ZX_OK;
   }
+  std::vector<uint8_t> GetLastSetReport() { return last_set_report_; }
 
   void SetReportDesc(std::vector<uint8_t> report_desc) { report_desc_ = report_desc; }
   void SetReport(std::vector<uint8_t> report) { report_ = report; }
@@ -132,6 +134,7 @@ class FakeHidDevice : public ddk::HidDeviceProtocol<FakeHidDevice> {
   hid_device_protocol_t proto_;
   std::vector<uint8_t> report_desc_;
   std::vector<uint8_t> report_;
+  std::vector<uint8_t> last_set_report_;
 };
 
 class HidDevTest : public zxtest::Test {
@@ -438,6 +441,43 @@ TEST_F(HidDevTest, KeyboardTest) {
   EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::UP, keyboard.pressed_keys()[1]);
   EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::B, keyboard.pressed_keys()[2]);
 
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
+TEST_F(HidDevTest, KeyboardOutputReportTest) {
+  size_t keyboard_descriptor_size;
+  const uint8_t* keyboard_descriptor = get_boot_kbd_report_desc(&keyboard_descriptor_size);
+  std::vector<uint8_t> desc(keyboard_descriptor, keyboard_descriptor + keyboard_descriptor_size);
+  fake_hid_.SetReportDesc(desc);
+  device_->Bind();
+  // Open an instance device.
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  // Make an output report.
+  std::array<hid_input_report::fuchsia_input_report::LedType, 2> led_array;
+  led_array[0] = hid_input_report::fuchsia_input_report::LedType::NUM_LOCK;
+  led_array[1] = hid_input_report::fuchsia_input_report::LedType::SCROLL_LOCK;
+  auto led_view = fidl::VectorView<hid_input_report::fuchsia_input_report::LedType>(led_array);
+  auto keyboard_builder = hid_input_report::fuchsia_input_report::KeyboardOutputReport::Build();
+  keyboard_builder.set_enabled_leds(&led_view);
+  hid_input_report::fuchsia_input_report::KeyboardOutputReport fidl_keyboard =
+      keyboard_builder.view();
+  auto builder = hid_input_report::fuchsia_input_report::OutputReport::Build();
+  builder.set_keyboard(&fidl_keyboard);
+  // Send the report.
+  fuchsia_input_report::InputDevice::ResultOf::SendOutputReport response =
+      sync_client.SendOutputReport(builder.view());
+  ASSERT_OK(response.status());
+  ASSERT_FALSE(response->result.is_err());
+  // Get and check the hid output report.
+  std::vector<uint8_t> set_report = fake_hid_.GetLastSetReport();
+  ASSERT_EQ(set_report.size(), 1);
+  ASSERT_EQ(set_report[0], 0b101);
   // Close the instance device.
   dev_ops.ops->close(dev_ops.ctx, 0);
 }

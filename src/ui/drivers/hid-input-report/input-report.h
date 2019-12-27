@@ -21,6 +21,7 @@ class InputReportBase {
  public:
   virtual void RemoveInstanceFromList(InputReportInstance* instance) = 0;
   virtual const hid_input_report::ReportDescriptor* GetDescriptors(size_t* size) = 0;
+  virtual zx_status_t SendOutputReport(fuchsia_input_report::OutputReport report) = 0;
 };
 
 class InputReport;
@@ -43,6 +44,7 @@ class InputReport : public DeviceType,
 
   void RemoveInstanceFromList(InputReportInstance* instance) override;
   const hid_input_report::ReportDescriptor* GetDescriptors(size_t* size) override;
+  zx_status_t SendOutputReport(fuchsia_input_report::OutputReport report) override;
 
  private:
   bool ParseHidInputReportDescriptor(const hid::ReportDescriptor* report_desc);

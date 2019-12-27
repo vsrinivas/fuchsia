@@ -173,4 +173,46 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, InputRep
   return kParseOk;
 }
 
+ParseResult Keyboard::SetOutputReport(const fuchsia_input_report::OutputReport* report,
+                                      uint8_t* data, size_t data_size, size_t* data_out_size) {
+  if (!report->has_keyboard()) {
+    return kParseNotImplemented;
+  }
+  if (!report->keyboard().has_enabled_leds()) {
+    return kParseNotImplemented;
+  }
+  if (data_size < output_report_size_) {
+    return kParseNoMemory;
+  }
+  for (size_t i = 0; i < data_size; i++) {
+    data[i] = 0;
+  }
+  // Go through each enabled LED and set its report field to enabled.
+  for (fuchsia_input_report::LedType led : report->keyboard().enabled_leds()) {
+    bool found = false;
+    for (size_t i = 0; i < num_leds_; i++) {
+      hid::ReportField& hid_led = led_fields_[i];
+      // Convert the usage to LedType.
+      fuchsia_input_report::LedType hid_led_type;
+      zx_status_t status = HidLedUsageToLlcppLedType(
+          static_cast<hid::usage::LEDs>(hid_led.attr.usage.usage), &hid_led_type);
+      if (status != ZX_OK) {
+        return kParseBadReport;
+      }
+      if (hid_led_type == led) {
+        found = true;
+        if (!InsertAsUnitType(data, data_size, hid_led.attr, 1)) {
+          return kParseBadReport;
+        }
+        break;
+      }
+    }
+    if (!found) {
+      return kParseItemNotFound;
+    }
+  }
+  *data_out_size = output_report_size_;
+  return kParseOk;
+}
+
 }  // namespace hid_input_report

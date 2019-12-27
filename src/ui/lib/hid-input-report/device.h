@@ -22,6 +22,8 @@ enum ParseResult : uint32_t {
   kParseReportSizeMismatch = 3,
   kParseNoCollection = 4,
   kParseBadReport = 5,
+  kParseNotImplemented = 6,
+  kParseItemNotFound = 7,
 };
 
 class Device {
@@ -32,6 +34,11 @@ class Device {
   virtual ReportDescriptor GetDescriptor() = 0;
 
   virtual ParseResult ParseInputReport(const uint8_t* data, size_t len, InputReport* report) = 0;
+
+  virtual ParseResult SetOutputReport(const fuchsia_input_report::OutputReport* report,
+                                      uint8_t* data, size_t data_size, size_t* data_out_size) {
+    return kParseNotImplemented;
+  }
 
   virtual uint8_t InputReportId() const = 0;
 };
