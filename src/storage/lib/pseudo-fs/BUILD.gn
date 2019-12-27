@@ -13,8 +13,8 @@ rustc_library("pseudo-fs") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-vfs/pseudo-fs/macros",
     "//garnet/public/rust/fuchsia-zircon",
+    "//src/storage/lib/pseudo-fs/macros",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",

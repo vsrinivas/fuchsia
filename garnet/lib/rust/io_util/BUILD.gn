@@ -21,7 +21,7 @@ rustc_library("io_util") {
   ]
 
   test_deps = [
-    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+    "//src/storage/lib/pseudo-fs",
     "//third_party/rust_crates:futures",
   ]
 }

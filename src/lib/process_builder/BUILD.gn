@@ -39,7 +39,7 @@ rustc_library("process_builder") {
   test_deps = [
     ":test-util-fidl-rustc",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+    "//src/storage/lib/pseudo-fs",
   ]
 }
 

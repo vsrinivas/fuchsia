@@ -381,11 +381,11 @@ group("all") {
     "//garnet/bin/sl4f:tests",
     "//garnet/bin/sshd-host:sshd-host-tests",
     "//garnet/examples/fidl/echo_server_cpp/fuzzer:echo_fuzzers",
-    "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt/macros:tests",
     "//src/connectivity/network/dhcp:dhcp_tests",
     "//src/connectivity/network/dhcp:dhcpd_tests",
     "//src/connectivity/network/mdns/bundles:tests",
     "//src/connectivity/network/netstack:tests",
+    "//src/storage/lib/pseudo-fs-mt/macros:tests",
   ]
 }
 
@@ -980,8 +980,8 @@ group("rust_crates") {
     "//garnet/public/rust/fuchsia-bootfs:fuchsia-bootfs-tests",
     "//garnet/public/rust/fuchsia-hyper:fuchsia-hyper-tests",
     "//garnet/public/rust/fuchsia-syslog:fuchsia-syslog-tests",
-    "//garnet/public/rust/fuchsia-vfs:fuchsia-vfs-tests",
     "//garnet/public/rust/fuchsia-zircon:fuchsia-zircon-tests",
+    "//src/storage/lib:fuchsia-vfs-tests",
   ]
 }
 

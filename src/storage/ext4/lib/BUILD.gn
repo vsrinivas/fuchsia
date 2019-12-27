@@ -11,9 +11,9 @@ rustc_library("parser") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/storage/ext4/read-only:ext4-read-only",
+    "//src/storage/lib/pseudo-fs-mt",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 

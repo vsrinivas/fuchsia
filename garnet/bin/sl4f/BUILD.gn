@@ -34,7 +34,6 @@ rustc_library("lib") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
@@ -64,6 +63,7 @@ rustc_library("lib") {
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/mapped-vmo",
     "//src/lib/test_executor/rust:test_executor",
+    "//src/storage/lib/fuchsia-vfs-watcher",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:base64",
     "//third_party/rust_crates:byteorder",
@@ -93,7 +93,7 @@ rustc_library("lib") {
 
   test_deps = [
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+    "//src/storage/lib/pseudo-fs",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
   ]

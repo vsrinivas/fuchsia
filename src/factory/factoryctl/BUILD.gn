@@ -31,7 +31,7 @@ rustc_binary("bin") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
-  test_deps = [ "//garnet/public/rust/fuchsia-vfs/pseudo-fs" ]
+  test_deps = [ "//src/storage/lib/pseudo-fs" ]
 }
 
 package("factoryctl") {

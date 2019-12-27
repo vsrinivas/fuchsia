@@ -44,11 +44,11 @@
 
     A safe Rust interface to Fuchsia's tracing interface
 
-* [fuchsia-vfs/](/garnet/public/rust/fuchsia-vfs/)
+* [storage/lib/](/src/storage/lib/)
 
     Bindings and protocol for serving filesystems on the Fuchsia platform
 
-* [fuchsia-vfs/fuchsia-vfs-watcher/](/garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher/)
+* [storage/lib/fuchsia-vfs-watcher/](/src/storage/lib/fuchsia-vfs-watcher/)
 
     Bindings for watching a directory for changes
 

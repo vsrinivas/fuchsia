@@ -19,7 +19,7 @@ rustc_library("files_async") {
   ]
   test_deps = [
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+    "//src/storage/lib/pseudo-fs",
     "//garnet/lib/rust/io_util",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:tempfile",
