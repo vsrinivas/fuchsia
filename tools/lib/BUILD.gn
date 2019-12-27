@@ -11,6 +11,7 @@ group("tests") {
     "//tools/lib/command:command_tests",
     "//tools/lib/iomisc:tests",
     "//tools/lib/logger:logger_tests",
+    "//tools/lib/osmisc:tests",
     "//tools/lib/retry:retry_tests",
     "//tools/lib/ring:tests",
     "//tools/lib/runner:runner_tests",

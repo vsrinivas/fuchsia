@@ -17,6 +17,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/qemu"
 )
 
@@ -307,27 +308,8 @@ func overwriteFileWithCopy(path string) error {
 		return err
 	}
 	defer tmpfile.Close()
-	if err := copyFile(path, tmpfile.Name()); err != nil {
+	if err := osmisc.CopyFile(path, tmpfile.Name()); err != nil {
 		return err
 	}
 	return os.Rename(tmpfile.Name(), path)
-}
-
-func copyFile(src, dest string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	info, err := in.Stat()
-	if err != nil {
-		return err
-	}
-	out, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE, info.Mode().Perm())
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	return err
 }
