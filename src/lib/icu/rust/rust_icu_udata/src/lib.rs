@@ -9,7 +9,10 @@ use {
 
 /// Implements `UDataMemory`.
 ///
-/// Represents data memory backed by a borrowed memory buffer.
+/// Represents data memory backed by a borrowed memory buffer used for loading ICU data.
+/// UDataMemory is very much not thread safe, as it affects the global state of the ICU library.
+/// This suggests that the best way to use this data is to load it up in a main thread, or access
+/// it through a synchronized wrapper.
 #[derive(Debug)]
 pub struct UDataMemory {
     // The buffer backing this data memory.  We're holding it here though unused
@@ -20,6 +23,7 @@ pub struct UDataMemory {
 }
 
 impl Drop for UDataMemory {
+    // Implements `u_cleanup`.
     fn drop(&mut self) {
         unsafe { versioned_function!(u_cleanup)() };
     }
