@@ -15,13 +15,13 @@ use {
     fidl_fuchsia_pkg_rewrite::{
         EngineMarker as RewriteEngineMarker, EngineProxy as RewriteEngineProxy,
     },
+    fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_url::pkg_url::RepoUrl,
-    fuchsia_url_rewrite::Rule,
     futures::prelude::*,
     parking_lot::Mutex,
     std::sync::Arc,

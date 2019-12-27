@@ -28,7 +28,7 @@ validator_deps = [
   "//src/diagnostics/inspect_validator/fidl:validate-rustc",
   "//src/lib/argh",
   "//src/lib/inspect/rust/fuchsia-inspect",
-  "//src/sys/lib/fuchsia_url",
+  "//src/lib/fuchsia-url",
   "//third_party/rust_crates:difference",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:thiserror",

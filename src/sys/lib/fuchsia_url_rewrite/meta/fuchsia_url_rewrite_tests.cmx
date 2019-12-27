@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/fuchsia_url_rewrite_tests"
-    }
-}

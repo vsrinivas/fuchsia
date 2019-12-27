@@ -27,7 +27,7 @@ go_library("system_ota_tests_lib") {
   testonly = true
   name = "fuchsia.googlesource.com/system_ota_tests"
   deps = [
-    "//src/testing/host_target_testing",
+    "//src/testing/host-target-testing",
   ]
   non_go_deps = [ ":copy" ]
   metadata = {

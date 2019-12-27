@@ -23,7 +23,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
-    "//src/sys/lib/fuchsia_url:fuchsia_url",
+    "//src/lib/fuchsia-url",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hyper",

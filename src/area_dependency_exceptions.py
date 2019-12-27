@@ -84,13 +84,12 @@ exceptions = {
     ],
     '//src/stories/bin/discovermgr': [
         '//src/sys/component_index/fidl',
-        '//src/sys/lib/fuchsia_url',
     ],
     '//src/sys': [
         '//examples/components/',
         '//garnet/examples/fidl',
     ],
-    '//src/testing/host_target_testing': [
+    '//src/testing/host-target-testing': [
         '//garnet/go/src',
     ],
     '//src/ui': [

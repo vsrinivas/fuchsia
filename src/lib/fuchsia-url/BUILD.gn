@@ -7,36 +7,30 @@ import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_library("fidl_fuchsia_pkg_ext") {
+rustc_library("fuchsia-url") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-    "//src/lib/inspect/rust/fuchsia-inspect",
-    "//src/sys/lib/fuchsia_url:fuchsia_url",
-    "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:hex",
-    "//third_party/rust_crates:proptest",
-    "//third_party/rust_crates:proptest-derive",
+    "//third_party/rust_crates:percent-encoding",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
-    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:url",
   ]
 }
 
-test_package("fidl_fuchsia_pkg_ext_tests") {
+test_package("fuchsia-url-tests") {
   deps = [
-    ":fidl_fuchsia_pkg_ext_test",
+    ":fuchsia-url_test",
   ]
 
   tests = [
     {
-      name = "fidl_fuchsia_pkg_ext_lib_test"
-      dest = "fidl_fuchsia_pkg_ext_tests"
+      name = "fuchsia_url_lib_test"
+      dest = "fuchsia-url-tests"
       environments = basic_envs
     },
   ]
@@ -44,7 +38,7 @@ test_package("fidl_fuchsia_pkg_ext_tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":fidl_fuchsia_pkg_ext_tests",
+  deps = [
+    ":fuchsia-url-tests",
   ]
 }

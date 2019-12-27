@@ -13,7 +13,7 @@ rustc_library("fidl_fuchsia_amber_ext") {
 
   deps = [
     "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
-    "//src/sys/lib/fuchsia_url:fuchsia_url",
+    "//src/lib/fuchsia-url",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:proptest",

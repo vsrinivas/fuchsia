@@ -4,7 +4,8 @@
 
 use {
     crate::error::Error, argh, argh::FromArgs, fidl_fuchsia_pkg::ExperimentToggle as Experiment,
-    fidl_fuchsia_pkg_ext::BlobId, fuchsia_url_rewrite::RuleConfig, serde_json, std::path::PathBuf,
+    fidl_fuchsia_pkg_ext::BlobId, fidl_fuchsia_pkg_rewrite_ext::RuleConfig, serde_json,
+    std::path::PathBuf,
 };
 
 #[derive(FromArgs, Debug, PartialEq)]

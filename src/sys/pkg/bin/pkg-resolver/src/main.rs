@@ -304,7 +304,7 @@ fn load_rewrite_manager(
     };
     fx_log_info!("channel repo is {}", repo.repo_url());
 
-    match fuchsia_url_rewrite::Rule::new("fuchsia.com", repo.repo_url().host(), "/", "/") {
+    match fidl_fuchsia_pkg_rewrite_ext::Rule::new("fuchsia.com", repo.repo_url().host(), "/", "/") {
         Ok(rule) => {
             channel_inspect_state
                 .channel_name

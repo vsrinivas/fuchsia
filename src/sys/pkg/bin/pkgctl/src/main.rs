@@ -17,10 +17,10 @@ use {
     },
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
+    fidl_fuchsia_pkg_rewrite_ext::{Rule as RewriteRule, RuleConfig},
     fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
     fidl_fuchsia_update as fidl_update, files_async, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    fuchsia_url_rewrite::{Rule as RewriteRule, RuleConfig},
     fuchsia_zircon as zx,
     std::{
         convert::{TryFrom, TryInto},

@@ -19,7 +19,7 @@ rustc_binary("font_manifest_generator") {
     "//src/fonts/font_info",
     "//src/fonts/manifest",
     "//src/fonts/offset_string",
-    "//src/sys/lib/fuchsia_url",
+    "//src/lib/fuchsia-url",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:rayon",

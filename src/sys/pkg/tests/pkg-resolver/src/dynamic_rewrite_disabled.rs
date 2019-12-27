@@ -8,8 +8,8 @@ use {
     super::*,
     crate::mock_filesystem::spawn_directory_handler,
     fidl_fuchsia_pkg_rewrite::EngineProxy as RewriteEngineProxy,
+    fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_async as fasync,
-    fuchsia_url_rewrite::{Rule, RuleConfig},
     fuchsia_zircon::Status,
     std::{convert::TryInto, fs::File},
 };

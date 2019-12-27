@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig, RuleInspectState},
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::fx_log_err,
     fuchsia_url::pkg_url::PkgUrl,
-    fuchsia_url_rewrite::{Rule, RuleConfig, RuleInspectState},
     std::{
         collections::VecDeque,
         fs::{self, File},
@@ -335,7 +335,7 @@ pub(crate) mod tests {
     macro_rules! rule {
         ($host_match:expr => $host_replacement:expr,
          $path_prefix_match:expr => $path_prefix_replacement:expr) => {
-            fuchsia_url_rewrite::Rule::new(
+            fidl_fuchsia_pkg_rewrite_ext::Rule::new(
                 $host_match.to_owned(),
                 $host_replacement.to_owned(),
                 $path_prefix_match.to_owned(),

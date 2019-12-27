@@ -4,7 +4,7 @@
 
 import("//build/go/go_library.gni")
 
-go_library("host_target_testing") {
+go_library("host-target-testing") {
   testonly = true
   name = "fuchsia.googlesource.com/host_target_testing"
   deps = [

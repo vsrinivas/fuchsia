@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/fidl-fuchsia-pkg-rewrite-ext-tests"
+    }
+}

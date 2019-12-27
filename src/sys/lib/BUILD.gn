@@ -6,9 +6,9 @@ group("tests") {
   testonly = true
 
   deps = [
+    "fidl-fuchsia-pkg-ext:tests",
+    "fidl-fuchsia-pkg-rewrite-ext:tests",
     "fuchsia_backoff:fuchsia_backoff_tests",
-    "fuchsia_url:tests",
-    "fuchsia_url_rewrite:tests",
     "library_loader:tests",
   ]
 }
