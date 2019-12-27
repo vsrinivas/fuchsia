@@ -131,7 +131,7 @@ The properties for a particular `NodeValue` are available through the
 certain type by passing the corresponding `PropertyValue` type as the
 template parameter to the `Contains<T>()` method:
 
-```
+```cpp
 // Returns true if the first property of the hierarchy's node is an INT value.
 if (hierarchy.node().properties()[0].Contains<IntPropertyValue>()) {
   // ...
@@ -140,7 +140,7 @@ if (hierarchy.node().properties()[0].Contains<IntPropertyValue>()) {
 
 Use the `Get<T>()` method to obtain the property:
 
-```
+```cpp
 // Get the IntPropertyValue of the first property on the node.
 // Note: This causes a runtime exception if the property does not contain
 // the given type, crashing the program.
@@ -149,7 +149,7 @@ hierarchy.node().properties()[0].Get<IntPropertyValue>();
 
 You may also switch based on the different possible format types:
 
-```
+```cpp
 const auto& property = hierarchy.node().properties()[0];
 switch (property.format()) {
   case FormatType::INT:
@@ -158,13 +158,12 @@ switch (property.format()) {
     break;
   /* ... */
 }
+```
 
 Array types may be specially formatted to contain histograms. The
 `GetBuckets()` method supports returning an array of histogram buckets
 from `{Int,Uint,Double}ArrayValue` types. The array will be empty if
 the underlying array is not a specially formatted histogram.
-```
-
 
 [cpp-reading-1]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/reader.h
 [cpp-reading-2]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/hierarchy.h
@@ -212,7 +211,7 @@ reference to the previously existing property.
 
 [Deletion][dart-3] is manual, but it is compatible with Futures and callbacks in Dart:
 
-```
+```cpp
 var item = parent.child('item');
 itemDeletedFuture.then(() => item.delete());
 ```
