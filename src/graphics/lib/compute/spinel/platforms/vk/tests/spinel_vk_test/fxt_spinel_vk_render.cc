@@ -366,6 +366,37 @@ fxt_spinel_vk_render::checksum()
     }
 }
 
+void ::spinel::vk::test::PrintTo(const param_spinel_vk_render & render, std::ostream * os)
+{
+  // clang-format off
+  *os << "name:\"" << (render.name ? render.name : "<NULL>") << "\",";
+
+  *os << "surface:"
+      << "(w:" << render.surface.width
+      << ",h:" << render.surface.height
+      << "),";
+
+  *os << "clip.composition:"
+      << "(x1" << render.clip.composition[0]
+      << ",y1" << render.clip.composition[1]
+      << ",x2" << render.clip.composition[2]
+      << ",y2" << render.clip.composition[3]
+      << "),";
+
+  *os << "clip.render:"
+      << "(x1" << render.clip.render[0]
+      << ",y1" << render.clip.render[1]
+      << ",x2" << render.clip.render[2]
+      << ",y2" << render.clip.render[3]
+      << "),";
+
+  *os << "svg:\"" << (render.svg ? render.svg : "<NULL>") << "\",";
+  *os << "loops:" << render.loops << ",";
+
+  *os << "checksums:" << ::testing::PrintToString(render.checksums);
+  // clang-format off
+}
+
 //
 // param name suffix generator
 //

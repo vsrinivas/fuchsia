@@ -16,18 +16,11 @@
 
 #include "fxt_spinel_vk.h"
 #include "spinel/spinel_opcodes.h"
-
 //
 //
 //
 
 namespace spinel::vk::test {
-
-//
-// We don't need to get too fancy here.  We're not implementing a true
-// Value interface, rather we're just lumping in all the fields we might
-// need in an explicit render.
-//
 
 struct param_spinel_vk_render
 {
@@ -77,6 +70,12 @@ struct param_spinel_vk_render
     AMD_V1807B = 0x15DD
   };
 };
+
+// Implementing this function is necessary to avoid Valgrind warnings
+// when registering tests parameterized with this struct
+// (see https://bugs.fuchsia.dev/p/fuchsia/issues/detail/?id=43334)
+void
+PrintTo(const param_spinel_vk_render & param, std::ostream * os);
 
 //
 //
