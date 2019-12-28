@@ -91,7 +91,7 @@ static zx_status_t mock_write_vector_at(zxio_t* io, zx_off_t offset, const zx_io
 
 static zx_status_t mock_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start,
                              size_t* out_offset) {
-  if (start != zxio_seek_origin_t::START) {
+  if (start != ZXIO_SEEK_ORIGIN_START) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   *out_offset = offset;

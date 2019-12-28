@@ -42,7 +42,7 @@ static zx_status_t read_at(fdio_t* io, void* buf, size_t len, off_t offset, size
 static zx_status_t read_file_into_vmo(fdio_t* io, zx::vmo* out_vmo) {
   zx_handle_t current_vmar_handle = zx_vmar_root_self();
 
-  fuchsia::io::NodeAttributes attr;
+  zxio_node_attr_t attr;
   zx_status_t status = fdio_get_ops(io)->get_attr(io, &attr);
   if (status != ZX_OK) {
     return ZX_ERR_BAD_HANDLE;

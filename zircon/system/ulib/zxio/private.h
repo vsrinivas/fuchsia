@@ -5,6 +5,11 @@
 #ifndef ZIRCON_SYSTEM_ULIB_ZXIO_PRIVATE_H_
 #define ZIRCON_SYSTEM_ULIB_ZXIO_PRIVATE_H_
 
+#include <lib/zxio/zxio.h>
+#include <zircon/types.h>
+
+#include <algorithm>
+
 namespace {
 
 template <typename F>

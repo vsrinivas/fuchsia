@@ -11,6 +11,7 @@
 #include <lib/fdio/vfs.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
+#include <lib/zxio/zxio.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <threads.h>
@@ -52,9 +53,8 @@ typedef struct fdio_ops {
   zx_status_t (*posix_ioctl)(fdio_t* io, int req, va_list va);
   zx_status_t (*get_vmo)(fdio_t* io, int flags, zx::vmo* out);
   zx_status_t (*get_token)(fdio_t* io, zx_handle_t* out);
-  zx_status_t (*get_attr)(fdio_t* io, llcpp::fuchsia::io::NodeAttributes* out);
-  zx_status_t (*set_attr)(fdio_t* io, uint32_t flags,
-                          const llcpp::fuchsia::io::NodeAttributes* attr);
+  zx_status_t (*get_attr)(fdio_t* io, zxio_node_attr_t* out);
+  zx_status_t (*set_attr)(fdio_t* io, uint32_t flags, const zxio_node_attr_t* attr);
   zx_status_t (*dirent_iterator_init)(fdio_t* io, zxio_dirent_iterator_t* iterator,
                                       zxio_t* directory, void* buffer, size_t capacity);
   zx_status_t (*dirent_iterator_next)(fdio_t* io, zxio_dirent_iterator_t* iterator,
@@ -297,8 +297,7 @@ fdio_t* fdio_waitable_create(zx_handle_t h, zx_signals_t signals_in, zx_signals_
 
 // unsupported / do-nothing hooks shared by implementations
 zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out);
-zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags,
-                                  const llcpp::fuchsia::io::NodeAttributes* attr);
+zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags, const zxio_node_attr_t* attr);
 zx_status_t fdio_default_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
                                               zxio_t* directory, void* buffer, size_t capacity);
 zx_status_t fdio_default_dirent_iterator_next(fdio_t* io, zxio_dirent_iterator_t* iterator,
@@ -316,7 +315,7 @@ zx_status_t fdio_default_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size
                                  int16_t* out_code);
 zx_status_t fdio_default_sendmsg(fdio_t* io, const struct msghdr* msg, int flags,
                                  size_t* out_actual, int16_t* out_code);
-zx_status_t fdio_default_get_attr(fdio_t* io, llcpp::fuchsia::io::NodeAttributes* out);
+zx_status_t fdio_default_get_attr(fdio_t* io, zxio_node_attr_t* out);
 zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode,
                               fdio_t** out);
 zx_status_t fdio_default_clone(fdio_t* io, zx_handle_t* out_handle);

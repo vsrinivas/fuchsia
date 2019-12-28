@@ -118,13 +118,13 @@ zx_status_t zxio_vmo_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start,
   sync_mutex_lock(&file->lock);
   zx_off_t at;
   switch (start) {
-    case fio::SeekOrigin::START:
+    case ZXIO_SEEK_ORIGIN_START:
       at = offset;
       break;
-    case fio::SeekOrigin::CURRENT:
+    case ZXIO_SEEK_ORIGIN_CURRENT:
       at = file->offset + offset;
       break;
-    case fio::SeekOrigin::END:
+    case ZXIO_SEEK_ORIGIN_END:
       at = file->size + offset;
       break;
     default:

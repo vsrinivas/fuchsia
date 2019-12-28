@@ -35,8 +35,7 @@ TEST(NullTest, Basic) {
   EXPECT_EQ(sizeof(buffer), actual);
   ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_write_at(&io, 0u, buffer, sizeof(buffer), 0, &actual));
   size_t offset = 0u;
-  ASSERT_EQ(ZX_ERR_WRONG_TYPE,
-            zxio_seek(&io, 0u, ::llcpp::fuchsia::io::SeekOrigin::START, &offset));
+  ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_seek(&io, 0u, ZXIO_SEEK_ORIGIN_START, &offset));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_truncate(&io, 0u));
   uint32_t flags = 0u;
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_flags_get(&io, &flags));

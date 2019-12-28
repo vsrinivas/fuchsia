@@ -5,15 +5,11 @@
 #ifndef LIB_ZXIO_ZXIO_H_
 #define LIB_ZXIO_ZXIO_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zxio/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
-
-typedef ::llcpp::fuchsia::io::NodeAttributes zxio_node_attr_t;
-typedef ::llcpp::fuchsia::io::SeekOrigin zxio_seek_origin_t;
 
 // An IO object.
 //
@@ -263,26 +259,6 @@ zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, zx_handle_t d
                       const char* dst_path);
 
 // Directory iterator
-
-// An entry in a directory.
-typedef struct zxio_dirent {
-  // The inode number of the entry.
-  uint64_t inode;
-
-  // The length of the name of the entry.
-  uint8_t size;
-
-  // The type of the entry.
-  //
-  // Aligned with the POSIX d_type values.
-  uint8_t type;
-
-  // The name of the entry.
-  //
-  // This string is not null terminated. Instead, refer to |size| to
-  // determine the length of the string.
-  char name[0];
-} __PACKED zxio_dirent_t;
 
 // An iterator for |zxio_dirent_t| objects.
 //

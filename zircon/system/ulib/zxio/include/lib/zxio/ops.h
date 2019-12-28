@@ -31,8 +31,8 @@ typedef struct zxio_storage {
 // A table of operations for a zxio_t.
 //
 // Most of the functions that operate on a zxio_t call through this operations
-// table to actually perform the operation. Use |zxio_alloc| to create a zxio_t
-// with a custom operations table.
+// table to actually perform the operation. Use |zxio_init| to initialize a
+// zxio_t with a custom operations table.
 typedef struct zxio_ops {
   // After |close| returns, no further ops will be called relative to |ctx|.
   zx_status_t (*close)(zxio_t* io);

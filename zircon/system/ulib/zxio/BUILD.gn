@@ -22,8 +22,6 @@ zx_library("zxio") {
     "zxio.cc",
   ]
   public_deps = [
-    # <lib/zxio/zxio.h> has #include <fuchsia/io/llcpp/fidl.h>.
-    "$zx/system/fidl/fuchsia-io:llcpp.headers",
     "$zx/system/ulib/sync:headers",
 
     # <lib/zxio/inception.h> has #include <fuchsia/posix/socket/llcpp/fidl.h>.

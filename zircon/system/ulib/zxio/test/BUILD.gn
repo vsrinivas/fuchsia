@@ -11,6 +11,7 @@ group("test") {
 
 zx_test("zxio") {
   sources = [
+    "c-compilation-test.c",
     "debuglog-test.cc",
     "dirent-test.cc",
     "null-test.cc",

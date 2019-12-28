@@ -8,16 +8,13 @@
 
 #include "private.h"
 
-namespace fuchsia = ::llcpp::fuchsia;
-
 zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t fdio_default_get_attr(fdio_t* io, fuchsia::io::NodeAttributes* out) {
+zx_status_t fdio_default_get_attr(fdio_t* io, zxio_node_attr_t* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags,
-                                  const fuchsia::io::NodeAttributes* attr) {
+zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags, const zxio_node_attr_t* attr) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

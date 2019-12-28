@@ -78,7 +78,7 @@ zx_status_t local_dir_open(fdio_t* io, const char* path, uint32_t flags, uint32_
   return dir->fs->Open(fbl::RefPtr(dir->vn), path, flags, mode, out);
 }
 
-zx_status_t local_dir_get_attr(fdio_t* io, fio::NodeAttributes* attr) {
+zx_status_t local_dir_get_attr(fdio_t* io, zxio_node_attr_t* attr) {
   *attr = {};
   attr->mode = V_TYPE_DIR | V_IRUSR;
   attr->id = fio::INO_UNKNOWN;

@@ -36,6 +36,30 @@ class Remote {
   zxio_remote_t* rio_;
 };
 
+zxio_node_attr_t ToZxioNodeAttr(fio::NodeAttributes attr) {
+  return zxio_node_attr_t{
+    .mode = attr.mode,
+    .id = attr.id,
+    .content_size = attr.content_size,
+    .storage_size = attr.storage_size,
+    .link_count = attr.link_count,
+    .creation_time = attr.creation_time,
+    .modification_time = attr.modification_time,
+  };
+}
+
+fio::NodeAttributes ToNodeAttributes(zxio_node_attr_t attr) {
+  return fio::NodeAttributes{
+    .mode = attr.mode,
+    .id = attr.id,
+    .content_size = attr.content_size,
+    .storage_size = attr.storage_size,
+    .link_count = attr.link_count,
+    .creation_time = attr.creation_time,
+    .modification_time = attr.modification_time,
+  };
+}
+
 zx_status_t zxio_remote_close(zxio_t* io) {
   Remote rio(io);
   auto result = fio::Node::Call::Close(rio.control());
@@ -80,13 +104,13 @@ zx_status_t zxio_remote_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
   if (auto status = result.Unwrap()->s; status != ZX_OK) {
     return status;
   }
-  *out_attr = result.Unwrap()->attributes;
+  *out_attr = ToZxioNodeAttr(result.Unwrap()->attributes);
   return ZX_OK;
 }
 
 zx_status_t zxio_remote_attr_set(zxio_t* io, uint32_t flags, const zxio_node_attr_t* attr) {
   Remote rio(io);
-  auto result = fio::Node::Call::SetAttr(rio.control(), flags, *attr);
+  auto result = fio::Node::Call::SetAttr(rio.control(), flags, ToNodeAttributes(*attr));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
