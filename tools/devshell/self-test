@@ -91,7 +91,7 @@ EOF
   /usr/bin/env -i \
       USER="${USER}" \
       HOME="${HOME}" \
-      "${SHELL}" "${shell_flags[@]}" \
+      bash "${shell_flags[@]}" \
       -c "${launch_script}" "${test_script_path}" "$@"
 }
 

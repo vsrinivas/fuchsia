@@ -1191,7 +1191,6 @@ which is outside the root directory '${bt_temp_dir_realpath}'."
 #   $2 - the name of the host (test) script
 #   $3 - the name of the test function to run
 # Globals:
-#   SHELL (in)
 #   USER (in)
 #   HOME (in)
 #   BT_TEMP_DIR (test execution dir path, propagated to subshell)
@@ -1241,7 +1240,7 @@ EOF
       _BTF_FRAMEWORK_SCRIPT_SUBDIR="${_BTF_FRAMEWORK_SCRIPT_SUBDIR}" \
       _BTF_SUBSHELL_TEST_FUNCTION="${test_function_name}" \
       _BTF_SUBSHELL_TEST_NUMBER="${test_counter}" \
-      "${SHELL}" "${shell_flags[@]}" \
+      bash "${shell_flags[@]}" \
       -c "${launch_script}" "${host_script_path}" \
       || return $?
 }
