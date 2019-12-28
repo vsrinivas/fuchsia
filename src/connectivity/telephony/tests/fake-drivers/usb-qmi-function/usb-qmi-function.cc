@@ -91,8 +91,8 @@ zx_status_t FakeUsbQmiFunction::UsbFunctionInterfaceControl(const usb_setup_t* s
         cdc_notification.bNotification = USB_CDC_NC_RESPONSE_AVAILABLE;
         usb_request_t* req = usb_int_req_.value();
         usb_request_copy_to(req, &cdc_notification, sizeof(cdc_notification), 0);
-        function_.RequestQueue(req, &complete);
         usb_int_req_.reset();
+        function_.RequestQueue(req, &complete);
       } else {
         zxlogf(ERROR, "FakeUsbQmiFunction: interrupt req not queued\n");
       }
