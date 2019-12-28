@@ -32,8 +32,8 @@ recovery_packages = [
   "//src/recovery/system",
   "//src/sys/pkg/bin/amber",
   "//src/sys/pkg/bin/omaha-client",
-  "//src/sys/pkg/bin/pkg-cache:pkg_cache",
-  "//src/sys/pkg/bin/pkg-resolver:pkg_resolver",
+  "//src/sys/pkg/bin/pkg-cache",
+  "//src/sys/pkg/bin/pkg-resolver",
   "//src/sys/timekeeper",
   pkgfs_package_label,
 ]

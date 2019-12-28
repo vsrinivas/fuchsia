@@ -63,6 +63,7 @@ test_package("pkgctl-tests") {
   tests = [
     {
       name = "pkgctl_bin_test"
+      dest = "pkgctl-bin-test"
       environments = basic_envs
     },
   ]

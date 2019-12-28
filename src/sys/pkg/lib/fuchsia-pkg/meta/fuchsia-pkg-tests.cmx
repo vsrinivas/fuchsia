@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/forced_fdr_lib_test"
+        "binary": "test/fuchsia-pkg-tests"
     },
     "sandbox": {
         "features": [

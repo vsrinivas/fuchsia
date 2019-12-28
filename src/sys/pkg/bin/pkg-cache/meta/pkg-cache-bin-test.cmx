@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/pkg-cache-bin-test"
+    }
+}

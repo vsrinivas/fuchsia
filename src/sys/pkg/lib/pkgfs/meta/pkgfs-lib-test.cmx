@@ -1,13 +1,17 @@
 {
     "program": {
-        "binary": "test/blobfs_ramdisk_lib_test"
+        "binary": "test/pkgfs-lib-test"
     },
     "sandbox": {
         "dev": [
             "misc/ramctl"
         ],
+        "features": [
+            "isolated-temp"
+        ],
         "services": [
             "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry"
         ]
     }

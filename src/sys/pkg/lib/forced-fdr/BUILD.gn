@@ -38,6 +38,7 @@ test_package("forced-fdr-tests") {
   tests = [
     {
       name = "forced_fdr_lib_test"
+      dest = "forced-fdr-lib-test"
     },
   ]
 }

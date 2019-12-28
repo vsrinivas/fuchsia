@@ -33,25 +33,26 @@ rustc_binary("bin") {
   ]
 }
 
-package("pkg_cache") {
+package("pkg-cache") {
   deps = [
     ":bin",
   ]
   binaries = [
     {
       name = "pkg_cache"
+      dest = "pkg-cache"
     },
   ]
 
   meta = [
     {
-      path = rebase_path("meta/pkg_cache.cmx")
-      dest = "pkg_cache.cmx"
+      path = rebase_path("meta/pkg-cache.cmx")
+      dest = "pkg-cache.cmx"
     },
   ]
 }
 
-test_package("pkg_cache_tests") {
+test_package("pkg-cache-tests") {
   deps = [
     ":bin_test",
   ]
@@ -59,6 +60,7 @@ test_package("pkg_cache_tests") {
   tests = [
     {
       name = "pkg_cache_bin_test"
+      dest = "pkg-cache-bin-test"
       environments = basic_envs
     },
   ]
@@ -77,6 +79,6 @@ config_data("config") {
 group("tests") {
   testonly = true
   public_deps = [
-    ":pkg_cache_tests",
+    ":pkg-cache-tests",
   ]
 }

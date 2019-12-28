@@ -3,12 +3,12 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx",
-                "fuchsia.update.channelcontrol.ChannelControl": "fuchsia-pkg://fuchsia.com/fake-channel-control#meta/fake_channel_control.cmx"
+                "fuchsia.update.channelcontrol.ChannelControl": "fuchsia-pkg://fuchsia.com/fake-channel-control#meta/fake-channel-control.cmx"
             }
         }
     },
     "program": {
-        "binary": "test/omaha_client_service_bin_test"
+        "binary": "test/omaha-client-service-bin-test"
     },
     "sandbox": {
         "features": [

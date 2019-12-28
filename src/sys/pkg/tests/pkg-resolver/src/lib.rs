@@ -213,7 +213,7 @@ impl<P: PkgFs> TestEnv<P> {
         );
 
         let mut pkg_cache = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg_cache.cmx"
+            "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cmx"
                 .to_owned(),
         )
         .add_handle_to_namespace(
@@ -222,7 +222,7 @@ impl<P: PkgFs> TestEnv<P> {
         );
 
         let mut pkg_resolver = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg_resolver.cmx"
+            "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver.cmx"
                 .to_owned(),
         )
         .add_handle_to_namespace(
@@ -346,7 +346,7 @@ impl<P: PkgFs> TestEnv<P> {
         // as `Node`s.
         // TODO(fxb/40888)
         let pattern = format!(
-            "/hub/r/{}/*/c/pkg_resolver.cmx/*/out/diagnostics/root.i[n]spect",
+            "/hub/r/{}/*/c/pkg-resolver.cmx/*/out/diagnostics/root.i[n]spect",
             glob::Pattern::escape(&self.nested_environment_label)
         );
         let paths = glob::glob_with(

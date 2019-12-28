@@ -54,6 +54,7 @@ test_package("blobfs-ramdisk-tests") {
   tests = [
     {
       name = "blobfs_ramdisk_lib_test"
+      dest = "blobfs-ramdisk-lib-test"
       environments = basic_envs
     },
   ]

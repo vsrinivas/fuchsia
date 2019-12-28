@@ -12,7 +12,7 @@ rustc_binary("pm_build") {
 
   deps = [
     "//garnet/public/rust/mundane",
-    "//src/sys/pkg/lib/fuchsia-pkg:fuchsia_pkg",
+    "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",

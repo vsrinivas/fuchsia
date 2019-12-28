@@ -1,14 +1,13 @@
 {
     "program": {
-        "binary": "bin/pkg_cache"
+        "binary": "test/blobfs-ramdisk-lib-test"
     },
     "sandbox": {
-        "pkgfs": [
-            "ctl",
-            "versions"
+        "dev": [
+            "misc/ramctl"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
             "fuchsia.tracing.provider.Registry"
         ]
     }

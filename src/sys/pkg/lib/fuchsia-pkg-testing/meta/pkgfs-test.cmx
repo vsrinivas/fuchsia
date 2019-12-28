@@ -1,15 +1,17 @@
 {
     "program": {
-        "binary": "test/amberctl_test"
+        "binary": "test/pkgfs-test"
     },
     "sandbox": {
+        "dev": [
+            "misc/ramctl"
+        ],
         "features": [
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader"
+            "fuchsia.process.Launcher"
         ]
     }
 }

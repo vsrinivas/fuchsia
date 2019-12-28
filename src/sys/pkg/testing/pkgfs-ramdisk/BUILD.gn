@@ -19,7 +19,7 @@ rustc_library("pkgfs-ramdisk") {
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/sys/pkg/lib/fuchsia-merkle",
-    "//src/sys/pkg/lib/fuchsia-pkg:fuchsia_pkg",
+    "//src/sys/pkg/lib/fuchsia-pkg",
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -64,6 +64,7 @@ test_package("pkgfs-ramdisk-tests") {
   tests = [
     {
       name = "pkgfs_ramdisk_lib_test"
+      dest = "pkgfs-ramdisk-lib-test"
       environments = basic_envs
     },
   ]

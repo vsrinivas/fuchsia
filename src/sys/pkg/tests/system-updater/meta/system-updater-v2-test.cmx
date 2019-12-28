@@ -1,17 +1,15 @@
 {
     "program": {
-        "binary": "test/pkgfs_test"
+        "binary": "test/system-updater-v2-test"
     },
     "sandbox": {
-        "dev": [
-            "misc/ramctl"
-        ],
         "features": [
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.process.Launcher"
+            "fuchsia.sys.Loader"
         ]
     }
 }

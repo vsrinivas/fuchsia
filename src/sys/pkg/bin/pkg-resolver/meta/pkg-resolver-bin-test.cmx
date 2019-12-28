@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/pkg_resolver_bin_test"
+        "binary": "test/pkg-resolver-bin-test"
     },
     "sandbox": {
         "features": [

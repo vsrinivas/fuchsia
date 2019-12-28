@@ -482,7 +482,7 @@ group("scenic_tools") {
 group("pkg_cache") {
   testonly = true
   public_deps = [
-    "//src/sys/pkg/bin/pkg-cache:pkg_cache",
+    "//src/sys/pkg/bin/pkg-cache",
   ]
 }
 
@@ -558,7 +558,7 @@ group("run") {
 group("pkg_resolver") {
   testonly = true
   public_deps = [
-    "//src/sys/pkg/bin/pkg-resolver:pkg_resolver",
+    "//src/sys/pkg/bin/pkg-resolver",
   ]
 }
 

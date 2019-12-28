@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_library("fuchsia_pkg") {
+rustc_library("fuchsia-pkg") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
@@ -30,15 +30,15 @@ rustc_library("fuchsia_pkg") {
   ]
 }
 
-test_package("fuchsia_pkg_tests") {
+test_package("fuchsia-pkg-tests") {
   deps = [
-    ":fuchsia_pkg_test",
+    ":fuchsia-pkg_test",
   ]
 
   tests = [
     {
       name = "fuchsia_pkg_lib_test"
-      dest = "fuchsia_pkg_tests"
+      dest = "fuchsia-pkg-tests"
       environments = basic_envs
     },
   ]
@@ -47,6 +47,6 @@ test_package("fuchsia_pkg_tests") {
 group("tests") {
   testonly = true
   public_deps = [
-    ":fuchsia_pkg_tests",
+    ":fuchsia-pkg-tests",
   ]
 }

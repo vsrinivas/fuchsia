@@ -50,6 +50,7 @@ test_package("rust-tuf-tests") {
   tests = [
     {
       name = "tuf_lib_test"
+      dest = "tuf-lib-test"
       environments = basic_envs
     },
   ]

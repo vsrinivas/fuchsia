@@ -1,25 +1,14 @@
 {
     "program": {
-        "binary": "bin/pkg_resolver"
+        "binary": "bin/pkg-resolver"
     },
     "sandbox": {
-        "dev": [
-            "class/skip-block",
-            "misc/sysinfo"
-        ],
         "features": [
-            "config-data",
-            "isolated-persistent-storage",
             "root-ssl-certificates"
-        ],
-        "pkgfs": [
-            "install",
-            "needs"
         ],
         "services": [
             "fuchsia.amber.Control",
             "fuchsia.logger.LogSink",
-            "fuchsia.net.NameLookup",
             "fuchsia.pkg.PackageCache",
             "fuchsia.posix.socket.Provider",
             "fuchsia.tracing.provider.Registry"

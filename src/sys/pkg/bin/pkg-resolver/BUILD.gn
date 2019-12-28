@@ -38,8 +38,8 @@ rustc_binary("bin") {
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
     "//src/sys/lib/fuchsia_backoff",
-    "//src/sys/pkg/lib/fidl-fuchsia-amber-ext:fidl_fuchsia_amber_ext",
-    "//src/sys/pkg/lib/fuchsia-pkg-testing:fuchsia_pkg_testing",
+    "//src/sys/pkg/lib/fidl-fuchsia-amber-ext",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/lib/pkgfs",
     "//src/sys/pkg/lib/tuf",
     "//third_party/rust_crates:anyhow",
@@ -66,20 +66,21 @@ rustc_binary("bin") {
 }
 
 # Ensure the contents of this package stay in sync with //src/sys/pkg/tests/amberctl:amberctl-tests
-package("pkg_resolver") {
+package("pkg-resolver") {
   deps = [
     ":bin",
   ]
   binaries = [
     {
       name = "pkg_resolver"
+      dest = "pkg-resolver"
     },
   ]
 
   meta = [
     {
-      path = rebase_path("meta/pkg_resolver.cmx")
-      dest = "pkg_resolver.cmx"
+      path = rebase_path("meta/pkg-resolver.cmx")
+      dest = "pkg-resolver.cmx"
     },
   ]
 }
@@ -122,6 +123,7 @@ test_package("pkg-resolver-unit-tests") {
   tests = [
     {
       name = "pkg_resolver_bin_test"
+      dest = "pkg-resolver-bin-test"
       environments = basic_envs
     },
   ]

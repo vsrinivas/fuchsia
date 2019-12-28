@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/pkgfs_lib_test"
+        "binary": "test/pkgfs-ramdisk-lib-test"
     },
     "sandbox": {
         "dev": [
@@ -11,7 +11,6 @@
         ],
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry"
         ]
     }

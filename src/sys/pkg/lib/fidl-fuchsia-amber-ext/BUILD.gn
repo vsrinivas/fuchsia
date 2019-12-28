@@ -6,7 +6,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_library("fidl_fuchsia_amber_ext") {
+rustc_library("fidl-fuchsia-amber-ext") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
@@ -24,15 +24,15 @@ rustc_library("fidl_fuchsia_amber_ext") {
   ]
 }
 
-test_package("fidl_fuchsia_amber_ext_tests") {
+test_package("fidl-fuchsia-amber-ext-tests") {
   deps = [
-    ":fidl_fuchsia_amber_ext_test",
+    ":fidl-fuchsia-amber-ext_test",
   ]
 
   tests = [
     {
       name = "fidl_fuchsia_amber_ext_lib_test"
-      dest = "fidl_fuchsia_amber_ext_tests"
+      dest = "fidl-fuchsia-amber-ext-tests"
       environments = basic_envs
     },
   ]
@@ -41,6 +41,6 @@ test_package("fidl_fuchsia_amber_ext_tests") {
 group("tests") {
   testonly = true
   public_deps = [
-    ":fidl_fuchsia_amber_ext_tests",
+    ":fidl-fuchsia-amber-ext-tests",
   ]
 }

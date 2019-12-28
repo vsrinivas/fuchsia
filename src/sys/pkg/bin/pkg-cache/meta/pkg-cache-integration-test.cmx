@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/pkg_cache"
+        "binary": "bin/pkg-cache"
     },
     "sandbox": {
         "services": [

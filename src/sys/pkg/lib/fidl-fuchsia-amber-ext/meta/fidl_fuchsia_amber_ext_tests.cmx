@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/fidl_fuchsia_amber_ext_tests"
-    }
-}

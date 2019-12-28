@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/system_updater_v2_test"
+        "binary": "test/amberctl-test"
     },
     "sandbox": {
         "features": [

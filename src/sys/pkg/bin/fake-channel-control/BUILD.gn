@@ -31,8 +31,8 @@ package("fake-channel-control") {
   ]
   meta = [
     {
-      path = rebase_path("meta/fake_channel_control.cmx")
-      dest = "fake_channel_control.cmx"
+      path = rebase_path("meta/fake-channel-control.cmx")
+      dest = "fake-channel-control.cmx"
     },
   ]
 }

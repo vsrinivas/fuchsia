@@ -70,6 +70,7 @@ test_package("systemupdater-tests") {
   tests = [
     {
       name = "system_updater_v2_test"
+      dest = "system-updater-v2-test"
       environments = basic_envs
     },
   ]

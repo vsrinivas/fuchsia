@@ -51,6 +51,7 @@ test_package("update-bin-tests") {
   tests = [
     {
       name = "update_bin_test"
+      dest = "update-bin-test"
       environments = basic_envs
     },
   ]

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/omaha_client_lib_test"
+        "binary": "test/omaha-client-lib-test"
     },
     "sandbox": {
         "features": [

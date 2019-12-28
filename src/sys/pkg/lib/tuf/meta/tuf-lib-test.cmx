@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/tuf_lib_test"
+        "binary": "test/tuf-lib-test"
     },
     "sandbox": {
         "features": [

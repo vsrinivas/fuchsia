@@ -136,7 +136,7 @@ impl TestEnv {
         .expect("/misc to mount");
 
         let mut pkg_resolver = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/amberctl-tests#meta/pkg_resolver_for_integration_test.cmx"
+            "fuchsia-pkg://fuchsia.com/amberctl-tests#meta/pkg-resolver-for-integration-test.cmx"
                 .to_owned(),
         )
         .add_dir_to_namespace(

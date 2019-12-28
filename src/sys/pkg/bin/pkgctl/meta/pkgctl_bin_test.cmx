@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/pkgctl_bin_test"
-    }
-}

@@ -25,7 +25,7 @@ rustc_test("driver") {
     "//src/lib/fuchsia-url",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
-    "//src/sys/pkg/lib/fidl-fuchsia-amber-ext:fidl_fuchsia_amber_ext",
+    "//src/sys/pkg/lib/fidl-fuchsia-amber-ext",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
@@ -55,7 +55,7 @@ test_package("amberctl-tests") {
       source = "grand_unified_binary"
     },
     {
-      name = "pkg_resolver"
+      name = "pkg-resolver"
       source = "pkg_resolver"
     },
   ]
@@ -79,14 +79,15 @@ test_package("amberctl-tests") {
     },
     {
       path = rebase_path(
-              "//src/sys/pkg/bin/pkg-resolver/meta/pkg_resolver_for_integration_test.cmx")
-      dest = "pkg_resolver_for_integration_test.cmx"
+              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-for-integration-test.cmx")
+      dest = "pkg-resolver-for-integration-test.cmx"
     },
   ]
 
   tests = [
     {
       name = "amberctl_test"
+      dest = "amberctl-test"
       environments = basic_envs
     },
   ]

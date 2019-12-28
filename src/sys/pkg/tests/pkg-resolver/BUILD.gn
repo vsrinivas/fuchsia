@@ -27,9 +27,9 @@ rustc_test("driver") {
     "//src/storage/lib/pseudo-fs",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
-    "//src/sys/pkg/lib/fidl-fuchsia-amber-ext:fidl_fuchsia_amber_ext",
+    "//src/sys/pkg/lib/fidl-fuchsia-amber-ext",
     "//src/sys/pkg/lib/fuchsia-merkle",
-    "//src/sys/pkg/lib/fuchsia-pkg-testing:fuchsia_pkg_testing",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -112,11 +112,11 @@ test_package("pkg-resolver-integration-tests") {
       source = "grand_unified_binary"
     },
     {
-      name = "pkg_cache"
+      name = "pkg-cache"
       source = "pkg_cache"
     },
     {
-      name = "pkg_resolver"
+      name = "pkg-resolver"
       source = "pkg_resolver"
     },
     {
@@ -133,13 +133,13 @@ test_package("pkg-resolver-integration-tests") {
     },
     {
       path = rebase_path(
-              "//src/sys/pkg/bin/pkg-cache/meta/pkg_cache_integration_test.cmx")
-      dest = "pkg_cache.cmx"
+              "//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-integration-test.cmx")
+      dest = "pkg-cache.cmx"
     },
     {
       path = rebase_path(
-              "//src/sys/pkg/bin/pkg-resolver/meta/pkg_resolver_for_integration_test.cmx")
-      dest = "pkg_resolver.cmx"
+              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-for-integration-test.cmx")
+      dest = "pkg-resolver.cmx"
     },
   ]
 

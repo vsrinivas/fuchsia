@@ -32,7 +32,7 @@ rustc_library("pkgfs") {
   deps += [ "//src/storage/ramdevice-client" ]
 
   test_deps = [
-    "//src/sys/pkg/lib/fuchsia-pkg-testing:fuchsia_pkg_testing",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
@@ -70,6 +70,7 @@ test_package("pkgfs-tests") {
   tests = [
     {
       name = "pkgfs_lib_test"
+      dest = "pkgfs-lib-test"
       environments = basic_envs
     },
   ]
