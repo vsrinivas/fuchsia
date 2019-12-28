@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("ring") {
+  name = "go.fuchsia.dev/fuchsia/tools/lib/ring"
+}
+
+go_test("tests") {
+  output_name = "ring_tests"
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/ring" ]
+  deps = [
+    ":ring",
+  ]
+}

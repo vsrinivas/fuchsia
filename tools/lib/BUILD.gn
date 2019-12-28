@@ -12,6 +12,7 @@ group("tests") {
     "//tools/lib/iomisc:tests",
     "//tools/lib/logger:logger_tests",
     "//tools/lib/retry:retry_tests",
+    "//tools/lib/ring:tests",
     "//tools/lib/runner:runner_tests",
     "//tools/lib/tarutil:tarutil_tests",
   ]
