@@ -143,6 +143,17 @@ static zx_status_t fdio_zxio_rename(fdio_t* io, const char* src, size_t srclen,
   return zxio_rename(z, src, dst_token, dst);
 }
 
+static zx_status_t fdio_zxio_unlink(fdio_t* io, const char* path, size_t len) {
+  zxio_t* z = fdio_get_zxio(io);
+  return zxio_unlink(z, path);
+}
+
+static zx_status_t fdio_zxio_link(fdio_t* io, const char* src, size_t srclen, zx_handle_t dst_token,
+                                  const char* dst, size_t dstlen) {
+  zxio_t* z = fdio_get_zxio(io);
+  return zxio_link(z, src, dst_token, dst);
+}
+
 static zx_status_t fdio_zxio_get_vmo(fdio_t* io, int flags, zx::vmo* out_vmo) {
   zxio_t* z = fdio_get_zxio(io);
   zx::vmo vmo;
@@ -259,22 +270,6 @@ static void fdio_zxio_remote_wait_end(fdio_t* io, zx_signals_t signals, uint32_t
   *_events = ((signals >> POLL_SHIFT) & POLL_MASK) | events;
 }
 
-static zx_status_t fdio_zxio_remote_unlink(fdio_t* io, const char* path, size_t len) {
-  zxio_remote_t* rio = fdio_get_zxio_remote(io);
-  auto result =
-      fio::Directory::Call::Unlink(zx::unowned_channel(rio->control), fidl::StringView(path, len));
-  return result.ok() ? result.Unwrap()->s : result.status();
-}
-
-static zx_status_t fdio_zxio_remote_link(fdio_t* io, const char* src, size_t srclen,
-                                         zx_handle_t dst_token, const char* dst, size_t dstlen) {
-  zxio_remote_t* rio = fdio_get_zxio_remote(io);
-  auto result =
-      fio::Directory::Call::Link(zx::unowned_channel(rio->control), fidl::StringView(src, srclen),
-                                 zx::handle(dst_token), fidl::StringView(dst, dstlen));
-  return result.ok() ? result.Unwrap()->s : result.status();
-}
-
 static fdio_ops_t fdio_zxio_remote_ops = {
     .close = fdio_zxio_close,
     .open = fdio_zxio_open,
@@ -290,10 +285,10 @@ static fdio_ops_t fdio_zxio_remote_ops = {
     .dirent_iterator_init = fdio_zxio_dirent_iterator_init,
     .dirent_iterator_next = fdio_zxio_dirent_iterator_next,
     .dirent_iterator_destroy = fdio_zxio_dirent_iterator_destroy,
-    .unlink = fdio_zxio_remote_unlink,
+    .unlink = fdio_zxio_unlink,
     .truncate = fdio_zxio_truncate,
     .rename = fdio_zxio_rename,
-    .link = fdio_zxio_remote_link,
+    .link = fdio_zxio_link,
     .get_flags = fdio_zxio_get_flags,
     .set_flags = fdio_zxio_set_flags,
     .bind = fdio_default_bind,

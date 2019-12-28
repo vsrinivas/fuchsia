@@ -229,9 +229,10 @@ zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path,
   return zio->ops->rename(old_directory, old_path, new_directory_token, new_path);
 }
 
-zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, zxio_t* dst_directory,
+zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, zx_handle_t dst_directory_token,
                       const char* dst_path) {
-  return ZX_ERR_NOT_SUPPORTED;
+  zxio_internal_t* zio = (zxio_internal_t*)src_directory;
+  return zio->ops->link(src_directory, src_path, dst_directory_token, dst_path);
 }
 
 zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory,

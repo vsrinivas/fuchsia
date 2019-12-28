@@ -255,11 +255,11 @@ zx_status_t zxio_unlink(zxio_t* directory, const char* path);
 zx_status_t zxio_rename(zxio_t* old_directory, const char* old_path,
                         zx_handle_t new_directory_token, const char* new_path);
 
-// Attempts to link |dst_path| relative to |dst_directory| to |src_path|
-// relative to |src_directory|.
+// Attempts to link |src_path| relative to |src_directory| to |dst_path| relative to
+// the directory represented by |dst_directory_token|.
 //
-// |src_directory| and |dst_directory| may be aliased.
-zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, zxio_t* dst_directory,
+// |src_directory| and |dst_directory_token| may be aliased.
+zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, zx_handle_t dst_directory_token,
                       const char* dst_path);
 
 // Directory iterator

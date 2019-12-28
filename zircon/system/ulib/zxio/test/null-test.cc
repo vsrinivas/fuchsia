@@ -53,10 +53,8 @@ TEST(NullTest, Basic) {
             zxio_open_async(&io, 0u, 0u, "hello", strlen("hello"), ZX_HANDLE_INVALID));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_unlink(&io, "hello"));
 
-  zxio_t io2;
-  zxio_null_init(&io2);
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_rename(&io, "one", ZX_HANDLE_INVALID, "two"));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_link(&io, "one", &io2, "two"));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_link(&io, "one", ZX_HANDLE_INVALID, "two"));
 
   zxio_dirent_iterator_t iter = {};
   char buffer2[ZXIO_DIRENT_ITERATOR_DEFAULT_BUFFER_SIZE];
