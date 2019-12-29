@@ -10,7 +10,9 @@ use std::io::{self, BufRead};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-use bindc::{compiler, debugger, instruction::Instruction};
+use bindc::{compiler, debugger, instruction::Condition, instruction::Instruction};
+
+const AUTOBIND_PROPERTY: u32 = 0x0002;
 
 #[derive(StructOpt, Debug)]
 struct Opt {
@@ -39,9 +41,22 @@ struct Opt {
     /// In debug mode no compiler output is produced, so --output should not be specified.
     #[structopt(short = "d", long = "debug", parse(from_os_str))]
     device_file: Option<PathBuf>,
+
+    // TODO(43400): Eventually this option should be removed when we can define this configuration
+    // in the driver's component manifest.
+    /// Disable automatically binding the driver so that the driver must be bound on a user's
+    /// request.
+    #[structopt(short = "a", long = "disable-autobind")]
+    disable_autobind: bool,
 }
 
-fn write_bind_template(instructions: Vec<Instruction>) -> Option<String> {
+fn write_bind_template(
+    mut instructions: Vec<Instruction>,
+    disable_autobind: bool,
+) -> Option<String> {
+    if disable_autobind {
+        instructions.insert(0, Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0)));
+    }
     let bind_count = instructions.len();
     let binding = instructions
         .into_iter()
@@ -98,7 +113,7 @@ fn main() {
     };
 
     match compiler::compile(opt.input, &includes) {
-        Ok(instructions) => match write_bind_template(instructions) {
+        Ok(instructions) => match write_bind_template(instructions, opt.disable_autobind) {
             Some(out_string) => {
                 let r = output.write(out_string.as_bytes());
                 if r.is_err() {
@@ -125,15 +140,23 @@ mod tests {
 
     #[test]
     fn zero_instructions() {
-        let out_string = write_bind_template(vec![]).unwrap();
+        let out_string = write_bind_template(vec![], false).unwrap();
         assert!(out_string.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 0)"));
     }
 
     #[test]
     fn one_instruction() {
         let instructions = vec![Instruction::Match(Condition::Always)];
-        let out_string = write_bind_template(instructions).unwrap();
+        let out_string = write_bind_template(instructions, false).unwrap();
         assert!(out_string.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 1)"));
         assert!(out_string.contains("{0x10,0x0}"));
+    }
+
+    #[test]
+    fn disable_autobind() {
+        let instructions = vec![Instruction::Match(Condition::Always)];
+        let out_string = write_bind_template(instructions, true).unwrap();
+        assert!(out_string.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 2)"));
+        assert!(out_string.contains("{0x20002,0x0}"));
     }
 }
