@@ -273,13 +273,24 @@ type ifState struct {
 	filterEndpoint *filter.Endpoint
 }
 
-// defaultRoutes returns the default IPv4 route appended to rs.
-func defaultRoutes(nicid tcpip.NICID, gateway tcpip.Address, rs ...tcpip.Route) []tcpip.Route {
-	return append(rs, tcpip.Route{
+// defaultV4Route returns a default IPv4 route through gateway on the specified
+// NIC.
+func defaultV4Route(nicid tcpip.NICID, gateway tcpip.Address) tcpip.Route {
+	return tcpip.Route{
 		Destination: header.IPv4EmptySubnet,
 		Gateway:     gateway,
 		NIC:         nicid,
-	})
+	}
+}
+
+// defaultV6Route returns a default IPv6 route through gateway on the specified
+// NIC.
+func defaultV6Route(nicid tcpip.NICID, gateway tcpip.Address) tcpip.Route {
+	return tcpip.Route{
+		Destination: header.IPv6EmptySubnet,
+		Gateway:     gateway,
+		NIC:         nicid,
+	}
 }
 
 func addressWithPrefixRoute(nicid tcpip.NICID, addr tcpip.AddressWithPrefix) tcpip.Route {
@@ -347,7 +358,9 @@ func (ns *Netstack) AddRoutesLocked(rs []tcpip.Route, metric routes.Metric, dyna
 
 		ns.mu.routeTable.AddRoute(r, metric, metricTracksInterface, dynamic, enabled)
 	}
+
 	ns.mu.stack.SetRouteTable(ns.mu.routeTable.GetNetstackTable())
+
 	return nil
 }
 
@@ -359,13 +372,15 @@ func (ns *Netstack) DelRoute(r tcpip.Route) error {
 	return ns.DelRouteLocked(r)
 }
 
-// DelRoute deletes a single route from the route table. It assumes the lock has
-// already been taken.
+// DelRouteLocked deletes a single route from the route table. It assumes the
+// lock has already been taken.
 func (ns *Netstack) DelRouteLocked(r tcpip.Route) error {
 	if err := ns.mu.routeTable.DelRoute(r); err != nil {
 		return fmt.Errorf("error deleting route, %s", err)
 	}
+
 	ns.mu.stack.SetRouteTable(ns.mu.routeTable.GetNetstackTable())
+
 	return nil
 }
 
@@ -497,8 +512,10 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 				syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, newAddr, config.LeaseLength)
 
 				// Add a default route and a route for the local subnet.
-				rs := defaultRoutes(ifs.nicid, config.Gateway)
-				rs = append(rs, addressWithPrefixRoute(ifs.nicid, newAddr))
+				rs := []tcpip.Route{
+					defaultV4Route(ifs.nicid, config.Gateway),
+					addressWithPrefixRoute(ifs.nicid, newAddr),
+				}
 				syslog.Infof("adding routes %+v with metric=<not-set> dynamic=true", rs)
 
 				if err := ifs.ns.AddRoutesLocked(rs, metricNotSet, true /* dynamic */); err != nil {
@@ -605,17 +622,17 @@ func (ifs *ifState) stateChange(s link.State) {
 			ifs.mu.dhcp.cancel()
 			ifs.runDHCPLocked(name)
 		}
-		// TODO(ckuiper): Remove this, as we shouldn't create default routes w/o a
-		// gateway given. Before doing so make sure nothing is still relying on
-		// this.
 		// Update the state before adding the routes, so they are properly enabled.
 		ifs.mu.state = s
 		if err := ifs.ns.AddRoutesLocked(
-			defaultRoutes(
-				ifs.nicid,
-				"",
+			[]tcpip.Route{
+				// TODO(fxb/43404): Remove this, as we shouldn't
+				// create default routes w/o a gateway given.
+				// Before doing so make sure nothing is still
+				// relying on this.
+				defaultV4Route(ifs.nicid, ""),
 				ipv6LinkLocalOnLinkRoute(ifs.nicid),
-			),
+			},
 			lowPriorityRoute,
 			true, /* dynamic */
 		); err != nil {

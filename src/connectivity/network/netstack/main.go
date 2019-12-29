@@ -54,6 +54,9 @@ func (s *bindingSetCounterStat) Value() uint64 {
 }
 
 func Main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	logLevel := syslog.InfoLevel
 
 	flags := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
@@ -69,7 +72,7 @@ func Main() {
 		atomic.StoreUint32(&sniffer.LogPackets, 0)
 	}
 
-	ctx := appcontext.CreateFromStartupInfo()
+	appCtx := appcontext.CreateFromStartupInfo()
 
 	l, err := syslog.NewLogger(syslog.LogInitOptions{
 		LogLevel:                      logLevel,
@@ -83,6 +86,8 @@ func Main() {
 	log.SetOutput(&syslog.Writer{Logger: l})
 	log.SetFlags(log.Lshortfile)
 
+	ndpDisp := newNDPDispatcher()
+
 	stk := tcpipstack.New(tcpipstack.Options{
 		NetworkProtocols: []tcpipstack.NetworkProtocol{
 			arp.NewProtocol(),
@@ -95,7 +100,12 @@ func Main() {
 			tcp.NewProtocol(),
 			udp.NewProtocol(),
 		},
-		HandleLocal:          true,
+		HandleLocal: true,
+		NDPConfigs: tcpipstack.NDPConfigurations{
+			HandleRAs:              true,
+			DiscoverDefaultRouters: true,
+		},
+		NDPDisp:              ndpDisp,
 		AutoGenIPv6LinkLocal: true,
 		// Raw sockets are typically used for implementing custom protocols. We intend
 		// to support custom protocols through structured FIDL APIs in the future, so
@@ -115,7 +125,7 @@ func Main() {
 	if err != nil {
 		syslog.Fatalf("could not connect to device name provider service: %s", err)
 	}
-	ctx.ConnectToEnvService(req)
+	appCtx.ConnectToEnvService(req)
 
 	ns := &Netstack{
 		arena:        arena,
@@ -124,6 +134,8 @@ func Main() {
 	}
 	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
 	ns.mu.stack = stk
+	ndpDisp.ns = ns
+	ndpDisp.start(ctx)
 
 	if err := ns.addLoopback(); err != nil {
 		syslog.Fatalf("loopback: %s", err)
@@ -157,7 +169,7 @@ func Main() {
 	}
 
 	var inspectService inspect.InspectService
-	ctx.OutgoingService.AddDiagnostics("counters", &appcontext.DirectoryWrapper{
+	appCtx.OutgoingService.AddDiagnostics("counters", &appcontext.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
 				inner: &statCounterInspectImpl{
@@ -168,7 +180,7 @@ func Main() {
 			}).asService,
 		},
 	})
-	ctx.OutgoingService.AddDiagnostics("interfaces", &appcontext.DirectoryWrapper{
+	appCtx.OutgoingService.AddDiagnostics("interfaces", &appcontext.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			// asService is late-bound so that each call retrieves fresh NIC info.
 			asService: func() *appcontext.Service {
@@ -180,7 +192,7 @@ func Main() {
 		},
 	})
 
-	ctx.OutgoingService.AddDiagnostics("sockets", &appcontext.DirectoryWrapper{
+	appCtx.OutgoingService.AddDiagnostics("sockets", &appcontext.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
 				inner: &socketInfoMapInspectImpl{
@@ -191,7 +203,7 @@ func Main() {
 		},
 	})
 
-	ctx.OutgoingService.AddService(
+	appCtx.OutgoingService.AddService(
 		netstack.NetstackName,
 		&netstack.NetstackStub{Impl: &netstackImpl{
 			ns: ns,
@@ -218,7 +230,7 @@ func Main() {
 	)
 
 	var dnsService netstack.ResolverAdminService
-	ctx.OutgoingService.AddService(
+	appCtx.OutgoingService.AddService(
 		netstack.ResolverAdminName,
 		&netstack.ResolverAdminStub{Impl: &dnsImpl{ns: ns}},
 		func(s fidl.Stub, c zx.Channel) error {
@@ -228,7 +240,7 @@ func Main() {
 	)
 
 	var stackService stack.StackService
-	ctx.OutgoingService.AddService(
+	appCtx.OutgoingService.AddService(
 		stack.StackName,
 		&stack.StackStub{Impl: &stackImpl{
 			ns: ns,
@@ -240,7 +252,7 @@ func Main() {
 	)
 
 	var logService stack.LogService
-	ctx.OutgoingService.AddService(
+	appCtx.OutgoingService.AddService(
 		stack.LogName,
 		&stack.LogStub{Impl: &logImpl{logger: l}},
 		func(s fidl.Stub, c zx.Channel) error {
@@ -249,7 +261,7 @@ func Main() {
 		})
 
 	var nameLookupService net.NameLookupService
-	ctx.OutgoingService.AddService(
+	appCtx.OutgoingService.AddService(
 		net.NameLookupName,
 		&net.NameLookupStub{Impl: &nameLookupImpl{dnsClient: ns.dnsClient}},
 		func(s fidl.Stub, c zx.Channel) error {
@@ -258,7 +270,7 @@ func Main() {
 		},
 	)
 
-	ctx.OutgoingService.AddService(
+	appCtx.OutgoingService.AddService(
 		socket.ProviderName,
 		&socket.ProviderStub{Impl: &socketProviderImpl},
 		func(s fidl.Stub, c zx.Channel) error {
@@ -267,22 +279,22 @@ func Main() {
 		},
 	)
 
-	if cobaltLogger, err := connectCobaltLogger(ctx); err != nil {
+	if cobaltLogger, err := connectCobaltLogger(appCtx); err != nil {
 		syslog.Warnf("could not initialize cobalt client: %s", err)
 	} else {
 		go func() {
-			if err := runCobaltClient(context.Background(), cobaltLogger, &ns.stats, ns.mu.stack, socketNotifications); err != nil {
+			if err := runCobaltClient(ctx, cobaltLogger, &ns.stats, ns.mu.stack, socketNotifications); err != nil {
 				syslog.Errorf("cobalt client exited unexpectedly: %s", err)
 			}
 		}()
 	}
 
-	if err := connectivity.AddOutgoingService(ctx); err != nil {
+	if err := connectivity.AddOutgoingService(appCtx); err != nil {
 		syslog.Fatalf("%v", err)
 	}
 
 	f := filter.New(stk.PortManager)
-	if err := filter.AddOutgoingService(ctx, f); err != nil {
+	if err := filter.AddOutgoingService(appCtx, f); err != nil {
 		syslog.Fatalf("%v", err)
 	}
 	ns.filter = f

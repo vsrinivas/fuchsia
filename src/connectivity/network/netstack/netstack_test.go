@@ -37,11 +37,23 @@ import (
 )
 
 const (
-	testDeviceName string        = "testdevice"
-	testTopoPath   string        = "/fake/ethernet/device"
-	testV4Address  tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10")
-	testV6Address  tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10")
+	testDeviceName       string        = "testdevice"
+	testTopoPath         string        = "/fake/ethernet/device"
+	testV4Address        tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10")
+	testV6Address        tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10")
+	testLinkLocalV6Addr1 tcpip.Address = "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+	testLinkLocalV6Addr2 tcpip.Address = "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02"
 )
+
+func containsRoute(rs []tcpip.Route, r tcpip.Route) bool {
+	for _, i := range rs {
+		if i == r {
+			return true
+		}
+	}
+
+	return false
+}
 
 // TestEndpointDoubleClose tests that closing an endpoint that has already been
 // closed once will not panic. This is in response to a bug where a socketImpl
@@ -255,20 +267,13 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 		t.Fatalf("addEth(_, _, _): %s", err)
 	}
 
-	found := false
 	linkLocalRoute := ipv6LinkLocalOnLinkRoute(ifs.nicid)
 
 	// Initially should not have the link-local route.
 	ns.mu.Lock()
 	rt := ns.mu.stack.GetRouteTable()
 	ns.mu.Unlock()
-	for _, r := range rt {
-		if r == linkLocalRoute {
-			found = true
-			break
-		}
-	}
-	if found {
+	if containsRoute(rt, linkLocalRoute) {
 		t.Fatalf("got GetRouteTable() = %+v, don't want = %s", rt, linkLocalRoute)
 	}
 
@@ -280,14 +285,7 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 	ns.mu.Lock()
 	rt = ns.mu.stack.GetRouteTable()
 	ns.mu.Unlock()
-	found = false
-	for _, r := range rt {
-		if r == linkLocalRoute {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !containsRoute(rt, linkLocalRoute) {
 		t.Fatalf("got GetRouteTable() = %+v, want = %s", rt, linkLocalRoute)
 	}
 
@@ -299,15 +297,14 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 	ns.mu.Lock()
 	rt = ns.mu.stack.GetRouteTable()
 	ns.mu.Unlock()
-	found = false
-	for _, r := range rt {
-		if r == linkLocalRoute {
-			found = true
-			break
-		}
-	}
-	if found {
+	if containsRoute(rt, linkLocalRoute) {
 		t.Fatalf("got GetRouteTable() = %+v, don't want = %s", rt, linkLocalRoute)
+	}
+}
+
+func TestDefaultV6Route(t *testing.T) {
+	if got, want := defaultV6Route(6, testLinkLocalV6Addr1), (tcpip.Route{Destination: header.IPv6EmptySubnet, Gateway: testLinkLocalV6Addr1, NIC: 6}); got != want {
+		t.Fatalf("got defaultV6Route(6, %s) = %s, want = %s", testLinkLocalV6Addr1, got, want)
 	}
 }
 
@@ -530,6 +527,13 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 }
 
 func newNetstack(t *testing.T) *Netstack {
+	t.Helper()
+	return newNetstackWithNDPDispatcher(t, nil)
+}
+
+func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstack {
+	t.Helper()
+
 	arena, err := eth.NewArena()
 	if err != nil {
 		t.Fatal(err)
@@ -548,6 +552,7 @@ func newNetstack(t *testing.T) *Netstack {
 			tcp.NewProtocol(),
 			udp.NewProtocol(),
 		},
+		NDPDisp: ndpDisp,
 	})
 
 	// We need to initialize the DNS client, since adding/removing interfaces
@@ -555,6 +560,9 @@ func newNetstack(t *testing.T) *Netstack {
 	// exist.
 	ns.dnsClient = dns.NewClient(ns.mu.stack)
 	ns.OnInterfacesChanged = func([]netstack.NetInterface2) {}
+	if ndpDisp != nil {
+		ndpDisp.ns = ns
+	}
 	return ns
 }
 
