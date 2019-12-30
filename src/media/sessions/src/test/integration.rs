@@ -320,21 +320,15 @@ async fn disconnected_player_results_in_removal_event() -> Result<()> {
     let service = TestService::new()?;
 
     let mut player1 = TestPlayer::new(&service).await?;
-    let _player2 = TestPlayer::new(&service).await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
 
     player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
-    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
-    let _updates = watcher.wait_for_n_updates(2).await?;
+    let _updates = watcher.wait_for_n_updates(1).await?;
 
-    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
-    let mut updates = watcher.wait_for_n_updates(1).await?;
-    assert_eq!(updates.len(), 1);
-    let (player1_id, _) = updates.remove(0);
-
+    let expected_id = player1.id;
     drop(player1);
     let removed_id = watcher.wait_for_removal().await?;
-    assert_eq!(player1_id, removed_id);
+    assert_eq!(removed_id, expected_id);
 
     Ok(())
 }
