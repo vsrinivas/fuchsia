@@ -32,7 +32,7 @@
 
     Rust interface to the fuchsia syslog
 
-* [fuchsia-system-alloc/](/garnet/public/rust/fuchsia-system-alloc/)
+* [fuchsia-system-alloc/](/src/lib/fuchsia-system-alloc/)
 
     A crate that sets the Rust allocator to the system allocator. This is automatically included for projects that use fuchsia-async, and all Fuchsia binaries should ensure that they take a transitive dependency on this crate (and “use” it, as merely setting it as a dependency in GN is not sufficient to ensure that it is linked in).
 
