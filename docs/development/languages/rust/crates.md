@@ -48,7 +48,7 @@
 
     Bindings for watching a directory for changes
 
-* [fuchsia-zircon/](/garnet/public/rust/fuchsia-zircon/)
+* [fuchsia-zircon/](/src/lib/zircon/rust/)
 
     Rust language bindings for Zircon kernel syscalls
 
@@ -56,7 +56,7 @@
 
     A convenience crate for Zircon VMO objects mapped into memory
 
-* [mundane/](/garnet/public/rust/mundane/)
+* [mundane/](/src/lib/mundane/)
 
     A Rust crypto library backed by BoringSSL
 

@@ -39,7 +39,7 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
-    "//garnet/public/rust/mundane",
+    "//src/lib/mundane",
     "//third_party/rust_crates:hex",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
   ]

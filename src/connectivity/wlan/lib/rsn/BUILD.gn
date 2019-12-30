@@ -13,10 +13,10 @@ rustc_library("wlan-rsn") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/rust/mundane",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/eapol",
     "//src/connectivity/wlan/lib/statemachine:wlan-statemachine",
+    "//src/lib/mundane",
     "//src/lib/zerocopy",
     "//third_party/boringssl/rust/boringssl-sys",
     "//third_party/rust_crates:anyhow",
