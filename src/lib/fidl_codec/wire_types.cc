@@ -120,7 +120,7 @@ class ToStringVisitor : public TypeVisitor {
 
   void VisitXUnionType(const XUnionType* type) override {
     VisitTypeWithMembers<std::unique_ptr<UnionMember>>(
-        type, "xunion", type->xunion_definition().members(),
+        type, "xunion", type->union_definition().members(),
         [this](const std::unique_ptr<UnionMember>& member) {
           *result_ += indent_ + "  " + std::to_string(member->ordinal()) + ": ";
           if (member->reserved()) {
@@ -254,19 +254,36 @@ std::unique_ptr<Value> StructType::Decode(MessageDecoder* decoder, uint64_t offs
 
 void StructType::Visit(TypeVisitor* visitor) const { visitor->VisitStructType(this); }
 
-size_t TableType::InlineSize(bool unions_are_xunions) const { return table_.size(); }
+size_t TableType::InlineSize(bool unions_are_xunions) const { return table_definition_.size(); }
 
 std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  uint64_t size = 0;
-  decoder->GetValueAt(offset, &size);
-  offset += sizeof(size);
+  uint64_t member_count = 0;
+  decoder->GetValueAt(offset, &member_count);
+  offset += sizeof(member_count);
 
-  auto result = std::make_unique<TableValue>(this, table_, size);
-  if (result->DecodeNullable(decoder, offset, size * 2 * sizeof(uint64_t))) {
-    if (result->IsNull()) {
-      decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
-                          << ": Invalid null value for table pointer\n";
+  bool is_null;
+  uint64_t nullable_offset;
+  constexpr size_t kEnvelopeSize = 2 * sizeof(uint32_t) + sizeof(uint64_t);
+  if (!decoder->DecodeNullableHeader(offset, member_count * kEnvelopeSize, &is_null,
+                                     &nullable_offset)) {
+    return std::make_unique<InvalidValue>(this);
+  }
+  if (is_null) {
+    decoder->AddError() << "Tables are not nullable.";
+    return std::make_unique<InvalidValue>(this);
+  }
+  auto result = std::make_unique<TableValue>(this, table_definition_);
+  for (uint64_t i = 1; i <= member_count; ++i) {
+    const TableMember* member = table_definition_.GetMember(i);
+    if ((member == nullptr) || member->reserved()) {
+      decoder->SkipEnvelope(nullable_offset);
+    } else {
+      std::unique_ptr<Value> value = decoder->DecodeEnvelope(nullable_offset, member->type());
+      if (!value->IsNull()) {
+        result->AddMember(member, std::move(value));
+      }
     }
+    nullable_offset += kEnvelopeSize;
   }
   return result;
 }
@@ -284,19 +301,64 @@ size_t UnionType::InlineSize(bool unions_are_xunions) const {
   return nullable_ ? sizeof(uintptr_t) : union_.size();
 }
 
+std::unique_ptr<Value> UnionType::DecodeUnion(MessageDecoder* decoder, uint64_t offset) const {
+  if (nullable_) {
+    bool is_null;
+    uint64_t nullable_offset;
+    if (!decoder->DecodeNullableHeader(offset, union_.size(), &is_null, &nullable_offset)) {
+      return std::make_unique<InvalidValue>(this);
+    }
+    if (is_null) {
+      return std::make_unique<NullValue>(this);
+    }
+    offset = nullable_offset;
+  }
+  uint32_t tag = 0;
+  decoder->GetValueAt(offset, &tag);
+  const UnionMember* member = union_.MemberWithTag(tag);
+  if (member == nullptr) {
+    return std::make_unique<InvalidValue>(this);
+  }
+  return std::make_unique<UnionValue>(this, *member,
+                                      member->type()->Decode(decoder, offset + member->offset()));
+}
+
+std::unique_ptr<Value> UnionType::DecodeXUnion(MessageDecoder* decoder, uint64_t offset) const {
+  Ordinal32 ordinal = 0;
+  if (decoder->GetValueAt(offset, &ordinal)) {
+    if ((ordinal == 0) && !nullable_) {
+      decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
+                          << ": Null envelope for a non nullable extensible union\n";
+      return std::make_unique<InvalidValue>(this);
+    }
+  }
+
+  offset += sizeof(uint64_t);  // Skips ordinal + padding.
+
+  if (ordinal == 0) {
+    if (!decoder->CheckNullEnvelope(offset)) {
+      return std::make_unique<InvalidValue>(this);
+    }
+    return std::make_unique<NullValue>(this);
+  }
+
+  const UnionMember* member = union_.MemberWithOrdinal(ordinal);
+  if (member == nullptr) {
+    return std::make_unique<InvalidValue>(this);
+  }
+  return std::make_unique<UnionValue>(this, *member,
+                                      decoder->DecodeEnvelope(offset, member->type()));
+}
+
 std::unique_ptr<Value> UnionType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return decoder->unions_are_xunions() ? union_.DecodeXUnion(decoder, this, offset, nullable_)
-                                       : union_.DecodeUnion(decoder, this, offset, nullable_);
+  return decoder->unions_are_xunions() ? DecodeXUnion(decoder, offset)
+                                       : DecodeUnion(decoder, offset);
 }
 
 void UnionType::Visit(TypeVisitor* visitor) const { visitor->VisitUnionType(this); }
 
-XUnionType::XUnionType(const XUnion& uni, bool nullable) : xunion_(uni), nullable_(nullable) {}
-
-size_t XUnionType::InlineSize(bool unions_are_xunions) const { return xunion_.size(); }
-
 std::unique_ptr<Value> XUnionType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return xunion_.DecodeXUnion(decoder, this, offset, nullable_);
+  return DecodeXUnion(decoder, offset);
 }
 
 void XUnionType::Visit(TypeVisitor* visitor) const { visitor->VisitXUnionType(this); }

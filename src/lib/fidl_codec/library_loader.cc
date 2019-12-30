@@ -86,8 +86,10 @@ std::string Bits::GetNameFromBytes(const uint8_t* bytes) const {
   return returned_value;
 }
 
-UnionMember::UnionMember(Library* enclosing_library, const rapidjson::Value& value, bool for_xunion)
-    : reserved_(enclosing_library->ExtractBool(value, "table member", "<unknown>", "reserved")),
+UnionMember::UnionMember(const Union& union_definition, Library* enclosing_library,
+                         const rapidjson::Value& value, bool for_xunion)
+    : union_definition_(union_definition),
+      reserved_(enclosing_library->ExtractBool(value, "table member", "<unknown>", "reserved")),
       name_(reserved_
                 ? "<reserved>"
                 : enclosing_library->ExtractString(value, "union member", "<unknown>", "name")),
@@ -124,7 +126,8 @@ void Union::DecodeTypes(bool for_xunion) {
     auto member_arr = value_["members"].GetArray();
     members_.reserve(member_arr.Size());
     for (auto& member : member_arr) {
-      members_.push_back(std::make_unique<UnionMember>(enclosing_library_, member, for_xunion));
+      members_.push_back(
+          std::make_unique<UnionMember>(*this, enclosing_library_, member, for_xunion));
     }
   }
 }
@@ -152,39 +155,6 @@ const UnionMember* Union::MemberWithOrdinal(Ordinal32 ordinal) const {
     }
   }
   return nullptr;
-}
-
-std::unique_ptr<UnionValue> Union::DecodeUnion(MessageDecoder* decoder, const Type* type,
-                                               uint64_t offset, bool nullable) const {
-  std::unique_ptr<UnionValue> result = std::make_unique<UnionValue>(type, *this);
-  if (nullable) {
-    result->DecodeNullable(decoder, offset, size_);
-  } else {
-    result->DecodeAt(decoder, offset);
-  }
-  return result;
-}
-
-std::unique_ptr<XUnionValue> Union::DecodeXUnion(MessageDecoder* decoder, const Type* type,
-                                                 uint64_t offset, bool nullable) const {
-  uint32_t ordinal = 0;
-  if (decoder->GetValueAt(offset, &ordinal)) {
-    if ((ordinal == 0) && !nullable) {
-      decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
-                          << ": Null envelope for a non nullable extensible union\n";
-      return nullptr;
-    }
-  }
-  offset += sizeof(uint64_t);  // Skips ordinal + padding.
-
-  std::unique_ptr<XUnionValue> result = std::make_unique<XUnionValue>(type, *this);
-
-  const UnionMember* member = MemberWithOrdinal(ordinal);
-  std::unique_ptr<EnvelopeValue> envelope =
-      std::make_unique<EnvelopeValue>((member == nullptr) ? nullptr : member->type());
-  envelope->DecodeAt(decoder, offset);
-  result->SetValue(member, std::move(envelope));
-  return result;
 }
 
 StructMember::StructMember(Library* enclosing_library, const rapidjson::Value& value)
@@ -318,8 +288,6 @@ void Table::DecodeTypes() {
   decoded_ = true;
   name_ = enclosing_library_->ExtractString(value_, "table", "<unknown>", "name");
   size_ = enclosing_library_->ExtractUint64(value_, "table", name_, "size");
-
-  unknown_member_type_ = std::make_unique<RawType>(size_);
 
   if (!value_.HasMember("members")) {
     enclosing_library_->FieldNotFound("table", name_, "members");

@@ -21,10 +21,8 @@ class Visitor {
   virtual void VisitStructValue(const StructValue* node) { VisitNullableValue(node); }
   virtual void VisitStringValue(const StringValue* node) { VisitValue(node); }
   virtual void VisitBoolValue(const BoolValue* node) { VisitValue(node); }
-  virtual void VisitEnvelopeValue(const EnvelopeValue* node) { VisitNullableValue(node); }
-  virtual void VisitTableValue(const TableValue* node) { VisitNullableValue(node); }
-  virtual void VisitUnionValue(const UnionValue* node) { VisitNullableValue(node); }
-  virtual void VisitXUnionValue(const XUnionValue* node) { VisitUnionValue(node); }
+  virtual void VisitTableValue(const TableValue* node) { VisitValue(node); }
+  virtual void VisitUnionValue(const UnionValue* node) { VisitValue(node); }
   virtual void VisitArrayValue(const ArrayValue* node) { VisitValue(node); }
   virtual void VisitVectorValue(const VectorValue* node) { VisitNullableValue(node); }
   virtual void VisitEnumValue(const EnumValue* node) { VisitValue(node); }
@@ -52,10 +50,8 @@ class Visitor {
   friend class StringValue;
   friend class BoolValue;
   friend class StructValue;
-  friend class EnvelopeValue;
   friend class TableValue;
   friend class UnionValue;
-  friend class XUnionValue;
   friend class ArrayValue;
   friend class VectorValue;
   friend class EnumValue;

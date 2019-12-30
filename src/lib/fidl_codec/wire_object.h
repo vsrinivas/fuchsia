@@ -244,38 +244,11 @@ class StructValue : public NullableValue {
   std::map<const StructMember*, std::unique_ptr<Value>> fields_;
 };
 
-// An envelope (used by TableValue and XUnion).
-class EnvelopeValue : public NullableValue {
- public:
-  EnvelopeValue(const Type* type);
-
-  uint32_t num_bytes() const { return num_bytes_; }
-  uint32_t num_handles() const { return num_handles_; }
-  const Value* value() const { return value_.get(); }
-  void set_value(std::unique_ptr<Value> value) { value_ = std::move(value); }
-
-  int DisplaySize(int remaining_size) const override;
-
-  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
-
-  void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
-
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override;
-
-  void Visit(Visitor* visitor) const override;
-
- private:
-  uint32_t num_bytes_ = 0;
-  uint32_t num_handles_ = 0;
-  std::unique_ptr<Value> value_ = nullptr;
-};
-
 // A table.
-class TableValue : public NullableValue {
+class TableValue : public Value {
  public:
-  TableValue(const Type* type, const Table& table_definition, uint64_t envelope_count);
+  TableValue(const Type* type, const Table& table_definition)
+      : Value(type), table_definition_(table_definition) {}
 
   const Table& table_definition() const { return table_definition_; }
   const std::map<const TableMember*, std::unique_ptr<Value>>& members() const { return members_; }
@@ -292,10 +265,6 @@ class TableValue : public NullableValue {
 
   int DisplaySize(int remaining_size) const override;
 
-  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
-
-  void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
-
   void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
                    std::string_view line_header, int tabs, int remaining_size,
                    int max_line_size) const override;
@@ -304,31 +273,20 @@ class TableValue : public NullableValue {
 
  private:
   const Table& table_definition_;
-  const uint64_t envelope_count_;
   std::map<const TableMember*, std::unique_ptr<Value>> members_;
   Ordinal32 highest_member_ = 0;
 };
 
 // An union.
-class UnionValue : public NullableValue {
+class UnionValue : public Value {
  public:
-  UnionValue(const Type* type, const Union& union_definition)
-      : NullableValue(type), union_definition_(union_definition) {}
+  UnionValue(const Type* type, const UnionMember& member, std::unique_ptr<Value> value)
+      : Value(type), member_(member), value_(std::move(value)) {}
 
-  const Union& union_definition() const { return union_definition_; }
-  const UnionMember* member() const { return member_; }
+  const UnionMember& member() const { return member_; }
   const std::unique_ptr<Value>& value() const { return value_; }
 
-  void SetValue(const UnionMember* member, std::unique_ptr<Value> value) {
-    member_ = member;
-    value_ = std::move(value);
-  }
-
   int DisplaySize(int remaining_size) const override;
-
-  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
-
-  void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
   void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
                    std::string_view line_header, int tabs, int remaining_size,
@@ -337,18 +295,8 @@ class UnionValue : public NullableValue {
   void Visit(Visitor* visitor) const override;
 
  private:
-  const Union& union_definition_;
-  const UnionMember* member_ = nullptr;
-  std::unique_ptr<Value> value_;
-};
-
-// An xunion.
-class XUnionValue : public UnionValue {
- public:
-  XUnionValue(const Type* type, const Union& union_definition)
-      : UnionValue(type, union_definition) {}
-
-  void Visit(Visitor* visitor) const override;
+  const UnionMember& member_;
+  const std::unique_ptr<Value> value_;
 };
 
 // An array.

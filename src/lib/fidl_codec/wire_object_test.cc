@@ -68,12 +68,10 @@ class WireObjectTest : public ::testing::Test {
 #define TEST_PRINT_OBJECT(_testname, field, pretty_print, json) \
   TEST_F(WireObjectTest, Parse##_testname) { TestPrintObject(field, pretty_print, json); }
 
-TEST_PRINT_OBJECT(EnvelopeValue, EnvelopeValue(nullptr), "#red#null#rst#", "null");
-
 class TableValueWithNullFields : public TableValue {
  public:
   TableValueWithNullFields(LibraryLoader* loader)
-      : TableValue(nullptr, GetTableDefinition(loader), 2) {
+      : TableValue(nullptr, GetTableDefinition(loader)) {
     AddMember("first_int16", nullptr);
     AddMember("third_union", nullptr);
   }

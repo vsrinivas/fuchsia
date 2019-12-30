@@ -152,12 +152,13 @@ class Bits : public EnumOrBits {
   }
 };
 
-// TODO: Consider whether this is duplicative of Struct / Table member.
 class UnionMember {
  public:
-  UnionMember(Library* enclosing_library, const rapidjson::Value& value, bool for_xunion);
+  UnionMember(const Union& union_definition, Library* enclosing_library,
+              const rapidjson::Value& value, bool for_xunion);
   ~UnionMember();
 
+  const Union& union_definition() const { return union_definition_; }
   bool reserved() const { return reserved_; }
   const std::string& name() const { return name_; }
   uint64_t offset() const { return offset_; }
@@ -166,6 +167,7 @@ class UnionMember {
   const Type* type() const { return type_.get(); }
 
  private:
+  const Union& union_definition_;
   const bool reserved_;
   const std::string name_;
   const uint64_t offset_;
@@ -188,11 +190,6 @@ class Union {
   const UnionMember* MemberWithTag(uint32_t tag) const;
 
   const UnionMember* MemberWithOrdinal(Ordinal32 ordinal) const;
-
-  std::unique_ptr<UnionValue> DecodeUnion(MessageDecoder* decoder, const Type* type,
-                                          uint64_t offset, bool nullable) const;
-  std::unique_ptr<XUnionValue> DecodeXUnion(MessageDecoder* decoder, const Type* type,
-                                            uint64_t offset, bool nullable) const;
 
  private:
   Union(Library* enclosing_library, const rapidjson::Value& value);
@@ -320,7 +317,6 @@ class Table {
   const std::string& name() const { return name_; }
   uint32_t size() const { return size_; }
   const std::vector<std::unique_ptr<TableMember>>& members() const { return members_; }
-  const Type* unknown_member_type() const { return unknown_member_type_.get(); }
 
   const TableMember* GetMember(uint64_t ordinal) const {
     if (ordinal >= members_.size()) {
@@ -346,7 +342,6 @@ class Table {
   bool decoded_ = false;
   std::string name_;
   uint64_t size_;
-  std::unique_ptr<Type> unknown_member_type_;
   std::vector<std::unique_ptr<TableMember>> members_;
 };
 

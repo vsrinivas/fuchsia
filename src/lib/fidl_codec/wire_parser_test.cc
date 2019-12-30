@@ -971,8 +971,7 @@ TEST_DECODE_WIRE(
         Version() +
         "!{ variant_i: #gre#int32#rst# = #blu#1234#rst# }\n"
         "    " +
-        Version() +
-        "!#blu#null#rst#\n"
+        "#red#null#rst#\n"
         "    " +
         Version() +
         "!{\n"
@@ -986,12 +985,13 @@ TEST_DECODE_WIRE(
     GetArrayNullableUnion(1234, "harpo", "chico"))
 
 TEST_F(WireParserTest, BadU8U16UnionStruct) {
-  TEST_DECODE_WIRE_BODY_COMMON(U8U16UnionStruct, -1, 0, "{\"s\":{\"u\":{\"variant_u8\":null}}}",
+  TEST_DECODE_WIRE_BODY_COMMON(U8U16UnionStruct, -1, 0,
+                               "{\"s\":{\"u\":{\"variant_u8\":\"(invalid)\"}}}",
                                "{\n"
                                "  s: #gre#test.fidlcodec.examples/U8U16UnionStructType#rst# = {\n"
                                "    u: #gre#test.fidlcodec.examples/U8U16Union#rst# = "
                                "" + Version() +
-                                   "!{ variant_u8: #gre#uint8#rst# = #red#null#rst# }\n"
+                                   "!{ variant_u8: #gre#uint8#rst# = #red#invalid#rst# }\n"
                                    "  }\n"
                                    "}",
                                24, GetU8U16UnionStruct(12));

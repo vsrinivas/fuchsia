@@ -320,4 +320,107 @@ bool MessageDecoder::DecodeNullableHeader(uint64_t offset, uint64_t size, bool* 
   return true;
 }
 
+std::unique_ptr<Value> MessageDecoder::DecodeEnvelope(uint64_t offset, const Type* type) {
+  FXL_DCHECK(type != nullptr);
+  uint32_t envelope_bytes;
+  GetValueAt(offset, &envelope_bytes);
+  offset += sizeof(envelope_bytes);
+  uint32_t envelope_handles;
+  GetValueAt(offset, &envelope_handles);
+  offset += sizeof(envelope_handles);
+  bool is_null;
+  uint64_t nullable_offset;
+  if (!DecodeNullableHeader(offset, envelope_bytes, &is_null, &nullable_offset)) {
+    return std::make_unique<InvalidValue>(type);
+  }
+  if (is_null) {
+    if (envelope_bytes != 0) {
+      AddError() << std::hex << (absolute_offset() + offset) << std::dec
+                 << ": Null envelope shouldn't have bytes\n";
+    }
+    if (envelope_handles != 0) {
+      AddError() << std::hex << (absolute_offset() + offset) << std::dec
+                 << ": Null envelope shouldn't have handles\n";
+    }
+    return std::make_unique<NullValue>(type);
+  }
+  if (envelope_bytes > num_bytes() - nullable_offset) {
+    AddError() << std::hex << (absolute_offset() + nullable_offset) << std::dec
+               << ": Not enough data to decode an envelope\n";
+    return std::make_unique<InvalidValue>(type);
+  }
+  if (envelope_handles > GetRemainingHandles()) {
+    AddError() << std::hex << (absolute_offset() + nullable_offset) << std::dec
+               << ": Not enough handles to decode an envelope\n";
+    return std::make_unique<InvalidValue>(type);
+  }
+  MessageDecoder envelope_decoder(this, nullable_offset, envelope_bytes, envelope_handles);
+  return envelope_decoder.DecodeValue(type);
+}
+
+bool MessageDecoder::CheckNullEnvelope(uint64_t offset) {
+  uint32_t envelope_bytes;
+  GetValueAt(offset, &envelope_bytes);
+  offset += sizeof(envelope_bytes);
+  uint32_t envelope_handles;
+  GetValueAt(offset, &envelope_handles);
+  offset += sizeof(envelope_handles);
+  bool is_null;
+  uint64_t nullable_offset;
+  if (!DecodeNullableHeader(offset, envelope_bytes, &is_null, &nullable_offset)) {
+    return false;
+  }
+  if (!is_null) {
+    AddError() << std::hex << (absolute_offset() + offset) << std::dec
+               << ": Expecting null envelope\n";
+    return false;
+  }
+  if (envelope_bytes != 0) {
+    AddError() << std::hex << (absolute_offset() + offset) << std::dec
+               << ": Null envelope shouldn't have bytes\n";
+    return false;
+  }
+  if (envelope_handles != 0) {
+    AddError() << std::hex << (absolute_offset() + offset) << std::dec
+               << ": Null envelope shouldn't have handles\n";
+    return false;
+  }
+  return true;
+}
+
+void MessageDecoder::SkipEnvelope(uint64_t offset) {
+  uint32_t envelope_bytes;
+  GetValueAt(offset, &envelope_bytes);
+  offset += sizeof(envelope_bytes);
+  uint32_t envelope_handles;
+  GetValueAt(offset, &envelope_handles);
+  offset += sizeof(envelope_handles);
+  bool is_null;
+  uint64_t nullable_offset;
+  if (!DecodeNullableHeader(offset, envelope_bytes, &is_null, &nullable_offset)) {
+    return;
+  }
+  if (is_null) {
+    if (envelope_bytes != 0) {
+      AddError() << std::hex << (absolute_offset() + offset) << std::dec
+                 << ": Null envelope shouldn't have bytes\n";
+    }
+    if (envelope_handles != 0) {
+      AddError() << std::hex << (absolute_offset() + offset) << std::dec
+                 << ": Null envelope shouldn't have handles\n";
+    }
+    return;
+  }
+  if (envelope_bytes > num_bytes() - nullable_offset) {
+    AddError() << std::hex << (absolute_offset() + nullable_offset) << std::dec
+               << ": Not enough data to decode an envelope\n";
+    return;
+  }
+  if (envelope_handles > GetRemainingHandles()) {
+    AddError() << std::hex << (absolute_offset() + nullable_offset) << std::dec
+               << ": Not enough handles to decode an envelope\n";
+    return;
+  }
+}
+
 }  // namespace fidl_codec

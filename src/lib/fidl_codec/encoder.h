@@ -58,16 +58,17 @@ class Encoder : public Visitor {
   // Visit any union and encode it as an XUnion.
   void VisitUnionAsXUnion(const UnionValue* node);
 
+  // Encode a value in an envelope.
+  void EncodeEnvelope(const Value* value, const Type* for_type);
+
   // Visitor overrides.
   void VisitInvalidValue(const InvalidValue* node) override;
   void VisitNullValue(const NullValue* node) override;
   void VisitRawValue(const RawValue* node) override;
   void VisitStringValue(const StringValue* node) override;
   void VisitBoolValue(const BoolValue* node) override;
-  void VisitEnvelopeValue(const EnvelopeValue* node) override;
   void VisitTableValue(const TableValue* node) override;
   void VisitUnionValue(const UnionValue* node) override;
-  void VisitXUnionValue(const XUnionValue* node) override;
   void VisitArrayValue(const ArrayValue* node) override;
   void VisitVectorValue(const VectorValue* node) override;
   void VisitEnumValue(const EnumValue* node) override;

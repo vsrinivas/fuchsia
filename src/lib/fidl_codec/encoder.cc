@@ -13,7 +13,6 @@
 
 namespace fidl_codec {
 
-// Currently only the String type can generate a null value.
 class NullVisitor : public TypeVisitor {
  public:
   explicit NullVisitor(Encoder* encoder) : encoder_(encoder) {}
@@ -26,6 +25,19 @@ class NullVisitor : public TypeVisitor {
   void VisitStringType(const StringType* type) override {
     FXL_DCHECK(type->Nullable());
     encoder_->WriteValue<uint64_t>(0);
+    encoder_->WriteValue<uint64_t>(0);
+  }
+
+  void VisitUnionType(const UnionType* type) override {
+    FXL_DCHECK(type->Nullable());
+    encoder_->WriteValue<uint64_t>(0);
+  }
+
+  void VisitXUnionType(const XUnionType* type) override {
+    FXL_DCHECK(type->Nullable());
+    encoder_->WriteValue<uint64_t>(0);
+    encoder_->WriteValue<uint32_t>(0);
+    encoder_->WriteValue<uint32_t>(0);
     encoder_->WriteValue<uint64_t>(0);
   }
 
@@ -67,8 +79,7 @@ void Encoder::WriteData(const uint8_t* data, size_t size) {
 }
 
 void Encoder::VisitUnionBody(const UnionValue* node) {
-  FXL_DCHECK(node->member() != nullptr);
-  WriteValue<uint32_t>(node->member()->ordinal());
+  WriteValue<uint32_t>(node->member().ordinal());
   node->value()->Visit(this);
 }
 
@@ -84,21 +95,21 @@ void Encoder::VisitStructValueBody(size_t offset, const StructValue* node) {
 }
 
 void Encoder::VisitUnionAsXUnion(const UnionValue* node) {
-  uint32_t ordinal = (node->member() == nullptr) ? 0 : node->member()->ordinal();
+  WriteValue<uint64_t>(node->member().ordinal());
+  EncodeEnvelope(node->value().get(), node->member().type());
+}
 
-  FXL_DCHECK(ordinal || node->IsNull() || node->value()->IsNull())
-      << "Invalid xunion field '" << node->member()->name() << "'";
-
-  auto field = node->value().get();
-  WriteValue<uint64_t>(ordinal);
-
-  if (field) {
-    field->Visit(this);
-  } else {
-    // Empty envelope
-    WriteValue<uint32_t>(0);
-    WriteValue<uint32_t>(0);
-    WriteValue<uint64_t>(0);
+void Encoder::EncodeEnvelope(const Value* value, const Type* for_type) {
+  Encoder envelope_encoder(unions_are_xunions_);
+  envelope_encoder.AllocateObject(for_type->InlineSize(unions_are_xunions_));
+  value->Visit(&envelope_encoder);
+  WriteValue<uint32_t>(envelope_encoder.bytes_.size());
+  WriteValue<uint32_t>(envelope_encoder.handles_.size());
+  WriteValue<uint64_t>(UINTPTR_MAX);
+  current_offset_ = AllocateObject(envelope_encoder.bytes_.size());
+  WriteData(envelope_encoder.bytes_);
+  for (const auto handle : envelope_encoder.handles_) {
+    handles_.push_back(handle);
   }
 }
 
@@ -124,19 +135,6 @@ void Encoder::VisitStringValue(const StringValue* node) {
 
 void Encoder::VisitBoolValue(const BoolValue* node) { WriteValue<uint8_t>(node->value()); }
 
-void Encoder::VisitEnvelopeValue(const EnvelopeValue* node) {
-  WriteValue<uint32_t>(node->num_bytes());
-  WriteValue<uint32_t>(node->num_handles());
-
-  if (node->IsNull() || (node->value() == nullptr)) {
-    WriteValue<uint64_t>(0);
-  } else {
-    WriteValue<uint64_t>(UINTPTR_MAX);
-    current_offset_ = AllocateObject(node->type()->InlineSize(unions_are_xunions_));
-    node->value()->Visit(this);
-  }
-}
-
 void Encoder::VisitTableValue(const TableValue* node) {
   WriteValue<uint64_t>(node->highest_member());
   WriteValue<uint64_t>(UINTPTR_MAX);
@@ -152,27 +150,23 @@ void Encoder::VisitTableValue(const TableValue* node) {
       WriteValue<uint32_t>(0);
       WriteValue<uint64_t>(0);
     } else {
-      it->second->Visit(this);
+      EncodeEnvelope(it->second.get(), it->first->type());
     }
     offset += kEnvelopeSize;
   }
 }
 
 void Encoder::VisitUnionValue(const UnionValue* node) {
-  if (unions_are_xunions_) {
+  if (unions_are_xunions_ || node->type()->IsXUnion()) {
     VisitUnionAsXUnion(node);
-  } else if (!node->type()->Nullable()) {
-    VisitUnionBody(node);
-  } else if (node->IsNull()) {
-    WriteValue<uint64_t>(0);
-  } else {
+  } else if (node->type()->Nullable()) {
     WriteValue<uint64_t>(UINTPTR_MAX);
-    current_offset_ = AllocateObject(node->union_definition().size());
+    current_offset_ = AllocateObject(node->member().union_definition().size());
+    VisitUnionBody(node);
+  } else {
     VisitUnionBody(node);
   }
 }
-
-void Encoder::VisitXUnionValue(const XUnionValue* node) { VisitUnionAsXUnion(node); }
 
 void Encoder::VisitArrayValue(const ArrayValue* node) {
   size_t component_size = node->type()->GetComponentType()->InlineSize(unions_are_xunions_);

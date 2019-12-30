@@ -246,71 +246,6 @@ void StructValue::PrettyPrint(std::ostream& os, const Colors& colors,
 
 void StructValue::Visit(Visitor* visitor) const { visitor->VisitStructValue(this); }
 
-EnvelopeValue::EnvelopeValue(const Type* type) : NullableValue(type) {}
-
-int EnvelopeValue::DisplaySize(int remaining_size) const {
-  if (IsNull() || (value_ == nullptr)) {
-    return 4;
-  }
-  return value_->DisplaySize(remaining_size);
-}
-
-void EnvelopeValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
-  if (offset + num_bytes_ > decoder->num_bytes()) {
-    decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
-                        << ": Not enough data to decode an envelope\n";
-    return;
-  }
-  if (num_handles_ > decoder->GetRemainingHandles()) {
-    decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
-                        << ": Not enough handles to decode an envelope\n";
-    return;
-  }
-  MessageDecoder envelope_decoder(decoder, offset, num_bytes_, num_handles_);
-  value_ = envelope_decoder.DecodeValue(type());
-}
-
-void EnvelopeValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
-  decoder->GetValueAt(base_offset, &num_bytes_);
-  base_offset += sizeof(num_bytes_);
-  decoder->GetValueAt(base_offset, &num_handles_);
-  base_offset += sizeof(num_handles_);
-
-  if (DecodeNullable(decoder, base_offset, num_bytes_)) {
-    if (type() == nullptr) {
-      if (!IsNull()) {
-        decoder->AddError() << std::hex << (decoder->absolute_offset() + base_offset) << std::dec
-                            << ": The envelope should be null\n";
-      }
-    }
-    if (IsNull()) {
-      if (num_bytes_ != 0) {
-        decoder->AddError() << std::hex << (decoder->absolute_offset() + base_offset) << std::dec
-                            << ": Null envelope shouldn't have bytes\n";
-      }
-      if (num_handles_ != 0) {
-        decoder->AddError() << std::hex << (decoder->absolute_offset() + base_offset) << std::dec
-                            << ": Null envelope shouldn't have handles\n";
-      }
-    }
-  }
-}
-
-void EnvelopeValue::PrettyPrint(std::ostream& os, const Colors& colors,
-                                const fidl_message_header_t* header, std::string_view line_header,
-                                int tabs, int remaining_size, int max_line_size) const {
-  if (IsNull() || (value_ == nullptr)) {
-    os << colors.red << "null" << colors.reset;
-  } else {
-    value_->PrettyPrint(os, colors, header, line_header, tabs, remaining_size, max_line_size);
-  }
-}
-
-void EnvelopeValue::Visit(Visitor* visitor) const { visitor->VisitEnvelopeValue(this); }
-
-TableValue::TableValue(const Type* type, const Table& table_definition, uint64_t envelope_count)
-    : NullableValue(type), table_definition_(table_definition), envelope_count_(envelope_count) {}
-
 bool TableValue::AddMember(std::string_view name, std::unique_ptr<Value> value) {
   const TableMember* member = table_definition_.GetMember(name);
   if (member == nullptr) {
@@ -342,24 +277,13 @@ int TableValue::DisplaySize(int remaining_size) const {
   return size;
 }
 
-void TableValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
-  for (uint64_t envelope_id = 0; envelope_id < envelope_count_; ++envelope_id) {
-    const TableMember* member = table_definition_.GetMember(envelope_id + 1);
-    std::unique_ptr<EnvelopeValue> envelope = std::make_unique<EnvelopeValue>(
-        (member == nullptr) ? table_definition_.unknown_member_type() : member->type());
-    envelope->DecodeAt(decoder, offset);
-    AddMember(member, std::move(envelope));
-    offset += 2 * sizeof(uint64_t);
-  }
-}
-
 void TableValue::PrettyPrint(std::ostream& os, const Colors& colors,
                              const fidl_message_header_t* header, std::string_view line_header,
                              int tabs, int remaining_size, int max_line_size) const {
   int display_size = DisplaySize(remaining_size);
   if (display_size == 2) {
     os << "{}";
-  } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
+  } else if (display_size + static_cast<int>(line_header.size()) <= remaining_size) {
     const char* separator = "{ ";
     for (const auto& member : table_definition_.members()) {
       if ((member != nullptr) && !member->reserved()) {
@@ -399,32 +323,14 @@ void TableValue::PrettyPrint(std::ostream& os, const Colors& colors,
 void TableValue::Visit(Visitor* visitor) const { visitor->VisitTableValue(this); }
 
 int UnionValue::DisplaySize(int remaining_size) const {
-  if (IsNull() || value_->IsNull()) {
-    return 4;
-  }
   // Two characters for the opening brace ("{ ") + three characters for equal
   // (" = ") and two characters for the closing brace (" }").
   constexpr int kExtraSize = 7;
-  int size = static_cast<int>(member_->name().size()) + kExtraSize;
+  int size = static_cast<int>(member_.name().size()) + kExtraSize;
   // Two characters for ": ".
-  size += static_cast<int>(member_->type()->Name().size()) + 2;
+  size += static_cast<int>(member_.type()->Name().size()) + 2;
   size += value_->DisplaySize(remaining_size - size);
   return size;
-}
-
-void UnionValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
-  DecodeAt(decoder, offset);
-}
-
-void UnionValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
-  uint32_t tag = 0;
-  decoder->GetValueAt(base_offset, &tag);
-  member_ = union_definition_.MemberWithTag(tag);
-  if (member_ == nullptr) {
-    value_ = std::make_unique<InvalidValue>(nullptr);
-  } else {
-    value_ = member_->type()->Decode(decoder, base_offset + member_->offset());
-  }
 }
 
 void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors,
@@ -433,15 +339,13 @@ void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors,
   if (header != nullptr) {
     os << (fidl_should_decode_union_from_xunion(header) ? "v1!" : "v0!");
   }
-  if (IsNull() || value_->IsNull()) {
-    os << colors.blue << "null" << colors.reset;
-  } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
+  if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
     // Two characters for the opening brace ("{ ") + three characters for equal
     // (" = ") and two characters for the closing brace (" }").
     constexpr int kExtraSize = 7;
-    int size = static_cast<int>(member_->name().size()) + kExtraSize;
-    os << "{ " << member_->name();
-    std::string type_name = member_->type()->Name();
+    int size = static_cast<int>(member_.name().size()) + kExtraSize;
+    os << "{ " << member_.name();
+    std::string type_name = member_.type()->Name();
     // Two characters for ": ".
     size += static_cast<int>(type_name.size()) + 2;
     os << ": " << colors.green << type_name << colors.reset << " = ";
@@ -451,9 +355,9 @@ void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors,
   } else {
     os << "{\n";
     // Three characters for " = ".
-    int size = (tabs + 1) * kTabSize + static_cast<int>(member_->name().size()) + 3;
-    os << line_header << std::string((tabs + 1) * kTabSize, ' ') << member_->name();
-    std::string type_name = member_->type()->Name();
+    int size = (tabs + 1) * kTabSize + static_cast<int>(member_.name().size()) + 3;
+    os << line_header << std::string((tabs + 1) * kTabSize, ' ') << member_.name();
+    std::string type_name = member_.type()->Name();
     // Two characters for ": ".
     size += static_cast<int>(type_name.size()) + 2;
     os << ": " << colors.green << type_name << colors.reset << " = ";
@@ -465,8 +369,6 @@ void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors,
 }
 
 void UnionValue::Visit(Visitor* visitor) const { visitor->VisitUnionValue(this); }
-
-void XUnionValue::Visit(Visitor* visitor) const { visitor->VisitXUnionValue(this); }
 
 int ArrayValue::DisplaySize(int remaining_size) const {
   int size = 2;

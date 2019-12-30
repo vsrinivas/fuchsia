@@ -36,8 +36,8 @@ class Type {
   Type() = default;
   virtual ~Type() = default;
 
-  // Return true if the type is a RawType.
-  virtual bool IsRaw() const { return false; }
+  // Return true if the type is a XUnionType.
+  virtual bool IsXUnion() const { return false; }
 
   // Return a readable representation of the type.
   virtual std::string Name() const = 0;
@@ -102,8 +102,6 @@ class Type {
 class RawType : public Type {
  public:
   explicit RawType(size_t inline_size) : inline_size_(inline_size) {}
-
-  bool IsRaw() const override { return true; }
 
   std::string Name() const override { return "unknown"; }
 
@@ -285,11 +283,11 @@ class StructType : public Type {
 
 class TableType : public Type {
  public:
-  explicit TableType(const Table& tab) : table_(tab) {}
+  explicit TableType(const Table& table_definition) : table_definition_(table_definition) {}
 
-  const Table& table_definition() const { return table_; }
+  const Table& table_definition() const { return table_definition_; }
 
-  std::string Name() const override { return table_.name(); }
+  std::string Name() const override { return table_definition_.name(); }
 
   size_t InlineSize(bool unions_are_xunions) const override;
 
@@ -298,7 +296,7 @@ class TableType : public Type {
   void Visit(TypeVisitor* visitor) const override;
 
  private:
-  const Table& table_;
+  const Table& table_definition_;
 };
 
 class UnionType : public Type {
@@ -308,9 +306,13 @@ class UnionType : public Type {
   const Union& union_definition() const { return union_; }
 
   std::string Name() const override { return union_.name(); }
-  bool Nullable() const override { return nullable_; }
 
   size_t InlineSize(bool unions_are_xunions) const override;
+
+  bool Nullable() const override { return nullable_; }
+
+  std::unique_ptr<Value> DecodeUnion(MessageDecoder* decoder, uint64_t offset) const;
+  std::unique_ptr<Value> DecodeXUnion(MessageDecoder* decoder, uint64_t offset) const;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -321,24 +323,15 @@ class UnionType : public Type {
   const bool nullable_;
 };
 
-class XUnionType : public Type {
+class XUnionType : public UnionType {
  public:
-  XUnionType(const XUnion& uni, bool nullable);
+  XUnionType(const XUnion& uni, bool nullable) : UnionType(uni, nullable) {}
 
-  const XUnion& xunion_definition() const { return xunion_; }
-
-  std::string Name() const override { return xunion_.name(); }
-  bool Nullable() const override { return nullable_; }
-
-  size_t InlineSize(bool unions_are_xunions) const override;
+  bool IsXUnion() const override { return true; }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
   void Visit(TypeVisitor* visitor) const override;
-
- private:
-  const XUnion& xunion_;
-  const bool nullable_;
 };
 
 class ElementSequenceType : public Type {
