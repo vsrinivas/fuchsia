@@ -65,8 +65,9 @@ class TaskTest : public zxtest::Test {
 
   void RemoveTaskCallback(task_remove_status_t status) {
     fbl::AutoLock al(&lock_);
-    frame_ready_ = true;
-    event_.Signal();
+    frame_removed_ = true;
+    frame_status_error_ = status;
+    remove_task_event_.Signal();
   }
 
   void WaitAndReset() {
@@ -75,6 +76,14 @@ class TaskTest : public zxtest::Test {
       event_.Wait(&lock_);
     }
     frame_ready_ = false;
+  }
+
+  void WaitForRemoveTaskAndReset() {
+    fbl::AutoLock al(&remove_lock_);
+    while (frame_removed_ == false) {
+      remove_task_event_.Wait(&remove_lock_);
+    }
+    frame_removed_ = false;
   }
 
   uint32_t GetCallbackSize() {
@@ -233,8 +242,11 @@ class TaskTest : public zxtest::Test {
  private:
   std::vector<std::pair<uint32_t, uint32_t>> callback_check_;
   bool frame_ready_;
+  bool frame_removed_;
   fbl::Mutex lock_;
+  fbl::Mutex remove_lock_;
   fbl::ConditionVariable event_;
+  fbl::ConditionVariable remove_task_event_;
 };
 
 TEST_F(TaskTest, BasicCreationTest) {
@@ -329,7 +341,6 @@ TEST_F(TaskTest, InitTaskTest) {
     EXPECT_EQ(received_ids.end(), entry);
     received_ids.push_back(task_id);
   }
-  ASSERT_OK(gdc_device_->StopThread());
 }
 
 TEST_F(TaskTest, RemoveTaskTest) {
@@ -338,13 +349,28 @@ TEST_F(TaskTest, RemoveTaskTest) {
 
   auto task_id = SetupForFrameProcessing(fake_regs);
 
-  // Valid id.
+  // Posting a task for frame processing.
+  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
+  EXPECT_OK(status);
+
+  // Posting a task to remove task.
   ASSERT_NO_DEATH(([this, task_id]() { gdc_device_->GdcRemoveTask(task_id); }));
 
-  // Invalid id.
-  ASSERT_DEATH(([this, task_id]() { gdc_device_->GdcRemoveTask(task_id + 1); }));
+  // Trigger the interrupt manually.
+  zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  EXPECT_OK(port_.queue(&packet));
 
-  ASSERT_OK(gdc_device_->StopThread());
+  // Expecting the task for frame processing to be completed first.
+  // Check if the callback was called.
+  WaitAndReset();
+  EXPECT_EQ(1, GetCallbackSize());
+
+  // Wait for the callback.
+  WaitForRemoveTaskAndReset();
+  EXPECT_EQ(frame_status_error_, TASK_REMOVE_STATUS_OK);
+
+  // |task_id| is no longer valid.
+  ASSERT_DEATH(([this, task_id]() { gdc_device_->GdcRemoveTask(task_id); }));
 }
 
 TEST_F(TaskTest, ProcessInvalidFrameTest) {
@@ -356,8 +382,6 @@ TEST_F(TaskTest, ProcessInvalidFrameTest) {
   // Invalid task id.
   zx_status_t status = gdc_device_->GdcProcessFrame(0xFF, 0);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
-
-  ASSERT_OK(gdc_device_->StopThread());
 }
 
 TEST_F(TaskTest, InvalidBufferProcessFrameTest) {
@@ -369,8 +393,6 @@ TEST_F(TaskTest, InvalidBufferProcessFrameTest) {
   // Invalid buffer id.
   zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
-
-  ASSERT_OK(gdc_device_->StopThread());
 }
 
 TEST_F(TaskTest, ProcessFrameTest) {
@@ -392,8 +414,6 @@ TEST_F(TaskTest, ProcessFrameTest) {
   // Check if the callback was called.
   WaitAndReset();
   EXPECT_EQ(1, GetCallbackSize());
-
-  ASSERT_OK(gdc_device_->StopThread());
 
   fake_regs.VerifyAll();
 }
@@ -426,8 +446,6 @@ TEST_F(TaskTest, SetOutputResTest) {
   EXPECT_EQ(1, GetCallbackSize());
   EXPECT_FALSE(frame_status_error_);
 
-  ASSERT_OK(gdc_device_->StopThread());
-
   fake_regs.VerifyAll();
 }
 
@@ -454,8 +472,6 @@ TEST_F(TaskTest, ReleaseValidFrameTest) {
   ASSERT_NO_DEATH(([this, task_id]() {
     gdc_device_->GdcReleaseFrame(task_id, GetCallbackBackOutputBufferIndex());
   }));
-
-  ASSERT_OK(gdc_device_->StopThread());
 }
 
 TEST_F(TaskTest, ReleaseInValidFrameTest) {
@@ -481,7 +497,6 @@ TEST_F(TaskTest, ReleaseInValidFrameTest) {
   ASSERT_DEATH(([this, task_id]() {
     gdc_device_->GdcReleaseFrame(task_id + 1, GetCallbackBackOutputBufferIndex());
   }));
-  ASSERT_OK(gdc_device_->StopThread());
 }
 
 TEST_F(TaskTest, MultipleProcessFrameTest) {
@@ -541,8 +556,6 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   WaitAndReset();
   EXPECT_EQ(4, GetCallbackSize());
   EXPECT_FALSE(frame_status_error_);
-
-  ASSERT_OK(gdc_device_->StopThread());
 }
 
 TEST_F(TaskTest, DropFrameTest) {
@@ -582,8 +595,6 @@ TEST_F(TaskTest, DropFrameTest) {
   WaitAndReset();
   EXPECT_EQ(kNumberOfBuffers + 1, GetCallbackSize());
   EXPECT_TRUE(frame_status_error_);
-
-  ASSERT_OK(gdc_device_->StopThread());
 }
 
 TEST(TaskTest, NonContigVmoTest) {

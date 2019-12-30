@@ -34,6 +34,8 @@ protocol Gdc {
              -> (zx.status s, uint32 task_index);
 
     // De-registers the task.
+    // NOTE: Ensure that after calling RemoveTask() on a particular |task_index|,
+    //       no other tasks pertaining to this |task_index| are queued up.
     RemoveTask(uint32 task_index);
 
     // Processes the frame at |input_buffer_index| within |input_buffer_collection|

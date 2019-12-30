@@ -59,6 +59,8 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
         gdc_irq_(std::move(gdc_irq)),
         bti_(std::move(bti)) {}
 
+  ~GdcDevice() { StopThread(); }
+
   // Setup() is used to create an instance of GdcDevice.
   // It sets up the pdev & brings the GDC out of reset.
   static zx_status_t Setup(void* ctx, zx_device_t* parent, std::unique_ptr<GdcDevice>* out);
@@ -117,8 +119,8 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   void InitClocks();
   int FrameProcessingThread();
   int JoinThread() { return thrd_join(processing_thread_, nullptr); }
-  void Start();
-  void Stop();
+  void Start() const;
+  void Stop() const;
 
   void ProcessTask(TaskInfo& info);
   void ChangeOutputResoultion(TaskInfo& info);

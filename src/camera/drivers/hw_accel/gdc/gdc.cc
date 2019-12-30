@@ -102,7 +102,7 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffe
   return ZX_OK;
 }
 
-void GdcDevice::Start() {
+void GdcDevice::Start() const {
   // Transition from 0->1 means GDC latches the data on the
   // configuration ports and starts the processing.
   // clang-format off
@@ -118,7 +118,7 @@ void GdcDevice::Start() {
   // clang-format on
 }
 
-void GdcDevice::Stop() {
+void GdcDevice::Stop() const {
   // clang-format off
   Config::Get()
       .ReadFrom(gdc_mmio())
@@ -295,7 +295,22 @@ void GdcDevice::ChangeOutputResoultion(TaskInfo& info) {
 }
 
 void GdcDevice::RemoveTask(TaskInfo& info) {
-  // TODO(braval): Implement this functionality.
+  fbl::AutoLock al(&interface_lock_);
+
+  auto task = info.task;
+  auto task_index = info.task_index;
+
+  // Find the entry in hashmap.
+  auto task_entry = task_map_.find(task_index);
+  if (task_entry == task_map_.end()) {
+    task->RemoveTaskCallback(TASK_REMOVE_STATUS_ERROR_INVALID);
+    return;
+  }
+
+  task->RemoveTaskCallback(TASK_REMOVE_STATUS_OK);
+
+  // Remove map entry.
+  task_map_.erase(task_entry);
 }
 
 void GdcDevice::ProcessTask(TaskInfo& info) {
@@ -418,8 +433,16 @@ void GdcDevice::GdcRemoveTask(uint32_t task_index) {
   auto task_entry = task_map_.find(task_index);
   ZX_ASSERT(task_entry != task_map_.end());
 
-  // Remove map entry.
-  task_map_.erase(task_entry);
+  TaskInfo info;
+  info.op = GDC_OP_REMOVE_TASK;
+  info.task = task_entry->second.get();
+  info.task_index = task_index;
+
+  // Put the task on the queue.
+  fbl::AutoLock lock(&processing_queue_lock_);
+  processing_queue_.push_front(info);
+  frame_processing_signal_.Signal();
+  return;
 }
 
 void GdcDevice::GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
