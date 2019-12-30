@@ -71,34 +71,6 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
   // is removed (TODO(fxb/23091)).
 
   // clang-format off
-
-  // TODO(fxb/42576): Disabled test due to flakiness.
-  // benchmarks_runner->AddTspecBenchmark("ledger.add_new_page_after_clear", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page_after_clear.tspec");
-
-  benchmarks_runner->AddTspecBenchmark("ledger.add_new_page_precached", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page_precached.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.add_new_page", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.get_same_page", "/pkgfs/packages/ledger_benchmarks/0/data/get_same_page.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.get_page_id", "/pkgfs/packages/ledger_benchmarks/0/data/get_page_id.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.get_small_entry", "/pkgfs/packages/ledger_benchmarks/0/data/get_small_entry.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.get_small_entry_inline", "/pkgfs/packages/ledger_benchmarks/0/data/get_small_entry_inline.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.get_big_entry", "/pkgfs/packages/ledger_benchmarks/0/data/get_big_entry.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.put", "/pkgfs/packages/ledger_benchmarks/0/data/put.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.put_as_reference", "/pkgfs/packages/ledger_benchmarks/0/data/put_as_reference.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.put_big_entry", "/pkgfs/packages/ledger_benchmarks/0/data/put_big_entry.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.transaction", "/pkgfs/packages/ledger_benchmarks/0/data/transaction.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.update_entry", "/pkgfs/packages/ledger_benchmarks/0/data/update_entry.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.update_big_entry", "/pkgfs/packages/ledger_benchmarks/0/data/update_big_entry.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.update_entry_transactions", "/pkgfs/packages/ledger_benchmarks/0/data/update_entry_transactions.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.delete_entry", "/pkgfs/packages/ledger_benchmarks/0/data/delete_entry.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.delete_big_entry", "/pkgfs/packages/ledger_benchmarks/0/data/delete_big_entry.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.delete_entry_transactions", "/pkgfs/packages/ledger_benchmarks/0/data/delete_entry_transactions.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_empty_ledger", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_empty_ledger.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_empty_pages", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_empty_pages.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_entries", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_entries.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_small_keys", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_small_keys.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_updates", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_updates.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_one_commit_per_entry", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_one_commit_per_entry.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_cleared_page", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_cleared_page.tspec");
   benchmarks_runner->AddTspecBenchmark("ledger.stories_single_active", "/pkgfs/packages/ledger_benchmarks/0/data/stories_single_active.tspec");
   benchmarks_runner->AddTspecBenchmark("ledger.stories_many_active", "/pkgfs/packages/ledger_benchmarks/0/data/stories_many_active.tspec");
   benchmarks_runner->AddTspecBenchmark("ledger.stories_wait_cached", "/pkgfs/packages/ledger_benchmarks/0/data/stories_wait_cached.tspec");

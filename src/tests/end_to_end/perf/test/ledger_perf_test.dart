@@ -13,33 +13,7 @@ void main() {
   // This list should be kept in sync with the list in
   // peridot/tests/benchmarks/benchmarks.cc until that list is removed
   // (TODO(fxb/23091)).
-  // TODO(fxb/42576): Disabled add_new_page_after_clear due to flakiness.
   const ledgerTests = [
-    // 'add_new_page_after_clear.tspec',
-    'add_new_page_precached.tspec',
-    'add_new_page.tspec',
-    'get_same_page.tspec',
-    'get_page_id.tspec',
-    'get_small_entry.tspec',
-    'get_small_entry_inline.tspec',
-    'get_big_entry.tspec',
-    'put.tspec',
-    'put_as_reference.tspec',
-    'put_big_entry.tspec',
-    'transaction.tspec',
-    'update_entry.tspec',
-    'update_big_entry.tspec',
-    'update_entry_transactions.tspec',
-    'delete_entry.tspec',
-    'delete_big_entry.tspec',
-    'delete_entry_transactions.tspec',
-    'disk_space_empty_ledger.tspec',
-    'disk_space_empty_pages.tspec',
-    'disk_space_entries.tspec',
-    'disk_space_small_keys.tspec',
-    'disk_space_updates.tspec',
-    'disk_space_one_commit_per_entry.tspec',
-    'disk_space_cleared_page.tspec',
     'stories_single_active.tspec',
     'stories_many_active.tspec',
     'stories_wait_cached.tspec',

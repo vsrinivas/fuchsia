@@ -6,7 +6,7 @@
     "name": "trace_record_environment"
   },
   "categories": [ "benchmark", "ledger" ],
-  "duration": 60,
+  "duration": 120,
   "measure": [
     {
       "type": "duration",
