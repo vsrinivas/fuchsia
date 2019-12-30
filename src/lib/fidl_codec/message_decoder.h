@@ -206,6 +206,9 @@ class MessageDecoder {
   // Decodes a field. Used by envelopes.
   std::unique_ptr<Value> DecodeValue(const Type* type);
 
+  std::unique_ptr<StructValue> DecodeStruct(const Type* type, const Struct& struct_definition,
+                                            uint64_t offset);
+
   // Decodes the header for a value which can be null.
   bool DecodeNullableHeader(uint64_t offset, uint64_t size, bool* is_null,
                             uint64_t* nullable_offset);

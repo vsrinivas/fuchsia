@@ -63,9 +63,7 @@ class Table;
 class Type;
 class TypeVisitor;
 class Union;
-class UnionValue;
 class XUnion;
-class XUnionValue;
 
 class EnumOrBitsMember {
   friend class Enum;
@@ -249,9 +247,6 @@ class Struct {
   const std::vector<std::unique_ptr<StructMember>>& members() const { return members_; }
 
   uint32_t Size(bool unions_are_xunions) const;
-
-  std::unique_ptr<StructValue> DecodeStruct(MessageDecoder* decoder, const Type* type,
-                                            uint64_t offset, bool nullable) const;
 
   // Wrap this Struct in a non-nullable type and use the given visitor on it.
   void VisitAsType(TypeVisitor* visitor) const;

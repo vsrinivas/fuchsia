@@ -159,9 +159,6 @@ void BoolValue::PrettyPrint(std::ostream& os, const Colors& colors,
 void BoolValue::Visit(Visitor* visitor) const { visitor->VisitBoolValue(this); }
 
 int StructValue::DisplaySize(int remaining_size) const {
-  if (IsNull()) {
-    return 4;
-  }
   int size = 0;
   for (const auto& member : struct_definition_.members()) {
     auto it = fields_.find(member.get());
@@ -183,33 +180,10 @@ int StructValue::DisplaySize(int remaining_size) const {
   return size;
 }
 
-void StructValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
-  DecodeAt(decoder, offset);
-}
-
-void StructValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
-  for (const auto& member : struct_definition_.members()) {
-    std::unique_ptr<Value> value =
-        member->type()->Decode(decoder, base_offset + member->Offset(decoder));
-    if (value != nullptr) {
-      fields_.emplace(std::make_pair(member.get(), std::move(value)));
-    }
-  }
-}
-
-void StructValue::ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                              rapidjson::Value& result) const {
-  JsonVisitor visitor(&result, &allocator);
-
-  Visit(&visitor);
-}
-
 void StructValue::PrettyPrint(std::ostream& os, const Colors& colors,
                               const fidl_message_header_t* header, std::string_view line_header,
                               int tabs, int remaining_size, int max_line_size) const {
-  if (IsNull()) {
-    os << colors.blue << "null" << colors.reset;
-  } else if (fields_.empty()) {
+  if (fields_.empty()) {
     os << "{}";
   } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
     const char* separator = "{ ";
@@ -245,6 +219,13 @@ void StructValue::PrettyPrint(std::ostream& os, const Colors& colors,
 }
 
 void StructValue::Visit(Visitor* visitor) const { visitor->VisitStructValue(this); }
+
+void StructValue::ExtractJson(rapidjson::Document::AllocatorType& allocator,
+                              rapidjson::Value& result) const {
+  JsonVisitor visitor(&result, &allocator);
+
+  Visit(&visitor);
+}
 
 bool TableValue::AddMember(std::string_view name, std::unique_ptr<Value> value) {
   const TableMember* member = table_definition_.GetMember(name);

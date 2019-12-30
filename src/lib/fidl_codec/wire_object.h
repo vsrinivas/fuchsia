@@ -212,10 +212,10 @@ class BoolValue : public Value {
 };
 
 // An instance of a Struct. This includes requests and responses which are also structs.
-class StructValue : public NullableValue {
+class StructValue : public Value {
  public:
   StructValue(const Type* type, const Struct& struct_definition)
-      : NullableValue(type), struct_definition_(struct_definition) {}
+      : Value(type), struct_definition_(struct_definition) {}
 
   const Struct& struct_definition() const { return struct_definition_; }
   const std::map<const StructMember*, std::unique_ptr<Value>>& fields() const { return fields_; }
@@ -225,10 +225,6 @@ class StructValue : public NullableValue {
   }
 
   int DisplaySize(int remaining_size) const override;
-
-  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
-
-  void DecodeAt(MessageDecoder* decoder, uint64_t base_offset);
 
   void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
                    std::string_view line_header, int tabs, int remaining_size,

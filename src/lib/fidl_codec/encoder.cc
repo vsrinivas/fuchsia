@@ -28,6 +28,11 @@ class NullVisitor : public TypeVisitor {
     encoder_->WriteValue<uint64_t>(0);
   }
 
+  void VisitStructType(const StructType* type) override {
+    FXL_DCHECK(type->Nullable());
+    encoder_->WriteValue<uint64_t>(0);
+  }
+
   void VisitUnionType(const UnionType* type) override {
     FXL_DCHECK(type->Nullable());
     encoder_->WriteValue<uint64_t>(0);
@@ -84,8 +89,6 @@ void Encoder::VisitUnionBody(const UnionValue* node) {
 }
 
 void Encoder::VisitStructValueBody(size_t offset, const StructValue* node) {
-  FXL_DCHECK(!node->IsNull());
-
   for (const auto& member : node->struct_definition().members()) {
     auto it = node->fields().find(member.get());
     FXL_DCHECK(it != node->fields().end());
@@ -134,6 +137,16 @@ void Encoder::VisitStringValue(const StringValue* node) {
 }
 
 void Encoder::VisitBoolValue(const BoolValue* node) { WriteValue<uint8_t>(node->value()); }
+
+void Encoder::VisitStructValue(const StructValue* node) {
+  if (node->type()->Nullable()) {
+    WriteValue<uint64_t>(UINTPTR_MAX);
+    size_t object_size = node->struct_definition().Size(unions_are_xunions_);
+    VisitStructValueBody(AllocateObject(object_size), node);
+  } else {
+    VisitStructValueBody(current_offset_, node);
+  }
+}
 
 void Encoder::VisitTableValue(const TableValue* node) {
   WriteValue<uint64_t>(node->highest_member());
@@ -213,18 +226,6 @@ void Encoder::VisitHandleValue(const HandleValue* node) {
   } else {
     WriteValue<uint32_t>(FIDL_HANDLE_PRESENT);
     handles_.push_back(node->handle());
-  }
-}
-
-void Encoder::VisitStructValue(const StructValue* node) {
-  if (!node->type()->Nullable()) {
-    VisitStructValueBody(current_offset_, node);
-  } else if (node->IsNull()) {
-    WriteValue<uint64_t>(0);
-  } else {
-    WriteValue<uint64_t>(UINTPTR_MAX);
-    size_t object_size = node->struct_definition().Size(unions_are_xunions_);
-    VisitStructValueBody(AllocateObject(object_size), node);
   }
 }
 

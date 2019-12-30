@@ -259,10 +259,8 @@ MessageDecoder::MessageDecoder(MessageDecoder* container, uint64_t offset, uint6
 std::unique_ptr<StructValue> MessageDecoder::DecodeMessage(const Struct& message_format) {
   // Set the offset for the next object (just after this one).
   SkipObject(message_format.Size(unions_are_xunions_));
-  // Decode the object.
-  std::unique_ptr<StructValue> object =
-      message_format.DecodeStruct(this, /*type=*/nullptr,
-                                  /*offset=*/0, /*nullable=*/false);
+  // Decode the message.
+  std::unique_ptr<StructValue> message = DecodeStruct(nullptr, message_format, 0);
   // It's an error if we didn't use all the bytes in the buffer.
   if (next_object_offset_ != num_bytes_) {
     AddError() << "Message not fully decoded (decoded=" << next_object_offset_
@@ -272,7 +270,7 @@ std::unique_ptr<StructValue> MessageDecoder::DecodeMessage(const Struct& message
   if (GetRemainingHandles() != 0) {
     AddError() << "Message not fully decoded (remain " << GetRemainingHandles() << " handles)\n";
   }
-  return object;
+  return message;
 }
 
 std::unique_ptr<Value> MessageDecoder::DecodeValue(const Type* type) {
@@ -292,6 +290,17 @@ std::unique_ptr<Value> MessageDecoder::DecodeValue(const Type* type) {
   if (GetRemainingHandles() != 0) {
     AddError() << "Message envelope not fully decoded (remain " << GetRemainingHandles()
                << " handles)\n";
+  }
+  return result;
+}
+
+std::unique_ptr<StructValue> MessageDecoder::DecodeStruct(const Type* type,
+                                                          const Struct& struct_definition,
+                                                          uint64_t offset) {
+  std::unique_ptr<StructValue> result = std::make_unique<StructValue>(type, struct_definition);
+  for (const auto& member : struct_definition.members()) {
+    std::unique_ptr<Value> value = member->type()->Decode(this, offset + member->Offset(this));
+    result->AddField(member.get(), std::move(value));
   }
   return result;
 }

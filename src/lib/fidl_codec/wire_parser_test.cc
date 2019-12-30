@@ -627,12 +627,12 @@ TEST_F(WireParserTest, BadBoolStruct) {
 }
 
 TEST_DECODE_WIRE(NullableStruct, NullableStruct, R"({"p":null})",
-                 "{ p: #gre#test.fidlcodec.examples/PrimitiveTypes#rst# = #blu#null#rst# }",
+                 "{ p: #gre#test.fidlcodec.examples/PrimitiveTypes#rst# = #red#null#rst# }",
                  nullptr);
 
 TEST_DECODE_WIRE(NullableStructAndInt, NullableStructAndInt, R"({"p":null, "i":"1"})",
                  "{ p: #gre#test.fidlcodec.examples/PrimitiveTypes#rst# = "
-                 "#blu#null#rst#, i: #gre#int32#rst# = #blu#1#rst# }",
+                 "#red#null#rst#, i: #gre#int32#rst# = #blu#1#rst# }",
                  nullptr, 1);
 
 namespace {
@@ -659,7 +659,7 @@ TEST_DECODE_WIRE(
     "  a: #gre#array<test.fidlcodec.examples/TwoStringStruct>#rst# = [\n"
     "    { value1: #gre#string#rst# = #red#\"harpo\"#rst#, "
     "value2: #gre#string#rst# = #red#\"chico\"#rst# }\n"
-    "    #blu#null#rst#\n"
+    "    #red#null#rst#\n"
     "    { value1: #gre#string#rst# = #red#\"groucho\"#rst#, "
     "value2: #gre#string#rst# = #red#\"zeppo\"#rst# }\n"
     "  ]\n"

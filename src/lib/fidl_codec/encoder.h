@@ -67,6 +67,7 @@ class Encoder : public Visitor {
   void VisitRawValue(const RawValue* node) override;
   void VisitStringValue(const StringValue* node) override;
   void VisitBoolValue(const BoolValue* node) override;
+  void VisitStructValue(const StructValue* node) override;
   void VisitTableValue(const TableValue* node) override;
   void VisitUnionValue(const UnionValue* node) override;
   void VisitArrayValue(const ArrayValue* node) override;
@@ -74,7 +75,6 @@ class Encoder : public Visitor {
   void VisitEnumValue(const EnumValue* node) override;
   void VisitBitsValue(const BitsValue* node) override;
   void VisitHandleValue(const HandleValue* node) override;
-  void VisitStructValue(const StructValue* node) override;
   void VisitU8Value(const NumericValue<uint8_t>* node) override;
   void VisitU16Value(const NumericValue<uint16_t>* node) override;
   void VisitU32Value(const NumericValue<uint32_t>* node) override;

@@ -211,17 +211,6 @@ uint32_t Struct::Size(bool unions_are_xunions) const {
   return unions_are_xunions ? v1_size_ : v0_size_;
 }
 
-std::unique_ptr<StructValue> Struct::DecodeStruct(MessageDecoder* decoder, const Type* type,
-                                                  uint64_t offset, bool nullable) const {
-  std::unique_ptr<StructValue> result = std::make_unique<StructValue>(type, *this);
-  if (nullable) {
-    result->DecodeNullable(decoder, offset, Size(decoder->unions_are_xunions()));
-  } else {
-    result->DecodeAt(decoder, offset);
-  }
-  return result;
-}
-
 void Struct::DecodeTypes(std::string_view container_name, const char* size_name,
                          const char* member_name, const char* v0_name, const char* v1_name) {
   FXL_DCHECK(!decoded_);

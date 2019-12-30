@@ -249,7 +249,19 @@ size_t StructType::InlineSize(bool unions_are_xunions) const {
 }
 
 std::unique_ptr<Value> StructType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return struct_.DecodeStruct(decoder, this, offset, nullable_);
+  if (nullable_) {
+    uint32_t size = decoder->unions_are_xunions() ? struct_.v1_size() : struct_.v0_size();
+    bool is_null;
+    uint64_t nullable_offset;
+    if (!decoder->DecodeNullableHeader(offset, size, &is_null, &nullable_offset)) {
+      return std::make_unique<InvalidValue>(this);
+    }
+    if (is_null) {
+      return std::make_unique<NullValue>(this);
+    }
+    offset = nullable_offset;
+  }
+  return decoder->DecodeStruct(this, struct_, offset);
 }
 
 void StructType::Visit(TypeVisitor* visitor) const { visitor->VisitStructType(this); }

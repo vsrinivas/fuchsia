@@ -33,20 +33,16 @@ class JsonVisitor : public Visitor {
   }
 
   void VisitStructValue(const StructValue* node) override {
-    if (node->IsNull()) {
-      result_->SetNull();
-    } else {
-      result_->SetObject();
-      for (const auto& member : node->struct_definition().members()) {
-        auto it = node->fields().find(member.get());
-        if (it == node->fields().end())
-          continue;
-        rapidjson::Value key;
-        key.SetString(it->first->name().c_str(), *allocator_);
-        result_->AddMember(key, rapidjson::Value(), *allocator_);
-        JsonVisitor visitor(&(*result_)[it->first->name().c_str()], allocator_);
-        it->second->Visit(&visitor);
-      }
+    result_->SetObject();
+    for (const auto& member : node->struct_definition().members()) {
+      auto it = node->fields().find(member.get());
+      if (it == node->fields().end())
+        continue;
+      rapidjson::Value key;
+      key.SetString(member->name().c_str(), *allocator_);
+      result_->AddMember(key, rapidjson::Value(), *allocator_);
+      JsonVisitor visitor(&(*result_)[member->name().c_str()], allocator_);
+      it->second->Visit(&visitor);
     }
   }
 

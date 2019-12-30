@@ -18,7 +18,7 @@ class Visitor {
   virtual void VisitNullValue(const NullValue* node) { VisitValue(node); }
   virtual void VisitNullableValue(const NullableValue* node) { VisitValue(node); }
   virtual void VisitRawValue(const RawValue* node) { VisitValue(node); }
-  virtual void VisitStructValue(const StructValue* node) { VisitNullableValue(node); }
+  virtual void VisitStructValue(const StructValue* node) { VisitValue(node); }
   virtual void VisitStringValue(const StringValue* node) { VisitValue(node); }
   virtual void VisitBoolValue(const BoolValue* node) { VisitValue(node); }
   virtual void VisitTableValue(const TableValue* node) { VisitValue(node); }
