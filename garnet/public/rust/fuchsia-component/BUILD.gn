@@ -2,24 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_alias.gni")
+
 # Soft transition for out-of-tree Rust
 #
 # TODO(bwb): Remove when all code is migrated away from using these paths
 
-group("fuchsia-component") {
-  deps = [
-    "//src/lib/fuchsia-component",
-  ]
-}
-
-copy("fuchsia-component_info") {
-  deps = [
-    "//src/lib/fuchsia-component:fuchsia-component_info",
-  ]
-  sources = [
-    "$root_out_dir/obj/src/lib/fuchsia-component/fuchsia-component_info.json",
-  ]
-  outputs = [
-    "$root_out_dir/obj/garnet/public/rust/fuchsia-component/fuchsia-component_info.json",
-  ]
+rustc_alias("fuchsia-component") {
+  alias = "//src/lib/fuchsia-component"
 }

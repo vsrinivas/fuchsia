@@ -2,24 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_alias.gni")
+
 # Soft transition for out-of-tree Rust
 #
 # TODO(bwb): Remove when all code is migrated away from using these paths
 
-group("fuchsia-async") {
-  deps = [
-    "//src/lib/fuchsia-async",
-  ]
-}
-
-copy("fuchsia-async_info") {
-  deps = [
-    "//src/lib/fuchsia-async:fuchsia-async_info",
-  ]
-  sources = [
-    "$root_out_dir/obj/src/lib/fuchsia-async/fuchsia-async_info.json",
-  ]
-  outputs = [
-    "$root_out_dir/obj/garnet/public/rust/fuchsia-async/fuchsia-async_info.json",
-  ]
+rustc_alias("fuchsia-async") {
+  alias = "//src/lib/fuchsia-async"
 }
