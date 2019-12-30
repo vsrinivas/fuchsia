@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/rust/staticlib/rust/crust.h"
-
 #include <stdio.h>
+
+#include "examples/rust/staticlib/rust/crust.h"
 
 void print_msg(void) {
   // Call the method from the Rust crate.

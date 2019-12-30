@@ -69,13 +69,6 @@ group("escher") {
   ]
 }
 
-group("crust") {
-  testonly = true
-  public_deps = [
-    "//garnet/examples/rust/staticlib:crust",
-  ]
-}
-
 group("all") {
   testonly = true
   public_deps = [
@@ -83,7 +76,6 @@ group("all") {
     "//garnet/packages/examples:bluetooth",
     "//garnet/packages/examples:carnelian",
     "//garnet/packages/examples:components",
-    "//garnet/packages/examples:crust",
     "//garnet/packages/examples:escher",
     "//garnet/packages/examples:eth-rs",
     "//garnet/packages/examples:fidl",
@@ -108,7 +100,7 @@ group("all") {
 group("eth-rs") {
   testonly = true
   public_deps = [
-    "//garnet/examples/rust/eth-rs:eth-rs",
+    "//examples/rust/eth-rs:eth-rs",
   ]
 }
 
@@ -151,11 +143,11 @@ group("fidl") {
 group("inspection") {
   testonly = true
   public_deps = [
+    "//examples/rust/inspect-rs",
     "//garnet/examples/inspection:example_server",
     "//garnet/examples/inspection:example_server_unittests",
     "//garnet/examples/inspection/vmo:inspect_vmo_example",
     "//garnet/examples/inspection/vmo:inspect_vmo_example_tests",
-    "//garnet/examples/rust/inspect-rs",
   ]
 }
 
@@ -223,7 +215,7 @@ group("tcp") {
 group("rust") {
   testonly = true
   public_deps = [
-    "//garnet/examples/rust:garnet-rust-examples",
+    "//examples/rust:garnet-rust-examples",
   ]
 }
 

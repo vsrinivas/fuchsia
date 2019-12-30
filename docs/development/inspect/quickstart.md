@@ -302,7 +302,7 @@ Now you can use inspect! For example try the following:
 let hello_world_property = root.create_string("hello", "world!");
 ```
 
-See [this example](/garnet/examples/rust/inspect-rs/src/main.rs) for further
+See [this example](/examples/rust/inspect-rs/src/main.rs) for further
 learning of other types offered by the API.
 
 To test your inspect code, you can use `assert_inspect_tree`:

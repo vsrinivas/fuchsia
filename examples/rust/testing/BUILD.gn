@@ -30,8 +30,8 @@ rustc_binary("testing_integration_test_two") {
 group("testing-tests") {
   testonly = true
   public_deps = [
-    ":testing_test",
     ":testing_integration_test",
     ":testing_integration_test_two",
+    ":testing_test",
   ]
 }

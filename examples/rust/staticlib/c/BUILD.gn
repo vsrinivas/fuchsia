@@ -9,7 +9,7 @@ source_set("lib") {
   ]
 
   deps = [
-    "//garnet/examples/rust/staticlib/rust:crust",
+    "//examples/rust/staticlib/rust:crust",
   ]
 }
 

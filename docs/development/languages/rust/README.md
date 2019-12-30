@@ -8,7 +8,7 @@ There are two GN target templates which should be used for Rust projects:
   other targets.
 - [`rustc_binary`][target-binary-rustc] defines an executable.
 
-The [garnet/examples/rust][rust-examples] directory has some examples of Rust
+The [examples/rust][rust-examples] directory has some examples of Rust
 packages that use these targets, as do the [Rust FIDL examples][fidl-tutorial].
 
 ### Building with a custom toolchain
@@ -119,7 +119,7 @@ Googler-only channels, see [go/fuchsia-rust-googlers].
 
 [target-library-rustc]: /build/rust/rustc_library.gni "Rust library"
 [target-binary-rustc]: /build/rust/rustc_binary.gni "Rust binary"
-[rust-examples]: /garnet/examples/rust/
+[rust-examples]: /examples/rust/
 [fargo]: https://fuchsia.googlesource.com/fargo
 [rustfmt-install]: https://github.com/rust-lang-nursery/rustfmt#quick-start
 [rustfmt-toml]: /rustfmt.toml

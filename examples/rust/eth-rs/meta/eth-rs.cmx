@@ -3,6 +3,8 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [ "class/ethernet" ]
+        "dev": [
+            "class/ethernet"
+        ]
     }
 }
