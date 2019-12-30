@@ -118,7 +118,7 @@ Updated: November 2019
 <p>
 //sdk/fidl/fuchsia.update.channelcontrol
 <p>
-//sdk/fidl/fuchsia.update.installer
+//src/sys/pkg/fidl/fuchsia.update.installer
    </td>
    <td>FIDL
    </td>
