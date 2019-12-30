@@ -27,7 +27,7 @@ rustc_test("waitgroup_lib_test") {
   source_root = "src/test.rs"
   deps = [
     ":waitgroup",
-    "//garnet/public/rust/fuchsia-async",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
   ]
 }

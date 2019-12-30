@@ -32,8 +32,8 @@ template("banjo_rust_library") {
     edition = "2018"
     forward_variables_from(invoker, [ "testonly" ])
     deps = [
-      "//garnet/public/rust/fuchsia-async",
       "//garnet/public/rust/fuchsia-zircon",
+      "//src/lib/fuchsia-async",
       "//third_party/rust_crates:futures",
     ]
 

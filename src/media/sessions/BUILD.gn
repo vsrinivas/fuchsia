@@ -33,7 +33,6 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
@@ -41,6 +40,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
     "//src/lib/fidl_table_validation",
+    "//src/lib/fuchsia-async",
     "//src/lib/mpmc",
     "//src/lib/streammap",
     "//src/lib/waitgroup",

@@ -13,10 +13,10 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
@@ -27,7 +27,7 @@ rustc_library("lib") {
   name = "regulatory_region_lib"
   edition = "2018"
   deps = [
-    "//garnet/public/rust/fuchsia-async",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures-test",
   ]
   with_unit_tests = true

@@ -23,12 +23,12 @@ rustc_library("driver") {
   deps = [
     ":ui-test-tools",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//src/lib/fuchsia-async",
     "//src/lib/ui/input-synthesis",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

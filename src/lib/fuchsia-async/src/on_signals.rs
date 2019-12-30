@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use std::fmt;
+use std::future::Future;
 use std::marker::PhantomData;
 use std::mem;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::future::Future;
 use std::task::Poll;
 
 use crate::executor::{EHandle, PacketReceiver, ReceiverRegistration};
@@ -38,8 +38,7 @@ impl OnSignalsReceiver {
     }
 
     fn set_signals(&self, signals: zx::Signals) {
-        self.maybe_signals
-            .store(signals.bits() as usize, Ordering::SeqCst);
+        self.maybe_signals.store(signals.bits() as usize, Ordering::SeqCst);
         self.task.wake();
     }
 }
@@ -86,10 +85,7 @@ impl<'a> OnSignals<'a> {
             zx::WaitAsyncOpts::Once,
         );
 
-        OnSignals {
-            state: res.map(|()| receiver).map_err(Into::into),
-            marker: PhantomData,
-        }
+        OnSignals { state: res.map(|()| receiver).map_err(Into::into), marker: PhantomData }
     }
 
     /// This function allows the `OnSignals` object to live for the `'static` lifetime.
@@ -98,10 +94,7 @@ impl<'a> OnSignals<'a> {
     /// `OnSignals` will not fire if the handle that was used to create it is dropped or
     /// transferred to another process.
     pub fn extend_lifetime(self) -> OnSignals<'static> {
-        OnSignals {
-            state: self.state,
-            marker: PhantomData,
-        }
+        OnSignals { state: self.state, marker: PhantomData }
     }
 }
 
@@ -110,10 +103,7 @@ impl Unpin for OnSignals<'_> {}
 impl Future for OnSignals<'_> {
     type Output = Result<zx::Signals, zx::Status>;
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let reg = self
-            .state
-            .as_mut()
-            .map_err(|e| mem::replace(e, zx::Status::OK))?;
+        let reg = self.state.as_mut().map_err(|e| mem::replace(e, zx::Status::OK))?;
         reg.receiver().get_signals(cx).map(Ok)
     }
 }
@@ -132,7 +122,8 @@ mod test {
     #[test]
     fn wait_for_event() -> Result<(), zx::Status> {
         let mut exec = crate::Executor::new()?;
-        let mut deliver_events = || assert!(exec.run_until_stalled(&mut pending::<()>()).is_pending());
+        let mut deliver_events =
+            || assert!(exec.run_until_stalled(&mut pending::<()>()).is_pending());
 
         let event = zx::Event::create()?;
         let mut signals = OnSignals::new(&event, zx::Signals::EVENT_SIGNALED);

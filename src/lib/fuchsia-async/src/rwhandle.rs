@@ -30,16 +30,12 @@ impl PacketReceiver for RWPacketReceiver {
             return;
         };
 
-        let old = zx::Signals::from_bits_truncate(
-            self.signals.fetch_or(new.bits(), Ordering::SeqCst)
-        );
+        let old =
+            zx::Signals::from_bits_truncate(self.signals.fetch_or(new.bits(), Ordering::SeqCst));
 
-        let became_readable = new.contains(OBJECT_READABLE)
-            && !old.contains(OBJECT_READABLE);
-        let became_writable = new.contains(OBJECT_WRITABLE)
-            && !old.contains(OBJECT_WRITABLE);
-        let became_closed = new.contains(OBJECT_PEER_CLOSED)
-            && !old.contains(OBJECT_PEER_CLOSED);
+        let became_readable = new.contains(OBJECT_READABLE) && !old.contains(OBJECT_READABLE);
+        let became_writable = new.contains(OBJECT_WRITABLE) && !old.contains(OBJECT_WRITABLE);
+        let became_closed = new.contains(OBJECT_PEER_CLOSED) && !old.contains(OBJECT_PEER_CLOSED);
 
         if became_readable || became_closed {
             self.read_task.wake();
@@ -103,9 +99,8 @@ where
 
     /// Tests to see if the channel received a OBJECT_PEER_CLOSED signal
     pub fn is_closed(&self) -> bool {
-        let signals = zx::Signals::from_bits_truncate(
-            self.receiver().signals.load(Ordering::Relaxed)
-        );
+        let signals =
+            zx::Signals::from_bits_truncate(self.receiver().signals.load(Ordering::Relaxed));
         signals.contains(OBJECT_PEER_CLOSED)
     }
 
@@ -119,7 +114,8 @@ where
         task: &AtomicWaker,
         signal: zx::Signals,
     ) -> Poll<Result<bool, zx::Status>> {
-        let signals = zx::Signals::from_bits_truncate(self.receiver().signals.load(Ordering::SeqCst));
+        let signals =
+            zx::Signals::from_bits_truncate(self.receiver().signals.load(Ordering::SeqCst));
         let was_closed = signals.contains(OBJECT_PEER_CLOSED);
         let was_signal = signals.contains(signal);
         if was_closed || was_signal {

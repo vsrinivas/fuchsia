@@ -17,7 +17,6 @@ rustc_binary("bt-integration-tests") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
@@ -29,6 +28,7 @@ rustc_binary("bt-integration-tests") {
     "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test-rustc",
     "//src/connectivity/bluetooth/fidl:host-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/fuchsia-async",
     "//src/storage/lib/fuchsia-vfs-watcher",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

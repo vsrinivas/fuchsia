@@ -14,8 +14,8 @@ rustc_test("base_resolver_test_bin") {
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/lib/rust/io_util",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests:test_utils",
     "//third_party/rust_crates:anyhow",
@@ -30,11 +30,11 @@ rustc_binary("root_component_bin") {
   deps = [
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
     "//src/storage/lib/pseudo-fs-mt",
     "//src/sys/lib/directory_broker",
     "//third_party/rust_crates:anyhow",

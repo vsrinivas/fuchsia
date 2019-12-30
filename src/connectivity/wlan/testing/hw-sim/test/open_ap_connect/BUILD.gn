@@ -12,11 +12,11 @@ rustc_test("open_ap_connect") {
     "//garnet/lib/wlan/fidl:sme-rustc",
     "//garnet/lib/wlan/fidl:wlantap-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
   ]

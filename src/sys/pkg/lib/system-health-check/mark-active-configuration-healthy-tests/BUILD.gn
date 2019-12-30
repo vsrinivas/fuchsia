@@ -13,10 +13,10 @@ rustc_test("driver") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
@@ -31,8 +31,8 @@ rustc_binary("mark-active-configuration-healthy") {
   source_root = "src/mark_active_configuration_healthy.rs"
 
   deps = [
-    "//garnet/public/rust/fuchsia-async",
     "//src/sys/pkg/lib/system-health-check",
+    "//src/lib/fuchsia-async",
   ]
 }
 

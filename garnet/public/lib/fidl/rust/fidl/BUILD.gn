@@ -23,9 +23,9 @@ rustc_library("fidl") {
   ]
   if (is_fuchsia) {
     deps += [
-      "//garnet/public/rust/fuchsia-async",
       "//garnet/public/rust/fuchsia-syslog",
       "//garnet/public/rust/fuchsia-zircon",
+      "//src/lib/fuchsia-async",
     ]
   } else {
     deps += [

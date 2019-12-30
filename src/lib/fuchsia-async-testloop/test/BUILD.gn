@@ -9,9 +9,9 @@ rustc_staticlib("guest") {
   name = "guest"
   edition = "2018"
   deps = [
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-async-testloop",
     "//third_party/rust_crates:libc",
   ]

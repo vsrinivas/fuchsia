@@ -21,9 +21,9 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog-listener",
     "//garnet/public/rust/fuchsia-zircon",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:regex",

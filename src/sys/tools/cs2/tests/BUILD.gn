@@ -11,7 +11,7 @@ rustc_test("cs2_test_bin") {
   edition = "2018"
   source_root = "cs2_test.rs"
   deps = [
-    "//garnet/public/rust/fuchsia-async",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests:test_utils",
     "//src/sys/tools/cs2:lib",

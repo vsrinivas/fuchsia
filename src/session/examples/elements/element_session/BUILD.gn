@@ -11,10 +11,10 @@ rustc_binary("element_session_bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
     "//src/session/fidl:session_examples-rustc",
     "//src/session/lib/element_management",
     "//third_party/rust_crates:anyhow",

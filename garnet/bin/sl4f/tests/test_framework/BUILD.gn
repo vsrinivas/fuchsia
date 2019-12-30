@@ -12,10 +12,10 @@ rustc_test("facade_tests_bin") {
 
   deps = [
     "//garnet/bin/sl4f:lib",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:serde_json",
   ]
 }
@@ -75,6 +75,6 @@ group("tests") {
   testonly = true
   deps = [
     ":sl4f_test_integration_tests",
-    "//examples/tests"
+    "//examples/tests",
   ]
 }

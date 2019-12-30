@@ -10,7 +10,6 @@ rustc_library("token_manager") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
@@ -19,6 +18,7 @@ rustc_library("token_manager") {
     "//src/identity/lib/identity_common",
     "//src/identity/lib/token_cache",
     "//src/identity/lib/token_store",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",

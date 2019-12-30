@@ -12,7 +12,7 @@ rustc_test("destruction_integration_test_bin") {
   source_root = "integration_test.rs"
   deps = [
     "//garnet/lib/rust/io_util",
-    "//garnet/public/rust/fuchsia-async",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests:test_utils",
     "//third_party/rust_crates:anyhow",
@@ -26,10 +26,10 @@ rustc_binary("destruction_collection_realm_bin") {
   deps = [
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
@@ -42,8 +42,8 @@ rustc_binary("destruction_trigger_bin") {
   edition = "2018"
   source_root = "trigger.rs"
   deps = [
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

@@ -31,8 +31,9 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = []
-  test_deps = [ "//garnet/public/rust/fuchsia-async" ]
+  test_deps = [ "//src/lib/fuchsia-async" ]
 }
+
 # [END rustc_tests]
 
 package("hello_world_rust") {

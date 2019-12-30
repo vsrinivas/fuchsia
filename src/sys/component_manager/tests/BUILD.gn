@@ -31,8 +31,8 @@ rustc_library("breakpoint_system_client") {
   source_root = "breakpoint_system_client.rs"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
@@ -68,7 +68,7 @@ rustc_test("shutdown_integration_test_bin") {
   source_root = "shutdown_integration.rs"
   deps = [
     ":test_utils",
-    "//garnet/public/rust/fuchsia-async",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
   ]
 }
@@ -78,10 +78,10 @@ rustc_binary("system_controller_client") {
   edition = "2018"
   source_root = "system_controller_client.rs"
   deps = [
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
   ]
 }
@@ -92,8 +92,8 @@ rustc_test("component_manager_panic_test_bin") {
   source_root = "component_manager_panic.rs"
   deps = [
     ":test_utils",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
   ]
 }
@@ -152,10 +152,10 @@ rustc_test("elf_runner_test_bin") {
   source_root = "elf_runner_test.rs"
   deps = [
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-runtime",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fuchsia-async",
   ]
 }
 

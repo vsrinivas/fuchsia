@@ -1,40 +1,25 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+# Soft transition for out-of-tree Rust
+#
+# TODO(bwb): Remove when all code is migrated away from using these paths
 
-rustc_library("fuchsia-async") {
-  name = "fuchsia_async"
-  edition = "2018"
-  version = "0.1.0"
-  with_unit_tests = true
+group("fuchsia-async") {
   deps = [
-    "//garnet/public/rust/fuchsia-async-macro",
-    "//garnet/public/rust/fuchsia-system-alloc",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust_crates:bytes",
-    "//third_party/rust_crates:crossbeam",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:net2",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:pin-utils",
+    "//src/lib/fuchsia-async",
   ]
-  test_deps = [ "//third_party/rust_crates:futures-test" ]
 }
 
-test_package("fuchsia-async-tests") {
+copy("fuchsia-async_info") {
   deps = [
-    ":fuchsia-async_test",
+    "//src/lib/fuchsia-async:fuchsia-async_info",
   ]
-
-  tests = [
-    {
-      name = "fuchsia_async_lib_test"
-      environments = basic_envs
-    },
+  sources = [
+    "$root_out_dir/obj/src/lib/fuchsia-async/fuchsia-async_info.json",
+  ]
+  outputs = [
+    "$root_out_dir/obj/garnet/public/rust/fuchsia-async/fuchsia-async_info.json",
   ]
 }

@@ -16,9 +16,9 @@ rustc_binary("input_session_bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
+    "//src/lib/fuchsia-async",
     "//src/session/lib/input",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

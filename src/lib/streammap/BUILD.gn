@@ -28,7 +28,7 @@ rustc_test("streammap_lib_test") {
   source_root = "src/lib.rs"
   deps = [
     ":streammap",
-    "//garnet/public/rust/fuchsia-async",
+    "//src/lib/fuchsia-async",
     "//src/lib/test_util",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

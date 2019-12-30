@@ -12,7 +12,6 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
@@ -28,6 +27,7 @@ rustc_binary("bin") {
     "//src/identity/lib/identity_common",
     "//src/identity/lib/identity_key_manager",
     "//src/identity/lib/token_manager",
+    "//src/lib/fuchsia-async",
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",

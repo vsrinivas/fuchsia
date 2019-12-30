@@ -14,9 +14,9 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
+    "//src/lib/fuchsia-async",
     "//src/storage/ext4/lib:parser",
     "//src/storage/ext4/read-only:ext4-read-only",
     "//src/storage/ext4/server/fidl:ext4_server-rustc",

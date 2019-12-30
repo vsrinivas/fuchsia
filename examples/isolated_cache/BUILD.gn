@@ -26,9 +26,9 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys.test:fuchsia.sys.test-rustc",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
   ]
 }

@@ -11,7 +11,6 @@ rustc_binary("sandbox_service") {
   with_unit_tests = true
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
@@ -20,6 +19,7 @@ rustc_binary("sandbox_service") {
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",

@@ -15,13 +15,13 @@ rustc_library("fuchsia-audio-encoder") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
     "//src/lib/fidl_table_validation",
+    "//src/lib/fuchsia-async",
     "//src/media/stream_processors/fuchsia-stream-processors",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",

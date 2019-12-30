@@ -27,8 +27,8 @@ rustc_library("integration_tests") {
   non_rust_deps = [ "//third_party/boringssl" ]
   if (is_fuchsia) {
     deps += [
-      "//garnet/public/rust/fuchsia-async",
       "//garnet/public/rust/fuchsia-zircon",
+      "//src/lib/fuchsia-async",
     ]
   }
 }

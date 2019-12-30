@@ -11,20 +11,20 @@ use {
     crate::executor::{EHandle, Time},
     fuchsia_zircon as zx,
     futures::{
+        stream::FusedStream,
         task::{AtomicWaker, Context},
         FutureExt, Stream,
-        stream::FusedStream,
     },
     pin_utils::{unsafe_pinned, unsafe_unpinned},
     std::{
         future::Future,
-        task::Poll,
         marker::Unpin,
         pin::Pin,
         sync::{
             atomic::{AtomicBool, Ordering},
             Arc,
         },
+        task::Poll,
     },
 };
 
@@ -36,11 +36,7 @@ pub trait TimeoutExt: Future + Sized {
     where
         OT: FnOnce() -> Self::Output,
     {
-        OnTimeout {
-            timer: Timer::new(time),
-            future: self,
-            on_timeout: Some(on_timeout),
-        }
+        OnTimeout { timer: Timer::new(time), future: self, on_timeout: Some(on_timeout) }
     }
 }
 
@@ -147,11 +143,7 @@ impl Interval {
     /// Create a new `Interval` which yields every `duration`.
     pub fn new(duration: zx::Duration) -> Self {
         let next = Time::after(duration);
-        Interval {
-            timer: Timer::new(next),
-            next,
-            duration,
-        }
+        Interval { timer: Timer::new(next), next, duration }
     }
 }
 
@@ -245,9 +237,7 @@ mod test {
         assert_eq!(0, counter.load(Ordering::SeqCst));
 
         // Pretend to wait until the next timer
-        let first_deadline = exec
-            .wake_next_timer()
-            .expect("Expected a pending timeout (1)");
+        let first_deadline = exec.wake_next_timer().expect("Expected a pending timeout (1)");
         assert!(first_deadline >= start + 5.seconds());
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
         assert_eq!(1, counter.load(Ordering::SeqCst));
@@ -257,9 +247,7 @@ mod test {
         assert_eq!(1, counter.load(Ordering::SeqCst));
 
         // "Wait" until the next timeout and poll again: expect another item from the stream
-        let second_deadline = exec
-            .wake_next_timer()
-            .expect("Expected a pending timeout (2)");
+        let second_deadline = exec.wake_next_timer().expect("Expected a pending timeout (2)");
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
         assert_eq!(2, counter.load(Ordering::SeqCst));
 

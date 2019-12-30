@@ -15,12 +15,12 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/mundane:mundane",
     "//sdk/fidl/fuchsia.kms:fuchsia.kms-rustc",
+    "//src/lib/fuchsia-async",
     "//third_party/boringssl/rust/boringssl-sys",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:base64",

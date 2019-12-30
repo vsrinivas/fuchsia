@@ -21,7 +21,7 @@ group("tests") {
 
 validator_deps = [
   "//garnet/public/lib/fidl/rust/fidl",
-  "//garnet/public/rust/fuchsia-async",
+  "//src/lib/fuchsia-async",
   "//garnet/public/rust/fuchsia-component",
   "//garnet/public/rust/fuchsia-syslog",
   "//garnet/public/rust/fuchsia-zircon",
@@ -53,7 +53,7 @@ rustc_test("validator_bin_test") {
 
   edition = "2018"
   source_root = "src/main.rs"
-  deps = validator_deps + [ "//garnet/public/rust/fuchsia-async" ]
+  deps = validator_deps + [ "//src/lib/fuchsia-async" ]
 }
 
 package("inspect_validator") {

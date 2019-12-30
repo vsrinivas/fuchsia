@@ -10,8 +10,8 @@ rustc_library("qmi") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport-rustc",

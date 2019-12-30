@@ -30,7 +30,6 @@ rustc_library("lib") {
     "//garnet/lib/wlan/fidl:sme-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-syslog",
@@ -61,6 +60,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
     "//src/connectivity/bluetooth/lib/bt-avdtp",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/fuchsia-async",
     "//src/lib/mapped-vmo",
     "//src/lib/test_executor/rust:test_executor",
     "//src/storage/lib/fuchsia-vfs-watcher",
@@ -92,8 +92,8 @@ rustc_library("lib") {
   ]
 
   test_deps = [
-    "//garnet/public/rust/fuchsia-async",
     "//src/storage/lib/pseudo-fs",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
   ]
@@ -106,8 +106,8 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",

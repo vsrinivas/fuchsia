@@ -12,8 +12,8 @@ pub use self::udp::*;
 
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::io::{self, AsyncRead, AsyncWrite};
-use futures::task::{AtomicWaker, Context};
 use futures::ready;
+use futures::task::{AtomicWaker, Context};
 use libc;
 
 use std::io::{Read, Write};

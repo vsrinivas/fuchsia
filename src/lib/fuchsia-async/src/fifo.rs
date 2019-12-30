@@ -116,7 +116,11 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
     /// needing a write on receiving a `zx::Status::SHOULD_WAIT`.
     ///
     /// Returns the number of elements processed.
-    pub fn try_write(&self, cx: &mut Context<'_>, entries: &[W]) -> Poll<Result<usize, zx::Status>> {
+    pub fn try_write(
+        &self,
+        cx: &mut Context<'_>,
+        entries: &[W],
+    ) -> Poll<Result<usize, zx::Status>> {
         let clear_closed = ready!(self.poll_write(cx)?);
         let elem_size = ::std::mem::size_of::<W>();
         let elembuf = unsafe {
@@ -238,10 +242,7 @@ impl<'a, F: FifoReadable<R>, R: FifoEntry> ReadEntry<'a, F, R> {
     /// Create a new ReadEntry, which borrows the `FifoReadable` type
     /// until the future completes.
     pub fn new(fifo: &'a F) -> ReadEntry<'_, F, R> {
-        ReadEntry {
-            fifo,
-            read_marker: PhantomData,
-        }
+        ReadEntry { fifo, read_marker: PhantomData }
     }
 }
 
@@ -281,8 +282,8 @@ mod tests {
         let mut exec = Executor::new().expect("failed to create executor");
         let elements: &[entry; 1] = &[entry { a: 10, b: 20 }];
 
-        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>())
-            .expect("failed to create zx fifo");
+        let (tx, rx) =
+            zx::Fifo::create(2, ::std::mem::size_of::<entry>()).expect("failed to create zx fifo");
         let (tx, rx) = (
             Fifo::<entry>::from_fifo(tx).expect("failed to create async tx fifo"),
             Fifo::<entry>::from_fifo(rx).expect("failed to create async rx fifo"),
@@ -299,8 +300,7 @@ mod tests {
         let sender = Timer::new(10.millis().after_now()).then(|()| tx.write_entries(elements));
 
         let done = try_join(receiver, sender);
-        exec.run_singlethreaded(done)
-            .expect("failed to run receive future on executor");
+        exec.run_singlethreaded(done).expect("failed to run receive future on executor");
     }
 
     #[test]
@@ -308,16 +308,14 @@ mod tests {
         let mut exec = Executor::new().expect("failed to create executor");
         let elements: &[entry; 1] = &[entry { a: 10, b: 20 }];
 
-        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>())
-            .expect("failed to create zx fifo");
+        let (tx, rx) =
+            zx::Fifo::create(2, ::std::mem::size_of::<entry>()).expect("failed to create zx fifo");
         let (tx, rx) = (
             Fifo::<entry>::from_fifo(tx).expect("failed to create async tx fifo"),
             Fifo::<wrong_entry>::from_fifo(rx).expect("failed to create async rx fifo"),
         );
 
-        let receive_future = rx
-            .read_entry()
-            .map_ok(|_entry| panic!("read should have failed"));
+        let receive_future = rx.read_entry().map_ok(|_entry| panic!("read should have failed"));
 
         // add a timeout to receiver so if test is broken it doesn't take forever
         let receiver = receive_future.on_timeout(300.millis().after_now(), || panic!("timeout"));
@@ -338,8 +336,8 @@ mod tests {
         let mut exec = Executor::new().expect("failed to create executor");
         let elements: &[wrong_entry; 1] = &[wrong_entry { a: 10 }];
 
-        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>())
-            .expect("failed to create zx fifo");
+        let (tx, rx) =
+            zx::Fifo::create(2, ::std::mem::size_of::<entry>()).expect("failed to create zx fifo");
         let (tx, _rx) = (
             Fifo::<wrong_entry>::from_fifo(tx).expect("failed to create async tx fifo"),
             Fifo::<entry>::from_fifo(rx).expect("failed to create async rx fifo"),
@@ -359,14 +357,11 @@ mod tests {
         use std::sync::atomic::{AtomicUsize, Ordering};
 
         let mut exec = Executor::new().expect("failed to create executor");
-        let elements: &[entry; 3] = &[
-            entry { a: 10, b: 20 },
-            entry { a: 30, b: 40 },
-            entry { a: 50, b: 60 },
-        ];
+        let elements: &[entry; 3] =
+            &[entry { a: 10, b: 20 }, entry { a: 30, b: 40 }, entry { a: 50, b: 60 }];
 
-        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>())
-            .expect("failed to create zx fifo");
+        let (tx, rx) =
+            zx::Fifo::create(2, ::std::mem::size_of::<entry>()).expect("failed to create zx fifo");
         let (tx, rx) = (
             Fifo::<entry>::from_fifo(tx).expect("failed to create async tx fifo"),
             Fifo::<entry>::from_fifo(rx).expect("failed to create async rx fifo"),
@@ -404,21 +399,17 @@ mod tests {
 
         let done = try_join(receiver, sender);
 
-        exec.run_singlethreaded(done)
-            .expect("failed to run receive future on executor");
+        exec.run_singlethreaded(done).expect("failed to run receive future on executor");
     }
 
     #[test]
     fn write_more_than_full() {
         let mut exec = Executor::new().expect("failed to create executor");
-        let elements: &[entry; 3] = &[
-            entry { a: 10, b: 20 },
-            entry { a: 30, b: 40 },
-            entry { a: 50, b: 60 },
-        ];
+        let elements: &[entry; 3] =
+            &[entry { a: 10, b: 20 }, entry { a: 30, b: 40 }, entry { a: 50, b: 60 }];
 
-        let (tx, rx) = zx::Fifo::create(2, ::std::mem::size_of::<entry>())
-            .expect("failed to create zx fifo");
+        let (tx, rx) =
+            zx::Fifo::create(2, ::std::mem::size_of::<entry>()).expect("failed to create zx fifo");
         let (tx, rx) = (
             Fifo::<entry>::from_fifo(tx).expect("failed to create async tx fifo"),
             Fifo::<entry>::from_fifo(rx).expect("failed to create async rx fifo"),
@@ -443,7 +434,6 @@ mod tests {
 
         let done = try_join(receiver, sender);
 
-        exec.run_singlethreaded(done)
-            .expect("failed to run receive future on executor");
+        exec.run_singlethreaded(done).expect("failed to run receive future on executor");
     }
 }

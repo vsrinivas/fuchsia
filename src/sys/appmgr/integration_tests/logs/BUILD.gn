@@ -47,10 +47,10 @@ rustc_binary("log_tests") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/lib/validating-log-listener",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]

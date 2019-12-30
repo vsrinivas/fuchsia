@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use std::fmt;
+use std::future::Future;
 use std::io;
 use std::pin::Pin;
-use std::future::Future;
 use std::task::{Context, Poll};
 
 use fuchsia_zircon::{self as zx, AsHandleRef, MessageBuf};
@@ -68,7 +68,11 @@ impl Channel {
 
     /// Receives a message on the channel and registers this `Channel` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
-    pub fn recv_from(&self, cx: &mut Context<'_>, buf: &mut MessageBuf) -> Poll<Result<(), zx::Status>> {
+    pub fn recv_from(
+        &self,
+        cx: &mut Context<'_>,
+        buf: &mut MessageBuf,
+    ) -> Poll<Result<(), zx::Status>> {
         let (bytes, handles) = buf.split_mut();
         self.read(cx, bytes, handles)
     }
@@ -143,8 +147,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut receiver).is_pending());
 
         let mut handles = Vec::new();
-        tx.write(bytes, &mut handles)
-            .expect("failed to write message");
+        tx.write(bytes, &mut handles).expect("failed to write message");
 
         assert!(exec.run_until_stalled(&mut receiver).is_ready());
     }

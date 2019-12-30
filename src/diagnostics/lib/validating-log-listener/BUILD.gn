@@ -12,7 +12,7 @@ rustc_library("validating-log-listener") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]

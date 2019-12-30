@@ -11,7 +11,7 @@ rustc_binary("advanced_routing_reporter_bin") {
   source_root = "advanced_routing/reporter.rs"
   deps = [
     ":hub_report_lib",
-    "//garnet/public/rust/fuchsia-async",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
   ]
 }
@@ -23,8 +23,8 @@ rustc_binary("used_service_reporter_bin") {
   deps = [
     ":hub_report_lib",
     "//examples/components/routing/fidl:echo-rustc",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//third_party/rust_crates:anyhow",
   ]
@@ -48,9 +48,9 @@ rustc_binary("dynamic_child_reporter_bin") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:anyhow",
@@ -68,8 +68,8 @@ rustc_binary("visibility_reporter_bin") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
@@ -84,9 +84,9 @@ rustc_library("hub_report_lib") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests/fidl:hub-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

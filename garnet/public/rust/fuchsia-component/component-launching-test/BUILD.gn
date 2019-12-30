@@ -14,8 +14,8 @@ rustc_test("driver") {
 
   deps = [
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:tempfile",
   ]
 }

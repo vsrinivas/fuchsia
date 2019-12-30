@@ -12,7 +12,7 @@ rustc_test("tests_bin") {
   name = "run_test_suite_integration_tests"
 
   deps = [
-    "//garnet/public/rust/fuchsia-async",
+    "//src/lib/fuchsia-async",
     "//src/sys/run_test_suite:lib",
     "//third_party/rust_crates:serde_json",
   ]

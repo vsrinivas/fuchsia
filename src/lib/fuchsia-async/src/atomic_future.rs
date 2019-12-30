@@ -69,10 +69,7 @@ pub enum AttemptPollResult {
 impl AtomicFuture {
     /// Create a new `AtomicFuture`.
     pub fn new(future: FutureObj<'static, ()>) -> Self {
-        AtomicFuture {
-            state: AtomicUsize::new(INACTIVE),
-            future: UnsafeCell::new(Some(future)),
-        }
+        AtomicFuture { state: AtomicUsize::new(INACTIVE), future: UnsafeCell::new(Some(future)) }
     }
 
     /// Attempt to poll the underlying future.
@@ -108,9 +105,8 @@ impl AtomicFuture {
                             // This `UnsafeCell` access is valid because `self.future.get()`
                             // is only called here, inside the critical section where
                             // we performed the transition from INACTIVE to ACTIVE.
-                            let opt: &mut Option<
-                                FutureObj<'static, ()>,
-                            > = unsafe { &mut *self.future.get() };
+                            let opt: &mut Option<FutureObj<'static, ()>> =
+                                unsafe { &mut *self.future.get() };
 
                             // We know that the future is still there and hasn't completed
                             // because `state` != `DONE`
@@ -121,9 +117,8 @@ impl AtomicFuture {
                         match poll_res {
                             Poll::Ready(()) => {
                                 // Take the future so that its innards can be dropped
-                                let future_opt: &mut Option<
-                                    FutureObj<'static, ()>,
-                                > = unsafe { &mut *self.future.get() };
+                                let future_opt: &mut Option<FutureObj<'static, ()>> =
+                                    unsafe { &mut *self.future.get() };
                                 future_opt.take();
 
                                 // No one else will read `future` unless they see

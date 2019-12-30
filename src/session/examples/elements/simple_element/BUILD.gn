@@ -11,8 +11,8 @@ rustc_binary("simple_element_bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//src/lib/fuchsia-async",
     "//src/session/fidl:session_examples-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",

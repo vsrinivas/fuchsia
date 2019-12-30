@@ -7,14 +7,14 @@ use fuchsia_zircon::{self as zx, AsHandleRef, Signals};
 use futures::io::{self, AsyncRead, AsyncWrite};
 use futures::{
     future::poll_fn,
+    ready,
     stream::Stream,
     task::{AtomicWaker, Context},
-    ready,
 };
 use std::fmt;
 use std::pin::Pin;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
 use std::task::Poll;
 
 pub struct SocketPacketReceiver {
@@ -343,7 +343,10 @@ impl<'a> AsyncWrite for &'a Socket {
 #[derive(Debug)]
 pub struct DatagramStream<S>(pub S);
 
-fn poll_datagram_as_stream(socket: &Socket, cx: &mut Context<'_>) -> Poll<Option<Result<Vec<u8>, zx::Status>>> {
+fn poll_datagram_as_stream(
+    socket: &Socket,
+    cx: &mut Context<'_>,
+) -> Poll<Option<Result<Vec<u8>, zx::Status>>> {
     let mut res = Vec::<u8>::new();
     Poll::Ready(match ready!(socket.poll_datagram(cx, &mut res)) {
         Ok(_size) => Some(Ok(res)),

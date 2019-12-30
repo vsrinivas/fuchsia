@@ -13,7 +13,6 @@ rustc_binary("bt-cli") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
@@ -21,6 +20,7 @@ rustc_binary("bt-cli") {
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//src/connectivity/bluetooth/lib/bt-fidl-mocks",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",

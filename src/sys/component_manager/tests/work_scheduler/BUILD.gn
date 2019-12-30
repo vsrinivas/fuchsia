@@ -14,8 +14,8 @@ rustc_library("work_scheduler_dispatch_reporter") {
   deps = [
     "//garnet/lib/rust/cm_rust",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager:lib",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
     "//third_party/rust_crates:futures",
@@ -30,8 +30,8 @@ rustc_test("work_scheduler_integration_test_bin") {
   deps = [
     ":work_scheduler_dispatch_reporter",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager:lib",
     "//src/sys/component_manager/tests:test_utils",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",

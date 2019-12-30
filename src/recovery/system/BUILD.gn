@@ -33,8 +33,8 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-framebuffer",
+    "//src/lib/fuchsia-async",
     "//src/lib/mapped-vmo",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

@@ -17,11 +17,7 @@ use {
         task::{Context, Poll},
     },
     pin_utils::unsafe_pinned,
-    std::{
-        marker::Unpin,
-        mem,
-        pin::Pin,
-    },
+    std::{marker::Unpin, mem, pin::Pin},
 };
 
 pub trait TempStreamExt: Stream + Sized {
@@ -98,13 +94,7 @@ where
     A: AsyncWrite,
     T: AsRef<[u8]>,
 {
-    WriteAll {
-        state: WriteState::Writing {
-            a: a,
-            buf: buf,
-            pos: 0,
-        },
-    }
+    WriteAll { state: WriteState::Writing { a: a, buf: buf, pos: 0 } }
 }
 
 fn zero_write() -> io::Error {
@@ -163,9 +153,7 @@ pub fn read_to_end<A>(a: A, buf: Vec<u8>) -> ReadToEnd<A>
 where
     A: AsyncRead,
 {
-    ReadToEnd {
-        state: State::Reading { a, buf },
-    }
+    ReadToEnd { state: State::Reading { a, buf } }
 }
 
 struct Guard<'a> {
@@ -191,13 +179,12 @@ impl<'a> Drop for Guard<'a> {
 // Because we're extending the buffer with uninitialized data for trusted
 // readers, we need to make sure to truncate that if any of this panics.
 fn read_to_end_internal<R: AsyncRead + Unpin>(
-    r: &mut R, cx: &mut Context<'_>, buf: &mut Vec<u8>,
+    r: &mut R,
+    cx: &mut Context<'_>,
+    buf: &mut Vec<u8>,
 ) -> Poll<io::Result<usize>> {
     let start_len = buf.len();
-    let mut g = Guard {
-        len: buf.len(),
-        buf: buf,
-    };
+    let mut g = Guard { len: buf.len(), buf: buf };
     let ret;
     loop {
         if g.len == g.buf.len() {
@@ -232,10 +219,7 @@ where
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
         match this.state {
-            State::Reading {
-                ref mut a,
-                ref mut buf,
-            } => {
+            State::Reading { ref mut a, ref mut buf } => {
                 // If we get `Ok`, then we know the stream hit EOF and we're done. If we
                 // hit "would block" then all the read data so far is in our buffer, and
                 // otherwise we propagate errors
@@ -261,10 +245,7 @@ pub trait TempFutureExt: Future + Sized {
         Self: Unpin,
         B: Unpin,
     {
-        SelectUnpin {
-            a: Some(self),
-            b: Some(b),
-        }
+        SelectUnpin { a: Some(self), b: Some(b) }
     }
 }
 

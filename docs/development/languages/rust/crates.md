@@ -8,7 +8,7 @@
 
     Work with Fuchsia Archives (FARs)
 
-* [fuchsia-async/](/garnet/public/rust/fuchsia-async/)
+* [fuchsia-async/](/src/lib/fuchsia-async/)
 
     Fuchsia-specific Futures executor and asynchronous primitives (Channel, Socket, Fifo, etc.)
 

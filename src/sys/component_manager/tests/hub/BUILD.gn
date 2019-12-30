@@ -12,7 +12,7 @@ rustc_library("hub_report_capability") {
   source_root = "hub_report_capability.rs"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//src/sys/component_manager/tests/fidl:hub-rustc",
@@ -28,7 +28,7 @@ rustc_test("hub_integration_test_bin") {
     ":hub_report_capability",
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/io_util",
-    "//garnet/public/rust/fuchsia-async",
+    "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests:test_utils",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
