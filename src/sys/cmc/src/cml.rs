@@ -422,6 +422,12 @@ impl FromClause for Storage {
     }
 }
 
+impl FromClause for Runner {
+    fn from(&self) -> &Ref {
+        &self.from
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

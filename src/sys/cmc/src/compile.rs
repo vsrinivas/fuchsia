@@ -91,6 +91,9 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     if let Some(facets) = document.facets.as_ref() {
         out.facets = Some(facets.clone());
     }
+    if let Some(runners) = document.runners.as_ref() {
+        out.runners = Some(translate_runners(runners)?);
+    }
     Ok(out)
 }
 
@@ -350,6 +353,19 @@ fn translate_storage(storage_in: &Vec<cml::Storage>) -> Result<Vec<cm::Storage>,
                 name: cm::Name::new(storage.name.to_string())?,
                 source_path: cm::Path::new(storage.path.clone())?,
                 source: extract_offer_source(storage)?,
+            })
+        })
+        .collect()
+}
+
+fn translate_runners(runners_in: &Vec<cml::Runner>) -> Result<Vec<cm::Runner>, Error> {
+    runners_in
+        .iter()
+        .map(|runner| {
+            Ok(cm::Runner {
+                name: cm::Name::new(runner.name.to_string())?,
+                source_path: cm::Path::new(runner.path.clone())?,
+                source: extract_offer_source(runner)?,
             })
         })
         .collect()
@@ -1301,6 +1317,28 @@ mod tests {
     }
 }"#,
         },
+        test_compile_runner => {
+            input = json!({
+                "runners": [
+                    {
+                        "name": "myrunner",
+                        "path": "/runner",
+                        "from": "self",
+                    }
+                ],
+            }),
+            output = r#"{
+    "runners": [
+        {
+            "name": "myrunner",
+            "source": {
+                "self": {}
+            },
+            "source_path": "/runner"
+        }
+    ]
+}"#,
+        },
 
         test_compile_all_sections => {
             input = json!({
@@ -1347,6 +1385,13 @@ mod tests {
                     "author": "Fuchsia",
                     "year": 2018,
                 },
+                "runners": [
+                    {
+                        "name": "myrunner",
+                        "path": "/runner",
+                        "from": "self",
+                    }
+                ],
             }),
             output = r#"{
     "program": {
@@ -1496,7 +1541,16 @@ mod tests {
     "facets": {
         "author": "Fuchsia",
         "year": 2018
-    }
+    },
+    "runners": [
+        {
+            "name": "myrunner",
+            "source": {
+                "self": {}
+            },
+            "source_path": "/runner"
+        }
+    ]
 }"#,
         },
     }
