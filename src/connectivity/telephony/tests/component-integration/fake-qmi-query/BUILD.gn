@@ -11,7 +11,7 @@ rustc_test("fake-qmi-query") {
     "//garnet/lib/rust/files_async",
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
     "//src/connectivity/telephony/lib/qmi",
     "//src/connectivity/telephony/lib/tel-devmgr/fidl:devmgr-rustc",

@@ -19,7 +19,7 @@ rustc_binary("hwinfo_bin") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-runtime",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
     "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",

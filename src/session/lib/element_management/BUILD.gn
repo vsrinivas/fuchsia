@@ -12,7 +12,7 @@ rustc_library("element_management") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",

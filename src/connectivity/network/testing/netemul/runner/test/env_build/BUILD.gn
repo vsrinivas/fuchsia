@@ -10,7 +10,7 @@ rustc_binary("env_build") {
   edition = "2018"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
     "//src/lib/fuchsia-async",

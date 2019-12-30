@@ -13,7 +13,7 @@ rustc_binary("netstack_cfg") {
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//garnet/lib/rust/fidl_fuchsia_netstack_ext",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",

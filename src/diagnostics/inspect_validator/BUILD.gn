@@ -23,7 +23,7 @@ validator_deps = [
   "//garnet/public/lib/fidl/rust/fidl",
   "//src/lib/fuchsia-async",
   "//src/lib/fuchsia-component",
-  "//garnet/public/rust/fuchsia-syslog",
+  "//src/lib/syslog/rust:syslog",
   "//src/lib/zircon/rust:fuchsia-zircon",
   "//src/diagnostics/inspect_validator/fidl:validate-rustc",
   "//src/lib/argh",

@@ -78,7 +78,7 @@ rustc_binary("system_controller_client") {
   edition = "2018"
   source_root = "system_controller_client.rs"
   deps = [
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

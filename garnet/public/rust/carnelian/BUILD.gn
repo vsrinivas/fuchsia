@@ -19,7 +19,7 @@ rustc_library("carnelian") {
     "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-framebuffer",
     "//garnet/public/rust/fuchsia-scenic",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",

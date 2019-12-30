@@ -11,7 +11,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.external:fuchsia.identity.external-rustc",
     "//src/identity/lib/identity_common",

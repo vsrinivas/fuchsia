@@ -26,7 +26,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/sysconfig-client",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-hyper",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",

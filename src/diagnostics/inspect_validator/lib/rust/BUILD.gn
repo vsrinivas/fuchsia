@@ -15,7 +15,7 @@ rustc_binary("inspect_validator_rust_puppet_bin") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-runtime",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//src/diagnostics/inspect_validator/fidl:validate-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

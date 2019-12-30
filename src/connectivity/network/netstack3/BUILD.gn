@@ -20,7 +20,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//garnet/lib/rust/never",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.net.icmp:fuchsia.net.icmp-rustc",
     "//sdk/fidl/fuchsia.net.icmp:fuchsia.net.icmp-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",

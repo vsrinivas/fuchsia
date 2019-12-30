@@ -15,7 +15,7 @@ rustc_test("driver") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-runtime",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",

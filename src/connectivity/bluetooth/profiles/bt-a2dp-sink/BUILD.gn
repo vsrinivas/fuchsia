@@ -25,7 +25,7 @@ rustc_binary("bin") {
     ":bt_a2dp_sink_metrics_rustlib",
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.avdtp:fuchsia.bluetooth.avdtp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",

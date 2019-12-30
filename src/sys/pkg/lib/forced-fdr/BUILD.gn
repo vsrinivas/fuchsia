@@ -14,7 +14,7 @@ rustc_library("forced-fdr") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
     "//sdk/fidl/fuchsia.update.channel:fuchsia.update.channel-rustc",
     "//src/lib/fuchsia-async",

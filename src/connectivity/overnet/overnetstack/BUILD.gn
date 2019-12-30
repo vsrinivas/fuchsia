@@ -12,7 +12,7 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns-rustc",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",

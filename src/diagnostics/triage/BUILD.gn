@@ -17,7 +17,7 @@ rustc_binary("triage_bin") {
   deps = [
     "//garnet/lib/rust/cm_json",
 
-    # "//garnet/public/rust/fuchsia-syslog",
+    # "//src/lib/syslog/rust:syslog",
     # "//src/lib/argh",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:clap",

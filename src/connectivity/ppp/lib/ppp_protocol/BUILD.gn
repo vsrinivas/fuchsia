@@ -11,7 +11,7 @@ import("//build/testing/environments.gni")
 rustc_library("ppp_protocol") {
   edition = "2018"
   deps = [
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//src/connectivity/ppp/lib/ppp_packet",
     "//src/lib/fuchsia-async",
     "//src/lib/packet",
@@ -24,7 +24,7 @@ rustc_test("ppp_protocol_test_bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//src/connectivity/ppp/lib/ppp_packet",
     "//src/lib/fuchsia-async",
     "//src/lib/packet",

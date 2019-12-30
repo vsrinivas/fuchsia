@@ -10,7 +10,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

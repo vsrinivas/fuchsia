@@ -10,7 +10,7 @@ rustc_library("text") {
   edition = "2018"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
     "//sdk/fidl/fuchsia.ui.text.testing:fuchsia.ui.text.testing-rustc",

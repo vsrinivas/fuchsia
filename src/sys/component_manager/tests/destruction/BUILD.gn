@@ -26,7 +26,7 @@ rustc_binary("destruction_collection_realm_bin") {
   deps = [
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

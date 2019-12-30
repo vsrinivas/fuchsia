@@ -12,7 +12,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//src/connectivity/telephony/lib/qmi",
     "//src/connectivity/telephony/tests/tel-dev:tel_dev",
     "//src/lib/argh",

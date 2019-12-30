@@ -8,7 +8,7 @@ rustc_test("fake-at-driver-test") {
   name = "tel_fake_at_driver_test"
   edition = "2018"
   deps = [
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//src/connectivity/telephony/lib/qmi",
     "//src/connectivity/telephony/tests/tel-dev:tel_dev",
     "//src/lib/fuchsia-async",

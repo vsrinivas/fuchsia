@@ -30,7 +30,7 @@ rustc_binary("tennis_manual_player_bin") {
   source_root = "src/main.rs"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

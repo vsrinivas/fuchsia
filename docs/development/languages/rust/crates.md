@@ -24,11 +24,11 @@
 
     Rust interface to Scenic, the Fuchsia compositor
 
-* [fuchsia-syslog-listener/](/garnet/public/rust/fuchsia-syslog-listener/)
+* [fuchsia-syslog-listener/](/src/lib/syslog/rust/syslog-listener/)
 
     Implement fuchsia syslog listeners in Rust
 
-* [fuchsia-syslog/](/garnet/public/rust/fuchsia-syslog/)
+* [fuchsia-syslog/](/src/lib/syslog/rust/)
 
     Rust interface to the fuchsia syslog
 

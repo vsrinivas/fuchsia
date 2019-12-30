@@ -1,35 +1,13 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//build/rust/rustc_alias.gni")
 
-rustc_library("fuchsia-syslog") {
-  assert(is_fuchsia)
-  name = "fuchsia_syslog"
-  version = "0.1.0"
-  edition = "2018"
-  with_unit_tests = true
-  deps = [
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:tempfile",
-  ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
-}
+# Soft transition for out-of-tree Rust
+#
+# TODO(bwb): Remove when all code is migrated away from using these paths
 
-test_package("fuchsia-syslog-tests") {
-  deps = [
-    ":fuchsia-syslog_test",
-  ]
-
-  tests = [
-    {
-      name = "fuchsia_syslog_lib_test"
-      environments = basic_envs
-    },
-  ]
+rustc_alias("fuchsia-syslog") {
+  alias = "//src/lib/syslog/rust:syslog"
 }

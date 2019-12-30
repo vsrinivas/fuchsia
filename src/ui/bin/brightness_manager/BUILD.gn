@@ -17,7 +17,7 @@ rustc_binary("bin") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-runtime",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fuchsia-async",

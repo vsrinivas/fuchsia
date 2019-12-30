@@ -17,7 +17,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//garnet/public/rust/fuchsia-trace",
     "//garnet/public/rust/fuchsia-trace-provider",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",

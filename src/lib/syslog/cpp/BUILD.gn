@@ -33,7 +33,7 @@ executable("syslog_cpp_unittests") {
   ]
 }
 
-test_package("tests") {
+test_package("cpp-tests") {
   package_name = "syslog_cpp_tests"
 
   deps = [
@@ -44,5 +44,12 @@ test_package("tests") {
       name = "syslog_cpp_unittests"
       environments = basic_envs
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":cpp-tests"
   ]
 }

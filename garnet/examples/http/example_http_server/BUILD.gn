@@ -9,7 +9,7 @@ rustc_binary("bin") {
   name = "example_http_server"
   edition = "2018"
   deps = [
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rouille",
     "//third_party/rust_crates:thiserror",

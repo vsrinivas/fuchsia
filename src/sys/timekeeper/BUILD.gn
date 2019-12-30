@@ -61,7 +61,7 @@ rustc_binary("bin") {
   deps = [
     ":fuchsia.time-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

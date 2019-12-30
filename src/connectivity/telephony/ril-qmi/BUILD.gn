@@ -14,7 +14,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
     "//src/connectivity/telephony/lib/qmi-protocol",
     "//src/lib/fuchsia-async",

@@ -57,7 +57,7 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//src/lib/argh",
     "//src/lib/fuchsia-async",

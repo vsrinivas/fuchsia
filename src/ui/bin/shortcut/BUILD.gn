@@ -31,7 +31,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
@@ -77,7 +77,7 @@ rustc_test("shortcut_test_bin") {
   deps = [
     ":bin",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",

@@ -33,6 +33,7 @@ group("lib") {
     "url",
     "uuid",
     "zerocopy",
+    "syslog",
   ]
 }
 
@@ -78,5 +79,6 @@ group("tests") {
     "watch_handler:tests",
     "zerocopy:tests",
     "zircon:tests",
+    "syslog:tests",
   ]
 }

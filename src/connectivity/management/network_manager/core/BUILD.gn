@@ -15,7 +15,7 @@ rustc_library("lib") {
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",

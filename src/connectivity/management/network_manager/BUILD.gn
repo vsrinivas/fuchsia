@@ -19,7 +19,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",

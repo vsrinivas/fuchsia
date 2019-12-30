@@ -24,7 +24,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/netfilter",
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.dns:fuchsia.net.dns-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",

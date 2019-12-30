@@ -61,4 +61,4 @@ error!("my msg: {}", 10);
 
 
 ### Reference
-[Rust APIs](/garnet/public/rust/fuchsia-syslog/src/lib.rs)
+[Rust APIs](/src/lib/syslog/rust/src/lib.rs)

@@ -14,7 +14,7 @@ rustc_binary("bin") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-scenic",
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.external:fuchsia.identity.external-rustc",
     "//sdk/fidl/fuchsia.identity.tokens:fuchsia.identity.tokens-rustc",
