@@ -231,15 +231,10 @@ table T {          table T {
 
 ## unions
 
-Note: unions (vs **x**unions) are deprecated.
-However, they follow similar rules to [structs](#structs).
-
-## xunions
-
 #### Reordering members
 
 ```fidl
-xunion A {         xunion A {
+union A {          union A {
   1: int32 a;         2: string b;
   2: string b;        1: int32 a;
 };                 };
@@ -252,7 +247,7 @@ xunion A {         xunion A {
 #### Renaming members
 
 ```fidl
-xunion A {         xunion A {
+union A {          union A {
   1: int32 a;         1: int32 a_new;
   2: string b;        2: string b;
 };                 };
@@ -265,7 +260,7 @@ xunion A {         xunion A {
 #### Adding members
 
 ```fidl
-xunion A {         xunion A {
+union A {          union A {
   1: int32 a;        1: int32 a;
   2: string b;       2: string b;
                      3: int32 c;
@@ -282,7 +277,7 @@ xunion A {         xunion A {
 #### Removing members
 
 ```fidl
-xunion A {         xunion A {
+union A {          union A {
   1: int32 a;         1: int32 a;
   2: string b;        2: reserved;
 };                 };
