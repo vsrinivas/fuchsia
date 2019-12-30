@@ -12,9 +12,9 @@ Also, see a modified [EBNF description of the FIDL grammar](grammar.md).
 
 # Syntax
 
-FIDL provides a syntax for declaring named
-bits, constants, enums, structs, tables, unions, xunions, and protocols.
-These declarations are collected into libraries for distribution.
+FIDL provides a syntax for declaring named bits, constants, enums, structs,
+tables, unions, and protocols. These declarations are collected into libraries
+for distribution.
 
 FIDL declarations are stored in plain text UTF-8 files. Each file consists of a
 sequence of semicolon-delimited declarations. The order of declarations within a
@@ -548,66 +548,27 @@ table Profile {
 
 ### Unions
 
-*   Tagged option type consisting of tag field and variadic contents.
-*   Declaration is not intended to be modified once deployed; use protocol
-    extension instead.
-*   Reference may be nullable.
-*   Unions contain one or more members. A union with no members would have
-    no inhabitants and thus would make little sense in a wire format.
-
-> Unions are deprecated. New code should use [xunions](#Xunions).
-
-#### Declaration
-
-```fidl
-union Pattern {
-    1: reserved;           // this was possibly a variant that was removed
-    2: Color color;        // the Pattern contains either a Color
-    3: Texture texture;    // or a Texture, but not both at the same time
-};
-struct Color {
-    float32 r;
-    float32 g;
-    float32 b;
-};
-struct Texture { string name; };
-```
-
-#### Use
-
-Unions are denoted by their declared name (eg. **Pattern**) and nullability:
-
-*   **`Pattern`** : non-nullable Pattern
-*   **`Pattern?`** : nullable Pattern
-
-### Xunions
-
 *   Record type consisting of an ordinal and an envelope.
 *   Ordinal indicates member selection, envelope holds contents.
 *   Declaration can be modified after deployment, while maintaining ABI
-    compatibility. See the [Compatibility Guide](abi-compat.md#xunions) for
+    compatibility. See the [Compatibility Guide](abi-compat.md#unions) for
     source-compatibility considerations.
 *   Reference may be nullable.
-*   Xunions contain one or more members. An xunion with no members would have
-    no inhabitants and thus would make little sense in a wire format.
+*   Unions contain one or more members. A union with no members would have no
+    inhabitants and thus would make little sense in a wire format.
 
 #### Declaration
 
 ```fidl
-xunion Value {
-    1: int16 command;
-    2: Circle data;
-    3: reserved;
-    4: float64 offset;
-};
+{%includecode gerrit_repo="fuchsia/samples" gerrit_path="src/calculator/fidl/calculator.fidl" region_tag="union" %}
 ```
 
 #### Use
 
-Xunions are denoted by their declared name (eg. **Value**) and nullability:
+Unions are denoted by their declared name (e.g. **Result**) and nullability:
 
-*   **`Value`** : non-nullable Value
-*   **`Value?`** : nullable Value
+*   **`Result`** : non-nullable Result
+*   **`Result?`** : nullable Result
 
 ### Protocols
 
