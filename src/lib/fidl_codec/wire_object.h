@@ -43,9 +43,6 @@ class Value {
   // This is used to eventually display a vector of uint8_t values as a string.
   virtual uint8_t GetUint8Value() const { return 0; }
 
-  // Decode the extra content of the value (in a secondary object).
-  virtual void DecodeContent(MessageDecoder* decoder, uint64_t offset) = 0;
-
   // Pretty print of the value.
   virtual void PrettyPrint(std::ostream& os, const Colors& colors,
                            const fidl_message_header_t* header, std::string_view line_header,
@@ -67,6 +64,9 @@ class NullableValue : public Value {
 
   bool DecodeNullable(MessageDecoder* decoder, uint64_t offset, uint64_t size);
 
+  // Decode the extra content of the value (in a secondary object).
+  virtual void DecodeContent(MessageDecoder* decoder, uint64_t offset) = 0;
+
   void Visit(Visitor* visitor) const override;
 
  private:
@@ -77,8 +77,6 @@ class NullableValue : public Value {
 class InlineValue : public Value {
  public:
   InlineValue(const Type* type) : Value(type) {}
-
-  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void Visit(Visitor* visitor) const override;
 };
@@ -341,8 +339,6 @@ class ArrayValue : public Value {
 
   int DisplaySize(int remaining_size) const override;
 
-  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
-
   void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
                    std::string_view line_header, int tabs, int remaining_size,
                    int max_line_size) const override;
@@ -432,8 +428,6 @@ class HandleValue : public Value {
   const zx_handle_info_t& handle() const { return handle_; }
 
   int DisplaySize(int remaining_size) const override;
-
-  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
                    std::string_view line_header, int tabs, int remaining_size,

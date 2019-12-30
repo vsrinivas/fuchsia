@@ -62,10 +62,6 @@ bool NullableValue::DecodeNullable(MessageDecoder* decoder, uint64_t offset, uin
 
 void NullableValue::Visit(Visitor* visitor) const { visitor->VisitNullableValue(this); }
 
-void InlineValue::DecodeContent(MessageDecoder* /*decoder*/, uint64_t /*offset*/) {
-  FXL_LOG(FATAL) << "Value is defined inline";
-}
-
 void InlineValue::Visit(Visitor* visitor) const { visitor->VisitInlineValue(this); }
 
 int RawValue::DisplaySize(int /*remaining_size*/) const {
@@ -507,10 +503,6 @@ int ArrayValue::DisplaySize(int remaining_size) const {
   return size;
 }
 
-void ArrayValue::DecodeContent(MessageDecoder* /*decoder*/, uint64_t /*offset*/) {
-  FXL_LOG(FATAL) << "Value is defined inline";
-}
-
 void ArrayValue::PrettyPrint(std::ostream& os, const Colors& colors,
                              const fidl_message_header_t* header, std::string_view line_header,
                              int tabs, int remaining_size, int max_line_size) const {
@@ -693,10 +685,6 @@ void BitsValue::Visit(Visitor* visitor) const { visitor->VisitBitsValue(this); }
 
 int HandleValue::DisplaySize(int /*remaining_size*/) const {
   return std::to_string(handle_.handle).size();
-}
-
-void HandleValue::DecodeContent(MessageDecoder* /*decoder*/, uint64_t /*offset*/) {
-  FXL_LOG(FATAL) << "Handle value is defined inline";
 }
 
 void HandleValue::PrettyPrint(std::ostream& os, const Colors& colors,
