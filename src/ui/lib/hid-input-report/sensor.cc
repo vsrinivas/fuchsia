@@ -18,7 +18,7 @@
 namespace hid_input_report {
 
 ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
-  hid::Attributes values[::llcpp::fuchsia::input::report::SENSOR_MAX_VALUES] = {};
+  hid::Attributes values[fuchsia_input_report::SENSOR_MAX_VALUES] = {};
   size_t num_values = 0;
 
   SensorDescriptor descriptor = {};
@@ -37,7 +37,7 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
       continue;
     }
 
-    if (num_values == ::llcpp::fuchsia::input::report::SENSOR_MAX_VALUES) {
+    if (num_values == fuchsia_input_report::SENSOR_MAX_VALUES) {
       return kParseTooManyItems;
     }
     values[num_values] = field.attr;

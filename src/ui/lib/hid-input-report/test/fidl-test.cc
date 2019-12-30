@@ -13,17 +13,17 @@
 #include "src/ui/lib/hid-input-report/device.h"
 #include "src/ui/lib/hid-input-report/mouse.h"
 
-namespace llcpp_report = ::llcpp::fuchsia::input::report;
+namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 
-void TestAxis(llcpp_report::Axis a, llcpp_report::Axis b) {
+void TestAxis(fuchsia_input_report::Axis a, fuchsia_input_report::Axis b) {
   ASSERT_EQ(a.range.min, b.range.min);
   ASSERT_EQ(a.range.max, b.range.max);
   ASSERT_EQ(a.unit, b.unit);
 }
 
 TEST(FidlTest, MouseDescriptor) {
-  llcpp_report::Axis axis;
-  axis.unit = llcpp_report::Unit::DISTANCE;
+  fuchsia_input_report::Axis axis;
+  axis.unit = fuchsia_input_report::Unit::DISTANCE;
   axis.range.min = -126;
   axis.range.max = 126;
 
@@ -41,7 +41,7 @@ TEST(FidlTest, MouseDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
 
-  llcpp_report::DeviceDescriptor fidl = fidl_desc.builder.view();
+  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.view();
   ASSERT_TRUE(fidl.has_mouse());
   auto& fidl_mouse = fidl.mouse();
 
@@ -76,7 +76,7 @@ TEST(FidlTest, MouseReport) {
   hid_input_report::FidlReport fidl_report = {};
   ASSERT_OK(SetFidlReport(report, &fidl_report));
 
-  llcpp_report::InputReport fidl = fidl_report.builder.view();
+  fuchsia_input_report::InputReport fidl = fidl_report.builder.view();
   ASSERT_TRUE(fidl.has_mouse());
   auto& fidl_mouse = fidl.mouse();
 
@@ -95,18 +95,18 @@ TEST(FidlTest, MouseReport) {
 }
 
 TEST(FidlTest, SensorDescriptor) {
-  llcpp_report::Axis axis;
-  axis.unit = llcpp_report::Unit::LINEAR_VELOCITY;
+  fuchsia_input_report::Axis axis;
+  axis.unit = fuchsia_input_report::Unit::LINEAR_VELOCITY;
   axis.range.min = -126;
   axis.range.max = 126;
 
   hid_input_report::SensorDescriptor sensor_desc = {};
   sensor_desc.values[0].axis = axis;
-  sensor_desc.values[0].type = llcpp_report::SensorType::ACCELEROMETER_X;
+  sensor_desc.values[0].type = fuchsia_input_report::SensorType::ACCELEROMETER_X;
 
-  axis.unit = llcpp_report::Unit::LUX;
+  axis.unit = fuchsia_input_report::Unit::LUX;
   sensor_desc.values[1].axis = axis;
-  sensor_desc.values[1].type = llcpp_report::SensorType::LIGHT_ILLUMINANCE;
+  sensor_desc.values[1].type = fuchsia_input_report::SensorType::LIGHT_ILLUMINANCE;
 
   sensor_desc.num_values = 2;
 
@@ -116,7 +116,7 @@ TEST(FidlTest, SensorDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
 
-  llcpp_report::DeviceDescriptor fidl = fidl_desc.builder.view();
+  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.view();
   ASSERT_TRUE(fidl.has_sensor());
   auto& fidl_sensor = fidl.sensor();
 
@@ -124,10 +124,10 @@ TEST(FidlTest, SensorDescriptor) {
   ASSERT_EQ(fidl_sensor.values().count(), 2);
 
   TestAxis(sensor_desc.values[0].axis, fidl_sensor.values()[0].axis);
-  ASSERT_EQ(fidl_sensor.values()[0].type, llcpp_report::SensorType::ACCELEROMETER_X);
+  ASSERT_EQ(fidl_sensor.values()[0].type, fuchsia_input_report::SensorType::ACCELEROMETER_X);
 
   TestAxis(sensor_desc.values[1].axis, fidl_sensor.values()[1].axis);
-  ASSERT_EQ(fidl_sensor.values()[1].type, llcpp_report::SensorType::LIGHT_ILLUMINANCE);
+  ASSERT_EQ(fidl_sensor.values()[1].type, fuchsia_input_report::SensorType::LIGHT_ILLUMINANCE);
 }
 
 TEST(FidlTest, SensorReport) {
@@ -143,7 +143,7 @@ TEST(FidlTest, SensorReport) {
   hid_input_report::FidlReport fidl_report = {};
   ASSERT_OK(SetFidlReport(report, &fidl_report));
 
-  llcpp_report::InputReport fidl = fidl_report.builder.view();
+  fuchsia_input_report::InputReport fidl = fidl_report.builder.view();
   ASSERT_TRUE(fidl.has_sensor());
   auto& fidl_sensor = fidl.sensor();
 
@@ -157,19 +157,19 @@ TEST(FidlTest, SensorReport) {
 
 TEST(FidlTest, TouchDescriptor) {
   hid_input_report::TouchDescriptor touch_desc = {};
-  touch_desc.touch_type = llcpp_report::TouchType::TOUCHSCREEN;
+  touch_desc.touch_type = fuchsia_input_report::TouchType::TOUCHSCREEN;
 
   touch_desc.max_contacts = 100;
 
-  llcpp_report::Axis axis;
-  axis.unit = llcpp_report::Unit::DISTANCE;
+  fuchsia_input_report::Axis axis;
+  axis.unit = fuchsia_input_report::Unit::DISTANCE;
   axis.range.min = 0;
   axis.range.max = 0xabcdef;
 
   touch_desc.contacts[0].position_x = axis;
   touch_desc.contacts[0].position_y = axis;
 
-  axis.unit = llcpp_report::Unit::PRESSURE;
+  axis.unit = fuchsia_input_report::Unit::PRESSURE;
   axis.range.min = 0;
   axis.range.max = 100;
   touch_desc.contacts[0].pressure = axis;
@@ -182,7 +182,7 @@ TEST(FidlTest, TouchDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
 
-  llcpp_report::DeviceDescriptor fidl = fidl_desc.builder.view();
+  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.view();
   ASSERT_TRUE(fidl.has_touch());
   auto& fidl_touch = fidl.touch();
 
@@ -215,7 +215,7 @@ TEST(FidlTest, TouchReport) {
   hid_input_report::FidlReport fidl_report = {};
   ASSERT_OK(SetFidlReport(report, &fidl_report));
 
-  llcpp_report::InputReport fidl = fidl_report.builder.view();
+  fuchsia_input_report::InputReport fidl = fidl_report.builder.view();
   ASSERT_TRUE(fidl.has_touch());
   auto& fidl_touch = fidl.touch();
 
@@ -241,7 +241,7 @@ TEST(FidlTest, KeyboardDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(descriptor, &fidl_desc));
 
-  llcpp_report::DeviceDescriptor fidl = fidl_desc.builder.view();
+  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.view();
   ASSERT_TRUE(fidl.has_keyboard());
   auto& fidl_keyboard = fidl.keyboard();
 
@@ -264,7 +264,7 @@ TEST(FidlTest, KeyboardReport) {
   hid_input_report::FidlReport fidl_report = {};
   ASSERT_OK(SetFidlReport(report, &fidl_report));
 
-  llcpp_report::InputReport fidl = fidl_report.builder.view();
+  fuchsia_input_report::InputReport fidl = fidl_report.builder.view();
   ASSERT_TRUE(fidl.has_keyboard());
   auto& fidl_keyboard = fidl.keyboard();
 

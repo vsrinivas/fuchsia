@@ -20,7 +20,7 @@
 
 namespace hid_input_report_dev {
 
-namespace llcpp_report = ::llcpp::fuchsia::input::report;
+namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 
 class InputReportBase;
 
@@ -28,7 +28,7 @@ class InputReportInstance;
 using InstanceDeviceType = ddk::Device<InputReportInstance, ddk::Closable, ddk::Messageable>;
 
 class InputReportInstance : public InstanceDeviceType,
-                            ::llcpp::fuchsia::input::report::InputDevice::Interface,
+                            fuchsia_input_report::InputDevice::Interface,
                             public fbl::DoublyLinkedListable<InputReportInstance*> {
  public:
   InputReportInstance(zx_device_t* parent) : InstanceDeviceType(parent) {}
@@ -55,13 +55,13 @@ class InputReportInstance : public InstanceDeviceType,
   fbl::Mutex report_lock_;
   zx::event reports_event_ __TA_GUARDED(report_lock_);
   // The ring buffer stores the hid reports as they are sent to the instance.
-  fbl::RingBuffer<hid_input_report::Report, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports_data_
-      __TA_GUARDED(report_lock_);
+  fbl::RingBuffer<hid_input_report::Report, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
+      reports_data_ __TA_GUARDED(report_lock_);
   // These two arrays store the information to build the FIDL tables.
-  std::array<hid_input_report::FidlReport, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports_fidl_data_
-      __TA_GUARDED(report_lock_);
-  std::array<llcpp_report::InputReport, llcpp_report::MAX_DEVICE_REPORT_COUNT> reports_
-      __TA_GUARDED(report_lock_);
+  std::array<hid_input_report::FidlReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
+      reports_fidl_data_ __TA_GUARDED(report_lock_);
+  std::array<fuchsia_input_report::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
+      reports_ __TA_GUARDED(report_lock_);
 
   InputReportBase* base_ = nullptr;
 };

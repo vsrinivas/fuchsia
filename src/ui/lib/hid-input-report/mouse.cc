@@ -18,7 +18,7 @@ namespace hid_input_report {
 ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
   hid::Attributes movement_x = {};
   hid::Attributes movement_y = {};
-  hid::Attributes buttons[::llcpp::fuchsia::input::report::MOUSE_MAX_NUM_BUTTONS];
+  hid::Attributes buttons[fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS];
   uint8_t num_buttons = 0;
 
   MouseDescriptor mouse_descriptor = {};
@@ -35,7 +35,7 @@ ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
       movement_y = field.attr;
       mouse_descriptor.movement_y = LlcppAxisFromAttribute(movement_y);
     } else if (field.attr.usage.page == hid::usage::Page::kButton) {
-      if (num_buttons == ::llcpp::fuchsia::input::report::MOUSE_MAX_NUM_BUTTONS) {
+      if (num_buttons == fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS) {
         return kParseTooManyItems;
       }
       buttons[num_buttons++] = field.attr;

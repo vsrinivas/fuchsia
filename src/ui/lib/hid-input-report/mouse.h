@@ -22,7 +22,7 @@ class Mouse : public Device {
  private:
   hid::Attributes movement_x_ = {};
   hid::Attributes movement_y_ = {};
-  hid::Attributes buttons_[::llcpp::fuchsia::input::report::MOUSE_MAX_NUM_BUTTONS] = {};
+  hid::Attributes buttons_[fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS] = {};
   size_t num_buttons_ = 0;
 
   MouseDescriptor descriptor_ = {};

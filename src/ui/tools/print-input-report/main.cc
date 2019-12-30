@@ -18,8 +18,6 @@
 
 namespace print_input_report {
 
-namespace llcpp_report = ::llcpp::fuchsia::input::report;
-
 void PrintHelp(Printer* printer) {
   printer->Print("usage: print-input-report <command> [<args>]\n\n");
   printer->Print("  commands:\n");
@@ -44,8 +42,8 @@ zx_status_t ParseUintArg(const char* arg, uint32_t min, uint32_t max, uint32_t* 
   return ZX_OK;
 }
 
-std::optional<llcpp_report::InputDevice::SyncClient> GetClientFromPath(Printer* printer,
-                                                                       const std::string& path) {
+std::optional<fuchsia_input_report::InputDevice::SyncClient> GetClientFromPath(
+    Printer* printer, const std::string& path) {
   fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
     printer->Print("could not open %s\n", path.c_str());
@@ -59,7 +57,7 @@ std::optional<llcpp_report::InputDevice::SyncClient> GetClientFromPath(Printer* 
     return std::nullopt;
   }
 
-  return llcpp_report::InputDevice::SyncClient(std::move(chan));
+  return fuchsia_input_report::InputDevice::SyncClient(std::move(chan));
 }
 
 }  // namespace print_input_report

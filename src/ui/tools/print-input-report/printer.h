@@ -13,18 +13,20 @@
 
 namespace print_input_report {
 
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::NONE) == 0);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::OTHER) == 1);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::DISTANCE) == 2);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::WEIGHT) == 3);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::ROTATION) == 4);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::ANGULAR_VELOCITY) == 5);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::LINEAR_VELOCITY) == 6);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::ACCELERATION) == 7);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::MAGNETIC_FLUX) == 8);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::LUMINOUS_FLUX) == 9);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::PRESSURE) == 10);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::Unit::LUX) == 11);
+namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
+
+static_assert(static_cast<int>(fuchsia_input_report::Unit::NONE) == 0);
+static_assert(static_cast<int>(fuchsia_input_report::Unit::OTHER) == 1);
+static_assert(static_cast<int>(fuchsia_input_report::Unit::DISTANCE) == 2);
+static_assert(static_cast<int>(fuchsia_input_report::Unit::WEIGHT) == 3);
+static_assert(static_cast<int>(fuchsia_input_report::Unit::ROTATION) == 4);
+static_assert(static_cast<int>(fuchsia_input_report::Unit::ANGULAR_VELOCITY) == 5);
+static_assert(static_cast<int>(fuchsia_input_report::Unit::LINEAR_VELOCITY) == 6);
+static_assert(static_cast<int>(fuchsia_input_report::Unit::ACCELERATION) == 7);
+static_assert(static_cast<int>(fuchsia_input_report::Unit::MAGNETIC_FLUX) == 8);
+static_assert(static_cast<int>(fuchsia_input_report::Unit::LUMINOUS_FLUX) == 9);
+static_assert(static_cast<int>(fuchsia_input_report::Unit::PRESSURE) == 10);
+static_assert(static_cast<int>(fuchsia_input_report::Unit::LUX) == 11);
 
 // These strings must be ordered based on the enums in fuchsia.input.report/units.fidl.
 const char* const kUnitStrings[] = {
@@ -42,20 +44,19 @@ const char* const kUnitStrings[] = {
     "LUX",
 };
 
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::ACCELEROMETER_X) == 1);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::ACCELEROMETER_Y) == 2);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::ACCELEROMETER_Z) == 3);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::MAGNETOMETER_X) == 4);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::MAGNETOMETER_Y) == 5);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::MAGNETOMETER_Z) == 6);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::GYROSCOPE_X) == 7);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::GYROSCOPE_Y) == 8);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::GYROSCOPE_Z) == 9);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::LIGHT_ILLUMINANCE) ==
-              10);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::LIGHT_RED) == 11);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::LIGHT_GREEN) == 12);
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::SensorType::LIGHT_BLUE) == 13);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::ACCELEROMETER_X) == 1);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::ACCELEROMETER_Y) == 2);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::ACCELEROMETER_Z) == 3);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::MAGNETOMETER_X) == 4);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::MAGNETOMETER_Y) == 5);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::MAGNETOMETER_Z) == 6);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::GYROSCOPE_X) == 7);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::GYROSCOPE_Y) == 8);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::GYROSCOPE_Z) == 9);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::LIGHT_ILLUMINANCE) == 10);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::LIGHT_RED) == 11);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::LIGHT_GREEN) == 12);
+static_assert(static_cast<int>(fuchsia_input_report::SensorType::LIGHT_BLUE) == 13);
 
 // These strings must be ordered based on the enums in fuchsia.input.report/sensor.fidl.
 const char* const kSensorTypeStrings[] = {
@@ -65,7 +66,7 @@ const char* const kSensorTypeStrings[] = {
     "LIGHT_GREEN",    "LIGHT_BLUE",
 };
 
-static_assert(static_cast<int>(::llcpp::fuchsia::input::report::TouchType::TOUCHSCREEN) == 1);
+static_assert(static_cast<int>(fuchsia_input_report::TouchType::TOUCHSCREEN) == 1);
 // These strings must be ordered based on the enums in fuchsia.input.report/touch.fidl.
 const char* const kTouchTypeStrings[] = {
     "ERROR",
@@ -78,7 +79,7 @@ class Printer {
 
   // Find the string related to the unit. If we are given a value that we do not
   // recognize, the string "NONE" will be returned and printed.
-  static const char* UnitToString(::llcpp::fuchsia::input::report::Unit unit) {
+  static const char* UnitToString(fuchsia_input_report::Unit unit) {
     uint32_t unit_index = static_cast<uint32_t>(unit);
     if (unit_index >= countof(kUnitStrings)) {
       return kUnitStrings[0];
@@ -88,7 +89,7 @@ class Printer {
 
   // Find the string related to the sensor type. If we are given a value that we do not
   // recognize, the string "ERROR" will be returned and printed.
-  static const char* SensorTypeToString(::llcpp::fuchsia::input::report::SensorType type) {
+  static const char* SensorTypeToString(fuchsia_input_report::SensorType type) {
     uint32_t unit_index = static_cast<uint32_t>(type);
     if (unit_index >= countof(kSensorTypeStrings)) {
       return kSensorTypeStrings[0];
@@ -96,7 +97,7 @@ class Printer {
     return kSensorTypeStrings[unit_index];
   }
 
-  static const char* TouchTypeToString(::llcpp::fuchsia::input::report::TouchType type) {
+  static const char* TouchTypeToString(fuchsia_input_report::TouchType type) {
     uint32_t unit_index = static_cast<uint32_t>(type);
     if (unit_index >= countof(kTouchTypeStrings)) {
       return kTouchTypeStrings[0];
@@ -104,13 +105,13 @@ class Printer {
     return kTouchTypeStrings[unit_index];
   }
 
-  void PrintAxis(::llcpp::fuchsia::input::report::Axis axis) {
+  void PrintAxis(fuchsia_input_report::Axis axis) {
     this->Print("Unit: %8s\n", UnitToString(axis.unit));
     this->Print("Min:  %8ld\n", axis.range.min);
     this->Print("Max:  %8ld\n", axis.range.max);
   }
 
-  void PrintAxisIndented(::llcpp::fuchsia::input::report::Axis axis) {
+  void PrintAxisIndented(fuchsia_input_report::Axis axis) {
     IncreaseIndent();
     this->Print("Unit: %8s\n", UnitToString(axis.unit));
     this->Print("Min:  %8ld\n", axis.range.min);

@@ -15,8 +15,6 @@
 
 namespace hid_input_report {
 
-namespace llcpp_report = ::llcpp::fuchsia::input::report;
-
 void SetMouseDescriptor(FidlMouseDescriptor* descriptor) {
   if (descriptor->data.movement_x) {
     descriptor->builder.set_movement_x(&descriptor->data.movement_x.value());
@@ -48,7 +46,7 @@ void SetMouseReport(FidlMouseReport* report) {
 }
 
 void SetSensorDescriptor(FidlSensorDescriptor* descriptor) {
-  descriptor->values_view = fidl::VectorView<llcpp_report::SensorAxis>(
+  descriptor->values_view = fidl::VectorView<fuchsia_input_report::SensorAxis>(
       descriptor->data.values.data(), descriptor->data.num_values);
   descriptor->builder.set_values(&descriptor->values_view);
   descriptor->descriptor = descriptor->builder.view();
@@ -64,7 +62,7 @@ void SetSensorReport(FidlSensorReport* report) {
 
 void SetTouchDescriptor(FidlTouchDescriptor* descriptor) {
   for (size_t i = 0; i < descriptor->data.num_contacts; i++) {
-    llcpp_report::ContactDescriptor::Builder& contact_builder =
+    fuchsia_input_report::ContactDescriptor::Builder& contact_builder =
         descriptor->contacts_builder[i].builder;
     if (descriptor->data.contacts[i].position_x) {
       contact_builder.set_position_x(&descriptor->data.contacts[i].position_x.value());
@@ -84,7 +82,7 @@ void SetTouchDescriptor(FidlTouchDescriptor* descriptor) {
     descriptor->contacts_built[i] = contact_builder.view();
   }
 
-  descriptor->contacts_view = fidl::VectorView<llcpp_report::ContactDescriptor>(
+  descriptor->contacts_view = fidl::VectorView<fuchsia_input_report::ContactDescriptor>(
       descriptor->contacts_built.data(), descriptor->data.num_contacts);
 
   descriptor->builder.set_contacts(&descriptor->contacts_view);
@@ -96,7 +94,7 @@ void SetTouchDescriptor(FidlTouchDescriptor* descriptor) {
 
 void SetTouchReport(FidlTouchReport* report) {
   for (size_t i = 0; i < report->data.num_contacts; i++) {
-    llcpp_report::ContactReport::Builder& contact_builder = report->contacts[i].builder;
+    fuchsia_input_report::ContactReport::Builder& contact_builder = report->contacts[i].builder;
     ContactReport& contact = report->data.contacts[i];
 
     if (contact.contact_id) {
@@ -120,7 +118,7 @@ void SetTouchReport(FidlTouchReport* report) {
     report->contacts_built[i] = contact_builder.view();
   }
 
-  report->contacts_view = fidl::VectorView<llcpp_report::ContactReport>(
+  report->contacts_view = fidl::VectorView<fuchsia_input_report::ContactReport>(
       report->contacts_built.data(), report->data.num_contacts);
   report->builder.set_contacts(&report->contacts_view);
 

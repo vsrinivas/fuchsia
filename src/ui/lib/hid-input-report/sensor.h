@@ -20,7 +20,7 @@ class Sensor : public Device {
   uint8_t ReportId() const override { return report_id_; }
 
  private:
-  hid::Attributes values_[::llcpp::fuchsia::input::report::SENSOR_MAX_VALUES] = {};
+  hid::Attributes values_[fuchsia_input_report::SENSOR_MAX_VALUES] = {};
   size_t num_values_ = 0;
 
   SensorDescriptor descriptor_ = {};

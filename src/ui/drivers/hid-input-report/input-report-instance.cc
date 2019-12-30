@@ -14,7 +14,7 @@ namespace hid_input_report_dev {
 
 zx_status_t InputReportInstance::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  llcpp_report::InputDevice::Dispatch(this, msg, &transaction);
+  fuchsia_input_report::InputDevice::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 
@@ -48,7 +48,7 @@ void InputReportInstance::GetReportsEvent(GetReportsEventCompleter::Sync _comple
 
 void InputReportInstance::GetDescriptor(GetDescriptorCompleter::Sync _completer) {
   hid_input_report::FidlDescriptor descriptor_data = {};
-  llcpp_report::DeviceDescriptor descriptor;
+  fuchsia_input_report::DeviceDescriptor descriptor;
 
   size_t size;
   const hid_input_report::ReportDescriptor* descriptors = base_->GetDescriptors(&size);
@@ -84,7 +84,7 @@ void InputReportInstance::GetReports(GetReportsCompleter::Sync _completer) {
     reports_event_.signal(DEV_STATE_READABLE, 0);
   }
 
-  fidl::VectorView<llcpp_report::InputReport> report_view(reports_.data(), index);
+  fidl::VectorView<fuchsia_input_report::InputReport> report_view(reports_.data(), index);
   _completer.Reply(report_view);
 }
 

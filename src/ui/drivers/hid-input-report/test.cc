@@ -190,13 +190,13 @@ TEST_F(HidDevTest, GetReportDescTest) {
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
 
-  auto sync_client = llcpp_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
-  llcpp_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
+  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
   ASSERT_OK(result.status());
 
   auto& desc = result.Unwrap()->descriptor;
   ASSERT_TRUE(desc.has_mouse());
-  llcpp_report::MouseDescriptor& mouse = desc.mouse();
+  fuchsia_input_report::MouseDescriptor& mouse = desc.mouse();
 
   ASSERT_TRUE(mouse.has_movement_x());
   ASSERT_EQ(-127, mouse.movement_x().range.min);
@@ -223,7 +223,7 @@ TEST_F(HidDevTest, GetReportTest) {
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
 
-  auto sync_client = llcpp_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
 
   // Spoof send a report.
   std::vector<uint8_t> sent_report = {0xFF, 0x50, 0x70};
@@ -231,7 +231,7 @@ TEST_F(HidDevTest, GetReportTest) {
   fake_hid_.SendReport();
 
   // Get the report.
-  llcpp_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
+  fuchsia_input_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
   ASSERT_OK(result.status());
   auto& reports = result.Unwrap()->reports;
 
@@ -272,28 +272,28 @@ TEST_F(HidDevTest, SensorTest) {
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
 
-  auto sync_client = llcpp_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
 
   // Get the report descriptor.
-  llcpp_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
+  fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
   ASSERT_OK(result.status());
-  llcpp_report::DeviceDescriptor& desc = result->descriptor;
+  fuchsia_input_report::DeviceDescriptor& desc = result->descriptor;
   ASSERT_TRUE(desc.has_sensor());
-  llcpp_report::SensorDescriptor& sensor_desc = desc.sensor();
+  fuchsia_input_report::SensorDescriptor& sensor_desc = desc.sensor();
   ASSERT_TRUE(sensor_desc.has_values());
   ASSERT_EQ(4, sensor_desc.values().count());
 
-  ASSERT_EQ(sensor_desc.values()[0].type, llcpp_report::SensorType::LIGHT_ILLUMINANCE);
-  ASSERT_EQ(sensor_desc.values()[0].axis.unit, llcpp_report::Unit::LUX);
+  ASSERT_EQ(sensor_desc.values()[0].type, fuchsia_input_report::SensorType::LIGHT_ILLUMINANCE);
+  ASSERT_EQ(sensor_desc.values()[0].axis.unit, fuchsia_input_report::Unit::LUX);
 
-  ASSERT_EQ(sensor_desc.values()[1].type, llcpp_report::SensorType::LIGHT_RED);
-  ASSERT_EQ(sensor_desc.values()[1].axis.unit, llcpp_report::Unit::LUX);
+  ASSERT_EQ(sensor_desc.values()[1].type, fuchsia_input_report::SensorType::LIGHT_RED);
+  ASSERT_EQ(sensor_desc.values()[1].axis.unit, fuchsia_input_report::Unit::LUX);
 
-  ASSERT_EQ(sensor_desc.values()[2].type, llcpp_report::SensorType::LIGHT_BLUE);
-  ASSERT_EQ(sensor_desc.values()[2].axis.unit, llcpp_report::Unit::LUX);
+  ASSERT_EQ(sensor_desc.values()[2].type, fuchsia_input_report::SensorType::LIGHT_BLUE);
+  ASSERT_EQ(sensor_desc.values()[2].axis.unit, fuchsia_input_report::Unit::LUX);
 
-  ASSERT_EQ(sensor_desc.values()[3].type, llcpp_report::SensorType::LIGHT_GREEN);
-  ASSERT_EQ(sensor_desc.values()[3].axis.unit, llcpp_report::Unit::LUX);
+  ASSERT_EQ(sensor_desc.values()[3].type, fuchsia_input_report::SensorType::LIGHT_GREEN);
+  ASSERT_EQ(sensor_desc.values()[3].axis.unit, fuchsia_input_report::Unit::LUX);
 
   // Create the report.
   ambient_light_input_rpt_t report_data = {};
@@ -315,14 +315,14 @@ TEST_F(HidDevTest, SensorTest) {
   fake_hid_.SendReport();
 
   // Get the report.
-  llcpp_report::InputDevice::ResultOf::GetReports report_result = sync_client.GetReports();
+  fuchsia_input_report::InputDevice::ResultOf::GetReports report_result = sync_client.GetReports();
   ASSERT_OK(result.status());
 
-  fidl::VectorView<llcpp_report::InputReport>& reports = report_result->reports;
+  fidl::VectorView<fuchsia_input_report::InputReport>& reports = report_result->reports;
   ASSERT_EQ(1, reports.count());
 
   ASSERT_TRUE(reports[0].has_sensor());
-  llcpp_report::SensorReport& sensor_report = reports[0].sensor();
+  fuchsia_input_report::SensorReport& sensor_report = reports[0].sensor();
   EXPECT_TRUE(sensor_report.has_values());
   EXPECT_EQ(4, sensor_report.values().count());
 
@@ -353,7 +353,7 @@ TEST_F(HidDevTest, GetTouchReportTest) {
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
 
-  auto sync_client = llcpp_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
 
   // Spoof send a report.
   paradise_touch_t touch_report = {};
@@ -371,7 +371,7 @@ TEST_F(HidDevTest, GetTouchReportTest) {
   fake_hid_.SendReport();
 
   // Get the report.
-  llcpp_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
+  fuchsia_input_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
   ASSERT_OK(result.status());
   auto& reports = result.Unwrap()->reports;
 
@@ -408,7 +408,7 @@ TEST_F(HidDevTest, KeyboardTest) {
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
 
-  auto sync_client = llcpp_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
   // Spoof send a report.
   hid_boot_kbd_report keyboard_report = {};
   keyboard_report.usage[0] = HID_USAGE_KEY_A;
@@ -422,7 +422,7 @@ TEST_F(HidDevTest, KeyboardTest) {
   fake_hid_.SendReport();
 
   // Get the report.
-  llcpp_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
+  fuchsia_input_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
   ASSERT_OK(result.status());
   auto& reports = result->reports;
 

@@ -20,13 +20,13 @@
 namespace hid_input_report {
 
 struct MouseDescriptor {
-  std::optional<::llcpp::fuchsia::input::report::Axis> movement_x = {};
-  std::optional<::llcpp::fuchsia::input::report::Axis> movement_y = {};
-  std::optional<::llcpp::fuchsia::input::report::Axis> scroll_v = {};
-  std::optional<::llcpp::fuchsia::input::report::Axis> scroll_h = {};
+  std::optional<fuchsia_input_report::Axis> movement_x = {};
+  std::optional<fuchsia_input_report::Axis> movement_y = {};
+  std::optional<fuchsia_input_report::Axis> scroll_v = {};
+  std::optional<fuchsia_input_report::Axis> scroll_h = {};
 
   uint8_t num_buttons = 0;
-  std::array<uint8_t, ::llcpp::fuchsia::input::report::MOUSE_MAX_NUM_BUTTONS> buttons;
+  std::array<uint8_t, fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS> buttons;
 };
 
 struct MouseReport {
@@ -35,14 +35,12 @@ struct MouseReport {
   std::optional<int64_t> scroll_v;
   std::optional<int64_t> scroll_h;
   uint8_t num_buttons_pressed;
-  std::array<uint8_t, ::llcpp::fuchsia::input::report::MOUSE_MAX_NUM_BUTTONS> buttons_pressed;
+  std::array<uint8_t, fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS> buttons_pressed;
 };
 
 // |SensorDescriptor| describes the capabilities of a sensor device.
 struct SensorDescriptor {
-  std::array<::llcpp::fuchsia::input::report::SensorAxis,
-             ::llcpp::fuchsia::input::report::SENSOR_MAX_VALUES>
-      values;
+  std::array<fuchsia_input_report::SensorAxis, fuchsia_input_report::SENSOR_MAX_VALUES> values;
   size_t num_values;
 };
 
@@ -50,27 +48,27 @@ struct SensorDescriptor {
 // The values array will always be the same size as the descriptor values, and they
 // will always be in the same order.
 struct SensorReport {
-  std::array<int64_t, ::llcpp::fuchsia::input::report::SENSOR_MAX_VALUES> values;
+  std::array<int64_t, fuchsia_input_report::SENSOR_MAX_VALUES> values;
   size_t num_values;
 };
 
 struct ContactDescriptor {
-  std::optional<::llcpp::fuchsia::input::report::Axis> contact_id;
-  std::optional<::llcpp::fuchsia::input::report::Axis> is_pressed;
-  std::optional<::llcpp::fuchsia::input::report::Axis> position_x;
-  std::optional<::llcpp::fuchsia::input::report::Axis> position_y;
-  std::optional<::llcpp::fuchsia::input::report::Axis> pressure;
-  std::optional<::llcpp::fuchsia::input::report::Axis> contact_width;
-  std::optional<::llcpp::fuchsia::input::report::Axis> contact_height;
+  std::optional<fuchsia_input_report::Axis> contact_id;
+  std::optional<fuchsia_input_report::Axis> is_pressed;
+  std::optional<fuchsia_input_report::Axis> position_x;
+  std::optional<fuchsia_input_report::Axis> position_y;
+  std::optional<fuchsia_input_report::Axis> pressure;
+  std::optional<fuchsia_input_report::Axis> contact_width;
+  std::optional<fuchsia_input_report::Axis> contact_height;
 };
 
 struct TouchDescriptor {
   /// The type of touch device being used.
-  ::llcpp::fuchsia::input::report::TouchType touch_type;
+  fuchsia_input_report::TouchType touch_type;
 
   uint32_t max_contacts;
   /// This describes each of the contact capabilities.
-  std::array<ContactDescriptor, ::llcpp::fuchsia::input::report::TOUCH_MAX_CONTACTS> contacts;
+  std::array<ContactDescriptor, fuchsia_input_report::TOUCH_MAX_CONTACTS> contacts;
   size_t num_contacts;
 };
 
@@ -90,20 +88,17 @@ struct ContactReport {
 /// |TouchReport| describes the current contacts recorded by the touchscreen.
 struct TouchReport {
   /// The contacts currently being reported by the device.
-  std::array<ContactReport, ::llcpp::fuchsia::input::report::TOUCH_MAX_CONTACTS> contacts;
+  std::array<ContactReport, fuchsia_input_report::TOUCH_MAX_CONTACTS> contacts;
   size_t num_contacts;
 };
 
 struct KeyboardDescriptor {
-  std::array<::llcpp::fuchsia::ui::input2::Key,
-             ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_KEYS>
-      keys;
+  std::array<::llcpp::fuchsia::ui::input2::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS> keys;
   size_t num_keys = 0;
 };
 
 struct KeyboardReport {
-  std::array<::llcpp::fuchsia::ui::input2::Key,
-             ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_KEYS>
+  std::array<::llcpp::fuchsia::ui::input2::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS>
       pressed_keys;
   size_t num_pressed_keys;
 };

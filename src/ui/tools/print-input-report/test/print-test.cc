@@ -23,7 +23,7 @@
 
 namespace test {
 
-namespace llcpp_report = ::llcpp::fuchsia::input::report;
+namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 
 class FakePrinter : public print_input_report::Printer {
  public:
@@ -64,7 +64,7 @@ class FakePrinter : public print_input_report::Printer {
 // This class fakes the InputReport driver by implementing the InputDevice interface.
 // The test client can use |SetReport| and |SetDescriptor| to send reports/descriptors
 // through the interface.
-class FakeDevice final : public llcpp_report::InputDevice::Interface {
+class FakeDevice final : public fuchsia_input_report::InputDevice::Interface {
  public:
   FakeDevice() : lock_() { zx::event::create(0, &reports_event_); }
   virtual void GetReportsEvent(GetReportsEventCompleter::Sync completer) override {
@@ -79,13 +79,13 @@ class FakeDevice final : public llcpp_report::InputDevice::Interface {
     hid_input_report::FidlReport fidl;
     zx_status_t status = hid_input_report::SetFidlReport(report_, &fidl);
     if (status != ZX_OK) {
-      completer.Reply(fidl::VectorView<llcpp_report::InputReport>(nullptr, 0));
+      completer.Reply(fidl::VectorView<fuchsia_input_report::InputReport>(nullptr, 0));
       return;
     }
 
-    llcpp_report::InputReport report = fidl.builder.view();
+    fuchsia_input_report::InputReport report = fidl.builder.view();
     reports_event_.signal(DEV_STATE_READABLE, 0);
-    completer.Reply(fidl::VectorView<llcpp_report::InputReport>(&report, 1));
+    completer.Reply(fidl::VectorView<fuchsia_input_report::InputReport>(&report, 1));
   }
 
   // Sets the fake's report, which will be read with |GetReports|. This also
@@ -102,7 +102,7 @@ class FakeDevice final : public llcpp_report::InputDevice::Interface {
     hid_input_report::FidlDescriptor fidl;
     ASSERT_EQ(hid_input_report::SetFidlDescriptor(descriptor_, &fidl), ZX_OK);
 
-    llcpp_report::DeviceDescriptor descriptor = fidl.builder.view();
+    fuchsia_input_report::DeviceDescriptor descriptor = fidl.builder.view();
     completer.Reply(std::move(descriptor));
   }
 
@@ -138,7 +138,7 @@ class PrintInputReport : public ::testing::Test {
     fidl::Bind(loop_->dispatcher(), std::move(token_server), fake_device_.get());
 
     // Make the client.
-    client_ = llcpp_report::InputDevice::SyncClient(std::move(token_client));
+    client_ = fuchsia_input_report::InputDevice::SyncClient(std::move(token_client));
   }
 
   virtual void TearDown() {
@@ -148,7 +148,7 @@ class PrintInputReport : public ::testing::Test {
 
   std::unique_ptr<async::Loop> loop_;
   std::unique_ptr<FakeDevice> fake_device_;
-  std::optional<llcpp_report::InputDevice::SyncClient> client_;
+  std::optional<fuchsia_input_report::InputDevice::SyncClient> client_;
 };
 
 TEST_F(PrintInputReport, PrintMouseReport) {
@@ -180,13 +180,13 @@ TEST_F(PrintInputReport, PrintMouseReport) {
 
 TEST_F(PrintInputReport, PrintMouseDescriptor) {
   hid_input_report::MouseDescriptor mouse = {};
-  llcpp_report::Axis axis;
-  axis.unit = llcpp_report::Unit::DISTANCE;
+  fuchsia_input_report::Axis axis;
+  axis.unit = fuchsia_input_report::Unit::DISTANCE;
   axis.range.min = -100;
   axis.range.max = -100;
   mouse.movement_x = axis;
 
-  axis.unit = llcpp_report::Unit::NONE;
+  axis.unit = fuchsia_input_report::Unit::NONE;
   axis.range.min = -200;
   axis.range.max = -200;
   mouse.movement_y = axis;
@@ -221,18 +221,18 @@ TEST_F(PrintInputReport, PrintMouseDescriptor) {
 }
 
 TEST_F(PrintInputReport, PrintSensorDescriptor) {
-  llcpp_report::Axis axis;
-  axis.unit = llcpp_report::Unit::LINEAR_VELOCITY;
+  fuchsia_input_report::Axis axis;
+  axis.unit = fuchsia_input_report::Unit::LINEAR_VELOCITY;
   axis.range.min = 0;
   axis.range.max = 1000;
 
   hid_input_report::SensorDescriptor sensor_desc = {};
   sensor_desc.values[0].axis = axis;
-  sensor_desc.values[0].type = llcpp_report::SensorType::ACCELEROMETER_X;
+  sensor_desc.values[0].type = fuchsia_input_report::SensorType::ACCELEROMETER_X;
 
-  axis.unit = llcpp_report::Unit::LUMINOUS_FLUX;
+  axis.unit = fuchsia_input_report::Unit::LUMINOUS_FLUX;
   sensor_desc.values[1].axis = axis;
-  sensor_desc.values[1].type = llcpp_report::SensorType::LIGHT_ILLUMINANCE;
+  sensor_desc.values[1].type = fuchsia_input_report::SensorType::LIGHT_ILLUMINANCE;
   sensor_desc.num_values = 2;
 
   hid_input_report::ReportDescriptor desc;
@@ -281,12 +281,12 @@ TEST_F(PrintInputReport, PrintSensorReport) {
 
 TEST_F(PrintInputReport, PrintTouchDescriptor) {
   hid_input_report::TouchDescriptor touch_desc = {};
-  touch_desc.touch_type = llcpp_report::TouchType::TOUCHSCREEN;
+  touch_desc.touch_type = fuchsia_input_report::TouchType::TOUCHSCREEN;
 
   touch_desc.max_contacts = 100;
 
-  llcpp_report::Axis axis;
-  axis.unit = llcpp_report::Unit::NONE;
+  fuchsia_input_report::Axis axis;
+  axis.unit = fuchsia_input_report::Unit::NONE;
   axis.range.min = 0;
   axis.range.max = 300;
 

@@ -16,7 +16,7 @@
 namespace hid_input_report {
 
 ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
-  ContactConfig contacts[::llcpp::fuchsia::input::report::TOUCH_MAX_CONTACTS];
+  ContactConfig contacts[fuchsia_input_report::TOUCH_MAX_CONTACTS];
   size_t num_contacts = 0;
   TouchDescriptor descriptor = {};
 
@@ -34,7 +34,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
 
   if (main_collection->usage ==
       hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchScreen)) {
-    descriptor.touch_type = ::llcpp::fuchsia::input::report::TouchType::TOUCHSCREEN;
+    descriptor.touch_type = fuchsia_input_report::TouchType::TOUCHSCREEN;
   } else {
     return ParseResult::kParseNoCollection;
   }
@@ -60,7 +60,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
     if (num_contacts < 1) {
       return ParseResult::kParseNoCollection;
     }
-    if (num_contacts > ::llcpp::fuchsia::input::report::TOUCH_MAX_CONTACTS) {
+    if (num_contacts > fuchsia_input_report::TOUCH_MAX_CONTACTS) {
       return kParseTooManyItems;
     }
     ContactConfig* contact = &contacts[num_contacts - 1];

@@ -31,7 +31,7 @@ class Touch : public Device {
     hid::Attributes contact_width;
     hid::Attributes contact_height;
   };
-  ContactConfig contacts_[::llcpp::fuchsia::input::report::TOUCH_MAX_CONTACTS] = {};
+  ContactConfig contacts_[fuchsia_input_report::TOUCH_MAX_CONTACTS] = {};
 
   TouchDescriptor descriptor_ = {};
 

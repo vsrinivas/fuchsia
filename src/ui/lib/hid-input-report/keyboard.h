@@ -23,7 +23,7 @@ class Keyboard : public Device {
   // Each item in |key_fields_| represents either a single key or a range of keys.
   // Ranges of keys will have the |kArray| flag set and will send a single key
   // value on each report. Single keys will be 1 if pressed, 0 if unpressed.
-  std::array<hid::ReportField, ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_KEYS> key_fields_;
+  std::array<hid::ReportField, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS> key_fields_;
   size_t num_keys_ = 0;
 
   KeyboardDescriptor descriptor_ = {};

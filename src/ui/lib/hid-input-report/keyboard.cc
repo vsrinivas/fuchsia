@@ -23,7 +23,7 @@ namespace hid_input_report {
 ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
   // Use a set to make it easy to create a list of sorted and unique keys.
   std::set<uint32_t> key_values;
-  std::array<hid::ReportField, ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_KEYS> key_fields;
+  std::array<hid::ReportField, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS> key_fields;
   size_t num_keys = 0;
 
   for (size_t i = 0; i < hid_report_descriptor.input_count; i++) {
@@ -39,13 +39,13 @@ ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_rep
         key_values.insert(field.attr.usage.usage);
       }
       key_fields[num_keys++] = field;
-      if (num_keys == ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_KEYS) {
+      if (num_keys == fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS) {
         return ParseResult::kParseTooManyItems;
       }
     }
   }
 
-  if (key_values.size() >= ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_KEYS) {
+  if (key_values.size() >= fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS) {
     return ParseResult::kParseTooManyItems;
   }
 
