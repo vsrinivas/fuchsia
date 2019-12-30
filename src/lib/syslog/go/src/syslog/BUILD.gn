@@ -40,6 +40,6 @@ test_package("syslog_gotests") {
 group("tests") {
   testonly = true
   deps = [
-    ":syslog_gotests"
+    ":syslog_gotests",
   ]
 }

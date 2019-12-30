@@ -50,6 +50,6 @@ test_package("cpp-tests") {
 group("tests") {
   testonly = true
   deps = [
-    ":cpp-tests"
+    ":cpp-tests",
   ]
 }

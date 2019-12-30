@@ -8,10 +8,10 @@ rustc_test("fake-at-driver-test") {
   name = "tel_fake_at_driver_test"
   edition = "2018"
   deps = [
-    "//src/lib/syslog/rust:syslog",
     "//src/connectivity/telephony/lib/qmi",
     "//src/connectivity/telephony/tests/tel-dev:tel_dev",
     "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:futures",
   ]

@@ -16,10 +16,8 @@ rustc_library("mold") {
     "//third_party/rust_crates:rustc-hash",
   ]
   if (is_fuchsia) {
-    features = [
-      "tracing",
-    ]
-    deps += [ "//garnet/public/rust/fuchsia-trace" ]
+    features = [ "tracing" ]
+    deps += [ "//src/lib/trace/rust:trace" ]
   }
 }
 

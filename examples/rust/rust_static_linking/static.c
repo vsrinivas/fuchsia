@@ -4,6 +4,4 @@
 
 #include <stdint.h>
 
-uint32_t returns_two() {
-  return 2;
-}
+uint32_t returns_two() { return 2; }

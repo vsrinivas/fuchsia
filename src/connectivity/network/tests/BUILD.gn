@@ -52,11 +52,11 @@ rustc_test("netstack_cobalt_integration_test") {
   source_root = "src/cobalt.rs"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test-rustc",
     "//src/connectivity/network/netstack:networking_metrics_rustlib",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

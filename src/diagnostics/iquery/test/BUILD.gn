@@ -10,9 +10,9 @@ rustc_test("iquery_golden_test") {
   source_root = "main.rs"
 
   deps = [
-    "//src/lib/fdio/rust:fdio",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/cstr",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",

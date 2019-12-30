@@ -12,8 +12,8 @@ rustc_library("ppp_packet") {
   edition = "2018"
 
   deps = [
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/packet",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
@@ -25,8 +25,8 @@ rustc_test("ppp_packet_test_bin") {
   edition = "2018"
 
   deps = [
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/packet",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",

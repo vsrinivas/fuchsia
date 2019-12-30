@@ -11,7 +11,6 @@ import("//build/rust/rustc_artifact.gni")
 #   alias
 #     GN Target of the Rust crate that is being redirected too
 #
-
 template("rustc_alias") {
   assert(defined(invoker.alias), "Must define an aliased crate")
 

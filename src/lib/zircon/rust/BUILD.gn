@@ -48,8 +48,8 @@ rustc_test("fuchsia-zircon-unittest") {
 
     # Test-only deps
     ":fuchsia-zircon",
-    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-runtime",
+    "//src/lib/fdio/rust:fdio",
   ]
 }
 

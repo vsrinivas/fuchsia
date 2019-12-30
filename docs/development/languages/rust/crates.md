@@ -1,6 +1,6 @@
 # Fuchsia Rust Crates
 
-* [fdio/](/garnet/public/rust/fdio/)
+* [fdio/](/src/lib/fdio/rust/)
 
     Wrapper over zircon-fdio library
 
@@ -36,7 +36,7 @@
 
     A crate that sets the Rust allocator to the system allocator. This is automatically included for projects that use fuchsia-async, and all Fuchsia binaries should ensure that they take a transitive dependency on this crate (and “use” it, as merely setting it as a dependency in GN is not sufficient to ensure that it is linked in).
 
-* [fuchsia-trace/](/garnet/public/rust/fuchsia-trace/)
+* [fuchsia-trace/](/src/lib/trace/rust/)
 
     A safe Rust interface to Fuchsia's tracing interface
 

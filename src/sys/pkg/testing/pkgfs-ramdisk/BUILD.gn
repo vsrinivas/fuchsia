@@ -14,8 +14,8 @@ rustc_library("pkgfs-ramdisk") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-runtime",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/lib/fuchsia-merkle",

@@ -13,12 +13,12 @@ rustc_test("driver") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-hyper",
     "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-url",

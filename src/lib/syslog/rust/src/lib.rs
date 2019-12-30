@@ -5,12 +5,12 @@
 // found in the LICENSE file.
 #![deny(missing_docs)]
 
+use fuchsia_zircon::{self as zx, sys::*};
 use lazy_static::lazy_static;
 use log::{Level, LevelFilter, Metadata, Record};
 use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
-use fuchsia_zircon::{self as zx, sys::*};
 use std::fmt::Arguments;
+use std::os::raw::c_char;
 
 #[allow(non_camel_case_types)]
 mod syslog;
@@ -35,9 +35,9 @@ pub mod levels {
 /// Convenient re-export of macros for globed imports Rust Edition 2018
 pub mod macros {
     pub use crate::fx_log;
+    pub use crate::fx_log_err;
     pub use crate::fx_log_info;
     pub use crate::fx_log_warn;
-    pub use crate::fx_log_err;
 }
 
 /// Maps log crate log levels to syslog severity levels.
@@ -210,9 +210,7 @@ pub fn log_helper(args: Arguments<'_>, lvl: i32, tag: &str) {
 
 /// Gets default logger.
 fn get_default() -> Logger {
-    Logger {
-        logger: unsafe { syslog::fx_log_get_logger() },
-    }
+    Logger { logger: unsafe { syslog::fx_log_get_logger() } }
 }
 
 unsafe impl Send for Logger {}
@@ -252,7 +250,8 @@ pub fn init() -> Result<(), zx::Status> {
 /// and max length of each tag can be 63 characters.
 pub fn init_with_tags(tags: &[&str]) -> Result<(), zx::Status> {
     //let mut c_tags: Vec<*const c_char> = Vec::new();
-    let cstr_vec: Vec<CString> = tags.iter()
+    let cstr_vec: Vec<CString> = tags
+        .iter()
         .map(|x| CString::new(x.to_owned()).expect("Cannot create tag with interior null"))
         .collect();
     let c_tags: Vec<*const c_char> = cstr_vec.iter().map(|x| x.as_ptr()).collect();
@@ -293,11 +292,11 @@ pub fn is_enabled(severity: levels::LogLevel) -> bool {
 mod test {
     use super::*;
 
-    use log::{trace, error, debug, info, warn};
+    use log::{debug, error, info, trace, warn};
     use std::fs::File;
-    use std::ptr;
-    use std::os::unix::io::AsRawFd;
     use std::io::Read;
+    use std::os::unix::io::AsRawFd;
+    use std::ptr;
     use tempfile::TempDir;
 
     #[test]
@@ -333,11 +332,7 @@ mod test {
 
         fx_log_err!(tag:"err_tag", "err msg {}", 10);
         let line = line!() - 1;
-        expected.push(format!(
-            "[err_tag] ERROR: {}({}): err msg 10",
-            file!(),
-            line
-        ));
+        expected.push(format!("[err_tag] ERROR: {}({}): err msg 10", file!(), line));
 
         //test verbosity
         fx_vlog!(1, "verbose msg {}", 10); // will not log
@@ -363,12 +358,7 @@ mod test {
 
         error!("log err: {}", 10);
         let line = line!() - 1;
-        expected.push(format!(
-            "[{}] ERROR: {}({}): log err: 10",
-            tag,
-            file!(),
-            line
-        ));
+        expected.push(format!("[{}] ERROR: {}({}): log err: 10", tag, file!(), line));
 
         debug!("log debug: {}", 10);
         expected.push(format!("[{}] VLOG(1): log debug: 10", tag));
@@ -387,9 +377,7 @@ mod test {
 
         let mut tmp_file = File::open(&file_path).expect("should have opened the file");
         let mut content = String::new();
-        tmp_file
-            .read_to_string(&mut content)
-            .expect("something went wrong reading the file");
+        tmp_file.read_to_string(&mut content).expect("something went wrong reading the file");
         let msgs = content.split("\n");
         let mut i = 0;
         for msg in msgs {
@@ -398,10 +386,7 @@ mod test {
                 continue;
             }
             if expected.len() <= i {
-                panic!(
-                    "Got extra line in msg \"{}\", full content\n{}",
-                    msg, content
-                );
+                panic!("Got extra line in msg \"{}\", full content\n{}", msg, content);
             } else if !msg.ends_with(&expected[i]) {
                 panic!(
                     "expected msg:\n\"{}\"\nto end with\n\"{}\"\nfull content\n{}",

@@ -2,22 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_alias.gni")
 
-shared_library("rust-trace-provider") {
-  visibility = [ ":*" ]
-  deps = [
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/trace-provider-with-fdio",
-  ]
-  sources = [
-    "trace_provider.cc",
-  ]
-}
+# Soft transition for out-of-tree Rust
+#
+# TODO(bwb): Remove when all code is migrated away from using these paths
 
-rustc_library("fuchsia-trace-provider") {
-  name = "fuchsia_trace_provider"
-  edition = "2018"
-  non_rust_deps = [ ":rust-trace-provider" ]
+rustc_alias("fuchsia-trace-provider") {
+  alias = "//src/lib/trace/rust:trace-provider"
 }

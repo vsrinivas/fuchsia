@@ -14,8 +14,8 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
@@ -28,8 +28,6 @@ rustc_library("lib") {
   with_unit_tests = true
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/syslog/rust:syslog",
     "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility-rustc",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
@@ -37,7 +35,9 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

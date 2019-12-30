@@ -11,10 +11,10 @@ import("//build/testing/environments.gni")
 rustc_library("ppp_protocol") {
   edition = "2018"
   deps = [
-    "//src/lib/syslog/rust:syslog",
     "//src/connectivity/ppp/lib/ppp_packet",
     "//src/lib/fuchsia-async",
     "//src/lib/packet",
+    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
@@ -24,10 +24,10 @@ rustc_test("ppp_protocol_test_bin") {
   edition = "2018"
 
   deps = [
-    "//src/lib/syslog/rust:syslog",
     "//src/connectivity/ppp/lib/ppp_packet",
     "//src/lib/fuchsia-async",
     "//src/lib/packet",
+    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]

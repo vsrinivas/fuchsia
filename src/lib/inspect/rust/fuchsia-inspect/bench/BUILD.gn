@@ -39,12 +39,12 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/rust/fuchsia-trace",
-    "//garnet/public/rust/fuchsia-trace-provider",
     "//src/lib/argh",
     "//src/lib/fuchsia-async",
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/mapped-vmo",
+    "//src/lib/trace/rust:trace",
+    "//src/lib/trace/rust:trace-provider",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:num",
     "//third_party/rust_crates:num-traits",

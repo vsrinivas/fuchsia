@@ -2,17 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("syslog") {
+group("trace") {
   deps = [
-    "rust:syslog",
+    "rust:trace",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    "cpp:tests",
-    "go/src/syslog:tests",
     "rust:tests",
   ]
 }

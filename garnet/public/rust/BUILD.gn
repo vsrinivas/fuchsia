@@ -11,7 +11,6 @@ unittest_package("rust-crates-tests") {
     "fuchsia-framebuffer",
     "fuchsia-hyper:fuchsia-hyper-tests",
     "fuchsia-scenic:fuchsia-scenic_test",
-    "fuchsia-trace:fuchsia-trace_test",
   ]
 
   tests = [
@@ -21,10 +20,6 @@ unittest_package("rust-crates-tests") {
     },
     {
       name = "fuchsia_scenic_lib_test"
-      environments = basic_envs
-    },
-    {
-      name = "fuchsia_trace_lib_test"
       environments = basic_envs
     },
   ]
