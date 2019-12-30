@@ -42,6 +42,14 @@ zx_status_t MockArchProvider::WriteSingleStep(const zx::thread& thread, bool sin
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t MockArchProvider::GetInfo(const zx::thread& thread, zx_object_info_topic_t topic,
+                                      void* buffer, size_t buffer_size, size_t* actual = nullptr,
+                                      size_t* avail = nullptr) const {
+  // TODO this should be mocked instead. But currently there's no way to mock the thread passed as
+  // input so there's no point in mocking the results from this.
+  return thread.get_info(topic, buffer, buffer_size, actual, avail);
+}
+
 zx_status_t MockArchProvider::InstallHWBreakpoint(const zx::thread& thread, uint64_t address) {
   bp_installs_[address]++;
   return ZX_OK;

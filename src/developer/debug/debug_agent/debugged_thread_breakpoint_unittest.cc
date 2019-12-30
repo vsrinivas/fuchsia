@@ -25,7 +25,8 @@ constexpr uint64_t kWatchpointLength = 8;
 
 class MockBreakpointArchProvider : public MockArchProvider {
  public:
-  zx_status_t ReadGeneralState(const zx::thread&, zx_thread_state_general_regs*) const override {
+  zx_status_t ReadGeneralState(const zx::thread&, zx_thread_state_general_regs* r) const override {
+    *arch::IPInRegs(r) = exception_addr_;
     return ZX_OK;
   }
 
@@ -35,7 +36,7 @@ class MockBreakpointArchProvider : public MockArchProvider {
   }
 
   zx_status_t GetInfo(const zx::thread&, zx_object_info_topic_t topic, void* buffer,
-                      size_t buffer_size, size_t* actual, size_t* avail) override {
+                      size_t buffer_size, size_t* actual, size_t* avail) const override {
     zx_info_thread* info = reinterpret_cast<zx_info_thread*>(buffer);
     info->state = ZX_THREAD_STATE_BLOCKED_EXCEPTION;
 
@@ -46,8 +47,6 @@ class MockBreakpointArchProvider : public MockArchProvider {
                                                uint32_t exception_type) override {
     return exception_type_;
   }
-
-  uint64_t* IPInRegs(zx_thread_state_general_regs* regs) override { return &exception_addr_; }
 
   bool IsBreakpointInstruction(zx::process& process, uint64_t address) override {
     for (uint64_t addr : breakpoints_) {

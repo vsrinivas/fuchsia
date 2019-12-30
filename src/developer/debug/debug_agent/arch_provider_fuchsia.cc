@@ -37,5 +37,11 @@ zx_status_t ArchProviderFuchsia::WriteSingleStep(const zx::thread& thread, bool 
   return thread.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
 }
 
+zx_status_t ArchProviderFuchsia::GetInfo(const zx::thread& thread, zx_object_info_topic_t topic,
+                                         void* buffer, size_t buffer_size, size_t* actual,
+                                         size_t* avail) const {
+  return thread.get_info(topic, buffer, buffer_size, actual, avail);
+}
+
 }  // namespace arch
 }  // namespace debug_agent

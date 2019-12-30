@@ -14,7 +14,6 @@ static_library("lib") {
   sources = [
     "agent_configuration.cc",
     "agent_configuration.h",
-    "arch.cc",
     "arch.h",
     "arch_helpers.cc",
     "arch_helpers.h",

@@ -24,6 +24,9 @@ class ArchProviderFuchsia : public ArchProvider {
   zx_status_t WriteDebugState(const zx::thread& handle,
                               const zx_thread_state_debug_regs& regs) override;
   zx_status_t WriteSingleStep(const zx::thread& thread, bool single_step) override;
+  zx_status_t GetInfo(const zx::thread&, zx_object_info_topic_t topic, void* buffer,
+                      size_t buffer_size, size_t* actual = nullptr,
+                      size_t* avail = nullptr) const override;
 };
 
 }  // namespace arch

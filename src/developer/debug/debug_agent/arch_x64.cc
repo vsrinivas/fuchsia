@@ -222,10 +222,6 @@ uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t exception_addr) 
   return exception_addr;
 }
 
-uint64_t* ArchProvider::IPInRegs(zx_thread_state_general_regs* regs) { return &regs->rip; }
-uint64_t* ArchProvider::SPInRegs(zx_thread_state_general_regs* regs) { return &regs->rsp; }
-uint64_t* ArchProvider::BPInRegs(zx_thread_state_general_regs* regs) { return &regs->rbp; }
-
 ::debug_ipc::Arch ArchProvider::GetArch() { return ::debug_ipc::Arch::kX64; }
 
 zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory& cat,

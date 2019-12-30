@@ -25,8 +25,8 @@ extern const BreakInstructionType kBreakInstruction;
 // This permits a virtual interface for your testing convenience.
 class ArchProvider {
  public:
-  ArchProvider();
-  virtual ~ArchProvider();
+  ArchProvider() = default;
+  virtual ~ArchProvider() = default;
 
   ::debug_ipc::Arch GetArch();
 
@@ -52,16 +52,10 @@ class ArchProvider {
 
   virtual zx_status_t WriteSingleStep(const zx::thread& thread, bool single_step) = 0;
 
-  // Returns the address of the instruction pointer/stack pointer/base pointer
-  // in the given reg structure.
-  virtual uint64_t* IPInRegs(zx_thread_state_general_regs* regs);
-  virtual uint64_t* SPInRegs(zx_thread_state_general_regs* regs);
-  virtual uint64_t* BPInRegs(zx_thread_state_general_regs* regs);
-
   // zx_object_get_info.
   virtual zx_status_t GetInfo(const zx::thread&, zx_object_info_topic_t topic, void* buffer,
                               size_t buffer_size, size_t* actual = nullptr,
-                              size_t* avail = nullptr);
+                              size_t* avail = nullptr) const = 0;
 
   // Software Exceptions ---------------------------------------------------------------------------
 

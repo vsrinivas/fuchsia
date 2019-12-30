@@ -228,8 +228,8 @@ zx_status_t UnwindStackNgUnwind(arch::ArchProvider* arch_provider, const zx::pro
 
   // Top stack frame.
   debug_ipc::StackFrame frame;
-  frame.ip = *arch_provider->IPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
-  frame.sp = *arch_provider->SPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
+  frame.ip = *arch::IPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
+  frame.sp = *arch::SPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
   frame.cfa = 0;
   arch_provider->SaveGeneralRegs(regs, &frame.regs);
   stack->push_back(std::move(frame));

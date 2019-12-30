@@ -235,8 +235,7 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
   // When stepping in a range, automatically continue as long as we're
   // still in range.
   if (run_mode_ == debug_ipc::ResumeRequest::How::kStepInRange &&
-      *arch_provider_->IPInRegs(regs) >= step_in_range_begin_ &&
-      *arch_provider_->IPInRegs(regs) < step_in_range_end_) {
+      *arch::IPInRegs(regs) >= step_in_range_begin_ && *arch::IPInRegs(regs) < step_in_range_end_) {
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping in range. Continuing.";
     ResumeForRunMode();
     return;
@@ -272,8 +271,8 @@ void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* except
 
 void DebuggedThread::HandleHardwareBreakpoint(debug_ipc::NotifyException* exception,
                                               zx_thread_state_general_regs* regs) {
-  uint64_t breakpoint_address = arch_provider_->BreakpointInstructionForHardwareExceptionAddress(
-      *arch_provider_->IPInRegs(regs));
+  uint64_t breakpoint_address =
+      arch_provider_->BreakpointInstructionForHardwareExceptionAddress(*arch::IPInRegs(regs));
   HardwareBreakpoint* found_bp = process_->FindHardwareBreakpoint(breakpoint_address);
   if (found_bp) {
     UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kHardware, found_bp, regs,
@@ -281,7 +280,7 @@ void DebuggedThread::HandleHardwareBreakpoint(debug_ipc::NotifyException* except
   } else {
     // Hit a hw debug exception that doesn't belong to any ProcessBreakpoint.
     // This is probably a race between the removal and the exception handler.
-    *arch_provider_->IPInRegs(regs) = breakpoint_address;
+    *arch::IPInRegs(regs) = breakpoint_address;
   }
 
   // The ProcessBreakpoint could've been deleted if it was a one-shot, so must
@@ -561,8 +560,8 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     zx_thread_state_general_regs* regs, std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
   // Get the correct address where the CPU is after hitting a breakpoint
   // (this is architecture specific).
-  uint64_t breakpoint_address = arch_provider_->BreakpointInstructionForSoftwareExceptionAddress(
-      *arch_provider_->IPInRegs(regs));
+  uint64_t breakpoint_address =
+      arch_provider_->BreakpointInstructionForSoftwareExceptionAddress(*arch::IPInRegs(regs));
 
   SoftwareBreakpoint* found_bp = process_->FindSoftwareBreakpoint(breakpoint_address);
   if (found_bp) {
@@ -592,8 +591,8 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       // The breakpoint is a hardcoded instruction in the program code. In
       // this case we want to continue from the following instruction since
       // the breakpoint instruction will never go away.
-      *arch_provider_->IPInRegs(regs) = arch_provider_->NextInstructionForSoftwareExceptionAddress(
-          *arch_provider_->IPInRegs(regs));
+      *arch::IPInRegs(regs) =
+          arch_provider_->NextInstructionForSoftwareExceptionAddress(*arch::IPInRegs(regs));
       zx_status_t status = arch_provider_->WriteGeneralState(handle_, *regs);
       if (status != ZX_OK) {
         fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
@@ -619,7 +618,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       // Not a breakpoint instruction. Probably the breakpoint instruction
       // used to be ours but its removal raced with the exception handler.
       // Resume from the instruction that used to be the breakpoint.
-      *arch_provider_->IPInRegs(regs) = breakpoint_address;
+      *arch::IPInRegs(regs) = breakpoint_address;
 
       // Don't automatically continue execution here. A race for this should
       // be unusual and maybe something weird happened that caused an
@@ -636,7 +635,7 @@ void DebuggedThread::FixSoftwareBreakpointAddress(ProcessBreakpoint* process_bre
   // triggered the breakpoint. When the thread resumes, this is the address that it will resume
   // from (after putting back the original instruction), and will be what the client wants to
   // display to the user.
-  *arch_provider_->IPInRegs(regs) = process_breakpoint->address();
+  *arch::IPInRegs(regs) = process_breakpoint->address();
   zx_status_t status = arch_provider_->WriteGeneralState(handle_, *regs);
   if (status != ZX_OK) {
     fprintf(stderr, "Warning: could not update IP on thread, error = %d.",

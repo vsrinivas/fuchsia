@@ -234,10 +234,6 @@ void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
   out->push_back(CreateRegister(RegisterID::kARMv8_tpidr, 8u, &input.tpidr));
 }
 
-uint64_t* ArchProvider::IPInRegs(zx_thread_state_general_regs* regs) { return &regs->pc; }
-uint64_t* ArchProvider::SPInRegs(zx_thread_state_general_regs* regs) { return &regs->sp; }
-uint64_t* ArchProvider::BPInRegs(zx_thread_state_general_regs* regs) { return &regs->r[29]; }
-
 ::debug_ipc::Arch ArchProvider::GetArch() { return ::debug_ipc::Arch::kArm64; }
 
 zx_status_t ArchProvider::ReadRegisters(const debug_ipc::RegisterCategory& cat,
