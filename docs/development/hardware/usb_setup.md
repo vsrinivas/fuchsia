@@ -1,50 +1,63 @@
 # Prepare a USB flash drive to be a bootable disk
 
-These instructions prepare a USB flash drive to be a bootable disk for your
-device: this procedure only enables you to netboot or pave, it won't put
-anything on your internal storage. This USB flash drive can then direct your
-device to boot from the freshly-built OS on your network-connected host
-development machine (or alternately from the OS on the flash drive itself).
+You can use a USB flash drive to make your device to boot from the freshly-built
+OS on your network-connected host development machine. Alternatively, you can also
+direct your device to boot from the OS on the flash drive itself.
 
-+ Execute `fx set core.x64` (if you haven't already)
-+ Create a __zedboot__ key using, `fx mkzedboot /path/to/your/device`. The
-`mkzedboot` command does the following:
-  + Creates a FAT partition continaing an EFI System Partition, containing
-    the Gigaboot EFI bootloader and a configuration that specifies to always
-    boot into Zedboot.
-  + Creates a ChromeOS bootable partition with a developer key signed Zedboot
+## Automatic configuration
+
+To prepare a USB flash drive to be a bootable disk for your device, complete the
+following steps:
+
+Note: This procedure only enables you to netboot or pave your device, it won't put
+anything on your internal storage.
+
+1. Run the following command to set the build configuration:
+  <pre class="prettyprint">
+  <code class="devsite-terminal">fx set core.x64</code>
+  </pre>
+
+1. Run the following command to build the fuchsia image:
+  <pre class="prettyprint">
+  <code class="devsite-terminal">fx build</code>
+  </pre>
+
+1. Run the following command to create a zedboot key, replacing `DEVICE-PATH`
+   with the path to your target device:
+
+  Note: To find the `device-path` to your USB drive, you can run `lsblk`.
+  If you identify your USB drive as `sda`, your `device-path` is `/dev/sda/`.
+
+  <pre class="prettyprint">
+  <code class="devsite-terminal">fx mkzedboot <b>DEVICE-PATH</b></code>
+  </pre>
+
+  This command requires that you `sudo` into your machine. As a result, you will
+  need to enter your password after running `fx mkzedboot`.
+
+    The `mkzedboot` command does the following:
+
+    + Creates a File Allocation Table (FAT) partition that contains an Extensible
+    Firmware Interface (EFI) System Partition. The EFI System Partitition contains
+    the Gigaboot EFI bootloader and a configuration that specifies that your
+    device always boot into Zedboot.
+    + Creates a ChromeOS bootable partition with a developer key signed Zedboot
     kernel partition.
-+ On your host, run `fx build` (if you haven't already).
-+ If you wish to install Fuchsia to the target device (modifying the target
-  device harddisk), run `fx pave` on the host. IF you only wish to "netboot"
-  the target device, and avoid modifying any disk state, run `fx netboot` on
-  the host instead.
-+ Connect your device to your host via built-in ethernet, then power up the
-  device.
 
-## Manual Configuration
+1. Connect your device to your host through built-in ethernet.
 
-It is also relatively easy to manually create an EFI boot key with particular
-properites, though this will only boot on EFI systems.
+1. (Optional) To pave your target device with Fuchsia, run:
+  <pre class="prettyprint">
+  <code class="devsite-terminal">fx pave</code>
+  </pre>
 
-+ Format the USB key with a blank FAT partition.
-+ Create a directory called `EFI/BOOT`.
-+ Copy `bootx64.efi` from `build-x64/bootloader` of a Zircon build into the
-  above directory.
-+ Copy `zircon.bin` from `build-x64` of a Zircon build into the root
-  directory of the FAT partition.
-+ Copy `zedboot.bin` from `build-x64` of a Zircon build into the root
-  directory of the FAT partition.
-+ Optionally: Create a file called `cmdline` in the root fo the FAT
-  partition. This file may contain any directives documented in
-  [command line flags](/docs/reference/kernel/kernel_cmdline.md).
+1. (Optional) To netboot your target device, run:
+  <pre class="prettyprint">
+  <code class="devsite-terminal">fx netboot</code>
+  </pre>
 
-The created disk will by default boot from zircon.bin instead of the network.
-At the Gigaboot screen, press 'm' to boot zircon vs 'z' for zedboot, or set
-the default boot behavior with the `bootloader.default` flag in `cmdline`.
+1. Power on your device.
 
-See also:
+## Manual configuration
 
-* [Setting up the Acer device](acer12.md)
-* [Setting up the NUC device](/docs/development/hardware/intel_nuc.md)
-* [Command line flags](/docs/reference/kernel/kernel_cmdline.md)
+Manually creating an EFI boot key is no longer supported.
