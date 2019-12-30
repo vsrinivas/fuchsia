@@ -49,6 +49,10 @@ lazy_static! {
     };
 }
 
+lazy_static! {
+    static ref GET_BRIGHTNESS_FAILED_FIRST: Arc<Mutex<bool>> = Arc::new(Mutex::new(true));
+}
+
 pub struct WatcherCurrentResponder {
     watcher_current_responder: ControlWatchCurrentBrightnessResponder,
 }
@@ -468,10 +472,17 @@ async fn set_brightness(value: f32, backlight: Arc<Mutex<dyn BacklightControl>>)
                 let mut backlight = backlight.lock().await;
                 let current_value = {
                     let fut = backlight.get_brightness();
-                    fut.await.unwrap_or_else(|e| {
-                        fx_log_err!("Failed to get backlight: {}. assuming 1.0", e);
-                        1.0
-                    }) as f32
+                    // TODO(lingxueluo) Deal with this in backlight.rs later.
+                    match fut.await {
+                        Ok(brightness) => brightness as f32,
+                        Err(e) => {
+                            if *GET_BRIGHTNESS_FAILED_FIRST.lock().await {
+                                fx_log_err!("Failed to get backlight: {}. assuming 1.0", e);
+                                *GET_BRIGHTNESS_FAILED_FIRST.lock().await = false;
+                            }
+                            1.0
+                        }
+                    }
                 };
                 let set_brightness = |value| {
                     backlight
