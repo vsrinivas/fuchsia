@@ -12,6 +12,7 @@
 #include <ddk/protocol/ethernet/mac.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/operation/ethernet.h>
+#include <lib/zx/clock.h>
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -334,13 +335,13 @@ zx_status_t DWMacDevice::EthMacMdioWrite(uint32_t reg, uint32_t val) {
 
   mmio_->Write32(miiaddr | MII_CLKRANGE_150_250M | MII_BUSY, DW_MAC_MAC_MIIADDR);
 
-  zx_time_t deadline = zx_deadline_after(ZX_MSEC(3));
+  zx::time deadline = zx::deadline_after(zx::msec(3));
   do {
     if (!mmio_->ReadMasked32(MII_BUSY, DW_MAC_MAC_MIIADDR)) {
       return ZX_OK;
     }
-    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
-  } while (zx_clock_get_monotonic() < deadline);
+    zx::nanosleep(zx::deadline_after(zx::usec(10)));
+  } while (zx::clock::get_monotonic() < deadline);
   return ZX_ERR_TIMED_OUT;
 }
 
@@ -349,14 +350,14 @@ zx_status_t DWMacDevice::EthMacMdioRead(uint32_t reg, uint32_t* val) {
 
   mmio_->Write32(miiaddr | MII_CLKRANGE_150_250M | MII_BUSY, DW_MAC_MAC_MIIADDR);
 
-  zx_time_t deadline = zx_deadline_after(ZX_MSEC(3));
+  zx::time deadline = zx::deadline_after(zx::msec(3));
   do {
     if (!mmio_->ReadMasked32(MII_BUSY, DW_MAC_MAC_MIIADDR)) {
       *val = mmio_->Read32(DW_MAC_MAC_MIIDATA);
       return ZX_OK;
     }
-    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
-  } while (zx_clock_get_monotonic() < deadline);
+    zx::nanosleep(zx::deadline_after(zx::usec(10)));
+  } while (zx::clock::get_monotonic() < deadline);
   return ZX_ERR_TIMED_OUT;
 }
 
