@@ -38,6 +38,23 @@ type ndpInvalidatedRouterEvent struct {
 	ndpRouterEventCommon
 }
 
+// ndpPrefixEventCommon holds the common fields for all events related to NDP
+// on-link prefix discovery and invalidation.
+type ndpPrefixEventCommon struct {
+	nicID  tcpip.NICID
+	prefix tcpip.Subnet
+}
+
+// isNDPEvent implements ndpEvent.isNDPEvent.
+func (*ndpPrefixEventCommon) isNDPEvent() {}
+
+type ndpDiscoveredPrefixEvent struct {
+	ndpPrefixEventCommon
+}
+type ndpInvalidatedPrefixEvent struct {
+	ndpPrefixEventCommon
+}
+
 var _ stack.NDPDispatcher = (*ndpDispatcher)(nil)
 
 // ndpDispatcher is a type that implements stack.NDPDispatcher to handle the
@@ -105,14 +122,19 @@ func (n *ndpDispatcher) OnDefaultRouterInvalidated(nicID tcpip.NICID, addr tcpip
 }
 
 // OnOnLinkPrefixDiscovered implements stack.NDPDispatcher.OnOnLinkPrefixDiscovered.
-func (*ndpDispatcher) OnOnLinkPrefixDiscovered(nicID tcpip.NICID, prefix tcpip.Subnet) bool {
-	// TODO(ghanan): enable prefix discovery.
-	return false
+//
+// Adds the event to the event queue and returns true so Stack remembers the
+// discovered on-link prefix.
+func (n *ndpDispatcher) OnOnLinkPrefixDiscovered(nicID tcpip.NICID, prefix tcpip.Subnet) bool {
+	syslog.Infof("ndp: OnOnLinkPrefixDiscovered(%d, %s)", nicID, prefix)
+	n.addEvent(&ndpDiscoveredPrefixEvent{ndpPrefixEventCommon: ndpPrefixEventCommon{nicID: nicID, prefix: prefix}})
+	return true
 }
 
 // OnOnLinkPrefixInvalidated implements stack.NDPDispatcher.OnOnLinkPrefixInvalidated.
-func (*ndpDispatcher) OnOnLinkPrefixInvalidated(nicID tcpip.NICID, prefix tcpip.Subnet) {
-	panic(fmt.Sprintf("should never end up here since we never remember an on-link prefix; got prefix = %s on nicID = %d", prefix, nicID))
+func (n *ndpDispatcher) OnOnLinkPrefixInvalidated(nicID tcpip.NICID, prefix tcpip.Subnet) {
+	syslog.Infof("ndp: OnOnLinkPrefixInvalidated(%d, %s)", nicID, prefix)
+	n.addEvent(&ndpInvalidatedPrefixEvent{ndpPrefixEventCommon: ndpPrefixEventCommon{nicID: nicID, prefix: prefix}})
 }
 
 // OnAutoGenAddress implements stack.NDPDispatcher.OnAutoGenAddress.
@@ -200,7 +222,7 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 			case *ndpDiscoveredRouterEvent:
 				nicID, addr := event.nicID, event.addr
 				rt := defaultV6Route(nicID, addr)
-				syslog.Infof("ndp: discovered a default router (%s) on nic (%d), adding a default route to it: [%s]", addr, nicID, rt)
+				syslog.Infof("ndp: discovered a default router (%s) on nicID (%d), adding a default route to it: [%s]", addr, nicID, rt)
 				if err := n.ns.AddRoute(rt, metricNotSet, true /* dynamic */); err != nil {
 					syslog.Errorf("ndp: failed to add the default route [%s] for the discovered router (%s) on nicID (%d): %s", rt, addr, nicID, err)
 				}
@@ -211,6 +233,22 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				syslog.Infof("ndp: invalidating a default router (%s) from nicID (%d), removing the default route to it: [%s]", addr, nicID, rt)
 				if err := n.ns.DelRoute(rt); err != nil {
 					syslog.Errorf("ndp: failed to remove the default route [%s] for the invalidated router (%s) on nicID (%d): %s", rt, addr, nicID, err)
+				}
+
+			case *ndpDiscoveredPrefixEvent:
+				nicID, prefix := event.nicID, event.prefix
+				rt := onLinkV6Route(nicID, prefix)
+				syslog.Infof("ndp: discovered an on-link prefix (%s) on nicID (%d), adding an on-link route to it: [%s]", prefix, nicID, rt)
+				if err := n.ns.AddRoute(rt, metricNotSet, true /* dynamic */); err != nil {
+					syslog.Errorf("ndp: failed to add the on-link route [%s] for the discovered on-link prefix (%s) on nicID (%d): %s", rt, prefix, nicID, err)
+				}
+
+			case *ndpInvalidatedPrefixEvent:
+				nicID, prefix := event.nicID, event.prefix
+				rt := onLinkV6Route(nicID, prefix)
+				syslog.Infof("ndp: invalidating an on-link prefix (%s) from nicID (%d), removing the on-link route to it: [%s]", prefix, nicID, rt)
+				if err := n.ns.DelRoute(rt); err != nil {
+					syslog.Errorf("ndp: failed to remove the on-link route [%s] for the invalidated on-link prefix (%s) on nicID (%d): %s", rt, prefix, nicID, err)
 				}
 
 			default:

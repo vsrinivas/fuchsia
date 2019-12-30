@@ -308,6 +308,19 @@ func TestDefaultV6Route(t *testing.T) {
 	}
 }
 
+func TestOnLinkV6Route(t *testing.T) {
+	subAddr := util.Parse("abcd:1234::")
+	subMask := tcpip.AddressMask(util.Parse("ffff:ffff::"))
+	subnet, err := tcpip.NewSubnet(subAddr, subMask)
+	if err != nil {
+		t.Fatalf("NewSubnet(%s, %s): %s", subAddr, subMask, err)
+	}
+
+	if got, want := onLinkV6Route(6, subnet), (tcpip.Route{Destination: subnet, NIC: 6}); got != want {
+		t.Fatalf("got onLinkV6Route(6, %s) = %s, want = %s", subnet, got, want)
+	}
+}
+
 func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
 	ns := newNetstack(t)
 

@@ -104,6 +104,7 @@ func Main() {
 		NDPConfigs: tcpipstack.NDPConfigurations{
 			HandleRAs:              true,
 			DiscoverDefaultRouters: true,
+			DiscoverOnLinkPrefixes: true,
 		},
 		NDPDisp:              ndpDisp,
 		AutoGenIPv6LinkLocal: true,

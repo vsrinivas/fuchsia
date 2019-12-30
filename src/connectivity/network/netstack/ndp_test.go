@@ -8,8 +8,12 @@ import (
 	"context"
 	"testing"
 
+	"netstack/util"
+
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/netstack"
+
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 // newNDPDispatcherForTest returns a new ndpDispatcher with a channel used to
@@ -183,5 +187,173 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	}
 	if containsRoute(rts, nic2Rtr1Rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Rtr1Rt, rts)
+	}
+}
+
+// Test that attempting to invalidate an on-link prefix which we do not have a
+// route for is not an issue.
+func TestNDPInvalidateUnknownIPv6Prefix(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	subAddr := util.Parse("abcd:1234::")
+	subMask := tcpip.AddressMask(util.Parse("ffff:ffff::"))
+	subnet, err := tcpip.NewSubnet(subAddr, subMask)
+	if err != nil {
+		t.Fatalf("NewSubnet(%s, %s): %s", subAddr, subMask, err)
+	}
+
+	ndpDisp := newNDPDispatcherForTest()
+	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ndpDisp.start(ctx)
+
+	eth := deviceForAddEth(ethernet.Info{}, t)
+	ifs, err := ns.addEth("/path1", netstack.InterfaceConfig{Name: "name1"}, &eth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ifs.eth.Up(); err != nil {
+		t.Fatalf("ifs.eth.Up(): %s", err)
+	}
+
+	// Invalidate the prefix subnet from eth (even though we do not yet know
+	// about it).
+	ndpDisp.OnOnLinkPrefixInvalidated(ifs.nicid, subnet)
+	waitForEmptyQueue(ndpDisp)
+	if rt, rts := onLinkV6Route(ifs.nicid, subnet), ns.mu.stack.GetRouteTable(); containsRoute(rts, rt) {
+		t.Fatalf("should not have route = %s in the route table, got = %s", rt, rts)
+	}
+}
+
+// Test that ndpDispatcher properly handles the discovery and invalidation of
+// on-link IPv6 prefixes.
+func TestNDPIPv6PrefixDiscovery(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	subAddr1 := util.Parse("abcd:1234::")
+	subAddr2 := util.Parse("abcd:1235::")
+	subMask := tcpip.AddressMask(util.Parse("ffff:ffff::"))
+	subnet1, err := tcpip.NewSubnet(subAddr1, subMask)
+	if err != nil {
+		t.Fatalf("NewSubnet(%s, %s): %s", subAddr1, subMask, err)
+	}
+	subnet2, err := tcpip.NewSubnet(subAddr2, subMask)
+	if err != nil {
+		t.Fatalf("NewSubnet(%s, %s): %s", subAddr2, subMask, err)
+	}
+
+	ndpDisp := newNDPDispatcherForTest()
+	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ndpDisp.start(ctx)
+
+	eth1 := deviceForAddEth(ethernet.Info{}, t)
+	ifs1, err := ns.addEth("/path1", netstack.InterfaceConfig{Name: "name1"}, &eth1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ifs1.eth.Up(); err != nil {
+		t.Fatalf("ifs1.eth.Up(): %s", err)
+	}
+	eth2 := deviceForAddEth(ethernet.Info{}, t)
+	ifs2, err := ns.addEth("/path2", netstack.InterfaceConfig{Name: "name2"}, &eth2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ifs2.eth.Up(); err != nil {
+		t.Fatalf("ifs2.eth.Up(): %s", err)
+	}
+
+	// Test discovering a new on-link prefix on eth1.
+	accept := ndpDisp.OnOnLinkPrefixDiscovered(ifs1.nicid, subnet1)
+	if !accept {
+		t.Fatalf("got OnOnLinkPrefixDiscovered(%d, %s) = false, want = true", ifs1.nicid, subnet1)
+	}
+	waitForEmptyQueue(ndpDisp)
+	nic1Sub1Rt := onLinkV6Route(ifs1.nicid, subnet1)
+	if rts := ns.mu.stack.GetRouteTable(); !containsRoute(rts, nic1Sub1Rt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic1Sub1Rt, rts)
+	}
+
+	// Test discovering the same on-link prefix on eth2.
+	accept = ndpDisp.OnOnLinkPrefixDiscovered(ifs2.nicid, subnet1)
+	if !accept {
+		t.Fatalf("got OnOnLinkPrefixDiscovered(%d, %s) = false, want = true", ifs2.nicid, subnet1)
+	}
+	waitForEmptyQueue(ndpDisp)
+	nic2Sub1Rt := onLinkV6Route(ifs2.nicid, subnet1)
+	rts := ns.mu.stack.GetRouteTable()
+	if !containsRoute(rts, nic2Sub1Rt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic2Sub1Rt, rts)
+	}
+	// Should still have the route from before.
+	if !containsRoute(rts, nic1Sub1Rt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic1Sub1Rt, rts)
+	}
+
+	// Test discovering another on-link prefix on eth2.
+	accept = ndpDisp.OnOnLinkPrefixDiscovered(ifs2.nicid, subnet2)
+	if !accept {
+		t.Fatalf("got OnOnLinkPrefixDiscovered(%d, %s) = false, want = true", ifs2.nicid, subnet2)
+	}
+	waitForEmptyQueue(ndpDisp)
+	nic2Sub2Rt := onLinkV6Route(ifs2.nicid, subnet2)
+	rts = ns.mu.stack.GetRouteTable()
+	if !containsRoute(rts, nic2Sub2Rt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic2Sub2Rt, rts)
+	}
+	// Should still have the routes from before.
+	if !containsRoute(rts, nic2Sub1Rt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic2Sub1Rt, rts)
+	}
+	if !containsRoute(rts, nic1Sub1Rt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic1Sub1Rt, rts)
+	}
+
+	// Invalidate the prefix subnet1 from eth2.
+	ndpDisp.OnOnLinkPrefixInvalidated(ifs2.nicid, subnet1)
+	waitForEmptyQueue(ndpDisp)
+	rts = ns.mu.stack.GetRouteTable()
+	if containsRoute(rts, nic2Sub1Rt) {
+		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Sub1Rt, rts)
+	}
+	// Should still have default routes through the non-invalidated
+	// routers.
+	if !containsRoute(rts, nic2Sub2Rt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic2Sub2Rt, rts)
+	}
+	if !containsRoute(rts, nic1Sub1Rt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic1Sub1Rt, rts)
+	}
+
+	// Invalidate the prefix subnet1 from eth1.
+	ndpDisp.OnOnLinkPrefixInvalidated(ifs1.nicid, subnet1)
+	waitForEmptyQueue(ndpDisp)
+	rts = ns.mu.stack.GetRouteTable()
+	if containsRoute(rts, nic1Sub1Rt) {
+		t.Fatalf("should not have route = %s in the route table, got = %s", nic1Sub1Rt, rts)
+	}
+	// Should still not have the other invalidated route.
+	if containsRoute(rts, nic2Sub1Rt) {
+		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Sub1Rt, rts)
+	}
+	// Should still have default route through the non-invalidated router.
+	if !containsRoute(rts, nic2Sub2Rt) {
+		t.Fatalf("missing route = %s from route table, got = %s", nic2Sub2Rt, rts)
+	}
+
+	// Invalidate the prefix subnet2 from eth2.
+	ndpDisp.OnOnLinkPrefixInvalidated(ifs2.nicid, subnet2)
+	waitForEmptyQueue(ndpDisp)
+	rts = ns.mu.stack.GetRouteTable()
+	if containsRoute(rts, nic2Sub2Rt) {
+		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Sub2Rt, rts)
+	}
+	// Should still not have the other invalidated route.
+	if containsRoute(rts, nic1Sub1Rt) {
+		t.Fatalf("should not have route = %s in the route table, got = %s", nic1Sub1Rt, rts)
+	}
+	if containsRoute(rts, nic2Sub1Rt) {
+		t.Fatalf("should not have route = %s in the route table, got = %s", nic2Sub1Rt, rts)
 	}
 }

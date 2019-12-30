@@ -68,10 +68,7 @@ var ipv6LoopbackBytes = func() [16]byte {
 }()
 
 func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
-	return tcpip.Route{
-		Destination: header.IPv6LinkLocalPrefix.Subnet(),
-		NIC:         nicID,
-	}
+	return onLinkV6Route(nicID, header.IPv6LinkLocalPrefix.Subnet())
 }
 
 type stats struct {
@@ -290,6 +287,17 @@ func defaultV6Route(nicid tcpip.NICID, gateway tcpip.Address) tcpip.Route {
 		Destination: header.IPv6EmptySubnet,
 		Gateway:     gateway,
 		NIC:         nicid,
+	}
+}
+
+// onLinkV6Route returns an on-link route to dest through the specified NIC.
+//
+// dest must be a subnet that is directly reachable by the specified NIC as
+// an on-link route is a route to a subnet that a NIC is directly connected to.
+func onLinkV6Route(nicID tcpip.NICID, dest tcpip.Subnet) tcpip.Route {
+	return tcpip.Route{
+		Destination: dest,
+		NIC:         nicID,
 	}
 }
 
