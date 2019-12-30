@@ -223,9 +223,9 @@ TEST_F(WireParserTest, ParseSingleString) {
                                       << " instead of " << message.handles().actual();             \
     }                                                                                              \
                                                                                                    \
-    auto encode_result = Encoder::EncodeMessage(header.txid, header.ordinal, header.flags,         \
-                                                header.magic_number, *object.get());               \
     if ((num_bytes == -1) && (patched_offset == -1)) {                                             \
+      auto encode_result = Encoder::EncodeMessage(header.txid, header.ordinal, header.flags,       \
+                                                  header.magic_number, *object.get());             \
       ASSERT_THAT(encode_result.bytes, ::testing::ElementsAreArray(message.bytes()));              \
       ASSERT_EQ(message.handles().size(), encode_result.handles.size());                           \
                                                                                                    \

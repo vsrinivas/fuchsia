@@ -152,7 +152,7 @@ class MessageDecoder {
   // Gets the address of some data of |size| at |offset|. If there is not enough
   // data, returns null.
   const uint8_t* GetAddress(uint64_t offset, uint64_t size) {
-    if (offset + size > num_bytes_) {
+    if ((offset > num_bytes_) || (size > num_bytes_ - offset)) {
       AddError() << std::hex << (absolute_offset_ + offset) << std::dec
                  << ": Not enough data to decode (needs " << size << ", remains "
                  << (num_bytes_ - offset) << ")\n";
@@ -206,12 +206,16 @@ class MessageDecoder {
   // Decodes a field. Used by envelopes.
   std::unique_ptr<Value> DecodeValue(const Type* type);
 
+  // Decode the header for a value which can be null.
+  bool DecodeNullableHeader(uint64_t offset, uint64_t size, bool* is_null,
+                            uint64_t* nullable_offset);
+
  private:
   // The absolute offset in the main buffer.
   const uint32_t absolute_offset_ = 0;
 
   // The size of the message bytes.
-  uint32_t num_bytes_;
+  const uint32_t num_bytes_;
 
   // The start of the message.
   const uint8_t* const start_byte_pos_;

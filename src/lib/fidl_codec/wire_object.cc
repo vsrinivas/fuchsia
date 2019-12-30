@@ -20,7 +20,6 @@
 namespace fidl_codec {
 
 constexpr char kInvalid[] = "invalid";
-constexpr char kNull[] = "null";
 
 const Colors WithoutColors("", "", "", "", "", "");
 const Colors WithColors(/*new_reset=*/"\u001b[0m", /*new_red=*/"\u001b[31m",
@@ -29,6 +28,10 @@ const Colors WithColors(/*new_reset=*/"\u001b[0m", /*new_red=*/"\u001b[31m",
                         /*new_yellow_background=*/"\u001b[103m");
 
 void Value::Visit(Visitor* visitor) const { visitor->VisitValue(this); }
+
+void InvalidValue::Visit(Visitor* visitor) const { visitor->VisitInvalidValue(this); }
+
+void NullValue::Visit(Visitor* visitor) const { visitor->VisitNullValue(this); }
 
 bool NullableValue::DecodeNullable(MessageDecoder* decoder, uint64_t offset, uint64_t size) {
   uintptr_t data;
@@ -130,33 +133,14 @@ void NumericValue<double>::Visit(Visitor* visitor) const {
 }
 
 int StringValue::DisplaySize(int /*remaining_size*/) const {
-  if (IsNull()) {
-    return strlen(kNull);
-  }
-  if (!string_) {
-    return strlen(kInvalid);
-  }
-  return static_cast<int>(string_->size()) + 2;  // The two quotes.
-}
-
-void StringValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
-  auto data = reinterpret_cast<const char*>(decoder->GetAddress(offset, string_length_));
-  string_ = data ? std::optional(std::string(data, data + string_length_)) : std::nullopt;
+  return static_cast<int>(string_.size()) + 2;  // The two quotes.
 }
 
 void StringValue::PrettyPrint(std::ostream& os, const Colors& colors,
                               const fidl_message_header_t* /*header*/,
                               std::string_view /*line_header*/, int /*tabs*/,
                               int /*remaining_size*/, int /*max_line_size*/) const {
-  os << colors.red;
-  if (IsNull()) {
-    os << kNull;
-  } else if (!string_) {
-    os << kInvalid;
-  } else {
-    os << '"' << *string_ << '"';
-  }
-  os << colors.reset;
+  os << colors.red << '"' << string_ << '"' << colors.reset;
 }
 
 void StringValue::Visit(Visitor* visitor) const { visitor->VisitStringValue(this); }

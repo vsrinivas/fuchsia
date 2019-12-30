@@ -14,11 +14,13 @@ namespace fidl_codec {
 class Visitor {
  protected:
   virtual void VisitValue(const Value* node) {}
+  virtual void VisitInvalidValue(const InvalidValue* node) { VisitValue(node); }
+  virtual void VisitNullValue(const NullValue* node) { VisitValue(node); }
   virtual void VisitNullableValue(const NullableValue* node) { VisitValue(node); }
   virtual void VisitInlineValue(const InlineValue* node) { VisitValue(node); }
   virtual void VisitRawValue(const RawValue* node) { VisitValue(node); }
   virtual void VisitStructValue(const StructValue* node) { VisitNullableValue(node); }
-  virtual void VisitStringValue(const StringValue* node) { VisitNullableValue(node); }
+  virtual void VisitStringValue(const StringValue* node) { VisitValue(node); }
   virtual void VisitBoolValue(const BoolValue* node) { VisitInlineValue(node); }
   virtual void VisitEnvelopeValue(const EnvelopeValue* node) { VisitNullableValue(node); }
   virtual void VisitTableValue(const TableValue* node) { VisitNullableValue(node); }
@@ -43,6 +45,8 @@ class Visitor {
   virtual void VisitF64Value(const NumericValue<double>* node) { VisitNumericValue(node); }
 
   friend class Value;
+  friend class InvalidValue;
+  friend class NullValue;
   friend class NullableValue;
   friend class InlineValue;
   friend class RawValue;

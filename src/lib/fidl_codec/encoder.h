@@ -59,6 +59,8 @@ class Encoder : public Visitor {
   void VisitUnionAsXUnion(const UnionValue* node);
 
   // Visitor overrides.
+  void VisitInvalidValue(const InvalidValue* node) override;
+  void VisitNullValue(const NullValue* node) override;
   void VisitRawValue(const RawValue* node) override;
   void VisitStringValue(const StringValue* node) override;
   void VisitBoolValue(const BoolValue* node) override;

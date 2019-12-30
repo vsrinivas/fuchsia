@@ -55,6 +55,47 @@ class Value {
   const Type* const type_;
 };
 
+// An invalid value. This value can't be present in a valid object.
+// It can only be found if we had an error while decoding a message.
+class InvalidValue : public Value {
+ public:
+  explicit InvalidValue(const Type* type) : Value(type) {}
+
+  int DisplaySize(int remaining_size) const override {
+    constexpr int kInvalidSize = 7;
+    return kInvalidSize;  // length of "invalid"
+  }
+
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override {
+    os << colors.red << "invalid" << colors.reset;
+  }
+
+  void Visit(Visitor* visitor) const override;
+};
+
+// A null value.
+class NullValue : public Value {
+ public:
+  explicit NullValue(const Type* type) : Value(type) {}
+
+  bool IsNull() const override { return true; }
+
+  int DisplaySize(int remaining_size) const override {
+    constexpr int kNullSize = 4;
+    return kNullSize;  // length of "null"
+  }
+
+  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
+                   std::string_view line_header, int tabs, int remaining_size,
+                   int max_line_size) const override {
+    os << colors.red << "null" << colors.reset;
+  }
+
+  void Visit(Visitor* visitor) const override;
+};
+
 // Base class for values which are nullable.
 class NullableValue : public Value {
  public:
@@ -141,19 +182,13 @@ class NumericValue : public InlineValue {
 };
 
 // A string value.
-class StringValue : public NullableValue {
+class StringValue : public Value {
  public:
-  StringValue(const Type* type, std::string str)
-      : NullableValue(type), string_length_(str.size()), string_(str) {}
-  StringValue(const Type* type, size_t string_length)
-      : NullableValue(type), string_length_(string_length), string_(std::nullopt) {}
+  StringValue(const Type* type, std::string_view string) : Value(type), string_(string) {}
 
-  const std::optional<std::string>& string() const { return string_; }
-  size_t size() const { return string_length_; }
+  const std::string& string() const { return string_; }
 
   int DisplaySize(int remaining_size) const override;
-
-  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
                    std::string_view line_header, int tabs, int remaining_size,
@@ -162,8 +197,7 @@ class StringValue : public NullableValue {
   void Visit(Visitor* visitor) const override;
 
  private:
-  size_t string_length_;
-  std::optional<std::string> string_;
+  const std::string string_;
 };
 
 // A Boolean value.

@@ -22,14 +22,14 @@ class JsonVisitor : public Visitor {
     result_->SetString(ss.str(), *allocator_);
   }
 
+  void VisitInvalidValue(const InvalidValue* node) override {
+    result_->SetString("(invalid)", *allocator_);
+  }
+
+  void VisitNullValue(const NullValue* node) override { result_->SetNull(); }
+
   void VisitStringValue(const StringValue* node) override {
-    if (node->IsNull()) {
-      result_->SetNull();
-    } else if (auto str = node->string()) {
-      result_->SetString(str->data(), str->size(), *allocator_);
-    } else {
-      result_->SetString("(invalid)", *allocator_);
-    }
+    result_->SetString(node->string().data(), node->string().size(), *allocator_);
   }
 
   void VisitStructValue(const StructValue* node) override {

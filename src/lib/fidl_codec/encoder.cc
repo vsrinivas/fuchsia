@@ -13,6 +13,25 @@
 
 namespace fidl_codec {
 
+// Currently only the String type can generate a null value.
+class NullVisitor : public TypeVisitor {
+ public:
+  explicit NullVisitor(Encoder* encoder) : encoder_(encoder) {}
+
+ private:
+  void VisitType(const Type* type) override {
+    FXL_LOG(FATAL) << "Type " << type->Name() << " can't be null.";
+  }
+
+  void VisitStringType(const StringType* type) override {
+    FXL_DCHECK(type->Nullable());
+    encoder_->WriteValue<uint64_t>(0);
+    encoder_->WriteValue<uint64_t>(0);
+  }
+
+  Encoder* encoder_;
+};
+
 Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, uint8_t flags[3],
                                        uint8_t magic, const StructValue& object) {
   Encoder encoder(flags[0] & FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG);
@@ -83,6 +102,15 @@ void Encoder::VisitUnionAsXUnion(const UnionValue* node) {
   }
 }
 
+void Encoder::VisitInvalidValue(const InvalidValue* node) {
+  FXL_LOG(FATAL) << "Can't encode invalid data.";
+}
+
+void Encoder::VisitNullValue(const NullValue* node) {
+  NullVisitor null_visitor(this);
+  node->type()->Visit(&null_visitor);
+}
+
 void Encoder::VisitRawValue(const RawValue* node) {
   const auto& data = node->data();
   if (data) {
@@ -91,15 +119,10 @@ void Encoder::VisitRawValue(const RawValue* node) {
 }
 
 void Encoder::VisitStringValue(const StringValue* node) {
-  if (node->IsNull() || !node->string()) {
-    WriteValue<uint64_t>(0);
-    WriteValue<uint64_t>(0);
-  } else {
-    WriteValue<uint64_t>(node->size());
-    WriteValue<uint64_t>(UINTPTR_MAX);
-    current_offset_ = AllocateObject(node->string()->size());
-    WriteData(reinterpret_cast<const uint8_t*>(node->string()->data()), node->string()->size());
-  }
+  WriteValue<uint64_t>(node->string().size());
+  WriteValue<uint64_t>(UINTPTR_MAX);
+  current_offset_ = AllocateObject(node->string().size());
+  WriteData(reinterpret_cast<const uint8_t*>(node->string().data()), node->string().size());
 }
 
 void Encoder::VisitBoolValue(const BoolValue* node) {

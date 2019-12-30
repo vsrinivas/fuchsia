@@ -296,4 +296,28 @@ std::unique_ptr<Value> MessageDecoder::DecodeValue(const Type* type) {
   return result;
 }
 
+bool MessageDecoder::DecodeNullableHeader(uint64_t offset, uint64_t size, bool* is_null,
+                                          uint64_t* nullable_offset) {
+  uintptr_t data;
+  if (!GetValueAt(offset, &data)) {
+    return false;
+  }
+
+  if (data == FIDL_ALLOC_ABSENT) {
+    *is_null = true;
+    *nullable_offset = 0;
+    return true;
+  }
+  if (data != FIDL_ALLOC_PRESENT) {
+    AddError() << std::hex << (absolute_offset() + offset) << std::dec << ": Invalid value <"
+               << std::hex << data << std::dec << "> for nullable\n";
+    return false;
+  }
+  *is_null = false;
+  *nullable_offset = next_object_offset();
+  // Set the offset for the next object (just after this one).
+  SkipObject(size);
+  return true;
+}
+
 }  // namespace fidl_codec
