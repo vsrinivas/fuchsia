@@ -13,7 +13,6 @@ rustc_library("rustyline") {
   edition = "2015"
   source_root = "../../../../third_party/rust-mirrors/rustyline/src/lib.rs"
   deps = [
-    "//garnet/public/rust/fuchsia-device",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",

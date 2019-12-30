@@ -12,10 +12,6 @@
 
     Fuchsia-specific Futures executor and asynchronous primitives (Channel, Socket, Fifo, etc.)
 
-* [fuchsia-device/](/garnet/public/rust/fuchsia-device/)
-
-    Rust bindings to common Fuchsia device libraries
-
 * [fuchsia-framebuffer/](/garnet/public/rust/fuchsia-framebuffer/)
 
     Configure, create and use FrameBuffers in Fuchsia
