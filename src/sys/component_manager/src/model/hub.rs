@@ -4,7 +4,9 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
+        capability::{
+            CapabilityProvider, CapabilitySource, ComponentCapability, FrameworkCapability,
+        },
         model::{
             addable_directory::AddableDirectoryWithResult,
             dir_tree::{CapabilityUsageTree, DirTree},
@@ -513,12 +515,15 @@ impl HubInner {
         Ok(())
     }
 
-    async fn try_set_capability_provider<'a>(
+    /// Given a `CapabilitySource`, determine if it is a framework-provided
+    /// hub capability. If so, update the given `capability_provider` to
+    /// provide a hub directory.
+    async fn try_provide_hub_capability<'a>(
         self: Arc<Self>,
         source: &'a CapabilitySource,
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     ) {
-        trace::duration!("component_manager", "hub:try_set_capability_provider");
+        trace::duration!("component_manager", "hub:try_provide_hub_capability");
         // If this is a scoped framework directory capability, then check the source path
         if let CapabilitySource::Framework {
             capability: FrameworkCapability::Directory(source_path),
@@ -550,18 +555,22 @@ impl HubInner {
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_route_capability_async");
-        self.clone().try_set_capability_provider(&source, capability_provider).await;
+        self.clone().try_provide_hub_capability(&source, capability_provider).await;
 
-        let mut instance_map = self.instances.lock().await;
-        let execution = instance_map
-            .get_mut(target_moniker)
-            .expect("A component that is requesting a capability must exist in the instance map")
-            .execution
-            .as_mut()
-            .expect("A component that is requesting a capability must have an execution.");
+        // Track used capabilities.
+        if Self::is_capability_visible_in_namespace(&source) {
+            let mut instance_map = self.instances.lock().await;
+            let execution = instance_map
+                .get_mut(target_moniker)
+                .expect(
+                    "A component that is requesting a capability must exist in the instance map",
+                )
+                .execution
+                .as_mut()
+                .expect("A component that is requesting a capability must have an execution.");
 
-        execution.capability_usage_tree.mark_capability_used(target_moniker, source).await?;
-
+            execution.capability_usage_tree.mark_capability_used(target_moniker, source).await?;
+        }
         Ok(())
     }
 
@@ -569,6 +578,19 @@ impl HubInner {
     // instead of dropping them.
     fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
         dir.and_then(|d| io_util::clone_directory(d, CLONE_FLAG_SAME_RIGHTS).ok())
+    }
+
+    /// Return if the given capability is exposed in the component's namespace.
+    ///
+    /// Services may be exposed in a component's namespace. Runner caps, storage
+    /// caps, resolvers etc are not exposed in a components namespace.
+    fn is_capability_visible_in_namespace(source: &CapabilitySource) -> bool {
+        match source {
+            CapabilitySource::Framework { capability: FrameworkCapability::Runner(_), .. } => false,
+            CapabilitySource::Component { capability: ComponentCapability::Runner(_), .. } => false,
+            CapabilitySource::StorageDecl(_, _) => false,
+            _ => true,
+        }
     }
 }
 
@@ -720,7 +742,7 @@ mod tests {
     ) -> (Arc<Model>, BuiltinEnvironment, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let mut resolver = ResolverRegistry::new();
-        let runner = mocks::MockRunner::new();
+        let runner = Arc::new(mocks::MockRunner::new());
         let mut mock_resolver = mocks::MockResolver::new();
         for component in components.into_iter() {
             mock_resolver.add_component(&component.name, component.decl);
@@ -743,8 +765,10 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url,
             root_resolver_registry: resolver,
-            elf_runner: Arc::new(runner),
-            builtin_runners: HashMap::new(),
+            elf_runner: runner.clone(),
+            builtin_runners: vec![(TEST_RUNNER_NAME.into(), runner.clone() as _)]
+                .into_iter()
+                .collect(),
         }));
         let builtin_environment =
             BuiltinEnvironment::new(&startup_args, &model, ComponentManagerConfig::default())
@@ -922,6 +946,32 @@ mod tests {
             vec!["expose", "in", "resolved_url", "used"],
             list_directory(&old_hub_dir_proxy).await
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn hub_ensure_runners_not_exposed_in_used() {
+        let root_component_url = "test:///root".to_string();
+
+        // Start a root component and child component, both using the runner "test_runner".
+        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
+            root_component_url.clone(),
+            vec![ComponentDescriptor {
+                name: "root".to_string(),
+                decl: component_decl_with_test_runner(),
+                host_fn: None,
+                runtime_host_fn: None,
+            }],
+        )
+        .await;
+
+        // Ensure "used" directory can be opened, but is empty.
+        let in_dir = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("exec/used"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+        assert_eq!(Vec::<String>::new(), list_directory(&in_dir).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
