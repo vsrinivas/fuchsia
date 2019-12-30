@@ -95,7 +95,6 @@ func TestGetImages(t *testing.T) {
 		name     string
 		bootMode Mode
 	}{
-		{"PaveImgs", ModePave},
 		{"NetbootImgs", ModeNetboot},
 		{"UnknownBootMode", -1},
 	}

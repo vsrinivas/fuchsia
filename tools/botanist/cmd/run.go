@@ -403,15 +403,9 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 	defer closeFunc()
 
-	paveImgs, closePaveImgsFunc, err := bootserver.GetImages(ctx, r.imageManifest, bootserver.ModePave)
-	if err != nil {
-		return err
-	}
-	defer closePaveImgsFunc()
 	opts := target.Options{
-		Netboot:  r.netboot,
-		SSHKey:   r.sshKey,
-		PaveImgs: paveImgs,
+		Netboot: r.netboot,
+		SSHKey:  r.sshKey,
 	}
 
 	data, err := ioutil.ReadFile(r.configFile)

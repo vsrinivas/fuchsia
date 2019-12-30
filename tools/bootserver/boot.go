@@ -12,7 +12,6 @@ import (
 	"io"
 	"log"
 	"sort"
-	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
@@ -141,89 +140,6 @@ func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string
 		}
 	}
 	return n.Reboot(t.RemoteAddr())
-}
-
-// BootZedbootShim extracts the Zircon-R image that is intended to be paved to the device
-// and mexec()'s it, it is intended to be executed before calling Boot().
-// This function serves to emulate zero-state, and will eventually be superseded by an
-// infra implementation.
-func BootZedbootShim(ctx context.Context, t tftp.Client, imgs []Image) error {
-	files, err := filterZedbootShimImages(imgs)
-	if err != nil {
-		return err
-	}
-
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].index < files[j].index
-	})
-
-	if err := transfer(ctx, t, files); err != nil {
-		return err
-	}
-	hasRAMKernel := files[len(files)-1].name == kernelNetsvcName
-	n := netboot.NewClient(time.Second)
-	if hasRAMKernel {
-		return n.Boot(t.RemoteAddr())
-	}
-	return n.Reboot(t.RemoteAddr())
-}
-
-func filterZedbootShimImages(imgs []Image) ([]*netsvcFile, error) {
-	netsvcName := kernelNetsvcName
-	bootloaderImg := Image{}
-	vbmetaRImg := Image{}
-	zirconRImg := Image{}
-	for _, img := range imgs {
-		for _, arg := range img.Args {
-			// Find name by bootserver arg to ensure we are extracting the correct zircon-r.
-			// There may be more than one in images.json but only one should be passed to
-			// the bootserver for paving.
-			name, ok := bootserverArgToName[arg]
-			if !ok {
-				return nil, fmt.Errorf("unrecognized bootserver argument found: %q", arg)
-			}
-			switch name {
-			case bootloaderNetsvcName:
-				bootloaderImg = img
-			case vbmetaRNetsvcName:
-				vbmetaRImg = img
-			case zirconRNetsvcName:
-				zirconRImg = img
-				// Signed ZBIs cannot be mexec()'d, so pave them to A and boot instead.
-				if strings.HasSuffix(img.Name, ".signed") {
-					netsvcName = zirconANetsvcName
-				}
-			default:
-				continue
-			}
-		}
-	}
-
-	if zirconRImg.Reader != nil {
-		files := []*netsvcFile{}
-		zedbootFile, err := newNetsvcFile(netsvcName, zirconRImg.Reader, zirconRImg.Size)
-		if err != nil {
-			return nil, err
-		}
-		files = append(files, zedbootFile)
-		if vbmetaRImg.Reader != nil && netsvcName == zirconANetsvcName {
-			vbmetaRFile, err := newNetsvcFile(vbmetaANetsvcName, vbmetaRImg.Reader, vbmetaRImg.Size)
-			if err != nil {
-				return nil, err
-			}
-			files = append(files, vbmetaRFile)
-		}
-		if bootloaderImg.Reader != nil {
-			bootloaderFile, err := newNetsvcFile(bootloaderNetsvcName, bootloaderImg.Reader, bootloaderImg.Size)
-			if err != nil {
-				return nil, err
-			}
-			files = append(files, bootloaderFile)
-		}
-		return files, nil
-	}
-
-	return nil, fmt.Errorf("no zircon-r image found in: %v", imgs)
 }
 
 // A file to send to netsvc.

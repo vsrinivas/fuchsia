@@ -179,12 +179,6 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 		signers = t.signers
 	}
 
-	// Mexec Zedboot
-	err = bootserver.BootZedbootShim(ctx, t.Tftp(), t.opts.PaveImgs)
-	if err != nil {
-		return err
-	}
-
 	// Boot Fuchsia.
 	return bootserver.Boot(ctx, t.Tftp(), images, args, signers)
 }

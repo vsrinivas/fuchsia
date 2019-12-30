@@ -103,14 +103,8 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		return err
 	}
 	defer closeFunc()
-	paveImgs, closePaveImgsFunc, err := bootserver.GetImages(ctx, cmd.imageManifest, bootserver.ModePave)
-	if err != nil {
-		return err
-	}
-	defer closePaveImgsFunc()
 	opts := target.Options{
-		Netboot:  cmd.netboot,
-		PaveImgs: paveImgs,
+		Netboot: cmd.netboot,
 	}
 
 	var devices []*target.DeviceTarget
