@@ -28,7 +28,7 @@ rustc_library("lib") {
     "//garnet/bin/terminal/third_party/term-model",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-scenic",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",

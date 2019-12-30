@@ -30,7 +30,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds-rustc",

@@ -32,7 +32,7 @@ rustc_binary("bin") {
     "//garnet/lib/wlan/fidl:sme-rustc",
     "//garnet/lib/wlan/fidl:wlantap-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.mesh:fuchsia.wlan.mesh-rustc",
     "//sdk/fidl/fuchsia.wlan.minstrel:fuchsia.wlan.minstrel-rustc",

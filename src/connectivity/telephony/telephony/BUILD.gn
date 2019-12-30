@@ -13,7 +13,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.telephony.manager:fuchsia.telephony.manager-rustc",
     "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",

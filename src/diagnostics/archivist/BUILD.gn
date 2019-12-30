@@ -17,7 +17,7 @@ rustc_library("lib") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream-rustc",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",

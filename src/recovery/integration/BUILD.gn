@@ -18,7 +18,7 @@ rustc_test("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-runtime",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fuchsia-async",

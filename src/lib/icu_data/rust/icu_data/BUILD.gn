@@ -12,7 +12,7 @@ rustc_library("icu_data") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/icu/rust/rust_icu_common",
     "//src/lib/icu/rust/rust_icu_sys",
     "//src/lib/icu/rust/rust_icu_udata",

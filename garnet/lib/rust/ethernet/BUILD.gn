@@ -14,7 +14,7 @@ rustc_library("ethernet") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-runtime",
     "//src/lib/fuchsia-async",
     "//src/lib/shared-buffer",

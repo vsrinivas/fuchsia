@@ -10,7 +10,7 @@ rustc_library("tel_dev") {
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//src/connectivity/telephony/lib/tel-devmgr/fidl:devmgr-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

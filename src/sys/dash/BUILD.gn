@@ -21,7 +21,7 @@ rustc_binary("dash_test_bin") {
   edition = "2018"
   source_root = "src/integration_test.rs"
   deps = [
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-runtime",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",

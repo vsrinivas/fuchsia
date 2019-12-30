@@ -15,7 +15,7 @@ rustc_library("fuchsia-audio-device-output") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//src/lib/fuchsia-async",

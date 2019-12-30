@@ -27,7 +27,7 @@ rustc_library("lib") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-trace",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",

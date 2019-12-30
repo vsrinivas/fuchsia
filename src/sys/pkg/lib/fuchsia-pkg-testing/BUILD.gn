@@ -17,7 +17,7 @@ rustc_library("fuchsia-pkg-testing") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-hyper",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fuchsia-async",
@@ -55,7 +55,7 @@ rustc_test("pkgfs-test") {
   source_root = "tests/pkgfs_test.rs"
   deps = [
     ":fuchsia-pkg-testing",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/testing/blobfs-ramdisk",

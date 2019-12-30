@@ -10,7 +10,7 @@ rustc_library("helper") {
   with_unit_tests = true
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",

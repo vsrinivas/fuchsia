@@ -12,7 +12,7 @@ rustc_binary("enclosed_runner") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//sdk/fidl/fuchsia.net.icmp:fuchsia.net.icmp-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/lib/fuchsia-async",

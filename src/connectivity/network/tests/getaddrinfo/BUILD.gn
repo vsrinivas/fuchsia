@@ -23,7 +23,7 @@ rustc_test("getaddrinfo_test") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

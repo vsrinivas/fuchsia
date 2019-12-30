@@ -24,7 +24,7 @@ rustc_library("lib") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/overnet/lib/hoist",
     "//src/developer/remote-control/service:remote-control-rustc",

@@ -11,7 +11,7 @@ rustc_binary("multiple_guests") {
   deps = [
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
     "//src/connectivity/network/testing/netemul/runner/test/guest:lib",
     "//src/lib/fuchsia-async",

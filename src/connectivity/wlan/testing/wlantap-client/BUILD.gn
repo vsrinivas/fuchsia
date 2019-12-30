@@ -12,7 +12,7 @@ rustc_library("wlantap-client") {
   deps = [
     "//garnet/lib/wlan/fidl:wlantap-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//src/connectivity/wlan/lib/wlan_dev",
     "//src/connectivity/wlan/testing/wlan-devmgr/fidl:devmgr-rustc",
     "//src/lib/fuchsia-async",

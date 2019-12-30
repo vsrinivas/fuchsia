@@ -964,7 +964,6 @@ group("rust_crates") {
     "//garnet/lib/rust/ethernet:ethernet-tests",
     "//garnet/lib/rust/io_util:io_util_tests",
     "//garnet/public/rust:rust-crates-tests",
-    "//garnet/public/rust/fdio:tests",
     "//garnet/public/rust/fuchsia-bootfs:fuchsia-bootfs-tests",
     "//garnet/public/rust/fuchsia-hyper:fuchsia-hyper-tests",
     "//garnet/public/rust/fuchsia-syslog:fuchsia-syslog-tests",

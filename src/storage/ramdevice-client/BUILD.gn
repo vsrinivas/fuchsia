@@ -9,7 +9,7 @@ rustc_library("ramdevice-client") {
   with_unit_tests = true
   edition = "2018"
   deps = [
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",

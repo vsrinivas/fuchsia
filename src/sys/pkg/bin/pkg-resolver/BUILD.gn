@@ -20,7 +20,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/io_util",
     "//garnet/lib/rust/sysconfig-client",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-hyper",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-trace",

@@ -10,7 +10,7 @@ rustc_library("fs-management") {
   edition = "2018"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
+    "//src/lib/fdio/rust:fdio",
     "//garnet/public/rust/fuchsia-runtime",
     "//src/lib/cstr",
     "//src/lib/zircon/rust:fuchsia-zircon",
