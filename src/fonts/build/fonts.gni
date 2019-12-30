@@ -67,7 +67,7 @@ _default_prefix = "all"
 #
 #   testonly
 #     Optional: If present, config_data will *not* be generated for
-#     pkg_resolver, which doesn't support loading arbitrary font package registry files.
+#     pkg-resolver, which doesn't support loading arbitrary font package registry files.
 #     Type: boolean
 template("font_collection") {
   forward_variables_from(invoker,
@@ -97,7 +97,7 @@ template("font_collection") {
       !invoker.testonly || prefix != _default_prefix,
       "Can't use default prefix '${prefix}' with a testonly font_collection.")
 
-  # The font resolver in pkg_resolver expects a hard-coded location in
+  # The font resolver in pkg-resolver expects a hard-coded location in
   # /config/data for the file font_packages.json. To avoid collisions from
   # multiple definitions of that file, we don't add it to config_data when
   # building tests.
@@ -115,7 +115,7 @@ template("font_collection") {
          "font_collection can't be empty")
 
   ##############################################################################
-  # Generate font_packages.json, used by pkg_resolver to know which Fuchsia
+  # Generate font_packages.json, used by pkg-resolver to know which Fuchsia
   # packages are font packages.
   ##############################################################################
   pkg_resolver_registry_path = "${target_gen_dir}/${prefix}.font_packages.json"
@@ -135,7 +135,7 @@ template("font_collection") {
 
   if (generate_pkg_resolver_config_data) {
     config_data("pkg_resolver_font_packages_config_data") {
-      for_pkg = "pkg_resolver"
+      for_pkg = "pkg-resolver"
       outputs = [
         "font_packages.json",
       ]
