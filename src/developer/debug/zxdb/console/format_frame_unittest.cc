@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/console/async_output_buffer_test_util.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
+#include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_node_console.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/symbols/function.h"

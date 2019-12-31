@@ -26,6 +26,7 @@
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_frame.h"
 #include "src/developer/debug/zxdb/console/format_job.h"
+#include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_node_console.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
@@ -101,6 +102,9 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
 
   FormatLocationOptions loc_opts(cmd.target());
   loc_opts.show_params = cmd.HasSwitch(kForceTypes);
+  loc_opts.func.name.elide_templates = true;
+  loc_opts.func.name.bold_last = true;
+  loc_opts.func.params = FormatFunctionNameOptions::kElideParams;
 
   ConsoleFormatOptions console_opts;
   console_opts.verbosity = cmd.HasSwitch(kForceTypes) ? ConsoleFormatOptions::Verbosity::kAllTypes
@@ -111,8 +115,10 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (cmd.GetNounIndex(Noun::kFrame) == Command::kNoIndex) {
     // Just "frame", this lists available frames.
     auto detail = FormatFrameDetail::kSimple;
-    if (cmd.HasSwitch(kVerboseSwitch))
-      detail = FormatFrameDetail::kVerbose;
+    if (cmd.HasSwitch(kVerboseSwitch)) {
+      loc_opts.func.name.elide_templates = false;
+      loc_opts.func.params = FormatFunctionNameOptions::kParamTypes;
+    }
 
     // Always force update the stack. Various things can have changed and when the user requests
     // a stack we want to be sure things are correct.

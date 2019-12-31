@@ -22,6 +22,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_steps.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_frame.h"
+#include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_node_console.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
@@ -180,6 +181,7 @@ Arguments
   -v
   --verbose
       Include extra stack frame information:
+       • Full template lists and function parameter types.
        • Instruction pointer.
        • Stack pointer.
        • Stack frame base pointer.
@@ -196,12 +198,18 @@ Err DoBacktrace(ConsoleContext* context, const Command& cmd) {
   if (!cmd.thread())
     return Err("There is no thread to have frames.");
 
-  auto detail = FormatFrameDetail::kParameters;
-  if (cmd.HasSwitch(kVerboseBacktrace))
-    detail = FormatFrameDetail::kVerbose;
-
   FormatLocationOptions loc_opts(cmd.target());
   loc_opts.show_params = cmd.HasSwitch(kForceAllTypes);
+  loc_opts.func.name.elide_templates = true;
+  loc_opts.func.name.bold_last = true;
+  loc_opts.func.params = FormatFunctionNameOptions::kElideParams;
+
+  auto detail = FormatFrameDetail::kParameters;
+  if (cmd.HasSwitch(kVerboseBacktrace)) {
+    detail = FormatFrameDetail::kVerbose;
+    loc_opts.func.name.elide_templates = false;
+    loc_opts.func.params = FormatFunctionNameOptions::kParamTypes;
+  }
 
   // These are minimal since there is often a lot of data.
   ConsoleFormatOptions format_opts;

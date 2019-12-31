@@ -7,6 +7,7 @@
 #include "src/developer/debug/zxdb/common/ref_ptr_to.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
+#include "src/developer/debug/zxdb/console/format_name.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"

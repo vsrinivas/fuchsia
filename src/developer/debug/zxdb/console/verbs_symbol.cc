@@ -22,6 +22,7 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_context.h"
+#include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
