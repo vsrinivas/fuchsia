@@ -74,10 +74,15 @@ pub extern "C" fn client_mlme_seq_mgr(mlme: &mut ClientMlme) -> &mut SequenceMan
 }
 
 #[no_mangle]
-pub extern "C" fn client_mlme_handle_mlme_msg(mlme: &mut ClientMlme, bytes: CSpan<'_>) -> i32 {
+pub extern "C" fn client_mlme_handle_mlme_msg(
+    mlme: &mut ClientMlme,
+    sta: *mut Client,
+    bytes: CSpan<'_>,
+) -> i32 {
+    let sta = if !sta.is_null() { unsafe { Some(&mut *sta) } } else { None };
     #[allow(deprecated)] // Allow until main message loop is in Rust.
     match fidl_mlme::MlmeRequestMessage::decode(bytes.into(), &mut []) {
-        Ok(msg) => mlme.handle_mlme_msg(msg).into_raw_zx_status(),
+        Ok(msg) => mlme.handle_mlme_msg(sta, msg).into_raw_zx_status(),
         Err(e) => {
             error!("error decoding MLME message: {}", e);
             zx::Status::IO.into_raw()

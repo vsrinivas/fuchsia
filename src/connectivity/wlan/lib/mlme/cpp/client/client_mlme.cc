@@ -112,6 +112,8 @@ zx_status_t ClientMlme::Init() {
         // The client never needs to disable beaconing.
         return ZX_ERR_NOT_SUPPORTED;
       },
+      .set_link_status = [](void* device,
+                            uint8_t status) { return DEVICE(device)->SetStatus(status); },
       .configure_assoc = [](void* device, wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t {
         return DEVICE(device)->ConfigureAssoc(assoc_ctx);
       },
@@ -194,7 +196,12 @@ void ClientMlme::HwScanComplete(uint8_t result_code) {
 }
 
 zx_status_t ClientMlme::HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) {
-  return ZX_ERR_NOT_SUPPORTED;
+  debugfn();
+  wlan_client_sta_t* rust_client = nullptr;
+  if (sta_ != nullptr) {
+    rust_client = sta_->GetRustClientSta();
+  }
+  return client_mlme_handle_mlme_msg(rust_mlme_.get(), rust_client, AsWlanSpan(msg));
 }
 
 zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {

@@ -142,9 +142,37 @@ impl ClientMlme {
     }
 
     #[allow(deprecated)] // Allow until main message loop is in Rust.
-    pub fn handle_mlme_msg(&mut self, _msg: fidl_mlme::MlmeRequestMessage) -> Result<(), Error> {
+    pub fn handle_mlme_msg(
+        &mut self,
+        sta: Option<&mut Client>,
+        msg: fidl_mlme::MlmeRequestMessage,
+    ) -> Result<(), Error> {
+        // Handle non station specific MLME messages first (for example, Scan)
         // 0x90 for now.
-        Err(Error::Status(format!("MLME messages not supported"), zx::Status::NOT_SUPPORTED))
+
+        // TODO(eyw): This match is removed in a later patch because all MLME messages are handled
+        // by Rust MLME instead of the C++ one.
+        match msg {
+            fidl_mlme::MlmeRequestMessage::FinalizeAssociationReq { .. } => {
+                let sta = match sta {
+                    Some(sta) => sta,
+                    None => {
+                        return Err(Error::Status(
+                            format!("Client does not exist"),
+                            zx::Status::BAD_STATE,
+                        ))
+                    }
+                };
+                sta.bind(&mut self.scanner, &mut self.chan_sched, &mut self.channel_state)
+                    .handle_mlme_msg(&mut self.ctx, msg);
+                Ok(())
+            }
+            _ => Err(Error::Status(
+                // will fall-through to the C++ handler
+                format!("MLME messages not supported"),
+                zx::Status::NOT_SUPPORTED,
+            )),
+        }
     }
 
     pub fn handle_mlme_scan_req(
@@ -690,38 +718,10 @@ impl<'a> BoundClient<'a> {
         result
     }
 
-    // TODO(39899): The Rust crate does not yet support channel scheduling. When
-    //              channel scheduling is available, use this code to doze and
-    //              awake as needed.
-    /// Sends a power management data frame to the associated AP indicating that
-    /// the client has entered the given power state. See `PowerState`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the data frame cannot be sent to the AP.
-    pub fn send_power_state_frame(
-        &mut self,
-        ctx: &mut Context,
-        state: PowerState,
-    ) -> Result<(), Error> {
-        let mut buffer = ctx.buf_provider.get_buffer(mac::FixedDataHdrFields::len(
-            mac::Addr4::ABSENT,
-            mac::QosControl::ABSENT,
-            mac::HtControl::ABSENT,
-        ))?;
-        let mut writer = BufferWriter::new(&mut buffer[..]);
-        write_power_state_frame(
-            &mut writer,
-            self.sta.bssid,
-            self.sta.iface_mac,
-            &mut ctx.seq_mgr,
-            state,
-        )?;
-        let n = writer.bytes_written();
-        let buffer = OutBuf::from(buffer, n);
-        ctx.device
-            .send_wlan_frame(buffer, TxFlags::NONE)
-            .map_err(|error| Error::Status(format!("error sending power management frame"), error))
+    #[allow(deprecated)] // Allow until main message loop is in Rust.
+    pub fn handle_mlme_msg(&mut self, ctx: &mut Context, msg: fidl_mlme::MlmeRequestMessage) {
+        // Safe: |state| is never None and always replaced with Some(..).
+        self.sta.state = Some(self.sta.state.take().unwrap().handle_mlme_msg(self, ctx, msg));
     }
 
     /// Sends an MLME-AUTHENTICATE.confirm message to the SME with authentication type

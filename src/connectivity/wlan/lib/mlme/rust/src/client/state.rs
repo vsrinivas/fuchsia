@@ -11,17 +11,20 @@ use {
     crate::{
         auth,
         client::{BoundClient, Context, TimedEvent},
+        ddk_converter as ddk,
         error::Error,
         timer::*,
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, info, warn},
+    std::convert::TryInto,
     wlan_common::{
+        ie,
         mac::{self, MacAddr},
         time::TimeUnit,
     },
     wlan_statemachine::*,
-    zerocopy::ByteSlice,
+    zerocopy::{AsBytes, ByteSlice},
 };
 
 /// Association timeout in Beacon periods.
@@ -29,6 +32,9 @@ use {
 /// considered to have failed.
 // TODO(41609): Let upper layers set this value.
 const ASSOC_TIMEOUT_BCN_PERIODS: u16 = 10;
+
+type OptionalHtOpBytes = Option<[u8; fidl_mlme::HT_OP_LEN as usize]>;
+type OptionalVhtOpBytes = Option<[u8; fidl_mlme::VHT_OP_LEN as usize]>;
 
 /// Processes an inbound deauthentication frame by issuing an MLME-DEAUTHENTICATE.indication
 /// to the STA's SME peer.
@@ -230,7 +236,7 @@ impl Associating {
         ctx: &mut Context,
         assoc_resp_hdr: &mac::AssocRespHdr,
         elements: B,
-    ) -> Result<(mac::Aid, ControlledPort), ()> {
+    ) -> Result<Association, ()> {
         ctx.timer.cancel_event(self.timeout);
 
         match assoc_resp_hdr.status_code {
@@ -239,11 +245,25 @@ impl Associating {
                     ctx,
                     assoc_resp_hdr.aid,
                     assoc_resp_hdr.capabilities,
-                    elements,
+                    &elements[..],
                 );
-                let controlled_port =
-                    if sta.sta.is_rsn { ControlledPort::Closed } else { ControlledPort::Open };
-                Ok((assoc_resp_hdr.aid, controlled_port))
+                let (ap_ht_op, ap_vht_op) = extract_ht_vht_op(elements);
+                let controlled_port_open = if sta.sta.is_rsn {
+                    false
+                } else {
+                    if let Err(e) = ctx.device.set_eth_link_up() {
+                        error!("Cannot set ethernet to UP. Status: {}", e);
+                    }
+                    true
+                };
+                let eth_qos = false; // it will be updated in finalize_assocition.
+                Ok(Association {
+                    aid: assoc_resp_hdr.aid,
+                    controlled_port_open,
+                    ap_ht_op,
+                    ap_vht_op,
+                    eth_qos,
+                })
             }
             status_code => {
                 error!("association with BSS failed: {:?}", status_code);
@@ -289,28 +309,52 @@ impl Associating {
     }
 }
 
-/// Represents an 802.1X controlled port.
-/// A closed controlled port only processes EAP frames while an open one processes any frames.
-#[derive(Debug, PartialEq)]
-enum ControlledPort {
-    Open,
-    Closed,
-}
-
-impl ControlledPort {
-    fn is_opened(&self) -> bool {
-        match self {
-            ControlledPort::Open => true,
-            _ => false,
+fn extract_ht_vht_op<B: ByteSlice>(elements: B) -> (OptionalHtOpBytes, OptionalVhtOpBytes) {
+    let mut ht_op = None;
+    let mut vht_op = None;
+    for (id, body) in ie::Reader::new(elements) {
+        match id {
+            ie::Id::HT_OPERATION => {
+                if body.len() != fidl_mlme::HT_OP_LEN as usize {
+                    error!("Invalid HT Operation len: {}", body.len());
+                    continue;
+                }
+                // Safe to unwrap because length has been verified.
+                ht_op = Some(body.as_bytes().try_into().unwrap());
+            }
+            ie::Id::VHT_OPERATION => {
+                if body.len() != fidl_mlme::VHT_OP_LEN as usize {
+                    error!("Invalid VHT Operation len: {}", body.len());
+                    continue;
+                }
+                // Safe to unwrap because length has been verified.
+                vht_op = Some(body.as_bytes().try_into().unwrap());
+            }
+            _ => (),
         }
     }
+    (ht_op, vht_op)
+}
+
+#[derive(Debug)]
+pub struct Association {
+    aid: mac::Aid,
+
+    // Represents an 802.1X controlled port.
+    // A closed controlled port only processes EAP frames while an open one processes any frames.
+    controlled_port_open: bool,
+
+    ap_ht_op: OptionalHtOpBytes,
+    ap_vht_op: OptionalVhtOpBytes,
+
+    // Whether to enable QoS bit for outgoing ethernet frames. Currently, QoS is enabled if the
+    // associated PHY is HT or VHT.
+    eth_qos: bool,
 }
 
 /// Client received a "successful" association response from the BSS.
-pub struct Associated {
-    aid: mac::Aid,
-    controlled_port: ControlledPort,
-}
+pub struct Associated(pub Association);
+
 impl DeauthenticationHandler for Associated {}
 
 impl Associated {
@@ -332,14 +376,13 @@ impl Associated {
             mac::data_dst_addr(fixed_data_fields),
         );
 
-        let is_controlled_port_open = self.controlled_port.is_opened();
         sta.handle_data_frame(
             ctx,
             fixed_data_fields,
             addr4,
             qos_ctrl,
             body,
-            is_controlled_port_open,
+            self.0.controlled_port_open,
         );
     }
 
@@ -363,12 +406,12 @@ impl Associated {
         fc: mac::FrameControl,
         dst_addr: MacAddr,
     ) {
-        if !self.controlled_port.is_opened() {
+        if !self.0.controlled_port_open {
             return;
         }
         // IEEE Std. 802.11-2016, 9.2.4.1.8
         if fc.more_data() && dst_addr == sta.sta.iface_mac {
-            let _ignored = sta.send_ps_poll_frame(ctx, self.aid);
+            let _ignored = sta.send_ps_poll_frame(ctx, self.0.aid);
         }
     }
 
@@ -401,24 +444,46 @@ impl Associated {
             }
         };
 
-        if !self.controlled_port.is_opened() {
+        if !self.0.controlled_port_open {
             return Err(Error::Status(
                 format!("Ethernet dropped. RSN not established"),
                 zx::Status::BAD_STATE,
             ));
         }
 
-        // TODO(eyw): Replaced it with finalize_association in the next patch .
-        const TEMPORARY_NO_QOS: bool = false;
         sta.send_data_frame(
             ctx,
             hdr.sa,
             hdr.da,
             sta.sta.is_rsn,
-            TEMPORARY_NO_QOS,
+            self.0.eth_qos,
             hdr.ether_type.to_native(),
             &body,
         )
+    }
+
+    fn finalize_association(
+        &mut self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        cap: fidl_mlme::NegotiatedCapabilities,
+    ) {
+        let Association { aid, ap_ht_op, ap_vht_op, .. } = self.0;
+
+        let assoc_ctx = ddk::build_ddk_assoc_ctx(sta.sta.bssid, aid, cap, ap_ht_op, ap_vht_op);
+        // TODO(29325): Determine for each outbound data frame,
+        // given the result of the dynamic capability negotiation, data frame
+        // classification, and QoS policy.
+        //
+        // Aruba / Ubiquiti are confirmed to be compatible with QoS field for the
+        // BlockAck session, independently of 40MHz operation.
+        self.0.eth_qos = assoc_ctx.qos;
+
+        if let Err(status) = ctx.device.configure_assoc(assoc_ctx) {
+            // Device cannot handle this association. Something is seriously wrong.
+            // TODO(eyw): Is this allowed? Should we deauthenticate or panic instead?
+            error!("device failed to configure association: {}", status);
+        }
     }
 }
 
@@ -480,7 +545,7 @@ impl States {
         }
     }
 
-    /// Initates an association with the joined BSS.
+    /// Initiates an association with the joined BSS.
     // TODO(eyw): Carry MLME-ASSOCIATE.request information to construct correct association frame.
     pub fn associate(self, sta: &mut BoundClient<'_>, ctx: &mut Context) -> States {
         match self {
@@ -494,6 +559,24 @@ impl States {
                     ctx,
                     fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated,
                 );
+                self
+            }
+        }
+    }
+
+    pub fn handle_mlme_finalize_association(
+        self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        cap: fidl_mlme::NegotiatedCapabilities,
+    ) -> States {
+        match self {
+            States::Associated(mut state) => {
+                state.finalize_association(sta, ctx, cap);
+                state.into()
+            }
+            _ => {
+                error!("received MLME-FinalizeAssociationReq in invalid state");
                 self
             }
         }
@@ -597,9 +680,7 @@ impl States {
             States::Associating(state) => match mgmt_body {
                 mac::MgmtBody::AssociationResp { assoc_resp_hdr, elements } => {
                     match state.on_assoc_resp_frame(sta, ctx, &assoc_resp_hdr, elements) {
-                        Ok((aid, controlled_port)) => {
-                            state.transition_to(Associated { aid, controlled_port }).into()
-                        }
+                        Ok(association) => state.transition_to(Associated(association)).into(),
                         Err(()) => state.transition_to(Authenticated).into(),
                     }
                 }
@@ -686,6 +767,23 @@ impl States {
         }
     }
 
+    #[allow(deprecated)] // Allow until main message loop is in Rust.
+    pub fn handle_mlme_msg(
+        self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        msg: fidl_mlme::MlmeRequestMessage,
+    ) -> States {
+        use fidl_mlme::MlmeRequestMessage as MlmeMsg;
+
+        match msg {
+            MlmeMsg::FinalizeAssociationReq { cap } => {
+                self.handle_mlme_finalize_association(sta, ctx, cap)
+            }
+            _ => self,
+        }
+    }
+
     /// Returns |true| iff a given FrameClass is permitted to be processed in the current state.
     fn is_frame_class_permitted(&self, class: mac::FrameClass) -> bool {
         match self {
@@ -708,6 +806,7 @@ mod tests {
             },
             device::{Device, FakeDevice},
         },
+        fidl_fuchsia_wlan_common as fidl_common,
         fuchsia_zircon::{self as zx, DurationNum},
         wlan_common::{
             assert_variant,
@@ -779,6 +878,16 @@ mod tests {
             rates: vec![],
             ht_cap: None,
             vht_cap: None,
+        }
+    }
+
+    fn empty_association() -> Association {
+        Association {
+            controlled_port_open: false,
+            aid: 0,
+            ap_ht_op: None,
+            ap_vht_op: None,
+            eth_qos: false,
         }
     }
 
@@ -1028,7 +1137,7 @@ mod tests {
             ctx.timer.schedule_event(ctx.timer.now() + 1.seconds(), TimedEvent::Associating);
         let state = Associating { timeout };
 
-        let (aid, controlled_port) = state
+        let Association { aid, controlled_port_open, .. } = state
             .on_assoc_resp_frame(
                 &mut sta,
                 &mut ctx,
@@ -1041,7 +1150,7 @@ mod tests {
             )
             .expect("failed processing association response frame");
         assert_eq!(aid, 42);
-        assert_eq!(ControlledPort::Open, controlled_port);
+        assert_eq!(true, controlled_port_open);
 
         // Verify timeout was canceled.
         assert_variant!(ctx.timer.triggered(&timeout), None);
@@ -1069,7 +1178,7 @@ mod tests {
             ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
         let state = Associating { timeout };
 
-        let (aid, controlled_port) = state
+        let Association { aid, controlled_port_open, .. } = state
             .on_assoc_resp_frame(
                 &mut sta,
                 &mut ctx,
@@ -1082,7 +1191,7 @@ mod tests {
             )
             .expect("failed processing association response frame");
         assert_eq!(aid, 42);
-        assert_eq!(ControlledPort::Closed, controlled_port);
+        assert_eq!(false, controlled_port_open);
 
         // Verify timeout was canceled.
         assert_variant!(ctx.timer.triggered(&timeout), None);
@@ -1239,7 +1348,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
+        let state = Associated(empty_association());
 
         state.on_deauth_frame(
             &mut sta,
@@ -1267,7 +1376,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
+        let state = Associated(empty_association());
 
         state.on_disassoc_frame(
             &mut sta,
@@ -1293,7 +1402,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = Associated { aid: 0, controlled_port: ControlledPort::Closed };
+        let state = Associated(empty_association());
 
         let data_frame = make_data_frame_single_llc(None, None);
         let (fixed, addr4, qos, body) = parse_data_frame(&data_frame[..]);
@@ -1309,7 +1418,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
+        let state = Associated(Association { controlled_port_open: true, ..empty_association() });
 
         let data_frame = make_data_frame_single_llc(None, None);
         let (fixed, addr4, qos, body) = parse_data_frame(&data_frame[..]);
@@ -1332,7 +1441,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = Associated { aid: 0, controlled_port: ControlledPort::Closed };
+        let state = Associated(empty_association());
 
         let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
         let (fixed, addr4, qos, body) = parse_data_frame(&eapol_frame[..]);
@@ -1358,7 +1467,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
+        let state = Associated(empty_association());
 
         let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
         let (fixed, addr4, qos, body) = parse_data_frame(&eapol_frame[..]);
@@ -1384,7 +1493,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
+        let state = Associated(Association { controlled_port_open: true, ..empty_association() });
 
         let data_frame = make_data_frame_amsdu();
         let (fixed, addr4, qos, body) = parse_data_frame(&data_frame[..]);
@@ -1416,7 +1525,8 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = Associated { aid: 42, controlled_port: ControlledPort::Open };
+        let state =
+            Associated(Association { aid: 42, controlled_port_open: true, ..empty_association() });
 
         let data_frame = make_data_frame_single_llc(None, None);
         let (mut fixed, addr4, qos, body) = parse_data_frame(&data_frame[..]);
@@ -1441,7 +1551,8 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = Associated { aid: 42, controlled_port: ControlledPort::Open };
+        let state =
+            Associated(Association { aid: 42, controlled_port_open: true, ..empty_association() });
 
         state.on_any_mgmt_frame(
             &mut sta,
@@ -1479,7 +1590,7 @@ mod tests {
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         // Closed Controlled port
-        let state = Associated { aid: 42, controlled_port: ControlledPort::Closed };
+        let state = Associated(empty_association());
         let data_frame = make_data_frame_single_llc(None, None);
         let (mut fixed, addr4, qos, body) = parse_data_frame(&data_frame[..]);
         fixed.frame_ctrl = fixed.frame_ctrl.with_more_data(true);
@@ -1487,10 +1598,10 @@ mod tests {
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
 
         // Foreign management frame
-        let state = States::from(statemachine::testing::new_state(Associated {
-            aid: 42,
-            controlled_port: ControlledPort::Open,
-        }));
+        let state = States::from(statemachine::testing::new_state(Associated(Association {
+            controlled_port_open: true,
+            ..empty_association()
+        })));
         #[rustfmt::skip]
         let beacon = vec![
             // Mgmt Header:
@@ -1514,10 +1625,11 @@ mod tests {
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         // Foreign data frame
-        let state = States::from(statemachine::testing::new_state(Associated {
+        let state = States::from(statemachine::testing::new_state(Associated(Association {
             aid: 42,
-            controlled_port: ControlledPort::Open,
-        }));
+            controlled_port_open: true,
+            ..empty_association()
+        })));
         let fc = mac::FrameControl(0)
             .with_frame_type(mac::FrameType::DATA)
             .with_data_subtype(mac::DataSubtype(0))
@@ -1844,10 +1956,8 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let mut state = States::from(statemachine::testing::new_state(Associated {
-            aid: 0,
-            controlled_port: ControlledPort::Open,
-        }));
+        let mut state =
+            States::from(statemachine::testing::new_state(Associated(empty_association())));
 
         // Disassociation: Associating > Authenticated
         #[rustfmt::skip]
@@ -1872,10 +1982,8 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let mut state = States::from(statemachine::testing::new_state(Associated {
-            aid: 0,
-            controlled_port: ControlledPort::Open,
-        }));
+        let mut state =
+            States::from(statemachine::testing::new_state(Associated(empty_association())));
 
         // Deauthentication: Associated > Joined
         #[rustfmt::skip]
@@ -1912,10 +2020,10 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = States::from(statemachine::testing::new_state(Associated {
-            aid: 0,
-            controlled_port: ControlledPort::Open,
-        }));
+        let state = States::from(statemachine::testing::new_state(Associated(Association {
+            controlled_port_open: true,
+            ..empty_association()
+        })));
 
         let eth_frame = [
             1, 2, 3, 4, 5, 6, // dst_addr
@@ -1957,10 +2065,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = States::from(statemachine::testing::new_state(Associated {
-            aid: 0,
-            controlled_port: ControlledPort::Closed,
-        }));
+        let state = States::from(statemachine::testing::new_state(Associated(empty_association())));
 
         let eth_frame = &[100; 13]; // Needs at least 14 bytes for header.
 
@@ -1977,10 +2082,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = States::from(statemachine::testing::new_state(Associated {
-            aid: 0,
-            controlled_port: ControlledPort::Closed,
-        }));
+        let state = States::from(statemachine::testing::new_state(Associated(empty_association())));
 
         let eth_frame = &[100; 14]; // long enough for ethernet header.
 
@@ -2006,5 +2108,57 @@ mod tests {
         let status = assert_variant !(result.unwrap_err(), Error::Status(_str, status) => status,
                                       "should be error");
         assert_eq!(status, zx::Status::BAD_STATE);
+    }
+
+    #[test]
+    #[allow(deprecated)] // For constructing MLME message
+    fn finalize_assoc_success() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let state = States::from(statemachine::testing::new_state(Associated(Association {
+            ap_ht_op: Some(ie::fake_ht_operation().as_bytes().try_into().unwrap()),
+            ap_vht_op: Some(ie::fake_vht_operation().as_bytes().try_into().unwrap()),
+            ..empty_association()
+        })));
+
+        let cap = fidl_mlme::NegotiatedCapabilities {
+            channel: fidl_common::WlanChan {
+                primary: 32,
+                cbw: fidl_common::Cbw::Cbw40,
+                secondary80: 88,
+            },
+            cap_info: 0x1234,
+            rates: vec![125, 126, 127, 128, 129, 130],
+            ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap(),
+            })),
+            vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap(),
+            })),
+        };
+        let state = state.handle_mlme_msg(
+            &mut sta,
+            &mut ctx,
+            fidl_mlme::MlmeRequestMessage::FinalizeAssociationReq { cap },
+        );
+        assert_variant!(state, States::Associated(_), "should stay in associated");
+
+        assert_eq!(m.fake_device.assocs.keys().count(), 1);
+        assert_eq!(*m.fake_device.assocs.keys().next().unwrap(), BSSID.0);
+
+        let assoc_ctx = m.fake_device.assocs.get(&BSSID.0).unwrap();
+
+        assert_eq!(assoc_ctx.aid, 0);
+        assert_eq!(assoc_ctx.phy, banjo_ddk_protocol_wlan_info::WlanPhyType::VHT);
+        assert_eq!(assoc_ctx.qos, true);
+        assert_eq!(assoc_ctx.rates_cnt, 6);
+        assert_eq!(assoc_ctx.rates[..6], [125, 126, 127, 128, 129, 130]);
+        assert_eq!(assoc_ctx.cap_info, 0x1234);
+        assert!(assoc_ctx.has_ht_cap);
+        assert!(assoc_ctx.has_vht_cap);
+        assert!(assoc_ctx.has_ht_op);
+        assert!(assoc_ctx.has_vht_op);
     }
 }

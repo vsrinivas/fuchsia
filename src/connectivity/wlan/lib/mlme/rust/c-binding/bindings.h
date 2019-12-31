@@ -228,7 +228,8 @@ extern "C" void ap_sta_timeout_fired(wlan_ap_sta_t *sta, wlan_scheduler_event_id
 
 extern "C" void client_mlme_delete(wlan_client_mlme_t *mlme);
 
-extern "C" int32_t client_mlme_handle_mlme_msg(wlan_client_mlme_t *mlme, wlan_span_t bytes);
+extern "C" int32_t client_mlme_handle_mlme_msg(wlan_client_mlme_t *mlme, wlan_client_sta_t *sta,
+                                               wlan_span_t bytes);
 
 extern "C" wlan_client_mlme_t *client_mlme_new(wlan_client_mlme_config_t config,
                                                mlme_device_ops_t device,

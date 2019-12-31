@@ -159,8 +159,13 @@ impl Device {
         zx::ok(status)
     }
 
-    pub fn set_link_status(&self, status: LinkStatus) -> Result<(), zx::Status> {
-        let status = (self.set_link_status)(self.device, status.0);
+    pub fn set_eth_link_up(&self) -> Result<(), zx::Status> {
+        let status = (self.set_link_status)(self.device, LinkStatus::UP.0);
+        zx::ok(status)
+    }
+
+    pub fn set_eth_link_down(&self) -> Result<(), zx::Status> {
+        let status = (self.set_link_status)(self.device, LinkStatus::DOWN.0);
         zx::ok(status)
     }
 
@@ -676,10 +681,10 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let dev = fake_device.as_device();
 
-        dev.set_link_status(LinkStatus::UP).expect("failed setting status");
+        dev.set_eth_link_up().expect("failed setting status");
         assert_eq!(fake_device.link_status, LinkStatus::UP);
 
-        dev.set_link_status(LinkStatus::DOWN).expect("failed setting status");
+        dev.set_eth_link_down().expect("failed setting status");
         assert_eq!(fake_device.link_status, LinkStatus::DOWN);
     }
 

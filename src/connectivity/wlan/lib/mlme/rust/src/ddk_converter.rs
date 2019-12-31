@@ -57,7 +57,9 @@ pub fn build_ddk_assoc_ctx(
         listen_interval: 0,
         phy,
         chan: ddk_channel_from_fidl(cap.channel),
-        qos: false,                        // Fuchsia does not support QoS yet.
+        // TODO(29325): QoS works with Aruba/Ubiquiti for BlockAck session but it may need to be
+        // dynamically determined for each outgoing data frame.
+        qos: has_ht_cap,
         rates_cnt: cap.rates.len() as u16, // will not overflow as MAX_RATES_LEN is u8
         rates,
         cap_info: cap.cap_info,
@@ -115,7 +117,7 @@ mod tests {
             },
             ddk.chan
         );
-        assert_eq!(false, ddk.qos);
+        assert_eq!(true, ddk.qos);
 
         assert_eq!(10, ddk.rates_cnt);
         assert_eq!([111, 112, 113, 114, 115, 116, 117, 118, 119, 120], ddk.rates[0..10]);
