@@ -25,6 +25,7 @@ driver_module("wlanphy_driver") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fdio",
     "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
   ]
 

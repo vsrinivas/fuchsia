@@ -31,6 +31,7 @@ TEST(DebugTest, NoCrash) {
   for (size_t i = 0; i < buffer_size; i++) {
     buffer[i] = i;
   }
+  buffer[buffer_size - 1] = 0;
 
   // First test all sizes from [0,100]
   size_t max_test_size = std::min<size_t>(100, buffer_size);

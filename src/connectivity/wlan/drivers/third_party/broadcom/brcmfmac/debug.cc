@@ -59,6 +59,7 @@ void Debug::PrintStringDump(uint32_t flag, const void* data, size_t length) {
       size_t line_width = std::min(kValuesPerLine, new_length - i);
       std::transform(bytes + i, bytes + i + line_width, buffer,
                      [](char c) { return std::isprint(c) ? c : '.'; });
+      buffer[kValuesPerLine] = 0;
       driver_printf(flag, "%04zx: %s\n", i, buffer);
     }
     if (length > kMaxStringDumpBytes) {
