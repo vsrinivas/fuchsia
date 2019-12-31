@@ -4,7 +4,7 @@
 
 declare_args() {
   # Enable printing of in driver logs in unittests.
-  enable_driver_unittest_logs = false
+  enable_driver_unittest_logs = true
 
   # Log levels to be printed when logs are enabled. Default is ERROR, WARNING, & INFO.
   # Refer to zircon/system/public/zircon/syscalls/log.h for levels.
