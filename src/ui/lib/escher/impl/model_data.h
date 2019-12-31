@@ -6,14 +6,14 @@
 #define SRC_UI_LIB_ESCHER_IMPL_MODEL_DATA_H_
 
 #include <cstdint>
-#include <vulkan/vulkan.hpp>
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/impl/uniform_buffer_pool.h"
-#include "src/ui/lib/escher/shape/modifier_wobble.h"
 #include "src/ui/lib/escher/util/hash_map.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 namespace impl {
@@ -88,9 +88,6 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
     // Color of object.  Applied as filter to object's material, if it has one.
     // Otherwise, treated as a solid color.
     vec4 color;
-    // Temporary hack.  Soon, per-object params for shape-modifiers, etc. will
-    // only be provided to the pipelines that need them.
-    ModifierWobble wobble;
   };
 
   vk::Device device() { return device_; }

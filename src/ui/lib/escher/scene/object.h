@@ -49,27 +49,6 @@ class Object {
   // by definition within the clippers' bounds).
   BoundingBox bounding_box() const;
 
-  Object& set_shape_modifiers(ShapeModifiers modifiers) {
-    shape_.set_modifiers(modifiers);
-    return *this;
-  }
-
-  // Obtain a temporary reference to data corresponding to a particular
-  // ShapeModifier; the modifier that is used is determined by DataT::kType.
-  // The returned pointer is invalidated by the next call to
-  // set_shape_modifier_data().  Escher clients should only use pre-existing
-  // Escher types for DataT (e.g. ModifierWobble), since those are the ones that
-  // the renderer implementation knows how to deal with.
-  template <typename DataT>
-  const DataT* shape_modifier_data() const;
-  // Set per-object ShapeModifier data for the ShapeModifier type specified by
-  // DataT::kType.  Uses memcpy() to copy the DataT into shape_modifier_data_.
-  template <typename DataT>
-  void set_shape_modifier_data(const DataT& data);
-  // Remove both the shape modifier data and the flag from the shape.
-  template <typename DataT>
-  void remove_shape_modifier();
-
   // Return the list of objects whose shapes will be used to clip 'clippees()'.
   // It is OK for these objects to not have a material; in this case the objects
   // update the stencil buffer, but not the color/depth buffers.
@@ -85,39 +64,9 @@ class Object {
   mat4 transform_;
   Shape shape_;
   MaterialPtr material_;
-  std::unordered_map<ShapeModifier, std::vector<uint8_t>> shape_modifier_data_;
   std::vector<Object> clippers_;
   std::vector<Object> clippees_;
 };
-
-// Inline function definitions.
-
-template <typename DataT>
-const DataT* Object::shape_modifier_data() const {
-  auto it = shape_modifier_data_.find(DataT::kType);
-  if (it == shape_modifier_data_.end()) {
-    return nullptr;
-  } else {
-    FXL_DCHECK(it->second.size() == sizeof(DataT));
-    return reinterpret_cast<const DataT*>(it->second.data());
-  }
-}
-
-template <typename DataT>
-void Object::set_shape_modifier_data(const DataT& data) {
-  auto& vect = shape_modifier_data_[DataT::kType];
-  vect.resize(sizeof(DataT));
-  memcpy(vect.data(), &data, sizeof(DataT));
-}
-
-template <typename DataT>
-void Object::remove_shape_modifier() {
-  shape_modifier_data_.erase(DataT::kType);
-  shape_.remove_modifier(DataT::kType);
-}
-
-template <typename DataT>
-void set_shape_modifier_data(const DataT& data);
 
 }  // namespace escher
 

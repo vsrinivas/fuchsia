@@ -8,29 +8,9 @@
 
 namespace escher {
 
-Shape::Shape(Type type, ShapeModifiers modifiers) : type_(type), modifiers_(modifiers) {
-  FXL_DCHECK(type != Type::kMesh);
-  if (modifiers_ & ShapeModifier::kWobble) {
-    FXL_LOG(ERROR) << "ShapeModifier::kWobble only supported for kMesh shapes.";
-    FXL_CHECK(false);
-  }
-}
+Shape::Shape(Type type) : type_(type) { FXL_DCHECK(type != Type::kMesh); }
 
-Shape::Shape(MeshPtr mesh, ShapeModifiers modifiers)
-    : type_(Type::kMesh), modifiers_(modifiers), mesh_(mesh) {
-  FXL_DCHECK(mesh);
-  if (modifiers_ & ShapeModifier::kWobble) {
-    const MeshAttributes required = MeshAttribute::kPositionOffset | MeshAttribute::kPerimeterPos;
-    if (required != (mesh_->spec().attributes[0] & required)) {
-      // NOTE: We check in attributes[0] because that's where ModelRenderer
-      // expects them to be; this isn't currently suppored by PaperRenderQueue,
-      // and probably never will be.
-      FXL_LOG(ERROR) << "ShapeModifier::kWobble requires both kPositionOffset "
-                        "and kPerimeterPos";
-      FXL_CHECK(false);
-    }
-  }
-}
+Shape::Shape(MeshPtr mesh) : type_(Type::kMesh), mesh_(mesh) { FXL_DCHECK(mesh); }
 
 Shape::~Shape() {}
 

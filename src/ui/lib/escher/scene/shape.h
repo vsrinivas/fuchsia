@@ -7,7 +7,6 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/types.h"
-#include "src/ui/lib/escher/scene/shape_modifier.h"
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/util/debug_print.h"
 
@@ -18,15 +17,12 @@ class Shape {
  public:
   enum class Type { kRect, kCircle, kMesh, kNone };
 
-  explicit Shape(Type type, ShapeModifiers modifiers = ShapeModifiers());
-  explicit Shape(MeshPtr mesh, ShapeModifiers modifiers = ShapeModifiers());
+  explicit Shape(Type type);
+  explicit Shape(MeshPtr mesh);
   ~Shape();
 
   Type type() const { return type_; }
-  ShapeModifiers modifiers() const { return modifiers_; }
   void set_mesh(MeshPtr mesh);
-  void set_modifiers(ShapeModifiers modifiers) { modifiers_ = modifiers; }
-  void remove_modifier(ShapeModifier modifier) { modifiers_ &= ~modifier; }
 
   const MeshPtr& mesh() const {
     FXL_DCHECK(type_ == Type::kMesh);
@@ -37,7 +33,6 @@ class Shape {
 
  private:
   Type type_;
-  ShapeModifiers modifiers_;
   MeshPtr mesh_;
 };
 

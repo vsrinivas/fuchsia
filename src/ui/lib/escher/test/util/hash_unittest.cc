@@ -56,9 +56,6 @@ TEST(Hash, AllHashedTypes) {
 
     impl::ModelPipelineSpec model_pipeline_spec;
     model_pipeline_spec.mesh_spec = mesh_spec;
-    model_pipeline_spec.shape_modifiers = ShapeModifier::kWobble;
-    FXL_CHECK((model_pipeline_spec.shape_modifiers & ShapeModifier::kWobble) ==
-              ShapeModifier::kWobble);
 
     TestHashForValue(mesh_spec);
     TestHashForValue(model_pipeline_spec);

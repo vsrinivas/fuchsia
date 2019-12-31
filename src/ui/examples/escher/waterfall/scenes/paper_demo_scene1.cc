@@ -12,7 +12,6 @@
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/scene/model.h"
 #include "src/ui/lib/escher/scene/stage.h"
-#include "src/ui/lib/escher/shape/modifier_wobble.h"
 #include "src/ui/lib/escher/util/alloca.h"
 #include "src/ui/lib/escher/util/stopwatch.h"
 #include "src/ui/lib/escher/vk/image.h"
@@ -23,7 +22,6 @@ using escher::MeshAttribute;
 using escher::MeshSpec;
 using escher::Object;
 using escher::RoundedRectSpec;
-using escher::ShapeModifier;
 
 using escher::plane3;
 using escher::vec2;

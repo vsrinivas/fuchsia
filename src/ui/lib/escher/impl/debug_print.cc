@@ -157,39 +157,9 @@ std::ostream& operator<<(std::ostream& str,
 }
 
 std::ostream& operator<<(std::ostream& str, const impl::ModelPipelineSpec& spec) {
-  str << "ModelPipelineSpec[" << spec.mesh_spec << ", " << spec.shape_modifiers
-      << ", clipper_state: " << spec.clipper_state << ", is_clippee: " << spec.is_clippee
-      << ", has_material: " << spec.has_material << ", is_opaque: " << spec.is_opaque << "]";
-  return str;
-}
-
-std::ostream& operator<<(std::ostream& str, const ShapeModifier& flag) {
-  switch (flag) {
-    case ShapeModifier::kWobble:
-      str << "kWobble";
-      break;
-  }
-  return str;
-}
-
-std::ostream& operator<<(std::ostream& str, const ShapeModifiers& flags) {
-  bool has_flag = false;
-  str << "ShapeModifiers[";
-  // TODO: would be nice to guarantee that we don't miss any.  Too bad we can't
-  // enumerate over the values in an enum class.
-  std::array<ShapeModifier, 1> all_flags = {{ShapeModifier::kWobble}};
-  for (auto flag : all_flags) {
-    if (flags & flag) {
-      // Put a pipe after the previous flag, if there is one.
-      if (has_flag) {
-        str << "|";
-      } else {
-        has_flag = true;
-      }
-      str << flag;
-    }
-  }
-  str << "]";
+  str << "ModelPipelineSpec[" << spec.mesh_spec << ", clipper_state: " << spec.clipper_state
+      << ", is_clippee: " << spec.is_clippee << ", has_material: " << spec.has_material
+      << ", is_opaque: " << spec.is_opaque << "]";
   return str;
 }
 
