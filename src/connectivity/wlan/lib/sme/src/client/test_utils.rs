@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        capabilities::JoinCapabilities,
         client::{bss::BssInfo, rsn::Supplicant},
         test_utils::{self, *},
         InfoEvent, InfoStream, Ssid,
@@ -21,6 +22,7 @@ use {
     wlan_common::{
         assert_variant,
         bss::Protection,
+        channel,
         ie::{rsn::rsne::RsnCapabilities, write_wpa1_ie, *},
         mac,
     },
@@ -46,11 +48,11 @@ fn fake_bss_description(ssid: Ssid, rsne: Option<Vec<u8>>) -> fidl_mlme::BssDesc
         rcpi_dbmh: 0,
         rsni_dbh: 0,
 
-        ht_cap: None,
-        ht_op: None,
-        vht_cap: None,
-        vht_op: None,
-        chan: fidl_common::WlanChan { primary: 1, secondary80: 0, cbw: fidl_common::Cbw::Cbw20 },
+        ht_cap: Some(Box::new(fidl_mlme::HtCapabilities { bytes: fake_ht_cap_bytes() })),
+        ht_op: Some(Box::new(fidl_mlme::HtOperation { bytes: fake_ht_op_bytes() })),
+        vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() })),
+        vht_op: Some(Box::new(fidl_mlme::VhtOperation { bytes: fake_vht_op_bytes() })),
+        chan: fidl_common::WlanChan { primary: 1, secondary80: 0, cbw: fidl_common::Cbw::Cbw40 },
         rssi_dbm: 0,
     }
 }
@@ -159,15 +161,33 @@ pub fn create_auth_conf(
     }
 }
 
+pub fn fake_negotiated_join_capabilities() -> JoinCapabilities {
+    // Based on fake_bss_description, device_info and create_assoc_conf
+    let mut ht_cap = fake_ht_capabilities();
+    // Fuchsia does not support tx_stbc yet.
+    ht_cap.ht_cap_info = ht_cap.ht_cap_info.with_tx_stbc(false);
+    JoinCapabilities {
+        channel: channel::Channel { primary: 1, cbw: channel::Cbw::Cbw40 },
+        cap_info: crate::test_utils::fake_capability_info(),
+        rates: [0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c]
+            .iter()
+            .cloned()
+            .map(SupportedRate)
+            .collect(),
+        ht_cap: Some(ht_cap),
+        vht_cap: Some(fake_vht_capabilities()),
+    }
+}
+
 pub fn create_assoc_conf(result_code: fidl_mlme::AssociateResultCodes) -> fidl_mlme::MlmeEvent {
     fidl_mlme::MlmeEvent::AssociateConf {
         resp: fidl_mlme::AssociateConfirm {
             result_code,
             association_id: 55,
-            cap_info: 0,
-            rates: vec![],
-            ht_cap: None,
-            vht_cap: None,
+            cap_info: crate::test_utils::fake_capability_info().raw(),
+            rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
+            ht_cap: Some(Box::new(fidl_mlme::HtCapabilities { bytes: fake_ht_cap_bytes() })),
+            vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() })),
         },
     }
 }

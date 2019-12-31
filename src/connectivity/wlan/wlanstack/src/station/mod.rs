@@ -103,6 +103,7 @@ fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl:
         MlmeRequest::SendMpOpenAction(mut req) => proxy.send_mp_open_action(&mut req),
         MlmeRequest::SendMpConfirmAction(mut req) => proxy.send_mp_confirm_action(&mut req),
         MlmeRequest::MeshPeeringEstablished(mut req) => proxy.mesh_peering_established(&mut req),
+        MlmeRequest::FinalizeAssociation(mut cap) => proxy.finalize_association_req(&mut cap),
     }
 }
 

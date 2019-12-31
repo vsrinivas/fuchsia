@@ -1179,7 +1179,7 @@ mod tests {
             assert_eq!(discovery_stats, Some(DiscoveryStats {
                 ess_count: 1,
                 num_bss_by_channel: hashmap! { 1 => 1 },
-                num_bss_by_standard: hashmap! { Standard::Dot11G => 1 },
+                num_bss_by_standard: hashmap! { Standard::Dot11Ac => 1 },
             }));
         });
     }

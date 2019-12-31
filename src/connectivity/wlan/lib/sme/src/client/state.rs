@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capabilities::JoinCapabilities,
+        capabilities::{intersect_with_ap, JoinCapabilities},
         client::{
             bss::ClientConfig,
             capabilities::build_join_capabilities,
@@ -258,6 +258,33 @@ impl Associating {
         let (last_rssi, link_state, radio_cfg) = match conf.result_code {
             fidl_mlme::AssociateResultCodes::Success => {
                 context.info.report_assoc_success(context.att_id);
+                if let Some(cap) = self.cap.as_ref() {
+                    match intersect_with_ap(cap, conf.into()) {
+                        Some(cap) => {
+                            context.mlme_sink.send(MlmeRequest::FinalizeAssociation(cap.into()))
+                        }
+                        None => {
+                            // This is unlikely to happen with any spec-compliant AP. In case the
+                            // user somehow decided to connect to a malicious AP, reject and reset.
+                            error!(
+                                "Associate terminated because AP's capabilies in association \
+                                 response is different from beacon"
+                            );
+                            report_connect_finished(
+                                self.cmd.responder,
+                                context,
+                                ConnectResult::Failed(ConnectFailure::AssociationFailure(
+                                    fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
+                                )),
+                            );
+                            state_change_msg.replace(format!(
+                                "failed associating; AP's capabilites changed between beacon and\
+                                 association response"
+                            ));
+                            return Err(Idle { cfg: self.cfg });
+                        }
+                    }
+                }
                 match self.cmd.protection {
                     Protection::Rsna(mut rsna) | Protection::LegacyWpa(mut rsna) => {
                         context.info.report_rsna_started(context.att_id);
@@ -1178,9 +1205,9 @@ mod tests {
 
     use crate::client::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, expect_info_event,
-        expect_stream_empty, fake_protected_bss_description, fake_unprotected_bss_description,
-        fake_wep_bss_description, fake_wpa1_bss_description, mock_supplicant, MockSupplicant,
-        MockSupplicantController,
+        expect_stream_empty, fake_negotiated_join_capabilities, fake_protected_bss_description,
+        fake_unprotected_bss_description, fake_wep_bss_description, fake_wpa1_bss_description,
+        mock_supplicant, MockSupplicant, MockSupplicantController,
     };
     use crate::client::{info::InfoReporter, inspect, InfoEvent, InfoSink, TimeStream};
     use crate::test_utils::make_wpa1_ie;
@@ -1311,6 +1338,7 @@ mod tests {
         // (mlme->sme) Send an AssociateConf
         let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
+        expect_finalize_association_req(&mut h.mlme_stream, fake_negotiated_join_capabilities());
 
         assert!(suppl_mock.is_supplicant_started());
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
@@ -1375,6 +1403,7 @@ mod tests {
         // (mlme->sme) Send an AssociateConf
         let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
+        expect_finalize_association_req(&mut h.mlme_stream, fake_negotiated_join_capabilities());
 
         assert!(suppl_mock.is_supplicant_started());
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
@@ -2189,6 +2218,12 @@ mod tests {
     fn expect_assoc_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Associate(req))) => {
             assert_eq!(bssid, req.peer_sta_address);
+        });
+    }
+
+    fn expect_finalize_association_req(mlme_stream: &mut MlmeStream, join_cap: JoinCapabilities) {
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::FinalizeAssociation(cap))) => {
+            assert_eq!(cap, join_cap.into());
         });
     }
 

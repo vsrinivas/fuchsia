@@ -94,7 +94,7 @@ pub(crate) fn build_join_capabilities(
     let (ht_cap, vht_cap) =
         override_ht_vht(band_info.ht_cap.as_ref(), band_info.vht_cap.as_ref(), channel.cbw)?;
 
-    Ok(JoinCapabilities { cap_info, rates, ht_cap, vht_cap })
+    Ok(JoinCapabilities { channel, cap_info, rates, ht_cap, vht_cap })
 }
 
 /// Follow the Channel as announced by the AP, unless user has manually specified CBW with

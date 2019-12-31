@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::ie::*;
+use {crate::ie::*, std::convert::TryInto};
 
 pub fn fake_ht_cap_chanwidth(chanwidth: ChanWidthSet) -> HtCapabilities {
     let mut ht_cap = fake_ht_capabilities();
@@ -117,4 +117,24 @@ pub fn fake_vht_operation() -> VhtOperation {
         center_freq_seg1: 0,
         basic_mcs_nss: VhtMcsNssMap(0x1b1b),
     }
+}
+
+pub fn fake_ht_cap_bytes() -> [u8; std::mem::size_of::<HtCapabilities>()] {
+    // Safe to unwrap because the size matches the IE.
+    fake_ht_capabilities().as_bytes().try_into().unwrap()
+}
+
+pub fn fake_ht_op_bytes() -> [u8; std::mem::size_of::<HtOperation>()] {
+    // Safe to unwrap because the size matches the IE.
+    fake_ht_operation().as_bytes().try_into().unwrap()
+}
+
+pub fn fake_vht_cap_bytes() -> [u8; std::mem::size_of::<VhtCapabilities>()] {
+    // Safe to unwrap because the size matches the IE.
+    fake_vht_capabilities().as_bytes().try_into().unwrap()
+}
+
+pub fn fake_vht_op_bytes() -> [u8; std::mem::size_of::<VhtOperation>()] {
+    // Safe to unwrap because the size matches the IE.
+    fake_vht_operation().as_bytes().try_into().unwrap()
 }

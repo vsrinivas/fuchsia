@@ -64,6 +64,7 @@ pub enum MlmeRequest {
     SendMpOpenAction(fidl_mlme::MeshPeeringOpenAction),
     SendMpConfirmAction(fidl_mlme::MeshPeeringConfirmAction),
     MeshPeeringEstablished(fidl_mlme::MeshPeeringParams),
+    FinalizeAssociation(fidl_mlme::NegotiatedCapabilities),
 }
 
 pub trait Station {
