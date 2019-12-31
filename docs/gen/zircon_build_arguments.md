@@ -100,7 +100,7 @@ From //third_party/lib/acpica/BUILD.gn:9
 ### enable_driver_unittest_logs
 Enable printing of in driver logs in unittests.
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //system/dev/lib/fake_ddk/BUILD.gn:7
 
