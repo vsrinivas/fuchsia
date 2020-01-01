@@ -72,7 +72,7 @@ static zx_status_t gicv2_get_gicv(paddr_t* gicv_paddr) {
   return ZX_OK;
 }
 
-static void giv2_read_gich_state(IchState* state) {
+static void gicv2_read_gich_state(IchState* state) {
   DEBUG_ASSERT(state->num_aprs == 1);
   DEBUG_ASSERT(state->num_lrs <= kNumLrs);
   gich->hcr = 0;
@@ -85,7 +85,7 @@ static void giv2_read_gich_state(IchState* state) {
   }
 }
 
-static void giv2_write_gich_state(IchState* state, uint32_t hcr) {
+static void gicv2_write_gich_state(IchState* state, uint32_t hcr) {
   DEBUG_ASSERT(state->num_aprs == 1);
   DEBUG_ASSERT(state->num_lrs <= kNumLrs);
   gich->hcr = hcr;
@@ -129,8 +129,8 @@ static uint8_t gicv2_get_num_lrs() { return static_cast<uint8_t>(GICH_VTR_LRS(gi
 
 static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .get_gicv = gicv2_get_gicv,
-    .read_gich_state = giv2_read_gich_state,
-    .write_gich_state = giv2_write_gich_state,
+    .read_gich_state = gicv2_read_gich_state,
+    .write_gich_state = gicv2_write_gich_state,
     .default_gich_vmcr = gicv2_default_gich_vmcr,
     .get_lr_from_vector = gicv2_get_lr_from_vector,
     .get_vector_from_lr = gicv2_get_vector_from_lr,

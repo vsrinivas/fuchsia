@@ -46,13 +46,13 @@ static uint32_t gicv3_default_gich_vmcr() {
   return ICH_VMCR_VPMR | ICH_VMCR_VFIQEN | ICH_VMCR_VENG1;
 }
 
-static void giv3_read_gich_state(IchState* state) {
+static void gicv3_read_gich_state(IchState* state) {
   DEBUG_ASSERT(state->num_aprs <= kNumAprs);
   DEBUG_ASSERT(state->num_lrs <= kNumLrs);
   arm64_el2_gicv3_read_gich_state(physmap_to_paddr(state));
 }
 
-static void giv3_write_gich_state(IchState* state, uint32_t hcr) {
+static void gicv3_write_gich_state(IchState* state, uint32_t hcr) {
   DEBUG_ASSERT(state->num_aprs <= kNumAprs);
   DEBUG_ASSERT(state->num_lrs <= kNumLrs);
   cpu_num_t cpu_num = arch_curr_cpu_num();
@@ -102,8 +102,8 @@ static uint8_t gicv3_get_num_lrs() {
 
 static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .get_gicv = gicv3_get_gicv,
-    .read_gich_state = giv3_read_gich_state,
-    .write_gich_state = giv3_write_gich_state,
+    .read_gich_state = gicv3_read_gich_state,
+    .write_gich_state = gicv3_write_gich_state,
     .default_gich_vmcr = gicv3_default_gich_vmcr,
     .get_lr_from_vector = gicv3_get_lr_from_vector,
     .get_vector_from_lr = gicv3_get_vector_from_lr,
