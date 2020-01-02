@@ -38,6 +38,17 @@ pub trait StandaloneWebFrame {
     async fn wait_for_redirect(&mut self, redirect_target: Url) -> TokenProviderResult<Url>;
 }
 
+/// Trait for structs capable of creating new Web frames.
+pub trait WebFrameSupplier {
+    /// The concrete `StandaloneWebFrame` type the supplier produces.
+    type Frame: StandaloneWebFrame;
+    /// Creates a new `StandaloneWebFrame`.  This method guarantees that the
+    /// new frame is in its own web context.
+    /// Although implementation of this method does not require state, `self`
+    /// is added here to allow injection of mocks with canned responses.
+    fn new_standalone_frame(&self) -> Result<Self::Frame, anyhow::Error>;
+}
+
 /// A `StandaloneWebFrame` implementation that uses the default fuchsia.web
 /// implementation to display a web frame.
 pub struct DefaultStandaloneWebFrame {
@@ -398,28 +409,92 @@ pub mod mock {
         }
     }
 
+    /// Clones a TokenProviderResult.  This is provided instead of a Clone
+    /// implementation due to orphan rules.
+    fn clone_result<T: Clone>(result: &TokenProviderResult<T>) -> TokenProviderResult<T> {
+        match result {
+            Ok(res) => Ok(res.clone()),
+            // error cause cannot be cloned so don't replicate it.
+            Err(err) => Err(TokenProviderError::new(err.api_error)),
+        }
+    }
+
+    /// A mock implementation of `WebFrameSupplier` that supplies `TestWebFrames`.
+    /// The supplied `TestWebFrames` will return the responses provided during
+    /// creation of the `TestWebFrameSupplier`.
+    pub struct TestWebFrameSupplier {
+        display_url_response: TokenProviderResult<()>,
+        wait_for_redirect_response: TokenProviderResult<Url>,
+    }
+
+    impl TestWebFrameSupplier {
+        pub fn new(
+            display_url_response: TokenProviderResult<()>,
+            wait_for_redirect_response: TokenProviderResult<Url>,
+        ) -> Self {
+            TestWebFrameSupplier { display_url_response, wait_for_redirect_response }
+        }
+    }
+
+    impl WebFrameSupplier for TestWebFrameSupplier {
+        type Frame = TestWebFrame;
+        fn new_standalone_frame(&self) -> Result<TestWebFrame, anyhow::Error> {
+            Ok(TestWebFrame::new(
+                clone_result(&self.display_url_response),
+                clone_result(&self.wait_for_redirect_response),
+            ))
+        }
+    }
+
     mod test {
         use super::*;
         use fuchsia_async as fasync;
         use fuchsia_scenic::ViewTokenPair;
+        use lazy_static::lazy_static;
+
+        lazy_static! {
+            static ref TEST_URL: Url = Url::parse("http://example.com").unwrap();
+        }
 
         #[fasync::run_until_stalled(test)]
         async fn test_web_frame_test() {
             let mut test_web_frame =
                 TestWebFrame::new(Ok(()), Err(TokenProviderError::new(ApiError::Internal)));
             let ViewTokenPair { view_token, view_holder_token: _ } = ViewTokenPair::new().unwrap();
-            assert!(test_web_frame
-                .display_url(view_token, Url::parse("http://example.com").unwrap())
-                .await
-                .is_ok());
+            assert!(test_web_frame.display_url(view_token, TEST_URL.clone()).await.is_ok());
 
             assert_eq!(
-                test_web_frame
-                    .wait_for_redirect(Url::parse("http://example.com").unwrap())
-                    .await
-                    .unwrap_err()
-                    .api_error,
+                test_web_frame.wait_for_redirect(TEST_URL.clone()).await.unwrap_err().api_error,
                 ApiError::Internal
+            );
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn test_web_frame_supplier_test() {
+            // frames given by the test supplier should just replicate the behavior the supplier
+            // is configured with.
+            let success_frame_supplier = TestWebFrameSupplier::new(Ok(()), Ok(TEST_URL.clone()));
+            let ViewTokenPair { view_token, view_holder_token: _ } = ViewTokenPair::new().unwrap();
+            let mut success_frame = success_frame_supplier.new_standalone_frame().unwrap();
+            assert!(success_frame.display_url(view_token, TEST_URL.clone()).await.is_ok(),);
+            assert_eq!(
+                success_frame.wait_for_redirect(TEST_URL.clone()).await.unwrap(),
+                TEST_URL.clone()
+            );
+
+            let error_frame_supplier = TestWebFrameSupplier::new(
+                Err(TokenProviderError::new(ApiError::Internal)),
+                Err(TokenProviderError::new(ApiError::Unknown)),
+            );
+            let mut error_frame = error_frame_supplier.new_standalone_frame().unwrap();
+            let ViewTokenPair { view_token, view_holder_token: _ } = ViewTokenPair::new().unwrap();
+            assert_eq!(
+                error_frame.display_url(view_token, TEST_URL.clone()).await.unwrap_err().api_error,
+                ApiError::Internal
+            );
+            assert_eq!(
+                error_frame.wait_for_redirect(TEST_URL.clone()).await.unwrap_err().api_error,
+                ApiError::Unknown
             );
         }
     }

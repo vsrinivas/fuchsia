@@ -15,7 +15,7 @@ use crate::oauth::{
     RefreshToken,
 };
 use crate::oauth_open_id_connect::{build_user_info_request, parse_user_info_response, IdToken};
-use crate::web::StandaloneWebFrame;
+use crate::web::{StandaloneWebFrame, WebFrameSupplier};
 use anyhow::Error;
 use fidl;
 use fidl::endpoints::ClientEnd;
@@ -34,17 +34,6 @@ use log::{info, warn};
 use url::Url;
 
 type AuthProviderResult<T> = Result<T, AuthProviderError>;
-
-/// Trait for structs capable of creating new Web frames.
-pub trait WebFrameSupplier {
-    /// The concrete `StandaloneWebFrame` type the supplier produces.
-    type Frame: StandaloneWebFrame;
-    /// Creates a new `StandaloneWebFrame`.  This method guarantees that the
-    /// new frame is in its own web context.
-    /// Although implementation of this method does not require state, `self`
-    /// is added here to allow injection of mocks with canned responses.
-    fn new_standalone_frame(&self) -> Result<Self::Frame, Error>;
-}
 
 /// An implementation of the `AuthProvider` FIDL protocol that communicates
 /// with the Google identity system to perform authentication for and issue
@@ -440,7 +429,7 @@ mod tests {
     use super::*;
     use crate::error::TokenProviderError;
     use crate::http::mock::TestHttpClient;
-    use crate::web::mock::TestWebFrame;
+    use crate::web::mock::TestWebFrameSupplier;
     use fidl::endpoints::{create_proxy_and_stream, create_request_stream};
     use fidl_fuchsia_auth::{AuthProviderMarker, AuthProviderProxy};
     use fidl_fuchsia_identity_external::Error as ApiError;
@@ -456,33 +445,6 @@ mod tests {
             Ok(res) => Ok(res.clone()),
             // error cause cannot be cloned so don't replicate it.
             Err(err) => Err(TokenProviderError::new(err.api_error)),
-        }
-    }
-
-    /// A mock implementation of `WebFrameSupplier` that supplies `TestWebFrames`.
-    /// The supplied `TestWebFrames` will return the responses provided during
-    /// creation of the `TestWebFrameSupplier`.
-    struct TestWebFrameSupplier {
-        display_url_response: TokenProviderResult<()>,
-        wait_for_redirect_response: TokenProviderResult<Url>,
-    }
-
-    impl TestWebFrameSupplier {
-        fn new(
-            display_url_response: TokenProviderResult<()>,
-            wait_for_redirect_response: TokenProviderResult<Url>,
-        ) -> Self {
-            TestWebFrameSupplier { display_url_response, wait_for_redirect_response }
-        }
-    }
-
-    impl WebFrameSupplier for TestWebFrameSupplier {
-        type Frame = TestWebFrame;
-        fn new_standalone_frame(&self) -> Result<TestWebFrame, Error> {
-            Ok(TestWebFrame::new(
-                clone_result(&self.display_url_response),
-                clone_result(&self.wait_for_redirect_response),
-            ))
         }
     }
 

@@ -87,7 +87,7 @@ impl WebFrameSupplier {
     }
 }
 
-impl auth_provider::WebFrameSupplier for WebFrameSupplier {
+impl web::WebFrameSupplier for WebFrameSupplier {
     type Frame = DefaultStandaloneWebFrame;
     fn new_standalone_frame(&self) -> Result<DefaultStandaloneWebFrame, anyhow::Error> {
         let context_provider = connect_to_service::<ContextProviderMarker>()?;
