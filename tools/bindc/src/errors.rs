@@ -216,7 +216,7 @@ impl From<DebuggerError> for UserError {
             DebuggerError::FileError(error) => UserError::from(error),
             DebuggerError::BindParserError(error) => UserError::from(error),
             DebuggerError::CompilerError(error) => UserError::from(error),
-            DebuggerError::DuplicateKeyError(identifier) => UserError::new(
+            DebuggerError::DuplicateKey(identifier) => UserError::new(
                 "E300",
                 &format!(
                     "The key `{}` appears multiple times in the device specification.",
@@ -224,7 +224,7 @@ impl From<DebuggerError> for UserError {
                 ),
                 None,
             ),
-            DebuggerError::MissingLabelError => UserError::new(
+            DebuggerError::MissingLabel => UserError::new(
                 "E301",
                 concat!(
                     "Missing label in the bind program symbolic instructions.\n",
@@ -232,11 +232,45 @@ impl From<DebuggerError> for UserError {
                 ),
                 None,
             ),
-            DebuggerError::NoOutcomeError => UserError::new(
+            DebuggerError::NoOutcome => UserError::new(
                 "E302",
                 concat!(
                     "Reached the end of the symbolic instructions without binding or aborting.\n",
                     "This is a bind compiler bug, please report it!"
+                ),
+                None,
+            ),
+            DebuggerError::IncorrectAstLocation => UserError::new(
+                "E303",
+                concat!(
+                    "Symbolic instruction has an incorrect AST location.\n",
+                    "This is a bind compiler bug, please report it!"
+                ),
+                None,
+            ),
+            DebuggerError::InvalidAstLocation => UserError::new(
+                "E304",
+                concat!(
+                    "AST location contains an incorrect statement type.\n",
+                    "This is a bind compiler bug, please report it!"
+                ),
+                None,
+            ),
+            DebuggerError::UnknownKey(identifier) => UserError::new(
+                "E305",
+                &format!(
+                    "Statement contains an undefined identifier: `{}`.\n\
+                    This is a bind compiler bug, please report it!",
+                    identifier
+                ),
+                None,
+            ),
+            DebuggerError::InvalidValueSymbol(symbol) => UserError::new(
+                "E306",
+                &format!(
+                    "Symbol is not a valid value type: `{:?}`.\n\
+                    This is a bind compiler bug, please report it!",
+                    symbol
                 ),
                 None,
             ),

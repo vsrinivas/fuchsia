@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::bind_program::{Condition, Statement};
+use crate::bind_program::{Condition, ConditionOp, Statement};
 use crate::compiler::{self, Symbol, SymbolTable, SymbolicInstruction, SymbolicInstructionLocated};
 use crate::device_specification::{self, Property};
 use crate::errors::{self, UserError};
@@ -17,15 +17,27 @@ pub enum DebuggerError {
     FileError(errors::FileError),
     BindParserError(parser_common::BindParserError),
     CompilerError(compiler::CompilerError),
-    DuplicateKeyError(CompoundIdentifier),
-    MissingLabelError,
-    NoOutcomeError,
+    DuplicateKey(CompoundIdentifier),
+    MissingLabel,
+    NoOutcome,
+    IncorrectAstLocation,
+    InvalidAstLocation,
+    UnknownKey(CompoundIdentifier),
+    InvalidValueSymbol(Symbol),
 }
 
 impl fmt::Display for DebuggerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", UserError::from(self.clone()))
     }
+}
+
+type DevicePropertyMap = HashMap<Symbol, DeviceValue>;
+
+#[derive(Debug, PartialEq)]
+struct DeviceValue {
+    symbol: Option<Symbol>,
+    identifier: Option<CompoundIdentifier>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -35,6 +47,31 @@ pub enum AstLocation<'a> {
     AcceptStatementFailure { identifier: CompoundIdentifier, span: Span<'a> },
     IfCondition(Condition<'a>),
     AbortStatement(Statement<'a>),
+}
+
+#[derive(Debug, PartialEq)]
+enum DebuggerOutput<'a> {
+    ConditionStatement {
+        statement: &'a Statement<'a>,
+        success: bool,
+    },
+    AbortStatement {
+        statement: &'a Statement<'a>,
+    },
+    AcceptStatementSuccess {
+        identifier: &'a CompoundIdentifier,
+        value: &'a Value,
+        value_symbol: &'a Symbol,
+        span: &'a Span<'a>,
+    },
+    AcceptStatementFailure {
+        identifier: &'a CompoundIdentifier,
+        span: &'a Span<'a>,
+    },
+    IfCondition {
+        condition: &'a Condition<'a>,
+        success: bool,
+    },
 }
 
 pub fn debug(
@@ -51,101 +88,401 @@ pub fn debug(
     let (instructions, symbol_table) = compiler::compile_to_symbolic(&program_str, libraries)
         .map_err(DebuggerError::CompilerError)?;
 
-    let symbolic_properties = properties_to_symbols(&device_ast.properties, &symbol_table)?;
-
-    let binds = evaluate_bind_program(&instructions, &symbolic_properties)?;
+    let mut debugger = Debugger::new(&device_ast.properties, &instructions, &symbol_table)?;
+    let binds = debugger.evaluate_bind_program()?;
+    debugger.log_output()?;
 
     if binds {
-        println!("Binds to device.");
+        println!("Driver binds to device.");
     } else {
-        println!("Doesn't bind to device.");
+        println!("Driver doesn't bind to device.");
     }
 
     Ok(())
 }
 
-fn properties_to_symbols(
-    properties: &[Property],
-    symbol_table: &SymbolTable,
-) -> Result<HashMap<Symbol, Symbol>, DebuggerError> {
-    let mut symbolic_properties = HashMap::new();
-    let mut keys_seen = HashSet::new();
-
-    for property in properties {
-        // Check for duplicate keys in the device specification.
-        // This is done using a separte set since the symbolic_properties map only contains
-        // keys and values which are present in the bind program's symbol table.
-        if keys_seen.contains(&property.key) {
-            return Err(DebuggerError::DuplicateKeyError(property.key.clone()));
-        }
-        keys_seen.insert(property.key.clone());
-
-        let key_symbol = symbol_table.get(&property.key);
-
-        let value_symbol = match &property.value {
-            Value::NumericLiteral(n) => Some(Symbol::NumberValue(*n)),
-            Value::StringLiteral(s) => Some(Symbol::StringValue(s.to_string())),
-            Value::BoolLiteral(b) => Some(Symbol::BoolValue(*b)),
-            Value::Identifier(identifier) => match symbol_table.get(&identifier) {
-                Some(symbol) => Some(symbol.clone()),
-                None => None,
-            },
-        };
-
-        if let (Some(key), Some(value)) = (key_symbol, value_symbol) {
-            symbolic_properties.insert(key.clone(), value);
-        }
-    }
-
-    Ok(symbolic_properties)
+struct Debugger<'a> {
+    device_properties: DevicePropertyMap,
+    instructions: &'a [SymbolicInstructionLocated<'a>],
+    symbol_table: &'a SymbolTable,
+    output: Vec<DebuggerOutput<'a>>,
 }
 
-fn evaluate_bind_program(
-    instructions: &Vec<SymbolicInstructionLocated>,
-    properties: &HashMap<Symbol, Symbol>,
-) -> Result<bool, DebuggerError> {
-    let mut instructions = instructions.iter();
+impl<'a> Debugger<'a> {
+    fn new(
+        properties: &[Property],
+        instructions: &'a [SymbolicInstructionLocated<'a>],
+        symbol_table: &'a SymbolTable,
+    ) -> Result<Self, DebuggerError> {
+        let device_properties = Debugger::construct_property_map(properties, symbol_table)?;
+        let output = Vec::new();
+        Ok(Debugger { device_properties, instructions, symbol_table, output })
+    }
 
-    while let Some(mut instruction) = instructions.next() {
-        let mut jump_label = None;
+    /// Constructs a map of the device's properties. The keys are of type Symbol, and only keys
+    /// which appear in the bind program's symbol table are included. Any other keys in the device
+    /// specification can be safely ignored, since the bind program won't check their values. The
+    /// values are a struct containing both a symbol and an identifier, to allow the debugger to
+    /// output both the identifier and the literal value it corresponds to when printing values.
+    /// Both these fields are optional. If the symbol is None, then the device value is an
+    /// identifier not defined in the symbol table. If the identifier is None, then the device
+    /// value is a literal.
+    fn construct_property_map(
+        properties: &[Property],
+        symbol_table: &SymbolTable,
+    ) -> Result<DevicePropertyMap, DebuggerError> {
+        let mut property_map = HashMap::new();
+        let mut keys_seen = HashSet::new();
 
-        match &instruction.instruction {
-            SymbolicInstruction::AbortIfEqual { lhs, rhs } => {
-                if properties.get(lhs) == Some(rhs) {
-                    return Ok(false);
-                }
+        for Property { key, value } in properties {
+            // Check for duplicate keys in the device specification. This is done using a separate
+            // set since the property_map only contains keys which are present in the symbol table.
+            if keys_seen.contains(key) {
+                return Err(DebuggerError::DuplicateKey(key.clone()));
             }
-            SymbolicInstruction::AbortIfNotEqual { lhs, rhs } => {
-                if properties.get(lhs) != Some(rhs) {
-                    return Ok(false);
-                }
+            keys_seen.insert(key.clone());
+
+            if let Some(key_symbol) = symbol_table.get(key) {
+                let device_value = match value {
+                    Value::NumericLiteral(n) => {
+                        DeviceValue { symbol: Some(Symbol::NumberValue(*n)), identifier: None }
+                    }
+                    Value::StringLiteral(s) => DeviceValue {
+                        symbol: Some(Symbol::StringValue(s.to_string())),
+                        identifier: None,
+                    },
+                    Value::BoolLiteral(b) => {
+                        DeviceValue { symbol: Some(Symbol::BoolValue(*b)), identifier: None }
+                    }
+                    Value::Identifier(identifier) => match symbol_table.get(identifier) {
+                        Some(symbol) => DeviceValue {
+                            symbol: Some(symbol.clone()),
+                            identifier: Some(identifier.clone()),
+                        },
+                        None => DeviceValue { symbol: None, identifier: Some(identifier.clone()) },
+                    },
+                };
+
+                property_map.insert(key_symbol.clone(), device_value);
             }
-            SymbolicInstruction::Label(_label) => (),
-            SymbolicInstruction::UnconditionalJump { label } => {
-                jump_label = Some(label);
-            }
-            SymbolicInstruction::JumpIfEqual { lhs, rhs, label } => {
-                if properties.get(lhs) == Some(rhs) {
-                    jump_label = Some(label);
-                }
-            }
-            SymbolicInstruction::JumpIfNotEqual { lhs, rhs, label } => {
-                if properties.get(lhs) != Some(rhs) {
-                    jump_label = Some(label);
-                }
-            }
-            SymbolicInstruction::UnconditionalAbort => return Ok(false),
-            SymbolicInstruction::UnconditionalBind => return Ok(true),
         }
 
-        if let Some(label) = jump_label {
-            while instruction.instruction != SymbolicInstruction::Label(*label) {
-                instruction = instructions.next().ok_or(DebuggerError::MissingLabelError)?;
+        Ok(property_map)
+    }
+
+    fn evaluate_bind_program(&mut self) -> Result<bool, DebuggerError> {
+        let mut instructions = self.instructions.iter();
+
+        while let Some(mut instruction) = instructions.next() {
+            let mut jump_label = None;
+
+            match &instruction.instruction {
+                SymbolicInstruction::AbortIfEqual { lhs, rhs } => {
+                    let aborts = self.device_property_matches(lhs, rhs);
+                    self.output_abort_if(&instruction.location, aborts)?;
+                    if aborts {
+                        return Ok(false);
+                    }
+                }
+                SymbolicInstruction::AbortIfNotEqual { lhs, rhs } => {
+                    let aborts = !self.device_property_matches(lhs, rhs);
+                    self.output_abort_if(&instruction.location, aborts)?;
+                    if aborts {
+                        return Ok(false);
+                    }
+                }
+                SymbolicInstruction::Label(_label) => (),
+                SymbolicInstruction::UnconditionalJump { label } => {
+                    jump_label = Some(label);
+                }
+                SymbolicInstruction::JumpIfEqual { lhs, rhs, label } => {
+                    let jump_succeeds = self.device_property_matches(lhs, rhs);
+                    self.output_jump_if_equal(&instruction.location, rhs, jump_succeeds)?;
+                    if jump_succeeds {
+                        jump_label = Some(label);
+                    }
+                }
+                SymbolicInstruction::JumpIfNotEqual { lhs, rhs, label } => {
+                    let jump_succeeds = !self.device_property_matches(lhs, rhs);
+                    self.output_jump_if_not_equal(&instruction.location, jump_succeeds)?;
+                    if jump_succeeds {
+                        jump_label = Some(label);
+                    }
+                }
+                SymbolicInstruction::UnconditionalAbort => {
+                    self.output_unconditional_abort(&instruction.location)?;
+                    return Ok(false);
+                }
+                SymbolicInstruction::UnconditionalBind => return Ok(true),
             }
+
+            if let Some(label) = jump_label {
+                while instruction.instruction != SymbolicInstruction::Label(*label) {
+                    instruction = instructions.next().ok_or(DebuggerError::MissingLabel)?;
+                }
+            }
+        }
+
+        Err(DebuggerError::NoOutcome)
+    }
+
+    fn device_property_matches(&self, lhs: &Symbol, rhs: &Symbol) -> bool {
+        if let Some(DeviceValue { symbol: Some(value_symbol), identifier: _ }) =
+            self.device_properties.get(lhs)
+        {
+            value_symbol == rhs
+        } else {
+            false
         }
     }
 
-    Err(DebuggerError::NoOutcomeError)
+    fn output_abort_if(
+        &mut self,
+        location: &'a Option<AstLocation>,
+        aborts: bool,
+    ) -> Result<(), DebuggerError> {
+        if let Some(AstLocation::ConditionStatement(statement)) = location {
+            self.output.push(DebuggerOutput::ConditionStatement { statement, success: !aborts });
+            Ok(())
+        } else {
+            Err(DebuggerError::IncorrectAstLocation)
+        }
+    }
+
+    fn output_jump_if_equal(
+        &mut self,
+        location: &'a Option<AstLocation>,
+        rhs: &'a Symbol,
+        jump_succeeds: bool,
+    ) -> Result<(), DebuggerError> {
+        match location {
+            Some(AstLocation::AcceptStatementValue { identifier, value, span }) => {
+                if jump_succeeds {
+                    self.output.push(DebuggerOutput::AcceptStatementSuccess {
+                        identifier,
+                        value,
+                        value_symbol: rhs,
+                        span,
+                    });
+                }
+                Ok(())
+            }
+            Some(AstLocation::IfCondition(condition)) => {
+                self.output
+                    .push(DebuggerOutput::IfCondition { condition, success: !jump_succeeds });
+                Ok(())
+            }
+            _ => Err(DebuggerError::IncorrectAstLocation),
+        }
+    }
+
+    fn output_jump_if_not_equal(
+        &mut self,
+        location: &'a Option<AstLocation>,
+        jump_succeeds: bool,
+    ) -> Result<(), DebuggerError> {
+        if let Some(AstLocation::IfCondition(condition)) = location {
+            self.output.push(DebuggerOutput::IfCondition { condition, success: !jump_succeeds });
+            Ok(())
+        } else {
+            Err(DebuggerError::IncorrectAstLocation)
+        }
+    }
+
+    fn output_unconditional_abort(
+        &mut self,
+        location: &'a Option<AstLocation>,
+    ) -> Result<(), DebuggerError> {
+        match location {
+            Some(AstLocation::AbortStatement(statement)) => {
+                self.output.push(DebuggerOutput::AbortStatement { statement });
+                Ok(())
+            }
+            Some(AstLocation::AcceptStatementFailure { identifier, span }) => {
+                self.output.push(DebuggerOutput::AcceptStatementFailure { identifier, span });
+                Ok(())
+            }
+            _ => Err(DebuggerError::IncorrectAstLocation),
+        }
+    }
+
+    fn log_output(&self) -> Result<(), DebuggerError> {
+        for output in &self.output {
+            match output {
+                DebuggerOutput::ConditionStatement { statement, success } => {
+                    self.log_condition_statement(statement, *success)?;
+                }
+                DebuggerOutput::AbortStatement { statement } => self.log_abort_statement(statement),
+                DebuggerOutput::AcceptStatementSuccess {
+                    identifier,
+                    value,
+                    value_symbol,
+                    span,
+                } => self.log_accept_statement_success(identifier, value, value_symbol, span)?,
+                DebuggerOutput::AcceptStatementFailure { identifier, span } => {
+                    self.log_accept_statement_failure(identifier, span)?;
+                }
+                DebuggerOutput::IfCondition { condition, success } => {
+                    self.log_if_condition(condition, *success)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn log_condition_statement(
+        &self,
+        statement: &Statement,
+        success: bool,
+    ) -> Result<(), DebuggerError> {
+        if let Statement::ConditionStatement { span, condition: Condition { lhs, op, .. } } =
+            statement
+        {
+            let outcome_string = if success { "succeeded" } else { "failed" };
+            println!(
+                "Line {}: Condition statement {}: {}",
+                span.line, outcome_string, span.fragment
+            );
+
+            if condition_needs_actual_value(success, op) {
+                println!("\t{}", self.actual_value_string(lhs)?)
+            }
+
+            Ok(())
+        } else {
+            Err(DebuggerError::InvalidAstLocation)
+        }
+    }
+
+    fn log_abort_statement(&self, statement: &Statement) {
+        if let Statement::Abort { span } = statement {
+            println!("Line {}: Abort statement reached.", span.line);
+        }
+    }
+
+    fn log_accept_statement_success(
+        &self,
+        identifier: &CompoundIdentifier,
+        value: &Value,
+        value_symbol: &Symbol,
+        span: &Span,
+    ) -> Result<(), DebuggerError> {
+        // Get the value identifier from the accept statement (or None for a literal value).
+        let value_identifier_prog =
+            if let Value::Identifier(identifier) = value { Some(identifier) } else { None };
+
+        // Get the value identifier from the device specification (or None for a literal value).
+        let key_symbol = self
+            .symbol_table
+            .get(identifier)
+            .ok_or(DebuggerError::UnknownKey(identifier.clone()))?;
+        let DeviceValue { symbol: _, identifier: value_identifier_device } = self
+            .device_properties
+            .get(key_symbol)
+            .expect("Accept statement succeeded so device must have this key.");
+
+        let value_literal = value_symbol_string(value_symbol)?;
+
+        let value_string = match (value_identifier_prog, value_identifier_device) {
+            (Some(identifier_prog), Some(identifier_value)) => {
+                if identifier_prog == identifier_value {
+                    format!("`{}` [{}]", identifier_prog, value_literal)
+                } else {
+                    format!("`{}` (`{}`) [{}]", identifier_prog, identifier_value, value_literal)
+                }
+            }
+            (Some(identifier_prog), None) => format!("`{}` [{}]", identifier_prog, value_literal),
+            (None, Some(identifier_value)) => format!("`{}` [{}]", identifier_value, value_literal),
+            (None, None) => format!("{}", value_literal),
+        };
+
+        println!(
+            "Line {}: Accept statement succeeded.\n\tValue of `{}` was {}.",
+            span.line, identifier, value_string
+        );
+
+        Ok(())
+    }
+
+    fn log_accept_statement_failure(
+        &self,
+        identifier: &CompoundIdentifier,
+        span: &Span,
+    ) -> Result<(), DebuggerError> {
+        println!(
+            "Line {}: Accept statement failed.\n\t{}",
+            span.line,
+            self.actual_value_string(identifier)?
+        );
+
+        Ok(())
+    }
+
+    fn log_if_condition(&self, condition: &Condition, success: bool) -> Result<(), DebuggerError> {
+        let Condition { span, lhs, op, rhs: _ } = condition;
+
+        let outcome_string = if success { "succeeded" } else { "failed" };
+        println!(
+            "Line {}: If statement condition {}: {}",
+            span.line, outcome_string, span.fragment
+        );
+
+        if condition_needs_actual_value(success, op) {
+            println!("\t{}", self.actual_value_string(lhs)?)
+        }
+
+        Ok(())
+    }
+
+    fn actual_value_string(
+        &self,
+        key_identifier: &CompoundIdentifier,
+    ) -> Result<String, DebuggerError> {
+        let key_symbol = self
+            .symbol_table
+            .get(key_identifier)
+            .ok_or(DebuggerError::UnknownKey(key_identifier.clone()))?;
+        let DeviceValue { symbol: value_symbol, identifier: value_identifier } = self
+            .device_properties
+            .get(key_symbol)
+            .unwrap_or(&DeviceValue { symbol: None, identifier: None });
+
+        Ok(match (value_symbol, value_identifier) {
+            (Some(symbol), Some(identifier)) => format!(
+                "Actual value of `{}` was `{}` [{}].",
+                key_identifier,
+                identifier,
+                value_symbol_string(symbol)?
+            ),
+            (Some(symbol), None) => format!(
+                "Actual value of `{}` was literal {}.",
+                key_identifier,
+                value_symbol_string(symbol)?
+            ),
+            (None, Some(identifier)) => {
+                format!("Actual value of `{}` was `{}`.", key_identifier, identifier)
+            }
+            (None, None) => format!("Device had no value for `{}`.", key_identifier),
+        })
+    }
+}
+
+fn condition_needs_actual_value(success: bool, op: &ConditionOp) -> bool {
+    match op {
+        ConditionOp::Equals => !success,
+        ConditionOp::NotEquals => success,
+    }
+}
+
+fn value_symbol_string(symbol: &Symbol) -> Result<String, DebuggerError> {
+    match symbol {
+        Symbol::DeprecatedKey(..) => Err(DebuggerError::InvalidValueSymbol(symbol.clone())),
+        Symbol::Key(..) => Err(DebuggerError::InvalidValueSymbol(symbol.clone())),
+        Symbol::NumberValue(n) => Ok(format!("0x{:x}", n)),
+        Symbol::StringValue(s) => Ok(format!("\"{}\"", s)),
+        Symbol::BoolValue(b) => Ok(b.to_string()),
+        Symbol::EnumValue => unimplemented!("Enum values are unsupported."),
+    }
 }
 
 #[cfg(test)]
@@ -164,14 +501,14 @@ mod test {
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(5) },
         ];
         assert_eq!(
-            properties_to_symbols(&properties, &symbol_table),
-            Err(DebuggerError::DuplicateKeyError(make_identifier!("abc")))
+            Debugger::construct_property_map(&properties, &symbol_table),
+            Err(DebuggerError::DuplicateKey(make_identifier!("abc")))
         );
     }
 
     #[test]
     fn condition_equals() {
-        let statements = vec![Statement::ConditionStatement {
+        let statement = Statement::ConditionStatement {
             span: Span::new(),
             condition: Condition {
                 span: Span::new(),
@@ -179,7 +516,8 @@ mod test {
                 op: ConditionOp::Equals,
                 rhs: Value::NumericLiteral(42),
             },
-        }];
+        };
+        let statements = vec![statement.clone()];
         let mut symbol_table = HashMap::new();
         symbol_table.insert(
             make_identifier!("abc"),
@@ -190,32 +528,48 @@ mod test {
         // Binds when the device has the correct property.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) }];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![DebuggerOutput::ConditionStatement { statement: &statement, success: true }]
+        );
 
         // Binds when other properties are present as well.
         let properties = vec![
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) },
             Property { key: make_identifier!("xyz"), value: Value::BoolLiteral(true) },
         ];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![DebuggerOutput::ConditionStatement { statement: &statement, success: true }]
+        );
 
         // Doesn't bind when the device has the wrong value for the property.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(5) }];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(!evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(!debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![DebuggerOutput::ConditionStatement { statement: &statement, success: false }]
+        );
 
         // Doesn't bind when the property is not present in the device.
         let properties = Vec::new();
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(!evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(!debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![DebuggerOutput::ConditionStatement { statement: &statement, success: false }]
+        );
     }
 
     #[test]
     fn condition_not_equals() {
-        let statements = vec![Statement::ConditionStatement {
+        let statement = Statement::ConditionStatement {
             span: Span::new(),
             condition: Condition {
                 span: Span::new(),
@@ -223,7 +577,8 @@ mod test {
                 op: ConditionOp::NotEquals,
                 rhs: Value::NumericLiteral(42),
             },
-        }];
+        };
+        let statements = vec![statement.clone()];
         let mut symbol_table = HashMap::new();
         symbol_table.insert(
             make_identifier!("abc"),
@@ -234,19 +589,31 @@ mod test {
         // Binds when the device has a different value for the property.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(5) }];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![DebuggerOutput::ConditionStatement { statement: &statement, success: true }]
+        );
 
         // Binds when the property is not present in the device.
         let properties = Vec::new();
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![DebuggerOutput::ConditionStatement { statement: &statement, success: true }]
+        );
 
         // Doesn't bind when the device has the property in the condition statement.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) }];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(!evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(!debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![DebuggerOutput::ConditionStatement { statement: &statement, success: false }]
+        );
     }
 
     #[test]
@@ -267,70 +634,103 @@ mod test {
         // Binds when the device has one of the accepted values for the property.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) }];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![DebuggerOutput::AcceptStatementSuccess {
+                identifier: &make_identifier!("abc"),
+                value: &Value::NumericLiteral(42),
+                value_symbol: &Symbol::NumberValue(42),
+                span: &Span::new(),
+            }]
+        );
 
         // Doesn't bind when the device has a different value for the property.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(5) }];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(!evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(!debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![DebuggerOutput::AcceptStatementFailure {
+                identifier: &make_identifier!("abc"),
+                span: &Span::new(),
+            }]
+        );
 
         // Doesn't bind when the device is missing the property.
         let properties = Vec::new();
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(!evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(!debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![DebuggerOutput::AcceptStatementFailure {
+                identifier: &make_identifier!("abc"),
+                span: &Span::new(),
+            }]
+        );
     }
 
     #[test]
     fn if_else() {
+        /*
+        if abc == 1 {
+            xyz == 1;
+        } else if abc == 2{
+            xyz == 2;
+        } else {
+            xyz == 3;
+        }
+        */
+
+        let condition1 = Condition {
+            span: Span::new(),
+            lhs: make_identifier!("abc"),
+            op: ConditionOp::Equals,
+            rhs: Value::NumericLiteral(1),
+        };
+        let condition2 = Condition {
+            span: Span::new(),
+            lhs: make_identifier!("abc"),
+            op: ConditionOp::Equals,
+            rhs: Value::NumericLiteral(2),
+        };
+        let statement1 = Statement::ConditionStatement {
+            span: Span::new(),
+            condition: Condition {
+                span: Span::new(),
+                lhs: make_identifier!("xyz"),
+                op: ConditionOp::Equals,
+                rhs: Value::NumericLiteral(1),
+            },
+        };
+        let statement2 = Statement::ConditionStatement {
+            span: Span::new(),
+            condition: Condition {
+                span: Span::new(),
+                lhs: make_identifier!("xyz"),
+                op: ConditionOp::Equals,
+                rhs: Value::NumericLiteral(2),
+            },
+        };
+        let statement3 = Statement::ConditionStatement {
+            span: Span::new(),
+            condition: Condition {
+                span: Span::new(),
+                lhs: make_identifier!("xyz"),
+                op: ConditionOp::Equals,
+                rhs: Value::NumericLiteral(3),
+            },
+        };
+
         let statements = vec![Statement::If {
             span: Span::new(),
             blocks: vec![
-                (
-                    Condition {
-                        span: Span::new(),
-                        lhs: make_identifier!("abc"),
-                        op: ConditionOp::Equals,
-                        rhs: Value::NumericLiteral(1),
-                    },
-                    vec![Statement::ConditionStatement {
-                        span: Span::new(),
-                        condition: Condition {
-                            span: Span::new(),
-                            lhs: make_identifier!("xyz"),
-                            op: ConditionOp::Equals,
-                            rhs: Value::NumericLiteral(1),
-                        },
-                    }],
-                ),
-                (
-                    Condition {
-                        span: Span::new(),
-                        lhs: make_identifier!("abc"),
-                        op: ConditionOp::Equals,
-                        rhs: Value::NumericLiteral(2),
-                    },
-                    vec![Statement::ConditionStatement {
-                        span: Span::new(),
-                        condition: Condition {
-                            span: Span::new(),
-                            lhs: make_identifier!("xyz"),
-                            op: ConditionOp::Equals,
-                            rhs: Value::NumericLiteral(2),
-                        },
-                    }],
-                ),
+                (condition1.clone(), vec![statement1.clone()]),
+                (condition2.clone(), vec![statement2.clone()]),
             ],
-            else_block: vec![Statement::ConditionStatement {
-                span: Span::new(),
-                condition: Condition {
-                    span: Span::new(),
-                    lhs: make_identifier!("xyz"),
-                    op: ConditionOp::Equals,
-                    rhs: Value::NumericLiteral(3),
-                },
-            }],
+            else_block: vec![statement3.clone()],
         }];
         let mut symbol_table = HashMap::new();
         symbol_table.insert(
@@ -349,51 +749,89 @@ mod test {
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(1) },
             Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(1) },
         ];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![
+                DebuggerOutput::IfCondition { condition: &condition1, success: true },
+                DebuggerOutput::ConditionStatement { statement: &statement1, success: true }
+            ]
+        );
 
         // Binds when the if else clause is satisfied.
         let properties = vec![
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(2) },
             Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(2) },
         ];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![
+                DebuggerOutput::IfCondition { condition: &condition1, success: false },
+                DebuggerOutput::IfCondition { condition: &condition2, success: true },
+                DebuggerOutput::ConditionStatement { statement: &statement2, success: true }
+            ]
+        );
 
         // Binds when the else clause is satisfied.
         let properties =
             vec![Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(3) }];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![
+                DebuggerOutput::IfCondition { condition: &condition1, success: false },
+                DebuggerOutput::IfCondition { condition: &condition2, success: false },
+                DebuggerOutput::ConditionStatement { statement: &statement3, success: true }
+            ]
+        );
 
         // Doesn't bind when the device has incorrect values for the properties.
         let properties = vec![
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) },
             Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(42) },
         ];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(!evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(!debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![
+                DebuggerOutput::IfCondition { condition: &condition1, success: false },
+                DebuggerOutput::IfCondition { condition: &condition2, success: false },
+                DebuggerOutput::ConditionStatement { statement: &statement3, success: false }
+            ]
+        );
 
         // Doesn't bind when the properties are missing in the device.
         let properties = Vec::new();
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(!evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(!debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![
+                DebuggerOutput::IfCondition { condition: &condition1, success: false },
+                DebuggerOutput::IfCondition { condition: &condition2, success: false },
+                DebuggerOutput::ConditionStatement { statement: &statement3, success: false }
+            ]
+        );
     }
 
     #[test]
     fn abort() {
-        let statements = vec![
-            Statement::ConditionStatement {
+        let condition_statement = Statement::ConditionStatement {
+            span: Span::new(),
+            condition: Condition {
                 span: Span::new(),
-                condition: Condition {
-                    span: Span::new(),
-                    lhs: make_identifier!("abc"),
-                    op: ConditionOp::Equals,
-                    rhs: Value::NumericLiteral(42),
-                },
+                lhs: make_identifier!("abc"),
+                op: ConditionOp::Equals,
+                rhs: Value::NumericLiteral(42),
             },
-            Statement::Abort { span: Span::new() },
-        ];
+        };
+        let abort_statement = Statement::Abort { span: Span::new() };
+        let statements = vec![condition_statement.clone(), abort_statement.clone()];
         let mut symbol_table = HashMap::new();
         symbol_table.insert(
             make_identifier!("abc"),
@@ -405,8 +843,18 @@ mod test {
         // Doesn't bind when abort statement is present.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) }];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(!evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(!debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![
+                DebuggerOutput::ConditionStatement {
+                    statement: &condition_statement,
+                    success: true
+                },
+                DebuggerOutput::AbortStatement { statement: &abort_statement }
+            ]
+        );
     }
 
     #[test]
@@ -486,38 +934,48 @@ mod test {
                 value: Value::Identifier(make_identifier!("VALUE")),
             },
         ];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(debugger.evaluate_bind_program().unwrap());
     }
 
     #[test]
     fn full_program() {
+        /*
+        if abc == 42 {
+            abort;
+        } else {
+            accept xyz {1, 2};
+            pqr == true;
+        }
+        */
+
+        let condition = Condition {
+            span: Span::new(),
+            lhs: make_identifier!("abc"),
+            op: ConditionOp::Equals,
+            rhs: Value::NumericLiteral(42),
+        };
+        let abort_statement = Statement::Abort { span: Span::new() };
+        let condition_statement = Statement::ConditionStatement {
+            span: Span::new(),
+            condition: Condition {
+                span: Span::new(),
+                lhs: make_identifier!("pqr"),
+                op: ConditionOp::NotEquals,
+                rhs: Value::BoolLiteral(true),
+            },
+        };
+
         let statements = vec![Statement::If {
             span: Span::new(),
-            blocks: vec![(
-                Condition {
-                    span: Span::new(),
-                    lhs: make_identifier!("abc"),
-                    op: ConditionOp::Equals,
-                    rhs: Value::NumericLiteral(42),
-                },
-                vec![Statement::Abort { span: Span::new() }],
-            )],
+            blocks: vec![(condition.clone(), vec![abort_statement.clone()])],
             else_block: vec![
                 Statement::Accept {
                     span: Span::new(),
                     identifier: make_identifier!("xyz"),
                     values: vec![Value::NumericLiteral(1), Value::NumericLiteral(2)],
                 },
-                Statement::ConditionStatement {
-                    span: Span::new(),
-                    condition: Condition {
-                        span: Span::new(),
-                        lhs: make_identifier!("pqr"),
-                        op: ConditionOp::NotEquals,
-                        rhs: Value::BoolLiteral(true),
-                    },
-                },
+                condition_statement.clone(),
             ],
         }];
         let mut symbol_table = HashMap::new();
@@ -538,24 +996,57 @@ mod test {
         // Aborts because if condition is true.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) }];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(!evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(!debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![
+                DebuggerOutput::IfCondition { condition: &condition, success: true },
+                DebuggerOutput::AbortStatement { statement: &abort_statement }
+            ]
+        );
 
         // Binds because all statements inside else block are satisfied.
         let properties = vec![
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(43) },
             Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(1) },
         ];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![
+                DebuggerOutput::IfCondition { condition: &condition, success: false },
+                DebuggerOutput::AcceptStatementSuccess {
+                    identifier: &make_identifier!("xyz"),
+                    value: &Value::NumericLiteral(1),
+                    value_symbol: &Symbol::NumberValue(1),
+                    span: &Span::new(),
+                },
+                DebuggerOutput::ConditionStatement {
+                    statement: &condition_statement,
+                    success: true
+                }
+            ]
+        );
 
         // Doesn't bind because accept statement is not satisfied.
         let properties = vec![
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(43) },
             Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(3) },
         ];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(!evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(!debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![
+                DebuggerOutput::IfCondition { condition: &condition, success: false },
+                DebuggerOutput::AcceptStatementFailure {
+                    identifier: &make_identifier!("xyz"),
+                    span: &Span::new(),
+                },
+            ]
+        );
 
         // Doesn't bind because condition statement is not satisfied.
         let properties = vec![
@@ -563,7 +1054,23 @@ mod test {
             Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(1) },
             Property { key: make_identifier!("pqr"), value: Value::BoolLiteral(true) },
         ];
-        let symbolic_properties = properties_to_symbols(&properties, &symbol_table).unwrap();
-        assert!(!evaluate_bind_program(&instructions, &symbolic_properties).unwrap());
+        let mut debugger = Debugger::new(&properties, &instructions, &symbol_table).unwrap();
+        assert!(!debugger.evaluate_bind_program().unwrap());
+        assert_eq!(
+            debugger.output,
+            vec![
+                DebuggerOutput::IfCondition { condition: &condition, success: false },
+                DebuggerOutput::AcceptStatementSuccess {
+                    identifier: &make_identifier!("xyz"),
+                    value: &Value::NumericLiteral(1),
+                    value_symbol: &Symbol::NumberValue(1),
+                    span: &Span::new(),
+                },
+                DebuggerOutput::ConditionStatement {
+                    statement: &condition_statement,
+                    success: false
+                }
+            ]
+        );
     }
 }
