@@ -4,9 +4,11 @@
 
 mod common;
 mod dev_auth_provider;
+mod oauth;
 mod oauth_open_id_connect;
 
 use crate::dev_auth_provider::AuthProvider;
+use crate::oauth::Oauth;
 use crate::oauth_open_id_connect::OauthOpenIdConnect;
 use anyhow::{Context as _, Error};
 use fuchsia_async as fasync;
@@ -26,6 +28,8 @@ fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(|stream| {
         fasync::spawn(OauthOpenIdConnect::handle_requests_for_stream(stream))
     });
+    fs.dir("svc")
+        .add_fidl_service(|stream| fasync::spawn(Oauth::handle_requests_for_stream(stream)));
     fs.take_and_serve_directory_handle()?;
 
     executor.run_singlethreaded(fs.collect::<()>());

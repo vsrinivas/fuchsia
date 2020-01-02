@@ -4,8 +4,9 @@
 
 use crate::common::{
     generate_random_string, get_token_expiry_time_nanos, USER_PROFILE_INFO_DISPLAY_NAME,
-    USER_PROFILE_INFO_EMAIL, USER_PROFILE_INFO_ID_DOMAIN, USER_PROFILE_INFO_IMAGE_URL,
+    USER_PROFILE_INFO_EMAIL, USER_PROFILE_INFO_IMAGE_URL,
 };
+use crate::oauth::AccessTokenContent;
 use fidl_fuchsia_identity_external::{
     Error as ApiError, OauthOpenIdConnectRequest, OauthOpenIdConnectRequestStream,
     OpenIdTokenFromOauthRefreshTokenRequest, OpenIdUserInfoFromOauthAccessTokenRequest,
@@ -14,6 +15,7 @@ use fidl_fuchsia_identity_tokens::{OpenIdToken, OpenIdUserInfo};
 use futures::future;
 use futures::prelude::*;
 use log::warn;
+use std::str::FromStr;
 
 /// An implementation of the `OauthOpenIdConnect` protocol for testing.
 pub struct OauthOpenIdConnect {}
@@ -53,10 +55,18 @@ impl OauthOpenIdConnect {
     }
 
     fn get_user_info_from_access_token(
-        _request: OpenIdUserInfoFromOauthAccessTokenRequest,
+        request: OpenIdUserInfoFromOauthAccessTokenRequest,
     ) -> Result<OpenIdUserInfo, ApiError> {
+        let access_token_content = request
+            .access_token
+            .ok_or(ApiError::InvalidRequest)?
+            .content
+            .ok_or(ApiError::InvalidRequest)?;
+
+        let subject = AccessTokenContent::from_str(&access_token_content)?.account_id;
+
         Ok(OpenIdUserInfo {
-            subject: Some(format!("{}{}", generate_random_string(), USER_PROFILE_INFO_ID_DOMAIN)),
+            subject: Some(subject),
             name: Some(USER_PROFILE_INFO_DISPLAY_NAME.to_string()),
             email: Some(USER_PROFILE_INFO_EMAIL.to_string()),
             picture: Some(USER_PROFILE_INFO_IMAGE_URL.to_string()),
@@ -69,7 +79,7 @@ mod test {
     use super::*;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_identity_external::{OauthOpenIdConnectMarker, OauthOpenIdConnectProxy};
-    use fidl_fuchsia_identity_tokens::OauthRefreshToken;
+    use fidl_fuchsia_identity_tokens::{OauthAccessToken, OauthRefreshToken};
     use fuchsia_async as fasync;
     use futures::future::join;
 
@@ -107,13 +117,23 @@ mod test {
     #[fasync::run_until_stalled(test)]
     async fn get_user_info_from_access_token_test() {
         run_proxy_test(|proxy| async move {
+            let access_token_content = AccessTokenContent::new(
+                "rt_token".to_string(),
+                "test-account@example.com".to_string(),
+                None,
+            )
+            .to_string();
+
             let user_info = proxy
                 .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
-                    access_token: None,
+                    access_token: Some(OauthAccessToken {
+                        content: Some(access_token_content),
+                        expiry_time: None,
+                    }),
                 })
                 .await?
                 .unwrap();
-            assert!(user_info.subject.unwrap().contains(USER_PROFILE_INFO_ID_DOMAIN));
+            assert_eq!(user_info.subject.unwrap(), "test-account@example.com".to_string());
             assert!(user_info.name.is_some());
             assert!(user_info.email.is_some());
             assert!(user_info.picture.is_some());
