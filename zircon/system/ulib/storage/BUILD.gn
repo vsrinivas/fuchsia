@@ -10,9 +10,10 @@ group("storage") {
 }
 
 group("test") {
-  testonly=true
+  testonly = true
   deps = [
     "buffer:test",
+    "buffer/test_support:test",
     "operation:test",
   ]
 }

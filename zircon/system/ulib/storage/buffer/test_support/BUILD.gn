@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("test_support") {
+  testonly = true
+  sources = [
+    "array_buffer.cc",
+  ]
+  static = true
+
+  public_deps = [
+    "$zx/system/ulib/storage/buffer:headers",
+    "$zx/system/ulib/zx:headers",
+  ]
+  deps = [
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":storage_buffer_test_support",
+  ]
+}
+
+zx_test("storage_buffer_test_support") {
+  output_name = "storage-buffer-test-support-test"
+  test_group = "storage"
+  sources = [
+    "test/array_buffer_test.cc",
+  ]
+  deps = [
+    ":test_support",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
+  ]
+}

@@ -12,10 +12,14 @@ group("test") {
 zx_test("disk-inspector-unit") {
   sources = [
     "basic-types-test.cc",
+    "inspector-transaction-handler-test.cc",
   ]
   deps = [
+    "$zx/system/ulib/block-client",
+    "$zx/system/ulib/block-client:fake-device",
     "$zx/system/ulib/disk-inspector",
-    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/storage/buffer",
+    "$zx/system/ulib/storage/operation",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
