@@ -41,7 +41,6 @@ class ImageTest : public TestBase, public FenceCallback {
 };
 
 TEST_F(ImageTest, MultipleAcquiresAllowed) {
-  async::TestLoop loop;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(1024 * 600 * 4, 0u, &vmo));
   image_t info = {};
@@ -54,11 +53,9 @@ TEST_F(ImageTest, MultipleAcquiresAllowed) {
   image->DiscardAcquire();
   EXPECT_TRUE(image->Acquire());
   image->EarlyRetire();
-  loop.RunUntilIdle();
 }
 
 TEST_F(ImageTest, RetiredImagesAreAlwaysUsable) {
-  async::TestLoop loop;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(1024 * 600 * 4, 0u, &vmo));
   image_t info = {};
@@ -117,7 +114,6 @@ TEST_F(ImageTest, RetiredImagesAreAlwaysUsable) {
     image->ResetFences();
   }
   image->EarlyRetire();
-  loop.RunUntilIdle();
 }
 
 }  // namespace display

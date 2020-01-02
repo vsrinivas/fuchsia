@@ -24,7 +24,6 @@ zx_test("display-core-unittests") {
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/fidl/fuchsia-hardware-display:llcpp",
     "$zx/system/fidl/fuchsia-sysmem:llcpp",
-    "$zx/system/ulib/async-testing",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon-internal",
@@ -40,6 +39,7 @@ static_library("base") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sysmem",
   ]
@@ -48,8 +48,10 @@ static_library("base") {
     "$zx/system/dev/display/fake:fake-lib",
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/sysmem/sysmem:common_srcs",
     "$zx/system/fidl/fuchsia-hardware-display:llcpp",
     "$zx/system/fidl/fuchsia-sysmem:llcpp",
+    "$zx/system/ulib/async-testing",
     "$zx/system/ulib/zxtest",
   ]
 }

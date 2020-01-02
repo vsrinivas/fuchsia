@@ -293,6 +293,7 @@ void Client::HandleImportImage(const fuchsia_hardware_display_ControllerImportIm
 
   auto it = collection_map_.find(req->collection_id);
   if (it == collection_map_.end()) {
+    zxlogf(ERROR, "Could not find collection %lu in map\n", req->collection_id);
     resp->res = ZX_ERR_INVALID_ARGS;
     return;
   }
@@ -888,7 +889,7 @@ void Client::HandleSetLayerImage(const fuchsia_hardware_display_ControllerSetLay
                                  fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
   auto layer = layers_.find(req->layer_id);
   if (!layer.IsValid()) {
-    zxlogf(ERROR, "SetLayerImage ordinal with invalid layer\n");
+    zxlogf(ERROR, "SetLayerImage ordinal with invalid layer %lu\n", req->layer_id);
     TearDown();
     return;
   }

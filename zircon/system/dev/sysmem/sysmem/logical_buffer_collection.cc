@@ -1645,7 +1645,7 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
   // Now that we know at least one child of raw_parent_vmo exists, we can StartWait() and add to
   // map.  From this point, ZX_VMO_ZERO_CHILDREN is the only way that allocator->Delete() gets
   // called.
-  status = tracked_parent_vmo->StartWait();
+  status = tracked_parent_vmo->StartWait(parent_device_->dispatcher());
   if (status != ZX_OK) {
     LogError("tracked_parent->StartWait() failed - status: %d", status);
     // ~tracked_parent_vmo calls allocator->Delete().
@@ -1757,11 +1757,11 @@ LogicalBufferCollection::TrackedParentVmo::~TrackedParentVmo() {
   }
 }
 
-zx_status_t LogicalBufferCollection::TrackedParentVmo::StartWait() {
+zx_status_t LogicalBufferCollection::TrackedParentVmo::StartWait(async_dispatcher_t* dispatcher) {
   LogInfo("LogicalBufferCollection::TrackedParentVmo::StartWait()");
   // The current thread is the dispatcher thread.
   ZX_DEBUG_ASSERT(!waiting_);
-  zx_status_t status = zero_children_wait_.Begin(async_get_default_dispatcher());
+  zx_status_t status = zero_children_wait_.Begin(dispatcher);
   if (status != ZX_OK) {
     LogError("zero_children_wait_.Begin() failed - status: %d", status);
     return status;

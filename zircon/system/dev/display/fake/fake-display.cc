@@ -463,7 +463,8 @@ void FakeDisplay::SendVsync() {
   fbl::AutoLock lock(&display_lock_);
   if (dc_intf_.is_valid()) {
     uint64_t live[] = {current_image_};
-    dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(), live, current_image_valid_);
+    dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(),
+                            current_image_valid_ ? live : nullptr, current_image_valid_);
   }
 }
 
