@@ -1,0 +1,22 @@
+{
+    "program": {
+        "args": [
+            "--test-threads=1"
+        ],
+        "binary": "test/unified_reader_test"
+    },
+    "sandbox": {
+        "features": [
+            "hub",
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.diagnostics.Archive",
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

@@ -390,6 +390,7 @@ impl HubCollector {
     pub async fn start(mut self) -> Result<(), Error> {
         let mut watch_stream = fuchsia_watch::watch_recursive(&self.path);
 
+        // Don't recursively traverse component manager since hub cycles exist.
         let is_name_allowed =
             |component_name: &str| -> bool { component_name != COMPONENT_MANAGER_NAME };
 

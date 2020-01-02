@@ -91,7 +91,7 @@ mod tests {
                   // Test comment for json5 portability.
                   "max_archive_size_bytes": 10485760,
                   "max_event_group_size_bytes": 262144,
-                  "num_threads": 1,
+                  "num_threads": 1
                 }"#;
 
         write_test_config_to_file(&test_config_file_name, test_config);
@@ -111,7 +111,7 @@ mod tests {
         let test_config = r#"
                 {
                   "max_archive_size_bytes": 10485760,
-                  "bad_field": "hello world"
+                  "bad_field": "hello world",
                 }"#;
 
         write_test_config_to_file(&test_config_file_name, test_config);

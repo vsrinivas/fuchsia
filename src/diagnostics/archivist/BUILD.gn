@@ -165,6 +165,6 @@ group("tests") {
     ":archivist_tests",
     "//src/diagnostics/archivist/tests:logger_integration_tests",
     "//src/diagnostics/archivist/tests/data_stats",
-    "//src/diagnostics/archivist/tests/inspect_reader_integration:inspect_reader_integration_tests",
+    "//src/diagnostics/archivist/tests/unified_reader:unified_reader_integration",
   ]
 }
