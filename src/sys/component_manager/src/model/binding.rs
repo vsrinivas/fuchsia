@@ -26,6 +26,12 @@ use {
     std::{convert::TryInto, sync::Arc},
 };
 
+#[derive(Clone)]
+pub struct ComponentDescriptor {
+    pub abs_moniker: AbsoluteMoniker,
+    pub url: String,
+}
+
 impl Model {
     /// Binds to the component instance in the given realm, starting it if it's not already
     /// running. Returns the list of child realms whose instances need to be eagerly started after
@@ -80,12 +86,18 @@ impl Model {
                     fsys::StartupMode::Lazy => None,
                 })
                 .collect();
-            let live_child_realms = state.live_child_realms().map(|(_, r)| r.clone()).collect();
+            let live_children = state
+                .live_child_realms()
+                .map(|(_, r)| ComponentDescriptor {
+                    abs_moniker: r.abs_moniker.clone(),
+                    url: r.component_url.clone(),
+                })
+                .collect();
             let event = Event::new(
                 realm.abs_moniker.clone(),
                 EventPayload::StartInstance {
                     component_decl: state.decl().clone(),
-                    live_child_realms,
+                    live_children,
                     routing_facade,
                 },
             );

@@ -7,10 +7,10 @@ use {
         capability::*,
         model::addable_directory::AddableDirectoryWithResult,
         model::{
+            binding::ComponentDescriptor,
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
-            realm::Realm,
         },
     },
     async_trait::async_trait,
@@ -187,11 +187,11 @@ impl TestHookInner {
     pub async fn on_start_instance_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
-        live_child_realms: &'a Vec<Arc<Realm>>,
+        live_children: &'a Vec<ComponentDescriptor>,
     ) -> Result<(), ModelError> {
         self.create_instance_if_necessary(target_moniker).await?;
-        for child_realm in live_child_realms {
-            self.create_instance_if_necessary(&child_realm.abs_moniker).await?;
+        for child_descriptor in live_children {
+            self.create_instance_if_necessary(&child_descriptor.abs_moniker).await?;
         }
         let mut events = self.lifecycle_events.lock().await;
         events.push(Lifecycle::Bind(target_moniker.clone()));
@@ -270,10 +270,10 @@ impl Hook for TestHookInner {
             match &event.payload {
                 EventPayload::StartInstance {
                     component_decl: _,
-                    live_child_realms,
+                    live_children,
                     routing_facade: _,
                 } => {
-                    self.on_start_instance_async(&event.target_moniker, &live_child_realms).await?;
+                    self.on_start_instance_async(&event.target_moniker, &live_children).await?;
                 }
                 EventPayload::AddDynamicChild { .. } => {
                     self.create_instance_if_necessary(&event.target_moniker).await?;

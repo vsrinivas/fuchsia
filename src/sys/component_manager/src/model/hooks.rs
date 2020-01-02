@@ -6,7 +6,7 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
         model::{
-            error::ModelError, moniker::AbsoluteMoniker, realm::Realm,
+            binding::ComponentDescriptor, error::ModelError, moniker::AbsoluteMoniker,
             routing_facade::RoutingFacade,
         },
     },
@@ -90,7 +90,7 @@ pub enum EventPayload {
     },
     StartInstance {
         component_decl: ComponentDecl,
-        live_child_realms: Vec<Arc<Realm>>,
+        live_children: Vec<ComponentDescriptor>,
         routing_facade: RoutingFacade,
     },
     StopInstance,

@@ -9,12 +9,13 @@ use {
         },
         model::{
             addable_directory::AddableDirectoryWithResult,
+            binding::ComponentDescriptor,
             dir_tree::{CapabilityUsageTree, DirTree},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
             moniker::AbsoluteMoniker,
-            realm::{Realm, Runtime},
+            realm::Runtime,
             routing_facade::RoutingFacade,
         },
     },
@@ -358,7 +359,7 @@ impl HubInner {
         &'a self,
         target_moniker: &AbsoluteMoniker,
         component_decl: &'a ComponentDecl,
-        live_child_realms: &'a Vec<Arc<Realm>>,
+        live_children: &'a Vec<ComponentDescriptor>,
         routing_facade: RoutingFacade,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_start_instance_async");
@@ -429,12 +430,12 @@ impl HubInner {
         }
 
         // TODO: Loop over deleting realms also?
-        for child_realm in live_child_realms {
-            let child_moniker = child_realm.abs_moniker.to_string();
-            trace::duration!("component_manager", "hub:add_live_child", "child_moniker" => child_moniker.as_ref());
+        for child_descriptor in live_children {
+            let abs_moniker = child_descriptor.abs_moniker.to_string();
+            trace::duration!("component_manager", "hub:add_live_child", "child_moniker" => abs_moniker.as_ref());
             Self::add_instance_to_parent_if_necessary(
-                &child_realm.abs_moniker,
-                child_realm.component_url.clone(),
+                &child_descriptor.abs_moniker,
+                child_descriptor.url.clone(),
                 &mut instances_map,
             )
             .await?;
@@ -598,15 +599,11 @@ impl Hook for HubInner {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             match &event.payload {
-                EventPayload::StartInstance {
-                    component_decl,
-                    live_child_realms,
-                    routing_facade,
-                } => {
+                EventPayload::StartInstance { component_decl, live_children, routing_facade } => {
                     self.on_start_instance_async(
                         &event.target_moniker,
                         &component_decl,
-                        &live_child_realms,
+                        &live_children,
                         routing_facade.clone(),
                     )
                     .await?;
