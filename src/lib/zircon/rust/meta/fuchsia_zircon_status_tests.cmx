@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/fuchsia_zircon_status_tests"
+    }
+}
