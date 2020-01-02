@@ -162,7 +162,7 @@ class NumericType : public Type {
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
     auto got = decoder->GetAddress(offset, sizeof(T));
-    return std::make_unique<NumericValue<T>>(this, reinterpret_cast<const T*>(got));
+    return std::make_unique<NumericValue<T>>(reinterpret_cast<const T*>(got));
   }
 };
 

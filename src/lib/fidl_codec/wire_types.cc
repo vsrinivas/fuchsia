@@ -203,9 +203,9 @@ std::unique_ptr<Value> Type::Decode(MessageDecoder* /*decoder*/, uint64_t /*offs
 std::unique_ptr<Value> RawType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   const uint8_t* data = decoder->GetAddress(offset, inline_size_);
   if (data == nullptr) {
-    return std::make_unique<InvalidValue>(this);
+    return std::make_unique<InvalidValue>();
   }
-  return std::make_unique<RawValue>(this, data, inline_size_);
+  return std::make_unique<RawValue>(data, inline_size_);
 }
 
 void RawType::Visit(TypeVisitor* visitor) const { visitor->VisitRawType(this); }
@@ -213,23 +213,23 @@ void RawType::Visit(TypeVisitor* visitor) const { visitor->VisitRawType(this); }
 std::unique_ptr<Value> StringType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   uint64_t string_length = 0;
   if (!decoder->GetValueAt(offset, &string_length)) {
-    return std::make_unique<InvalidValue>(this);
+    return std::make_unique<InvalidValue>();
   }
   offset += sizeof(string_length);
 
   bool is_null;
   uint64_t nullable_offset;
   if (!decoder->DecodeNullableHeader(offset, string_length, &is_null, &nullable_offset)) {
-    return std::make_unique<InvalidValue>(this);
+    return std::make_unique<InvalidValue>();
   }
   if (is_null) {
-    return std::make_unique<NullValue>(this);
+    return std::make_unique<NullValue>();
   }
   auto data = reinterpret_cast<const char*>(decoder->GetAddress(nullable_offset, string_length));
   if (data == nullptr) {
-    return std::make_unique<InvalidValue>(this);
+    return std::make_unique<InvalidValue>();
   }
-  return std::make_unique<StringValue>(this, std::string_view(data, string_length));
+  return std::make_unique<StringValue>(std::string_view(data, string_length));
 }
 
 void StringType::Visit(TypeVisitor* visitor) const { visitor->VisitStringType(this); }
@@ -237,9 +237,9 @@ void StringType::Visit(TypeVisitor* visitor) const { visitor->VisitStringType(th
 std::unique_ptr<Value> BoolType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   auto byte = decoder->GetAddress(offset, sizeof(uint8_t));
   if (byte == nullptr) {
-    return std::make_unique<InvalidValue>(this);
+    return std::make_unique<InvalidValue>();
   }
-  return std::make_unique<BoolValue>(this, *byte);
+  return std::make_unique<BoolValue>(*byte);
 }
 
 void BoolType::Visit(TypeVisitor* visitor) const { visitor->VisitBoolType(this); };
@@ -254,14 +254,14 @@ std::unique_ptr<Value> StructType::Decode(MessageDecoder* decoder, uint64_t offs
     bool is_null;
     uint64_t nullable_offset;
     if (!decoder->DecodeNullableHeader(offset, size, &is_null, &nullable_offset)) {
-      return std::make_unique<InvalidValue>(this);
+      return std::make_unique<InvalidValue>();
     }
     if (is_null) {
-      return std::make_unique<NullValue>(this);
+      return std::make_unique<NullValue>();
     }
     offset = nullable_offset;
   }
-  return decoder->DecodeStruct(this, struct_, offset);
+  return decoder->DecodeStruct(struct_, offset);
 }
 
 void StructType::Visit(TypeVisitor* visitor) const { visitor->VisitStructType(this); }
@@ -278,13 +278,13 @@ std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offse
   constexpr size_t kEnvelopeSize = 2 * sizeof(uint32_t) + sizeof(uint64_t);
   if (!decoder->DecodeNullableHeader(offset, member_count * kEnvelopeSize, &is_null,
                                      &nullable_offset)) {
-    return std::make_unique<InvalidValue>(this);
+    return std::make_unique<InvalidValue>();
   }
   if (is_null) {
     decoder->AddError() << "Tables are not nullable.";
-    return std::make_unique<InvalidValue>(this);
+    return std::make_unique<InvalidValue>();
   }
-  auto result = std::make_unique<TableValue>(this, table_definition_);
+  auto result = std::make_unique<TableValue>(table_definition_);
   for (uint64_t i = 1; i <= member_count; ++i) {
     const TableMember* member = table_definition_.GetMember(i);
     if ((member == nullptr) || member->reserved()) {
@@ -318,10 +318,10 @@ std::unique_ptr<Value> UnionType::DecodeUnion(MessageDecoder* decoder, uint64_t 
     bool is_null;
     uint64_t nullable_offset;
     if (!decoder->DecodeNullableHeader(offset, union_.size(), &is_null, &nullable_offset)) {
-      return std::make_unique<InvalidValue>(this);
+      return std::make_unique<InvalidValue>();
     }
     if (is_null) {
-      return std::make_unique<NullValue>(this);
+      return std::make_unique<NullValue>();
     }
     offset = nullable_offset;
   }
@@ -329,9 +329,9 @@ std::unique_ptr<Value> UnionType::DecodeUnion(MessageDecoder* decoder, uint64_t 
   decoder->GetValueAt(offset, &tag);
   const UnionMember* member = union_.MemberWithTag(tag);
   if (member == nullptr) {
-    return std::make_unique<InvalidValue>(this);
+    return std::make_unique<InvalidValue>();
   }
-  return std::make_unique<UnionValue>(this, *member,
+  return std::make_unique<UnionValue>(*member,
                                       member->type()->Decode(decoder, offset + member->offset()));
 }
 
@@ -341,7 +341,7 @@ std::unique_ptr<Value> UnionType::DecodeXUnion(MessageDecoder* decoder, uint64_t
     if ((ordinal == 0) && !nullable_) {
       decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
                           << ": Null envelope for a non nullable extensible union\n";
-      return std::make_unique<InvalidValue>(this);
+      return std::make_unique<InvalidValue>();
     }
   }
 
@@ -349,17 +349,16 @@ std::unique_ptr<Value> UnionType::DecodeXUnion(MessageDecoder* decoder, uint64_t
 
   if (ordinal == 0) {
     if (!decoder->CheckNullEnvelope(offset)) {
-      return std::make_unique<InvalidValue>(this);
+      return std::make_unique<InvalidValue>();
     }
-    return std::make_unique<NullValue>(this);
+    return std::make_unique<NullValue>();
   }
 
   const UnionMember* member = union_.MemberWithOrdinal(ordinal);
   if (member == nullptr) {
-    return std::make_unique<InvalidValue>(this);
+    return std::make_unique<InvalidValue>();
   }
-  return std::make_unique<UnionValue>(this, *member,
-                                      decoder->DecodeEnvelope(offset, member->type()));
+  return std::make_unique<UnionValue>(*member, decoder->DecodeEnvelope(offset, member->type()));
 }
 
 std::unique_ptr<Value> UnionType::Decode(MessageDecoder* decoder, uint64_t offset) const {
@@ -388,7 +387,7 @@ ArrayType::ArrayType(std::unique_ptr<Type>&& component_type, uint32_t count)
     : ElementSequenceType(std::move(component_type)), count_(count) {}
 
 std::unique_ptr<Value> ArrayType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  auto result = std::make_unique<VectorValue>(this);
+  auto result = std::make_unique<VectorValue>();
   for (uint64_t i = 0; i < count_; ++i) {
     result->AddValue(component_type_->Decode(decoder, offset));
     offset += component_type_->InlineSize(decoder->unions_are_xunions());
@@ -410,14 +409,14 @@ std::unique_ptr<Value> VectorType::Decode(MessageDecoder* decoder, uint64_t offs
   if (!decoder->DecodeNullableHeader(
           offset, element_count * component_type_->InlineSize(decoder->unions_are_xunions()),
           &is_null, &nullable_offset)) {
-    return std::make_unique<InvalidValue>(this);
+    return std::make_unique<InvalidValue>();
   }
   if (is_null) {
-    return std::make_unique<NullValue>(this);
+    return std::make_unique<NullValue>();
   }
 
   size_t component_size = component_type_->InlineSize(decoder->unions_are_xunions());
-  auto result = std::make_unique<VectorValue>(this);
+  auto result = std::make_unique<VectorValue>();
   for (uint64_t i = 0;
        (i < element_count) && ((nullable_offset + component_size) <= decoder->num_bytes()); ++i) {
     result->AddValue(component_type_->Decode(decoder, nullable_offset));
@@ -431,7 +430,7 @@ void VectorType::Visit(TypeVisitor* visitor) const { visitor->VisitVectorType(th
 EnumType::EnumType(const Enum& e) : enum_(e) {}
 
 std::unique_ptr<Value> EnumType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return std::make_unique<EnumValue>(this, decoder->CopyAddress(offset, enum_.size()), enum_);
+  return std::make_unique<EnumValue>(decoder->CopyAddress(offset, enum_.size()), enum_);
 }
 
 void EnumType::Visit(TypeVisitor* visitor) const { visitor->VisitEnumType(this); }
@@ -439,7 +438,7 @@ void EnumType::Visit(TypeVisitor* visitor) const { visitor->VisitEnumType(this);
 BitsType::BitsType(const Bits& b) : bits_(b) {}
 
 std::unique_ptr<Value> BitsType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return std::make_unique<BitsValue>(this, decoder->CopyAddress(offset, bits_.size()), bits_);
+  return std::make_unique<BitsValue>(decoder->CopyAddress(offset, bits_.size()), bits_);
 }
 
 void BitsType::Visit(TypeVisitor* visitor) const { visitor->VisitBitsType(this); }
@@ -461,7 +460,7 @@ std::unique_ptr<Value> HandleType::Decode(MessageDecoder* decoder, uint64_t offs
   } else {
     handle_info = decoder->GetNextHandle();
   }
-  return std::make_unique<HandleValue>(this, handle_info);
+  return std::make_unique<HandleValue>(handle_info);
 }
 
 void HandleType::Visit(TypeVisitor* visitor) const { visitor->VisitHandleType(this); }

@@ -33,19 +33,19 @@ class WireObjectTest : public ::testing::Test {
   void TestPrintObject(const Value& value, const char* pretty_print, const char* json) {
     // Checks that we can pretty print an object (or a value).
     std::stringstream result;
-    value.PrettyPrint(result, FakeColors, nullptr, "", 0, 100, 100);
+    value.PrettyPrint(nullptr, result, FakeColors, nullptr, "", 0, 100, 100);
     ASSERT_EQ(result.str(), pretty_print)
         << "expected = " << pretty_print << " actual = " << result.str();
 
     // Checks that we can use Display size.
-    value.DisplaySize(1);
-    value.DisplaySize(100);
-    value.DisplaySize(1000);
+    value.DisplaySize(nullptr, 1);
+    value.DisplaySize(nullptr, 100);
+    value.DisplaySize(nullptr, 1000);
 
     // Checks that we can use the JSON visitor.
     rapidjson::Document actual;
     JsonVisitor visitor(&actual, &actual.GetAllocator());
-    value.Visit(&visitor);
+    value.Visit(&visitor, nullptr);
     rapidjson::StringBuffer actual_string;
     rapidjson::Writer<rapidjson::StringBuffer> actual_w(actual_string);
     actual.Accept(actual_w);
@@ -70,8 +70,7 @@ class WireObjectTest : public ::testing::Test {
 
 class TableValueWithNullFields : public TableValue {
  public:
-  TableValueWithNullFields(LibraryLoader* loader)
-      : TableValue(nullptr, GetTableDefinition(loader)) {
+  TableValueWithNullFields(LibraryLoader* loader) : TableValue(GetTableDefinition(loader)) {
     AddMember("first_int16", nullptr);
     AddMember("third_union", nullptr);
   }
@@ -88,6 +87,6 @@ class TableValueWithNullFields : public TableValue {
 
 TEST_PRINT_OBJECT(TableValue, TableValueWithNullFields(loader()), "{}", "{}");
 
-TEST_PRINT_OBJECT(InvalidValue, InvalidValue(nullptr), "#red#invalid#rst#", "\"(invalid)\"");
+TEST_PRINT_OBJECT(InvalidValue, InvalidValue(), "#red#invalid#rst#", "\"(invalid)\"");
 
 }  // namespace fidl_codec

@@ -91,7 +91,7 @@ void Encoder::WriteData(const uint8_t* data, size_t size) {
 
 void Encoder::VisitUnionBody(const UnionValue* node) {
   WriteValue<uint32_t>(node->member().ordinal());
-  node->value()->Visit(this);
+  node->value()->Visit(this, node->member().type());
 }
 
 void Encoder::VisitStructValueBody(size_t offset, const StructValue* node) {
@@ -99,7 +99,7 @@ void Encoder::VisitStructValueBody(size_t offset, const StructValue* node) {
     auto it = node->fields().find(member.get());
     FXL_DCHECK(it != node->fields().end());
     current_offset_ = offset + (unions_are_xunions_ ? member->v1_offset() : member->v0_offset());
-    it->second->Visit(this);
+    it->second->Visit(this, member->type());
   }
 }
 
@@ -111,7 +111,7 @@ void Encoder::VisitUnionAsXUnion(const UnionValue* node) {
 void Encoder::EncodeEnvelope(const Value* value, const Type* for_type) {
   Encoder envelope_encoder(unions_are_xunions_);
   envelope_encoder.AllocateObject(for_type->InlineSize(unions_are_xunions_));
-  value->Visit(&envelope_encoder);
+  value->Visit(&envelope_encoder, for_type);
   WriteValue<uint32_t>(envelope_encoder.bytes_.size());
   WriteValue<uint32_t>(envelope_encoder.handles_.size());
   WriteValue<uint64_t>(UINTPTR_MAX);
@@ -122,30 +122,32 @@ void Encoder::EncodeEnvelope(const Value* value, const Type* for_type) {
   }
 }
 
-void Encoder::VisitInvalidValue(const InvalidValue* node) {
+void Encoder::VisitInvalidValue(const InvalidValue* node, const Type* for_type) {
   FXL_LOG(FATAL) << "Can't encode invalid data.";
 }
 
-void Encoder::VisitNullValue(const NullValue* node) {
+void Encoder::VisitNullValue(const NullValue* node, const Type* for_type) {
+  FXL_DCHECK(for_type != nullptr);
   NullVisitor null_visitor(this);
-  node->type()->Visit(&null_visitor);
+  for_type->Visit(&null_visitor);
 }
 
-void Encoder::VisitRawValue(const RawValue* node) {
-  WriteData(node->data().data(), node->data().size());
-}
+void Encoder::VisitRawValue(const RawValue* node, const Type* for_type) { WriteData(node->data()); }
 
-void Encoder::VisitStringValue(const StringValue* node) {
+void Encoder::VisitStringValue(const StringValue* node, const Type* for_type) {
   WriteValue<uint64_t>(node->string().size());
   WriteValue<uint64_t>(UINTPTR_MAX);
   current_offset_ = AllocateObject(node->string().size());
   WriteData(reinterpret_cast<const uint8_t*>(node->string().data()), node->string().size());
 }
 
-void Encoder::VisitBoolValue(const BoolValue* node) { WriteValue<uint8_t>(node->value()); }
+void Encoder::VisitBoolValue(const BoolValue* node, const Type* for_type) {
+  WriteValue<uint8_t>(node->value());
+}
 
-void Encoder::VisitStructValue(const StructValue* node) {
-  if (node->type()->Nullable()) {
+void Encoder::VisitStructValue(const StructValue* node, const Type* for_type) {
+  FXL_DCHECK(for_type != nullptr);
+  if (for_type->Nullable()) {
     WriteValue<uint64_t>(UINTPTR_MAX);
     size_t object_size = node->struct_definition().Size(unions_are_xunions_);
     VisitStructValueBody(AllocateObject(object_size), node);
@@ -154,7 +156,7 @@ void Encoder::VisitStructValue(const StructValue* node) {
   }
 }
 
-void Encoder::VisitTableValue(const TableValue* node) {
+void Encoder::VisitTableValue(const TableValue* node, const Type* for_type) {
   WriteValue<uint64_t>(node->highest_member());
   WriteValue<uint64_t>(UINTPTR_MAX);
 
@@ -175,10 +177,11 @@ void Encoder::VisitTableValue(const TableValue* node) {
   }
 }
 
-void Encoder::VisitUnionValue(const UnionValue* node) {
-  if (unions_are_xunions_ || node->type()->IsXUnion()) {
+void Encoder::VisitUnionValue(const UnionValue* node, const Type* for_type) {
+  FXL_DCHECK(for_type != nullptr);
+  if (unions_are_xunions_ || for_type->IsXUnion()) {
     VisitUnionAsXUnion(node);
-  } else if (node->type()->Nullable()) {
+  } else if (for_type->Nullable()) {
     WriteValue<uint64_t>(UINTPTR_MAX);
     current_offset_ = AllocateObject(node->member().union_definition().size());
     VisitUnionBody(node);
@@ -187,12 +190,13 @@ void Encoder::VisitUnionValue(const UnionValue* node) {
   }
 }
 
-void Encoder::VisitVectorValue(const VectorValue* node) {
-  const Type* component_type = node->type()->GetComponentType();
+void Encoder::VisitVectorValue(const VectorValue* node, const Type* for_type) {
+  FXL_DCHECK(for_type != nullptr);
+  const Type* component_type = for_type->GetComponentType();
   FXL_DCHECK(component_type != nullptr);
   size_t component_size = component_type->InlineSize(unions_are_xunions_);
   size_t offset;
-  if (node->type()->IsArray()) {
+  if (for_type->IsArray()) {
     offset = current_offset_;
   } else {
     WriteValue<uint64_t>(node->values().size());
@@ -201,24 +205,24 @@ void Encoder::VisitVectorValue(const VectorValue* node) {
   }
   for (const auto& value : node->values()) {
     current_offset_ = offset;
-    value->Visit(this);
+    value->Visit(this, component_type);
     offset += component_size;
   }
 }
 
-void Encoder::VisitEnumValue(const EnumValue* node) {
+void Encoder::VisitEnumValue(const EnumValue* node, const Type* for_type) {
   if (node->data()) {
     WriteData(node->data()->data(), node->enum_definition().size());
   }
 }
 
-void Encoder::VisitBitsValue(const BitsValue* node) {
+void Encoder::VisitBitsValue(const BitsValue* node, const Type* for_type) {
   if (node->data()) {
     WriteData(node->data()->data(), node->bits_definition().size());
   }
 }
 
-void Encoder::VisitHandleValue(const HandleValue* node) {
+void Encoder::VisitHandleValue(const HandleValue* node, const Type* for_type) {
   if (node->handle().handle == FIDL_HANDLE_ABSENT) {
     WriteValue<uint32_t>(FIDL_HANDLE_ABSENT);
   } else {
@@ -227,24 +231,44 @@ void Encoder::VisitHandleValue(const HandleValue* node) {
   }
 }
 
-void Encoder::VisitU8Value(const NumericValue<uint8_t>* node) { WriteValue(node->value()); }
+void Encoder::VisitU8Value(const NumericValue<uint8_t>* node, const Type* for_type) {
+  WriteValue(node->value());
+}
 
-void Encoder::VisitU16Value(const NumericValue<uint16_t>* node) { WriteValue(node->value()); }
+void Encoder::VisitU16Value(const NumericValue<uint16_t>* node, const Type* for_type) {
+  WriteValue(node->value());
+}
 
-void Encoder::VisitU32Value(const NumericValue<uint32_t>* node) { WriteValue(node->value()); }
+void Encoder::VisitU32Value(const NumericValue<uint32_t>* node, const Type* for_type) {
+  WriteValue(node->value());
+}
 
-void Encoder::VisitU64Value(const NumericValue<uint64_t>* node) { WriteValue(node->value()); }
+void Encoder::VisitU64Value(const NumericValue<uint64_t>* node, const Type* for_type) {
+  WriteValue(node->value());
+}
 
-void Encoder::VisitI8Value(const NumericValue<int8_t>* node) { WriteValue(node->value()); }
+void Encoder::VisitI8Value(const NumericValue<int8_t>* node, const Type* for_type) {
+  WriteValue(node->value());
+}
 
-void Encoder::VisitI16Value(const NumericValue<int16_t>* node) { WriteValue(node->value()); }
+void Encoder::VisitI16Value(const NumericValue<int16_t>* node, const Type* for_type) {
+  WriteValue(node->value());
+}
 
-void Encoder::VisitI32Value(const NumericValue<int32_t>* node) { WriteValue(node->value()); }
+void Encoder::VisitI32Value(const NumericValue<int32_t>* node, const Type* for_type) {
+  WriteValue(node->value());
+}
 
-void Encoder::VisitI64Value(const NumericValue<int64_t>* node) { WriteValue(node->value()); }
+void Encoder::VisitI64Value(const NumericValue<int64_t>* node, const Type* for_type) {
+  WriteValue(node->value());
+}
 
-void Encoder::VisitF32Value(const NumericValue<float>* node) { WriteValue(node->value()); }
+void Encoder::VisitF32Value(const NumericValue<float>* node, const Type* for_type) {
+  WriteValue(node->value());
+}
 
-void Encoder::VisitF64Value(const NumericValue<double>* node) { WriteValue(node->value()); }
+void Encoder::VisitF64Value(const NumericValue<double>* node, const Type* for_type) {
+  WriteValue(node->value());
+}
 
 }  // namespace fidl_codec

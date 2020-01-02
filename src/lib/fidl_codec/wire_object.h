@@ -23,12 +23,14 @@ class Visitor;
 // Base class for all the values we can find within a message.
 class Value {
  public:
-  Value(const Type* type) : type_(type) {}
+  Value() = default;
   virtual ~Value() = default;
 
-  const Type* type() const { return type_; }
-
   virtual bool IsNull() const { return false; }
+
+  // Returns the uint8_t value of the value. If the value is not a uint8_t value this returns zero.
+  // This is used to eventually display a vector of uint8_t values as a string.
+  virtual uint8_t GetUint8Value() const { return 0; }
 
   // Returns the size needed to display the value. If the needed size is
   // greater than |remaining_size|, the return value can be anything greater
@@ -37,80 +39,71 @@ class Value {
   // Remaining size is just an optimization parameter. It avoids to compute the
   // whole display size for an object: the computation is stopped as soon as we
   // find that the object doesn't fit.
-  virtual int DisplaySize(int remaining_size) const = 0;
-
-  // Returns the uint8_t value of the value. If the value is not a uint8_t value this returns zero.
-  // This is used to eventually display a vector of uint8_t values as a string.
-  virtual uint8_t GetUint8Value() const { return 0; }
+  virtual int DisplaySize(const Type* for_type, int remaining_size) const = 0;
 
   // Pretty print of the value.
-  virtual void PrettyPrint(std::ostream& os, const Colors& colors,
+  virtual void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
                            const fidl_message_header_t* header, std::string_view line_header,
                            int tabs, int remaining_size, int max_line_size) const = 0;
 
   // Use a visitor on this value;
-  virtual void Visit(Visitor* visitor) const = 0;
-
- private:
-  const Type* const type_;
+  virtual void Visit(Visitor* visitor, const Type* for_type) const = 0;
 };
 
 // An invalid value. This value can't be present in a valid object.
 // It can only be found if we had an error while decoding a message.
 class InvalidValue : public Value {
  public:
-  explicit InvalidValue(const Type* type) : Value(type) {}
+  InvalidValue() = default;
 
-  int DisplaySize(int remaining_size) const override {
+  int DisplaySize(const Type* for_type, int remaining_size) const override {
     constexpr int kInvalidSize = 7;
     return kInvalidSize;  // length of "invalid"
   }
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override {
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override {
     os << colors.red << "invalid" << colors.reset;
   }
 
-  void Visit(Visitor* visitor) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 };
 
 // A null value.
 class NullValue : public Value {
  public:
-  explicit NullValue(const Type* type) : Value(type) {}
+  NullValue() = default;
 
   bool IsNull() const override { return true; }
 
-  int DisplaySize(int remaining_size) const override {
+  int DisplaySize(const Type* for_type, int remaining_size) const override {
     constexpr int kNullSize = 4;
     return kNullSize;  // length of "null"
   }
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override {
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override {
     os << colors.red << "null" << colors.reset;
   }
 
-  void Visit(Visitor* visitor) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 };
 
 // A value with no known representation (we only print the raw data).
 class RawValue : public Value {
  public:
-  RawValue(const Type* type, const uint8_t* data, size_t size)
-      : Value(type), data_(data, data + size) {}
+  RawValue(const uint8_t* data, size_t size) : data_(data, data + size) {}
 
   const std::vector<uint8_t>& data() const { return data_; }
 
-  int DisplaySize(int remaining_size) const override;
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override;
-
-  void Visit(Visitor* visitor) const override;
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
   const std::vector<uint8_t> data_;
@@ -120,14 +113,17 @@ class RawValue : public Value {
 template <typename T>
 class NumericValue : public Value {
  public:
-  explicit NumericValue(const Type* type, std::optional<T> value = std::nullopt)
-      : Value(type), value_(std::move(value)) {}
-  explicit NumericValue(const Type* type, const T* value)
-      : NumericValue(type, value ? std::optional(*value) : std::nullopt) {}
+  explicit NumericValue(std::optional<T> value = std::nullopt) : value_(std::move(value)) {}
+  explicit NumericValue(const T* value)
+      : NumericValue(value ? std::optional(*value) : std::nullopt) {}
 
   std::optional<T> value() const { return value_; }
 
-  int DisplaySize(int remaining_size) const override {
+  uint8_t GetUint8Value() const override {
+    return (sizeof(T) == 1 && value_) ? static_cast<uint8_t>(*value_) : 0;
+  }
+
+  int DisplaySize(const Type* for_type, int remaining_size) const override {
     if (value_) {
       return std::to_string(*value_).size();
     } else {
@@ -135,13 +131,9 @@ class NumericValue : public Value {
     }
   }
 
-  uint8_t GetUint8Value() const override {
-    return (sizeof(T) == 1 && value_) ? static_cast<uint8_t>(*value_) : 0;
-  }
-
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override {
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override {
     if (value_) {
       os << colors.blue << std::to_string(*value_) << colors.reset;
     } else {
@@ -149,7 +141,7 @@ class NumericValue : public Value {
     }
   }
 
-  void Visit(Visitor* visitor) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
   std::optional<T> value_;
@@ -158,17 +150,17 @@ class NumericValue : public Value {
 // A string value.
 class StringValue : public Value {
  public:
-  StringValue(const Type* type, std::string_view string) : Value(type), string_(string) {}
+  explicit StringValue(std::string_view string) : string_(string) {}
 
   const std::string& string() const { return string_; }
 
-  int DisplaySize(int remaining_size) const override;
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
-  void Visit(Visitor* visitor) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
   const std::string string_;
@@ -177,17 +169,17 @@ class StringValue : public Value {
 // A Boolean value.
 class BoolValue : public Value {
  public:
-  BoolValue(const Type* type, uint8_t value) : Value(type), value_(value) {}
+  explicit BoolValue(uint8_t value) : value_(value) {}
 
   uint8_t value() const { return value_; }
 
-  int DisplaySize(int remaining_size) const override;
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
-  void Visit(Visitor* visitor) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
   const uint8_t value_;
@@ -196,8 +188,7 @@ class BoolValue : public Value {
 // An instance of a Struct. This includes requests and responses which are also structs.
 class StructValue : public Value {
  public:
-  StructValue(const Type* type, const Struct& struct_definition)
-      : Value(type), struct_definition_(struct_definition) {}
+  explicit StructValue(const Struct& struct_definition) : struct_definition_(struct_definition) {}
 
   const Struct& struct_definition() const { return struct_definition_; }
   const std::map<const StructMember*, std::unique_ptr<Value>>& fields() const { return fields_; }
@@ -206,13 +197,13 @@ class StructValue : public Value {
     fields_.emplace(std::make_pair(member, std::move(value)));
   }
 
-  int DisplaySize(int remaining_size) const override;
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
-  void Visit(Visitor* visitor) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 
   // Extract the JSON for this object.
   void ExtractJson(rapidjson::Document::AllocatorType& allocator, rapidjson::Value& result) const;
@@ -225,8 +216,7 @@ class StructValue : public Value {
 // A table.
 class TableValue : public Value {
  public:
-  TableValue(const Type* type, const Table& table_definition)
-      : Value(type), table_definition_(table_definition) {}
+  explicit TableValue(const Table& table_definition) : table_definition_(table_definition) {}
 
   const Table& table_definition() const { return table_definition_; }
   const std::map<const TableMember*, std::unique_ptr<Value>>& members() const { return members_; }
@@ -241,13 +231,13 @@ class TableValue : public Value {
 
   bool AddMember(std::string_view name, std::unique_ptr<Value> value);
 
-  int DisplaySize(int remaining_size) const override;
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
-  void Visit(Visitor* visitor) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
   const Table& table_definition_;
@@ -258,19 +248,19 @@ class TableValue : public Value {
 // An union.
 class UnionValue : public Value {
  public:
-  UnionValue(const Type* type, const UnionMember& member, std::unique_ptr<Value> value)
-      : Value(type), member_(member), value_(std::move(value)) {}
+  UnionValue(const UnionMember& member, std::unique_ptr<Value> value)
+      : member_(member), value_(std::move(value)) {}
 
   const UnionMember& member() const { return member_; }
   const std::unique_ptr<Value>& value() const { return value_; }
 
-  int DisplaySize(int remaining_size) const override;
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
-  void Visit(Visitor* visitor) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
   const UnionMember& member_;
@@ -280,7 +270,7 @@ class UnionValue : public Value {
 // A vector.
 class VectorValue : public Value {
  public:
-  explicit VectorValue(const Type* type) : Value(type) {}
+  VectorValue() = default;
 
   const std::vector<std::unique_ptr<Value>>& values() const { return values_; }
 
@@ -300,13 +290,13 @@ class VectorValue : public Value {
     values_.push_back(std::move(value));
   }
 
-  int DisplaySize(int remaining_size) const override;
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
-  void Visit(Visitor* visitor) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
   std::vector<std::unique_ptr<Value>> values_;
@@ -317,20 +307,20 @@ class VectorValue : public Value {
 // An enum.
 class EnumValue : public Value {
  public:
-  EnumValue(const Type* type, std::optional<std::vector<uint8_t>> data, const Enum& enum_definition)
-      : Value(type), enum_definition_(enum_definition), data_(std::move(data)) {}
+  EnumValue(std::optional<std::vector<uint8_t>> data, const Enum& enum_definition)
+      : enum_definition_(enum_definition), data_(std::move(data)) {}
 
   const std::optional<std::vector<uint8_t>>& data() const { return data_; }
 
   const Enum& enum_definition() const { return enum_definition_; };
 
-  int DisplaySize(int remaining_size) const override;
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
-  void Visit(Visitor* visitor) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
   const Enum& enum_definition_;
@@ -340,20 +330,20 @@ class EnumValue : public Value {
 // Bits.
 class BitsValue : public Value {
  public:
-  BitsValue(const Type* type, std::optional<std::vector<uint8_t>> data, const Bits& bits_definition)
-      : Value(type), bits_definition_(bits_definition), data_(std::move(data)) {}
+  BitsValue(std::optional<std::vector<uint8_t>> data, const Bits& bits_definition)
+      : bits_definition_(bits_definition), data_(std::move(data)) {}
 
   const std::optional<std::vector<uint8_t>>& data() const { return data_; }
 
   const Bits& bits_definition() const { return bits_definition_; };
 
-  int DisplaySize(int remaining_size) const override;
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
-  void Visit(Visitor* visitor) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
   const Bits& bits_definition_;
@@ -363,17 +353,17 @@ class BitsValue : public Value {
 // A handle.
 class HandleValue : public Value {
  public:
-  HandleValue(const Type* type, const zx_handle_info_t& handle) : Value(type), handle_(handle) {}
+  explicit HandleValue(const zx_handle_info_t& handle) : handle_(handle) {}
 
   const zx_handle_info_t& handle() const { return handle_; }
 
-  int DisplaySize(int remaining_size) const override;
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
-  void Visit(Visitor* visitor) const override;
+  void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
   const zx_handle_info_t handle_;

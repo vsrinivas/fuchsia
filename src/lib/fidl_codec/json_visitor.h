@@ -7,32 +7,33 @@
 
 #include "src/lib/fidl_codec/visitor.h"
 #include "src/lib/fidl_codec/wire_object.h"
+#include "src/lib/fidl_codec/wire_types.h"
 
 namespace fidl_codec {
 
 class JsonVisitor : public Visitor {
  public:
-  explicit JsonVisitor(rapidjson::Value* result, rapidjson::Document::AllocatorType* allocator)
+  JsonVisitor(rapidjson::Value* result, rapidjson::Document::AllocatorType* allocator)
       : result_(result), allocator_(allocator) {}
 
  private:
-  void VisitValue(const Value* node) override {
+  void VisitValue(const Value* node, const Type* for_type) override {
     std::stringstream ss;
-    node->PrettyPrint(ss, WithoutColors, nullptr, "", 0, 0, 0);
+    node->PrettyPrint(for_type, ss, WithoutColors, nullptr, "", 0, 0, 0);
     result_->SetString(ss.str(), *allocator_);
   }
 
-  void VisitInvalidValue(const InvalidValue* node) override {
+  void VisitInvalidValue(const InvalidValue* node, const Type* for_type) override {
     result_->SetString("(invalid)", *allocator_);
   }
 
-  void VisitNullValue(const NullValue* node) override { result_->SetNull(); }
+  void VisitNullValue(const NullValue* node, const Type* for_type) override { result_->SetNull(); }
 
-  void VisitStringValue(const StringValue* node) override {
+  void VisitStringValue(const StringValue* node, const Type* for_type) override {
     result_->SetString(node->string().data(), node->string().size(), *allocator_);
   }
 
-  void VisitStructValue(const StructValue* node) override {
+  void VisitStructValue(const StructValue* node, const Type* for_type) override {
     result_->SetObject();
     for (const auto& member : node->struct_definition().members()) {
       auto it = node->fields().find(member.get());
@@ -42,11 +43,11 @@ class JsonVisitor : public Visitor {
       key.SetString(member->name().c_str(), *allocator_);
       result_->AddMember(key, rapidjson::Value(), *allocator_);
       JsonVisitor visitor(&(*result_)[member->name().c_str()], allocator_);
-      it->second->Visit(&visitor);
+      it->second->Visit(&visitor, member->type());
     }
   }
 
-  void VisitTableValue(const TableValue* node) override {
+  void VisitTableValue(const TableValue* node, const Type* for_type) override {
     result_->SetObject();
     for (const auto& member : node->table_definition().members()) {
       if ((member != nullptr) && !member->reserved()) {
@@ -57,31 +58,34 @@ class JsonVisitor : public Visitor {
         key.SetString(member->name().c_str(), *allocator_);
         result_->AddMember(key, rapidjson::Value(), *allocator_);
         JsonVisitor visitor(&(*result_)[member->name().c_str()], allocator_);
-        it->second->Visit(&visitor);
+        it->second->Visit(&visitor, member->type());
       }
     }
   }
 
-  void VisitUnionValue(const UnionValue* node) override {
+  void VisitUnionValue(const UnionValue* node, const Type* for_type) override {
     result_->SetObject();
     rapidjson::Value key;
     key.SetString(node->member().name().c_str(), *allocator_);
     result_->AddMember(key, rapidjson::Value(), *allocator_);
     JsonVisitor visitor(&(*result_)[node->member().name().c_str()], allocator_);
-    node->value()->Visit(&visitor);
+    node->value()->Visit(&visitor, node->member().type());
   }
 
-  void VisitVectorValue(const VectorValue* node) override {
+  void VisitVectorValue(const VectorValue* node, const Type* for_type) override {
+    FXL_DCHECK(for_type != nullptr);
+    const Type* component_type = for_type->GetComponentType();
+    FXL_DCHECK(component_type != nullptr);
     result_->SetArray();
     for (const auto& value : node->values()) {
       rapidjson::Value element;
       JsonVisitor visitor(&element, allocator_);
-      value->Visit(&visitor);
+      value->Visit(&visitor, component_type);
       result_->PushBack(element, *allocator_);
     }
   }
 
-  void VisitEnumValue(const EnumValue* node) override {
+  void VisitEnumValue(const EnumValue* node, const Type* for_type) override {
     if (auto data = node->data()) {
       std::string name = node->enum_definition().GetNameFromBytes(data->data());
       result_->SetString(name.c_str(), *allocator_);
@@ -90,7 +94,7 @@ class JsonVisitor : public Visitor {
     }
   }
 
-  void VisitBitsValue(const BitsValue* node) override {
+  void VisitBitsValue(const BitsValue* node, const Type* for_type) override {
     if (auto data = node->data()) {
       std::string name = node->bits_definition().GetNameFromBytes(data->data());
       result_->SetString(name.c_str(), *allocator_);

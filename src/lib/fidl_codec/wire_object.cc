@@ -27,17 +27,19 @@ const Colors WithColors(/*new_reset=*/"\u001b[0m", /*new_red=*/"\u001b[31m",
                         /*new_white_on_magenta=*/"\u001b[45m\u001b[37m",
                         /*new_yellow_background=*/"\u001b[103m");
 
-void Value::Visit(Visitor* visitor) const { visitor->VisitValue(this); }
+void InvalidValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitInvalidValue(this, for_type);
+}
 
-void InvalidValue::Visit(Visitor* visitor) const { visitor->VisitInvalidValue(this); }
+void NullValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitNullValue(this, for_type);
+}
 
-void NullValue::Visit(Visitor* visitor) const { visitor->VisitNullValue(this); }
-
-int RawValue::DisplaySize(int /*remaining_size*/) const {
+int RawValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
   return (data_.size() == 0) ? 0 : static_cast<int>(data_.size()) * 3 - 1;
 }
 
-void RawValue::PrettyPrint(std::ostream& os, const Colors& /*colors*/,
+void RawValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& /*colors*/,
                            const fidl_message_header_t* /*header*/,
                            std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                            int /*max_line_size*/) const {
@@ -55,78 +57,84 @@ void RawValue::PrettyPrint(std::ostream& os, const Colors& /*colors*/,
   os << buffer.data();
 }
 
-void RawValue::Visit(Visitor* visitor) const { visitor->VisitRawValue(this); }
-
-template <>
-void NumericValue<uint8_t>::Visit(Visitor* visitor) const {
-  visitor->VisitU8Value(this);
-}
-template <>
-void NumericValue<uint16_t>::Visit(Visitor* visitor) const {
-  visitor->VisitU16Value(this);
-}
-template <>
-void NumericValue<uint32_t>::Visit(Visitor* visitor) const {
-  visitor->VisitU32Value(this);
-}
-template <>
-void NumericValue<uint64_t>::Visit(Visitor* visitor) const {
-  visitor->VisitU64Value(this);
-}
-template <>
-void NumericValue<int8_t>::Visit(Visitor* visitor) const {
-  visitor->VisitI8Value(this);
-}
-template <>
-void NumericValue<int16_t>::Visit(Visitor* visitor) const {
-  visitor->VisitI16Value(this);
-}
-template <>
-void NumericValue<int32_t>::Visit(Visitor* visitor) const {
-  visitor->VisitI32Value(this);
-}
-template <>
-void NumericValue<int64_t>::Visit(Visitor* visitor) const {
-  visitor->VisitI64Value(this);
-}
-template <>
-void NumericValue<float>::Visit(Visitor* visitor) const {
-  visitor->VisitF32Value(this);
-}
-template <>
-void NumericValue<double>::Visit(Visitor* visitor) const {
-  visitor->VisitF64Value(this);
+void RawValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitRawValue(this, for_type);
 }
 
-int StringValue::DisplaySize(int /*remaining_size*/) const {
+template <>
+void NumericValue<uint8_t>::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitU8Value(this, for_type);
+}
+template <>
+void NumericValue<uint16_t>::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitU16Value(this, for_type);
+}
+template <>
+void NumericValue<uint32_t>::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitU32Value(this, for_type);
+}
+template <>
+void NumericValue<uint64_t>::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitU64Value(this, for_type);
+}
+template <>
+void NumericValue<int8_t>::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitI8Value(this, for_type);
+}
+template <>
+void NumericValue<int16_t>::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitI16Value(this, for_type);
+}
+template <>
+void NumericValue<int32_t>::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitI32Value(this, for_type);
+}
+template <>
+void NumericValue<int64_t>::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitI64Value(this, for_type);
+}
+template <>
+void NumericValue<float>::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitF32Value(this, for_type);
+}
+template <>
+void NumericValue<double>::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitF64Value(this, for_type);
+}
+
+int StringValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
   return static_cast<int>(string_.size()) + 2;  // The two quotes.
 }
 
-void StringValue::PrettyPrint(std::ostream& os, const Colors& colors,
+void StringValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
                               const fidl_message_header_t* /*header*/,
                               std::string_view /*line_header*/, int /*tabs*/,
                               int /*remaining_size*/, int /*max_line_size*/) const {
   os << colors.red << '"' << string_ << '"' << colors.reset;
 }
 
-void StringValue::Visit(Visitor* visitor) const { visitor->VisitStringValue(this); }
+void StringValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitStringValue(this, for_type);
+}
 
-int BoolValue::DisplaySize(int /*remaining_size*/) const {
+int BoolValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
   constexpr int kTrueSize = 4;
   constexpr int kFalseSize = 5;
   return value_ ? kTrueSize : kFalseSize;
 }
 
-void BoolValue::PrettyPrint(std::ostream& os, const Colors& colors,
+void BoolValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
                             const fidl_message_header_t* /*header*/,
                             std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                             int /*max_line_size*/) const {
   os << colors.blue << (value_ ? "true" : "false") << colors.reset;
 }
 
-void BoolValue::Visit(Visitor* visitor) const { visitor->VisitBoolValue(this); }
+void BoolValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitBoolValue(this, for_type);
+}
 
-int StructValue::DisplaySize(int remaining_size) const {
+int StructValue::DisplaySize(const Type* for_type, int remaining_size) const {
   int size = 0;
   for (const auto& member : struct_definition_.members()) {
     auto it = fields_.find(member.get());
@@ -138,7 +146,7 @@ int StructValue::DisplaySize(int remaining_size) const {
     size += static_cast<int>(member->name().size()) + kExtraSize;
     // Two characters for ": ".
     size += static_cast<int>(member->type()->Name().size()) + 2;
-    size += it->second->DisplaySize(remaining_size - size);
+    size += it->second->DisplaySize(member->type(), remaining_size - size);
     if (size > remaining_size) {
       return size;
     }
@@ -148,12 +156,13 @@ int StructValue::DisplaySize(int remaining_size) const {
   return size;
 }
 
-void StructValue::PrettyPrint(std::ostream& os, const Colors& colors,
+void StructValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
                               const fidl_message_header_t* header, std::string_view line_header,
                               int tabs, int remaining_size, int max_line_size) const {
   if (fields_.empty()) {
     os << "{}";
-  } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
+  } else if (DisplaySize(for_type, remaining_size) + static_cast<int>(line_header.size()) <=
+             remaining_size) {
     const char* separator = "{ ";
     for (const auto& member : struct_definition_.members()) {
       auto it = fields_.find(member.get());
@@ -161,8 +170,8 @@ void StructValue::PrettyPrint(std::ostream& os, const Colors& colors,
         continue;
       os << separator << member->name() << ": " << colors.green << member->type()->Name()
          << colors.reset << " = ";
-      it->second->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size,
-                              max_line_size);
+      it->second->PrettyPrint(member->type(), os, colors, header, line_header, tabs + 1,
+                              max_line_size, max_line_size);
       separator = ", ";
     }
     os << " }";
@@ -178,21 +187,23 @@ void StructValue::PrettyPrint(std::ostream& os, const Colors& colors,
       // Two characters for ": ", three characters for " = ".
       os << ": " << colors.green << type_name << colors.reset << " = ";
       size += static_cast<int>(type_name.size()) + 2 + 3;
-      it->second->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
-                              max_line_size);
+      it->second->PrettyPrint(member->type(), os, colors, header, line_header, tabs + 1,
+                              max_line_size - size, max_line_size);
       os << "\n";
     }
     os << line_header << std::string(tabs * kTabSize, ' ') << '}';
   }
 }
 
-void StructValue::Visit(Visitor* visitor) const { visitor->VisitStructValue(this); }
+void StructValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitStructValue(this, for_type);
+}
 
 void StructValue::ExtractJson(rapidjson::Document::AllocatorType& allocator,
                               rapidjson::Value& result) const {
   JsonVisitor visitor(&result, &allocator);
 
-  Visit(&visitor);
+  Visit(&visitor, nullptr);
 }
 
 bool TableValue::AddMember(std::string_view name, std::unique_ptr<Value> value) {
@@ -204,7 +215,7 @@ bool TableValue::AddMember(std::string_view name, std::unique_ptr<Value> value) 
   return true;
 }
 
-int TableValue::DisplaySize(int remaining_size) const {
+int TableValue::DisplaySize(const Type* for_type, int remaining_size) const {
   int size = 0;
   for (const auto& member : table_definition_.members()) {
     if ((member != nullptr) && !member->reserved()) {
@@ -215,7 +226,7 @@ int TableValue::DisplaySize(int remaining_size) const {
       size += static_cast<int>(member->name().size()) + 2 + 3;
       // Two characters for ": ".
       size += static_cast<int>(member->type()->Name().size()) + 2;
-      size += it->second->DisplaySize(remaining_size - size);
+      size += it->second->DisplaySize(member->type(), remaining_size - size);
       if (size > remaining_size) {
         return size;
       }
@@ -226,10 +237,10 @@ int TableValue::DisplaySize(int remaining_size) const {
   return size;
 }
 
-void TableValue::PrettyPrint(std::ostream& os, const Colors& colors,
+void TableValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
                              const fidl_message_header_t* header, std::string_view line_header,
                              int tabs, int remaining_size, int max_line_size) const {
-  int display_size = DisplaySize(remaining_size);
+  int display_size = DisplaySize(for_type, remaining_size);
   if (display_size == 2) {
     os << "{}";
   } else if (display_size + static_cast<int>(line_header.size()) <= remaining_size) {
@@ -242,8 +253,8 @@ void TableValue::PrettyPrint(std::ostream& os, const Colors& colors,
         os << separator << member->name() << ": " << colors.green << member->type()->Name()
            << colors.reset << " = ";
         separator = ", ";
-        it->second->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size,
-                                max_line_size);
+        it->second->PrettyPrint(member->type(), os, colors, header, line_header, tabs + 1,
+                                max_line_size, max_line_size);
       }
     }
     os << " }";
@@ -260,8 +271,8 @@ void TableValue::PrettyPrint(std::ostream& os, const Colors& colors,
         // Two characters for ": ", three characters for " = ".
         size += static_cast<int>(type_name.size()) + 2 + 3;
         os << ": " << colors.green << type_name << colors.reset << " = ";
-        it->second->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
-                                max_line_size);
+        it->second->PrettyPrint(member->type(), os, colors, header, line_header, tabs + 1,
+                                max_line_size - size, max_line_size);
         os << "\n";
       }
     }
@@ -269,26 +280,29 @@ void TableValue::PrettyPrint(std::ostream& os, const Colors& colors,
   }
 }
 
-void TableValue::Visit(Visitor* visitor) const { visitor->VisitTableValue(this); }
+void TableValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitTableValue(this, for_type);
+}
 
-int UnionValue::DisplaySize(int remaining_size) const {
+int UnionValue::DisplaySize(const Type* for_type, int remaining_size) const {
   // Two characters for the opening brace ("{ ") + three characters for equal
   // (" = ") and two characters for the closing brace (" }").
   constexpr int kExtraSize = 7;
   int size = static_cast<int>(member_.name().size()) + kExtraSize;
   // Two characters for ": ".
   size += static_cast<int>(member_.type()->Name().size()) + 2;
-  size += value_->DisplaySize(remaining_size - size);
+  size += value_->DisplaySize(member_.type(), remaining_size - size);
   return size;
 }
 
-void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors,
+void UnionValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
                              const fidl_message_header_t* header, std::string_view line_header,
                              int tabs, int remaining_size, int max_line_size) const {
   if (header != nullptr) {
     os << (fidl_should_decode_union_from_xunion(header) ? "v1!" : "v0!");
   }
-  if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
+  if (DisplaySize(for_type, remaining_size) + static_cast<int>(line_header.size()) <=
+      remaining_size) {
     // Two characters for the opening brace ("{ ") + three characters for equal
     // (" = ") and two characters for the closing brace (" }").
     constexpr int kExtraSize = 7;
@@ -298,8 +312,8 @@ void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors,
     // Two characters for ": ".
     size += static_cast<int>(type_name.size()) + 2;
     os << ": " << colors.green << type_name << colors.reset << " = ";
-    value_->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
-                        max_line_size);
+    value_->PrettyPrint(member_.type(), os, colors, header, line_header, tabs + 1,
+                        max_line_size - size, max_line_size);
     os << " }";
   } else {
     os << "{\n";
@@ -310,26 +324,31 @@ void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors,
     // Two characters for ": ".
     size += static_cast<int>(type_name.size()) + 2;
     os << ": " << colors.green << type_name << colors.reset << " = ";
-    value_->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
-                        max_line_size);
+    value_->PrettyPrint(member_.type(), os, colors, header, line_header, tabs + 1,
+                        max_line_size - size, max_line_size);
     os << '\n';
     os << line_header << std::string(tabs * kTabSize, ' ') << "}";
   }
 }
 
-void UnionValue::Visit(Visitor* visitor) const { visitor->VisitUnionValue(this); }
+void UnionValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitUnionValue(this, for_type);
+}
 
-int VectorValue::DisplaySize(int remaining_size) const {
+int VectorValue::DisplaySize(const Type* for_type, int remaining_size) const {
+  FXL_DCHECK(for_type != nullptr);
   if (values_.empty()) {
     return 2;  // The two brackets.
   }
   if (is_string_) {
     return static_cast<int>(values_.size() + 2);  // The string and the two quotes.
   }
+  const Type* component_type = for_type->GetComponentType();
+  FXL_DCHECK(component_type != nullptr);
   int size = 0;
   for (const auto& value : values_) {
     // Two characters for the separator ("[ " or ", ").
-    size += value->DisplaySize(remaining_size - size) + 2;
+    size += value->DisplaySize(component_type, remaining_size - size) + 2;
     if (size > remaining_size) {
       return size;
     }
@@ -339,9 +358,10 @@ int VectorValue::DisplaySize(int remaining_size) const {
   return size;
 }
 
-void VectorValue::PrettyPrint(std::ostream& os, const Colors& colors,
+void VectorValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
                               const fidl_message_header_t* header, std::string_view line_header,
                               int tabs, int remaining_size, int max_line_size) const {
+  FXL_DCHECK(for_type != nullptr);
   if (values_.empty()) {
     os << "[]";
   } else if (is_string_) {
@@ -370,19 +390,25 @@ void VectorValue::PrettyPrint(std::ostream& os, const Colors& colors,
       }
       os << '"';
     }
-  } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
+  } else if (DisplaySize(for_type, remaining_size) + static_cast<int>(line_header.size()) <=
+             remaining_size) {
+    const Type* component_type = for_type->GetComponentType();
+    FXL_DCHECK(component_type != nullptr);
     const char* separator = "[ ";
     for (const auto& value : values_) {
       os << separator;
       separator = ", ";
-      value->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size, max_line_size);
+      value->PrettyPrint(component_type, os, colors, header, line_header, tabs + 1, max_line_size,
+                         max_line_size);
     }
     os << " ]";
   } else {
+    const Type* component_type = for_type->GetComponentType();
+    FXL_DCHECK(component_type != nullptr);
     os << "[\n";
     int size = 0;
     for (const auto& value : values_) {
-      int value_size = value->DisplaySize(max_line_size - size);
+      int value_size = value->DisplaySize(component_type, max_line_size - size);
       if (size == 0) {
         os << line_header << std::string((tabs + 1) * kTabSize, ' ');
         size = (tabs + 1) * kTabSize;
@@ -394,8 +420,8 @@ void VectorValue::PrettyPrint(std::ostream& os, const Colors& colors,
         os << ", ";
         size += 2;
       }
-      value->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
-                         max_line_size);
+      value->PrettyPrint(component_type, os, colors, header, line_header, tabs + 1,
+                         max_line_size - size, max_line_size);
       size += value_size;
     }
     os << '\n';
@@ -403,16 +429,18 @@ void VectorValue::PrettyPrint(std::ostream& os, const Colors& colors,
   }
 }
 
-void VectorValue::Visit(Visitor* visitor) const { visitor->VisitVectorValue(this); }
+void VectorValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitVectorValue(this, for_type);
+}
 
-int EnumValue::DisplaySize(int /*remaining_size*/) const {
+int EnumValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
   if (!data_) {
     return strlen(kInvalid);
   }
   return enum_definition_.GetNameFromBytes(data_->data()).size();
 }
 
-void EnumValue::PrettyPrint(std::ostream& os, const Colors& colors,
+void EnumValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
                             const fidl_message_header_t* /*header*/,
                             std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                             int /*max_line_size*/) const {
@@ -423,16 +451,18 @@ void EnumValue::PrettyPrint(std::ostream& os, const Colors& colors,
   }
 }
 
-void EnumValue::Visit(Visitor* visitor) const { visitor->VisitEnumValue(this); }
+void EnumValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitEnumValue(this, for_type);
+}
 
-int BitsValue::DisplaySize(int /*remaining_size*/) const {
+int BitsValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
   if (!data_) {
     return strlen(kInvalid);
   }
   return bits_definition_.GetNameFromBytes(data_->data()).size();
 }
 
-void BitsValue::PrettyPrint(std::ostream& os, const Colors& colors,
+void BitsValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
                             const fidl_message_header_t* /*header*/,
                             std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                             int /*max_line_size*/) const {
@@ -443,19 +473,23 @@ void BitsValue::PrettyPrint(std::ostream& os, const Colors& colors,
   }
 }
 
-void BitsValue::Visit(Visitor* visitor) const { visitor->VisitBitsValue(this); }
+void BitsValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitBitsValue(this, for_type);
+}
 
-int HandleValue::DisplaySize(int /*remaining_size*/) const {
+int HandleValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
   return std::to_string(handle_.handle).size();
 }
 
-void HandleValue::PrettyPrint(std::ostream& os, const Colors& colors,
+void HandleValue::PrettyPrint(const Type* /*for_type*/, std::ostream& os, const Colors& colors,
                               const fidl_message_header_t* /*header*/,
                               std::string_view /*line_header*/, int /*tabs*/,
                               int /*remaining_size*/, int /*max_line_size*/) const {
   DisplayHandle(colors, handle_, os);
 }
 
-void HandleValue::Visit(Visitor* visitor) const { visitor->VisitHandleValue(this); }
+void HandleValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitHandleValue(this, for_type);
+}
 
 }  // namespace fidl_codec

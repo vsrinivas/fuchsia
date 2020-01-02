@@ -117,8 +117,8 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
        << message_direction_ << "request" << colors.reset << ' ' << colors.green
        << method_->enclosing_interface().name() << '.' << method_->name() << colors.reset << " = ";
     if (pretty_print) {
-      decoded_request_->PrettyPrint(os, colors, header_, line_header, tabs, tabs * kTabSize,
-                                    columns);
+      decoded_request_->PrettyPrint(nullptr, os, colors, header_, line_header, tabs,
+                                    tabs * kTabSize, columns);
     } else {
       rapidjson::Document actual_request;
       if (decoded_request_ != nullptr) {
@@ -133,8 +133,8 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
        << message_direction_ << "response" << colors.reset << ' ' << colors.green
        << method_->enclosing_interface().name() << '.' << method_->name() << colors.reset << " = ";
     if (pretty_print) {
-      decoded_response_->PrettyPrint(os, colors, header_, line_header, tabs, tabs * kTabSize,
-                                     columns);
+      decoded_response_->PrettyPrint(nullptr, os, colors, header_, line_header, tabs,
+                                     tabs * kTabSize, columns);
     } else {
       rapidjson::Document actual_response;
       if (decoded_response_ != nullptr) {
@@ -157,8 +157,8 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
          << message_direction_ << "request" << colors.reset << ' ' << colors.green
          << method_->enclosing_interface().name() << '.' << method_->name() << colors.reset
          << " = ";
-      decoded_request_->PrettyPrint(os, colors, header_, line_header, tabs, tabs * kTabSize,
-                                    columns);
+      decoded_request_->PrettyPrint(nullptr, os, colors, header_, line_header, tabs,
+                                    tabs * kTabSize, columns);
       os << '\n';
     }
   }
@@ -172,8 +172,8 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
          << message_direction_ << "request" << colors.reset << ' ' << colors.green
          << method_->enclosing_interface().name() << '.' << method_->name() << colors.reset
          << " = ";
-      decoded_response_->PrettyPrint(os, colors, header_, line_header, tabs, tabs * kTabSize,
-                                     columns);
+      decoded_response_->PrettyPrint(nullptr, os, colors, header_, line_header, tabs,
+                                     tabs * kTabSize, columns);
       os << '\n';
     }
   }
@@ -260,7 +260,7 @@ std::unique_ptr<StructValue> MessageDecoder::DecodeMessage(const Struct& message
   // Set the offset for the next object (just after this one).
   SkipObject(message_format.Size(unions_are_xunions_));
   // Decode the message.
-  std::unique_ptr<StructValue> message = DecodeStruct(nullptr, message_format, 0);
+  std::unique_ptr<StructValue> message = DecodeStruct(message_format, 0);
   // It's an error if we didn't use all the bytes in the buffer.
   if (next_object_offset_ != num_bytes_) {
     AddError() << "Message not fully decoded (decoded=" << next_object_offset_
@@ -294,10 +294,9 @@ std::unique_ptr<Value> MessageDecoder::DecodeValue(const Type* type) {
   return result;
 }
 
-std::unique_ptr<StructValue> MessageDecoder::DecodeStruct(const Type* type,
-                                                          const Struct& struct_definition,
+std::unique_ptr<StructValue> MessageDecoder::DecodeStruct(const Struct& struct_definition,
                                                           uint64_t offset) {
-  std::unique_ptr<StructValue> result = std::make_unique<StructValue>(type, struct_definition);
+  std::unique_ptr<StructValue> result = std::make_unique<StructValue>(struct_definition);
   for (const auto& member : struct_definition.members()) {
     std::unique_ptr<Value> value = member->type()->Decode(this, offset + member->Offset(this));
     result->AddField(member.get(), std::move(value));
@@ -340,7 +339,7 @@ std::unique_ptr<Value> MessageDecoder::DecodeEnvelope(uint64_t offset, const Typ
   bool is_null;
   uint64_t nullable_offset;
   if (!DecodeNullableHeader(offset, envelope_bytes, &is_null, &nullable_offset)) {
-    return std::make_unique<InvalidValue>(type);
+    return std::make_unique<InvalidValue>();
   }
   if (is_null) {
     if (envelope_bytes != 0) {
@@ -351,17 +350,17 @@ std::unique_ptr<Value> MessageDecoder::DecodeEnvelope(uint64_t offset, const Typ
       AddError() << std::hex << (absolute_offset() + offset) << std::dec
                  << ": Null envelope shouldn't have handles\n";
     }
-    return std::make_unique<NullValue>(type);
+    return std::make_unique<NullValue>();
   }
   if (envelope_bytes > num_bytes() - nullable_offset) {
     AddError() << std::hex << (absolute_offset() + nullable_offset) << std::dec
                << ": Not enough data to decode an envelope\n";
-    return std::make_unique<InvalidValue>(type);
+    return std::make_unique<InvalidValue>();
   }
   if (envelope_handles > GetRemainingHandles()) {
     AddError() << std::hex << (absolute_offset() + nullable_offset) << std::dec
                << ": Not enough handles to decode an envelope\n";
-    return std::make_unique<InvalidValue>(type);
+    return std::make_unique<InvalidValue>();
   }
   MessageDecoder envelope_decoder(this, nullable_offset, envelope_bytes, envelope_handles);
   return envelope_decoder.DecodeValue(type);
