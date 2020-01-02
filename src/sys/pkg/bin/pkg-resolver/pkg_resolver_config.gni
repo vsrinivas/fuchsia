@@ -22,7 +22,7 @@ template("pkg_resolver_config") {
   write_file(config_path, cfg, "json")
 
   config_data(target_name) {
-    for_pkg = "pkg_resolver"
+    for_pkg = "pkg-resolver"
     outputs = [
       "config.json",
     ]
