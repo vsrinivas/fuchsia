@@ -3,16 +3,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Run, inspect and debug
 ### build and run tests on host
 
-##
 ## Usage: fx run-host-tests [-z] [host test names ...] [-- [test runner flags]]
 ## Builds and runs the given host tests.
 ## With "-z" passed, only Zircon tests will be run - and
 ## without it only tests from Garnet and above.
 ## Test runner flags can typically be --gtest_filter=TestSuiteName.TestName
 ## to restrict to a particular test or set of tests.
-##
 
 set -o errexit
 set -o pipefail

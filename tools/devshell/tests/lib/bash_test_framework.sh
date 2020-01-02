@@ -1041,7 +1041,7 @@ btf::is_bt_temp_dir() {
 #######################################
 btf::_make_temp_dir() {
   local temp_dir
-  temp_dir="$(mktemp -d)" || btf::abort $? "Unable to create temporary test directory."
+  temp_dir="$(mktemp -d -t "tmp.fx-self-test.XXXXXX")" || btf::abort $? "Unable to create temporary test directory."
 
   touch "${temp_dir}/${_BTF_TEMP_DIR_MARKER}"
 
@@ -1469,6 +1469,8 @@ btf::_run_tests_in_isolation() {
     # Keep temporary directory for debugging.
     if [[ ${test_error_count} == 0 ]]; then
       btf::_clean_up_temp_dir || return $?
+    else
+      echo "Preserving the temp directory: ${BT_TEMP_DIR}"
     fi
 
     if (( ${test_error_count} > 0 )); then

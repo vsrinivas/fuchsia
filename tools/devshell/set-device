@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Device discovery
 ### set the default device to interact with
 
 ## usage: fx set-device [<device-name>]

@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Software delivery
 ### make a zedboot USB key
 
 ## usage: fx mkzedboot [options] <usb device>

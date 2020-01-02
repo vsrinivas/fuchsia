@@ -6,6 +6,8 @@
 ### Test the common fx execution flows, namely fx help and fx <subcommand>
 BT_FILE_DEPS=(
   "scripts/fx"
+  "scripts/fx-help.awk"
+  "tools/devshell/vendor"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/prebuilt.sh"
 )
@@ -27,14 +29,18 @@ EOF
 BT_SET_UP() {
   base_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/../../../.."
   fx="${base_dir}/scripts/fx"
+  BT_ASSERT_FILE_EXISTS "${fx}"
+}
 
-  subcommand="mysubcommand"
-  subcommand_file="${base_dir}/tools/devshell/${subcommand}"
-  category="Testing"
-  summary="Simple mock script used to test help extraction"
-  long_description_1="usage:"
-  long_description_2="  fx mysubcommand bla bla"
-  subcommand_output="howdy!"
+_create_subcommand() {
+  local subcommand="$1"
+  local subcommand_file="${base_dir}/$2/${subcommand}"
+  local subcommand_output="$3"
+  local summary="$4"
+  local category="Testing"
+  local long_description_1="$5"
+  local long_description_2="$6"
+  mkdir -p "$(dirname "${subcommand_file}")"
   cat >"${subcommand_file}" <<EOF
 #!/bin/bash
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -50,7 +56,6 @@ BT_SET_UP() {
 echo "${subcommand_output}"
 EOF
   chmod u+x "${subcommand_file}"
-  BT_ASSERT_FILE_EXISTS "${fx}"
   BT_ASSERT_FILE_EXISTS "${subcommand_file}"
   [[ -x "${subcommand_file}" ]]
   BT_ASSERT_GOOD_STATUS $? "File ${subcommand_file} must be executable"
@@ -58,25 +63,70 @@ EOF
 
 # test for `fx help`
 TEST_fx-help() {
-  # check the summary
+  local subcommand="mycommand1"
+  local summary="Simple mock script used to test help extraction"
+  _create_subcommand "${subcommand}" "tools/devshell" "howdy!" "${summary}" "line1" "line2"
+  # check the command name and summary
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "${subcommand}")" "${subcommand}"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "${subcommand}")" "${summary}"
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "${subcommand}")" "${subcommand}"
-
-  # check the description
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "${subcommand}")" "${subcommand}"
 }
 
 # test for `fx help <subcommand>`
 TEST_fx-help-subcommand() {
+  local subcommand="mycommand1"
+  local line1="Usage:"
+  local line2="  fx mysubcommand bla bla"
+  _create_subcommand "${subcommand}" "tools/devshell" "howdy!" "summary" "${line1}" "${line2}"
   # check the long description
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help "${subcommand}")" "${long_description_1}"
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help "${subcommand}")" "${long_description_2}"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help "${subcommand}")" "${line1}"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help "${subcommand}")" "${line2}"
 }
 
 # executes a simple subcommand and checks its output
 TEST_fx-subcommand-run() {
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} "${subcommand}")" "${subcommand_output}"
+  local subcommand="mycommand1"
+  local output="Howdy!"
+  _create_subcommand "${subcommand}" "tools/devshell" "${output}" "summary" "line1" "line2"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} "${subcommand}")" "${output}"
 }
 
+# executes a simple subcommand in contrib and checks its output
+TEST_fx-contrib-subcommand-run() {
+  local subcommand="mycommand-contrib"
+  local output="Hello contrib!"
+  _create_subcommand "${subcommand}" "tools/devshell/contrib" "${output}" "summary" "line1" "line2"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} "${subcommand}")" "${output}"
+}
+
+# executes a simple subcommand in vendor/mycompany and checks its output
+TEST_fx-vendor-subcommand-run() {
+  local subcommand="mycommand-vendor"
+  local output="Hello vendor!"
+  local vendor="mycompany"
+  _create_subcommand "${subcommand}" "vendor/${vendor}/scripts/devshell" "${output}" "summary" "line1" "line2"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} vendor "${vendor}" "${subcommand}")" "${output}"
+}
+
+# executes a host tool subcommand
+# if this test fails, check if the directory that host tools are installed has
+# changed. There are at least two places that use this path hard coded:
+#  //build/host.gni  (template install_host_tools)
+#  //scripts/fx      (method get_host_tools_dir)
+# This test will fail if fx is changed to look for host tools in a different
+# directory. It will NOT fail if the install_host_tools template changes.
+TEST_fx-hosttools-subcommand-run() {
+  # create build directory in a subshell to not pollute the test
+  build_dir="out/default"
+  (
+      source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../../lib/vars.sh || exit $?
+      mkdir -p "${BT_TEMP_DIR}/${build_dir}"
+      fx-build-dir-write "${build_dir}"
+  )
+  local host_tools_dir="${build_dir}/host-tools"
+  local subcommand="myhosttool"
+  local output="Hello host tool!"
+  _create_subcommand "${subcommand}" "${host_tools_dir}" "${output}" "summary" "line1" "line2"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} "${subcommand}")" "${output}"
+}
 
 BT_RUN_TESTS "$@"

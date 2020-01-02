@@ -3,7 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### listen for logs
+#### CATEGORY=Run, inspect and debug
+### listen for logs.
 
 ## usage: fx syslog [--raw] [flags]
 ##

@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Run, inspect and debug
 ### generate a report of error conditions
 
 ## usage: fx triage [--config <config-file>]

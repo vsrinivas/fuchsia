@@ -1,8 +1,24 @@
 #!/usr/bin/env python3
-
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
+#### CATEGORY=Run, inspect and debug
+### packet capture and display tool
+##
+## usage:
+##   $ fx sniff wlan                    capture packets over WLAN interface,
+##                                      and show their summaries
+##   $ fx sniff --view hex eth          capture packets over Ethernet interface,
+##                                      and show their hexadecimal dump
+##   $ fx sniff --view wireshark wlan   capture packets over WLAN interface,
+##                                      and start wireshark GUI for display
+##   $ fx sniff --file myfile eth       capture packets and store
+##                                      at //out/myfile.pcapng
+##   $ fx sniff -t 10 wlan              capture for 10 sec
+##   $ fx sniff --help                  show all command line options
+
+
 """Fuchsia packet capture and display tool.
 
 fx sniff captures the packets flowing in-and-out the Fuchsia target device

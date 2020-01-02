@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Run, inspect and debug
 ### Obtain and parse a bugreport from a connected target.
 
 ## Connects to a running target and obtains a bugreport that contains useful

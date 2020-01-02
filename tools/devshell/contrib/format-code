@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Source tree
 ### runs source formatters on modified files
 
 ## Usage: fx format-code

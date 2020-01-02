@@ -251,11 +251,11 @@ function fx-command-exec {
 }
 
 function fx-print-command-help {
-  local -r command_path="$1"
+  local command_path="$1"
   if grep '^## ' "$command_path" > /dev/null; then
     sed -n -e 's/^## //p' -e 's/^##$//p' < "$command_path"
   else
-    local -r command_name=$(basename "$command_path")
+    local -r command_name=$(basename "$command_path" ".fx")
     echo "No help found. Try \`fx $command_name -h\`"
   fi
 }

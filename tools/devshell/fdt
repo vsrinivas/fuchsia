@@ -1,7 +1,16 @@
 #!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
-# In the common case (with no command line arguments) fdt will be run from the
-# Fuchsia prebuilts downloaded by JIRI.
+#### CATEGORY=Run, inspect and debug
+### run fuchsia devtools
+
+## usage: fx fdt [VERSION]
+##   VERSION   Download (if necessary) and run a specific version of
+##             Fuchsia devtools. If not specified, the current version
+##             in //prebuilt will be used.
+##             VERSION is either a CIPD hash or "latest".
 
 if [[ $# == 0 ]]; then
   # Use prebuilt version.

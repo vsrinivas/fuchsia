@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Software delivery
 ### start the update server and attach to a running fuchsia device
 ## usage: fx serve-updates [-v] [-l host[:port]]
 ##   -l host:port for "pm serve" to listen on

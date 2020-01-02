@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Run, inspect and debug
 ### start component graph server to map component topology
 
 PYTHONPATH="$FUCHSIA_DIR/scripts/component_graph/" python3 -m server "$@"

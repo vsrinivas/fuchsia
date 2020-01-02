@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Software delivery
 ### start `pave` and `serve-updates` in a single command
 ## usage: fx serve [-v] [-l host[:port]] [-a target]
 ##   -l host:port for "pm serve" to listen on

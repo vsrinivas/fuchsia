@@ -3,81 +3,167 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-function get_build_dir {
-  (fx-build-dir-if-present && echo "${FUCHSIA_BUILD_DIR}")
+function get_host_tools_dir {
+  local -r build_dir="$(fx-build-dir-if-present && echo "${FUCHSIA_BUILD_DIR}")"
+  local -r host_tools="${build_dir}/host-tools"
+  if [[ -d "${build_dir}" && -d "${host_tools}"  ]]; then
+    echo "${host_tools}"
+  fi
 }
 
-readonly EPONYMOUS_PREBUILT_3P_COMMANDS=(gn ninja)
-readonly JIRI_BIN_COMMANDS=(cipd jiri)
+function get_exec_from_metadata {
+  local -r metadata_file=$1
+
+  export PREBUILT_3P_DIR FUCHSIA_DIR HOST_PLATFORM
+  export HOST_TOOLS_DIR="$(get_host_tools_dir)"
+
+  awk -F ' *= *' -f - "${metadata_file}" <<'EOF'
+    /^#### +EXECUTABLE */ {
+      gsub(/\${PREBUILT_3P_DIR}/, ENVIRON["PREBUILT_3P_DIR"], $2);
+      gsub(/\${FUCHSIA_DIR}/, ENVIRON["FUCHSIA_DIR"], $2);
+      gsub(/\${HOST_TOOLS_DIR}/, ENVIRON["HOST_TOOLS_DIR"], $2);
+      gsub(/\${HOST_PLATFORM}/, ENVIRON["HOST_PLATFORM"], $2);
+      print $2;
+    }
+EOF
+}
+
+function _relative {
+  cmd="$1"
+  if [[ "${cmd}" == *"${fuchsia_dir}"* ]]; then
+    echo "//${cmd#${fuchsia_dir}/}"
+  else
+    echo "${cmd}"
+  fi
+}
+
+function find_executable {
+  local cmd_name="$1"
+  local cmd_path="$(commands "${cmd_name}")"
+  cmd_path="${cmd_path%.fx}"
+  local fx_file_path="${cmd_path}.fx"
+  if [[ ! -f "${fx_file_path}" ]]; then
+    # no metadata, so let's try to find the file
+    if [[ -z "${cmd_path}" ]]; then
+      # no file in regular script directories, look in host_tools
+      cmd_path="$(find_host_tools "${cmd_name}")"
+    fi
+    echo "${cmd_path}"
+    if [[ ! -x "${cmd_path}" ]]; then
+      return 1
+    fi
+
+  else
+    # there's metadata
+    local from_metadata="$(get_exec_from_metadata "${fx_file_path}")"
+
+    if [[ -n "${from_metadata}" ]]; then
+      # EXECUTABLE is defined in the metadata, use it
+      echo "${from_metadata}"
+      if [[ -f "${cmd_path}"  && ! "${cmd_path}" -ef "${from_metadata}" ]]; then
+        fx-error "Invalid ${fx_file_path}: if both ${basename_exec} and EXECUTABLE metadata exist, they must point to the same file"
+        return 1
+      fi
+    else
+      # no EXECUTABLE in the metadata, so return the cmd_path itself
+      echo "${cmd_path}"
+      if [[ ! -x "${cmd_path}" ]]; then
+        return 1
+      fi
+    fi
+  fi
+}
+
+function find_execs_and_metadata {
+  local cmd_name=$1
+  shift
+
+  if [[ -z "${cmd_name}" ]]; then
+    cmd_name="*"
+  fi
+  local dirs=()
+  for d in "$@"; do
+    if [[ -d "${d}" ]]; then
+      dirs+=( "${d}" )
+    fi
+  done
+  if [[ ${#dirs[@]} -eq 0 ]]; then
+    return 0
+  fi
+
+  # run find assuming "-executable" is supported
+  cmds="$( find "${dirs[@]}" -maxdepth 1 -type f \
+    \( -executable -name "${cmd_name}" \) -o \
+    \( -name "${cmd_name}.fx" \) 2>/dev/null )"
+
+  if [[ $? -ne 0 ]]; then
+    # assume that the error was caused because versions of find older than 4.3.0
+    # don't support -executable. Run with -perm +100 instead, which is not
+    # supported in versions of find newer than 4.5.12, so it can't be used always.
+    cmds="$( find "${dirs[@]}" -maxdepth 1 -type f \
+      \( -perm +100 -name "${cmd_name}" \) -o \
+      \( -name "${cmd_name}.fx" \) 2>/dev/null )"
+    if [[ $? -ne 0 ]]; then
+      {
+        echo "ERROR: 'find' failed unexpectedly, please execute fx with '-x' and report a bug."
+        echo "At least one of the commands below was expected to work:"
+        echo 'find ' "${dirs[@]}" '-maxdepth 1 -type f \( -executable -name' "\"${cmd_name}\"" '\) -o \( -name ' "\"${cmd_name}.fx\"" '\)'
+        echo 'find ' "${dirs[@]}" '-maxdepth 1 -type f \( -perm +100 -name' "\"${cmd_name}\"" '\) -o \( -name ' "\"${cmd_name}.fx\"" '\)'
+      } >&2
+      exit 1
+    fi
+  fi
+  sort -u <<< "${cmds}"
+}
+
+
+function find_host_tools {
+  local cmd_name=$1
+  local -r host_tools="$(get_host_tools_dir)"
+  if [[ -z "${host_tools}" ]]; then
+    return
+  fi
+  # get a list of non-host-tools commands and metadata files, separated by
+  # semi-colon.
+  cmds="$(commands | tr '\n' ';')"
+
+  binaries=()
+  # do not list a host tool if there's a subcommand script or an .fx metadata
+  # file with the same name.
+  for binary in $(find_execs_and_metadata "${cmd_name}" "${host_tools}"); do
+    name="${binary##*/}"   # remove path, equivalent to basename but faster
+    # only return the binary if no {binary} or {binary}.fx as other commands
+    if [[ "${cmds}" != */${name}.fx\;* && "${cmds}" != */${name}\;* ]]; then
+      binaries+=( "${binary}" )
+    fi
+  done
+  echo "${binaries[@]}"
+}
+
 
 function commands {
-  local dirs=()
-  dirs+=("${fuchsia_dir}"/tools/devshell{,/contrib})
-  local -r build_dir="$(get_build_dir)"
-  if [[ -n "${build_dir}" ]]; then
-    dirs+=("${build_dir}/host-tools")
+  local cmd_name=$1
+  local dirs
+  # handle "fx help vendor VENDOR COMMAND"
+  if [[ "${cmd_name}" == "vendor" && $# -eq 3 ]]; then
+    vendor=$2
+    cmd_name=$3
+    dirs=("${fuchsia_dir}"/vendor/${vendor}/scripts/devshell)
+  else
+    dirs=("${fuchsia_dir}"/tools/devshell{,/contrib} "${fuchsia_dir}"/vendor/*/scripts/devshell)
   fi
 
-  (
-    for dir in "${dirs[@]}"; do
-      for cmd in "${dir}"/*; do
-        if [[ -x "${cmd}" && -f "${cmd}" ]]; then
-          basename "${cmd}"
-        fi
-      done
-    done
-    echo "${EPONYMOUS_PREBUILT_3P_COMMANDS[@]}" "${JIRI_BIN_COMMANDS[@]}"
-  ) | sort -u
+  find_execs_and_metadata "${cmd_name}" "${dirs[@]}"
 }
 
-function find_command {
-  local -r cmd=$1
 
-  local command_path="${fuchsia_dir}/tools/devshell/${cmd}"
-  if [[ -x "${command_path}" ]]; then
-    echo "${command_path}"
-    return 0
-  fi
+function help_options {
+  cat <<END
 
-  local command_path="${fuchsia_dir}/tools/devshell/contrib/${cmd}"
-  if [[ -x "${command_path}" ]]; then
-    echo "${command_path}"
-    return 0
-  fi
-
-  local -r build_dir=$(get_build_dir)
-  if [[ -n "${build_dir}" ]]; then
-    local command_path="${build_dir}/host-tools/${cmd}"
-    if [[ -x "${command_path}" ]]; then
-      echo "${command_path}"
-      return 0
-    fi
-  fi
-
-  local tool
-  for tool in "${EPONYMOUS_PREBUILT_3P_COMMANDS[@]}"; do
-    if [[ "$cmd" != "$tool" ]]; then
-      continue
-    fi
-    local command_path="${PREBUILT_3P_DIR}/${tool}/${HOST_PLATFORM}/${tool}"
-    if [[ -x "${command_path}" ]]; then
-      echo "${command_path}"
-      return 0
-    fi
-  done
-
-  for tool in "${JIRI_BIN_COMMANDS[@]}"; do
-    if [[ "$cmd" != "$tool" ]]; then
-      continue
-    fi
-    local command_path="${FUCHSIA_DIR}/.jiri_root/bin/${tool}"
-    if [[ -x "${command_path}" ]]; then
-      echo "${command_path}"
-      return 0
-    fi
-  done
-
-  return 1
+fx help flags: fx help [OPTION]
+  --no-contrib      Hide contrib commands (see //tools/devshell/README.md)
+  --deprecated      Do not hide deprecated commands
+END
 }
 
 function help_global_options {
@@ -92,31 +178,58 @@ Global fx options: fx [OPTION] ${cmd} ...
                         modified under your Fuchsia directory, not including
                         out/.
   -x                    Print commands and their arguments as they are executed.
+  -xx                   Print extra logging of the fx tool itself (implies -x)
 END
 }
 
-function help {
-  local cmd="$1"
-  if [[ -z "${cmd}" ]]; then
-    for cmd in $(commands); do
-      local cmd_path="$(find_command "${cmd}")"
-      if [[ $(file -b --mime "${cmd_path}" | cut -d / -f 1) == "text" ]]; then
-        echo "${cmd} | $(sed -n '1,/^###/s/^### //p' < "${cmd_path}")"
-      else
-        echo "${cmd}"
-      fi
-    done | column -t -s '|' -c 2
+function help_list_commands {
+  local hide_contrib=0
+  local show_deprecated=0
+  while [[ $# -ne 0 ]]; do
+    if [[ "$1" == "--deprecated" ]]; then
+      show_deprecated=1
+    elif [[ "$1" == "--no-contrib" ]]; then
+      hide_contrib=1
+    fi
+    shift
+  done
+
+  # list all subcommands with summaries, grouped by categories
+  commands | xargs awk \
+    -v hide_contrib=${hide_contrib} \
+    -v show_deprecated=${show_deprecated} \
+    -f "${fuchsia_dir}/scripts/fx-help.awk"
+
+  # list host tools build artifacts without corresponding metadata
+  host_tools="$(find_host_tools)"
+  if [[ -n "${host_tools}" ]]; then
+    echo "Host binaries produced by the build with no metadata (more info at //tools/devshel/README.md):"
+    for i in ${host_tools}; do
+      echo -n "  "
+      basename $i
+    done
+  fi
+
+  help_options
+  help_global_options
+}
+
+function help_command {
+  local cmd="$@"
+  local cmd_path="$(commands ${cmd} | head -1)"
+  if [[ -z "${cmd_path}" ]]; then
+    local cmd_path="$(find_host_tools ${cmd} | head -1)"
+    if [[ -z "${cmd_path}" ]]; then
+      echo "Command ${cmd} not found. Try \`fx help\`"
+    else
+      echo "'$(_relative "${cmd_path}")' is a host tool and no metadata" \
+        "was found. Try running \`fx ${cmd} -h\`"
+    fi
+  elif [[ $(file -b --mime "${cmd_path}" | cut -d / -f 1) == "text" ]]; then
+    fx-print-command-help "${cmd_path}"
     help_global_options
   else
-    local cmd_path="$(find_command "${cmd}")"
-    if [[ -z "$cmd_path" ]]; then
-      echo "Command not found. Try \`fx help\`"
-    elif [[ $(file -b --mime "${cmd_path}" | cut -d / -f 1) == "text" ]]; then
-      fx-print-command-help "${cmd_path}"
-      help_global_options
-    else
-      echo "No help found. Try \`fx ${cmd} -h\`"
-    fi
+    echo "No help found. Try \`fx ${cmd} -h\`"
   fi
 }
 
@@ -124,23 +237,17 @@ function usage {
   cat <<END
 usage: fx [--dir BUILD_DIR] [-d DEVICE_NAME] [-i] [-x] COMMAND [...]
 
-Run Fuchsia development commands. Must be run with either a current working
-directory that is contained in a Platform Source Tree or the FUCHSIA_DIR
+Run Fuchsia development commands. Must be run either from a directory
+that is contained in a Platform Source Tree or with the FUCHSIA_DIR
 environment variable set to the root of a Platform Source Tree.
 
-commands:
-$(help)
-
-optional shell extensions:
-  fx-go
-  fx-update-path
-  fx-set-prompt
-
-To use these shell extensions, first source fx-env.sh into your shell:
-
-  $ source scripts/fx-env.sh
+host shell extensions: (requires "source scripts/fx-env.sh")
+  fx-update-path        add useful tools to the PATH
+  fx-set-prompt         display the current configuration in the shell prompt
 
 END
+
+  help_list_commands "$@"
 }
 
 fuchsia_dir="${FUCHSIA_DIR}"
@@ -212,19 +319,22 @@ while [[ $# -ne 0 ]]; do
     -x)
       export FUCHSIA_DEVSHELL_VERBOSITY=1
       ;;
+    -xx)
+      set -x
+      ;;
     --)
       shift
       break
       ;;
-    help)
-      if [[ $# -gt 1 ]]; then
+    help|--help)
+      if [[ $# -lt 2 || "$2" =~ ^\-\-.* ]]; then
         shift
-        help "$@"
-        exit
+        usage "$@"
       else
-        usage
-        exit 1
+        shift
+        help_command "$@"
       fi
+      exit 0
       ;;
     -*)
       usage
@@ -245,11 +355,15 @@ if [[ $# -lt 1 ]]; then
 fi
 
 command_name="$1"
-command_path="$(find_command ${command_name})"
+command_path="$(find_executable ${command_name})"
 
-if [[ $? -ne 0 ]]; then
-  usage
-  fx-error "Unknown command ${command_name}"
+if [[ $? -ne 0 || ! -x "${command_path}" ]]; then
+  if [[ -n "${command_path}" ]]; then
+    _path_message=" in the expected location $(_relative "${command_path}")"
+  fi
+  fx-error "Cannot find executable for ${command_name}${_path_message}."\
+    "If this is a tool produced by the build, make sure your"\
+    "\`fx set\` config produces it in the $(_relative "$(get_host_tools_dir)") directory."
   exit 1
 fi
 

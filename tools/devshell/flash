@@ -3,6 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### CATEGORY=Device management
+### flash and, optionally, pave a connected device
 ## usage: fx flash [-s <serial>] [--pave]
 ##   -s        Device you wish to flash to (only necessary if multiple
 ##             devices in fastboot mode)

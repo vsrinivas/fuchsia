@@ -3,8 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### Creates a CL in an integration repository suitable for testing other CLs
-### using the global integration commit queue.
+#### CATEGORY=Source tree
+### Creates an integration CL to test other CLs in the global integration commit queue.
 
 ## usage: fx make-integration-patch
 ##
