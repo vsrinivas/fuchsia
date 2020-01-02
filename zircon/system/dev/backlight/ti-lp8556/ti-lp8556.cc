@@ -87,6 +87,13 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
     }
 
     if (power) {
+      for (size_t i = 0; i < init_registers_size_; i += 2) {
+        if ((status = i2c_.WriteSync(&init_registers_[i], 2)) != ZX_OK) {
+          LOG_ERROR("Failed to set register 0x%02x: %d\n", init_registers_[i], status);
+          return status;
+        }
+      }
+
       buf[0] = kCfg2Reg;
       buf[1] = cfg2_;
       status = i2c_.WriteSync(buf, sizeof(buf));
@@ -169,6 +176,57 @@ zx_status_t Lp8556Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
+zx_status_t Lp8556Device::Init() {
+  double brightness_nits = 0.0;
+  size_t actual;
+  zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
+                                           &brightness_nits, sizeof(brightness_nits), &actual);
+  if (status == ZX_OK && actual == sizeof(brightness_nits)) {
+    SetMaxAbsoluteBrightnessNits(brightness_nits);
+  }
+
+  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, init_registers_,
+                               sizeof(init_registers_), &actual);
+  // Supplying this metadata is optional.
+  if (status == ZX_OK) {
+    if (actual % (2 * sizeof(uint8_t)) != 0) {
+      LOG_ERROR("Register metadata is invalid\n");
+      return ZX_ERR_INVALID_ARGS;
+    } else if (actual > sizeof(init_registers_)) {
+      LOG_ERROR("Too many registers specified in metadata\n");
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    init_registers_size_ = actual;
+
+    for (size_t i = 0; i < init_registers_size_; i += 2) {
+      if ((status = i2c_.WriteSync(&init_registers_[i], 2)) != ZX_OK) {
+        LOG_ERROR("Failed to set register 0x%02x: %d\n", init_registers_[i], status);
+        return status;
+      }
+    }
+  }
+
+  auto persistent_brightness = BrightnessStickyReg::Get().ReadFrom(&mmio_);
+
+  if (persistent_brightness.is_valid()) {
+    double brightness =
+        static_cast<double>(persistent_brightness.brightness()) / kBrightnessRegMaxValue;
+
+    if ((status = SetBacklightState(brightness > 0, brightness)) != ZX_OK) {
+      LOG_ERROR("Could not set persistent brightness value: %f\n", brightness);
+    } else {
+      LOG_INFO("Successfully set persistent brightness value: %f\n", brightness);
+    }
+  }
+
+  if ((i2c_.ReadSync(kCfg2Reg, &cfg2_, 1) != ZX_OK) || (cfg2_ == 0)) {
+    cfg2_ = kCfg2Default;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
   composite_protocol_t composite;
 
@@ -217,11 +275,8 @@ zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  double brightness_nits = 0.0;
-  status = device_get_metadata(parent, DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
-                               &brightness_nits, sizeof(brightness_nits), &actual);
-  if (status == ZX_OK && actual == sizeof(brightness_nits)) {
-    dev->SetMaxAbsoluteBrightnessNits(brightness_nits);
+  if ((status = dev->Init()) != ZX_OK) {
+    return status;
   }
 
   status = dev->DdkAdd("ti-lp8556");

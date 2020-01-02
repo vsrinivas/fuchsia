@@ -4,9 +4,13 @@
 
 #include "ti-lp8556.h"
 
+#include <map>
+
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
+#include <ddk/metadata.h>
+#include <fbl/span.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
@@ -15,6 +19,28 @@ namespace ti {
 constexpr uint32_t kMmioRegSize = sizeof(uint32_t);
 constexpr uint32_t kMmioRegCount = (kAOBrightnessStickyReg + kMmioRegSize) / kMmioRegSize;
 
+class Bind : fake_ddk::Bind {
+ public:
+  zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* data, size_t length,
+                                size_t* actual) override {
+    if (metadata_.find(type) == metadata_.end()) {
+      return ZX_ERR_NOT_FOUND;
+    }
+
+    const fbl::Span<const uint8_t>& entry = metadata_[type];
+    *actual = entry.size_bytes();
+    memcpy(data, entry.data(), std::min(length, entry.size_bytes()));
+    return ZX_OK;
+  }
+
+  void SetMetadata(uint32_t type, const void* data, size_t data_length) {
+    metadata_[type] = fbl::Span(reinterpret_cast<const uint8_t*>(data), data_length);
+  }
+
+ private:
+  std::map<uint32_t, fbl::Span<const uint8_t>> metadata_;
+};
+
 class Lp8556DeviceTest : public zxtest::Test {
  public:
   Lp8556DeviceTest()
@@ -22,16 +48,11 @@ class Lp8556DeviceTest : public zxtest::Test {
 
   void SetUp() {
     ddk::MmioBuffer mmio(mock_regs_.GetMmioBuffer());
-    mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
-    mock_i2c_.ExpectWrite({kCfg2Reg}).ExpectReadStop({kCfg2Default});
 
     fbl::AllocChecker ac;
     dev_ = fbl::make_unique_checked<Lp8556Device>(
         &ac, fake_ddk::kFakeParent, ddk::I2cChannel(mock_i2c_.GetProto()), std::move(mmio));
-    EXPECT_TRUE(ac.check());
-
-    ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
-    ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+    ASSERT_TRUE(ac.check());
   }
 
   void TestLifecycle() {
@@ -83,11 +104,13 @@ class Lp8556DeviceTest : public zxtest::Test {
     ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
   }
 
- private:
+ protected:
   mock_i2c::MockI2c mock_i2c_;
   std::unique_ptr<Lp8556Device> dev_;
-  ddk_mock::MockMmioReg mock_reg_array_[kMmioRegCount];
   ddk_mock::MockMmioRegRegion mock_regs_;
+
+ private:
+  ddk_mock::MockMmioReg mock_reg_array_[kMmioRegCount];
 };
 
 TEST_F(Lp8556DeviceTest, DdkLifecycle) { TestLifecycle(); }
@@ -104,6 +127,109 @@ TEST_F(Lp8556DeviceTest, Brightness) {
 
   VerifySetBrightness(true, 0.0);
   VerifyGetBrightness(true, 0.0);
+}
+
+TEST_F(Lp8556DeviceTest, InitRegisters) {
+  constexpr uint8_t kInitialRegisterValues[] = {
+      0x01, 0x85,
+      0xa2, 0x30,
+      0xa3, 0x32,
+      0xa5, 0x54,
+      0xa7, 0xf4,
+      0xa9, 0x60,
+      0xae, 0x09,
+  };
+
+  Bind ddk;
+  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, kInitialRegisterValues, sizeof(kInitialRegisterValues));
+
+  mock_i2c_.ExpectWriteStop({0x01, 0x85})
+      .ExpectWriteStop({0xa2, 0x30})
+      .ExpectWriteStop({0xa3, 0x32})
+      .ExpectWriteStop({0xa5, 0x54})
+      .ExpectWriteStop({0xa7, 0xf4})
+      .ExpectWriteStop({0xa9, 0x60})
+      .ExpectWriteStop({0xae, 0x09})
+      .ExpectWrite({kCfg2Reg})
+      .ExpectReadStop({kCfg2Default});
+  mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
+
+  EXPECT_OK(dev_->Init());
+
+  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+}
+
+TEST_F(Lp8556DeviceTest, InitNoRegisters) {
+  Bind ddk;
+
+  mock_i2c_.ExpectWrite({kCfg2Reg}).ExpectReadStop({kCfg2Default});
+  mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
+
+  EXPECT_OK(dev_->Init());
+
+  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+}
+
+TEST_F(Lp8556DeviceTest, InitInvalidRegisters) {
+  constexpr uint8_t kInitialRegisterValues[] = {
+      0x01, 0x85,
+      0xa2, 0x30,
+      0xa3, 0x32,
+      0xa5, 0x54,
+      0xa7, 0xf4,
+      0xa9, 0x60,
+      0xae,
+  };
+
+  Bind ddk;
+  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, kInitialRegisterValues, sizeof(kInitialRegisterValues));
+
+  EXPECT_NOT_OK(dev_->Init());
+
+  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+}
+
+TEST_F(Lp8556DeviceTest, InitTooManyRegisters) {
+  constexpr uint8_t kInitialRegisterValues[514] = {};
+
+  Bind ddk;
+  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, kInitialRegisterValues, sizeof(kInitialRegisterValues));
+
+  EXPECT_NOT_OK(dev_->Init());
+
+  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+}
+
+TEST_F(Lp8556DeviceTest, InitOverwriteBrightnessRegisters) {
+  constexpr uint8_t kInitialRegisterValues[] = {
+      kBacklightBrightnessLsbReg, 0xab,
+      kBacklightBrightnessMsbReg, 0xcd,
+  };
+
+  Bind ddk;
+  ddk.SetMetadata(DEVICE_METADATA_PRIVATE, kInitialRegisterValues, sizeof(kInitialRegisterValues));
+
+  mock_i2c_.ExpectWriteStop({kBacklightBrightnessLsbReg, 0xab})
+      .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xcd})
+      .ExpectWriteStop({kBacklightBrightnessLsbReg, 0x00})
+      .ExpectWrite({kBacklightBrightnessMsbReg})
+      .ExpectReadStop({0xcd})
+      .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xc4})
+      .ExpectWrite({kCfg2Reg})
+      .ExpectReadStop({kCfg2Default});
+
+  const uint32_t kStickyRegValue =
+      BrightnessStickyReg::Get().FromValue(0).set_is_valid(1).set_brightness(0x400).reg_value();
+  mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead(kStickyRegValue);
+
+  EXPECT_OK(dev_->Init());
+
+  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
 }
 
 }  // namespace ti

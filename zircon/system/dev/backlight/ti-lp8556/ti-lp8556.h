@@ -63,24 +63,9 @@ class Lp8556Device : public DeviceType,
                      public FidlBacklight::Device::Interface {
  public:
   Lp8556Device(zx_device_t* parent, ddk::I2cChannel i2c, ddk::MmioBuffer mmio)
-      : DeviceType(parent), i2c_(std::move(i2c)), mmio_(std::move(mmio)) {
-    auto persistent_brightness = BrightnessStickyReg::Get().ReadFrom(&mmio_);
+      : DeviceType(parent), i2c_(std::move(i2c)), mmio_(std::move(mmio)) {}
 
-    if (persistent_brightness.is_valid()) {
-      double brightness =
-          static_cast<double>(persistent_brightness.brightness()) / kBrightnessRegMaxValue;
-
-      if (SetBacklightState(brightness > 0, brightness) != ZX_OK) {
-        LOG_ERROR("Could not set persistent brightness value: %f\n", brightness);
-      } else {
-        LOG_INFO("Successfully set persistent brightness value: %f\n", brightness);
-      }
-    }
-
-    if ((i2c_.ReadSync(kCfg2Reg, &cfg2_, 1) != ZX_OK) || (cfg2_ == 0)) {
-      cfg2_ = kCfg2Default;
-    }
-  }
+  zx_status_t Init();
 
   // Methods requried by the ddk mixins
   void DdkUnbindNew(ddk::UnbindTxn txn);
@@ -119,6 +104,8 @@ class Lp8556Device : public DeviceType,
   bool power_ = true;
   uint8_t cfg2_;
   std::optional<double> max_absolute_brightness_nits_;
+  uint8_t init_registers_[2 * (UINT8_MAX + 1)];  // 256 possible registers, plus values.
+  size_t init_registers_size_ = 0;
 };
 
 }  // namespace ti
