@@ -31,9 +31,13 @@ pub async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>
 
         let path = Path::new(ETH_PATH).join(file.name);
         let dev = IsolatedDeviceEnv::open_file(path)?;
-        if let Ok(client) =
-            ethernet::Client::from_file(dev, vmo, ethernet::DEFAULT_BUFFER_SIZE, "wlan-hw-sim")
-                .await
+        if let Ok(client) = ethernet::Client::from_file(
+            dev,
+            vmo,
+            ethernet::DEFAULT_BUFFER_SIZE as u64,
+            "wlan-hw-sim",
+        )
+        .await
         {
             if let Ok(info) = client.info().await {
                 if &info.mac.octets == mac {
@@ -100,7 +104,7 @@ pub async fn get_next_frame(client: &mut ethernet::Client) -> (mac::EthernetIIHd
             }
             ethernet::Event::Receive(rx_buffer, flags) => {
                 assert!(flags.intersects(ethernet::EthernetQueueFlags::RX_OK), "RX_OK not set");
-                let mut buf = vec![0; rx_buffer.len()];
+                let mut buf = vec![0; rx_buffer.len() as usize];
                 rx_buffer.read(&mut buf);
                 let mut buf_reader = BufferReader::new(&buf[..]);
                 let header = buf_reader

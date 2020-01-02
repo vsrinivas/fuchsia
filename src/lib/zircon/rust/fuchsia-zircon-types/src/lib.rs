@@ -422,6 +422,15 @@ pub struct zx_waitset_result_t {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_handle_info_t {
+    pub handle: zx_handle_t,
+    pub ty: zx_obj_type_t,
+    pub rights: zx_rights_t,
+    pub unused: u32,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct zx_channel_call_args_t {
     pub wr_bytes: *const u8,
     pub wr_handles: *const zx_handle_t,
@@ -760,7 +769,7 @@ struct_decl_macro! {
     #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
     pub struct <zx_info_vmar_t> {
         pub base: usize,
-        pub len: usize,
+        pub len: u64,
     }
 }
 
@@ -778,4 +787,144 @@ multiconst!(u32, [
     ZX_LOG_FLAG_READABLE = 0x40000000;
 ]);
 
-include!("definitions.rs");
+// For C, the below types are currently forward declared for syscalls.h.
+// We might want to investigate a better solution for Rust or removing those
+// forward declarations.
+//
+// These are hand typed translations from C types into Rust structures using a C
+// layout
+
+// source: zircon/system/public/zircon/syscalls/system.h
+#[repr(C)]
+pub struct zx_system_powerctl_arg_t {
+    // rust can't express anonymous unions at this time
+    // https://github.com/rust-lang/rust/issues/49804
+    powerctl_internal: zx_powerctl_union,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union zx_powerctl_union {
+    acpi_transition_s_state: acpi_transition_s_state,
+    x86_power_limit: x86_power_limit,
+}
+
+#[repr(C)]
+#[derive(Default, Debug, PartialEq, Copy, Clone)]
+pub struct acpi_transition_s_state {
+    target_s_state: u8, // Value between 1 and 5 indicating which S-state
+    sleep_type_a: u8,   // Value from ACPI VM (SLP_TYPa)
+    sleep_type_b: u8,   // Value from ACPI VM (SLP_TYPb)
+    _padding1: [u8; 9],
+}
+
+#[repr(C)]
+#[derive(Default, Debug, PartialEq, Copy, Clone)]
+pub struct x86_power_limit {
+    power_limit: u32, // PL1 value in milliwatts
+    time_window: u32, // PL1 time window in microseconds
+    clamp: u8,        // PL1 clamping enable
+    enable: u8,       // PL1 enable
+    _padding2: [u8; 2],
+}
+
+// source: zircon/system/public/zircon/syscalls/pci.h
+pub type zx_pci_bar_types_t = u32;
+
+multiconst!(zx_pci_bar_types_t, [
+            ZX_PCI_BAR_TYPE_UNUSED = 0;
+            ZX_PCI_BAR_TYPE_MMIO = 1;
+            ZX_PCI_BAR_TYPE_PIO = 2;
+]);
+
+#[repr(C)]
+pub struct zx_pci_bar_t {
+    id: u32,
+    ty: u32,
+    size: usize,
+    // rust can't express anonymous unions at this time
+    // https://github.com/rust-lang/rust/issues/49804
+    zx_pci_bar_union: zx_pci_bar_union,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union zx_pci_bar_union {
+    addr: usize,
+    zx_pci_bar_union_struct: zx_pci_bar_union_struct,
+}
+
+#[repr(C)]
+#[derive(Default, Debug, PartialEq, Copy, Clone)]
+pub struct zx_pci_bar_union_struct {
+    handle: zx_handle_t,
+    _padding1: [u8; 4],
+}
+
+// source: zircon/system/public/zircon/syscalls/smc.h
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_smc_parameters_t {
+    func_id: u32,
+    _padding1: [u8; 4],
+    arg1: u64,
+    arg2: u64,
+    arg3: u64,
+    arg4: u64,
+    arg5: u64,
+    arg6: u64,
+    client_id: u16,
+    secure_os_id: u16,
+    _padding2: [u8; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_smc_result_t {
+    arg0: u64,
+    arg1: u64,
+    arg2: u64,
+    arg3: u64,
+    arg6: u64,
+}
+
+const ZX_CPU_SET_MAX_CPUS: usize = 512;
+const ZX_CPU_SET_BITS_PER_WORD: usize = 64;
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_cpu_set_t {
+    mask: [u64; ZX_CPU_SET_MAX_CPUS / ZX_CPU_SET_BITS_PER_WORD],
+}
+
+// source: zircon/system/public/zircon/syscalls/scheduler.h
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct zx_profile_info_t {
+    flags: u32,
+    _padding1: [u8; 4],
+    zx_profile_info_union: zx_profile_info_union,
+    cpu_affinity_mask: zx_cpu_set_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct priority_params {
+    priority: i32,
+    _padding2: [u8; 20],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+union zx_profile_info_union {
+    priority_params: priority_params,
+    deadline_params: zx_sched_deadline_params_t,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+struct zx_sched_deadline_params_t {
+    capacity: zx_duration_t,
+    relative_deadline: zx_duration_t,
+    period: zx_duration_t,
+}

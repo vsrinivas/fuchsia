@@ -163,7 +163,8 @@ impl EthernetSetupWorker {
             async move {
                 let vmo = zx::Vmo::create(256 * eth::DEFAULT_BUFFER_SIZE as u64)?;
                 let eth_client =
-                    eth::Client::new(self.dev, vmo, eth::DEFAULT_BUFFER_SIZE, "netstack3").await?;
+                    eth::Client::new(self.dev, vmo, eth::DEFAULT_BUFFER_SIZE as u64, "netstack3")
+                        .await?;
                 let info = eth_client.info().await?;
                 eth_client.start().await?;
                 let eth_device_event = Event::EthSetupEvent(EthernetDeviceReady {
@@ -384,7 +385,7 @@ impl EventLoop {
                 // TODO(wesleyac): Check flags
                 let len = rx.read(buf);
                 if let Some(id) = self.ctx.dispatcher().devices.get_core_id(id) {
-                    receive_frame(&mut self.ctx, id, Buf::new(&mut buf[..len], ..));
+                    receive_frame(&mut self.ctx, id, Buf::new(&mut buf[..len as usize], ..));
                 } else {
                     debug!("Received ethernet frame on disabled device: {}", id);
                 }

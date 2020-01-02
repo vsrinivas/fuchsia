@@ -67,7 +67,7 @@ impl Client {
     pub async fn new(
         dev: sys::DeviceProxy,
         buf: zx::Vmo,
-        buf_size: usize,
+        buf_size: u64,
         name: &str,
     ) -> Result<Self, anyhow::Error> {
         zx::Status::ok(dev.set_client_name(name).await?)?;
@@ -94,7 +94,7 @@ impl Client {
     pub async fn from_file(
         dev: File,
         buf: zx::Vmo,
-        buf_size: usize,
+        buf_size: u64,
         name: &str,
     ) -> Result<Self, anyhow::Error> {
         let dev = dev.as_raw_fd();
@@ -350,7 +350,7 @@ impl ClientInner {
     ) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
         match ready!(self.tx_fifo.try_read(cx))? {
             Some(buffer::FifoEntry { offset, flags, .. }) => {
-                self.pool.lock().unwrap().release_tx_buffer(offset as usize);
+                self.pool.lock().unwrap().release_tx_buffer(offset.into());
                 Poll::Ready(Ok(EthernetQueueFlags::from_bits_truncate(flags)))
             }
             None => Poll::Ready(Err(zx::Status::PEER_CLOSED)),
@@ -369,7 +369,7 @@ impl ClientInner {
                 if let Poll::Pending = result {
                     // Map the buffer and drop it immediately, to return it to the set of available
                     // buffers.
-                    let _ = pool_guard.map_rx_buffer(fifo_offset as usize, 0);
+                    let _ = pool_guard.map_rx_buffer(fifo_offset.into(), 0);
                 }
                 Poll::Ready(Ok(()))
             }
@@ -384,7 +384,7 @@ impl ClientInner {
         Poll::Ready(match ready!(self.rx_fifo.try_read(cx))? {
             Some(entry) => {
                 let mut pool_guard = self.pool.lock().unwrap();
-                let buf = pool_guard.map_rx_buffer(entry.offset as usize, entry.length as usize);
+                let buf = pool_guard.map_rx_buffer(entry.offset.into(), entry.length.into());
                 Ok((buf, EthernetQueueFlags::from_bits_truncate(entry.flags)))
             }
             None => Err(zx::Status::PEER_CLOSED),

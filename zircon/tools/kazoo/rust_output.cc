@@ -59,12 +59,25 @@ std::string RustName(const Type& type) {
 
 }  // namespace
 
+std::string mangle_identifier(std::string type) {
+  // type is a reserved name in rustc
+  if (type == "type") {
+    return "ty";
+  } else {
+    return type;
+  }
+}
+
 bool RustOutput(const SyscallLibrary& library, Writer* writer) {
   if (!CopyrightHeaderWithCppComments(writer)) {
     return false;
   }
 
   constexpr const char indent[] = "    ";
+  writer->Puts("// re-export the types defined in the fuchsia-zircon-types crate\n");
+  writer->Puts("pub use fuchsia_zircon_types::*;\n");
+  writer->Puts("// only link against zircon when targeting Fuchsia\n");
+  writer->Puts("#[cfg(target_os = \"fuchsia\")]\n");
   writer->Puts("#[link(name = \"zircon\")]\n");
   writer->Puts("extern {\n");
   for (const auto& syscall : library.syscalls()) {
@@ -76,7 +89,7 @@ bool RustOutput(const SyscallLibrary& library, Writer* writer) {
     for (size_t i = 0; i < syscall->kernel_arguments().size(); ++i) {
       const StructMember& arg = syscall->kernel_arguments()[i];
       const bool last = i == syscall->kernel_arguments().size() - 1;
-      writer->Printf("%s%s%s: %s%s\n", indent, indent, arg.name().c_str(),
+      writer->Printf("%s%s%s: %s%s\n", indent, indent, mangle_identifier(arg.name()).c_str(),
                      RustName(arg.type()).c_str(), last ? "" : ",");
     }
     writer->Printf("%s%s)", indent, indent);

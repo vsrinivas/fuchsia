@@ -28,7 +28,8 @@ async fn find_ethernet_device(mac: MacAddress) -> Result<eth::Client, anyhow::Er
         let dev = File::open(device?.path().to_str().unwrap())?;
         let vmo = zx::Vmo::create(256 * eth::DEFAULT_BUFFER_SIZE as u64)?;
 
-        let eth_client = eth::Client::from_file(dev, vmo, eth::DEFAULT_BUFFER_SIZE, "test").await?;
+        let eth_client =
+            eth::Client::from_file(dev, vmo, eth::DEFAULT_BUFFER_SIZE as u64, "test").await?;
 
         eth_client.start().await?;
 
@@ -58,7 +59,7 @@ async fn main() -> Result<(), anyhow::Error> {
     while let Some(evt) = events.try_next().await? {
         match evt {
             eth::Event::Receive(rx, flags) => {
-                if flags == eth::EthernetQueueFlags::RX_OK && rx.len() == config.length {
+                if flags == eth::EthernetQueueFlags::RX_OK && rx.len() == config.length as u64 {
                     rx.read(&mut buf);
                     break;
                 }

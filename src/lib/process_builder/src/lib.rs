@@ -663,7 +663,7 @@ impl BuilderInner {
         let stack_flags = zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE;
         let stack_base = self
             .root_vmar
-            .map(0, &stack_vmo, 0, stack_size, stack_flags)
+            .map(0, &stack_vmo, 0, stack_size as u64, stack_flags)
             .map_err(|s| ProcessBuilderError::GenericStatus("Failed to map initial stack", s))?;
         let stack_ptr = compute_initial_stack_pointer(stack_base, stack_size);
 
@@ -799,9 +799,9 @@ impl ReservationVmar {
         // (base+len) represents the full address space, assuming this is used with a root VMAR and
         // length extends to the end of the address space, including a region the kernel reserves
         // at the start of the space.
-        let reserve_size = util::page_end((info.base + info.len) / 2) - info.base;
+        let reserve_size = util::page_end((info.base + info.len as usize) / 2) - info.base;
         let (reserve_vmar, reserve_base) =
-            vmar.allocate(0, reserve_size, zx::VmarFlags::SPECIFIC).map_err(|s| {
+            vmar.allocate(0, reserve_size as u64, zx::VmarFlags::SPECIFIC).map_err(|s| {
                 ProcessBuilderError::GenericStatus("Failed to allocate reservation VMAR", s)
             })?;
         assert_eq!(reserve_base, info.base, "Reservation VMAR allocated at wrong address");
@@ -1261,10 +1261,10 @@ mod tests {
         // This ends up being the same thing ReservationVmar does, but it's not reused here so that
         // this catches bugs or bad changes to ReservationVmar itself.
         let info = built.root_vmar.info()?;
-        let lower_half_len = util::page_end((info.base + info.len) / 2) - info.base;
+        let lower_half_len = util::page_end((info.base + info.len as usize) / 2) - info.base;
         built
             .root_vmar
-            .allocate(0, lower_half_len, zx::VmarFlags::SPECIFIC)
+            .allocate(0, lower_half_len as u64, zx::VmarFlags::SPECIFIC)
             .context("Unable to allocate lower address range of new process")?;
         Ok(())
     }

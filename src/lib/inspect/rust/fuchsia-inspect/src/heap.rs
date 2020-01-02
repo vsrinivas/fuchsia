@@ -101,7 +101,7 @@ impl Heap {
     }
 
     fn grow_heap(&mut self, requested_size: usize) -> Result<(), Error> {
-        let mapping_size = self.mapping.len();
+        let mapping_size = self.mapping.len() as usize;
         if self.current_size_bytes == mapping_size && requested_size > mapping_size {
             return Err(format_err!("Heap already at maxium size"));
         }

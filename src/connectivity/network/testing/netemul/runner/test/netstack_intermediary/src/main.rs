@@ -127,7 +127,8 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     };
 
     let mut eth_client =
-        ethernet::Client::new(eth_proxy, vmo, ethernet::DEFAULT_BUFFER_SIZE, &ep_name).await?;
+        ethernet::Client::new(eth_proxy, vmo, ethernet::DEFAULT_BUFFER_SIZE as u64, &ep_name)
+            .await?;
 
     eth_client.start().await?;
 
@@ -145,9 +146,9 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
                 if !sent_response {
                     let mut data: [u8; 100] = [0; 100];
                     rx.read(&mut data);
-                    let user_message = str::from_utf8(&data[0..rx.len()]).unwrap();
+                    let user_message = str::from_utf8(&data[0..rx.len() as usize]).unwrap();
                     println!("From client: {}", user_message);
-                    eth_client.send(&data[0..rx.len()]);
+                    eth_client.send(&data[0..rx.len() as usize]);
                     sent_response = true;
 
                     // Start listening for the server's response to be

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/fuchsia/zircon_images.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
@@ -20,19 +21,30 @@ if (is_fuchsia) {
   }
 }
 
+# TODO(bwb): Post build unification, this should depend upon the kazoo
+# generation target.
+rustc_library("fuchsia-zircon-sys") {
+  version = "0.3.3"
+  edition = "2018"
+  source_root = "$zircon_root_build_dir/user.vdso-$target_cpu-clang.shlib/gen/zircon/syscalls/definitions.rs"
+  deps = [
+    ":fuchsia-zircon-types",
+  ]
+}
+
+rustc_library("fuchsia-zircon-types") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "fuchsia-zircon-types/src/lib.rs"
+}
+
 rustc_library("fuchsia-zircon-status") {
   version = "0.1.0"
   edition = "2018"
   source_root = "fuchsia-zircon-status/src/lib.rs"
   deps = [
-    "//src/lib/zircon/rust:fuchsia-zircon-sys",
+    ":fuchsia-zircon-sys",
   ]
-}
-
-rustc_library("fuchsia-zircon-sys") {
-  version = "0.3.3"
-  edition = "2018"
-  source_root = "fuchsia-zircon-sys/src/lib.rs"
 }
 
 # Certain unit tests for fuchsia-zircon need dependencies which can't be added

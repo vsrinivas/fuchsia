@@ -82,7 +82,7 @@ pub trait BlockContainerEq<RHS = Self> {
 
 impl ReadableBlockContainer for Arc<Mapping> {
     fn read_bytes(&self, offset: usize, bytes: &mut [u8]) -> usize {
-        self.read_at(offset, bytes)
+        self.read_at(offset as u64, bytes) as usize
     }
 }
 
@@ -112,7 +112,7 @@ impl BlockContainerEq for &[u8] {
 
 impl WritableBlockContainer for Arc<Mapping> {
     fn write_bytes(&self, offset: usize, bytes: &[u8]) -> usize {
-        self.write_at(offset, bytes)
+        self.write_at(offset as u64, bytes) as usize
     }
 }
 

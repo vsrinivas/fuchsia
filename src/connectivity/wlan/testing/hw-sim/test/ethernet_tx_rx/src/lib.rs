@@ -31,7 +31,7 @@ async fn send_and_receive<'a>(
             }
             ethernet::Event::Receive(rx_buffer, flags) => {
                 ensure!(flags.intersects(ethernet::EthernetQueueFlags::RX_OK), "RX_OK not set");
-                let mut buf = vec![0; rx_buffer.len()];
+                let mut buf = vec![0; rx_buffer.len() as usize];
                 rx_buffer.read(&mut buf);
                 let mut buf_reader = BufferReader::new(&buf[..]);
                 let header = buf_reader

@@ -675,7 +675,7 @@ pub struct HostMemory {
 
 impl HostMemory {
     pub fn allocate(session: SessionPtr, size: usize) -> Result<HostMemory, Status> {
-        let (mapping, vmo) = Mapping::allocate(size)?;
+        let (mapping, vmo) = Mapping::allocate(size as u64)?;
         let remote = vmo.duplicate_handle(
             Rights::DUPLICATE
                 | Rights::TRANSFER
@@ -691,7 +691,7 @@ impl HostMemory {
     }
 
     pub fn len(&self) -> usize {
-        self.mapping.len()
+        self.mapping.len() as usize
     }
 }
 

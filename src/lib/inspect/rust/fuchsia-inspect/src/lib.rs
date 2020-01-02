@@ -234,7 +234,7 @@ impl Inspector {
             size =
                 (1 + size / constants::MINIMUM_VMO_SIZE_BYTES) * constants::MINIMUM_VMO_SIZE_BYTES;
         }
-        let (mapping, vmo) = Mapping::allocate(size)
+        let (mapping, vmo) = Mapping::allocate(size as u64)
             .map_err(|e| format_err!("failed to allocate vmo zx status={}", e))?;
         let heap = Heap::new(Arc::new(mapping))?;
         let state = State::create(heap)?;

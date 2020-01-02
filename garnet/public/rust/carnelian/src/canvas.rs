@@ -391,7 +391,7 @@ impl MappingPixelSink {
 
 impl PixelSink for MappingPixelSink {
     fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
-        self.mapping.write_at(offset, &value);
+        self.mapping.write_at(offset as u64, &value);
     }
 }
 
