@@ -40,6 +40,9 @@
 
 namespace media_player {
 
+static const char* kDumpEntry = "dump";
+static constexpr size_t kMaxBufferSize = 32 * 1024;
+
 // static
 std::unique_ptr<SessionAudioConsumerFactoryImpl> SessionAudioConsumerFactoryImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::SessionAudioConsumerFactory> request,
@@ -102,6 +105,22 @@ AudioConsumerImpl::AudioConsumerImpl(uint64_t session_id, sys::ComponentContext*
 
   decoder_factory_ = DecoderFactory::Create(this);
   FX_DCHECK(decoder_factory_);
+
+  component_context_->outgoing()->debug_dir()->AddEntry(
+      kDumpEntry,
+      std::make_unique<vfs::PseudoFile>(
+          kMaxBufferSize, [this](std::vector<uint8_t>* out, size_t max_bytes) -> zx_status_t {
+            std::ostringstream os;
+
+            core_.Dump(os << std::boolalpha);
+            os << "\n";
+
+            auto out_str = os.str();
+            auto end = out_str.size() > max_bytes ? out_str.begin() + max_bytes : out_str.end();
+            *out = std::vector<uint8_t>(out_str.begin(), end);
+
+            return ZX_OK;
+          }));
 
   core_.SetUpdateCallback([this]() {
     if (core_.problem()) {
