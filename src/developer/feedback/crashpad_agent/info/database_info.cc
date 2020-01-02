@@ -23,6 +23,12 @@ void DatabaseInfo::LogMaxCrashpadDatabaseSize(const uint64_t max_crashpad_databa
   context_->InspectManager().ExposeDatabase(max_crashpad_database_size_in_kb);
 }
 
+void DatabaseInfo::LogGarbageCollection(const uint64_t num_cleaned,
+                                                 const uint64_t num_pruned) {
+  context_->InspectManager().IncreaseReportsCleanedBy(num_cleaned);
+  context_->InspectManager().IncreaseReportsPrunedBy(num_pruned);
+}
+
 void DatabaseInfo::RecordUploadAttemptNumber(const std::string& local_report_id,
                                              const uint64_t upload_attempt) {
   context_->InspectManager().SetUploadAttempt(local_report_id, upload_attempt);

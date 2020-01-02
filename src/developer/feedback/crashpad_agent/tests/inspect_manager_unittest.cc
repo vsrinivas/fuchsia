@@ -360,14 +360,28 @@ TEST_F(InspectManagerTest, ExposeSettings_TrackUploadPolicyChanges) {
           PropertyList(ElementsAre(StringIs("upload_policy", ToString(kSettingsEnabled)))))))));
 }
 
-TEST_F(InspectManagerTest, ExposeDatabase) {
-  const uint64_t kCrashpadDatabaseMaxSizeInKb = 1234u;
-  inspect_manager_->ExposeDatabase(kCrashpadDatabaseMaxSizeInKb);
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(NodeMatches(
-                  AllOf(NameMatches("database"),
-                        PropertyList(ElementsAre(UintIs("max_crashpad_database_size_in_kb",
-                                                        kCrashpadDatabaseMaxSizeInKb))))))));
+TEST_F(InspectManagerTest, IncreaseReportsCleanedBy) {
+  const uint64_t kNumReportsCleaned = 10;
+  for (size_t i = 1; i < 5; ++i) {
+    inspect_manager_->IncreaseReportsCleanedBy(kNumReportsCleaned);
+    EXPECT_THAT(
+        InspectTree(),
+        ChildrenMatch(Contains(NodeMatches(AllOf(
+            NameMatches("database"),
+            PropertyList(ElementsAre(UintIs("num_reports_cleaned", i * kNumReportsCleaned))))))));
+  }
+}
+
+TEST_F(InspectManagerTest, IncreaseReportsPrunedBy) {
+  const uint64_t kNumReportsPruned = 10;
+  for (size_t i = 1; i < 5; ++i) {
+    inspect_manager_->IncreaseReportsPrunedBy(kNumReportsPruned);
+    EXPECT_THAT(
+        InspectTree(),
+        ChildrenMatch(Contains(NodeMatches(AllOf(
+            NameMatches("database"),
+            PropertyList(ElementsAre(UintIs("num_reports_pruned", i * kNumReportsPruned))))))));
+  }
 }
 
 TEST_F(InspectManagerTest, SetQueueSize) {

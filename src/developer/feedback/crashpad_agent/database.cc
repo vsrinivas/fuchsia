@@ -204,7 +204,7 @@ size_t Database::GarbageCollect() {
                                        num_cleaned);
   }
 
-  if (num_pruned + num_cleaned > 0) {
+  if (num_cleaned + num_pruned > 0) {
     // We need to store the |UUID|s to be removed from |additional_data_| because erasing a
     // |UUID| within the loop will invalidate the generated iterator and cause a use-after-free bug.
     std::vector<UUID> clean_up;
@@ -222,7 +222,8 @@ size_t Database::GarbageCollect() {
     }
   }
 
-  return num_pruned + num_cleaned;
+  info_.LogGarbageCollection(num_cleaned, num_pruned);
+  return num_cleaned + num_pruned;
 }
 
 }  // namespace feedback

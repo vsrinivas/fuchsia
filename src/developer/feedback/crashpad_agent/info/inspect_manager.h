@@ -37,6 +37,12 @@ class InspectManager {
   // Records the current size of the queue of pending reports.
   void SetQueueSize(uint64_t size);
 
+  // Increase the total number of cleaned reports by |num_cleaned|.
+  void IncreaseReportsCleanedBy(uint64_t num_cleaned);
+
+  // Increase the total number of pruned reports by |num_pruned|.
+  void IncreaseReportsPrunedBy(uint64_t num_pruned);
+
   // Adds a new report under the given program.
   //
   // Returns false if there is already a report with |local_report_id| as ID (for the given program
@@ -89,6 +95,8 @@ class InspectManager {
   // Inspect node containing the database properties.
   struct Database {
     inspect::UintProperty max_crashpad_database_size_in_kb;
+    inspect::UintProperty num_pruned;
+    inspect::UintProperty num_cleaned;
   };
 
   // Inspect node containing the queue properties.

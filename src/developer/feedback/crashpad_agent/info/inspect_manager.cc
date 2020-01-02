@@ -171,6 +171,24 @@ void InspectManager::OnUploadPolicyChange(const feedback::Settings::UploadPolicy
   }
 }
 
+void InspectManager::IncreaseReportsCleanedBy(const uint64_t num_cleaned) {
+  if (!database_.num_cleaned) {
+    database_.num_cleaned =
+        node_manager_.Get("/database").CreateUint("num_reports_cleaned", num_cleaned);
+  } else {
+    database_.num_cleaned.Add(num_cleaned);
+  }
+}
+
+void InspectManager::IncreaseReportsPrunedBy(const uint64_t num_pruned) {
+  if (!database_.num_pruned) {
+    database_.num_pruned =
+        node_manager_.Get("/database").CreateUint("num_reports_pruned", num_pruned);
+  } else {
+    database_.num_pruned.Add(num_pruned);
+  }
+}
+
 void InspectManager::ExposeDatabase(uint64_t max_crashpad_database_size_in_kb) {
   database_.max_crashpad_database_size_in_kb =
       node_manager_.Get("/database")

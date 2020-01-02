@@ -598,17 +598,26 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportGarbageCollected) {
   EXPECT_EQ(database_->GarbageCollect(), 1u);
   AddCobaltCrashState(CrashState::GarbageCollected);
   CheckCobaltEvents();
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches("reports")),
-          ChildrenMatch(ElementsAre(AllOf(NodeMatches(NameMatches("program")),
-                                          ChildrenMatch(ElementsAre(AllOf(NodeMatches(AllOf(
-                                              NameMatches(local_report_id.ToString()),
-                                              PropertyList(UnorderedElementsAreArray({
-                                                  StringIs("creation_time", kTimeStr),
-                                                  StringIs("final_state", "garbage_collected"),
-                                              }))))))))))))));
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(IsSupersetOf({
+                  AllOf(NodeMatches(NameMatches("reports")),
+                        ChildrenMatch(
+                            ElementsAre(AllOf(NodeMatches(NameMatches("program")),
+                                              ChildrenMatch(ElementsAre(AllOf(NodeMatches(AllOf(
+                                                  NameMatches(local_report_id.ToString()),
+                                                  PropertyList(UnorderedElementsAreArray({
+                                                      StringIs("creation_time", kTimeStr),
+                                                      StringIs("final_state", "garbage_collected"),
+                                                  }))))))))))),
+                  AllOf(NodeMatches(AllOf(NameMatches("database"),
+                                          PropertyList(UnorderedElementsAreArray({
+                                              UintIs("max_crashpad_database_size_in_kb", 0u),
+                                              UintIs("num_reports_cleaned", 0u),
+                                              UintIs("num_reports_pruned", 1u),
+                                          })))),
+                        ChildrenMatch(IsEmpty())),
+
+              })));
 }
 
 }  // namespace
