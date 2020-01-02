@@ -49,7 +49,7 @@ $ fx shell run loadbench --file /pkg/data/simple_load.json
 ## Workload Specification Files
 
 Workload specification files are standard JSON format, with extensions to allow
-trailing commas and single ``// ...` and multi-line `/* ... */` comments.
+trailing commas and single `// ...` and multi-line `/* ... */` comments.
 
 The primary document element of a specification file is always a JSON object:
 
