@@ -27,7 +27,13 @@ class SimMvm : public ::wlan::simulation::StationIfc {
     }
   }
 
-  zx_status_t SendCmd(struct iwl_host_cmd* cmd);
+  // Execute the command.
+  //
+  // 'notify_wait' will be updated to:
+  //   true: tell the caller to notify the notification wait.
+  //   false: no need to notify.
+  //
+  zx_status_t SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait);
 
   // StationIfc operations
   void Rx(void* pkt) override {}

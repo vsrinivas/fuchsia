@@ -48,6 +48,12 @@ static struct trans_sim_priv* IWL_TRANS_GET_TRANS_SIM(struct iwl_trans* trans) {
   return (struct trans_sim_priv*)trans->trans_specific;
 }
 
+// Notify the mvm->notif_wait to unblock the waiting.
+static void unblock_notif_wait(struct iwl_trans* trans) {
+  struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(trans->op_mode);
+  iwl_notification_notify(&mvm->notif_wait);
+}
+
 static zx_status_t iwl_trans_sim_start_hw(struct iwl_trans* iwl_trans, bool low_power) {
   return ZX_OK;
 }
@@ -60,8 +66,7 @@ static zx_status_t iwl_trans_sim_start_fw(struct iwl_trans* trans, const struct 
   //
   // Since we don't have a real firmware to load, there will be no notification from the firmware.
   // Fake a RX packet's behavior so that we won't get blocked in the iwl_mvm_mac_start().
-  struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(trans->op_mode);
-  iwl_notification_notify(&mvm->notif_wait);
+  unblock_notif_wait(trans);
 
   return ZX_OK;
 }
@@ -71,7 +76,16 @@ static void iwl_trans_sim_fw_alive(struct iwl_trans* trans, uint32_t scd_addr) {
 static void iwl_trans_sim_stop_device(struct iwl_trans* trans, bool low_power) {}
 
 static zx_status_t iwl_trans_sim_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
-  return IWL_TRANS_GET_TRANS_SIM(trans)->fw->SendCmd(cmd);
+  bool notify_wait;
+  zx_status_t ret = IWL_TRANS_GET_TRANS_SIM(trans)->fw->SendCmd(cmd, &notify_wait);
+
+  // On real hardware, some particular commands would reply a packet to unblock the wait.
+  // However, in the simulated firmware, we don't generate the packet. We unblock it directly.
+  if (notify_wait) {
+    unblock_notif_wait(trans);
+  }
+
+  return ret;
 }
 
 static zx_status_t iwl_trans_sim_tx(struct iwl_trans* trans, struct sk_buff* skb,

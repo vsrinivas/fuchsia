@@ -520,7 +520,7 @@ zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
   lockdep_assert_held(&mvm->mutex);
 
   if (WARN_ON_ONCE(mvm->calibrating)) {
-    return 0;
+    return ZX_OK;
   }
 
   iwl_init_notification_wait(&mvm->notif_wait, &calib_wait, init_complete,
@@ -557,10 +557,12 @@ zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
   if (mvm->nvm_file_name) {
     iwl_mvm_load_nvm_to_nic(mvm);
   }
+#endif  // NEEDS_PORTING
 
-  WARN_ONCE(mvm->nvm_data->nvm_version < mvm->trans->cfg->nvm_ver,
-            "Too old NVM version (0x%0x, required = 0x%0x)", mvm->nvm_data->nvm_version,
+  if (mvm->nvm_data && mvm->nvm_data->nvm_version < mvm->trans->cfg->nvm_ver) {
+    IWL_ERR(mvm, "Too old NVM version (0x%0x, required = 0x%0x)", mvm->nvm_data->nvm_version,
             mvm->trans->cfg->nvm_ver);
+  }
 
   /*
    * abort after reading the nvm in case RF Kill is on, we will complete
@@ -575,12 +577,12 @@ zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
 
   /* Send TX valid antennas before triggering calibrations */
   ret = iwl_send_tx_ant_cfg(mvm, iwl_mvm_get_valid_tx_ant(mvm));
-  if (ret) {
+  if (ret != ZX_OK) {
     goto remove_notif;
   }
 
   ret = iwl_send_phy_cfg_cmd(mvm);
-  if (ret) {
+  if (ret != ZX_OK) {
     IWL_ERR(mvm, "Failed to run INIT calibrations: %d\n", ret);
     goto remove_notif;
   }
@@ -590,25 +592,22 @@ zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
    * just wait for the calibration complete notification.
    */
   ret = iwl_wait_notification(&mvm->notif_wait, &calib_wait, MVM_UCODE_CALIB_TIMEOUT);
-  if (!ret) {
+  if (ret == ZX_OK) {
     goto out;
   }
 
   if (iwl_mvm_is_radio_hw_killed(mvm)) {
     IWL_DEBUG_RF_KILL(mvm, "RFKILL while calibrating.\n");
-    ret = 0;
+    ret = ZX_OK;
   } else {
     IWL_ERR(mvm, "Failed to run INIT calibrations: %d\n", ret);
   }
 
   goto out;
-#endif  // NEEDS_PORTING
 
 remove_notif:
   iwl_remove_notification(&mvm->notif_wait, &calib_wait);
-#if 0   // NEEDS_PORTING
 out:
-#endif  // NEEDS_PORTING
   mvm->calibrating = false;
 
 #if 0   // NEEDS_PORTING
@@ -977,8 +976,8 @@ static int iwl_mvm_sar_init(struct iwl_mvm* mvm) {
 }
 #endif  // NEEDS_PORTING
 
-static int iwl_mvm_load_rt_fw(struct iwl_mvm* mvm) {
-  int ret;
+static zx_status_t iwl_mvm_load_rt_fw(struct iwl_mvm* mvm) {
+  zx_status_t ret;
 
 #if 0   // NEEDS_PORTING
   // The chip we use (7265D) doesn't have unified ucode.
@@ -992,7 +991,7 @@ static int iwl_mvm_load_rt_fw(struct iwl_mvm* mvm) {
     IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", ret);
 
     if (iwlmvm_mod_params.init_dbg) {
-      return 0;
+      return ZX_OK;
     }
     return ret;
   }
@@ -1004,7 +1003,7 @@ static int iwl_mvm_load_rt_fw(struct iwl_mvm* mvm) {
    */
   _iwl_trans_stop_device(mvm->trans, false);
   ret = _iwl_trans_start_hw(mvm->trans, false);
-  if (ret) {
+  if (ret != ZX_OK) {
     return ret;
   }
 
@@ -1013,7 +1012,7 @@ static int iwl_mvm_load_rt_fw(struct iwl_mvm* mvm) {
 #endif  // NEEDS_PORTING
 
   ret = iwl_mvm_load_ucode_wait_alive(mvm, IWL_UCODE_REGULAR);
-  if (ret) {
+  if (ret != ZX_OK) {
     return ret;
   }
 
@@ -1040,6 +1039,7 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
 #if 0   // NEEDS_PORTING
     iwl_fw_assert_error_dump(&mvm->fwrt);
 #endif  // NEEDS_PORTING
+
     goto error;
   }
 
@@ -1228,6 +1228,7 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
     * RTNL is not taken during Ct-kill, but we don't need to scan/Tx
     * anyway, so don't init MCC.
     */
+    // TODO(42213): port this function.
     if (!test_bit(IWL_MVM_STATUS_HW_CTKILL, &mvm->status)) {
         ret = iwl_mvm_init_mcc(mvm);
         if (ret) { goto error; }
@@ -1278,6 +1279,7 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
 #endif
 
 #if 0   // NEEDS_PORTING
+    // TODO(42216): port this function.
     ret = iwl_mvm_sar_init(mvm);
     if (ret == 0) {
         ret = iwl_mvm_sar_geo_init(mvm);

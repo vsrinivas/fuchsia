@@ -14,21 +14,28 @@ extern "C" {
 namespace wlan {
 namespace testing {
 
-zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd) {
+zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
   IWL_INSPECT_HOST_CMD(cmd);
   uint8_t opcode = iwl_cmd_opcode(cmd->id);
   uint8_t group_id = iwl_cmd_groupid(cmd->id);
   SimMvmResponse resp;  // Used by command functions to return packet.
   zx_status_t ret;
 
+  *notify_wait = false;
   switch (group_id) {
     case LONG_GROUP:
       switch (opcode) {  // enum iwl_legacy_cmds
         // No state change for the following commands.
+
+        // On real hardware, this command would reply a pakcet to unblock the driver waiting.
+        // In the simulated code, we don't generate the packet. Instead, we unblock it directly.
+        case PHY_CONFIGURATION_CMD:
+          *notify_wait = true;
+          // passthru
+
         case SHARED_MEM_CFG:
         case TX_ANT_CONFIGURATION_CMD:
         case PHY_DB_CMD:
-        case PHY_CONFIGURATION_CMD:
         case PHY_CONTEXT_CMD:
         case REPLY_THERMAL_MNG_BACKOFF:
         case POWER_TABLE_CMD:
