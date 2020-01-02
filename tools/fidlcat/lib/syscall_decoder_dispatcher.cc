@@ -302,4 +302,12 @@ void SyscallDisplayDispatcher::StopMonitoring(zx_koid_t koid) {
   SyscallDecoderDispatcher::StopMonitoring(koid);
 }
 
+std::unique_ptr<SyscallDecoder> SyscallCompareDispatcher::CreateDecoder(
+    InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, uint64_t process_id,
+    uint64_t thread_id, const Syscall* syscall) {
+  return std::make_unique<SyscallDecoder>(this, thread_observer, thread, process_id, thread_id,
+                                          syscall,
+                                          std::make_unique<SyscallCompare>(this, comparator_, os_));
+}
+
 }  // namespace fidlcat

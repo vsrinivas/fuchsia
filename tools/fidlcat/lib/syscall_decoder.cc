@@ -460,4 +460,27 @@ void SyscallDisplay::SyscallDecodingError(const DecoderError& error, SyscallDeco
   decoder->Destroy();
 }
 
+void SyscallCompare::SyscallInputsDecoded(SyscallDecoder* decoder) {
+  os_.clear();
+  os_.str("");
+  SyscallDisplay::SyscallInputsDecoded(decoder);
+  comparator_.CompareInput(os_.str());
+}
+
+void SyscallCompare::SyscallOutputsDecoded(SyscallDecoder* decoder) {
+  os_.clear();
+  os_.str("");
+  SyscallDisplay::SyscallOutputsDecoded(decoder);
+  if (decoder->syscall()->return_type() != SyscallReturnType::kNoReturn) {
+    comparator_.CompareOutput(os_.str());
+  }
+}
+
+void SyscallCompare::SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) {
+  os_.clear();
+  os_.str("");
+  SyscallDisplay::SyscallDecodingError(error, decoder);
+  comparator_.DecodingError(os_.str());
+}
+
 }  // namespace fidlcat

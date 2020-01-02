@@ -150,15 +150,16 @@ int ConsoleMain(int argc, const char* argv[]) {
     return 1;
   }
 
-  Comparator* comparator =
-      options.compare_file.has_value() ? new Comparator(options.compare_file.value()) : nullptr;
-  std::ostream& os = options.compare_file.has_value() ? comparator->output_stream() : std::cout;
+  std::unique_ptr<SyscallDecoderDispatcher> decoder_dispatcher =
+      options.compare_file.has_value()
+          ? std::make_unique<SyscallCompareDispatcher>(&loader, decode_options, display_options,
+                                                       options.compare_file.value())
+          : std::make_unique<SyscallDisplayDispatcher>(&loader, decode_options, display_options,
+                                                       std::cout);
 
   InterceptionWorkflow workflow;
-  workflow.Initialize(
-      options.symbol_paths, options.symbol_repo_paths, options.symbol_cache_path,
-      options.symbol_servers,
-      std::make_unique<SyscallDisplayDispatcher>(&loader, decode_options, display_options, os));
+  workflow.Initialize(options.symbol_paths, options.symbol_repo_paths, options.symbol_cache_path,
+                      options.symbol_servers, std::move(decoder_dispatcher));
 
   if (workflow.HasSymbolServers()) {
     for (const auto& server : workflow.GetSymbolServers()) {
@@ -225,10 +226,6 @@ int ConsoleMain(int argc, const char* argv[]) {
   // When all the monitored process will be terminated, we will exit the loop.
   InterceptionWorkflow::Go();
 
-  if (options.compare_file.has_value()) {
-    comparator->Compare(std::cout);
-    delete comparator;
-  }
   return 0;
 }
 

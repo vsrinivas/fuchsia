@@ -15,6 +15,7 @@
 #include <map>
 #include <memory>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -25,6 +26,7 @@
 #include "src/lib/fidl_codec/display_options.h"
 #include "src/lib/fidl_codec/message_decoder.h"
 #include "src/lib/fxl/logging.h"
+#include "tools/fidlcat/lib/comparator.h"
 #include "tools/fidlcat/lib/decode_options.h"
 #include "tools/fidlcat/lib/exception_decoder.h"
 #include "tools/fidlcat/lib/inference.h"
@@ -1580,6 +1582,24 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   const SyscallDisplay* last_displayed_syscall_ = nullptr;
   // The stream which will receive the syscall decodings.
   std::ostream& os_;
+};
+
+class SyscallCompareDispatcher : public SyscallDisplayDispatcher {
+ public:
+  SyscallCompareDispatcher(fidl_codec::LibraryLoader* loader, const DecodeOptions& decode_options,
+                           const DisplayOptions& display_options,
+                           std::string_view compare_file_name)
+      : SyscallDisplayDispatcher(loader, decode_options, display_options, os_),
+        comparator_(compare_file_name, std::cout) {}
+
+  std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
+                                                zxdb::Thread* thread, uint64_t process_id,
+                                                uint64_t thread_id,
+                                                const Syscall* syscall) override;
+
+ private:
+  Comparator comparator_;
+  std::ostringstream os_;
 };
 
 // Display a value on a stream.

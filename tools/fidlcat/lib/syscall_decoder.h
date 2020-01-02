@@ -19,6 +19,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
+#include "tools/fidlcat/lib/comparator.h"
 #include "tools/fidlcat/lib/decoder.h"
 #include "tools/fidlcat/lib/type_decoder.h"
 
@@ -274,6 +275,21 @@ class SyscallDisplay : public SyscallUse {
   SyscallDisplayDispatcher* const dispatcher_;
   std::ostream& os_;
   std::string line_header_;
+};
+
+class SyscallCompare : public SyscallDisplay {
+ public:
+  SyscallCompare(SyscallDisplayDispatcher* dispatcher, Comparator& comparator,
+                 std::ostringstream& os)
+      : SyscallDisplay(dispatcher, os), comparator_(comparator), os_(os) {}
+
+  void SyscallInputsDecoded(SyscallDecoder* decoder) override;
+  void SyscallOutputsDecoded(SyscallDecoder* decoder) override;
+  void SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) override;
+
+ private:
+  Comparator& comparator_;
+  std::ostringstream& os_;
 };
 
 }  // namespace fidlcat
