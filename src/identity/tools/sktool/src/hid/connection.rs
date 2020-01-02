@@ -26,6 +26,21 @@ pub trait Connection: Sized + Debug {
 
     /// Returns the maximum length of packets this device can read.
     async fn max_packet_length(&self) -> Result<u16, Error>;
+
+    /// Waits for a CTAP packet (aka HID report) on which the supplied predicate returns true.
+    /// If the predicate returns an error the packet is considered illegal and the function will
+    /// terminate immediately with this error.
+    async fn read_matching_packet<F>(&self, predicate: F) -> Result<Packet, Error>
+    where
+        F: Fn(&Packet) -> Result<bool, Error>,
+    {
+        loop {
+            let packet = self.read_packet().await?;
+            if predicate(&packet)? {
+                return Ok(packet);
+            }
+        }
+    }
 }
 
 /// An implementation of a `Connection` over the FIDL `fuchsia.hardware.input.Device` protocol.
@@ -38,6 +53,7 @@ pub mod fidl {
     use fidl_fuchsia_hardware_input::{DeviceProxy, ReportType};
     use fuchsia_async::{self as fasync, Time, TimeoutExt};
     use fuchsia_zircon as zx;
+    use futures::TryFutureExt;
     use lazy_static::lazy_static;
     use std::convert::TryFrom;
 
@@ -47,6 +63,12 @@ pub mod fidl {
     const INPUT_REPORT_ID: u8 = 0;
 
     lazy_static! {
+        /// Time to wait before declaring a FIDL call to be failed.
+        // Note: This choice of time is somewhat arbitrary and may need tuning in the future. Its
+        // intended to be large enough that a healthy system does not timeout and small enough that
+        // waiting for FIDL doesn't interfere with the timeouts we set on the security key.
+        static ref FIDL_TIMEOUT: zx::Duration = zx::Duration::from_millis(50);
+
         /// Time to wait before declaring a read failure. Set slightly higher than the 100ms
         /// KEEPALIVE requirement in the CTAPHID specification.
         static ref READ_PACKET_TIMEOUT: zx::Duration = zx::Duration::from_millis(110);
@@ -68,8 +90,11 @@ pub mod fidl {
         async fn get_reports(&self) -> Result<(zx::Status, Vec<u8>), Error> {
             self.proxy
                 .get_reports()
-                .await
                 .map_err(|err| format_err!("FIDL error on GetReports: {:?}", err))
+                .on_timeout(Time::after(*FIDL_TIMEOUT), || {
+                    Err(format_err!("FIDL timeout on GetReports"))
+                })
+                .await
                 .map(|(status, data)| (zx::Status::from_raw(status), data))
         }
 
@@ -78,8 +103,11 @@ pub mod fidl {
             let (status, event) = self
                 .proxy
                 .get_reports_event()
-                .await
                 .map_err(|err| format_err!("FIDL error on GetReportsEvent: {:?}", err))
+                .on_timeout(Time::after(*FIDL_TIMEOUT), || {
+                    Err(format_err!("FIDL timeout on GetReportsEvent"))
+                })
+                .await
                 .map(|(status, event)| (zx::Status::from_raw(status), event))?;
             if status != zx::Status::OK {
                 return Err(format_err!("Bad status on GetReportsEvent: {:?}", status));
@@ -138,16 +166,22 @@ pub mod fidl {
         async fn report_descriptor(&self) -> Result<Bytes, Error> {
             self.proxy
                 .get_report_desc()
+                .map_err(|err| format_err!("FIDL error: {:?}", err))
+                .on_timeout(Time::after(*FIDL_TIMEOUT), || {
+                    Err(format_err!("FIDL timeout on GetReportDesc"))
+                })
                 .await
                 .map(|vec| Bytes::from(vec))
-                .map_err(|err| format_err!("FIDL error: {:?}", err))
         }
 
         async fn max_packet_length(&self) -> Result<u16, Error> {
             self.proxy
                 .get_max_input_report_size()
-                .await
                 .map_err(|err| format_err!("FIDL error: {:?}", err))
+                .on_timeout(Time::after(*FIDL_TIMEOUT), || {
+                    Err(format_err!("FIDL timeout on GetMaxinputReportSize"))
+                })
+                .await
         }
     }
 
@@ -162,7 +196,9 @@ pub mod fidl {
 
         const TEST_REPORT_LENGTH: u16 = 99;
         const TEST_REPORT_DESCRIPTOR: [u8; 8] = [0x06, 0xd0, 0xf1, 0x09, 0x01, 0xa1, 0x01, 0x09];
+        const TEST_CHANNEL: u32 = 0xfeefbccb;
         const TEST_PACKET: [u8; 9] = [0xfe, 0xef, 0xbc, 0xcb, 0x86, 0x00, 0x02, 0x88, 0x99];
+        const DIFFERENT_PACKET: [u8; 9] = [0x12, 0x21, 0x34, 0x43, 0x86, 0x00, 0x02, 0x88, 0x99];
 
         /// Creates a mock device proxy that will invoke the supplied function on each request.
         fn valid_mock_device_proxy<F>(request_fn: F) -> DeviceProxy
@@ -248,6 +284,62 @@ pub mod fidl {
             });
             let connection = FidlConnection::new(proxy);
             assert!(connection.read_packet().await.is_err());
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn test_read_matching_packet_success() -> Result<(), Error> {
+            let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
+                (DeviceRequest::GetReports { responder }, 1) => {
+                    let response = DIFFERENT_PACKET.to_vec();
+                    responder
+                        .send(zx::sys::ZX_OK, &mut response.into_iter())
+                        .expect("failed to send response");
+                }
+                (DeviceRequest::GetReports { responder }, 2) => {
+                    let response = TEST_PACKET.to_vec();
+                    responder
+                        .send(zx::sys::ZX_OK, &mut response.into_iter())
+                        .expect("failed to send response");
+                }
+                _ => panic!("got unexpected device request."),
+            });
+            let connection = FidlConnection::new(proxy);
+            let received = connection
+                .read_matching_packet(|packet| Ok(packet.channel() == TEST_CHANNEL))
+                .await?;
+            assert_eq!(received, Packet::try_from(TEST_PACKET.to_vec())?);
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn test_read_matching_packet_fail() -> Result<(), Error> {
+            let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
+                (DeviceRequest::GetReports { responder }, 1) => {
+                    let response = DIFFERENT_PACKET.to_vec();
+                    responder
+                        .send(zx::sys::ZX_OK, &mut response.into_iter())
+                        .expect("failed to send response");
+                }
+                (DeviceRequest::GetReports { responder }, 2) => {
+                    let response = TEST_PACKET.to_vec();
+                    responder
+                        .send(zx::sys::ZX_OK, &mut response.into_iter())
+                        .expect("failed to send response");
+                }
+                _ => panic!("got unexpected device request."),
+            });
+            let connection = FidlConnection::new(proxy);
+            connection
+                .read_matching_packet(|packet| {
+                    if packet.channel() == TEST_CHANNEL {
+                        Err(format_err!("expected"))
+                    } else {
+                        Ok(false)
+                    }
+                })
+                .await
+                .expect_err("Should have failed read matching packet on TEST_CHANNEL receipt");
             Ok(())
         }
 

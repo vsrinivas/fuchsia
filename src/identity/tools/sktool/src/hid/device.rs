@@ -12,6 +12,8 @@ use bytes::{Buf, Bytes, IntoBuf};
 use fdio::service_connect;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_hardware_input::DeviceMarker;
+use fuchsia_async::{Time, TimeoutExt};
+use fuchsia_zircon as zx;
 use lazy_static::lazy_static;
 use log::{info, warn};
 use rand::{rngs::OsRng, Rng};
@@ -31,11 +33,18 @@ const FIDO_REPORT_DESCRIPTOR: [u8; 34] = [
     0x02, 0xc0,
 ];
 
-/// The channel to use for the initial INIT packet.
+/// The channel to use for the initial init packet.
 const INIT_CHANNEL: u32 = 0xffffffff;
 
 /// The number of bytes in an init nonce, as defined in the CTAP HID spec.
 const NONCE_LENGTH: u16 = 8;
+
+lazy_static! {
+    /// Time to wait while a device is sending valid packets but ones the don't match our
+    /// initialization request before declaring an initializaton failure. Set to a large value in
+    /// case the device is in the middle of responding to a slow operation for a different client.
+    static ref INIT_TIMEOUT: zx::Duration = zx::Duration::from_millis(2000);
+}
 
 bitfield! {
     /// A `BitField` of device capabilities as documented in the CTAP HID spec.
@@ -69,6 +78,16 @@ pub struct Device<C: Connection, R: Rng> {
     capabilities: Capabilities,
 }
 
+/// The properties that we learn about a connection as we initialize it.
+struct ConnectionProperties {
+    /// The assigned CTAPHID channel to use for all packets.
+    channel: u32,
+    /// The version of the CTAPHID protocol used by the device.
+    ctaphid_version: u8,
+    /// The device's capabilities.
+    capabilities: Capabilities,
+}
+
 impl<C: Connection, R: Rng> Device<C, R> {
     /// Constructs a new `Device` using the supplied path, `Connection`, and `Rng`
     ///
@@ -79,61 +98,22 @@ impl<C: Connection, R: Rng> Device<C, R> {
         connection: C,
         mut rng: R,
     ) -> Result<Option<Device<C, R>>, Error> {
-        // TODO(jsankey): Add a timeout in case the device stalls, on all calls.
         let report_descriptor =
             connection.report_descriptor().await.map_err(|err| format_err!("Error: {:?}", err))?;
         if &FIDO_REPORT_DESCRIPTOR[..] == &report_descriptor[..] {
-            // TODO(jsankey): This logic is needed to acquire a channel during initialitation, but
-            // its also eventually going to be needed to reinitialize a device that has reached
-            // some bad state. Break it out into a separate method.
+            info!("Attempting first initialization on {:?}", path);
+            let properties =
+                Self::initialize_connection(&connection, &mut rng, INIT_CHANNEL).await?;
             let packet_length = connection.max_packet_length().await?;
-            let nonce: [u8; NONCE_LENGTH as usize] = rng.gen();
-            let init_packet =
-                Packet::padded_initialization(INIT_CHANNEL, Command::Init, &nonce, packet_length)?;
-            info!("Sending INIT packet to {:?}", path);
-            connection
-                .write_packet(init_packet)
-                .await
-                .map_err(|err| format_err!("Error writing init packet: {:?}", err))?;
-            let res = connection.read_packet().await;
-
-            // TODO(jsankey): Currently this fails if the first packet we read from the connection
-            // does not match our request, but if other clients are communicating with the device
-            // this may occur. Continue polling until the desired channel, command and nonce are
-            // received.
-            let packet = res?;
-            if packet.channel() != INIT_CHANNEL {
-                return Err(format_err!("Received unexpected channel in init response."));
-            } else if packet.command()? != Command::Init {
-                return Err(format_err!("Received unexpected command in init response."));
-            } else if packet.payload().len() < NONCE_LENGTH as usize + 9 {
-                // Note: The 9 above = 4 bytes channel + 4 bytes version + 1 byte capability.
-                return Err(format_err!(
-                    "Received short init response ({:?} bytes).",
-                    packet.payload().len()
-                ));
-            }
-
-            let mut payload = packet.payload().into_buf();
-            let mut received_nonce = [0u8; NONCE_LENGTH as usize];
-            payload.copy_to_slice(&mut received_nonce);
-            if received_nonce != nonce {
-                return Err(format_err!("Received mismatched nonce in init response."));
-            }
-            let channel = payload.get_u32_be();
-            let ctaphid_version = payload.get_u8();
-            // Skip the 3 bytes of device-specific version information.
-            payload.advance(3);
-            let capabilities = Capabilities(payload.get_u8());
 
             Ok(Some(Device {
                 path,
                 connection,
                 rng,
                 packet_length,
-                channel,
-                ctaphid_version,
-                capabilities,
+                channel: properties.channel,
+                ctaphid_version: properties.ctaphid_version,
+                capabilities: properties.capabilities,
             }))
         } else {
             Ok(None)
@@ -148,6 +128,64 @@ impl<C: Connection, R: Rng> Device<C, R> {
     /// Returns the capabilities of the device.
     pub fn capabilities(&self) -> &Capabilities {
         &self.capabilities
+    }
+
+    /// Performs CTAPHID initialization on the supplied connection using the supplied channel,
+    /// returning values extracted from the init response packet if successful.
+    async fn initialize_connection(
+        connection: &C,
+        rng: &mut R,
+        init_channel: u32,
+    ) -> Result<ConnectionProperties, Error> {
+        let packet_length = connection.max_packet_length().await?;
+        let nonce: [u8; NONCE_LENGTH as usize] = rng.gen();
+        let init_packet =
+            Packet::padded_initialization(init_channel, Command::Init, &nonce, packet_length)?;
+        connection
+            .write_packet(init_packet)
+            .await
+            .map_err(|err| format_err!("Error writing init packet: {:?}", err))?;
+
+        let packet = connection
+            .read_matching_packet(|packet| {
+                if packet.channel() != init_channel {
+                    // It's normal for reponses to other clients to be present on other channels.
+                    return Ok(false);
+                } else if packet.command()? != Command::Init {
+                    return Err(format_err!("Received unexpected command in init response."));
+                } else if packet.payload().len() < NONCE_LENGTH as usize + 9 {
+                    // Note: The 9 above = 4 bytes channel + 4 bytes version + 1 byte capability.
+                    return Err(format_err!(
+                        "Received short init response ({:?} bytes).",
+                        packet.payload().len()
+                    ));
+                }
+
+                let mut payload = packet.payload().into_buf();
+                let mut received_nonce = [0u8; NONCE_LENGTH as usize];
+                payload.copy_to_slice(&mut received_nonce);
+                if received_nonce != nonce {
+                    // It's potentially possible to recieve another client's init response, whose
+                    // nonce won't match the one we sent. Unlikely enough to log though.
+                    info!("Received init packet with an unexpected nonce.");
+                    return Ok(false);
+                }
+                Ok(true)
+            })
+            .on_timeout(Time::after(*INIT_TIMEOUT), || {
+                Err(format_err!("Timed out waiting for valid init response"))
+            })
+            .await?;
+
+        let mut payload = packet.payload().into_buf();
+        // Skip the nonce we validated while matching the packet.
+        payload.advance(NONCE_LENGTH as usize);
+        let channel = payload.get_u32_be();
+        let ctaphid_version = payload.get_u8();
+        // Skip the 3 bytes of device-specific version information.
+        payload.advance(3);
+        let capabilities = Capabilities(payload.get_u8());
+        Ok(ConnectionProperties { channel, ctaphid_version, capabilities })
     }
 }
 
@@ -219,6 +257,7 @@ mod tests {
     const TEST_CHANNEL: u32 = 0x88776655;
     /// The nonce that a StdRng seeded with zero should generate.
     const EXPECTED_NONCE: [u8; 8] = [0xe2, 0xcf, 0x59, 0x54, 0x7a, 0x32, 0xae, 0xef];
+    const DIFFERENT_NONCE: [u8; 8] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
 
     lazy_static! {
         static ref FIXED_SEED_RNG: StdRng = StdRng::seed_from_u64(0);
@@ -257,12 +296,12 @@ mod tests {
         assert_eq!(dev.path, TEST_PATH);
         assert_eq!(dev.channel, TEST_CHANNEL);
         assert_eq!(dev.capabilities.wink(), false); /* Capability=0x04 does not contain wink */
-        assert_eq!(dev.capabilities.cbor(), true); /* Capability=0x04 dot contain CBOR */
+        assert_eq!(dev.capabilities.cbor(), true); /* Capability=0x04 does contain CBOR */
         Ok(())
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_mismatched_nonce_during_init() -> Result<(), Error> {
+    async fn test_other_traffic_during_init() -> Result<(), Error> {
         // Configure a fake connection to expect an init request and return a response.
         let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
         con.expect_write(Packet::padded_initialization(
@@ -271,12 +310,28 @@ mod tests {
             &EXPECTED_NONCE,
             REPORT_LENGTH,
         )?);
-        con.expect_read(build_init_response(&vec![1, 2, 3, 4, 5, 6, 7, 8], TEST_CHANNEL, 0x04));
+        // Return a valid response to a different command on a different channel. The code under
+        // test should ignore this and attempt another read.
+        con.expect_read(
+            Packet::padded_initialization(TEST_CHANNEL, Command::Wink, &[], REPORT_LENGTH).unwrap(),
+        );
+        // Return a valid init packet with a different nonce, possibly in response to a different
+        // client that is also going through init. The code under test should ignore this and
+        // attempt another read.
+        con.expect_read(build_init_response(&DIFFERENT_NONCE, 0x99999999, 0x04));
+        // Return the valid init packet in response to our request.
+        con.expect_read(build_init_response(&EXPECTED_NONCE, TEST_CHANNEL, 0x04));
 
         // Attempt to create a device using this connection and a deterministic Rng.
-        Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
-            .await
-            .expect_err("Should fail to create device with mismatched nonce");
+        let dev = Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
+            .await?
+            .expect("Failed to create device");
+
+        assert_eq!(dev.report_descriptor().await?, &FIDO_REPORT_DESCRIPTOR[..]);
+        assert_eq!(dev.path, TEST_PATH);
+        assert_eq!(dev.channel, TEST_CHANNEL);
+        assert_eq!(dev.capabilities.wink(), false); /* Capability=0x04 does not contain wink */
+        assert_eq!(dev.capabilities.cbor(), true); /* Capability=0x04 does contain CBOR */
         Ok(())
     }
 
