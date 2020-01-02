@@ -24,7 +24,7 @@ Updated: November 2019
   <tr>
    <td>pkgctl
    </td>
-   <td>CLI for pkg_resolver
+   <td>CLI for pkg-resolver
    </td>
    <td>`//src/sys/pkg/bin/pkgctl`
    </td>
@@ -32,7 +32,7 @@ Updated: November 2019
    </td>
   </tr>
   <tr>
-   <td>pkg_resolver
+   <td>pkg-resolver
    </td>
    <td>Main entry point for software delivery stack. Coordinates retrieval and installation of packages.
    </td>
@@ -42,7 +42,7 @@ Updated: November 2019
    </td>
   </tr>
   <tr>
-   <td>pkg_cache
+   <td>pkg-cache
    </td>
    <td>Caches downloaded packages in case they are needed again.
    </td>
@@ -186,7 +186,7 @@ Tab 1 > fx set core.x64 --with //bundles:tests && fx build && fx serve
 
 Tab 2 > fx qemu -kN
 
-Tab 3 > fx run-test pkg-resolver-integration-tests # example of running the pkg_resolver integration tests
+Tab 3 > fx run-test pkg-resolver-integration-tests # example of running the pkg-resolver integration tests
 
 ```
 
@@ -202,7 +202,7 @@ You can discover more tests with by running `fx list-packages` on the host.
 
 ### Common Workflows
 
-##### Updating a base image to get a new version of pkg_resolver or pkgctl
+##### Updating a base image to get a new version of pkg-resolver or pkgctl
 
 To update the base of your fuchsia image, you can use `fx update` if you’re
 running on hardware which supports OTA. If you’re running under QEMU, you’ll
@@ -228,9 +228,9 @@ this example?
 
 ### FAQs
 
-#### What’s the difference between amber and pkg_resolver?
+#### What’s the difference between amber and pkg-resolver?
 
-We’re slowly migrating from (amber, pkgfs) to (pkg_resolver, pkg_cache, pkgfs).
+We’re slowly migrating from (amber, pkgfs) to (pkg-resolver, pkg-cache, pkgfs).
 We expect this migration to be complete by the end of 2019.
 
 #### How do I run a hosted package server?
