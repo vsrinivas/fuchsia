@@ -10,5 +10,6 @@ group("tests") {
     "fidl-fuchsia-pkg-rewrite-ext:tests",
     "fuchsia_backoff:fuchsia_backoff_tests",
     "library_loader:tests",
+    "runner:tests",
   ]
 }

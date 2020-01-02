@@ -23,7 +23,6 @@ rustc_library("lib") {
   deps = [
     "//garnet/lib/rust/cm_fidl_translator",
     "//garnet/lib/rust/cm_fidl_validator",
-    "//garnet/lib/rust/cm_rust",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -45,6 +44,7 @@ rustc_library("lib") {
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//src/sys/lib/directory_broker",
     "//src/sys/lib/library_loader:library_loader",
+    "//src/sys/lib/runner",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:byteorder",

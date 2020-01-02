@@ -11,10 +11,8 @@ use {
     },
     anyhow::{format_err, Context as _, Error},
     clonable_error::ClonableError,
-    cm_rust::data::DictionaryExt,
     fdio::fdio_sys,
     fidl::endpoints::{ClientEnd, ServerEnd},
-    fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
@@ -83,54 +81,6 @@ impl From<ElfRunnerError> for RunnerError {
 /// Runs components with ELF binaries.
 pub struct ElfRunner {
     launcher_connector: ProcessLauncherConnector,
-}
-
-fn get_resolved_url(start_info: &fsys::ComponentStartInfo) -> Result<String, Error> {
-    match &start_info.resolved_url {
-        Some(url) => Ok(url.to_string()),
-        _ => Err(format_err!("missing url")),
-    }
-}
-
-fn get_program_binary(start_info: &fsys::ComponentStartInfo) -> Result<String, Error> {
-    if let Some(program) = &start_info.program {
-        if let Some(val) = program.find("binary") {
-            if let fdata::Value::Str(bin) = val {
-                if !Path::new(bin).is_absolute() {
-                    Ok(bin.to_string())
-                } else {
-                    Err(format_err!("the value of \"program.binary\" must be a relative path"))
-                }
-            } else {
-                Err(format_err!("the value of \"program.binary\" must be a string"))
-            }
-        } else {
-            Err(format_err!("\"program.binary\" must be specified"))
-        }
-    } else {
-        Err(format_err!("\"program\" must be specified"))
-    }
-}
-
-fn get_program_args(start_info: &fsys::ComponentStartInfo) -> Result<Vec<String>, Error> {
-    if let Some(program) = &start_info.program {
-        if let Some(args) = program.find("args") {
-            if let fdata::Value::Vec(vec) = args {
-                return vec
-                    .values
-                    .iter()
-                    .map(|v| {
-                        if let Some(fdata::Value::Str(a)) = v.as_ref().map(|x| &**x) {
-                            Ok(a.clone())
-                        } else {
-                            Err(format_err!("invalid type in arguments"))
-                        }
-                    })
-                    .collect();
-            }
-        }
-    }
-    Ok(vec![])
 }
 
 fn handle_info_from_fd(fd: i32) -> Result<Option<fproc::HandleInfo>, Error> {
@@ -208,12 +158,12 @@ impl ElfRunner {
         start_info: fsys::ComponentStartInfo,
         launcher: &'a fproc::LauncherProxy,
     ) -> Result<(Option<Directory>, fproc::LaunchInfo), Error> {
-        let bin_path =
-            get_program_binary(&start_info).map_err(|e| RunnerError::invalid_args(url, e))?;
+        let bin_path = runner::get_program_binary(&start_info)
+            .map_err(|e| RunnerError::invalid_args(url, e))?;
         let bin_arg = &[String::from(
             PKG_PATH.join(&bin_path).to_str().ok_or(format_err!("invalid binary path"))?,
         )];
-        let args = get_program_args(&start_info)?;
+        let args = runner::get_program_args(&start_info)?;
 
         let name = Path::new(url)
             .file_name()
@@ -317,7 +267,7 @@ impl ElfRunner {
         server_end: ServerEnd<fsys::ComponentControllerMarker>,
     ) -> Result<Option<Box<ElfController>>, RunnerError> {
         let resolved_url =
-            get_resolved_url(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
+            runner::get_resolved_url(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
 
         let launcher = self
             .launcher_connector
@@ -516,7 +466,7 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::{create_endpoints, ClientEnd, Proxy},
-        fuchsia_async as fasync, io_util,
+        fidl_fuchsia_data as fdata, fuchsia_async as fasync, io_util,
     };
 
     // Rust's test harness does not allow passing through arbitrary arguments, so to get coverage
@@ -651,110 +601,6 @@ mod tests {
             Ok(_) => Err(format_err!("hello_world_fail_test succeeded unexpectedly")),
             Err(_) => Ok(()),
         }
-    }
-
-    #[test]
-    fn get_program_binary_test() {
-        let new_start_info = |binary_name: Option<&str>| fsys::ComponentStartInfo {
-            program: Some(fdata::Dictionary {
-                entries: vec![fdata::Entry {
-                    key: "binary".to_string(),
-                    value: binary_name
-                        .and_then(|s| Some(Box::new(fdata::Value::Str(s.to_string())))),
-                }],
-            }),
-            ns: None,
-            outgoing_dir: None,
-            runtime_dir: None,
-            resolved_url: None,
-        };
-        assert_eq!(
-            "bin/myexecutable".to_string(),
-            get_program_binary(&new_start_info(Some("bin/myexecutable"))).unwrap(),
-        );
-        assert_eq!(
-            format!("{:?}", format_err!("the value of \"program.binary\" must be a relative path")),
-            format!(
-                "{:?}",
-                get_program_binary(&new_start_info(Some("/bin/myexecutable"))).unwrap_err()
-            ),
-        );
-        assert_eq!(
-            format!("{:?}", format_err!("\"program.binary\" must be specified")),
-            format!("{:?}", get_program_binary(&new_start_info(None)).unwrap_err()),
-        );
-    }
-
-    fn new_args_set(args: Vec<Option<Box<fdata::Value>>>) -> fsys::ComponentStartInfo {
-        fsys::ComponentStartInfo {
-            program: Some(fdata::Dictionary {
-                entries: vec![fdata::Entry {
-                    key: "args".to_string(),
-                    value: Some(Box::new(fdata::Value::Vec(fdata::Vector { values: args }))),
-                }],
-            }),
-            ns: None,
-            outgoing_dir: None,
-            runtime_dir: None,
-            resolved_url: None,
-        }
-    }
-
-    #[test]
-    fn get_program_args_test() {
-        let e: Vec<String> = vec![];
-
-        assert_eq!(
-            e,
-            get_program_args(&fsys::ComponentStartInfo {
-                program: Some(fdata::Dictionary { entries: vec![] }),
-                ns: None,
-                outgoing_dir: None,
-                runtime_dir: None,
-                resolved_url: None,
-            })
-            .unwrap()
-        );
-
-        assert_eq!(e, get_program_args(&new_args_set(vec![])).unwrap());
-
-        assert_eq!(
-            vec!["a".to_string()],
-            get_program_args(&new_args_set(vec![Some(Box::new(fdata::Value::Str(
-                "a".to_string()
-            )))]))
-            .unwrap()
-        );
-
-        assert_eq!(
-            vec!["a".to_string(), "b".to_string()],
-            get_program_args(&new_args_set(vec![
-                Some(Box::new(fdata::Value::Str("a".to_string()))),
-                Some(Box::new(fdata::Value::Str("b".to_string()))),
-            ]))
-            .unwrap()
-        );
-
-        assert_eq!(
-            format!("{:?}", format_err!("invalid type in arguments")),
-            format!(
-                "{:?}",
-                get_program_args(&new_args_set(vec![
-                    Some(Box::new(fdata::Value::Str("a".to_string()))),
-                    None,
-                ]))
-                .unwrap_err()
-            )
-        );
-
-        assert_eq!(
-            format!("{:?}", format_err!("invalid type in arguments")),
-            format!(
-                "{:?}",
-                get_program_args(&new_args_set(vec![Some(Box::new(fdata::Value::Inum(1))),]))
-                    .unwrap_err()
-            )
-        );
     }
 
     #[fasync::run_singlethreaded(test)]
