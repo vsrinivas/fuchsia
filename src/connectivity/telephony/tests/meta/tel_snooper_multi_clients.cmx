@@ -13,7 +13,7 @@
         }
     },
     "program": {
-        "binary": "test/tel_snooper_single_client"
+        "binary": "test/tel_snooper_multi_clients"
     },
     "sandbox": {
         "boot": [

@@ -4,9 +4,9 @@
 
 import("//build/rust/rustc_test.gni")
 
-rustc_test("single-client") {
-  name = "tel_snooper_single_client"
-  source_root = "src/single_client.rs"
+rustc_test("multi-clients") {
+  name = "tel_snooper_multi_clients"
+  source_root = "src/multi_clients.rs"
   edition = "2018"
   deps = [
     "//garnet/lib/rust/files_async",

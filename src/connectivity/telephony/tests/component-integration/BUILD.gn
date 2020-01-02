@@ -19,6 +19,6 @@ group("fake-qmi-query") {
 group("snooper") {
   testonly = true
   public_deps = [
-    "snooper:single-client",
+    "snooper:multi-clients",
   ]
 }

@@ -9,19 +9,29 @@ use {
     tel_dev::{component_test::*, snooper_test::*},
 };
 
+const SNOOPER_CLIENT_NUM: i64 = 3;
+
+// TODO (jiamingw): remove timeout within test
+
 #[fuchsia_async::run_singlethreaded(test)]
-async fn snooper_single_client() {
-    syslog::init_with_tags(&["snooper-single-client"]).expect("Can't init logger");
+async fn snooper_multi_clients() {
+    syslog::init_with_tags(&["snooper-multi-clients"]).expect("Can't init logger");
     // Connect to driver and get a channel to talk to QMI driver directly.
-    let qmi_device_file = get_fake_device_in_isolated_devmgr(QMI_PATH).await.expect("get fake device");
+    let qmi_device_file =
+        get_fake_device_in_isolated_devmgr(QMI_PATH).await.expect("get fake device");
     let mut qmi_driver_channel =
         qmi::connect_transport_device(&qmi_device_file).await.expect("connecting to driver");
     // Connect to snooper and get the event stream.
-    let snooper_proxy = connect_to_service::<SnooperMarker>().expect("connecting to snooper");
-    // Wait for snooper to connect to device driver, try at most 5 times.
-    let mut device_num: u32 = 0;
-    for _ in 0..100 {
-        device_num = snooper_proxy.get_device_num().await.expect("query from snooper");
+    let mut snooper_proxies = Vec::new();
+    for _ in 0..SNOOPER_CLIENT_NUM {
+        let snooper_proxy = connect_to_service::<SnooperMarker>().expect("connecting to snooper");
+        snooper_proxies.push(snooper_proxy);
+    }
+    // Wait for snooper to connect to device driver
+    let mut device_num: u32;
+    loop {
+        device_num =
+            snooper_proxies.get(0).unwrap().get_device_num().await.expect("query from snooper");
         if device_num != 0 {
             break;
         }
@@ -29,9 +39,11 @@ async fn snooper_single_client() {
     }
     assert_eq!(device_num, 1); // Snooper should have 1 device connected.
                                // Create event stream vec for validating snooper output.
-    let snooper_event_stream = snooper_proxy.take_event_stream();
     let mut snoop_event_streams = Vec::new();
-    snoop_event_streams.push(snooper_event_stream);
+    for snooper_proxy in snooper_proxies {
+        let snooper_event_stream = snooper_proxy.take_event_stream();
+        snoop_event_streams.push(snooper_event_stream);
+    }
 
     fx_log_info!("sending QMI request");
     qmi_driver_channel.write(QMI_IMEI_REQ, &mut Vec::new()).expect("sending QMI msg");

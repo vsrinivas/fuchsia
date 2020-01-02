@@ -41,7 +41,7 @@ test_package("telephony-tests") {
       environments = basic_envs
     },
     {
-      name = "tel_snooper_single_client"
+      name = "tel_snooper_multi_clients"
       environments = basic_envs
     },
   ]
