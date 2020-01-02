@@ -478,9 +478,8 @@ void AudioCapturerImpl::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_fr
 
 void AudioCapturerImpl::ReleasePacket(fuchsia::media::StreamPacket packet) {
   TRACE_DURATION("audio", "AudioCapturerImpl::ReleasePacket");
-  // TODO(mpuryear): Implement.
+  // TODO(43507): Implement.
   FX_LOGS(ERROR) << "ReleasePacket not implemented yet.";
-  BeginShutdown();
 }
 
 void AudioCapturerImpl::DiscardAllPacketsNoReply() {

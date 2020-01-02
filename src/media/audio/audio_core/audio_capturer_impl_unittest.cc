@@ -69,7 +69,6 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
     // will not work since the rest of this class is destructed before the loop and its
     // queued functions are. Here, we ensure the error handler runs before this class' destructors
     // run.
-    { auto r = std::move(capturer_); }
     { auto r = std::move(fidl_capturer_); }
     RunLoopUntilIdle();
 
@@ -86,8 +85,8 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
   StreamVolumeManager volume_manager_;
   RouteGraph route_graph_;
 
-  fuchsia::media::AudioCapturerPtr fidl_capturer_;
   fbl::RefPtr<AudioCapturerImpl> capturer_;
+  fuchsia::media::AudioCapturerPtr fidl_capturer_;
 
   ProcessConfig::Handle config_handle_;
   zx::vmo vmo_;
@@ -101,7 +100,9 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
 
 TEST_F(AudioCapturerImplTest, CanShutdownWithUnusedBuffer) {
   zx::vmo duplicate;
-  ASSERT_EQ(vmo_.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE | ZX_RIGHT_READ, &duplicate), ZX_OK);
+  ASSERT_EQ(
+      vmo_.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE | ZX_RIGHT_READ | ZX_RIGHT_MAP, &duplicate),
+      ZX_OK);
   fidl_capturer_->SetPcmStreamType(stream_type_);
   fidl_capturer_->AddPayloadBuffer(0, std::move(duplicate));
   RunLoopUntilIdle();
@@ -144,6 +145,18 @@ TEST_F(AudioCapturerImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
 
   RunLoopUntilIdle();
   EXPECT_EQ(capturer_->source_link_count(), 1u);
+}
+
+TEST_F(AudioCapturerImplTest, CanReleasePacketWithoutDroppingConnection) {
+  capturer_ = nullptr;
+
+  bool channel_dropped = false;
+  fidl_capturer_.set_error_handler([&channel_dropped](auto _) { channel_dropped = true; });
+  fidl_capturer_->ReleasePacket(fuchsia::media::StreamPacket{});
+  RunLoopUntilIdle();
+
+  // The RouteGraph should still own our capturer.
+  EXPECT_FALSE(channel_dropped);
 }
 
 }  // namespace
