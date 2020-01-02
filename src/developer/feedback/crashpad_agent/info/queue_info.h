@@ -18,6 +18,7 @@ struct QueueInfo {
   QueueInfo(std::shared_ptr<InfoContext> context);
 
   void LogReport(const std::string& program_name, const std::string& local_report_id);
+  void SetSize(uint64_t size);
 
  private:
   std::shared_ptr<InfoContext> context_;

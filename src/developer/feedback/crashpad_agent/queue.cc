@@ -63,9 +63,10 @@ bool Queue::Add(const std::string& program_name,
     return false;
   }
 
-  info_.LogReport(program_name, local_report_id.ToString());
-
   pending_reports_.push_back(local_report_id);
+
+  info_.LogReport(program_name, local_report_id.ToString());
+  info_.SetSize(pending_reports_.size());
 
   // We do the processing and garbage collection asynchronously as we don't want to block the
   // caller.
@@ -126,6 +127,7 @@ size_t Queue::UploadAll() {
   }
 
   pending_reports_.swap(new_pending_reports);
+  info_.SetSize(pending_reports_.size());
 
   // |new_pending_reports| now contains the pending reports before attempting to upload them.
   return new_pending_reports.size() - pending_reports_.size();
@@ -140,6 +142,8 @@ size_t Queue::ArchiveAll() {
   }
 
   pending_reports_.clear();
+  info_.SetSize(0u);
+
   return successful;
 }
 

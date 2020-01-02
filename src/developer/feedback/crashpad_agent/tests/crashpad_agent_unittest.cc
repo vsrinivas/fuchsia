@@ -68,6 +68,7 @@ using testing::Contains;
 using testing::ElementsAre;
 using testing::Eq;
 using testing::IsEmpty;
+using testing::IsSupersetOf;
 using testing::Not;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
@@ -801,30 +802,34 @@ TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
           NodeMatches(AllOf(NameMatches("settings"),
                             PropertyList(ElementsAre(StringIs(
                                 "upload_policy", ToString(Settings::UploadPolicy::ENABLED)))))),
-          NodeMatches(NameMatches("reports")))));
+          NodeMatches(NameMatches("reports")), NodeMatches(NameMatches("queue")))));
 }
 
 TEST_F(CrashpadAgentTest, Check_InspectTreeAfterSuccessfulUpload) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches("reports")),
-          ChildrenMatch(ElementsAre(AllOf(
-              NodeMatches(NameMatches(kProgramName)),
-              ChildrenMatch(ElementsAre(AllOf(
-                  NodeMatches(PropertyList(UnorderedElementsAreArray({
-                      StringIs("creation_time", Not(IsEmpty())),
-                      StringIs("final_state", "uploaded"),
-                      UintIs("upload_attempts", 1u),
-                  }))),
-                  ChildrenMatch(ElementsAre(NodeMatches(AllOf(
-                      NameMatches("crash_server"), PropertyList(UnorderedElementsAreArray({
-                                                       StringIs("creation_time", Not(IsEmpty())),
-                                                       StringIs("id", kStubServerReportId),
-                                                   }))))))))))))))));
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(IsSupersetOf({
+                  AllOf(NodeMatches(NameMatches("reports")),
+                        ChildrenMatch(ElementsAre(AllOf(
+                            NodeMatches(NameMatches(kProgramName)),
+                            ChildrenMatch(ElementsAre(AllOf(
+                                NodeMatches(PropertyList(UnorderedElementsAreArray({
+                                    StringIs("creation_time", Not(IsEmpty())),
+                                    StringIs("final_state", "uploaded"),
+                                    UintIs("upload_attempts", 1u),
+                                }))),
+                                ChildrenMatch(ElementsAre(
+                                    NodeMatches(AllOf(NameMatches("crash_server"),
+                                                      PropertyList(UnorderedElementsAreArray({
+                                                          StringIs("creation_time", Not(IsEmpty())),
+                                                          StringIs("id", kStubServerReportId),
+                                                      }))))))))))))),
+                  AllOf(NodeMatches(AllOf(NameMatches("queue"),
+                                          PropertyList(ElementsAre(UintIs("size", 0u))))),
+                        ChildrenMatch(IsEmpty())),
+              })));
 }
 
 }  // namespace

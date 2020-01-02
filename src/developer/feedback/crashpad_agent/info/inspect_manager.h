@@ -34,6 +34,9 @@ class InspectManager {
   // Exposes the static properties of the crash report database.
   void ExposeDatabase(uint64_t max_crashpad_database_size_in_kb);
 
+  // Records the current size of the queue of pending reports.
+  void SetQueueSize(uint64_t size);
+
   // Adds a new report under the given program.
   //
   // Returns false if there is already a report with |local_report_id| as ID (for the given program
@@ -88,6 +91,11 @@ class InspectManager {
     inspect::UintProperty max_crashpad_database_size_in_kb;
   };
 
+  // Inspect node containing the queue properties.
+  struct Queue {
+    inspect::UintProperty size;
+  };
+
   // Inspect node for a single report.
   struct Report {
     Report(const std::string& program_name, const std::string& local_report_id);
@@ -115,6 +123,7 @@ class InspectManager {
   Config config_;
   Settings settings_;
   Database database_;
+  Queue queue_;
   // Maps a local report ID to a |Report|.
   std::map<std::string, Report> reports_;
 

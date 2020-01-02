@@ -83,6 +83,7 @@ TEST_F(InspectManagerTest, InitialInspectTree) {
                                  NodeMatches(NameMatches("database")),
                                  NodeMatches(NameMatches("reports")),
                                  NodeMatches(NameMatches("settings")),
+                                 NodeMatches(NameMatches("queue")),
                              })));
 }
 
@@ -367,6 +368,14 @@ TEST_F(InspectManagerTest, ExposeDatabase) {
                   AllOf(NameMatches("database"),
                         PropertyList(ElementsAre(UintIs("max_crashpad_database_size_in_kb",
                                                         kCrashpadDatabaseMaxSizeInKb))))))));
+}
+
+TEST_F(InspectManagerTest, SetQueueSize) {
+  const uint64_t kQueueSize = 10u;
+  inspect_manager_->SetQueueSize(kQueueSize);
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(NodeMatches(AllOf(
+                  NameMatches("queue"), PropertyList(ElementsAre(UintIs("size", kQueueSize))))))));
 }
 
 TEST_F(InspectManagerTest, Check_CanAccessMultipleReportsForTheSameProgram) {

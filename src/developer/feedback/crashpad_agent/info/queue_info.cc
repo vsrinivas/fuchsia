@@ -16,4 +16,6 @@ void QueueInfo::LogReport(const std::string& program_name, const std::string& lo
   context_->InspectManager().AddReport(program_name, local_report_id);
 }
 
+void QueueInfo::SetSize(const uint64_t size) { context_->InspectManager().SetQueueSize(size); }
+
 }  // namespace feedback

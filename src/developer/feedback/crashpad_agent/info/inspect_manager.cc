@@ -45,6 +45,7 @@ InspectManager::InspectManager(inspect::Node* root_node, timekeeper::Clock* cloc
     : node_manager_(root_node), clock_(clock) {
   node_manager_.Get("/config/crash_server");
   node_manager_.Get("/database");
+  node_manager_.Get("/queue");
   node_manager_.Get("/reports");
   node_manager_.Get("/settings");
 }
@@ -144,6 +145,15 @@ void InspectManager::ExposeSettings(feedback::Settings* settings) {
       [this](const feedback::Settings::UploadPolicy& upload_policy) {
         OnUploadPolicyChange(upload_policy);
       });
+}
+
+void InspectManager::SetQueueSize(const uint64_t size) {
+  inspect::Node& queue = node_manager_.Get("/queue");
+  if (!queue_.size) {
+    queue_.size = queue.CreateUint("size", size);
+  } else {
+    queue_.size.Set(size);
+  }
 }
 
 bool InspectManager::Contains(const std::string& local_report_id) {
