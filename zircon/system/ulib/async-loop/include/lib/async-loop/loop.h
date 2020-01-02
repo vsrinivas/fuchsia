@@ -23,11 +23,11 @@
 
 __BEGIN_CDECLS
 
-// Pointer to a message loop created using |async_loop_create()|.
+/// Pointer to a message loop created using |async_loop_create()|.
 typedef struct async_loop async_loop_t;
 
-// Accessors for getting/setting the "default" async loop for the thread upon
-// which an async loop is created.
+/// Accessors for getting/setting the "default" async loop for the thread upon
+/// which an async loop is created.
 typedef async_dispatcher_t*(async_loop_get_default_dispatcher_t)(void);
 typedef void(async_loop_set_default_dispatcher_t)(async_dispatcher_t*);
 typedef struct {
@@ -35,159 +35,159 @@ typedef struct {
   async_loop_set_default_dispatcher_t* setter;
 } async_loop_default_accessors_t;
 
-// Message loop configuration structure.
+/// Message loop configuration structure.
 typedef void(async_loop_callback_t)(async_loop_t* loop, void* data);
 typedef struct async_loop_config {
-  // If specified, these functions will be used to register the loop as the default
-  // dispatcher on the thread on which they are called and will be used to
-  // automatically unregister the loop when it is destroyed.
-  //
-  // If NULL, the loop will not do this.  The loop's creator is then
-  // responsible for retrieving the loop's dispatcher using |async_loop_get_dispatcher()|
-  // and passing it around explicitly.
-  //
-  // It is an error for only one of the functions to be non-NULL.
-  //
-  // Note that the loop can be used even without setting it as the current
-  // thread's default.
+  /// If specified, these functions will be used to register the loop as the default
+  /// dispatcher on the thread on which they are called and will be used to
+  /// automatically unregister the loop when it is destroyed.
+  ///
+  /// If NULL, the loop will not do this.  The loop's creator is then
+  /// responsible for retrieving the loop's dispatcher using |async_loop_get_dispatcher()|
+  /// and passing it around explicitly.
+  ///
+  /// It is an error for only one of the functions to be non-NULL.
+  ///
+  /// Note that the loop can be used even without setting it as the current
+  /// thread's default.
   async_loop_default_accessors_t default_accessors;
 
-  // If true, then uses default_accessors.setter to register the loop as the
-  // default dispatcher for the thread upon which the loop was created.
-  //
-  // TRANSITIONAL BEHAVIOR:
-  // If default_accesors are not specified and this flag is true, then behaves as if
-  // async_get_default_dispatcher/async_set_default_dispatcher were specified
-  // as the default_accessors.
+  /// If true, then uses default_accessors.setter to register the loop as the
+  /// default dispatcher for the thread upon which the loop was created.
+  ///
+  /// TRANSITIONAL BEHAVIOR:
+  /// If default_accesors are not specified and this flag is true, then behaves as if
+  /// async_get_default_dispatcher/async_set_default_dispatcher were specified
+  /// as the default_accessors.
   bool make_default_for_current_thread;
 
-  // A function to call before the dispatcher invokes each handler, or NULL if none.
+  /// A function to call before the dispatcher invokes each handler, or NULL if none.
   async_loop_callback_t* prologue;
 
-  // A function to call after the dispatcher invokes each handler, or NULL if none.
+  /// A function to call after the dispatcher invokes each handler, or NULL if none.
   async_loop_callback_t* epilogue;
 
-  // Data to pass to the callback functions.
+  /// Data to pass to the callback functions.
   void* data;
 
-  // True if IRQs should be supported
+  /// True if IRQs should be supported
   bool irq_support;
 } async_loop_config_t;
 
-// Simple config that when passed to async_loop_create will create a loop
-// that is not registered to the current thread or any threads created with
-// async_loop_start_thread
+/// Simple config that when passed to async_loop_create will create a loop
+/// that is not registered to the current thread or any threads created with
+/// async_loop_start_thread
 extern const async_loop_config_t kAsyncLoopConfigNeverAttachToThread;
 
-// Creates a message loop and returns a pointer to it in |out_loop|.
-// All operations on the message loop are thread-safe (except destroy).
-//
-// Note that it's ok to run the loop on a different thread from the one
-// upon which it was created.
-//
-// |config| provides configuration for the message loop. Must not be null.
-//
-// Returns |ZX_OK| on success.
-// Returns |ZX_ERR_NO_MEMORY| if allocation failed.
-// May return other errors if the necessary internal handles could not be created.
-//
-// See also |kAsyncLoopConfigNeverAttachToThread|,
-// |kAsyncLoopConfigAttachToCurrentThread|, and
-// |kAsyncLoopConfigNoAttachToCurrentThread|.
+/// Creates a message loop and returns a pointer to it in |out_loop|.
+/// All operations on the message loop are thread-safe (except destroy).
+///
+/// Note that it's ok to run the loop on a different thread from the one
+/// upon which it was created.
+///
+/// |config| provides configuration for the message loop. Must not be null.
+///
+/// Returns |ZX_OK| on success.
+/// Returns |ZX_ERR_NO_MEMORY| if allocation failed.
+/// May return other errors if the necessary internal handles could not be created.
+///
+/// See also |kAsyncLoopConfigNeverAttachToThread|,
+/// |kAsyncLoopConfigAttachToCurrentThread|, and
+/// |kAsyncLoopConfigNoAttachToCurrentThread|.
 zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** out_loop);
 
-// Gets the message loop's asynchronous dispatch interface.
+/// Gets the message loop's asynchronous dispatch interface.
 async_dispatcher_t* async_loop_get_dispatcher(async_loop_t* loop);
 
-// Gets the message loop associated with the specified asynchronous dispatch interface
-//
-// This function assumes the dispatcher is backed by an |async_loop_t| which was created
-// using |async_loop_create()|.  Its behavior is undefined if used with other dispatcher
-// implementations.
+/// Gets the message loop associated with the specified asynchronous dispatch interface
+///
+/// This function assumes the dispatcher is backed by an |async_loop_t| which was created
+/// using |async_loop_create()|.  Its behavior is undefined if used with other dispatcher
+/// implementations.
 async_loop_t* async_loop_from_dispatcher(async_dispatcher_t* dispatcher);
 
-// Shuts down the message loop, notifies handlers which asked to handle shutdown.
-// The message loop must not currently be running on any threads other than
-// those started by |async_loop_start_thread()| which this function will join.
-//
-// Does nothing if already shutting down.
+/// Shuts down the message loop, notifies handlers which asked to handle shutdown.
+/// The message loop must not currently be running on any threads other than
+/// those started by |async_loop_start_thread()| which this function will join.
+///
+/// Does nothing if already shutting down.
 void async_loop_shutdown(async_loop_t* loop);
 
-// Destroys the message loop.
-// Implicitly calls |async_loop_shutdown()| and joins all threads started
-// using |async_loop_start_thread()| before destroying the loop itself.
-//
-// If `make_default_for_current_thread` was true in the config used to create
-// the loop, then this method must be called on the same thread that called
-// async_loop_create.
+/// Destroys the message loop.
+/// Implicitly calls |async_loop_shutdown()| and joins all threads started
+/// using |async_loop_start_thread()| before destroying the loop itself.
+///
+/// If `make_default_for_current_thread` was true in the config used to create
+/// the loop, then this method must be called on the same thread that called
+/// async_loop_create.
 void async_loop_destroy(async_loop_t* loop);
 
-// Runs the message loop on the current thread.
-// This function can be called on multiple threads to setup a multi-threaded
-// dispatcher.
-//
-// Dispatches events until the |deadline| expires or the loop is quitted.
-// Use |ZX_TIME_INFINITE| to dispatch events indefinitely.
-//
-// If |once| is true, performs a single unit of work then returns.
-//
-// Returns |ZX_OK| if the dispatcher returns after one cycle.
-// Returns |ZX_ERR_TIMED_OUT| if the deadline expired.
-// Returns |ZX_ERR_CANCELED| if the loop quitted.
-// Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
+/// Runs the message loop on the current thread.
+/// This function can be called on multiple threads to setup a multi-threaded
+/// dispatcher.
+///
+/// Dispatches events until the |deadline| expires or the loop is quitted.
+/// Use |ZX_TIME_INFINITE| to dispatch events indefinitely.
+///
+/// If |once| is true, performs a single unit of work then returns.
+///
+/// Returns |ZX_OK| if the dispatcher returns after one cycle.
+/// Returns |ZX_ERR_TIMED_OUT| if the deadline expired.
+/// Returns |ZX_ERR_CANCELED| if the loop quitted.
+/// Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
 zx_status_t async_loop_run(async_loop_t* loop, zx_time_t deadline, bool once);
 
-// Dispatches events until there are none remaining, and then returns without
-// waiting. This is useful for unit testing, because the behavior doesn't depend
-// on time.
-//
-// Returns |ZX_OK| if the dispatcher reaches an idle state.
-// Returns |ZX_ERR_CANCELED| if the loop quitted.
-// Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
+/// Dispatches events until there are none remaining, and then returns without
+/// waiting. This is useful for unit testing, because the behavior doesn't depend
+/// on time.
+///
+/// Returns |ZX_OK| if the dispatcher reaches an idle state.
+/// Returns |ZX_ERR_CANCELED| if the loop quitted.
+/// Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
 zx_status_t async_loop_run_until_idle(async_loop_t* loop);
 
-// Quits the message loop.
-// Active invocations of |async_loop_run()| and threads started using
-// |async_loop_start_thread()| will eventually terminate upon completion of their
-// current unit of work.
-//
-// Subsequent calls to |async_loop_run()| or |async_loop_start_thread()|
-// will return immediately until |async_loop_reset_quit()| is called.
+/// Quits the message loop.
+/// Active invocations of |async_loop_run()| and threads started using
+/// |async_loop_start_thread()| will eventually terminate upon completion of their
+/// current unit of work.
+///
+/// Subsequent calls to |async_loop_run()| or |async_loop_start_thread()|
+/// will return immediately until |async_loop_reset_quit()| is called.
 void async_loop_quit(async_loop_t* loop);
 
-// Resets the quit state of the message loop so that it can be restarted
-// using |async_loop_run()| or |async_loop_start_thread()|.
-//
-// This function must only be called when the message loop is not running.
-// The caller must ensure all active invocations of |async_loop_run()| and
-// threads started using |async_loop_start_thread()| have terminated before
-// resetting the quit state.
-//
-// Returns |ZX_OK| if the loop's state was |ASYNC_LOOP_RUNNABLE| or |ASYNC_LOOP_QUIT|.
-// Returns |ZX_ERR_BAD_STATE| if the loop's state was |ASYNC_LOOP_SHUTDOWN| or if
-// the message loop is currently active on one or more threads.
+/// Resets the quit state of the message loop so that it can be restarted
+/// using |async_loop_run()| or |async_loop_start_thread()|.
+///
+/// This function must only be called when the message loop is not running.
+/// The caller must ensure all active invocations of |async_loop_run()| and
+/// threads started using |async_loop_start_thread()| have terminated before
+/// resetting the quit state.
+///
+/// Returns |ZX_OK| if the loop's state was |ASYNC_LOOP_RUNNABLE| or |ASYNC_LOOP_QUIT|.
+/// Returns |ZX_ERR_BAD_STATE| if the loop's state was |ASYNC_LOOP_SHUTDOWN| or if
+/// the message loop is currently active on one or more threads.
 zx_status_t async_loop_reset_quit(async_loop_t* loop);
 
-// Returns the current state of the message loop.
+/// Returns the current state of the message loop.
 typedef uint32_t async_loop_state_t;
 #define ASYNC_LOOP_RUNNABLE ((async_loop_state_t)0)
 #define ASYNC_LOOP_QUIT ((async_loop_state_t)1)
 #define ASYNC_LOOP_SHUTDOWN ((async_loop_state_t)2)
 async_loop_state_t async_loop_get_state(async_loop_t* loop);
 
-// Starts a message loop running on a new thread.
-// The thread will run until the loop quits.
-//
-// |name| is the desired name for the new thread, may be NULL.
-// If |out_thread| is not NULL, it is set to the new thread identifier.
-//
-// Returns |ZX_OK| on success.
-// Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
-// Returns |ZX_ERR_NO_MEMORY| if allocation or thread creation failed.
+/// Starts a message loop running on a new thread.
+/// The thread will run until the loop quits.
+///
+/// |name| is the desired name for the new thread, may be NULL.
+/// If |out_thread| is not NULL, it is set to the new thread identifier.
+///
+/// Returns |ZX_OK| on success.
+/// Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
+/// Returns |ZX_ERR_NO_MEMORY| if allocation or thread creation failed.
 zx_status_t async_loop_start_thread(async_loop_t* loop, const char* name, thrd_t* out_thread);
 
-// Blocks until all dispatch threads started with |async_loop_start_thread()|
-// have terminated.
+/// Blocks until all dispatch threads started with |async_loop_start_thread()|
+/// have terminated.
 void async_loop_join_threads(async_loop_t* loop);
 
 __END_CDECLS
