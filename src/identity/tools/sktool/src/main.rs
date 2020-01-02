@@ -31,10 +31,16 @@ async fn print_devices() {
         Ok(devices) => {
             for device in devices {
                 println!(
-                    "Device at {:?} has a the following capabilities {:?}",
+                    "Device at {:?} has the following capabilities: {:?}",
                     device.path(),
                     device.capabilities()
                 );
+                if device.capabilities().wink() {
+                    println!("Requesting that {:?} wink", device.path());
+                    if let Err(err) = device.wink().await {
+                        println!("Error during wink: {:?}", err);
+                    }
+                }
             }
         }
     }

@@ -41,9 +41,9 @@ const NONCE_LENGTH: u16 = 8;
 
 lazy_static! {
     /// Time to wait while a device is sending valid packets but ones the don't match our
-    /// initialization request before declaring an initializaton failure. Set to a large value in
-    /// case the device is in the middle of responding to a slow operation for a different client.
-    static ref INIT_TIMEOUT: zx::Duration = zx::Duration::from_millis(2000);
+    /// request before we declare a transaction failure. Set to a large value in case the device
+    /// is in the middle of responding to a slow operation for a different client.
+    static ref TRANSACTION_TIMEOUT: zx::Duration = zx::Duration::from_millis(2000);
 }
 
 bitfield! {
@@ -51,11 +51,11 @@ bitfield! {
     pub struct Capabilities(u8);
     impl Debug;
     // LSB is set if the device supports "Wink", i.e. some visible or audible indication.
-    wink, _: 0;
+    pub wink, _: 0;
     // Bit 2 is set if the device supports CBOR messages.
-    cbor, _: 2;
+    pub cbor, _: 2;
     // Bit 3 is set if the device does *not* support encapsulated CTAP1 messages.
-    nmsg, _: 3;
+    pub nmsg, _: 3;
 }
 
 /// An representation of a valid FIDO CTAP HID device, backed by a connection used to communicate
@@ -130,6 +130,33 @@ impl<C: Connection, R: Rng> Device<C, R> {
         &self.capabilities
     }
 
+    /// Instructs the device to wink, i.e. perform some vendor-defined visual or audible
+    /// identification.
+    pub async fn wink(&self) -> Result<(), Error> {
+        let out =
+            Packet::padded_initialization(self.channel, Command::Wink, &[], self.packet_length)?;
+        self.connection
+            .write_packet(out)
+            .await
+            .map_err(|err| format_err!("Error writing wink packet: {:?}", err))?;
+
+        self.connection
+            .read_matching_packet(|packet| {
+                if packet.channel() != self.channel {
+                    // Its normal for reponses to other clients to be present on other channels.
+                    return Ok(false);
+                } else if packet.command()? != Command::Wink {
+                    return Err(format_err!("Received unexpected command in wink response."));
+                }
+                Ok(true)
+            })
+            .on_timeout(Time::after(*TRANSACTION_TIMEOUT), || {
+                Err(format_err!("Timed out waiting for wink response"))
+            })
+            .await?;
+        Ok(())
+    }
+
     /// Performs CTAPHID initialization on the supplied connection using the supplied channel,
     /// returning values extracted from the init response packet if successful.
     async fn initialize_connection(
@@ -172,7 +199,7 @@ impl<C: Connection, R: Rng> Device<C, R> {
                 }
                 Ok(true)
             })
-            .on_timeout(Time::after(*INIT_TIMEOUT), || {
+            .on_timeout(Time::after(*TRANSACTION_TIMEOUT), || {
                 Err(format_err!("Timed out waiting for valid init response"))
             })
             .await?;
@@ -255,12 +282,18 @@ mod tests {
     const TEST_PATH: &str = "/dev/test-device";
     const BAD_REPORT_DESCRIPTOR: [u8; 3] = [0xba, 0xdb, 0xad];
     const TEST_CHANNEL: u32 = 0x88776655;
+    const BAD_CHANNEL: u32 = 0xffeeffee;
     /// The nonce that a StdRng seeded with zero should generate.
     const EXPECTED_NONCE: [u8; 8] = [0xe2, 0xcf, 0x59, 0x54, 0x7a, 0x32, 0xae, 0xef];
     const DIFFERENT_NONCE: [u8; 8] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
 
     lazy_static! {
         static ref FIXED_SEED_RNG: StdRng = StdRng::seed_from_u64(0);
+    }
+
+    /// Builds an expected request packet for the initialization transaction.
+    fn build_init_request(nonce: &[u8]) -> Packet {
+        Packet::padded_initialization(INIT_CHANNEL, Command::Init, nonce, REPORT_LENGTH).unwrap()
     }
 
     /// Builds a response packet for the initialization transaction.
@@ -276,15 +309,10 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_valid_device() -> Result<(), Error> {
+    async fn test_init_valid_device() -> Result<(), Error> {
         // Configure a fake connection to expect an init request and return a response.
         let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
-        con.expect_write(Packet::padded_initialization(
-            INIT_CHANNEL,
-            Command::Init,
-            &EXPECTED_NONCE,
-            REPORT_LENGTH,
-        )?);
+        con.expect_write(build_init_request(&EXPECTED_NONCE));
         con.expect_read(build_init_response(&EXPECTED_NONCE, TEST_CHANNEL, 0x04));
 
         // Create a device using this connection and a deterministic Rng.
@@ -301,19 +329,14 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_other_traffic_during_init() -> Result<(), Error> {
+    async fn test_init_while_other_traffic_present() -> Result<(), Error> {
         // Configure a fake connection to expect an init request and return a response.
         let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
-        con.expect_write(Packet::padded_initialization(
-            INIT_CHANNEL,
-            Command::Init,
-            &EXPECTED_NONCE,
-            REPORT_LENGTH,
-        )?);
+        con.expect_write(build_init_request(&EXPECTED_NONCE));
         // Return a valid response to a different command on a different channel. The code under
         // test should ignore this and attempt another read.
         con.expect_read(
-            Packet::padded_initialization(TEST_CHANNEL, Command::Wink, &[], REPORT_LENGTH).unwrap(),
+            Packet::padded_initialization(BAD_CHANNEL, Command::Wink, &[], REPORT_LENGTH).unwrap(),
         );
         // Return a valid init packet with a different nonce, possibly in response to a different
         // client that is also going through init. The code under test should ignore this and
@@ -336,7 +359,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_non_fido_device() -> Result<(), Error> {
+    async fn test_init_non_fido_device() -> Result<(), Error> {
         let con = FakeConnection::new(&BAD_REPORT_DESCRIPTOR);
         assert!(Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
             .await?
@@ -345,12 +368,45 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_fidl_error() -> Result<(), Error> {
+    async fn test_init_fidl_error() -> Result<(), Error> {
         let mut con = FakeConnection::new(&BAD_REPORT_DESCRIPTOR);
         con.error();
         Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
             .await
             .expect_err("Should have failed to create device");
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_wink() -> Result<(), Error> {
+        // Configure a fake connection and expect standard initialization.
+        let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
+        con.expect_write(build_init_request(&EXPECTED_NONCE));
+        con.expect_read(build_init_response(&EXPECTED_NONCE, TEST_CHANNEL, 0x01));
+        // Expect a wink request but return a packet on a different channel before success.
+        con.expect_write(
+            Packet::padded_initialization(TEST_CHANNEL, Command::Wink, &[], REPORT_LENGTH).unwrap(),
+        );
+        con.expect_read(
+            Packet::padded_initialization(BAD_CHANNEL, Command::Wink, &[], REPORT_LENGTH).unwrap(),
+        );
+        con.expect_read(
+            Packet::padded_initialization(TEST_CHANNEL, Command::Wink, &[], REPORT_LENGTH).unwrap(),
+        );
+        // Now expect a second wink request and return an invalid message on the correct channel.
+        con.expect_write(
+            Packet::padded_initialization(TEST_CHANNEL, Command::Wink, &[], REPORT_LENGTH).unwrap(),
+        );
+        con.expect_read(
+            Packet::padded_initialization(TEST_CHANNEL, Command::Init, &[], REPORT_LENGTH).unwrap(),
+        );
+
+        // Attempt to create a device and resquest two winks, one successful one not.
+        let dev = Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
+            .await?
+            .expect("Failed to create device");
+        assert!(dev.wink().await.is_ok());
+        assert!(dev.wink().await.is_err());
         Ok(())
     }
 }
