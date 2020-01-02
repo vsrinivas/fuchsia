@@ -169,6 +169,56 @@ TEST_F(AudioConsumerTests, CreateStreamSink) {
   EXPECT_FALSE(sink_connection_closed);
 }
 
+TEST_F(AudioConsumerTests, SetRate) {
+  fuchsia::media::StreamSinkPtr sink;
+  fuchsia::media::AudioStreamType stream_type;
+  stream_type.frames_per_second = kFramesPerSecond;
+  stream_type.channels = kSamplesPerFrame;
+  stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  bool sink_connection_closed = false;
+  got_status_ = false;
+
+  auto compression = fuchsia::media::Compression::New();
+  compression->type = fuchsia::media::AUDIO_ENCODING_AACLATM;
+
+  std::vector<zx::vmo> vmos(kNumVmos);
+  for (uint32_t i = 0; i < kNumVmos; i++) {
+    zx_status_t status = zx::vmo::create(kVmoSize, 0, &vmos[i]);
+    EXPECT_EQ(status, ZX_OK);
+  }
+
+  StartWatcher();
+
+  audio_consumer_->CreateStreamSink(std::move(vmos), stream_type, std::move(compression),
+                                    sink.NewRequest());
+
+  sink.set_error_handler(
+      [&sink_connection_closed](zx_status_t status) { sink_connection_closed = true; });
+
+  // clear initial
+  RunLoopUntil([this]() { return got_status_; });
+  got_status_ = false;
+
+  audio_consumer_->Start(fuchsia::media::AudioConsumerStartFlags::SUPPLY_DRIVEN, 0,
+                         fuchsia::media::NO_TIMESTAMP);
+  RunLoopUntil([this]() { return got_status_ && last_status_.has_presentation_timeline(); });
+  // default rate should be 1
+  EXPECT_EQ(last_status_.presentation_timeline().subject_delta, 1u);
+  got_status_ = false;
+
+  audio_consumer_->SetRate(0.0f);
+  RunLoopUntil([this]() { return got_status_ && last_status_.has_presentation_timeline(); });
+  EXPECT_EQ(last_status_.presentation_timeline().subject_delta, 0u);
+  got_status_ = false;
+
+  audio_consumer_->SetRate(1.0f);
+  RunLoopUntil([this]() { return got_status_ && last_status_.has_presentation_timeline(); });
+  EXPECT_EQ(last_status_.presentation_timeline().subject_delta, 1u);
+  got_status_ = false;
+
+  EXPECT_FALSE(sink_connection_closed);
+}
+
 // Test that error is generated when unsupported codec is specified
 TEST_F(AudioConsumerTests, UnsupportedCodec) {
   fuchsia::media::StreamSinkPtr sink;

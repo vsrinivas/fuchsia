@@ -75,7 +75,7 @@ protocol AudioConsumer {
 
     /// Requests to change the playback rate of the renderer. 1.0 means normal
     /// playback. Negative rates are not supported. The new rate will be
-    /// reflected in the updated status.
+    /// reflected in the updated status. The default rate of any newly created `StreamSink` is 1.0.
     SetRate(float32 rate);
 
     /// Binds to this `AudioConsumer` volume control for control and notifications.
@@ -107,7 +107,8 @@ table AudioConsumerStatus {
     1: AudioConsumerError error;
 
     /// If present, indicates the current relationship between the presentation timeline
-    /// and local monotonic clock, both in nanosecond units. Absent initially.
+    /// and local monotonic clock, both in nanosecond units. If not present,
+    /// indicates there is no relationship. Absent initially.
     ///
     /// 'Presentation timeline' refers to the `pts` (presentation timestamp) values on the packets.
     /// This timeline function can be used to determine the local monotonic clock time that a

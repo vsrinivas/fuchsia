@@ -92,6 +92,7 @@ class AudioConsumerImpl : public fuchsia::media::AudioConsumer, public ServicePr
  private:
   static constexpr int64_t kMinimumLeadTime = ZX_MSEC(30);
   static constexpr int64_t kMaximumLeadTime = ZX_MSEC(500);
+  static constexpr float kDefaultRate = 1.0f;
 
   // Ensures renderer is created
   void EnsureRenderer();
@@ -118,9 +119,12 @@ class AudioConsumerImpl : public fuchsia::media::AudioConsumer, public ServicePr
   fuchsia::media::AudioConsumer::WatchStatusCallback watch_status_callback_;
 
   std::shared_ptr<FidlAudioRenderer> audio_renderer_;
+  bool renderer_primed_;
+
   std::shared_ptr<SimpleStreamSinkImpl> simple_stream_sink_;
 
   bool timeline_started_;
+  float rate_;
   bool status_dirty_;
 };
 

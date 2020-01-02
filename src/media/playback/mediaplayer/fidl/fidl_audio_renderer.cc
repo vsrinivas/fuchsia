@@ -9,6 +9,7 @@
 #include <trace/event.h>
 
 #include "lib/async/default.h"
+#include "lib/fostr/indent.h"
 #include "lib/media/cpp/timeline_rate.h"
 #include "lib/trace-engine/types.h"
 #include "lib/trace/internal/event_common.h"
@@ -393,7 +394,6 @@ bool FidlAudioRenderer::NeedMorePackets() {
   // and check then.
   demand_task_.PostForTime(dispatcher(), zx::time(current_timeline_function().ApplyInverse(
                                              last_supplied_pts_ns_ - target_lead_time_ns_)));
-
   return false;
 }
 

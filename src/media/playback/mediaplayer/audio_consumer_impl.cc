@@ -98,6 +98,7 @@ AudioConsumerImpl::AudioConsumerImpl(uint64_t session_id, sys::ComponentContext*
     : dispatcher_(async_get_default_dispatcher()),
       component_context_(component_context),
       core_(dispatcher_),
+      rate_(kDefaultRate),
       status_dirty_(true) {
   FX_DCHECK(component_context_);
 
@@ -132,7 +133,6 @@ AudioConsumerImpl::AudioConsumerImpl(uint64_t session_id, sys::ComponentContext*
         }
       }
     }
-    SendStatusUpdate();
   });
 }
 
@@ -182,6 +182,10 @@ void AudioConsumerImpl::CreateStreamSink(
 
 void AudioConsumerImpl::MaybeSetNewSource() {
   if (core_.has_source_segment()) {
+    // reset state for next stream sink
+    timeline_started_ = false;
+    rate_ = kDefaultRate;
+    status_dirty_ = true;
     core_.ClearSourceSegment();
   }
 
@@ -197,15 +201,13 @@ void AudioConsumerImpl::MaybeSetNewSource() {
 
   EnsureRenderer();
 
-  core_.SetSourceSegment(audio_consumer_source->TakeSourceSegment(),
-                         [this, simple_stream_sink = std::move(simple_stream_sink),
-                          buffers = std::move(buffers)]() mutable {
-                           for (size_t i = 0; i < buffers.size(); ++i) {
-                             simple_stream_sink->AddPayloadBuffer(i, std::move(buffers[i]));
-                           }
-
-                           SendStatusUpdate();
-                         });
+  core_.SetSourceSegment(
+      audio_consumer_source->TakeSourceSegment(),
+      [simple_stream_sink = std::move(simple_stream_sink), buffers = std::move(buffers)]() mutable {
+        for (size_t i = 0; i < buffers.size(); ++i) {
+          simple_stream_sink->AddPayloadBuffer(i, std::move(buffers[i]));
+        }
+      });
 }
 
 void AudioConsumerImpl::EnsureRenderer() {
@@ -221,6 +223,7 @@ void AudioConsumerImpl::EnsureRenderer() {
     audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
     core_.SetSinkSegment(RendererSinkSegment::Create(audio_renderer_, decoder_factory_.get()),
                          StreamType::Medium::kAudio);
+    core_.SetProgramRange(0, 0, Packet::kMaxPts);
   }
 }
 
@@ -228,22 +231,43 @@ void AudioConsumerImpl::SetTimelineFunction(float rate, int64_t subject_time,
                                             int64_t reference_time, fit::closure callback) {
   core_.SetTimelineFunction(
       media::TimelineFunction(subject_time, reference_time, media::TimelineRate(rate)),
-      std::move(callback));
+      [this, rate, callback = std::move(callback)]() {
+        if (rate > 0.0f && !renderer_primed_) {
+          core_.Prime([]() {});
+          renderer_primed_ = true;
+        } else if (rate == 0.0f) {
+          renderer_primed_ = false;
+        }
+        SendStatusUpdate();
+        callback();
+      });
 }
 
 void AudioConsumerImpl::Start(fuchsia::media::AudioConsumerStartFlags flags, int64_t reference_time,
                               int64_t media_time) {
-  // TODO(afoxley) set lead time based on flags?
   timeline_started_ = true;
-  SetTimelineFunction(1.0f, 0, zx::clock::get_monotonic().get() + kMinimumLeadTime, [this]() {
-    core_.SetProgramRange(0, 0, Packet::kMaxPts);
-    core_.Prime([]() {});
-    SendStatusUpdate();
-  });
+
+  if (reference_time == 0) {
+    // TODO(afoxley) set lead time based on flags?
+    reference_time = zx::clock::get_monotonic().get() + kMinimumLeadTime;
+  }
+
+  if (media_time == fuchsia::media::NO_TIMESTAMP) {
+    media_time = 0;
+  }
+
+  SetTimelineFunction(rate_, media_time, reference_time, []() {});
 }
 
 void AudioConsumerImpl::SetRate(float rate) {
-  // TODO(afoxley) pass rate through to audio renderer
+  // AudioRenderer currently only supports 0/1 (paused) or 1/1 (normal playback rate).
+  if (rate != 0.0f) {
+    rate = 1.0f;
+  }
+  rate_ = rate;
+
+  SetTimelineFunction(rate_, core_.timeline_function().subject_time(),
+                      zx::clock::get_monotonic().get() + kMinimumLeadTime, []() {});
 }
 
 void AudioConsumerImpl::BindVolumeControl(
@@ -252,7 +276,8 @@ void AudioConsumerImpl::BindVolumeControl(
 }
 
 void AudioConsumerImpl::Stop() {
-  SetTimelineFunction(0.0f, 0, zx::clock::get_monotonic().get(), [this]() { SendStatusUpdate(); });
+  SetTimelineFunction(0.0f, core_.timeline_function().subject_time(),
+                      core_.timeline_function().reference_time(), []() {});
 }
 
 void AudioConsumerImpl::WatchStatus(fuchsia::media::AudioConsumer::WatchStatusCallback callback) {
