@@ -9,7 +9,7 @@ use {
     anyhow::{Context as _, Error},
     carnelian::{
         make_message, AnimationMode, AppContext, Message, Size, ViewAssistant,
-        ViewAssistantContext, ViewKey,
+        ViewAssistantContext, ViewKey, ViewMessages,
     },
     fidl_fuchsia_hardware_pty::WindowSize,
     fidl_fuchsia_ui_input::KeyboardEvent,
@@ -46,6 +46,7 @@ impl ByteContainer {
 }
 
 /// Messages which can be used to interact with the Pty.
+#[derive(Debug)]
 enum PtyOutgoingMessages {
     /// A message which indicates that a String should be sent to the Pty.
     SendInput(String),
@@ -54,13 +55,41 @@ enum PtyOutgoingMessages {
     Resize(Size),
 }
 
+#[derive(Clone)]
+struct AppContextWrapper {
+    app_context: Option<AppContext>,
+    test_sender: Option<mpsc::UnboundedSender<Message>>,
+}
+
+impl AppContextWrapper {
+    fn queue_message(&self, target: ViewKey, message: Message) {
+        // In a real environment we send to the app_context but we can optionally
+        // send to the test_sender for observing what is sent to the framework.
+        // This is needed because the framework does not give us access to observe
+        // messages that are received. The if/else ensures that we do not send to
+        // both places as this will fail the borrow check.
+        if let Some(app_context) = &self.app_context {
+            app_context.queue_message(target, message);
+        } else if let Some(sender) = &self.test_sender {
+            sender.unbounded_send(message).expect("Unable queue message to test_sender");
+        }
+    }
+
+    #[cfg(test)]
+    // Allows tests to observe what is sent to the app_context.
+    fn use_test_sender(&mut self, sender: mpsc::UnboundedSender<Message>) {
+        self.app_context = None;
+        self.test_sender = Some(sender);
+    }
+}
+
 pub struct TerminalViewAssistant {
     last_known_size: Size,
     parser: Processor,
     pty: Option<PtyWrapper>,
     terminal_scene: TerminalScene,
     term: Term,
-    app_context: AppContext,
+    app_context: AppContextWrapper,
 }
 
 impl TerminalViewAssistant {
@@ -88,7 +117,10 @@ impl TerminalViewAssistant {
             pty: None,
             term,
             terminal_scene: TerminalScene::default(),
-            app_context: app_context.clone(),
+            app_context: AppContextWrapper {
+                app_context: Some(app_context.clone()),
+                test_sender: None,
+            },
         }
     }
 
@@ -186,6 +218,7 @@ impl TerminalViewAssistant {
 
                         if read_count > 0 {
                             app_context.queue_message(view_key, make_message(ByteContainer::new(read_buf, read_count)));
+                            app_context.queue_message(view_key, make_message(ViewMessages::Update));
                         }
                     },
                 result = pty_receiver.next().fuse() => {
@@ -261,7 +294,7 @@ impl ViewAssistant for TerminalViewAssistant {
     }
 
     fn initial_animation_mode(&mut self) -> AnimationMode {
-        AnimationMode::EveryFrame
+        AnimationMode::None
     }
 
     fn handle_message(&mut self, message: Message) {
@@ -420,6 +453,39 @@ mod tests {
         let mut view = TerminalViewAssistant::new_for_test();
         view.spawn_pty_if_needed(&Size::new(100.0, 100.0), 1)?;
         assert!(view.pty.is_some());
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn pty_message_reads_trigger_call_to_redraw() -> Result<(), Error> {
+        use std::io::prelude::*;
+
+        let (sender, mut receiver) = mpsc::unbounded();
+
+        let mut view = TerminalViewAssistant::new_for_test();
+        view.app_context.use_test_sender(sender);
+
+        let _ = view.spawn_pty_if_needed(&Size::new(100.0, 100.0), 1);
+        let mut fd = view
+            .pty
+            .as_ref()
+            .map(|pty| pty.fd.try_clone().expect("attempt to clone fd failed"))
+            .unwrap();
+
+        fasync::spawn_local(async move {
+            let _ = fd.write_all(b"ls");
+        });
+
+        loop {
+            let result = receiver.next().fuse().await;
+            let message = result.expect("result should not be None");
+            if let Some(view_msg) = message.downcast_ref::<ViewMessages>() {
+                match view_msg {
+                    ViewMessages::Update => break,
+                }
+            }
+        }
 
         Ok(())
     }
