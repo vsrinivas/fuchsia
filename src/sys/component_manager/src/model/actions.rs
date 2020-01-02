@@ -249,7 +249,13 @@ pub mod tests {
             binding::Binder,
             hooks::{EventType, Hook, HooksRegistration},
             moniker::{AbsoluteMoniker, PartialMoniker},
-            testing::{test_helpers::*, test_hook::*},
+            testing::{
+                test_helpers::{
+                    component_decl_with_test_runner, execution_is_shut_down, has_child,
+                    ActionsTest, ComponentDeclBuilder, ComponentInfo, TEST_RUNNER_NAME,
+                },
+                test_hook::Lifecycle,
+            },
         },
         cm_rust::{
             CapabilityPath, ExposeDecl, ExposeServiceProtocolDecl, ExposeSource, ExposeTarget,
