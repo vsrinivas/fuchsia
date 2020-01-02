@@ -1,0 +1,142 @@
+{
+  "app": "fuchsia-pkg://fuchsia.com/rust_inspect_benchmarks#meta/rust_inspect_benchmarks.cmx",
+  "args": [
+    "--iterations",
+    "100",
+    "--benchmark",
+    "reader"
+  ],
+  "test_suite_name": "fuchsia.rust_inspect.reader_benchmarks",
+  "measure": [
+    {
+      "output_test_name": "Snapshot/4K/1hz",
+      "event_name": "Snapshot/4K/1hz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/4K/10hz",
+      "event_name": "Snapshot/4K/10hz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/4K/100hz",
+      "event_name": "Snapshot/4K/100hz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/4K/1khz",
+      "event_name": "Snapshot/4K/1khz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/4K/10khz",
+      "event_name": "Snapshot/4K/10khz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/4K/100khz",
+      "event_name": "Snapshot/4K/100khz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/4K/1mhz",
+      "event_name": "Snapshot/4K/1mhz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/256K/1hz",
+      "event_name": "Snapshot/256K/1hz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/256K/10hz",
+      "event_name": "Snapshot/256K/10hz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/256K/100hz",
+      "event_name": "Snapshot/256K/100hz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/256K/1khz",
+      "event_name": "Snapshot/256K/1khz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/256K/10khz",
+      "event_name": "Snapshot/256K/10khz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/256K/100khz",
+      "event_name": "Snapshot/256K/100khz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/256K/1mhz",
+      "event_name": "Snapshot/256K/1mhz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/1M/1hz",
+      "event_name": "Snapshot/1M/1hz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/1M/10hz",
+      "event_name": "Snapshot/1M/10hz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/1M/100hz",
+      "event_name": "Snapshot/1M/100hz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/1M/1khz",
+      "event_name": "Snapshot/1M/1khz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/1M/10khz",
+      "event_name": "Snapshot/1M/10khz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/1M/100khz",
+      "event_name": "Snapshot/1M/100khz",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Snapshot/1M/1mhz",
+      "event_name": "Snapshot/1M/1mhz",
+      "type": "duration",
+      "event_category": "benchmark"
+    }
+  ],
+  "duration": 120,
+  "categories": [
+    "benchmark"
+  ]
+}

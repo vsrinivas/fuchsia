@@ -19,6 +19,10 @@ package("rust_inspect_benchmarks") {
       path = rebase_path("benchmarks.tspec")
       dest = "benchmarks.tspec"
     },
+    {
+      path = rebase_path("reader_benchmarks.tspec")
+      dest = "reader_benchmarks.tspec"
+    },
   ]
 
   meta = [
@@ -48,6 +52,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:num",
     "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:thiserror",
   ]

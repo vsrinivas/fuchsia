@@ -4,17 +4,18 @@
 
 use {
     anyhow::Error,
-    argh::FromArgs,
+    argh::{FromArgValue, FromArgs},
     fuchsia_async as fasync,
     fuchsia_inspect::{
-        heap::Heap, ArrayProperty, ExponentialHistogramParams, HistogramProperty, Inspector,
-        LinearHistogramParams, Node, NumericProperty, Property,
+        heap::Heap, reader::snapshot::Snapshot, ArrayProperty, ExponentialHistogramParams,
+        HistogramProperty, Inspector, LinearHistogramParams, Node, NumericProperty, Property,
     },
     fuchsia_trace as ftrace,
     fuchsia_trace_provider::trace_provider_create_with_fdio,
     mapped_vmo::Mapping,
     num::{pow, One},
     num_traits::FromPrimitive,
+    parking_lot::Mutex,
     paste,
     std::{
         ops::{Add, Mul},
@@ -27,6 +28,24 @@ use {
 struct Args {
     #[argh(option, description = "number of iterations", short = 'i', default = "500")]
     iterations: usize,
+
+    #[argh(option, description = "which benchmark to run (writer, reader)")]
+    benchmark: BenchmarkOption,
+}
+
+enum BenchmarkOption {
+    Reader,
+    Writer,
+}
+
+impl FromArgValue for BenchmarkOption {
+    fn from_arg_value(value: &str) -> Result<Self, String> {
+        match value {
+            "reader" => Ok(BenchmarkOption::Reader),
+            "writer" => Ok(BenchmarkOption::Writer),
+            _ => Err(format!("Unknown benchmark \"{}\"", value)),
+        }
+    }
 }
 
 const NAME: &str = "name";
@@ -338,13 +357,142 @@ macro_rules! single_iteration_fn {
 
 single_iteration_fn!(array_sizes: [32, 128, 240], property_sizes: [4, 8, 100, 2000, 2048, 10000]);
 
+enum InspectorState {
+    Running,
+    Done,
+}
+
+/// Start a worker thread that will continually update the given inspector at the given rate.
+///
+/// Returns a closure that when called cancels the thread, returning only when the thread has
+/// exited.
+fn start_inspector_update_thread(inspector: Inspector, changes_per_second: usize) -> impl FnOnce() {
+    let state = Arc::new(Mutex::new(InspectorState::Running));
+    let ret_state = state.clone();
+
+    let child = inspector.root().create_child("test");
+    let val = child.create_int("val", 0);
+
+    let thread = std::thread::spawn(move || {
+        ftrace::duration!("benchmark", "Thread operation");
+
+        loop {
+            {
+                ftrace::duration!("benchmark", "Sleep");
+                let sleep_time =
+                    std::time::Duration::from_nanos(1000000000u64 / changes_per_second as u64);
+                std::thread::sleep(sleep_time);
+                match *state.lock() {
+                    InspectorState::Done => {
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+            {
+                ftrace::duration!("benchmark", "Update");
+                val.add(1);
+            }
+        }
+    });
+
+    return move || {
+        {
+            *ret_state.lock() = InspectorState::Done;
+        }
+        thread.join().expect("join thread");
+    };
+}
+macro_rules! reader_bench_fn {
+    ($name:ident, $size:expr, $freq:expr, $label:expr) => {
+        fn $name(iterations: usize) {
+            let inspector = Inspector::new_with_size($size);
+            let vmo = inspector.duplicate_vmo().expect("failed to duplicate vmo");
+            let done_fn = start_inspector_update_thread(inspector, $freq);
+
+            for _ in 0..iterations {
+                ftrace::duration!("benchmark", $label);
+
+                loop {
+                    ftrace::duration!("benchmark", "TryOnce");
+                    if let Ok(_) = Snapshot::try_once_from_vmo(&vmo) {
+                        break;
+                    }
+                }
+            }
+
+            done_fn();
+        }
+    };
+}
+
+reader_bench_fn!(bench_4k_1hz, 4096, 1, "Snapshot/4K/1hz");
+reader_bench_fn!(bench_4k_10hz, 4096, 10, "Snapshot/4K/10hz");
+reader_bench_fn!(bench_4k_100hz, 4096, 100, "Snapshot/4K/100hz");
+reader_bench_fn!(bench_4k_1khz, 4096, 1000, "Snapshot/4K/1khz");
+reader_bench_fn!(bench_4k_10khz, 4096, 10000, "Snapshot/4K/10khz");
+reader_bench_fn!(bench_4k_100khz, 4096, 100000, "Snapshot/4K/100khz");
+reader_bench_fn!(bench_4k_1mhz, 4096, 1000000, "Snapshot/4K/1mhz");
+reader_bench_fn!(bench_256k_1hz, 4096 * 64, 1, "Snapshot/256K/1hz");
+reader_bench_fn!(bench_256k_10hz, 4096 * 64, 10, "Snapshot/256K/10hz");
+reader_bench_fn!(bench_256k_100hz, 4096 * 64, 100, "Snapshot/256K/100hz");
+reader_bench_fn!(bench_256k_1khz, 4096 * 64, 1000, "Snapshot/256K/1khz");
+reader_bench_fn!(bench_256k_10khz, 4096 * 64, 10000, "Snapshot/256K/10khz");
+reader_bench_fn!(bench_256k_100khz, 4096 * 64, 100000, "Snapshot/256K/100khz");
+reader_bench_fn!(bench_256k_1mhz, 4096 * 64, 1000000, "Snapshot/256K/1mhz");
+reader_bench_fn!(bench_1m_1hz, 4096 * 256, 1, "Snapshot/1M/1hz");
+reader_bench_fn!(bench_1m_10hz, 4096 * 256, 10, "Snapshot/1M/10hz");
+reader_bench_fn!(bench_1m_100hz, 4096 * 256, 100, "Snapshot/1M/100hz");
+reader_bench_fn!(bench_1m_1khz, 4096 * 256, 1000, "Snapshot/1M/1khz");
+reader_bench_fn!(bench_1m_10khz, 4096 * 256, 10000, "Snapshot/1M/10khz");
+reader_bench_fn!(bench_1m_100khz, 4096 * 256, 100000, "Snapshot/1M/100khz");
+reader_bench_fn!(bench_1m_1mhz, 4096 * 256, 1000000, "Snapshot/1M/1mhz");
+
+fn reader_benchmark(iterations: usize) {
+    // TODO(fxb/43505): Implement benchmarks where the real size doesn't match the inspector size.
+    // TODO(fxb/43505): Enforce threads starting before benches run.
+
+    bench_4k_1hz(iterations);
+    bench_4k_10hz(iterations);
+    bench_4k_100hz(iterations);
+    bench_4k_1khz(iterations);
+    bench_4k_10khz(iterations);
+    bench_4k_100khz(iterations);
+    bench_4k_1mhz(iterations);
+    bench_256k_1hz(iterations);
+    bench_256k_10hz(iterations);
+    bench_256k_100hz(iterations);
+    bench_256k_1khz(iterations);
+    bench_256k_10khz(iterations);
+    bench_256k_100khz(iterations);
+    bench_256k_1mhz(iterations);
+    bench_1m_1hz(iterations);
+    bench_1m_10hz(iterations);
+    bench_1m_100hz(iterations);
+    bench_1m_1khz(iterations);
+    bench_1m_10khz(iterations);
+    bench_1m_100khz(iterations);
+    bench_1m_1mhz(iterations);
+}
+
+fn writer_benchmark(iterations: usize) {
+    for i in 0..iterations {
+        single_iteration(i);
+    }
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     trace_provider_create_with_fdio();
     let args: Args = argh::from_env();
 
-    for i in 0..args.iterations {
-        single_iteration(i);
+    match args.benchmark {
+        BenchmarkOption::Writer => {
+            writer_benchmark(args.iterations);
+        }
+        BenchmarkOption::Reader => {
+            reader_benchmark(args.iterations);
+        }
     }
 
     Ok(())

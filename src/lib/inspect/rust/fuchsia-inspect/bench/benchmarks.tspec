@@ -2,7 +2,9 @@
   "app": "fuchsia-pkg://fuchsia.com/rust_inspect_benchmarks#meta/rust_inspect_benchmarks.cmx",
   "args": [
     "--iterations",
-    "50000"
+    "50000",
+    "--benchmark",
+    "writer"
   ],
   "test_suite_name": "fuchsia.rust_inspect.benchmarks",
   "measure": [

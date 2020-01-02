@@ -43,40 +43,55 @@ impl Snapshot {
         }
     }
 
-    fn try_from_with_callback<F>(vmo: &Vmo, mut first_read_callback: F) -> Result<Snapshot, Error>
+    /// Try to take a consistent snapshot of the given VMO once.
+    ///
+    /// Returns a Snapshot on success or an Error if a consistent snapshot could not be taken.
+    pub fn try_once_from_vmo(vmo: &Vmo) -> Result<Snapshot, Error> {
+        Snapshot::try_once_with_callback(vmo, &mut || {})
+    }
+
+    fn try_once_with_callback<F>(vmo: &Vmo, first_read_callback: &mut F) -> Result<Snapshot, Error>
     where
         F: FnMut() -> (),
     {
         let mut header_bytes: [u8; 16] = [0; 16];
+        vmo.read(&mut header_bytes, 0)?;
 
-        for _ in 0..SNAPSHOT_TRIES {
-            vmo.read(&mut header_bytes, 0)?;
+        let generation = header_generation_count(&header_bytes[..]);
 
-            let generation = header_generation_count(&header_bytes[..]);
+        // Used for testing
+        first_read_callback();
 
-            // Used for testing
-            first_read_callback();
-
-            match generation {
-                None => {}
-                Some(gen) => {
-                    let size = vmo.get_size()?;
-                    let mut buffer = vec![0u8; size as usize];
-                    vmo.read(&mut buffer[..], 0)?;
-                    if BlockIterator::from(&buffer[..16])
-                        .find(|block| {
-                            block.block_type_or().unwrap_or(BlockType::Reserved)
-                                == BlockType::Header
-                                && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
-                                && block.header_version().unwrap()
-                                    == constants::HEADER_VERSION_NUMBER
-                                && block.header_generation_count().unwrap() == gen
-                        })
-                        .is_some()
-                    {
-                        return Ok(Snapshot { buffer: buffer });
-                    }
+        match generation {
+            None => {}
+            Some(gen) => {
+                let size = vmo.get_size()?;
+                let mut buffer = vec![0u8; size as usize];
+                vmo.read(&mut buffer[..], 0)?;
+                if BlockIterator::from(&buffer[..16])
+                    .find(|block| {
+                        block.block_type_or().unwrap_or(BlockType::Reserved) == BlockType::Header
+                            && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
+                            && block.header_version().unwrap() == constants::HEADER_VERSION_NUMBER
+                            && block.header_generation_count().unwrap() == gen
+                    })
+                    .is_some()
+                {
+                    return Ok(Snapshot { buffer: buffer });
                 }
+            }
+        }
+
+        Err(format_err!("Failed to get consistent snapshot"))
+    }
+
+    fn try_from_with_callback<F>(vmo: &Vmo, mut first_read_callback: F) -> Result<Snapshot, Error>
+    where
+        F: FnMut() -> (),
+    {
+        for _ in 0..SNAPSHOT_TRIES {
+            if let Ok(ret) = Snapshot::try_once_with_callback(&vmo, &mut first_read_callback) {
+                return Ok(ret);
             }
         }
         return Err(format_err!("Failed to read snapshot from vmo"));
