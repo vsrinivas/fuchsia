@@ -39,9 +39,15 @@ class Encoder : public Visitor {
   void WriteData(const uint8_t* data, size_t size);
   void WriteData(const std::vector<uint8_t>& data) { WriteData(data.data(), data.size()); }
 
+  // Encode a value in an envelope.
+  void EncodeEnvelope(const Value* value, const Type* for_type);
+
   // Visit a union which is known to be non-null and which we want encoded immediately at the
   // current position.
   void VisitUnionBody(const UnionValue* node);
+
+  // Visit any union and encode it as an XUnion.
+  void VisitUnionAsXUnion(const UnionValue* node);
 
   // Visit an object which is known to be non-null and which we want encoded immediately at the
   // current position. If existing_size is specified, it indicates some number of bytes which have
@@ -49,25 +55,19 @@ class Encoder : public Visitor {
   // calculating member offsets.
   void VisitStructValueBody(size_t offset, const StructValue* node);
 
-  // Visit any union and encode it as an XUnion.
-  void VisitUnionAsXUnion(const UnionValue* node);
-
-  // Encode a value in an envelope.
-  void EncodeEnvelope(const Value* value, const Type* for_type);
-
   // Visitor overrides.
   void VisitInvalidValue(const InvalidValue* node, const Type* for_type) override;
   void VisitNullValue(const NullValue* node, const Type* for_type) override;
   void VisitRawValue(const RawValue* node, const Type* for_type) override;
+  void VisitBoolValue(const BoolValue* node, const Type* for_type) override;
   void VisitIntegerValue(const IntegerValue* node, const Type* for_type) override;
   void VisitDoubleValue(const DoubleValue* node, const Type* for_type) override;
   void VisitStringValue(const StringValue* node, const Type* for_type) override;
-  void VisitBoolValue(const BoolValue* node, const Type* for_type) override;
-  void VisitStructValue(const StructValue* node, const Type* for_type) override;
-  void VisitTableValue(const TableValue* node, const Type* for_type) override;
-  void VisitUnionValue(const UnionValue* node, const Type* for_type) override;
-  void VisitVectorValue(const VectorValue* node, const Type* for_type) override;
   void VisitHandleValue(const HandleValue* node, const Type* for_type) override;
+  void VisitUnionValue(const UnionValue* node, const Type* for_type) override;
+  void VisitStructValue(const StructValue* node, const Type* for_type) override;
+  void VisitVectorValue(const VectorValue* node, const Type* for_type) override;
+  void VisitTableValue(const TableValue* node, const Type* for_type) override;
 
   const bool unions_are_xunions_;
   std::vector<uint8_t> bytes_;

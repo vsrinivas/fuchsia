@@ -28,11 +28,6 @@ class NullVisitor : public TypeVisitor {
     encoder_->WriteValue<uint64_t>(0);
   }
 
-  void VisitStructType(const StructType* type) override {
-    FXL_DCHECK(type->Nullable());
-    encoder_->WriteValue<uint64_t>(0);
-  }
-
   void VisitUnionType(const UnionType* type) override {
     FXL_DCHECK(type->Nullable());
     encoder_->WriteValue<uint64_t>(0);
@@ -43,6 +38,11 @@ class NullVisitor : public TypeVisitor {
     encoder_->WriteValue<uint64_t>(0);
     encoder_->WriteValue<uint32_t>(0);
     encoder_->WriteValue<uint32_t>(0);
+    encoder_->WriteValue<uint64_t>(0);
+  }
+
+  void VisitStructType(const StructType* type) override {
+    FXL_DCHECK(type->Nullable());
     encoder_->WriteValue<uint64_t>(0);
   }
 
@@ -89,25 +89,6 @@ void Encoder::WriteData(const uint8_t* data, size_t size) {
   current_offset_ += size;
 }
 
-void Encoder::VisitUnionBody(const UnionValue* node) {
-  WriteValue<uint32_t>(node->member().ordinal());
-  node->value()->Visit(this, node->member().type());
-}
-
-void Encoder::VisitStructValueBody(size_t offset, const StructValue* node) {
-  for (const auto& member : node->struct_definition().members()) {
-    auto it = node->fields().find(member.get());
-    FXL_DCHECK(it != node->fields().end());
-    current_offset_ = offset + (unions_are_xunions_ ? member->v1_offset() : member->v0_offset());
-    it->second->Visit(this, member->type());
-  }
-}
-
-void Encoder::VisitUnionAsXUnion(const UnionValue* node) {
-  WriteValue<uint64_t>(node->member().ordinal());
-  EncodeEnvelope(node->value().get(), node->member().type());
-}
-
 void Encoder::EncodeEnvelope(const Value* value, const Type* for_type) {
   Encoder envelope_encoder(unions_are_xunions_);
   envelope_encoder.AllocateObject(for_type->InlineSize(unions_are_xunions_));
@@ -122,6 +103,25 @@ void Encoder::EncodeEnvelope(const Value* value, const Type* for_type) {
   }
 }
 
+void Encoder::VisitUnionBody(const UnionValue* node) {
+  WriteValue<uint32_t>(node->member().ordinal());
+  node->value()->Visit(this, node->member().type());
+}
+
+void Encoder::VisitUnionAsXUnion(const UnionValue* node) {
+  WriteValue<uint64_t>(node->member().ordinal());
+  EncodeEnvelope(node->value().get(), node->member().type());
+}
+
+void Encoder::VisitStructValueBody(size_t offset, const StructValue* node) {
+  for (const auto& member : node->struct_definition().members()) {
+    auto it = node->fields().find(member.get());
+    FXL_DCHECK(it != node->fields().end());
+    current_offset_ = offset + (unions_are_xunions_ ? member->v1_offset() : member->v0_offset());
+    it->second->Visit(this, member->type());
+  }
+}
+
 void Encoder::VisitInvalidValue(const InvalidValue* node, const Type* for_type) {
   FXL_LOG(FATAL) << "Can't encode invalid data.";
 }
@@ -133,6 +133,10 @@ void Encoder::VisitNullValue(const NullValue* node, const Type* for_type) {
 }
 
 void Encoder::VisitRawValue(const RawValue* node, const Type* for_type) { WriteData(node->data()); }
+
+void Encoder::VisitBoolValue(const BoolValue* node, const Type* for_type) {
+  WriteValue<uint8_t>(node->value());
+}
 
 void Encoder::VisitIntegerValue(const IntegerValue* node, const Type* for_type) {
   FXL_DCHECK(for_type != nullptr);
@@ -163,39 +167,12 @@ void Encoder::VisitStringValue(const StringValue* node, const Type* for_type) {
   WriteData(reinterpret_cast<const uint8_t*>(node->string().data()), node->string().size());
 }
 
-void Encoder::VisitBoolValue(const BoolValue* node, const Type* for_type) {
-  WriteValue<uint8_t>(node->value());
-}
-
-void Encoder::VisitStructValue(const StructValue* node, const Type* for_type) {
-  FXL_DCHECK(for_type != nullptr);
-  if (for_type->Nullable()) {
-    WriteValue<uint64_t>(UINTPTR_MAX);
-    size_t object_size = node->struct_definition().Size(unions_are_xunions_);
-    VisitStructValueBody(AllocateObject(object_size), node);
+void Encoder::VisitHandleValue(const HandleValue* node, const Type* for_type) {
+  if (node->handle().handle == FIDL_HANDLE_ABSENT) {
+    WriteValue<uint32_t>(FIDL_HANDLE_ABSENT);
   } else {
-    VisitStructValueBody(current_offset_, node);
-  }
-}
-
-void Encoder::VisitTableValue(const TableValue* node, const Type* for_type) {
-  WriteValue<uint64_t>(node->highest_member());
-  WriteValue<uint64_t>(UINTPTR_MAX);
-
-  constexpr size_t kEnvelopeSize = 2 * sizeof(uint32_t) + sizeof(uint64_t);
-  size_t offset = AllocateObject(node->highest_member() * kEnvelopeSize);
-
-  for (Ordinal32 i = 1; i <= node->highest_member(); ++i) {
-    current_offset_ = offset;
-    auto it = node->members().find(node->table_definition().members()[i].get());
-    if ((it == node->members().end()) || it->second->IsNull()) {
-      WriteValue<uint32_t>(0);
-      WriteValue<uint32_t>(0);
-      WriteValue<uint64_t>(0);
-    } else {
-      EncodeEnvelope(it->second.get(), it->first->type());
-    }
-    offset += kEnvelopeSize;
+    WriteValue<uint32_t>(FIDL_HANDLE_PRESENT);
+    handles_.push_back(node->handle());
   }
 }
 
@@ -209,6 +186,17 @@ void Encoder::VisitUnionValue(const UnionValue* node, const Type* for_type) {
     VisitUnionBody(node);
   } else {
     VisitUnionBody(node);
+  }
+}
+
+void Encoder::VisitStructValue(const StructValue* node, const Type* for_type) {
+  FXL_DCHECK(for_type != nullptr);
+  if (for_type->Nullable()) {
+    WriteValue<uint64_t>(UINTPTR_MAX);
+    size_t object_size = node->struct_definition().Size(unions_are_xunions_);
+    VisitStructValueBody(AllocateObject(object_size), node);
+  } else {
+    VisitStructValueBody(current_offset_, node);
   }
 }
 
@@ -232,12 +220,24 @@ void Encoder::VisitVectorValue(const VectorValue* node, const Type* for_type) {
   }
 }
 
-void Encoder::VisitHandleValue(const HandleValue* node, const Type* for_type) {
-  if (node->handle().handle == FIDL_HANDLE_ABSENT) {
-    WriteValue<uint32_t>(FIDL_HANDLE_ABSENT);
-  } else {
-    WriteValue<uint32_t>(FIDL_HANDLE_PRESENT);
-    handles_.push_back(node->handle());
+void Encoder::VisitTableValue(const TableValue* node, const Type* for_type) {
+  WriteValue<uint64_t>(node->highest_member());
+  WriteValue<uint64_t>(UINTPTR_MAX);
+
+  constexpr size_t kEnvelopeSize = 2 * sizeof(uint32_t) + sizeof(uint64_t);
+  size_t offset = AllocateObject(node->highest_member() * kEnvelopeSize);
+
+  for (Ordinal32 i = 1; i <= node->highest_member(); ++i) {
+    current_offset_ = offset;
+    auto it = node->members().find(node->table_definition().members()[i].get());
+    if ((it == node->members().end()) || it->second->IsNull()) {
+      WriteValue<uint32_t>(0);
+      WriteValue<uint32_t>(0);
+      WriteValue<uint64_t>(0);
+    } else {
+      EncodeEnvelope(it->second.get(), it->first->type());
+    }
+    offset += kEnvelopeSize;
   }
 }
 

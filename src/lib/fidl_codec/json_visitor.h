@@ -33,6 +33,15 @@ class JsonVisitor : public Visitor {
     result_->SetString(node->string().data(), node->string().size(), *allocator_);
   }
 
+  void VisitUnionValue(const UnionValue* node, const Type* for_type) override {
+    result_->SetObject();
+    rapidjson::Value key;
+    key.SetString(node->member().name().c_str(), *allocator_);
+    result_->AddMember(key, rapidjson::Value(), *allocator_);
+    JsonVisitor visitor(&(*result_)[node->member().name().c_str()], allocator_);
+    node->value()->Visit(&visitor, node->member().type());
+  }
+
   void VisitStructValue(const StructValue* node, const Type* for_type) override {
     result_->SetObject();
     for (const auto& member : node->struct_definition().members()) {
@@ -44,6 +53,19 @@ class JsonVisitor : public Visitor {
       result_->AddMember(key, rapidjson::Value(), *allocator_);
       JsonVisitor visitor(&(*result_)[member->name().c_str()], allocator_);
       it->second->Visit(&visitor, member->type());
+    }
+  }
+
+  void VisitVectorValue(const VectorValue* node, const Type* for_type) override {
+    FXL_DCHECK(for_type != nullptr);
+    const Type* component_type = for_type->GetComponentType();
+    FXL_DCHECK(component_type != nullptr);
+    result_->SetArray();
+    for (const auto& value : node->values()) {
+      rapidjson::Value element;
+      JsonVisitor visitor(&element, allocator_);
+      value->Visit(&visitor, component_type);
+      result_->PushBack(element, *allocator_);
     }
   }
 
@@ -60,28 +82,6 @@ class JsonVisitor : public Visitor {
         JsonVisitor visitor(&(*result_)[member->name().c_str()], allocator_);
         it->second->Visit(&visitor, member->type());
       }
-    }
-  }
-
-  void VisitUnionValue(const UnionValue* node, const Type* for_type) override {
-    result_->SetObject();
-    rapidjson::Value key;
-    key.SetString(node->member().name().c_str(), *allocator_);
-    result_->AddMember(key, rapidjson::Value(), *allocator_);
-    JsonVisitor visitor(&(*result_)[node->member().name().c_str()], allocator_);
-    node->value()->Visit(&visitor, node->member().type());
-  }
-
-  void VisitVectorValue(const VectorValue* node, const Type* for_type) override {
-    FXL_DCHECK(for_type != nullptr);
-    const Type* component_type = for_type->GetComponentType();
-    FXL_DCHECK(component_type != nullptr);
-    result_->SetArray();
-    for (const auto& value : node->values()) {
-      rapidjson::Value element;
-      JsonVisitor visitor(&element, allocator_);
-      value->Visit(&visitor, component_type);
-      result_->PushBack(element, *allocator_);
     }
   }
 

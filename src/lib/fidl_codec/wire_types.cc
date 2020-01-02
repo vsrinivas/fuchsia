@@ -68,34 +68,23 @@ class ToStringVisitor : public TypeVisitor {
 
   void VisitType(const Type* type) override { *result_ += type->Name(); }
 
-  void VisitStructType(const StructType* type) override {
-    VisitTypeWithMembers<std::unique_ptr<StructMember>>(
-        type, "struct", type->struct_definition().members(),
-        [this](const std::unique_ptr<StructMember>& member) {
-          *result_ += indent_ + "  ";
-          ToStringVisitor visitor(indent_ + "  ", NextExpandLevels(), result_);
-          member->type()->Visit(&visitor);
-          *result_ += " " + std::string(member->name());
-          return true;
-        });
+  void VisitEnumType(const EnumType* type) override {
+    VisitTypeWithMembers<EnumOrBitsMember>(type, "enum", type->enum_definition().members(),
+                                           [this](const EnumOrBitsMember& member) {
+                                             *result_ += indent_ + "  " + member.name() + " = ";
+                                             if (member.negative()) {
+                                               *result_ += "-";
+                                             }
+                                             *result_ += std::to_string(member.absolute_value());
+                                             return true;
+                                           });
   }
 
-  void VisitTableType(const TableType* type) override {
-    VisitTypeWithMembers<std::unique_ptr<TableMember>>(
-        type, "table", type->table_definition().members(),
-        [this](const std::unique_ptr<TableMember>& member) {
-          if (!member) {
-            return false;
-          }
-          *result_ += indent_ + "  ";
-          *result_ += std::to_string(member->ordinal()) + ": ";
-          if (member->reserved()) {
-            *result_ += "reserved";
-            return true;
-          }
-          ToStringVisitor visitor(indent_ + "  ", NextExpandLevels(), result_);
-          member->type()->Visit(&visitor);
-          *result_ += " " + std::string(member->name());
+  void VisitBitsType(const BitsType* type) override {
+    VisitTypeWithMembers<EnumOrBitsMember>(
+        type, "bits", type->bits_definition().members(), [this](const EnumOrBitsMember& member) {
+          *result_ +=
+              indent_ + "  " + member.name() + " = " + std::to_string(member.absolute_value());
           return true;
         });
   }
@@ -136,6 +125,18 @@ class ToStringVisitor : public TypeVisitor {
         });
   }
 
+  void VisitStructType(const StructType* type) override {
+    VisitTypeWithMembers<std::unique_ptr<StructMember>>(
+        type, "struct", type->struct_definition().members(),
+        [this](const std::unique_ptr<StructMember>& member) {
+          *result_ += indent_ + "  ";
+          ToStringVisitor visitor(indent_ + "  ", NextExpandLevels(), result_);
+          member->type()->Visit(&visitor);
+          *result_ += " " + std::string(member->name());
+          return true;
+        });
+  }
+
   void VisitArrayType(const ArrayType* type) override {
     *result_ += "array<";
     type->component_type()->Visit(this);
@@ -148,23 +149,22 @@ class ToStringVisitor : public TypeVisitor {
     *result_ += ">";
   }
 
-  void VisitEnumType(const EnumType* type) override {
-    VisitTypeWithMembers<EnumOrBitsMember>(type, "enum", type->enum_definition().members(),
-                                           [this](const EnumOrBitsMember& member) {
-                                             *result_ += indent_ + "  " + member.name() + " = ";
-                                             if (member.negative()) {
-                                               *result_ += "-";
-                                             }
-                                             *result_ += std::to_string(member.absolute_value());
-                                             return true;
-                                           });
-  }
-
-  void VisitBitsType(const BitsType* type) override {
-    VisitTypeWithMembers<EnumOrBitsMember>(
-        type, "bits", type->bits_definition().members(), [this](const EnumOrBitsMember& member) {
-          *result_ +=
-              indent_ + "  " + member.name() + " = " + std::to_string(member.absolute_value());
+  void VisitTableType(const TableType* type) override {
+    VisitTypeWithMembers<std::unique_ptr<TableMember>>(
+        type, "table", type->table_definition().members(),
+        [this](const std::unique_ptr<TableMember>& member) {
+          if (!member) {
+            return false;
+          }
+          *result_ += indent_ + "  ";
+          *result_ += std::to_string(member->ordinal()) + ": ";
+          if (member->reserved()) {
+            *result_ += "reserved";
+            return true;
+          }
+          ToStringVisitor visitor(indent_ + "  ", NextExpandLevels(), result_);
+          member->type()->Visit(&visitor);
+          *result_ += " " + std::string(member->name());
           return true;
         });
   }
@@ -204,6 +204,36 @@ std::unique_ptr<Value> RawType::Decode(MessageDecoder* decoder, uint64_t offset)
 
 void RawType::Visit(TypeVisitor* visitor) const { visitor->VisitRawType(this); }
 
+std::unique_ptr<Value> BoolType::Decode(MessageDecoder* decoder, uint64_t offset) const {
+  auto byte = decoder->GetAddress(offset, sizeof(uint8_t));
+  if (byte == nullptr) {
+    return std::make_unique<InvalidValue>();
+  }
+  return std::make_unique<BoolValue>(*byte);
+}
+
+void BoolType::Visit(TypeVisitor* visitor) const { visitor->VisitBoolType(this); };
+
+void Int8Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt8Type(this); }
+
+void Int16Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt16Type(this); }
+
+void Int32Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt32Type(this); }
+
+void Int64Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt64Type(this); }
+
+void Uint8Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint8Type(this); }
+
+void Uint16Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint16Type(this); }
+
+void Uint32Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint32Type(this); }
+
+void Uint64Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint64Type(this); }
+
+void Float32Type::Visit(TypeVisitor* visitor) const { visitor->VisitFloat32Type(this); }
+
+void Float64Type::Visit(TypeVisitor* visitor) const { visitor->VisitFloat64Type(this); }
+
 std::unique_ptr<Value> StringType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   uint64_t string_length = 0;
   if (!decoder->GetValueAt(offset, &string_length)) {
@@ -228,73 +258,66 @@ std::unique_ptr<Value> StringType::Decode(MessageDecoder* decoder, uint64_t offs
 
 void StringType::Visit(TypeVisitor* visitor) const { visitor->VisitStringType(this); }
 
-std::unique_ptr<Value> BoolType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  auto byte = decoder->GetAddress(offset, sizeof(uint8_t));
-  if (byte == nullptr) {
-    return std::make_unique<InvalidValue>();
+std::unique_ptr<Value> HandleType::Decode(MessageDecoder* decoder, uint64_t offset) const {
+  zx_handle_t handle = FIDL_HANDLE_ABSENT;
+  decoder->GetValueAt(offset, &handle);
+  if ((handle != FIDL_HANDLE_ABSENT) && (handle != FIDL_HANDLE_PRESENT)) {
+    decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
+                        << ": Invalid value <" << std::hex << handle << std::dec
+                        << "> for handle\n";
+    handle = FIDL_HANDLE_ABSENT;
   }
-  return std::make_unique<BoolValue>(*byte);
+  zx_handle_info_t handle_info;
+  if (handle == FIDL_HANDLE_ABSENT) {
+    handle_info.handle = FIDL_HANDLE_ABSENT;
+    handle_info.type = ZX_OBJ_TYPE_NONE;
+    handle_info.rights = 0;
+  } else {
+    handle_info = decoder->GetNextHandle();
+  }
+  return std::make_unique<HandleValue>(handle_info);
 }
 
-void BoolType::Visit(TypeVisitor* visitor) const { visitor->VisitBoolType(this); };
+void HandleType::Visit(TypeVisitor* visitor) const { visitor->VisitHandleType(this); }
 
-size_t StructType::InlineSize(bool unions_are_xunions) const {
-  return nullable_ ? sizeof(uintptr_t) : struct_.Size(unions_are_xunions);
+EnumType::EnumType(const Enum& e) : enum_(e) {}
+
+std::unique_ptr<Value> EnumType::Decode(MessageDecoder* decoder, uint64_t offset) const {
+  return enum_.type()->Decode(decoder, offset);
 }
 
-std::unique_ptr<Value> StructType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  if (nullable_) {
-    uint32_t size = decoder->unions_are_xunions() ? struct_.v1_size() : struct_.v0_size();
-    bool is_null;
-    uint64_t nullable_offset;
-    if (!decoder->DecodeNullableHeader(offset, size, &is_null, &nullable_offset)) {
-      return std::make_unique<InvalidValue>();
-    }
-    if (is_null) {
-      return std::make_unique<NullValue>();
-    }
-    offset = nullable_offset;
+void EnumType::PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                           const fidl_message_header_t* header, std::string_view line_header,
+                           int tabs, int remaining_size, int max_line_size) const {
+  uint64_t absolute;
+  bool negative;
+  if (!value->GetIntegerValue(&absolute, &negative)) {
+    os << colors.red << "invalid" << colors.reset;
+  } else {
+    os << colors.blue << enum_.GetName(absolute, negative) << colors.reset;
   }
-  return decoder->DecodeStruct(struct_, offset);
 }
 
-void StructType::Visit(TypeVisitor* visitor) const { visitor->VisitStructType(this); }
+void EnumType::Visit(TypeVisitor* visitor) const { visitor->VisitEnumType(this); }
 
-size_t TableType::InlineSize(bool unions_are_xunions) const { return table_definition_.size(); }
+BitsType::BitsType(const Bits& b) : bits_(b) {}
 
-std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  uint64_t member_count = 0;
-  decoder->GetValueAt(offset, &member_count);
-  offset += sizeof(member_count);
-
-  bool is_null;
-  uint64_t nullable_offset;
-  constexpr size_t kEnvelopeSize = 2 * sizeof(uint32_t) + sizeof(uint64_t);
-  if (!decoder->DecodeNullableHeader(offset, member_count * kEnvelopeSize, &is_null,
-                                     &nullable_offset)) {
-    return std::make_unique<InvalidValue>();
+std::unique_ptr<Value> BitsType::Decode(MessageDecoder* decoder, uint64_t offset) const {
+  return bits_.type()->Decode(decoder, offset);
+}
+void BitsType::PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                           const fidl_message_header_t* header, std::string_view line_header,
+                           int tabs, int remaining_size, int max_line_size) const {
+  uint64_t absolute;
+  bool negative;
+  if (!value->GetIntegerValue(&absolute, &negative)) {
+    os << colors.red << "invalid" << colors.reset;
+  } else {
+    os << colors.blue << bits_.GetName(absolute, negative) << colors.reset;
   }
-  if (is_null) {
-    decoder->AddError() << "Tables are not nullable.";
-    return std::make_unique<InvalidValue>();
-  }
-  auto result = std::make_unique<TableValue>(table_definition_);
-  for (uint64_t i = 1; i <= member_count; ++i) {
-    const TableMember* member = table_definition_.GetMember(i);
-    if ((member == nullptr) || member->reserved()) {
-      decoder->SkipEnvelope(nullable_offset);
-    } else {
-      std::unique_ptr<Value> value = decoder->DecodeEnvelope(nullable_offset, member->type());
-      if (!value->IsNull()) {
-        result->AddMember(member, std::move(value));
-      }
-    }
-    nullable_offset += kEnvelopeSize;
-  }
-  return result;
 }
 
-void TableType::Visit(TypeVisitor* visitor) const { visitor->VisitTableType(this); }
+void BitsType::Visit(TypeVisitor* visitor) const { visitor->VisitBitsType(this); }
 
 UnionType::UnionType(const Union& uni, bool nullable) : union_(uni), nullable_(nullable) {}
 
@@ -368,6 +391,28 @@ std::unique_ptr<Value> XUnionType::Decode(MessageDecoder* decoder, uint64_t offs
 
 void XUnionType::Visit(TypeVisitor* visitor) const { visitor->VisitXUnionType(this); }
 
+size_t StructType::InlineSize(bool unions_are_xunions) const {
+  return nullable_ ? sizeof(uintptr_t) : struct_.Size(unions_are_xunions);
+}
+
+std::unique_ptr<Value> StructType::Decode(MessageDecoder* decoder, uint64_t offset) const {
+  if (nullable_) {
+    uint32_t size = decoder->unions_are_xunions() ? struct_.v1_size() : struct_.v0_size();
+    bool is_null;
+    uint64_t nullable_offset;
+    if (!decoder->DecodeNullableHeader(offset, size, &is_null, &nullable_offset)) {
+      return std::make_unique<InvalidValue>();
+    }
+    if (is_null) {
+      return std::make_unique<NullValue>();
+    }
+    offset = nullable_offset;
+  }
+  return decoder->DecodeStruct(struct_, offset);
+}
+
+void StructType::Visit(TypeVisitor* visitor) const { visitor->VisitStructType(this); }
+
 ElementSequenceType::ElementSequenceType(std::unique_ptr<Type>&& component_type)
     : component_type_(std::move(component_type)) {
   FXL_DCHECK(component_type_.get() != nullptr);
@@ -421,73 +466,45 @@ std::unique_ptr<Value> VectorType::Decode(MessageDecoder* decoder, uint64_t offs
 
 void VectorType::Visit(TypeVisitor* visitor) const { visitor->VisitVectorType(this); }
 
-EnumType::EnumType(const Enum& e) : enum_(e) {}
+size_t TableType::InlineSize(bool unions_are_xunions) const { return table_definition_.size(); }
 
-std::unique_ptr<Value> EnumType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return enum_.type()->Decode(decoder, offset);
-}
+std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offset) const {
+  uint64_t member_count = 0;
+  decoder->GetValueAt(offset, &member_count);
+  offset += sizeof(member_count);
 
-void EnumType::PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
-                           const fidl_message_header_t* header, std::string_view line_header,
-                           int tabs, int remaining_size, int max_line_size) const {
-  uint64_t absolute;
-  bool negative;
-  if (!value->GetIntegerValue(&absolute, &negative)) {
-    os << colors.red << "invalid" << colors.reset;
-  } else {
-    os << colors.blue << enum_.GetName(absolute, negative) << colors.reset;
+  bool is_null;
+  uint64_t nullable_offset;
+  constexpr size_t kEnvelopeSize = 2 * sizeof(uint32_t) + sizeof(uint64_t);
+  if (!decoder->DecodeNullableHeader(offset, member_count * kEnvelopeSize, &is_null,
+                                     &nullable_offset)) {
+    return std::make_unique<InvalidValue>();
   }
-}
-
-void EnumType::Visit(TypeVisitor* visitor) const { visitor->VisitEnumType(this); }
-
-BitsType::BitsType(const Bits& b) : bits_(b) {}
-
-std::unique_ptr<Value> BitsType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return bits_.type()->Decode(decoder, offset);
-}
-
-void BitsType::PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
-                           const fidl_message_header_t* header, std::string_view line_header,
-                           int tabs, int remaining_size, int max_line_size) const {
-  uint64_t absolute;
-  bool negative;
-  if (!value->GetIntegerValue(&absolute, &negative)) {
-    os << colors.red << "invalid" << colors.reset;
-  } else {
-    os << colors.blue << bits_.GetName(absolute, negative) << colors.reset;
+  if (is_null) {
+    decoder->AddError() << "Tables are not nullable.";
+    return std::make_unique<InvalidValue>();
   }
+  auto result = std::make_unique<TableValue>(table_definition_);
+  for (uint64_t i = 1; i <= member_count; ++i) {
+    const TableMember* member = table_definition_.GetMember(i);
+    if ((member == nullptr) || member->reserved()) {
+      decoder->SkipEnvelope(nullable_offset);
+    } else {
+      std::unique_ptr<Value> value = decoder->DecodeEnvelope(nullable_offset, member->type());
+      if (!value->IsNull()) {
+        result->AddMember(member, std::move(value));
+      }
+    }
+    nullable_offset += kEnvelopeSize;
+  }
+  return result;
 }
 
-void BitsType::Visit(TypeVisitor* visitor) const { visitor->VisitBitsType(this); }
-
-std::unique_ptr<Value> HandleType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  zx_handle_t handle = FIDL_HANDLE_ABSENT;
-  decoder->GetValueAt(offset, &handle);
-  if ((handle != FIDL_HANDLE_ABSENT) && (handle != FIDL_HANDLE_PRESENT)) {
-    decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
-                        << ": Invalid value <" << std::hex << handle << std::dec
-                        << "> for handle\n";
-    handle = FIDL_HANDLE_ABSENT;
-  }
-  zx_handle_info_t handle_info;
-  if (handle == FIDL_HANDLE_ABSENT) {
-    handle_info.handle = FIDL_HANDLE_ABSENT;
-    handle_info.type = ZX_OBJ_TYPE_NONE;
-    handle_info.rights = 0;
-  } else {
-    handle_info = decoder->GetNextHandle();
-  }
-  return std::make_unique<HandleValue>(handle_info);
-}
-
-void HandleType::Visit(TypeVisitor* visitor) const { visitor->VisitHandleType(this); }
+void TableType::Visit(TypeVisitor* visitor) const { visitor->VisitTableType(this); }
 
 std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name, size_t inline_size) {
   static std::map<std::string, std::function<std::unique_ptr<Type>()>> scalar_type_map_{
       {"bool", []() { return std::make_unique<BoolType>(); }},
-      {"float32", []() { return std::make_unique<Float32Type>(); }},
-      {"float64", []() { return std::make_unique<Float64Type>(); }},
       {"int8", []() { return std::make_unique<Int8Type>(); }},
       {"int16", []() { return std::make_unique<Int16Type>(); }},
       {"int32", []() { return std::make_unique<Int32Type>(); }},
@@ -496,6 +513,8 @@ std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name, siz
       {"uint16", []() { return std::make_unique<Uint16Type>(); }},
       {"uint32", []() { return std::make_unique<Uint32Type>(); }},
       {"uint64", []() { return std::make_unique<Uint64Type>(); }},
+      {"float32", []() { return std::make_unique<Float32Type>(); }},
+      {"float64", []() { return std::make_unique<Float64Type>(); }},
   };
   auto it = scalar_type_map_.find(type_name);
   if (it != scalar_type_map_.end()) {
@@ -543,6 +562,12 @@ std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Valu
     return std::make_unique<RawType>(inline_size);
   }
   std::string kind = type["kind"].GetString();
+  if (kind == "string") {
+    return std::make_unique<StringType>();
+  }
+  if (kind == "handle") {
+    return std::make_unique<HandleType>();
+  }
   if (kind == "array") {
     const rapidjson::Value& element_type = type["element_type"];
     uint32_t element_count = std::strtol(type["element_count"].GetString(), nullptr, kDecimalBase);
@@ -551,12 +576,6 @@ std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Valu
   if (kind == "vector") {
     const rapidjson::Value& element_type = type["element_type"];
     return std::make_unique<VectorType>(GetType(loader, element_type, 0));
-  }
-  if (kind == "string") {
-    return std::make_unique<StringType>();
-  }
-  if (kind == "handle") {
-    return std::make_unique<HandleType>();
   }
   if (kind == "request") {
     return std::make_unique<HandleType>();
@@ -570,16 +589,5 @@ std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Valu
   FXL_LOG(ERROR) << "Invalid type " << kind;
   return std::make_unique<RawType>(inline_size);
 }
-
-void Float32Type::Visit(TypeVisitor* visitor) const { visitor->VisitFloat32Type(this); }
-void Float64Type::Visit(TypeVisitor* visitor) const { visitor->VisitFloat64Type(this); }
-void Int8Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt8Type(this); }
-void Int16Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt16Type(this); }
-void Int32Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt32Type(this); }
-void Int64Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt64Type(this); }
-void Uint8Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint8Type(this); }
-void Uint16Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint16Type(this); }
-void Uint32Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint32Type(this); }
-void Uint64Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint64Type(this); }
 
 }  // namespace fidl_codec

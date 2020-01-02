@@ -117,59 +117,27 @@ class RawType : public Type {
   size_t inline_size_;
 };
 
-class StringType : public Type {
+class BoolType : public Type {
  public:
-  std::string Name() const override { return "string"; }
+  std::string Name() const override { return "bool"; }
 
-  size_t InlineSize(bool unions_are_xunions) const override {
-    return sizeof(uint64_t) + sizeof(uint64_t);
-  }
-
-  bool Nullable() const override { return true; }
+  size_t InlineSize(bool unions_are_xunions) const override { return sizeof(uint8_t); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
   void Visit(TypeVisitor* visitor) const override;
 };
 
-// A generic type that can be used for any numeric value that corresponds to a
-// C++ arithmetic value.
-template <typename T>
-class NumericType : public Type {
-  static_assert(std::is_arithmetic<T>::value && !std::is_same<T, bool>::value,
-                "NumericType can only be used for numerics");
-
- public:
-  size_t InlineSize(bool unions_are_xunions) const override { return sizeof(T); }
-
-  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
-    auto got = decoder->GetAddress(offset, sizeof(T));
-    if (got == nullptr) {
-      return std::make_unique<InvalidValue>();
-    }
-    return std::make_unique<DoubleValue>(*reinterpret_cast<const T*>(got));
-  }
-
-  void PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override {
-    double result;
-    if (!value->GetDoubleValue(&result)) {
-      os << colors.red << "invalid" << colors.reset;
-    } else {
-      os << colors.blue << std::to_string(result) << colors.reset;
-    }
-  }
-};
-
 // A generic type that can be used for any integer numeric value that corresponds to a
 // C++ integral value.
 template <typename T>
-class IntegralType : public NumericType<T> {
+class IntegralType : public Type {
   static_assert(std::is_integral<T>::value && !std::is_same<T, bool>::value,
                 "IntegralType can only be used for integers");
 
  public:
+  size_t InlineSize(bool unions_are_xunions) const override { return sizeof(T); }
+
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
     auto got = decoder->GetAddress(offset, sizeof(T));
     if (got == nullptr) {
@@ -198,18 +166,6 @@ class IntegralType : public NumericType<T> {
       os << std::to_string(absolute) << colors.reset;
     }
   }
-};
-
-class Float32Type : public NumericType<float> {
- public:
-  std::string Name() const override { return "float32"; }
-  void Visit(TypeVisitor* visitor) const override;
-};
-
-class Float64Type : public NumericType<double> {
- public:
-  std::string Name() const override { return "float64"; }
-  void Visit(TypeVisitor* visitor) const override;
 };
 
 class Int8Type : public IntegralType<int8_t> {
@@ -260,54 +216,118 @@ class Uint64Type : public IntegralType<uint64_t> {
   void Visit(TypeVisitor* visitor) const override;
 };
 
-class BoolType : public Type {
- public:
-  std::string Name() const override { return "bool"; }
+// A generic type that can be used for any numeric value that corresponds to a
+// C++ arithmetic value.
+template <typename T>
+class NumericType : public Type {
+  static_assert(std::is_arithmetic<T>::value && !std::is_same<T, bool>::value,
+                "NumericType can only be used for numerics");
 
-  size_t InlineSize(bool unions_are_xunions) const override { return sizeof(uint8_t); }
+ public:
+  size_t InlineSize(bool unions_are_xunions) const override { return sizeof(T); }
+
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
+    auto got = decoder->GetAddress(offset, sizeof(T));
+    if (got == nullptr) {
+      return std::make_unique<InvalidValue>();
+    }
+    return std::make_unique<DoubleValue>(*reinterpret_cast<const T*>(got));
+  }
+
+  void PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override {
+    double result;
+    if (!value->GetDoubleValue(&result)) {
+      os << colors.red << "invalid" << colors.reset;
+    } else {
+      os << colors.blue << std::to_string(result) << colors.reset;
+    }
+  }
+};
+
+class Float32Type : public NumericType<float> {
+ public:
+  std::string Name() const override { return "float32"; }
+  void Visit(TypeVisitor* visitor) const override;
+};
+
+class Float64Type : public NumericType<double> {
+ public:
+  std::string Name() const override { return "float64"; }
+  void Visit(TypeVisitor* visitor) const override;
+};
+
+class StringType : public Type {
+ public:
+  std::string Name() const override { return "string"; }
+
+  size_t InlineSize(bool unions_are_xunions) const override {
+    return sizeof(uint64_t) + sizeof(uint64_t);
+  }
+
+  bool Nullable() const override { return true; }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
   void Visit(TypeVisitor* visitor) const override;
 };
 
-class StructType : public Type {
+class HandleType : public Type {
  public:
-  StructType(const Struct& str, bool nullable) : struct_(str), nullable_(nullable) {}
+  HandleType() {}
 
-  const Struct& struct_definition() const { return struct_; }
+  std::string Name() const override { return "handle"; }
 
-  std::string Name() const override { return struct_.name(); }
-
-  size_t InlineSize(bool unions_are_xunions) const override;
-
-  bool Nullable() const override { return nullable_; }
+  size_t InlineSize(bool unions_are_xunions) const override { return sizeof(zx_handle_t); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
   void Visit(TypeVisitor* visitor) const override;
-
- private:
-  const Struct& struct_;
-  const bool nullable_;
 };
 
-class TableType : public Type {
+class EnumType : public Type {
  public:
-  explicit TableType(const Table& table_definition) : table_definition_(table_definition) {}
+  explicit EnumType(const Enum& e);
 
-  const Table& table_definition() const { return table_definition_; }
+  const Enum& enum_definition() const { return enum_; }
 
-  std::string Name() const override { return table_definition_.name(); }
+  std::string Name() const override { return enum_.name(); }
 
-  size_t InlineSize(bool unions_are_xunions) const override;
+  size_t InlineSize(bool unions_are_xunions) const override { return enum_.size(); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
+
+  void PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
   void Visit(TypeVisitor* visitor) const override;
 
  private:
-  const Table& table_definition_;
+  const Enum& enum_;
+};
+
+class BitsType : public Type {
+ public:
+  explicit BitsType(const Bits& b);
+
+  const Bits& bits_definition() const { return bits_; }
+
+  std::string Name() const override { return bits_.name(); }
+
+  size_t InlineSize(bool unions_are_xunions) const override { return bits_.size(); }
+
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
+
+  void PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
+
+  void Visit(TypeVisitor* visitor) const override;
+
+ private:
+  const Bits& bits_;
 };
 
 class UnionType : public Type {
@@ -343,6 +363,27 @@ class XUnionType : public UnionType {
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
   void Visit(TypeVisitor* visitor) const override;
+};
+
+class StructType : public Type {
+ public:
+  StructType(const Struct& str, bool nullable) : struct_(str), nullable_(nullable) {}
+
+  const Struct& struct_definition() const { return struct_; }
+
+  std::string Name() const override { return struct_.name(); }
+
+  size_t InlineSize(bool unions_are_xunions) const override;
+
+  bool Nullable() const override { return nullable_; }
+
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
+
+  void Visit(TypeVisitor* visitor) const override;
+
+ private:
+  const Struct& struct_;
+  const bool nullable_;
 };
 
 class ElementSequenceType : public Type {
@@ -400,61 +441,22 @@ class VectorType : public ElementSequenceType {
   void Visit(TypeVisitor* visitor) const override;
 };
 
-class EnumType : public Type {
+class TableType : public Type {
  public:
-  explicit EnumType(const Enum& e);
+  explicit TableType(const Table& table_definition) : table_definition_(table_definition) {}
 
-  const Enum& enum_definition() const { return enum_; }
+  const Table& table_definition() const { return table_definition_; }
 
-  std::string Name() const override { return enum_.name(); }
+  std::string Name() const override { return table_definition_.name(); }
 
-  size_t InlineSize(bool unions_are_xunions) const override { return enum_.size(); }
+  size_t InlineSize(bool unions_are_xunions) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
-
-  void PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
 
   void Visit(TypeVisitor* visitor) const override;
 
  private:
-  const Enum& enum_;
-};
-
-class BitsType : public Type {
- public:
-  explicit BitsType(const Bits& b);
-
-  const Bits& bits_definition() const { return bits_; }
-
-  std::string Name() const override { return bits_.name(); }
-
-  size_t InlineSize(bool unions_are_xunions) const override { return bits_.size(); }
-
-  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
-
-  void PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
-
-  void Visit(TypeVisitor* visitor) const override;
-
- private:
-  const Bits& bits_;
-};
-
-class HandleType : public Type {
- public:
-  HandleType() {}
-
-  std::string Name() const override { return "handle"; }
-
-  size_t InlineSize(bool unions_are_xunions) const override { return sizeof(zx_handle_t); }
-
-  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
-
-  void Visit(TypeVisitor* visitor) const override;
+  const Table& table_definition_;
 };
 
 }  // namespace fidl_codec

@@ -23,6 +23,9 @@ class Visitor {
   virtual void VisitRawValue(const RawValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
+  virtual void VisitBoolValue(const BoolValue* node, const Type* for_type) {
+    VisitValue(node, for_type);
+  }
   virtual void VisitIntegerValue(const IntegerValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
@@ -32,22 +35,19 @@ class Visitor {
   virtual void VisitStringValue(const StringValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
-  virtual void VisitBoolValue(const BoolValue* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-  virtual void VisitStructValue(const StructValue* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-  virtual void VisitTableValue(const TableValue* node, const Type* for_type) {
+  virtual void VisitHandleValue(const HandleValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
   virtual void VisitUnionValue(const UnionValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
+  virtual void VisitStructValue(const StructValue* node, const Type* for_type) {
+    VisitValue(node, for_type);
+  }
   virtual void VisitVectorValue(const VectorValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
-  virtual void VisitHandleValue(const HandleValue* node, const Type* for_type) {
+  virtual void VisitTableValue(const TableValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
 
@@ -55,15 +55,15 @@ class Visitor {
   friend class InvalidValue;
   friend class NullValue;
   friend class RawValue;
+  friend class BoolValue;
   friend class IntegerValue;
   friend class DoubleValue;
   friend class StringValue;
-  friend class BoolValue;
-  friend class StructValue;
-  friend class TableValue;
-  friend class UnionValue;
-  friend class VectorValue;
   friend class HandleValue;
+  friend class UnionValue;
+  friend class StructValue;
+  friend class VectorValue;
+  friend class TableValue;
 };
 
 }  // namespace fidl_codec

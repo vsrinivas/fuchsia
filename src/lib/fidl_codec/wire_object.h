@@ -119,6 +119,25 @@ class RawValue : public Value {
   const std::vector<uint8_t> data_;
 };
 
+// A Boolean value.
+class BoolValue : public Value {
+ public:
+  explicit BoolValue(uint8_t value) : value_(value) {}
+
+  uint8_t value() const { return value_; }
+
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
+
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor, const Type* for_type) const override;
+
+ private:
+  const uint8_t value_;
+};
+
 class IntegerValue : public Value {
  public:
   IntegerValue(uint64_t absolute_value, bool negative)
@@ -209,12 +228,12 @@ class StringValue : public Value {
   const std::string string_;
 };
 
-// A Boolean value.
-class BoolValue : public Value {
+// A handle.
+class HandleValue : public Value {
  public:
-  explicit BoolValue(uint8_t value) : value_(value) {}
+  explicit HandleValue(const zx_handle_info_t& handle) : handle_(handle) {}
 
-  uint8_t value() const { return value_; }
+  const zx_handle_info_t& handle() const { return handle_; }
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
@@ -225,7 +244,29 @@ class BoolValue : public Value {
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
-  const uint8_t value_;
+  const zx_handle_info_t handle_;
+};
+
+// An union.
+class UnionValue : public Value {
+ public:
+  UnionValue(const UnionMember& member, std::unique_ptr<Value> value)
+      : member_(member), value_(std::move(value)) {}
+
+  const UnionMember& member() const { return member_; }
+  const std::unique_ptr<Value>& value() const { return value_; }
+
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
+
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor, const Type* for_type) const override;
+
+ private:
+  const UnionMember& member_;
+  const std::unique_ptr<Value> value_;
 };
 
 // An instance of a Struct. This includes requests and responses which are also structs.
@@ -254,60 +295,6 @@ class StructValue : public Value {
  private:
   const Struct& struct_definition_;
   std::map<const StructMember*, std::unique_ptr<Value>> fields_;
-};
-
-// A table.
-class TableValue : public Value {
- public:
-  explicit TableValue(const Table& table_definition) : table_definition_(table_definition) {}
-
-  const Table& table_definition() const { return table_definition_; }
-  const std::map<const TableMember*, std::unique_ptr<Value>>& members() const { return members_; }
-  Ordinal32 highest_member() const { return highest_member_; }
-
-  void AddMember(const TableMember* member, std::unique_ptr<Value> value) {
-    members_.emplace(std::make_pair(member, std::move(value)));
-    if (member->ordinal() > highest_member_) {
-      highest_member_ = member->ordinal();
-    }
-  }
-
-  bool AddMember(std::string_view name, std::unique_ptr<Value> value);
-
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
-
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
-
-  void Visit(Visitor* visitor, const Type* for_type) const override;
-
- private:
-  const Table& table_definition_;
-  std::map<const TableMember*, std::unique_ptr<Value>> members_;
-  Ordinal32 highest_member_ = 0;
-};
-
-// An union.
-class UnionValue : public Value {
- public:
-  UnionValue(const UnionMember& member, std::unique_ptr<Value> value)
-      : member_(member), value_(std::move(value)) {}
-
-  const UnionMember& member() const { return member_; }
-  const std::unique_ptr<Value>& value() const { return value_; }
-
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
-
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
-
-  void Visit(Visitor* visitor, const Type* for_type) const override;
-
- private:
-  const UnionMember& member_;
-  const std::unique_ptr<Value> value_;
 };
 
 // A vector.
@@ -347,12 +334,23 @@ class VectorValue : public Value {
   bool has_new_line_ = false;
 };
 
-// A handle.
-class HandleValue : public Value {
+// A table.
+class TableValue : public Value {
  public:
-  explicit HandleValue(const zx_handle_info_t& handle) : handle_(handle) {}
+  explicit TableValue(const Table& table_definition) : table_definition_(table_definition) {}
 
-  const zx_handle_info_t& handle() const { return handle_; }
+  const Table& table_definition() const { return table_definition_; }
+  const std::map<const TableMember*, std::unique_ptr<Value>>& members() const { return members_; }
+  Ordinal32 highest_member() const { return highest_member_; }
+
+  void AddMember(const TableMember* member, std::unique_ptr<Value> value) {
+    members_.emplace(std::make_pair(member, std::move(value)));
+    if (member->ordinal() > highest_member_) {
+      highest_member_ = member->ordinal();
+    }
+  }
+
+  bool AddMember(std::string_view name, std::unique_ptr<Value> value);
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
@@ -363,7 +361,9 @@ class HandleValue : public Value {
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
-  const zx_handle_info_t handle_;
+  const Table& table_definition_;
+  std::map<const TableMember*, std::unique_ptr<Value>> members_;
+  Ordinal32 highest_member_ = 0;
 };
 
 }  // namespace fidl_codec

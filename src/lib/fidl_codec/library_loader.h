@@ -510,10 +510,10 @@ class Library {
   std::vector<std::unique_ptr<Interface>> interfaces_;
   std::map<std::string, std::unique_ptr<Enum>> enums_;
   std::map<std::string, std::unique_ptr<Bits>> bits_;
-  std::map<std::string, std::unique_ptr<Struct>> structs_;
-  std::map<std::string, std::unique_ptr<Table>> tables_;
   std::map<std::string, std::unique_ptr<Union>> unions_;
   std::map<std::string, std::unique_ptr<XUnion>> xunions_;
+  std::map<std::string, std::unique_ptr<Struct>> structs_;
+  std::map<std::string, std::unique_ptr<Table>> tables_;
 };
 
 // An indexed collection of libraries.
