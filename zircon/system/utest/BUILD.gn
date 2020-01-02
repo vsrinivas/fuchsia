@@ -267,6 +267,7 @@ if (current_cpu != "") {
       "logger",
       "memfs",
       "mexec",
+      "minfs-micro-benchmark",
       "miscsvc",
       "msd",
       "mt8167-thermal",
