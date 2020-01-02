@@ -27,10 +27,22 @@ use {
     },
 };
 
-/// An enum representing messages that are incoming from the Pty.
-enum PtyIncomingMessages {
-    /// Message sent when a byte comes in from the Pty.
-    ByteReceived(u8),
+const BYTE_BUFFER_MAX_SIZE: usize = 128;
+type ByteContainerBuffer = [u8; BYTE_BUFFER_MAX_SIZE];
+
+struct ByteContainer {
+    buffer: ByteContainerBuffer,
+    read_count: usize,
+}
+
+impl ByteContainer {
+    fn new(buffer: ByteContainerBuffer, read_count: usize) -> ByteContainer {
+        ByteContainer { buffer, read_count }
+    }
+
+    fn make_buffer() -> ByteContainerBuffer {
+        [0u8; BYTE_BUFFER_MAX_SIZE]
+    }
 }
 
 /// Messages which can be used to interact with the Pty.
@@ -159,12 +171,12 @@ impl TerminalViewAssistant {
 
             drop(pty);
 
-            let mut read_buf = [0u8; 1024];
+            let mut read_buf = ByteContainer::make_buffer();
             loop {
                 let mut read_fut = evented_fd.read(&mut read_buf).fuse();
                 select!(
                     result = read_fut => {
-                        let bytes_read = result.unwrap_or_else(|e: std::io::Error| {
+                        let read_count = result.unwrap_or_else(|e: std::io::Error| {
                             eprintln!(
                                 "failed to read bytes from io_loop, dropping current message: {:?}",
                                 e
@@ -172,10 +184,8 @@ impl TerminalViewAssistant {
                             0
                         });
 
-                        if bytes_read > 0 {
-                            for byte in &read_buf[0..bytes_read] {
-                                app_context.queue_message(view_key, make_message(PtyIncomingMessages::ByteReceived(*byte)));
-                            }
+                        if read_count > 0 {
+                            app_context.queue_message(view_key, make_message(ByteContainer::new(read_buf, read_count)));
                         }
                     },
                 result = pty_receiver.next().fuse() => {
@@ -206,7 +216,7 @@ impl TerminalViewAssistant {
 
     fn queue_outgoing_message(&mut self, message: PtyOutgoingMessages) -> Result<(), Error> {
         if let Some(pty) = &mut self.pty {
-            pty.sender.try_send(message).context("Unable queue pty message")?;
+            pty.sender.unbounded_send(message).context("Unable queue pty message")?;
         }
 
         Ok(())
@@ -255,14 +265,12 @@ impl ViewAssistant for TerminalViewAssistant {
     }
 
     fn handle_message(&mut self, message: Message) {
-        if let Some(pty_message) = message.downcast_ref::<PtyIncomingMessages>() {
-            match pty_message {
-                PtyIncomingMessages::ByteReceived(byte) => {
-                    if let Some(pty) = &mut self.pty {
-                        self.parser.advance(&mut self.term, *byte, &mut pty.fd);
-                    } else {
-                        self.parser.advance(&mut self.term, *byte, &mut ::std::io::sink());
-                    }
+        if let Some(bytes_container) = message.downcast_ref::<ByteContainer>() {
+            for byte in &bytes_container.buffer[0..bytes_container.read_count] {
+                if let Some(pty) = &mut self.pty {
+                    self.parser.advance(&mut self.term, *byte, &mut pty.fd);
+                } else {
+                    self.parser.advance(&mut self.term, *byte, &mut ::std::io::sink());
                 }
             }
         }
@@ -272,14 +280,14 @@ impl ViewAssistant for TerminalViewAssistant {
 struct PtyWrapper {
     fd: File,
     pty: Rc<RefCell<Pty>>,
-    sender: mpsc::Sender<PtyOutgoingMessages>,
-    receiver: Option<mpsc::Receiver<PtyOutgoingMessages>>,
+    sender: mpsc::UnboundedSender<PtyOutgoingMessages>,
+    receiver: Option<mpsc::UnboundedReceiver<PtyOutgoingMessages>>,
 }
 
 impl PtyWrapper {
     fn new() -> Result<PtyWrapper, Error> {
         let pty = Pty::new()?;
-        let (sender, receiver) = mpsc::channel(1024);
+        let (sender, receiver) = mpsc::unbounded();
 
         Ok(PtyWrapper {
             fd: pty.try_clone_fd()?,
@@ -289,7 +297,7 @@ impl PtyWrapper {
         })
     }
 
-    fn take_receiver(&mut self) -> mpsc::Receiver<PtyOutgoingMessages> {
+    fn take_receiver(&mut self) -> mpsc::UnboundedReceiver<PtyOutgoingMessages> {
         self.receiver.take().expect("attempting to call PtyWrapper::take_receiver twice")
     }
 }
@@ -426,10 +434,33 @@ mod tests {
 
         let col_pos_before = view.term.cursor().point.col;
 
-        view.handle_message(make_message(PtyIncomingMessages::ByteReceived(b'A')));
+        let mut buffer = ByteContainer::make_buffer();
+        buffer[0] = b'A';
+
+        view.handle_message(make_message(ByteContainer::new(buffer, 2)));
 
         let col_pos_after = view.term.cursor().point.col;
         assert_eq!(col_pos_before + 1, col_pos_after);
+    }
+
+    #[test]
+    fn bytes_received_is_processed_by_term_multiple_bytes() {
+        let mut view = TerminalViewAssistant::new_for_test();
+
+        // make sure we have a big enough size that a single character does not wrap
+        let large_size = Size::new(1000.0, 1000.0);
+        let _ = view.resize_if_needed(&large_size, &large_size);
+
+        let col_pos_before = view.term.cursor().point.col;
+
+        let mut buffer = ByteContainer::make_buffer();
+        buffer[0] = b'A';
+        buffer[1] = b'B';
+
+        view.handle_message(make_message(ByteContainer::new(buffer, 2)));
+
+        let col_pos_after = view.term.cursor().point.col;
+        assert_eq!(col_pos_before + 2, col_pos_after);
     }
 
     fn make_keyboard_event(code_point: u32) -> KeyboardEvent {
