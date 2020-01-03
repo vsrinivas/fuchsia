@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-#### CATEGORY=Run, inspect and debug
+#### CATEGORY=Software delivery
 ### take a snapshot of all built Fuchsia packages
 
 ## usage: fx save-package-stats [--build] [[--name|-n NAME] | [OUTPUT_PATH]]
