@@ -1,0 +1,53 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.annotation;
+
+using fuchsia.ui.views;
+
+enum Error {
+    // |ViewRef| is invalid.
+    VIEWREF_INVALID = 1;
+
+    // Provided |ViewRef| doesn't refer to an existing |View|.
+    VIEW_DOES_NOT_EXIST = 2;
+
+    // Failed when creating annotation |ViewHolder|.
+    VIEWHOLDER_CREATION_FAILED = 3;
+};
+
+/// Annotation allows a privileged client service to create an "annotation"
+/// |ViewHolder|, linked with an annotation |View| drawn within the View-space
+/// of the existing client |View|.
+[Discoverable]
+protocol Registry {
+    /// Creates a new annotation |ViewHolder|, which can be linked to the
+    /// annotation |View| which renders within the existing client's View-space
+    /// without that client's knowledge.
+    ///
+    /// The client should create a |ViewToken| / |ViewHolderToken| pair, pass
+    /// the |ViewHolderToken| as an argument to this function to create the
+    /// annotation |ViewHolder|, and create an annotation |View| in its own
+    /// |Session| using the corresponding |ViewToken|.
+    ///
+    /// The annotation |View| has the following properties:
+    ///  + It is a descendent of |client_view| in the scene graph. but it's
+    ///    not visible by the |client_view|'s |Session|.
+    ///  + It does not receive or intercept any hit event.
+    ///  + It always has the same rendering state as |client_view| and always
+    ///    match the size and metrics.
+    ///
+    /// There are a few erroneous conditions where the annotation |ViewHolder|
+    /// will not be created, and callers should remove the annotation |View|
+    /// and |Session| they create.
+    ///
+    /// Error conditions include:
+    ///  + If the provided |ViewRef| is invalid;
+    ///  + If the provided |ViewRef| doesn't refer to an existing Scenic |View|;
+    ///  + If Scenic fails creating the annotation |ViewHolder|.
+    ///
+    CreateAnnotationViewHolder(fuchsia.ui.views.ViewRef client_view,
+                               fuchsia.ui.views.ViewHolderToken view_holder_token)
+        -> () error Error;
+};
