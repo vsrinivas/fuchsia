@@ -20,6 +20,7 @@ mod web;
 
 use crate::auth_provider::GoogleAuthProvider;
 use crate::http::UrlLoaderHttpClient;
+use crate::oauth::Oauth;
 use crate::oauth_open_id_connect::OauthOpenIdConnect;
 use crate::time::UtcClock;
 use crate::web::DefaultStandaloneWebFrame;
@@ -48,7 +49,7 @@ fn main() -> Result<(), Error> {
     let http_client = UrlLoaderHttpClient::new(url_loader);
 
     let google_auth_provider =
-        Arc::new(GoogleAuthProvider::new(frame_supplier, http_client.clone()));
+        Arc::new(GoogleAuthProvider::new(frame_supplier.clone(), http_client.clone()));
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream| {
         let auth_provider_clone = Arc::clone(&google_auth_provider);
@@ -60,7 +61,8 @@ fn main() -> Result<(), Error> {
         });
     });
 
-    let oauth_open_id_connect = Arc::new(OauthOpenIdConnect::<_, UtcClock>::new(http_client));
+    let oauth_open_id_connect =
+        Arc::new(OauthOpenIdConnect::<_, UtcClock>::new(http_client.clone()));
     fs.dir("svc").add_fidl_service(move |stream| {
         let oauth_open_id_connect_clone = Arc::clone(&oauth_open_id_connect);
         fasync::spawn(async move {
@@ -71,6 +73,17 @@ fn main() -> Result<(), Error> {
         });
     });
 
+    let oauth = Arc::new(Oauth::<_, _, UtcClock>::new(frame_supplier, http_client));
+    fs.dir("svc").add_fidl_service(move |stream| {
+        let oauth_clone = Arc::clone(&oauth);
+        fasync::spawn(async move {
+            oauth_clone
+                .handle_requests_from_stream(stream)
+                .await
+                .unwrap_or_else(|e| error!("Error handling Oauth channel {:?}", e));
+        });
+    });
+
     fs.take_and_serve_directory_handle()?;
 
     executor.run_singlethreaded(fs.collect::<()>());
@@ -78,6 +91,7 @@ fn main() -> Result<(), Error> {
 }
 
 /// Struct that provides new web frames by connecting to a ContextProvider service.
+#[derive(Clone)]
 struct WebFrameSupplier;
 
 impl WebFrameSupplier {

@@ -279,8 +279,9 @@ where
     ) -> AuthProviderResult<(RefreshToken, AccessToken)> {
         let request = build_request_with_auth_code(auth_code)?;
         let (response_body, status_code) = self.http_client.request(request).await?;
-        parse_response_with_refresh_token(response_body, status_code)
-            .map_err(AuthProviderError::from)
+        let (refresh_token, access_token, _) =
+            parse_response_with_refresh_token(response_body, status_code)?;
+        Ok((refresh_token, access_token))
     }
 
     /// Use an access token to retrieve profile information.
@@ -288,7 +289,7 @@ where
         &self,
         access_token: AccessToken,
     ) -> AuthProviderResult<UserProfileInfo> {
-        let request = build_user_info_request(access_token)?;
+        let request = build_user_info_request(&access_token)?;
         let (response_body, status_code) = self.http_client.request(request).await?;
         let user_info_response = parse_user_info_response(response_body, status_code)?;
         Ok(UserProfileInfo {
@@ -495,7 +496,8 @@ mod tests {
                 .unwrap()),
         );
         let refresh_token_response =
-            "{\"refresh_token\": \"test-refresh-token\", \"access_token\": \"test-access-token\"}";
+            "{\"refresh_token\": \"test-refresh-token\", \"access_token\": \"test-access-token\", \
+             \"expires_in\": 3600}";
         let user_info_response =
             "{\"sub\": \"test-id\", \"name\": \"Bill\", \"profile\": \"profile-url\", \
              \"picture\": \"picture-url\"}";
@@ -586,7 +588,8 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_persistent_credential_get_user_info_failures() -> Result<(), Error> {
         let auth_code_exchange_body =
-            "{\"refresh_token\": \"test-refresh-token\", \"access_token\": \"test-access-token\"}"
+            "{\"refresh_token\": \"test-refresh-token\", \"access_token\": \"test-access-token\", \
+            \"expires_in\": 3600}"
                 .to_string();
         let auth_code_exchange_response = Ok((Some(auth_code_exchange_body), StatusCode::OK));
 

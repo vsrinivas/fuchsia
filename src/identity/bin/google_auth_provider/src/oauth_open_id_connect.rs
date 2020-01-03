@@ -129,7 +129,7 @@ where
             return Err(TokenProviderError::new(ApiError::InvalidRequest));
         }
 
-        let request = build_user_info_request(AccessToken(access_token_content))?;
+        let request = build_user_info_request(&AccessToken(access_token_content))?;
         let (response_body, status_code) = self.http_client.request(request).await?;
         let OpenIdUserInfoResponse { sub, name, email, picture, .. } =
             parse_user_info_response(response_body, status_code)?;
@@ -167,7 +167,7 @@ struct OpenIdErrorResponse {
 }
 
 /// Construct an `HttpRequest` for an OpenID user info request.
-pub fn build_user_info_request(access_token: AccessToken) -> TokenProviderResult<HttpRequest> {
+pub fn build_user_info_request(access_token: &AccessToken) -> TokenProviderResult<HttpRequest> {
     HttpRequestBuilder::new(USER_INFO_URI.as_str(), "GET")
         .with_header("Authorization", format!("Bearer {}", access_token.0))
         .finish()
@@ -267,23 +267,21 @@ mod test {
         let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::OK);
         let test_object = OauthOpenIdConnect::new(mock_http);
 
-        run_proxy_test(test_object, |proxy| {
-            async move {
-                let id_token = proxy
-                    .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
-                        refresh_token: Some(create_refresh_token("refresh_token")),
-                        audiences: None,
-                    })
-                    .await?
-                    .unwrap();
+        run_proxy_test(test_object, |proxy| async move {
+            let id_token = proxy
+                .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
+                    refresh_token: Some(create_refresh_token("refresh_token")),
+                    audiences: None,
+                })
+                .await?
+                .unwrap();
 
-                assert_eq!(id_token.content, Some("test-id-token".to_string()),);
-                assert_eq!(
-                    id_token.expiry_time.unwrap(),
-                    (TEST_CURRENT_TIME.clone() + Duration::from_seconds(3600)).into_nanos()
-                );
-                Ok(())
-            }
+            assert_eq!(id_token.content, Some("test-id-token".to_string()),);
+            assert_eq!(
+                id_token.expiry_time.unwrap(),
+                (TEST_CURRENT_TIME.clone() + Duration::from_seconds(3600)).into_nanos()
+            );
+            Ok(())
         })
         .await;
 
@@ -292,23 +290,21 @@ mod test {
         let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::OK);
         let test_object = OauthOpenIdConnect::new(mock_http);
 
-        run_proxy_test(test_object, |proxy| {
-            async move {
-                let id_token = proxy
-                    .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
-                        refresh_token: Some(create_refresh_token("refresh_token")),
-                        audiences: Some(vec![]),
-                    })
-                    .await?
-                    .unwrap();
+        run_proxy_test(test_object, |proxy| async move {
+            let id_token = proxy
+                .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
+                    refresh_token: Some(create_refresh_token("refresh_token")),
+                    audiences: Some(vec![]),
+                })
+                .await?
+                .unwrap();
 
-                assert_eq!(id_token.content, Some("test-id-token".to_string()),);
-                assert_eq!(
-                    id_token.expiry_time.unwrap(),
-                    (TEST_CURRENT_TIME.clone() + Duration::from_seconds(3600)).into_nanos()
-                );
-                Ok(())
-            }
+            assert_eq!(id_token.content, Some("test-id-token".to_string()),);
+            assert_eq!(
+                id_token.expiry_time.unwrap(),
+                (TEST_CURRENT_TIME.clone() + Duration::from_seconds(3600)).into_nanos()
+            );
+            Ok(())
         })
         .await;
     }
@@ -318,17 +314,15 @@ mod test {
         // Invalid request
         let mock_http = TestHttpClient::with_error(ApiError::Internal);
         let test_object = OauthOpenIdConnect::new(mock_http);
-        run_proxy_test(test_object, |proxy| {
-            async move {
-                let request_result = proxy
-                    .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
-                        refresh_token: Some(create_refresh_token("refresh_token")),
-                        audiences: Some(vec!["".to_string()]),
-                    })
-                    .await?;
-                assert_eq!(request_result, Err(ApiError::InvalidRequest));
-                Ok(())
-            }
+        run_proxy_test(test_object, |proxy| async move {
+            let request_result = proxy
+                .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
+                    refresh_token: Some(create_refresh_token("refresh_token")),
+                    audiences: Some(vec!["".to_string()]),
+                })
+                .await?;
+            assert_eq!(request_result, Err(ApiError::InvalidRequest));
+            Ok(())
         })
         .await;
 
@@ -336,34 +330,30 @@ mod test {
         let http_result = "{\"error\": \"invalid_client\"}";
         let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::BAD_REQUEST);
         let test_object = OauthOpenIdConnect::new(mock_http);
-        run_proxy_test(test_object, |proxy| {
-            async move {
-                let request_result = proxy
-                    .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
-                        refresh_token: Some(create_refresh_token("refresh_token")),
-                        audiences: None,
-                    })
-                    .await?;
-                assert_eq!(request_result, Err(ApiError::Server));
-                Ok(())
-            }
+        run_proxy_test(test_object, |proxy| async move {
+            let request_result = proxy
+                .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
+                    refresh_token: Some(create_refresh_token("refresh_token")),
+                    audiences: None,
+                })
+                .await?;
+            assert_eq!(request_result, Err(ApiError::Server));
+            Ok(())
         })
         .await;
 
         // Network error
         let mock_http = TestHttpClient::with_error(ApiError::Network);
         let test_object = OauthOpenIdConnect::new(mock_http);
-        run_proxy_test(test_object, |proxy| {
-            async move {
-                let request_result = proxy
-                    .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
-                        refresh_token: Some(create_refresh_token("refresh_token")),
-                        audiences: None,
-                    })
-                    .await?;
-                assert_eq!(request_result, Err(ApiError::Network));
-                Ok(())
-            }
+        run_proxy_test(test_object, |proxy| async move {
+            let request_result = proxy
+                .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
+                    refresh_token: Some(create_refresh_token("refresh_token")),
+                    audiences: None,
+                })
+                .await?;
+            assert_eq!(request_result, Err(ApiError::Network));
+            Ok(())
         })
         .await;
     }
@@ -375,25 +365,23 @@ mod test {
              \"picture\": \"picture-url\", \"email\": \"bill@test.com\"}";
         let mock_http = TestHttpClient::with_response(Some(http_response), StatusCode::OK);
         let test_object = OauthOpenIdConnect::new(mock_http);
-        run_proxy_test(test_object, |proxy| {
-            async move {
-                let user_info = proxy
-                    .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
-                        access_token: Some(create_access_token("access_token")),
-                    })
-                    .await?
-                    .unwrap();
-                assert_eq!(
-                    user_info,
-                    OpenIdUserInfo {
-                        subject: Some("test-id".to_string()),
-                        name: Some("Bill".to_string()),
-                        email: Some("bill@test.com".to_string()),
-                        picture: Some("picture-url".to_string())
-                    }
-                );
-                Ok(())
-            }
+        run_proxy_test(test_object, |proxy| async move {
+            let user_info = proxy
+                .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
+                    access_token: Some(create_access_token("access_token")),
+                })
+                .await?
+                .unwrap();
+            assert_eq!(
+                user_info,
+                OpenIdUserInfo {
+                    subject: Some("test-id".to_string()),
+                    name: Some("Bill".to_string()),
+                    email: Some("bill@test.com".to_string()),
+                    picture: Some("picture-url".to_string())
+                }
+            );
+            Ok(())
         })
         .await;
     }
@@ -403,48 +391,42 @@ mod test {
         // Invalid request
         let mock_http = TestHttpClient::with_error(ApiError::Internal);
         let test_object = OauthOpenIdConnect::new(mock_http);
-        run_proxy_test(test_object, |proxy| {
-            async move {
-                let request_result = proxy
-                    .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
-                        access_token: Some(create_access_token("")),
-                    })
-                    .await?;
-                assert_eq!(request_result, Err(ApiError::InvalidRequest));
-                Ok(())
-            }
+        run_proxy_test(test_object, |proxy| async move {
+            let request_result = proxy
+                .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
+                    access_token: Some(create_access_token("")),
+                })
+                .await?;
+            assert_eq!(request_result, Err(ApiError::InvalidRequest));
+            Ok(())
         })
         .await;
 
         // Error response
         let mock_http = TestHttpClient::with_response(None, StatusCode::INTERNAL_SERVER_ERROR);
         let test_object = OauthOpenIdConnect::new(mock_http);
-        run_proxy_test(test_object, |proxy| {
-            async move {
-                let request_result = proxy
-                    .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
-                        access_token: Some(create_access_token("access_token")),
-                    })
-                    .await?;
-                assert_eq!(request_result, Err(ApiError::Server));
-                Ok(())
-            }
+        run_proxy_test(test_object, |proxy| async move {
+            let request_result = proxy
+                .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
+                    access_token: Some(create_access_token("access_token")),
+                })
+                .await?;
+            assert_eq!(request_result, Err(ApiError::Server));
+            Ok(())
         })
         .await;
 
         // Network error
         let mock_http = TestHttpClient::with_error(ApiError::Network);
         let test_object = OauthOpenIdConnect::new(mock_http);
-        run_proxy_test(test_object, |proxy| {
-            async move {
-                let request_result = proxy
-                    .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
-                        access_token: Some(create_access_token("access_token")),
-                    })
-                    .await?;
-                assert_eq!(request_result, Err(ApiError::Network));
-                Ok(())
-            }
+        run_proxy_test(test_object, |proxy| async move {
+            let request_result = proxy
+                .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
+                    access_token: Some(create_access_token("access_token")),
+                })
+                .await?;
+            assert_eq!(request_result, Err(ApiError::Network));
+            Ok(())
         })
         .await;
     }
