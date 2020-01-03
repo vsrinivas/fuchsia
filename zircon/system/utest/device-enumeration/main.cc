@@ -283,6 +283,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "backlight/ti-lp8556",
       "SherlockLightSensor/tcs-3400/hid-device-000",
       "aml-secure-mem/aml-securemem",
+      "pwm-init",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

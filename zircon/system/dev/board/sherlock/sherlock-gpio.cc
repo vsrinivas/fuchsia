@@ -101,6 +101,9 @@ static const gpio_pin_t gpio_pins[] = {
     // LED
     {GPIO_AMBER_LED},
     {GPIO_GREEN_LED},
+    // For Bluetooth.
+    {GPIO_SOC_WIFI_LPO_32k768},
+    {GPIO_SOC_BT_REG_ON},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
