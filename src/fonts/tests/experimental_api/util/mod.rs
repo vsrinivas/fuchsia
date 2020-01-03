@@ -10,23 +10,60 @@ pub use {
     fidl_fuchsia_intl::LocaleId,
     fuchsia_async as fasync,
     fuchsia_component::client::{launch, launch_with_options, launcher, App, LaunchOptions},
-    lazy_static::lazy_static,
 };
 
-pub fn start_provider_with_manifest(
-    manifest_file_path: impl AsRef<str>,
-) -> Result<(App, fonts_exp::ProviderProxy), Error> {
+// TODO(kpozin): "Default" fonts will be empty when we begin building fonts per target product.
+pub fn start_provider_with_default_fonts() -> Result<(App, fonts_exp::ProviderProxy), Error> {
+    let launcher = launcher().context("Failed to open launcher service")?;
+    let app = launch(&launcher, FONTS_CMX.to_string(), None)
+        .context("Failed to launch fonts_exp::Provider")?;
+
+    let font_provider = app
+        .connect_to_service::<fonts_exp::ProviderMarker>()
+        .context("Failed to connect to fonts_exp::Provider")?;
+
+    Ok((app, font_provider))
+}
+
+pub fn start_provider_with_test_fonts() -> Result<(App, fonts_exp::ProviderProxy), Error> {
     let mut launch_options = LaunchOptions::new();
     launch_options.add_dir_to_namespace(
-        "/testdata".to_string(),
-        std::fs::File::open("/pkg/data/testdata")?,
+        "/test_fonts".to_string(),
+        std::fs::File::open("/pkg/data/testdata/test_fonts")?,
     )?;
 
     let launcher = launcher().context("Failed to open launcher service")?;
     let app = launch_with_options(
         &launcher,
         FONTS_CMX.to_string(),
-        Some(vec!["--font-manifest".to_string(), manifest_file_path.as_ref().to_string()]),
+        Some(vec!["--font-manifest".to_string(), "/test_fonts/test_manifest_v1.json".to_string()]),
+        launch_options,
+    )
+    .context("Failed to launch fonts::Provider")?;
+
+    let font_provider = app
+        .connect_to_service::<fonts_exp::ProviderMarker>()
+        .context("Failed to connect to fonts_exp::Provider")?;
+
+    Ok((app, font_provider))
+}
+
+pub fn start_provider_with_all_fonts() -> Result<(App, fonts_exp::ProviderProxy), Error> {
+    let mut launch_options = LaunchOptions::new();
+    launch_options.add_dir_to_namespace(
+        "/test_fonts".to_string(),
+        std::fs::File::open("/pkg/data/testdata/test_fonts")?,
+    )?;
+
+    let launcher = launcher().context("Failed to open launcher service")?;
+    let app = launch_with_options(
+        &launcher,
+        FONTS_CMX.to_string(),
+        Some(vec![
+            "--no-default-fonts".to_string(),
+            "--font-manifest".to_string(),
+            "/test_fonts/all_fonts_manifest_v1.json".to_string(),
+        ]),
         launch_options,
     )
     .context("Failed to launch fonts::Provider")?;
