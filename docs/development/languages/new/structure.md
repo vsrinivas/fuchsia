@@ -55,7 +55,7 @@ using
 
 * [async](/zircon/system/ulib/async)
   (C and C++)
-* [fuchsia-async](/garnet/public/rust/fuchsia-async/) (Rust)
+* [fuchsia-async](/src/lib/fuchsia-async/) (Rust)
 * [zxwait](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/zxwait/) (Go)
 
 ## FIDL
