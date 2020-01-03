@@ -21,7 +21,7 @@ constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
 
 Resource::Resource(Session* session) : session_(session), id_(session->AllocResourceId()) {}
 
-Resource::Resource(Resource&& moved) : session_(moved.session_), id_(moved.id_) {
+Resource::Resource(Resource&& moved) noexcept : session_(moved.session_), id_(moved.id_) {
   auto& moved_session = *const_cast<Session**>(&moved.session_);
   auto& moved_id = *const_cast<uint32_t*>(&moved.id_);
   moved_session = nullptr;
@@ -52,7 +52,7 @@ void Resource::SetLabel(const std::string& label) {
 
 Shape::Shape(Session* session) : Resource(session) {}
 
-Shape::Shape(Shape&& moved) : Resource(std::move(moved)) {}
+Shape::Shape(Shape&& moved) noexcept : Resource(std::move(moved)) {}
 
 Shape::~Shape() = default;
 
@@ -60,7 +60,7 @@ Circle::Circle(Session* session, float radius) : Shape(session) {
   session->Enqueue(NewCreateCircleCmd(id(), radius));
 }
 
-Circle::Circle(Circle&& moved) : Shape(std::move(moved)) {}
+Circle::Circle(Circle&& moved) noexcept : Shape(std::move(moved)) {}
 
 Circle::~Circle() = default;
 
@@ -68,7 +68,7 @@ Rectangle::Rectangle(Session* session, float width, float height) : Shape(sessio
   session->Enqueue(NewCreateRectangleCmd(id(), width, height));
 }
 
-Rectangle::Rectangle(Rectangle&& moved) : Shape(std::move(moved)) {}
+Rectangle::Rectangle(Rectangle&& moved) noexcept : Shape(std::move(moved)) {}
 
 Rectangle::~Rectangle() = default;
 
@@ -81,20 +81,20 @@ RoundedRectangle::RoundedRectangle(Session* session, float width, float height,
                                                 bottom_left_radius));
 }
 
-RoundedRectangle::RoundedRectangle(RoundedRectangle&& moved) : Shape(std::move(moved)) {}
+RoundedRectangle::RoundedRectangle(RoundedRectangle&& moved) noexcept : Shape(std::move(moved)) {}
 
 RoundedRectangle::~RoundedRectangle() = default;
 
 Image::Image(const Memory& memory, off_t memory_offset, fuchsia::images::ImageInfo info)
-    : Image(memory.session(), memory.id(), memory_offset, std::move(info)) {}
+    : Image(memory.session(), memory.id(), memory_offset, info) {}
 
 Image::Image(Session* session, uint32_t memory_id, off_t memory_offset,
              fuchsia::images::ImageInfo info)
     : Resource(session), memory_offset_(memory_offset), info_(info) {
-  session->Enqueue(NewCreateImageCmd(id(), memory_id, memory_offset_, std::move(info)));
+  session->Enqueue(NewCreateImageCmd(id(), memory_id, memory_offset_, info));
 }
 
-Image::Image(Image&& moved)
+Image::Image(Image&& moved) noexcept
     : Resource(std::move(moved)), memory_offset_(moved.memory_offset_), info_(moved.info_) {}
 
 Image::~Image() = default;
@@ -111,7 +111,7 @@ Buffer::Buffer(Session* session, uint32_t memory_id, off_t memory_offset, size_t
   session->Enqueue(NewCreateBufferCmd(id(), memory_id, memory_offset, num_bytes));
 }
 
-Buffer::Buffer(Buffer&& moved) : Resource(std::move(moved)) {}
+Buffer::Buffer(Buffer&& moved) noexcept : Resource(std::move(moved)) {}
 
 Buffer::~Buffer() = default;
 
@@ -121,13 +121,14 @@ Memory::Memory(Session* session, zx::vmo vmo, uint64_t allocation_size,
   session->Enqueue(NewCreateMemoryCmd(id(), std::move(vmo), allocation_size, memory_type));
 }
 
-Memory::Memory(Memory&& moved) : Resource(std::move(moved)), memory_type_(moved.memory_type_) {}
+Memory::Memory(Memory&& moved) noexcept
+    : Resource(std::move(moved)), memory_type_(moved.memory_type_) {}
 
 Memory::~Memory() = default;
 
 Mesh::Mesh(Session* session) : Shape(session) { session->Enqueue(NewCreateMeshCmd(id())); }
 
-Mesh::Mesh(Mesh&& moved) : Shape(std::move(moved)) {}
+Mesh::Mesh(Mesh&& moved) noexcept : Shape(std::move(moved)) {}
 
 Mesh::~Mesh() = default;
 
@@ -139,14 +140,14 @@ void Mesh::BindBuffers(const Buffer& index_buffer, fuchsia::ui::gfx::MeshIndexFo
   ZX_DEBUG_ASSERT(session() == index_buffer.session() && session() == vertex_buffer.session());
   session()->Enqueue(NewBindMeshBuffersCmd(
       id(), index_buffer.id(), index_format, index_offset, index_count, vertex_buffer.id(),
-      std::move(vertex_format), vertex_offset, vertex_count, bounding_box_min, bounding_box_max));
+      vertex_format, vertex_offset, vertex_count, bounding_box_min, bounding_box_max));
 }
 
 Material::Material(Session* session) : Resource(session) {
   session->Enqueue(NewCreateMaterialCmd(id()));
 }
 
-Material::Material(Material&& moved) : Resource(std::move(moved)) {}
+Material::Material(Material&& moved) noexcept : Resource(std::move(moved)) {}
 
 Material::~Material() = default;
 
@@ -160,7 +161,7 @@ void Material::SetColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha)
 
 Node::Node(Session* session) : Resource(session) {}
 
-Node::Node(Node&& moved) : Resource(std::move(moved)) {}
+Node::Node(Node&& moved) noexcept : Resource(std::move(moved)) {}
 
 Node::~Node() = default;
 
@@ -206,7 +207,7 @@ ShapeNode::ShapeNode(Session* session) : Node(session) {
   session->Enqueue(NewCreateShapeNodeCmd(id()));
 }
 
-ShapeNode::ShapeNode(ShapeNode&& moved) : Node(std::move(moved)) {}
+ShapeNode::ShapeNode(ShapeNode&& moved) noexcept : Node(std::move(moved)) {}
 
 ShapeNode::~ShapeNode() = default;
 
@@ -218,7 +219,7 @@ void ShapeNode::SetMaterial(uint32_t material_id) {
 
 ContainerNode::ContainerNode(Session* session) : Node(session) {}
 
-ContainerNode::ContainerNode(ContainerNode&& moved) : Node(std::move(moved)) {}
+ContainerNode::ContainerNode(ContainerNode&& moved) noexcept : Node(std::move(moved)) {}
 
 ContainerNode::~ContainerNode() = default;
 
@@ -232,7 +233,7 @@ EntityNode::EntityNode(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateEntityNodeCmd(id()));
 }
 
-EntityNode::EntityNode(EntityNode&& moved) : ContainerNode(std::move(moved)) {}
+EntityNode::EntityNode(EntityNode&& moved) noexcept : ContainerNode(std::move(moved)) {}
 
 EntityNode::~EntityNode() = default;
 
@@ -248,7 +249,7 @@ void EntityNode::SetClipPlanes(std::vector<fuchsia::ui::gfx::Plane3> planes) {
 
 ImportNode::ImportNode(Session* session) : ContainerNode(session) {}
 
-ImportNode::ImportNode(ImportNode&& moved) : ContainerNode(std::move(moved)) {}
+ImportNode::ImportNode(ImportNode&& moved) noexcept : ContainerNode(std::move(moved)) {}
 
 ImportNode::~ImportNode() { ZX_DEBUG_ASSERT_MSG(is_bound_, "Import was never bound."); }
 
@@ -282,7 +283,7 @@ ViewHolder::ViewHolder(Session* session, fuchsia::ui::views::ViewHolderToken tok
   session->Enqueue(NewCreateViewHolderCmd(id(), std::move(token), debug_name));
 }
 
-ViewHolder::ViewHolder(ViewHolder&& moved) : Node(std::move(moved)) {}
+ViewHolder::ViewHolder(ViewHolder&& moved) noexcept : Node(std::move(moved)) {}
 
 ViewHolder::~ViewHolder() = default;
 
@@ -318,7 +319,7 @@ View::View(Session* session, fuchsia::ui::views::ViewToken token,
                                     std::move(view_ref), debug_name));
 }
 
-View::View(View&& moved) : Resource(std::move(moved)) {}
+View::View(View&& moved) noexcept : Resource(std::move(moved)) {}
 
 View::~View() = default;
 
@@ -340,7 +341,7 @@ ClipNode::ClipNode(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateClipNodeCmd(id()));
 }
 
-ClipNode::ClipNode(ClipNode&& moved) : ContainerNode(std::move(moved)) {}
+ClipNode::ClipNode(ClipNode&& moved) noexcept : ContainerNode(std::move(moved)) {}
 
 ClipNode::~ClipNode() = default;
 
@@ -348,7 +349,8 @@ OpacityNodeHACK::OpacityNodeHACK(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateOpacityNodeCmdHACK(id()));
 }
 
-OpacityNodeHACK::OpacityNodeHACK(OpacityNodeHACK&& moved) : ContainerNode(std::move(moved)) {}
+OpacityNodeHACK::OpacityNodeHACK(OpacityNodeHACK&& moved) noexcept
+    : ContainerNode(std::move(moved)) {}
 
 OpacityNodeHACK::~OpacityNodeHACK() = default;
 
@@ -361,7 +363,7 @@ Variable::Variable(Session* session, fuchsia::ui::gfx::Value initial_value) : Re
   session->Enqueue(NewCreateVariableCmd(id(), std::move(initial_value)));
 }
 
-Variable::Variable(Variable&& moved) : Resource(std::move(moved)) {}
+Variable::Variable(Variable&& moved) noexcept : Resource(std::move(moved)) {}
 
 Variable::~Variable() = default;
 
@@ -369,7 +371,7 @@ Scene::Scene(Session* session) : ContainerNode(session) {
   session->Enqueue(NewCreateSceneCmd(id()));
 }
 
-Scene::Scene(Scene&& moved) : ContainerNode(std::move(moved)) {}
+Scene::Scene(Scene&& moved) noexcept : ContainerNode(std::move(moved)) {}
 
 Scene::~Scene() = default;
 
@@ -415,7 +417,7 @@ Camera::Camera(Session* session, uint32_t scene_id) : CameraBase(session) {
   session->Enqueue(NewCreateCameraCmd(id(), scene_id));
 }
 
-Camera::Camera(Camera&& moved) : CameraBase(std::move(moved)) {}
+Camera::Camera(Camera&& moved) noexcept : CameraBase(std::move(moved)) {}
 
 Camera::~Camera() = default;
 
@@ -429,12 +431,12 @@ StereoCamera::StereoCamera(Session* session, uint32_t scene_id) : CameraBase(ses
   session->Enqueue(NewCreateStereoCameraCmd(id(), scene_id));
 }
 
-StereoCamera::StereoCamera(StereoCamera&& moved) : CameraBase(std::move(moved)) {}
+StereoCamera::StereoCamera(StereoCamera&& moved) noexcept : CameraBase(std::move(moved)) {}
 
 StereoCamera::~StereoCamera() = default;
 
-void StereoCamera::SetStereoProjection(const float left_projection[16],
-                                       const float right_projection[16]) {
+void StereoCamera::SetStereoProjection(const float left_projection[4 * 4],
+                                       const float right_projection[4 * 4]) {
   session()->Enqueue(NewSetStereoCameraProjectionCmd(id(), left_projection, right_projection));
 }
 
@@ -442,7 +444,7 @@ Renderer::Renderer(Session* session) : Resource(session) {
   session->Enqueue(NewCreateRendererCmd(id()));
 }
 
-Renderer::Renderer(Renderer&& moved) : Resource(std::move(moved)) {}
+Renderer::Renderer(Renderer&& moved) noexcept : Resource(std::move(moved)) {}
 
 Renderer::~Renderer() = default;
 
@@ -472,7 +474,7 @@ void Renderer::SetEnableDebugging(bool enable_debugging) {
 
 Layer::Layer(Session* session) : Resource(session) { session->Enqueue(NewCreateLayerCmd(id())); }
 
-Layer::Layer(Layer&& moved) : Resource(std::move(moved)) {}
+Layer::Layer(Layer&& moved) noexcept : Resource(std::move(moved)) {}
 
 Layer::~Layer() = default;
 
@@ -486,7 +488,7 @@ LayerStack::LayerStack(Session* session) : Resource(session) {
   session->Enqueue(NewCreateLayerStackCmd(id()));
 }
 
-LayerStack::LayerStack(LayerStack&& moved) : Resource(std::move(moved)) {}
+LayerStack::LayerStack(LayerStack&& moved) noexcept : Resource(std::move(moved)) {}
 
 LayerStack::~LayerStack() = default;
 
@@ -502,7 +504,8 @@ DisplayCompositor::DisplayCompositor(Session* session) : Resource(session) {
   session->Enqueue(NewCreateDisplayCompositorCmd(id()));
 }
 
-DisplayCompositor::DisplayCompositor(DisplayCompositor&& moved) : Resource(std::move(moved)) {}
+DisplayCompositor::DisplayCompositor(DisplayCompositor&& moved) noexcept
+    : Resource(std::move(moved)) {}
 
 DisplayCompositor::~DisplayCompositor() = default;
 
@@ -511,7 +514,7 @@ void DisplayCompositor::SetLayerStack(uint32_t layer_stack_id) {
 }
 
 void DisplayCompositor::SetColorConversion(const std::array<float, 3>& preoffsets,
-                                           const std::array<float, 9>& matrix,
+                                           const std::array<float, 3 * 3>& matrix,
                                            const std::array<float, 3>& postoffsets) {
   session()->Enqueue(NewSetDisplayColorConversionCmdHACK(id(), preoffsets, matrix, postoffsets));
 }
@@ -524,7 +527,7 @@ Compositor::Compositor(Session* session) : Resource(session) {
   session->Enqueue(NewCreateCompositorCmd(id()));
 }
 
-Compositor::Compositor(Compositor&& moved) : Resource(std::move(moved)) {}
+Compositor::Compositor(Compositor&& moved) noexcept : Resource(std::move(moved)) {}
 
 Compositor::~Compositor() = default;
 
@@ -538,7 +541,7 @@ void Compositor::SetLayoutRotation(uint32_t rotation_degrees) {
 
 Light::Light(Session* session) : Resource(session) {}
 
-Light::Light(Light&& moved) : Resource(std::move(moved)) {}
+Light::Light(Light&& moved) noexcept : Resource(std::move(moved)) {}
 
 Light::~Light() = default;
 
@@ -554,7 +557,7 @@ AmbientLight::AmbientLight(Session* session) : Light(session) {
   session->Enqueue(NewCreateAmbientLightCmd(id()));
 }
 
-AmbientLight::AmbientLight(AmbientLight&& moved) : Light(std::move(moved)) {}
+AmbientLight::AmbientLight(AmbientLight&& moved) noexcept : Light(std::move(moved)) {}
 
 AmbientLight::~AmbientLight() = default;
 
@@ -562,7 +565,7 @@ DirectionalLight::DirectionalLight(Session* session) : Light(session) {
   session->Enqueue(NewCreateDirectionalLightCmd(id()));
 }
 
-DirectionalLight::DirectionalLight(DirectionalLight&& moved) : Light(std::move(moved)) {}
+DirectionalLight::DirectionalLight(DirectionalLight&& moved) noexcept : Light(std::move(moved)) {}
 
 DirectionalLight::~DirectionalLight() = default;
 
@@ -578,7 +581,7 @@ PointLight::PointLight(Session* session) : Light(session) {
   session->Enqueue(NewCreatePointLightCmd(id()));
 }
 
-PointLight::PointLight(PointLight&& moved) : Light(std::move(moved)) {}
+PointLight::PointLight(PointLight&& moved) noexcept : Light(std::move(moved)) {}
 
 PointLight::~PointLight() = default;
 

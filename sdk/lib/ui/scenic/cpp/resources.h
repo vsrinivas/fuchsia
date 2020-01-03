@@ -48,7 +48,7 @@ class Resource {
 
  protected:
   explicit Resource(Session* session);
-  Resource(Resource&& moved);
+  Resource(Resource&& moved) noexcept;
 
   Resource(const Resource&) = delete;
   Resource& operator=(const Resource&) = delete;
@@ -73,7 +73,7 @@ class Memory : public Resource {
   fuchsia::images::MemoryType memory_type() const { return memory_type_; }
 
  protected:
-  Memory(Memory&& moved);
+  Memory(Memory&& moved) noexcept;
 
  private:
   fuchsia::images::MemoryType const memory_type_;
@@ -84,7 +84,7 @@ class Memory : public Resource {
 class Shape : public Resource {
  protected:
   explicit Shape(Session* session);
-  Shape(Shape&& moved);
+  Shape(Shape&& moved) noexcept;
   ~Shape();
 };
 
@@ -92,7 +92,7 @@ class Shape : public Resource {
 class Circle final : public Shape {
  public:
   Circle(Session* session, float radius);
-  Circle(Circle&& moved);
+  Circle(Circle&& moved) noexcept;
   ~Circle();
 };
 
@@ -100,7 +100,7 @@ class Circle final : public Shape {
 class Rectangle final : public Shape {
  public:
   Rectangle(Session* session, float width, float height);
-  Rectangle(Rectangle&& moved);
+  Rectangle(Rectangle&& moved) noexcept;
   ~Rectangle();
 };
 
@@ -109,7 +109,7 @@ class RoundedRectangle final : public Shape {
  public:
   RoundedRectangle(Session* session, float width, float height, float top_left_radius,
                    float top_right_radius, float bottom_right_radius, float bottom_left_radius);
-  RoundedRectangle(RoundedRectangle&& moved);
+  RoundedRectangle(RoundedRectangle&& moved) noexcept;
   ~RoundedRectangle();
 };
 
@@ -132,7 +132,7 @@ class Image : public Resource {
   const fuchsia::images::ImageInfo& info() const { return info_; }
 
  protected:
-  Image(Image&& moved);
+  Image(Image&& moved) noexcept;
 
  private:
   off_t const memory_offset_;
@@ -142,9 +142,9 @@ class Image : public Resource {
 // Represents a buffer that is immutably bound to a range of a memory resource.
 class Buffer final : public Resource {
  public:
-  Buffer(const Memory& memory, off_t memory_offset, size_t buffer_size);
-  Buffer(Session* session, uint32_t memory_id, off_t memory_offset, size_t buffer_size);
-  Buffer(Buffer&& moved);
+  Buffer(const Memory& memory, off_t memory_offset, size_t num_bytes);
+  Buffer(Session* session, uint32_t memory_id, off_t memory_offset, size_t num_bytes);
+  Buffer(Buffer&& moved) noexcept;
   ~Buffer();
 };
 
@@ -153,7 +153,7 @@ class Buffer final : public Resource {
 class Mesh final : public Shape {
  public:
   Mesh(Session* session);
-  Mesh(Mesh&& moved);
+  Mesh(Mesh&& moved) noexcept;
 
   ~Mesh();
 
@@ -170,7 +170,7 @@ class Mesh final : public Shape {
 class Material final : public Resource {
  public:
   explicit Material(Session* session);
-  Material(Material&& moved);
+  Material(Material&& moved) noexcept;
   ~Material();
 
   // Sets the material's texture.
@@ -220,7 +220,7 @@ class Node : public Resource {
 
  protected:
   explicit Node(Session* session);
-  Node(Node&& moved);
+  Node(Node&& moved) noexcept;
   ~Node();
 };
 
@@ -228,7 +228,7 @@ class Node : public Resource {
 class ShapeNode final : public Node {
  public:
   explicit ShapeNode(Session* session);
-  ShapeNode(ShapeNode&& moved);
+  ShapeNode(ShapeNode&& moved) noexcept;
   ~ShapeNode();
 
   // Sets the shape that the shape node should draw.
@@ -262,7 +262,7 @@ class ContainerNode : public Node {
 
  protected:
   explicit ContainerNode(Session* session);
-  ContainerNode(ContainerNode&& moved);
+  ContainerNode(ContainerNode&& moved) noexcept;
   ~ContainerNode();
 };
 
@@ -274,7 +274,7 @@ class ViewHolder;
 class EntityNode : public ContainerNode {
  public:
   explicit EntityNode(Session* session);
-  EntityNode(EntityNode&& moved);
+  EntityNode(EntityNode&& moved) noexcept;
   ~EntityNode();
 
   void SetClip(uint32_t clip_id, bool clip_to_self);
@@ -292,7 +292,7 @@ class EntityNode : public ContainerNode {
 class ImportNode final : public ContainerNode {
  public:
   explicit ImportNode(Session* session);
-  ImportNode(ImportNode&& moved);
+  ImportNode(ImportNode&& moved) noexcept;
   ~ImportNode();
 
   // Imports the node associated with |import_token|.
@@ -321,7 +321,7 @@ class ViewHolder final : public Node {
   ViewHolder(Session* session, zx::eventpair token, const std::string& debug_name);
   ViewHolder(Session* session, fuchsia::ui::views::ViewHolderToken token,
              const std::string& debug_name);
-  ViewHolder(ViewHolder&& moved);
+  ViewHolder(ViewHolder&& moved) noexcept;
   ~ViewHolder();
 
   // Set properties of the attached view.
@@ -353,7 +353,7 @@ class View final : public Resource {
   View(Session* session, fuchsia::ui::views::ViewToken token,
        fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref,
        const std::string& debug_name);
-  View(View&& moved);
+  View(View&& moved) noexcept;
   ~View();
 
   void AddChild(const Node& child) const;
@@ -367,7 +367,7 @@ class View final : public Resource {
 class ClipNode final : public ContainerNode {
  public:
   explicit ClipNode(Session* session);
-  ClipNode(ClipNode&& moved);
+  ClipNode(ClipNode&& moved) noexcept;
   ~ClipNode();
 };
 
@@ -375,7 +375,7 @@ class ClipNode final : public ContainerNode {
 class OpacityNodeHACK final : public ContainerNode {
  public:
   explicit OpacityNodeHACK(Session* session);
-  OpacityNodeHACK(OpacityNodeHACK&& moved);
+  OpacityNodeHACK(OpacityNodeHACK&& moved) noexcept;
   ~OpacityNodeHACK();
 
   // The opacity with which to render the contents of the hierarchy rooted at
@@ -387,7 +387,7 @@ class OpacityNodeHACK final : public ContainerNode {
 class Variable final : public Resource {
  public:
   explicit Variable(Session* session, fuchsia::ui::gfx::Value initial_value);
-  Variable(Variable&& moved);
+  Variable(Variable&& moved) noexcept;
   ~Variable();
 };
 
@@ -405,7 +405,7 @@ class Light : public Resource {
 
  protected:
   explicit Light(Session* session);
-  Light(Light&& moved);
+  Light(Light&& moved) noexcept;
   ~Light();
 };
 
@@ -413,7 +413,7 @@ class Light : public Resource {
 class AmbientLight final : public Light {
  public:
   explicit AmbientLight(Session* session);
-  AmbientLight(AmbientLight&& moved);
+  AmbientLight(AmbientLight&& moved) noexcept;
   ~AmbientLight();
 };
 
@@ -421,7 +421,7 @@ class AmbientLight final : public Light {
 class DirectionalLight final : public Light {
  public:
   explicit DirectionalLight(Session* session);
-  DirectionalLight(DirectionalLight&& moved);
+  DirectionalLight(DirectionalLight&& moved) noexcept;
   ~DirectionalLight();
 
   // Sets the light's direction.
@@ -434,12 +434,12 @@ class DirectionalLight final : public Light {
 class PointLight final : public Light {
  public:
   explicit PointLight(Session* session);
-  PointLight(PointLight&& moved);
+  PointLight(PointLight&& moved) noexcept;
   ~PointLight();
 
   // Sets the light's direction.
   void SetPosition(float dx, float dy, float dz) { SetPosition((float[3]){dx, dy, dz}); }
-  void SetPosition(const float direction[3]);
+  void SetPosition(const float position[3]);
   void SetPosition(uint32_t variable_id);
 
   // Set the light's falloff.
@@ -450,7 +450,7 @@ class PointLight final : public Light {
 class Scene final : public ContainerNode {
  public:
   explicit Scene(Session* session);
-  Scene(Scene&& moved);
+  Scene(Scene&& moved) noexcept;
   ~Scene();
 
   void AddLight(const Light& light) {
@@ -486,7 +486,7 @@ class Scene final : public ContainerNode {
 class CameraBase : public Resource {
  public:
   CameraBase(Session* session) : Resource(session) {}
-  CameraBase(CameraBase&& moved) : Resource(std::move(moved)) {}
+  CameraBase(CameraBase&& moved) noexcept : Resource(std::move(moved)) {}
   ~CameraBase() {}
   // Sets the camera's view parameters.
   void SetTransform(const float eye_position[3], const float eye_look_at[3], const float eye_up[3]);
@@ -508,7 +508,7 @@ class Camera : public CameraBase {
  public:
   explicit Camera(const Scene& scene);
   Camera(Session* session, uint32_t scene_id);
-  Camera(Camera&& moved);
+  Camera(Camera&& moved) noexcept;
   ~Camera();
 
   // Sets the camera's projection parameters.
@@ -520,18 +520,18 @@ class StereoCamera final : public CameraBase {
  public:
   explicit StereoCamera(const Scene& scene);
   StereoCamera(Session* session, uint32_t scene_id);
-  StereoCamera(StereoCamera&& moved);
+  StereoCamera(StereoCamera&& moved) noexcept;
   ~StereoCamera();
 
   // Sets the camera's projection parameters.
-  void SetStereoProjection(const float left_projection[16], const float right_projection[16]);
+  void SetStereoProjection(const float left_projection[4 * 4], const float right_projection[4 * 4]);
 };
 
 // Represents a renderer resource in a session.
 class Renderer final : public Resource {
  public:
   explicit Renderer(Session* session);
-  Renderer(Renderer&& moved);
+  Renderer(Renderer&& moved) noexcept;
   ~Renderer();
 
   // Sets the camera whose view will be rendered.
@@ -559,7 +559,7 @@ class Renderer final : public Resource {
 class Layer final : public Resource {
  public:
   explicit Layer(Session* session);
-  Layer(Layer&& moved);
+  Layer(Layer&& moved) noexcept;
   ~Layer();
 
   // Sets the layer's XY translation and Z-order.
@@ -580,7 +580,7 @@ class Layer final : public Resource {
 class LayerStack final : public Resource {
  public:
   explicit LayerStack(Session* session);
-  LayerStack(LayerStack&& moved);
+  LayerStack(LayerStack&& moved) noexcept;
   ~LayerStack();
 
   void AddLayer(const Layer& layer) {
@@ -600,7 +600,7 @@ class LayerStack final : public Resource {
 class DisplayCompositor final : public Resource {
  public:
   explicit DisplayCompositor(Session* session);
-  DisplayCompositor(DisplayCompositor&& moved);
+  DisplayCompositor(DisplayCompositor&& moved) noexcept;
   ~DisplayCompositor();
 
   // Sets the layer-stack that is to be composited.
@@ -611,7 +611,7 @@ class DisplayCompositor final : public Resource {
   void SetLayerStack(uint32_t layer_stack_id);
 
   void SetColorConversion(const std::array<float, 3>& preoffsets,
-                          const std::array<float, 9>& matrix,
+                          const std::array<float, 3 * 3>& matrix,
                           const std::array<float, 3>& postoffsets);
 
   void SetLayoutRotation(uint32_t rotation_degrees);
@@ -621,7 +621,7 @@ class DisplayCompositor final : public Resource {
 class Compositor final : public Resource {
  public:
   explicit Compositor(Session* session);
-  Compositor(Compositor&& moved);
+  Compositor(Compositor&& moved) noexcept;
   ~Compositor();
 
   // Sets the layer-stack that is to be composited.

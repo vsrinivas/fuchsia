@@ -161,7 +161,7 @@ fuchsia::ui::gfx::Command NewSetViewHolderBoundsColorCmd(uint32_t view_holder_id
 
 fuchsia::ui::gfx::Command NewSetDisplayColorConversionCmdHACK(
     uint32_t compositor_id, const std::array<float, 3>& preoffsets,
-    const std::array<float, 9>& matrix, const std::array<float, 3>& postoffsets);
+    const std::array<float, 3 * 3>& matrix, const std::array<float, 3>& postoffsets);
 
 fuchsia::ui::gfx::Command NewSetDisplayRotationCmdHACK(uint32_t compositor_id,
                                                        uint32_t rotation_degrees);
@@ -186,8 +186,8 @@ fuchsia::ui::gfx::Command NewSetCameraPoseBufferCmd(uint32_t camera_id, uint32_t
                                                     zx::duration time_interval);
 
 fuchsia::ui::gfx::Command NewSetStereoCameraProjectionCmd(uint32_t camera_id,
-                                                          const float left_projection[16],
-                                                          const float right_projection[16]);
+                                                          const float left_projection[4 * 4],
+                                                          const float right_projection[4 * 4]);
 
 fuchsia::ui::gfx::Command NewSetLightColorCmd(uint32_t light_id, const float rgb[3]);
 fuchsia::ui::gfx::Command NewSetLightColorCmd(uint32_t light_id, uint32_t variable_id);
@@ -249,7 +249,7 @@ fuchsia::ui::gfx::Vector4Value NewVector4Value(const float value[4]);
 fuchsia::ui::gfx::Vector4Value NewVector4Value(uint32_t variable_id);
 fuchsia::ui::gfx::QuaternionValue NewQuaternionValue(const float value[4]);
 fuchsia::ui::gfx::QuaternionValue NewQuaternionValue(uint32_t variable_id);
-fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(const float matrix[16]);
+fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(const float matrix[4 * 4]);
 fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(uint32_t variable_id);
 fuchsia::ui::gfx::ColorRgbValue NewColorRgbValue(float red, float green, float blue);
 fuchsia::ui::gfx::ColorRgbValue NewColorRgbValue(uint32_t variable_id);

@@ -74,7 +74,7 @@ void Session::Enqueue(fuchsia::ui::input::Command command) {
 void Session::Enqueue(fuchsia::ui::scenic::Command command) {
   commands_.push_back(std::move(command));
   if (commands_.size() >= kCommandsPerMessage ||
-      command.Which() == fuchsia::ui::scenic::Command::Tag::kInput) {
+      commands_.back().Which() == fuchsia::ui::scenic::Command::Tag::kInput) {
     Flush();
   }
 }

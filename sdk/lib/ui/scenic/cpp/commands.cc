@@ -53,10 +53,10 @@ fuchsia::ui::gfx::Command NewCreateImageCmd(uint32_t id, uint32_t memory_id, uin
   fuchsia::ui::gfx::ImageArgs image;
   image.memory_id = memory_id;
   image.memory_offset = memory_offset;
-  image.info = std::move(info);
+  image.info = info;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_image(std::move(image));
+  resource.set_image(image);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -93,7 +93,7 @@ fuchsia::ui::gfx::Command NewCreateImageCmd(uint32_t id, uint32_t memory_id, uin
   info.width = width;
   info.height = height;
   info.stride = stride;
-  return NewCreateImageCmd(id, memory_id, memory_offset, std::move(info));
+  return NewCreateImageCmd(id, memory_id, memory_offset, info);
 }
 
 fuchsia::ui::gfx::Command NewCreateBufferCmd(uint32_t id, uint32_t memory_id,
@@ -104,7 +104,7 @@ fuchsia::ui::gfx::Command NewCreateBufferCmd(uint32_t id, uint32_t memory_id,
   buffer.num_bytes = num_bytes;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_buffer(std::move(buffer));
+  resource.set_buffer(buffer);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -113,7 +113,7 @@ fuchsia::ui::gfx::Command NewCreateCompositorCmd(uint32_t id) {
   fuchsia::ui::gfx::CompositorArgs compositor;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_compositor(std::move(compositor));
+  resource.set_compositor(compositor);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -122,7 +122,7 @@ fuchsia::ui::gfx::Command NewCreateDisplayCompositorCmd(uint32_t id) {
   fuchsia::ui::gfx::DisplayCompositorArgs display_compositor;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_display_compositor(std::move(display_compositor));
+  resource.set_display_compositor(display_compositor);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -131,7 +131,7 @@ fuchsia::ui::gfx::Command NewCreateLayerStackCmd(uint32_t id) {
   fuchsia::ui::gfx::LayerStackArgs layer_stack;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_layer_stack(std::move(layer_stack));
+  resource.set_layer_stack(layer_stack);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -140,7 +140,7 @@ fuchsia::ui::gfx::Command NewCreateLayerCmd(uint32_t id) {
   fuchsia::ui::gfx::LayerArgs layer;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_layer(std::move(layer));
+  resource.set_layer(layer);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -149,7 +149,7 @@ fuchsia::ui::gfx::Command NewCreateSceneCmd(uint32_t id) {
   fuchsia::ui::gfx::SceneArgs scene;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_scene(std::move(scene));
+  resource.set_scene(scene);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -159,7 +159,7 @@ fuchsia::ui::gfx::Command NewCreateCameraCmd(uint32_t id, uint32_t scene_id) {
   camera.scene_id = scene_id;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_camera(std::move(camera));
+  resource.set_camera(camera);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -169,7 +169,7 @@ fuchsia::ui::gfx::Command NewCreateStereoCameraCmd(uint32_t id, uint32_t scene_i
   stereo_camera.scene_id = scene_id;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_stereo_camera(std::move(stereo_camera));
+  resource.set_stereo_camera(stereo_camera);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -177,7 +177,7 @@ fuchsia::ui::gfx::Command NewCreateStereoCameraCmd(uint32_t id, uint32_t scene_i
 fuchsia::ui::gfx::Command NewCreateRendererCmd(uint32_t id) {
   fuchsia::ui::gfx::RendererArgs renderer;
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_renderer(std::move(renderer));
+  resource.set_renderer(renderer);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -186,7 +186,7 @@ fuchsia::ui::gfx::Command NewCreateAmbientLightCmd(uint32_t id) {
   fuchsia::ui::gfx::AmbientLightArgs ambient_light;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_ambient_light(std::move(ambient_light));
+  resource.set_ambient_light(ambient_light);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -195,7 +195,7 @@ fuchsia::ui::gfx::Command NewCreateDirectionalLightCmd(uint32_t id) {
   fuchsia::ui::gfx::DirectionalLightArgs directional_light;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_directional_light(std::move(directional_light));
+  resource.set_directional_light(directional_light);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -204,7 +204,7 @@ fuchsia::ui::gfx::Command NewCreatePointLightCmd(uint32_t id) {
   fuchsia::ui::gfx::PointLightArgs point_light;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_point_light(std::move(point_light));
+  resource.set_point_light(point_light);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -276,8 +276,7 @@ fuchsia::ui::gfx::Command NewCreateRoundedRectangleCmd(uint32_t id, float width,
   return NewCreateResourceCmd(id, std::move(resource));
 }
 
-fuchsia::ui::gfx::Command NewCreateVarCircleCmd(uint32_t id, uint32_t radius_var_id,
-                                                uint32_t height_var_id) {
+fuchsia::ui::gfx::Command NewCreateVarCircleCmd(uint32_t id, uint32_t radius_var_id) {
   fuchsia::ui::gfx::Value radius_value;
   radius_value.set_variable_id(radius_var_id);
 
@@ -350,7 +349,7 @@ fuchsia::ui::gfx::Command NewCreateMeshCmd(uint32_t id) {
   fuchsia::ui::gfx::MeshArgs mesh;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_mesh(std::move(mesh));
+  resource.set_mesh(mesh);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -359,7 +358,7 @@ fuchsia::ui::gfx::Command NewCreateMaterialCmd(uint32_t id) {
   fuchsia::ui::gfx::MaterialArgs material;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_material(std::move(material));
+  resource.set_material(material);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -368,7 +367,7 @@ fuchsia::ui::gfx::Command NewCreateClipNodeCmd(uint32_t id) {
   fuchsia::ui::gfx::ClipNodeArgs node;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_clip_node(std::move(node));
+  resource.set_clip_node(node);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -377,7 +376,7 @@ fuchsia::ui::gfx::Command NewCreateEntityNodeCmd(uint32_t id) {
   fuchsia::ui::gfx::EntityNodeArgs node;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_entity_node(std::move(node));
+  resource.set_entity_node(node);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -386,7 +385,7 @@ fuchsia::ui::gfx::Command NewCreateOpacityNodeCmdHACK(uint32_t id) {
   fuchsia::ui::gfx::OpacityNodeArgsHACK node;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_opacity_node(std::move(node));
+  resource.set_opacity_node(node);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -395,7 +394,7 @@ fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id) {
   fuchsia::ui::gfx::ShapeNodeArgs node;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_shape_node(std::move(node));
+  resource.set_shape_node(node);
 
   return NewCreateResourceCmd(id, std::move(resource));
 }
@@ -483,7 +482,7 @@ fuchsia::ui::gfx::Command NewCreateVariableCmd(uint32_t id, fuchsia::ui::gfx::Va
       break;
     case fuchsia::ui::gfx::Value::Tag::kVariableId:
       // A variable's initial value cannot be another variable.
-      return fuchsia::ui::gfx::Command();
+      // This is also an invalid case, thus fall through.
     case fuchsia::ui::gfx::Value::Tag::Invalid:
       return fuchsia::ui::gfx::Command();
   }
@@ -500,7 +499,7 @@ fuchsia::ui::gfx::Command NewReleaseResourceCmd(uint32_t id) {
   release_resource.id = id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_release_resource(std::move(release_resource));
+  command.set_release_resource(release_resource);
 
   return command;
 }
@@ -571,7 +570,7 @@ fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(uint32_t view_holder_id,
   props.inset_from_max = NewVector3(inset_from_max);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_view_properties(std::move(set_view_properties));
+  command.set_set_view_properties(set_view_properties);
 
   return command;
 }
@@ -583,7 +582,7 @@ fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(uint32_t view_holder_id,
   set_view_properties.properties = props;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_view_properties(std::move(set_view_properties));
+  command.set_set_view_properties(set_view_properties);
 
   return command;
 }
@@ -594,7 +593,7 @@ fuchsia::ui::gfx::Command NewAddChildCmd(uint32_t node_id, uint32_t child_id) {
   add_child.child_id = child_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_add_child(std::move(add_child));
+  command.set_add_child(add_child);
 
   return command;
 }
@@ -604,7 +603,7 @@ fuchsia::ui::gfx::Command NewDetachCmd(uint32_t id) {
   detach.id = id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_detach(std::move(detach));
+  command.set_detach(detach);
 
   return command;
 }
@@ -614,7 +613,7 @@ fuchsia::ui::gfx::Command NewDetachChildrenCmd(uint32_t node_id) {
   detach_children.node_id = node_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_detach_children(std::move(detach_children));
+  command.set_detach_children(detach_children);
 
   return command;
 }
@@ -625,7 +624,7 @@ fuchsia::ui::gfx::Command NewSetTranslationCmd(uint32_t node_id, const float tra
   set_translation.value = NewVector3Value(translation);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_translation(std::move(set_translation));
+  command.set_set_translation(set_translation);
 
   return command;
 }
@@ -636,7 +635,7 @@ fuchsia::ui::gfx::Command NewSetTranslationCmd(uint32_t node_id, uint32_t variab
   set_translation.value = NewVector3Value(variable_id);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_translation(std::move(set_translation));
+  command.set_set_translation(set_translation);
 
   return command;
 }
@@ -647,7 +646,7 @@ fuchsia::ui::gfx::Command NewSetScaleCmd(uint32_t node_id, const float scale[3])
   set_scale.value = NewVector3Value(scale);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_scale(std::move(set_scale));
+  command.set_set_scale(set_scale);
 
   return command;
 }
@@ -658,7 +657,7 @@ fuchsia::ui::gfx::Command NewSetScaleCmd(uint32_t node_id, uint32_t variable_id)
   set_scale.value = NewVector3Value(variable_id);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_scale(std::move(set_scale));
+  command.set_set_scale(set_scale);
 
   return command;
 }
@@ -669,7 +668,7 @@ fuchsia::ui::gfx::Command NewSetRotationCmd(uint32_t node_id, const float quater
   set_rotation.value = NewQuaternionValue(quaternion);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_rotation(std::move(set_rotation));
+  command.set_set_rotation(set_rotation);
 
   return command;
 }
@@ -680,7 +679,7 @@ fuchsia::ui::gfx::Command NewSetRotationCmd(uint32_t node_id, uint32_t variable_
   set_rotation.value = NewQuaternionValue(variable_id);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_rotation(std::move(set_rotation));
+  command.set_set_rotation(set_rotation);
 
   return command;
 }
@@ -691,7 +690,7 @@ fuchsia::ui::gfx::Command NewSetAnchorCmd(uint32_t node_id, const float anchor[3
   set_anchor.value = NewVector3Value(anchor);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_anchor(std::move(set_anchor));
+  command.set_set_anchor(set_anchor);
 
   return command;
 }
@@ -702,7 +701,7 @@ fuchsia::ui::gfx::Command NewSetAnchorCmd(uint32_t node_id, uint32_t variable_id
   set_anchor.value = NewVector3Value(variable_id);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_anchor(std::move(set_anchor));
+  command.set_set_anchor(set_anchor);
 
   return command;
 }
@@ -713,7 +712,7 @@ fuchsia::ui::gfx::Command NewSetOpacityCmd(uint32_t node_id, float opacity) {
   set_opacity.opacity = opacity;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_opacity(std::move(set_opacity));
+  command.set_set_opacity(set_opacity);
 
   return command;
 }
@@ -724,7 +723,7 @@ fuchsia::ui::gfx::Command NewSetEnableDebugViewBoundsCmd(uint32_t view_id, bool 
   enable_cmd.enable = enable;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_enable_view_debug_bounds(std::move(enable_cmd));
+  command.set_set_enable_view_debug_bounds(enable_cmd);
   return command;
 }
 
@@ -737,16 +736,16 @@ fuchsia::ui::gfx::Command NewSetViewHolderBoundsColorCmd(uint32_t view_holder_id
 
   fuchsia::ui::gfx::SetViewHolderBoundsColorCmd bounds_color_cmd;
   bounds_color_cmd.view_holder_id = view_holder_id;
-  bounds_color_cmd.color = std::move(color);
+  bounds_color_cmd.color = color;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_view_holder_bounds_color(std::move(bounds_color_cmd));
+  command.set_set_view_holder_bounds_color(bounds_color_cmd);
   return command;
 }
 
 fuchsia::ui::gfx::Command NewSetDisplayColorConversionCmdHACK(
     uint32_t compositor_id, const std::array<float, 3>& preoffsets,
-    const std::array<float, 9>& matrix, const std::array<float, 3>& postoffsets) {
+    const std::array<float, 3 * 3>& matrix, const std::array<float, 3>& postoffsets) {
   fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK color_conversion;
   color_conversion.compositor_id = compositor_id;
   color_conversion.preoffsets = preoffsets;
@@ -754,7 +753,7 @@ fuchsia::ui::gfx::Command NewSetDisplayColorConversionCmdHACK(
   color_conversion.postoffsets = postoffsets;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_display_color_conversion(std::move(color_conversion));
+  command.set_set_display_color_conversion(color_conversion);
 
   return command;
 }
@@ -766,7 +765,7 @@ fuchsia::ui::gfx::Command NewSetDisplayRotationCmdHACK(uint32_t compositor_id,
   display_rotation.rotation_degrees = rotation_degrees;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_display_rotation(std::move(display_rotation));
+  command.set_set_display_rotation(display_rotation);
 
   return command;
 }
@@ -779,7 +778,7 @@ fuchsia::ui::gfx::Command NewSendSizeChangeHintCmdHACK(uint32_t node_id, float w
   send_size_change_hint.height_change_factor = height_change_factor;
 
   fuchsia::ui::gfx::Command command;
-  command.set_send_size_change_hint_hack(std::move(send_size_change_hint));
+  command.set_send_size_change_hint_hack(send_size_change_hint);
 
   return command;
 }
@@ -790,7 +789,7 @@ fuchsia::ui::gfx::Command NewSetShapeCmd(uint32_t node_id, uint32_t shape_id) {
   set_shape.shape_id = shape_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_shape(std::move(set_shape));
+  command.set_set_shape(set_shape);
 
   return command;
 }
@@ -801,7 +800,7 @@ fuchsia::ui::gfx::Command NewSetMaterialCmd(uint32_t node_id, uint32_t material_
   set_material.material_id = material_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_material(std::move(set_material));
+  command.set_set_material(set_material);
 
   return command;
 }
@@ -813,7 +812,7 @@ fuchsia::ui::gfx::Command NewSetClipCmd(uint32_t node_id, uint32_t clip_id, bool
   set_clip.clip_to_self = clip_to_self;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_clip(std::move(set_clip));
+  command.set_set_clip(set_clip);
 
   return command;
 }
@@ -825,7 +824,7 @@ fuchsia::ui::gfx::Command NewSetClipPlanesCmd(uint32_t node_id,
   set_clip_planes.clip_planes = std::move(planes);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_clip_planes(std::move(set_clip_planes));
+  command.set_set_clip_planes(set_clip_planes);
 
   return command;
 }
@@ -836,7 +835,7 @@ fuchsia::ui::gfx::Command NewSetTagCmd(uint32_t node_id, uint32_t tag_value) {
   set_tag.tag_value = tag_value;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_tag(std::move(set_tag));
+  command.set_set_tag(set_tag);
 
   return command;
 }
@@ -848,7 +847,7 @@ fuchsia::ui::gfx::Command NewSetHitTestBehaviorCmd(
   set_hit_test_behavior.hit_test_behavior = hit_test_behavior;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_hit_test_behavior(std::move(set_hit_test_behavior));
+  command.set_set_hit_test_behavior(set_hit_test_behavior);
 
   return command;
 }
@@ -859,7 +858,7 @@ fuchsia::ui::gfx::Command NewSetCameraCmd(uint32_t renderer_id, uint32_t camera_
   set_camera.camera_id = camera_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_camera(std::move(set_camera));
+  command.set_set_camera(set_camera);
   return command;
 }
 
@@ -869,7 +868,7 @@ fuchsia::ui::gfx::Command NewSetTextureCmd(uint32_t material_id, uint32_t textur
   set_texture.texture_id = texture_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_texture(std::move(set_texture));
+  command.set_set_texture(set_texture);
   return command;
 }
 
@@ -883,10 +882,10 @@ fuchsia::ui::gfx::Command NewSetColorCmd(uint32_t material_id, uint8_t red, uint
   color.variable_id = 0;
   fuchsia::ui::gfx::SetColorCmd set_color;
   set_color.material_id = material_id;
-  set_color.color = std::move(color);
+  set_color.color = color;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_color(std::move(set_color));
+  command.set_set_color(set_color);
 
   return command;
 }
@@ -913,7 +912,7 @@ fuchsia::ui::gfx::Command NewBindMeshBuffersCmd(
   bind_mesh_buffers.index_offset = index_offset;
   bind_mesh_buffers.index_count = index_count;
   bind_mesh_buffers.vertex_buffer_id = vertex_buffer_id;
-  bind_mesh_buffers.vertex_format = std::move(vertex_format);
+  bind_mesh_buffers.vertex_format = vertex_format;
   bind_mesh_buffers.vertex_offset = vertex_offset;
   bind_mesh_buffers.vertex_count = vertex_count;
   auto& bbox = bind_mesh_buffers.bounding_box;
@@ -925,7 +924,7 @@ fuchsia::ui::gfx::Command NewBindMeshBuffersCmd(
   bbox.max.z = bounding_box_max[2];
 
   fuchsia::ui::gfx::Command command;
-  command.set_bind_mesh_buffers(std::move(bind_mesh_buffers));
+  command.set_bind_mesh_buffers(bind_mesh_buffers);
 
   return command;
 }
@@ -936,7 +935,7 @@ fuchsia::ui::gfx::Command NewAddLayerCmd(uint32_t layer_stack_id, uint32_t layer
   add_layer.layer_id = layer_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_add_layer(std::move(add_layer));
+  command.set_add_layer(add_layer);
   return command;
 }
 
@@ -946,7 +945,7 @@ fuchsia::ui::gfx::Command NewRemoveLayerCmd(uint32_t layer_stack_id, uint32_t la
   remove_layer.layer_id = layer_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_remove_layer(std::move(remove_layer));
+  command.set_remove_layer(remove_layer);
   return command;
 }
 
@@ -955,7 +954,7 @@ fuchsia::ui::gfx::Command NewRemoveAllLayersCmd(uint32_t layer_stack_id) {
   remove_all_layers.layer_stack_id = layer_stack_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_remove_all_layers(std::move(remove_all_layers));
+  command.set_remove_all_layers(remove_all_layers);
   return command;
 }
 
@@ -965,7 +964,7 @@ fuchsia::ui::gfx::Command NewSetLayerStackCmd(uint32_t compositor_id, uint32_t l
   set_layer_stack.layer_stack_id = layer_stack_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_layer_stack(std::move(set_layer_stack));
+  command.set_set_layer_stack(set_layer_stack);
   return command;
 }
 
@@ -975,7 +974,7 @@ fuchsia::ui::gfx::Command NewSetRendererCmd(uint32_t layer_id, uint32_t renderer
   set_renderer.renderer_id = renderer_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_renderer(std::move(set_renderer));
+  command.set_set_renderer(set_renderer);
   return command;
 }
 
@@ -999,7 +998,7 @@ fuchsia::ui::gfx::Command NewSetSizeCmd(uint32_t node_id, const float size[2]) {
   set_size.value.variable_id = 0;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_size(std::move(set_size));
+  command.set_set_size(set_size);
 
   return command;
 }
@@ -1014,7 +1013,7 @@ fuchsia::ui::gfx::Command NewSetCameraTransformCmd(uint32_t camera_id, const flo
   set_command.eye_up = NewVector3Value(eye_up);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_camera_transform(std::move(set_command));
+  command.set_set_camera_transform(set_command);
 
   return command;
 }
@@ -1025,21 +1024,21 @@ fuchsia::ui::gfx::Command NewSetCameraProjectionCmd(uint32_t camera_id, const fl
   set_command.fovy = NewFloatValue(fovy);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_camera_projection(std::move(set_command));
+  command.set_set_camera_projection(set_command);
 
   return command;
 }
 
 fuchsia::ui::gfx::Command NewSetStereoCameraProjectionCmd(uint32_t camera_id,
-                                                          const float left_projection[16],
-                                                          const float right_projection[16]) {
+                                                          const float left_projection[4 * 4],
+                                                          const float right_projection[4 * 4]) {
   fuchsia::ui::gfx::SetStereoCameraProjectionCmd set_command;
   set_command.camera_id = camera_id;
   set_command.left_projection = NewMatrix4Value(left_projection);
   set_command.right_projection = NewMatrix4Value(right_projection);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_stereo_camera_projection(std::move(set_command));
+  command.set_set_stereo_camera_projection(set_command);
 
   return command;
 }
@@ -1052,7 +1051,7 @@ fuchsia::ui::gfx::Command NewSetCameraClipSpaceTransformCmd(uint32_t camera_id, 
   set_command.scale = scale;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_camera_clip_space_transform(std::move(set_command));
+  command.set_set_camera_clip_space_transform(set_command);
 
   return command;
 }
@@ -1068,7 +1067,7 @@ fuchsia::ui::gfx::Command NewSetCameraPoseBufferCmd(uint32_t camera_id, uint32_t
   set_command.time_interval = time_interval;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_camera_pose_buffer(std::move(set_command));
+  command.set_set_camera_pose_buffer(set_command);
 
   return command;
 }
@@ -1086,7 +1085,7 @@ fuchsia::ui::gfx::Command NewSetLightColorCmd(uint32_t light_id, const float rgb
   set_command.color = NewColorRgbValue(rgb[0], rgb[1], rgb[2]);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_light_color(std::move(set_command));
+  command.set_set_light_color(set_command);
 
   return command;
 }
@@ -1097,7 +1096,7 @@ fuchsia::ui::gfx::Command NewSetLightColorCmd(uint32_t light_id, uint32_t variab
   set_command.color = NewColorRgbValue(variable_id);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_light_color(std::move(set_command));
+  command.set_set_light_color(set_command);
 
   return command;
 }
@@ -1108,7 +1107,7 @@ fuchsia::ui::gfx::Command NewSetLightDirectionCmd(uint32_t light_id, const float
   set_command.direction = NewVector3Value(dir);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_light_direction(std::move(set_command));
+  command.set_set_light_direction(set_command);
 
   return command;
 }
@@ -1119,7 +1118,7 @@ fuchsia::ui::gfx::Command NewSetLightDirectionCmd(uint32_t light_id, uint32_t va
   set_command.direction = NewVector3Value(variable_id);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_light_direction(std::move(set_command));
+  command.set_set_light_direction(set_command);
 
   return command;
 }
@@ -1130,7 +1129,7 @@ fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id, const f
   set_command.position = NewVector3Value(pos);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_point_light_position(std::move(set_command));
+  command.set_set_point_light_position(set_command);
 
   return command;
 }
@@ -1141,7 +1140,7 @@ fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id, uint32_
   set_command.position = NewVector3Value(variable_id);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_point_light_position(std::move(set_command));
+  command.set_set_point_light_position(set_command);
 
   return command;
 }
@@ -1152,7 +1151,7 @@ fuchsia::ui::gfx::Command NewSetPointLightFalloffCmd(uint32_t light_id, float fa
   set_command.falloff = NewFloatValue(falloff);
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_point_light_falloff(std::move(set_command));
+  command.set_set_point_light_falloff(set_command);
 
   return command;
 }
@@ -1163,7 +1162,7 @@ fuchsia::ui::gfx::Command NewAddLightCmd(uint32_t scene_id, uint32_t light_id) {
   add_light_command.light_id = light_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_add_light(std::move(add_light_command));
+  command.set_add_light(add_light_command);
 
   return command;
 }
@@ -1174,7 +1173,7 @@ fuchsia::ui::gfx::Command NewSceneAddAmbientLightCmd(uint32_t scene_id, uint32_t
   add_light_command.light_id = light_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_scene__add_ambient_light(std::move(add_light_command));
+  command.set_scene__add_ambient_light(add_light_command);
 
   return command;
 }
@@ -1185,7 +1184,7 @@ fuchsia::ui::gfx::Command NewSceneAddDirectionalLightCmd(uint32_t scene_id, uint
   add_light_command.light_id = light_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_scene__add_directional_light(std::move(add_light_command));
+  command.set_scene__add_directional_light(add_light_command);
 
   return command;
 }
@@ -1196,7 +1195,7 @@ fuchsia::ui::gfx::Command NewSceneAddPointLightCmd(uint32_t scene_id, uint32_t l
   add_light_command.light_id = light_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_scene__add_point_light(std::move(add_light_command));
+  command.set_scene__add_point_light(add_light_command);
 
   return command;
 }
@@ -1206,7 +1205,7 @@ fuchsia::ui::gfx::Command NewDetachLightCmd(uint32_t light_id) {
   detach_light_command.light_id = light_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_detach_light(std::move(detach_light_command));
+  command.set_detach_light(detach_light_command);
 
   return command;
 }
@@ -1216,7 +1215,7 @@ fuchsia::ui::gfx::Command NewDetachLightsCmd(uint32_t scene_id) {
   detach_lights_command.scene_id = scene_id;
 
   fuchsia::ui::gfx::Command command;
-  command.set_detach_lights(std::move(detach_lights_command));
+  command.set_detach_lights(detach_lights_command);
 
   return command;
 }
@@ -1227,7 +1226,7 @@ fuchsia::ui::gfx::Command NewSetEventMaskCmd(uint32_t resource_id, uint32_t even
   set_event_mask_command.event_mask = event_mask;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_event_mask(std::move(set_event_mask_command));
+  command.set_set_event_mask(set_event_mask_command);
 
   return command;
 }
@@ -1249,7 +1248,7 @@ fuchsia::ui::gfx::Command NewSetDisableClippingCmd(uint32_t renderer_id, bool di
   set_disable_clipping_command.disable_clipping = disable_clipping;
 
   fuchsia::ui::gfx::Command command;
-  command.set_set_disable_clipping(std::move(set_disable_clipping_command));
+  command.set_set_disable_clipping(set_disable_clipping_command);
 
   return command;
 }
@@ -1346,28 +1345,15 @@ fuchsia::ui::gfx::QuaternionValue NewQuaternionValue(uint32_t variable_id) {
   return val;
 }
 
-fuchsia::ui::gfx::mat4 NewMatrix4(const float matrix[16]) {
+fuchsia::ui::gfx::mat4 NewMatrix4(const float matrix[4 * 4]) {
   fuchsia::ui::gfx::mat4 val;
-  val.matrix[0] = matrix[0];
-  val.matrix[1] = matrix[1];
-  val.matrix[2] = matrix[2];
-  val.matrix[3] = matrix[3];
-  val.matrix[4] = matrix[4];
-  val.matrix[5] = matrix[5];
-  val.matrix[6] = matrix[6];
-  val.matrix[7] = matrix[7];
-  val.matrix[8] = matrix[8];
-  val.matrix[9] = matrix[9];
-  val.matrix[10] = matrix[10];
-  val.matrix[11] = matrix[11];
-  val.matrix[12] = matrix[12];
-  val.matrix[13] = matrix[13];
-  val.matrix[14] = matrix[14];
-  val.matrix[15] = matrix[15];
+  for (size_t index = 0; index < 4 * 4; index++) {
+    val.matrix[index] = matrix[index];
+  }
   return val;
 }
 
-fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(const float matrix[16]) {
+fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(const float matrix[4 * 4]) {
   fuchsia::ui::gfx::Matrix4Value val;
   val.variable_id = 0;
   val.value = NewMatrix4(matrix);
