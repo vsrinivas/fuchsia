@@ -5,7 +5,7 @@
 use crate::error::TokenManagerError;
 use anyhow::{format_err, Error};
 use fidl_fuchsia_auth::Status;
-use fuchsia_zircon::{ClockId, Duration, Time};
+use fuchsia_zircon::Time;
 use std::convert::TryFrom;
 use std::ops::Deref;
 use token_cache::{CacheKey, CacheToken, KeyFor};
@@ -31,12 +31,20 @@ impl Deref for OAuthToken {
     }
 }
 
-impl From<fidl_fuchsia_auth::AuthToken> for OAuthToken {
-    fn from(auth_token: fidl_fuchsia_auth::AuthToken) -> OAuthToken {
-        OAuthToken {
-            expiry_time: get_current_time() + Duration::from_seconds(auth_token.expires_in as i64),
-            token: auth_token.token,
-        }
+impl TryFrom<fidl_fuchsia_identity_tokens::OauthAccessToken> for OAuthToken {
+    type Error = TokenManagerError;
+
+    fn try_from(
+        fidl_access_token: fidl_fuchsia_identity_tokens::OauthAccessToken,
+    ) -> Result<Self, Self::Error> {
+        let content = fidl_access_token
+            .content
+            .ok_or(TokenManagerError::new(Status::AuthProviderServerError))?;
+
+        Ok(OAuthToken {
+            expiry_time: fidl_access_token.expiry_time.map_or(Time::INFINITE, Time::from_nanos),
+            token: content,
+        })
     }
 }
 
@@ -170,19 +178,11 @@ fn validate_provider_and_id(auth_provider_type: &str, user_profile_id: &str) -> 
     }
 }
 
-/// Obtains the current time in UTC.
-fn get_current_time() -> Time {
-    Time::get(ClockId::UTC)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_auth::TokenType;
     use lazy_static::lazy_static;
 
-    const LONG_EXPIRY: Duration = Duration::from_seconds(3000);
-    const TEST_ACCESS_TOKEN: &str = "access token";
     const TEST_ID_TOKEN: &str = "id token";
     const TEST_AUTH_PROVIDER_TYPE: &str = "test-provider";
     const TEST_USER_PROFILE_ID: &str = "test-user-123";
@@ -192,26 +192,6 @@ mod tests {
 
     lazy_static! {
         static ref TEST_EXPIRY_TIME: Time = Time::from_nanos(12345);
-    }
-
-    #[test]
-    fn test_oauth_from_fidl() {
-        let fidl_type = fidl_fuchsia_auth::AuthToken {
-            token_type: TokenType::AccessToken,
-            expires_in: LONG_EXPIRY.into_seconds() as u64,
-            token: TEST_ACCESS_TOKEN.to_string(),
-        };
-
-        let time_before_conversion = get_current_time();
-        let native_type = OAuthToken::from(fidl_type);
-        let time_after_conversion = get_current_time();
-
-        assert_eq!(&native_type.token, TEST_ACCESS_TOKEN);
-        assert!(native_type.expiry_time >= time_before_conversion + LONG_EXPIRY);
-        assert!(native_type.expiry_time <= time_after_conversion + LONG_EXPIRY);
-
-        // Also verify our implementation of the Deref trait
-        assert_eq!(&*native_type, TEST_ACCESS_TOKEN);
     }
 
     #[test]

@@ -9,13 +9,15 @@ use anyhow::format_err;
 use fidl;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::{
-    AppConfig, AuthProviderStatus, AuthenticationUiContextMarker, Status,
-    TokenManagerAuthorizeResponder, TokenManagerDeleteAllTokensResponder,
-    TokenManagerGetAccessTokenResponder, TokenManagerGetIdTokenResponder,
-    TokenManagerListProfileIdsResponder, TokenManagerRequest, TokenManagerRequestStream,
-    UserProfileInfo,
+    AppConfig, AuthenticationUiContextMarker, Status, TokenManagerAuthorizeResponder,
+    TokenManagerDeleteAllTokensResponder, TokenManagerGetAccessTokenResponder,
+    TokenManagerGetIdTokenResponder, TokenManagerListProfileIdsResponder, TokenManagerRequest,
+    TokenManagerRequestStream, UserProfileInfo,
 };
-use fidl_fuchsia_identity_external::OpenIdTokenFromOauthRefreshTokenRequest;
+use fidl_fuchsia_identity_external::{
+    OauthAccessTokenFromOauthRefreshTokenRequest, OauthRefreshTokenRequest,
+    OpenIdTokenFromOauthRefreshTokenRequest, OpenIdUserInfoFromOauthAccessTokenRequest,
+};
 use fidl_fuchsia_identity_tokens::OauthRefreshToken;
 use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
@@ -171,8 +173,7 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
         // Depending on the outcome of design discussions either pass it through or remove it
         // entirely.
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy =
-            self.auth_provider_cache.get_auth_provider_proxy(auth_provider_type).await?;
+        let oauth_proxy = self.auth_provider_cache.get_oauth_proxy(auth_provider_type).await?;
 
         let (ui_context_client_end, ui_context_server_end) =
             create_endpoints().token_manager_status(Status::UnknownError)?;
@@ -181,30 +182,43 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
             .get_authentication_ui_context(ui_context_server_end)
             .token_manager_status(Status::InvalidAuthContext)?;
 
-        let (status, credential, user_profile_info) = auth_provider_proxy
-            .get_persistent_credential(
-                Some(ui_context_client_end),
-                user_profile_id.as_ref().map(|x| &**x),
-            )
+        let (refresh_token, access_token) = oauth_proxy
+            .create_refresh_token(OauthRefreshTokenRequest {
+                account_id: user_profile_id,
+                ui_context: Some(ui_context_client_end),
+            })
             .await
             .map_err(|err| {
                 TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-            })?;
+            })??;
 
-        match (credential, user_profile_info) {
-            (Some(credential), Some(user_profile_info)) => {
-                let db_value = CredentialValue::new(
-                    app_config.auth_provider_type,
-                    user_profile_info.id.clone(),
-                    credential,
-                    None,
-                )
-                .map_err(|_| Status::AuthProviderServerError)?;
-                self.token_store.lock().add_credential(db_value)?;
-                Ok(*user_profile_info)
-            }
-            _ => Err(TokenManagerError::from(status)),
-        }
+        // Get user profile info
+        let oauth_open_id_proxy =
+            self.auth_provider_cache.get_oauth_open_id_connect_proxy(auth_provider_type).await?;
+
+        let user_profile_info = oauth_open_id_proxy
+            .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
+                access_token: Some(access_token),
+            })
+            .await
+            .map_err(|err| {
+                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+            })??;
+        let db_value = CredentialValue::new(
+            app_config.auth_provider_type,
+            user_profile_info.subject.clone().ok_or(Status::AuthProviderServerError)?,
+            refresh_token.content.ok_or(Status::AuthProviderServerError)?,
+            None,
+        )
+        .map_err(|_| Status::AuthProviderServerError)?;
+        self.token_store.lock().add_credential(db_value)?;
+
+        Ok(UserProfileInfo {
+            id: user_profile_info.subject.ok_or(Status::AuthProviderServerError)?,
+            display_name: user_profile_info.name,
+            url: None,
+            image_url: user_profile_info.picture,
+        })
     }
 
     /// Implements the FIDL TokenManager.GetAccessToken method.
@@ -239,25 +253,25 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
     async fn handle_get_access_token(
         &self,
         app_config: AppConfig,
-        refresh_token: String,
+        refresh_token: OauthRefreshToken,
         app_scopes: Vec<String>,
         cache_key: AccessTokenKey,
     ) -> TokenManagerResult<Arc<OAuthToken>> {
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy =
-            self.auth_provider_cache.get_auth_provider_proxy(auth_provider_type).await?;
+        let oauth_proxy = self.auth_provider_cache.get_oauth_proxy(auth_provider_type).await?;
 
-        let fut = auth_provider_proxy.get_app_access_token(
-            &refresh_token,
-            app_config.client_id.as_ref().map(|x| &**x),
-            &mut app_scopes.iter().map(|x| &**x),
-        );
-        let (status, provider_token) = fut.await.map_err(|err| {
-            TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-        })?;
+        let provider_token = oauth_proxy
+            .get_access_token_from_refresh_token(OauthAccessTokenFromOauthRefreshTokenRequest {
+                refresh_token: Some(refresh_token),
+                client_id: app_config.client_id.clone(),
+                scopes: Some(app_scopes),
+            })
+            .await
+            .map_err(|err| {
+                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+            })??;
 
-        let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
-        let native_token = Arc::new(OAuthToken::from(*provider_token));
+        let native_token = Arc::new(provider_token.try_into()?);
         self.token_cache.lock().put(cache_key, Arc::clone(&native_token));
         Ok(native_token)
     }
@@ -290,10 +304,7 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
         let oauth_open_id_proxy =
             self.auth_provider_cache.get_oauth_open_id_connect_proxy(auth_provider_type).await?;
         let get_id_token_request = OpenIdTokenFromOauthRefreshTokenRequest {
-            refresh_token: Some(OauthRefreshToken {
-                content: Some(refresh_token),
-                account_id: Some(user_profile_id),
-            }),
+            refresh_token: Some(refresh_token),
             audiences: audience.map(|audience| vec![audience]),
         };
 
@@ -337,18 +348,22 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
 
         // Request that the auth provider revoke the credential server-side.
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy =
-            self.auth_provider_cache.get_auth_provider_proxy(auth_provider_type).await?;
-        let status =
-            auth_provider_proxy.revoke_app_or_persistent_credential(&refresh_token).await.map_err(
-                |err| TokenManagerError::new(Status::AuthProviderServerError).with_cause(err),
-            )?;
+        let oauth_proxy = self.auth_provider_cache.get_oauth_proxy(auth_provider_type).await?;
+        let result = oauth_proxy
+            .revoke_refresh_token(OauthRefreshToken {
+                content: Some(refresh_token),
+                account_id: None,
+            })
+            .await
+            .map_err(|err| {
+                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
+            })?;
 
-        if status != AuthProviderStatus::Ok {
+        if let Err(api_error) = result {
             if force {
-                warn!("Removing stored tokens even though revocation failed with {:?}", status)
+                warn!("Removing stored tokens even though revocation failed with {:?}", api_error)
             } else {
-                return Err(TokenManagerError::from(status));
+                return Err(TokenManagerError::from(api_error));
             }
         }
 
@@ -389,9 +404,15 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
 
     /// Returns the current refresh token for a user from the data store.  Failure to find the user
     /// leads to an Error.
-    fn get_refresh_token(&self, db_key: &CredentialKey) -> Result<String, TokenManagerError> {
+    fn get_refresh_token(
+        &self,
+        db_key: &CredentialKey,
+    ) -> Result<OauthRefreshToken, TokenManagerError> {
         match (**self.token_store.lock()).get_refresh_token(db_key) {
-            Ok(rt) => Ok(rt.to_string()),
+            Ok(rt) => Ok(OauthRefreshToken {
+                content: Some(rt.to_string()),
+                account_id: Some(db_key.user_profile_id().to_string()),
+            }),
             Err(err) => Err(TokenManagerError::from(err)),
         }
     }
@@ -499,11 +520,10 @@ mod tests {
     use crate::fake_auth_provider_supplier::FakeAuthProviderSupplier;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_auth::{
-        AuthProviderRequest, AuthProviderStatus, AuthToken, AuthenticationContextProviderMarker,
-        TokenManagerMarker, TokenManagerProxy, TokenType,
+        AuthenticationContextProviderMarker, TokenManagerMarker, TokenManagerProxy,
     };
-    use fidl_fuchsia_identity_external::OauthOpenIdConnectRequest;
-    use fidl_fuchsia_identity_tokens::OpenIdToken;
+    use fidl_fuchsia_identity_external::{OauthOpenIdConnectRequest, OauthRequest};
+    use fidl_fuchsia_identity_tokens::{OauthAccessToken, OpenIdToken, OpenIdUserInfo};
     use fuchsia_async as fasync;
     use fuchsia_zircon::{ClockId, Duration, Time};
     use futures::channel::oneshot;
@@ -568,27 +588,25 @@ mod tests {
         token_manager.handle_requests_from_stream(&context, stream, receiver.shared()).await
     }
 
-    /// Expect a GetPersistentCredential request, configurable with user_id. Generates a response.
-    fn expect_get_cred(request: AuthProviderRequest, user_id: &str) -> Result<(), fidl::Error> {
+    /// Expect a CreateRefreshToken request, configurable with user_id. Generates a response.
+    fn expect_create_refresh_token(
+        request: OauthRequest,
+        user_id: &str,
+    ) -> Result<(), fidl::Error> {
         match request {
-            AuthProviderRequest::GetPersistentCredential {
-                auth_ui_context,
-                user_profile_id,
-                responder,
-            } => {
-                assert!(auth_ui_context.is_some());
-                assert_eq!(user_profile_id, Some(user_id.to_string()));
-                let mut user_profile_info = UserProfileInfo {
-                    id: user_id.to_string(),
-                    display_name: Some(format!("{}_DISPLAY", user_id)),
-                    url: Some(format!("http://example.org/{}", user_id)),
-                    image_url: Some(format!("http://example.org/{}/img", user_id)),
-                };
-                responder.send(
-                    AuthProviderStatus::Ok,
-                    Some(&format!("{}_CREDENTIAL", user_id)),
-                    Some(&mut user_profile_info),
-                )?;
+            OauthRequest::CreateRefreshToken { request, responder } => {
+                assert!(request.ui_context.is_some());
+                assert_eq!(request.account_id, Some(user_id.to_string()));
+                responder.send(&mut Ok((
+                    OauthRefreshToken {
+                        content: Some(format!("{}_CREDENTIAL", user_id)),
+                        account_id: Some(user_id.to_string()),
+                    },
+                    OauthAccessToken {
+                        content: Some("ACCESS_TOKEN".to_string()),
+                        expiry_time: None,
+                    },
+                )))?;
             }
             _ => panic!("Unexpected message received"),
         }
@@ -597,24 +615,41 @@ mod tests {
 
     /// Expect a GetAppAccessToken request, configurable with a token. Generates a response.
     fn expect_get_access_token(
-        request: AuthProviderRequest,
+        oauth_request: OauthRequest,
         token: &str,
     ) -> Result<(), fidl::Error> {
-        match request {
-            AuthProviderRequest::GetAppAccessToken { credential, client_id, scopes, responder } => {
-                assert_eq!(credential, token);
-                assert_eq!(client_id, None);
-                assert_eq!(scopes, Vec::<String>::default());
-                let mut auth_token = AuthToken {
-                    token_type: TokenType::AccessToken,
-                    token: format!("{}_ACCESS", token),
-                    expires_in: 3600,
+        match oauth_request {
+            OauthRequest::GetAccessTokenFromRefreshToken { request, responder } => {
+                assert_eq!(request.refresh_token.unwrap().content.unwrap(), token);
+                assert_eq!(request.client_id, None);
+                assert_eq!(request.scopes.unwrap(), Vec::<String>::default());
+                let access_token = OauthAccessToken {
+                    content: Some(format!("{}_ACCESS", token)),
+                    expiry_time: None, // todo(before-submit)
                 };
-                responder.send(AuthProviderStatus::Ok, Some(&mut auth_token))?;
+                responder.send(&mut Ok(access_token))?;
             }
             _ => panic!("Unexpected message received"),
         }
         Ok(())
+    }
+
+    fn expect_get_user_info(
+        request: OauthOpenIdConnectRequest,
+        user_id: &str,
+    ) -> Result<(), fidl::Error> {
+        match request {
+            OauthOpenIdConnectRequest::GetUserInfoFromAccessToken { request, responder } => {
+                assert_eq!(request.access_token.unwrap().content.unwrap(), "ACCESS_TOKEN");
+                responder.send(&mut Ok(OpenIdUserInfo {
+                    subject: Some(user_id.to_string()),
+                    name: Some(format!("{}_DISPLAY", user_id)),
+                    email: Some(format!("{}@example.org", user_id)),
+                    picture: Some(format!("http://example.org/{}/img", user_id)),
+                }))
+            }
+            _ => panic!("Unexpected message received"),
+        }
     }
 
     /// Expect a GetIdTokenFromRefreshToken request, configurable with a token. Generates a response.
@@ -640,11 +675,11 @@ mod tests {
     }
 
     /// Expect a RevokeAppOrPersistentCredential request, configurable with a token. Responds Ok.
-    fn expect_revoke_cred(request: AuthProviderRequest, token: &str) -> Result<(), fidl::Error> {
+    fn expect_revoke_refresh_token(request: OauthRequest, token: &str) -> Result<(), fidl::Error> {
         match request {
-            AuthProviderRequest::RevokeAppOrPersistentCredential { credential, responder } => {
-                assert_eq!(credential, token);
-                responder.send(AuthProviderStatus::Ok)?;
+            OauthRequest::RevokeRefreshToken { refresh_token, responder } => {
+                assert_eq!(refresh_token.content.unwrap().as_str(), token);
+                responder.send(&mut Ok(()))?;
             }
             _ => panic!("Unexpected message received"),
         }
@@ -748,13 +783,28 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn authorize() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("hooli", |mut stream| async move {
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "DENPAK")?;
+        auth_provider_supplier.add_oauth("hooli", |mut stream| async move {
+            expect_create_refresh_token(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
+            expect_create_refresh_token(
+                stream.try_next().await?.expect("End of stream"),
+                "DENPAK",
+            )?;
             Ok(assert!(stream.try_next().await?.is_none()))
         });
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+        auth_provider_supplier.add_oauth_open_id_connect("hooli", |mut stream| async move {
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "DENPAK")?;
+            Ok(assert!(stream.try_next().await?.is_none()))
+        });
+        auth_provider_supplier.add_oauth("pied-piper", |mut stream| async move {
+            expect_create_refresh_token(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD",
+            )?;
+            Ok(assert!(stream.try_next().await?.is_none()))
+        });
+        auth_provider_supplier.add_oauth_open_id_connect("pied-piper", |mut stream| async move {
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
             Ok(assert!(stream.try_next().await?.is_none()))
         });
 
@@ -766,7 +816,7 @@ mod tests {
             let user_profile_info = user_profile_info.expect("user_profile_info is empty");
             assert_eq!(user_profile_info.id, "GAVIN");
             assert_eq!(user_profile_info.display_name, Some("GAVIN_DISPLAY".to_string()));
-            assert_eq!(user_profile_info.url, Some("http://example.org/GAVIN".to_string()));
+            assert_eq!(user_profile_info.url, None);
             assert_eq!(
                 user_profile_info.image_url,
                 Some("http://example.org/GAVIN/img".to_string())
@@ -779,7 +829,7 @@ mod tests {
             let user_profile_info = user_profile_info.expect("user_profile_info is empty");
             assert_eq!(user_profile_info.id, "RICHARD");
             assert_eq!(user_profile_info.display_name, Some("RICHARD_DISPLAY".to_string()));
-            assert_eq!(user_profile_info.url, Some("http://example.org/RICHARD".to_string()));
+            assert_eq!(user_profile_info.url, None);
             assert_eq!(
                 user_profile_info.image_url,
                 Some("http://example.org/RICHARD/img".to_string())
@@ -814,13 +864,28 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn list_profile_ids() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("hooli", |mut stream| async move {
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "DENPAK")?;
+        auth_provider_supplier.add_oauth("hooli", |mut stream| async move {
+            expect_create_refresh_token(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
+            expect_create_refresh_token(
+                stream.try_next().await?.expect("End of stream"),
+                "DENPAK",
+            )?;
             Ok(assert!(stream.try_next().await?.is_none()))
         });
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+        auth_provider_supplier.add_oauth_open_id_connect("hooli", |mut stream| async move {
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "DENPAK")?;
+            Ok(assert!(stream.try_next().await?.is_none()))
+        });
+        auth_provider_supplier.add_oauth("pied-piper", |mut stream| async move {
+            expect_create_refresh_token(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD",
+            )?;
+            Ok(assert!(stream.try_next().await?.is_none()))
+        });
+        auth_provider_supplier.add_oauth_open_id_connect("pied-piper", |mut stream| async move {
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
             Ok(assert!(stream.try_next().await?.is_none()))
         });
 
@@ -856,8 +921,11 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn get_tokens() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+        auth_provider_supplier.add_oauth("pied-piper", |mut stream| async move {
+            expect_create_refresh_token(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD",
+            )?;
             expect_get_access_token(
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
@@ -865,6 +933,7 @@ mod tests {
             Ok(assert!(stream.try_next().await?.is_none()))
         });
         auth_provider_supplier.add_oauth_open_id_connect("pied-piper", |mut stream| async move {
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
             expect_get_id_token(
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
@@ -917,20 +986,28 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn delete_all_tokens() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "DINESH")?;
+        auth_provider_supplier.add_oauth("pied-piper", |mut stream| async move {
+            expect_create_refresh_token(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD",
+            )?;
+            expect_create_refresh_token(
+                stream.try_next().await?.expect("End of stream"),
+                "DINESH",
+            )?;
             expect_get_access_token(
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
             )?;
-            expect_revoke_cred(
+            expect_revoke_refresh_token(
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
             )?;
             Ok(assert!(stream.try_next().await?.is_none()))
         });
         auth_provider_supplier.add_oauth_open_id_connect("pied-piper", |mut stream| async move {
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "DINESH")?;
             expect_get_id_token(
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
@@ -1000,8 +1077,15 @@ mod tests {
 
         // Part 1: Create some state in a token manager
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+        auth_provider_supplier.add_oauth("pied-piper", |mut stream| async move {
+            expect_create_refresh_token(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD",
+            )?;
+            Ok(assert!(stream.try_next().await?.is_none()))
+        });
+        auth_provider_supplier.add_oauth_open_id_connect("pied-piper", |mut stream| async move {
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
             Ok(assert!(stream.try_next().await?.is_none()))
         });
 
@@ -1027,7 +1111,7 @@ mod tests {
 
         // Part 2: Create a new token manager and check that the state survived
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
+        auth_provider_supplier.add_oauth("pied-piper", |mut stream| async move {
             expect_get_access_token(
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
@@ -1070,21 +1154,36 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn in_memory() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("hooli", |mut stream| async move {
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
+        auth_provider_supplier.add_oauth("hooli", |mut stream| async move {
+            expect_create_refresh_token(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
             Ok(assert!(stream.try_next().await?.is_none()))
         });
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
-            expect_get_cred(stream.try_next().await?.expect("End of stream"), "DINESH")?;
+        auth_provider_supplier.add_oauth_open_id_connect("hooli", |mut stream| async move {
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
+            Ok(assert!(stream.try_next().await?.is_none()))
+        });
+        auth_provider_supplier.add_oauth("pied-piper", |mut stream| async move {
+            expect_create_refresh_token(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD",
+            )?;
+            expect_create_refresh_token(
+                stream.try_next().await?.expect("End of stream"),
+                "DINESH",
+            )?;
             expect_get_access_token(
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
             )?;
-            expect_revoke_cred(
+            expect_revoke_refresh_token(
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
             )?;
+            Ok(assert!(stream.try_next().await?.is_none()))
+        });
+        auth_provider_supplier.add_oauth_open_id_connect("pied-piper", |mut stream| async move {
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+            expect_get_user_info(stream.try_next().await?.expect("End of stream"), "DINESH")?;
             Ok(assert!(stream.try_next().await?.is_none()))
         });
 

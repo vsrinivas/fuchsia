@@ -4,8 +4,8 @@
 
 use crate::error::{ResultExt, TokenManagerError};
 use crate::AuthProviderSupplier;
-use fidl_fuchsia_auth::{AuthProviderProxy, Status};
-use fidl_fuchsia_identity_external::OauthOpenIdConnectProxy;
+use fidl_fuchsia_auth::Status;
+use fidl_fuchsia_identity_external::{OauthOpenIdConnectProxy, OauthProxy};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -17,9 +17,9 @@ type TokenManagerResult<T> = Result<T, TokenManagerError>;
 pub struct AuthProviderCache<APS: AuthProviderSupplier> {
     /// The `AuthProviderSupplier` used to generate fresh proxies.
     auth_provider_supplier: APS,
-    /// A mapping from auth provider type to existing proxies to `fuchsia.auth.AuthProvider`
-    /// implementations.
-    auth_provider_proxies: Mutex<HashMap<String, Arc<AuthProviderProxy>>>,
+    /// A mapping from auth provider type to existing proxies to
+    /// `fuchsia.identity.external.Oauth` implementations.
+    oauth_proxies: Mutex<HashMap<String, Arc<OauthProxy>>>,
     /// A mapping from auth provider type to existing proxies to
     /// `fuchsia.identity.external.OauthOpenIdConnect` implementations.
     oauth_open_id_connect_proxies: Mutex<HashMap<String, Arc<OauthOpenIdConnectProxy>>>,
@@ -30,30 +30,28 @@ impl<APS: AuthProviderSupplier> AuthProviderCache<APS> {
     pub fn new(auth_provider_supplier: APS) -> Self {
         AuthProviderCache {
             auth_provider_supplier,
-            auth_provider_proxies: Mutex::new(HashMap::new()),
+            oauth_proxies: Mutex::new(HashMap::new()),
             oauth_open_id_connect_proxies: Mutex::new(HashMap::new()),
         }
     }
 
-    /// Returns an `AuthProviderProxy` for the specified `auth_provider_type` either by returning
-    /// a previously created copy or by acquiring a new one from the `AuthProviderSupplier`.
-    pub async fn get_auth_provider_proxy(
+    /// Returns an `OauthOpenIdConnectProxy` for the specified `auth_provider_type` either by
+    /// returning a previously created copy or by acquiring a new one from the `AuthProviderSupplier`.
+    pub async fn get_oauth_proxy(
         &self,
         auth_provider_type: &str,
-    ) -> TokenManagerResult<Arc<AuthProviderProxy>> {
-        match self.auth_provider_proxies.lock().get(auth_provider_type) {
+    ) -> TokenManagerResult<Arc<OauthProxy>> {
+        match self.oauth_proxies.lock().get(auth_provider_type) {
             // only return a cached proxy if the connection hasn't crashed.
-            Some(auth_provider) if !auth_provider.is_closed() => {
-                return Ok(Arc::clone(auth_provider));
+            Some(oauth) if !oauth.is_closed() => {
+                return Ok(Arc::clone(oauth));
             }
             _ => (),
         };
 
-        let client_end = self.auth_provider_supplier.get_auth_provider(auth_provider_type).await?;
+        let client_end = self.auth_provider_supplier.get_oauth(auth_provider_type).await?;
         let proxy = Arc::new(client_end.into_proxy().token_manager_status(Status::UnknownError)?);
-        self.auth_provider_proxies
-            .lock()
-            .insert(auth_provider_type.to_string(), Arc::clone(&proxy));
+        self.oauth_proxies.lock().insert(auth_provider_type.to_string(), Arc::clone(&proxy));
         Ok(proxy)
     }
 
@@ -88,24 +86,23 @@ impl<APS: AuthProviderSupplier> AuthProviderCache<APS> {
 mod test {
     use super::*;
     use crate::fake_auth_provider_supplier::FakeAuthProviderSupplier;
-    use fidl_fuchsia_auth::{AuthProviderRequest, AuthProviderStatus};
     use fidl_fuchsia_identity_external::{
-        OauthOpenIdConnectRequest, OpenIdTokenFromOauthRefreshTokenRequest,
+        OauthOpenIdConnectRequest, OauthRequest, OpenIdTokenFromOauthRefreshTokenRequest,
     };
-    use fidl_fuchsia_identity_tokens::OpenIdToken;
+    use fidl_fuchsia_identity_tokens::{OauthRefreshToken, OpenIdToken};
     use fuchsia_async as fasync;
     use futures::future::join;
     use futures::prelude::*;
 
     #[fasync::run_until_stalled(test)]
-    async fn test_get_auth_provider_proxy() {
+    async fn test_get_oauth_proxy() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
 
-        auth_provider_supplier.add_auth_provider("crashes", |mut stream| {
+        auth_provider_supplier.add_oauth("crashes", |mut stream| {
             async move {
                 match stream.try_next().await? {
-                    Some(AuthProviderRequest::GetAppAccessToken { responder, .. }) => {
-                        responder.send(AuthProviderStatus::Ok, None)?
+                    Some(OauthRequest::RevokeRefreshToken { responder, .. }) => {
+                        responder.send(&mut Ok(()))?
                     }
                     _ => panic!("Got unexpected request"),
                 };
@@ -123,19 +120,19 @@ mod test {
             let cache = AuthProviderCache::new(auth_provider_supplier);
 
             // first get call should create a fresh proxy
-            let (status, _) = cache
-                .get_auth_provider_proxy("crashes")
+            cache
+                .get_oauth_proxy("crashes")
                 .await?
-                .get_app_access_token("credential", None, &mut vec![].into_iter())
+                .revoke_refresh_token(OauthRefreshToken { content: None, account_id: None })
                 .await
+                .unwrap()
                 .unwrap();
-            assert_eq!(status, AuthProviderStatus::Ok);
 
             // second get call should retrieve the same proxy, the auth provider should fail
             assert!(cache
-                .get_auth_provider_proxy("crashes")
+                .get_oauth_proxy("crashes")
                 .await?
-                .get_app_access_token("credential", None, &mut vec![].into_iter())
+                .revoke_refresh_token(OauthRefreshToken { content: None, account_id: None })
                 .await
                 .is_err());
 
@@ -143,7 +140,7 @@ mod test {
             // Since FakeAuthProviderSupplier currently can't make the same auth provider twice
             // the get should fail.
             assert_eq!(
-                cache.get_auth_provider_proxy("crashes").await.unwrap_err().status,
+                cache.get_oauth_proxy("crashes").await.unwrap_err().status,
                 Status::AuthProviderServiceUnavailable
             );
 

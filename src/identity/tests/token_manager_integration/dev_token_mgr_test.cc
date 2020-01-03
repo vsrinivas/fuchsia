@@ -132,9 +132,9 @@ class DevTokenManagerAppTest : public sys::testing::TestWithEnvironment,
     scopes.push_back("test_scope");
 
     bool call_complete = false;
-    token_mgr_->Authorize(app_config, nullptr,   /* optional AuthenticationUiContext */
-                          std::move(scopes), "", /* new user, no existing user_profile_id */
-                          "",                    /* empty auth_code */
+    token_mgr_->Authorize(app_config, nullptr,        /* optional AuthenticationUiContext */
+                          std::move(scopes), nullptr, /* new user, no existing user_profile_id */
+                          "",                         /* empty auth_code */
                           [&](Status status, UserProfileInfoPtr user_info) {
                             EXPECT_EQ(Status::OK, status);
                             EXPECT_NE(nullptr, user_info);
@@ -151,17 +151,16 @@ TEST_F(DevTokenManagerAppTest, Authorize) {
   std::vector<std::string> scopes;
   scopes.push_back("test_scope");
   bool call_complete = false;
-  token_mgr_->Authorize(dev_app_config_, nullptr, /* optional AuthenticationUiContext */
-                        std::move(scopes), "",    /* new user, no existing user_profile_id */
-                        "",                       /* empty auth_code */
+  token_mgr_->Authorize(dev_app_config_, nullptr,   /* optional AuthenticationUiContext */
+                        std::move(scopes), nullptr, /* new user, no existing user_profile_id */
+                        "",                         /* empty auth_code */
                         [&](Status status, UserProfileInfoPtr user_info) {
                           EXPECT_EQ(Status::OK, status);
                           EXPECT_NE(nullptr, user_info);
                           EXPECT_FALSE(user_info->id.empty());
                           ASSERT_TRUE(user_info->display_name.has_value());
                           EXPECT_FALSE(user_info->display_name->empty());
-                          ASSERT_TRUE(user_info->url.has_value());
-                          EXPECT_FALSE(user_info->url->empty());
+                          ASSERT_FALSE(user_info->url.has_value());
                           ASSERT_TRUE(user_info->image_url.has_value());
                           EXPECT_FALSE(user_info->image_url->empty());
                           call_complete = true;
@@ -311,7 +310,7 @@ TEST_F(DevTokenManagerAppTest, Reauthorize) {
   bool last_call_complete = false;
 
   std::vector<std::string> scopes;
-  token_mgr_->Authorize(dev_app_config_, nullptr, std::move(scopes), "", "",
+  token_mgr_->Authorize(dev_app_config_, nullptr, std::move(scopes), nullptr, "",
                         [&](Status status, UserProfileInfoPtr user_info) {
                           EXPECT_EQ(Status::OK, status);
                           user_profile_id = user_info->id;

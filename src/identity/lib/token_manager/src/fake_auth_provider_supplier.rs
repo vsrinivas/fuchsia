@@ -83,7 +83,6 @@ impl FakeAuthProviderSupplier {
     /// Add an `Oauth` implementation, by supplying two arguments: the type, and a
     /// function which acts as the server end for the auth provider. This function will be
     /// invoked when `run()` is called.
-    #[allow(dead_code)]
     pub fn add_oauth<'a, F, Fut>(&'a self, auth_provider_type: &'a str, server_fn: F)
     where
         F: (FnOnce(OauthRequestStream) -> Fut),
@@ -194,6 +193,10 @@ impl AuthProviderSupplier for FakeAuthProviderSupplier {
 
 mod tests {
     use super::*;
+    use fidl_fuchsia_identity_external::{
+        Error as ApiError, OauthAccessTokenFromOauthRefreshTokenRequest,
+    };
+    use fidl_fuchsia_identity_tokens::OauthRefreshToken;
     use fuchsia_async;
 
     /// This is a meta-test, of the FakeAuthProviderSupplier itself, since it has a bit of logic.
@@ -207,14 +210,11 @@ mod tests {
         // Non existing auth provider
         assert!(auth_provider_supplier.get_auth_provider("myspace").await.is_err());
 
-        auth_provider_supplier.add_auth_provider("hooli", |mut stream| async move {
+        auth_provider_supplier.add_oauth("hooli", |mut stream| async move {
             match stream.try_next().await? {
-                Some(AuthProviderRequest::RevokeAppOrPersistentCredential {
-                    responder,
-                    credential,
-                }) => {
-                    assert_eq!(credential, "HOOLI_CREDENTIAL");
-                    responder.send(AuthProviderStatus::BadRequest)?;
+                Some(OauthRequest::RevokeRefreshToken { responder, refresh_token }) => {
+                    assert_eq!(refresh_token.content.unwrap(), "HOOLI_CREDENTIAL");
+                    responder.send(&mut Err(ApiError::InvalidRequest))?;
                 }
                 _ => panic!("Unexpected message received"),
             }
@@ -222,18 +222,16 @@ mod tests {
             Ok(())
         });
 
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
+        auth_provider_supplier.add_oauth("pied-piper", |mut stream| async move {
             match stream.try_next().await? {
-                Some(AuthProviderRequest::GetAppAccessToken {
-                    responder,
-                    credential,
-                    client_id,
-                    scopes,
-                }) => {
-                    assert_eq!(credential, "PIED_PIPER_CREDENTIAL");
-                    assert!(client_id.is_none());
-                    assert!(scopes.is_empty());
-                    responder.send(AuthProviderStatus::Ok, None)?;
+                Some(OauthRequest::GetAccessTokenFromRefreshToken { responder, request }) => {
+                    assert_eq!(
+                        request.refresh_token.unwrap().content.unwrap(),
+                        "PIED_PIPER_CREDENTIAL"
+                    );
+                    assert!(request.client_id.is_none());
+                    assert!(request.scopes.unwrap().is_empty());
+                    responder.send(&mut Err(ApiError::Network))?;
                 }
                 _ => panic!("Unexpected message received"),
             }
@@ -244,28 +242,45 @@ mod tests {
         let auth_provider_supplier_clone = Arc::clone(&auth_provider_supplier);
 
         let client_fn = async move {
-            let ap_proxy = auth_provider_supplier_clone
-                .get_auth_provider("hooli")
+            let oauth_proxy = auth_provider_supplier_clone
+                .get_oauth("hooli")
                 .await
                 .unwrap()
                 .into_proxy()
                 .unwrap();
-            let status =
-                ap_proxy.revoke_app_or_persistent_credential("HOOLI_CREDENTIAL").await.unwrap();
-            assert_eq!(status, AuthProviderStatus::BadRequest);
+            assert_eq!(
+                oauth_proxy
+                    .revoke_refresh_token(OauthRefreshToken {
+                        content: Some("HOOLI_CREDENTIAL".to_string()),
+                        account_id: None
+                    })
+                    .await
+                    .unwrap(),
+                Err(ApiError::InvalidRequest)
+            );
 
-            let ap_proxy = auth_provider_supplier_clone
-                .get_auth_provider("pied-piper")
+            let oauth_proxy = auth_provider_supplier_clone
+                .get_oauth("pied-piper")
                 .await
                 .unwrap()
                 .into_proxy()
                 .unwrap();
-            let (status, access_token) = ap_proxy
-                .get_app_access_token("PIED_PIPER_CREDENTIAL", None, &mut vec![].into_iter())
-                .await
-                .unwrap();
-            assert_eq!(status, AuthProviderStatus::Ok);
-            assert!(access_token.is_none());
+            assert_eq!(
+                oauth_proxy
+                    .get_access_token_from_refresh_token(
+                        OauthAccessTokenFromOauthRefreshTokenRequest {
+                            refresh_token: Some(OauthRefreshToken {
+                                content: Some("PIED_PIPER_CREDENTIAL".to_string()),
+                                account_id: None,
+                            }),
+                            client_id: None,
+                            scopes: Some(vec![])
+                        }
+                    )
+                    .await
+                    .unwrap(),
+                Err(ApiError::Network)
+            );
         };
         let (run_result, _) = join(auth_provider_supplier.run(), client_fn).await;
         assert!(run_result.is_ok());
@@ -281,10 +296,8 @@ mod tests {
 
         auth_provider_supplier.add_auth_provider("hooli", |mut stream| async move {
             match stream.try_next().await? {
-                Some(AuthProviderRequest::RevokeAppOrPersistentCredential {
-                    responder, ..
-                }) => {
-                    responder.send(AuthProviderStatus::BadRequest)?;
+                Some(AuthProviderRequest::GetAppFirebaseToken { responder, .. }) => {
+                    responder.send(AuthProviderStatus::BadRequest, None)?;
                 }
                 _ => panic!("Unexpected message received"),
             }
@@ -339,10 +352,10 @@ mod tests {
                 .unwrap();
             assert_eq!(
                 auth_provider_proxy
-                    .revoke_app_or_persistent_credential("HOOLI_CREDENTIAL")
+                    .get_app_firebase_token("HOOLI_ID_TOKEN", "API_KEY")
                     .await
                     .unwrap(),
-                AuthProviderStatus::BadRequest
+                (AuthProviderStatus::BadRequest, None)
             );
 
             let oauth_proxy =
