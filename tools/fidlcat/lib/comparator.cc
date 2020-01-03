@@ -220,35 +220,43 @@ uint32_t Comparator::ExtractHexUint32(std::string_view str) {
 }
 
 std::string_view Comparator::GetNextExpectedMessage() {
+  size_t processed_char_count = 0;
+  std::string_view message =
+      GetMessage(expected_output_.substr(position_in_golden_file_), &processed_char_count);
+  position_in_golden_file_ += processed_char_count;
+  return message;
+}
+
+std::string_view Comparator::GetMessage(std::string_view messages, size_t* processed_char_count) {
   // begin points to the beginning of the line, end to its end.
-  size_t begin = position_in_golden_file_;
-  size_t end = expected_output_.find('\n', begin);
+  size_t begin = 0;
+  size_t end = messages.find('\n', begin);
   // Ignore fidlcat startup lines or empty lines.
   while (end != std::string::npos) {
-    if (!IgnoredLine(expected_output_.substr(begin, end - begin))) {
+    if (!IgnoredLine(messages.substr(begin, end - begin))) {
       break;
     }
     begin = end + 1;
-    end = expected_output_.find('\n', begin);
+    end = messages.find('\n', begin);
   }
   // Now we get the message.
   size_t bpos = begin;
   while (end != std::string::npos) {
     // New line indicates end of syscall input or output.
-    if (bpos < begin && end == begin && expected_output_[begin] == '\n') {
+    if (bpos < begin && end == begin && messages[begin] == '\n') {
       break;
     }
     // Beginning of syscall output display.
-    if (bpos < begin && expected_output_.substr(begin, end - begin).find("  ->") == 0) {
+    if (bpos < begin && messages.substr(begin, end - begin).find("  ->") == 0) {
       break;
     }
     begin = end + 1;
-    end = expected_output_.find('\n', begin);
+    end = messages.find('\n', begin);
   }
-  position_in_golden_file_ = begin;
+  *processed_char_count = begin;
 
   // Note that as expected_output_ is a string_view, substr() returns a string_view as well.
-  return expected_output_.substr(bpos, begin - bpos);
+  return messages.substr(bpos, begin - bpos);
 }
 
 bool Comparator::IgnoredLine(std::string_view line) {

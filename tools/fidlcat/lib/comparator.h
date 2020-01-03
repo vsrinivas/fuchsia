@@ -51,6 +51,11 @@ class Comparator {
   // position_in_golden_file_.
   std::string_view GetNextExpectedMessage();
 
+  // Returns the first block of syscall input or output from messages, and stores the number of
+  // characters processed in processed_char_count (which may be different from the length of the
+  // message if some lines from messages were ignored).
+  std::string_view GetMessage(std::string_view messages, size_t* processed_char_count);
+
   // Check that both messages begin with the same name, and that pid and tids match (modulo the maps
   // below), and updates actual with the pid and tid from expected.
   bool SameProcessNamePidTid(std::string* actual, std::string_view expected);
