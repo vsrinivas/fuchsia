@@ -465,10 +465,24 @@ zx_status_t ReadDataFromDisk(fs::TransactionHandler* transaction_handler,
 zx_status_t ReplayJournal(Bcache* bc, const Superblock& info, fs::JournalSuperblock* out);
 #endif
 
+// Return the required vmo size (in blocks) to store doubly indirect blocks in vmo_indirect_
+// TODO(43519).
+constexpr uint32_t GetVmoBlocksForDoublyIndirect() { return kMinfsIndirect + kMinfsDoublyIndirect; }
+static_assert(GetVmoBlocksForDoublyIndirect() == kMinfsIndirect + kMinfsDoublyIndirect,
+              "Vnode block map changed");
+
+// Return the required vmo size (in bytes) to store doubly indirect blocks in vmo_indirect_
+constexpr size_t GetVmoSizeForDoublyIndirect() {
+  return GetVmoBlocksForDoublyIndirect() * kMinfsBlockSize;
+}
+static_assert(GetVmoSizeForDoublyIndirect() ==
+                  (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsBlockSize,
+              "Vnode layout changed");
+
 // Return the block offset in vmo_indirect_ of indirect blocks pointed to by the doubly indirect
 // block at dindex
 constexpr uint32_t GetVmoOffsetForIndirect(uint32_t dibindex) {
-  return kMinfsIndirect + kMinfsDoublyIndirect + (dibindex * kMinfsDirectPerIndirect);
+  return GetVmoBlocksForDoublyIndirect() + (dibindex * kMinfsDirectPerIndirect);
 }
 
 // Return the required vmo size (in bytes) to store indirect blocks pointed to by doubly indirect
@@ -483,11 +497,6 @@ constexpr size_t GetVmoSizeForIndirect(uint32_t dibindex) {
 constexpr uint32_t GetVmoOffsetForDoublyIndirect(uint32_t dibindex) {
   ZX_DEBUG_ASSERT(dibindex < kMinfsDoublyIndirect);
   return kMinfsIndirect + dibindex;
-}
-
-// Return the required vmo size (in bytes) to store doubly indirect blocks in vmo_indirect_
-constexpr size_t GetVmoSizeForDoublyIndirect() {
-  return (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsBlockSize;
 }
 
 // write the inode data of this vnode to disk (default does not update time values)

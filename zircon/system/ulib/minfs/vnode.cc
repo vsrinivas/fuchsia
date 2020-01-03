@@ -85,7 +85,7 @@ zx_status_t VnodeMinfs::BlocksShrink(Transaction* transaction, blk_t start) {
 
 #ifdef __Fuchsia__
   // Arbitrary minimum size for indirect vmo
-  size_t size = (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsBlockSize;
+  size_t size = GetVmoSizeForDoublyIndirect();
   // Number of blocks before dindirect blocks start
   blk_t pre_dindirect = kMinfsDirect + kMinfsDirectPerIndirect * kMinfsIndirect;
   if (start > pre_dindirect) {
@@ -159,8 +159,7 @@ zx_status_t VnodeMinfs::InitIndirectVmo() {
     return ZX_OK;
   }
 
-  vmo_indirect_ = fzl::ResizeableVmoMapper::Create(
-      kMinfsBlockSize * (kMinfsIndirect + kMinfsDoublyIndirect), "minfs-indirect");
+  vmo_indirect_ = fzl::ResizeableVmoMapper::Create(GetVmoSizeForDoublyIndirect(), "minfs-indirect");
 
   zx_status_t status = fs_->bc_->device()->BlockAttachVmo(vmo_indirect_->vmo(), &vmoid_indirect_);
   if (status != ZX_OK) {
