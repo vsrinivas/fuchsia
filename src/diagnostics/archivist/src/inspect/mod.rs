@@ -14,13 +14,14 @@ use {
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS},
-    fidl_fuchsia_mem, files_async, fuchsia_async as fasync,
+    fidl_fuchsia_mem, files_async,
+    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_inspect::reader::{
         snapshot::{Snapshot, SnapshotTree},
         NodeHierarchy, PartialNodeHierarchy,
     },
     fuchsia_inspect::trie,
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon::{self as zx, DurationNum, HandleBased},
     futures::future::{join_all, BoxFuture},
     futures::{FutureExt, TryFutureExt, TryStreamExt},
     inspect_fidl_load as deprecated_inspect,
@@ -39,6 +40,14 @@ use {
 // TODO(4601): Make this product-configurable.
 // TODO(4601): Consider configuring batch sizes by bytes, not by hierarchy count.
 static IN_MEMORY_SNAPSHOT_LIMIT: usize = 64;
+
+// Number of seconds to wait before timing out various async operations;
+//    1) Reading the diagnostics directory of a component, searching for inspect files.
+//    2) Getting the description of a file proxy backing the inspect data.
+//    3) Reading the bytes from a File.
+//    4) Loading a hierachy from the deprecated inspect fidl protocol.
+//    5) Converting an unpopulated data map into a populated data map.
+static INSPECT_ASYNC_TIMEOUT_SECONDS: i64 = 15;
 
 type InspectDataTrie = trie::Trie<char, UnpopulatedInspectDataContainer>;
 
@@ -84,11 +93,29 @@ impl InspectDataCollector {
     pub async fn populate_data_map(&mut self, inspect_proxy: &DirectoryProxy) -> Result<(), Error> {
         // TODO(36762): Use a streaming and bounded readdir API when available to avoid
         // being hung.
-        for entry in files_async::readdir_recursive(inspect_proxy).await?.into_iter() {
+        for entry in files_async::readdir_recursive(inspect_proxy)
+            .on_timeout(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(), || {
+                Err(format_err!(
+                    "Timed out recursively searching diagnostics directory: {:?}",
+                    inspect_proxy
+                ))
+            })
+            .await?
+            .into_iter()
+        {
             // We are only currently interested in inspect VMO files (root.inspect) and
             // inspect services.
             if let Some(proxy) = self.maybe_load_service::<TreeMarker>(inspect_proxy, &entry)? {
-                let maybe_vmo = proxy.get_content().await?.buffer.map(|b| b.vmo);
+                let maybe_vmo = proxy
+                    .get_content()
+                    .err_into::<anyhow::Error>()
+                    .on_timeout(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(), || {
+                        Err(format_err!("Timed out reading contents via Tree protocol."))
+                    })
+                    .await?
+                    .buffer
+                    .map(|b| b.vmo);
+
                 self.maybe_add(
                     Path::new(&entry.name).file_name().unwrap().to_string_lossy().to_string(),
                     Data::Tree(proxy, maybe_vmo),
@@ -117,7 +144,17 @@ impl InspectDataCollector {
             };
 
             // Obtain the vmo backing any VmoFiles.
-            match file_proxy.describe().await {
+            match file_proxy
+                .describe()
+                .err_into::<anyhow::Error>()
+                .on_timeout(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(), || {
+                    Err(format_err!(
+                        "Timed out waiting for backing file description: {:?}",
+                        file_proxy
+                    ))
+                })
+                .await
+            {
                 Ok(nodeinfo) => match nodeinfo {
                     NodeInfo::Vmofile(vmofile) => {
                         self.maybe_add(
@@ -130,7 +167,14 @@ impl InspectDataCollector {
                         );
                     }
                     NodeInfo::File(_) => {
-                        let contents = io_util::read_file_bytes(&file_proxy).await?;
+                        let contents = io_util::read_file_bytes(&file_proxy)
+                            .on_timeout(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(), || {
+                                Err(format_err!(
+                                    "Timed out reading contents of fuchsia File: {:?}",
+                                    file_proxy
+                                ))
+                            })
+                            .await?;
                         self.maybe_add(
                             Path::new(&entry.name)
                                 .file_name()
@@ -194,7 +238,12 @@ impl DataCollector for InspectDataCollector {
     /// This currently only does a single pass over the directory to find information.
     fn collect(mut self: Box<Self>, path: PathBuf) -> BoxFuture<'static, Result<(), Error>> {
         async move {
-            let inspect_proxy = match InspectDataCollector::find_directory_proxy(&path).await {
+            let inspect_proxy = match InspectDataCollector::find_directory_proxy(&path)
+                .on_timeout(INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(), || {
+                    Err(format_err!("Timed out converting path into directory proxy: {:?}", path))
+                })
+                .await
+            {
                 Ok(proxy) => proxy,
                 Err(e) => {
                     return Err(format_err!("Failed to open out directory at {:?}: {}", path, e));
@@ -256,7 +305,17 @@ impl PopulatedInspectDataContainer {
                                 _ => {}
                             },
                             Data::DeprecatedFidl(inspect_proxy) => {
-                                match deprecated_inspect::load_hierarchy(inspect_proxy).await {
+                                match deprecated_inspect::load_hierarchy(inspect_proxy)
+                                    .on_timeout(
+                                        INSPECT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(),
+                                        || {
+                                            Err(format_err!(
+                                                "Timed out reading via deprecated inspect protocol.",
+                                            ))
+                                        },
+                                    )
+                                    .await
+                                {
                                     Ok(hierarchy) => acc.push(ReadSnapshot::Finished(hierarchy)),
                                     _ => {}
                                 }
