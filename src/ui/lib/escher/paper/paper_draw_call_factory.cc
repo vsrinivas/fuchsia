@@ -260,7 +260,7 @@ PaperDrawCallFactory::SortKey PaperDrawCallFactory::SortKey::NewOpaque(Hash pipe
   // Prioritize minimizing pipeline changes over depth-sorting; both are more
   // important than minimizing mesh/texture state changes (in practice, almost
   // every draw call uses a separate mesh/texture anyway).
-  // TODO(ES-105): We currently don't have multiple pipelines used in the opaque
+  // TODO(ES-150): We currently don't have multiple pipelines used in the opaque
   // pass, so we sort primarily by depth.  However, when we eventually do have
   // multiple pipelines, we may want to rewrite the pipeline hashes with a value
   // that reflects whether objects drawn using that pipeline tend to be drawn
