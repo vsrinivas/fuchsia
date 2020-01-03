@@ -150,6 +150,7 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   // Check if GPU performance profiling is supported.
   bool supports_timer_queries() const { return supports_timer_queries_; }
   float timestamp_period() const { return timestamp_period_; }
+  bool supports_wireframe() const { return device_->caps().enabled_features.fillModeNonSolid; }
   bool allow_protected_memory() const { return device_->caps().allow_protected_memory; }
 
  private:

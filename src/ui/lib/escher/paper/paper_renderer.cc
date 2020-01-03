@@ -194,9 +194,9 @@ void PaperRenderer::BeginFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUp
   auto index = frame->frame_number() % depth_buffers_.size();
   TexturePtr& depth_texture = depth_buffers_[index];
   TexturePtr& msaa_texture = msaa_buffers_[index];
-  RenderFuncs::ObtainDepthAndMsaaTextures(
-          escher(), frame, output_image->info(), config_.msaa_sample_count,
-          config_.depth_stencil_format, depth_texture, msaa_texture);
+  RenderFuncs::ObtainDepthAndMsaaTextures(escher(), frame, output_image->info(),
+                                          config_.msaa_sample_count, config_.depth_stencil_format,
+                                          depth_texture, msaa_texture);
 
   frame_data_ = std::make_unique<FrameData>(
       frame, std::move(uploader), scene, output_image,
@@ -362,6 +362,18 @@ void PaperRenderer::BindSceneAndCameraUniforms(uint32_t camera_index) {
   frame_data_->cameras[camera_index].binding.Bind(cmd_buf);
 }
 
+bool PaperRenderer::SupportsMaterial(const PaperMaterialPtr& material) {
+  if (!material) {
+    return false;
+  }
+  if (material->type() == Material::Type::kWireframe && !escher()->supports_wireframe()) {
+    FXL_LOG(ERROR) << "Device doesn't support feature fillModeNonSolid. "
+                      "Draw Calls will not be enqueued.";
+    return false;
+  }
+  return true;
+}
+
 void PaperRenderer::Draw(PaperDrawable* drawable, PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperRenderer::Draw");
   FXL_DCHECK(frame_data_);
@@ -381,8 +393,10 @@ void PaperRenderer::DrawCircle(float radius, const PaperMaterialPtr& material,
   FXL_DCHECK(frame_data_);
   FXL_DCHECK(!frame_data_->scene_finalized);
 
-  if (!material)
+  FXL_DCHECK(material);
+  if (!SupportsMaterial(material)) {
     return;
+  }
   draw_call_factory_.DrawCircle(radius, *material.get(), flags);
 }
 
@@ -392,8 +406,10 @@ void PaperRenderer::DrawRect(vec2 min, vec2 max, const PaperMaterialPtr& materia
   FXL_DCHECK(frame_data_);
   FXL_DCHECK(!frame_data_->scene_finalized);
 
-  if (!material)
+  FXL_DCHECK(material);
+  if (!SupportsMaterial(material)) {
     return;
+  }
   draw_call_factory_.DrawRect(min, max, *material.get(), flags);
 }
 
@@ -410,8 +426,10 @@ void PaperRenderer::DrawRoundedRect(const RoundedRectSpec& spec, const PaperMate
   FXL_DCHECK(frame_data_);
   FXL_DCHECK(!frame_data_->scene_finalized);
 
-  if (!material)
+  FXL_DCHECK(material);
+  if (!SupportsMaterial(material)) {
     return;
+  }
   draw_call_factory_.DrawRoundedRect(spec, *material.get(), flags);
 }
 
@@ -421,10 +439,10 @@ void PaperRenderer::DrawBoundingBox(const BoundingBox& box, const PaperMaterialP
   FXL_DCHECK(frame_data_);
   FXL_DCHECK(!frame_data_->scene_finalized);
 
-  if (!material) {
+  FXL_DCHECK(material);
+  if (!SupportsMaterial(material)) {
     return;
   }
-
   if (material->texture()) {
     FXL_LOG(ERROR) << "TODO(ES-218): Box meshes do not currently support textures.";
     return;
@@ -442,10 +460,10 @@ void PaperRenderer::DrawMesh(const MeshPtr& mesh, const PaperMaterialPtr& materi
   FXL_DCHECK(frame_data_);
   FXL_DCHECK(!frame_data_->scene_finalized);
 
-  if (!material) {
+  FXL_DCHECK(material);
+  if (!SupportsMaterial(material)) {
     return;
   }
-
   draw_call_factory_.DrawMesh(mesh, *material.get(), flags);
 }
 

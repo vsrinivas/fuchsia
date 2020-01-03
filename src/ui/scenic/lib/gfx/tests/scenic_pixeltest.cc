@@ -765,6 +765,13 @@ TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
 // Where a,b, and c represent the bounds for views 1,2, and
 // 3 respectively.
 TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
+  auto escher = escher::test::GetEscher()->GetWeakPtr();
+  bool supports_wireframe = escher->supports_wireframe();
+  if (!supports_wireframe) {
+    FXL_LOG(INFO) << "Vulkan device feature fillModeNonSolid is not supported on this device. "
+                     "Error messages are expected.";
+  }
+
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
@@ -846,14 +853,21 @@ TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
   ASSERT_FALSE(screenshot.empty());
   auto histogram = screenshot.Histogram();
 
-  histogram.erase({0, 0, 0, 0});
-  scenic::Color expected_colors[2] = {{0, 255, 255, 255},   // First ViewHolder
-                                      {255, 0, 255, 255}};  // Second ViewHolder
-  for (uint32_t i = 0; i < 2; i++) {
-    EXPECT_GT(histogram[expected_colors[i]], 0u);
-    histogram.erase(expected_colors[i]);
+  if (supports_wireframe) {
+    histogram.erase({0, 0, 0, 0});
+    scenic::Color expected_colors[2] = {{0, 255, 255, 255},   // First ViewHolder
+                                        {255, 0, 255, 255}};  // Second ViewHolder
+    for (uint32_t i = 0; i < 2; i++) {
+      EXPECT_GT(histogram[expected_colors[i]], 0u);
+      histogram.erase(expected_colors[i]);
+    }
+    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+  } else {
+    // If drawing wireframe is not supported, there should be nothing displayed
+    // on screen.
+    histogram.erase({0, 0, 0, 0});
+    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
   }
-  EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
 
   // Now toggle debug rendering for view 2. This should tirgger view3's bounds to
   // display as view3 is directly embedded by view2.
@@ -868,15 +882,22 @@ TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
   ASSERT_FALSE(screenshot2.empty());
   histogram = screenshot2.Histogram();
 
-  histogram.erase({0, 0, 0, 0});
-  scenic::Color expected_colors_2[3] = {{0, 255, 255, 255},   // First ViewHolder
-                                        {255, 0, 255, 255},   // Second ViewHolder
-                                        {255, 255, 0, 255}};  // Third ViewHolder
-  for (uint32_t i = 0; i < 3; i++) {
-    EXPECT_GT(histogram[expected_colors_2[i]], 0u);
-    histogram.erase(expected_colors_2[i]);
+  if (supports_wireframe) {
+    histogram.erase({0, 0, 0, 0});
+    scenic::Color expected_colors_2[3] = {{0, 255, 255, 255},   // First ViewHolder
+                                          {255, 0, 255, 255},   // Second ViewHolder
+                                          {255, 255, 0, 255}};  // Third ViewHolder
+    for (uint32_t i = 0; i < 3; i++) {
+      EXPECT_GT(histogram[expected_colors_2[i]], 0u);
+      histogram.erase(expected_colors_2[i]);
+    }
+    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+  } else {
+    // If drawing wireframe is not supported, there should be nothing displayed
+    // on screen.
+    histogram.erase({0, 0, 0, 0});
+    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
   }
-  EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
 }
 
 // TODO(SCN-1375): Blocked against hardware inability
