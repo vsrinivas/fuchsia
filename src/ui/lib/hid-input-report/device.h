@@ -31,9 +31,9 @@ class Device {
   virtual ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) = 0;
   virtual ReportDescriptor GetDescriptor() = 0;
 
-  virtual ParseResult ParseReport(const uint8_t* data, size_t len, Report* report) = 0;
+  virtual ParseResult ParseInputReport(const uint8_t* data, size_t len, InputReport* report) = 0;
 
-  virtual uint8_t ReportId() const = 0;
+  virtual uint8_t InputReportId() const = 0;
 };
 
 }  // namespace hid_input_report

@@ -42,7 +42,7 @@ pub struct TouchBinding {
     descriptor: TouchDescriptor,
 }
 
-/// A [`ContactDescriptor`] describes the possible values touch contact properties can take on.
+/// A [`ContactInputDescriptor`] describes the possible values touch contact properties can take on.
 ///
 /// This descriptor can be used, for example, to determine where on a screen a touch made contact.
 ///
@@ -56,7 +56,7 @@ pub struct TouchBinding {
 /// let hit_location = scaling_factor * contact_report.position_x;
 /// ```
 #[derive(Copy, Clone)]
-pub struct ContactDescriptor {
+pub struct ContactInputDescriptor {
     /// The range of possible x values for this touch contact.
     _x_range: fidl::Range,
 
@@ -108,9 +108,12 @@ impl input_device::InputDeviceBinding for TouchBinding {
     async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
         match device.get_descriptor().await?.touch {
             Some(fidl_fuchsia_input_report::TouchDescriptor {
-                contacts: Some(_contacts),
-                max_contacts: _,
-                touch_type: _,
+                input:
+                    Some(fidl_fuchsia_input_report::TouchInputDescriptor {
+                        contacts: Some(_contacts),
+                        max_contacts: _,
+                        touch_type: _,
+                    }),
             }) => {
                 let (message_sender, message_receiver) =
                     futures::channel::mpsc::channel(input_device::INPUT_MESSAGE_BUFFER_SIZE);
@@ -133,7 +136,7 @@ impl input_device::InputDeviceBinding for TouchBinding {
 }
 
 impl TouchBinding {
-    /// Parses a FIDL contact descriptor into a [`ContactDescriptor`]
+    /// Parses a FIDL contact descriptor into a [`ContactInputDescriptor`]
     ///
     /// # Parameters
     /// - `contact_descriptor`: The contact descriptor to parse.
@@ -142,16 +145,16 @@ impl TouchBinding {
     /// If the contact descripto fails to parse because required fields aren't present.
     #[allow(dead_code)]
     fn parse_contact_descriptor(
-        contact_descriptor: &fidl::ContactDescriptor,
-    ) -> Result<ContactDescriptor, Error> {
+        contact_descriptor: &fidl::ContactInputDescriptor,
+    ) -> Result<ContactInputDescriptor, Error> {
         match contact_descriptor {
-            fidl::ContactDescriptor {
+            fidl::ContactInputDescriptor {
                 position_x: Some(x_axis),
                 position_y: Some(y_axis),
                 pressure: pressure_axis,
                 contact_width: width_axis,
                 contact_height: height_axis,
-            } => Ok(ContactDescriptor {
+            } => Ok(ContactInputDescriptor {
                 _x_range: x_axis.range,
                 _y_range: y_axis.range,
                 _pressure_range: Some(pressure_axis.unwrap().range), // Unwrap may be unsafe here

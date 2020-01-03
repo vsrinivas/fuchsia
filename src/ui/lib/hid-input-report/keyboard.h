@@ -15,9 +15,9 @@ class Keyboard : public Device {
   ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) override;
   ReportDescriptor GetDescriptor() override;
 
-  ParseResult ParseReport(const uint8_t* data, size_t len, Report* report) override;
+  ParseResult ParseInputReport(const uint8_t* data, size_t len, InputReport* report) override;
 
-  uint8_t ReportId() const override { return report_id_; }
+  uint8_t InputReportId() const override { return report_id_; }
 
  private:
   // Each item in |key_fields_| represents either a single key or a range of keys.

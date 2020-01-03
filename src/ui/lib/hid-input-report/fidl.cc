@@ -15,7 +15,7 @@
 
 namespace hid_input_report {
 
-void SetMouseDescriptor(FidlMouseDescriptor* descriptor) {
+void SetMouseInputDescriptor(FidlMouseInputDescriptor* descriptor) {
   if (descriptor->data.movement_x) {
     descriptor->builder.set_movement_x(&descriptor->data.movement_x.value());
   }
@@ -30,7 +30,7 @@ void SetMouseDescriptor(FidlMouseDescriptor* descriptor) {
   descriptor->descriptor = descriptor->builder.view();
 }
 
-void SetMouseReport(FidlMouseReport* report) {
+void SetMouseInputReport(FidlMouseInputReport* report) {
   if (report->data.movement_x) {
     report->builder.set_movement_x(&report->data.movement_x.value());
   }
@@ -45,14 +45,14 @@ void SetMouseReport(FidlMouseReport* report) {
   report->report = report->builder.view();
 }
 
-void SetSensorDescriptor(FidlSensorDescriptor* descriptor) {
+void SetSensorInputDescriptor(FidlSensorInputDescriptor* descriptor) {
   descriptor->values_view = fidl::VectorView<fuchsia_input_report::SensorAxis>(
       descriptor->data.values.data(), descriptor->data.num_values);
   descriptor->builder.set_values(&descriptor->values_view);
   descriptor->descriptor = descriptor->builder.view();
 }
 
-void SetSensorReport(FidlSensorReport* report) {
+void SetSensorInputReport(FidlSensorInputReport* report) {
   report->values_view =
       fidl::VectorView<int64_t>(report->data.values.data(), report->data.num_values);
   report->builder.set_values(&report->values_view);
@@ -60,9 +60,9 @@ void SetSensorReport(FidlSensorReport* report) {
   report->report = report->builder.view();
 }
 
-void SetTouchDescriptor(FidlTouchDescriptor* descriptor) {
+void SetTouchInputDescriptor(FidlTouchInputDescriptor* descriptor) {
   for (size_t i = 0; i < descriptor->data.num_contacts; i++) {
-    fuchsia_input_report::ContactDescriptor::Builder& contact_builder =
+    fuchsia_input_report::ContactInputDescriptor::Builder& contact_builder =
         descriptor->contacts_builder[i].builder;
     if (descriptor->data.contacts[i].position_x) {
       contact_builder.set_position_x(&descriptor->data.contacts[i].position_x.value());
@@ -82,7 +82,7 @@ void SetTouchDescriptor(FidlTouchDescriptor* descriptor) {
     descriptor->contacts_built[i] = contact_builder.view();
   }
 
-  descriptor->contacts_view = fidl::VectorView<fuchsia_input_report::ContactDescriptor>(
+  descriptor->contacts_view = fidl::VectorView<fuchsia_input_report::ContactInputDescriptor>(
       descriptor->contacts_built.data(), descriptor->data.num_contacts);
 
   descriptor->builder.set_contacts(&descriptor->contacts_view);
@@ -92,10 +92,11 @@ void SetTouchDescriptor(FidlTouchDescriptor* descriptor) {
   descriptor->descriptor = descriptor->builder.view();
 }
 
-void SetTouchReport(FidlTouchReport* report) {
+void SetTouchInputReport(FidlTouchInputReport* report) {
   for (size_t i = 0; i < report->data.num_contacts; i++) {
-    fuchsia_input_report::ContactReport::Builder& contact_builder = report->contacts[i].builder;
-    ContactReport& contact = report->data.contacts[i];
+    fuchsia_input_report::ContactInputReport::Builder& contact_builder =
+        report->contacts[i].builder;
+    ContactInputReport& contact = report->data.contacts[i];
 
     if (contact.contact_id) {
       contact_builder.set_contact_id(&contact.contact_id.value());
@@ -118,21 +119,21 @@ void SetTouchReport(FidlTouchReport* report) {
     report->contacts_built[i] = contact_builder.view();
   }
 
-  report->contacts_view = fidl::VectorView<fuchsia_input_report::ContactReport>(
+  report->contacts_view = fidl::VectorView<fuchsia_input_report::ContactInputReport>(
       report->contacts_built.data(), report->data.num_contacts);
   report->builder.set_contacts(&report->contacts_view);
 
   report->report = report->builder.view();
 }
 
-void SetKeyboardDescriptor(FidlKeyboardDescriptor* descriptor) {
+void SetKeyboardInputDescriptor(FidlKeyboardInputDescriptor* descriptor) {
   descriptor->keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
       descriptor->data.keys.data(), descriptor->data.num_keys);
   descriptor->builder.set_keys(&descriptor->keys_view);
   descriptor->descriptor = descriptor->builder.view();
 }
 
-void SetKeyboardReport(FidlKeyboardReport* report) {
+void SetKeyboardInputReport(FidlKeyboardInputReport* report) {
   report->pressed_keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
       report->data.pressed_keys.data(), report->data.num_pressed_keys);
   report->builder.set_pressed_keys(&report->pressed_keys_view);
@@ -142,66 +143,87 @@ void SetKeyboardReport(FidlKeyboardReport* report) {
 zx_status_t SetFidlDescriptor(const hid_input_report::ReportDescriptor& hid_desc,
                               FidlDescriptor* descriptor) {
   if (std::holds_alternative<MouseDescriptor>(hid_desc.descriptor)) {
-    descriptor->mouse.data = std::get<MouseDescriptor>(hid_desc.descriptor);
-    SetMouseDescriptor(&descriptor->mouse);
+    const MouseDescriptor* hid_mouse = &std::get<MouseDescriptor>(hid_desc.descriptor);
+    if (hid_mouse->input) {
+      descriptor->mouse.input.data = *hid_mouse->input;
+      SetMouseInputDescriptor(&descriptor->mouse.input);
+      descriptor->mouse.builder.set_input(&descriptor->mouse.input.descriptor);
+    }
+    descriptor->mouse.descriptor = descriptor->mouse.builder.view();
     descriptor->builder.set_mouse(&descriptor->mouse.descriptor);
     return ZX_OK;
   }
   if (std::holds_alternative<SensorDescriptor>(hid_desc.descriptor)) {
-    descriptor->sensor.data = std::get<SensorDescriptor>(hid_desc.descriptor);
-    SetSensorDescriptor(&descriptor->sensor);
+    const SensorDescriptor* hid_sensor = &std::get<SensorDescriptor>(hid_desc.descriptor);
+    if (hid_sensor->input) {
+      descriptor->sensor.input.data = *hid_sensor->input;
+      SetSensorInputDescriptor(&descriptor->sensor.input);
+      descriptor->sensor.builder.set_input(&descriptor->sensor.input.descriptor);
+    }
+    descriptor->sensor.descriptor = descriptor->sensor.builder.view();
     descriptor->builder.set_sensor(&descriptor->sensor.descriptor);
     return ZX_OK;
   }
   if (std::holds_alternative<TouchDescriptor>(hid_desc.descriptor)) {
-    descriptor->touch.data = std::get<TouchDescriptor>(hid_desc.descriptor);
-    SetTouchDescriptor(&descriptor->touch);
+    const TouchDescriptor* hid_touch = &std::get<TouchDescriptor>(hid_desc.descriptor);
+    if (hid_touch->input) {
+      descriptor->touch.input.data = *hid_touch->input;
+      SetTouchInputDescriptor(&descriptor->touch.input);
+      descriptor->touch.builder.set_input(&descriptor->touch.input.descriptor);
+    }
+    descriptor->touch.descriptor = descriptor->touch.builder.view();
     descriptor->builder.set_touch(&descriptor->touch.descriptor);
     return ZX_OK;
   }
   if (std::holds_alternative<KeyboardDescriptor>(hid_desc.descriptor)) {
-    descriptor->keyboard.data = std::get<KeyboardDescriptor>(hid_desc.descriptor);
-    SetKeyboardDescriptor(&descriptor->keyboard);
+    const KeyboardDescriptor* hid_keyboard = &std::get<KeyboardDescriptor>(hid_desc.descriptor);
+    if (hid_keyboard->input) {
+      descriptor->keyboard.input.data = *hid_keyboard->input;
+      SetKeyboardInputDescriptor(&descriptor->keyboard.input);
+      descriptor->keyboard.builder.set_input(&descriptor->keyboard.input.descriptor);
+    }
+    descriptor->keyboard.descriptor = descriptor->keyboard.builder.view();
     descriptor->builder.set_keyboard(&descriptor->keyboard.descriptor);
     return ZX_OK;
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t SetFidlReport(const hid_input_report::Report& hid_report, FidlReport* report) {
-  if (std::holds_alternative<MouseReport>(hid_report.report)) {
-    report->report = FidlMouseReport();
-    FidlMouseReport* mouse = &std::get<FidlMouseReport>(report->report);
+zx_status_t SetFidlInputReport(const hid_input_report::InputReport& hid_report,
+                               FidlInputReport* report) {
+  if (std::holds_alternative<MouseInputReport>(hid_report.report)) {
+    report->report = FidlMouseInputReport();
+    FidlMouseInputReport* mouse = &std::get<FidlMouseInputReport>(report->report);
 
-    mouse->data = std::get<MouseReport>(hid_report.report);
-    SetMouseReport(mouse);
+    mouse->data = std::get<MouseInputReport>(hid_report.report);
+    SetMouseInputReport(mouse);
     report->builder.set_mouse(&mouse->report);
     return ZX_OK;
   }
-  if (std::holds_alternative<SensorReport>(hid_report.report)) {
-    report->report = FidlSensorReport();
-    FidlSensorReport* sensor = &std::get<FidlSensorReport>(report->report);
+  if (std::holds_alternative<SensorInputReport>(hid_report.report)) {
+    report->report = FidlSensorInputReport();
+    FidlSensorInputReport* sensor = &std::get<FidlSensorInputReport>(report->report);
 
-    sensor->data = std::get<SensorReport>(hid_report.report);
-    SetSensorReport(sensor);
+    sensor->data = std::get<SensorInputReport>(hid_report.report);
+    SetSensorInputReport(sensor);
     report->builder.set_sensor(&sensor->report);
     return ZX_OK;
   }
-  if (std::holds_alternative<TouchReport>(hid_report.report)) {
-    report->report = FidlTouchReport();
-    FidlTouchReport* touch = &std::get<FidlTouchReport>(report->report);
+  if (std::holds_alternative<TouchInputReport>(hid_report.report)) {
+    report->report = FidlTouchInputReport();
+    FidlTouchInputReport* touch = &std::get<FidlTouchInputReport>(report->report);
 
-    touch->data = std::get<TouchReport>(hid_report.report);
-    SetTouchReport(touch);
+    touch->data = std::get<TouchInputReport>(hid_report.report);
+    SetTouchInputReport(touch);
     report->builder.set_touch(&touch->report);
     return ZX_OK;
   }
-  if (std::holds_alternative<KeyboardReport>(hid_report.report)) {
-    report->report = FidlKeyboardReport();
-    FidlKeyboardReport* keyboard = &std::get<FidlKeyboardReport>(report->report);
+  if (std::holds_alternative<KeyboardInputReport>(hid_report.report)) {
+    report->report = FidlKeyboardInputReport();
+    FidlKeyboardInputReport* keyboard = &std::get<FidlKeyboardInputReport>(report->report);
 
-    keyboard->data = std::get<KeyboardReport>(hid_report.report);
-    SetKeyboardReport(keyboard);
+    keyboard->data = std::get<KeyboardInputReport>(hid_report.report);
+    SetKeyboardInputReport(keyboard);
     report->builder.set_keyboard(&keyboard->report);
     return ZX_OK;
   }

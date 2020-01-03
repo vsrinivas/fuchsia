@@ -50,6 +50,7 @@ ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_rep
   }
 
   // No error, write to class members.
+  descriptor_.input = KeyboardInputDescriptor();
   size_t i = 0;
   // Convert each of the HID keys to fuchsia keys.
   for (uint32_t key : key_values) {
@@ -57,10 +58,10 @@ ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_rep
         key_util::hid_key_to_fuchsia_key(hid::USAGE(hid::usage::Page::kKeyboardKeypad, key));
     if (fuchsia_key) {
       // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be equivalent.
-      descriptor_.keys[i++] = static_cast<llcpp::fuchsia::ui::input2::Key>(*fuchsia_key);
+      descriptor_.input->keys[i++] = static_cast<llcpp::fuchsia::ui::input2::Key>(*fuchsia_key);
     }
   }
-  descriptor_.num_keys = i;
+  descriptor_.input->num_keys = i;
 
   num_keys_ = num_keys;
   key_fields_ = key_fields;
@@ -77,8 +78,8 @@ ReportDescriptor Keyboard::GetDescriptor() {
   return report_descriptor;
 }
 
-ParseResult Keyboard::ParseReport(const uint8_t* data, size_t len, Report* report) {
-  KeyboardReport keyboard_report = {};
+ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, InputReport* report) {
+  KeyboardInputReport keyboard_report = {};
   size_t key_index = 0;
   if (len != report_size_) {
     return kParseReportSizeMismatch;

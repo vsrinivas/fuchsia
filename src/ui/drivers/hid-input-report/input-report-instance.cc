@@ -71,7 +71,8 @@ void InputReportInstance::GetReports(GetReportsCompleter::Sync _completer) {
   size_t index = 0;
   zx_status_t status = ZX_OK;
   while (!reports_data_.empty()) {
-    status = hid_input_report::SetFidlReport(reports_data_.front(), &reports_fidl_data_[index]);
+    status =
+        hid_input_report::SetFidlInputReport(reports_data_.front(), &reports_fidl_data_[index]);
     reports_data_.pop();
     if (status != ZX_OK) {
       break;
@@ -89,7 +90,7 @@ void InputReportInstance::GetReports(GetReportsCompleter::Sync _completer) {
 }
 
 void InputReportInstance::ReceiveReport(const hid_input_report::ReportDescriptor& descriptor,
-                                        const hid_input_report::Report& input_report) {
+                                        const hid_input_report::InputReport& input_report) {
   fbl::AutoLock lock(&report_lock_);
 
   if (reports_data_.empty()) {

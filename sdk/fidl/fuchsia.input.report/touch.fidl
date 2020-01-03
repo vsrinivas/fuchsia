@@ -15,7 +15,7 @@ enum TouchType : uint32 {
 };
 
 /// `ContactDescriptor` describes the fields associated with a touch on a touch device.
-table ContactDescriptor {
+table ContactInputDescriptor {
     /// Describes the reporting of the x-axis.
     1: Axis position_x;
 
@@ -32,10 +32,11 @@ table ContactDescriptor {
     5: Axis contact_height;
 };
 
-/// `TouchDescriptor` describes the fields associated with an individual touch device.
-table TouchDescriptor {
+/// Describes the format of the input report that will be sent from the keyboard
+/// to the device.
+table TouchInputDescriptor {
     /// The contact descriptors associated with this touch descriptor.
-    1: vector<ContactDescriptor>:TOUCH_MAX_CONTACTS contacts;
+    1: vector<ContactInputDescriptor>:TOUCH_MAX_CONTACTS contacts;
 
     /// The max number of contacts that this touch device can report at once.
     2: uint32 max_contacts;
@@ -44,8 +45,13 @@ table TouchDescriptor {
     3: TouchType touch_type;
 };
 
+/// The capabilities of a touch device.
+table TouchDescriptor {
+    1: TouchInputDescriptor input;
+};
+
 /// `Contact` describes one touch on a touch device.
-table ContactReport {
+table ContactInputReport {
     /// Identifier for this contact.
     1: uint32 contact_id;
 
@@ -72,7 +78,7 @@ table ContactReport {
 };
 
 /// `TouchscreenReport` describes the current contacts recorded by the touchscreen.
-table TouchReport {
+table TouchInputReport {
     /// The contacts currently being reported by the device.
-    1: vector<ContactReport>:TOUCH_MAX_CONTACTS contacts;
+    1: vector<ContactInputReport>:TOUCH_MAX_CONTACTS contacts;
 };

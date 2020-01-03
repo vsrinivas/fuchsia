@@ -19,7 +19,7 @@
 
 namespace hid_input_report {
 
-struct MouseDescriptor {
+struct MouseInputDescriptor {
   std::optional<fuchsia_input_report::Axis> movement_x = {};
   std::optional<fuchsia_input_report::Axis> movement_y = {};
   std::optional<fuchsia_input_report::Axis> scroll_v = {};
@@ -29,7 +29,7 @@ struct MouseDescriptor {
   std::array<uint8_t, fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS> buttons;
 };
 
-struct MouseReport {
+struct MouseInputReport {
   std::optional<int64_t> movement_x;
   std::optional<int64_t> movement_y;
   std::optional<int64_t> scroll_v;
@@ -38,21 +38,21 @@ struct MouseReport {
   std::array<uint8_t, fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS> buttons_pressed;
 };
 
-// |SensorDescriptor| describes the capabilities of a sensor device.
-struct SensorDescriptor {
+// |SensorInputDescriptor| describes the capabilities of a sensor device.
+struct SensorInputDescriptor {
   std::array<fuchsia_input_report::SensorAxis, fuchsia_input_report::SENSOR_MAX_VALUES> values;
   size_t num_values;
 };
 
-// |SensorReport| describes the sensor event delivered from the event stream.
+// |SensorInputReport| describes the sensor event delivered from the event stream.
 // The values array will always be the same size as the descriptor values, and they
 // will always be in the same order.
-struct SensorReport {
+struct SensorInputReport {
   std::array<int64_t, fuchsia_input_report::SENSOR_MAX_VALUES> values;
   size_t num_values;
 };
 
-struct ContactDescriptor {
+struct ContactInputDescriptor {
   std::optional<fuchsia_input_report::Axis> contact_id;
   std::optional<fuchsia_input_report::Axis> is_pressed;
   std::optional<fuchsia_input_report::Axis> position_x;
@@ -62,18 +62,22 @@ struct ContactDescriptor {
   std::optional<fuchsia_input_report::Axis> contact_height;
 };
 
-struct TouchDescriptor {
+struct TouchInputDescriptor {
   /// The type of touch device being used.
   fuchsia_input_report::TouchType touch_type;
 
   uint32_t max_contacts;
   /// This describes each of the contact capabilities.
-  std::array<ContactDescriptor, fuchsia_input_report::TOUCH_MAX_CONTACTS> contacts;
+  std::array<ContactInputDescriptor, fuchsia_input_report::TOUCH_MAX_CONTACTS> contacts;
   size_t num_contacts;
 };
 
+struct TouchDescriptor {
+  std::optional<TouchInputDescriptor> input;
+};
+
 /// |Contact| describes one touch on a touch device.
-struct ContactReport {
+struct ContactInputReport {
   /// Identifier for the contact.
   /// Note: |contact_id| might not be sequential and will range from 0 to |max_contact_id|.
   std::optional<uint32_t> contact_id;
@@ -85,30 +89,44 @@ struct ContactReport {
   std::optional<int64_t> contact_height;
 };
 
-/// |TouchReport| describes the current contacts recorded by the touchscreen.
-struct TouchReport {
+/// |TouchInputReport| describes the current contacts recorded by the touchscreen.
+struct TouchInputReport {
   /// The contacts currently being reported by the device.
-  std::array<ContactReport, fuchsia_input_report::TOUCH_MAX_CONTACTS> contacts;
+  std::array<ContactInputReport, fuchsia_input_report::TOUCH_MAX_CONTACTS> contacts;
   size_t num_contacts;
 };
 
-struct KeyboardDescriptor {
+struct KeyboardInputDescriptor {
   std::array<::llcpp::fuchsia::ui::input2::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS> keys;
   size_t num_keys = 0;
 };
 
-struct KeyboardReport {
+struct KeyboardDescriptor {
+  std::optional<KeyboardInputDescriptor> input;
+};
+
+struct KeyboardInputReport {
   std::array<::llcpp::fuchsia::ui::input2::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS>
       pressed_keys;
   size_t num_pressed_keys;
+};
+
+struct MouseDescriptor {
+  std::optional<MouseInputDescriptor> input;
+};
+
+struct SensorDescriptor {
+  std::optional<SensorInputDescriptor> input;
 };
 
 struct ReportDescriptor {
   std::variant<MouseDescriptor, SensorDescriptor, TouchDescriptor, KeyboardDescriptor> descriptor;
 };
 
-struct Report {
-  std::variant<std::monostate, MouseReport, SensorReport, TouchReport, KeyboardReport> report;
+struct InputReport {
+  std::variant<std::monostate, MouseInputReport, SensorInputReport, TouchInputReport,
+               KeyboardInputReport>
+      report;
 };
 
 }  // namespace hid_input_report

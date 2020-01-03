@@ -94,8 +94,8 @@ impl input_device::InputDeviceBinding for MouseBinding {
         _device_descriptor: &mut input_device::InputDescriptor,
         input_message_sender: &mut Sender<input_device::InputMessage>,
     ) -> Option<InputReport> {
-        // Fail early if the new InputReport isn't a MouseReport
-        let mouse_report: &fidl_fuchsia_input_report::MouseReport = match &report.mouse {
+        // Fail early if the new InputReport isn't a MouseInputReport
+        let mouse_report: &fidl_fuchsia_input_report::MouseInputReport = match &report.mouse {
             Some(mouse) => mouse,
             None => {
                 fx_log_info!("Not processing non-mouse InputReport.");
@@ -218,11 +218,11 @@ fn get_u32_from_vector(vector: &Vec<u8>) -> u32 {
     bits
 }
 
-/// Returns a u32 representation of the pressed buttons in the MouseReport.
+/// Returns a u32 representation of the pressed buttons in the MouseInputReport.
 ///
 /// # Parameters
 /// - `mouse_report`: The report to get pressed buttons from.
-fn buttons(mouse_report: &Option<fidl_fuchsia_input_report::MouseReport>) -> u32 {
+fn buttons(mouse_report: &Option<fidl_fuchsia_input_report::MouseInputReport>) -> u32 {
     if mouse_report.is_some() {
         return match &mouse_report.as_ref().unwrap().pressed_buttons {
             Some(buttons) => get_u32_from_vector(&buttons),
@@ -279,7 +279,7 @@ mod tests {
         InputReport {
             event_time: None,
             keyboard: None,
-            mouse: Some(fidl_fuchsia_input_report::MouseReport {
+            mouse: Some(fidl_fuchsia_input_report::MouseInputReport {
                 movement_x: Some(x),
                 movement_y: Some(y),
                 scroll_h: None,

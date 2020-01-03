@@ -76,8 +76,8 @@ class FakeDevice final : public fuchsia_input_report::InputDevice::Interface {
 
   virtual void GetReports(GetReportsCompleter::Sync completer) override {
     fbl::AutoLock lock(&lock_);
-    hid_input_report::FidlReport fidl;
-    zx_status_t status = hid_input_report::SetFidlReport(report_, &fidl);
+    hid_input_report::FidlInputReport fidl;
+    zx_status_t status = hid_input_report::SetFidlInputReport(report_, &fidl);
     if (status != ZX_OK) {
       completer.Reply(fidl::VectorView<fuchsia_input_report::InputReport>(nullptr, 0));
       return;
@@ -91,7 +91,7 @@ class FakeDevice final : public fuchsia_input_report::InputDevice::Interface {
   // Sets the fake's report, which will be read with |GetReports|. This also
   // triggers the |reports_events_| signal which wakes up any clients waiting
   // for report dta.
-  void SetReport(hid_input_report::Report report) {
+  void SetReport(hid_input_report::InputReport report) {
     fbl::AutoLock lock(&lock_);
     report_ = report;
     reports_event_.signal(0, DEV_STATE_READABLE);
@@ -117,7 +117,7 @@ class FakeDevice final : public fuchsia_input_report::InputDevice::Interface {
   // reports and handling the FIDL calls happen on seperate threads.
   fbl::Mutex lock_ = {};
   zx::event reports_event_ __TA_GUARDED(lock_);
-  hid_input_report::Report report_ __TA_GUARDED(lock_) = {};
+  hid_input_report::InputReport report_ __TA_GUARDED(lock_) = {};
   hid_input_report::ReportDescriptor descriptor_ __TA_GUARDED(lock_) = {};
 };
 
@@ -151,8 +151,8 @@ class PrintInputReport : public ::testing::Test {
   std::optional<fuchsia_input_report::InputDevice::SyncClient> client_;
 };
 
-TEST_F(PrintInputReport, PrintMouseReport) {
-  hid_input_report::MouseReport mouse = {};
+TEST_F(PrintInputReport, PrintMouseInputReport) {
+  hid_input_report::MouseInputReport mouse = {};
   mouse.movement_x = 100;
   mouse.movement_y = 200;
 
@@ -161,7 +161,7 @@ TEST_F(PrintInputReport, PrintMouseReport) {
   mouse.buttons_pressed[1] = 10;
   mouse.buttons_pressed[2] = 5;
 
-  hid_input_report::Report report;
+  hid_input_report::InputReport report;
   report.report = mouse;
 
   fake_device_->SetReport(report);
@@ -178,23 +178,25 @@ TEST_F(PrintInputReport, PrintMouseReport) {
   print_input_report::PrintInputReport(&printer, &client_.value(), 1);
 }
 
-TEST_F(PrintInputReport, PrintMouseDescriptor) {
+TEST_F(PrintInputReport, PrintMouseInputDescriptor) {
   hid_input_report::MouseDescriptor mouse = {};
+  mouse.input = hid_input_report::MouseInputDescriptor();
+
   fuchsia_input_report::Axis axis;
   axis.unit = fuchsia_input_report::Unit::DISTANCE;
   axis.range.min = -100;
   axis.range.max = -100;
-  mouse.movement_x = axis;
+  mouse.input->movement_x = axis;
 
   axis.unit = fuchsia_input_report::Unit::NONE;
   axis.range.min = -200;
   axis.range.max = -200;
-  mouse.movement_y = axis;
+  mouse.input->movement_y = axis;
 
-  mouse.num_buttons = 3;
-  mouse.buttons[0] = 1;
-  mouse.buttons[1] = 10;
-  mouse.buttons[2] = 5;
+  mouse.input->num_buttons = 3;
+  mouse.input->buttons[0] = 1;
+  mouse.input->buttons[1] = 10;
+  mouse.input->buttons[2] = 5;
 
   hid_input_report::ReportDescriptor descriptor;
   descriptor.descriptor = mouse;
@@ -220,20 +222,21 @@ TEST_F(PrintInputReport, PrintMouseDescriptor) {
   print_input_report::PrintInputDescriptor(&printer, &client_.value());
 }
 
-TEST_F(PrintInputReport, PrintSensorDescriptor) {
+TEST_F(PrintInputReport, PrintSensorInputDescriptor) {
   fuchsia_input_report::Axis axis;
   axis.unit = fuchsia_input_report::Unit::LINEAR_VELOCITY;
   axis.range.min = 0;
   axis.range.max = 1000;
 
   hid_input_report::SensorDescriptor sensor_desc = {};
-  sensor_desc.values[0].axis = axis;
-  sensor_desc.values[0].type = fuchsia_input_report::SensorType::ACCELEROMETER_X;
+  sensor_desc.input = hid_input_report::SensorInputDescriptor();
+  sensor_desc.input->values[0].axis = axis;
+  sensor_desc.input->values[0].type = fuchsia_input_report::SensorType::ACCELEROMETER_X;
 
   axis.unit = fuchsia_input_report::Unit::LUMINOUS_FLUX;
-  sensor_desc.values[1].axis = axis;
-  sensor_desc.values[1].type = fuchsia_input_report::SensorType::LIGHT_ILLUMINANCE;
-  sensor_desc.num_values = 2;
+  sensor_desc.input->values[1].axis = axis;
+  sensor_desc.input->values[1].type = fuchsia_input_report::SensorType::LIGHT_ILLUMINANCE;
+  sensor_desc.input->num_values = 2;
 
   hid_input_report::ReportDescriptor desc;
   desc.descriptor = sensor_desc;
@@ -258,13 +261,13 @@ TEST_F(PrintInputReport, PrintSensorDescriptor) {
   print_input_report::PrintInputDescriptor(&printer, &client_.value());
 }
 
-TEST_F(PrintInputReport, PrintSensorReport) {
-  hid_input_report::SensorReport sensor_report = {};
+TEST_F(PrintInputReport, PrintSensorInputReport) {
+  hid_input_report::SensorInputReport sensor_report = {};
   sensor_report.values[0] = 100;
   sensor_report.values[1] = -100;
   sensor_report.num_values = 2;
 
-  hid_input_report::Report report;
+  hid_input_report::InputReport report;
   report.report = sensor_report;
 
   fake_device_->SetReport(report);
@@ -279,26 +282,27 @@ TEST_F(PrintInputReport, PrintSensorReport) {
   print_input_report::PrintInputReport(&printer, &client_.value(), 1);
 }
 
-TEST_F(PrintInputReport, PrintTouchDescriptor) {
+TEST_F(PrintInputReport, PrintTouchInputDescriptor) {
   hid_input_report::TouchDescriptor touch_desc = {};
-  touch_desc.touch_type = fuchsia_input_report::TouchType::TOUCHSCREEN;
+  touch_desc.input = hid_input_report::TouchInputDescriptor();
+  touch_desc.input->touch_type = fuchsia_input_report::TouchType::TOUCHSCREEN;
 
-  touch_desc.max_contacts = 100;
+  touch_desc.input->max_contacts = 100;
 
   fuchsia_input_report::Axis axis;
   axis.unit = fuchsia_input_report::Unit::NONE;
   axis.range.min = 0;
   axis.range.max = 300;
 
-  touch_desc.contacts[0].position_x = axis;
+  touch_desc.input->contacts[0].position_x = axis;
 
   axis.range.max = 500;
-  touch_desc.contacts[0].position_y = axis;
+  touch_desc.input->contacts[0].position_y = axis;
 
   axis.range.max = 100;
-  touch_desc.contacts[0].pressure = axis;
+  touch_desc.input->contacts[0].pressure = axis;
 
-  touch_desc.num_contacts = 1;
+  touch_desc.input->num_contacts = 1;
 
   hid_input_report::ReportDescriptor desc;
   desc.descriptor = touch_desc;
@@ -328,8 +332,8 @@ TEST_F(PrintInputReport, PrintTouchDescriptor) {
   print_input_report::PrintInputDescriptor(&printer, &client_.value());
 }
 
-TEST_F(PrintInputReport, PrintTouchReport) {
-  hid_input_report::TouchReport touch_report = {};
+TEST_F(PrintInputReport, PrintTouchInputReport) {
+  hid_input_report::TouchInputReport touch_report = {};
 
   touch_report.num_contacts = 1;
 
@@ -340,7 +344,7 @@ TEST_F(PrintInputReport, PrintTouchReport) {
   touch_report.contacts[0].contact_width = 678;
   touch_report.contacts[0].contact_height = 789;
 
-  hid_input_report::Report report;
+  hid_input_report::InputReport report;
   report.report = touch_report;
 
   fake_device_->SetReport(report);
@@ -359,13 +363,14 @@ TEST_F(PrintInputReport, PrintTouchReport) {
   print_input_report::PrintInputReport(&printer, &client_.value(), 1);
 }
 
-TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
+TEST_F(PrintInputReport, PrintKeyboardInputDescriptor) {
   hid_input_report::KeyboardDescriptor keyboard_desc = {};
+  keyboard_desc.input = hid_input_report::KeyboardInputDescriptor();
 
-  keyboard_desc.num_keys = 3;
-  keyboard_desc.keys[0] = llcpp::fuchsia::ui::input2::Key::A;
-  keyboard_desc.keys[1] = llcpp::fuchsia::ui::input2::Key::UP;
-  keyboard_desc.keys[2] = llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT;
+  keyboard_desc.input->num_keys = 3;
+  keyboard_desc.input->keys[0] = llcpp::fuchsia::ui::input2::Key::A;
+  keyboard_desc.input->keys[1] = llcpp::fuchsia::ui::input2::Key::UP;
+  keyboard_desc.input->keys[2] = llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT;
 
   hid_input_report::ReportDescriptor desc;
   desc.descriptor = keyboard_desc;
@@ -383,15 +388,15 @@ TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
   print_input_report::PrintInputDescriptor(&printer, &client_.value());
 }
 
-TEST_F(PrintInputReport, PrintKeyboardReport) {
-  hid_input_report::KeyboardReport keyboard_report = {};
+TEST_F(PrintInputReport, PrintKeyboardInputReport) {
+  hid_input_report::KeyboardInputReport keyboard_report = {};
 
   keyboard_report.num_pressed_keys = 3;
   keyboard_report.pressed_keys[0] = llcpp::fuchsia::ui::input2::Key::A;
   keyboard_report.pressed_keys[1] = llcpp::fuchsia::ui::input2::Key::UP;
   keyboard_report.pressed_keys[2] = llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT;
 
-  hid_input_report::Report report;
+  hid_input_report::InputReport report;
   report.report = keyboard_report;
 
   fake_device_->SetReport(report);
@@ -408,12 +413,12 @@ TEST_F(PrintInputReport, PrintKeyboardReport) {
   print_input_report::PrintInputReport(&printer, &client_.value(), 1);
 }
 
-TEST_F(PrintInputReport, PrintKeyboardReportNoKeys) {
-  hid_input_report::KeyboardReport keyboard_report = {};
+TEST_F(PrintInputReport, PrintKeyboardInputReportNoKeys) {
+  hid_input_report::KeyboardInputReport keyboard_report = {};
 
   keyboard_report.num_pressed_keys = 0;
 
-  hid_input_report::Report report;
+  hid_input_report::InputReport report;
   report.report = keyboard_report;
 
   fake_device_->SetReport(report);

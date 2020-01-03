@@ -230,10 +230,10 @@ class TouchApp {
   }
 
   bool IsTouchscreen(const fidl_report::DeviceDescriptor& descriptor) {
-    if (!descriptor.has_touch()) {
+    if (!descriptor.has_touch() || !descriptor.touch().has_input()) {
       return false;
     }
-    const fidl_report::TouchDescriptor& touch_desc = descriptor.touch();
+    const fidl_report::TouchInputDescriptor& touch_desc = descriptor.touch().input();
     if (!touch_desc.has_touch_type() ||
         (touch_desc.touch_type() != fidl_report::TouchType::TOUCHSCREEN)) {
       return false;
@@ -275,8 +275,8 @@ class TouchApp {
         continue;
       }
 
-      SetMaxValues(device_descriptor.touch().contacts()[0].position_x().range.max,
-                   device_descriptor.touch().contacts()[0].position_y().range.max);
+      SetMaxValues(device_descriptor.touch().input().contacts()[0].position_x().range.max,
+                   device_descriptor.touch().input().contacts()[0].position_y().range.max);
 
       printf("Found touchscreen at %s\n", devname);
 

@@ -78,7 +78,9 @@ impl input_device::InputDeviceBinding for KeyboardBinding {
 
     async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
         match device.get_descriptor().await?.keyboard {
-            Some(fidl_fuchsia_input_report::KeyboardDescriptor { keys: _ }) => {
+            Some(fidl_fuchsia_input_report::KeyboardDescriptor {
+                input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor { keys: _ }),
+            }) => {
                 let (message_sender, message_receiver) =
                     futures::channel::mpsc::channel(input_device::INPUT_MESSAGE_BUFFER_SIZE);
                 Ok(KeyboardBinding {

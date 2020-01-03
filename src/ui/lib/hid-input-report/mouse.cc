@@ -21,7 +21,7 @@ ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
   hid::Attributes buttons[fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS];
   uint8_t num_buttons = 0;
 
-  MouseDescriptor mouse_descriptor = {};
+  MouseInputDescriptor mouse_descriptor = {};
 
   for (size_t i = 0; i < hid_report_descriptor.input_count; i++) {
     const hid::ReportField& field = hid_report_descriptor.input_fields[i];
@@ -52,7 +52,7 @@ ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
   num_buttons_ = num_buttons;
 
   mouse_descriptor.num_buttons = num_buttons;
-  descriptor_ = mouse_descriptor;
+  descriptor_.input = mouse_descriptor;
 
   report_size_ = hid_report_descriptor.input_byte_sz;
   report_id_ = hid_report_descriptor.report_id;
@@ -66,19 +66,19 @@ ReportDescriptor Mouse::GetDescriptor() {
   return report_descriptor;
 }
 
-ParseResult Mouse::ParseReport(const uint8_t* data, size_t len, Report* report) {
-  MouseReport mouse_report = {};
+ParseResult Mouse::ParseInputReport(const uint8_t* data, size_t len, InputReport* report) {
+  MouseInputReport mouse_report = {};
   if (len != report_size_) {
     return kParseReportSizeMismatch;
   }
 
-  if (descriptor_.movement_x) {
+  if (descriptor_.input->movement_x) {
     double value_out;
     if (hid::ExtractAsUnitType(data, len, movement_x_, &value_out)) {
       mouse_report.movement_x = static_cast<int64_t>(value_out);
     }
   }
-  if (descriptor_.movement_y) {
+  if (descriptor_.input->movement_y) {
     double value_out;
     if (hid::ExtractAsUnitType(data, len, movement_y_, &value_out)) {
       mouse_report.movement_y = static_cast<int64_t>(value_out);

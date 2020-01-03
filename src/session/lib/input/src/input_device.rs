@@ -324,11 +324,13 @@ mod tests {
                     let _ = responder.send(fidl_fuchsia_input_report::DeviceDescriptor {
                         device_info: None,
                         mouse: Some(fidl_fuchsia_input_report::MouseDescriptor {
-                            movement_x: None,
-                            movement_y: None,
-                            scroll_v: None,
-                            scroll_h: None,
-                            buttons: None,
+                            input: Some(fidl_fuchsia_input_report::MouseInputDescriptor {
+                                movement_x: None,
+                                movement_y: None,
+                                scroll_v: None,
+                                scroll_h: None,
+                                buttons: None,
+                            }),
                         }),
                         sensor: None,
                         touch: None,
@@ -378,9 +380,11 @@ mod tests {
                         mouse: None,
                         sensor: None,
                         touch: Some(fidl_fuchsia_input_report::TouchDescriptor {
-                            contacts: None,
-                            max_contacts: None,
-                            touch_type: None,
+                            input: Some(fidl_fuchsia_input_report::TouchInputDescriptor {
+                                contacts: None,
+                                max_contacts: None,
+                                touch_type: None,
+                            }),
                         }),
                         keyboard: None,
                     });
@@ -429,7 +433,9 @@ mod tests {
                         sensor: None,
                         touch: None,
                         keyboard: Some(fidl_fuchsia_input_report::KeyboardDescriptor {
-                            keys: None,
+                            input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor {
+                                keys: None,
+                            }),
                         }),
                     });
                 }
@@ -473,20 +479,26 @@ mod tests {
                     let _ = responder.send(fidl_fuchsia_input_report::DeviceDescriptor {
                         device_info: None,
                         mouse: Some(fidl_fuchsia_input_report::MouseDescriptor {
-                            movement_x: None,
-                            movement_y: None,
-                            scroll_v: None,
-                            scroll_h: None,
-                            buttons: None,
+                            input: Some(fidl_fuchsia_input_report::MouseInputDescriptor {
+                                movement_x: None,
+                                movement_y: None,
+                                scroll_v: None,
+                                scroll_h: None,
+                                buttons: None,
+                            }),
                         }),
                         sensor: None,
                         touch: Some(fidl_fuchsia_input_report::TouchDescriptor {
-                            contacts: None,
-                            max_contacts: None,
-                            touch_type: None,
+                            input: Some(fidl_fuchsia_input_report::TouchInputDescriptor {
+                                contacts: None,
+                                max_contacts: None,
+                                touch_type: None,
+                            }),
                         }),
                         keyboard: Some(fidl_fuchsia_input_report::KeyboardDescriptor {
-                            keys: None,
+                            input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor {
+                                keys: None,
+                            }),
                         }),
                     });
                 }

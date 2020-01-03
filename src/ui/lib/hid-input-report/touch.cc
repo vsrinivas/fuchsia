@@ -18,7 +18,7 @@ namespace hid_input_report {
 ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
   ContactConfig contacts[fuchsia_input_report::TOUCH_MAX_CONTACTS];
   size_t num_contacts = 0;
-  TouchDescriptor descriptor = {};
+  TouchInputDescriptor descriptor = {};
 
   // Traverse up the nested collections to the Application collection.
   hid::Collection* main_collection = hid_report_descriptor.input_fields[0].col;
@@ -64,7 +64,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
       return kParseTooManyItems;
     }
     ContactConfig* contact = &contacts[num_contacts - 1];
-    ContactDescriptor* contact_descriptor = &descriptor.contacts[num_contacts - 1];
+    ContactInputDescriptor* contact_descriptor = &descriptor.contacts[num_contacts - 1];
 
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID)) {
@@ -110,7 +110,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
 
   descriptor.max_contacts = static_cast<uint32_t>(num_contacts);
   descriptor.num_contacts = num_contacts;
-  descriptor_ = descriptor;
+  descriptor_.input = descriptor;
 
   report_size_ = hid_report_descriptor.input_byte_sz;
   report_id_ = hid_report_descriptor.report_id;
@@ -124,8 +124,8 @@ ReportDescriptor Touch::GetDescriptor() {
   return report_descriptor;
 }
 
-ParseResult Touch::ParseReport(const uint8_t* data, size_t len, Report* report) {
-  TouchReport touch_report = {};
+ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, InputReport* report) {
+  TouchInputReport touch_report = {};
   if (len != report_size_) {
     return kParseReportSizeMismatch;
   }
@@ -134,9 +134,9 @@ ParseResult Touch::ParseReport(const uint8_t* data, size_t len, Report* report) 
 
   // Extract each touch item.
   size_t contact_num = 0;
-  for (size_t i = 0; i < descriptor_.num_contacts; i++) {
-    ContactReport& contact = touch_report.contacts[contact_num];
-    if (descriptor_.contacts[i].is_pressed) {
+  for (size_t i = 0; i < descriptor_.input->num_contacts; i++) {
+    ContactInputReport& contact = touch_report.contacts[contact_num];
+    if (descriptor_.input->contacts[i].is_pressed) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].tip_switch, &value_out)) {
         contact.is_pressed = static_cast<bool>(value_out);
         if (!*contact.is_pressed) {
@@ -145,7 +145,7 @@ ParseResult Touch::ParseReport(const uint8_t* data, size_t len, Report* report) 
       }
     }
     contact_num++;
-    if (descriptor_.contacts[i].contact_id) {
+    if (descriptor_.input->contacts[i].contact_id) {
       // Some touchscreens we support mistakenly set the logical range to 0-1 for the
       // tip switch and then never reset the range for the contact id. For this reason,
       // we have to do an "unconverted" extraction.
@@ -154,27 +154,27 @@ ParseResult Touch::ParseReport(const uint8_t* data, size_t len, Report* report) 
         contact.contact_id = contact_id;
       }
     }
-    if (descriptor_.contacts[i].position_x) {
+    if (descriptor_.input->contacts[i].position_x) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].position_x, &value_out)) {
         contact.position_x = static_cast<int64_t>(value_out);
       }
     }
-    if (descriptor_.contacts[i].position_y) {
+    if (descriptor_.input->contacts[i].position_y) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].position_y, &value_out)) {
         contact.position_y = static_cast<int64_t>(value_out);
       }
     }
-    if (descriptor_.contacts[i].pressure) {
+    if (descriptor_.input->contacts[i].pressure) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].pressure, &value_out)) {
         contact.pressure = static_cast<int64_t>(value_out);
       }
     }
-    if (descriptor_.contacts[i].contact_width) {
+    if (descriptor_.input->contacts[i].contact_width) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].contact_width, &value_out)) {
         contact.contact_width = static_cast<int64_t>(value_out);
       }
     }
-    if (descriptor_.contacts[i].contact_height) {
+    if (descriptor_.input->contacts[i].contact_height) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].contact_height, &value_out)) {
         contact.contact_height = static_cast<int64_t>(value_out);
       }

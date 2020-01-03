@@ -70,7 +70,7 @@ TEST(KeyboardTest, BootKeyboard) {
       std::get_if<hid_input_report::KeyboardDescriptor>(&report_descriptor.descriptor);
   ASSERT_NOT_NULL(keyboard_descriptor);
 
-  EXPECT_EQ(keyboard_descriptor->num_keys, 105U);
+  EXPECT_EQ(keyboard_descriptor->input->num_keys, 105U);
 
   // Test a report parses correctly.
   hid_boot_kbd_report kbd_report = {};
@@ -79,13 +79,13 @@ TEST(KeyboardTest, BootKeyboard) {
   kbd_report.usage[1] = HID_USAGE_KEY_NON_US_BACKSLASH;
   kbd_report.usage[2] = HID_USAGE_KEY_UP;
 
-  hid_input_report::Report report = {};
-  EXPECT_EQ(
-      hid_input_report::ParseResult::kParseOk,
-      keyboard.ParseReport(reinterpret_cast<uint8_t*>(&kbd_report), sizeof(kbd_report), &report));
+  hid_input_report::InputReport report = {};
+  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+            keyboard.ParseInputReport(reinterpret_cast<uint8_t*>(&kbd_report), sizeof(kbd_report),
+                                      &report));
 
-  hid_input_report::KeyboardReport* keyboard_report =
-      std::get_if<hid_input_report::KeyboardReport>(&report.report);
+  hid_input_report::KeyboardInputReport* keyboard_report =
+      std::get_if<hid_input_report::KeyboardInputReport>(&report.report);
   ASSERT_NOT_NULL(keyboard_report);
   ASSERT_EQ(keyboard_report->num_pressed_keys, 5U);
   EXPECT_EQ(keyboard_report->pressed_keys[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
@@ -113,18 +113,18 @@ TEST(KeyboardTest, DoubleCountingKeys) {
       std::get_if<hid_input_report::KeyboardDescriptor>(&report_descriptor.descriptor);
   ASSERT_NOT_NULL(keyboard_descriptor);
 
-  EXPECT_EQ(keyboard_descriptor->num_keys, 105U);
+  EXPECT_EQ(keyboard_descriptor->input->num_keys, 105U);
 
   // Test that all of the expected keys are here.
   for (size_t i = 0; i < 97; i++) {
     EXPECT_EQ(*key_util::fuchsia_key_to_hid_key(
-                  static_cast<fuchsia::ui::input2::Key>(keyboard_descriptor->keys[i])),
+                  static_cast<fuchsia::ui::input2::Key>(keyboard_descriptor->input->keys[i])),
               i + 4);
   }
 
   for (size_t i = 97; i < 105; i++) {
     EXPECT_EQ(*key_util::fuchsia_key_to_hid_key(
-                  static_cast<fuchsia::ui::input2::Key>(keyboard_descriptor->keys[i])),
+                  static_cast<fuchsia::ui::input2::Key>(keyboard_descriptor->input->keys[i])),
               0xE0 + (i - 97));
   }
 }

@@ -196,7 +196,8 @@ TEST_F(HidDevTest, GetReportDescTest) {
 
   auto& desc = result.Unwrap()->descriptor;
   ASSERT_TRUE(desc.has_mouse());
-  fuchsia_input_report::MouseDescriptor& mouse = desc.mouse();
+  ASSERT_TRUE(desc.mouse().has_input());
+  fuchsia_input_report::MouseInputDescriptor& mouse = desc.mouse().input();
 
   ASSERT_TRUE(mouse.has_movement_x());
   ASSERT_EQ(-127, mouse.movement_x().range.min);
@@ -279,7 +280,8 @@ TEST_F(HidDevTest, SensorTest) {
   ASSERT_OK(result.status());
   fuchsia_input_report::DeviceDescriptor& desc = result->descriptor;
   ASSERT_TRUE(desc.has_sensor());
-  fuchsia_input_report::SensorDescriptor& sensor_desc = desc.sensor();
+  ASSERT_TRUE(desc.sensor().has_input());
+  fuchsia_input_report::SensorInputDescriptor& sensor_desc = desc.sensor().input();
   ASSERT_TRUE(sensor_desc.has_values());
   ASSERT_EQ(4, sensor_desc.values().count());
 
@@ -322,7 +324,7 @@ TEST_F(HidDevTest, SensorTest) {
   ASSERT_EQ(1, reports.count());
 
   ASSERT_TRUE(reports[0].has_sensor());
-  fuchsia_input_report::SensorReport& sensor_report = reports[0].sensor();
+  fuchsia_input_report::SensorInputReport& sensor_report = reports[0].sensor();
   EXPECT_TRUE(sensor_report.has_values());
   EXPECT_EQ(4, sensor_report.values().count());
 
@@ -338,7 +340,7 @@ TEST_F(HidDevTest, SensorTest) {
   dev_ops.ops->close(dev_ops.ctx, 0);
 }
 
-TEST_F(HidDevTest, GetTouchReportTest) {
+TEST_F(HidDevTest, GetTouchInputReportTest) {
   size_t desc_len;
   const uint8_t* report_desc = get_paradise_touch_report_desc(&desc_len);
   std::vector<uint8_t> desc(report_desc, report_desc + desc_len);

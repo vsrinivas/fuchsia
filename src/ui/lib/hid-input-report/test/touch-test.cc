@@ -48,17 +48,17 @@ TEST(TouchscreenTest, ParadiseV1) {
       std::get_if<hid_input_report::TouchDescriptor>(&report_descriptor.descriptor);
   ASSERT_NOT_NULL(touch_descriptor);
 
-  EXPECT_EQ(5UL, touch_descriptor->num_contacts);
-  EXPECT_TRUE(touch_descriptor->contacts[0].contact_id);
-  EXPECT_TRUE(touch_descriptor->contacts[0].is_pressed);
+  EXPECT_EQ(5UL, touch_descriptor->input->num_contacts);
+  EXPECT_TRUE(touch_descriptor->input->contacts[0].contact_id);
+  EXPECT_TRUE(touch_descriptor->input->contacts[0].is_pressed);
 
-  EXPECT_TRUE(touch_descriptor->contacts[0].position_x);
-  EXPECT_EQ(0, touch_descriptor->contacts[0].position_x->range.min);
-  EXPECT_EQ(259200, touch_descriptor->contacts[0].position_x->range.max);
+  EXPECT_TRUE(touch_descriptor->input->contacts[0].position_x);
+  EXPECT_EQ(0, touch_descriptor->input->contacts[0].position_x->range.min);
+  EXPECT_EQ(259200, touch_descriptor->input->contacts[0].position_x->range.max);
 
-  EXPECT_TRUE(touch_descriptor->contacts[0].position_y);
-  EXPECT_EQ(0, touch_descriptor->contacts[0].position_y->range.min);
-  EXPECT_EQ(172800, touch_descriptor->contacts[0].position_y->range.max);
+  EXPECT_TRUE(touch_descriptor->input->contacts[0].position_y);
+  EXPECT_EQ(0, touch_descriptor->input->contacts[0].position_y->range.min);
+  EXPECT_EQ(172800, touch_descriptor->input->contacts[0].position_y->range.max);
 
   // Now use the parsed descriptor to interpret a touchpad report.
   paradise_touch_t touch_v1_report = {};
@@ -69,13 +69,13 @@ TEST(TouchscreenTest, ParadiseV1) {
   touch_v1_report.fingers[1].x = 100;
   touch_v1_report.fingers[1].y = 200;
 
-  hid_input_report::Report report = {};
+  hid_input_report::InputReport report = {};
   EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
-            touch.ParseReport(reinterpret_cast<uint8_t*>(&touch_v1_report), sizeof(touch_v1_report),
-                              &report));
+            touch.ParseInputReport(reinterpret_cast<uint8_t*>(&touch_v1_report),
+                                   sizeof(touch_v1_report), &report));
 
-  hid_input_report::TouchReport* touch_report =
-      std::get_if<hid_input_report::TouchReport>(&report.report);
+  hid_input_report::TouchInputReport* touch_report =
+      std::get_if<hid_input_report::TouchInputReport>(&report.report);
   ASSERT_NOT_NULL(touch_report);
 
   EXPECT_EQ(1UL, touch_report->num_contacts);

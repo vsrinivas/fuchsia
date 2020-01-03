@@ -46,15 +46,21 @@ struct SensorAxis {
     SensorType type;
 };
 
-/// |SensorDescriptor| describes the capabilities of a sensor.
-table SensorDescriptor {
+/// Describes the format of the input report that will be sent from the keyboard
+/// to the device.
+table SensorInputDescriptor {
     /// Each |SensorAxis| in |values| describes what a sensor is measuring and its range.
     /// These will directly correspond to the values in |SensorReport|.
     1: vector<SensorAxis>:SENSOR_MAX_VALUES values;
 };
 
+/// The capabilities of a sensor device.
+table SensorDescriptor {
+    1: SensorInputDescriptor input;
+};
+
 /// |SensorReport| gives the values measured by a sensor at a given point in time.
-table SensorReport {
+table SensorInputReport {
     /// The ordering of |values| will always directly correspond to the ordering of
     /// the values in |SensorDescriptor|.
     1: vector<int64>:SENSOR_MAX_VALUES values;

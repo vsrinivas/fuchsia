@@ -44,7 +44,7 @@ class InputReportInstance : public InstanceDeviceType,
   zx_status_t DdkClose(uint32_t flags);
 
   void ReceiveReport(const hid_input_report::ReportDescriptor& descriptor,
-                     const hid_input_report::Report& input_report);
+                     const hid_input_report::InputReport& input_report);
 
   // FIDL functions.
   void GetReportsEvent(GetReportsEventCompleter::Sync _completer);
@@ -55,10 +55,10 @@ class InputReportInstance : public InstanceDeviceType,
   fbl::Mutex report_lock_;
   zx::event reports_event_ __TA_GUARDED(report_lock_);
   // The ring buffer stores the hid reports as they are sent to the instance.
-  fbl::RingBuffer<hid_input_report::Report, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
+  fbl::RingBuffer<hid_input_report::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
       reports_data_ __TA_GUARDED(report_lock_);
   // These two arrays store the information to build the FIDL tables.
-  std::array<hid_input_report::FidlReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
+  std::array<hid_input_report::FidlInputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
       reports_fidl_data_ __TA_GUARDED(report_lock_);
   std::array<fuchsia_input_report::InputReport, fuchsia_input_report::MAX_DEVICE_REPORT_COUNT>
       reports_ __TA_GUARDED(report_lock_);

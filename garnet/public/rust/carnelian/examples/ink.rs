@@ -809,13 +809,16 @@ impl TouchDevice {
             let descriptor = device.get_descriptor(zx::Time::INFINITE)?;
             match descriptor.touch {
                 None => continue,
-                Some(touch) => {
-                    println!("touch device: {0}", entry.path().to_str().unwrap());
-                    let contact_descriptor = &touch.contacts.as_ref().unwrap()[0];
-                    let x_range = contact_descriptor.position_x.as_ref().unwrap().range;
-                    let y_range = contact_descriptor.position_y.as_ref().unwrap().range;
-                    return Ok(TouchDevice { device, x_range, y_range });
-                }
+                Some(touch) => match touch.input {
+                    None => continue,
+                    Some(input) => {
+                        println!("touch device: {0}", entry.path().to_str().unwrap());
+                        let contact_descriptor = &input.contacts.as_ref().unwrap()[0];
+                        let x_range = contact_descriptor.position_x.as_ref().unwrap().range;
+                        let y_range = contact_descriptor.position_y.as_ref().unwrap().range;
+                        return Ok(TouchDevice { device, x_range, y_range });
+                    }
+                },
             }
         }
         Err(std::io::Error::new(std::io::ErrorKind::NotFound, "no touch device found").into())

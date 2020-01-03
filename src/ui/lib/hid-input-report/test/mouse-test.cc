@@ -31,12 +31,12 @@ TEST(MouseTest, BootMouse) {
       std::get_if<hid_input_report::MouseDescriptor>(&report_descriptor.descriptor);
   ASSERT_NOT_NULL(mouse_descriptor);
 
-  EXPECT_TRUE(mouse_descriptor->movement_x);
-  EXPECT_TRUE(mouse_descriptor->movement_y);
+  EXPECT_TRUE(mouse_descriptor->input->movement_x);
+  EXPECT_TRUE(mouse_descriptor->input->movement_y);
   constexpr uint8_t kNumButtons = 3;
-  EXPECT_EQ(kNumButtons, mouse_descriptor->num_buttons);
+  EXPECT_EQ(kNumButtons, mouse_descriptor->input->num_buttons);
 
-  EXPECT_EQ(0, mouse.ReportId());
+  EXPECT_EQ(0, mouse.InputReportId());
 
   hid_boot_mouse_report_t report_data = {};
   const int kXTestVal = 10;
@@ -45,13 +45,13 @@ TEST(MouseTest, BootMouse) {
   report_data.rel_y = kYTestVal;
   report_data.buttons = 0xFF;
 
-  hid_input_report::Report report = {};
-  EXPECT_EQ(
-      hid_input_report::ParseResult::kParseOk,
-      mouse.ParseReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data), &report));
+  hid_input_report::InputReport report = {};
+  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+            mouse.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),
+                                   &report));
 
-  hid_input_report::MouseReport* mouse_report =
-      std::get_if<hid_input_report::MouseReport>(&report.report);
+  hid_input_report::MouseInputReport* mouse_report =
+      std::get_if<hid_input_report::MouseInputReport>(&report.report);
   ASSERT_NOT_NULL(mouse_report);
   EXPECT_TRUE(mouse_report->movement_x);
   EXPECT_EQ(kXTestVal, mouse_report->movement_x);

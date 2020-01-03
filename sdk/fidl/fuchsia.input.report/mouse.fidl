@@ -8,8 +8,9 @@ library fuchsia.input.report;
 /// if we ever see mice with more buttons.
 const uint32 MOUSE_MAX_NUM_BUTTONS = 32;
 
-/// |MouseDescriptor| describes the capabilities of a mouse.
-table MouseDescriptor {
+/// Describes the format of the input report that will be sent from the mouse
+/// to the device.
+table MouseInputDescriptor {
     /// The range of relative X movement.
     1: Axis movement_x;
 
@@ -26,11 +27,16 @@ table MouseDescriptor {
     5: vector<uint8>:MOUSE_MAX_NUM_BUTTONS buttons;
 };
 
+/// The capabilities of a mouse device.
+table MouseDescriptor {
+    1: MouseInputDescriptor input;
+};
+
 /// |MouseReport| gives the relative movement of the mouse and currently
 /// pressed buttons. Relative means the movement seen between the previous
 /// report and this report. The client is responsble for tracking this and
 /// converting it to absolute movement.
-table MouseReport {
+table MouseInputReport {
     /// Relative X positional displacement.
     1: int64 movement_x;
     /// Relative Y positional displacement.

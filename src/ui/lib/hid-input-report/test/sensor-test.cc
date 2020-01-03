@@ -35,25 +35,31 @@ TEST(SensorTest, AmbientLight) {
   hid_input_report::SensorDescriptor* sensor_descriptor =
       std::get_if<hid_input_report::SensorDescriptor>(&report_descriptor.descriptor);
   ASSERT_NOT_NULL(sensor_descriptor);
+  hid_input_report::SensorInputDescriptor* sensor_input_descriptor =
+      &sensor_descriptor->input.value();
 
   // Check the descriptor.
-  ASSERT_EQ(4, sensor_descriptor->num_values);
+  ASSERT_EQ(4, sensor_input_descriptor->num_values);
 
-  ASSERT_EQ(sensor_descriptor->values[0].type,
+  ASSERT_EQ(sensor_input_descriptor->values[0].type,
             ::llcpp::fuchsia::input::report::SensorType::LIGHT_ILLUMINANCE);
-  ASSERT_EQ(sensor_descriptor->values[0].axis.unit, ::llcpp::fuchsia::input::report::Unit::LUX);
+  ASSERT_EQ(sensor_input_descriptor->values[0].axis.unit,
+            ::llcpp::fuchsia::input::report::Unit::LUX);
 
-  ASSERT_EQ(sensor_descriptor->values[1].type,
+  ASSERT_EQ(sensor_input_descriptor->values[1].type,
             ::llcpp::fuchsia::input::report::SensorType::LIGHT_RED);
-  ASSERT_EQ(sensor_descriptor->values[1].axis.unit, ::llcpp::fuchsia::input::report::Unit::LUX);
+  ASSERT_EQ(sensor_input_descriptor->values[1].axis.unit,
+            ::llcpp::fuchsia::input::report::Unit::LUX);
 
-  ASSERT_EQ(sensor_descriptor->values[2].type,
+  ASSERT_EQ(sensor_input_descriptor->values[2].type,
             ::llcpp::fuchsia::input::report::SensorType::LIGHT_BLUE);
-  ASSERT_EQ(sensor_descriptor->values[2].axis.unit, ::llcpp::fuchsia::input::report::Unit::LUX);
+  ASSERT_EQ(sensor_input_descriptor->values[2].axis.unit,
+            ::llcpp::fuchsia::input::report::Unit::LUX);
 
-  ASSERT_EQ(sensor_descriptor->values[3].type,
+  ASSERT_EQ(sensor_input_descriptor->values[3].type,
             ::llcpp::fuchsia::input::report::SensorType::LIGHT_GREEN);
-  ASSERT_EQ(sensor_descriptor->values[3].axis.unit, ::llcpp::fuchsia::input::report::Unit::LUX);
+  ASSERT_EQ(sensor_input_descriptor->values[3].axis.unit,
+            ::llcpp::fuchsia::input::report::Unit::LUX);
 
   // Create the report.
   ambient_light_input_rpt_t report_data = {};
@@ -69,13 +75,13 @@ TEST(SensorTest, AmbientLight) {
   report_data.green = kGreenTestVal;
 
   // Parse the report.
-  hid_input_report::Report report = {};
-  EXPECT_EQ(
-      hid_input_report::ParseResult::kParseOk,
-      sensor.ParseReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data), &report));
+  hid_input_report::InputReport report = {};
+  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+            sensor.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),
+                                    &report));
 
-  hid_input_report::SensorReport* sensor_report =
-      std::get_if<hid_input_report::SensorReport>(&report.report);
+  hid_input_report::SensorInputReport* sensor_report =
+      std::get_if<hid_input_report::SensorInputReport>(&report.report);
   ASSERT_NOT_NULL(sensor_report);
   EXPECT_EQ(4, sensor_report->num_values);
 
