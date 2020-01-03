@@ -5,7 +5,7 @@
 use anyhow::format_err;
 use async_trait::async_trait;
 use fidl::endpoints::{create_endpoints, ClientEnd};
-use fidl_fuchsia_auth::{AuthProviderMarker, Status};
+use fidl_fuchsia_auth::Status;
 use fidl_fuchsia_identity_external::{OauthMarker, OauthOpenIdConnectMarker, OpenIdConnectMarker};
 use fidl_fuchsia_identity_internal::AccountHandlerContextProxy;
 use token_manager::TokenManagerError;
@@ -29,20 +29,6 @@ impl AuthProviderSupplier {
 
 #[async_trait]
 impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
-    async fn get_auth_provider(
-        &self,
-        auth_provider_type: &str,
-    ) -> Result<ClientEnd<AuthProviderMarker>, TokenManagerError> {
-        let (client_end, server_end) = create_endpoints()
-            .map_err(|err| TokenManagerError::new(Status::UnknownError).with_cause(err))?;
-        match self.account_handler_context.get_auth_provider(auth_provider_type, server_end).await {
-            Ok(Ok(())) => Ok(client_end),
-            Ok(Err(status)) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
-                .with_cause(format_err!("AccountHandlerContext returned {:?}", status))),
-            Err(err) => Err(TokenManagerError::new(Status::UnknownError).with_cause(err)),
-        }
-    }
-
     async fn get_oauth(
         &self,
         auth_provider_type: &str,
@@ -114,7 +100,7 @@ mod tests {
         let proxy = client_end.into_proxy().unwrap();
         let auth_provider_supplier = AuthProviderSupplier::new(proxy);
         executor.run_singlethreaded(async move {
-            let result = auth_provider_supplier.get_auth_provider(TEST_AUTH_PROVIDER_TYPE).await;
+            let result = auth_provider_supplier.get_oauth(TEST_AUTH_PROVIDER_TYPE).await;
             match expected_error {
                 Some(status) => {
                     assert!(result.is_err());
@@ -136,9 +122,9 @@ mod tests {
         fasync::spawn(async move {
             let mut request_stream = server_end.into_stream().unwrap();
             // Only respond to the first received message, only when its of the intended type.
-            if let Ok(Some(AccountHandlerContextRequest::GetAuthProvider {
+            if let Ok(Some(AccountHandlerContextRequest::GetOauth {
                 auth_provider_type,
-                auth_provider: _,
+                oauth: _,
                 responder,
             })) = request_stream.try_next().await
             {

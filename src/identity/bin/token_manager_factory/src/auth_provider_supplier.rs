@@ -5,7 +5,7 @@
 use anyhow::format_err;
 use async_trait::async_trait;
 use fidl::endpoints::ClientEnd;
-use fidl_fuchsia_auth::{AuthProviderConfig, AuthProviderMarker, Status};
+use fidl_fuchsia_auth::{AuthProviderConfig, Status};
 use fidl_fuchsia_identity_external::{OauthMarker, OauthOpenIdConnectMarker, OpenIdConnectMarker};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -56,13 +56,6 @@ impl AuthProviderSupplier {
 
 #[async_trait]
 impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
-    async fn get_auth_provider(
-        &self,
-        auth_provider_type: &str,
-    ) -> Result<ClientEnd<AuthProviderMarker>, TokenManagerError> {
-        self.get(auth_provider_type)
-    }
-
     async fn get_oauth(
         &self,
         auth_provider_type: &str,

@@ -3,11 +3,9 @@
 // found in the LICENSE file.
 
 mod common;
-mod dev_auth_provider;
 mod oauth;
 mod oauth_open_id_connect;
 
-use crate::dev_auth_provider::AuthProvider;
 use crate::oauth::Oauth;
 use crate::oauth_open_id_connect::OauthOpenIdConnect;
 use anyhow::{Context as _, Error};
@@ -23,8 +21,6 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     let mut fs = ServiceFs::new();
-    fs.dir("svc")
-        .add_fidl_service(|stream| fasync::spawn(AuthProvider::handle_requests_for_stream(stream)));
     fs.dir("svc").add_fidl_service(|stream| {
         fasync::spawn(OauthOpenIdConnect::handle_requests_for_stream(stream))
     });

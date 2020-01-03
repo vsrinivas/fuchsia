@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Error};
-use fidl_fuchsia_auth::{AuthProviderStatus, Status};
+use fidl_fuchsia_auth::Status;
 use fidl_fuchsia_identity_external::Error as ExternalApiError;
 use thiserror::Error;
 use token_cache::AuthCacheError;
@@ -108,26 +108,6 @@ impl From<ExternalApiError> for TokenManagerError {
     }
 }
 
-impl From<AuthProviderStatus> for TokenManagerError {
-    fn from(auth_provider_status: AuthProviderStatus) -> Self {
-        TokenManagerError {
-            status: match auth_provider_status {
-                AuthProviderStatus::BadRequest => Status::InvalidRequest,
-                AuthProviderStatus::OauthServerError => Status::AuthProviderServerError,
-                AuthProviderStatus::UserCancelled => Status::UserCancelled,
-                AuthProviderStatus::ReauthRequired => Status::ReauthRequired,
-                AuthProviderStatus::NetworkError => Status::NetworkError,
-                AuthProviderStatus::InternalError => Status::InternalError,
-                _ => Status::UnknownError,
-            },
-            // Auth provider failures are localized to the particular provider that
-            // produced them and therefore none are fatal to an entire TokenManager.
-            fatal: false,
-            cause: Some(format_err!("Auth provider error: {:?}", auth_provider_status)),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,12 +168,5 @@ mod tests {
             (format!("{:?}", err.cause.as_ref().unwrap()), err.fatal, err.status),
             ("invalid argument".to_string(), false, Status::InvalidRequest)
         );
-    }
-
-    #[test]
-    fn test_from_auth_provider_status() {
-        let err = TokenManagerError::from(AuthProviderStatus::ReauthRequired);
-        assert_eq!((err.fatal, err.status), (false, Status::ReauthRequired));
-        assert!(err.cause.is_some());
     }
 }

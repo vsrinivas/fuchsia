@@ -1,6 +1,6 @@
 {
   "fidl/fuchsia.auth/attestation_signer.fidl": "2098608b8fb873f664cbd5f15b70c946",
-  "fidl/fuchsia.auth/auth_provider.fidl": "6ba33ef00b36f131941241501484238d",
+  "fidl/fuchsia.auth/auth_provider.fidl": "d4621167c976d2cf0bc96bdd69a18d40",
   "fidl/fuchsia.auth/common.fidl": "aca9213406fa9a608878e5ffe7c3e785",
   "fidl/fuchsia.auth/token_manager.fidl": "7b7db81de3e84364edeb4b435ffeb6cf"
 }

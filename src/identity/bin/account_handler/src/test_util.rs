@@ -95,9 +95,6 @@ impl FakeAccountHandlerContext {
     /// Asynchronously handles a single `AccountHandlerContextRequest`.
     async fn handle_request(&self, req: AccountHandlerContextRequest) -> Result<(), fidl::Error> {
         match req {
-            AccountHandlerContextRequest::GetAuthProvider { responder, .. } => {
-                responder.send(&mut Err(Error::Internal))
-            }
             AccountHandlerContextRequest::GetOauth { responder, .. } => {
                 responder.send(&mut Err(Error::Internal))
             }
@@ -138,7 +135,7 @@ mod tests {
         let proxy = spawn_context_channel(fake_context.clone());
         let (_, ap_server_end) = create_endpoints().expect("failed creating channel pair");
         assert_eq!(
-            proxy.get_auth_provider("dummy_auth_provider", ap_server_end).await.unwrap(),
+            proxy.get_oauth("dummy_auth_provider", ap_server_end).await.unwrap(),
             Err(Error::Internal)
         );
     }

@@ -10,9 +10,7 @@ pub const TOKEN_LIFETIME_SECONDS: u64 = 3600; // one hour lifetime
 pub const USER_PROFILE_INFO_ID_DOMAIN: &str = "@example.com";
 pub const USER_PROFILE_INFO_DISPLAY_NAME: &str = "test_user_display_name";
 pub const USER_PROFILE_INFO_EMAIL: &str = "example@example.com";
-pub const USER_PROFILE_INFO_URL: &str = "http://test_user/profile/url";
 pub const USER_PROFILE_INFO_IMAGE_URL: &str = "http://test_user/profile/image/url";
-pub const FIREBASE_TOKEN_EMAIL_DOMAIN: &str = "@firebase.example.com";
 const RANDOM_STRING_LENGTH: usize = 10;
 
 /// Generate random alphanumeric string of fixed length RANDOM_STRING_LENGTH

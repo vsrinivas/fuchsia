@@ -50,11 +50,6 @@ impl AccountHandlerContext {
     /// Asynchronously handles a single `AccountHandlerContextRequest`.
     async fn handle_request(&self, req: AccountHandlerContextRequest) -> Result<(), fidl::Error> {
         match req {
-            AccountHandlerContextRequest::GetAuthProvider {
-                auth_provider_type,
-                auth_provider,
-                responder,
-            } => responder.send(&mut self.connect(&auth_provider_type, auth_provider).await),
             AccountHandlerContextRequest::GetOauth { auth_provider_type, oauth, responder } => {
                 responder.send(&mut self.connect(&auth_provider_type, oauth).await)
             }

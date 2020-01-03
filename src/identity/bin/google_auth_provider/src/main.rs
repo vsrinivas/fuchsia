@@ -8,17 +8,14 @@
 
 #![deny(missing_docs)]
 
-mod auth_provider;
 mod constants;
 mod error;
-mod firebase;
 mod http;
 mod oauth;
 mod oauth_open_id_connect;
 mod time;
 mod web;
 
-use crate::auth_provider::GoogleAuthProvider;
 use crate::http::UrlLoaderHttpClient;
 use crate::oauth::Oauth;
 use crate::oauth_open_id_connect::OauthOpenIdConnect;
@@ -48,18 +45,7 @@ fn main() -> Result<(), Error> {
     let frame_supplier = WebFrameSupplier::new();
     let http_client = UrlLoaderHttpClient::new(url_loader);
 
-    let google_auth_provider =
-        Arc::new(GoogleAuthProvider::new(frame_supplier.clone(), http_client.clone()));
     let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(move |stream| {
-        let auth_provider_clone = Arc::clone(&google_auth_provider);
-        fasync::spawn(async move {
-            auth_provider_clone
-                .handle_requests_from_stream(stream)
-                .await
-                .unwrap_or_else(|e| error!("Error handling AuthProvider channel {:?}", e));
-        });
-    });
 
     let oauth_open_id_connect =
         Arc::new(OauthOpenIdConnect::<_, UtcClock>::new(http_client.clone()));

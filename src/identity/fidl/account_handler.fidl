@@ -251,17 +251,6 @@ protocol AccountHandlerControl {
 /// component that launches it (i.e. the AccountManager).
 [Discoverable]
 protocol AccountHandlerContext {
-    /// Connects to the `AuthProvider` implementation for a particular service
-    /// provider, launching it if necessary.  This method will soon be removed
-    /// along with the `AuthProvider` protocol.
-    ///
-    /// `auth_provider_type` An OAuth identity provider matching a configuration
-    ///                      set in an AuthProviderConfig.auth_provider_type
-    /// `auth_provider` The server end of an `AuthProvider` channel
-    GetAuthProvider(string auth_provider_type,
-                    request<fuchsia.auth.AuthProvider> auth_provider)
-        -> () error fuchsia.identity.account.Error;
-
     /// Connects to the `Oauth` implementation for a particular service provider,
     /// launching it if necessary.
     ///

@@ -6,9 +6,7 @@
 use crate::{AuthProviderSupplier, TokenManagerError};
 use async_trait::async_trait;
 use fidl::endpoints::{create_request_stream, ClientEnd};
-use fidl_fuchsia_auth::{
-    AuthProviderMarker, AuthProviderRequest, AuthProviderRequestStream, AuthProviderStatus, Status,
-};
+use fidl_fuchsia_auth::Status;
 use fidl_fuchsia_identity_external::{
     OauthMarker, OauthOpenIdConnectMarker, OauthOpenIdConnectRequest,
     OauthOpenIdConnectRequestStream, OauthRefreshTokenRequest, OauthRequest, OauthRequestStream,
@@ -33,9 +31,6 @@ use thiserror::Error;
 /// reuses them throughout its lifetime, hence it will never ask for the same auth provider
 /// (as defined by its `auth_provider_type`) twice.
 pub struct FakeAuthProviderSupplier {
-    /// A mapping from auth provider type to client ends of `AuthProvider`
-    /// implementations provided in `add_auth_provider`.
-    auth_provider_clients: Mutex<HashMap<String, ClientEnd<AuthProviderMarker>>>,
     /// A mapping from auth provider type to client ends of `Oauth`
     /// implementations provided in `add_oauth`.
     oauth_clients: Mutex<HashMap<String, ClientEnd<OauthMarker>>>,
@@ -58,26 +53,11 @@ pub enum FakeAuthProviderError {
 impl FakeAuthProviderSupplier {
     pub fn new() -> Self {
         Self {
-            auth_provider_clients: Mutex::new(HashMap::new()),
             oauth_clients: Mutex::new(HashMap::new()),
             oauth_open_id_connect_clients: Mutex::new(HashMap::new()),
             open_id_connect_clients: Mutex::new(HashMap::new()),
             servers: Mutex::new(FuturesUnordered::new()),
         }
-    }
-
-    /// Add an `AuthProvider` implementation, by supplying two arguments: the type, and a
-    /// function which acts as the server end for the auth provider. This function will be
-    /// invoked when `run()` is called.
-    pub fn add_auth_provider<'a, F, Fut>(&'a self, auth_provider_type: &'a str, server_fn: F)
-    where
-        F: (FnOnce(AuthProviderRequestStream) -> Fut),
-        Fut: Future<Output = Result<(), fidl::Error>> + Send + 'static,
-    {
-        let (client_end, stream) = create_request_stream::<AuthProviderMarker>().unwrap();
-        let serve = server_fn(stream);
-        self.auth_provider_clients.lock().insert(auth_provider_type.to_string(), client_end);
-        self.servers.lock().push(serve.boxed());
     }
 
     /// Add an `Oauth` implementation, by supplying two arguments: the type, and a
@@ -150,16 +130,6 @@ impl FakeAuthProviderSupplier {
 
 #[async_trait]
 impl AuthProviderSupplier for FakeAuthProviderSupplier {
-    async fn get_auth_provider(
-        &self,
-        auth_provider_type: &str,
-    ) -> Result<ClientEnd<AuthProviderMarker>, TokenManagerError> {
-        self.auth_provider_clients
-            .lock()
-            .remove(auth_provider_type)
-            .ok_or(TokenManagerError::new(Status::AuthProviderServiceUnavailable))
-    }
-
     async fn get_oauth(
         &self,
         auth_provider_type: &str,
@@ -208,7 +178,7 @@ mod tests {
     async fn auth_provider_fake_test() {
         let auth_provider_supplier = Arc::new(FakeAuthProviderSupplier::new());
         // Non existing auth provider
-        assert!(auth_provider_supplier.get_auth_provider("myspace").await.is_err());
+        assert!(auth_provider_supplier.get_oauth("myspace").await.is_err());
 
         auth_provider_supplier.add_oauth("hooli", |mut stream| async move {
             match stream.try_next().await? {
@@ -284,8 +254,8 @@ mod tests {
         };
         let (run_result, _) = join(auth_provider_supplier.run(), client_fn).await;
         assert!(run_result.is_ok());
-        assert!(auth_provider_supplier.get_auth_provider("hooli").await.is_err());
-        assert!(auth_provider_supplier.get_auth_provider("pied-piper").await.is_err());
+        assert!(auth_provider_supplier.get_oauth("hooli").await.is_err());
+        assert!(auth_provider_supplier.get_oauth("pied-piper").await.is_err());
     }
 
     /// A test for FakeAuthProviderSupplier that walks through setting and retrieving one of
@@ -293,17 +263,6 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn multiple_protocols_test() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-
-        auth_provider_supplier.add_auth_provider("hooli", |mut stream| async move {
-            match stream.try_next().await? {
-                Some(AuthProviderRequest::GetAppFirebaseToken { responder, .. }) => {
-                    responder.send(AuthProviderStatus::BadRequest, None)?;
-                }
-                _ => panic!("Unexpected message received"),
-            }
-            assert!(stream.try_next().await?.is_none());
-            Ok(())
-        });
 
         auth_provider_supplier.add_oauth("hooli", |mut stream| async move {
             match stream.try_next().await? {
@@ -344,20 +303,6 @@ mod tests {
         });
 
         let client_fn = async {
-            let auth_provider_proxy = auth_provider_supplier
-                .get_auth_provider("hooli")
-                .await
-                .unwrap()
-                .into_proxy()
-                .unwrap();
-            assert_eq!(
-                auth_provider_proxy
-                    .get_app_firebase_token("HOOLI_ID_TOKEN", "API_KEY")
-                    .await
-                    .unwrap(),
-                (AuthProviderStatus::BadRequest, None)
-            );
-
             let oauth_proxy =
                 auth_provider_supplier.get_oauth("hooli").await.unwrap().into_proxy().unwrap();
 

@@ -15,7 +15,7 @@
 
 use async_trait::async_trait;
 use fidl::endpoints::ClientEnd;
-use fidl_fuchsia_auth::{AuthProviderMarker, AuthenticationContextProviderProxy};
+use fidl_fuchsia_auth::AuthenticationContextProviderProxy;
 use fidl_fuchsia_identity_external::{OauthMarker, OauthOpenIdConnectMarker, OpenIdConnectMarker};
 
 mod auth_provider_cache;
@@ -47,13 +47,6 @@ pub struct TokenManagerContext {
 // AccountHandlerContext.
 #[async_trait]
 pub trait AuthProviderSupplier {
-    /// Returns a `ClientEnd` for communication with a token provider for the requested
-    /// `auth_provider_type` over the `AuthProvider` protocol.
-    async fn get_auth_provider(
-        &self,
-        auth_provider_type: &str,
-    ) -> Result<ClientEnd<AuthProviderMarker>, TokenManagerError>;
-
     /// Returns a `ClientEnd` for communication with a token provider for the requested
     /// `auth_provider_type` over the `Oauth` protocol.
     async fn get_oauth(
