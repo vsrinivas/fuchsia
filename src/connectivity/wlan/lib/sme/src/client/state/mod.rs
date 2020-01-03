@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod link_state;
+
 use {
     crate::{
         capabilities::{intersect_with_ap, JoinCapabilities},
         client::{
             bss::ClientConfig,
             capabilities::build_join_capabilities,
-            event::{self, Event},
-            info::ConnectionPingInfo,
+            event::Event,
+            internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
-            report_connect_finished,
-            rsn::Rsna,
-            ConnectFailure, ConnectResult, Context, EstablishRsnaFailure, Status,
+            report_connect_finished, ConnectFailure, ConnectResult, EstablishRsnaFailure, Status,
         },
         clone_utils::clone_bss_desc,
         phy_selection::derive_phy_cbw,
@@ -25,16 +25,13 @@ use {
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent},
     fuchsia_inspect_contrib::{inspect_log, log::InspectBytes},
     fuchsia_zircon as zx,
+    link_state::LinkState,
     log::{error, warn},
     std::convert::TryInto,
     wep_deprecated,
     wlan_common::{
         bss::BssDescriptionExt, channel::Channel, format::MacFmt, ie::rsn::cipher, mac::Bssid,
         RadioConfig,
-    },
-    wlan_rsn::{
-        key::exchange::Key,
-        rsna::{self, SecAssocStatus, SecAssocUpdate},
     },
     wlan_statemachine::*,
     zerocopy::AsBytes,
@@ -50,38 +47,11 @@ const RSNA_STATE: &str = "EstablishingRsnaState";
 const LINK_UP_STATE: &str = "LinkUpState";
 
 #[derive(Debug)]
-pub enum LinkState {
-    EstablishingRsna {
-        responder: Option<Responder<ConnectResult>>,
-        rsna: Rsna,
-        // Timeout for the total duration RSNA may take to complete.
-        rsna_timeout: Option<EventId>,
-        // Timeout waiting to receive a key frame from the Authenticator. This timeout is None at
-        // the beginning of the RSNA when no frame has been exchanged yet, or at the end of the
-        // RSNA when all the key frames have finished exchanging.
-        resp_timeout: Option<EventId>,
-    },
-    LinkUp {
-        protection: Protection,
-        since: zx::Time,
-        ping_event: Option<EventId>,
-    },
-}
-
-#[derive(Debug)]
 pub struct ConnectCommand {
     pub bss: Box<BssDescription>,
     pub responder: Option<Responder<ConnectResult>>,
     pub protection: Protection,
     pub radio_cfg: RadioConfig,
-}
-
-#[derive(Debug)]
-pub enum RsnaStatus {
-    Established,
-    Failed(EstablishRsnaFailure),
-    Unchanged,
-    Progressed { new_resp_timeout: Option<EventId> },
 }
 
 #[derive(Debug)]
@@ -255,7 +225,7 @@ impl Associating {
         state_change_msg: &mut Option<String>,
         context: &mut Context,
     ) -> Result<Associated, Idle> {
-        let (last_rssi, link_state, radio_cfg) = match conf.result_code {
+        let link_state = match conf.result_code {
             fidl_mlme::AssociateResultCodes::Success => {
                 context.info.report_assoc_success(context.att_id);
                 if let Some(cap) = self.cap.as_ref() {
@@ -285,50 +255,16 @@ impl Associating {
                         }
                     }
                 }
-                match self.cmd.protection {
-                    Protection::Rsna(mut rsna) | Protection::LegacyWpa(mut rsna) => {
-                        context.info.report_rsna_started(context.att_id);
-                        match rsna.supplicant.start() {
-                            Err(e) => {
-                                handle_supplicant_start_failure(
-                                    self.cmd.responder,
-                                    self.cmd.bss.as_ref(),
-                                    context,
-                                    e,
-                                );
-                                state_change_msg.replace(format!("supplicant failed to start"));
-                                return Err(Idle { cfg: self.cfg });
-                            }
-                            Ok(_) => {
-                                let rsna_timeout =
-                                    Some(context.timer.schedule(event::EstablishingRsnaTimeout));
-                                let last_rssi = self.cmd.bss.rssi_dbm;
-                                let link_state = LinkState::EstablishingRsna {
-                                    responder: self.cmd.responder,
-                                    rsna,
-                                    rsna_timeout,
-                                    resp_timeout: None,
-                                };
-                                (last_rssi, link_state, self.cmd.radio_cfg)
-                            }
-                        }
-                    }
-                    Protection::Open | Protection::Wep(_) => {
-                        report_connect_finished(
-                            self.cmd.responder,
-                            context,
-                            ConnectResult::Success,
-                        );
-                        let now = now();
-                        let info = ConnectionPingInfo::first_connected(now);
-                        let ping_event = Some(report_ping(info, context));
-                        let last_rssi = self.cmd.bss.rssi_dbm;
-                        let link_state = LinkState::LinkUp {
-                            protection: Protection::Open,
-                            since: now,
-                            ping_event,
-                        };
-                        (last_rssi, link_state, self.cmd.radio_cfg)
+                match LinkState::new(
+                    &self.cmd.bss,
+                    self.cmd.responder,
+                    self.cmd.protection,
+                    context,
+                ) {
+                    Some(link_state) => link_state,
+                    None => {
+                        state_change_msg.replace(format!("supplicant failed to start"));
+                        return Err(Idle { cfg: self.cfg });
                     }
                 }
             }
@@ -346,10 +282,10 @@ impl Associating {
         state_change_msg.replace("successful auth".to_string());
         Ok(Associated {
             cfg: self.cfg,
+            last_rssi: self.cmd.bss.rssi_dbm,
             bss: self.cmd.bss,
-            last_rssi,
             link_state,
-            radio_cfg,
+            radio_cfg: self.cmd.radio_cfg,
             cap: self.cap,
             protection_ie: self.protection_ie,
         })
@@ -407,21 +343,17 @@ impl Associated {
         state_change_msg: &mut Option<String>,
         context: &mut Context,
     ) -> Associating {
-        let (responder, mut protection) = match self.link_state {
-            LinkState::LinkUp { protection, since, .. } => {
-                let connected_duration = now() - since;
-                context.info.report_connection_lost(
-                    connected_duration,
-                    self.last_rssi,
-                    self.bss.bssid,
-                    self.bss.ssid.clone(),
-                );
-                (None, protection)
-            }
-            LinkState::EstablishingRsna { responder, rsna, .. } => {
-                (responder, Protection::Rsna(rsna))
-            }
-        };
+        let (responder, mut protection, connected_duration) = self.link_state.disconnect();
+
+        if let Some(duration) = connected_duration {
+            context.info.report_connection_lost(
+                duration,
+                self.last_rssi,
+                self.bss.bssid,
+                self.bss.ssid.clone(),
+            );
+        }
+
         // Client is disassociating. The ESS-SA must be kept alive but reset.
         if let Protection::Rsna(rsna) = &mut protection {
             rsna.supplicant.reset();
@@ -446,21 +378,22 @@ impl Associated {
         state_change_msg: &mut Option<String>,
         context: &mut Context,
     ) -> Idle {
-        match self.link_state {
-            LinkState::EstablishingRsna { responder, .. } => {
-                let connect_result = EstablishRsnaFailure::InternalError.into();
-                report_connect_finished(responder, context, connect_result);
-            }
-            LinkState::LinkUp { since, .. } => {
-                let connected_duration = now() - since;
+        let (responder, _, connected_duration) = self.link_state.disconnect();
+        match connected_duration {
+            Some(duration) => {
                 context.info.report_connection_lost(
-                    connected_duration,
+                    duration,
                     self.last_rssi,
                     self.bss.bssid,
                     self.bss.ssid,
                 );
             }
+            None => {
+                let connect_result = EstablishRsnaFailure::InternalError.into();
+                report_connect_finished(responder, context, connect_result);
+            }
         }
+
         state_change_msg
             .replace(format!("received DeauthenticateInd msg; reason code {:?}", ind.reason_code));
         Idle { cfg: self.cfg }
@@ -489,67 +422,11 @@ impl Associated {
             return Ok(self);
         }
 
-        let link_state = match self.link_state {
-            LinkState::EstablishingRsna { responder, mut rsna, rsna_timeout, mut resp_timeout } => {
-                match process_eapol_ind(context, &mut rsna, &ind) {
-                    RsnaStatus::Established => {
-                        context.mlme_sink.send(MlmeRequest::SetCtrlPort(
-                            fidl_mlme::SetControlledPortRequest {
-                                peer_sta_address: self.bss.bssid.clone(),
-                                state: fidl_mlme::ControlledPortState::Open,
-                            },
-                        ));
-                        context.info.report_rsna_established(context.att_id);
-                        report_connect_finished(responder, context, ConnectResult::Success);
-
-                        let now = now();
-                        let info = ConnectionPingInfo::first_connected(now);
-                        let ping_event = Some(report_ping(info, context));
-                        state_change_msg.replace("RSNA established".to_string());
-                        LinkState::LinkUp {
-                            protection: Protection::Rsna(rsna),
-                            since: now,
-                            ping_event,
-                        }
-                    }
-                    RsnaStatus::Failed(failure) => {
-                        report_connect_finished(responder, context, failure.into());
-                        send_deauthenticate_request(&self.bss, &context.mlme_sink);
-                        return Err(Idle { cfg: self.cfg });
-                    }
-                    RsnaStatus::Progressed { new_resp_timeout } => {
-                        cancel(&mut resp_timeout);
-                        if let Some(id) = new_resp_timeout {
-                            resp_timeout.replace(id);
-                        }
-                        LinkState::EstablishingRsna { responder, rsna, rsna_timeout, resp_timeout }
-                    }
-                    RsnaStatus::Unchanged => {
-                        LinkState::EstablishingRsna { responder, rsna, rsna_timeout, resp_timeout }
-                    }
-                }
-            }
-            LinkState::LinkUp { protection, ping_event, since } => {
-                match protection {
-                    Protection::Rsna(mut rsna) => {
-                        match process_eapol_ind(context, &mut rsna, &ind) {
-                            RsnaStatus::Unchanged => {}
-                            // This can happen when there's a GTK rotation.
-                            // Timeout is ignored because only one RX frame is
-                            // needed in the exchange, so we are not waiting for
-                            // another one.
-                            RsnaStatus::Progressed { new_resp_timeout: _ } => {}
-                            // Once re-keying is supported, the RSNA can fail in
-                            // LinkUp as well and cause deauthentication.
-                            s => error!("unexpected RsnaStatus in LinkUp state: {:?}", s),
-                        };
-                        LinkState::LinkUp { protection: Protection::Rsna(rsna), ping_event, since }
-                    }
-                    // Drop EAPOL frames if the BSS is not an RSN.
-                    _ => LinkState::LinkUp { protection, ping_event, since },
-                }
-            }
-        };
+        let link_state =
+            match self.link_state.on_eapol_ind(ind, &self.bss, state_change_msg, context) {
+                Some(link_state) => link_state,
+                None => return Err(Idle { cfg: self.cfg }),
+            };
         Ok(Self { link_state, ..self })
     }
 
@@ -566,69 +443,13 @@ impl Associated {
         state_change_msg: &mut Option<String>,
         context: &mut Context,
     ) -> Result<Self, Idle> {
-        let new_link_state = match self.link_state {
-            LinkState::EstablishingRsna { responder, rsna, mut rsna_timeout, mut resp_timeout } => {
-                match event {
-                    Event::EstablishingRsnaTimeout(..) if triggered(&rsna_timeout, event_id) => {
-                        error!("timeout establishing RSNA; deauthenticating");
-                        cancel(&mut rsna_timeout);
-                        report_connect_finished(
-                            responder,
-                            context,
-                            EstablishRsnaFailure::OverallTimeout.into(),
-                        );
-                        send_deauthenticate_request(&self.bss, &context.mlme_sink);
-                        state_change_msg.replace("RSNA timeout".to_string());
-                        return Err(Idle { cfg: self.cfg });
-                    }
-                    Event::KeyFrameExchangeTimeout(event::KeyFrameExchangeTimeout {
-                        bssid,
-                        sta_addr,
-                        frame,
-                        attempt,
-                    }) => {
-                        if triggered(&resp_timeout, event_id) {
-                            context.info.report_key_exchange_timeout();
-                            if attempt < event::KEY_FRAME_EXCHANGE_MAX_ATTEMPTS {
-                                warn!(
-                                    "timeout waiting for key frame for attempt {}; retrying",
-                                    attempt
-                                );
-                                let id =
-                                    send_eapol_frame(context, bssid, sta_addr, frame, attempt + 1);
-                                resp_timeout.replace(id);
-                            } else {
-                                error!("timeout waiting for key frame for last attempt; deauth");
-                                cancel(&mut resp_timeout);
-                                report_connect_finished(
-                                    responder,
-                                    context,
-                                    EstablishRsnaFailure::KeyFrameExchangeTimeout.into(),
-                                );
-                                send_deauthenticate_request(&self.bss, &context.mlme_sink);
-                                state_change_msg.replace("key frame rx timeout".to_string());
-                                return Err(Idle { cfg: self.cfg });
-                            }
-                        }
-                        LinkState::EstablishingRsna { responder, rsna, rsna_timeout, resp_timeout }
-                    }
-                    _ => {
-                        LinkState::EstablishingRsna { responder, rsna, rsna_timeout, resp_timeout }
-                    }
-                }
+        match self.link_state.handle_timeout(event_id, event, state_change_msg, context) {
+            Some(link_state) => Ok(Associated { link_state, ..self }),
+            None => {
+                send_deauthenticate_request(&self.bss, &context.mlme_sink);
+                Err(Idle { cfg: self.cfg })
             }
-            LinkState::LinkUp { protection, since, mut ping_event } => match event {
-                Event::ConnectionPing(prev_ping) => {
-                    if triggered(&ping_event, event_id) {
-                        cancel(&mut ping_event);
-                        ping_event.replace(report_ping(prev_ping.next_ping(now()), context));
-                    }
-                    LinkState::LinkUp { protection, since, ping_event }
-                }
-                _ => LinkState::LinkUp { protection, since, ping_event },
-            },
-        };
-        Ok(Associated { link_state: new_link_state, ..self })
+        }
     }
 }
 
@@ -644,8 +465,9 @@ impl ClientState {
             Self::Authenticating(_) => AUTHENTICATING_STATE,
             Self::Associating(_) => ASSOCIATING_STATE,
             Self::Associated(state) => match state.link_state {
-                LinkState::EstablishingRsna { .. } => RSNA_STATE,
-                LinkState::LinkUp { .. } => LINK_UP_STATE,
+                LinkState::EstablishingRsna(_) => RSNA_STATE,
+                LinkState::LinkUp(_) => LINK_UP_STATE,
+                _ => unreachable!(),
             },
         }
     }
@@ -905,6 +727,7 @@ impl ClientState {
                     connected_to: Some(associated.cfg.convert_bss_description(&associated.bss)),
                     connecting_to: None,
                 },
+                _ => unreachable!(),
             },
         }
     }
@@ -973,166 +796,6 @@ fn connect_cmd_inspect_summary(cmd: &ConnectCommand) -> String {
     )
 }
 
-fn triggered(id: &Option<EventId>, received_id: EventId) -> bool {
-    id.map_or(false, |id| id == received_id)
-}
-
-fn cancel(event_id: &mut Option<EventId>) {
-    let _ = event_id.take();
-}
-
-fn process_eapol_ind(
-    context: &mut Context,
-    rsna: &mut Rsna,
-    ind: &fidl_mlme::EapolIndication,
-) -> RsnaStatus {
-    let mic_size = rsna.negotiated_protection.mic_size;
-    let eapol_pdu = &ind.data[..];
-    let eapol_frame = match eapol::KeyFrameRx::parse(mic_size as usize, eapol_pdu) {
-        Ok(key_frame) => eapol::Frame::Key(key_frame),
-        Err(e) => {
-            error!("received invalid EAPOL Key frame: {:?}", e);
-            inspect_log!(context.inspect.rsn_events.lock(), {
-                rx_eapol_frame: InspectBytes(&eapol_pdu),
-                status: format!("rejected (parse error): {:?}", e)
-            });
-            return RsnaStatus::Unchanged;
-        }
-    };
-
-    let mut update_sink = rsna::UpdateSink::default();
-    match rsna.supplicant.on_eapol_frame(&mut update_sink, eapol_frame) {
-        Err(e) => {
-            error!("error processing EAPOL key frame: {}", e);
-            inspect_log!(context.inspect.rsn_events.lock(), {
-                rx_eapol_frame: InspectBytes(&eapol_pdu),
-                status: format!("rejected (processing error): {}", e)
-            });
-            context.info.report_supplicant_error(e);
-            return RsnaStatus::Unchanged;
-        }
-        Ok(_) => {
-            inspect_log!(context.inspect.rsn_events.lock(), {
-                rx_eapol_frame: InspectBytes(&eapol_pdu),
-                status: "processed"
-            });
-            if update_sink.is_empty() {
-                return RsnaStatus::Unchanged;
-            }
-        }
-    }
-    context.info.report_supplicant_updates(&update_sink);
-
-    let bssid = ind.src_addr;
-    let sta_addr = ind.dst_addr;
-    let mut new_resp_timeout = None;
-    for update in update_sink {
-        match update {
-            // ESS Security Association requests to send an EAPOL frame.
-            // Forward EAPOL frame to MLME.
-            SecAssocUpdate::TxEapolKeyFrame(frame) => {
-                new_resp_timeout.replace(send_eapol_frame(context, bssid, sta_addr, frame, 1));
-            }
-            // ESS Security Association derived a new key.
-            // Configure key in MLME.
-            SecAssocUpdate::Key(key) => {
-                inspect_log_key(context, &key);
-                send_keys(&context.mlme_sink, bssid, key)
-            }
-            // Received a status update.
-            // TODO(hahnr): Rework this part.
-            // As of now, we depend on the fact that the status is always the last update.
-            // However, this fact is not clear from the API.
-            // We should fix the API and make this more explicit.
-            // Then we should rework this part.
-            SecAssocUpdate::Status(status) => {
-                inspect_log!(
-                    context.inspect.rsn_events.lock(),
-                    rsna_status: format!("{:?}", status)
-                );
-                match status {
-                    // ESS Security Association was successfully established. Link is now up.
-                    SecAssocStatus::EssSaEstablished => return RsnaStatus::Established,
-                    SecAssocStatus::WrongPassword => {
-                        return RsnaStatus::Failed(EstablishRsnaFailure::InternalError)
-                    }
-                    _ => (),
-                }
-            }
-        }
-    }
-
-    RsnaStatus::Progressed { new_resp_timeout }
-}
-
-fn inspect_log_key(context: &mut Context, key: &Key) {
-    let (cipher, key_index) = match key {
-        Key::Ptk(ptk) => (Some(&ptk.cipher), None),
-        Key::Gtk(gtk) => (Some(&gtk.cipher), Some(gtk.key_id())),
-        _ => (None, None),
-    };
-    inspect_log!(context.inspect.rsn_events.lock(), {
-        derived_key: key.name(),
-        cipher?: cipher.map(|c| format!("{:?}", c)),
-        key_index?: key_index,
-    });
-}
-
-fn send_eapol_frame(
-    context: &mut Context,
-    bssid: [u8; 6],
-    sta_addr: [u8; 6],
-    frame: eapol::KeyFrameBuf,
-    attempt: u32,
-) -> EventId {
-    let resp_timeout_id = context.timer.schedule(event::KeyFrameExchangeTimeout {
-        bssid,
-        sta_addr,
-        frame: frame.clone(),
-        attempt,
-    });
-
-    inspect_log!(context.inspect.rsn_events.lock(), tx_eapol_frame: InspectBytes(&frame[..]));
-    context.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
-        src_addr: sta_addr,
-        dst_addr: bssid,
-        data: frame.into(),
-    }));
-    resp_timeout_id
-}
-
-fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], key: Key) {
-    match key {
-        Key::Ptk(ptk) => {
-            mlme_sink.send(MlmeRequest::SetKeys(fidl_mlme::SetKeysRequest {
-                keylist: vec![fidl_mlme::SetKeyDescriptor {
-                    key_type: fidl_mlme::KeyType::Pairwise,
-                    key: ptk.tk().to_vec(),
-                    key_id: 0,
-                    address: bssid,
-                    cipher_suite_oui: eapol::to_array(&ptk.cipher.oui[..]),
-                    cipher_suite_type: ptk.cipher.suite_type,
-                    rsc: 0,
-                }],
-            }));
-        }
-        Key::Gtk(gtk) => {
-            mlme_sink.send(MlmeRequest::SetKeys(fidl_mlme::SetKeysRequest {
-                keylist: vec![fidl_mlme::SetKeyDescriptor {
-                    key_type: fidl_mlme::KeyType::Group,
-                    key: gtk.tk().to_vec(),
-                    key_id: gtk.key_id() as u16,
-                    address: [0xFFu8; 6],
-                    cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
-                    cipher_suite_type: gtk.cipher.suite_type,
-                    rsc: gtk.rsc,
-                }],
-            }));
-        }
-        _ => error!("derived unexpected key"),
-    };
-}
-
 fn send_deauthenticate_request(current_bss: &BssDescription, mlme_sink: &MlmeSink) {
     mlme_sink.send(MlmeRequest::Deauthenticate(fidl_mlme::DeauthenticateRequest {
         peer_sta_address: current_bss.bssid.clone(),
@@ -1171,24 +834,6 @@ fn send_mlme_assoc_req(
     mlme_sink.send(MlmeRequest::Associate(req))
 }
 
-fn handle_supplicant_start_failure(
-    responder: Option<Responder<ConnectResult>>,
-    bss: &BssDescription,
-    context: &mut Context,
-    e: anyhow::Error,
-) {
-    error!("deauthenticating; could not start Supplicant: {}", e);
-    send_deauthenticate_request(bss, &context.mlme_sink);
-    context.info.report_supplicant_error(e);
-
-    report_connect_finished(responder, context, EstablishRsnaFailure::StartSupplicantFailed.into());
-}
-
-fn report_ping(info: ConnectionPingInfo, context: &mut Context) -> EventId {
-    context.info.report_connection_ping(info.clone());
-    context.timer.schedule(info)
-}
-
 fn now() -> zx::Time {
     zx::Time::get(zx::ClockId::Monotonic)
 }
@@ -1199,8 +844,13 @@ mod tests {
     use anyhow::format_err;
     use fuchsia_inspect::Inspector;
     use futures::channel::{mpsc, oneshot};
+    use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
     use wlan_common::{assert_variant, ie::rsn::rsne::RsnCapabilities, RadioConfig};
+    use wlan_rsn::{
+        key::exchange::Key,
+        rsna::{SecAssocStatus, SecAssocUpdate},
+    };
     use wlan_rsn::{rsna::UpdateSink, NegotiatedProtection};
 
     use crate::client::test_utils::{
@@ -1209,7 +859,7 @@ mod tests {
         fake_unprotected_bss_description, fake_wep_bss_description, fake_wpa1_bss_description,
         mock_supplicant, MockSupplicant, MockSupplicantController,
     };
-    use crate::client::{info::InfoReporter, inspect, InfoEvent, InfoSink, TimeStream};
+    use crate::client::{info::InfoReporter, inspect, rsn::Rsna, InfoEvent, InfoSink, TimeStream};
     use crate::test_utils::make_wpa1_ie;
 
     use crate::{test_utils, timer, DeviceInfo, InfoStream, MlmeStream, Ssid};
@@ -1716,7 +1366,7 @@ mod tests {
         assert_variant!(state, ClientState::Associated(state) => {
             assert_variant!(
                 &state.link_state,
-                LinkState::LinkUp { protection: Protection::Rsna(_), .. }
+                LinkState::LinkUp(state) => assert_variant!(&state.protection, Protection::Rsna(_))
             )
         });
     }
@@ -2434,16 +2084,18 @@ mod tests {
 
     fn establishing_rsna_state(cmd: ConnectCommand) -> ClientState {
         let rsna = assert_variant!(cmd.protection, Protection::Rsna(rsna) => rsna);
+        let link_state = testing::new_state(EstablishingRsna {
+            responder: cmd.responder,
+            rsna,
+            rsna_timeout: None,
+            resp_timeout: None,
+        })
+        .into();
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
             bss: cmd.bss,
             last_rssi: 60,
-            link_state: LinkState::EstablishingRsna {
-                responder: cmd.responder,
-                rsna,
-                rsna_timeout: None,
-                resp_timeout: None,
-            },
+            link_state,
             radio_cfg: RadioConfig::default(),
             cap: None,
             protection_ie: None,
@@ -2452,15 +2104,17 @@ mod tests {
     }
 
     fn link_up_state(bss: Box<fidl_mlme::BssDescription>) -> ClientState {
+        let link_state = testing::new_state(LinkUp {
+            protection: Protection::Open,
+            since: now(),
+            ping_event: None,
+        })
+        .into();
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
             bss,
             last_rssi: 60,
-            link_state: LinkState::LinkUp {
-                protection: Protection::Open,
-                since: now(),
-                ping_event: None,
-            },
+            link_state,
             radio_cfg: RadioConfig::default(),
             cap: None,
             protection_ie: None,
@@ -2476,15 +2130,17 @@ mod tests {
                 .expect("invalid NegotiatedProtection"),
             supplicant: Box::new(supplicant),
         };
+        let link_state = testing::new_state(LinkUp {
+            protection: Protection::Rsna(rsna),
+            since: now(),
+            ping_event: None,
+        })
+        .into();
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
             bss: Box::new(bss),
             last_rssi: 60,
-            link_state: LinkState::LinkUp {
-                protection: Protection::Rsna(rsna),
-                since: now(),
-                ping_event: None,
-            },
+            link_state,
             radio_cfg: RadioConfig::default(),
             cap: None,
             protection_ie: None,
