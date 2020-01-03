@@ -4835,3 +4835,21 @@ TEST(Conformance, ReverseOrdinalUnion_V1_Decode) {
   };
   EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
 }
+
+TEST(Conformance, StringExceedsLimit_Encode_Failure) {
+  llcpp::conformance::Length2StringWrapper v1{};
+  fidl::StringView v2("abc", 3);
+  v1.length_2_string = std::move(v2);
+
+  EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure(&v1, ZX_ERR_INVALID_ARGS));
+}
+
+TEST(Conformance, UnionWithBoundString_ExceedsBounds_Encode_Failure) {
+  llcpp::conformance::UnionWithBoundStringStruct v1{};
+  llcpp::conformance::UnionWithBoundString v2;
+  fidl::StringView v3("abcdef", 6);
+  v2.set_boundFiveStr(&v3);
+  v1.v = std::move(v2);
+
+  EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure(&v1, ZX_ERR_INVALID_ARGS));
+}

@@ -47,11 +47,31 @@ TEST(Conformance, {{ .Name }}_Decode) {
 	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&{{ .ValueVar }}, std::move(bytes)));
 }
 {{ end }}
+
+{{ range .EncodeFailureCases }}
+TEST(Conformance, {{ .Name }}_Encode_Failure) {
+	{{ .ValueBuild }}
+
+	EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure(&{{ .ValueVar }}, {{ .ErrorCode }}));
+}
+{{ end }}
+
+{{ range .DecodeFailureCases }}
+TEST(Conformance, {{ .Name }}_Decode_Failure) {
+	auto bytes = std::vector<uint8_t>{
+		{{ .Bytes }}
+	};
+
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeFailure<{{ .ValueType }}>(std::move(bytes), {{ .ErrorCode }}));
+}
+{{ end }}
 `))
 
 type tmplInput struct {
 	EncodeSuccessCases []encodeSuccessCase
 	DecodeSuccessCases []decodeSuccessCase
+	EncodeFailureCases []encodeFailureCase
+	DecodeFailureCases []decodeFailureCase
 }
 
 type encodeSuccessCase struct {
@@ -60,6 +80,14 @@ type encodeSuccessCase struct {
 
 type decodeSuccessCase struct {
 	Name, ValueBuild, ValueVar, Bytes string
+}
+
+type encodeFailureCase struct {
+	Name, ValueBuild, ValueVar, ErrorCode string
+}
+
+type decodeFailureCase struct {
+	Name, ValueType, Bytes, ErrorCode string
 }
 
 // Generate generates Low-Level C++ tests.
@@ -72,9 +100,19 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	if err != nil {
 		return err
 	}
+	encodeFailureCases, err := encodeFailureCases(gidl.EncodeFailure, fidl)
+	if err != nil {
+		return err
+	}
+	decodeFailureCases, err := decodeFailureCases(gidl.DecodeFailure, fidl)
+	if err != nil {
+		return err
+	}
 	return tmpl.Execute(wr, tmplInput{
 		EncodeSuccessCases: encodeSuccessCases,
 		DecodeSuccessCases: decodeSuccessCases,
+		EncodeFailureCases: encodeFailureCases,
+		DecodeFailureCases: decodeFailureCases,
 	})
 }
 
@@ -88,10 +126,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
 			continue
 		}
-		var valueBuilder llcppValueBuilder
-		gidlmixer.Visit(&valueBuilder, encodeSuccess.Value, decl)
-		valueBuild := valueBuilder.String()
-		valueVar := valueBuilder.lastVar
+		valueBuild, valueVar := buildValue(encodeSuccess.Value, decl)
 		for _, encoding := range encodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -117,10 +152,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
 			continue
 		}
-		var valueBuilder llcppValueBuilder
-		gidlmixer.Visit(&valueBuilder, decodeSuccess.Value, decl)
-		valueBuild := valueBuilder.String()
-		valueVar := valueBuilder.lastVar
+		valueBuild, valueVar := buildValue(decodeSuccess.Value, decl)
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -134,6 +166,47 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		}
 	}
 	return decodeSuccessCases, nil
+}
+
+func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, fidl fidlir.Root) ([]encodeFailureCase, error) {
+	var encodeFailureCases []encodeFailureCase
+	for _, encodeFailure := range gidlEncodeFailurees {
+		decl, err := gidlmixer.ExtractDeclarationUnsafe(encodeFailure.Value, fidl)
+		if err != nil {
+			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
+		}
+		valueBuild, valueVar := buildValue(encodeFailure.Value, decl)
+		for _, wireFormat := range encodeFailure.WireFormats {
+			if !wireFormatSupported(wireFormat) {
+				continue
+			}
+			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
+				Name:       encodeFailure.Name,
+				ValueBuild: valueBuild,
+				ValueVar:   valueVar,
+				ErrorCode:  llcppErrorCode(encodeFailure.Err),
+			})
+		}
+	}
+	return encodeFailureCases, nil
+}
+
+func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, fidl fidlir.Root) ([]decodeFailureCase, error) {
+	var decodeFailureCases []decodeFailureCase
+	for _, decodeFailure := range gidlDecodeFailurees {
+		for _, encoding := range decodeFailure.Encodings {
+			if !wireFormatSupported(encoding.WireFormat) {
+				continue
+			}
+			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
+				Name:      decodeFailure.Name,
+				ValueType: llcppType(decodeFailure.Type),
+				Bytes:     bytesBuilder(encoding.Bytes),
+				ErrorCode: llcppErrorCode(decodeFailure.Err),
+			})
+		}
+	}
+	return decodeFailureCases, nil
 }
 
 func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
@@ -155,6 +228,14 @@ func bytesBuilder(bytes []byte) string {
 		}
 	}
 	return builder.String()
+}
+
+func buildValue(value interface{}, decl gidlmixer.Declaration) (string, string) {
+	var builder llcppValueBuilder
+	gidlmixer.Visit(&builder, value, decl)
+	valueBuild := builder.String()
+	valueVar := builder.lastVar
+	return valueBuild, valueVar
 }
 
 type llcppValueBuilder struct {
@@ -402,4 +483,13 @@ func elemName(parent gidlmixer.ListDeclaration) string {
 
 func numberName(primitiveSubtype fidlir.PrimitiveSubtype) string {
 	return fmt.Sprintf("%s_t", primitiveSubtype)
+}
+
+func llcppType(gidlTypeString string) string {
+	return "llcpp::conformance::" + gidlTypeString
+}
+
+func llcppErrorCode(code gidlir.ErrorCode) string {
+	// TODO(fxb/35381) Implement different codes for different FIDL error cases.
+	return "ZX_ERR_INVALID_ARGS"
 }
