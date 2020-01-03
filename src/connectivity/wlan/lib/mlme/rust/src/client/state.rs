@@ -13,6 +13,7 @@ use {
         client::{BoundClient, Context, TimedEvent},
         ddk_converter as ddk,
         error::Error,
+        key::KeyConfig,
         timer::*,
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
@@ -552,6 +553,64 @@ impl Associated {
         }
     }
 
+    fn on_sme_eapol(
+        &self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        req: fidl_mlme::EapolRequest,
+    ) {
+        // Drop EAPoL frame if it is not a protected network.
+        if !sta.sta.is_rsn {
+            error!("Unexpected MLME-EAPOL.request message: BSS not protected");
+            return;
+        }
+        // There may be more EAPoL frames (such as key rotation) coming after EAPoL established.
+        // They need to be protected.
+        let protected = sta.sta.is_rsn && self.0.controlled_port_open;
+        sta.send_eapol_frame(ctx, req.src_addr, req.dst_addr, protected, &req.data);
+    }
+
+    fn on_sme_set_keys(
+        &self,
+        sta: &BoundClient<'_>,
+        ctx: &mut Context,
+        req: fidl_mlme::SetKeysRequest,
+    ) {
+        if !sta.sta.is_rsn {
+            error!("Unexpected MLME-SetKeys.request message: BSS not protected");
+            return;
+        }
+        for key_desc in req.keylist {
+            if let Err(e) = ctx.device.set_key(KeyConfig::from(&key_desc)) {
+                error!("failed to set keys in driver: {}", e);
+            }
+        }
+    }
+
+    fn on_sme_set_controlled_port(
+        &mut self,
+        sta: &BoundClient<'_>,
+        ctx: &mut Context,
+        req: fidl_mlme::SetControlledPortRequest,
+    ) {
+        if !sta.sta.is_rsn {
+            error!("Unexpected MLME-SetControlledPort.request message: BSS not protected.");
+            return;
+        }
+        let should_open_controlled_port = req.state == fidl_mlme::ControlledPortState::Open;
+        if should_open_controlled_port == self.0.controlled_port_open {
+            return;
+        }
+        self.0.controlled_port_open = should_open_controlled_port;
+        if let Err(e) = ctx.device.set_eth_link(req.state.into()) {
+            error!(
+                "Error settting Ethernet port to {}: {}",
+                if should_open_controlled_port { "OPEN" } else { "CLOSED" },
+                e
+            );
+        }
+    }
+
     fn on_sme_deauthenticate(
         &mut self,
         sta: &mut BoundClient<'_>,
@@ -661,8 +720,6 @@ impl States {
             }
         }
     }
-
-    // TODO(hahnr): Add functionality to open/close controlled port.
 
     /// Callback to process arbitrary IEEE 802.11 frames.
     /// Frames are dropped if:
@@ -881,6 +938,18 @@ impl States {
             States::Associated(mut state) => match msg {
                 MlmeMsg::FinalizeAssociationReq { cap } => {
                     state.on_sme_finalize_association(sta, ctx, cap);
+                    state.into()
+                }
+                MlmeMsg::EapolReq { req } => {
+                    state.on_sme_eapol(sta, ctx, req);
+                    state.into()
+                }
+                MlmeMsg::SetKeysReq { req } => {
+                    state.on_sme_set_keys(sta, ctx, req);
+                    state.into()
+                }
+                MlmeMsg::SetControlledPort { req } => {
+                    state.on_sme_set_controlled_port(sta, ctx, req);
                     state.into()
                 }
                 MlmeMsg::DeauthenticateReq { req } => {
@@ -2462,5 +2531,250 @@ mod tests {
         assert_eq!(0, m.fake_device.assocs.len());
         // Verify ethernet link status is down.
         assert_eq!(crate::device::LinkStatus::DOWN, m.fake_device.link_status);
+    }
+
+    #[allow(deprecated)]
+    fn fake_mlme_eapol_req() -> fidl_mlme::MlmeRequestMessage {
+        fidl_mlme::MlmeRequestMessage::EapolReq {
+            req: fidl_mlme::EapolRequest {
+                dst_addr: BSSID.0,
+                src_addr: IFACE_MAC,
+                data: vec![1, 2, 3, 4],
+            },
+        }
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn mlme_eapol_not_associated() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_protected_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
+        let state = States::from(statemachine::testing::new_state(Joined));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_eapol_req());
+        assert_eq!(m.fake_device.wlan_queue.len(), 0);
+
+        let state = States::from(statemachine::testing::new_state(Authenticating {
+            timeout: EventId::default(),
+        }));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_eapol_req());
+        assert_eq!(m.fake_device.wlan_queue.len(), 0);
+
+        let state = States::from(statemachine::testing::new_state(Authenticated));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_eapol_req());
+        assert_eq!(m.fake_device.wlan_queue.len(), 0);
+
+        let state = States::from(statemachine::testing::new_state(Associating {
+            timeout: EventId::default(),
+        }));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_eapol_req());
+        assert_eq!(m.fake_device.wlan_queue.len(), 0);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn mlme_eapol_associated_not_protected() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
+        let state = States::from(statemachine::testing::new_state(Associated(empty_association())));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_eapol_req());
+        assert_eq!(m.fake_device.wlan_queue.len(), 0);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn mlme_eapol_associated() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_protected_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
+        let state = States::from(statemachine::testing::new_state(Associated(empty_association())));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_eapol_req());
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &m.fake_device.wlan_queue[0].0[..],
+            &[
+                // Data header (EAPoL frames are data frames)
+                0b00001000, 0b00000001, // Frame Control
+                0, 0, // Duration
+                6, 6, 6, 6, 6, 6, // addr1 - BSSID
+                3, 3, 3, 3, 3, 3, // addr2 - IFACE_MAC
+                6, 6, 6, 6, 6, 6, // addr3 - BSSID
+                0x10, 0, // Sequence Control
+                // LLC header
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x88, 0x8E, // Protocol ID (EAPoL is 0x888E)
+                1, 2, 3, 4, // Payload
+            ][..]
+        );
+    }
+
+    #[allow(deprecated)]
+    fn fake_mlme_set_keys_req() -> fidl_mlme::MlmeRequestMessage {
+        fidl_mlme::MlmeRequestMessage::SetKeysReq {
+            req: fidl_mlme::SetKeysRequest {
+                keylist: vec![fidl_mlme::SetKeyDescriptor {
+                    cipher_suite_oui: [1, 2, 3],
+                    cipher_suite_type: 4,
+                    key_type: fidl_mlme::KeyType::Pairwise,
+                    address: [5; 6],
+                    key_id: 6,
+                    key: vec![1, 2, 3, 4, 5, 6, 7],
+                    rsc: 8,
+                }],
+            },
+        }
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn mlme_set_keys_not_associated() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_protected_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
+        let state = States::from(statemachine::testing::new_state(Joined));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_keys_req());
+        assert_eq!(m.fake_device.keys.len(), 0);
+
+        let state = States::from(statemachine::testing::new_state(Authenticating {
+            timeout: EventId::default(),
+        }));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_keys_req());
+        assert_eq!(m.fake_device.keys.len(), 0);
+
+        let state = States::from(statemachine::testing::new_state(Authenticated));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_keys_req());
+        assert_eq!(m.fake_device.keys.len(), 0);
+
+        let state = States::from(statemachine::testing::new_state(Associating {
+            timeout: EventId::default(),
+        }));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_keys_req());
+        assert_eq!(m.fake_device.keys.len(), 0);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn mlme_set_keys_associated_not_protected() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
+        let state = States::from(statemachine::testing::new_state(Associated(empty_association())));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_keys_req());
+        assert_eq!(m.fake_device.keys.len(), 0);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn mlme_set_keys_associated() {
+        use crate::key::*;
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_protected_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
+        let state = States::from(statemachine::testing::new_state(Associated(empty_association())));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_keys_req());
+        assert_eq!(m.fake_device.keys.len(), 1);
+
+        assert_eq!(
+            m.fake_device.keys[0],
+            KeyConfig {
+                bssid: 0,
+                protection: Protection::RX_TX,
+                cipher_oui: [1, 2, 3],
+                cipher_type: 4,
+                key_type: KeyType::PAIRWISE,
+                peer_addr: [5; 6],
+                key_idx: 6,
+                key_len: 7,
+                key: [
+                    1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0,
+                ],
+                rsc: 8,
+            }
+        );
+    }
+
+    #[allow(deprecated)]
+    fn fake_mlme_set_ctrl_port_open(open: bool) -> fidl_mlme::MlmeRequestMessage {
+        fidl_mlme::MlmeRequestMessage::SetControlledPort {
+            req: fidl_mlme::SetControlledPortRequest {
+                peer_sta_address: BSSID.0,
+                state: match open {
+                    true => fidl_mlme::ControlledPortState::Open,
+                    false => fidl_mlme::ControlledPortState::Closed,
+                },
+            },
+        }
+    }
+    #[test]
+    #[allow(deprecated)]
+    fn mlme_set_controlled_port_not_associated() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_protected_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
+        let state = States::from(statemachine::testing::new_state(Joined));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_ctrl_port_open(true));
+        assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
+
+        let state = States::from(statemachine::testing::new_state(Authenticating {
+            timeout: EventId::default(),
+        }));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_ctrl_port_open(true));
+        assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
+
+        let state = States::from(statemachine::testing::new_state(Authenticated));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_ctrl_port_open(true));
+        assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
+
+        let state = States::from(statemachine::testing::new_state(Associating {
+            timeout: EventId::default(),
+        }));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_ctrl_port_open(true));
+        assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn mlme_set_controlled_port_associated_not_protected() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
+        let state = States::from(statemachine::testing::new_state(Associated(empty_association())));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_ctrl_port_open(true));
+        assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn mlme_set_controlled_port_associated() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_protected_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
+        let state = States::from(statemachine::testing::new_state(Associated(empty_association())));
+        assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
+        let state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_ctrl_port_open(true));
+        assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::UP);
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_set_ctrl_port_open(false));
+        assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
     }
 }

@@ -22,6 +22,15 @@ impl LinkStatus {
     pub const UP: Self = Self(1);
 }
 
+impl From<fidl_mlme::ControlledPortState> for LinkStatus {
+    fn from(state: fidl_mlme::ControlledPortState) -> Self {
+        match state {
+            fidl_mlme::ControlledPortState::Open => Self::UP,
+            fidl_mlme::ControlledPortState::Closed => Self::DOWN,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct TxFlags(pub u32);
 impl TxFlags {
@@ -156,6 +165,11 @@ impl Device {
 
     pub fn disable_beaconing(&self) -> Result<(), zx::Status> {
         let status = (self.disable_beaconing)(self.device);
+        zx::ok(status)
+    }
+
+    pub fn set_eth_link(&self, status: LinkStatus) -> Result<(), zx::Status> {
+        let status = (self.set_link_status)(self.device, status.0);
         zx::ok(status)
     }
 
