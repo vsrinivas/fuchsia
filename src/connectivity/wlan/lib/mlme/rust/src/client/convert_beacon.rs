@@ -5,6 +5,7 @@
 use {
     anyhow::{format_err, Error},
     banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    static_assertions::assert_eq_size,
     std::convert::TryInto,
     wlan_common::{
         channel::derive_channel,
@@ -12,6 +13,7 @@ use {
         mac::{Bssid, CapabilityInfo},
         TimeUnit,
     },
+    zerocopy::AsBytes,
 };
 
 /// Given information from beacon or probe response, convert to BssDescription.
@@ -23,6 +25,11 @@ pub fn construct_bss_description(
     ies: &[u8],
     rx_info: banjo_wlan_mac::WlanRxInfo,
 ) -> Result<fidl_mlme::BssDescription, Error> {
+    type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
+    type HtOpArray = [u8; fidl_mlme::HT_OP_LEN as usize];
+    type VhtCapArray = [u8; fidl_mlme::VHT_CAP_LEN as usize];
+    type VhtOpArray = [u8; fidl_mlme::VHT_OP_LEN as usize];
+
     let mut ssid = None;
     let mut rates = None;
     let mut dsss_chan = None;
@@ -30,10 +37,10 @@ pub fn construct_bss_description(
     let mut country = None;
     let mut rsne = None;
     let mut vendor_ies = None;
-    let mut ht_cap = None;
-    let mut ht_op = None;
-    let mut vht_cap = None;
-    let mut vht_op = None;
+    let mut fidl_ht_cap = None;
+    let mut fidl_ht_op = None;
+    let mut fidl_vht_cap = None;
+    let mut fidl_vht_op = None;
 
     let mut parsed_ht_op = None;
     let mut parsed_vht_op = None;
@@ -61,38 +68,30 @@ pub fn construct_bss_description(
                 vendor_ies.extend_from_slice(body);
             }
             ie::Id::HT_CAPABILITIES => {
-                if body.len() != fidl_mlme::HT_CAP_LEN as usize {
-                    return Err(format_err!("Invalid HT capabilities IE"));
-                }
-                // Safe to unwrap because length was already checked above
-                let bytes: [u8; fidl_mlme::HT_CAP_LEN as usize] = body.try_into().unwrap();
-                ht_cap = Some(Box::new(fidl_mlme::HtCapabilities { bytes }))
+                let ht_caps = ie::parse_ht_capabilities(body)?;
+                assert_eq_size!(ie::HtCapabilities, HtCapArray);
+                let bytes: HtCapArray = ht_caps.as_bytes().try_into().unwrap();
+                fidl_ht_cap = Some(Box::new(fidl_mlme::HtCapabilities { bytes }))
             }
             ie::Id::HT_OPERATION => {
-                parsed_ht_op = Some(*ie::parse_ht_operation(body)?);
-                if body.len() != fidl_mlme::HT_OP_LEN as usize {
-                    return Err(format_err!("Invalid HT operation IE"));
-                }
-                // Safe to unwrap because length was already checked above
-                let bytes: [u8; fidl_mlme::HT_OP_LEN as usize] = body.try_into().unwrap();
-                ht_op = Some(Box::new(fidl_mlme::HtOperation { bytes }));
+                let ht_op = ie::parse_ht_operation(body)?;
+                parsed_ht_op = Some(*ht_op);
+                assert_eq_size!(ie::HtOperation, HtOpArray);
+                let bytes: HtOpArray = ht_op.as_bytes().try_into().unwrap();
+                fidl_ht_op = Some(Box::new(fidl_mlme::HtOperation { bytes }));
             }
             ie::Id::VHT_CAPABILITIES => {
-                if body.len() != fidl_mlme::VHT_CAP_LEN as usize {
-                    return Err(format_err!("Invalid VHT capabilities IE"));
-                }
-                // Safe to unwrap because length was already checked above
-                let bytes: [u8; fidl_mlme::VHT_CAP_LEN as usize] = body.try_into().unwrap();
-                vht_cap = Some(Box::new(fidl_mlme::VhtCapabilities { bytes }));
+                let ht_caps = ie::parse_vht_capabilities(body)?;
+                assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
+                let bytes: VhtCapArray = ht_caps.as_bytes().try_into().unwrap();
+                fidl_vht_cap = Some(Box::new(fidl_mlme::VhtCapabilities { bytes }));
             }
             ie::Id::VHT_OPERATION => {
-                parsed_vht_op = Some(*ie::parse_vht_operation(body)?);
-                if body.len() != fidl_mlme::VHT_OP_LEN as usize {
-                    return Err(format_err!("Invalid VHT operation IE"));
-                }
-                // Safe to unwrap because length was already checked above
-                let bytes: [u8; fidl_mlme::VHT_OP_LEN as usize] = body.try_into().unwrap();
-                vht_op = Some(Box::new(fidl_mlme::VhtOperation { bytes }));
+                let ht_op = ie::parse_vht_operation(body)?;
+                parsed_vht_op = Some(*ht_op);
+                assert_eq_size!(ie::VhtOperation, VhtOpArray);
+                let bytes: VhtOpArray = ht_op.as_bytes().try_into().unwrap();
+                fidl_vht_op = Some(Box::new(fidl_mlme::VhtOperation { bytes }));
             }
             _ => (),
         }
@@ -116,10 +115,10 @@ pub fn construct_bss_description(
         country,
         rsne,
         vendor_ies,
-        ht_cap,
-        ht_op,
-        vht_cap,
-        vht_op,
+        ht_cap: fidl_ht_cap,
+        ht_op: fidl_ht_op,
+        vht_cap: fidl_vht_cap,
+        vht_op: fidl_vht_op,
 
         chan,
         rssi_dbm: rx_info.rssi_dbm,

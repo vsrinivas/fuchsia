@@ -4,6 +4,7 @@
 
 use {
     fidl_fuchsia_wlan_mlme as fidl_mlme,
+    static_assertions::assert_eq_size,
     std::convert::TryInto,
     wlan_common::{
         channel::Channel,
@@ -81,27 +82,43 @@ fn intersect(ours: &JoinCapabilities, theirs: &PeerCapabilities) -> JoinCapabili
 
 impl From<fidl_mlme::AssociateConfirm> for PeerCapabilities {
     fn from(ac: fidl_mlme::AssociateConfirm) -> Self {
+        type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
+        type VhtCapArray = [u8; fidl_mlme::VHT_CAP_LEN as usize];
+
         let cap_info = CapabilityInfo(ac.cap_info);
         let rates = ac.rates.iter().map(|&r| SupportedRate(r)).collect();
-        // Both are safe to unwrap because the size of bytes are guaranteed to match the IEs.
-        let ht_cap = ac.ht_cap.map(|h| *parse_ht_capabilities(&h.bytes[..]).unwrap());
-        let vht_cap = ac.vht_cap.map(|v| *parse_vht_capabilities(&v.bytes[..]).unwrap());
+
+        let ht_cap = ac.ht_cap.map(|ht_cap| {
+            let bytes: &HtCapArray = &ht_cap.bytes;
+            assert_eq_size!(HtCapabilities, HtCapArray);
+            let ht_caps: HtCapabilities = *parse_ht_capabilities(&bytes[..]).unwrap();
+            ht_caps
+        });
+        let vht_cap = ac.vht_cap.map(|vht_cap| {
+            let bytes: &VhtCapArray = &vht_cap.bytes;
+            assert_eq_size!(VhtCapabilities, VhtCapArray);
+            let vht_caps: VhtCapabilities = *parse_vht_capabilities(&bytes[..]).unwrap();
+            vht_caps
+        });
         PeerCapabilities { cap_info, rates, ht_cap, vht_cap }
     }
 }
 
 impl From<JoinCapabilities> for fidl_mlme::NegotiatedCapabilities {
     fn from(jc: JoinCapabilities) -> Self {
-        // Both try_into().unwrap() are safe because there are tests in the CQ that guarantee the
-        // length of the slice produced by as_bytes() matches the length or the destination array
-        // in FIDL.
-        // See //src/connectivity/wlan/lib/common/rust/src/ie/parse.rs for |to_and_from_fidl_*|
-        let ht_cap = jc
-            .ht_cap
-            .map(|h| fidl_mlme::HtCapabilities { bytes: h.as_bytes().try_into().unwrap() });
-        let vht_cap = jc
-            .vht_cap
-            .map(|v| fidl_mlme::VhtCapabilities { bytes: v.as_bytes().try_into().unwrap() });
+        type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
+        type VhtCapArray = [u8; fidl_mlme::VHT_CAP_LEN as usize];
+
+        let ht_cap = jc.ht_cap.map(|ht_cap| {
+            assert_eq_size!(HtCapabilities, HtCapArray);
+            let bytes: HtCapArray = ht_cap.as_bytes().try_into().unwrap();
+            fidl_mlme::HtCapabilities { bytes }
+        });
+        let vht_cap = jc.vht_cap.map(|vht_cap| {
+            assert_eq_size!(VhtCapabilities, VhtCapArray);
+            let bytes: VhtCapArray = vht_cap.as_bytes().try_into().unwrap();
+            fidl_mlme::VhtCapabilities { bytes }
+        });
         Self {
             channel: jc.channel.to_fidl(),
             cap_info: jc.cap_info.raw(),

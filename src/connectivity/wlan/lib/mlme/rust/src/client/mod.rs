@@ -33,13 +33,14 @@ use {
     lost_bss::LostBssCounter,
     scanner::Scanner,
     state::States,
+    static_assertions::assert_eq_size,
     std::convert::TryInto,
     wlan_common::{
         buffer_writer::BufferWriter,
         frame_len,
         ie::{
-            parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, Id, Reader, IE_PREFIX_LEN,
-            SUPPORTED_RATES_MAX_LEN,
+            self, parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, Id, Reader,
+            IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN,
         },
         mac::{self, Aid, Bssid, MacAddr, OptionalField, PowerState, Presence},
         sequence::SequenceManager,
@@ -458,7 +459,6 @@ impl<'a> BoundClient<'a> {
         };
 
         let ht_cap = if ht_cap.is_empty() { None } else { Some(*parse_ht_capabilities(ht_cap)?) };
-
         let vht_cap =
             if vht_cap.is_empty() { None } else { Some(*parse_vht_capabilities(vht_cap)?) };
 
@@ -776,6 +776,9 @@ impl<'a> BoundClient<'a> {
         cap_info: mac::CapabilityInfo,
         elements: B,
     ) {
+        type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
+        type VhtCapArray = [u8; fidl_mlme::VHT_CAP_LEN as usize];
+
         let mut assoc_conf = fidl_mlme::AssociateConfirm {
             association_id,
             cap_info: cap_info.raw(),
@@ -795,23 +798,22 @@ impl<'a> BoundClient<'a> {
                     // safe to unwrap because supported rate is 1-byte thus always aligned
                     assoc_conf.rates.extend_from_slice(&body);
                 }
-                Id::HT_CAPABILITIES => {
-                    if body.len() != fidl_mlme::HT_CAP_LEN as usize {
-                        error!("invalid HT Capabilities len: {}", body.len());
-                        continue;
-                    } // safe to unwrap as we just verified the size.
-                    let bytes = body.as_bytes().try_into().unwrap();
-                    assoc_conf.ht_cap = Some(Box::new(fidl_mlme::HtCapabilities { bytes }))
-                }
-                Id::VHT_CAPABILITIES => {
-                    if body.len() != fidl_mlme::VHT_CAP_LEN as usize {
-                        error!("invalid VHT Capabilities len: {}", body.len());
-                        continue;
+                Id::HT_CAPABILITIES => match ie::parse_ht_capabilities(body) {
+                    Err(e) => error!("invalid HT Capabilities: {}", e),
+                    Ok(ht_cap) => {
+                        assert_eq_size!(ie::HtCapabilities, HtCapArray);
+                        let bytes: HtCapArray = ht_cap.as_bytes().try_into().unwrap();
+                        assoc_conf.ht_cap = Some(Box::new(fidl_mlme::HtCapabilities { bytes }))
                     }
-                    // safe to unwrap as we just verified the size.
-                    let bytes = body.as_bytes().try_into().unwrap();
-                    assoc_conf.vht_cap = Some(Box::new(fidl_mlme::VhtCapabilities { bytes }))
-                }
+                },
+                Id::VHT_CAPABILITIES => match ie::parse_vht_capabilities(body) {
+                    Err(e) => error!("invalid VHT Capabilities: {}", e),
+                    Ok(vht_cap) => {
+                        assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
+                        let bytes: VhtCapArray = vht_cap.as_bytes().try_into().unwrap();
+                        assoc_conf.vht_cap = Some(Box::new(fidl_mlme::VhtCapabilities { bytes }))
+                    }
+                },
                 _ => {}
             }
         }
