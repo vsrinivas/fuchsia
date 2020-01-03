@@ -984,13 +984,17 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetReports GetReports(::fidl::BytePart _response_buffer);
 
-    // Receive an event that will be signalled when there are reports in the
-    // Device's report FIFO.
+    // Receive an event that will signal on `ZX_USER_SIGNAL_0` when there are reports in the
+    // Device's report FIFO. This signal will be de-asserted when there are no
+    // reports in the Device's report FIFO. This event can be re-used each time
+    // the client wishes to know if there are reports in the FIFO.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetReportsEvent GetReportsEvent();
 
-    // Receive an event that will be signalled when there are reports in the
-    // Device's report FIFO.
+    // Receive an event that will signal on `ZX_USER_SIGNAL_0` when there are reports in the
+    // Device's report FIFO. This signal will be de-asserted when there are no
+    // reports in the Device's report FIFO. This event can be re-used each time
+    // the client wishes to know if there are reports in the FIFO.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetReportsEvent GetReportsEvent(::fidl::BytePart _response_buffer);
 
@@ -1115,13 +1119,17 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetReports GetReports(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Receive an event that will be signalled when there are reports in the
-    // Device's report FIFO.
+    // Receive an event that will signal on `ZX_USER_SIGNAL_0` when there are reports in the
+    // Device's report FIFO. This signal will be de-asserted when there are no
+    // reports in the Device's report FIFO. This event can be re-used each time
+    // the client wishes to know if there are reports in the FIFO.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetReportsEvent GetReportsEvent(::zx::unowned_channel _client_end);
 
-    // Receive an event that will be signalled when there are reports in the
-    // Device's report FIFO.
+    // Receive an event that will signal on `ZX_USER_SIGNAL_0` when there are reports in the
+    // Device's report FIFO. This signal will be de-asserted when there are no
+    // reports in the Device's report FIFO. This event can be re-used each time
+    // the client wishes to know if there are reports in the FIFO.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetReportsEvent GetReportsEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
@@ -1193,8 +1201,10 @@ class Device final {
     // wait on the event from |GetReportsEvent|.
     static ::fidl::DecodeResult<GetReportsResponse> GetReports(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    // Receive an event that will be signalled when there are reports in the
-    // Device's report FIFO.
+    // Receive an event that will signal on `ZX_USER_SIGNAL_0` when there are reports in the
+    // Device's report FIFO. This signal will be de-asserted when there are no
+    // reports in the Device's report FIFO. This event can be re-used each time
+    // the client wishes to know if there are reports in the FIFO.
     static ::fidl::DecodeResult<GetReportsEventResponse> GetReportsEvent(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get a single report of the given (type, id) pair.  This interface is not intended

@@ -72,8 +72,10 @@ protocol Device {
     /// wait on the event from |GetReportsEvent|.
     GetReports() -> (zx.status status, vector<uint8>:MAX_REPORT_DATA data);
 
-    /// Receive an event that will be signalled when there are reports in the
-    /// Device's report FIFO.
+    /// Receive an event that will signal on `ZX_USER_SIGNAL_0` when there are reports in the
+    /// Device's report FIFO. This signal will be de-asserted when there are no
+    /// reports in the Device's report FIFO. This event can be re-used each time
+    /// the client wishes to know if there are reports in the FIFO.
     GetReportsEvent() -> (zx.status status, handle<event> event);
 
     /// Get a single report of the given (type, id) pair.  This interface is not intended
