@@ -16,6 +16,8 @@ pub mod buffer_reader;
 pub mod buffer_writer;
 pub mod channel;
 pub mod data_writer;
+#[allow(unused)]
+pub mod energy;
 pub mod error;
 pub mod format;
 pub mod ie;
