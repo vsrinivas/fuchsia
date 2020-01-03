@@ -16,14 +16,13 @@
 #include <stdlib.h>
 #include <string>
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-bool WriteHeaders(const ArrayRef<Elf64_Phdr>& phdrs, const zx::vmo& vmo) {
-  BEGIN_HELPER;
+void WriteHeaders(const ArrayRef<Elf64_Phdr>& phdrs, const zx::vmo& vmo) {
   const Elf64_Ehdr ehdr = {
       .e_ident =
           {
@@ -50,15 +49,13 @@ bool WriteHeaders(const ArrayRef<Elf64_Phdr>& phdrs, const zx::vmo& vmo) {
       .e_shnum = 0,
       .e_shstrndx = 0,
   };
-  EXPECT_EQ(ZX_OK, vmo.write(&ehdr, 0, sizeof(ehdr)));
-  EXPECT_EQ(ZX_OK, vmo.write(phdrs.begin(), sizeof(ehdr), sizeof(Elf64_Phdr) * phdrs.size()));
-  END_HELPER;
+  EXPECT_OK(vmo.write(&ehdr, 0, sizeof(ehdr)));
+  EXPECT_OK(vmo.write(phdrs.begin(), sizeof(ehdr), sizeof(Elf64_Phdr) * phdrs.size()));
 }
 
 // TODO(jakehehrlich): Switch all uses of uint8_t to std::byte once libc++ lands.
 
-bool WriteBuildID(ArrayRef<uint8_t> build_id, const zx::vmo& vmo, uint64_t note_offset) {
-  BEGIN_HELPER;
+void WriteBuildID(ArrayRef<uint8_t> build_id, const zx::vmo& vmo, uint64_t note_offset) {
   uint8_t buf[64];
   const Elf64_Nhdr nhdr = {
       .n_namesz = sizeof(ELF_NOTE_GNU),
@@ -73,8 +70,7 @@ bool WriteBuildID(ArrayRef<uint8_t> build_id, const zx::vmo& vmo, uint64_t note_
   note_size += sizeof(ELF_NOTE_GNU);
   memcpy(buf + note_size, build_id.get(), build_id.size());
   note_size += build_id.size();
-  EXPECT_EQ(ZX_OK, vmo.write(buf, note_offset, note_size));
-  END_HELPER;
+  EXPECT_OK(vmo.write(buf, note_offset, note_size));
 }
 
 struct Module {
@@ -84,22 +80,20 @@ struct Module {
   zx::vmo vmo;
 };
 
-bool MakeELF(Module* mod) {
-  BEGIN_HELPER;
+void MakeELF(Module* mod) {
   size_t size = 0;
   for (const auto& phdr : mod->phdrs) {
     size = fbl::max(size, phdr.p_offset + phdr.p_filesz);
   }
-  ASSERT_EQ(ZX_OK, zx::vmo::create(size, 0, &mod->vmo));
-  EXPECT_EQ(ZX_OK, mod->vmo.set_property(ZX_PROP_NAME, mod->name.data(), mod->name.size()));
-  EXPECT_EQ(ZX_OK, mod->vmo.replace_as_executable(zx::handle(), &mod->vmo));
-  EXPECT_TRUE(WriteHeaders(mod->phdrs, mod->vmo));
+  ASSERT_OK(zx::vmo::create(size, 0, &mod->vmo));
+  EXPECT_OK(mod->vmo.set_property(ZX_PROP_NAME, mod->name.data(), mod->name.size()));
+  EXPECT_OK(mod->vmo.replace_as_executable(zx::handle(), &mod->vmo));
+  ASSERT_NO_FATAL_FAILURES(WriteHeaders(mod->phdrs, mod->vmo));
   for (const auto& phdr : mod->phdrs) {
     if (phdr.p_type == PT_NOTE) {
-      EXPECT_TRUE(WriteBuildID(mod->build_id, mod->vmo, phdr.p_offset));
+      ASSERT_NO_FATAL_FAILURES(WriteBuildID(mod->build_id, mod->vmo, phdr.p_offset));
     }
   }
-  END_HELPER;
 }
 
 constexpr Elf64_Phdr MakePhdr(uint32_t type, uint64_t size, uint64_t addr, uint32_t flags,
@@ -116,18 +110,15 @@ constexpr Elf64_Phdr MakePhdr(uint32_t type, uint64_t size, uint64_t addr, uint3
   };
 }
 
-bool GetKoid(const zx::vmo& obj, zx_koid_t* out) {
-  BEGIN_HELPER;
+void GetKoid(const zx::vmo& obj, zx_koid_t* out) {
   zx_info_handle_basic_t info;
-  ASSERT_EQ(ZX_OK, obj.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL));
+  ASSERT_OK(obj.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
   *out = info.koid;
-  END_HELPER;
 }
 
-bool ElfSearchTest() {
-  BEGIN_TEST;
-  unittest_cancel_timeout();
-
+// TODO(jakehehrlich): Not all error cases are tested. Appropriate tests can be
+// sussed out by looking at coverage results.
+TEST(ElfSearchTest, ForEachModule) {
   // Define some dummy modules.
   constexpr Elf64_Phdr mod0_phdrs[] = {MakePhdr(PT_LOAD, 0x2000, 0, PF_R, 0x1000),
                                        MakePhdr(PT_NOTE, 20, 0x1000, PF_R, 4),
@@ -162,19 +153,19 @@ bool ElfSearchTest() {
   ASSERT_NE("", root_dir);
   std::string helper = std::string(root_dir) + "/" + file;
   const char* argv[] = {helper.c_str()};
-  springboard_t* sb = tu_launch_init(ZX_HANDLE_INVALID, "mod-test", 1, argv, 0, NULL, 0, NULL,
-                                     NULL);
+  springboard_t* sb = tu_launch_init(ZX_HANDLE_INVALID, "mod-test", 1, argv, 0, nullptr, 0, nullptr,
+                                     nullptr);
   zx_handle_t vmar = springboard_get_root_vmar_handle(sb);
 
   uintptr_t base, entry;
   for (auto& mod : mods) {
-    EXPECT_TRUE(MakeELF(&mod));
+    ASSERT_NO_FATAL_FAILURES(MakeELF(&mod));
     if (mod.name == "mod3") {
       // Handle mod3's string table.
-      EXPECT_EQ(ZX_OK, mods[3].vmo.write(&mod3_dyns, 0x1800, sizeof(mod3_dyns)));
-      EXPECT_EQ(ZX_OK, mods[3].vmo.write(mod3_soname, 0x1901, strlen(mod3_soname) + 1));
+      EXPECT_OK(mods[3].vmo.write(&mod3_dyns, 0x1800, sizeof(mod3_dyns)));
+      EXPECT_OK(mods[3].vmo.write(mod3_soname, 0x1901, strlen(mod3_soname) + 1));
     }
-    ASSERT_EQ(ZX_OK, elf_load_extra(vmar, mod.vmo.get(), &base, &entry),
+    ASSERT_OK(elf_load_extra(vmar, mod.vmo.get(), &base, &entry),
               "Unable to load extra ELF");
   }
   zx::process process;
@@ -205,28 +196,20 @@ bool ElfSearchTest() {
         ++matchCount;
         char name[ZX_MAX_NAME_LEN];
         zx_koid_t vmo_koid = 0;
-        EXPECT_TRUE(GetKoid(mod.vmo, &vmo_koid));
+        ASSERT_NO_FATAL_FAILURES(GetKoid(mod.vmo, &vmo_koid));
         if (mod.name != "mod3") {
           snprintf(name, sizeof(name), "<VMO#%" PRIu64 "=%s>", vmo_koid, mod.name.data());
         } else {
           snprintf(name, sizeof(name), "%s", mod3_soname);
         }
-        EXPECT_TRUE(info.name == name, "expected module names to be the same");
+        EXPECT_STR_EQ(info.name, name);
         EXPECT_EQ(mod.phdrs.size(), info.phdrs.size(), "expected same number of phdrs");
       }
     }
     EXPECT_EQ(moduleCount, matchCount, "Build for module was not found.");
   });
-  EXPECT_EQ(ZX_OK, status, zx_status_get_string(status));
+  EXPECT_OK(status);
   EXPECT_EQ(moduleCount, fbl::count_of(mods), "Unexpected number of modules found.");
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(elf_search_tests)
-// TODO(jakehehrlich): Not all error cases are tested. Appropriate tests can be
-// sussed out by looking at coverage results.
-RUN_TEST(ElfSearchTest)
-END_TEST_CASE(elf_search_tests)
