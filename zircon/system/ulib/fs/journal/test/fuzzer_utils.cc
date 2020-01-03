@@ -12,9 +12,9 @@
 
 #include <fs/journal/format.h>
 #include <fuzzer/FuzzedDataProvider.h>
-#include <storage/buffer/blocking-ring-buffer.h>
+#include <storage/buffer/blocking_ring_buffer.h>
 #include <storage/operation/operation.h>
-#include <storage/operation/unbuffered-operations-builder.h>
+#include <storage/operation/unbuffered_operations_builder.h>
 
 namespace fs {
 

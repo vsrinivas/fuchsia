@@ -12,8 +12,8 @@
 #include <fs/journal/format.h>
 #include <fs/journal/header_view.h>
 #include <fs/journal/superblock.h>
-#include <storage/buffer/block-buffer-view.h>
-#include <storage/operation/buffered-operation.h>
+#include <storage/buffer/block_buffer_view.h>
+#include <storage/operation/buffered_operation.h>
 
 namespace fs {
 

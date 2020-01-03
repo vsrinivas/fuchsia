@@ -12,7 +12,7 @@
 #include <block-client/cpp/remote-block-device.h>
 #include <fs/trace.h>
 #include <safemath/checked_math.h>
-#include <storage/buffer/vmo-buffer.h>
+#include <storage/buffer/vmo_buffer.h>
 
 namespace disk_inspector {
 

@@ -8,7 +8,7 @@
 #include <fs/transaction/writeback.h>
 #include <range/interval-tree.h>
 #include <range/range.h>
-#include <storage/operation/buffered-operation.h>
+#include <storage/operation/buffered_operation.h>
 
 namespace fs {
 namespace internal {

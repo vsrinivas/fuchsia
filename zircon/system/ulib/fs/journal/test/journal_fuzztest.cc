@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 #include <fs/journal/journal.h>
-#include <storage/buffer/blocking-ring-buffer.h>
+#include <storage/buffer/blocking_ring_buffer.h>
 
 #include "fuzzer_utils.h"
 

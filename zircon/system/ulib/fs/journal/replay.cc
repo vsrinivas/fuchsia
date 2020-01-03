@@ -11,7 +11,7 @@
 #include <fs/journal/replay.h>
 #include <fs/journal/superblock.h>
 #include <fs/transaction/writeback.h>
-#include <storage/operation/buffered-operation.h>
+#include <storage/operation/buffered_operation.h>
 
 #include "entry_view.h"
 #include "replay_tree.h"

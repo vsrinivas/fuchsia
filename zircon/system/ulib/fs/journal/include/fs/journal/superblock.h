@@ -10,7 +10,7 @@
 #include <fbl/macros.h>
 #include <fs/journal/format.h>
 #include <fs/trace.h>
-#include <storage/buffer/block-buffer.h>
+#include <storage/buffer/block_buffer.h>
 
 namespace fs {
 

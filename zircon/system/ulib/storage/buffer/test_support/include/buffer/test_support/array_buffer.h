@@ -7,7 +7,7 @@
 
 #include <array>
 
-#include <storage/buffer/block-buffer.h>
+#include <storage/buffer/block_buffer.h>
 
 namespace storage {
 

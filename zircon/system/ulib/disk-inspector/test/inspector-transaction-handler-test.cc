@@ -5,7 +5,7 @@
 #include <lib/disk-inspector/inspector-transaction-handler.h>
 
 #include <block-client/cpp/fake-device.h>
-#include <storage/buffer/vmo-buffer.h>
+#include <storage/buffer/vmo_buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace disk_inspector {

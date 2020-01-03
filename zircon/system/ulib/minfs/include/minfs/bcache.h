@@ -33,8 +33,8 @@
 #include <block-client/cpp/block-group-registry.h>
 #include <block-client/cpp/client.h>
 #include <fvm/client.h>
-#include <storage/buffer/vmo-buffer.h>
-#include <storage/buffer/vmoid-registry.h>
+#include <storage/buffer/vmo_buffer.h>
+#include <storage/buffer/vmoid_registry.h>
 #else
 #include <fbl/vector.h>
 #endif

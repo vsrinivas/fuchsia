@@ -9,8 +9,8 @@ zx_library("operation") {
 
   if (is_fuchsia) {
     sources += [
-      "buffered-operation.cc",
-      "unbuffered-operations-builder.cc",
+      "buffered_operation.cc",
+      "unbuffered_operations_builder.cc",
     ]
     public_deps = [
       "$zx/system/ulib/fbl:headers",
@@ -31,14 +31,15 @@ zx_library("operation") {
 group("test") {
   testonly = true
   deps = [
-    ":storage-operation",
+    ":storage_operation",
   ]
 }
 
-zx_test("storage-operation") {
+zx_test("storage_operation") {
   test_group = "storage"
+  output_name = "storage-operation-test"
   sources = [
-    "test/unbuffered-operations-builder-test.cc",
+    "test/unbuffered_operations_builder_test.cc",
   ]
   deps = [
     ":operation",

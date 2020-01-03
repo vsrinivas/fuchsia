@@ -9,9 +9,9 @@ zx_library("buffer") {
 
   if (is_fuchsia) {
     sources += [
-      "blocking-ring-buffer.cc",
-      "ring-buffer.cc",
-      "vmo-buffer.cc",
+      "blocking_ring_buffer.cc",
+      "ring_buffer.cc",
+      "vmo_buffer.cc",
     ]
     public_deps = [
       "$zx/system/ulib/fbl:headers",
@@ -36,17 +36,18 @@ zx_library("buffer") {
 group("test") {
   testonly = true
   deps = [
-    ":storage-buffer",
+    ":storage_buffer",
   ]
 }
 
-zx_test("storage-buffer") {
+zx_test("storage_buffer") {
+  output_name = "storage-buffer-test"
   test_group = "storage"
   sources = [
-    "test/block-buffer-view-test.cc",
-    "test/blocking-ring-buffer-test.cc",
-    "test/ring-buffer-test.cc",
-    "test/vmo-buffer-test.cc",
+    "test/block_buffer_view_test.cc",
+    "test/blocking_ring_buffer_test.cc",
+    "test/ring_buffer_test.cc",
+    "test/vmo_buffer_test.cc",
   ]
   deps = [
     ":buffer",

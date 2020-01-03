@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/journal/data_streamer.h>
+#include "fs/journal/data_streamer.h"
+
+#include <zircon/assert.h>
 
 #include <fs/journal/journal.h>
 #include <fs/transaction/writeback.h>
-#include <storage/buffer/vmoid-registry.h>
-#include <zircon/assert.h>
+#include <storage/buffer/vmoid_registry.h>
 #include <zxtest/zxtest.h>
 
 namespace fs {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <storage/buffer/vmo-buffer.h>
+#include "storage/buffer/vmo_buffer.h"
 
 #include <zircon/assert.h>
 #include <zircon/status.h>

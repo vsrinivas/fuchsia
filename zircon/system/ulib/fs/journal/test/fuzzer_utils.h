@@ -17,10 +17,10 @@
 #include <fs/journal/superblock.h>
 #include <fs/transaction/block_transaction.h>
 #include <fuzzer/FuzzedDataProvider.h>
-#include <storage/buffer/blocking-ring-buffer.h>
-#include <storage/buffer/vmo-buffer.h>
-#include <storage/buffer/vmoid-registry.h>
-#include <storage/operation/buffered-operation.h>
+#include <storage/buffer/blocking_ring_buffer.h>
+#include <storage/buffer/vmo_buffer.h>
+#include <storage/buffer/vmoid_registry.h>
+#include <storage/operation/buffered_operation.h>
 #include <storage/operation/operation.h>
 
 namespace fs {

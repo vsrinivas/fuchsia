@@ -10,8 +10,8 @@
 #include <fbl/vector.h>
 #include <fs/journal/superblock.h>
 #include <fs/transaction/block_transaction.h>
-#include <storage/buffer/vmo-buffer.h>
-#include <storage/operation/buffered-operation.h>
+#include <storage/buffer/vmo_buffer.h>
+#include <storage/operation/buffered_operation.h>
 
 namespace fs {
 

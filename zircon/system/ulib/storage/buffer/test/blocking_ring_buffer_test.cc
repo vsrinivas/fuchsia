@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <storage/buffer/blocking-ring-buffer.h>
+#include "storage/buffer/blocking_ring_buffer.h"
+
+#include <sched.h>
 
 #include <atomic>
-#include <sched.h>
 #include <thread>
 
-#include <storage/operation/unbuffered-operations-builder.h>
+#include <storage/operation/unbuffered_operations_builder.h>
 #include <zxtest/zxtest.h>
 
 namespace storage {

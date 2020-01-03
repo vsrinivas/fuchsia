@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "storage/buffer/ring_buffer.h"
+
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 
 #include <memory>
 
-#include <storage/buffer/ring-buffer.h>
-#include <storage/operation/unbuffered-operations-builder.h>
+#include <storage/operation/unbuffered_operations_builder.h>
 #include <zxtest/zxtest.h>
 
 namespace storage {

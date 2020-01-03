@@ -15,7 +15,7 @@
 #include <fs/trace.h>
 #include <minfs/bcache.h>
 #include <minfs/format.h>
-#include <storage/buffer/block-buffer.h>
+#include <storage/buffer/block_buffer.h>
 #include <storage/operation/operation.h>
 
 #include "minfs-private.h"

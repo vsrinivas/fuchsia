@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <minfs/bcache.h>
+#include "minfs/bcache.h"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -10,7 +10,7 @@
 #include <vector>
 
 #include <minfs/format.h>
-#include <storage/buffer/block-buffer.h>
+#include <storage/buffer/block_buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace {

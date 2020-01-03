@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <minfs/bcache.h>
+#include "minfs/bcache.h"
 
 #include <block-client/cpp/fake-device.h>
 #include <minfs/format.h>
 #include <minfs/minfs.h>
-#include <storage/buffer/vmo-buffer.h>
+#include <storage/buffer/vmo_buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace minfs {

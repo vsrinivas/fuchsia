@@ -13,8 +13,8 @@
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/block-group-registry.h>
 #include <fs/transaction/block_transaction.h>
-#include <storage/buffer/block-buffer.h>
-#include <storage/buffer/vmoid-registry.h>
+#include <storage/buffer/block_buffer.h>
+#include <storage/buffer/vmoid_registry.h>
 #include <storage/operation/operation.h>
 
 namespace disk_inspector {

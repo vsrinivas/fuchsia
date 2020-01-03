@@ -11,7 +11,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/vector.h>
-#include <storage/buffer/block-buffer.h>
+#include <storage/buffer/block_buffer.h>
 #include <storage/operation/operation.h>
 
 #ifdef __Fuchsia__

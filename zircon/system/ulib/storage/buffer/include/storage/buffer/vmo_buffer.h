@@ -7,8 +7,8 @@
 
 #include <lib/fzl/owned-vmo-mapper.h>
 
-#include <storage/buffer/block-buffer.h>
-#include <storage/buffer/vmoid-registry.h>
+#include <storage/buffer/block_buffer.h>
+#include <storage/buffer/vmoid_registry.h>
 
 namespace storage {
 

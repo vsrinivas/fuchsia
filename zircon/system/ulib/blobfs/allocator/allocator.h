@@ -25,7 +25,7 @@
 #include <fbl/vector.h>
 #include <fs/trace.h>
 #include <id_allocator/id_allocator.h>
-#include <storage/buffer/vmoid-registry.h>
+#include <storage/buffer/vmoid_registry.h>
 
 #include "extent-reserver.h"
 #include "node-reserver.h"

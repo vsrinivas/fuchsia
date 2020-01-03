@@ -10,7 +10,7 @@
 
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <storage/buffer/ring-buffer.h>
+#include <storage/buffer/ring_buffer.h>
 
 namespace storage {
 

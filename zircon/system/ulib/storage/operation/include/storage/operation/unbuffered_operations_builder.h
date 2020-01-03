@@ -17,7 +17,7 @@
 
 #include <fbl/macros.h>
 #include <fbl/vector.h>
-#include <storage/operation/buffered-operation.h>
+#include <storage/operation/buffered_operation.h>
 
 namespace storage {
 

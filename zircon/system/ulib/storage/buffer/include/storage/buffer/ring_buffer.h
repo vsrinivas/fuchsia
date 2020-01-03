@@ -10,9 +10,9 @@
 #endif
 
 #include <fbl/mutex.h>
-#include <storage/buffer/block-buffer-view.h>
-#include <storage/buffer/vmo-buffer.h>
-#include <storage/operation/buffered-operation.h>
+#include <storage/buffer/block_buffer_view.h>
+#include <storage/buffer/vmo_buffer.h>
+#include <storage/operation/buffered_operation.h>
 
 namespace storage {
 
