@@ -1,0 +1,19 @@
+// Overloads system with cpu_num * 2 threads, which has manifested as an apparent hang in systems
+// with large core counts.
+{
+  "name": "Large Core Counts Overload Test.",
+  "config": {
+    "priority": 30,
+    "interval": "10s"
+  },
+  "workers": [
+    {
+      "name": "Twice Number of Threads Than CPUs",
+      "instances": "cpu_num*2",
+      "priority": 0,
+      "actions": [
+        { "action": "yield", "duration": "10m" }
+      ]
+    }
+  ]
+}

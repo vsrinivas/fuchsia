@@ -118,6 +118,50 @@ std::chrono::nanoseconds ParseDurationString(const std::string& duration) {
   }
 }
 
+// Parses an expression of the form "cpu_num<+|-|*><positive integer>" and returns evaluated result
+// as an integer.
+size_t ParseInstancesString(const std::string& instances) {
+  static const std::regex kReInstances{"(^[a-zA-Z_]+)((\\+|\\*|-)(\\d+))?$"};
+
+  // Match[0]: Full match
+  // Match[1]: "num_cpu"
+  // Match[2]: <operation><argument>
+  // Match[3]: <operation>
+  // Match[4]: <argument>
+  std::smatch match;
+
+  FXL_CHECK(std::regex_search(instances, match, kReInstances)) <<
+    "The expression string must be in the format cpu_num<+|-|*><positive integer>.";
+  FXL_CHECK(match[1] == "cpu_num") <<
+    "The expression string must be in the format cpu_num<+|-|*><positive integer>.";
+  FXL_CHECK(match.size() == 5) <<
+    "Unexpected match size " << match.size();
+
+  const std::string operation = match[3];
+
+  if (operation == "") {
+    return ReadCpuCount();
+  } else {
+    const size_t argument = std::stoull(match[4]);
+
+    if (operation == "+") {
+      return ReadCpuCount() + argument;
+    } else if (operation == "-") {
+      if (argument > ReadCpuCount()) {
+        FXL_LOG(WARNING) << "Expression " << instances <<
+          " yields negative number. Instances set to 0";
+        return 0;
+      } else {
+        return ReadCpuCount() - argument;
+      }
+    } else if (operation == "*") {
+      return ReadCpuCount() * argument;
+    } else {
+        __builtin_unreachable();
+    }
+  }
+}
+
 // Returns an unowned handle to a profile for the specified priority. Maintains
 // an internal map of already requested profiles and returns the same handle for
 // multiple requests for the same priority.

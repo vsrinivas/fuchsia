@@ -57,6 +57,7 @@ package("loadbench") {
     "port_test.json",
     "simple_load.json",
     "relative_bandwidth.json",
+    "tests/automated/large_core_counts_overload_test.json",
     "tests/dpc_latency.json",
   ]
 

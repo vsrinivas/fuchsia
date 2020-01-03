@@ -442,6 +442,8 @@ std::unique_ptr<Action> Workload::ParseAction(const rapidjson::Value& action) {
       const auto [min_ns, max_ns] = std::get<Uniform>(result);
       return SleepUniformAction::Create(min_ns, max_ns);
     }
+  } else if (action_string == "yield") {
+    return YieldAction::Create();
   } else if (action_string == "write") {
     const auto* channel_name = GetString("channel", action, "Write action");
     const size_t side = GetInt("side", action, "Write action");
@@ -595,12 +597,15 @@ void Workload::ParseWorker(const rapidjson::Value& worker) {
   if (worker.HasMember("instances")) {
     const auto& instances_member = worker["instances"];
     const bool is_integer = instances_member.IsInt();
+    const bool is_string = instances_member.IsString();
     const bool is_object = instances_member.IsObject();
-    FXL_CHECK(is_integer || is_object)
-        << "Worker member \"instances\" must either be an integer or a JSON object!";
+    FXL_CHECK(is_integer || is_string || is_object)
+        << "Worker member \"instances\" must either be an integer, string or a JSON object!";
 
     if (is_integer) {
       instances = GetInt("instances", worker, "Worker");
+    } else if (is_string) {
+      instances = ParseInstancesString(GetString("instances", worker, "Worker"));
     } else if (is_object) {
       FXL_CHECK(false) << "Worker member \"instances\" expressions are not yet implemented!";
     }

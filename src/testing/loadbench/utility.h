@@ -22,6 +22,10 @@ using double_seconds = std::chrono::duration<double, std::chrono::seconds::perio
 // the equivalent value in nanoseconds.
 std::chrono::nanoseconds ParseDurationString(const std::string& duration);
 
+// Parses an expression of the form "cpu_num<+|-|*><positive integer>" and returns evaluated result
+// as an integer.
+size_t ParseInstancesString(const std::string& instances_str);
+
 // Returns an unowned handle to a profile for the specified priority. Maintains
 // an internal map of already requested profiles and returns the same handle for
 // multiple requests for the same priority.
