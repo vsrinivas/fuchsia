@@ -1046,28 +1046,32 @@ static void iwl_mvm_mac_reconfig_complete(struct ieee80211_hw* hw,
         break;
     }
 }
+#endif  // NEEDS_PORTING
 
 void __iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
-    lockdep_assert_held(&mvm->mutex);
+  lockdep_assert_held(&mvm->mutex);
 
-    /* firmware counters are obviously reset now, but we shouldn't
-     * partially track so also clear the fw_reset_accu counters.
-     */
-    memset(&mvm->accu_radio_stats, 0, sizeof(mvm->accu_radio_stats));
+  /* firmware counters are obviously reset now, but we shouldn't
+   * partially track so also clear the fw_reset_accu counters.
+   */
+  memset(&mvm->accu_radio_stats, 0, sizeof(mvm->accu_radio_stats));
 
-    /* async_handlers_wk is now blocked */
+  /* async_handlers_wk is now blocked */
 
+#if 0   // NEEDS_PORTING
     /*
      * The work item could be running or queued if the
      * ROC time event stops just as we get here.
      */
     flush_work(&mvm->roc_done_wk);
+#endif  // NEEDS_PORTING
 
-    iwl_mvm_stop_device(mvm);
+  iwl_mvm_stop_device(mvm);
 
-    iwl_mvm_async_handlers_purge(mvm);
-    /* async_handlers_list is empty and will stay empty: HW is stopped */
+  iwl_mvm_async_handlers_purge(mvm);
+  /* async_handlers_list is empty and will stay empty: HW is stopped */
 
+#if 0   // NEEDS_PORTING
     /* the fw is stopped, the aux sta is dead: clean up driver state */
     iwl_mvm_del_aux_sta(mvm);
 
@@ -1082,22 +1086,22 @@ void __iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
         test_and_clear_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status)) {
         ieee80211_iterate_interfaces(mvm->hw, 0, iwl_mvm_cleanup_iterator, mvm);
     }
+#endif  // NEEDS_PORTING
 
-    /* We shouldn't have any UIDs still set.  Loop over all the UIDs to
-     * make sure there's nothing left there and warn if any is found.
-     */
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
-        int i;
-
-        for (i = 0; i < mvm->max_scans; i++) {
-            if (WARN_ONCE(mvm->scan_uid_status[i], "UMAC scan UID %d status was not cleaned\n",
-                          i)) {
-                mvm->scan_uid_status[i] = 0;
-            }
-        }
+  /* We shouldn't have any UIDs still set.  Loop over all the UIDs to
+   * make sure there's nothing left there and warn if any is found.
+   */
+  if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
+    for (unsigned int i = 0; i < mvm->max_scans; i++) {
+      if (mvm->scan_uid_status[i]) {
+        IWL_WARN(mvm, "UMAC scan UID %d status was not cleaned\n", i);
+        mvm->scan_uid_status[i] = 0;
+      }
     }
+  }
 }
 
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_mac_stop(struct ieee80211_hw* hw) {
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
 
@@ -1207,40 +1211,43 @@ static void iwl_mvm_update_ctx_tx_power_limit(struct iwl_mvm* mvm, struct ieee80
     iwl_mvm_set_tx_power(mvm, vif, phy_ctxt->fm_tx_power_limit);
 }
 #endif
+#endif  // NEEDS_PORTING
 
-static int iwl_mvm_mac_add_interface(struct ieee80211_hw* hw, struct ieee80211_vif* vif) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-    struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-    int ret;
+zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif, struct ieee80211_vif* vif) {
+  struct iwl_mvm* mvm = mvmvif->mvm;
+  vif->drv_priv = mvmvif;
+  mvmvif->probe_resp_data = NULL;
 
-    mvmvif->mvm = mvm;
-    RCU_INIT_POINTER(mvmvif->probe_resp_data, NULL);
+  /*
+   * make sure D0i3 exit is completed, otherwise a target access
+   * during tx queue configuration could be done when still in
+   * D0i3 state.
+   */
+  zx_status_t ret = iwl_mvm_ref_sync(mvm, IWL_MVM_REF_ADD_IF);
+  if (ret != ZX_OK) {
+    return ret;
+  }
 
-    /*
-     * make sure D0i3 exit is completed, otherwise a target access
-     * during tx queue configuration could be done when still in
-     * D0i3 state.
-     */
-    ret = iwl_mvm_ref_sync(mvm, IWL_MVM_REF_ADD_IF);
-    if (ret) { return ret; }
+  /*
+   * Not much to do here. The stack will not allow interface
+   * types or combinations that we didn't advertise, so we
+   * don't really have to check the types.
+   */
 
-    /*
-     * Not much to do here. The stack will not allow interface
-     * types or combinations that we didn't advertise, so we
-     * don't really have to check the types.
-     */
+  mtx_lock(&mvm->mutex);
 
-    mutex_lock(&mvm->mutex);
+  /* make sure that beacon statistics don't go backwards with FW reset */
+  if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
+    mvmvif->beacon_stats.accu_num_beacons += mvmvif->beacon_stats.num_beacons;
+  }
 
-    /* make sure that beacon statistics don't go backwards with FW reset */
-    if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
-        mvmvif->beacon_stats.accu_num_beacons += mvmvif->beacon_stats.num_beacons;
-    }
+  /* Allocate resources for the MAC context, and add it to the fw  */
+  ret = iwl_mvm_mac_ctxt_init(mvm, vif);
+  if (ret != ZX_OK) {
+    goto out_unlock;
+  }
 
-    /* Allocate resources for the MAC context, and add it to the fw  */
-    ret = iwl_mvm_mac_ctxt_init(mvm, vif);
-    if (ret) { goto out_unlock; }
-
+#if 0   // NEEDS_PORTING
     /* Currently not much to do for NAN */
     if (vif->type == NL80211_IFTYPE_NAN) { goto out_unlock; }
 
@@ -1277,16 +1284,21 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw* hw, struct ieee80211_v
     }
 
     mvmvif->features |= hw->netdev_features;
+#endif  // NEEDS_PORTING
+  mvm->vif_count++;
 
-    ret = iwl_mvm_mac_ctxt_add(mvm, vif);
-    if (ret) { goto out_release; }
+  ret = iwl_mvm_mac_ctxt_add(mvm, vif);
+  if (ret != ZX_OK) {
+    goto out_release;
+  }
 
+#if 0  // NEEDS_PORTING
     ret = iwl_mvm_power_update_mac(mvm);
     if (ret) { goto out_remove_mac; }
 
     /* beacon filtering */
     ret = iwl_mvm_disable_beacon_filter(mvm, vif, 0);
-    if (ret) { goto out_remove_mac; }
+    if (ret != ZX_OK) { goto out_remove_mac; }
 
     if (!mvm->bf_allowed_vif && vif->type == NL80211_IFTYPE_STATION && !vif->p2p) {
         mvm->bf_allowed_vif = mvmvif;
@@ -1326,8 +1338,10 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw* hw, struct ieee80211_v
     if (vif->type == NL80211_IFTYPE_MONITOR) { mvm->monitor_on = true; }
 
     iwl_mvm_vif_dbgfs_register(mvm, vif);
-    goto out_unlock;
+#endif  // NEEDS_PORTING
+  goto out_unlock;
 
+#if 0   // NEEDS_PORTING
 out_unbind:
     iwl_mvm_binding_remove_vif(mvm, vif);
 out_unref_phy:
@@ -1338,18 +1352,23 @@ out_free_bf:
         vif->driver_flags &= ~(IEEE80211_VIF_BEACON_FILTER | IEEE80211_VIF_SUPPORTS_CQM_RSSI);
     }
 out_remove_mac:
-    mvmvif->phy_ctxt = NULL;
-    iwl_mvm_mac_ctxt_remove(mvm, vif);
+#endif  // NEEDS_PORTING
+  mvmvif->phy_ctxt = NULL;
+  iwl_mvm_mac_ctxt_remove(mvmvif);
 out_release:
+#if 0   // NEEDS_PORTING
     if (vif->type != NL80211_IFTYPE_P2P_DEVICE) { mvm->vif_count--; }
+#endif  // NEEDS_PORTING
+  mvm->vif_count--;
 out_unlock:
-    mutex_unlock(&mvm->mutex);
+  mtx_unlock(&mvm->mutex);
 
-    iwl_mvm_unref(mvm, IWL_MVM_REF_ADD_IF);
+  iwl_mvm_unref(mvm, IWL_MVM_REF_ADD_IF);
 
-    return ret;
+  return ret;
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_prepare_mac_removal(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
     if (vif->type == NL80211_IFTYPE_P2P_DEVICE) {
         /*
@@ -1360,12 +1379,12 @@ static void iwl_mvm_prepare_mac_removal(struct iwl_mvm* mvm, struct ieee80211_vi
         flush_work(&mvm->roc_done_wk);
     }
 }
+#endif  // NEEDS_PORTING
 
-static void iwl_mvm_mac_remove_interface(struct ieee80211_hw* hw, struct ieee80211_vif* vif) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-    struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-    struct iwl_probe_resp_data* probe_data;
+zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif) {
+  struct iwl_mvm* mvm = mvmvif->mvm;
 
+#if 0   // NEEDS_PORTING
     iwl_mvm_prepare_mac_removal(mvm, vif);
 
     if (vif->type == NL80211_IFTYPE_NAN) {
@@ -1379,13 +1398,14 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw* hw, struct ieee802
     if (!(vif->type == NL80211_IFTYPE_AP || vif->type == NL80211_IFTYPE_ADHOC)) {
         iwl_mvm_tcm_rm_vif(mvm, vif);
     }
+#endif  // NEEDS_PORTING
 
-    mutex_lock(&mvm->mutex);
+  mtx_lock(&mvm->mutex);
 
-    probe_data = rcu_dereference_protected(mvmvif->probe_resp_data, lockdep_is_held(&mvm->mutex));
-    RCU_INIT_POINTER(mvmvif->probe_resp_data, NULL);
-    if (probe_data) { kfree_rcu(probe_data, rcu_head); }
+  free(mvmvif->probe_resp_data);
+  mvmvif->probe_resp_data = NULL;
 
+#if 0  // NEEDS_PORTING
     if (mvm->bf_allowed_vif == mvmvif) {
         mvm->bf_allowed_vif = NULL;
         vif->driver_flags &= ~(IEEE80211_VIF_BEACON_FILTER | IEEE80211_VIF_SUPPORTS_CQM_RSSI);
@@ -1408,11 +1428,15 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw* hw, struct ieee802
         iwl_mvm_dealloc_bcast_sta(mvm, vif);
         goto out_release;
     }
+#endif  // NEEDS_PORTING
 
 #ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
-    if (mvmvif == mvm->p2p_opps_test_wa_vif) { mvm->p2p_opps_test_wa_vif = NULL; }
+  if (mvmvif == mvm->p2p_opps_test_wa_vif) {
+    mvm->p2p_opps_test_wa_vif = NULL;
+  }
 #endif
 
+#if 0   // NEEDS_PORTING
     if (vif->type == NL80211_IFTYPE_P2P_DEVICE) {
         mvm->p2p_device_vif = NULL;
         iwl_mvm_rm_p2p_bcast_sta(mvm, vif);
@@ -1422,20 +1446,33 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw* hw, struct ieee802
     }
 
     if (mvm->vif_count && vif->type != NL80211_IFTYPE_P2P_DEVICE) { mvm->vif_count--; }
+#endif  // NEEDS_PORTING
+  if (mvm->vif_count) {
+    mvm->vif_count--;
+  }
 
+#if 0   // NEEDS_PORTING
     iwl_mvm_power_update_mac(mvm);
-    iwl_mvm_mac_ctxt_remove(mvm, vif);
+#endif  // NEEDS_PORTING
+  zx_status_t ret = iwl_mvm_mac_ctxt_remove(mvmvif);
 
+#if 0   // NEEDS_PORTING
     if (vif->type == NL80211_IFTYPE_MONITOR) { mvm->monitor_on = false; }
+#endif  // NEEDS_PORTING
 
 #ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-    iwl_mvm_tdls_peer_cache_clear(mvm, vif);
+  iwl_mvm_tdls_peer_cache_clear(mvm, vif);
 #endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
+#if 0   // NEEDS_PORTING
 out_release:
-    mutex_unlock(&mvm->mutex);
+#endif  // NEEDS_PORTING
+  mtx_unlock(&mvm->mutex);
+
+  return ret;
 }
 
+#if 0  // NEEDS_PORTING
 static int iwl_mvm_mac_config(struct ieee80211_hw* hw, uint32_t changed) {
     return 0;
 }

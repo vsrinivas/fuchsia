@@ -36,7 +36,9 @@ TEST_F(MacContextTest, Init) {
 }
 
 TEST_F(MacContextTest, AddModifyRemove) {
-  struct iwl_mvm_vif mvmvif = {};
+  struct iwl_mvm_vif mvmvif = {
+      .mvm = mvm_,
+  };
   struct ieee80211_vif vif = {
       .type = WLAN_INFO_MAC_ROLE_CLIENT,
       .bss_conf =
@@ -59,11 +61,11 @@ TEST_F(MacContextTest, AddModifyRemove) {
 
   // Expect success for modify and remove
   ASSERT_OK(iwl_mvm_mac_ctxt_changed(mvm_, &vif, false, nullptr));
-  ASSERT_OK(iwl_mvm_mac_ctxt_remove(mvm_, &vif));
+  ASSERT_OK(iwl_mvm_mac_ctxt_remove(&mvmvif));
 
   // Removed so expect error
   ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_ctxt_changed(mvm_, &vif, false, nullptr));
-  ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_ctxt_remove(mvm_, &vif));
+  ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_ctxt_remove(&mvmvif));
 }
 
 }  // namespace

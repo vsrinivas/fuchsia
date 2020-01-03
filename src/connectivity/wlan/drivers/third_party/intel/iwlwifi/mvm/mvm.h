@@ -1664,7 +1664,7 @@ zx_status_t iwl_mvm_mac_ctxt_init(struct iwl_mvm* mvm, struct ieee80211_vif* vif
 zx_status_t iwl_mvm_mac_ctxt_add(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 int iwl_mvm_mac_ctxt_changed(struct iwl_mvm* mvm, struct ieee80211_vif* vif, bool force_assoc_off,
                              const uint8_t* bssid_override);
-int iwl_mvm_mac_ctxt_remove(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+int iwl_mvm_mac_ctxt_remove(struct iwl_mvm_vif* mvmvif);
 int iwl_mvm_mac_ctxt_beacon_changed(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 void iwl_mvm_rx_beacon_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 void iwl_mvm_rx_missed_beacons_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
@@ -2076,5 +2076,9 @@ void iwl_mvm_ax_softap_testmode_sta_add_debugfs(struct ieee80211_hw* hw, struct 
 
 // The entry point for ops.c.
 zx_status_t iwl_mvm_init(void);
+
+// Interfaces for mac80211.c
+zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif, struct ieee80211_vif* vif);
+zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_

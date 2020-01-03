@@ -98,7 +98,12 @@ static zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc,
 }
 
 static void mac_stop(void* ctx) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
+  struct iwl_mvm_vif* mvmvif = ctx;
+
+  zx_status_t ret = iwl_mvm_mac_remove_interface(mvmvif);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Cannot remove MAC interface: %s\n", zx_status_get_string(ret));
+  }
 }
 
 static zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
@@ -298,7 +303,6 @@ static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_r
     mvmvif->mac_role = req->role;
     mvmvif->sme_channel = req->sme_channel;
     mvm->mvmvif[id] = mvmvif;
-    mvm->vif_count++;
     *out_iface_id = id;
   }
 
@@ -347,8 +351,13 @@ static zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
   // Unlink the 'mvmvif' from the 'mvm' and remove the zxdev. The memory of 'mvmvif' will be freed
   // in mac_release().
   mvmvif->zxdev = NULL;
-  mvm->vif_count--;
   mvm->mvmvif[id] = NULL;
+
+  // the last MAC interface. stop the MVM to save power. 'vif_count' had been decreased in
+  // iwl_mvm_mac_remove_interface().
+  if (mvm->vif_count == 0) {
+    __iwl_mvm_mac_stop(mvm);
+  }
 
 unlock:
   mtx_unlock(&mvm->mutex);

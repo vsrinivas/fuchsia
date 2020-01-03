@@ -1193,8 +1193,7 @@ zx_status_t iwl_mvm_mac_ctxt_changed(struct iwl_mvm* mvm, struct ieee80211_vif* 
   return iwl_mvm_mac_ctx_send(mvm, vif, FW_CTXT_ACTION_MODIFY, force_assoc_off, bssid_override);
 }
 
-zx_status_t iwl_mvm_mac_ctxt_remove(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
+zx_status_t iwl_mvm_mac_ctxt_remove(struct iwl_mvm_vif* mvmvif) {
   struct iwl_mac_ctx_cmd cmd;
   zx_status_t ret;
 
@@ -1214,7 +1213,7 @@ zx_status_t iwl_mvm_mac_ctxt_remove(struct iwl_mvm* mvm, struct ieee80211_vif* v
   cmd.id_and_color = cpu_to_le32(FW_CMD_ID_AND_COLOR(mvmvif->id, mvmvif->color));
   cmd.action = cpu_to_le32(FW_CTXT_ACTION_REMOVE);
 
-  ret = iwl_mvm_send_cmd_pdu(mvm, MAC_CONTEXT_CMD, 0, sizeof(cmd), &cmd);
+  ret = iwl_mvm_send_cmd_pdu(mvmvif->mvm, MAC_CONTEXT_CMD, 0, sizeof(cmd), &cmd);
   if (ret) {
     IWL_ERR(mvm, "Failed to remove MAC context: %d\n", ret);
     return ret;

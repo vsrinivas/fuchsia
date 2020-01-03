@@ -92,6 +92,18 @@ executable("iwl-phy-db_test") {
   deps = testing_deps
 }
 
+executable("mac80211_test") {
+  output_name = "mac80211_test"
+  testonly = true
+
+  sources = [
+    "mac80211_test.cc",
+  ]
+
+  defines = testing_defines
+  deps = testing_deps
+}
+
 executable("mac-ctxt_test") {
   output_name = "mac-ctxt_test"
   testonly = true
@@ -206,6 +218,7 @@ unittest_package("iwlwifi_test") {
     ":fuchsia_porting_test",
     ":iwl-phy-db_test",
     ":mac-ctxt_test",
+    ":mac80211_test",
     ":mvm_test",
     ":notif-wait_test",
     ":nvm_test",
@@ -226,6 +239,10 @@ unittest_package("iwlwifi_test") {
     },
     {
       name = "iwl-phy-db_test"
+      environments = basic_envs
+    },
+    {
+      name = "mac80211_test"
       environments = basic_envs
     },
     {
