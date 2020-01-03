@@ -96,7 +96,8 @@ void App::CreateExampleScene(float display_width, float display_height) {
   static const glm::vec3 eye(0, 0, 0);
   static const glm::vec3 look_at(0, 0, -1);
   static const glm::vec3 up(0, 1, 0);
-  camera_->SetTransform(glm::value_ptr(eye), glm::value_ptr(look_at), glm::value_ptr(up));
+  camera_->SetTransform({eye.x, eye.y, eye.z}, {look_at.x, look_at.y, look_at.z},
+                        {up.x, up.y, up.z});
 
   float fovy = glm::radians(30.f);
   float f = 1.0f / tan(0.5f * fovy);
@@ -112,8 +113,10 @@ void App::CreateExampleScene(float display_width, float display_height) {
                         0.0f,              0.0f, far / (near - far),         -1.0f,
                         0.0f,              0.0f, (near * far) / (near - far), 0.0f);
   // clang-format on
-
-  camera_->SetStereoProjection(glm::value_ptr(projection), glm::value_ptr(projection));
+  std::array<float, 16> projection_arr;
+  const float* projection_ptr = glm::value_ptr(projection);
+  std::copy(projection_ptr, projection_ptr + 16, std::begin(projection_arr));
+  camera_->SetStereoProjection(projection_arr, projection_arr);
 
   compositor_->SetLayerStack(layer_stack);
   layer_stack.AddLayer(layer);

@@ -106,10 +106,10 @@ VK_TEST_F(ViewClippingTest, ClipSettingTest) {
     for (int32_t j = -10; j < 10; j++) {
       for (int32_t k = -10; k < 10; k++) {
         for (int32_t m = 1; m < 10; m++) {
-          const float bbox_min[3] = {float(i), float(j), float(k)};
-          const float bbox_max[3] = {float(i + m), float(j + m), float(k + m)};
-          const float inset_min[3] = {0, 0, 0};
-          const float inset_max[3] = {0, 0, 0};
+          const std::array<float, 3> bbox_min = {float(i), float(j), float(k)};
+          const std::array<float, 3> bbox_max = {float(i + m), float(j + m), float(k + m)};
+          const std::array<float, 3> inset_min = {0, 0, 0};
+          const std::array<float, 3> inset_max = {0, 0, 0};
 
           BoundingBox bbox(vec3(i, j, k), vec3(i + m, j + m, k + m));
 
@@ -152,10 +152,10 @@ VK_TEST_F(ViewClippingTest, InsetsTest) {
   EXPECT_TRUE(view_holder);
 
   // Set view bounding box properties.
-  const float bbox_min[3] = {0, 0, -100};
-  const float bbox_max[3] = {500, 500, 0};
-  const float inset_min[3] = {10, 20, 30};
-  const float inset_max[3] = {40, 50, 60};
+  const std::array<float, 3> bbox_min = {0, 0, -100};
+  const std::array<float, 3> bbox_max = {500, 500, 0};
+  const std::array<float, 3> inset_min = {10, 20, 30};
+  const std::array<float, 3> inset_max = {40, 50, 60};
   Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, bbox_min, bbox_max, inset_min, inset_max));
 
   // Test to make sure the bounding boxes are the same.
@@ -191,9 +191,9 @@ VK_TEST_F(ViewClippingTest, ClipSettingBeforeViewCreationTest) {
   ViewHolder* view_holder = FindResource<ViewHolder>(view_holder_id).get();
   EXPECT_TRUE(view_holder);
 
-  const float bbox_min[3] = {-5, -10, -15};
-  const float bbox_max[3] = {5, 10, 15};
-  const float inset[3] = {0, 0, 0};
+  const std::array<float, 3> bbox_min = {-5, -10, -15};
+  const std::array<float, 3> bbox_max = {5, 10, 15};
+  const std::array<float, 3> inset = {0, 0, 0};
 
   BoundingBox bbox(vec3(bbox_min[0], bbox_min[1], bbox_min[2]),
                    vec3(bbox_max[0], bbox_max[1], bbox_max[2]));
@@ -230,10 +230,10 @@ VK_TEST_F(ViewClippingTest, SceneTraversal) {
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-  const float bbox_min[3] = {0, 0, kFar};
-  const float bbox_max[3] = {kWidth, kHeight, kNear};
-  const float inset_min[3] = {0, 0, 0};
-  const float inset_max[3] = {0, 0, 0};
+  const std::array<float, 3> bbox_min = {0, 0, kFar};
+  const std::array<float, 3> bbox_max = {kWidth, kHeight, kNear};
+  const std::array<float, 3> inset_min = {0, 0, 0};
+  const std::array<float, 3> inset_max = {0, 0, 0};
 
   Apply(scenic::NewCreateSceneCmd(scene_id));
 

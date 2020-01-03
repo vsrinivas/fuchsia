@@ -50,12 +50,12 @@ void SpinningSquareView::OnSceneInvalidated(fuchsia::images::PresentationInfo pr
 
   scenic::Rectangle background_shape(session(), logical_size().x, logical_size().y);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslation((float[]){center_x, center_y, -kBackgroundElevation});
+  background_node_.SetTranslation({center_x, center_y, -kBackgroundElevation});
 
   scenic::Rectangle square_shape(session(), square_size, square_size);
   square_node_.SetShape(square_shape);
-  square_node_.SetTranslation((float[]){center_x, center_y, -kSquareElevation});
-  square_node_.SetRotation((float[]){0.f, 0.f, sinf(angle * .5f), cosf(angle * .5f)});
+  square_node_.SetTranslation({center_x, center_y, -kSquareElevation});
+  square_node_.SetRotation({0.f, 0.f, sinf(angle * .5f), cosf(angle * .5f)});
 
   InvalidateScene();
 }

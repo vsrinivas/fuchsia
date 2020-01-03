@@ -31,8 +31,16 @@ TEST_F(StereoCameraTest, Basic) {
   glm::mat4 left_projection = glm::mat4(2);
   glm::mat4 right_projection = glm::mat4(3);
 
-  EXPECT_TRUE(Apply(scenic::NewSetStereoCameraProjectionCmd(
-      camera_id, glm::value_ptr(left_projection), glm::value_ptr(right_projection))));
+  const float* left_projection_ptr = glm::value_ptr(left_projection);
+  const float* right_projection_ptr = glm::value_ptr(right_projection);
+
+  std::array<float, 16> left_projection_arr;
+  std::array<float, 16> right_projection_arr;
+  std::copy(left_projection_ptr, left_projection_ptr + 16, std::begin(left_projection_arr));
+  std::copy(right_projection_ptr, right_projection_ptr + 16, std::begin(right_projection_arr));
+
+  EXPECT_TRUE(Apply(scenic::NewSetStereoCameraProjectionCmd(camera_id, left_projection_arr,
+                                                            right_projection_arr)));
 
   auto camera = session()->resources()->FindResource<StereoCamera>(camera_id);
   EXPECT_TRUE(camera);

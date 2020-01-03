@@ -39,10 +39,11 @@ struct TestSession {
   Camera SetUpCamera(float offset = kDefaultCameraOffset) {
     // SCN-1276: The near plane is hardcoded at -1000 and far at 0 in camera
     // space.
-    const float eye_position[3] = {display_dimensions.width / 2.f, display_dimensions.height / 2.f,
-                                   -offset};
-    const float look_at[3] = {display_dimensions.width / 2.f, display_dimensions.height / 2.f, 1};
-    static const float up[3] = {0, -1, 0};
+    const std::array<float, 3> eye_position = {display_dimensions.width / 2.f,
+                                               display_dimensions.height / 2.f, -offset};
+    const std::array<float, 3> look_at = {display_dimensions.width / 2.f,
+                                          display_dimensions.height / 2.f, 1};
+    static const std::array<float, 3> up = {0, -1, 0};
     Camera camera(scene);
     camera.SetTransform(eye_position, look_at, up);
     renderer.SetCamera(camera.id());

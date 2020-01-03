@@ -54,7 +54,7 @@ TEST_F(SceneTest, Lighting) {
   EXPECT_EQ(point->color(), glm::vec3(0.f, 0.f, 0.f));
   EXPECT_EQ(point2->color(), glm::vec3(0.f, 0.f, 0.f));
   {
-    const float rgb[3] = {1.f, 0.8f, 0.8f};
+    const std::array<float, 3> rgb = {1.f, 0.8f, 0.8f};
     EXPECT_TRUE(Apply(scenic::NewSetLightColorCmd(kAmbientLightId, rgb)));
     EXPECT_EQ(ambient->color().x, rgb[0]);
     EXPECT_EQ(ambient->color().y, rgb[1]);
@@ -63,7 +63,7 @@ TEST_F(SceneTest, Lighting) {
 
   // Position and falloff of point light.
   {
-    const float pos[3] = {111.f, 222.f, 333.f};
+    const std::array<float, 3> pos = {111.f, 222.f, 333.f};
     EXPECT_TRUE(Apply(scenic::NewSetPointLightPositionCmd(kPointLightId, pos)));
     EXPECT_EQ(point->position().x, pos[0]);
     EXPECT_EQ(point->position().y, pos[1]);

@@ -139,9 +139,9 @@ void App::CreateExampleScene(float display_width, float display_height) {
     const glm::vec3 kPointLight1Color = kPointLightAverageColor + kPointLightColorDiff;
     const glm::vec3 kPointLight2Color = kPointLightAverageColor - kPointLightColorDiff;
 
-    ambient_light.SetColor(&kAmbientLightColor[0]);
-    point_light1.SetColor(&kPointLight1Color[0]);
-    point_light2.SetColor(&kPointLight2Color[0]);
+    ambient_light.SetColor({kAmbientLightColor[0], kAmbientLightColor[1], kAmbientLightColor[2]});
+    point_light1.SetColor({kPointLight1Color[0], kPointLight1Color[1], kPointLight1Color[2]});
+    point_light2.SetColor({kPointLight2Color[0], kPointLight2Color[1], kPointLight2Color[2]});
     point_light1.SetPosition(0.3f * display_width, 0.3f * display_height, -1000.f);
     point_light2.SetPosition(display_width, 0.2f * display_height, -1000.f);
     point_light1.SetFalloff(0.f);
@@ -288,10 +288,10 @@ void App::Update(uint64_t next_presentation_time) {
     glm::vec3 eye = glm::mix(eye_start, eye_end, glm::smoothstep(0.f, 1.f, param));
 
     // Always look at the middle of the stage.
-    float target[3] = {1080, 720, 0};
-    float up[3] = {0, -1, 0};
+    std::array<float, 3> target = {1080, 720, 0};
+    std::array<float, 3> up = {0, -1, 0};
 
-    camera_->SetTransform(glm::value_ptr(eye), target, up);
+    camera_->SetTransform({eye.x, eye.y, eye.z}, target, up);
     camera_->SetProjection(glm::radians(15.f));
   }
 

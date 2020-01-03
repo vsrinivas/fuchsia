@@ -334,16 +334,16 @@ TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedRequestCreatedViewho
   // Action: Create view holder, but don't connect it to Scene.
   // Expect, with focus change request: no focus change, no focus chain.
   //
-  parent_client.RunNow([test = this, state = &parent_client,
-                        parent_token = std::move(token_pair.view_holder_token)](
-                           scenic::Session* session, scenic::EntityNode*) mutable {
-    const float kZero[3] = {0, 0, 0};
-    state->holder_child =
-        std::make_unique<scenic::ViewHolder>(session, std::move(parent_token), "child holder");
-    state->holder_child->SetViewProperties(kZero, (float[3]){5, 5, 1}, kZero, kZero);
+  parent_client.RunNow(
+      [test = this, state = &parent_client, parent_token = std::move(token_pair.view_holder_token)](
+          scenic::Session* session, scenic::EntityNode*) mutable {
+        const std::array<float, 3> kZero = {0, 0, 0};
+        state->holder_child =
+            std::make_unique<scenic::ViewHolder>(session, std::move(parent_token), "child holder");
+        state->holder_child->SetViewProperties(kZero, {5, 5, 1}, kZero, kZero);
 
-    test->RequestToPresent(session);
-  });
+        test->RequestToPresent(session);
+      });
 
   EXPECT_FALSE(RequestFocusChange(&parent_focuser, target));
   EXPECT_EQ(CountReceivedFocusChains(), 1u);
@@ -394,22 +394,22 @@ TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedRequestConnected) {
         test->RequestToPresent(session);
       });
 
-  parent_client.RunNow([test = this, state = &parent_client,
-                        parent_token = std::move(token_pair.view_holder_token)](
-                           scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
-    const float kZero[3] = {0, 0, 0};
-    state->holder_child =
-        std::make_unique<scenic::ViewHolder>(session, std::move(parent_token), "child holder");
-    state->holder_child->SetViewProperties(kZero, (float[3]){5, 5, 1}, kZero, kZero);
+  parent_client.RunNow(
+      [test = this, state = &parent_client, parent_token = std::move(token_pair.view_holder_token)](
+          scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
+        const std::array<float, 3> kZero = {0, 0, 0};
+        state->holder_child =
+            std::make_unique<scenic::ViewHolder>(session, std::move(parent_token), "child holder");
+        state->holder_child->SetViewProperties(kZero, {5, 5, 1}, kZero, kZero);
 
-    //
-    // Action: Connect view holder to Scene.
-    // Expect, with focus change request: focus change, with new focus chain.
-    //
-    session_anchor->Attach(*state->holder_child);
+        //
+        // Action: Connect view holder to Scene.
+        // Expect, with focus change request: focus change, with new focus chain.
+        //
+        session_anchor->Attach(*state->holder_child);
 
-    test->RequestToPresent(session);
-  });
+        test->RequestToPresent(session);
+      });
 
   // TODO(42737): Remove when session update logic guarantees view tree updates in every session.
   child_client.RunNow([test = this](scenic::Session* session, scenic::EntityNode* session_anchor) {

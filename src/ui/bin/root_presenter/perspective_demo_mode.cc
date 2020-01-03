@@ -121,7 +121,7 @@ void PerspectiveDemoMode::UpdateCamera(Presentation* presenter, float pan_param,
   const float half_height = presenter->display_model_.display_info().height_in_px * 0.5f;
 
   // Always look at the middle of the stage.
-  const float target[3] = {half_width, half_height, 0};
+  const std::array<float, 3> target = {half_width, half_height, 0};
 
   // Ease-in/ease-out for the animation.
   pan_param = glm::smoothstep(0.f, 1.f, pan_param);
@@ -153,8 +153,8 @@ void PerspectiveDemoMode::UpdateCamera(Presentation* presenter, float pan_param,
   glm::vec3 glm_up = glm::mix(glm::vec3(0, -1.f, 0.f), glm::vec3(0, -0.1f, -0.9f), pan_param);
   glm_up = glm::normalize(glm_up);
 
-  float up[3] = {glm_up[0], glm_up[1], glm_up[2]};
-  presenter->camera_.SetTransform(glm::value_ptr(eye), target, up);
+  const std::array<float, 3> up = {glm_up[0], glm_up[1], glm_up[2]};
+  presenter->camera_.SetTransform({eye.x, eye.y, eye.z}, target, up);
   presenter->camera_.SetProjection(2.f * half_fovy);
 }
 
@@ -183,15 +183,15 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter, uint64_t pres
         const float half_height = presenter->display_model_.display_info().height_in_px * 0.5f;
 
         // Always look at the middle of the stage.
-        const float target[3] = {half_width, half_height, 0};
+        const std::array<float, 3> target = {half_width, half_height, 0};
 
         glm::vec3 glm_up(0, -1.f, 0.f);
         glm_up = glm::normalize(glm_up);
-        float up[3] = {glm_up[0], glm_up[1], glm_up[2]};
+        std::array<float, 3> up = {glm_up[0], glm_up[1], glm_up[2]};
 
         // Switch back to ortho view, and re-enable clipping.
         // TODO(SCN-1276): Don't hardcode Z bounds in multiple locations.
-        float ortho_eye[3] = {half_width, half_height, -1010.f};
+        std::array<float, 3> ortho_eye = {half_width, half_height, -1010.f};
         presenter->camera_.SetTransform(ortho_eye, target, up);
         presenter->camera_.SetProjection(0.f);
         return true;

@@ -137,7 +137,7 @@ class HitTestTest : public gtest::TestLoopFixture {
     session.Apply(scenic::NewCreateLayerStackCmd(kLayerStackId));
     session.Apply(scenic::NewSetLayerStackCmd(kCompositorId, kLayerStackId));
     session.Apply(scenic::NewCreateLayerCmd(kLayerId));
-    session.Apply(scenic::NewSetSizeCmd(kLayerId, (float[]){layer_width, layer_height}));
+    session.Apply(scenic::NewSetSizeCmd(kLayerId, {layer_width, layer_height}));
     session.Apply(scenic::NewAddLayerCmd(kLayerStackId, kLayerId));
 
     session.Apply(scenic::NewCreateSceneCmd(kSceneId));
@@ -212,7 +212,7 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
     sess.Apply(scenic::NewCreateShapeNodeCmd(kShapeId));
     sess.Apply(scenic::NewSetShapeCmd(kShapeId, kRectId));
     sess.Apply(scenic::NewSetMaterialCmd(kShapeId, kMaterialId));
-    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, (float[]){8, 4.5f, -1}));
+    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, {8, 4.5f, -1}));
 
     // Graph
     sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
@@ -282,8 +282,8 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
     sess.Apply(scenic::NewCreateShapeNodeCmd(kShapeId));
     sess.Apply(scenic::NewSetShapeCmd(kShapeId, kRectId));
     sess.Apply(scenic::NewSetMaterialCmd(kShapeId, kMaterialId));
-    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, (float[]){8, 4.5f, -1}));
-    sess.Apply(scenic::NewSetScaleCmd(kShapeId, (float[]){2, 2, 2}));
+    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, {8, 4.5f, -1}));
+    sess.Apply(scenic::NewSetScaleCmd(kShapeId, {2, 2, 2}));
 
     // Graph
     sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
@@ -346,13 +346,13 @@ TEST_F(SingleSessionHitTestTest, ViewTransform) {
     sess.Apply(scenic::NewCreateShapeNodeCmd(kShapeId));
     sess.Apply(scenic::NewSetShapeCmd(kShapeId, kRectId));
     sess.Apply(scenic::NewSetMaterialCmd(kShapeId, kMaterialId));
-    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, (float[]){2.5, 1.5f, -1}));
+    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, {2.5, 1.5f, -1}));
 
     // Graph
     sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
     sess.Apply(scenic::NewAddChildCmd(kViewId, kShapeId));
-    sess.Apply(scenic::NewSetTranslationCmd(kViewHolderId, (float[]){3, 2, 1}));
-    sess.Apply(scenic::NewSetScaleCmd(kViewHolderId, (float[]){3, 3, 3}));
+    sess.Apply(scenic::NewSetTranslationCmd(kViewHolderId, {3, 2, 1}));
+    sess.Apply(scenic::NewSetScaleCmd(kViewHolderId, {3, 3, 3}));
   }
 
   {
@@ -410,7 +410,7 @@ TEST_F(SingleSessionHitTestTest, CameraTransform) {
     sess.Apply(scenic::NewCreateShapeNodeCmd(kShapeId));
     sess.Apply(scenic::NewSetShapeCmd(kShapeId, kRectId));
     sess.Apply(scenic::NewSetMaterialCmd(kShapeId, kMaterialId));
-    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, (float[]){8, 4.5f, -1}));
+    sess.Apply(scenic::NewSetTranslationCmd(kShapeId, {8, 4.5f, -1}));
 
     // Graph
     sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
@@ -487,10 +487,10 @@ TEST_F(SingleSessionHitTestTest, ViewClipping) {
     sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "MyView"));
 
     // Set the bounding box on the view holder.
-    const float bbox_min[3] = {0.f, 0.f, -2.f};
-    const float bbox_max[3] = {layer_width() / 2, layer_height(), 1.f};
-    const float inset_min[3] = {0, 0, 0};
-    const float inset_max[3] = {0, 0, 0};
+    const std::array<float, 3> bbox_min = {0.f, 0.f, -2.f};
+    const std::array<float, 3> bbox_max = {layer_width() / 2, layer_height(), 1.f};
+    const std::array<float, 3> inset_min = {0, 0, 0};
+    const std::array<float, 3> inset_max = {0, 0, 0};
     sess.Apply(
         scenic::NewSetViewPropertiesCmd(kViewHolderId, bbox_min, bbox_max, inset_min, inset_max));
 
@@ -498,8 +498,8 @@ TEST_F(SingleSessionHitTestTest, ViewClipping) {
     sess.Apply(scenic::NewCreateShapeNodeCmd(kShapeNodeId));
     sess.Apply(scenic::NewCreateRectangleCmd(kRectId, pane_width, pane_height));
     sess.Apply(scenic::NewSetShapeCmd(kShapeNodeId, kRectId));
-    sess.Apply(scenic::NewSetTranslationCmd(
-        kShapeNodeId, (float[3]){0.5f * pane_width, 0.5f * layer_height(), 0.f}));
+    sess.Apply(scenic::NewSetTranslationCmd(kShapeNodeId,
+                                            {0.5f * pane_width, 0.5f * layer_height(), 0.f}));
 
     sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
     sess.Apply(scenic::NewAddChildCmd(kViewId, kShapeNodeId));
@@ -545,10 +545,10 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   // Create bounds for the views.
-  const float bbox_min[3] = {0, 0, -4};
-  const float bbox_max[3] = {10, 10, 0};
-  const float inset_min[3] = {0, 0, 0};
-  const float inset_max[3] = {0, 0, 0};
+  const std::array<float, 3> bbox_min = {0, 0, -4};
+  const std::array<float, 3> bbox_max = {10, 10, 0};
+  const std::array<float, 3> inset_min = {0, 0, 0};
+  const std::array<float, 3> inset_max = {0, 0, 0};
 
   const uint32_t kHittableShapeNodeId = 1007;
   CustomSession sess = CreateRootSession(1024, 768);
@@ -559,10 +559,10 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
     const uint32_t kViewId = 1002;
     sess.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "view"));
     // Set the bounding box on the view holder.
-    const float bbox_min[3] = {0.f, 0.f, -10.f};
-    const float bbox_max[3] = {layer_width(), layer_height(), 0.f};
-    const float inset_min[3] = {0, 0, 0};
-    const float inset_max[3] = {0, 0, 0};
+    const std::array<float, 3> bbox_min = {0.f, 0.f, -10.f};
+    const std::array<float, 3> bbox_max = {layer_width(), layer_height(), 0.f};
+    const std::array<float, 3> inset_min = {0, 0, 0};
+    const std::array<float, 3> inset_max = {0, 0, 0};
     sess.Apply(
         scenic::NewSetViewPropertiesCmd(kViewHolderId, bbox_min, bbox_max, inset_min, inset_max));
     sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
@@ -580,8 +580,8 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
     sess.Apply(scenic::NewCreateShapeNodeCmd(kUnhittableShapeNodeId));
     sess.Apply(scenic::NewAddChildCmd(kUnhittableEntityNodeId, kUnhittableShapeNodeId));
     // Move to middle of view.
-    sess.Apply(scenic::NewSetTranslationCmd(
-        kUnhittableShapeNodeId, (float[3]){layer_width() / 2.f, layer_height() / 2.f, -5.f}));
+    sess.Apply(scenic::NewSetTranslationCmd(kUnhittableShapeNodeId,
+                                            {layer_width() / 2.f, layer_height() / 2.f, -5.f}));
     const uint32_t kShapeId1 = 1006;
     sess.Apply(scenic::NewCreateRectangleCmd(kShapeId1, layer_width(), layer_height()));
     sess.Apply(scenic::NewSetShapeCmd(kUnhittableShapeNodeId, kShapeId1));
@@ -593,8 +593,8 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
     sess.Apply(scenic::NewCreateRectangleCmd(kShapeId2, layer_width(), layer_height()));
     sess.Apply(scenic::NewSetShapeCmd(kHittableShapeNodeId, kShapeId2));
     // Move to middle of view, below UnhittableShapeNode.
-    sess.Apply(scenic::NewSetTranslationCmd(
-        kHittableShapeNodeId, (float[3]){layer_width() / 2.f, layer_height() / 2.f, -2.5f}));
+    sess.Apply(scenic::NewSetTranslationCmd(kHittableShapeNodeId,
+                                            {layer_width() / 2.f, layer_height() / 2.f, -2.5f}));
   }
 
   {
@@ -645,12 +645,12 @@ TEST_F(SingleSessionHitTestTest, InclusiveViewBounds) {
     sess.Apply(scenic::NewCreateShapeNodeCmd(kShape1Id));
     sess.Apply(scenic::NewSetShapeCmd(kShape1Id, kRectId));
     sess.Apply(scenic::NewSetMaterialCmd(kShape1Id, kMaterialId));
-    sess.Apply(scenic::NewSetTranslationCmd(kShape1Id, (float[]){4, 4.5f, -1}));
+    sess.Apply(scenic::NewSetTranslationCmd(kShape1Id, {4, 4.5f, -1}));
 
     sess.Apply(scenic::NewCreateShapeNodeCmd(kShape2Id));
     sess.Apply(scenic::NewSetShapeCmd(kShape2Id, kRectId));
     sess.Apply(scenic::NewSetMaterialCmd(kShape2Id, kMaterialId));
-    sess.Apply(scenic::NewSetTranslationCmd(kShape2Id, (float[]){12, 4.5f, 1}));
+    sess.Apply(scenic::NewSetTranslationCmd(kShape2Id, {12, 4.5f, 1}));
 
     // Graph
     sess.Apply(scenic::NewAddChildCmd(kSceneId, kViewHolderId));
@@ -703,10 +703,12 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParent) {
 
     // Set view_holder 1's bounding box. It is a small box centered in the display.
     const float width = 100, height = 100;
-    const float bbox_min[3] = {(layer_width() - width) / 2, (layer_height() - height) / 2, -6};
-    const float bbox_max[3] = {(layer_width() + width) / 2, (layer_height() + height) / 2, -4};
-    const float inset_min[3] = {0, 0, 0};
-    const float inset_max[3] = {0, 0, 0};
+    const std::array<float, 3> bbox_min = {(layer_width() - width) / 2,
+                                           (layer_height() - height) / 2, -6};
+    const std::array<float, 3> bbox_max = {(layer_width() + width) / 2,
+                                           (layer_height() + height) / 2, -4};
+    const std::array<float, 3> inset_min = {0, 0, 0};
+    const std::array<float, 3> inset_max = {0, 0, 0};
     sess.Apply(
         scenic::NewSetViewPropertiesCmd(kViewHolderId, bbox_min, bbox_max, inset_min, inset_max));
   }
@@ -726,10 +728,10 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParent) {
 
     // Set view holder 2's bounding box. It takes up the entire display and thus is bigger
     // than it's parent's box.
-    const float bbox_min2[3] = {0, 0, -9};
-    const float bbox_max2[3] = {layer_width(), layer_height(), 0};
-    const float inset_min[3] = {0, 0, 0};
-    const float inset_max[3] = {0, 0, 0};
+    const std::array<float, 3> bbox_min2 = {0, 0, -9};
+    const std::array<float, 3> bbox_max2 = {layer_width(), layer_height(), 0};
+    const std::array<float, 3> inset_min = {0, 0, 0};
+    const std::array<float, 3> inset_max = {0, 0, 0};
     sess1.Apply(scenic::NewSetViewPropertiesCmd(kViewHolderId2, bbox_min2, bbox_max2, inset_min,
                                                 inset_max));
   }
@@ -751,15 +753,15 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParent) {
     sess2.Apply(scenic::NewCreateShapeNodeCmd(kOuterShapeNodeId));
     sess2.Apply(scenic::NewCreateRectangleCmd(kRectId, pane_width, pane_height));
     sess2.Apply(scenic::NewSetShapeCmd(kOuterShapeNodeId, kRectId));
-    sess2.Apply(scenic::NewSetTranslationCmd(
-        kOuterShapeNodeId, (float[3]){layer_width() / 2, layer_height() / 2, -8.f}));
+    sess2.Apply(scenic::NewSetTranslationCmd(kOuterShapeNodeId,
+                                             {layer_width() / 2, layer_height() / 2, -8.f}));
     sess2.Apply(scenic::NewAddChildCmd(kViewId2, kOuterShapeNodeId));
 
     // Create shape node, apply rectangle and translate it inside the parent view.
     sess2.Apply(scenic::NewCreateShapeNodeCmd(kInnerShapeNodeId));
     sess2.Apply(scenic::NewSetShapeCmd(kInnerShapeNodeId, kRectId));
-    sess2.Apply(scenic::NewSetTranslationCmd(
-        kInnerShapeNodeId, (float[3]){layer_width() / 2, layer_height() / 2, -5.f}));
+    sess2.Apply(scenic::NewSetTranslationCmd(kInnerShapeNodeId,
+                                             {layer_width() / 2, layer_height() / 2, -5.f}));
     sess2.Apply(scenic::NewAddChildCmd(kViewId2, kInnerShapeNodeId));
   }
 
@@ -808,10 +810,10 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
     sess.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolderId));
 
     // Set view_holder 1's bounding box. It takes up the left-hand side of the display.
-    const float bbox_min[3] = {0, 0, -9};
-    const float bbox_max[3] = {layer_width() / 2, layer_height() / 2, 0};
-    const float inset_min[3] = {0, 0, 0};
-    const float inset_max[3] = {0, 0, 0};
+    const std::array<float, 3> bbox_min = {0, 0, -9};
+    const std::array<float, 3> bbox_max = {layer_width() / 2, layer_height() / 2, 0};
+    const std::array<float, 3> inset_min = {0, 0, 0};
+    const std::array<float, 3> inset_max = {0, 0, 0};
     sess.Apply(
         scenic::NewSetViewPropertiesCmd(kViewHolderId, bbox_min, bbox_max, inset_min, inset_max));
   }
@@ -830,10 +832,10 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
     sess1.Apply(scenic::NewAddChildCmd(kMiddleNodeId, kViewHolderId2));
 
     // Set view holder 2's bounding box. It takes up the right-hand side of the display.
-    const float bbox_min2[3] = {layer_width() / 2, layer_height() / 2, -9};
-    const float bbox_max2[3] = {layer_width(), layer_height(), 0};
-    const float inset_min[3] = {0, 0, 0};
-    const float inset_max[3] = {0, 0, 0};
+    const std::array<float, 3> bbox_min2 = {layer_width() / 2, layer_height() / 2, -9};
+    const std::array<float, 3> bbox_max2 = {layer_width(), layer_height(), 0};
+    const std::array<float, 3> inset_min = {0, 0, 0};
+    const std::array<float, 3> inset_max = {0, 0, 0};
     sess1.Apply(scenic::NewSetViewPropertiesCmd(kViewHolderId2, bbox_min2, bbox_max2, inset_min,
                                                 inset_max));
   }
@@ -854,7 +856,7 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
     sess2.Apply(scenic::NewCreateRectangleCmd(kRectId, pane_width, pane_height));
     sess2.Apply(scenic::NewSetShapeCmd(kShapeNodeId, kRectId));
     sess2.Apply(scenic::NewSetTranslationCmd(
-        kShapeNodeId, (float[3]){3.f * layer_width() / 4.f, 3.f * layer_height() / 4.f, -5.f}));
+        kShapeNodeId, {3.f * layer_width() / 4.f, 3.f * layer_height() / 4.f, -5.f}));
     sess2.Apply(scenic::NewAddChildCmd(kViewId2, kShapeNodeId));
   }
 
@@ -876,10 +878,10 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   auto [view_token_2, view_holder_token_2] = scenic::ViewTokenPair::New();
 
   // Create bounds for the views.
-  const float bbox_min[3] = {0, 0, -4};
-  const float bbox_max[3] = {10, 10, 0};
-  const float inset_min[3] = {0, 0, 0};
-  const float inset_max[3] = {0, 0, 0};
+  const std::array<float, 3> bbox_min = {0, 0, -4};
+  const std::array<float, 3> bbox_max = {10, 10, 0};
+  const std::array<float, 3> inset_min = {0, 0, 0};
+  const std::array<float, 3> inset_max = {0, 0, 0};
 
   // Root session sets up the scene with two view holders and some geometry.
   CustomSession s_r = CreateRootSession(9, 9);
@@ -907,7 +909,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     const uint32_t kShapeNodeId = 1001;
     s_r.Apply(scenic::NewCreateShapeNodeCmd(kShapeNodeId));
     s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kShapeNodeId));
-    s_r.Apply(scenic::NewSetTranslationCmd(kShapeNodeId, (float[3]){4.f, 4.f, /*z*/ -1.f}));
+    s_r.Apply(scenic::NewSetTranslationCmd(kShapeNodeId, {4.f, 4.f, /*z*/ -1.f}));
 
     const uint32_t kShapeId = 2004;
     s_r.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
@@ -928,7 +930,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     const uint32_t kShapeNodeId = 2003;
     s_1.Apply(scenic::NewCreateShapeNodeCmd(kShapeNodeId));
     s_1.Apply(scenic::NewAddChildCmd(kRootNodeId, kShapeNodeId));
-    s_1.Apply(scenic::NewSetTranslationCmd(kShapeNodeId, (float[3]){4.f, 4.f, /*z*/ -2.f}));
+    s_1.Apply(scenic::NewSetTranslationCmd(kShapeNodeId, {4.f, 4.f, /*z*/ -2.f}));
 
     const uint32_t kShapeId = 2004;  // Hit
     s_1.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
@@ -948,7 +950,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     const uint32_t kShapeNodeId = 3003;
     s_2.Apply(scenic::NewCreateShapeNodeCmd(kShapeNodeId));
     s_2.Apply(scenic::NewAddChildCmd(kRootNodeId, kShapeNodeId));
-    s_2.Apply(scenic::NewSetTranslationCmd(kShapeNodeId, (float[3]){4.f, 4.f, /*z*/ -3.f}));
+    s_2.Apply(scenic::NewSetTranslationCmd(kShapeNodeId, {4.f, 4.f, /*z*/ -3.f}));
 
     const uint32_t kShapeId = 3004;  // Hit
     s_2.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,

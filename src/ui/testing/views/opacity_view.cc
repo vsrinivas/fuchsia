@@ -52,9 +52,9 @@ void OpacityView::set_foreground_color(uint8_t r, uint8_t g, uint8_t b) {
 void OpacityView::Draw(float cx, float cy, float sx, float sy) {
   Rectangle shape(&session_, sx, sy);
   background_node_.SetShape(shape);
-  background_node_.SetTranslation((float[]){cx, cy, -kBackgroundElevation});
+  background_node_.SetTranslation({cx, cy, -kBackgroundElevation});
   foreground_node_.SetShape(shape);
-  foreground_node_.SetTranslation((float[]){cx, cy, -kForegroundElevation});
+  foreground_node_.SetTranslation({cx, cy, -kForegroundElevation});
 }
 
 void OpacityView::Present() {

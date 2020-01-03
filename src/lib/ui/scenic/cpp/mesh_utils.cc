@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <array>
 #include <memory>
 
 #include "lib/ui/scenic/cpp/commands.h"
@@ -65,11 +66,11 @@ std::unique_ptr<Mesh> NewMeshWithVertices(Session* session, const std::vector<fl
                                                    fuchsia::ui::gfx::ValueType::kVector2);
 
   // Compute bounding box.
-  std::vector<float> bounding_box_min;
-  std::vector<float> bounding_box_max;
+  std::array<float, 3> bounding_box_min;
+  std::array<float, 3> bounding_box_max;
   for (int i = 0; i < 3; i++) {
-    bounding_box_min.push_back(std::numeric_limits<float>::max());
-    bounding_box_max.push_back(std::numeric_limits<float>::min());
+    bounding_box_min[i] = std::numeric_limits<float>::max();
+    bounding_box_max[i] = std::numeric_limits<float>::min();
   }
 
   for (uint64_t i = 0; i < num_vertices; i++) {
@@ -86,7 +87,7 @@ std::unique_ptr<Mesh> NewMeshWithVertices(Session* session, const std::vector<fl
   // Bind buffers.
   mesh->BindBuffers(index_buffer, fuchsia::ui::gfx::MeshIndexFormat::kUint32, 0, indices.size(),
                     vertex_buffer, std::move(vertex_format), 0, num_vertices,
-                    bounding_box_min.data(), bounding_box_max.data());
+                    std::move(bounding_box_min), std::move(bounding_box_max));
   return mesh;
 }
 

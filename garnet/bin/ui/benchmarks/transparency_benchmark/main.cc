@@ -14,9 +14,10 @@
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <math.h>
-#include <trace-provider/provider.h>
 
 #include <cmath>
+
+#include <trace-provider/provider.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -249,11 +250,10 @@ class View : public fuchsia::ui::scenic::SessionListener {
 
       static const float PI = 3.14159;
 
-      PushCommand(cmds, scenic::NewSetRotationCmd(
-                            id, (float[]){0, 0, std::sin(PI / 2.0f), std::cos(PI / 2.0f)}));
-      PushCommand(cmds, scenic::NewSetTranslationCmd(
-                            id, (float[]){center_x + x * view_width_, center_y + y * view_height_,
-                                          z * -1.0f}));
+      PushCommand(cmds,
+                  scenic::NewSetRotationCmd(id, {0, 0, std::sin(PI / 2.0f), std::cos(PI / 2.0f)}));
+      PushCommand(cmds, scenic::NewSetTranslationCmd(id, {center_x + x * view_width_,
+                                                          center_y + y * view_height_, z * -1.0f}));
     }
   }
 
@@ -487,8 +487,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  std::unique_ptr<sys::ComponentContext> component_context =
-      sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
 
   ViewProviderService view_provider(component_context.get());
 

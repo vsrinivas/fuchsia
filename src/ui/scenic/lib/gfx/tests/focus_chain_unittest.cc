@@ -143,7 +143,7 @@ struct TwoNodeFocusChainTest : public FocusChainTest {
     client_a->RunNow(
         [test = this, state = client_a.get(), vh_ab = std::move(pair_ab.view_holder_token)](
             scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
-          const float kZero[3] = {0, 0, 0};
+          const std::array<float, 3> kZero = {0, 0, 0};
 
           // Minimal scene.
           scenic::Compositor compositor(session);
@@ -163,7 +163,7 @@ struct TwoNodeFocusChainTest : public FocusChainTest {
           state->scene->AddChild(*session_anchor);
           state->holder_b =
               std::make_unique<scenic::ViewHolder>(session, std::move(vh_ab), "view holder B");
-          state->holder_b->SetViewProperties(kZero, (float[3]){9, 9, 1}, kZero, kZero);
+          state->holder_b->SetViewProperties(kZero, {9, 9, 1}, kZero, kZero);
           session_anchor->Attach(*state->holder_b);
 
           test->RequestToPresent(session);
@@ -230,7 +230,7 @@ struct ThreeNodeFocusChainTest : public FocusChainTest {
     client_a->RunNow(
         [test = this, state = client_a.get(), vh_ab = std::move(pair_ab.view_holder_token)](
             scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
-          const float kZero[3] = {0, 0, 0};
+          const std::array<float, 3> kZero = {0, 0, 0};
 
           // Minimal scene.
           scenic::Compositor compositor(session);
@@ -250,7 +250,7 @@ struct ThreeNodeFocusChainTest : public FocusChainTest {
           state->scene->AddChild(*session_anchor);
           state->holder_b =
               std::make_unique<scenic::ViewHolder>(session, std::move(vh_ab), "view holder B");
-          state->holder_b->SetViewProperties(kZero, (float[3]){9, 9, 1}, kZero, kZero);
+          state->holder_b->SetViewProperties(kZero, {9, 9, 1}, kZero, kZero);
           session_anchor->Attach(*state->holder_b);
 
           test->RequestToPresent(session);
@@ -259,7 +259,7 @@ struct ThreeNodeFocusChainTest : public FocusChainTest {
     client_b->RunNow([test = this, state = client_b.get(), v_ab = std::move(pair_ab.view_token),
                       vh_bc = std::move(pair_bc.view_holder_token)](
                          scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
-      const float kZero[3] = {0, 0, 0};
+      const std::array<float, 3> kZero = {0, 0, 0};
 
       auto pair = scenic::ViewRefPair::New();
       state->view_ref_koid = ExtractKoid(pair.view_ref);
@@ -270,7 +270,7 @@ struct ThreeNodeFocusChainTest : public FocusChainTest {
 
       state->holder_c =
           std::make_unique<scenic::ViewHolder>(session, std::move(vh_bc), "view holder C");
-      state->holder_c->SetViewProperties(kZero, (float[3]){9, 9, 1}, kZero, kZero);
+      state->holder_c->SetViewProperties(kZero, {9, 9, 1}, kZero, kZero);
       session_anchor->Attach(*state->holder_c);
 
       test->RequestToPresent(session);
@@ -343,7 +343,7 @@ struct FourNodeFocusChainTest : public FocusChainTest {
                       vh_ab = std::move(pair_ab.view_holder_token),
                       vh_ac = std::move(pair_ac.view_holder_token)](
                          scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
-      const float kZero[3] = {0, 0, 0};
+      const std::array<float, 3> kZero = {0, 0, 0};
 
       // Minimal scene.
       scenic::Compositor compositor(session);
@@ -366,8 +366,8 @@ struct FourNodeFocusChainTest : public FocusChainTest {
           std::make_unique<scenic::ViewHolder>(session, std::move(vh_ab), "view holder B");
       state->holder_c =
           std::make_unique<scenic::ViewHolder>(session, std::move(vh_ac), "view holder C");
-      state->holder_b->SetViewProperties(kZero, (float[3]){9, 9, 1}, kZero, kZero);
-      state->holder_c->SetViewProperties(kZero, (float[3]){9, 9, 1}, kZero, kZero);
+      state->holder_b->SetViewProperties(kZero, {9, 9, 1}, kZero, kZero);
+      state->holder_c->SetViewProperties(kZero, {9, 9, 1}, kZero, kZero);
       session_anchor->Attach(*state->holder_b);
       session_anchor->Attach(*state->holder_c);
 
@@ -377,7 +377,7 @@ struct FourNodeFocusChainTest : public FocusChainTest {
     client_b->RunNow([test = this, state = client_b.get(), v_ab = std::move(pair_ab.view_token),
                       vh_bd = std::move(pair_bd.view_holder_token)](
                          scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
-      const float kZero[3] = {0, 0, 0};
+      const std::array<float, 3> kZero = {0, 0, 0};
       auto pair = scenic::ViewRefPair::New();
       state->view_ref_koid = ExtractKoid(pair.view_ref);
       state->view =
@@ -387,7 +387,7 @@ struct FourNodeFocusChainTest : public FocusChainTest {
 
       state->holder_d =
           std::make_unique<scenic::ViewHolder>(session, std::move(vh_bd), "view holder D");
-      state->holder_d->SetViewProperties(kZero, (float[3]){9, 9, 1}, kZero, kZero);
+      state->holder_d->SetViewProperties(kZero, {9, 9, 1}, kZero, kZero);
       session_anchor->Attach(*state->holder_d);
 
       test->RequestToPresent(session);
@@ -508,7 +508,7 @@ TEST_F(FocusChainTest, LayerSwapMeansSceneSwap) {
   client_a.RunNow([test = this, state = &client_a, vh_ab = std::move(pair_ab.view_holder_token),
                    vh_ac = std::move(pair_ac.view_holder_token)](
                       scenic::Session* session, scenic::EntityNode* unused) mutable {
-    const float kZero[3] = {0, 0, 0};
+    const std::array<float, 3> kZero = {0, 0, 0};
 
     // Scene graph is set up with multiple layers, and inserts at most one in the layer stack.
     state->compositor = std::make_unique<scenic::Compositor>(session);
@@ -652,7 +652,7 @@ TEST_F(FocusChainTest, OneLinkTopology) {
 
   client_a.RunNow([test = this, state = &client_a, vh_ab = std::move(pair_ab.view_holder_token)](
                       scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
-    const float kZero[3] = {0, 0, 0};
+    const std::array<float, 3> kZero = {0, 0, 0};
 
     // Minimal scene.
     scenic::Compositor compositor(session);
@@ -672,7 +672,7 @@ TEST_F(FocusChainTest, OneLinkTopology) {
     state->scene->AddChild(*session_anchor);
     state->view_holder =
         std::make_unique<scenic::ViewHolder>(session, std::move(vh_ab), "view holder B");
-    state->view_holder->SetViewProperties(kZero, (float[3]){9, 9, 1}, kZero, kZero);
+    state->view_holder->SetViewProperties(kZero, {9, 9, 1}, kZero, kZero);
     session_anchor->Attach(*state->view_holder);
 
     test->RequestToPresent(session);
@@ -1017,10 +1017,10 @@ TEST_F(FocusChainTest, LateViewConnectTriggersViewTreeUpdate) {
   parent_client.RunNow(
       [test = this, state = &parent_client, parent_token = std::move(token_pair.view_holder_token)](
           scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
-        const float kZero[3] = {0, 0, 0};
+        const std::array<float, 3> kZero = {0, 0, 0};
         state->holder_child =
             std::make_unique<scenic::ViewHolder>(session, std::move(parent_token), "child holder");
-        state->holder_child->SetViewProperties(kZero, (float[3]){9, 9, 1}, kZero, kZero);
+        state->holder_child->SetViewProperties(kZero, {9, 9, 1}, kZero, kZero);
 
         session_anchor->Attach(*state->holder_child);
 

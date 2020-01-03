@@ -107,8 +107,8 @@ void ImagePipeView::OnViewPropertiesChanged(fuchsia::ui::gfx::ViewProperties vp)
   const float center_y = view_height_ * .5f;
 
   constexpr float kBackgroundElevation = 0.f;
-  PushCommand(&cmds, scenic::NewSetTranslationCmd(
-                         kShapeNodeId, (float[]){center_x, center_y, -kBackgroundElevation}));
+  PushCommand(&cmds, scenic::NewSetTranslationCmd(kShapeNodeId,
+                                                  {center_x, center_y, -kBackgroundElevation}));
 
   session_->Enqueue(std::move(cmds));
   session_->Present(0,                                             // presentation time

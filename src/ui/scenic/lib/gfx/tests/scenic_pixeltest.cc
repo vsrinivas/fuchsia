@@ -279,8 +279,11 @@ TEST_F(ScenicPixelTest, StereoCamera) {
                                           gfx::TestSession::kDefaultCameraOffset);
   projection = glm::scale(projection, glm::vec3(1.f, -1.f, 1.f));
 
-  test_session->SetUpCamera<scenic::StereoCamera>().SetStereoProjection(glm::value_ptr(projection),
-                                                                        glm::value_ptr(projection));
+  std::array<float, 16> projection_arr;
+  auto projection_ptr = glm::value_ptr(projection);
+  std::copy(projection_ptr, projection_ptr + 16, std::begin(projection_arr));
+  test_session->SetUpCamera<scenic::StereoCamera>().SetStereoProjection(projection_arr,
+                                                                        projection_arr);
 
   const float pane_width = viewport_width / 2;
   const float pane_height = viewport_height / 2;
@@ -348,10 +351,10 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   // View matrix matches vulkan clip space +Y down, looking in direction of +Z
   const glm::vec3 eye(display_width / 2.f, display_height / 2.f, -kCameraOffset);
   const glm::vec3 look_at(eye + glm::vec3(0, 0, 1));
-  static const float up[] = {0, -1, 0};
+  const std::array<float, 3> up = {0, -1, 0};
 
   scenic::StereoCamera camera(test_session->scene);
-  camera.SetTransform(glm::value_ptr(eye), glm::value_ptr(look_at), up);
+  camera.SetTransform({eye.x, eye.y, eye.z}, {look_at.x, look_at.y, look_at.z}, up);
 
   glm::mat4 projection =
       glm::perspective(glm::radians(120.f), viewport_width / viewport_height, 0.1f, kCameraOffset);
@@ -365,7 +368,10 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   // clang-format on
   projection = clip * projection;
 
-  camera.SetStereoProjection(glm::value_ptr(projection), glm::value_ptr(projection));
+  std::array<float, 16> projection_arr;
+  auto projection_ptr = glm::value_ptr(projection);
+  std::copy(projection_ptr, projection_ptr + 16, std::begin(projection_arr));
+  camera.SetStereoProjection(projection_arr, projection_arr);
 
   test_session->renderer.SetCamera(camera.id());
 
@@ -575,10 +581,10 @@ TEST_F(ScenicPixelTest, ViewBoundClipping) {
   scenic::View view(session, std::move(view_token), "ClipView");
   scenic::ViewHolder view_holder(session, std::move(view_holder_token), "ClipViewHolder");
 
-  static const float bmin[3] = {0.f, 0.f, -2.f};
-  const float bmax[3] = {display_width / 2, display_height, 1.f};
-  static const float imin[3] = {0, 0, 0};
-  static const float imax[3] = {0, 0, 0};
+  static const std::array<float, 3> bmin = {0.f, 0.f, -2.f};
+  const std::array<float, 3> bmax = {display_width / 2, display_height, 1.f};
+  static const std::array<float, 3> imin = {0, 0, 0};
+  static const std::array<float, 3> imax = {0, 0, 0};
   view_holder.SetViewProperties(bmin, bmax, imin, imax);
 
   // Pane extends all the way across the screen horizontally, but
@@ -689,10 +695,10 @@ TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
 
   // Bounds of each view should be the size of a quarter of the display with
   // origin at 0,0 relative to its transform node.
-  const float bmin[3] = {0.f, 0.f, -2.f};
-  const float bmax[3] = {display_width / 2, display_height / 2, 1.f};
-  const float imin[3] = {0, 0, 0};
-  const float imax[3] = {0, 0, 0};
+  const std::array<float, 3> bmin = {0.f, 0.f, -2.f};
+  const std::array<float, 3> bmax = {display_width / 2, display_height / 2, 1.f};
+  const std::array<float, 3> imin = {0, 0, 0};
+  const std::array<float, 3> imax = {0, 0, 0};
   view_holder.SetViewProperties(bmin, bmax, imin, imax);
   view_holder2.SetViewProperties(bmin, bmax, imin, imax);
 
@@ -809,14 +815,14 @@ TEST_F(ScenicPixelTest, ViewBoundWireframeRendering) {
   scenic::View view3(session3, std::move(view_token3), "ClipView3");
   scenic::ViewHolder view_holder3(session2, std::move(view_holder_token3), "ClipViewHolder3");
 
-  const float bmin[3] = {0.f, 0.f, -2.f};
-  const float bmax[3] = {display_width / 2, display_height, 1.f};
-  const float imin[3] = {1, 1, 0};
-  const float imax[3] = {1, 1, 0};
+  const std::array<float, 3> bmin = {0.f, 0.f, -2.f};
+  const std::array<float, 3> bmax = {display_width / 2, display_height, 1.f};
+  const std::array<float, 3> imin = {1, 1, 0};
+  const std::array<float, 3> imax = {1, 1, 0};
   view_holder.SetViewProperties(bmin, bmax, imin, imax);
 
-  const float bmin2[3] = {0, 0, -2.f};
-  const float bmax2[3] = {display_width / 2, display_height / 2, 1.f};
+  const std::array<float, 3> bmin2 = {0, 0, -2.f};
+  const std::array<float, 3> bmax2 = {display_width / 2, display_height / 2, 1.f};
   view_holder2.SetViewProperties(bmin2, bmax2, imin, imax);
   view_holder3.SetViewProperties(bmin2, bmax2, imin, imax);
 
