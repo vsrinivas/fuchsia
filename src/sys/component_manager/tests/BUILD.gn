@@ -48,10 +48,10 @@ rustc_library("test_utils") {
     ":breakpoint_system_client",
     "//garnet/lib/rust/files_async",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-runtime",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:anyhow",
@@ -151,11 +151,11 @@ rustc_test("elf_runner_test_bin") {
   edition = "2018"
   source_root = "elf_runner_test.rs"
   deps = [
-    "//garnet/public/rust/fuchsia-runtime",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
   ]
 }
 

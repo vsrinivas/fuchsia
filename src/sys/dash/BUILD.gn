@@ -21,12 +21,12 @@ rustc_binary("dash_test_bin") {
   edition = "2018"
   source_root = "src/integration_test.rs"
   deps = [
-    "//garnet/public/rust/fuchsia-runtime",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",

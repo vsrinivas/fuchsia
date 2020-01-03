@@ -12,7 +12,7 @@ rustc_library("mapped-vmo") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/rust/fuchsia-runtime",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/shared-buffer",
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]

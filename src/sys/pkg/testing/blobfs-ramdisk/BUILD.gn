@@ -14,9 +14,9 @@ rustc_library("blobfs-ramdisk") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-runtime",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/ramdevice-client",
     "//src/sys/pkg/lib/fuchsia-merkle",
