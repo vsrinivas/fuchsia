@@ -37,6 +37,10 @@ zx_status_t PageWatcher::CreatePagedVmo(size_t vmo_size, zx::vmo* vmo_out) {
   return ZX_OK;
 }
 
+void PageWatcher::SetPageVerifierInfo(std::unique_ptr<VerifierInfo> verifier_info) {
+  verifier_info_ = std::move(verifier_info);
+}
+
 void PageWatcher::DetachPagedVmoSync() {
   TRACE_DURATION("blobfs", "PageWatcher::DetachPagedVmoSync");
 
@@ -69,7 +73,7 @@ void PageWatcher::HandlePageRequest(async_dispatcher_t* dispatcher, async::Paged
 
   switch (request->command) {
     case ZX_PAGER_VMO_READ: {
-      PopulatePagesInRange(request->offset, request->length);
+      PopulateAndVerifyPagesInRange(request->offset, request->length);
       return;
     }
     case ZX_PAGER_VMO_COMPLETE: {
@@ -115,8 +119,9 @@ void PageWatcher::GetPrefetchRangeInBytes(const uint64_t requested_offset,
 // are:
 //   1. when the |supply_pages| syscall succeeds (look at PageSource::OnPagesSupplied()).
 //   2. when the page source is detached from the VMO.
-void PageWatcher::PopulatePagesInRange(uint64_t offset, uint64_t length) {
-  TRACE_DURATION("blobfs", "PageWatcher::PopulatePagesInRange", "offset", offset, "length", length);
+void PageWatcher::PopulateAndVerifyPagesInRange(uint64_t offset, uint64_t length) {
+  TRACE_DURATION("blobfs", "PageWatcher::PopulateAndVerifyPagesInRange", "offset", offset, "length",
+                 length);
 
   if (!vmo_->is_valid()) {
     FS_TRACE_ERROR("blobfs pager: VMO is not valid.\n");
@@ -133,15 +138,16 @@ void PageWatcher::PopulatePagesInRange(uint64_t offset, uint64_t length) {
   uint64_t prefetch_offset, prefetch_length;
   GetPrefetchRangeInBytes(offset, length, &prefetch_offset, &prefetch_length);
 
-  auto start_block = static_cast<uint32_t>(prefetch_offset / kBlobfsBlockSize);
-  auto block_count =
-      static_cast<uint32_t>(fbl::round_up(prefetch_length, kBlobfsBlockSize) / kBlobfsBlockSize);
-
-  zx_status_t status =
-      user_pager_->TransferPagesToVmo(identifier_, start_block, block_count, *vmo_);
+  if (!verifier_info_) {
+    FS_TRACE_ERROR("blobfs pager: Page verifier not set.\n");
+    return;
+  }
+  zx_status_t status = user_pager_->TransferPagesToVmo(
+      identifier_, prefetch_offset, prefetch_length, *vmo_, verifier_info_.get());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs pager: Failed to transfer pages to the blob, error: %s\n",
                    zx_status_get_string(status));
+    return;
   }
 }
 

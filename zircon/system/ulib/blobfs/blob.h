@@ -48,6 +48,7 @@ namespace blobfs {
 class Blobfs;
 
 using digest::Digest;
+using digest::MerkleTreeVerifier;
 
 typedef uint32_t BlobFlags;
 
@@ -228,6 +229,10 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Verifies the integrity of the in-memory Blob - operates on the entire blob at once.
   // InitVmos() must have already been called for this blob.
   zx_status_t Verify() const;
+
+  // Instantiates |verifier| with the Merkle tree mapped at the beginning of this
+  // Blob's VMO. The |verifier| is then passed on to the |page_watcher_|, which owns it.
+  zx_status_t InitMerkleTreeVerifier(std::unique_ptr<MerkleTreeVerifier>* verifier);
 
   // Called by the Vnode once the last write has completed, updating the
   // on-disk metadata.

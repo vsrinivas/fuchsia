@@ -794,12 +794,15 @@ zx_status_t Blobfs::AttachTransferVmo(const zx::vmo& transfer_vmo) {
   return AttachVmo(transfer_vmo, &transfer_vmoid_);
 }
 
-zx_status_t Blobfs::PopulateTransferVmo(uint32_t map_index, uint32_t start_block,
-                                        uint32_t block_count) {
+zx_status_t Blobfs::PopulateTransferVmo(uint32_t map_index, uint64_t offset, uint64_t length) {
   fs::Ticker ticker(Metrics().Collecting());
   fs::ReadTxn txn(this);
   AllocatedExtentIterator extent_iter(GetAllocator(), map_index);
   BlockIterator block_iter(&extent_iter);
+
+  auto start_block = static_cast<uint32_t>(offset / kBlobfsBlockSize);
+  auto block_count =
+      static_cast<uint32_t>(fbl::round_up(length, kBlobfsBlockSize) / kBlobfsBlockSize);
 
   // Navigate to the start block.
   zx_status_t status = IterateToBlock(&block_iter, start_block);
@@ -829,6 +832,62 @@ zx_status_t Blobfs::PopulateTransferVmo(uint32_t map_index, uint32_t start_block
     return status;
   }
   Metrics().UpdateMerkleDiskRead(block_count * kBlobfsBlockSize, ticker.End());
+  return ZX_OK;
+}
+
+zx_status_t Blobfs::VerifyTransferVmo(VerifierInfo* verifier_info, const zx::vmo& transfer_vmo,
+                                      uint64_t offset, uint64_t length) {
+  if (!verifier_info) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  ZX_DEBUG_ASSERT(verifier_info->verifier);
+
+  fs::Ticker ticker(Metrics().Collecting());
+  fzl::VmoMapper mapping;
+  // We need to unmap the transfer VMO before its pages can be transferred to the destination VMO,
+  // via |zx_pager_supply_pages|.
+  auto unmap = fbl::MakeAutoCall([&]() { mapping.Unmap(); });
+
+  // Map the transfer VMO in order to pass the verifier a pointer to the data.
+  zx_status_t status = mapping.Map(transfer_vmo, 0, length, ZX_VM_PERM_READ);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to map transfer buffer: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  uint64_t tree_length = verifier_info->verifier->GetTreeLength();
+  status = verifier_info->verifier->Verify(mapping.start(), length,
+                                           offset - fbl::round_up(tree_length, kBlobfsBlockSize));
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Verification failure: %s\n", zx_status_get_string(status));
+  }
+  Metrics().UpdateMerkleVerify(length, tree_length, ticker.End());
+
+  return status;
+}
+
+zx_status_t Blobfs::AlignForVerification(VerifierInfo* verifier_info, uint64_t* offset,
+                                         uint64_t* length) {
+  ZX_DEBUG_ASSERT(verifier_info->verifier);
+
+  uint64_t merkle_size = fbl::round_up(verifier_info->verifier->GetTreeLength(), kBlobfsBlockSize);
+  uint64_t data_offset = *offset - merkle_size;
+  uint64_t data_length = fbl::min(*length, verifier_info->verifier_data_length - data_offset);
+
+  zx_status_t status = verifier_info->verifier->Align(&data_offset, &data_length);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Could not align offsets for verification: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+
+  ZX_DEBUG_ASSERT(data_offset % kBlobfsBlockSize == 0);
+  ZX_DEBUG_ASSERT(data_length % kBlobfsBlockSize == 0 ||
+                  data_offset + data_length == verifier_info->verifier_data_length);
+
+  *offset = data_offset + merkle_size;
+  *length = data_length;
+
   return ZX_OK;
 }
 

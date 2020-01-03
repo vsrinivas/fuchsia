@@ -43,7 +43,6 @@ namespace {
 
 using digest::Digest;
 using digest::MerkleTreeCreator;
-using digest::MerkleTreeVerifier;
 
 // Blob's vmo names have following pattern
 // "blob-1abc8" or "compressedBlob-5c"
@@ -82,6 +81,38 @@ zx_status_t Blob::Verify() const {
   blobfs_->Metrics().UpdateMerkleVerify(data_size, merkle_size, ticker.End());
 
   return status;
+}
+
+zx_status_t Blob::InitMerkleTreeVerifier(std::unique_ptr<MerkleTreeVerifier>* verifier) {
+  // Pre-populate the Merkle tree blocks. Verification takes place on the page fault path, so we
+  // can't block to fault in the Merkle tree then.
+  zx_status_t status = blobfs_->TransferPagesToVmo(
+      GetMapIndex(), 0, MerkleTreeBlocks(inode_) * kBlobfsBlockSize, mapping_.vmo(), nullptr);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Failed to page in Merkle tree blocks: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  const void* tree = inode_.blob_size ? GetMerkle() : nullptr;
+  auto merkle_tree_verifier = std::make_unique<MerkleTreeVerifier>();
+
+  status = merkle_tree_verifier->SetDataLength(inode_.blob_size);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Failed to set data length for Merkle tree verifier: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+
+  size_t merkle_size = merkle_tree_verifier->GetTreeLength();
+  status = merkle_tree_verifier->SetTree(tree, merkle_size, GetKey(), digest::kSha256Length);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Failed to set tree for Merkle tree verifier: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+
+  *verifier = std::move(merkle_tree_verifier);
+  return ZX_OK;
 }
 
 zx_status_t Blob::InitVmos() {
@@ -143,20 +174,16 @@ zx_status_t Blob::InitVmos() {
   }
 
   if (use_pager) {
-    // TODO(rashaeqbal): Remove this once Merkle tree verification no longer requires the entire
-    // blob to be present (fxb/35678).
-    // For now page in the entire blob. This is different from the InitUncompressed() path below,
-    // which reads the data directly into the blob's VMO. This path exercises the blobfs pager.
-    char bytes[kBlobfsBlockSize];
-    for (uint64_t blk = 0; blk < num_blocks; blk++) {
-      status = mapping_.vmo().read(static_cast<void*>(bytes), blk * kBlobfsBlockSize,
-                                   kBlobfsBlockSize);
-      if (status != ZX_OK) {
-        FS_TRACE_ERROR("Failed to read in data at block %zu; error %s\n", blk,
-                       zx_status_get_string(status));
-        return status;
-      }
+    std::unique_ptr<MerkleTreeVerifier> verifier = nullptr;
+    status = InitMerkleTreeVerifier(&verifier);
+    if (status != ZX_OK) {
+      return status;
     }
+    auto verifier_info = std::make_unique<VerifierInfo>();
+    verifier_info->verifier = std::move(verifier);
+    verifier_info->verifier_data_length = inode_.blob_size;
+    page_watcher_->SetPageVerifierInfo(std::move(verifier_info));
+
   } else if ((inode_.header.flags & kBlobFlagLZ4Compressed) != 0) {
     status = InitCompressed(CompressionAlgorithm::LZ4);
   } else if ((inode_.header.flags & kBlobFlagZSTDCompressed) != 0) {
@@ -168,11 +195,14 @@ zx_status_t Blob::InitVmos() {
   if (status != ZX_OK) {
     return status;
   }
-  // TODO(rashaeqbal): Remove this once fxb/35678 is in. Instead verify pages as they are populated
-  // by the pager.
-  status = Verify();
-  if (status != ZX_OK) {
-    return status;
+
+  // Verify the blob up front if the pager is not enabled. If the pager is enabled, the page request
+  // handler verifies pages as they are read in from disk.
+  if (!use_pager) {
+    status = Verify();
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   cleanup.cancel();
@@ -735,8 +765,8 @@ zx_status_t Blob::CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_siz
     status = mapping_.vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, merkle_bytes,
                                          inode_.blob_size, &clone);
   } else {
-    status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, merkle_bytes,
-                                         inode_.blob_size, &clone);
+    status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, merkle_bytes, inode_.blob_size,
+                                         &clone);
   }
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to create child VMO: %s\n", zx_status_get_string(status));
@@ -832,8 +862,17 @@ zx_status_t Blob::VerifyBlob(Blobfs* bs, uint32_t node_index) {
   vn->PopulateInode(node_index);
 
   // If we are unable to read in the blob from disk, this should also be a VerifyBlob error.
-  // Since InitVmos calls Verify as its final step, we can just return its result here.
-  return vn->InitVmos();
+  zx_status_t status = vn->InitVmos();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // If the pager is not set up, InitVmos() calls Verify() as its final step. Return here.
+  if (!vn->page_watcher_) {
+    return status;
+  }
+
+  return vn->Verify();
 }
 
 BlobCache& Blob::Cache() { return blobfs_->Cache(); }

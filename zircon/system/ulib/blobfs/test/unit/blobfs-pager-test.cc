@@ -4,6 +4,7 @@
 
 #include <lib/async/cpp/paged_vmo.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/pager.h>
 #include <limits.h>
 #include <threads.h>
@@ -13,6 +14,9 @@
 #include <memory>
 
 #include <blobfs/format.h>
+#include <digest/digest.h>
+#include <digest/merkle-tree.h>
+#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "pager/page-watcher.h"
@@ -43,6 +47,22 @@ class MockBlob {
     zx_info_vmo_t info;
     ASSERT_OK(vmo_.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
     ASSERT_NE(info.flags & ZX_INFO_VMO_PAGER_BACKED, 0);
+
+    char data[kPagedVmoSize];
+    memset(data, identifier, kPagedVmoSize);
+
+    size_t tree_len;
+    ASSERT_OK(
+        digest::MerkleTreeCreator::Create(data, kPagedVmoSize, &merkle_tree_, &tree_len, &root_));
+
+    auto mtv = std::make_unique<digest::MerkleTreeVerifier>();
+    ASSERT_OK(mtv->SetDataLength(kPagedVmoSize));
+    ASSERT_OK(mtv->SetTree(merkle_tree_.get(), tree_len, root_.get(), root_.len()));
+
+    auto verifier_info = std::make_unique<VerifierInfo>();
+    verifier_info->verifier = std::move(mtv);
+    verifier_info->verifier_data_length = kPagedVmoSize;
+    page_watcher_.SetPageVerifierInfo(std::move(verifier_info));
   }
 
   ~MockBlob() { page_watcher_.DetachPagedVmoSync(); }
@@ -63,6 +83,8 @@ class MockBlob {
   zx::vmo vmo_;
   PageWatcher page_watcher_;
   char identifier_;
+  std::unique_ptr<uint8_t[]> merkle_tree_;
+  Digest root_;
 };
 
 // Mock user pager. Defines the UserPager interface such that the result of reads on distinct
@@ -77,19 +99,36 @@ class MockPager : public UserPager {
     return ZX_OK;
   }
 
-  zx_status_t PopulateTransferVmo(uint32_t map_index, uint32_t start_block,
-                                  uint32_t block_count) override {
+  zx_status_t PopulateTransferVmo(uint32_t map_index, uint64_t offset, uint64_t length) override {
     // Fill the transfer buffer with the blob's identifier character, to service page requests. The
     // identifier helps us distinguish between blobs.
     char text[kBlobfsBlockSize];
     memset(text, static_cast<char>(map_index), kBlobfsBlockSize);
-    for (uint32_t i = 0; i < block_count; i++) {
-      zx_status_t status = vmo_->write(text, i * kBlobfsBlockSize, kBlobfsBlockSize);
+    for (uint32_t i = 0; i < length; i += kBlobfsBlockSize) {
+      zx_status_t status = vmo_->write(text, i, kBlobfsBlockSize);
       if (status != ZX_OK) {
         return status;
       }
     }
     return ZX_OK;
+  }
+
+  zx_status_t AlignForVerification(VerifierInfo* verifier_info, uint64_t* offset,
+                                   uint64_t* length) override {
+    return verifier_info->verifier->Align(offset, length);
+  }
+
+  zx_status_t VerifyTransferVmo(VerifierInfo* verifier_info, const zx::vmo& transfer_vmo,
+                                uint64_t offset, uint64_t length) override {
+    fzl::VmoMapper mapping;
+    auto unmap = fbl::MakeAutoCall([&]() { mapping.Unmap(); });
+
+    // Map the transfer VMO in order to pass the verifier a pointer to the data.
+    zx_status_t status = mapping.Map(transfer_vmo, 0, length, ZX_VM_PERM_READ);
+    if (status != ZX_OK) {
+      return status;
+    }
+    return verifier_info->verifier->Verify(mapping.start(), length, offset);
   }
 
   zx::unowned_vmo vmo_;
@@ -143,8 +182,8 @@ TEST_F(BlobfsPagerTest, ReadSequential) {
 TEST_F(BlobfsPagerTest, ReadRandom) {
   auto blob = CreateBlob();
   uint64_t offset, length;
+  unsigned int seed = 0;
   for (uint64_t i = 0; i < kNumReadRequests; i++) {
-    unsigned int seed = 0;
     GetRandomOffsetAndLength(&seed, &offset, &length);
     blob->Read(offset, length);
   }
@@ -160,9 +199,9 @@ TEST_F(BlobfsPagerTest, ReadRandomMultipleBlobs) {
   std::unique_ptr<MockBlob> blobs[3] = {CreateBlob('x'), CreateBlob('y'), CreateBlob('z')};
 
   uint64_t offset, length;
+  unsigned int seed = 0;
   for (uint64_t i = 0; i < kNumReadRequests; i++) {
     uint64_t index = rand() % 3;
-    unsigned int seed = 0;
     GetRandomOffsetAndLength(&seed, &offset, &length);
     blobs[index]->Read(offset, length);
   }

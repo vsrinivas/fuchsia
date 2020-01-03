@@ -52,27 +52,44 @@ zx_status_t UserPager::InitPager() {
   return ZX_OK;
 }
 
-zx_status_t UserPager::TransferPagesToVmo(uint32_t map_index, uint32_t start_block,
-                                          uint32_t block_count, const zx::vmo& vmo) {
-  TRACE_DURATION("blobfs", "UserPager::TransferPagesToVmo", "map_index", map_index, "start_block",
-                 start_block, "block_count", block_count);
+zx_status_t UserPager::TransferPagesToVmo(uint32_t map_index, uint64_t offset, uint64_t length,
+                                          const zx::vmo& vmo, VerifierInfo* verifier_info) {
+  TRACE_DURATION("blobfs", "UserPager::TransferPagesToVmo", "map_index", map_index, "offset",
+                 offset, "length", length);
 
-  auto decommit = fbl::MakeAutoCall([this, block_count]() {
+  auto decommit = fbl::MakeAutoCall([this, length]() {
     // Decommit pages in the transfer buffer that might have been populated. All blobs share the
     // same transfer buffer - this prevents data leaks between different blobs.
-    transfer_buffer_.op_range(ZX_VMO_OP_DECOMMIT, 0, block_count * kBlobfsBlockSize, nullptr, 0);
+    transfer_buffer_.op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize),
+                              nullptr, 0);
   });
 
+  zx_status_t status;
+  if (verifier_info) {
+    // Align the range to include pages needed for verification.
+    status = AlignForVerification(verifier_info, &offset, &length);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
   // Read from storage into the transfer buffer.
-  zx_status_t status = PopulateTransferVmo(map_index, start_block, block_count);
+  status = PopulateTransferVmo(map_index, offset, length);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to populate transfer buffer: %s\n",
-                   zx_status_get_string(status));
     return status;
   }
 
+  // Verify the pages read in if a verifier is provided.
+  if (verifier_info) {
+    status = VerifyTransferVmo(verifier_info, transfer_buffer_, offset, length);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  ZX_DEBUG_ASSERT(offset % PAGE_SIZE == 0);
   // Move the pages from the transfer buffer to the destination VMO.
-  status = pager_.supply_pages(vmo, start_block * kBlobfsBlockSize, block_count * kBlobfsBlockSize,
+  status = pager_.supply_pages(vmo, offset, fbl::round_up<uint64_t, uint64_t>(length, PAGE_SIZE),
                                transfer_buffer_, 0);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to supply pages to paged VMO: %s\n",
@@ -80,7 +97,6 @@ zx_status_t UserPager::TransferPagesToVmo(uint32_t map_index, uint32_t start_blo
     return status;
   }
 
-  decommit.cancel();
   return ZX_OK;
 }
 

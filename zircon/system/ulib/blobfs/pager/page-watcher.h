@@ -34,6 +34,9 @@ class PageWatcher {
   // |vmo_out| is owned by the caller.
   zx_status_t CreatePagedVmo(size_t vmo_size, zx::vmo* vmo_out);
 
+  // Sets |verifier_info_| that will be used to verify pages as they are populated.
+  void SetPageVerifierInfo(std::unique_ptr<VerifierInfo> verifier_info);
+
   // Detaches the paged VMO from the pager and waits for the page request handler to receive a
   // ZX_PAGER_VMO_COMPLETE packet. Should be called before the associated VMO or the |PageWatcher|
   // is destroyed. This is required to prevent use-after-frees.
@@ -55,9 +58,10 @@ class PageWatcher {
   void GetPrefetchRangeInBytes(const uint64_t requested_offset, const uint64_t requested_length,
                                uint64_t* prefetch_offset, uint64_t* prefetch_length);
 
-  // Fulfills page read requests for a certain range in the paged VMO. Called by |HandlePageRequest|
-  // for a ZX_PAGER_VMO_READ packet. |offset| and |length| are in bytes.
-  void PopulatePagesInRange(uint64_t offset, uint64_t length);
+  // Fulfills page read requests for a certain range in the paged VMO. Also verifies the range after
+  // it is read in from disk. Called by |HandlePageRequest| for a ZX_PAGER_VMO_READ packet. |offset|
+  // and |length| are in bytes.
+  void PopulateAndVerifyPagesInRange(uint64_t offset, uint64_t length);
 
   // Signals condition variable that is holding up destruction, indicating that it's safe to
   // delete the paged VMO now that the pager has been detached. Called by |HandlePageRequest| on
@@ -85,6 +89,8 @@ class PageWatcher {
 
   // Unowned VMO corresponding to the paged VMO. Used by |page_request_handler_| to populate pages.
   zx::unowned_vmo vmo_;
+
+  std::unique_ptr<VerifierInfo> verifier_info_ = nullptr;
 };
 
 }  // namespace blobfs

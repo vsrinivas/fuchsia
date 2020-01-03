@@ -172,10 +172,14 @@ class Blobfs : public TransactionManager, public UserPager {
   ////////////////
   // UserPager interface.
   //
-  // Allows populating the pager transfer buffer with a blob's blocks from the block device.
+  // Allows populating (and verifying) the pager transfer buffer with a blob's blocks
+  // from the block device.
   zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) final;
-  zx_status_t PopulateTransferVmo(uint32_t map_index, uint32_t start_block,
-                                  uint32_t block_count) final;
+  zx_status_t PopulateTransferVmo(uint32_t map_index, uint64_t offset, uint64_t length) final;
+  zx_status_t VerifyTransferVmo(VerifierInfo* verifier_info, const zx::vmo& transfer_vmo,
+                                uint64_t offset, uint64_t length) final;
+  zx_status_t AlignForVerification(VerifierInfo* verifier_info, uint64_t* offset,
+                                   uint64_t* length) final;
 
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
          const Superblock* info, Writability writable);
