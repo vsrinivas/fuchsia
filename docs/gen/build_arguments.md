@@ -557,7 +557,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/5978edca928ec927289775825fb7b1186a5795d4/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/708e8b1641c732eb9cf84216080c6c7df5fd5cc5/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -572,7 +572,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/5978edca928ec927289775825fb7b1186a5795d4/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/708e8b1641c732eb9cf84216080c6c7df5fd5cc5/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -622,7 +622,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/5978edca928ec927289775825fb7b1186a5795d4/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/708e8b1641c732eb9cf84216080c6c7df5fd5cc5/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -691,6 +691,25 @@ Package the rootfs as a QCOW image (as opposed to a flat file).
 **Current value (from the default):** `true`
 
 From //src/virtualization/packages/debian_guest/BUILD.gn:9
+
+### default_git_folder
+Absolute path to the .git folder.
+
+This is used in rules that need to refer to `.git/logs/HEAD` to include
+a hash in the version string. By default the folder is `.git`, but we define
+it as an argument so it can be overriden by users of `git-worktree` (See
+Issue #33619).
+
+When using git-worktree, you can add
+
+   default_git_folder = "/path/to/main/git/repo/.git/worktrees/name/"
+
+to out/ReleaseX64/args.gn. The path above can be extracted from the `.git`
+file under the git worktree folder.
+
+**Current value (from the default):** `"//third_party/dart//.git"`
+
+From //third_party/dart/sdk_args.gni:25
 
 ### devmgr_config
 List of arguments to add to /boot/config/devmgr.
@@ -843,20 +862,20 @@ From //build/fidl/wireformat.gni:9
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/5978edca928ec927289775825fb7b1186a5795d4/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/708e8b1641c732eb9cf84216080c6c7df5fd5cc5/runtime/dart/dart_component.gni#12)
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/5978edca928ec927289775825fb7b1186a5795d4/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/708e8b1641c732eb9cf84216080c6c7df5fd5cc5/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/5978edca928ec927289775825fb7b1186a5795d4/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/708e8b1641c732eb9cf84216080c6c7df5fd5cc5/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1064,7 +1083,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/423b22d7305ebb6ce468f9f05ed204bee7d8d004/config.gni#8)
+From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/995c0373ab900da6cbf97cb3074d9f475efaa915/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
@@ -2089,7 +2108,7 @@ TODO(#38701): Remove this when the fork has been merged back in.
 
 **Current value (from the default):** `false`
 
-From //third_party/dart/sdk_args.gni:4
+From //third_party/dart/sdk_args.gni:10
 
 ### use_prebuilt_dart_sdk
 Whether to use the prebuilt Dart SDK for everything.
