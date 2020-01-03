@@ -19,7 +19,7 @@ use {
 
 mod spinel_utils;
 
-use crate::spinel_utils::{Context, MoldContext, Path, Raster, RenderExt, SpinelContext};
+use crate::spinel_utils::{Context, MoldContext, Path, Raster, SpinelContext};
 
 const APP_NAME: &'static [u8; 7] = b"ink_rs\0";
 const BACKGROUND_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
@@ -647,30 +647,23 @@ impl Scene {
 }
 
 struct Contents {
-    image_id: u32,
-    composition_id: u32,
+    index: u32,
     size: Size,
 }
 
 impl Contents {
-    fn new(context: &mut dyn Context, index: u32) -> Self {
-        // Use index as image and composition IDs.
-        let image_id = index;
-        context.image_from_index(image_id, index);
-        let composition_id = index;
-
-        Self { image_id, composition_id, size: Size::zero() }
+    fn new(index: u32) -> Self {
+        Self { index, size: Size::zero() }
     }
 
     fn update(&mut self, context: &mut dyn Context, scene: &Scene, size: &Size) {
-        let clip: [u32; 4] = [0, 0, size.width.floor() as u32, size.height.floor() as u32];
-
-        let composition = context.composition(self.composition_id);
+        let composition = context.composition(self.index);
         composition.unseal();
         composition.reset();
 
         if self.size != *size {
             self.size = *size;
+            let clip: [u32; 4] = [0, 0, size.width.floor() as u32, size.height.floor() as u32];
             composition.set_clip(&clip);
         }
 
@@ -694,13 +687,7 @@ impl Contents {
 
         composition.seal();
 
-        context.render(
-            self.image_id,
-            self.composition_id,
-            &clip,
-            &[RenderExt::PreClear(BACKGROUND_COLOR)],
-        );
-        context.image(self.image_id, &[0, 0]).flush();
+        context.render(self.index, true, &BACKGROUND_COLOR);
     }
 }
 
@@ -1110,13 +1097,10 @@ impl<T: Context> ViewAssistant for InkViewAssistant<T> {
         let mut temp_content;
         let content;
         if canvas.id == 0 {
-            temp_content = Contents::new(context, canvas.index);
+            temp_content = Contents::new(canvas.index);
             content = &mut temp_content;
         } else {
-            content = self
-                .contents
-                .entry(canvas.id)
-                .or_insert_with(|| Contents::new(context, canvas.index));
+            content = self.contents.entry(canvas.id).or_insert_with(|| Contents::new(canvas.index));
         }
         content.update(context, &self.scene, size);
         Ok(())

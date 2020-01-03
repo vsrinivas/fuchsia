@@ -30,7 +30,6 @@ group("carnelian") {
     "//garnet/public/rust/carnelian:drawing_mold_rs",
     "//garnet/public/rust/carnelian:drawing_rs",
     "//garnet/public/rust/carnelian:embedding_rs",
-    "//garnet/public/rust/carnelian:infinite_scroll_rs",
     "//garnet/public/rust/carnelian:ink_rs",
     "//garnet/public/rust/carnelian:perf_test_01_rs",
     "//garnet/public/rust/carnelian:perf_test_02_rs",
