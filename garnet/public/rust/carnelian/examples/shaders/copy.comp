@@ -1,0 +1,40 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 450
+
+layout (local_size_x = 48) in;
+
+layout (binding = 0, rgba8) readonly uniform image2D src_image;
+layout (binding = 1, rgba8) writeonly uniform image2D dst_image;
+
+layout (push_constant) uniform PushConstantBlock {
+    // Source image offset.
+    ivec2 src_offset;
+    // Destination image offset.
+    ivec2 dst_offset;
+    // Values used to advance copy offset.
+    ivec2 dxdy;
+    // Extent of copy.
+    uint extent;
+} params;
+
+// Copies a number of samples specified by the extent parameter from
+// source to destination image.
+//
+// * Source and destination memory regions can overlap. Dxdy
+//   parameter defines the result for such a case.
+void main()
+{
+    ivec2 dst = ivec2(gl_GlobalInvocationID.xy) + params.dst_offset.xy;
+    ivec2 src = ivec2(gl_GlobalInvocationID.xy) + params.src_offset.xy;
+
+    uint extent = params.extent;
+    while (extent-- > 0)
+    {
+        imageStore(dst_image, dst, imageLoad(src_image, src));
+        dst.xy += params.dxdy.xy;
+        src.xy += params.dxdy.xy;
+    }
+}

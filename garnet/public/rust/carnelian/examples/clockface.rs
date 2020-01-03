@@ -18,7 +18,8 @@ use {
 mod spinel_utils;
 
 use crate::spinel_utils::{
-    Context, GroupId, MoldContext, Path, PathBuilder, Raster, RasterBuilder, SpinelContext,
+    Context, GroupId, MoldContext, Path, PathBuilder, Raster, RasterBuilder, RenderExt,
+    SpinelContext,
 };
 
 const APP_NAME: &'static [u8; 13usize] = b"clockface_rs\0";
@@ -337,28 +338,35 @@ impl Scene {
 }
 
 struct Contents {
-    index: u32,
+    image_id: u32,
+    composition_id: u32,
     size: Size,
     previous_rasters: Vec<Rc<RefCell<Raster>>>,
 }
 
 impl Contents {
-    fn new(index: u32) -> Self {
-        Self { index, size: Size::zero(), previous_rasters: Vec::new() }
+    fn new(context: &mut dyn Context, index: u32) -> Self {
+        // Use index as image and composition IDs.
+        let image_id = index;
+        context.image_from_index(image_id, index);
+        let composition_id = index;
+
+        Self { image_id, composition_id, size: Size::zero(), previous_rasters: Vec::new() }
     }
 
     fn update(&mut self, context: &mut dyn Context, scene: &Scene, size: &Size) {
-        let composition = context.composition(self.index);
+        let clip: [u32; 4] = [0, 0, size.width.floor() as u32, size.height.floor() as u32];
+        let composition = context.composition(self.composition_id);
         composition.unseal();
         composition.reset();
 
-        let mut needs_clear = false;
-        if self.size != *size {
+        let exts = if self.size != *size {
             self.size = *size;
-            let clip: [u32; 4] = [0, 0, size.width.floor() as u32, size.height.floor() as u32];
             composition.set_clip(&clip);
-            needs_clear = true;
-        }
+            &[RenderExt::PreClear(BACKGROUND_COLOR)]
+        } else {
+            &[] as &[RenderExt]
+        };
 
         // New rasters for this frame.
         let hour_hand_raster = scene.hour_hand.raster.as_ref().unwrap().clone();
@@ -391,7 +399,8 @@ impl Contents {
 
         composition.seal();
 
-        context.render(self.index, needs_clear, &BACKGROUND_COLOR);
+        context.render(self.image_id, self.composition_id, &clip, exts);
+        context.image(self.image_id, &[0, 0]).flush();
 
         // Keep reference to rasters for clearing.
         self.previous_rasters.push(hour_hand_raster);
@@ -436,10 +445,13 @@ impl<T: Context> ViewAssistant for ClockfaceViewAssistant<T> {
         let content;
 
         if canvas.id == 0 {
-            temp_content = Contents::new(canvas.index);
+            temp_content = Contents::new(context, canvas.index);
             content = &mut temp_content;
         } else {
-            content = self.contents.entry(canvas.id).or_insert_with(|| Contents::new(canvas.index));
+            content = self
+                .contents
+                .entry(canvas.id)
+                .or_insert_with(|| Contents::new(context, canvas.index));
         }
         content.update(context, &self.scene, size);
 
