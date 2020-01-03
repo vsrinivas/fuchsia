@@ -42,7 +42,7 @@ WithErrorSyntax_ResponseAsStruct_Result::~WithErrorSyntax_ResponseAsStruct_Resul
   Destroy();
 }
 
-WithErrorSyntax_ResponseAsStruct_Result::WithErrorSyntax_ResponseAsStruct_Result(WithErrorSyntax_ResponseAsStruct_Result&& other) : tag_(other.tag_) {
+WithErrorSyntax_ResponseAsStruct_Result::WithErrorSyntax_ResponseAsStruct_Result(WithErrorSyntax_ResponseAsStruct_Result&& other) : tag_(GetWriteOrdinal(other.tag_)) {
   switch (tag_) {
     case Tag::kResponse:
       new (&response_) class WithErrorSyntax_ResponseAsStruct_Response();
@@ -59,7 +59,7 @@ WithErrorSyntax_ResponseAsStruct_Result::WithErrorSyntax_ResponseAsStruct_Result
 WithErrorSyntax_ResponseAsStruct_Result& WithErrorSyntax_ResponseAsStruct_Result::operator=(WithErrorSyntax_ResponseAsStruct_Result&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = other.tag_;
+    tag_ = GetWriteOrdinal(other.tag_);
     switch (tag_) {
       case Tag::kResponse:
         new (&response_) class WithErrorSyntax_ResponseAsStruct_Response();
@@ -86,6 +86,10 @@ WithErrorSyntax_ResponseAsStruct_Result WithErrorSyntax_ResponseAsStruct_Result:
   return result;
 }
 
+
+fidl_xunion_tag_t WithErrorSyntax_ResponseAsStruct_Result::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
+  return ordinal;
+}
 
 void WithErrorSyntax_ResponseAsStruct_Result::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -186,9 +190,10 @@ void WithErrorSyntax_ResponseAsStruct_Result::Destroy() {
 }
 
 void WithErrorSyntax_ResponseAsStruct_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  if (tag_ != tag) {
+  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
+  if (tag_ != canonical_tag) {
     Destroy();
-    tag_ = tag;
+    tag_ = canonical_tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -229,7 +234,7 @@ WithErrorSyntax_ErrorAsPrimitive_Result::~WithErrorSyntax_ErrorAsPrimitive_Resul
   Destroy();
 }
 
-WithErrorSyntax_ErrorAsPrimitive_Result::WithErrorSyntax_ErrorAsPrimitive_Result(WithErrorSyntax_ErrorAsPrimitive_Result&& other) : tag_(other.tag_) {
+WithErrorSyntax_ErrorAsPrimitive_Result::WithErrorSyntax_ErrorAsPrimitive_Result(WithErrorSyntax_ErrorAsPrimitive_Result&& other) : tag_(GetWriteOrdinal(other.tag_)) {
   switch (tag_) {
     case Tag::kResponse:
       new (&response_) class WithErrorSyntax_ErrorAsPrimitive_Response();
@@ -246,7 +251,7 @@ WithErrorSyntax_ErrorAsPrimitive_Result::WithErrorSyntax_ErrorAsPrimitive_Result
 WithErrorSyntax_ErrorAsPrimitive_Result& WithErrorSyntax_ErrorAsPrimitive_Result::operator=(WithErrorSyntax_ErrorAsPrimitive_Result&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = other.tag_;
+    tag_ = GetWriteOrdinal(other.tag_);
     switch (tag_) {
       case Tag::kResponse:
         new (&response_) class WithErrorSyntax_ErrorAsPrimitive_Response();
@@ -273,6 +278,10 @@ WithErrorSyntax_ErrorAsPrimitive_Result WithErrorSyntax_ErrorAsPrimitive_Result:
   return result;
 }
 
+
+fidl_xunion_tag_t WithErrorSyntax_ErrorAsPrimitive_Result::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
+  return ordinal;
+}
 
 void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -373,9 +382,10 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Destroy() {
 }
 
 void WithErrorSyntax_ErrorAsPrimitive_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  if (tag_ != tag) {
+  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
+  if (tag_ != canonical_tag) {
     Destroy();
-    tag_ = tag;
+    tag_ = canonical_tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -1217,7 +1227,7 @@ WithErrorSyntax_ErrorAsEnum_Result::~WithErrorSyntax_ErrorAsEnum_Result() {
   Destroy();
 }
 
-WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&& other) : tag_(other.tag_) {
+WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&& other) : tag_(GetWriteOrdinal(other.tag_)) {
   switch (tag_) {
     case Tag::kResponse:
       new (&response_) class WithErrorSyntax_ErrorAsEnum_Response();
@@ -1235,7 +1245,7 @@ WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result(WithError
 WithErrorSyntax_ErrorAsEnum_Result& WithErrorSyntax_ErrorAsEnum_Result::operator=(WithErrorSyntax_ErrorAsEnum_Result&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = other.tag_;
+    tag_ = GetWriteOrdinal(other.tag_);
     switch (tag_) {
       case Tag::kResponse:
         new (&response_) class WithErrorSyntax_ErrorAsEnum_Response();
@@ -1263,6 +1273,10 @@ WithErrorSyntax_ErrorAsEnum_Result WithErrorSyntax_ErrorAsEnum_Result::WithErr(E
   return result;
 }
 
+
+fidl_xunion_tag_t WithErrorSyntax_ErrorAsEnum_Result::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
+  return ordinal;
+}
 
 void WithErrorSyntax_ErrorAsEnum_Result::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -1366,9 +1380,10 @@ void WithErrorSyntax_ErrorAsEnum_Result::Destroy() {
 }
 
 void WithErrorSyntax_ErrorAsEnum_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  if (tag_ != tag) {
+  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
+  if (tag_ != canonical_tag) {
     Destroy();
-    tag_ = tag;
+    tag_ = canonical_tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;

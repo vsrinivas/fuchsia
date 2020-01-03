@@ -32,6 +32,8 @@ class UnionSize8Alignment4 final {
   
   static UnionSize8Alignment4 WithVariant(uint32_t&&);
 
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
+
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kVariant = 1,  // 0x1
@@ -133,6 +135,8 @@ class UnionSize36Alignment4 final {
   
   static UnionSize36Alignment4 WithVariant(::std::array<uint8_t, 32>&&);
 
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
+
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kVariant = 1,  // 0x1
@@ -233,6 +237,8 @@ class UnionSize12Alignment4 final {
 
   
   static UnionSize12Alignment4 WithVariant(::std::array<uint8_t, 6>&&);
+
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -356,6 +362,8 @@ class UnionSize24Alignment8 final {
 
   
   static UnionSize24Alignment8 WithVariant(class StructSize16Alignment8&&);
+
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   

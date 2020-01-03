@@ -48,6 +48,8 @@ class Union final {
   
   static Union WithField(int32_t&&);
 
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
+
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kField = 1,  // 0x1

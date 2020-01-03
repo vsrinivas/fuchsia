@@ -141,6 +141,8 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   static WithErrorSyntax_ResponseAsStruct_Result WithResponse(class WithErrorSyntax_ResponseAsStruct_Response&&);
   static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t&&);
 
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
+
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kResponse = 1,  // 0x1
@@ -280,6 +282,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   
   static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(class WithErrorSyntax_ErrorAsPrimitive_Response&&);
   static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t&&);
+
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -962,6 +966,8 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   
   static WithErrorSyntax_ErrorAsEnum_Result WithResponse(class WithErrorSyntax_ErrorAsEnum_Response&&);
   static WithErrorSyntax_ErrorAsEnum_Result WithErr(ErrorEnun&&);
+
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   

@@ -128,14 +128,26 @@ type XUnion struct {
 	types.Strictness
 }
 
+func (xu XUnion) ShouldReadBothOrdinals() bool {
+	if len(xu.Members) == 0 {
+		return false
+	}
+	// xunions members for any given xunion will always use the same "type"
+	// (hashed/explicit) of ordinal, so we can just check the first member to
+	// determine if supporting both sets are required
+	return xu.Members[0].HashedOrdinal != xu.Members[0].ExplicitOrdinal
+}
+
 type XUnionMember struct {
 	types.Attributes
-	Ordinal     int
-	Type        Type
-	Name        string
-	StorageName string
-	TagName     string
-	Offset      int
+	Ordinal         uint64
+	ExplicitOrdinal uint64
+	HashedOrdinal   uint64
+	Type            Type
+	Name            string
+	StorageName     string
+	TagName         string
+	Offset          int
 }
 
 func (xum XUnionMember) UpperCamelCaseName() string {
@@ -1090,13 +1102,15 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
 	n := changeIfReserved(val.Name, "")
 	return XUnionMember{
-		Attributes:  val.Attributes,
-		Ordinal:     val.Ordinal,
-		Type:        c.compileType(val.Type),
-		Name:        n,
-		StorageName: changeIfReserved(val.Name, "_"),
-		TagName:     fmt.Sprintf("k%s", common.ToUpperCamelCase(n)),
-		Offset:      val.Offset,
+		Attributes:      val.Attributes,
+		Ordinal:         uint64(val.Ordinal),
+		ExplicitOrdinal: uint64(val.ExplicitOrdinal),
+		HashedOrdinal:   uint64(val.HashedOrdinal),
+		Type:            c.compileType(val.Type),
+		Name:            n,
+		StorageName:     changeIfReserved(val.Name, "_"),
+		TagName:         fmt.Sprintf("k%s", common.ToUpperCamelCase(n)),
+		Offset:          val.Offset,
 	}
 }
 

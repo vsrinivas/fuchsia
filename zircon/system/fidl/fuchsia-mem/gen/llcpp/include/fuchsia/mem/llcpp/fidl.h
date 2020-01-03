@@ -44,10 +44,9 @@ struct Data {
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_bytes() const { return ordinal_ == Ordinal::kBytes; }
+  bool is_bytes() const { return ordinal() == Ordinal::kBytes; }
 
   static Data WithBytes(::fidl::VectorView<uint8_t>* val) {
     Data result;
@@ -63,15 +62,15 @@ struct Data {
 
   // The binary data provided inline in the message.
   ::fidl::VectorView<uint8_t>& mutable_bytes() {
-    ZX_ASSERT(ordinal_ == Ordinal::kBytes);
+    ZX_ASSERT(ordinal() == Ordinal::kBytes);
     return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data);
   }
   const ::fidl::VectorView<uint8_t>& bytes() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kBytes);
+    ZX_ASSERT(ordinal() == Ordinal::kBytes);
     return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data);
   }
 
-  bool is_buffer() const { return ordinal_ == Ordinal::kBuffer; }
+  bool is_buffer() const { return ordinal() == Ordinal::kBuffer; }
 
   static Data WithBuffer(::llcpp::fuchsia::mem::Buffer* val) {
     Data result;
@@ -87,11 +86,11 @@ struct Data {
 
   // The binary data provided out-of-line in a `Buffer`.
   ::llcpp::fuchsia::mem::Buffer& mutable_buffer() {
-    ZX_ASSERT(ordinal_ == Ordinal::kBuffer);
+    ZX_ASSERT(ordinal() == Ordinal::kBuffer);
     return *static_cast<::llcpp::fuchsia::mem::Buffer*>(envelope_.data);
   }
   const ::llcpp::fuchsia::mem::Buffer& buffer() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kBuffer);
+    ZX_ASSERT(ordinal() == Ordinal::kBuffer);
     return *static_cast<::llcpp::fuchsia::mem::Buffer*>(envelope_.data);
   }
   void* unknownData() const {
@@ -116,6 +115,19 @@ struct Data {
     kBytes = 835814982,  // 0x31d18646
     kBuffer = 1925873109,  // 0x72ca7dd5
   };
+
+  Ordinal ordinal() const {
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+      case 1:
+      case 835814982:
+        return Ordinal::kBytes;
+      case 2:
+      case 1925873109:
+        return Ordinal::kBuffer;
+    }
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

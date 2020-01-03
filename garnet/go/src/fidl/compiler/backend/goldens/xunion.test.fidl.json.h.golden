@@ -69,6 +69,8 @@ class StrictSimpleXUnion final {
   static StrictSimpleXUnion WithF(float&&);
   static StrictSimpleXUnion WithS(::std::string&&);
 
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
+
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kI = 1851697276,  // 0x6e5ea87c
@@ -176,6 +178,8 @@ class StrictBoundedXUnion final {
   
   static StrictBoundedXUnion WithV(::std::vector<uint8_t>&&);
 
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
+
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kV = 2024555624,  // 0x78ac4468
@@ -253,6 +257,8 @@ class OlderSimpleUnion final {
   
   static OlderSimpleUnion WithI(int64_t&&);
   static OlderSimpleUnion WithF(float&&);
+
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   kUnknown = 0,
@@ -544,6 +550,8 @@ class NewerSimpleUnion final {
   static NewerSimpleUnion WithS(::std::string&&);
   static NewerSimpleUnion WithV(::std::vector<::std::string>&&);
 
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
+
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   kUnknown = 0,
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
@@ -665,6 +673,8 @@ class ExplicitXUnion final {
   
   static ExplicitXUnion WithI(int64_t&&);
   static ExplicitXUnion WithF(float&&);
+
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   kUnknown = 0,
@@ -790,6 +800,8 @@ class XUnionContainingEmptyStruct final {
 
   
   static XUnionContainingEmptyStruct WithEmpty(class Empty&&);
+
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   kUnknown = 0,

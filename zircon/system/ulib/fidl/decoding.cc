@@ -203,7 +203,7 @@ class FidlDecoder final
   Status ValidatePadding(const uint8_t* padding_ptr, uint32_t padding_length) {
     for (uint32_t i = 0; i < padding_length; i++) {
       if (padding_ptr[i] != 0) {
-        SetError("non-zero padding bytes detected");
+        SetError("non-zero padding bytes detected during decoding");
         return Status::kConstraintViolationError;
       }
     }

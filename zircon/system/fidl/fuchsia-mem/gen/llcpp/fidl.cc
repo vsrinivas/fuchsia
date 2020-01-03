@@ -9,10 +9,10 @@ namespace fuchsia {
 namespace mem {
 auto ::llcpp::fuchsia::mem::Data::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
-  switch (ordinal_) {
+  switch (ordinal()) {
   case Ordinal::kBytes:
   case Ordinal::kBuffer:
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   default:
     return Tag::kUnknown;
   }

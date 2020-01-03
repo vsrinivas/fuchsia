@@ -69,10 +69,9 @@ struct NameProvider_GetDeviceName_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static NameProvider_GetDeviceName_Result WithResponse(::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response* val) {
     NameProvider_GetDeviceName_Result result;
@@ -86,15 +85,15 @@ struct NameProvider_GetDeviceName_Result {
   }
 
   ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static NameProvider_GetDeviceName_Result WithErr(int32_t* val) {
     NameProvider_GetDeviceName_Result result;
@@ -108,16 +107,16 @@ struct NameProvider_GetDeviceName_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_NameProvider_GetDeviceName_ResultTable;
@@ -136,6 +135,11 @@ struct NameProvider_GetDeviceName_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -153,10 +157,9 @@ struct Controller_GetPowerStateMapping_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_GetPowerStateMapping_Result WithResponse(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response* val) {
     Controller_GetPowerStateMapping_Result result;
@@ -170,15 +173,15 @@ struct Controller_GetPowerStateMapping_Result {
   }
 
   ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_GetPowerStateMapping_Result WithErr(int32_t* val) {
     Controller_GetPowerStateMapping_Result result;
@@ -192,16 +195,16 @@ struct Controller_GetPowerStateMapping_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
@@ -220,6 +223,11 @@ struct Controller_GetPowerStateMapping_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -237,10 +245,9 @@ struct Controller_GetDevicePowerCaps_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_GetDevicePowerCaps_Result WithResponse(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response* val) {
     Controller_GetDevicePowerCaps_Result result;
@@ -254,15 +261,15 @@ struct Controller_GetDevicePowerCaps_Result {
   }
 
   ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_GetDevicePowerCaps_Result WithErr(int32_t* val) {
     Controller_GetDevicePowerCaps_Result result;
@@ -276,16 +283,16 @@ struct Controller_GetDevicePowerCaps_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
@@ -304,6 +311,11 @@ struct Controller_GetDevicePowerCaps_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -321,10 +333,9 @@ struct Controller_Resume_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_Resume_Result WithResponse(::llcpp::fuchsia::device::Controller_Resume_Response* val) {
     Controller_Resume_Result result;
@@ -338,15 +349,15 @@ struct Controller_Resume_Result {
   }
 
   ::llcpp::fuchsia::device::Controller_Resume_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_Resume_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::Controller_Resume_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_Resume_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_Resume_Result WithErr(int32_t* val) {
     Controller_Resume_Result result;
@@ -360,16 +371,16 @@ struct Controller_Resume_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Resume_ResultTable;
@@ -388,6 +399,11 @@ struct Controller_Resume_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -405,10 +421,9 @@ struct Controller_UpdatePowerStateMapping_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_UpdatePowerStateMapping_Result WithResponse(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response* val) {
     Controller_UpdatePowerStateMapping_Result result;
@@ -422,15 +437,15 @@ struct Controller_UpdatePowerStateMapping_Result {
   }
 
   ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_UpdatePowerStateMapping_Result WithErr(int32_t* val) {
     Controller_UpdatePowerStateMapping_Result result;
@@ -444,16 +459,16 @@ struct Controller_UpdatePowerStateMapping_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
@@ -472,6 +487,11 @@ struct Controller_UpdatePowerStateMapping_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -489,10 +509,9 @@ struct Controller_ScheduleUnbind_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_ScheduleUnbind_Result WithResponse(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response* val) {
     Controller_ScheduleUnbind_Result result;
@@ -506,15 +525,15 @@ struct Controller_ScheduleUnbind_Result {
   }
 
   ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_ScheduleUnbind_Result WithErr(int32_t* val) {
     Controller_ScheduleUnbind_Result result;
@@ -528,16 +547,16 @@ struct Controller_ScheduleUnbind_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_ScheduleUnbind_ResultTable;
@@ -556,6 +575,11 @@ struct Controller_ScheduleUnbind_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -573,10 +597,9 @@ struct Controller_Rebind_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_Rebind_Result WithResponse(::llcpp::fuchsia::device::Controller_Rebind_Response* val) {
     Controller_Rebind_Result result;
@@ -590,15 +613,15 @@ struct Controller_Rebind_Result {
   }
 
   ::llcpp::fuchsia::device::Controller_Rebind_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_Rebind_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::Controller_Rebind_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_Rebind_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_Rebind_Result WithErr(int32_t* val) {
     Controller_Rebind_Result result;
@@ -612,16 +635,16 @@ struct Controller_Rebind_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Rebind_ResultTable;
@@ -640,6 +663,11 @@ struct Controller_Rebind_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -657,10 +685,9 @@ struct Controller_GetTopologicalPath_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_GetTopologicalPath_Result WithResponse(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response* val) {
     Controller_GetTopologicalPath_Result result;
@@ -674,15 +701,15 @@ struct Controller_GetTopologicalPath_Result {
   }
 
   ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_GetTopologicalPath_Result WithErr(int32_t* val) {
     Controller_GetTopologicalPath_Result result;
@@ -696,16 +723,16 @@ struct Controller_GetTopologicalPath_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetTopologicalPath_ResultTable;
@@ -724,6 +751,11 @@ struct Controller_GetTopologicalPath_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -741,10 +773,9 @@ struct Controller_Bind_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_Bind_Result WithResponse(::llcpp::fuchsia::device::Controller_Bind_Response* val) {
     Controller_Bind_Result result;
@@ -758,15 +789,15 @@ struct Controller_Bind_Result {
   }
 
   ::llcpp::fuchsia::device::Controller_Bind_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_Bind_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::Controller_Bind_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::Controller_Bind_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_Bind_Result WithErr(int32_t* val) {
     Controller_Bind_Result result;
@@ -780,16 +811,16 @@ struct Controller_Bind_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Bind_ResultTable;
@@ -808,6 +839,11 @@ struct Controller_Bind_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

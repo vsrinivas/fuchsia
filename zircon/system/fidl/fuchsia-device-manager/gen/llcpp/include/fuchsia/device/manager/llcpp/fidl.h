@@ -158,10 +158,9 @@ struct Coordinator_AddDevice_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_AddDevice_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response* val) {
     Coordinator_AddDevice_Result result;
@@ -175,15 +174,15 @@ struct Coordinator_AddDevice_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_AddDevice_Result WithErr(int32_t* val) {
     Coordinator_AddDevice_Result result;
@@ -197,16 +196,16 @@ struct Coordinator_AddDevice_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_AddDevice_ResultTable;
@@ -225,6 +224,11 @@ struct Coordinator_AddDevice_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -242,10 +246,9 @@ struct Coordinator_AddDeviceInvisible_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_AddDeviceInvisible_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response* val) {
     Coordinator_AddDeviceInvisible_Result result;
@@ -259,15 +262,15 @@ struct Coordinator_AddDeviceInvisible_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_AddDeviceInvisible_Result WithErr(int32_t* val) {
     Coordinator_AddDeviceInvisible_Result result;
@@ -281,16 +284,16 @@ struct Coordinator_AddDeviceInvisible_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResultTable;
@@ -309,6 +312,11 @@ struct Coordinator_AddDeviceInvisible_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -326,10 +334,9 @@ struct DeviceController_Unbind_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static DeviceController_Unbind_Result WithResponse(::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response* val) {
     DeviceController_Unbind_Result result;
@@ -343,15 +350,15 @@ struct DeviceController_Unbind_Result {
   }
 
   ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static DeviceController_Unbind_Result WithErr(int32_t* val) {
     DeviceController_Unbind_Result result;
@@ -365,16 +372,16 @@ struct DeviceController_Unbind_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_DeviceController_Unbind_ResultTable;
@@ -393,6 +400,11 @@ struct DeviceController_Unbind_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -410,10 +422,9 @@ struct DeviceController_CompleteRemoval_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static DeviceController_CompleteRemoval_Result WithResponse(::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response* val) {
     DeviceController_CompleteRemoval_Result result;
@@ -427,15 +438,15 @@ struct DeviceController_CompleteRemoval_Result {
   }
 
   ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static DeviceController_CompleteRemoval_Result WithErr(int32_t* val) {
     DeviceController_CompleteRemoval_Result result;
@@ -449,16 +460,16 @@ struct DeviceController_CompleteRemoval_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_DeviceController_CompleteRemoval_ResultTable;
@@ -477,6 +488,11 @@ struct DeviceController_CompleteRemoval_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -494,10 +510,9 @@ struct Coordinator_RunCompatibilityTests_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_RunCompatibilityTests_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response* val) {
     Coordinator_RunCompatibilityTests_Result result;
@@ -511,15 +526,15 @@ struct Coordinator_RunCompatibilityTests_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_RunCompatibilityTests_Result WithErr(int32_t* val) {
     Coordinator_RunCompatibilityTests_Result result;
@@ -533,16 +548,16 @@ struct Coordinator_RunCompatibilityTests_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResultTable;
@@ -561,6 +576,11 @@ struct Coordinator_RunCompatibilityTests_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -578,10 +598,9 @@ struct Coordinator_PublishMetadata_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_PublishMetadata_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response* val) {
     Coordinator_PublishMetadata_Result result;
@@ -595,15 +614,15 @@ struct Coordinator_PublishMetadata_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_PublishMetadata_Result WithErr(int32_t* val) {
     Coordinator_PublishMetadata_Result result;
@@ -617,16 +636,16 @@ struct Coordinator_PublishMetadata_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_PublishMetadata_ResultTable;
@@ -645,6 +664,11 @@ struct Coordinator_PublishMetadata_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -662,10 +686,9 @@ struct Coordinator_MakeVisible_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_MakeVisible_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response* val) {
     Coordinator_MakeVisible_Result result;
@@ -679,15 +702,15 @@ struct Coordinator_MakeVisible_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_MakeVisible_Result WithErr(int32_t* val) {
     Coordinator_MakeVisible_Result result;
@@ -701,16 +724,16 @@ struct Coordinator_MakeVisible_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_MakeVisible_ResultTable;
@@ -729,6 +752,11 @@ struct Coordinator_MakeVisible_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -746,10 +774,9 @@ struct Coordinator_LoadFirmware_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_LoadFirmware_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response* val) {
     Coordinator_LoadFirmware_Result result;
@@ -763,15 +790,15 @@ struct Coordinator_LoadFirmware_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_LoadFirmware_Result WithErr(int32_t* val) {
     Coordinator_LoadFirmware_Result result;
@@ -785,16 +812,16 @@ struct Coordinator_LoadFirmware_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_LoadFirmware_ResultTable;
@@ -813,6 +840,11 @@ struct Coordinator_LoadFirmware_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -830,10 +862,9 @@ struct Coordinator_GetTopologicalPath_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_GetTopologicalPath_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response* val) {
     Coordinator_GetTopologicalPath_Result result;
@@ -847,15 +878,15 @@ struct Coordinator_GetTopologicalPath_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_GetTopologicalPath_Result WithErr(int32_t* val) {
     Coordinator_GetTopologicalPath_Result result;
@@ -869,16 +900,16 @@ struct Coordinator_GetTopologicalPath_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_GetTopologicalPath_ResultTable;
@@ -897,6 +928,11 @@ struct Coordinator_GetTopologicalPath_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -914,10 +950,9 @@ struct Coordinator_GetMetadata_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_GetMetadata_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response* val) {
     Coordinator_GetMetadata_Result result;
@@ -931,15 +966,15 @@ struct Coordinator_GetMetadata_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_GetMetadata_Result WithErr(int32_t* val) {
     Coordinator_GetMetadata_Result result;
@@ -953,16 +988,16 @@ struct Coordinator_GetMetadata_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_GetMetadata_ResultTable;
@@ -981,6 +1016,11 @@ struct Coordinator_GetMetadata_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -998,10 +1038,9 @@ struct Coordinator_GetMetadataSize_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_GetMetadataSize_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response* val) {
     Coordinator_GetMetadataSize_Result result;
@@ -1015,15 +1054,15 @@ struct Coordinator_GetMetadataSize_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_GetMetadataSize_Result WithErr(int32_t* val) {
     Coordinator_GetMetadataSize_Result result;
@@ -1037,16 +1076,16 @@ struct Coordinator_GetMetadataSize_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_GetMetadataSize_ResultTable;
@@ -1065,6 +1104,11 @@ struct Coordinator_GetMetadataSize_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -1082,10 +1126,9 @@ struct Coordinator_DirectoryWatch_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_DirectoryWatch_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response* val) {
     Coordinator_DirectoryWatch_Result result;
@@ -1099,15 +1142,15 @@ struct Coordinator_DirectoryWatch_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_DirectoryWatch_Result WithErr(int32_t* val) {
     Coordinator_DirectoryWatch_Result result;
@@ -1121,16 +1164,16 @@ struct Coordinator_DirectoryWatch_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_DirectoryWatch_ResultTable;
@@ -1149,6 +1192,11 @@ struct Coordinator_DirectoryWatch_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -1166,10 +1214,9 @@ struct Coordinator_BindDevice_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_BindDevice_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response* val) {
     Coordinator_BindDevice_Result result;
@@ -1183,15 +1230,15 @@ struct Coordinator_BindDevice_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_BindDevice_Result WithErr(int32_t* val) {
     Coordinator_BindDevice_Result result;
@@ -1205,16 +1252,16 @@ struct Coordinator_BindDevice_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_BindDevice_ResultTable;
@@ -1233,6 +1280,11 @@ struct Coordinator_BindDevice_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -1250,10 +1302,9 @@ struct Coordinator_AddMetadata_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_AddMetadata_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response* val) {
     Coordinator_AddMetadata_Result result;
@@ -1267,15 +1318,15 @@ struct Coordinator_AddMetadata_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_AddMetadata_Result WithErr(int32_t* val) {
     Coordinator_AddMetadata_Result result;
@@ -1289,16 +1340,16 @@ struct Coordinator_AddMetadata_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_AddMetadata_ResultTable;
@@ -1317,6 +1368,11 @@ struct Coordinator_AddMetadata_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -1334,10 +1390,9 @@ struct Coordinator_AddCompositeDevice_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Coordinator_AddCompositeDevice_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response* val) {
     Coordinator_AddCompositeDevice_Result result;
@@ -1351,15 +1406,15 @@ struct Coordinator_AddCompositeDevice_Result {
   }
 
   ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Coordinator_AddCompositeDevice_Result WithErr(int32_t* val) {
     Coordinator_AddCompositeDevice_Result result;
@@ -1373,16 +1428,16 @@ struct Coordinator_AddCompositeDevice_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_Coordinator_AddCompositeDevice_ResultTable;
@@ -1401,6 +1456,11 @@ struct Coordinator_AddCompositeDevice_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

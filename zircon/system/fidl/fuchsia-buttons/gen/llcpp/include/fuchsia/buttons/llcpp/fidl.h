@@ -46,10 +46,9 @@ struct Buttons_RegisterNotify_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Buttons_RegisterNotify_Result WithResponse(::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response* val) {
     Buttons_RegisterNotify_Result result;
@@ -63,15 +62,15 @@ struct Buttons_RegisterNotify_Result {
   }
 
   ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Buttons_RegisterNotify_Result WithErr(int32_t* val) {
     Buttons_RegisterNotify_Result result;
@@ -85,16 +84,16 @@ struct Buttons_RegisterNotify_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
@@ -113,6 +112,11 @@ struct Buttons_RegisterNotify_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

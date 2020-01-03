@@ -28,12 +28,11 @@ struct {{ .Name }} {
   {{- end }}
   };
 
-{{/* TODO(fxb/42311): rename to something more appropriate */}}
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
   {{- range $index, $member := .Members }}
 
-  bool is_{{ .Name }}() const { return ordinal_ == Ordinal::{{ .TagName }}; }
+  bool is_{{ .Name }}() const { return ordinal() == Ordinal::{{ .TagName }}; }
 
   static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.LLDecl }}* val) {
     {{ $.Name }} result;
@@ -53,11 +52,11 @@ struct {{ .Name }} {
   //{{ . }}
   {{- end }}
   {{ .Type.LLDecl }}& mutable_{{ .Name }}() {
-    ZX_ASSERT(ordinal_ == Ordinal::{{ .TagName }});
+    ZX_ASSERT(ordinal() == Ordinal::{{ .TagName }});
     return *static_cast<{{ .Type.LLDecl }}*>(envelope_.data);
   }
   const {{ .Type.LLDecl }}& {{ .Name }}() const {
-    ZX_ASSERT(ordinal_ == Ordinal::{{ .TagName }});
+    ZX_ASSERT(ordinal() == Ordinal::{{ .TagName }});
     return *static_cast<{{ .Type.LLDecl }}*>(envelope_.data);
   }
   {{- end }}
@@ -73,7 +72,7 @@ struct {{ .Name }} {
   {{- else }}
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
   {{- end }}
 
@@ -94,6 +93,20 @@ struct {{ .Name }} {
     {{ .TagName }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
   {{- end }}
   };
+
+  Ordinal ordinal() const {
+    {{- if .ShouldReadBothOrdinals }}
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+      {{- range .Members }}
+      case {{ .ExplicitOrdinal }}:
+      case {{ .HashedOrdinal }}:
+        return Ordinal::{{ .TagName }};
+      {{- end }}
+    }
+    {{- end }}
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
 
   {{- /* All fields are private to maintain standard layout */}}
@@ -108,11 +121,11 @@ struct {{ .Name }} {
 {{- if .IsFlexible }}
 auto {{ .Namespace }}::{{ .Name }}::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
-  switch (ordinal_) {
+  switch (ordinal()) {
   {{- range .Members }}
   case Ordinal::{{ .TagName }}:
   {{- end }}
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   default:
     return Tag::kUnknown;
   }

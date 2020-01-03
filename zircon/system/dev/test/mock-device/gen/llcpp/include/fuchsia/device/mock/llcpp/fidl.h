@@ -46,10 +46,9 @@ struct Action {
     kAddDevice = 6,  // 0x6
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_return_status() const { return ordinal_ == Ordinal::kReturnStatus; }
+  bool is_return_status() const { return ordinal() == Ordinal::kReturnStatus; }
 
   static Action WithReturnStatus(int32_t* val) {
     Action result;
@@ -65,15 +64,15 @@ struct Action {
 
   // Return this status.
   int32_t& mutable_return_status() {
-    ZX_ASSERT(ordinal_ == Ordinal::kReturnStatus);
+    ZX_ASSERT(ordinal() == Ordinal::kReturnStatus);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& return_status() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kReturnStatus);
+    ZX_ASSERT(ordinal() == Ordinal::kReturnStatus);
     return *static_cast<int32_t*>(envelope_.data);
   }
 
-  bool is_write() const { return ordinal_ == Ordinal::kWrite; }
+  bool is_write() const { return ordinal() == Ordinal::kWrite; }
 
   static Action WithWrite(::fidl::VectorView<uint8_t>* val) {
     Action result;
@@ -89,15 +88,15 @@ struct Action {
 
   // Write these bytes to the buffer associated with the hook.
   ::fidl::VectorView<uint8_t>& mutable_write() {
-    ZX_ASSERT(ordinal_ == Ordinal::kWrite);
+    ZX_ASSERT(ordinal() == Ordinal::kWrite);
     return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data);
   }
   const ::fidl::VectorView<uint8_t>& write() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kWrite);
+    ZX_ASSERT(ordinal() == Ordinal::kWrite);
     return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data);
   }
 
-  bool is_create_thread() const { return ordinal_ == Ordinal::kCreateThread; }
+  bool is_create_thread() const { return ordinal() == Ordinal::kCreateThread; }
 
   static Action WithCreateThread(::zx::channel* val) {
     Action result;
@@ -113,15 +112,15 @@ struct Action {
 
   // Create a new thread with a processing loop.
   ::zx::channel& mutable_create_thread() {
-    ZX_ASSERT(ordinal_ == Ordinal::kCreateThread);
+    ZX_ASSERT(ordinal() == Ordinal::kCreateThread);
     return *static_cast<::zx::channel*>(envelope_.data);
   }
   const ::zx::channel& create_thread() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kCreateThread);
+    ZX_ASSERT(ordinal() == Ordinal::kCreateThread);
     return *static_cast<::zx::channel*>(envelope_.data);
   }
 
-  bool is_async_remove_device() const { return ordinal_ == Ordinal::kAsyncRemoveDevice; }
+  bool is_async_remove_device() const { return ordinal() == Ordinal::kAsyncRemoveDevice; }
 
   static Action WithAsyncRemoveDevice(bool* val) {
     Action result;
@@ -137,15 +136,15 @@ struct Action {
 
   // Invoke device_async_remove() on our device.
   bool& mutable_async_remove_device() {
-    ZX_ASSERT(ordinal_ == Ordinal::kAsyncRemoveDevice);
+    ZX_ASSERT(ordinal() == Ordinal::kAsyncRemoveDevice);
     return *static_cast<bool*>(envelope_.data);
   }
   const bool& async_remove_device() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kAsyncRemoveDevice);
+    ZX_ASSERT(ordinal() == Ordinal::kAsyncRemoveDevice);
     return *static_cast<bool*>(envelope_.data);
   }
 
-  bool is_unbind_reply() const { return ordinal_ == Ordinal::kUnbindReply; }
+  bool is_unbind_reply() const { return ordinal() == Ordinal::kUnbindReply; }
 
   static Action WithUnbindReply(::llcpp::fuchsia::device::mock::UnbindReplyAction* val) {
     Action result;
@@ -161,15 +160,15 @@ struct Action {
 
   // Signal that the unbind has completed.
   ::llcpp::fuchsia::device::mock::UnbindReplyAction& mutable_unbind_reply() {
-    ZX_ASSERT(ordinal_ == Ordinal::kUnbindReply);
+    ZX_ASSERT(ordinal() == Ordinal::kUnbindReply);
     return *static_cast<::llcpp::fuchsia::device::mock::UnbindReplyAction*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::mock::UnbindReplyAction& unbind_reply() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kUnbindReply);
+    ZX_ASSERT(ordinal() == Ordinal::kUnbindReply);
     return *static_cast<::llcpp::fuchsia::device::mock::UnbindReplyAction*>(envelope_.data);
   }
 
-  bool is_add_device() const { return ordinal_ == Ordinal::kAddDevice; }
+  bool is_add_device() const { return ordinal() == Ordinal::kAddDevice; }
 
   static Action WithAddDevice(::llcpp::fuchsia::device::mock::AddDeviceAction* val) {
     Action result;
@@ -185,16 +184,16 @@ struct Action {
 
   // Create a new child device
   ::llcpp::fuchsia::device::mock::AddDeviceAction& mutable_add_device() {
-    ZX_ASSERT(ordinal_ == Ordinal::kAddDevice);
+    ZX_ASSERT(ordinal() == Ordinal::kAddDevice);
     return *static_cast<::llcpp::fuchsia::device::mock::AddDeviceAction*>(envelope_.data);
   }
   const ::llcpp::fuchsia::device::mock::AddDeviceAction& add_device() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kAddDevice);
+    ZX_ASSERT(ordinal() == Ordinal::kAddDevice);
     return *static_cast<::llcpp::fuchsia::device::mock::AddDeviceAction*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_ActionTable;
@@ -217,6 +216,11 @@ struct Action {
     kUnbindReply = 5,  // 0x5
     kAddDevice = 6,  // 0x6
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

@@ -112,10 +112,9 @@ struct SecureMem_SetPhysicalSecureHeaps_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static SecureMem_SetPhysicalSecureHeaps_Result WithResponse(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response* val) {
     SecureMem_SetPhysicalSecureHeaps_Result result;
@@ -129,15 +128,15 @@ struct SecureMem_SetPhysicalSecureHeaps_Result {
   }
 
   ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static SecureMem_SetPhysicalSecureHeaps_Result WithErr(int32_t* val) {
     SecureMem_SetPhysicalSecureHeaps_Result result;
@@ -151,16 +150,16 @@ struct SecureMem_SetPhysicalSecureHeaps_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
@@ -179,6 +178,11 @@ struct SecureMem_SetPhysicalSecureHeaps_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -196,10 +200,9 @@ struct SecureMem_GetPhysicalSecureHeaps_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static SecureMem_GetPhysicalSecureHeaps_Result WithResponse(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response* val) {
     SecureMem_GetPhysicalSecureHeaps_Result result;
@@ -213,15 +216,15 @@ struct SecureMem_GetPhysicalSecureHeaps_Result {
   }
 
   ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static SecureMem_GetPhysicalSecureHeaps_Result WithErr(int32_t* val) {
     SecureMem_GetPhysicalSecureHeaps_Result result;
@@ -235,16 +238,16 @@ struct SecureMem_GetPhysicalSecureHeaps_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
@@ -263,6 +266,11 @@ struct SecureMem_GetPhysicalSecureHeaps_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

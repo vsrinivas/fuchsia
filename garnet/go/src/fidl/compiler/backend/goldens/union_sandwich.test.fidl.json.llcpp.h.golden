@@ -42,10 +42,9 @@ struct UnionSize8Alignment4 {
     kVariant = 1,  // 0x1
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
+  bool is_variant() const { return ordinal() == Ordinal::kVariant; }
 
   static UnionSize8Alignment4 WithVariant(uint32_t* val) {
     UnionSize8Alignment4 result;
@@ -59,16 +58,16 @@ struct UnionSize8Alignment4 {
   }
 
   uint32_t& mutable_variant() {
-    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
+    ZX_ASSERT(ordinal() == Ordinal::kVariant);
     return *static_cast<uint32_t*>(envelope_.data);
   }
   const uint32_t& variant() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
+    ZX_ASSERT(ordinal() == Ordinal::kVariant);
     return *static_cast<uint32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_test_fidl_unionsandwich_UnionSize8Alignment4Table;
@@ -86,6 +85,11 @@ struct UnionSize8Alignment4 {
     Invalid = 0,
     kVariant = 1,  // 0x1
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -102,10 +106,9 @@ struct UnionSize36Alignment4 {
     kVariant = 1,  // 0x1
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
+  bool is_variant() const { return ordinal() == Ordinal::kVariant; }
 
   static UnionSize36Alignment4 WithVariant(::fidl::Array<uint8_t, 32>* val) {
     UnionSize36Alignment4 result;
@@ -119,16 +122,16 @@ struct UnionSize36Alignment4 {
   }
 
   ::fidl::Array<uint8_t, 32>& mutable_variant() {
-    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
+    ZX_ASSERT(ordinal() == Ordinal::kVariant);
     return *static_cast<::fidl::Array<uint8_t, 32>*>(envelope_.data);
   }
   const ::fidl::Array<uint8_t, 32>& variant() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
+    ZX_ASSERT(ordinal() == Ordinal::kVariant);
     return *static_cast<::fidl::Array<uint8_t, 32>*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_test_fidl_unionsandwich_UnionSize36Alignment4Table;
@@ -146,6 +149,11 @@ struct UnionSize36Alignment4 {
     Invalid = 0,
     kVariant = 1,  // 0x1
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -162,10 +170,9 @@ struct UnionSize12Alignment4 {
     kVariant = 1,  // 0x1
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
+  bool is_variant() const { return ordinal() == Ordinal::kVariant; }
 
   static UnionSize12Alignment4 WithVariant(::fidl::Array<uint8_t, 6>* val) {
     UnionSize12Alignment4 result;
@@ -179,16 +186,16 @@ struct UnionSize12Alignment4 {
   }
 
   ::fidl::Array<uint8_t, 6>& mutable_variant() {
-    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
+    ZX_ASSERT(ordinal() == Ordinal::kVariant);
     return *static_cast<::fidl::Array<uint8_t, 6>*>(envelope_.data);
   }
   const ::fidl::Array<uint8_t, 6>& variant() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
+    ZX_ASSERT(ordinal() == Ordinal::kVariant);
     return *static_cast<::fidl::Array<uint8_t, 6>*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_test_fidl_unionsandwich_UnionSize12Alignment4Table;
@@ -206,6 +213,11 @@ struct UnionSize12Alignment4 {
     Invalid = 0,
     kVariant = 1,  // 0x1
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -222,10 +234,9 @@ struct UnionSize24Alignment8 {
     kVariant = 1,  // 0x1
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
+  bool is_variant() const { return ordinal() == Ordinal::kVariant; }
 
   static UnionSize24Alignment8 WithVariant(::llcpp::test::fidl::unionsandwich::StructSize16Alignment8* val) {
     UnionSize24Alignment8 result;
@@ -239,16 +250,16 @@ struct UnionSize24Alignment8 {
   }
 
   ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8& mutable_variant() {
-    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
+    ZX_ASSERT(ordinal() == Ordinal::kVariant);
     return *static_cast<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8*>(envelope_.data);
   }
   const ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8& variant() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
+    ZX_ASSERT(ordinal() == Ordinal::kVariant);
     return *static_cast<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_test_fidl_unionsandwich_UnionSize24Alignment8Table;
@@ -266,6 +277,11 @@ struct UnionSize24Alignment8 {
     Invalid = 0,
     kVariant = 1,  // 0x1
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

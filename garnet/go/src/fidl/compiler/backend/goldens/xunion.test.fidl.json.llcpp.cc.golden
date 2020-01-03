@@ -21,10 +21,10 @@ void ::llcpp::test::name::StrictBoundedXUnion::SizeAndOffsetAssertionHelper() {
 }
 auto ::llcpp::test::name::OlderSimpleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
-  switch (ordinal_) {
+  switch (ordinal()) {
   case Ordinal::kI:
   case Ordinal::kF:
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   default:
     return Tag::kUnknown;
   }
@@ -341,11 +341,11 @@ void TestProtocol::SetTransactionHeaderFor::FlexibleXUnionHenceResponseMustBeHea
 }
 auto ::llcpp::test::name::NewerSimpleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
-  switch (ordinal_) {
+  switch (ordinal()) {
   case Ordinal::kI:
   case Ordinal::kS:
   case Ordinal::kV:
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   default:
     return Tag::kUnknown;
   }
@@ -358,10 +358,10 @@ void ::llcpp::test::name::NewerSimpleUnion::SizeAndOffsetAssertionHelper() {
 }
 auto ::llcpp::test::name::ExplicitXUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
-  switch (ordinal_) {
+  switch (ordinal()) {
   case Ordinal::kI:
   case Ordinal::kF:
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   default:
     return Tag::kUnknown;
   }
@@ -374,9 +374,9 @@ void ::llcpp::test::name::ExplicitXUnion::SizeAndOffsetAssertionHelper() {
 }
 auto ::llcpp::test::name::XUnionContainingEmptyStruct::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
-  switch (ordinal_) {
+  switch (ordinal()) {
   case Ordinal::kEmpty:
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   default:
     return Tag::kUnknown;
   }

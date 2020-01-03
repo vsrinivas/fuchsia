@@ -66,10 +66,9 @@ struct ProcessLimbo_RemoveFilters_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static ProcessLimbo_RemoveFilters_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response* val) {
     ProcessLimbo_RemoveFilters_Result result;
@@ -83,15 +82,15 @@ struct ProcessLimbo_RemoveFilters_Result {
   }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static ProcessLimbo_RemoveFilters_Result WithErr(int32_t* val) {
     ProcessLimbo_RemoveFilters_Result result;
@@ -105,16 +104,16 @@ struct ProcessLimbo_RemoveFilters_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
@@ -133,6 +132,11 @@ struct ProcessLimbo_RemoveFilters_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -150,10 +154,9 @@ struct ProcessLimbo_ReleaseProcess_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static ProcessLimbo_ReleaseProcess_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response* val) {
     ProcessLimbo_ReleaseProcess_Result result;
@@ -167,15 +170,15 @@ struct ProcessLimbo_ReleaseProcess_Result {
   }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static ProcessLimbo_ReleaseProcess_Result WithErr(int32_t* val) {
     ProcessLimbo_ReleaseProcess_Result result;
@@ -189,16 +192,16 @@ struct ProcessLimbo_ReleaseProcess_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
@@ -217,6 +220,11 @@ struct ProcessLimbo_ReleaseProcess_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -234,10 +242,9 @@ struct ProcessLimbo_AppendFilters_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static ProcessLimbo_AppendFilters_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response* val) {
     ProcessLimbo_AppendFilters_Result result;
@@ -251,15 +258,15 @@ struct ProcessLimbo_AppendFilters_Result {
   }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static ProcessLimbo_AppendFilters_Result WithErr(int32_t* val) {
     ProcessLimbo_AppendFilters_Result result;
@@ -273,16 +280,16 @@ struct ProcessLimbo_AppendFilters_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
@@ -301,6 +308,11 @@ struct ProcessLimbo_AppendFilters_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -419,10 +431,9 @@ struct ProcessLimbo_WatchProcessesWaitingOnException_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static ProcessLimbo_WatchProcessesWaitingOnException_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response* val) {
     ProcessLimbo_WatchProcessesWaitingOnException_Result result;
@@ -436,15 +447,15 @@ struct ProcessLimbo_WatchProcessesWaitingOnException_Result {
   }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static ProcessLimbo_WatchProcessesWaitingOnException_Result WithErr(int32_t* val) {
     ProcessLimbo_WatchProcessesWaitingOnException_Result result;
@@ -458,16 +469,16 @@ struct ProcessLimbo_WatchProcessesWaitingOnException_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
@@ -486,6 +497,11 @@ struct ProcessLimbo_WatchProcessesWaitingOnException_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -607,10 +623,9 @@ struct ProcessLimbo_RetrieveException_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static ProcessLimbo_RetrieveException_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response* val) {
     ProcessLimbo_RetrieveException_Result result;
@@ -624,15 +639,15 @@ struct ProcessLimbo_RetrieveException_Result {
   }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static ProcessLimbo_RetrieveException_Result WithErr(int32_t* val) {
     ProcessLimbo_RetrieveException_Result result;
@@ -646,16 +661,16 @@ struct ProcessLimbo_RetrieveException_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
@@ -674,6 +689,11 @@ struct ProcessLimbo_RetrieveException_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

@@ -102,10 +102,9 @@ struct Controller_StartCapture_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_StartCapture_Result WithResponse(::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response* val) {
     Controller_StartCapture_Result result;
@@ -119,15 +118,15 @@ struct Controller_StartCapture_Result {
   }
 
   ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_StartCapture_Result WithErr(int32_t* val) {
     Controller_StartCapture_Result result;
@@ -141,16 +140,16 @@ struct Controller_StartCapture_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_Controller_StartCapture_ResultTable;
@@ -169,6 +168,11 @@ struct Controller_StartCapture_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -186,10 +190,9 @@ struct Controller_ReleaseCapture_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_ReleaseCapture_Result WithResponse(::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response* val) {
     Controller_ReleaseCapture_Result result;
@@ -203,15 +206,15 @@ struct Controller_ReleaseCapture_Result {
   }
 
   ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_ReleaseCapture_Result WithErr(int32_t* val) {
     Controller_ReleaseCapture_Result result;
@@ -225,16 +228,16 @@ struct Controller_ReleaseCapture_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_Controller_ReleaseCapture_ResultTable;
@@ -253,6 +256,11 @@ struct Controller_ReleaseCapture_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -270,10 +278,9 @@ struct Controller_IsCaptureSupported_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_IsCaptureSupported_Result WithResponse(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response* val) {
     Controller_IsCaptureSupported_Result result;
@@ -287,15 +294,15 @@ struct Controller_IsCaptureSupported_Result {
   }
 
   ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_IsCaptureSupported_Result WithErr(int32_t* val) {
     Controller_IsCaptureSupported_Result result;
@@ -309,16 +316,16 @@ struct Controller_IsCaptureSupported_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_Controller_IsCaptureSupported_ResultTable;
@@ -337,6 +344,11 @@ struct Controller_IsCaptureSupported_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -354,10 +366,9 @@ struct Controller_ImportImageForCapture_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_ImportImageForCapture_Result WithResponse(::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response* val) {
     Controller_ImportImageForCapture_Result result;
@@ -371,15 +382,15 @@ struct Controller_ImportImageForCapture_Result {
   }
 
   ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_ImportImageForCapture_Result WithErr(int32_t* val) {
     Controller_ImportImageForCapture_Result result;
@@ -393,16 +404,16 @@ struct Controller_ImportImageForCapture_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTable;
@@ -421,6 +432,11 @@ struct Controller_ImportImageForCapture_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

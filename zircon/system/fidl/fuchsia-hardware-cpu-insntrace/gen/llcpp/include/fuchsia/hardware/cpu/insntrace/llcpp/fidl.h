@@ -59,10 +59,9 @@ struct Controller_Terminate_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_Terminate_Result WithResponse(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response* val) {
     Controller_Terminate_Result result;
@@ -76,15 +75,15 @@ struct Controller_Terminate_Result {
   }
 
   ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_Terminate_Result WithErr(int32_t* val) {
     Controller_Terminate_Result result;
@@ -98,16 +97,16 @@ struct Controller_Terminate_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_Terminate_ResultTable;
@@ -126,6 +125,11 @@ struct Controller_Terminate_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -143,10 +147,9 @@ struct Controller_ReleaseThreadBuffer_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_ReleaseThreadBuffer_Result WithResponse(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response* val) {
     Controller_ReleaseThreadBuffer_Result result;
@@ -160,15 +163,15 @@ struct Controller_ReleaseThreadBuffer_Result {
   }
 
   ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_ReleaseThreadBuffer_Result WithErr(int32_t* val) {
     Controller_ReleaseThreadBuffer_Result result;
@@ -182,16 +185,16 @@ struct Controller_ReleaseThreadBuffer_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_ReleaseThreadBuffer_ResultTable;
@@ -210,6 +213,11 @@ struct Controller_ReleaseThreadBuffer_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -227,10 +235,9 @@ struct Controller_Initialize_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_Initialize_Result WithResponse(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response* val) {
     Controller_Initialize_Result result;
@@ -244,15 +251,15 @@ struct Controller_Initialize_Result {
   }
 
   ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_Initialize_Result WithErr(int32_t* val) {
     Controller_Initialize_Result result;
@@ -266,16 +273,16 @@ struct Controller_Initialize_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_Initialize_ResultTable;
@@ -294,6 +301,11 @@ struct Controller_Initialize_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -311,10 +323,9 @@ struct Controller_AssignThreadBuffer_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_AssignThreadBuffer_Result WithResponse(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response* val) {
     Controller_AssignThreadBuffer_Result result;
@@ -328,15 +339,15 @@ struct Controller_AssignThreadBuffer_Result {
   }
 
   ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_AssignThreadBuffer_Result WithErr(int32_t* val) {
     Controller_AssignThreadBuffer_Result result;
@@ -350,16 +361,16 @@ struct Controller_AssignThreadBuffer_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_AssignThreadBuffer_ResultTable;
@@ -378,6 +389,11 @@ struct Controller_AssignThreadBuffer_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -395,10 +411,9 @@ struct Controller_AllocateBuffer_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static Controller_AllocateBuffer_Result WithResponse(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response* val) {
     Controller_AllocateBuffer_Result result;
@@ -412,15 +427,15 @@ struct Controller_AllocateBuffer_Result {
   }
 
   ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static Controller_AllocateBuffer_Result WithErr(int32_t* val) {
     Controller_AllocateBuffer_Result result;
@@ -434,16 +449,16 @@ struct Controller_AllocateBuffer_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_AllocateBuffer_ResultTable;
@@ -462,6 +477,11 @@ struct Controller_AllocateBuffer_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

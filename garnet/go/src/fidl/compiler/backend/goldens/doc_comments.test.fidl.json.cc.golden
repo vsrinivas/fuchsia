@@ -15,7 +15,7 @@ Union::~Union() {
   Destroy();
 }
 
-Union::Union(Union&& other) : tag_(other.tag_) {
+Union::Union(Union&& other) : tag_(GetWriteOrdinal(other.tag_)) {
   switch (tag_) {
     case Tag::kField:
       Field_ = std::move(other.Field_);
@@ -28,7 +28,7 @@ Union::Union(Union&& other) : tag_(other.tag_) {
 Union& Union::operator=(Union&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = other.tag_;
+    tag_ = GetWriteOrdinal(other.tag_);
     switch (tag_) {
       case Tag::kField:
         Field_ = std::move(other.Field_);
@@ -46,6 +46,10 @@ Union Union::WithField(int32_t&& val) {
   return result;
 }
 
+
+fidl_xunion_tag_t Union::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
+  return ordinal;
+}
 
 void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -125,9 +129,10 @@ void Union::Destroy() {
 }
 
 void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  if (tag_ != tag) {
+  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
+  if (tag_ != canonical_tag) {
     Destroy();
-    tag_ = tag;
+    tag_ = canonical_tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;

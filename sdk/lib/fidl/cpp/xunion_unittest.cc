@@ -167,5 +167,56 @@ TEST(XUnion, XUnionContainingEmptyStruct) {
   EXPECT_TRUE(xu.is_empty());
 }
 
+TEST(XUnion, ReadBothOrdinals) {
+  using test::misc::SampleXUnion;
+  using test::misc::SampleXUnionInStruct;
+
+  std::vector<uint8_t> hashed_ordinal = {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // header
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+      0xa5, 0x47, 0xdf, 0x29, 0x00, 0x00, 0x00, 0x00,  // hashed I ordinal
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
+      0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00,  // I (uint32) + padding
+  };
+
+  auto hashed_s = ::fidl::test::util::DecodedBytes<SampleXUnionInStruct>(hashed_ordinal);
+  auto hashed_xu = std::move(hashed_s.xu);
+
+  EXPECT_EQ(hashed_xu.Ordinal(), 0x29df47a5ul);
+  EXPECT_TRUE(hashed_xu.is_i());
+  EXPECT_EQ(hashed_xu.Which(), SampleXUnion::Tag::kI);
+  EXPECT_EQ(hashed_xu.i(), -272716322);
+
+  std::vector<uint8_t> explicit_ordinal = {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // header
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // explicit I ordinal
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
+      0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00,  // I (int32) + padding
+  };
+
+  auto explicit_s = ::fidl::test::util::DecodedBytes<SampleXUnionInStruct>(hashed_ordinal);
+  auto explicit_xu = std::move(explicit_s.xu);
+
+  EXPECT_EQ(explicit_xu.Ordinal(), 0x29df47a5ul);
+  EXPECT_TRUE(explicit_xu.is_i());
+  EXPECT_EQ(explicit_xu.Which(), SampleXUnion::Tag::kI);
+  EXPECT_EQ(explicit_xu.i(), -272716322);
+
+  // Regardless of which kind of ordinal was encounted when decoding, the hashed version is used
+  // when encoding
+  EXPECT_TRUE(::fidl::Equals(hashed_xu, explicit_xu));
+  bool equality =
+      fidl::test::util::ValueToBytes<decltype(hashed_xu), fidl::test::util::EncoderFactoryV1>(
+          hashed_xu, std::vector<uint8_t>(hashed_ordinal.begin() + 16, hashed_ordinal.end()));
+  EXPECT_TRUE(equality);
+  equality =
+      fidl::test::util::ValueToBytes<decltype(explicit_xu), fidl::test::util::EncoderFactoryV1>(
+          explicit_xu, std::vector<uint8_t>(hashed_ordinal.begin() + 16, hashed_ordinal.end()));
+  EXPECT_TRUE(equality);
+}
+
 }  // namespace
 }  // namespace fidl

@@ -41,10 +41,9 @@ struct Union {
     kField = 1,  // 0x1
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_Field() const { return ordinal_ == Ordinal::kField; }
+  bool is_Field() const { return ordinal() == Ordinal::kField; }
 
   static Union WithField(int32_t* val) {
     Union result;
@@ -64,16 +63,16 @@ struct Union {
   //
   // union member comment #3
   int32_t& mutable_Field() {
-    ZX_ASSERT(ordinal_ == Ordinal::kField);
+    ZX_ASSERT(ordinal() == Ordinal::kField);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& Field() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kField);
+    ZX_ASSERT(ordinal() == Ordinal::kField);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_test_name_UnionTable;
@@ -91,6 +90,11 @@ struct Union {
     Invalid = 0,
     kField = 1,  // 0x1
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

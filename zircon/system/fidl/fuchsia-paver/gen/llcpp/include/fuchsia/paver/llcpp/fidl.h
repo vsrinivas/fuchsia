@@ -76,10 +76,9 @@ struct ReadResult {
     kInfo = 3,  // 0x3
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static ReadResult WithErr(int32_t* val) {
     ReadResult result;
@@ -95,15 +94,15 @@ struct ReadResult {
 
   // Error encountered while reading data.
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
 
-  bool is_eof() const { return ordinal_ == Ordinal::kEof; }
+  bool is_eof() const { return ordinal() == Ordinal::kEof; }
 
   static ReadResult WithEof(bool* val) {
     ReadResult result;
@@ -119,15 +118,15 @@ struct ReadResult {
 
   // End of file reached.
   bool& mutable_eof() {
-    ZX_ASSERT(ordinal_ == Ordinal::kEof);
+    ZX_ASSERT(ordinal() == Ordinal::kEof);
     return *static_cast<bool*>(envelope_.data);
   }
   const bool& eof() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kEof);
+    ZX_ASSERT(ordinal() == Ordinal::kEof);
     return *static_cast<bool*>(envelope_.data);
   }
 
-  bool is_info() const { return ordinal_ == Ordinal::kInfo; }
+  bool is_info() const { return ordinal() == Ordinal::kInfo; }
 
   static ReadResult WithInfo(::llcpp::fuchsia::paver::ReadInfo* val) {
     ReadResult result;
@@ -143,16 +142,16 @@ struct ReadResult {
 
   // Information about location of successfully read data within pre-registered VMO.
   ::llcpp::fuchsia::paver::ReadInfo& mutable_info() {
-    ZX_ASSERT(ordinal_ == Ordinal::kInfo);
+    ZX_ASSERT(ordinal() == Ordinal::kInfo);
     return *static_cast<::llcpp::fuchsia::paver::ReadInfo*>(envelope_.data);
   }
   const ::llcpp::fuchsia::paver::ReadInfo& info() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kInfo);
+    ZX_ASSERT(ordinal() == Ordinal::kInfo);
     return *static_cast<::llcpp::fuchsia::paver::ReadInfo*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_ReadResultTable;
@@ -172,6 +171,11 @@ struct ReadResult {
     kEof = 2,  // 0x2
     kInfo = 3,  // 0x3
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -189,10 +193,9 @@ struct DataSink_WipeVolume_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static DataSink_WipeVolume_Result WithResponse(::llcpp::fuchsia::paver::DataSink_WipeVolume_Response* val) {
     DataSink_WipeVolume_Result result;
@@ -206,15 +209,15 @@ struct DataSink_WipeVolume_Result {
   }
 
   ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::paver::DataSink_WipeVolume_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::paver::DataSink_WipeVolume_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static DataSink_WipeVolume_Result WithErr(int32_t* val) {
     DataSink_WipeVolume_Result result;
@@ -228,16 +231,16 @@ struct DataSink_WipeVolume_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSink_WipeVolume_ResultTable;
@@ -256,6 +259,11 @@ struct DataSink_WipeVolume_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -273,10 +281,9 @@ struct BootManager_QueryConfigurationStatus_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static BootManager_QueryConfigurationStatus_Result WithResponse(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response* val) {
     BootManager_QueryConfigurationStatus_Result result;
@@ -290,15 +297,15 @@ struct BootManager_QueryConfigurationStatus_Result {
   }
 
   ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static BootManager_QueryConfigurationStatus_Result WithErr(int32_t* val) {
     BootManager_QueryConfigurationStatus_Result result;
@@ -312,16 +319,16 @@ struct BootManager_QueryConfigurationStatus_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
@@ -340,6 +347,11 @@ struct BootManager_QueryConfigurationStatus_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -357,10 +369,9 @@ struct BootManager_QueryActiveConfiguration_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static BootManager_QueryActiveConfiguration_Result WithResponse(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response* val) {
     BootManager_QueryActiveConfiguration_Result result;
@@ -374,15 +385,15 @@ struct BootManager_QueryActiveConfiguration_Result {
   }
 
   ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static BootManager_QueryActiveConfiguration_Result WithErr(int32_t* val) {
     BootManager_QueryActiveConfiguration_Result result;
@@ -396,16 +407,16 @@ struct BootManager_QueryActiveConfiguration_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
@@ -424,6 +435,11 @@ struct BootManager_QueryActiveConfiguration_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -441,10 +457,9 @@ struct DataSink_ReadAsset_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static DataSink_ReadAsset_Result WithResponse(::llcpp::fuchsia::paver::DataSink_ReadAsset_Response* val) {
     DataSink_ReadAsset_Result result;
@@ -458,15 +473,15 @@ struct DataSink_ReadAsset_Result {
   }
 
   ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::paver::DataSink_ReadAsset_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::paver::DataSink_ReadAsset_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static DataSink_ReadAsset_Result WithErr(int32_t* val) {
     DataSink_ReadAsset_Result result;
@@ -480,16 +495,16 @@ struct DataSink_ReadAsset_Result {
   }
 
   int32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSink_ReadAsset_ResultTable;
@@ -508,6 +523,11 @@ struct DataSink_ReadAsset_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

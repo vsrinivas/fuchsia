@@ -70,10 +70,9 @@ struct Value {
     kIndexValue = 4,  // 0x4
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_string_value() const { return ordinal_ == Ordinal::kStringValue; }
+  bool is_string_value() const { return ordinal() == Ordinal::kStringValue; }
 
   static Value WithStringValue(::fidl::StringView* val) {
     Value result;
@@ -87,15 +86,15 @@ struct Value {
   }
 
   ::fidl::StringView& mutable_string_value() {
-    ZX_ASSERT(ordinal_ == Ordinal::kStringValue);
+    ZX_ASSERT(ordinal() == Ordinal::kStringValue);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
   const ::fidl::StringView& string_value() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kStringValue);
+    ZX_ASSERT(ordinal() == Ordinal::kStringValue);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
 
-  bool is_int_value() const { return ordinal_ == Ordinal::kIntValue; }
+  bool is_int_value() const { return ordinal() == Ordinal::kIntValue; }
 
   static Value WithIntValue(int64_t* val) {
     Value result;
@@ -109,15 +108,15 @@ struct Value {
   }
 
   int64_t& mutable_int_value() {
-    ZX_ASSERT(ordinal_ == Ordinal::kIntValue);
+    ZX_ASSERT(ordinal() == Ordinal::kIntValue);
     return *static_cast<int64_t*>(envelope_.data);
   }
   const int64_t& int_value() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kIntValue);
+    ZX_ASSERT(ordinal() == Ordinal::kIntValue);
     return *static_cast<int64_t*>(envelope_.data);
   }
 
-  bool is_double_value() const { return ordinal_ == Ordinal::kDoubleValue; }
+  bool is_double_value() const { return ordinal() == Ordinal::kDoubleValue; }
 
   static Value WithDoubleValue(double* val) {
     Value result;
@@ -131,15 +130,15 @@ struct Value {
   }
 
   double& mutable_double_value() {
-    ZX_ASSERT(ordinal_ == Ordinal::kDoubleValue);
+    ZX_ASSERT(ordinal() == Ordinal::kDoubleValue);
     return *static_cast<double*>(envelope_.data);
   }
   const double& double_value() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kDoubleValue);
+    ZX_ASSERT(ordinal() == Ordinal::kDoubleValue);
     return *static_cast<double*>(envelope_.data);
   }
 
-  bool is_index_value() const { return ordinal_ == Ordinal::kIndexValue; }
+  bool is_index_value() const { return ordinal() == Ordinal::kIndexValue; }
 
   static Value WithIndexValue(uint32_t* val) {
     Value result;
@@ -153,16 +152,16 @@ struct Value {
   }
 
   uint32_t& mutable_index_value() {
-    ZX_ASSERT(ordinal_ == Ordinal::kIndexValue);
+    ZX_ASSERT(ordinal() == Ordinal::kIndexValue);
     return *static_cast<uint32_t*>(envelope_.data);
   }
   const uint32_t& index_value() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kIndexValue);
+    ZX_ASSERT(ordinal() == Ordinal::kIndexValue);
     return *static_cast<uint32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_ValueTable;
@@ -183,6 +182,11 @@ struct Value {
     kDoubleValue = 3,  // 0x3
     kIndexValue = 4,  // 0x4
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -204,10 +208,9 @@ struct EventPayload {
     kIntHistogram = 7,  // 0x7
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_event() const { return ordinal_ == Ordinal::kEvent; }
+  bool is_event() const { return ordinal() == Ordinal::kEvent; }
 
   static EventPayload WithEvent(::llcpp::fuchsia::cobalt::Event* val) {
     EventPayload result;
@@ -221,15 +224,15 @@ struct EventPayload {
   }
 
   ::llcpp::fuchsia::cobalt::Event& mutable_event() {
-    ZX_ASSERT(ordinal_ == Ordinal::kEvent);
+    ZX_ASSERT(ordinal() == Ordinal::kEvent);
     return *static_cast<::llcpp::fuchsia::cobalt::Event*>(envelope_.data);
   }
   const ::llcpp::fuchsia::cobalt::Event& event() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kEvent);
+    ZX_ASSERT(ordinal() == Ordinal::kEvent);
     return *static_cast<::llcpp::fuchsia::cobalt::Event*>(envelope_.data);
   }
 
-  bool is_event_count() const { return ordinal_ == Ordinal::kEventCount; }
+  bool is_event_count() const { return ordinal() == Ordinal::kEventCount; }
 
   static EventPayload WithEventCount(::llcpp::fuchsia::cobalt::CountEvent* val) {
     EventPayload result;
@@ -243,15 +246,15 @@ struct EventPayload {
   }
 
   ::llcpp::fuchsia::cobalt::CountEvent& mutable_event_count() {
-    ZX_ASSERT(ordinal_ == Ordinal::kEventCount);
+    ZX_ASSERT(ordinal() == Ordinal::kEventCount);
     return *static_cast<::llcpp::fuchsia::cobalt::CountEvent*>(envelope_.data);
   }
   const ::llcpp::fuchsia::cobalt::CountEvent& event_count() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kEventCount);
+    ZX_ASSERT(ordinal() == Ordinal::kEventCount);
     return *static_cast<::llcpp::fuchsia::cobalt::CountEvent*>(envelope_.data);
   }
 
-  bool is_elapsed_micros() const { return ordinal_ == Ordinal::kElapsedMicros; }
+  bool is_elapsed_micros() const { return ordinal() == Ordinal::kElapsedMicros; }
 
   static EventPayload WithElapsedMicros(int64_t* val) {
     EventPayload result;
@@ -265,15 +268,15 @@ struct EventPayload {
   }
 
   int64_t& mutable_elapsed_micros() {
-    ZX_ASSERT(ordinal_ == Ordinal::kElapsedMicros);
+    ZX_ASSERT(ordinal() == Ordinal::kElapsedMicros);
     return *static_cast<int64_t*>(envelope_.data);
   }
   const int64_t& elapsed_micros() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kElapsedMicros);
+    ZX_ASSERT(ordinal() == Ordinal::kElapsedMicros);
     return *static_cast<int64_t*>(envelope_.data);
   }
 
-  bool is_fps() const { return ordinal_ == Ordinal::kFps; }
+  bool is_fps() const { return ordinal() == Ordinal::kFps; }
 
   static EventPayload WithFps(float* val) {
     EventPayload result;
@@ -287,15 +290,15 @@ struct EventPayload {
   }
 
   float& mutable_fps() {
-    ZX_ASSERT(ordinal_ == Ordinal::kFps);
+    ZX_ASSERT(ordinal() == Ordinal::kFps);
     return *static_cast<float*>(envelope_.data);
   }
   const float& fps() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kFps);
+    ZX_ASSERT(ordinal() == Ordinal::kFps);
     return *static_cast<float*>(envelope_.data);
   }
 
-  bool is_memory_bytes_used() const { return ordinal_ == Ordinal::kMemoryBytesUsed; }
+  bool is_memory_bytes_used() const { return ordinal() == Ordinal::kMemoryBytesUsed; }
 
   static EventPayload WithMemoryBytesUsed(int64_t* val) {
     EventPayload result;
@@ -309,15 +312,15 @@ struct EventPayload {
   }
 
   int64_t& mutable_memory_bytes_used() {
-    ZX_ASSERT(ordinal_ == Ordinal::kMemoryBytesUsed);
+    ZX_ASSERT(ordinal() == Ordinal::kMemoryBytesUsed);
     return *static_cast<int64_t*>(envelope_.data);
   }
   const int64_t& memory_bytes_used() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kMemoryBytesUsed);
+    ZX_ASSERT(ordinal() == Ordinal::kMemoryBytesUsed);
     return *static_cast<int64_t*>(envelope_.data);
   }
 
-  bool is_int_histogram() const { return ordinal_ == Ordinal::kIntHistogram; }
+  bool is_int_histogram() const { return ordinal() == Ordinal::kIntHistogram; }
 
   static EventPayload WithIntHistogram(::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>* val) {
     EventPayload result;
@@ -331,16 +334,16 @@ struct EventPayload {
   }
 
   ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>& mutable_int_histogram() {
-    ZX_ASSERT(ordinal_ == Ordinal::kIntHistogram);
+    ZX_ASSERT(ordinal() == Ordinal::kIntHistogram);
     return *static_cast<::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>*>(envelope_.data);
   }
   const ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>& int_histogram() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kIntHistogram);
+    ZX_ASSERT(ordinal() == Ordinal::kIntHistogram);
     return *static_cast<::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_EventPayloadTable;
@@ -363,6 +366,11 @@ struct EventPayload {
     kMemoryBytesUsed = 5,  // 0x5
     kIntHistogram = 7,  // 0x7
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

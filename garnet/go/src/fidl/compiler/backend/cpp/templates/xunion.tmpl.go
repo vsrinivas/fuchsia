@@ -27,6 +27,8 @@ class {{ .Name }} final {
   static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.Identifier }}&&);
   {{- end }}
 
+  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
+
   {{/* There are two different tag types here:
 
     * fidl_xunion_tag_t: This is an "open" enum that encompasses all possible ordinal values
@@ -196,7 +198,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .V1TableType }};
   Destroy();
 }
 
-{{ .Name }}::{{ .Name }}({{ .Name }}&& other) : tag_(other.tag_) {
+{{ .Name }}::{{ .Name }}({{ .Name }}&& other) : tag_(GetWriteOrdinal(other.tag_)) {
   switch (tag_) {
   {{- range .Members }}
     case Tag::{{ .TagName }}:
@@ -220,7 +222,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .V1TableType }};
 {{ .Name }}& {{ .Name }}::operator=({{ .Name }}&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = other.tag_;
+    tag_ = GetWriteOrdinal(other.tag_);
     switch (tag_) {
     {{- range .Members }}
       case Tag::{{ .TagName }}:
@@ -250,6 +252,19 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .V1TableType }};
   return result;
 }
 {{ end }}
+
+fidl_xunion_tag_t {{ .Name }}::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
+  {{- if .ShouldReadBothOrdinals }}
+  switch (ordinal) {
+    {{- range .Members }}
+    case {{ .ExplicitOrdinal }}:
+    case {{ .HashedOrdinal }}:
+      return {{ $.Name }}::Tag::{{ .TagName }};
+    {{- end }}
+  }
+  {{- end }}
+  return ordinal;
+}
 
 void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -369,9 +384,10 @@ void {{ .Name }}::Destroy() {
 }
 
 void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  if (tag_ != tag) {
+  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
+  if (tag_ != canonical_tag) {
     Destroy();
-    tag_ = tag;
+    tag_ = canonical_tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;

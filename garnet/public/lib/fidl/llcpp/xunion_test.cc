@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
+#include <garnet/public/lib/fidl/llcpp/test_utils.h>
 
 #include "gtest/gtest.h"
 
@@ -155,4 +156,44 @@ TEST(XUnion, UnknownTagStrict) {
   raw_bytes[0] = unknown_tag;
 
   EXPECT_EQ(static_cast<fidl_xunion_tag_t>(strict_xunion.which()), unknown_tag);
+}
+
+// Ensure that the fidl_decode path is exercised when decoding this struct
+static_assert(fidl::NeedsEncodeDecode<llcpp_test::TestXUnionStruct>::value);
+
+TEST(XUnion, ReadHashedOrdinal) {
+  std::vector<uint8_t> bytes = {
+      0xee, 0x98, 0xcf, 0x08, 0x00, 0x00, 0x00, 0x00,  // hashed ordinal
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
+      0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00,  // primitive (int32) + padding
+  };
+  int32_t val = 0xefbeadde;
+  llcpp_test::TestXUnionStruct s;
+  s.xu = llcpp_test::TestXUnion::WithPrimitive(&val);
+  fidl::EncodedMessage<llcpp_test::TestXUnionStruct> message(
+      fidl::BytePart(&bytes[0], bytes.size(), bytes.size()));
+  auto decode_result = fidl::Decode(std::move(message));
+  ASSERT_EQ(decode_result.status, ZX_OK);
+  auto decoded_s = decode_result.message.message();
+  ASSERT_EQ(decoded_s->xu.which(), llcpp_test::TestXUnion::Tag::kPrimitive);
+  ASSERT_EQ(decoded_s->xu.primitive(), val);
+}
+TEST(XUnion, ReadExplicitOrdinal) {
+  std::vector<uint8_t> bytes = {
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // hashed ordinal
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
+      0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00,  // primitive (int32) + padding
+  };
+  int32_t val = 0xefbeadde;
+  llcpp_test::TestXUnionStruct s;
+  s.xu = llcpp_test::TestXUnion::WithPrimitive(&val);
+  fidl::EncodedMessage<llcpp_test::TestXUnionStruct> message(
+      fidl::BytePart(&bytes[0], bytes.size(), bytes.size()));
+  auto decode_result = fidl::Decode(std::move(message));
+  ASSERT_EQ(decode_result.status, ZX_OK);
+  auto decoded_s = decode_result.message.message();
+  ASSERT_EQ(decoded_s->xu.which(), llcpp_test::TestXUnion::Tag::kPrimitive);
+  ASSERT_EQ(decoded_s->xu.primitive(), val);
 }

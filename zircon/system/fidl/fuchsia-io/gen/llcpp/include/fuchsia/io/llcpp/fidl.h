@@ -75,10 +75,9 @@ struct NodeInfo {
     kSocket = 8,  // 0x8
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_service() const { return ordinal_ == Ordinal::kService; }
+  bool is_service() const { return ordinal() == Ordinal::kService; }
 
   static NodeInfo WithService(::llcpp::fuchsia::io::Service* val) {
     NodeInfo result;
@@ -92,15 +91,15 @@ struct NodeInfo {
   }
 
   ::llcpp::fuchsia::io::Service& mutable_service() {
-    ZX_ASSERT(ordinal_ == Ordinal::kService);
+    ZX_ASSERT(ordinal() == Ordinal::kService);
     return *static_cast<::llcpp::fuchsia::io::Service*>(envelope_.data);
   }
   const ::llcpp::fuchsia::io::Service& service() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kService);
+    ZX_ASSERT(ordinal() == Ordinal::kService);
     return *static_cast<::llcpp::fuchsia::io::Service*>(envelope_.data);
   }
 
-  bool is_file() const { return ordinal_ == Ordinal::kFile; }
+  bool is_file() const { return ordinal() == Ordinal::kFile; }
 
   static NodeInfo WithFile(::llcpp::fuchsia::io::FileObject* val) {
     NodeInfo result;
@@ -114,15 +113,15 @@ struct NodeInfo {
   }
 
   ::llcpp::fuchsia::io::FileObject& mutable_file() {
-    ZX_ASSERT(ordinal_ == Ordinal::kFile);
+    ZX_ASSERT(ordinal() == Ordinal::kFile);
     return *static_cast<::llcpp::fuchsia::io::FileObject*>(envelope_.data);
   }
   const ::llcpp::fuchsia::io::FileObject& file() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kFile);
+    ZX_ASSERT(ordinal() == Ordinal::kFile);
     return *static_cast<::llcpp::fuchsia::io::FileObject*>(envelope_.data);
   }
 
-  bool is_directory() const { return ordinal_ == Ordinal::kDirectory; }
+  bool is_directory() const { return ordinal() == Ordinal::kDirectory; }
 
   static NodeInfo WithDirectory(::llcpp::fuchsia::io::DirectoryObject* val) {
     NodeInfo result;
@@ -136,15 +135,15 @@ struct NodeInfo {
   }
 
   ::llcpp::fuchsia::io::DirectoryObject& mutable_directory() {
-    ZX_ASSERT(ordinal_ == Ordinal::kDirectory);
+    ZX_ASSERT(ordinal() == Ordinal::kDirectory);
     return *static_cast<::llcpp::fuchsia::io::DirectoryObject*>(envelope_.data);
   }
   const ::llcpp::fuchsia::io::DirectoryObject& directory() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kDirectory);
+    ZX_ASSERT(ordinal() == Ordinal::kDirectory);
     return *static_cast<::llcpp::fuchsia::io::DirectoryObject*>(envelope_.data);
   }
 
-  bool is_pipe() const { return ordinal_ == Ordinal::kPipe; }
+  bool is_pipe() const { return ordinal() == Ordinal::kPipe; }
 
   static NodeInfo WithPipe(::llcpp::fuchsia::io::Pipe* val) {
     NodeInfo result;
@@ -158,15 +157,15 @@ struct NodeInfo {
   }
 
   ::llcpp::fuchsia::io::Pipe& mutable_pipe() {
-    ZX_ASSERT(ordinal_ == Ordinal::kPipe);
+    ZX_ASSERT(ordinal() == Ordinal::kPipe);
     return *static_cast<::llcpp::fuchsia::io::Pipe*>(envelope_.data);
   }
   const ::llcpp::fuchsia::io::Pipe& pipe() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kPipe);
+    ZX_ASSERT(ordinal() == Ordinal::kPipe);
     return *static_cast<::llcpp::fuchsia::io::Pipe*>(envelope_.data);
   }
 
-  bool is_vmofile() const { return ordinal_ == Ordinal::kVmofile; }
+  bool is_vmofile() const { return ordinal() == Ordinal::kVmofile; }
 
   static NodeInfo WithVmofile(::llcpp::fuchsia::io::Vmofile* val) {
     NodeInfo result;
@@ -180,15 +179,15 @@ struct NodeInfo {
   }
 
   ::llcpp::fuchsia::io::Vmofile& mutable_vmofile() {
-    ZX_ASSERT(ordinal_ == Ordinal::kVmofile);
+    ZX_ASSERT(ordinal() == Ordinal::kVmofile);
     return *static_cast<::llcpp::fuchsia::io::Vmofile*>(envelope_.data);
   }
   const ::llcpp::fuchsia::io::Vmofile& vmofile() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kVmofile);
+    ZX_ASSERT(ordinal() == Ordinal::kVmofile);
     return *static_cast<::llcpp::fuchsia::io::Vmofile*>(envelope_.data);
   }
 
-  bool is_device() const { return ordinal_ == Ordinal::kDevice; }
+  bool is_device() const { return ordinal() == Ordinal::kDevice; }
 
   static NodeInfo WithDevice(::llcpp::fuchsia::io::Device* val) {
     NodeInfo result;
@@ -202,15 +201,15 @@ struct NodeInfo {
   }
 
   ::llcpp::fuchsia::io::Device& mutable_device() {
-    ZX_ASSERT(ordinal_ == Ordinal::kDevice);
+    ZX_ASSERT(ordinal() == Ordinal::kDevice);
     return *static_cast<::llcpp::fuchsia::io::Device*>(envelope_.data);
   }
   const ::llcpp::fuchsia::io::Device& device() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kDevice);
+    ZX_ASSERT(ordinal() == Ordinal::kDevice);
     return *static_cast<::llcpp::fuchsia::io::Device*>(envelope_.data);
   }
 
-  bool is_tty() const { return ordinal_ == Ordinal::kTty; }
+  bool is_tty() const { return ordinal() == Ordinal::kTty; }
 
   static NodeInfo WithTty(::llcpp::fuchsia::io::Tty* val) {
     NodeInfo result;
@@ -224,15 +223,15 @@ struct NodeInfo {
   }
 
   ::llcpp::fuchsia::io::Tty& mutable_tty() {
-    ZX_ASSERT(ordinal_ == Ordinal::kTty);
+    ZX_ASSERT(ordinal() == Ordinal::kTty);
     return *static_cast<::llcpp::fuchsia::io::Tty*>(envelope_.data);
   }
   const ::llcpp::fuchsia::io::Tty& tty() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kTty);
+    ZX_ASSERT(ordinal() == Ordinal::kTty);
     return *static_cast<::llcpp::fuchsia::io::Tty*>(envelope_.data);
   }
 
-  bool is_socket() const { return ordinal_ == Ordinal::kSocket; }
+  bool is_socket() const { return ordinal() == Ordinal::kSocket; }
 
   static NodeInfo WithSocket(::llcpp::fuchsia::io::Socket* val) {
     NodeInfo result;
@@ -246,16 +245,16 @@ struct NodeInfo {
   }
 
   ::llcpp::fuchsia::io::Socket& mutable_socket() {
-    ZX_ASSERT(ordinal_ == Ordinal::kSocket);
+    ZX_ASSERT(ordinal() == Ordinal::kSocket);
     return *static_cast<::llcpp::fuchsia::io::Socket*>(envelope_.data);
   }
   const ::llcpp::fuchsia::io::Socket& socket() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kSocket);
+    ZX_ASSERT(ordinal() == Ordinal::kSocket);
     return *static_cast<::llcpp::fuchsia::io::Socket*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeInfoTable;
@@ -280,6 +279,11 @@ struct NodeInfo {
     kTty = 7,  // 0x7
     kSocket = 8,  // 0x8
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

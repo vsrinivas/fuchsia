@@ -118,10 +118,9 @@ struct NameLookup_LookupHostname_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static NameLookup_LookupHostname_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupHostname_Response* val) {
     NameLookup_LookupHostname_Result result;
@@ -135,15 +134,15 @@ struct NameLookup_LookupHostname_Result {
   }
 
   ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::net::NameLookup_LookupHostname_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::net::NameLookup_LookupHostname_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static NameLookup_LookupHostname_Result WithErr(::llcpp::fuchsia::net::LookupError* val) {
     NameLookup_LookupHostname_Result result;
@@ -157,16 +156,16 @@ struct NameLookup_LookupHostname_Result {
   }
 
   ::llcpp::fuchsia::net::LookupError& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<::llcpp::fuchsia::net::LookupError*>(envelope_.data);
   }
   const ::llcpp::fuchsia::net::LookupError& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<::llcpp::fuchsia::net::LookupError*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookup_LookupHostname_ResultTable;
@@ -185,6 +184,11 @@ struct NameLookup_LookupHostname_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -202,10 +206,9 @@ struct NameLookup_LookupIp_Result {
     kErr = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
 
   static NameLookup_LookupIp_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupIp_Response* val) {
     NameLookup_LookupIp_Result result;
@@ -219,15 +222,15 @@ struct NameLookup_LookupIp_Result {
   }
 
   ::llcpp::fuchsia::net::NameLookup_LookupIp_Response& mutable_response() {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::net::NameLookup_LookupIp_Response*>(envelope_.data);
   }
   const ::llcpp::fuchsia::net::NameLookup_LookupIp_Response& response() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
     return *static_cast<::llcpp::fuchsia::net::NameLookup_LookupIp_Response*>(envelope_.data);
   }
 
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
 
   static NameLookup_LookupIp_Result WithErr(::llcpp::fuchsia::net::LookupError* val) {
     NameLookup_LookupIp_Result result;
@@ -241,16 +244,16 @@ struct NameLookup_LookupIp_Result {
   }
 
   ::llcpp::fuchsia::net::LookupError& mutable_err() {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<::llcpp::fuchsia::net::LookupError*>(envelope_.data);
   }
   const ::llcpp::fuchsia::net::LookupError& err() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
     return *static_cast<::llcpp::fuchsia::net::LookupError*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookup_LookupIp_ResultTable;
@@ -269,6 +272,11 @@ struct NameLookup_LookupIp_Result {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -287,10 +295,9 @@ struct IpAddress {
     kIpv6 = 2,  // 0x2
   };
 
-
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_ipv4() const { return ordinal_ == Ordinal::kIpv4; }
+  bool is_ipv4() const { return ordinal() == Ordinal::kIpv4; }
 
   static IpAddress WithIpv4(::llcpp::fuchsia::net::Ipv4Address* val) {
     IpAddress result;
@@ -304,15 +311,15 @@ struct IpAddress {
   }
 
   ::llcpp::fuchsia::net::Ipv4Address& mutable_ipv4() {
-    ZX_ASSERT(ordinal_ == Ordinal::kIpv4);
+    ZX_ASSERT(ordinal() == Ordinal::kIpv4);
     return *static_cast<::llcpp::fuchsia::net::Ipv4Address*>(envelope_.data);
   }
   const ::llcpp::fuchsia::net::Ipv4Address& ipv4() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kIpv4);
+    ZX_ASSERT(ordinal() == Ordinal::kIpv4);
     return *static_cast<::llcpp::fuchsia::net::Ipv4Address*>(envelope_.data);
   }
 
-  bool is_ipv6() const { return ordinal_ == Ordinal::kIpv6; }
+  bool is_ipv6() const { return ordinal() == Ordinal::kIpv6; }
 
   static IpAddress WithIpv6(::llcpp::fuchsia::net::Ipv6Address* val) {
     IpAddress result;
@@ -326,16 +333,16 @@ struct IpAddress {
   }
 
   ::llcpp::fuchsia::net::Ipv6Address& mutable_ipv6() {
-    ZX_ASSERT(ordinal_ == Ordinal::kIpv6);
+    ZX_ASSERT(ordinal() == Ordinal::kIpv6);
     return *static_cast<::llcpp::fuchsia::net::Ipv6Address*>(envelope_.data);
   }
   const ::llcpp::fuchsia::net::Ipv6Address& ipv6() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kIpv6);
+    ZX_ASSERT(ordinal() == Ordinal::kIpv6);
     return *static_cast<::llcpp::fuchsia::net::Ipv6Address*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
+    return static_cast<Tag>(ordinal());
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_IpAddressTable;
@@ -354,6 +361,11 @@ struct IpAddress {
     kIpv4 = 1,  // 0x1
     kIpv6 = 2,  // 0x2
   };
+
+  Ordinal ordinal() const {
+    return ordinal_;
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL

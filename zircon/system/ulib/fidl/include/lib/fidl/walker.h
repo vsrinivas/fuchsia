@@ -713,7 +713,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         const FidlXUnionField* known_field = nullptr;
         for (size_t i = 0; i < frame->xunion_state.field_count; i++) {
           const auto field = frame->xunion_state.fields + i;
-          if (field->ordinal == xunion->tag) {
+          if (field->hashed_ordinal == xunion->tag || field->explicit_ordinal == xunion->tag) {
             known_field = field;
             break;
           }

@@ -5,10 +5,11 @@
 #include <lib/fidl/coding.h>
 #include <lib/zx/eventpair.h>
 #include <stddef.h>
-#include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
+
+#include <unittest/unittest.h>
 
 #include "fidl_coded_types.h"
 #include "fidl_structs.h"
@@ -253,7 +254,7 @@ bool decode_single_present_handle_check_trailing_padding() {
                               ArrayCount(handles), &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_STR_EQ(error, "non-zero padding bytes detected");
+    EXPECT_STR_EQ(error, "non-zero padding bytes detected during decoding");
   }
 
   END_TEST;
@@ -1533,7 +1534,7 @@ bool decode_many_membered_present_nonnullable_union_check_padding() {
                               kBufferSize, handles, ArrayCount(handles), &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_STR_EQ(error, "non-zero padding bytes detected");
+    EXPECT_STR_EQ(error, "non-zero padding bytes detected during decoding");
   }
 
   END_TEST;
@@ -1720,7 +1721,7 @@ bool decode_nested_nonnullable_structs_check_padding() {
                               ArrayCount(handles), &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_STR_EQ(error, "non-zero padding bytes detected");
+    EXPECT_STR_EQ(error, "non-zero padding bytes detected during decoding");
   }
 
   END_TEST;
