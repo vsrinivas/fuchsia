@@ -17,6 +17,7 @@
 #include "src/developer/feedback/boot_log_checker/metrics_registry.cb.h"
 #include "src/developer/feedback/boot_log_checker/tests/stub_crash_reporter.h"
 #include "src/developer/feedback/boot_log_checker/tests/stub_network_reachability_provider.h"
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
@@ -28,6 +29,8 @@
 
 namespace feedback {
 namespace {
+
+using testing::ElementsAre;
 
 constexpr fit::result_state kError = fit::result_state::error;
 constexpr fit::result_state kOk = fit::result_state::ok;
@@ -44,9 +47,11 @@ struct TestParam {
   uint32_t output_cobalt_event_code;
 };
 
-class RebootLogHandlerTest : public UnitTestFixture, public testing::WithParamInterface<TestParam> {
+class RebootLogHandlerTest : public UnitTestFixture,
+                             public CobaltTestFixture,
+                             public testing::WithParamInterface<TestParam> {
  public:
-  RebootLogHandlerTest() : executor_(dispatcher()) {}
+  RebootLogHandlerTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
   void SetUpNetworkReachabilityProvider(
@@ -61,13 +66,6 @@ class RebootLogHandlerTest : public UnitTestFixture, public testing::WithParamIn
     crash_reporter_ = std::move(crash_reporter);
     if (crash_reporter_) {
       InjectServiceProvider(crash_reporter_.get());
-    }
-  }
-
-  void SetUpLoggerFactory(std::unique_ptr<StubCobaltLoggerFactoryBase> logger_factory) {
-    logger_factory_ = std::move(logger_factory);
-    if (logger_factory_) {
-      InjectServiceProvider(logger_factory_.get());
     }
   }
 
@@ -100,7 +98,6 @@ class RebootLogHandlerTest : public UnitTestFixture, public testing::WithParamIn
  protected:
   std::unique_ptr<StubConnectivity> network_reachability_provider_;
   std::unique_ptr<StubCrashReporter> crash_reporter_;
-  std::unique_ptr<StubCobaltLoggerFactoryBase> logger_factory_;
   std::string reboot_log_path_;
 
  private:
@@ -167,7 +164,7 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   WriteRebootLogContents(param.input_reboot_log);
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
   SetUpCrashReporter(std::make_unique<StubCrashReporter>());
-  SetUpLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
   EXPECT_EQ(result.state(), kOk);
@@ -175,14 +172,14 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   EXPECT_STREQ(crash_reporter_->reboot_log().c_str(), param.input_reboot_log.c_str());
   EXPECT_EQ(crash_reporter_->uptime(), param.output_uptime);
 
-  EXPECT_EQ(logger_factory_->LastEvent(),
-            CobaltEvent(cobalt_registry::kRebootMetricId, param.output_cobalt_event_code));
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(cobalt_registry::kRebootMetricId,
+                                                              param.output_cobalt_event_code)));
 }
 
 TEST_F(RebootLogHandlerTest, Pending_NetworkNotReachable) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
-  SetUpLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kPending);
@@ -223,7 +220,7 @@ TEST_F(RebootLogHandlerTest, Fail_NetworkReachabilityProviderClosesConnection) {
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterNotAvailable) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
-  SetUpLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
   EXPECT_EQ(result.state(), kError);
@@ -233,7 +230,7 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterClosesConnection) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
   SetUpCrashReporter(std::make_unique<StubCrashReporterClosesConnection>());
-  SetUpLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
   EXPECT_EQ(result.state(), kError);
@@ -243,7 +240,7 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterFailsToFile) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
   SetUpCrashReporter(std::make_unique<StubCrashReporterAlwaysReturnsError>());
-  SetUpLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
   EXPECT_EQ(result.state(), kError);
@@ -262,7 +259,7 @@ TEST_F(RebootLogHandlerTest, Fail_CobaltLoggerClosesConnection) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
   SetUpCrashReporter(std::make_unique<StubCrashReporter>());
-  SetUpLoggerFactory(std::make_unique<StubCobaltLoggerFactoryClosesConnection>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactoryClosesConnection>());
 
   fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
   EXPECT_EQ(result.state(), kError);
@@ -272,7 +269,7 @@ TEST_F(RebootLogHandlerTest, Fail_CobaltLoggerFailsToCreateLogger) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
   SetUpCrashReporter(std::make_unique<StubCrashReporter>());
-  SetUpLoggerFactory(std::make_unique<StubCobaltLoggerFactoryFailsToCreateLogger>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactoryFailsToCreateLogger>());
 
   fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
   EXPECT_EQ(result.state(), kError);
@@ -282,7 +279,7 @@ TEST_F(RebootLogHandlerTest, Fail_CobaltLoggerFailsToLogEvent) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
   SetUpCrashReporter(std::make_unique<StubCrashReporter>());
-  SetUpLoggerFactory(
+  SetUpCobaltLoggerFactory(
       std::make_unique<StubCobaltLoggerFactory>(std::make_unique<StubCobaltLoggerFailsLogEvent>()));
 
   fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();

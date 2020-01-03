@@ -10,6 +10,7 @@
 #include <memory>
 #include <vector>
 
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
@@ -32,18 +33,13 @@ constexpr zx::duration kLoggerBackoffInitialDelay = zx::msec(100);
 using fuchsia::cobalt::Status;
 using testing::UnorderedElementsAreArray;
 
-class CobaltTest : public UnitTestFixture {
+class CobaltTest : public UnitTestFixture, public CobaltTestFixture {
  public:
-  void SetUp() override { cobalt_ = std::make_unique<Cobalt>(dispatcher(), services()); }
+  CobaltTest()
+      : CobaltTestFixture(/*unit_test_fixture=*/this),
+        cobalt_(std::make_unique<Cobalt>(dispatcher(), services())) {}
 
  protected:
-  void SetUpCobaltLoggerFactory(std::unique_ptr<StubCobaltLoggerFactoryBase> logger_factory) {
-    logger_factory_ = std::move(logger_factory);
-    if (logger_factory_) {
-      InjectServiceProvider(logger_factory_.get());
-    }
-  }
-
   void LogOccurrence() {
     cobalt_->LogOccurrence(kMetricId, kEventCode);
     events_.emplace_back(kMetricId, kEventCode);
@@ -54,32 +50,12 @@ class CobaltTest : public UnitTestFixture {
     events_.emplace_back(kMetricId, kEventCode, kCount);
   }
 
-  const std::vector<CobaltEvent>& SentEvents() const { return events_; }
-  const std::vector<CobaltEvent>& ReceivedEvents() const { return logger_factory_->Events(); }
-
-  bool WasLogEventCalled() { return logger_factory_->WasLogEventCalled(); }
-  bool WasLogEventCountCalled() { return logger_factory_->WasLogEventCountCalled(); }
-
-  void CloseAllConnections() {
-    logger_factory_->CloseAllConnections();
-    RunLoopUntilIdle();
-  }
-
-  void CloseFactoryConnection() {
-    logger_factory_->CloseFactoryConnection();
-    RunLoopUntilIdle();
-  }
-
-  void CloseLoggerConnection() {
-    logger_factory_->CloseLoggerConnection();
-    RunLoopUntilIdle();
-  }
+  const std::vector<CobaltEvent> SentCobaltEvents() { return events_; }
 
   std::unique_ptr<Cobalt> cobalt_;
 
  private:
   std::vector<CobaltEvent> events_;
-  std::unique_ptr<StubCobaltLoggerFactoryBase> logger_factory_;
 };
 
 TEST_F(CobaltTest, Check_Log) {
@@ -91,7 +67,7 @@ TEST_F(CobaltTest, Check_Log) {
     RunLoopUntilIdle();
   }
 
-  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(SentEvents()));
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray(SentCobaltEvents()));
 }
 
 TEST_F(CobaltTest, Check_LoggerLosesConnection_BeforeLoggingEvents) {
@@ -105,7 +81,7 @@ TEST_F(CobaltTest, Check_LoggerLosesConnection_BeforeLoggingEvents) {
   }
   RunLoopUntilIdle();
 
-  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(SentEvents()));
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray(SentCobaltEvents()));
 }
 
 TEST_F(CobaltTest, Check_LoggerLosesConnection_WhileLoggingEvents) {
@@ -116,7 +92,7 @@ TEST_F(CobaltTest, Check_LoggerLosesConnection_WhileLoggingEvents) {
   }
   RunLoopUntilIdle();
 
-  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(SentEvents()));
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray(SentCobaltEvents()));
 
   CloseLoggerConnection();
 
@@ -128,7 +104,7 @@ TEST_F(CobaltTest, Check_LoggerLosesConnection_WhileLoggingEvents) {
   // backoff::ExponentialBackoff.
   RunLoopFor(kLoggerBackoffInitialDelay * 2);
 
-  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(SentEvents()));
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray(SentCobaltEvents()));
 }
 
 TEST_F(CobaltTest, Check_CallbackExecutes) {
@@ -159,7 +135,7 @@ TEST_F(CobaltTest, Check_LoggerDoesNotRespond_ClosesConnection) {
   // backoff::ExponentialBackoff.
   RunLoopFor(kLoggerBackoffInitialDelay * 2);
 
-  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(SentEvents()));
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray(SentCobaltEvents()));
 }
 
 TEST_F(CobaltTest, Check_QueueReachesMaxSize) {
@@ -178,7 +154,7 @@ TEST_F(CobaltTest, Check_QueueReachesMaxSize) {
   }
   RunLoopUntilIdle();
 
-  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(events));
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray(events));
 }
 
 TEST_F(CobaltTest, Check_ExponentialBackoff) {
@@ -201,7 +177,7 @@ TEST_F(CobaltTest, Check_ExponentialBackoff) {
   }
   RunLoopFor(delay);
 
-  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(SentEvents()));
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray(SentCobaltEvents()));
 }
 
 TEST_F(CobaltTest, SmokeTest_NoLoggerFactoryServer) {

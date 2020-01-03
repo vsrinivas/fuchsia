@@ -33,6 +33,7 @@
 #include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_feedback_data_provider.h"
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
@@ -111,7 +112,9 @@ PrivacySettings MakePrivacySettings(const std::optional<bool> user_data_sharing_
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
-class CrashpadAgentTest : public UnitTestFixture {
+class CrashpadAgentTest : public UnitTestFixture, public CobaltTestFixture {
+ public:
+  CrashpadAgentTest() : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture=*/this) {}
   void TearDown() override {
     ASSERT_TRUE(files::DeletePath(kCrashpadDatabasePath, /*recursive=*/true));
   }
@@ -164,16 +167,6 @@ class CrashpadAgentTest : public UnitTestFixture {
     privacy_settings_ = std::move(privacy_settings);
     if (privacy_settings_) {
       InjectServiceProvider(privacy_settings_.get());
-    }
-  }
-
-  // Sets up the underlying cobalt logger factory and registers it in the
-  // |service_directory_provider_|.
-  void SetUpCobaltLoggerFactory(
-      std::unique_ptr<StubCobaltLoggerFactoryBase> cobalt_logger_factory) {
-    cobalt_logger_factory_ = std::move(cobalt_logger_factory);
-    if (cobalt_logger_factory_) {
-      InjectServiceProvider(cobalt_logger_factory_.get());
     }
   }
 
@@ -260,8 +253,6 @@ class CrashpadAgentTest : public UnitTestFixture {
       EXPECT_THAT(crash_server_->latest_attachment_keys(), testing::Contains(key));
     }
   }
-
-  const std::vector<CobaltEvent>& AllCobaltEvents() { return cobalt_logger_factory_->Events(); }
 
   // Checks that the crash server is still expecting at least one more request.
   //
@@ -430,7 +421,6 @@ class CrashpadAgentTest : public UnitTestFixture {
  private:
   std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider_;
   std::unique_ptr<FakePrivacySettings> privacy_settings_;
-  std::unique_ptr<StubCobaltLoggerFactoryBase> cobalt_logger_factory_;
   StubCrashServer* crash_server_;
   std::string attachments_dir_;
   std::unique_ptr<inspect::Inspector> inspector_;
@@ -759,28 +749,22 @@ TEST_F(CrashpadAgentTest, Check_CobaltAfterSuccessfulUpload) {
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 
-  CobaltEvent event_1(kCrashMetricId, CrashState::Filed);
-  CobaltEvent event_2(kCrashMetricId, CrashState::Uploaded);
-  CobaltEvent event_3(kCrashUploadAttemptsMetricId, UploadAttemptState::UploadAttempt, 1u);
-  CobaltEvent event_4(kCrashUploadAttemptsMetricId, UploadAttemptState::Uploaded, 1u);
-
-  EXPECT_THAT(AllCobaltEvents(), UnorderedElementsAreArray({
-                                     Eq(ByRef(event_1)),
-                                     Eq(ByRef(event_2)),
-                                     Eq(ByRef(event_3)),
-                                     Eq(ByRef(event_4)),
-                                 }));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  CobaltEvent(kCrashMetricId, CrashState::Filed),
+                  CobaltEvent(kCrashMetricId, CrashState::Uploaded),
+                  CobaltEvent(kCrashUploadAttemptsMetricId, UploadAttemptState::UploadAttempt, 1u),
+                  CobaltEvent(kCrashUploadAttemptsMetricId, UploadAttemptState::Uploaded, 1u),
+              }));
 }
 
 TEST_F(CrashpadAgentTest, Check_CobaltAfterInvalidInputCrashReport) {
   SetUpAgentDefaultConfig();
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
-
-  CobaltEvent event_1(kCrashMetricId, CrashState::Dropped);
-  EXPECT_THAT(AllCobaltEvents(), UnorderedElementsAreArray({
-                                     Eq(ByRef(event_1)),
-                                 }));
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(kCrashMetricId, CrashState::Dropped),
+                                      }));
 }
 
 TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {

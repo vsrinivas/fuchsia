@@ -2,6 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("cobalt_test_fixture") {
+  testonly = true
+
+  sources = [
+    "cobalt_test_fixture.h",
+  ]
+
+  public_deps = [
+    ":unit_test_fixture",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
+    "//src/developer/feedback/utils:cobalt",
+  ]
+}
+
 source_set("gmatchers") {
   testonly = true
 

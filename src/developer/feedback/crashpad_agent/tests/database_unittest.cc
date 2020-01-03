@@ -15,6 +15,7 @@
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/metrics_registry.cb.h"
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/files/directory.h"
@@ -93,16 +94,19 @@ std::string GenerateString(const uint64_t string_size_in_kb) {
   return str;
 }
 
-class DatabaseTest : public UnitTestFixture {
+class DatabaseTest : public UnitTestFixture, public CobaltTestFixture {
  public:
+  DatabaseTest() : UnitTestFixture(), CobaltTestFixture(/*unit_test_fixture*/ this) {}
+
   void SetUp() override {
     clock_ = std::make_unique<timekeeper::TestClock>();
     inspector_ = std::make_unique<inspect::Inspector>();
     info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(),
                                                   dispatcher(), services());
 
-    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
     SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb);
+    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    RunLoopUntilIdle();
   }
 
   void TearDown() override {
@@ -119,15 +123,6 @@ class DatabaseTest : public UnitTestFixture {
     pending_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadPendingDir);
   }
 
-  void SetUpCobaltLoggerFactory(
-      std::unique_ptr<StubCobaltLoggerFactoryBase> cobalt_logger_factory) {
-    cobalt_logger_factory_ = std::move(cobalt_logger_factory);
-    if (cobalt_logger_factory_) {
-      InjectServiceProvider(cobalt_logger_factory_.get());
-    }
-    RunLoopUntilIdle();
-  }
-
   std::vector<std::string> GetAttachmentsDirContents() {
     return GetDirectoryContents(attachments_dir_);
   }
@@ -137,28 +132,6 @@ class DatabaseTest : public UnitTestFixture {
   }
 
   std::vector<std::string> GetPendingDirContents() { return GetDirectoryContents(pending_dir_); }
-
-  void AddCobaltCrashState(const CrashState crash_state) {
-    expected_events_.emplace_back(kCrashMetricId, crash_state);
-  }
-
-  void AddCobaltCrashUploadAttempt(const UploadAttemptState attempt_state, const uint64_t count) {
-    expected_events_.emplace_back(kCrashUploadAttemptsMetricId, attempt_state, count);
-  }
-
-  void CheckCobaltEvents() {
-    // We create a vector of matchers out of the vector of expected Cobalt events.
-    //
-    // We have to set the expectations in advance and then pass a reference to the gMock matcher
-    // using testing::ByReg() since |CobaltEvent| is not copyable.
-    ASSERT_GE(expected_events_.size(), 1u);
-    std::vector<decltype(Eq(ByRef(expected_events_[0])))> matchers;
-    for (auto& event : expected_events_) {
-      matchers.push_back(Eq(ByRef(event)));
-    }
-    RunLoopUntilIdle();
-    EXPECT_THAT(cobalt_logger_factory_->Events(), UnorderedElementsAreArray(matchers));
-  }
 
   std::string GetMetadataFilepath(const UUID& local_report_id) {
     return AddExtension(local_report_id.ToString(), kMetadataExtension);
@@ -225,10 +198,8 @@ class DatabaseTest : public UnitTestFixture {
 
  private:
   std::unique_ptr<inspect::Inspector> inspector_;
-  std::unique_ptr<StubCobaltLoggerFactoryBase> cobalt_logger_factory_;
   std::string completed_dir_;
   std::string pending_dir_;
-  std::vector<CobaltEvent> expected_events_;
 
  protected:
   std::unique_ptr<Database> database_;
@@ -246,8 +217,10 @@ TEST_F(DatabaseTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
 
   // Check that garbage collection occurs correctly.
   EXPECT_EQ(database_->GarbageCollect(), 1u);
-  AddCobaltCrashState(CrashState::GarbageCollected);
-  CheckCobaltEvents();
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(kCrashMetricId, CrashState::GarbageCollected),
+                                      }));
 
   EXPECT_TRUE(GetAttachmentsDirContents().empty());
   EXPECT_TRUE(GetPendingDirContents().empty());
@@ -285,8 +258,10 @@ TEST_F(DatabaseTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSizeForOn
 
   // Check that garbage collection occurs correctly.
   EXPECT_EQ(database_->GarbageCollect(), 1u);
-  AddCobaltCrashState(CrashState::GarbageCollected);
-  CheckCobaltEvents();
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(kCrashMetricId, CrashState::GarbageCollected),
+                                      }));
 
   // We cannot expect the set of attachments, the completed reports, and the pending reports to be
   // different than the first set as the real-time clock could go back in time between the
@@ -367,10 +342,13 @@ TEST_F(DatabaseTest, Check_ReportInCompleted_MarkAsUploaded) {
 
   // Mark a report as uploaded and check that it's in completed/.
   ASSERT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
-  AddCobaltCrashState(CrashState::Uploaded);
-  AddCobaltCrashUploadAttempt(UploadAttemptState::UploadAttempt, 1u);
-  AddCobaltCrashUploadAttempt(UploadAttemptState::Uploaded, 1u);
-  CheckCobaltEvents();
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  CobaltEvent(kCrashMetricId, CrashState::Uploaded),
+                  CobaltEvent(kCrashUploadAttemptsMetricId, UploadAttemptState::UploadAttempt, 1u),
+                  CobaltEvent(kCrashUploadAttemptsMetricId, UploadAttemptState::Uploaded, 1u),
+              }));
 
   EXPECT_THAT(GetCompletedDirContents(), UnorderedElementsAreArray({
                                              GetMetadataFilepath(local_report_id),
@@ -385,8 +363,10 @@ TEST_F(DatabaseTest, Check_ReportInCompleted_Archive) {
 
   // Archive a report and check it's in completed/.
   ASSERT_TRUE(database_->Archive(local_report_id));
-  AddCobaltCrashState(CrashState::Archived);
-  CheckCobaltEvents();
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(kCrashMetricId, CrashState::Archived),
+                                      }));
 }
 
 TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterMarkAsCompleted) {
@@ -402,10 +382,13 @@ TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterMarkAsCompleted) {
 
   // Mark a report as uploaded and check that it's in completed/.
   ASSERT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
-  AddCobaltCrashState(CrashState::Uploaded);
-  AddCobaltCrashUploadAttempt(UploadAttemptState::UploadAttempt, 1u);
-  AddCobaltCrashUploadAttempt(UploadAttemptState::Uploaded, 1u);
-  CheckCobaltEvents();
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  CobaltEvent(kCrashMetricId, CrashState::Uploaded),
+                  CobaltEvent(kCrashUploadAttemptsMetricId, UploadAttemptState::UploadAttempt, 1u),
+                  CobaltEvent(kCrashUploadAttemptsMetricId, UploadAttemptState::Uploaded, 1u),
+              }));
 
   EXPECT_EQ(database_->GetUploadReport(local_report_id), nullptr);
 }
@@ -417,8 +400,10 @@ TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterArchive) {
       /*attachments=*/{{kAttachmentKey, kAttachmentValue}}, &local_report_id);
 
   ASSERT_TRUE(database_->Archive(local_report_id));
-  AddCobaltCrashState(CrashState::Archived);
-  CheckCobaltEvents();
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(kCrashMetricId, CrashState::Archived),
+                                      }));
 
   EXPECT_EQ(database_->GetUploadReport(local_report_id), nullptr);
 }
@@ -455,8 +440,10 @@ TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterReportIsPruned) {
 
   // Check that garbage collection occurs correctly.
   EXPECT_EQ(database_->GarbageCollect(), 1u);
-  AddCobaltCrashState(CrashState::GarbageCollected);
-  CheckCobaltEvents();
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(kCrashMetricId, CrashState::GarbageCollected),
+                                      }));
 
   // Get the |UUID| of the pruned report and attempt to get a report for it.
   ASSERT_THAT(GetAttachmentsDirContents(),
@@ -500,8 +487,10 @@ TEST_F(DatabaseTest, Attempt_Archive_AfterReportIsPruned) {
 
   // Check that garbage collection occurs correctly.
   EXPECT_EQ(database_->GarbageCollect(), 1u);
-  AddCobaltCrashState(CrashState::GarbageCollected);
-  CheckCobaltEvents();
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(kCrashMetricId, CrashState::GarbageCollected),
+                                      }));
 
   // Determine the |UUID| of the pruned report and attempt to archive it.
   ASSERT_THAT(GetAttachmentsDirContents(),
@@ -530,10 +519,13 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportUploaded) {
   // Mark the report as uploaded and check the Inspect tree.
   database_->IncrementUploadAttempt(local_report_id);
   EXPECT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
-  AddCobaltCrashState(CrashState::Uploaded);
-  AddCobaltCrashUploadAttempt(UploadAttemptState::UploadAttempt, 1u);
-  AddCobaltCrashUploadAttempt(UploadAttemptState::Uploaded, 1u);
-  CheckCobaltEvents();
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  CobaltEvent(kCrashMetricId, CrashState::Uploaded),
+                  CobaltEvent(kCrashUploadAttemptsMetricId, UploadAttemptState::UploadAttempt, 1u),
+                  CobaltEvent(kCrashUploadAttemptsMetricId, UploadAttemptState::Uploaded, 1u),
+              }));
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(AllOf(
                   NodeMatches(NameMatches("reports")),
@@ -565,8 +557,10 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportArchived) {
 
   // Archive the report and check the Inspect tree.
   EXPECT_TRUE(database_->Archive(local_report_id));
-  AddCobaltCrashState(CrashState::Archived);
-  CheckCobaltEvents();
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(kCrashMetricId, CrashState::Archived),
+                                      }));
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
@@ -596,8 +590,10 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportGarbageCollected) {
 
   // Check that garbage collection occurs correctly and check the Inspect tree.
   EXPECT_EQ(database_->GarbageCollect(), 1u);
-  AddCobaltCrashState(CrashState::GarbageCollected);
-  CheckCobaltEvents();
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(kCrashMetricId, CrashState::GarbageCollected),
+                                      }));
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(IsSupersetOf({
                   AllOf(NodeMatches(NameMatches("reports")),

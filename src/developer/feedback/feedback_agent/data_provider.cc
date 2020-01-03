@@ -14,6 +14,8 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include "src/developer/feedback/feedback_agent/annotations.h"
 #include "src/developer/feedback/feedback_agent/attachments.h"
 #include "src/developer/feedback/feedback_agent/attachments/screenshot_ptr.h"

@@ -38,6 +38,7 @@ executable("reboot_log_handler_unittest") {
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/boot_log_checker:metrics_registry",
     "//src/developer/feedback/boot_log_checker:src",
+    "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
