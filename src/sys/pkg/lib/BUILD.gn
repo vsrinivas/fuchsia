@@ -5,6 +5,7 @@
 group("lib") {
   testonly = true
   deps = [
+    "event-queue",
     "fidl-fuchsia-amber-ext",
     "forced-fdr",
     "fuchsia-archive",
@@ -22,6 +23,7 @@ group("lib") {
 group("tests") {
   testonly = true
   deps = [
+    "event-queue:tests",
     "fidl-fuchsia-amber-ext:tests",
     "forced-fdr:tests",
     "fuchsia-archive:tests",

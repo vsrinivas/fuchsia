@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/event_queue_lib_test"
+    },
+    "sandbox": {
+        "features": []
+    }
+}
