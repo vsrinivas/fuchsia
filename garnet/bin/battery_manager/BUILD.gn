@@ -14,6 +14,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_power_ext",
+    "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
     "//src/lib/fdio/rust:fdio",
