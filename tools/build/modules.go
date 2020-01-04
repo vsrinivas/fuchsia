@@ -11,6 +11,8 @@ import (
 )
 
 const (
+	// BinaryModuleName is the name of the build API module of binaries.
+	binaryModuleName = "binaries.json"
 	// ImageModuleName is the name of the build API module of images.
 	imageModuleName = "images.json"
 	// PlatformModuleName is the the name of the build API module of valid
@@ -27,6 +29,7 @@ const (
 // modules associated with a build.
 type Modules struct {
 	buildDir      string
+	binaries      []Binary
 	images        []Image
 	platforms     []DimensionSet
 	testSpecs     []TestSpec
@@ -39,17 +42,22 @@ func NewModules(buildDir string) (*Modules, error) {
 	var err error
 	m := &Modules{buildDir: buildDir}
 
+	m.binaries, err = loadBinaries(m.BinaryManifest())
+	if err != nil {
+		errMsgs = append(errMsgs, err.Error())
+	}
+
 	m.images, err = LoadImages(m.ImageManifest())
 	if err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.platforms, err = LoadPlatforms(m.PlatformManifest())
+	m.platforms, err = loadPlatforms(m.PlatformManifest())
 	if err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
-	m.testSpecs, err = LoadTestSpecs(m.TestManifest())
+	m.testSpecs, err = loadTestSpecs(m.TestManifest())
 	if err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
@@ -68,6 +76,16 @@ func NewModules(buildDir string) (*Modules, error) {
 // BuildDir returns the fuchsia build directory root.
 func (m Modules) BuildDir() string {
 	return m.buildDir
+}
+
+// Binaries returns the build API module of binaries.
+func (m Modules) Binaries() []Binary {
+	return m.binaries
+}
+
+// BinaryManifest returns the path to the manifest of binaries in the build.
+func (m Modules) BinaryManifest() string {
+	return filepath.Join(m.BuildDir(), binaryModuleName)
 }
 
 // Images returns the aggregated build APIs of fuchsia and zircon images.

@@ -85,7 +85,7 @@ type DimensionSet struct {
 }
 
 // LoadTestSpecs reads in the entries in a given test manifest.
-func LoadTestSpecs(manifest string) ([]TestSpec, error) {
+func loadTestSpecs(manifest string) ([]TestSpec, error) {
 	f, err := os.Open(manifest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open %s: %v", manifest, err)
@@ -99,7 +99,7 @@ func LoadTestSpecs(manifest string) ([]TestSpec, error) {
 }
 
 // LoadPlatforms reads in the entries in a given platform manifest.
-func LoadPlatforms(manifest string) ([]DimensionSet, error) {
+func loadPlatforms(manifest string) ([]DimensionSet, error) {
 	f, err := os.Open(manifest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open %s: %v", manifest, err)
