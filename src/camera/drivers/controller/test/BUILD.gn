@@ -9,7 +9,7 @@ import("//build/test.gni")
 executable("controller-test") {
   testonly = true
   sources = [
-    "controller-device-test.cc",
+    "device_test.cc",
   ]
   deps = [
     "//garnet/public/lib/gtest",
@@ -50,7 +50,7 @@ executable("controller-test") {
 executable("controller-protocol-test") {
   testonly = true
   sources = [
-    "controller-protocol-test.cc",
+    "protocol_test.cc",
   ]
   deps = [
     "//garnet/public/lib/gtest",
@@ -95,7 +95,7 @@ executable("controller-protocol-test") {
 executable("controller-allocator-test") {
   testonly = true
   sources = [
-    "controller-allocator-test.cc",
+    "allocator_test.cc",
   ]
   deps = [
     "//garnet/public/lib/gtest",

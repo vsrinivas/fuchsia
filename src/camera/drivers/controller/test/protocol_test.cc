@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/controller/controller-protocol.h"
-
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -14,6 +12,7 @@
 
 #include "fake_gdc.h"
 #include "fake_isp.h"
+#include "src/camera/drivers/controller/controller-protocol.h"
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/drivers/controller/isp_stream_protocol.h"
 #include "src/camera/drivers/controller/pipeline_manager.h"

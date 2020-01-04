@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../controller-device.h"
-
 #include <fuchsia/hardware/camera/cpp/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
@@ -12,8 +10,10 @@
 #include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_call.h>
 
-#include "../controller-protocol.h"
 #include "fake_sysmem.h"
+#include "src/camera/drivers/controller/controller-device.h"
+#include "src/camera/drivers/controller/controller-protocol.h"
+
 namespace camera {
 namespace {
 
