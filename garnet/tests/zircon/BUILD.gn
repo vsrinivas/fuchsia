@@ -5,7 +5,7 @@
 import("//build/config/fuchsia/zircon_images.gni")
 import("//build/package.gni")
 
-zircon_extras_manifest("zircon-test-manifest") {
+zircon_extras_manifest("zircon_test_manifest") {
   manifest = "tests"
   patterns = [ "*" ]
 }
@@ -13,12 +13,13 @@ zircon_extras_manifest("zircon-test-manifest") {
 package("zircon_tests") {
   deprecated_system_image = true
   deps = [
-    ":zircon-test-manifest",
+    ":zircon_test_manifest",
+    ":zircon_test_metadata",
   ]
-  extra = get_target_outputs(":zircon-test-manifest")
+  extra = get_target_outputs(":zircon_test_manifest")
 }
 
-zircon_extras_manifest("zircon-fuzzers-manifest") {
+zircon_extras_manifest("zircon_fuzzers_manifest") {
   manifest = "tests"
   patterns = [
     "bin/*-fuzzer.*",
@@ -26,11 +27,39 @@ zircon_extras_manifest("zircon-fuzzers-manifest") {
   ]
 }
 
+group("zircon_test_metadata") {
+  test_specs = read_file("$zircon_root_build_dir/tests.json", "json")
+  target_test_specs = []
+  foreach(spec, test_specs) {
+    _test = {
+    }
+    _test = spec.test
+
+    # Note: zircon host tests are surfaced separately as
+    # //src:zircon_host_tests; this is done separately as we want to run host
+    # tests - bringup or otherwise - together, and the same can't be said of
+    # zircon tests.
+    if (_test.os == "fuchsia") {
+      target_test_specs += [
+        {
+          test = {
+            forward_variables_from(_test, "*")
+            label = string_replace(label, "//", "//zircon/")
+          }
+        },
+      ]
+    }
+  }
+  metadata = {
+    tests = target_test_specs
+  }
+}
+
 package("zircon_fuzzers") {
   deps = [
-    ":zircon-fuzzers-manifest",
+    ":zircon_fuzzers_manifest",
   ]
-  extra = get_target_outputs(":zircon-fuzzers-manifest")
+  extra = get_target_outputs(":zircon_fuzzers_manifest")
   metadata = {
     fuzz_spec = [
       {
