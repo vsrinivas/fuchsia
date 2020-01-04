@@ -41,7 +41,7 @@ class ImagePipeUpdater : public scheduling::SessionUpdater {
   void ScheduleImagePipeUpdate(zx::time presentation_time, fxl::WeakPtr<ImagePipeBase> image_pipe);
 
   // |scheduling::SessionUpdater|
-  UpdateResults UpdateSessions(std::unordered_set<scheduling::SessionId> sessions_to_update,
+  UpdateResults UpdateSessions(const std::unordered_set<scheduling::SessionId>& sessions_to_update,
                                zx::time presentation_time, zx::time latched_time,
                                uint64_t trace_id) override;
 

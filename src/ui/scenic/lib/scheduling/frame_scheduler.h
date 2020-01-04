@@ -52,7 +52,7 @@ class SessionUpdater {
   // For each known session in |sessions_to_update|, apply all of the "ready" updates.  A "ready"
   // update is one that is scheduled at or before |presentation_time|, and for which all other
   // preconditions have been met (for example, all acquire fences have been signaled).
-  virtual UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
+  virtual UpdateResults UpdateSessions(const std::unordered_set<SessionId>& sessions_to_update,
                                        zx::time presentation_time, zx::time latched_time,
                                        uint64_t trace_id) = 0;
 

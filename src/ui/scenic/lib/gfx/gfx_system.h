@@ -42,9 +42,9 @@ class GfxSystem : public System,
   void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
 
   // |scheduling::SessionUpdater|
-  virtual UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
-                                       zx::time target_presentation_time, zx::time latched_time,
-                                       uint64_t trace_id) override;
+  virtual UpdateResults UpdateSessions(
+      const std::unordered_set<scheduling::SessionId>& sessions_to_update,
+      zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id) override;
 
   // |scheduling::SessionUpdater|
   virtual void PrepareFrame(zx::time target_presentation_time, uint64_t trace_id) override;

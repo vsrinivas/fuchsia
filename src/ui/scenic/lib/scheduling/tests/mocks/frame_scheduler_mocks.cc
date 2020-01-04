@@ -39,7 +39,7 @@ void MockFrameScheduler::SetOnFramePresentedCallbackForSession(
 }
 
 SessionUpdater::UpdateResults MockSessionUpdater::UpdateSessions(
-    std::unordered_set<SessionId> sessions_to_update, zx::time presentation_time,
+    const std::unordered_set<SessionId>& sessions_to_update, zx::time presentation_time,
     zx::time wakeup_time, uint64_t trace_id) {
   ++update_sessions_call_count_;
 

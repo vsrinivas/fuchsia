@@ -20,6 +20,33 @@ inline bool operator==(const fuchsia::images::PresentationInfo& a,
 namespace scheduling {
 namespace test {
 
+namespace {
+
+// A MockSessionUpdater class which executes the provided function on every
+// UpdateSessions call.
+//
+class MockSessionUpdaterWithFunctionOnUpdate : public MockSessionUpdater {
+ public:
+  MockSessionUpdaterWithFunctionOnUpdate(fit::function<void()> function)
+      : function_(std::move(function)) {}
+
+  // |SessionUpdater|
+  SessionUpdater::UpdateResults UpdateSessions(
+      const std::unordered_set<SessionId>& sessions_to_update, zx::time target_presentation_time,
+      zx::time latched_time, uint64_t trace_id = 0) override {
+    if (function_) {
+      function_();
+    }
+    return MockSessionUpdater::UpdateSessions(std::move(sessions_to_update),
+                                              target_presentation_time, latched_time, trace_id);
+  }
+
+ private:
+  fit::function<void()> function_;
+};
+
+}  // namespace
+
 // Schedule an update on the scheduler, and also add a callback in the mock updater which will be
 // invoked when the frame is finished "rendering".
 static void ScheduleUpdateAndCallback(const std::unique_ptr<DefaultFrameScheduler>& scheduler,
@@ -900,7 +927,7 @@ TEST_F(FrameSchedulerTest, FailedPresent2UpdateWithRender_ShouldNotCrash) {
   constexpr SessionId kSessionId2 = 2;
   bool update_failed2 = false;
   scheduler->SetOnUpdateFailedCallbackForSession(kSessionId2,
-                                                 [&update_failed2](){ update_failed2 = true; });
+                                                 [&update_failed2]() { update_failed2 = true; });
 
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId1, Now());
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId2, Now());
@@ -1804,6 +1831,155 @@ TEST(SessionUpdaterManagerTest, DynamicUpdaterAddRemove) {
     // As expected, we see that |updater6| was killed while |updater5| remains.
     EXPECT_FALSE(status5->updater_disappeared);
     EXPECT_TRUE(status6->updater_disappeared);
+  }
+}
+
+TEST(SessionUpdaterManagerTest, AddSessionUpdatersInSessionUpdater) {
+  auto sum = std::make_unique<DefaultFrameScheduler::UpdateManager>();
+
+  // Pre-declare the Session IDs used in this test.
+  constexpr SessionId kSession1 = 1;
+  // Updates are not expected to fail.
+  sum->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
+  fuchsia::images::PresentationInfo info;
+  info.presentation_interval = 1;
+
+  // Creates a mock SessionUpdater that creates 10 SessionUpdaters on every
+  // UpdateSessions call.
+  constexpr size_t kUpdatersToAddOnEveryUpdate = 10U;
+  std::vector<std::unique_ptr<MockSessionUpdater>> session_updaters_created;
+
+  auto updater1 = std::make_unique<MockSessionUpdaterWithFunctionOnUpdate>(
+      [sum = sum.get(), &session_updaters_created]() {
+        for (size_t i = 0; i < kUpdatersToAddOnEveryUpdate; i++) {
+          auto updater = std::make_unique<MockSessionUpdater>();
+          updater->BeRelaxedAboutUnexpectedSessionUpdates();
+          sum->AddSessionUpdater(updater->GetWeakPtr());
+          session_updaters_created.push_back(std::move(updater));
+        }
+      });
+  sum->AddSessionUpdater(updater1->GetWeakPtr());
+
+  // Frame 1: Updater1 creates 10 new SessionUpdaters this frame, but only
+  //   updater1 will be called to update sessions.
+  {
+    auto status1 =
+        ScheduleUpdateAndCallback(sum, updater1.get(), kSession1, zx::time(1), zx::time(1));
+    EXPECT_EQ(updater1->update_sessions_call_count(), 0U);
+
+    uint64_t frame_number = info.presentation_time = 1;
+    zx::time latched_time = zx::time(1);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
+    EXPECT_TRUE(render);
+    EXPECT_FALSE(reschedule);
+
+    sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
+    sum->SignalPresentCallbacks(info);
+
+    EXPECT_TRUE(status1->callback_passed && status1->callback_invoked);
+    EXPECT_FALSE(status1->updater_disappeared);
+    EXPECT_EQ(updater1->update_sessions_call_count(), 1U);
+    EXPECT_EQ(session_updaters_created.size(), kUpdatersToAddOnEveryUpdate);
+    EXPECT_TRUE(std::all_of(session_updaters_created.begin(), session_updaters_created.end(),
+                            [](const auto& session_updater) {
+                              return session_updater->update_sessions_call_count() == 0;
+                            }));
+  }
+
+  // Frame 2: updater1 will create another 10 SessionUpdaters this frame, which
+  //          will not be updated, while the SessionUpdaters created on previous
+  //          frame will be updated now.
+  {
+    auto status2 =
+        ScheduleUpdateAndCallback(sum, updater1.get(), kSession1, zx::time(2), zx::time(2));
+    EXPECT_EQ(updater1->update_sessions_call_count(), 1U);
+
+    uint64_t frame_number = info.presentation_time = 2;
+    zx::time latched_time = zx::time(2);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
+    EXPECT_TRUE(render);
+    EXPECT_FALSE(reschedule);
+
+    sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
+    sum->SignalPresentCallbacks(info);
+
+    EXPECT_TRUE(status2->callback_passed && status2->callback_invoked);
+    EXPECT_FALSE(status2->updater_disappeared);
+    EXPECT_EQ(updater1->update_sessions_call_count(), 2U);
+    EXPECT_EQ(session_updaters_created.size(), 2 * kUpdatersToAddOnEveryUpdate);
+    EXPECT_TRUE(std::count_if(session_updaters_created.begin(), session_updaters_created.end(),
+                              [](const auto& session_updater) {
+                                return session_updater->update_sessions_call_count() == 1;
+                              }) == kUpdatersToAddOnEveryUpdate);
+  }
+}
+
+TEST(SessionUpdaterManagerTest, RemoveSessionUpdatersInSessionUpdater) {
+  auto sum = std::make_unique<DefaultFrameScheduler::UpdateManager>();
+
+  // Pre-declare the Session IDs used in this test.
+  constexpr SessionId kSession1 = 1;
+  // Updates are not expected to fail.
+  sum->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
+  fuchsia::images::PresentationInfo info;
+  info.presentation_interval = 1;
+
+  // Creates updaters to be removed later.
+  constexpr size_t kNumOfUpdatersToRemove = 10U;
+  std::vector<std::unique_ptr<MockSessionUpdater>> updaters_to_remove;
+  std::vector<fxl::WeakPtr<MockSessionUpdater>> updaters_to_remove_weak;
+
+  for (size_t i = 0; i < kNumOfUpdatersToRemove; i++) {
+    auto updater = std::make_unique<MockSessionUpdater>();
+    updater->BeRelaxedAboutUnexpectedSessionUpdates();
+    updaters_to_remove_weak.push_back(updater->GetWeakPtr());
+    updaters_to_remove.push_back(std::move(updater));
+  }
+
+  // Creates a mock SessionUpdater that removes a SessionUpdater on every
+  // UpdateSessions call.
+  auto updater1 = std::make_unique<MockSessionUpdaterWithFunctionOnUpdate>(
+      [updaters_to_remove = std::move(updaters_to_remove)]() mutable {
+        updaters_to_remove.pop_back();
+      });
+  updater1->BeRelaxedAboutUnexpectedSessionUpdates();
+  sum->AddSessionUpdater(updater1->GetWeakPtr());
+
+  for (const auto& updater : updaters_to_remove_weak) {
+    sum->AddSessionUpdater(updater->GetWeakPtr());
+  }
+
+  for (size_t frame_number = 1; frame_number <= kNumOfUpdatersToRemove; frame_number++) {
+    auto status1 = ScheduleUpdateAndCallback(sum, updater1.get(), kSession1, zx::time(frame_number),
+                                             zx::time(frame_number));
+
+    info.presentation_time = frame_number;
+    zx::time latched_time = zx::time(1);
+    auto [render, reschedule] =
+        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
+                          zx::duration(info.presentation_interval), frame_number);
+    EXPECT_TRUE(render);
+    EXPECT_FALSE(reschedule);
+
+    sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
+    sum->SignalPresentCallbacks(info);
+
+    EXPECT_TRUE(status1->callback_passed && status1->callback_invoked);
+    EXPECT_FALSE(status1->updater_disappeared);
+    EXPECT_EQ(updater1->update_sessions_call_count(), frame_number);
+
+    size_t remaining_updaters = 0;
+    for (const auto& updater : updaters_to_remove_weak) {
+      if (updater) {
+        EXPECT_TRUE(updater->update_sessions_call_count() == frame_number);
+        ++remaining_updaters;
+      }
+    }
+    EXPECT_TRUE(remaining_updaters + frame_number == kNumOfUpdatersToRemove);
   }
 }
 

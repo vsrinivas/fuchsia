@@ -9,6 +9,8 @@
 #include <lib/async/dispatcher.h>
 #include <lib/zx/time.h>
 
+#include <list>
+
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -103,7 +105,7 @@ class DefaultFrameScheduler : public FrameScheduler {
     // Return true if there are any scheduled session updates that have not yet been applied.
     bool HasUpdatableSessions() const { return !updatable_sessions_.empty(); }
 
-    zx::time EarliestRequestedPresentationTime() {
+    zx::time EarliestRequestedPresentationTime() const {
       FXL_DCHECK(HasUpdatableSessions());
       return updatable_sessions_.top().requested_presentation_time;
     }
@@ -159,6 +161,11 @@ class DefaultFrameScheduler : public FrameScheduler {
     // Set of SessionUpdaters to update. Stored as a WeakPtr: when the updaters become
     // invalid, the WeakPtr is removed from this list.
     std::vector<fxl::WeakPtr<SessionUpdater>> session_updaters_;
+
+    // Stores SessionUpdaters we added to the DefaultFrameScheduler. Upon
+    // ApplyUpdates() is called, these SessionUpdaters will be moved to
+    // the |session_updaters_| vector.
+    std::list<fxl::WeakPtr<SessionUpdater>> new_session_updaters_;
   };
 
  protected:

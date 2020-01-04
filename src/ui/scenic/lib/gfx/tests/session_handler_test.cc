@@ -81,8 +81,8 @@ void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
 escher::EscherWeakPtr SessionHandlerTest::GetEscherWeakPtr() { return escher::EscherWeakPtr(); }
 
 scheduling::SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
-    std::unordered_set<SessionId> sessions_to_update, zx::time target_presentation_time,
-    zx::time latched_time, uint64_t trace_id) {
+    const std::unordered_set<scheduling::SessionId>& sessions_to_update,
+    zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id) {
   UpdateResults update_results;
   CommandContext command_context(/*uploader*/ nullptr, /*sysmem*/ nullptr,
                                  /*display_manager*/ nullptr, engine_->scene_graph()->GetWeakPtr());

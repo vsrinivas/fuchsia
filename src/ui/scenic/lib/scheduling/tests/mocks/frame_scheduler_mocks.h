@@ -90,10 +90,9 @@ class MockSessionUpdater : public SessionUpdater {
   MockSessionUpdater() : weak_factory_(this) {}
 
   // |SessionUpdater|
-  SessionUpdater::UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
-                                               zx::time target_presentation_time,
-                                               zx::time latched_time,
-                                               uint64_t trace_id = 0) override;
+  SessionUpdater::UpdateResults UpdateSessions(
+      const std::unordered_set<SessionId>& sessions_to_update, zx::time target_presentation_time,
+      zx::time latched_time, uint64_t trace_id = 0) override;
 
   // |SessionUpdater|
   void PrepareFrame(zx::time presentation_time, uint64_t frame_number) override {

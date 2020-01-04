@@ -30,7 +30,7 @@ void ImagePipeUpdater::ScheduleImagePipeUpdate(zx::time presentation_time,
 }
 
 ImagePipeUpdater::UpdateResults ImagePipeUpdater::UpdateSessions(
-    std::unordered_set<scheduling::SessionId> sessions_to_update, zx::time presentation_time,
+    const std::unordered_set<scheduling::SessionId>& sessions_to_update, zx::time presentation_time,
     zx::time latched_time, uint64_t trace_id) {
   UpdateResults result{.needs_render = false};
 

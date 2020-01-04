@@ -400,7 +400,7 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
 void DefaultFrameScheduler::UpdateManager::AddSessionUpdater(
     fxl::WeakPtr<SessionUpdater> session_updater) {
   FXL_DCHECK(session_updater);
-  session_updaters_.push_back(std::move(session_updater));
+  new_session_updaters_.push_back(std::move(session_updater));
 }
 
 void DefaultFrameScheduler::UpdateManager::RemoveSession(SessionId session_id) {
@@ -441,6 +441,11 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time target_presentation_
     updatable_sessions_.pop();
   }
 
+  // Move all new created SessionUpdaters to session_updaters_.
+  std::move(new_session_updaters_.begin(), new_session_updaters_.end(),
+            std::back_inserter(session_updaters_));
+  new_session_updaters_.clear();
+
   // Clear any stale SessionUpdaters.
   session_updaters_.erase(
       std::remove_if(session_updaters_.begin(), session_updaters_.end(), std::logical_not()),
@@ -452,6 +457,12 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time target_presentation_
       session_updaters_.begin(), session_updaters_.end(),
       [this, &sessions_to_update, &update_results, target_presentation_time, latched_time,
        frame_number](fxl::WeakPtr<SessionUpdater> updater) {
+        // The SessionUpdater may be removed in other session updating process.
+        // We skip the updater if it is invalid.
+        if (!updater) {
+          return;
+        }
+
         auto session_results = updater->UpdateSessions(sessions_to_update, target_presentation_time,
                                                        latched_time, frame_number);
 
