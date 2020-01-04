@@ -4,30 +4,36 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+wlanphy_sources = [
+  "device.cc",
+  "device.h",
+  "driver.cc",
+  "driver.h",
+]
+
+wlanphy_deps = [
+  "//garnet/lib/wlan/fidl",
+  "//garnet/lib/wlan/fidl:fidl_llcpp",
+  "//garnet/lib/wlan/protocol",
+  "//sdk/banjo/ddk.protocol.wlanphyimpl",
+  "//src/connectivity/wlan/lib/common/cpp:common",
+  "//src/devices:driver",
+  "//zircon/public/lib/async-cpp",
+  "//zircon/public/lib/async-loop-cpp",
+  "//zircon/public/lib/async-loop-default",
+  "//zircon/public/lib/ddk",
+  "//zircon/public/lib/fdio",
+  "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
+]
 
 driver_module("wlanphy_driver") {
   output_name = "wlanphy"
-  sources = [
-    "device.cc",
-    "device.h",
-    "driver.cc",
-    "driver.h",
-  ]
+  sources = wlanphy_sources
 
-  deps = [
-    "//garnet/lib/wlan/fidl",
-    "//garnet/lib/wlan/fidl:fidl_llcpp",
-    "//garnet/lib/wlan/protocol",
-    "//sdk/banjo/ddk.protocol.wlanphyimpl",
-    "//src/connectivity/wlan/lib/common/cpp:common",
-    "//src/devices:driver",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fdio",
-    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
-  ]
+  deps = wlanphy_deps
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
@@ -46,6 +52,31 @@ package("wlanphy") {
   drivers = [
     {
       name = "wlanphy.so"
+    },
+  ]
+}
+
+# unit tests start here
+
+executable("wlanphy_convert_unittest") {
+  testonly = true
+  sources = wlanphy_sources + [ "tests/convert_unittest.cc" ]
+
+  deps = wlanphy_deps + [ "//src/lib/fxl/test:gtest_main_with_syslog" ]
+
+  configs +=
+      [ "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_mlme_tests_config" ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+}
+
+unittest_package("wlanphy-unittests") {
+  deps = [
+    ":wlanphy_convert_unittest",
+  ]
+  tests = [
+    {
+      name = "wlanphy_convert_unittest"
+      environments = basic_envs
     },
   ]
 }

@@ -5,9 +5,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_H_
 
+#include <fuchsia/wlan/device/cpp/fidl.h>
+
 #include <ddk/driver.h>
 #include <ddk/protocol/wlanphyimpl.h>
-#include <fuchsia/wlan/device/cpp/fidl.h>
 #include <wlan/common/dispatcher.h>
 
 namespace wlanphy {
@@ -48,6 +49,8 @@ class Device : public ::fuchsia::wlan::device::Phy {
   friend class DeviceConnector;
 };
 
+void ConvertPhyBandInfo(::std::vector<::fuchsia::wlan::device::BandInfo>* BandInfo,
+                        uint8_t bands_count, const wlan_info_band_info_t* all_phy_bands);
 }  // namespace wlanphy
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DEVICE_H_

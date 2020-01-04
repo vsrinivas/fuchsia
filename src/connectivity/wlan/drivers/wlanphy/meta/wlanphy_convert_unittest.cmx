@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "tests/wlanphy_convert_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

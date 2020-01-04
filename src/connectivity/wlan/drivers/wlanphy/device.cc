@@ -194,39 +194,42 @@ static void ConvertPhyChannels(wlan_device::ChannelList* Channels,
   }
 }
 
-static void ConvertPhyBandInfo(::std::vector<wlan_device::BandInfo>* BandInfo, uint8_t bands_count,
-                               const wlan_info_band_info_t* phy_bands) {
+void ConvertPhyBandInfo(::std::vector<wlan_device::BandInfo>* BandInfo, uint8_t bands_count,
+                        const wlan_info_band_info_t* all_phy_bands) {
   BandInfo->resize(0);
   for (uint8_t band_num = 0; band_num < bands_count; band_num++) {
-    wlan_device::BandInfo band;
-    const wlan_info_band_info_t* phy_band = &phy_bands[band_num];
-    band.band_id = wlan::common::BandToFidl(phy_band->band);
+    wlan_device::BandInfo out_band{};
+    const wlan_info_band_info_t& this_phy_band = all_phy_bands[band_num];
+    out_band.band_id = wlan::common::BandToFidl(this_phy_band.band);
 
     // ht_caps
-    band.ht_caps = wlan_mlme::HtCapabilities::New();
-    auto ht_cap = ::wlan::HtCapabilities::FromDdk(phy_bands->ht_caps);
-    static_assert(sizeof(band.ht_caps->bytes) == sizeof(ht_cap));
-    memcpy(band.ht_caps->bytes.data(), &ht_cap, sizeof(ht_cap));
+    if (this_phy_band.ht_supported) {
+      out_band.ht_caps = wlan_mlme::HtCapabilities::New();
+      auto ht_cap = ::wlan::HtCapabilities::FromDdk(this_phy_band.ht_caps);
+      static_assert(sizeof(out_band.ht_caps->bytes) == sizeof(ht_cap));
+      memcpy(out_band.ht_caps->bytes.data(), &ht_cap, sizeof(ht_cap));
+    }
 
     // vht_caps
-    if (phy_bands->vht_supported) {
-      auto vht_cap = ::wlan::VhtCapabilities::FromDdk(phy_bands->vht_caps);
-      static_assert(sizeof(band.vht_caps->bytes) == sizeof(vht_cap));
-      memcpy(band.vht_caps->bytes.data(), &vht_cap, sizeof(vht_cap));
+    if (this_phy_band.vht_supported) {
+      out_band.vht_caps = wlan_mlme::VhtCapabilities::New();
+      auto vht_cap = ::wlan::VhtCapabilities::FromDdk(this_phy_band.vht_caps);
+      static_assert(sizeof(out_band.vht_caps->bytes) == sizeof(vht_cap));
+      memcpy(out_band.vht_caps->bytes.data(), &vht_cap, sizeof(vht_cap));
     }
 
     // rates
-    band.rates.resize(0);
+    out_band.rates.resize(0);
     size_t rate_ndx = 0;
-    while ((rate_ndx < arraysize(phy_bands->rates)) && (phy_bands->rates[rate_ndx] > 0)) {
-      band.rates.push_back(phy_bands->rates[rate_ndx]);
+    while ((rate_ndx < arraysize(this_phy_band.rates)) && (this_phy_band.rates[rate_ndx] > 0)) {
+      out_band.rates.push_back(this_phy_band.rates[rate_ndx]);
       rate_ndx++;
     }
 
     // supported_channels
-    ConvertPhyChannels(&band.supported_channels, &phy_bands->supported_channels);
+    ConvertPhyChannels(&out_band.supported_channels, &this_phy_band.supported_channels);
 
-    BandInfo->push_back(std::move(band));
+    BandInfo->push_back(std::move(out_band));
   }
 }
 
