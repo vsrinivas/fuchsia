@@ -41,13 +41,125 @@ class WlanDeviceTest : public SingleApTest {
       : mvmvif_sta_{
             .mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans()),
             .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
-        } {}
+        } {
+    EXPECT_EQ(ZX_OK, iwl_nvm_init(iwl_trans_get_mvm(sim_trans_.iwl_trans())));
+  }
   ~WlanDeviceTest() {}
 
  protected:
   static constexpr zx_handle_t sme_channel_ = 73939133;  // An arbitrary value not ZX_HANDLE_INVALID
-  struct iwl_mvm_vif mvmvif_sta_;                        // The mvm_vif settings for station role.
+  static constexpr uint8_t kInvalidBandIdFillByte = 0xa5;
+  static constexpr wlan_info_band_t kInvalidBandId = 0xa5a5a5a5;
+  struct iwl_mvm_vif mvmvif_sta_;  // The mvm_vif settings for station role.
 };
+
+//////////////////////////////////// Helper Functions  /////////////////////////////////////////////
+TEST_F(WlanDeviceTest, ComposeBandList) {
+  struct iwl_nvm_data nvm_data;
+  wlan_info_band_t bands[WLAN_INFO_BAND_COUNT];
+
+  // nothing enabled
+  memset(&nvm_data, 0, sizeof(nvm_data));
+  memset(bands, kInvalidBandIdFillByte, sizeof(bands));
+  EXPECT_EQ(0, compose_band_list(&nvm_data, bands));
+  EXPECT_EQ(kInvalidBandId, bands[0]);
+  EXPECT_EQ(kInvalidBandId, bands[1]);
+
+  // 2.4GHz only
+  memset(&nvm_data, 0, sizeof(nvm_data));
+  memset(bands, kInvalidBandIdFillByte, sizeof(bands));
+  nvm_data.sku_cap_band_24ghz_enable = true;
+  EXPECT_EQ(1, compose_band_list(&nvm_data, bands));
+  EXPECT_EQ(WLAN_INFO_BAND_2GHZ, bands[0]);
+  EXPECT_EQ(kInvalidBandId, bands[1]);
+
+  // 5GHz only
+  memset(&nvm_data, 0, sizeof(nvm_data));
+  memset(bands, kInvalidBandIdFillByte, sizeof(bands));
+  nvm_data.sku_cap_band_52ghz_enable = true;
+  EXPECT_EQ(1, compose_band_list(&nvm_data, bands));
+  EXPECT_EQ(WLAN_INFO_BAND_5GHZ, bands[0]);
+  EXPECT_EQ(kInvalidBandId, bands[1]);
+
+  // both bands enabled
+  memset(&nvm_data, 0, sizeof(nvm_data));
+  memset(bands, kInvalidBandIdFillByte, sizeof(bands));
+  nvm_data.sku_cap_band_24ghz_enable = true;
+  nvm_data.sku_cap_band_52ghz_enable = true;
+  EXPECT_EQ(2, compose_band_list(&nvm_data, bands));
+  EXPECT_EQ(WLAN_INFO_BAND_2GHZ, bands[0]);
+  EXPECT_EQ(WLAN_INFO_BAND_5GHZ, bands[1]);
+}
+
+// Short-cut to access the iwl_cfg80211_rates[] structure and convert it to 802.11 rate.
+//
+// Args:
+//   index: the index of iwl_cfg80211_rates[].
+//
+// Returns:
+//   the 802.11 rate.
+//
+static unsigned expected_rate(size_t index) {
+  return cfg_rates_to_80211(iwl_cfg80211_rates[index]);
+}
+
+TEST_F(WlanDeviceTest, FillBandInfos) {
+  // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
+
+  wlan_info_band_t bands[WLAN_INFO_BAND_COUNT] = {
+      WLAN_INFO_BAND_2GHZ,
+      WLAN_INFO_BAND_5GHZ,
+  };
+  wlan_info_band_info_t band_infos[WLAN_INFO_BAND_COUNT] = {};
+
+  fill_band_infos(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, ARRAY_SIZE(bands),
+                  band_infos);
+  // 2.4Ghz
+  wlan_info_band_info_t* exp_band_info = &band_infos[0];
+  EXPECT_EQ(WLAN_INFO_BAND_2GHZ, exp_band_info->band);
+  EXPECT_EQ(true, exp_band_info->ht_supported);
+  EXPECT_EQ(expected_rate(0), exp_band_info->rates[0]);    // 1Mbps
+  EXPECT_EQ(expected_rate(11), exp_band_info->rates[11]);  // 54Mbps
+  EXPECT_EQ(2407, exp_band_info->supported_channels.base_freq);
+  EXPECT_EQ(1, exp_band_info->supported_channels.channels[0]);
+  EXPECT_EQ(13, exp_band_info->supported_channels.channels[12]);
+  // 5GHz
+  exp_band_info = &band_infos[1];
+  EXPECT_EQ(WLAN_INFO_BAND_5GHZ, exp_band_info->band);
+  EXPECT_EQ(true, exp_band_info->ht_supported);
+  EXPECT_EQ(expected_rate(4), exp_band_info->rates[0]);   // 6Mbps
+  EXPECT_EQ(expected_rate(11), exp_band_info->rates[7]);  // 54Mbps
+  EXPECT_EQ(5000, exp_band_info->supported_channels.base_freq);
+  EXPECT_EQ(36, exp_band_info->supported_channels.channels[0]);
+  EXPECT_EQ(165, exp_band_info->supported_channels.channels[24]);
+}
+
+TEST_F(WlanDeviceTest, FillBandInfosOnly5GHz) {
+  // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
+
+  wlan_info_band_t bands[WLAN_INFO_BAND_COUNT] = {
+      WLAN_INFO_BAND_5GHZ,
+      0,
+  };
+  wlan_info_band_info_t band_infos[WLAN_INFO_BAND_COUNT] = {};
+
+  fill_band_infos(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, 1, band_infos);
+  // 5GHz
+  wlan_info_band_info_t* exp_band_info = &band_infos[0];
+  EXPECT_EQ(WLAN_INFO_BAND_5GHZ, exp_band_info->band);
+  EXPECT_EQ(true, exp_band_info->ht_supported);
+  EXPECT_EQ(expected_rate(4), exp_band_info->rates[0]);   // 6Mbps
+  EXPECT_EQ(expected_rate(11), exp_band_info->rates[7]);  // 54Mbps
+  EXPECT_EQ(5000, exp_band_info->supported_channels.base_freq);
+  EXPECT_EQ(36, exp_band_info->supported_channels.channels[0]);
+  EXPECT_EQ(165, exp_band_info->supported_channels.channels[24]);
+  // index 1 should be empty.
+  exp_band_info = &band_infos[1];
+  EXPECT_EQ(false, exp_band_info->ht_supported);
+  EXPECT_EQ(0x00, exp_band_info->rates[0]);
+  EXPECT_EQ(0x00, exp_band_info->rates[7]);
+  EXPECT_EQ(0, exp_band_info->supported_channels.channels[0]);
+}
 
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
 
@@ -55,14 +167,26 @@ TEST_F(WlanDeviceTest, MacQuery) {
   // Test input null pointers
   uint32_t options = 0;
   void* whatever = &options;
-  ASSERT_EQ(wlanmac_ops.query(nullptr, options, nullptr), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlanmac_ops.query(whatever, options, nullptr), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlanmac_ops.query(nullptr, options, reinterpret_cast<wlanmac_info*>(whatever)),
-            ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanmac_ops.query(nullptr, options, nullptr));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanmac_ops.query(whatever, options, nullptr));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            wlanmac_ops.query(nullptr, options, reinterpret_cast<wlanmac_info*>(whatever)));
 
-  wlanmac_info_t info;
-  ASSERT_EQ(wlanmac_ops.query(&mvmvif_sta_, options, &info), ZX_OK);
-  ASSERT_EQ(info.ifc_info.mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
+  wlanmac_info_t info = {};
+  ASSERT_EQ(ZX_OK, wlanmac_ops.query(&mvmvif_sta_, options, &info));
+  EXPECT_EQ(WLAN_INFO_MAC_ROLE_CLIENT, info.ifc_info.mac_role);
+  //
+  // The below code assumes the test/sim-default-nvm.cc contains 2 bands.
+  //
+  //   .bands[0]: WLAN_INFO_BAND_2GHZ
+  //   .bands[1]: WLAN_INFO_BAND_5GHZ
+  //
+  ASSERT_EQ(2, info.ifc_info.bands_count);
+  EXPECT_EQ(expected_rate(0), info.ifc_info.bands[0].rates[0]);    // 1 Mbps
+  EXPECT_EQ(expected_rate(7), info.ifc_info.bands[0].rates[7]);    // 18 Mbps
+  EXPECT_EQ(expected_rate(11), info.ifc_info.bands[0].rates[11]);  // 54 Mbps
+  EXPECT_EQ(expected_rate(4), info.ifc_info.bands[1].rates[0]);    // 6 Mbps
+  EXPECT_EQ(165, info.ifc_info.bands[1].supported_channels.channels[24]);
 }
 
 TEST_F(WlanDeviceTest, MacStart) {
@@ -170,13 +294,29 @@ TEST_F(WlanDeviceTest, MacRelease) {
 /////////////////////////////////////       PHY       //////////////////////////////////////////////
 
 TEST_F(WlanDeviceTest, PhyQuery) {
-  // Test input null pointers
-  ASSERT_EQ(wlanphy_ops.query(nullptr, nullptr), ZX_ERR_INVALID_ARGS);
+  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
+  wlanphy_impl_info_t info = {};
 
-  // 'ctx' null is okay for now because the code under test is still not using that.
-  wlanphy_impl_info_t info;
-  ASSERT_EQ(wlanphy_ops.query(nullptr, &info), ZX_OK);
-  ASSERT_EQ(info.wlan_info.mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
+  // Test input null pointers
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanphy_ops.query(nullptr, nullptr));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanphy_ops.query(iwl_trans, nullptr));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanphy_ops.query(nullptr, &info));
+
+  // Normal case
+  ASSERT_EQ(ZX_OK, wlanphy_ops.query(iwl_trans, &info));
+  EXPECT_EQ(WLAN_INFO_MAC_ROLE_CLIENT, info.wlan_info.mac_role);
+  //
+  // The below code assumes the test/sim-default-nvm.cc contains 2 bands.
+  //
+  //   .bands[0]: WLAN_INFO_BAND_2GHZ
+  //   .bands[1]: WLAN_INFO_BAND_5GHZ
+  //
+  ASSERT_EQ(2, info.wlan_info.bands_count);
+  EXPECT_EQ(expected_rate(0), info.wlan_info.bands[0].rates[0]);    // 1 Mbps
+  EXPECT_EQ(expected_rate(7), info.wlan_info.bands[0].rates[7]);    // 18 Mbps
+  EXPECT_EQ(expected_rate(11), info.wlan_info.bands[0].rates[11]);  // 54 Mbps
+  EXPECT_EQ(expected_rate(4), info.wlan_info.bands[1].rates[0]);    // 6 Mbps
+  EXPECT_EQ(165, info.wlan_info.bands[1].supported_channels.channels[24]);
 }
 
 TEST_F(WlanDeviceTest, PhyCreateDestroySingleInterface) {

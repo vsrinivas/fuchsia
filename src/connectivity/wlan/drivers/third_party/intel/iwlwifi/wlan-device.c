@@ -48,9 +48,84 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
+#include "garnet/lib/wlan/protocol/include/wlan/protocol/ieee80211.h"
 #include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+
+////////////////////////////////////  Helper Functions  ////////////////////////////////////////////
+
+//
+// Given a NVM data structure, and return the list of bands.
+//
+// Returns:
+//   size_t: # of bands enabled in the NVM data.
+//   bands[]: contains the list of enabled bands.
+//
+size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
+                         wlan_info_band_t bands[WLAN_INFO_BAND_COUNT]) {
+  size_t bands_count = 0;
+
+  if (nvm_data->sku_cap_band_24ghz_enable) {
+    bands[bands_count++] = WLAN_INFO_BAND_2GHZ;
+  }
+  if (nvm_data->sku_cap_band_52ghz_enable) {
+    bands[bands_count++] = WLAN_INFO_BAND_5GHZ;
+  }
+  ZX_ASSERT(bands_count <= WLAN_INFO_BAND_COUNT);
+
+  return bands_count;
+}
+
+//
+// Given a NVM data, copy the band and channel info into the 'wlan_info_band_info_t'  structure.
+//
+// - 'bands_count' is the number of bands in 'bands[]'.
+// - 'band_infos[]' must have at least bands_count for this function to write.
+//
+void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t* bands,
+                     size_t bands_count, wlan_info_band_info_t* band_infos) {
+  ZX_ASSERT(bands_count <= ARRAY_SIZE(nvm_data->bands));
+
+  for (size_t band_idx = 0; band_idx < bands_count; ++band_idx) {
+    wlan_info_band_t band_id = bands[band_idx];
+    const struct ieee80211_supported_band* sband = &nvm_data->bands[band_id];  // source
+    wlan_info_band_info_t* band_info = &band_infos[band_idx];                  // destination
+
+    band_info->band = band_id;
+    band_info->ht_supported = nvm_data->sku_cap_11n_enable;
+    // TODO(43517): Better handling of driver features bits/flags
+    band_info->ht_caps.ht_capability_info =
+        IEEE80211_HT_CAPS_CHAN_WIDTH | IEEE80211_HT_CAPS_SMPS_DYNAMIC;
+    band_info->ht_caps.ampdu_params = (3 << IEEE80211_AMPDU_RX_LEN_SHIFT) |  // (64K - 1) bytes
+                                      (6 << IEEE80211_AMPDU_DENSITY_SHIFT);  // 8 us
+    // TODO(36683): band_info->ht_caps->supported_mcs_set =
+    // TODO(36684): band_info->vht_caps =
+
+    ZX_ASSERT(sband->n_bitrates <= (int)ARRAY_SIZE(band_info->rates));
+    for (int rate_idx = 0; rate_idx < sband->n_bitrates; ++rate_idx) {
+      band_info->rates[rate_idx] = cfg_rates_to_80211(sband->bitrates[rate_idx]);
+    }
+
+    // Fill the channel list of this band.
+    wlan_info_channel_list_t* ch_list = &band_info->supported_channels;
+    switch (band_info->band) {
+      case WLAN_INFO_BAND_2GHZ:
+        ch_list->base_freq = 2407;
+        break;
+      case WLAN_INFO_BAND_5GHZ:
+        ch_list->base_freq = 5000;
+        break;
+      default:
+        ZX_ASSERT(0);  // Unknown band ID.
+        break;
+    }
+    ZX_ASSERT(sband->n_channels <= (int)ARRAY_SIZE(ch_list->channels));
+    for (int ch_idx = 0; ch_idx < sband->n_channels; ++ch_idx) {
+      ch_list->channels[ch_idx] = sband->channels[ch_idx].ch_num;
+    }
+  }
+}
 
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
 
@@ -62,11 +137,27 @@ static zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) 
   }
   memset(info, 0, sizeof(*info));
 
-  info->ifc_info.mac_role = mvmvif->mac_role;
-  info->ifc_info.driver_features = WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
+  ZX_ASSERT(mvmvif->mvm);
+  ZX_ASSERT(mvmvif->mvm->nvm_data);
+  struct iwl_nvm_data* nvm_data = mvmvif->mvm->nvm_data;
 
-  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
-  return ZX_OK;  // Temporarily returns OK to make the interface list-able.
+  memcpy(info->ifc_info.mac_addr, nvm_data->hw_addr, sizeof(info->ifc_info.mac_addr));
+  info->ifc_info.mac_role = mvmvif->mac_role;
+  // TODO(43517): Better handling of driver features bits/flags
+  info->ifc_info.driver_features = WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
+  info->ifc_info.supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK |
+                                  WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT;
+  info->ifc_info.caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
+                        WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT |
+                        WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
+
+  // Determine how many bands this adapter supports.
+  wlan_info_band_t bands[WLAN_INFO_BAND_COUNT];
+  info->ifc_info.bands_count = compose_band_list(nvm_data, bands);
+
+  fill_band_infos(nvm_data, bands, info->ifc_info.bands_count, info->ifc_info.bands);
+
+  return ZX_OK;
 }
 
 static zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc,
@@ -201,20 +292,23 @@ zx_protocol_device_t device_mac_ops = {
 /////////////////////////////////////       PHY       //////////////////////////////////////////////
 
 static zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
-  if (!info) {
+  struct iwl_trans* iwl_trans = ctx;
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+  if (!mvm || !info) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Returns dummy info for now.
+  struct iwl_nvm_data* nvm_data = mvm->nvm_data;
+  ZX_ASSERT(nvm_data);
+
   memset(info, 0, sizeof(*info));
 
-  // TODO(fxb/36682): reads real MAC address from hardware.
-  uint8_t fake_mac[] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc};
-  memcpy(info->wlan_info.mac_addr, fake_mac, sizeof(info->wlan_info.mac_addr));
+  memcpy(info->wlan_info.mac_addr, nvm_data->hw_addr, sizeof(info->wlan_info.mac_addr));
 
   // TODO(fxb/36677): supports AP role
   info->wlan_info.mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
 
+  // TODO(43517): Better handling of driver features bits/flags
   info->wlan_info.supported_phys =
       WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK | WLAN_INFO_PHY_TYPE_OFDM;
   // TODO(fxb/36683): supports HT (802.11n): WLAN_INFO_PHY_TYPE_HT
@@ -222,17 +316,16 @@ static zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
 
   info->wlan_info.driver_features = WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
 
-  // The current band/channel setting is for channel 11 only (in 2.4GHz).
-  // TODO(fxb/36689): lists all bands and their channels.
-  wlan_info_band_info_t* wlan_band = &info->wlan_info.bands[info->wlan_info.bands_count++];
-  wlan_band->band = WLAN_INFO_BAND_2GHZ;
-  // See IEEE Std 802.11-2016, 9.4.2.3 for encoding. Those values are:
-  //   [1Mbps, 2Mbps, 5.5Mbps, 11Mbps, 6Mbps, 9Mbps, 12Mbps, 18Mbps, 24Mbps, 36Mbps, 48Mbps, 54Mbps]
-  uint8_t rates[] = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c};
-  static_assert(sizeof(rates) <= sizeof(wlan_band->rates), "Too many basic_rates to copy");
-  memcpy(wlan_band->rates, rates, sizeof(rates));
-  wlan_band->supported_channels.base_freq = 2407;
-  wlan_band->supported_channels.channels[0] = 11;
+  // TODO(43517): Better handling of driver features bits/flags
+  info->wlan_info.caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
+                         WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT |
+                         WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
+
+  // Determine how many bands this adapter supports.
+  wlan_info_band_t bands[WLAN_INFO_BAND_COUNT];
+  info->wlan_info.bands_count = compose_band_list(nvm_data, bands);
+
+  fill_band_infos(nvm_data, bands, info->wlan_info.bands_count, info->wlan_info.bands);
 
   return ZX_OK;
 }

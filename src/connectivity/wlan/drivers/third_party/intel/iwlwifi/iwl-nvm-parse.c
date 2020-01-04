@@ -120,7 +120,7 @@ static const uint8_t iwl_ext_nvm_channels[] = {
 #define N_HW_ADDR_MASK 0xF
 
 /* rate data (static) */
-static uint16_t iwl_cfg80211_rates[] = {
+uint16_t iwl_cfg80211_rates[] = {
     1 * 10,    // 1 Mbps
     2 * 10,    // 2 Mbps
     5.5 * 10,  // 5.5 Mbps
@@ -724,6 +724,7 @@ static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
   sband->n_bitrates = N_RATES_24;
   n_used += iwl_init_sband_channels(data, sband, n_channels, WLAN_INFO_BAND_2GHZ);
 #if 0   // NEEDS_PORTING
+  // TODO(36683): HT support.
   iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, NL80211_BAND_2GHZ, tx_chains, rx_chains);
 
   if (data->sku_cap_11ax_enable && !iwlwifi_mod_params.disable_11ax) {
@@ -737,6 +738,7 @@ static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
   sband->n_bitrates = N_RATES_52;
   n_used += iwl_init_sband_channels(data, sband, n_channels, WLAN_INFO_BAND_5GHZ);
 #if 0   // NEEDS_PORTING
+  // TODO(36683): HT support.
   iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, NL80211_BAND_5GHZ, tx_chains, rx_chains);
   if (data->sku_cap_11ac_enable && !iwlwifi_mod_params.disable_11ac) {
     iwl_init_vht_hw_capab(trans, data, &sband->vht_cap, tx_chains, rx_chains);

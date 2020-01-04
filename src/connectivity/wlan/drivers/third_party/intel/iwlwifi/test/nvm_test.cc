@@ -61,5 +61,9 @@ TEST_F(NvmTest, TestParsingDefaultNvm) {
   EXPECT_EQ(data->bands[WLAN_INFO_BAND_5GHZ].channels[0].ch_num, 36);
 }
 
+TEST_F(NvmTest, CfgRatesTo80211) {
+  EXPECT_EQ(2, cfg_rates_to_80211(1 * 10));  // 1 Mbps
+}
+
 }  // namespace
 }  // namespace wlan::testing
