@@ -53,6 +53,7 @@ enum class OpType : uint32_t {
 };
 
 constexpr uint32_t kOpFlagComplete = (1u << 0);
+constexpr uint32_t kOpFlagDeferred = (1u << 1);
 constexpr uint32_t kOpFlagGroupLeader = (1u << 8);
 
 constexpr uint32_t kOpGroupNone = 0;
@@ -129,12 +130,13 @@ class StreamOp {
         group_members_(group_members),
         result_(ZX_OK),
         cookie_(cookie),
+        flags_(0),
         stream_(nullptr) {}
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(StreamOp);
 
   OpType type() { return type_; }
-  void set_ype(OpType type) { type_ = type; }
+  void set_type(OpType type) { type_ = type; }
 
   uint32_t stream_id() { return stream_id_; }
   void set_stream_id(uint32_t stream_id) { stream_id_ = stream_id; }
@@ -156,6 +158,7 @@ class StreamOp {
 
   Stream* stream() { return stream_; }
   void set_stream(Stream* stream) { stream_ = stream; }
+  bool is_deferred() { return flags_ & kOpFlagDeferred; }
 
   // List support.
   using ActiveListNodeState = fbl::DoublyLinkedListNodeState<StreamOp*>;
