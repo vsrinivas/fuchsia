@@ -1,0 +1,91 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+template("sysmgr_config") {
+  # Copy the config file to the output directory so changes to the config file
+  # will trigger a re-build of the target
+  copy(target_name) {
+    forward_variables_from(invoker, [ "source" ])
+    assert(defined(source))
+
+    sources = [
+      source,
+    ]
+    outputs = [
+      "${target_out_dir}/${target_name}_${source}",
+    ]
+
+    visibility = [ "//src/sys/pkg:*" ]
+    metadata = {
+      sysmgr_config_files = outputs
+    }
+  }
+}
+
+template("merge_sysmgr_config") {
+  cfg = {
+    forward_variables_from(invoker,
+                           [
+                             "output",
+                             "deps",
+                           ])
+    assert(defined(output))
+    assert(defined(deps))
+  }
+
+  merged_config_path = "${target_out_dir}/${cfg.output}"
+  merged_config_target = "${target_name}_merged_config"
+  merged_config_inputs_path = "${target_out_dir}/${cfg.output}.inputs"
+  merged_config_inputs_target = "${target_name}_merged_config_inputs"
+
+  # Define a config_data package entry for the merged config
+  config_data(target_name) {
+    for_pkg = "sysmgr"
+    deps = [
+      ":$merged_config_target",
+    ]
+    sources = [
+      merged_config_path,
+    ]
+    outputs = [
+      cfg.output,
+    ]
+  }
+
+  # Using the list of sysmgr config file paths, merge the json into a single
+  # file
+  action(merged_config_target) {
+    script = "//src/sys/pkg/scripts/merge_sysmgr_config.py"
+
+    deps = [
+      ":$merged_config_inputs_target",
+    ]
+    inputs = [
+      merged_config_inputs_path,
+    ]
+    outputs = [
+      merged_config_path,
+    ]
+
+    args = [
+      "--inputs",
+      rebase_path(merged_config_inputs_path, root_build_dir),
+      "--output",
+      rebase_path(merged_config_path, root_build_dir),
+    ]
+  }
+
+  # Collect the list of configs specified in the "sysmgr_config_files" metadata
+  # key into a file
+  generated_file(merged_config_inputs_target) {
+    data_keys = [ "sysmgr_config_files" ]
+    rebase = root_build_dir
+    deps = cfg.deps
+    outputs = [
+      merged_config_inputs_path,
+    ]
+  }
+}

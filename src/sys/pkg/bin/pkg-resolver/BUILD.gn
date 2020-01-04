@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/sys/pkg/bin/pkg-resolver/pkg_resolver_config.gni")
+import("//src/sys/pkg/sysmgr_config.gni")
 
 rustc_binary("bin") {
   name = "pkg_resolver"
@@ -133,14 +133,8 @@ pkg_resolver_config("disable_dynamic_configuration") {
   disable_dynamic_configuration = true
 }
 
-config_data("config") {
-  for_pkg = "sysmgr"
-  outputs = [
-    "pkg_resolver.config",
-  ]
-  sources = [
-    "sysmgr.config",
-  ]
+sysmgr_config("config") {
+  source = "sysmgr.config"
 }
 
 group("tests") {

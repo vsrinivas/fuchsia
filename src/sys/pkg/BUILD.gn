@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can
 # found in the LICENSE file.
 
+import("//src/sys/pkg/sysmgr_config.gni")
+
 group("pkg") {
   testonly = true
   deps = [
@@ -23,16 +25,23 @@ group("tests") {
 # Targets to include in the base package set for the core product.
 group("core") {
   public_deps = [
+    ":core_config",
     "bin/amber",
-    "bin/amber:config",
     "bin/amber:pkgfs",
     "bin/pkg-cache",
-    "bin/pkg-cache:config",
     "bin/pkg-resolver",
-    "bin/pkg-resolver:config",
     "bin/pkgctl",
     "bin/system-update-checker",
-    "bin/system-update-checker:system-update-checker-config",
     "bin/update:update-bin",
+  ]
+}
+
+merge_sysmgr_config("core_config") {
+  output = "pkg.config"
+  deps = [
+    "bin/amber:sysmgr_config",
+    "bin/pkg-cache:config",
+    "bin/pkg-resolver:config",
+    "bin/system-update-checker:config",
   ]
 }
