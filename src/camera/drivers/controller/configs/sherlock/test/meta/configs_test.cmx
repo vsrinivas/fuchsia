@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/configs_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/sysmem"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

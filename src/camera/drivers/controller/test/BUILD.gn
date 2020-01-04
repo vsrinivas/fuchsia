@@ -59,6 +59,7 @@ executable("controller-protocol-test") {
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller/:controller-source",
+    "//src/camera/drivers/controller/configs/sherlock:controller-configs",
     "//src/camera/drivers/test_utils",
     "//src/devices:driver",
     "//src/lib/fxl/test:gtest_main_with_syslog",

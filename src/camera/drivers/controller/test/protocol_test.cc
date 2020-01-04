@@ -12,6 +12,7 @@
 
 #include "fake_gdc.h"
 #include "fake_isp.h"
+#include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"
 #include "src/camera/drivers/controller/controller-protocol.h"
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/drivers/controller/isp_stream_protocol.h"
@@ -34,109 +35,53 @@ constexpr auto kNumBuffers = 5;
 
 class ControllerProtocolTest : public gtest::TestLoopFixture {
  public:
-  ControllerProtocolTest()
-      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        context_(sys::ComponentContext::Create()) {}
+  ControllerProtocolTest() : context_(sys::ComponentContext::Create()) {}
 
   void SetUp() override {
-    ASSERT_EQ(ZX_OK, loop_.StartThread("camera-controller-loop"));
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator1_.NewRequest()));
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator2_.NewRequest()));
-    ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator3_.NewRequest()));
     isp_ = fake_isp_.client();
     gdc_ = fake_gdc_.client();
-    controller_protocol_device_ = std::make_unique<ControllerImpl>(
-        fake_ddk::kFakeParent, isp_, gdc_, std::move(sysmem_allocator1_));
     pipeline_manager_ = std::make_unique<PipelineManager>(fake_ddk::kFakeParent, &dispatcher_, isp_,
-                                                          gdc_, std::move(sysmem_allocator2_));
+                                                          gdc_, std::move(sysmem_allocator1_));
+
+    internal_config_info_ = SherlockInternalConfigs();
   }
 
   void TearDown() override {
-    camera_client_ = nullptr;
     context_ = nullptr;
     sysmem_allocator1_ = nullptr;
     sysmem_allocator2_ = nullptr;
-    sysmem_allocator3_ = nullptr;
-    controller_protocol_device_ = nullptr;
-    loop_.Shutdown();
-  }
-
-  void TestInternalConfigs() {
-    InternalConfigInfo* info = nullptr;
-
-    // Invalid config index and pointer
-    EXPECT_EQ(controller_protocol_device_->GetInternalConfiguration(0, &info), ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(controller_protocol_device_->GetInternalConfiguration(0, nullptr),
-              ZX_ERR_INVALID_ARGS);
-
-    controller_protocol_device_->PopulateConfigurations();
-
-    // Debug Configuration
-    EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kDebugConfig, &info));
-    EXPECT_EQ(info->streams_info.size(), 1u);
-    // 1st stream is FR
-    EXPECT_EQ(info->streams_info[0].input_stream_type, kStreamTypeFR);
-    // FR supported streams
-    EXPECT_EQ(info->streams_info[0].supported_streams.size(), 1u);
-    EXPECT_EQ(info->streams_info[0].supported_streams[0], kStreamTypeFR);
-
-    // Monitor Configuration
-    EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kMonitorConfig, &info));
-    EXPECT_EQ(info->streams_info.size(), 2u);
-
-    // 1st Stream is FR
-    EXPECT_EQ(info->streams_info[0].input_stream_type, kStreamTypeFR);
-
-    // FR Supported streams
-    EXPECT_EQ(info->streams_info[0].supported_streams.size(), 2u);
-    EXPECT_EQ(info->streams_info[0].supported_streams[0], kStreamTypeFR | kStreamTypeML);
-    EXPECT_EQ(info->streams_info[0].supported_streams[1], kStreamTypeDS | kStreamTypeML);
-
-    // 2nd Stream is DS
-    EXPECT_EQ(info->streams_info[1].input_stream_type, kStreamTypeDS);
-
-    // DS supported streams
-    EXPECT_EQ(info->streams_info[1].supported_streams.size(), 1u);
-    EXPECT_EQ(info->streams_info[1].supported_streams[0], kStreamTypeMonitoring);
-    EXPECT_EQ(info->streams_info[1].child_nodes[0].type, kGdc);
-    ASSERT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type.size(), 3u);
-    EXPECT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type[0],
-              GdcConfig::MONITORING_720p);
-    EXPECT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type[1],
-              GdcConfig::MONITORING_480p);
-    EXPECT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type[2],
-              GdcConfig::MONITORING_360p);
-    ASSERT_EQ(info->streams_info[1].child_nodes[0].supported_streams.size(), 1u);
-    EXPECT_EQ(info->streams_info[1].child_nodes[0].supported_streams[0], kStreamTypeMonitoring);
-
-    // Output node.
-    EXPECT_EQ(info->streams_info[1].child_nodes[0].child_nodes.size(), 1u);
-    EXPECT_EQ(info->streams_info[1].child_nodes[0].child_nodes[0].type, kOutputStream);
-    ASSERT_EQ(info->streams_info[1].child_nodes[0].child_nodes[0].supported_streams.size(), 1u);
-    EXPECT_EQ(info->streams_info[1].child_nodes[0].child_nodes[0].supported_streams[0],
-              kStreamTypeMonitoring);
-
-    // Video Conferencing configuration
-    EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kVideoConfig, &info));
-    EXPECT_EQ(info->streams_info.size(), 1u);
-
-    // 1st stream is FR
-    EXPECT_EQ(info->streams_info[0].input_stream_type, kStreamTypeFR);
-    // FR Supported streams
-    EXPECT_EQ(info->streams_info[0].supported_streams.size(), 2u);
-    EXPECT_EQ(info->streams_info[0].supported_streams[0],
-              kStreamTypeFR | kStreamTypeML | kStreamTypeVideo);
-    EXPECT_EQ(info->streams_info[0].supported_streams[1], kStreamTypeVideo);
   }
 
   InternalConfigNode* GetStreamConfigNode(uint32_t config_type,
                                           const fuchsia::camera2::CameraStreamType stream_type) {
-    controller_protocol_device_->PopulateConfigurations();
-    InternalConfigInfo* info = nullptr;
-    // Get internal configuration for debug config.
-    EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(config_type, &info));
-    // Get stream config for kStreamTypeFR; stream.
-    return controller_protocol_device_->GetStreamConfigNode(info, stream_type);
+    InternalConfigInfo& config_info = internal_config_info_.configs_info.at(0);
+
+    switch (config_type) {
+      case kDebugConfig: {
+        config_info = internal_config_info_.configs_info.at(0);
+        break;
+      }
+      case kMonitorConfig: {
+        config_info = internal_config_info_.configs_info.at(1);
+        break;
+      }
+      case kVideoConfig: {
+        config_info = internal_config_info_.configs_info.at(2);
+        break;
+      }
+      default: { return nullptr; }
+    }
+
+    for (auto& stream_info : config_info.streams_info) {
+      auto supported_streams = stream_info.supported_streams;
+      if (std::find(supported_streams.begin(), supported_streams.end(), stream_type) !=
+          supported_streams.end()) {
+        return &stream_info;
+      }
+    }
+    return nullptr;
   }
 
   // This helper API does the basic validation of an Input Node.
@@ -158,17 +103,6 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     return result;
   }
 
-  // This helper API does the basic validation of an Output Node.
-  fit::result<camera::OutputNode*, zx_status_t> GetGraphNode(StreamCreationData* info,
-                                                             ProcessNode* input_node) {
-    auto graph_result = pipeline_manager_->CreateGraph(info, info->node, input_node);
-    EXPECT_TRUE(graph_result.is_ok());
-
-    EXPECT_NE(nullptr, graph_result.value());
-    EXPECT_NE(nullptr, graph_result.value()->client_stream());
-    EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
-    return graph_result;
-  }
   // Returns |true| if all |streams| are present in the
   // vector |streams_to_validate|.
   bool HasAllStreams(const std::vector<fuchsia::camera2::CameraStreamType>& streams_to_validate,
@@ -199,7 +133,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
 
-    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator2_));
 
     // Testing successful creation of |OutputNode|.
     auto input_result = GetInputNode(allocator, stream_type, &info);
@@ -231,7 +165,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
-    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator2_));
 
     auto input_result = GetInputNode(allocator, kStreamTypeDS | kStreamTypeML, &info);
     // Testing successful creation of |GdcNode|.
@@ -255,189 +189,236 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(stream_type);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
-    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
 
-    __UNUSED auto result = GetInputNode(allocator, stream_type, &info);
-    __UNUSED auto graph_result = GetGraphNode(&info, result.value().get());
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+
+    auto fr_head_node = pipeline_manager_->full_resolution_stream();
+    EXPECT_EQ(fr_head_node->type(), NodeType::kInputStream);
+    EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type}));
+    EXPECT_TRUE(HasAllStreams(fr_head_node->supported_streams(), {stream_type}));
+
+    auto output_node =
+        static_cast<OutputNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
+    EXPECT_EQ(output_node->type(), NodeType::kOutputStream);
+    EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type}));
+    EXPECT_TRUE(HasAllStreams(output_node->supported_streams(), {stream_type}));
+    EXPECT_NE(nullptr, output_node->client_stream());
   }
 
   void TestConfigureMonitorConfigStreamFR() {
-    auto stream_type = kStreamTypeDS | kStreamTypeML;
-    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type);
+    auto stream_type1 = kStreamTypeDS | kStreamTypeML;
+    auto stream_type2 = kStreamTypeFR | kStreamTypeML;
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type2);
+    ASSERT_NE(nullptr, stream_config_node);
+    StreamCreationData info;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(stream_type2);
+    info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+
+    auto fr_head_node = pipeline_manager_->full_resolution_stream();
+    auto output_node =
+        static_cast<OutputNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
+
+    // Check if all nodes were created.
+    EXPECT_EQ(NodeType::kInputStream, fr_head_node->type());
+    EXPECT_EQ(NodeType::kOutputStream, output_node->type());
+
+    // Validate the configured streams for all nodes.
+    EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type2}));
+    EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type2}));
+
+    EXPECT_TRUE(HasAllStreams(fr_head_node->supported_streams(), {stream_type1, stream_type2}));
+
+    // Check if client_stream is valid.
+    EXPECT_NE(nullptr, output_node->client_stream());
+  }
+
+  void TestConfigureMonitorConfigStreamDS() {
+    auto stream_type1 = kStreamTypeDS | kStreamTypeML;
+    auto stream_type2 = kStreamTypeFR | kStreamTypeML;
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type1);
+    ASSERT_NE(nullptr, stream_config_node);
+    StreamCreationData info;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(stream_type1);
+    info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+
+    auto fr_head_node = pipeline_manager_->full_resolution_stream();
+    auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
+    auto output_node =
+        static_cast<OutputNode*>(gdc_node->child_nodes_info().at(0).child_node.get());
+
+    // Check if all nodes were created.
+    EXPECT_EQ(NodeType::kGdc, gdc_node->type());
+    EXPECT_EQ(NodeType::kInputStream, fr_head_node->type());
+    EXPECT_EQ(NodeType::kOutputStream, output_node->type());
+
+    // Validate the configured streams for all nodes.
+    EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type1}));
+    EXPECT_TRUE(HasAllStreams(gdc_node->configured_streams(), {stream_type1}));
+    EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type1}));
+
+    EXPECT_TRUE(HasAllStreams(fr_head_node->supported_streams(), {stream_type1, stream_type2}));
+    EXPECT_TRUE(HasAllStreams(gdc_node->supported_streams(), {stream_type1}));
+    EXPECT_TRUE(HasAllStreams(output_node->supported_streams(), {stream_type1}));
+
+    // Check if client_stream is valid.
+    EXPECT_NE(nullptr, output_node->client_stream());
+  }
+
+  void TestConfigure_MonitorConfig_MultiStreamFR() {
+    auto stream_type1 = kStreamTypeDS | kStreamTypeML;
+    auto stream_type2 = kStreamTypeFR | kStreamTypeML;
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type2);
+    ASSERT_NE(nullptr, stream_config_node);
+    StreamCreationData info;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(stream_type2);
+    info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+
+    // Change the requested stream type.
+    stream_config.properties.set_stream_type(stream_type1);
+    info.stream_config = &stream_config;
+
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+
+    auto fr_head_node = pipeline_manager_->full_resolution_stream();
+    auto fr_ml_output_node =
+        static_cast<OutputNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
+    auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes_info().at(1).child_node.get());
+    auto ds_ml_output_node =
+        static_cast<OutputNode*>(gdc_node->child_nodes_info().at(0).child_node.get());
+
+    // Validate input node.
+    EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type1, stream_type2}));
+    EXPECT_TRUE(HasAllStreams(fr_head_node->supported_streams(), {stream_type1, stream_type2}));
+
+    // Check if client_stream is valid.
+    ASSERT_NE(nullptr, fr_ml_output_node->client_stream());
+    ASSERT_NE(nullptr, ds_ml_output_node->client_stream());
+
+    // Start streaming on FR|ML stream. Expecting other stream to be disabled.
+    fr_ml_output_node->client_stream()->Start();
+    EXPECT_TRUE(fr_head_node->enabled());
+    EXPECT_TRUE(fr_ml_output_node->enabled());
+    EXPECT_FALSE(gdc_node->enabled());
+    EXPECT_FALSE(ds_ml_output_node->enabled());
+
+    // Start streaming on DS|ML stream.
+    ds_ml_output_node->client_stream()->Start();
+    EXPECT_TRUE(fr_head_node->enabled());
+    EXPECT_TRUE(fr_ml_output_node->enabled());
+    EXPECT_TRUE(gdc_node->enabled());
+    EXPECT_TRUE(ds_ml_output_node->enabled());
+
+    // Stop streaming on FR|ML stream.
+    fr_ml_output_node->client_stream()->Stop();
+    EXPECT_TRUE(fr_head_node->enabled());
+    EXPECT_FALSE(fr_ml_output_node->enabled());
+    EXPECT_TRUE(gdc_node->enabled());
+    EXPECT_TRUE(ds_ml_output_node->enabled());
+
+    // Stop streaming on DS|ML stream.
+    ds_ml_output_node->client_stream()->Stop();
+    EXPECT_FALSE(fr_head_node->enabled());
+    EXPECT_FALSE(fr_ml_output_node->enabled());
+    EXPECT_FALSE(gdc_node->enabled());
+    EXPECT_FALSE(ds_ml_output_node->enabled());
+  }
+
+  void TestConfigure_MonitorConfig_MultiStreamFR_BadOrdering() {
+    auto stream_type1 = kStreamTypeDS | kStreamTypeML;
+    auto stream_type2 = kStreamTypeFR | kStreamTypeML;
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type1);
+    ASSERT_NE(nullptr, stream_config_node);
+    StreamCreationData info;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(stream_type1);
+    info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+
+    // Change the requested stream type.
+    stream_config.properties.set_stream_type(stream_type2);
+    info.stream_config = &stream_config;
+
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+  }
+
+  void TestConfigureVideoConfigStream1() {
+    auto stream_type = kStreamTypeFR | kStreamTypeML | kStreamTypeVideo;
+    auto stream_config_node = GetStreamConfigNode(kVideoConfig, stream_type);
     ASSERT_NE(nullptr, stream_config_node);
     StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(stream_type);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
-    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
 
-    auto result = GetInputNode(allocator, stream_type, &info);
-    auto graph_result = GetGraphNode(&info, result.value().get());
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
 
-    // Check if GDC node was created.
-    EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
+    auto fr_head_node = pipeline_manager_->full_resolution_stream();
+    auto gdc1_node = static_cast<GdcNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
+    auto gdc2_node = static_cast<GdcNode*>(gdc1_node->child_nodes_info().at(0).child_node.get());
+    auto output_node =
+        static_cast<OutputNode*>(gdc2_node->child_nodes_info().at(0).child_node.get());
 
-    // Validate the configured and supported streams for Input node.
-    EXPECT_TRUE(HasAllStreams(result.value()->configured_streams(), {stream_type}));
+    // Check if all nodes were created appropriately.
+    EXPECT_EQ(NodeType::kGdc, gdc1_node->type());
+    EXPECT_EQ(NodeType::kGdc, gdc2_node->type());
+    EXPECT_EQ(NodeType::kInputStream, fr_head_node->type());
+    EXPECT_EQ(NodeType::kOutputStream, output_node->type());
 
-    EXPECT_TRUE(HasAllStreams(result.value()->supported_streams(),
-                              {stream_type, kStreamTypeFR | kStreamTypeML}));
+    // Validate the configured streams for all nodes.
+    EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type}));
+    EXPECT_TRUE(HasAllStreams(gdc1_node->configured_streams(), {stream_type}));
+    EXPECT_TRUE(HasAllStreams(gdc2_node->configured_streams(), {stream_type}));
+    EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type}));
 
-    // Validate the configured and supported streams for GDC node.
-    EXPECT_TRUE(
-        HasAllStreams(graph_result.value()->parent_node()->configured_streams(), {stream_type}));
+    EXPECT_TRUE(HasAllStreams(fr_head_node->supported_streams(), {stream_type, kStreamTypeVideo}));
+    EXPECT_TRUE(HasAllStreams(gdc1_node->supported_streams(), {stream_type, kStreamTypeVideo}));
+    EXPECT_TRUE(HasAllStreams(gdc2_node->supported_streams(), {stream_type}));
+    EXPECT_TRUE(HasAllStreams(output_node->supported_streams(), {stream_type}));
 
-    EXPECT_TRUE(
-        HasAllStreams(graph_result.value()->parent_node()->supported_streams(), {stream_type}));
-
-    // Validate the configured and supported streams for Output node.
-    EXPECT_TRUE(HasAllStreams(graph_result.value()->configured_streams(), {stream_type}));
-
-    EXPECT_TRUE(HasAllStreams(graph_result.value()->supported_streams(), {stream_type}));
-
-    // Check if the stream got created.
-    EXPECT_TRUE(camera::HasStreamType(result.value()->configured_streams(),
-                                      info.stream_config->properties.stream_type()));
-
-    // Change the requested stream type.
-    stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
-    info.stream_config = &stream_config;
-
-    auto append_result =
-        pipeline_manager_->FindNodeToAttachNewStream(&info, info.node, result.value().get());
-    ASSERT_EQ(true, append_result.is_ok());
-
-    EXPECT_EQ(NodeType::kInputStream, append_result.value().second->type());
-    EXPECT_EQ(append_result.value().second->supported_streams().size(), 2u);
-
-    // Check for a stream which is not created.
-    EXPECT_FALSE(camera::HasStreamType(result.value()->configured_streams(),
-                                       info.stream_config->properties.stream_type()));
-    // Change the requested stream type to something invalid for this configuration.
-    stream_config.properties.set_stream_type(kStreamTypeML);
-    info.stream_config = &stream_config;
-
-    append_result =
-        pipeline_manager_->FindNodeToAttachNewStream(&info, info.node, result.value().get());
-    ASSERT_EQ(true, append_result.is_error());
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, append_result.error());
-  }
-
-  void TestConfigureMonitorConfigStreamDS() {
-    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeMonitoring);
-    ASSERT_NE(nullptr, stream_config_node);
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(kStreamTypeMonitoring);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
-    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
-
-    auto result = GetInputNode(allocator, kStreamTypeMonitoring, &info);
-    auto graph_result = GetGraphNode(&info, result.value().get());
-
-    // Check if GDC node was created.
-    EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
-
-    // Validate the configured and supported streams for Input node.
-    EXPECT_TRUE(HasAllStreams(result.value()->configured_streams(), {kStreamTypeMonitoring}));
-    EXPECT_TRUE(HasAllStreams(result.value()->supported_streams(), {kStreamTypeMonitoring}));
-
-    // Validate the configured and supported streams for GDC node.
-    EXPECT_TRUE(HasAllStreams(graph_result.value()->parent_node()->supported_streams(),
-                              {kStreamTypeMonitoring}));
-    EXPECT_TRUE(HasAllStreams(graph_result.value()->parent_node()->configured_streams(),
-                              {kStreamTypeMonitoring}));
-
-    // Validate the configured and supported streams for Output node.
-    EXPECT_TRUE(HasAllStreams(graph_result.value()->supported_streams(), {kStreamTypeMonitoring}));
-    EXPECT_TRUE(HasAllStreams(graph_result.value()->configured_streams(), {kStreamTypeMonitoring}));
-  }
-
-  void TestConfigureVideoConfigStream1() {
-    auto stream_config_node =
-        GetStreamConfigNode(kVideoConfig, kStreamTypeFR | kStreamTypeML | kStreamTypeVideo);
-    ASSERT_NE(nullptr, stream_config_node);
-
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML | kStreamTypeVideo);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
-    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
-
-    auto result = GetInputNode(allocator, kStreamTypeFR | kStreamTypeML | kStreamTypeVideo, &info);
-    auto graph_result = GetGraphNode(&info, result.value().get());
-
-    // Check if GDC1 & GDC2 node was created.
-    EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
-    EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->parent_node()->type());
-
-    // Validate the configured and supported streams for Input node.
-    EXPECT_TRUE(HasAllStreams(result.value()->configured_streams(),
-                              {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
-    EXPECT_TRUE(
-        HasAllStreams(result.value()->supported_streams(),
-                      {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo, kStreamTypeVideo}));
-
-    // Validate the configured and supported streams for GDC2 node.
-    EXPECT_TRUE(HasAllStreams(graph_result.value()->parent_node()->configured_streams(),
-                              {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
-    EXPECT_TRUE(HasAllStreams(graph_result.value()->parent_node()->supported_streams(),
-                              {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
-
-    // Validate the configured and supported streams for GDC1 node.
-    EXPECT_TRUE(
-        HasAllStreams(graph_result.value()->parent_node()->parent_node()->configured_streams(),
-                      {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
-    EXPECT_TRUE(
-        HasAllStreams(graph_result.value()->parent_node()->parent_node()->supported_streams(),
-                      {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo, kStreamTypeVideo}));
-
-    // Validate the configured and supported streams for Output node.
-    EXPECT_TRUE(HasAllStreams(graph_result.value()->configured_streams(),
-                              {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
-    EXPECT_TRUE(HasAllStreams(graph_result.value()->supported_streams(),
-                              {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
-
-    // Check if the stream got created.
-    EXPECT_TRUE(camera::HasStreamType(result.value()->configured_streams(),
-                                      info.stream_config->properties.stream_type()));
-
-    // Change the requested stream type.
-    stream_config.properties.set_stream_type(kStreamTypeVideo);
-    info.stream_config = &stream_config;
-
-    auto append_result =
-        pipeline_manager_->FindNodeToAttachNewStream(&info, info.node, result.value().get());
-    ASSERT_EQ(true, append_result.is_ok());
-
-    EXPECT_EQ(NodeType::kGdc, append_result.value().second->type());
-    EXPECT_EQ(append_result.value().second->supported_streams().size(), 2u);
-
-    // Check for a stream which is not created.
-    EXPECT_FALSE(camera::HasStreamType(result.value()->configured_streams(),
-                                       info.stream_config->properties.stream_type()));
+    // Check if client_stream is valid.
+    EXPECT_NE(nullptr, output_node->client_stream());
   }
 
   void TestShutdownPathAfterStreamingOn() {
-    auto stream_config_node = GetStreamConfigNode(kDebugConfig, kStreamTypeFR);
+    auto stream_type = kStreamTypeFR;
+    auto stream_config_node = GetStreamConfigNode(kDebugConfig, stream_type);
     ASSERT_NE(nullptr, stream_config_node);
-
     StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(kStreamTypeFR);
+    stream_config.properties.set_stream_type(stream_type);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
 
-    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
 
-    auto result = GetInputNode(allocator, kStreamTypeFR, &info);
-    auto graph_result = GetGraphNode(&info, result.value().get());
+    auto fr_head_node = pipeline_manager_->full_resolution_stream();
+    auto output_node =
+        static_cast<OutputNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
 
     // Set streaming on.
-    graph_result.value()->client_stream()->Start();
+    output_node->client_stream()->Start();
 
     EXPECT_NO_FATAL_FAILURE(pipeline_manager_->OnClientStreamDisconnect(&info));
   }
@@ -495,185 +476,66 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   void TestMultipleStartStreaming() {
-    auto stream_config_node = GetStreamConfigNode(kDebugConfig, kStreamTypeFR);
+    auto stream_type = kStreamTypeFR;
+    auto stream_config_node = GetStreamConfigNode(kDebugConfig, stream_type);
     ASSERT_NE(nullptr, stream_config_node);
-
     StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(kStreamTypeFR);
+    stream_config.properties.set_stream_type(stream_type);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
-    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
 
-    auto result = GetInputNode(allocator, kStreamTypeFR, &info);
-    auto graph_result = GetGraphNode(&info, result.value().get());
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+
+    auto fr_head_node = pipeline_manager_->full_resolution_stream();
+    auto output_node =
+        static_cast<OutputNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
 
     // Set streaming on.
-    graph_result.value()->client_stream()->Start();
+    output_node->client_stream()->Start();
 
-    EXPECT_NO_FATAL_FAILURE(graph_result.value()->client_stream()->Start());
-  }
-
-  void TestConfigure_MonitorConfig_MultiStreamFR_BadOrdering() {
-    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeDS | kStreamTypeML);
-    ASSERT_NE(nullptr, stream_config_node);
-
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
-    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
-
-    auto result = GetInputNode(allocator, kStreamTypeDS | kStreamTypeML, &info);
-    __UNUSED auto graph_result = GetGraphNode(&info, result.value().get());
-
-    // Change the requested stream type.
-    stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
-    info.stream_config = &stream_config;
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
-
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
-              pipeline_manager_->AppendToExistingGraph(&info, result.value().get(), stream));
-  }
-
-  void TestConfigure_MonitorConfig_MultiStreamFR() {
-    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeFR | kStreamTypeML);
-    EXPECT_NE(nullptr, stream_config_node);
-
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
-    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
-
-    auto result = GetInputNode(allocator, kStreamTypeFR | kStreamTypeML, &info);
-    auto graph_result = GetGraphNode(&info, result.value().get());
-
-    // Change the requested stream type.
-    stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
-    info.stream_config = &stream_config;
-
-    auto append_result =
-        pipeline_manager_->FindNodeToAttachNewStream(&info, info.node, result.value().get());
-    EXPECT_EQ(true, append_result.is_ok());
-
-    auto output_node_result = pipeline_manager_->CreateGraph(&info, append_result.value().first,
-                                                             append_result.value().second);
-    EXPECT_EQ(true, output_node_result.is_ok());
-
-    // Push this new requested stream to all pre-existing nodes |configured_streams| vector.
-    auto requested_stream_type = info.stream_config->properties.stream_type();
-    auto current_node = append_result.value().second;
-    while (current_node) {
-      current_node->configured_streams().push_back(requested_stream_type);
-      current_node = current_node->parent_node();
-    }
-
-    auto ml_fr_output = graph_result.value();
-    auto ml_ds_output = output_node_result.value();
-
-    EXPECT_EQ(ml_ds_output->type(), NodeType::kOutputStream);
-    EXPECT_TRUE(HasAllStreams(ml_ds_output->supported_streams(), {kStreamTypeDS | kStreamTypeML}));
-
-    EXPECT_EQ(ml_ds_output->parent_node()->type(), NodeType::kGdc);
-    EXPECT_TRUE(HasAllStreams(ml_ds_output->parent_node()->supported_streams(),
-                              {kStreamTypeDS | kStreamTypeML}));
-
-    EXPECT_EQ(ml_ds_output->parent_node()->parent_node()->type(), NodeType::kInputStream);
-    EXPECT_TRUE(HasAllStreams(ml_ds_output->parent_node()->parent_node()->supported_streams(),
-                              {kStreamTypeDS | kStreamTypeML, kStreamTypeFR | kStreamTypeML}));
-    EXPECT_TRUE(HasAllStreams(ml_ds_output->parent_node()->parent_node()->configured_streams(),
-                              {kStreamTypeDS | kStreamTypeML, kStreamTypeFR | kStreamTypeML}));
-
-    // Test Streaming On for ML FR stream.
-    ml_fr_output->client_stream()->Start();
-    EXPECT_TRUE(ml_fr_output->enabled());
-    EXPECT_TRUE(ml_fr_output->parent_node()->enabled());
-    // Expect the ML DS stream to be disabled.
-    EXPECT_FALSE(ml_ds_output->enabled());
-    EXPECT_FALSE(ml_ds_output->parent_node()->enabled());
-    EXPECT_TRUE(ml_ds_output->parent_node()->parent_node()->enabled());
-
-    // Now test the streaming on for ML DS stream.
-    ml_ds_output->client_stream()->Start();
-    EXPECT_TRUE(ml_ds_output->enabled());
-    EXPECT_TRUE(ml_ds_output->parent_node()->enabled());
-    EXPECT_TRUE(ml_ds_output->parent_node()->parent_node()->enabled());
-    // ML FR should still be streaming.
-    EXPECT_TRUE(ml_fr_output->enabled());
-    EXPECT_TRUE(ml_fr_output->parent_node()->enabled());
-
-    // Stop ML FR stream.
-    ml_fr_output->client_stream()->Stop();
-    EXPECT_FALSE(ml_fr_output->enabled());
-    EXPECT_TRUE(ml_fr_output->parent_node()->enabled());
-    // Expect the ML DS stream to be enabled.
-    EXPECT_TRUE(ml_ds_output->enabled());
-    EXPECT_TRUE(ml_ds_output->parent_node()->enabled());
-    EXPECT_TRUE(ml_ds_output->parent_node()->parent_node()->enabled());
-
-    // Stop ML DS stream.
-    ml_ds_output->client_stream()->Stop();
-    EXPECT_FALSE(ml_ds_output->enabled());
-    EXPECT_FALSE(ml_ds_output->parent_node()->enabled());
-    EXPECT_FALSE(ml_ds_output->parent_node()->parent_node()->enabled());
-    // ML FR should be disabled.
-    EXPECT_FALSE(ml_fr_output->enabled());
-    EXPECT_FALSE(ml_fr_output->parent_node()->enabled());
+    EXPECT_NO_FATAL_FAILURE(output_node->client_stream()->Start());
   }
 
   void TestInUseBufferCounts() {
-    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeFR | kStreamTypeML);
-    EXPECT_NE(nullptr, stream_config_node);
-
+    auto stream_type1 = kStreamTypeDS | kStreamTypeML;
+    auto stream_type2 = kStreamTypeFR | kStreamTypeML;
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type2);
+    ASSERT_NE(nullptr, stream_config_node);
     StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
+    stream_config.properties.set_stream_type(stream_type2);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
-    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    buffer_collection.buffer_count = kNumBuffers;
+    info.output_buffers = std::move(buffer_collection);
 
-    auto result = GetInputNode(allocator, kStreamTypeFR | kStreamTypeML, &info);
-    auto graph_result = GetGraphNode(&info, result.value().get());
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
 
     // Change the requested stream type.
-    stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
+    stream_config.properties.set_stream_type(stream_type1);
     info.stream_config = &stream_config;
 
-    auto append_result =
-        pipeline_manager_->FindNodeToAttachNewStream(&info, info.node, result.value().get());
-    EXPECT_EQ(true, append_result.is_ok());
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
 
-    auto output_node_result = pipeline_manager_->CreateGraph(&info, append_result.value().first,
-                                                             append_result.value().second);
-    EXPECT_EQ(true, output_node_result.is_ok());
-
-    // Push this new requested stream to all pre-existing nodes |configured_streams| vector.
-    auto requested_stream_type = info.stream_config->properties.stream_type();
-    auto current_node = append_result.value().second;
-    while (current_node) {
-      current_node->configured_streams().push_back(requested_stream_type);
-      current_node = current_node->parent_node();
-    }
-
-    auto ml_fr_output = graph_result.value();
-    auto ml_ds_output = output_node_result.value();
-    auto isp_node = static_cast<camera::InputNode*>(ml_fr_output->parent_node());
-
-    auto isp_stream_protocol = std::make_unique<camera::IspStreamProtocol>();
-    fake_isp_.PopulateStreamProtocol(isp_stream_protocol->protocol());
-    isp_node->set_isp_stream_protocol(std::move(isp_stream_protocol));
+    auto fr_head_node = pipeline_manager_->full_resolution_stream();
+    auto fr_ml_output_node =
+        static_cast<OutputNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
+    auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes_info().at(1).child_node.get());
+    auto ds_ml_output_node =
+        static_cast<OutputNode*>(gdc_node->child_nodes_info().at(0).child_node.get());
 
     // Start streaming both streams.
-    ml_fr_output->client_stream()->Start();
-    ml_ds_output->client_stream()->Start();
+    fr_ml_output_node->client_stream()->Start();
+    ds_ml_output_node->client_stream()->Start();
 
     // Disable the output node so we do not client.
     // This is needed for tests.
-    ml_fr_output->set_enabled(false);
-    ml_ds_output->set_enabled(false);
+    fr_ml_output_node->set_enabled(false);
+    ds_ml_output_node->set_enabled(false);
 
     // ISP is single parent for two nodes.
     // Invoke OnFrameAvailable() for the ISP node. Buffer index = 1.
@@ -688,34 +550,30 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
             },
     };
 
-    EXPECT_NO_FATAL_FAILURE(isp_node->OnFrameAvailable(&frame_info));
+    EXPECT_NO_FATAL_FAILURE(fr_head_node->OnFrameAvailable(&frame_info));
 
-    EXPECT_EQ(isp_node->get_in_use_buffer_count(0), 0u);
-    EXPECT_EQ(isp_node->get_in_use_buffer_count(frame_info.buffer_id), 1u);
+    EXPECT_EQ(fr_head_node->get_in_use_buffer_count(0), 0u);
+    EXPECT_EQ(fr_head_node->get_in_use_buffer_count(frame_info.buffer_id), 1u);
 
-    EXPECT_NO_FATAL_FAILURE(isp_node->OnReleaseFrame(frame_info.buffer_id));
-    EXPECT_EQ(isp_node->get_in_use_buffer_count(frame_info.buffer_id), 0u);
+    EXPECT_NO_FATAL_FAILURE(fr_head_node->OnReleaseFrame(frame_info.buffer_id));
+    EXPECT_EQ(fr_head_node->get_in_use_buffer_count(frame_info.buffer_id), 0u);
 
-    ml_fr_output->client_stream()->Stop();
-    ml_ds_output->client_stream()->Stop();
+    fr_ml_output_node->client_stream()->Stop();
+    ds_ml_output_node->client_stream()->Stop();
   }
 
   FakeIsp fake_isp_;
   FakeGdc fake_gdc_;
-  async::Loop loop_;
   async_dispatcher_t dispatcher_;
-  std::unique_ptr<ControllerImpl> controller_protocol_device_;
   fuchsia::camera2::hal::ControllerSyncPtr camera_client_;
   std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<camera::PipelineManager> pipeline_manager_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator1_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator2_;
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator3_;
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;
+  InternalConfigs internal_config_info_;
 };
-
-TEST_F(ControllerProtocolTest, GetConfigs) { TestInternalConfigs(); }
 
 TEST_F(ControllerProtocolTest, GetDebugStreamConfig) { TestDebugStreamConfigNode(); }
 

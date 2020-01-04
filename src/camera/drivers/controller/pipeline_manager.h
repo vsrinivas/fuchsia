@@ -47,10 +47,6 @@ class PipelineManager {
   zx_status_t ConfigureStreamPipeline(StreamCreationData* info,
                                       fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
-  fit::result<ProcessNode*, zx_status_t> CreateGdcNode(StreamCreationData* info,
-                                                       ProcessNode* parent_node,
-                                                       const InternalConfigNode& internal_gdc_node);
-
   // Creates the stream pipeline graph and appends it to the input node (|parent_node|).
   // Args:
   // |internal_node| : Internal node of the node where this new graph needs to append.
@@ -69,6 +65,9 @@ class PipelineManager {
   fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t> FindNodeToAttachNewStream(
       StreamCreationData* info, const InternalConfigNode& current_internal_node,
       ProcessNode* graph_head);
+
+  ProcessNode* full_resolution_stream() { return full_resolution_stream_.get(); }
+  ProcessNode* downscaled_resolution_stream() { return downscaled_resolution_stream_.get(); }
 
  private:
   fit::result<std::unique_ptr<InputNode>, zx_status_t> ConfigureStreamPipelineHelper(
