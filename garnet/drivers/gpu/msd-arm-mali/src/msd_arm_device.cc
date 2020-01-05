@@ -1105,6 +1105,7 @@ bool MsdArmDevice::IsProtectedModeSupported() {
 }
 
 void MsdArmDevice::EnterProtectedMode() {
+  TRACE_DURATION("magma", "MsdArmDevice::EnterProtectedMode");
   // TODO(MA-522): If cache-coherency is enabled, power down L2 and wait for the
   // completion of that.
   register_io_->Write32(registers::GpuCommand::kOffset,
@@ -1112,6 +1113,7 @@ void MsdArmDevice::EnterProtectedMode() {
 }
 
 bool MsdArmDevice::ExitProtectedMode() {
+  TRACE_DURATION("magma", "MsdArmDevice::ExitProtectedMode");
   // Remove perf counter address mapping.
   perf_counters_->ForceDisable();
   // |force_expire| is false because nothing should have been using an address
