@@ -1,0 +1,33 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### generate tags for .fidl files
+
+## usage: fx fidltags
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+main () {
+    if [ $# -gt 0 ]; then
+        echo "Script to generate TAGS for .fidl files"
+        echo "Uses the (already built) outputs of fidlc, so you want to run this after"
+        echo "completion of a successful build."
+        echo
+        echo "Generates ${FUCHSIA_DIR}/fidl-tags, which you can use in (e.g.) Vim as:"
+        echo "  :set tags^=${FUCHSIA_DIR}/fidl-tags"
+        echo
+        echo "Usage: fx fidltags"
+        echo
+        exit
+    fi
+
+    ${FUCHSIA_DIR}/scripts/generate-fidl-tags.py \
+        --build-dir=${FUCHSIA_BUILD_DIR} \
+        --zircon-build-dir=${ZIRCON_BUILDROOT} \
+        --output=${FUCHSIA_DIR}/fidl-tags
+}
+
+main "$@"

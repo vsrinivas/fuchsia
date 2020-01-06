@@ -45,6 +45,7 @@ cscope.*
 default.profraw
 rls*.log
 Session.vim
+fidl-tags
 tags
 TAGS
 Thumbs.db

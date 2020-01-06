@@ -13,6 +13,7 @@ per-file debug=sadmac@google.com
 per-file delta,save-package-stats=kevinwells@google.com,raggi@google.com
 per-file exec-host-tests=joshuaseaton@google.com
 per-file fidlcat=jeremymanson@google.com
+per-file fidltags=scottmg@google.com
 per-file flutter-attach=zra@google.com
 per-file format-code=jeremymanson@google.com
 per-file fuzz=aarongreen@google.com
