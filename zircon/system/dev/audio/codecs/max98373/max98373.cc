@@ -162,6 +162,11 @@ zx_status_t Max98373::Create(zx_device_t* parent) {
   fbl::AllocChecker ac;
   auto dev = std::unique_ptr<Max98373>(
       new (&ac) Max98373(parent, components[COMPONENT_I2C], components[COMPONENT_RESET_GPIO]));
+  if (!ac.check()) {
+    zxlogf(ERROR, "%s Could not allocate memory\n", __FILE__);
+    return ZX_ERR_NO_MEMORY;
+  }
+
   status = dev->Bind();
   if (status != ZX_OK) {
     return status;
