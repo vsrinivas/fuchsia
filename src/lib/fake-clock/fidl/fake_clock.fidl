@@ -1,0 +1,69 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.testing;
+using zx;
+
+/// Allows access to fake clocks managed by `FakeClockControl`.
+[Discoverable]
+protocol FakeClock {
+    /// Gets the current time.
+    Get() -> (zx.time time);
+    /// Registers the event handle `event` to be signaled with `ZX_EVENTPAIR_SIGNALED` when the
+    /// provided `time` is reached by the fake clock.
+    /// The `FakeClock` instance will retain this event (even after it's fired) for as long as the
+    /// client-side of the provided event pair `event` is open.
+    RegisterEvent(handle<eventpair> event, zx.time time);
+    /// Reschedules an event to be signalled with `ZX_EVENTPAIR_SIGNALED` at the new deadline in
+    /// `time`.
+    /// `event` is a duplicate of the client-side of the event pair, and it's used to retrieve the
+    /// originally registered event through its kernel object identifier.
+    RescheduleEvent(handle<eventpair> event, zx.time time) -> ();
+    /// Cancels a previously registered event.
+    /// `event` is a duplicate of the client-side of the event pair, and it's used to retrieve the
+    /// originally registered event through its kernel object identifier.
+    CancelEvent(handle<eventpair> event) -> ();
+};
+
+/// A fake clock increment in a uniform random range.
+struct RandomRange {
+    /// The lower bound (inclusive) for the random duration.
+    zx.duration min_rand;
+    /// The upper bound (exclusive) for the random duration.
+    zx.duration max_rand;
+};
+
+/// A fake clock increment step.
+union Increment {
+    /// Increments the fake clock by the `determined` duration.
+    1: zx.duration determined;
+    /// Increments the fake clock by a random duration chosen uniformly from the range in `random`.
+    2: RandomRange random;
+};
+
+/// Provides control over fake clocks.
+///
+/// `FakeClockControl` provides complete control of the fake clocks that it provides, and serves
+/// over `FakeClock`.
+///
+/// Upon start up, all the clocks are set to free-running with increments set to 1ms:1ms (same as
+/// calling `SetIncrements` with a `real` duration of 1ms and a `determined` `increment` of 1ms as
+/// well).
+///
+/// The initial time value for every fake clock is read from the corresponding real clock at start
+/// up.
+[Discoverable]
+protocol FakeClockControl {
+    /// Advances the fake clock `increment` once.
+    /// Returns `ZX_ERR_INVALID_ARGS` if the provided `increment` is invalid (such as a badly formed
+    /// RandomRange). Returns `ZX_ERR_ACCESS_DENIED` if called while the FakeClock is free-running.
+    Advance(Increment increment) -> () error zx.status;
+    /// Resumes free-running increments on the fake clock.
+    /// `real` is the period based on the real monotonic clock over which `increment` is going to be
+    /// applied. Returns `ZX_ERR_INVALID_ARGS` if the provided `increment` is invalid (such as a
+    /// badly formed RandomRange).
+    ResumeWithIncrements(zx.duration real, Increment increment) -> () error zx.status;
+    /// Pauses free-running increments on the fake clock.
+    Pause() -> ();
+};
