@@ -9,7 +9,6 @@
 pub mod cobalt_event_builder;
 pub mod connector;
 pub mod sender;
-pub mod traits;
 
 use futures::prelude::*;
 

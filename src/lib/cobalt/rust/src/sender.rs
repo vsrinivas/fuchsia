@@ -6,7 +6,7 @@
 //! FIDL service.
 
 use {
-    crate::traits::AsEventCodes,
+    cobalt_client::traits::AsEventCodes,
     fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload, HistogramBucket},
     futures::channel::mpsc,
     log::{error, info},

@@ -5,7 +5,7 @@
 //! Helper builder for constructing a `CobaltEvent`.
 
 use {
-    crate::traits::AsEventCodes,
+    cobalt_client::traits::AsEventCodes,
     fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload, HistogramBucket},
 };
 

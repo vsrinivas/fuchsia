@@ -22,5 +22,6 @@ rustc_library("fuchsia-cobalt") {
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
+    "//third_party/cobalt/src/lib/client/rust:cobalt-client",
   ]
 }
