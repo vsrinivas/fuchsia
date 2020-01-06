@@ -5,11 +5,12 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::{self as inspect, Node, NumericProperty, StringProperty, UintProperty},
-    fuchsia_vfs_pseudo_fs::{
-        directory::entry::DirectoryEntry, file::asynchronous::read_only, pseudo_directory,
+    fuchsia_vfs_pseudo_fs_mt::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::pcb::asynchronous::read_only, path::Path, pseudo_directory,
     },
     fuchsia_zircon as zx,
-    std::{collections::BTreeMap, future::Future, path::PathBuf},
+    std::{collections::BTreeMap, path::PathBuf},
 };
 
 const STORAGE_INSPECT_FILE_NAME: &'static str = "storage_stats.inspect";
@@ -32,26 +33,20 @@ fn storage_inspect_proxy(name: &str, path: PathBuf) -> Result<DirectoryProxy, Er
     let (proxy, server) = create_proxy::<DirectoryMarker>()?;
     let name = name.to_string(); // need to allocate before passing to async block
     fasync::spawn(async move {
-        publish_data_directory_stats(name, path, server.into_channel().into()).await;
+        publish_data_directory_stats(name, path, server.into_channel().into());
     });
-
     Ok(proxy)
 }
 
-fn publish_data_directory_stats(
-    name: String,
-    path: PathBuf,
-    server_end: ServerEnd<NodeMarker>,
-) -> impl Future {
-    let mut dir = pseudo_directory! {
+fn publish_data_directory_stats(name: String, path: PathBuf, server_end: ServerEnd<NodeMarker>) {
+    let dir = pseudo_directory! {
         STORAGE_INSPECT_FILE_NAME => read_only(
             // we clone the arguments because this macro may run this closure repeatedly
             move || get_data_directory_stats(name.clone(), path.clone()))
     };
 
-    dir.open(OPEN_RIGHT_READABLE, 0, &mut std::iter::empty(), server_end);
-
-    dir
+    let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+    dir.open(scope, OPEN_RIGHT_READABLE, 0, Path::empty(), server_end);
 }
 
 async fn get_filesystem_info_from_admin(
@@ -265,8 +260,7 @@ mod tests {
                 "test_data".to_string(),
                 path_clone,
                 server.into_channel().into(),
-            )
-            .await;
+            );
         });
 
         let f = io_util::open_file(

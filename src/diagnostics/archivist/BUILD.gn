@@ -32,7 +32,7 @@ rustc_library("lib") {
     "//src/lib/inspect/rust/fuchsia-inspect-contrib",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/lib/fuchsia-watch",
-    "//src/storage/lib/pseudo-fs",
+    "//src/storage/lib/pseudo-fs-mt",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:chrono",
