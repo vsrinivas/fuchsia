@@ -467,8 +467,7 @@ impl DeviceState {
         lif_id: UUID,
         properties: &LifProperties,
     ) -> error::Result<()> {
-        let l = self.lif_manager.lif_mut(&lif_id);
-        let lif = match l {
+        let lif = match self.lif_manager.lif_mut(&lif_id) {
             None => {
                 info!("update_lif_properties: lif not found {:?} ", lif_id);
                 return Err(error::NetworkManager::LIF(error::Lif::NotSupported));

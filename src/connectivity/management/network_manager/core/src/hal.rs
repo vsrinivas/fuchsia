@@ -155,9 +155,9 @@ pub struct Interface {
 impl Interface {
     pub fn get_address(&self) -> Option<LifIpAddr> {
         self.ipv4_addr.as_ref().map(|a| match a {
-            InterfaceAddress::Unknown(a) => a.clone(),
-            InterfaceAddress::Static(a) => a.clone(),
-            InterfaceAddress::Dhcp(a) => a.clone(),
+            InterfaceAddress::Unknown(a) => *a,
+            InterfaceAddress::Static(a) => *a,
+            InterfaceAddress::Dhcp(a) => *a,
         })
     }
 }

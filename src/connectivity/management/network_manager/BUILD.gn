@@ -17,6 +17,7 @@ rustc_binary("bin") {
     "core:lib",
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
+    "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",

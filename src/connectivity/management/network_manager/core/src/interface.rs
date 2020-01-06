@@ -113,17 +113,22 @@ impl Config {
             (if wlan { "wlans" } else { "eths" }, "/platform/")
         };
 
-        let index = topological_path.find(pat).ok_or(anyhow::format_err!(
-            "unexpected topological path {}: {} is not found",
-            topological_path,
-            pat
-        ))?;
+        let index = topological_path.find(pat).ok_or_else(|| {
+            anyhow::format_err!(
+                "unexpected topological path {}: {} is not found",
+                topological_path,
+                pat
+            )
+        })?;
         let topological_path = &topological_path[index + pat.len()..];
-        let index = topological_path.find('/').ok_or(anyhow::format_err!(
-            "unexpected topological path suffix {}: '/' is not found after {}",
-            topological_path,
-            pat
-        ))?;
+        let index = topological_path.find('/').ok_or_else(|| {
+            anyhow::format_err!(
+                "unexpected topological path suffix {}: '/' is not found after {}",
+                topological_path,
+                pat
+            )
+        })?;
+
         let mut name = String::from(prefix);
         for digit in topological_path[..index]
             .trim_end_matches(|c: char| !c.is_digit(16) || c == '0')
