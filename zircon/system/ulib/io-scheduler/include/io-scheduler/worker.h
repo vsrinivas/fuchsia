@@ -30,12 +30,14 @@ class Worker {
   Worker(Scheduler* sched, uint32_t id);
 
   static int ThreadEntry(void* arg);
-  void ThreadMain();
-  void WorkerLoop();
+  void WorkerLoop();   // Main worker loop.
+  void DoAcquire();    // Acquire new ops.
+  void ExecuteLoop();  // Issue available ops.
 
   Scheduler* sched_ = nullptr;
   uint32_t id_;
-  bool cancelled_ = false;  // Exit has been requested.
+  bool cancelled_ = false;     // Exit has been requested.
+  bool input_closed_ = false;  // The op source has been closed.
   bool thread_started_ = false;
   thrd_t thread_;
 };

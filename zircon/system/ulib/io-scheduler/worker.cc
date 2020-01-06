@@ -44,80 +44,95 @@ int Worker::ThreadEntry(void* arg) {
   return 0;
 }
 
-void Worker::WorkerLoop() {
+void Worker::DoAcquire() {
+  ZX_DEBUG_ASSERT(!input_closed_);
+  SchedulerClient* client = sched_->client();
   const size_t max_ops = 10;
+  zx_status_t status;
+  size_t acquire_count = 0;
+  StreamOp* op_list[max_ops];
+  status = client->Acquire(op_list, max_ops, &acquire_count, true);
+  if (status == ZX_ERR_CANCELED) {
+    // No more ops to read. Drain the streams and exit.
+    input_closed_ = true;
+    return;
+  }
+  if (status != ZX_OK) {
+    fprintf(stderr, "ioworker %u: Unexpected return status from Acquire() %d\n", id_, status);
+    client->Fatal();
+    input_closed_ = true;
+    return;
+  }
+
+  // Containerize all ops for safety.
+  UniqueOp uop_list[max_ops];
+  for (size_t i = 0; i < acquire_count; i++) {
+    uop_list[i].set(op_list[i]);
+  }
+
+  // Enqueue ops in the scheduler's priority queue.
+  size_t num_error = 0;
+  sched_->Enqueue(uop_list, acquire_count, uop_list, &num_error);
+  // Any ops remaining in the list have encountered an error and should be released.
+  for (size_t i = 0; i < num_error; i++) {
+    client->Release(uop_list[i].release());
+  }
+}
+
+void Worker::ExecuteLoop() {
+  ZX_DEBUG_ASSERT(!cancelled_);
   SchedulerClient* client = sched_->client();
   zx_status_t status;
-  while (!cancelled_) {
-    // Fetch ops from the client.
 
-    size_t acquire_count = 0;
-    StreamOp* op_list[max_ops];
-    status = client->Acquire(op_list, max_ops, &acquire_count, true);
-    if (status == ZX_ERR_CANCELED) {
-      // Cancel received, no more ops to read. Drain the streams and exit.
+  for (;;) {
+    // Fetch an op.
+    UniqueOp op;
+    status = sched_->Dequeue(&op, false);
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      // No more ops in scheduler, acquire more.
       break;
+    } else if (status == ZX_ERR_CANCELED) {
+      // Shutdown initiated.
+      cancelled_ = true;
+      break;
+    }
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+
+    Stream* stream;
+    if (op->is_deferred()) {
+      // Op completion has been deferred. Release it now.
+      stream = op->stream();
+      stream->ReleaseOp(std::move(op), client);
+      continue;
+    }
+
+    // Execute it.
+    status = client->Issue(op.get());
+    if (status == ZX_ERR_ASYNC) {
+      // Op queued for async completion. Released when completed.
+      // Op is retained in stream.
+      op.release();
+      continue;
     }
     if (status != ZX_OK) {
-      fprintf(stderr, "Unexpected return status from Acquire() %d\n", status);
-      client->Fatal();
-      break;
+      fprintf(stderr, "ioworker %u: Unexpected return status from Issue() %d\n", id_, status);
+      // Mark op as failed.
+      op->set_result(ZX_ERR_IO);
     }
+    stream = op->stream();
+    stream->ReleaseOp(std::move(op), client);
+  }
+}
 
-    // Containerize all ops for safety.
-    UniqueOp uop_list[max_ops];
-    for (size_t i = 0; i < acquire_count; i++) {
-      uop_list[i].set(op_list[i]);
+void Worker::WorkerLoop() {
+  while ((!input_closed_) || (!cancelled_)) {
+    // Fetch ops from the client.
+    if (!input_closed_) {
+      DoAcquire();
     }
-
-    // Enqueue ops in the scheduler's priority queue.
-
-    size_t num_error = 0;
-    sched_->Enqueue(uop_list, acquire_count, uop_list, &num_error);
-    // Any ops remaining in the list have encountered an error and should be released.
-    for (size_t i = 0; i < num_error; i++) {
-      client->Release(uop_list[i].release());
-    }
-
     // Drain the priority queue.
-
-    for (;;) {
-      // Fetch an op.
-
-      UniqueOp op;
-      status = sched_->Dequeue(&op, false);
-      if (status == ZX_ERR_SHOULD_WAIT) {
-        // No more ops.
-        break;
-      } else if (status == ZX_ERR_CANCELED) {
-        // Shutdown initiated.
-        cancelled_ = true;
-        break;
-      } else if (status != ZX_OK) {
-        fprintf(stderr, "Dequeue() failed %d\n", status);
-        return;
-      }
-
-      // Execute it.
-
-      status = client->Issue(op.get());
-
-      Stream* stream = op->stream();
-      ZX_DEBUG_ASSERT(stream != nullptr);
-
-      if (status == ZX_OK) {
-        // Op completed successfully or encountered a synchronous error.
-        stream->ReleaseOp(std::move(op), client);
-      } else if (status == ZX_ERR_ASYNC) {
-        // Op queued for async completion. Released when completed.
-        // Op is retained in stream.
-        op.release();
-      } else {
-        fprintf(stderr, "Unexpected return status from Issue() %d\n", status);
-        // Mark op as failed.
-        op->set_result(ZX_ERR_IO);
-        stream->ReleaseOp(std::move(op), client);
-      }
+    if (!cancelled_) {
+      ExecuteLoop();
     }
   }
 }
