@@ -4,7 +4,6 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl_fuchsia_device::ControllerSynchronousProxy,
     fidl_fuchsia_io,
     fidl_fuchsia_telephony_ril::{RadioInterfaceLayerMarker, SetupMarker},
     fuchsia_component::{
@@ -12,21 +11,12 @@ use {
         fuchsia_single_component_package_url,
     },
     fuchsia_syslog::{self as syslog, macros::*},
-    fuchsia_zircon as zx, qmi,
-    std::fs::File,
+    qmi,
     std::path::Path,
     tel_dev::{component_test::*, isolated_devmgr},
 };
 
 const RIL_URL: &str = fuchsia_single_component_package_url!("ril-qmi");
-
-fn unbind_fake_device(device: &File) -> Result<(), Error> {
-    let channel = fdio::clone_channel(device)?;
-    let mut interface = ControllerSynchronousProxy::new(channel);
-    interface
-        .schedule_unbind(fuchsia_zircon::Time::INFINITE)?
-        .map_err(|e| zx::Status::from_raw(e).into())
-}
 
 // Tests that creating and destroying a fake QMI device binds and unbinds the qmi-host driver.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -38,7 +28,7 @@ async fn qmi_query_test() -> Result<(), Error> {
     let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
         fuchsia_async::Channel::from_channel(fdio::clone_channel(&tel_dir)?)?,
     );
-    let mut tel_devices = files_async::readdir(&directory_proxy).await?;
+    let tel_devices = files_async::readdir(&directory_proxy).await?;
     let last_device: &files_async::DirEntry = tel_devices.last().expect("no device found");
     let found_device_path = Box::new(Path::new(TEL_PATH).join(last_device.name.clone()));
     assert_eq!(tel_devices.len(), 1);
@@ -59,13 +49,6 @@ async fn qmi_query_test() -> Result<(), Error> {
     fx_log_info!("received and verified responses");
     unbind_fake_device(&found_device)?;
     fx_log_info!("unbinded device");
-    for _ in 0..5 {
-        tel_devices = files_async::readdir(&directory_proxy).await?;
-        if tel_devices.len() == 0 {
-            break;
-        }
-        wait_in_nanos(DEVICE_UNBIND_TIMEOUT_IN_NANOS).await;
-    }
-    assert_eq!(tel_devices.len(), 0);
+    validate_removal_of_fake_device(TEL_PATH).await.expect("validate removal of device");
     Ok(())
 }

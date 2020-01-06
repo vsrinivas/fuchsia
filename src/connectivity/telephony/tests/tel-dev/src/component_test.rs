@@ -5,14 +5,11 @@ use {
     crate::isolated_devmgr,
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_device::ControllerSynchronousProxy,
-    fuchsia_async::{DurationExt, TimeoutExt, Timer},
+    fuchsia_async::{DurationExt, Timer},
     fuchsia_zircon::{self as zx, AsHandleRef, MessageBuf},
     std::fs::File,
     std::path::Path,
 };
-
-pub const ONE_SECOND_IN_NANOS: i64 = 1_000_000_000;
-pub const DEVICE_UNBIND_TIMEOUT_IN_NANOS: i64 = 100_000_000;
 
 /// Resize vec to the size of qmi message
 // TODO (jiamingw): get message from driver without padding (fxb/39128)
@@ -52,44 +49,35 @@ pub async fn get_fake_device_in_isolated_devmgr(dir_path_str: &str) -> Result<Fi
 }
 
 /// Validate 0 device is presented in path `dir_path_str` in IsolatedDevmgr component
-pub async fn validate_removal_of_fake_device(
-    dir_path_str: &str,
-    time_in_nanos: i64,
-) -> Result<(), Error> {
+pub async fn validate_removal_of_fake_device(dir_path_str: &str) -> Result<(), Error> {
     let tel_dir = isolated_devmgr::open_dir_in_isolated_devmgr(dir_path_str)
         .context("err opening tel dir")?;
     let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
         fuchsia_async::Channel::from_channel(fdio::clone_channel(&tel_dir)?)?,
     );
-    let fut = async move {
-        loop {
-            let tel_devices = files_async::readdir(&directory_proxy).await?;
-            if tel_devices.is_empty() {
-                break;
-            }
+    loop {
+        let tel_devices = files_async::readdir(&directory_proxy).await?;
+        if tel_devices.is_empty() {
+            break;
         }
-        Ok::<(), Error>(())
-    };
-    let timeout_err = Err(format_err!("validate_removal_of_fake_device: time out"));
-    fut.on_timeout(zx::Duration::from_nanos(time_in_nanos).after_now(), move || timeout_err)
-        .await?;
-    Ok(())
+    }
+    Ok::<(), Error>(())
 }
 
 /// Remove device in isolated_devmgr
-pub fn unbind_fake_device(device: &File, time_in_nanos: i64) -> Result<(), Error> {
+pub fn unbind_fake_device(device: &File) -> Result<(), Error> {
     let channel = fdio::clone_channel(device)?;
     let mut interface = ControllerSynchronousProxy::new(channel);
-    interface
-        .schedule_unbind(zx::Time::after(zx::Duration::from_nanos(time_in_nanos)))?
-        .map_err(|e| zx::Status::from_raw(e).into())
+    interface.schedule_unbind(zx::Time::INFINITE)?.map_err(|e| zx::Status::from_raw(e).into())
 }
 
-/// Read next message from `channel` with wait time `time`
-pub fn read_next_msg_from_channel(channel: &zx::Channel, time: zx::Time) -> Result<Vec<u8>, Error> {
+/// Read next message from `channel`
+pub fn read_next_msg_from_channel(channel: &zx::Channel) -> Result<Vec<u8>, Error> {
     let mut received_msg = MessageBuf::new();
-    let channel_signals = channel
-        .wait_handle(zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED, time)?;
+    let channel_signals = channel.wait_handle(
+        zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED,
+        zx::Time::INFINITE,
+    )?;
     if channel_signals.contains(zx::Signals::CHANNEL_PEER_CLOSED) {
         return Err(format_err!("read_next_msg_from_channel: peer closed"));
     } else if !channel_signals.contains(zx::Signals::CHANNEL_READABLE) {

@@ -6,7 +6,6 @@ use {
     crate::component_test,
     anyhow::{format_err, Error},
     fidl_fuchsia_telephony_snoop::{Message as SnoopMessage, SnooperEvent, SnooperEventStream},
-    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_zircon as zx,
     futures::{self, stream::TryStreamExt},
 };
@@ -56,10 +55,7 @@ pub async fn validate_snoop_result<'a>(args: ValidateSnoopResultArgs<'a>) -> Res
     }
     // Collect source message from next message from driver channel, if it is present.
     if let Some(channel) = args.driver_channel {
-        let mut qmi_msg_vec = component_test::read_next_msg_from_channel(
-            channel,
-            zx::Time::after(zx::Duration::from_nanos(SNOOPER_TEST_TIMEOUT)),
-        )?;
+        let mut qmi_msg_vec = component_test::read_next_msg_from_channel(channel)?;
         component_test::qmi_vec_resize(&mut qmi_msg_vec)?;
         src_msg_vec.push(qmi_msg_vec);
     }
@@ -81,12 +77,8 @@ pub async fn validate_snoop_result<'a>(args: ValidateSnoopResultArgs<'a>) -> Res
     }
     // Compare snoop messages with source message
     for mut snoop_event_stream in args.snoop_event_stream_vec {
-        let timeout_err = Err(format_err!("validate_snoop_result: snoop client get msg time out"));
-        let mut snoop_qmi_msg_vec = read_next_msg_from_snoop_stream(&mut snoop_event_stream)
-            .on_timeout(zx::Duration::from_nanos(SNOOPER_TEST_TIMEOUT).after_now(), move || {
-                timeout_err
-            })
-            .await?;
+        let mut snoop_qmi_msg_vec =
+            read_next_msg_from_snoop_stream(&mut snoop_event_stream).await?;
         component_test::qmi_vec_resize(&mut snoop_qmi_msg_vec)?;
         if !component_test::is_equal_vec(&snoop_qmi_msg_vec, &src_msg_vec[0]) {
             return Err(format_err!("snoop msg and source msg identical"));

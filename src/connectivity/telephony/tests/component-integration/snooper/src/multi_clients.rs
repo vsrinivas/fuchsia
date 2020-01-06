@@ -11,8 +11,6 @@ use {
 
 const SNOOPER_CLIENT_NUM: i64 = 3;
 
-// TODO (jiamingw): remove timeout within test
-
 #[fuchsia_async::run_singlethreaded(test)]
 async fn snooper_multi_clients() {
     syslog::init_with_tags(&["snooper-multi-clients"]).expect("Can't init logger");
@@ -71,8 +69,6 @@ async fn snooper_multi_clients() {
     fx_log_info!("received and validated QMI request/responses");
 
     // Remove fake device and ensure the device is gone.
-    unbind_fake_device(&qmi_device_file, ONE_SECOND_IN_NANOS).expect("removing fake device");
-    validate_removal_of_fake_device(QMI_PATH, ONE_SECOND_IN_NANOS)
-        .await
-        .expect("validate removal of device");
+    unbind_fake_device(&qmi_device_file).expect("removing fake device");
+    validate_removal_of_fake_device(QMI_PATH).await.expect("validate removal of device");
 }
