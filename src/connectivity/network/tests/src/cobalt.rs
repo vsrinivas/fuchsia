@@ -70,6 +70,13 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         display_events(&events),
     );
 
+    // The stack sees both the client and server side of the TCP connection.
+    // Hence we see the TCP stats below accounting for both sides.
+    let tcp_connections_established_events =
+        events_with_id(&events, networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID);
+    assert_eq!(tcp_connections_established_events.len(), 1);
+    assert_eq!(tcp_connections_established_events[0].count, 2);
+
     std::mem::drop(s1);
     std::mem::drop(s2);
 
@@ -184,6 +191,25 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         "sockets destroyed. events:\n{}\n",
         display_events(&events)
     );
+    // We expect only the server-side to be closed at this point.
+    // The client-side TCP connection would not be closed as yet, because we do
+    // not want to wait for TCP TIME-WAIT interval in this test.
+    // TODO(gvisor.dev/issue/1400) There is currently no way the client can avoid
+    // getting into time-wait on close.
+    let tcp_connections_established_events =
+        events_with_id(&events, networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID);
+    assert_eq!(tcp_connections_established_events.len(), 1);
+    assert_eq!(tcp_connections_established_events[0].count, 1);
+    let tcp_connections_closed_events =
+        events_with_id(&events, networking_metrics::TCP_CONNECTIONS_CLOSED_METRIC_ID);
+    assert_eq!(tcp_connections_closed_events.len(), 1);
+    assert_eq!(tcp_connections_closed_events[0].count, 1);
+    let tcp_connections_reset_events =
+        events_with_id(&events, networking_metrics::TCP_CONNECTIONS_RESET_METRIC_ID);
+    assert_eq!(tcp_connections_reset_events[0].count, 0);
+    let tcp_connections_timed_out_events =
+        events_with_id(&events, networking_metrics::TCP_CONNECTIONS_TIMED_OUT_METRIC_ID);
+    assert_eq!(tcp_connections_timed_out_events[0].count, 0);
 
     Ok(())
 }

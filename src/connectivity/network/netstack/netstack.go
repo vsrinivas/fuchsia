@@ -82,18 +82,23 @@ type stats struct {
 type nicStats map[uint32]uint64
 
 func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, stats *stats, stk *stack.Stack, notify <-chan struct{}) error {
-	// Metric            | Sampling Interval | Aggregation Strategy
-	// SocketCountMax    | socket creation   | max
-	// SocketsCreated    | 1 minute          | delta
-	// SocketsDestroyed  | 1 minute          | delta
-	// PacketsSent       | 1 minute          | delta
-	// PacketsReceived   | 1 minute          | delta
-	// BytesSent         | 1 minute          | delta
-	// BytesReceived     | 1 minute          | delta
+	// Metric                         | Sampling Interval | Aggregation Strategy
+	// SocketCountMax                 | socket creation   | max
+	// SocketsCreated                 | 1 minute          | delta
+	// SocketsDestroyed               | 1 minute          | delta
+	// PacketsSent                    | 1 minute          | delta
+	// PacketsReceived                | 1 minute          | delta
+	// BytesSent                      | 1 minute          | delta
+	// BytesReceived                  | 1 minute          | delta
+	// TCPConnectionsEstablishedTotal | 1 minute          | max
+	// TCPConnectionsClosed           | 1 minute          | delta
+	// TCPConnectionsReset            | 1 minute          | delta
+	// TCPConnectionsTimedout         | 1 minute          | delta
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	var socketCountMax, lastCreated, lastDestroyed uint64
+	var lastTcpConnectionsClosed, lastTcpConnectionsReset, lastTcpConnectionsTimedOut uint64
 	previousTime := time.Now()
 
 	lastNICStats := make(map[tcpip.NICID]nicStats)
@@ -104,6 +109,10 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, 
 	}, func(ts time.Time) {
 		created := stats.SocketsCreated.Value()
 		destroyed := stats.SocketsDestroyed.Value()
+		tcpConnectionsClosed := stats.TCP.EstablishedClosed.Value()
+		tcpConnectionsReset := stats.TCP.EstablishedResets.Value()
+		tcpConnectionsTimedOut := stats.TCP.EstablishedTimedout.Value()
+
 		// TODO: replace with time.Duration.Microseconds when it's available.
 		period := ts.Sub(previousTime).Nanoseconds() / 1e3
 		previousTime = ts
@@ -119,6 +128,22 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, 
 			{
 				MetricId: networking_metrics.SocketsDestroyedMetricId,
 				Payload:  eventCount(period, destroyed-lastDestroyed),
+			},
+			{
+				MetricId: networking_metrics.TcpConnectionsEstablishedTotalMetricId,
+				Payload:  eventCount(period, stats.TCP.CurrentEstablished.Value()),
+			},
+			{
+				MetricId: networking_metrics.TcpConnectionsClosedMetricId,
+				Payload:  eventCount(period, tcpConnectionsClosed-lastTcpConnectionsClosed),
+			},
+			{
+				MetricId: networking_metrics.TcpConnectionsResetMetricId,
+				Payload:  eventCount(period, tcpConnectionsReset-lastTcpConnectionsReset),
+			},
+			{
+				MetricId: networking_metrics.TcpConnectionsTimedOutMetricId,
+				Payload:  eventCount(period, tcpConnectionsTimedOut-lastTcpConnectionsTimedOut),
 			},
 		}
 
@@ -167,6 +192,9 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, 
 		socketCountMax = stats.SocketCount.Value()
 		lastCreated = created
 		lastDestroyed = destroyed
+		lastTcpConnectionsClosed = tcpConnectionsClosed
+		lastTcpConnectionsReset = tcpConnectionsReset
+		lastTcpConnectionsTimedOut = tcpConnectionsTimedOut
 	})
 }
 
