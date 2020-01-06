@@ -35,6 +35,7 @@ rustc_binary("bin") {
     "//src/connectivity/bluetooth/lib/bt-avdtp",
     "//src/connectivity/bluetooth/lib/bt-avdtp",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/argh",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl_table_validation",

@@ -91,15 +91,22 @@ pub struct ConnectedPeers {
     streams: Streams,
     /// Cobalt logger to use and hand out to peers
     cobalt_sender: CobaltSender,
+    /// Media session domain
+    domain: Option<String>,
 }
 
 impl ConnectedPeers {
-    pub(crate) fn new(streams: Streams, cobalt_sender: CobaltSender) -> Self {
+    pub(crate) fn new(
+        streams: Streams,
+        cobalt_sender: CobaltSender,
+        domain: Option<String>,
+    ) -> Self {
         Self {
             connected: DetachableMap::new(),
             descriptors: HashMap::new(),
             streams,
             cobalt_sender,
+            domain,
         }
     }
 
@@ -160,7 +167,7 @@ impl ConnectedPeers {
                 let closed_fut = peer.closed();
                 self.connected.insert(id, RwLock::new(peer));
 
-                let avrcp_relay = AvrcpRelay::start(id).ok();
+                let avrcp_relay = AvrcpRelay::start(id, self.domain.clone()).ok();
 
                 // Remove the peer when we disconnect.
                 let detached_peer = self.connected.get(&id).expect("just added");
@@ -230,15 +237,22 @@ mod tests {
         };
     }
 
-    #[test]
-    fn connected_peers_connect_creates_peer() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+    fn setup_connected_peer_test() -> (fasync::Executor, PeerId, ConnectedPeers, inspect::Inspector)
+    {
+        let exec = fasync::Executor::new().expect("executor should build");
         let id = PeerId(1);
         let (cobalt_sender, _) = fake_cobalt_sender();
 
-        let mut peers = ConnectedPeers::new(Streams::new(), cobalt_sender);
+        let peers = ConnectedPeers::new(Streams::new(), cobalt_sender, None);
 
         let inspect = inspect::Inspector::new();
+
+        (exec, id, peers, inspect)
+    }
+
+    #[test]
+    fn connected_peers_connect_creates_peer() {
+        let (mut exec, id, mut peers, inspect) = setup_connected_peer_test();
 
         let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
@@ -265,13 +279,7 @@ mod tests {
 
     #[test]
     fn connected_peers_found_connected_peer_starts_discovery() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
-        let id = PeerId(1);
-        let (cobalt_sender, _) = fake_cobalt_sender();
-
-        let mut peers = ConnectedPeers::new(Streams::new(), cobalt_sender);
-
-        let inspect = inspect::Inspector::new();
+        let (mut exec, id, mut peers, inspect) = setup_connected_peer_test();
 
         let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
@@ -290,13 +298,7 @@ mod tests {
 
     #[test]
     fn connected_peers_connected_found_peer_starts_discovery() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
-        let id = PeerId(1);
-        let (cobalt_sender, _) = fake_cobalt_sender();
-
-        let mut peers = ConnectedPeers::new(Streams::new(), cobalt_sender);
-
-        let inspect = inspect::Inspector::new();
+        let (mut exec, id, mut peers, inspect) = setup_connected_peer_test();
 
         let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
@@ -315,13 +317,7 @@ mod tests {
 
     #[test]
     fn connected_peers_peer_disconnect_removes_peer() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
-        let id = PeerId(1);
-        let (cobalt_sender, _) = fake_cobalt_sender();
-
-        let mut peers = ConnectedPeers::new(Streams::new(), cobalt_sender);
-
-        let inspect = inspect::Inspector::new();
+        let (mut exec, id, mut peers, inspect) = setup_connected_peer_test();
 
         let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
@@ -338,13 +334,7 @@ mod tests {
 
     #[test]
     fn connected_peers_reconnect_works() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
-        let id = PeerId(1);
-        let (cobalt_sender, _) = fake_cobalt_sender();
-
-        let mut peers = ConnectedPeers::new(Streams::new(), cobalt_sender);
-
-        let inspect = inspect::Inspector::new();
+        let (mut exec, id, mut peers, inspect) = setup_connected_peer_test();
 
         let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 

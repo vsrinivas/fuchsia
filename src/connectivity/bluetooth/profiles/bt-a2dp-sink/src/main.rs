@@ -6,6 +6,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
+    argh::FromArgs,
     bt_a2dp::media_types::*,
     bt_a2dp_sink_metrics as metrics,
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
@@ -461,8 +462,20 @@ fn report_stream_metrics(mut cobalt_sender: CobaltSender, encoding: &str, durati
     );
 }
 
+/// Options available from the command line
+#[derive(FromArgs)]
+#[argh(description = "Bluetooth Advanced Audio Distribution Profile: Sink")]
+struct Opt {
+    #[argh(option)]
+    /// published Media Session Domain (optional, defaults to a native Fuchsia session)
+    // TODO - Point to any media documentation about domains
+    domain: Option<String>,
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    let opts: Opt = argh::from_env();
+
     fuchsia_syslog::init_with_tags(&["a2dp-sink"]).expect("Can't init logger");
 
     let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
@@ -494,7 +507,8 @@ async fn main() -> Result<(), Error> {
         return Err(format_err!("Can't play media - no codecs found or media player missing"));
     }
 
-    let mut peers = connected_peers::ConnectedPeers::new(streams, cobalt_logger.clone());
+    let mut peers =
+        connected_peers::ConnectedPeers::new(streams, cobalt_logger.clone(), opts.domain);
 
     let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;

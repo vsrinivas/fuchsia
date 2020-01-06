@@ -76,7 +76,7 @@ impl AvrcpRelay {
     /// Start a relay between AVRCP and MediaSession.
     /// A MediaSession is published with the information from the AVRCP target.
     /// This starts the relay.  The relay can be stopped by dropping it.
-    pub(crate) fn start(peer_id: PeerId) -> Result<Self, Error> {
+    pub(crate) fn start(peer_id: PeerId, domain: Option<String>) -> Result<Self, Error> {
         let avrcp_svc = fuchsia_component::client::connect_to_service::<avrcp::PeerManagerMarker>()
             .context("Failed to connect to Bluetooth AVRCP interface")?;
         let session_svc =
@@ -86,7 +86,7 @@ impl AvrcpRelay {
         let (sender, receiver) = futures::channel::oneshot::channel();
 
         fasync::spawn(async move {
-            if let Err(e) = Self::relay(avrcp_svc, session_svc, peer_id, receiver).await {
+            if let Err(e) = Self::relay(avrcp_svc, session_svc, domain, peer_id, receiver).await {
                 fx_log_info!("Relay ended with {:?}", e);
             }
         });
@@ -97,12 +97,16 @@ impl AvrcpRelay {
     async fn relay(
         mut avrcp: avrcp::PeerManagerProxy,
         publisher: sessions2::PublisherProxy,
+        domain: Option<String>,
         peer_id: PeerId,
         stop_signal: Receiver<()>,
     ) -> Result<(), Error> {
-        let controller = connect_avrcp(&mut avrcp, peer_id).await?;
+        let controller =
+            connect_avrcp(&mut avrcp, peer_id).await.context("getting controller from AVRCP")?;
 
-        let mut player_request_stream = connect_session_player(publisher).await?;
+        let mut player_request_stream = connect_session_player(publisher, domain)
+            .await
+            .context("connect the session player")?;
 
         let mut staged_info = Some(sessions2::PlayerInfoDelta {
             local: Some(true),
@@ -298,13 +302,15 @@ async fn connect_avrcp(
     Ok(controller)
 }
 
+/// Publishes a new player client to the `publisher` and returns the request stream to relay
+/// commands from the media session control.
 async fn connect_session_player(
     publisher: sessions2::PublisherProxy,
+    domain: Option<String>,
 ) -> Result<sessions2::PlayerRequestStream, Error> {
     let (player_client, player_request_stream) = endpoints::create_request_stream()?;
 
-    let registration =
-        sessions2::PlayerRegistration { domain: Some("some_domain_string".to_string()) };
+    let registration = sessions2::PlayerRegistration { domain };
 
     publisher.publish(player_client, registration).await.context("publishing player")?;
 
@@ -372,6 +378,7 @@ mod tests {
         mut exec: &mut fasync::Executor,
         mut publisher_request_stream: sessions2::PublisherRequestStream,
         mut avrcp_request_stream: avrcp::PeerManagerRequestStream,
+        expected_domain: Option<String>,
     ) -> Result<(sessions2::PlayerProxy, avrcp::ControllerRequestStream), Error> {
         // Connects to AVRCP first.
         let complete = exec.run_until_stalled(&mut avrcp_request_stream.select_next_some());
@@ -397,7 +404,12 @@ mod tests {
 
         let complete = exec.run_until_stalled(&mut publisher_request_stream.select_next_some());
         let player_client = match complete {
-            Poll::Ready(Ok(sessions2::PublisherRequest::Publish { player, responder, .. })) => {
+            Poll::Ready(Ok(sessions2::PublisherRequest::Publish {
+                player,
+                responder,
+                registration,
+            })) => {
+                assert_eq!(expected_domain, registration.domain);
                 responder.send(1).expect("should have been able to send session response");
                 player.into_proxy()?
             }
@@ -413,7 +425,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
         // At this point, the relay is setup and should be waiting for requests from each of
-        // player_client and sending commands / getting notifications from avrcp.
+        // player_client and volume_clent, and sending commands / getting notifications from avrcp.
         Ok((player_client, controller_request_stream))
     }
 
@@ -430,7 +442,7 @@ mod tests {
 
         let peer_id = PeerId(0);
 
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, peer_id, receiver);
+        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
 
         pin_mut!(relay_fut);
 
@@ -442,6 +454,7 @@ mod tests {
             &mut exec,
             publisher_request_stream,
             avrcp_request_stream,
+            None,
         )?;
 
         // Sending a stop should drop all the things and the future should complete.
@@ -475,7 +488,7 @@ mod tests {
 
         let peer_id = PeerId(0);
 
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, peer_id, receiver);
+        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
 
         pin_mut!(relay_fut);
 
@@ -487,6 +500,7 @@ mod tests {
             &mut exec,
             publisher_request_stream,
             avrcp_request_stream,
+            None,
         )?;
 
         // Closing the AVRCP controller should end the relay.
@@ -516,7 +530,7 @@ mod tests {
 
         let peer_id = PeerId(0);
 
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, peer_id, receiver);
+        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
 
         pin_mut!(relay_fut);
 
@@ -528,6 +542,7 @@ mod tests {
             &mut exec,
             publisher_request_stream,
             avrcp_request_stream,
+            None,
         )?;
 
         // Closing of the MediaSession should end the relay.
@@ -557,7 +572,7 @@ mod tests {
 
         let peer_id = PeerId(0);
 
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, peer_id, receiver);
+        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
 
         pin_mut!(relay_fut);
 
@@ -568,6 +583,7 @@ mod tests {
             &mut exec,
             publisher_request_stream,
             avrcp_request_stream,
+            None,
         )?;
 
         let mut watch_info_fut = player_client.watch_info_change();
@@ -614,7 +630,7 @@ mod tests {
 
         let peer_id = PeerId(0);
 
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, peer_id, receiver);
+        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
 
         pin_mut!(relay_fut);
 
@@ -625,6 +641,7 @@ mod tests {
             &mut exec,
             publisher_request_stream,
             avrcp_request_stream,
+            None,
         )?;
 
         let mut watch_info_fut = player_client.watch_info_change();
@@ -731,7 +748,7 @@ mod tests {
 
         let peer_id = PeerId(0);
 
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, peer_id, receiver);
+        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
 
         pin_mut!(relay_fut);
 
@@ -742,6 +759,7 @@ mod tests {
             &mut exec,
             publisher_request_stream,
             avrcp_request_stream,
+            None,
         )?;
 
         let mut watch_info_fut = player_client.watch_info_change();
@@ -831,7 +849,7 @@ mod tests {
 
         let peer_id = PeerId(0);
 
-        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, peer_id, receiver);
+        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, None, peer_id, receiver);
 
         pin_mut!(relay_fut);
 
@@ -842,6 +860,7 @@ mod tests {
             &mut exec,
             publisher_request_stream,
             avrcp_request_stream,
+            None,
         )?;
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
@@ -876,6 +895,39 @@ mod tests {
             avrcp::AvcPanelCommand::Backward,
         )?;
 
+        Ok(())
+    }
+
+    #[test]
+    /// Publishes with the correct domain when it is requested.
+    fn test_session2_domain() -> Result<(), Error> {
+        let mut exec = fasync::Executor::new().expect("executor needed");
+
+        let domain = Some("domain://test".to_string());
+
+        let (publisher_proxy, publisher_request_stream) = setup_publisher_proxy()?;
+        let (avrcp_proxy, avrcp_request_stream) = setup_avrcp_proxy()?;
+
+        let (_stop_sender, receiver) = futures::channel::oneshot::channel();
+
+        let peer_id = PeerId(0);
+
+        let relay_fut =
+            AvrcpRelay::relay(avrcp_proxy, publisher_proxy, domain.clone(), peer_id, receiver);
+
+        pin_mut!(relay_fut);
+
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+
+        let (_player, _controller_requests) = finish_relay_setup(
+            &mut relay_fut,
+            &mut exec,
+            publisher_request_stream,
+            avrcp_request_stream,
+            domain,
+        )?;
+
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
         Ok(())
     }
 }
