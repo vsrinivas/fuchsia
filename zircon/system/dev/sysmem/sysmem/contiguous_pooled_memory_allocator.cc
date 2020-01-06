@@ -141,7 +141,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size, zx::vmo* pa
   RegionAllocator::Region::UPtr region;
   zx::vmo result_parent_vmo;
 
-  // TODO: Use a fragmentation-reducing allocator (such as best fit).
+  // TODO(43184): Use a fragmentation-reducing allocator (such as best fit).
   //
   // The "region" param is an out ref.
   zx_status_t status = region_allocator_.GetRegion(size, ZX_PAGE_SIZE, region);
