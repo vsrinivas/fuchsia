@@ -16,6 +16,7 @@ source_set("logger_factory_server_provider") {
     "//sdk/lib/fidl/cpp/fuzzing",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/app:lib",
+    "//src/cobalt/bin/utils:base64",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }

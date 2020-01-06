@@ -14,9 +14,9 @@
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/logger_factory_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
+#include "src/cobalt/bin/utils/base64.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "third_party/cobalt/src/lib/clearcut/uploader.h"
-#include "third_party/cobalt/src/lib/crypto_util/base64.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
 #include "third_party/cobalt/src/local_aggregation/event_aggregator_mgr.h"
 #include "third_party/cobalt/src/logger/observation_writer.h"
@@ -44,10 +44,11 @@ class NoOpHTTPClient : public cobalt::lib::clearcut::HTTPClient {
   std::future<cobalt::lib::statusor::StatusOr<cobalt::lib::clearcut::HTTPResponse>> Post(
       cobalt::lib::clearcut::HTTPRequest request,
       std::chrono::steady_clock::time_point deadline) override {
-    return std::async(std::launch::async,
-                      []() mutable -> cobalt::lib::statusor::StatusOr<cobalt::lib::clearcut::HTTPResponse> {
-                        return cobalt::util::Status::CANCELLED;
-                      });
+    return std::async(
+        std::launch::async,
+        []() mutable -> cobalt::lib::statusor::StatusOr<cobalt::lib::clearcut::HTTPResponse> {
+          return cobalt::util::Status::CANCELLED;
+        });
   }
 };
 
@@ -90,8 +91,7 @@ zx_status_t fuzzer_init() {
         ::fidl::fuzzing::ServerProviderDispatcherMode::kFromCaller);
   }
 
-  std::string config;
-  cobalt::crypto::Base64Decode(cobalt::logger::kConfig, &config);
+  std::string config = cobalt::Base64Decode(cobalt::logger::kConfig);
   auto global_project_context_factory =
       std::make_shared<cobalt::logger::ProjectContextFactory>(config);
 

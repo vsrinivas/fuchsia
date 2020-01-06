@@ -7,13 +7,11 @@
 #include "src/cobalt/bin/testapp/prober_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/test_constants.h"
 #include "src/cobalt/bin/testapp/testapp_metrics_registry.cb.h"
+#include "src/cobalt/bin/utils/base64.h"
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
-#include "third_party/cobalt/src/lib/crypto_util/base64.h"
 #include "third_party/cobalt/src/lib/util/datetime_util.h"
 
 namespace cobalt {
-
-using crypto::Base64Decode;
 
 using util::SystemClockInterface;
 using util::TimeToDayIndex;
@@ -44,11 +42,8 @@ bool SendAndCheckSuccess(const std::string& test_name, CobaltTestAppLogger* logg
 // safe to use the generated constants from the testapp registry in order to log
 // events for the prober project.
 bool CheckMetricIds() {
-  std::string decoded_testapp_config;
-  std::string decoded_prober_config;
-
-  Base64Decode(cobalt_registry::kConfig, &decoded_testapp_config);
-  Base64Decode(cobalt_prober_registry::kConfig, &decoded_prober_config);
+  std::string decoded_testapp_config = Base64Decode(cobalt_registry::kConfig);
+  std::string decoded_prober_config = Base64Decode(cobalt_prober_registry::kConfig);
 
   CobaltRegistry testapp_registry;
   CobaltRegistry prober_registry;
@@ -359,8 +354,7 @@ bool GenerateObsAndCheckCount(uint32_t day_index,
   return true;
 }
 
-bool TestLogEventWithAggregation(CobaltTestAppLogger* logger,
-                                 SystemClockInterface* clock,
+bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                                  fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                                  const size_t backfill_days) {
   FX_LOGS(INFO) << "========================";
@@ -399,8 +393,7 @@ bool TestLogEventWithAggregation(CobaltTestAppLogger* logger,
   return SendAndCheckSuccess("TestLogEventWithAggregation", logger);
 }
 
-bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger,
-                                      SystemClockInterface* clock,
+bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                                       const size_t backfill_days) {
   FX_LOGS(INFO) << "========================";
@@ -423,7 +416,8 @@ bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger,
           FX_LOGS(INFO) << "TestLogEventCountWithAggregation : FAIL";
           return false;
         }
-        expected_num_obs[cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId] +=
+        expected_num_obs
+            [cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId] +=
             kConnectionAttemptsNumWindowSizes;
       }
     }
@@ -439,8 +433,7 @@ bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger,
   return SendAndCheckSuccess("TestLogEventCountWithAggregation", logger);
 }
 
-bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger,
-                                       SystemClockInterface* clock,
+bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                                        fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                                        const size_t backfill_days) {
   FX_LOGS(INFO) << "========================";

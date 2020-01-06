@@ -1,14 +1,13 @@
 #include "src/lib/cobalt/cpp/project_profile.h"
 
+#include "src/cobalt/bin/utils/base64.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "third_party/cobalt/src/lib/crypto_util/base64.h"
 
 namespace cobalt {
 
 fuchsia::cobalt::ProjectProfile ProjectProfileFromBase64String(const std::string &encoded_cfg) {
-  std::string cfg;
-  cobalt::crypto::Base64Decode(encoded_cfg, &cfg);
+  std::string cfg = Base64Decode(encoded_cfg);
 
   return ProjectProfileFromString(cfg);
 }

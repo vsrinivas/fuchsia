@@ -67,8 +67,8 @@ source_set("project_profile") {
     "//zircon/system/fidl/fuchsia-cobalt",
   ]
   deps = [
+    "//src/cobalt/bin/utils:base64",
     "//src/lib/fsl",
-    "//third_party/cobalt/src/lib/crypto_util",
   ]
 }
 
