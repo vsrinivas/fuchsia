@@ -45,85 +45,6 @@ import (
 // #include <netinet/in.h>
 import "C"
 
-type providerImpl struct {
-	ns                    *Netstack
-	controlService        socket.ControlService
-	datagramSocketService socket.DatagramSocketService
-	streamSocketService   socket.StreamSocketService
-	metadata              socketMetadata
-}
-
-var _ socket.Provider = (*providerImpl)(nil)
-
-// Highest two bits modify the socket type.
-const sockTypesMask = 0x7fff &^ (C.SOCK_CLOEXEC | C.SOCK_NONBLOCK)
-
-func toTransProto(typ, protocol int16) (int32, tcpip.TransportProtocolNumber) {
-	switch typ & sockTypesMask {
-	case C.SOCK_STREAM:
-		switch protocol {
-		case C.IPPROTO_IP, C.IPPROTO_TCP:
-			return 0, tcp.ProtocolNumber
-		}
-	case C.SOCK_DGRAM:
-		switch protocol {
-		case C.IPPROTO_IP, C.IPPROTO_UDP:
-			return 0, udp.ProtocolNumber
-		case C.IPPROTO_ICMP:
-			return 0, icmp.ProtocolNumber4
-		case C.IPPROTO_ICMPV6:
-			return 0, icmp.ProtocolNumber6
-		}
-	}
-	return C.EPROTONOSUPPORT, 0
-}
-
-func toNetProto(domain int16) (int32, tcpip.NetworkProtocolNumber) {
-	switch domain {
-	case C.AF_INET:
-		return 0, ipv4.ProtocolNumber
-	case C.AF_INET6:
-		return 0, ipv6.ProtocolNumber
-	case C.AF_PACKET:
-		return C.EPERM, 0
-	default:
-		return C.EPFNOSUPPORT, 0
-	}
-}
-
-func (sp *providerImpl) Socket(domain, typ, protocol int16) (int16, socket.ControlInterface, error) {
-	code, netProto := toNetProto(domain)
-	if code != 0 {
-		return int16(code), socket.ControlInterface{}, nil
-	}
-	code, transProto := toTransProto(typ, protocol)
-	if code != 0 {
-		return int16(code), socket.ControlInterface{}, nil
-	}
-	wq := new(waiter.Queue)
-	sp.ns.mu.Lock()
-	ep, err := sp.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
-	sp.ns.mu.Unlock()
-	if err != nil {
-		return int16(tcpipErrorToCode(err)), socket.ControlInterface{}, nil
-	}
-	{
-		ep, err := newEndpointWithSocket(ep, wq, transProto, netProto, &sp.metadata)
-		if err != nil {
-			return 0, socket.ControlInterface{}, err
-		}
-		controlInterface, err := newControl(ep, &sp.controlService)
-		return 0, controlInterface, err
-	}
-}
-
-const (
-	localSignalClosing = zx.SignalUser1
-	// TODO(tamird): use definitions from third_party/go when they're available.
-	zxsioSignalShutdownRead  = zx.SignalUser4
-	zxsioSignalShutdownWrite = zx.SignalUser5
-)
-
 // Data owned by providerImpl used for statistics and other
 // introspection.
 type socketMetadata struct {
@@ -191,6 +112,151 @@ func (ep *endpoint) SetAttr(flags uint32, attributes io.NodeAttributes) (int32, 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
+func (ep *endpoint) Bind(sockaddr []uint8) (socket.BaseSocketBindResult, error) {
+	addr, err := decodeAddr(sockaddr)
+	if err != nil {
+		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
+	}
+	if err := ep.ep.Bind(addr); err != nil {
+		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(err)), nil
+	}
+
+	{
+		localAddr, err := ep.ep.GetLocalAddress()
+		if err != nil {
+			panic(err)
+		}
+		syslog.VLogTf(syslog.DebugVerbosity, "bind", "%p: local=%+v", ep, localAddr)
+	}
+
+	return socket.BaseSocketBindResultWithResponse(socket.BaseSocketBindResponse{}), nil
+}
+
+func (ep *endpoint) Connect(sockaddr []uint8) (socket.BaseSocketConnectResult, error) {
+	addr, err := decodeAddr(sockaddr)
+	if err != nil {
+		return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
+	}
+	// NB: We can't just compare the length to zero because that would
+	// mishandle the IPv6-mapped IPv4 unspecified address.
+	disconnect := addr.Port == 0 && (len(addr.Addr) == 0 || net.IP(addr.Addr).IsUnspecified())
+	if disconnect {
+		if err := ep.ep.Disconnect(); err != nil {
+			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
+		}
+	} else {
+		if l := len(addr.Addr); l > 0 {
+			if ep.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
+				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: unsupported address %s", ep, addr.Addr)
+				return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrAddressFamilyNotSupported)), nil
+			}
+		}
+		if err := ep.ep.Connect(addr); err != nil {
+			if err == tcpip.ErrConnectStarted {
+				localAddr, err := ep.ep.GetLocalAddress()
+				if err != nil {
+					panic(err)
+				}
+				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: started, local=%+v, addr=%+v", ep, localAddr, addr)
+			}
+			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
+		}
+	}
+
+	{
+		localAddr, err := ep.ep.GetLocalAddress()
+		if err != nil {
+			panic(err)
+		}
+
+		if disconnect {
+			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=disconnected", ep, localAddr)
+		} else {
+			remoteAddr, err := ep.ep.GetRemoteAddress()
+			if err != nil {
+				panic(err)
+			}
+			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=%+v", ep, localAddr, remoteAddr)
+		}
+	}
+
+	return socket.BaseSocketConnectResultWithResponse(socket.BaseSocketConnectResponse{}), nil
+}
+
+func (ep *endpoint) GetSockName() (socket.BaseSocketGetSockNameResult, error) {
+	addr, err := ep.ep.GetLocalAddress()
+	if err != nil {
+		return socket.BaseSocketGetSockNameResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketGetSockNameResultWithResponse(socket.BaseSocketGetSockNameResponse{
+		Addr: encodeAddr(ep.netProto, addr),
+	}), nil
+}
+
+func (ep *endpoint) GetPeerName() (socket.BaseSocketGetPeerNameResult, error) {
+	addr, err := ep.ep.GetRemoteAddress()
+	if err != nil {
+		return socket.BaseSocketGetPeerNameResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketGetPeerNameResultWithResponse(socket.BaseSocketGetPeerNameResponse{
+		Addr: encodeAddr(ep.netProto, addr),
+	}), nil
+}
+
+func (ep *endpoint) SetSockOpt(level, optName int16, optVal []uint8) (socket.BaseSocketSetSockOptResult, error) {
+	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
+		if len(optVal) < sizeOfInt32 {
+			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(tcpip.ErrInvalidOptionValue)), nil
+		}
+
+		v := binary.LittleEndian.Uint32(optVal)
+		ep.mu.Lock()
+		ep.mu.sockOptTimestamp = v != 0
+		ep.mu.Unlock()
+	} else {
+		if err := SetSockOpt(ep.ep, level, optName, optVal); err != nil {
+			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(err)), nil
+		}
+	}
+	syslog.VLogTf(syslog.DebugVerbosity, "setsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ep, level, optName, len(optVal), optVal)
+
+	return socket.BaseSocketSetSockOptResultWithResponse(socket.BaseSocketSetSockOptResponse{}), nil
+}
+
+func (ep *endpoint) GetSockOpt(level, optName int16) (socket.BaseSocketGetSockOptResult, error) {
+	var val interface{}
+	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
+		ep.mu.Lock()
+		if ep.mu.sockOptTimestamp {
+			val = int32(1)
+		} else {
+			val = int32(0)
+		}
+		ep.mu.Unlock()
+	} else {
+		var err *tcpip.Error
+		val, err = GetSockOpt(ep.ep, ep.netProto, ep.transProto, level, optName)
+		if err != nil {
+			return socket.BaseSocketGetSockOptResultWithErr(tcpipErrorToCode(err)), nil
+		}
+	}
+	if val, ok := val.([]byte); ok {
+		return socket.BaseSocketGetSockOptResultWithResponse(socket.BaseSocketGetSockOptResponse{
+			Optval: val,
+		}), nil
+	}
+	b := make([]byte, reflect.TypeOf(val).Size())
+	n := copyAsBytes(b, val)
+	if n < len(b) {
+		panic(fmt.Sprintf("short %T: %d/%d", val, n, len(b)))
+	}
+	syslog.VLogTf(syslog.DebugVerbosity, "getsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ep, level, optName, len(b), b)
+
+	return socket.BaseSocketGetSockOptResultWithResponse(socket.BaseSocketGetSockOptResponse{
+		Optval: b,
+	}), nil
+}
+
 type boolWithMutex struct {
 	mu struct {
 		sync.Mutex
@@ -225,6 +291,231 @@ type endpointWithSocket struct {
 	// This is used to make sure that endpoint.close only cleans up its
 	// resources once - the first time it was closed.
 	closeOnce sync.Once
+}
+
+func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip.TransportProtocolNumber, netProto tcpip.NetworkProtocolNumber, metadata *socketMetadata) (*endpointWithSocket, error) {
+	var flags uint32
+	if transProto == tcp.ProtocolNumber {
+		flags |= zx.SocketStream
+	} else {
+		flags |= zx.SocketDatagram
+	}
+	localS, peerS, err := zx.NewSocket(flags)
+	if err != nil {
+		return nil, err
+	}
+
+	eps := &endpointWithSocket{
+		endpoint: endpoint{
+			ep:         ep,
+			wq:         wq,
+			transProto: transProto,
+			netProto:   netProto,
+			metadata:   metadata,
+		},
+		local:         localS,
+		peer:          peerS,
+		loopReadDone:  make(chan struct{}),
+		loopWriteDone: make(chan struct{}),
+		closing:       make(chan struct{}),
+	}
+
+	// Register synchronously to avoid missing incoming event notifications
+	// between this function returning and the goroutines below being scheduled.
+	// Such races can lead to deadlock.
+	inEntry, inCh := waiter.NewChannelEntry(nil)
+	eps.wq.EventRegister(&inEntry, waiter.EventIn)
+
+	initCh := make(chan struct{})
+	go func() {
+		defer close(eps.loopReadDone)
+		defer eps.wq.EventUnregister(&inEntry)
+
+		eps.loopRead(inCh, initCh)
+	}()
+	go func() {
+		defer close(eps.loopWriteDone)
+
+		eps.loopWrite()
+	}()
+
+	syslog.VLogTf(syslog.DebugVerbosity, "socket", "%p", eps)
+
+	// Wait for initial state checking to complete.
+	<-initCh
+
+	metadata.addEndpoint(zx.Handle(localS), ep)
+
+	return eps, nil
+}
+
+type endpointWithEvent struct {
+	endpoint
+
+	mu struct {
+		sync.Mutex
+		readView buffer.View
+		sender   tcpip.FullAddress
+	}
+
+	local, peer zx.Handle
+
+	incoming boolWithMutex
+
+	entry waiter.Entry
+}
+
+func (epe *endpointWithEvent) close() int64 {
+	epe.wq.EventUnregister(&epe.entry)
+
+	return epe.endpoint.close(func() { epe.endpoint.metadata.removeEndpoint(epe.local) })
+}
+
+func (epe *endpointWithEvent) Describe() (io.NodeInfo, error) {
+	var info io.NodeInfo
+	event, err := epe.peer.Duplicate(zx.RightsBasic)
+	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", epe, err)
+	if err != nil {
+		return info, err
+	}
+	info.SetDatagramSocket(io.DatagramSocket{Event: event})
+	return info, nil
+}
+
+func (epe *endpointWithEvent) Shutdown(how int16) (socket.DatagramSocketShutdownResult, error) {
+	var signals zx.Signals
+	var flags tcpip.ShutdownFlags
+	switch how {
+	case C.SHUT_RD:
+		signals = zxsioSignalShutdownRead
+		flags = tcpip.ShutdownRead
+	case C.SHUT_WR:
+		signals = zxsioSignalShutdownWrite
+		flags = tcpip.ShutdownWrite
+	case C.SHUT_RDWR:
+		signals = zxsioSignalShutdownRead | zxsioSignalShutdownWrite
+		flags = tcpip.ShutdownRead | tcpip.ShutdownWrite
+	default:
+		return socket.DatagramSocketShutdownResultWithErr(C.EINVAL), nil
+	}
+	if err := epe.ep.Shutdown(flags); err != nil {
+		return socket.DatagramSocketShutdownResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	if flags&tcpip.ShutdownRead != 0 {
+		epe.wq.EventUnregister(&epe.entry)
+	}
+	if err := epe.local.SignalPeer(0, signals); err != nil {
+		return socket.DatagramSocketShutdownResult{}, err
+	}
+	return socket.DatagramSocketShutdownResultWithResponse(socket.DatagramSocketShutdownResponse{}), nil
+}
+
+const (
+	localSignalClosing = zx.SignalUser1
+	// TODO(tamird): use definitions from third_party/go when they're available.
+	zxsioSignalShutdownRead  = zx.SignalUser4
+	zxsioSignalShutdownWrite = zx.SignalUser5
+)
+
+// close destroys the endpoint and releases associated resources, taking its
+// reference count into account.
+//
+// When called, close signals loopRead and loopWrite (via closing and
+// local) to exit, and then blocks until its arguments are signaled. close
+// is typically called with loop{Read,Write}Done.
+//
+// Note, calling close on an endpoint that has already been closed is safe as
+// the cleanup work will only be done once.
+func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) int64 {
+	return eps.endpoint.close(func() {
+		eps.closeOnce.Do(func() {
+			// Interrupt waits on notification channels. Notification reads
+			// are always combined with closing in a select statement.
+			close(eps.closing)
+
+			// Interrupt waits on endpoint.local. Handle waits always
+			// include localSignalClosing.
+			if err := eps.local.Handle().Signal(0, localSignalClosing); err != nil {
+				panic(err)
+			}
+
+			// The interruptions above cause our loops to exit. Wait until
+			// they do before releasing resources they may be using.
+			for _, ch := range loopDone {
+				<-ch
+			}
+
+			if err := eps.local.Close(); err != nil {
+				panic(err)
+			}
+
+			if err := eps.peer.Close(); err != nil {
+				panic(err)
+			}
+
+			eps.endpoint.metadata.removeEndpoint(zx.Handle(eps.local))
+		})
+	})
+}
+
+func (eps *endpointWithSocket) Listen(backlog int16) (socket.StreamSocketListenResult, error) {
+	if err := eps.ep.Listen(int(backlog)); err != nil {
+		return socket.StreamSocketListenResultWithErr(tcpipErrorToCode(err)), nil
+	}
+
+	syslog.VLogTf(syslog.DebugVerbosity, "listen", "%p: backlog=%d", eps, backlog)
+
+	return socket.StreamSocketListenResultWithResponse(socket.StreamSocketListenResponse{}), nil
+}
+
+func (eps *endpointWithSocket) Accept() (int32, *endpointWithSocket, error) {
+	ep, wq, err := eps.endpoint.ep.Accept()
+	if err != nil {
+		return tcpipErrorToCode(err), nil, nil
+	}
+	{
+		var err error
+		// We lock here to ensure that no incoming connection changes readiness
+		// while we clear the signal.
+		eps.incoming.mu.Lock()
+		if eps.incoming.mu.asserted && eps.endpoint.ep.Readiness(waiter.EventIn) == 0 {
+			err = eps.local.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0)
+			eps.incoming.mu.asserted = false
+		}
+		eps.incoming.mu.Unlock()
+		if err != nil {
+			ep.Close()
+			return 0, nil, err
+		}
+	}
+
+	if localAddr, err := ep.GetLocalAddress(); err == tcpip.ErrNotConnected {
+		// This should never happen as of writing as GetLocalAddress
+		// does not actually return any errors. However, we handle
+		// the tcpip.ErrNotConnected case now for the same reasons
+		// as mentioned below for the ep.GetRemoteAddress case.
+		syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: disconnected", eps)
+	} else if err != nil {
+		panic(err)
+	} else {
+		// GetRemoteAddress returns a tcpip.ErrNotConnected error if ep is no
+		// longer connected. This can happen if the endpoint was closed after
+		// the call to Accept returned, but before this point. A scenario this
+		// was actually witnessed was when a TCP RST was received after the call
+		// to Accept returned, but before this point. If GetRemoteAddress
+		// returns other (unexpected) errors, panic.
+		if remoteAddr, err := ep.GetRemoteAddress(); err == tcpip.ErrNotConnected {
+			syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, disconnected", eps, localAddr)
+		} else if err != nil {
+			panic(err)
+		} else {
+			syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", eps, localAddr, remoteAddr)
+		}
+	}
+	{
+		ep, err := newEndpointWithSocket(ep, wq, eps.transProto, eps.netProto, eps.endpoint.metadata)
+		return 0, ep, err
+	}
 }
 
 // loopWrite shuttles signals and data from the zircon socket to the tcpip.Endpoint.
@@ -596,218 +887,6 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 	}
 }
 
-func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip.TransportProtocolNumber, netProto tcpip.NetworkProtocolNumber, metadata *socketMetadata) (*endpointWithSocket, error) {
-	var flags uint32
-	if transProto == tcp.ProtocolNumber {
-		flags |= zx.SocketStream
-	} else {
-		flags |= zx.SocketDatagram
-	}
-	localS, peerS, err := zx.NewSocket(flags)
-	if err != nil {
-		return nil, err
-	}
-
-	eps := &endpointWithSocket{
-		endpoint: endpoint{
-			ep:         ep,
-			wq:         wq,
-			transProto: transProto,
-			netProto:   netProto,
-			metadata:   metadata,
-		},
-		local:         localS,
-		peer:          peerS,
-		loopReadDone:  make(chan struct{}),
-		loopWriteDone: make(chan struct{}),
-		closing:       make(chan struct{}),
-	}
-
-	// Register synchronously to avoid missing incoming event notifications
-	// between this function returning and the goroutines below being scheduled.
-	// Such races can lead to deadlock.
-	inEntry, inCh := waiter.NewChannelEntry(nil)
-	eps.wq.EventRegister(&inEntry, waiter.EventIn)
-
-	initCh := make(chan struct{})
-	go func() {
-		defer close(eps.loopReadDone)
-		defer eps.wq.EventUnregister(&inEntry)
-
-		eps.loopRead(inCh, initCh)
-	}()
-	go func() {
-		defer close(eps.loopWriteDone)
-
-		eps.loopWrite()
-	}()
-
-	syslog.VLogTf(syslog.DebugVerbosity, "socket", "%p", eps)
-
-	// Wait for initial state checking to complete.
-	<-initCh
-
-	metadata.addEndpoint(zx.Handle(localS), ep)
-
-	return eps, nil
-}
-
-func (metadata *socketMetadata) addEndpoint(handle zx.Handle, ep tcpip.Endpoint) {
-	if ep, loaded := metadata.endpoints.LoadOrStore(handle, ep); loaded {
-		var info stack.TransportEndpointInfo
-		switch t := ep.Info().(type) {
-		case *tcp.EndpointInfo:
-			info = t.TransportEndpointInfo
-		case *stack.TransportEndpointInfo:
-			info = *t
-		}
-		syslog.Errorf("endpoint map store error, key %d exists with endpoint %+v", handle, info)
-	}
-
-	metadata.socketsCreated.Increment()
-	select {
-	case metadata.newSocketNotifications <- struct{}{}:
-	default:
-	}
-}
-
-// close destroys the endpoint and releases associated resources, taking its
-// reference count into account.
-//
-// When called, close signals loopRead and loopWrite (via closing and
-// local) to exit, and then blocks until its arguments are signaled. close
-// is typically called with loop{Read,Write}Done.
-//
-// Note, calling close on an endpoint that has already been closed is safe as
-// the cleanup work will only be done once.
-func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) int64 {
-	return eps.endpoint.close(func() {
-		eps.closeOnce.Do(func() {
-			// Interrupt waits on notification channels. Notification reads
-			// are always combined with closing in a select statement.
-			close(eps.closing)
-
-			// Interrupt waits on endpoint.local. Handle waits always
-			// include localSignalClosing.
-			if err := eps.local.Handle().Signal(0, localSignalClosing); err != nil {
-				panic(err)
-			}
-
-			// The interruptions above cause our loops to exit. Wait until
-			// they do before releasing resources they may be using.
-			for _, ch := range loopDone {
-				<-ch
-			}
-
-			if err := eps.local.Close(); err != nil {
-				panic(err)
-			}
-
-			if err := eps.peer.Close(); err != nil {
-				panic(err)
-			}
-
-			eps.endpoint.metadata.removeEndpoint(zx.Handle(eps.local))
-		})
-	})
-}
-
-func (metadata *socketMetadata) removeEndpoint(handle zx.Handle) {
-	metadata.endpoints.Delete(handle)
-	metadata.socketsDestroyed.Increment()
-}
-
-func tcpipErrorToCode(err *tcpip.Error) int32 {
-	if err != tcpip.ErrConnectStarted {
-		if pc, file, line, ok := runtime.Caller(1); ok {
-			if i := strings.LastIndexByte(file, '/'); i != -1 {
-				file = file[i+1:]
-			}
-			syslog.VLogf(syslog.DebugVerbosity, "%s: %s:%d: %s", runtime.FuncForPC(pc).Name(), file, line, err)
-		} else {
-			syslog.VLogf(syslog.DebugVerbosity, "%s", err)
-		}
-	}
-	switch err {
-	case tcpip.ErrUnknownProtocol:
-		return C.EINVAL
-	case tcpip.ErrUnknownNICID:
-		return C.EINVAL
-	case tcpip.ErrUnknownDevice:
-		return C.ENODEV
-	case tcpip.ErrUnknownProtocolOption:
-		return C.ENOPROTOOPT
-	case tcpip.ErrDuplicateNICID:
-		return C.EEXIST
-	case tcpip.ErrDuplicateAddress:
-		return C.EEXIST
-	case tcpip.ErrNoRoute:
-		return C.EHOSTUNREACH
-	case tcpip.ErrBadLinkEndpoint:
-		return C.EINVAL
-	case tcpip.ErrAlreadyBound:
-		return C.EINVAL
-	case tcpip.ErrInvalidEndpointState:
-		return C.EINVAL
-	case tcpip.ErrAlreadyConnecting:
-		return C.EALREADY
-	case tcpip.ErrAlreadyConnected:
-		return C.EISCONN
-	case tcpip.ErrNoPortAvailable:
-		return C.EAGAIN
-	case tcpip.ErrPortInUse:
-		return C.EADDRINUSE
-	case tcpip.ErrBadLocalAddress:
-		return C.EADDRNOTAVAIL
-	case tcpip.ErrClosedForSend:
-		return C.EPIPE
-	case tcpip.ErrClosedForReceive:
-		return C.EAGAIN
-	case tcpip.ErrWouldBlock:
-		return C.EWOULDBLOCK
-	case tcpip.ErrConnectionRefused:
-		return C.ECONNREFUSED
-	case tcpip.ErrTimeout:
-		return C.ETIMEDOUT
-	case tcpip.ErrAborted:
-		return C.EPIPE
-	case tcpip.ErrConnectStarted:
-		return C.EINPROGRESS
-	case tcpip.ErrDestinationRequired:
-		return C.EDESTADDRREQ
-	case tcpip.ErrNotSupported:
-		return C.EOPNOTSUPP
-	case tcpip.ErrQueueSizeNotSupported:
-		return C.ENOTTY
-	case tcpip.ErrNotConnected:
-		return C.ENOTCONN
-	case tcpip.ErrConnectionReset:
-		return C.ECONNRESET
-	case tcpip.ErrConnectionAborted:
-		return C.ECONNABORTED
-	case tcpip.ErrNoSuchFile:
-		return C.ENOENT
-	case tcpip.ErrInvalidOptionValue:
-		return C.EINVAL
-	case tcpip.ErrNoLinkAddress:
-		return C.EHOSTDOWN
-	case tcpip.ErrBadAddress:
-		return C.EFAULT
-	case tcpip.ErrNetworkUnreachable:
-		return C.ENETUNREACH
-	case tcpip.ErrMessageTooLong:
-		return C.EMSGSIZE
-	case tcpip.ErrNoBufferSpace:
-		return C.ENOBUFS
-	case tcpip.ErrBroadcastDisabled, tcpip.ErrNotPermitted:
-		return C.EACCES
-	case tcpip.ErrAddressFamilyNotSupported:
-		return C.EAFNOSUPPORT
-	default:
-		panic(fmt.Sprintf("unknown error %v", err))
-	}
-}
-
 type controlImpl struct {
 	*endpointWithSocket
 	bindingKey fidl.BindingKey
@@ -846,6 +925,17 @@ func (s *controlImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error 
 	}
 }
 
+func (s *controlImpl) Describe() (io.NodeInfo, error) {
+	var info io.NodeInfo
+	h, err := s.endpointWithSocket.peer.Handle().Duplicate(zx.RightsBasic | zx.RightRead | zx.RightWrite)
+	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", s.endpointWithSocket, err)
+	if err != nil {
+		return info, err
+	}
+	info.SetSocket(io.Socket{Socket: zx.Socket(h)})
+	return info, nil
+}
+
 func (s *controlImpl) close() {
 	clones := s.endpointWithSocket.close(s.loopReadDone, s.loopWriteDone)
 
@@ -859,128 +949,19 @@ func (s *controlImpl) Close() (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (s *controlImpl) Describe() (io.NodeInfo, error) {
-	var info io.NodeInfo
-	h, err := s.endpointWithSocket.peer.Handle().Duplicate(zx.RightsBasic | zx.RightRead | zx.RightWrite)
-	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", s.endpointWithSocket, err)
+func (s *controlImpl) Bind(sockaddr []uint8) (int16, error) {
+	result, err := s.endpointWithSocket.Bind(sockaddr)
 	if err != nil {
-		return info, err
+		return 0, err
 	}
-	info.SetSocket(io.Socket{Socket: zx.Socket(h)})
-	return info, nil
-}
-
-func (eps *endpointWithSocket) Accept() (int32, *endpointWithSocket, error) {
-	ep, wq, err := eps.endpoint.ep.Accept()
-	if err != nil {
-		return tcpipErrorToCode(err), nil, nil
+	switch w := result.Which(); w {
+	case socket.BaseSocketBindResultResponse:
+		return 0, nil
+	case socket.BaseSocketBindResultErr:
+		return int16(result.Err), nil
+	default:
+		panic(fmt.Sprintf("unknown variant %d", w))
 	}
-	{
-		var err error
-		// We lock here to ensure that no incoming connection changes readiness
-		// while we clear the signal.
-		eps.incoming.mu.Lock()
-		if eps.incoming.mu.asserted && eps.endpoint.ep.Readiness(waiter.EventIn) == 0 {
-			err = eps.local.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0)
-			eps.incoming.mu.asserted = false
-		}
-		eps.incoming.mu.Unlock()
-		if err != nil {
-			ep.Close()
-			return 0, nil, err
-		}
-	}
-
-	if localAddr, err := ep.GetLocalAddress(); err == tcpip.ErrNotConnected {
-		// This should never happen as of writing as GetLocalAddress
-		// does not actually return any errors. However, we handle
-		// the tcpip.ErrNotConnected case now for the same reasons
-		// as mentioned below for the ep.GetRemoteAddress case.
-		syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: disconnected", eps)
-	} else if err != nil {
-		panic(err)
-	} else {
-		// GetRemoteAddress returns a tcpip.ErrNotConnected error if ep is no
-		// longer connected. This can happen if the endpoint was closed after
-		// the call to Accept returned, but before this point. A scenario this
-		// was actually witnessed was when a TCP RST was received after the call
-		// to Accept returned, but before this point. If GetRemoteAddress
-		// returns other (unexpected) errors, panic.
-		if remoteAddr, err := ep.GetRemoteAddress(); err == tcpip.ErrNotConnected {
-			syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, disconnected", eps, localAddr)
-		} else if err != nil {
-			panic(err)
-		} else {
-			syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", eps, localAddr, remoteAddr)
-		}
-	}
-	{
-		ep, err := newEndpointWithSocket(ep, wq, eps.transProto, eps.netProto, eps.endpoint.metadata)
-		return 0, ep, err
-	}
-}
-
-func (s *controlImpl) Accept(int16) (int16, socket.ControlInterface, error) {
-	code, eps, err := s.endpointWithSocket.Accept()
-	if err != nil {
-		return 0, socket.ControlInterface{}, err
-	}
-	if code != 0 {
-		return int16(code), socket.ControlInterface{}, nil
-	}
-	controlInterface, err := newControl(eps, s.service)
-	return 0, controlInterface, err
-}
-
-func (ep *endpoint) Connect(sockaddr []uint8) (socket.BaseSocketConnectResult, error) {
-	addr, err := decodeAddr(sockaddr)
-	if err != nil {
-		return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
-	}
-	// NB: We can't just compare the length to zero because that would
-	// mishandle the IPv6-mapped IPv4 unspecified address.
-	disconnect := addr.Port == 0 && (len(addr.Addr) == 0 || net.IP(addr.Addr).IsUnspecified())
-	if disconnect {
-		if err := ep.ep.Disconnect(); err != nil {
-			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
-		}
-	} else {
-		if l := len(addr.Addr); l > 0 {
-			if ep.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
-				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: unsupported address %s", ep, addr.Addr)
-				return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrAddressFamilyNotSupported)), nil
-			}
-		}
-		if err := ep.ep.Connect(addr); err != nil {
-			if err == tcpip.ErrConnectStarted {
-				localAddr, err := ep.ep.GetLocalAddress()
-				if err != nil {
-					panic(err)
-				}
-				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: started, local=%+v, addr=%+v", ep, localAddr, addr)
-			}
-			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
-		}
-	}
-
-	{
-		localAddr, err := ep.ep.GetLocalAddress()
-		if err != nil {
-			panic(err)
-		}
-
-		if disconnect {
-			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=disconnected", ep, localAddr)
-		} else {
-			remoteAddr, err := ep.ep.GetRemoteAddress()
-			if err != nil {
-				panic(err)
-			}
-			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=%+v", ep, localAddr, remoteAddr)
-		}
-	}
-
-	return socket.BaseSocketConnectResultWithResponse(socket.BaseSocketConnectResponse{}), nil
 }
 
 func (s *controlImpl) Connect(sockaddr []uint8) (int16, error) {
@@ -998,39 +979,16 @@ func (s *controlImpl) Connect(sockaddr []uint8) (int16, error) {
 	}
 }
 
-func (ep *endpoint) Bind(sockaddr []uint8) (socket.BaseSocketBindResult, error) {
-	addr, err := decodeAddr(sockaddr)
+func (s *controlImpl) Accept(int16) (int16, socket.ControlInterface, error) {
+	code, eps, err := s.endpointWithSocket.Accept()
 	if err != nil {
-		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
+		return 0, socket.ControlInterface{}, err
 	}
-	if err := ep.ep.Bind(addr); err != nil {
-		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(err)), nil
+	if code != 0 {
+		return int16(code), socket.ControlInterface{}, nil
 	}
-
-	{
-		localAddr, err := ep.ep.GetLocalAddress()
-		if err != nil {
-			panic(err)
-		}
-		syslog.VLogTf(syslog.DebugVerbosity, "bind", "%p: local=%+v", ep, localAddr)
-	}
-
-	return socket.BaseSocketBindResultWithResponse(socket.BaseSocketBindResponse{}), nil
-}
-
-func (s *controlImpl) Bind(sockaddr []uint8) (int16, error) {
-	result, err := s.endpointWithSocket.Bind(sockaddr)
-	if err != nil {
-		return 0, err
-	}
-	switch w := result.Which(); w {
-	case socket.BaseSocketBindResultResponse:
-		return 0, nil
-	case socket.BaseSocketBindResultErr:
-		return int16(result.Err), nil
-	default:
-		panic(fmt.Sprintf("unknown variant %d", w))
-	}
+	controlInterface, err := newControl(eps, s.service)
+	return 0, controlInterface, err
 }
 
 func (s *controlImpl) Listen(backlog int16) (int16, error) {
@@ -1106,151 +1064,6 @@ func (s *controlImpl) GetSockOpt(level, optName int16) (int16, []uint8, error) {
 	default:
 		panic(fmt.Sprintf("unknown variant %d", w))
 	}
-}
-
-func (ep *endpoint) GetSockName() (socket.BaseSocketGetSockNameResult, error) {
-	addr, err := ep.ep.GetLocalAddress()
-	if err != nil {
-		return socket.BaseSocketGetSockNameResultWithErr(tcpipErrorToCode(err)), nil
-	}
-	return socket.BaseSocketGetSockNameResultWithResponse(socket.BaseSocketGetSockNameResponse{
-		Addr: encodeAddr(ep.netProto, addr),
-	}), nil
-}
-
-func (ep *endpoint) GetPeerName() (socket.BaseSocketGetPeerNameResult, error) {
-	addr, err := ep.ep.GetRemoteAddress()
-	if err != nil {
-		return socket.BaseSocketGetPeerNameResultWithErr(tcpipErrorToCode(err)), nil
-	}
-	return socket.BaseSocketGetPeerNameResultWithResponse(socket.BaseSocketGetPeerNameResponse{
-		Addr: encodeAddr(ep.netProto, addr),
-	}), nil
-}
-
-func (ep *endpoint) GetSockOpt(level, optName int16) (socket.BaseSocketGetSockOptResult, error) {
-	var val interface{}
-	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
-		ep.mu.Lock()
-		if ep.mu.sockOptTimestamp {
-			val = int32(1)
-		} else {
-			val = int32(0)
-		}
-		ep.mu.Unlock()
-	} else {
-		var err *tcpip.Error
-		val, err = GetSockOpt(ep.ep, ep.netProto, ep.transProto, level, optName)
-		if err != nil {
-			return socket.BaseSocketGetSockOptResultWithErr(tcpipErrorToCode(err)), nil
-		}
-	}
-	if val, ok := val.([]byte); ok {
-		return socket.BaseSocketGetSockOptResultWithResponse(socket.BaseSocketGetSockOptResponse{
-			Optval: val,
-		}), nil
-	}
-	b := make([]byte, reflect.TypeOf(val).Size())
-	n := copyAsBytes(b, val)
-	if n < len(b) {
-		panic(fmt.Sprintf("short %T: %d/%d", val, n, len(b)))
-	}
-	syslog.VLogTf(syslog.DebugVerbosity, "getsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ep, level, optName, len(b), b)
-
-	return socket.BaseSocketGetSockOptResultWithResponse(socket.BaseSocketGetSockOptResponse{
-		Optval: b,
-	}), nil
-}
-
-func (ep *endpoint) SetSockOpt(level, optName int16, optVal []uint8) (socket.BaseSocketSetSockOptResult, error) {
-	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
-		if len(optVal) < sizeOfInt32 {
-			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(tcpip.ErrInvalidOptionValue)), nil
-		}
-
-		v := binary.LittleEndian.Uint32(optVal)
-		ep.mu.Lock()
-		ep.mu.sockOptTimestamp = v != 0
-		ep.mu.Unlock()
-	} else {
-		if err := SetSockOpt(ep.ep, level, optName, optVal); err != nil {
-			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(err)), nil
-		}
-	}
-	syslog.VLogTf(syslog.DebugVerbosity, "setsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ep, level, optName, len(optVal), optVal)
-
-	return socket.BaseSocketSetSockOptResultWithResponse(socket.BaseSocketSetSockOptResponse{}), nil
-}
-
-type endpointWithEvent struct {
-	endpoint
-
-	mu struct {
-		sync.Mutex
-		readView buffer.View
-		sender   tcpip.FullAddress
-	}
-
-	local, peer zx.Handle
-
-	incoming boolWithMutex
-
-	entry waiter.Entry
-}
-
-func (epe *endpointWithEvent) close() int64 {
-	epe.wq.EventUnregister(&epe.entry)
-
-	return epe.endpoint.close(func() { epe.endpoint.metadata.removeEndpoint(epe.local) })
-}
-
-func (epe *endpointWithEvent) Describe() (io.NodeInfo, error) {
-	var info io.NodeInfo
-	event, err := epe.peer.Duplicate(zx.RightsBasic)
-	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", epe, err)
-	if err != nil {
-		return info, err
-	}
-	info.SetDatagramSocket(io.DatagramSocket{Event: event})
-	return info, nil
-}
-
-func (epe *endpointWithEvent) Shutdown(how int16) (socket.DatagramSocketShutdownResult, error) {
-	var signals zx.Signals
-	var flags tcpip.ShutdownFlags
-	switch how {
-	case C.SHUT_RD:
-		signals = zxsioSignalShutdownRead
-		flags = tcpip.ShutdownRead
-	case C.SHUT_WR:
-		signals = zxsioSignalShutdownWrite
-		flags = tcpip.ShutdownWrite
-	case C.SHUT_RDWR:
-		signals = zxsioSignalShutdownRead | zxsioSignalShutdownWrite
-		flags = tcpip.ShutdownRead | tcpip.ShutdownWrite
-	default:
-		return socket.DatagramSocketShutdownResultWithErr(C.EINVAL), nil
-	}
-	if err := epe.ep.Shutdown(flags); err != nil {
-		return socket.DatagramSocketShutdownResultWithErr(tcpipErrorToCode(err)), nil
-	}
-	if flags&tcpip.ShutdownRead != 0 {
-		epe.wq.EventUnregister(&epe.entry)
-	}
-	if err := epe.local.SignalPeer(0, signals); err != nil {
-		return socket.DatagramSocketShutdownResult{}, err
-	}
-	return socket.DatagramSocketShutdownResultWithResponse(socket.DatagramSocketShutdownResponse{}), nil
-}
-
-func (eps *endpointWithSocket) Listen(backlog int16) (socket.StreamSocketListenResult, error) {
-	if err := eps.ep.Listen(int(backlog)); err != nil {
-		return socket.StreamSocketListenResultWithErr(tcpipErrorToCode(err)), nil
-	}
-
-	syslog.VLogTf(syslog.DebugVerbosity, "listen", "%p: backlog=%d", eps, backlog)
-
-	return socket.StreamSocketListenResultWithResponse(socket.StreamSocketListenResponse{}), nil
 }
 
 type datagramSocketImpl struct {
@@ -1451,6 +1264,102 @@ func (s *streamSocketImpl) Accept(flags int16) (socket.StreamSocketAcceptResult,
 	return socket.StreamSocketAcceptResultWithResponse(socket.StreamSocketAcceptResponse{S: streamSocketInterface}), nil
 }
 
+func (metadata *socketMetadata) addEndpoint(handle zx.Handle, ep tcpip.Endpoint) {
+	if ep, loaded := metadata.endpoints.LoadOrStore(handle, ep); loaded {
+		var info stack.TransportEndpointInfo
+		switch t := ep.Info().(type) {
+		case *tcp.EndpointInfo:
+			info = t.TransportEndpointInfo
+		case *stack.TransportEndpointInfo:
+			info = *t
+		}
+		syslog.Errorf("endpoint map store error, key %d exists with endpoint %+v", handle, info)
+	}
+
+	metadata.socketsCreated.Increment()
+	select {
+	case metadata.newSocketNotifications <- struct{}{}:
+	default:
+	}
+}
+
+func (metadata *socketMetadata) removeEndpoint(handle zx.Handle) {
+	metadata.endpoints.Delete(handle)
+	metadata.socketsDestroyed.Increment()
+}
+
+type providerImpl struct {
+	ns                    *Netstack
+	controlService        socket.ControlService
+	datagramSocketService socket.DatagramSocketService
+	streamSocketService   socket.StreamSocketService
+	metadata              socketMetadata
+}
+
+var _ socket.Provider = (*providerImpl)(nil)
+
+// Highest two bits modify the socket type.
+const sockTypesMask = 0x7fff &^ (C.SOCK_CLOEXEC | C.SOCK_NONBLOCK)
+
+func toTransProto(typ, protocol int16) (int32, tcpip.TransportProtocolNumber) {
+	switch typ & sockTypesMask {
+	case C.SOCK_STREAM:
+		switch protocol {
+		case C.IPPROTO_IP, C.IPPROTO_TCP:
+			return 0, tcp.ProtocolNumber
+		}
+	case C.SOCK_DGRAM:
+		switch protocol {
+		case C.IPPROTO_IP, C.IPPROTO_UDP:
+			return 0, udp.ProtocolNumber
+		case C.IPPROTO_ICMP:
+			return 0, icmp.ProtocolNumber4
+		case C.IPPROTO_ICMPV6:
+			return 0, icmp.ProtocolNumber6
+		}
+	}
+	return C.EPROTONOSUPPORT, 0
+}
+
+func toNetProto(domain int16) (int32, tcpip.NetworkProtocolNumber) {
+	switch domain {
+	case C.AF_INET:
+		return 0, ipv4.ProtocolNumber
+	case C.AF_INET6:
+		return 0, ipv6.ProtocolNumber
+	case C.AF_PACKET:
+		return C.EPERM, 0
+	default:
+		return C.EPFNOSUPPORT, 0
+	}
+}
+
+func (sp *providerImpl) Socket(domain, typ, protocol int16) (int16, socket.ControlInterface, error) {
+	code, netProto := toNetProto(domain)
+	if code != 0 {
+		return int16(code), socket.ControlInterface{}, nil
+	}
+	code, transProto := toTransProto(typ, protocol)
+	if code != 0 {
+		return int16(code), socket.ControlInterface{}, nil
+	}
+	wq := new(waiter.Queue)
+	sp.ns.mu.Lock()
+	ep, err := sp.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
+	sp.ns.mu.Unlock()
+	if err != nil {
+		return int16(tcpipErrorToCode(err)), socket.ControlInterface{}, nil
+	}
+	{
+		ep, err := newEndpointWithSocket(ep, wq, transProto, netProto, &sp.metadata)
+		if err != nil {
+			return 0, socket.ControlInterface{}, err
+		}
+		controlInterface, err := newControl(ep, &sp.controlService)
+		return 0, controlInterface, err
+	}
+}
+
 type callback func(*waiter.Entry)
 
 func (cb callback) Callback(e *waiter.Entry) {
@@ -1536,5 +1445,96 @@ func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSoc
 		return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{
 			S: socket.BaseSocketInterface(datagramSocketInterface),
 		}), nil
+	}
+}
+
+func tcpipErrorToCode(err *tcpip.Error) int32 {
+	if err != tcpip.ErrConnectStarted {
+		if pc, file, line, ok := runtime.Caller(1); ok {
+			if i := strings.LastIndexByte(file, '/'); i != -1 {
+				file = file[i+1:]
+			}
+			syslog.VLogf(syslog.DebugVerbosity, "%s: %s:%d: %s", runtime.FuncForPC(pc).Name(), file, line, err)
+		} else {
+			syslog.VLogf(syslog.DebugVerbosity, "%s", err)
+		}
+	}
+	switch err {
+	case tcpip.ErrUnknownProtocol:
+		return C.EINVAL
+	case tcpip.ErrUnknownNICID:
+		return C.EINVAL
+	case tcpip.ErrUnknownDevice:
+		return C.ENODEV
+	case tcpip.ErrUnknownProtocolOption:
+		return C.ENOPROTOOPT
+	case tcpip.ErrDuplicateNICID:
+		return C.EEXIST
+	case tcpip.ErrDuplicateAddress:
+		return C.EEXIST
+	case tcpip.ErrNoRoute:
+		return C.EHOSTUNREACH
+	case tcpip.ErrBadLinkEndpoint:
+		return C.EINVAL
+	case tcpip.ErrAlreadyBound:
+		return C.EINVAL
+	case tcpip.ErrInvalidEndpointState:
+		return C.EINVAL
+	case tcpip.ErrAlreadyConnecting:
+		return C.EALREADY
+	case tcpip.ErrAlreadyConnected:
+		return C.EISCONN
+	case tcpip.ErrNoPortAvailable:
+		return C.EAGAIN
+	case tcpip.ErrPortInUse:
+		return C.EADDRINUSE
+	case tcpip.ErrBadLocalAddress:
+		return C.EADDRNOTAVAIL
+	case tcpip.ErrClosedForSend:
+		return C.EPIPE
+	case tcpip.ErrClosedForReceive:
+		return C.EAGAIN
+	case tcpip.ErrWouldBlock:
+		return C.EWOULDBLOCK
+	case tcpip.ErrConnectionRefused:
+		return C.ECONNREFUSED
+	case tcpip.ErrTimeout:
+		return C.ETIMEDOUT
+	case tcpip.ErrAborted:
+		return C.EPIPE
+	case tcpip.ErrConnectStarted:
+		return C.EINPROGRESS
+	case tcpip.ErrDestinationRequired:
+		return C.EDESTADDRREQ
+	case tcpip.ErrNotSupported:
+		return C.EOPNOTSUPP
+	case tcpip.ErrQueueSizeNotSupported:
+		return C.ENOTTY
+	case tcpip.ErrNotConnected:
+		return C.ENOTCONN
+	case tcpip.ErrConnectionReset:
+		return C.ECONNRESET
+	case tcpip.ErrConnectionAborted:
+		return C.ECONNABORTED
+	case tcpip.ErrNoSuchFile:
+		return C.ENOENT
+	case tcpip.ErrInvalidOptionValue:
+		return C.EINVAL
+	case tcpip.ErrNoLinkAddress:
+		return C.EHOSTDOWN
+	case tcpip.ErrBadAddress:
+		return C.EFAULT
+	case tcpip.ErrNetworkUnreachable:
+		return C.ENETUNREACH
+	case tcpip.ErrMessageTooLong:
+		return C.EMSGSIZE
+	case tcpip.ErrNoBufferSpace:
+		return C.ENOBUFS
+	case tcpip.ErrBroadcastDisabled, tcpip.ErrNotPermitted:
+		return C.EACCES
+	case tcpip.ErrAddressFamilyNotSupported:
+		return C.EAFNOSUPPORT
+	default:
+		panic(fmt.Sprintf("unknown error %v", err))
 	}
 }
