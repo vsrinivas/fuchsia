@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use core::fmt::Debug;
 use fidl_fuchsia_identity_account::{Error as ApiError, Lifetime};
 use fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy};
+use fidl_fuchsia_stash::StoreMarker;
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
 use fuchsia_async as fasync;
 use fuchsia_component::client::App;
@@ -109,6 +110,9 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
         // name is not known to the launched component.
         let account_id_string = account_id.to_canonical_string();
         let mut fs_for_account_handler = ServiceFs::new();
+        if lifetime == Lifetime::Persistent {
+            fs_for_account_handler.add_proxy_service::<StoreMarker, _>();
+        }
         fs_for_account_handler.add_fidl_service(move |stream| {
             let context_clone = context.clone();
             fasync::spawn(async move {

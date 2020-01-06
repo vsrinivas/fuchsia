@@ -78,7 +78,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
     }
 
     /// Get an account handler connection if one exists for the account, either
-    /// by returning a previously added or cached connection, or by loading
+    /// by returning a previously added or cached connection, or by pre-loading
     /// an account from disk and returning its connection.
     ///
     /// Returns: A reference to the account handler connection or `NotFound`
@@ -98,7 +98,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
                 )?);
                 new_handler
                     .proxy()
-                    .load_account()
+                    .preload()
                     .await
                     .account_manager_error(ApiError::Resource)?
                     .map_err(|err| {

@@ -11,6 +11,7 @@ use fidl_fuchsia_identity_account::{
     AccountManagerMarker, AccountManagerProxy, Error as ApiError, Lifetime, Scenario,
     ThreatScenario,
 };
+use fidl_fuchsia_stash::StoreMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::{launch, App};
 use fuchsia_component::fuchsia_single_component_package_url;
@@ -118,6 +119,7 @@ impl Deref for NestedAccountManagerProxy {
 /// destroyed before a new one referencing the same enviroment is created.
 fn create_account_manager(env: Option<String>) -> Result<NestedAccountManagerProxy, Error> {
     let mut service_fs = ServiceFs::new();
+    service_fs.add_proxy_service::<StoreMarker, _>();
 
     let nested_environment = match env {
         None => service_fs.create_salted_nested_environment("account_test_env")?,

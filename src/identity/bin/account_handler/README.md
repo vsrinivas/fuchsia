@@ -29,6 +29,8 @@ Persona channels may only be obtained from an Account channel.
 * */identity/lib/token_manager* - Account Manager uses the TokenManager library
   to perform the authentication token management and implement the
   fuchsia.auth.TokenManager FIDL protocol
+* *fuchsia.stash.Store* - The persistent Account Handler uses stash to store
+  pre-authentication data such as what authentication mechanisms are enrolled.
 
 
 ## Design
@@ -42,9 +44,12 @@ supplied to the Account Handler at launch time, but is passed through a flag
 instead, and parsed by in the main program entry point.
 
 The AccountHandlerControl protocol drives a state machine in the Account
-Handler, starting in an `Uninitialized` state. Once an account is loaded or
+Handler, starting in an `Uninitialized` state. Once an account is unlocked or
 created, the `AccountHandler` is considered `Initialized`. When initialized, the
-`Account` serves subsequent `AccountHandlerControl.GetAccount` calls.
+`Account` serves subsequent `AccountHandlerControl.GetAccount` calls. Notably,
+the `AccountHandler` can also be in the `Locked` state, where the `Account`
+is not available. Unlocking may involve an authentication attempt if the
+account was enrolled with an authentication mechanism upon creation.
 
 `Account` implements the fuchsia.identity.account.Account FIDL protocol and
 stores an instance of the `Persona` struct representing the default Persona.

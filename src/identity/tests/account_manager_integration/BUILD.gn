@@ -27,6 +27,7 @@ rustc_test("test") {
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//src/identity/fidl:account-prototype-rustc",
     "//src/identity/lib/account_common",
     "//src/lib/fuchsia-async",

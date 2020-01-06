@@ -102,6 +102,10 @@ enum Error {
     /// has been corrected before the retry.
     FAILED_PRECONDITION = 9;
 
+    /// The request cannot be processed due to a rejected authentication
+    /// attempt. User consent or input is required before any retry.
+    FAILED_AUTHENTICATION = 10;
+
     // This enumeration may expand to include additional statuses in the future.
     // Examples are likely to include: MAX_LISTENERS, NO_SUITABLE_AUTHENTICATOR,
     // INVALID_AUTH_PROVIDER,

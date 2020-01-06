@@ -22,7 +22,7 @@ mod test_util;
 
 use crate::account_handler::AccountHandler;
 use crate::common::AccountLifetime;
-use account_common::LocalAccountId;
+use account_common::{AccountManagerError, LocalAccountId};
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
 use fuchsia_async as fasync;
@@ -44,6 +44,7 @@ const EPHEMERAL_FLAG: &str = "ephemeral";
 /// determines the local account identifier.
 const ACCOUNT_ID_FLAG: &str = "account_id";
 
+// TODO(dnordstrom): Remove all panics.
 fn main() -> Result<(), Error> {
     let mut opts = getopts::Options::new();
     opts.optflag("", EPHEMERAL_FLAG, "this account is an in-memory ephemeral account");
@@ -78,7 +79,10 @@ fn main() -> Result<(), Error> {
     // TODO(dnordstrom): Find a testable way to inject global capabilities.
     let context = connect_to_service::<AccountHandlerContextMarker>()
         .expect("Error connecting to the AccountHandlerContext service");
-    let account_handler = Arc::new(AccountHandler::new(context, account_id, lifetime, &inspector));
+
+    let pre_auth_manager = create_pre_auth_manager(&lifetime, &account_id)?;
+    let account_handler =
+        Arc::new(AccountHandler::new(context, account_id, lifetime, pre_auth_manager, &inspector));
     fs.dir("svc").add_fidl_service(move |stream| {
         let account_handler_clone = Arc::clone(&account_handler);
         fasync::spawn(async move {
@@ -94,4 +98,17 @@ fn main() -> Result<(), Error> {
 
     info!("Stopping account handler");
     Ok(())
+}
+
+/// Returns a pre-auth manager given the current lifetime and account id.
+fn create_pre_auth_manager(
+    lifetime: &AccountLifetime,
+    id: &LocalAccountId,
+) -> Result<Arc<dyn pre_auth::Manager>, AccountManagerError> {
+    if lifetime == &AccountLifetime::Ephemeral {
+        Ok(Arc::new(pre_auth::InMemoryManager::new(pre_auth::State::NoEnrollments)))
+    } else {
+        let store_name = format!("account_handler/{}", &id.to_canonical_string());
+        Ok(Arc::new(pre_auth::StashManager::create(&store_name)?))
+    }
 }

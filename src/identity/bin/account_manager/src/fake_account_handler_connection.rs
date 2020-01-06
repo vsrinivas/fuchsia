@@ -80,12 +80,12 @@ impl AccountHandlerConnection for FakeAccountHandlerConnection {
                         }
                         responder.send(&mut response).unwrap();
                     }
-                    AccountHandlerControlRequest::LoadAccount { responder } => {
+                    AccountHandlerControlRequest::Preload { responder } => {
                         let mut response = Ok(());
                         if generate_unknown_err {
                             response = Err(ApiError::Unknown);
                         }
-                        // Loading an ephemeral account is always an error
+                        // Preloading an ephemeral account is always an error
                         if lifetime_clone == Lifetime::Ephemeral {
                             response = Err(ApiError::Internal)
                         }
@@ -94,8 +94,10 @@ impl AccountHandlerConnection for FakeAccountHandlerConnection {
                     AccountHandlerControlRequest::Terminate { .. } => {
                         break;
                     }
+                    // TODO(dnordstrom): Support LockAccount/UnlockAccount
+                    // TODO(dnordstrom): Remove wildcard and panic instead
                     _ => {
-                        break; // Close the channel
+                        break;
                     }
                 };
             }
@@ -157,32 +159,32 @@ mod tests {
     }
 
     #[fuchsia_async::run_until_stalled(test)]
-    async fn load_success() -> Result<(), AccountManagerError> {
+    async fn preload_success() -> Result<(), AccountManagerError> {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
             DEFAULT_ACCOUNT_ID.clone(),
         )?;
-        assert!(conn.proxy().load_account().await.unwrap().is_ok());
+        assert!(conn.proxy().preload().await.unwrap().is_ok());
         Ok(())
     }
 
     #[fuchsia_async::run_until_stalled(test)]
-    async fn load_corrupt() -> Result<(), AccountManagerError> {
+    async fn preload_corrupt() -> Result<(), AccountManagerError> {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
             UNKNOWN_ERROR_ACCOUNT_ID.clone(),
         )?;
-        assert_eq!(conn.proxy().load_account().await.unwrap().unwrap_err(), ApiError::Unknown);
+        assert_eq!(conn.proxy().preload().await.unwrap().unwrap_err(), ApiError::Unknown);
         Ok(())
     }
 
     #[fuchsia_async::run_until_stalled(test)]
-    async fn load_ephemeral() -> Result<(), AccountManagerError> {
+    async fn preload_ephemeral() -> Result<(), AccountManagerError> {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Ephemeral,
             DEFAULT_ACCOUNT_ID.clone(),
         )?;
-        assert_eq!(conn.proxy().load_account().await.unwrap().unwrap_err(), ApiError::Internal);
+        assert_eq!(conn.proxy().preload().await.unwrap().unwrap_err(), ApiError::Internal);
         Ok(())
     }
 

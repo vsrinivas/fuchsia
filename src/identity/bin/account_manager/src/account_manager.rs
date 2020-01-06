@@ -173,6 +173,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             warn!("Failure getting account handler connection: {:?}", err);
             err.api_error
         })?;
+        account_handler.proxy().unlock_account().await.map_err(|_| ApiError::Resource)??;
 
         account_handler.proxy().get_account(auth_context_provider, account).await.map_err(
             |err| {
@@ -215,6 +216,9 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             warn!("Could not get account handler for account removal {:?}", err);
             err.api_error
         })?;
+        // TODO(43491): Make a conscious decision on what should happen when removing
+        // a locked account.
+        account_handler.proxy().unlock_account().await.map_err(|_| ApiError::Resource)??;
         account_handler.proxy().remove_account(force).await.map_err(|_| ApiError::Resource)??;
         account_handler.terminate().await;
         // Emphemeral accounts were never included in the StoredAccountList and so it does not need

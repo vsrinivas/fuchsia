@@ -16,6 +16,7 @@ use fidl_fuchsia_mem::Buffer;
 use fidl_fuchsia_stash::{StoreAccessorProxy, StoreMarker, StoreProxy, Value};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon::Vmo;
+use futures::lock::Mutex;
 
 /// Identifier in stash for the authentication mechanism id field.
 const AUTH_MECHANISM_ID: &str = "auth_mechanism_id";
@@ -38,12 +39,15 @@ pub enum State {
 /// Manages persistent pre-auth state. Capable of reading and writing state
 /// atomically.
 #[async_trait]
-pub trait Manager: Send + Sized {
+pub trait Manager: Send + Sync {
     /// Returns the current pre-auth state.
     async fn get(&self) -> Result<State, AccountManagerError>;
 
     /// Sets the pre-auth state.
     async fn put(&self, state: &State) -> Result<(), AccountManagerError>;
+
+    /// Removes the pre-auth state.
+    async fn remove(&self) -> Result<(), AccountManagerError>;
 }
 
 /// Stash-backed pre-auth manager. It uses two Stash fields, for auth mechanism
@@ -55,7 +59,6 @@ pub struct StashManager {
 
 impl StashManager {
     /// Create a StashManager using a given store name.
-    #[allow(dead_code)]
     pub fn create(store_name: &str) -> Result<Self, AccountManagerError> {
         let store_proxy =
             connect_to_service::<StoreMarker>().account_manager_error(ApiError::Resource)?;
@@ -112,6 +115,10 @@ impl Manager for StashManager {
                 .with_cause(format_err!("Failed committing update to stash: {:?}", err))
         })
     }
+
+    async fn remove(&self) -> Result<(), AccountManagerError> {
+        self.put(&State::NoEnrollments).await
+    }
 }
 
 fn read_mem_buffer(buffer: &Buffer) -> Result<Vec<u8>, AccountManagerError> {
@@ -126,57 +133,34 @@ fn write_mem_buffer(data: &[u8]) -> Result<Buffer, AccountManagerError> {
     Ok(Buffer { vmo, size: data.len() as u64 })
 }
 
-#[cfg(test)]
-mod fake {
-    use super::*;
-    use futures::lock::Mutex;
+/// Pre-auth manager with an in-memory state.
+pub struct InMemoryManager {
+    state: Mutex<State>,
+}
 
-    /// Fake pre-auth manager with an in-memory state.
-    pub struct FakeManager {
-        state: Mutex<State>,
+impl InMemoryManager {
+    /// Create an in-memory manager with a pre-set initial state.
+    pub fn new(initial_state: State) -> Self {
+        Self { state: Mutex::new(initial_state) }
+    }
+}
+
+#[async_trait]
+impl Manager for InMemoryManager {
+    async fn get(&self) -> Result<State, AccountManagerError> {
+        Ok((*self.state.lock().await).clone())
     }
 
-    impl FakeManager {
-        /// Create a fake manager with a pre-set initial state.
-        pub fn new(initial_state: State) -> Self {
-            Self { state: Mutex::new(initial_state) }
-        }
+    async fn put(&self, state: &State) -> Result<(), AccountManagerError> {
+        let mut state_lock = self.state.lock().await;
+        *state_lock = state.clone();
+        Ok(())
     }
 
-    #[async_trait]
-    impl Manager for FakeManager {
-        async fn get(&self) -> Result<State, AccountManagerError> {
-            Ok((*self.state.lock().await).clone())
-        }
-
-        async fn put(&self, state: &State) -> Result<(), AccountManagerError> {
-            let mut state_lock = self.state.lock().await;
-            *state_lock = state.clone();
-            Ok(())
-        }
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-        use fuchsia_async as fasync;
-        use lazy_static::lazy_static;
-
-        lazy_static! {
-            static ref TEST_STATE: State = State::SingleEnrollment {
-                auth_mechanism_id: String::from("test_id"),
-                data: vec![1, 2, 3],
-            };
-        }
-
-        #[fasync::run_until_stalled(test)]
-        async fn basic() -> Result<(), AccountManagerError> {
-            let manager = FakeManager::new(State::NoEnrollments);
-            assert_eq!(manager.get().await?, State::NoEnrollments);
-            manager.put(&*TEST_STATE).await?;
-            assert_eq!(manager.get().await?, *TEST_STATE);
-            Ok(())
-        }
+    async fn remove(&self) -> Result<(), AccountManagerError> {
+        let mut state_lock = self.state.lock().await;
+        *state_lock = State::NoEnrollments;
+        Ok(())
     }
 }
 
@@ -200,8 +184,17 @@ mod tests {
         format!("pre_auth_test_{}", &rand_string)
     }
 
+    #[fasync::run_until_stalled(test)]
+    async fn in_memory_basic() -> Result<(), AccountManagerError> {
+        let manager = InMemoryManager::new(State::NoEnrollments);
+        assert_eq!(manager.get().await?, State::NoEnrollments);
+        manager.put(&*TEST_STATE).await?;
+        assert_eq!(manager.get().await?, *TEST_STATE);
+        Ok(())
+    }
+
     #[fasync::run_singlethreaded(test)]
-    async fn no_enrollments() -> Result<(), AccountManagerError> {
+    async fn stash_no_enrollments() -> Result<(), AccountManagerError> {
         let manager = StashManager::create(&random_store_id())?;
         assert_eq!(manager.get().await?, State::NoEnrollments);
         manager.put(&State::NoEnrollments).await?;
@@ -210,7 +203,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn single_enrollment() -> Result<(), AccountManagerError> {
+    async fn stash_single_enrollment() -> Result<(), AccountManagerError> {
         let manager = StashManager::create(&random_store_id())?;
         manager.put(&TEST_STATE).await?;
         assert_eq!(manager.get().await?, *TEST_STATE);
@@ -220,7 +213,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn lifecycle() -> Result<(), AccountManagerError> {
+    async fn stash_lifecycle() -> Result<(), AccountManagerError> {
         let store_name = random_store_id();
         {
             let manager = StashManager::create(&store_name)?;
@@ -233,7 +226,7 @@ mod tests {
 
     /// Manually construct an invalid state by directly connecting to Stash.
     #[fasync::run_singlethreaded(test)]
-    async fn inconsistent_state() -> Result<(), AccountManagerError> {
+    async fn stash_inconsistent_state() -> Result<(), AccountManagerError> {
         let store_name = random_store_id();
         {
             let store_proxy =
@@ -254,7 +247,7 @@ mod tests {
 
     /// Manually populate the Stash store with a known key but an invalid type.
     #[fasync::run_singlethreaded(test)]
-    async fn type_mismatch() -> Result<(), AccountManagerError> {
+    async fn stash_type_mismatch() -> Result<(), AccountManagerError> {
         let store_name = random_store_id();
         {
             let store_proxy =
