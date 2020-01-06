@@ -11,8 +11,9 @@ use {
     },
     fuchsia_async as fasync,
     futures::{TryFutureExt, TryStreamExt},
+    parking_lot::RwLock,
     selectors,
-    std::sync::{Arc, RwLock},
+    std::sync::Arc,
 };
 
 /// ArchiveAccessor represents an incoming connection from a client to an Archivist

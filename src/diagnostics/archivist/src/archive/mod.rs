@@ -16,6 +16,7 @@ use {
     futures::{FutureExt, StreamExt},
     itertools::Itertools,
     lazy_static::lazy_static,
+    parking_lot::{Mutex, RwLock},
     regex::Regex,
     serde_derive::{Deserialize, Serialize},
     serde_json::Deserializer,
@@ -24,7 +25,7 @@ use {
     std::fs,
     std::io::Write,
     std::path::{Path, PathBuf},
-    std::sync::{Arc, Mutex, RwLock},
+    std::sync::Arc,
 };
 
 // Keep only the 50 most recent events.
@@ -612,14 +613,11 @@ fn populate_inspect_repo(
     state: &Arc<Mutex<ArchivistState>>,
     inspect_reader_data: InspectReaderData,
 ) -> Result<(), Error> {
-    let state = state.lock().unwrap();
-    let mut inspect_repo = state.inspect_repository.write().unwrap();
-
     // The InspectReaderData should always contain a directory_proxy. Its existence
     // as an Option is only to support mock objects for equality in tests.
     let inspect_directory_proxy = inspect_reader_data.data_directory_proxy.unwrap();
 
-    inspect_repo.add(
+    state.lock().inspect_repository.write().add(
         inspect_reader_data.component_name,
         inspect_reader_data.absolute_moniker,
         inspect_directory_proxy,
@@ -627,9 +625,7 @@ fn populate_inspect_repo(
 }
 
 fn remove_from_inspect_repo(state: &Arc<Mutex<ArchivistState>>, component_name: &String) {
-    let state = state.lock().unwrap();
-    let mut inspect_repo = state.inspect_repository.write().unwrap();
-    inspect_repo.remove(component_name)
+    state.lock().inspect_repository.write().remove(component_name);
 }
 
 async fn process_event(
@@ -652,7 +648,7 @@ async fn archive_event(
     event_name: &str,
     event_data: ComponentEventData,
 ) -> Result<(), Error> {
-    let mut state = state.lock().unwrap();
+    let mut state = state.lock();
     let ArchivistState { writer, log_node, configuration, .. } = &mut *state;
     let writer = if let Some(w) = writer.as_mut() {
         w
@@ -763,7 +759,7 @@ pub async fn run_archivist(archivist_state: ArchivistState) -> Result<(), Error>
 
     let collector_state = state.clone();
     fasync::spawn(collector.start().then(|e| async move {
-        let mut state = collector_state.lock().unwrap();
+        let mut state = collector_state.lock();
         component::health().set_unhealthy("Collection loop stopped");
         inspect_log!(state.log_node, event: "Collection ended", result: format!("{:?}", e));
         eprintln!("Collection ended with result {:?}", e);
@@ -774,7 +770,7 @@ pub async fn run_archivist(archivist_state: ArchivistState) -> Result<(), Error>
     while let Some(event) = events.next().await {
         let state = state.clone();
         process_event(state.clone(), event).await.unwrap_or_else(|e| {
-            let mut state = state.lock().unwrap();
+            let mut state = state.lock();
             inspect_log!(state.log_node, event: "Failed to log event", result: format!("{:?}", e));
             eprintln!("Failed to log event: {:?}", e);
         });

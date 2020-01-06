@@ -14,10 +14,8 @@ use {
     fuchsia_component::server::ServiceFs,
     futures::{future, FutureExt, StreamExt},
     io_util,
-    std::{
-        path::PathBuf,
-        sync::{Arc, RwLock},
-    },
+    parking_lot::RwLock,
+    std::{path::PathBuf, sync::Arc},
 };
 
 /// Monitor, collect, and store diagnostics from components.

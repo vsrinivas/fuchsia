@@ -27,11 +27,12 @@ use {
     inspect_fidl_load as deprecated_inspect,
     inspect_formatter::{self, DeprecatedHierarchyFormatter, HierarchyData},
     io_util,
+    parking_lot::{Mutex, RwLock},
     regex::{Regex, RegexSet},
     selectors,
     std::convert::{TryFrom, TryInto},
     std::path::{Path, PathBuf},
-    std::sync::{Arc, Mutex, RwLock},
+    std::sync::Arc,
 };
 
 /// Keep only 64 hierarchy snapshots in memory at a time.
@@ -201,12 +202,8 @@ impl InspectDataCollector {
     /// Adds a key value to the contained vector if it hasn't been taken yet. Otherwise, does
     /// nothing.
     fn maybe_add(&mut self, key: String, value: Data) {
-        let mut data_map = self.inspect_data_map.lock().unwrap();
-        match data_map.as_mut() {
-            Some(map) => {
-                map.insert(key, value);
-            }
-            _ => {}
+        if let Some(map) = self.inspect_data_map.lock().as_mut() {
+            map.insert(key, value);
         };
     }
 
@@ -230,7 +227,7 @@ impl InspectDataCollector {
 impl DataCollector for InspectDataCollector {
     /// Takes the contained extra data. Additions following this have no effect.
     fn take_data(self: Box<Self>) -> Option<DataMap> {
-        self.inspect_data_map.lock().unwrap().take()
+        self.inspect_data_map.lock().take()
     }
 
     /// Collect extra data stored under the given path.
@@ -726,10 +723,7 @@ impl ReaderServer {
     ) -> Result<(), Error> {
         // We must fetch the repositories in a closure to prevent the
         // repository mutex-guard from leaking into futures.
-        let inspect_repo_data = {
-            let locked_inspect_repo = self.inspect_repo.read().unwrap();
-            locked_inspect_repo.fetch_data()
-        };
+        let inspect_repo_data = self.inspect_repo.read().fetch_data();
         let mut stream = fidl_fuchsia_diagnostics::BatchIteratorRequestStream::from_channel(
             batch_iterator_channel,
         );
@@ -1097,11 +1091,7 @@ mod tests {
         // selector, so any path would match.
         let absolute_moniker = vec!["test_component.cmx".to_string()];
         let filename_string = filename.into();
-        inspect_repo
-            .write()
-            .unwrap()
-            .add(filename_string.clone(), absolute_moniker, out_dir_proxy)
-            .unwrap();
+        inspect_repo.write().add(filename_string.clone(), absolute_moniker, out_dir_proxy).unwrap();
 
         let reader_server = ReaderServer::new(inspect_repo.clone(), Vec::new());
 
@@ -1124,7 +1114,7 @@ mod tests {
 }"#;
         assert_eq!(result_string, expected_result);
 
-        inspect_repo.write().unwrap().remove(&filename_string);
+        inspect_repo.write().remove(&filename_string);
         let result_string = read_snapshot(reader_server.clone()).await;
 
         assert_eq!(result_string, "".to_string());

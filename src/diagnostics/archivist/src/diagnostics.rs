@@ -4,7 +4,8 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::{component, Node, UintProperty},
     lazy_static::lazy_static,
-    std::sync::{Arc, Mutex},
+    parking_lot::Mutex,
+    std::sync::Arc,
 };
 
 lazy_static! {
@@ -55,8 +56,7 @@ pub fn serve(service_fs: &mut ServiceFs<impl ServiceObjTrait>) -> Result<(), Err
 }
 
 pub(crate) fn set_group_stats(stats: &EventFileGroupStatsMap) {
-    let mut groups = GROUPS.lock().unwrap();
-    groups.replace(stats);
+    GROUPS.lock().replace(stats);
 }
 
 #[cfg(test)]
