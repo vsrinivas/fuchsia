@@ -185,7 +185,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
     ~TrackedParentVmo();
     // This should only be called after client code has created a child VMO, and
     // will begin the wait for ZX_VMO_ZERO_CHILDREN.
-    zx_status_t StartWait(async_dispatcher_t* dispatcher);
+    zx_status_t StartWait();
     zx::vmo TakeVmo();
     [[nodiscard]] const zx::vmo& vmo() const;
 

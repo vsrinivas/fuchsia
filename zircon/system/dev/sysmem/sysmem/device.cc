@@ -23,7 +23,6 @@
 #include "allocator.h"
 #include "buffer_collection_token.h"
 #include "contiguous_pooled_memory_allocator.h"
-#include "driver.h"
 #include "macros.h"
 
 using sysmem_driver::MemoryAllocator;
@@ -233,8 +232,8 @@ Device::Device(zx_device_t* parent_device, Driver* parent_driver)
     : parent_device_(parent_device),
       parent_driver_(parent_driver),
       in_proc_sysmem_protocol_{.ops = &in_proc_sysmem_protocol_ops, .ctx = this},
-      dispatcher_(parent_driver->dispatcher),
-      closure_queue_(dispatcher_, parent_driver->dispatcher_thrd) {
+      dispatcher_(async_get_default_dispatcher()),
+      closure_queue_(dispatcher_, thrd_current()) {
   ZX_DEBUG_ASSERT(parent_device_);
   ZX_DEBUG_ASSERT(parent_driver_);
 }

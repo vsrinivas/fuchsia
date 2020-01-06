@@ -33,7 +33,6 @@ namespace display {
 class ClientProxy;
 class Controller;
 class ControllerTest;
-class IntegrationTest;
 class DisplayConfig;
 
 class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
@@ -116,11 +115,11 @@ class Controller : public ControllerParent,
                       const display_params_t** params) __TA_REQUIRES(mtx());
   bool GetSupportedPixelFormats(uint64_t display_id, fbl::Array<zx_pixel_format_t>* fmts_out)
       __TA_REQUIRES(mtx());
-  bool GetCursorInfo(uint64_t display_id, fbl::Array<cursor_info_t>* cursor_info_out)
-      __TA_REQUIRES(mtx());
+  bool GetCursorInfo(uint64_t display_id,
+                     fbl::Array<cursor_info_t>* cursor_info_out) __TA_REQUIRES(mtx());
   bool GetDisplayIdentifiers(uint64_t display_id, const char** manufacturer_name,
-                             const char** monitor_name, const char** monitor_serial)
-      __TA_REQUIRES(mtx());
+                             const char** monitor_name,
+                             const char** monitor_serial) __TA_REQUIRES(mtx());
 
   ddk::DisplayControllerImplProtocolClient* dc() { return &dc_; }
   ddk::DisplayCaptureImplProtocolClient* dc_capture() {
@@ -134,15 +133,10 @@ class Controller : public ControllerParent,
   // Thread-safety annotations currently don't deal with pointer aliases. Use this to document
   // places where we believe a mutex aliases mtx()
   void AssertMtxAliasHeld(mtx_t* m) __TA_ASSERT(m) { ZX_DEBUG_ASSERT(m == mtx()); }
-  mtx_t* mtx() const { return &mtx_; }
-
-  // Test helpers
-  size_t TEST_imported_images_count() const;
+  mtx_t* mtx() { return &mtx_; }
 
  private:
   friend ControllerTest;
-  friend IntegrationTest;
-
   void HandleClientOwnershipChanges() __TA_REQUIRES(mtx());
   void PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) __TA_EXCLUDES(mtx());
   void PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info);
@@ -158,7 +152,7 @@ class Controller : public ControllerParent,
   };
 
   // mtx_ is a global lock on state shared among clients.
-  mutable mtx_t mtx_;
+  mtx_t mtx_;
   bool unbinding_ __TA_GUARDED(mtx()) = false;
 
   DisplayInfo::Map displays_ __TA_GUARDED(mtx());

@@ -5,29 +5,22 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_TEST_BASE_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_TEST_BASE_H_
 
-#include <lib/async-testing/test_loop.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/bti.h>
-#include <zircon/device/sysmem.h>
 
 #include <map>
 #include <vector>
 
-#include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/platform/bus.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/sysmem.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
-
-#include "../../../sysmem/sysmem/device.h"
-#include "../../../sysmem/sysmem/driver.h"
 
 namespace fake_display {
 // Forward declared because the Banjo and FIDL headers conflict for fuchsia.hardware.display
@@ -48,18 +41,23 @@ class Binder : public fake_ddk::Bind {
     std::vector<zx_device_t*> children;
   };
 
-  // |fake_ddk::DeviceAdd|
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) override {
-    *out = reinterpret_cast<zx_device_t*>(reinterpret_cast<char*>(kFakeChild) + total_children_);
-    children_++;
-    total_children_++;
-    devices_[parent].children.push_back(*out);
+    zx_status_t status;
     if (args && args->ops && args->ops->message) {
-      auto loop = std::make_unique<fake_ddk::FidlMessenger>();
-      loop->SetMessageOp(args->ctx, args->ops->message);
-      fidl_loops_.insert({*out, std::move(loop)});
+      if ((status = fidl_.SetMessageOp(args->ctx, args->ops->message)) < 0) {
+        return status;
+      }
     }
+    if (parent == fake_ddk::kFakeParent) {
+      *out = fake_ddk::kFakeDevice;
+    } else {
+      *out = reinterpret_cast<zx_device_t*>(reinterpret_cast<char*>(kFakeChild) + total_children_);
+      children_++;
+      total_children_++;
+      devices_[parent].children.push_back(*out);
+    }
+    printf("added device %p\n", *out);
 
     DeviceState state;
     constexpr device_add_args_t null_args = {};
@@ -74,6 +72,7 @@ class Binder : public fake_ddk::Bind {
     }
     // unbind all children
     for (zx_device_t* dev : state->children) {
+      printf("removing device %p\n", dev);
       auto child = devices_.find(dev);
       if (child != devices_.end()) {
         RemoveHelper(&child->second);
@@ -86,18 +85,18 @@ class Binder : public fake_ddk::Bind {
     }
   }
 
-  // |fake_ddk::Bind|
   void DeviceAsyncRemove(zx_device_t* device) override {
+    printf("removing device %p\n", device);
+
     auto state = devices_.find(device);
     if (state == devices_.end()) {
-      printf("Unrecognized device %p\n", device);
+      printf("Unrecognized device\n");
       return;
     }
     RemoveHelper(&state->second);
     devices_.erase(state);
   }
 
-  // |fake_ddk::Bind|
   zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
                                 void* protocol) override;
 
@@ -106,87 +105,17 @@ class Binder : public fake_ddk::Bind {
   zx_device_t* display();
 
   bool Ok() {
-    if (devices_.empty()) {
-      EXPECT_EQ(children_, 0);
-    } else {
-      EXPECT_TRUE(devices_.size() == 1);
-      EXPECT_TRUE(devices_.begin()->first == fake_ddk::kFakeParent);
-    }
+    EXPECT_TRUE(devices_.empty());
+    EXPECT_EQ(children_, 0);
     return true;
-  }
-
-  // |fake_ddk::Bind|
-  zx_status_t DeviceGetMetadataSize(zx_device_t* dev, uint32_t type, size_t* out_size) override {
-    if (type == SYSMEM_METADATA) {
-      *out_size = sizeof(sysmem_metadata_);
-      return ZX_OK;
-    }
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // |fake_ddk::Bind|
-  zx_status_t DeviceGetMetadata(zx_device_t* dev, uint32_t type, void* data, size_t length,
-                                size_t* actual) override {
-    if (type == SYSMEM_METADATA) {
-      *actual = sizeof(sysmem_metadata_);
-      if (length < *actual) {
-        return ZX_ERR_NO_MEMORY;
-      }
-      *static_cast<sysmem_metadata_t*>(data) = sysmem_metadata_;
-      return ZX_OK;
-    }
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  zx::unowned_channel fidl_loop(const zx_device_t* dev) {
-    auto iter = fidl_loops_.find(dev);
-    if (iter == fidl_loops_.end()) {
-      return zx::unowned_channel(0);
-    }
-    return zx::unowned_channel(iter->second->local().get());
   }
 
  private:
   std::map<zx_device_t*, DeviceState> devices_;
-  std::map<const zx_device_t*, std::unique_ptr<fake_ddk::FidlMessenger>> fidl_loops_;
   zx_device_t* kFakeChild = reinterpret_cast<zx_device_t*>(0xcccc);
   int total_children_ = 0;
   int children_ = 0;
   fake_display::FakeDisplay* display_;
-  const sysmem_metadata_t sysmem_metadata_ = {
-      .vid = PDEV_VID_QEMU,
-      .pid = PDEV_VID_QEMU,
-      .protected_memory_size = 0,
-      .contiguous_memory_size = 0,
-  };
-};
-
-class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
- public:
-  FakePBus() : proto_({&pbus_protocol_ops_, this}) {}
-
-  const pbus_protocol_t* proto() const { return &proto_; }
-
-  zx_status_t PBusDeviceAdd(const pbus_dev_t* dev) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol, size_t protocol_size) {
-    return ZX_OK;
-  }
-  zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
-                                     const device_component_t* components_list,
-                                     size_t components_count, uint32_t coresident_device_index) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
- private:
-  pbus_protocol_t proto_;
 };
 
 class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
@@ -215,6 +144,36 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
 
  private:
   pdev_protocol_t proto_;
+};
+
+class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
+ public:
+  FakeSysmem() : proto_({&sysmem_protocol_ops_, this}) {}
+
+  const sysmem_protocol_t* proto() const { return &proto_; }
+
+  zx_status_t SysmemConnect(zx::channel allocator2_request) {
+    // Currently, do nothing
+    return ZX_OK;
+  }
+
+  zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection) {
+    // Currently, do nothing
+    return ZX_OK;
+  }
+
+  zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection) {
+    // Currently, do nothing
+    return ZX_OK;
+  }
+
+  zx_status_t SysmemUnregisterSecureMem() {
+    // Currently, do nothing
+    return ZX_OK;
+  }
+
+ private:
+  sysmem_protocol_t proto_;
 };
 
 class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
@@ -247,7 +206,7 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
 
 class TestBase : public zxtest::Test {
  public:
-  TestBase() : loop_(&kAsyncLoopConfigAttachToCurrentThread), composite_(fake_ddk::kFakeParent) {}
+  TestBase() : composite_(fake_ddk::kFakeParent) {}
 
   void SetUp() override;
   void TearDown() override;
@@ -255,22 +214,12 @@ class TestBase : public zxtest::Test {
   Binder& ddk() { return ddk_; }
   Controller* controller() { return controller_; }
   fake_display::FakeDisplay* display() { return display_; }
-  zx::unowned_channel sysmem_fidl();
-  zx::unowned_channel display_fidl();
-
-  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
-  bool RunLoopWithTimeoutOrUntil(fit::function<bool()> condition, zx::duration timeout = zx::sec(1),
-                                 zx::duration step = zx::msec(10));
 
  private:
-  async::Loop loop_;
-  thrd_t loop_thrd_ = 0;
   Binder ddk_;
   FakeComposite composite_;
-  FakePBus pbus_;
   FakePDev pdev_;
-  std::unique_ptr<sysmem_driver::Device> sysmem_;
-  std::unique_ptr<sysmem_driver::Driver> sysmem_ctx_;
+  FakeSysmem sysmem_;
   // Not owned, FakeDisplay will delete itself on shutdown.
   fake_display::FakeDisplay* display_;
 

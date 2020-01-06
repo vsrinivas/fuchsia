@@ -6,8 +6,6 @@
 #define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_TEST_FIDL_CLIENT_H_
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
-#include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/message.h>
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
@@ -32,34 +30,17 @@ class TestFidlClient {
     fbl::String manufacturer_name_;
     fbl::String monitor_name_;
     fbl::String monitor_serial_;
-
-    ::llcpp::fuchsia::hardware::display::ImageConfig image_config_;
   };
 
-  TestFidlClient(::llcpp::fuchsia::sysmem::Allocator::SyncClient* sysmem) : sysmem_(sysmem) {}
-  ~TestFidlClient();
+  TestFidlClient() {}
 
   bool CreateChannel(zx_handle_t provider, bool is_vc);
-  // Enable vsync for a display and wait for events using |dispatcher|.
-  bool Bind(async_dispatcher_t* dispatcher);
-  zx_status_t ImportImageWithSysmem(
-      const ::llcpp::fuchsia::hardware::display::ImageConfig& image_config, uint64_t* image_id);
-  zx_status_t PresentImage();
-  uint64_t display_id() const;
+  bool Bind();
 
   fbl::Vector<Display> displays_;
   std::unique_ptr<::llcpp::fuchsia::hardware::display::Controller::SyncClient> dc_;
-  ::llcpp::fuchsia::sysmem::Allocator::SyncClient* sysmem_;
   zx::handle device_handle_;
-  bool has_ownership_ = false;
-  size_t vsync_count_ = 0;
-  uint64_t image_id_ = 0;
-  uint64_t layer_id_ = 0;
-
- private:
-  void OnEventMsgAsync(async_dispatcher_t* dispatcher, async::WaitBase* self, zx_status_t status,
-                       const zx_packet_signal_t* signal);
-  async::WaitMethod<TestFidlClient, &TestFidlClient::OnEventMsgAsync> wait_events_{this};
+  bool has_ownership_;
 };
 
 }  // namespace display

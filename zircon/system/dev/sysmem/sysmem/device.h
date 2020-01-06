@@ -76,7 +76,6 @@ class Device final : public MemoryAllocator::Owner {
 
   const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }
   const zx_device_t* device() const { return device_; }
-  async_dispatcher_t* dispatcher() { return dispatcher_; }
 
  private:
   void Post(fit::closure to_run);

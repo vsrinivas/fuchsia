@@ -93,11 +93,6 @@ class FakeDisplay : public DeviceType,
   // Just for display core unittests.
   zx_status_t ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
 
-  size_t TEST_imported_images_count() const {
-    fbl::AutoLock lock(&image_lock_);
-    return imported_images_.size_slow();
-  }
-
  private:
   enum {
     COMPONENT_PDEV,
@@ -124,9 +119,9 @@ class FakeDisplay : public DeviceType,
   thrd_t capture_thread_;
 
   // Locks used by the display driver
-  fbl::Mutex display_lock_;        // general display state (i.e. display_id)
-  mutable fbl::Mutex image_lock_;  // used for accessing imported_images
-  fbl::Mutex capture_lock_;        // general capture state
+  fbl::Mutex display_lock_;  // general display state (i.e. display_id)
+  fbl::Mutex image_lock_;    // used for accessing imported_images
+  fbl::Mutex capture_lock_;  // general capture state
 
   // The ID for currently active capture
   uint64_t capture_active_id_ TA_GUARDED(capture_lock_);

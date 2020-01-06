@@ -455,7 +455,6 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   }
 
   if (!info) {
-    zxlogf(ERROR, "No such display %lu\n", display_id);
     return;
   }
 
@@ -610,7 +609,6 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
   uint32_t display_count = 0;
   {
     fbl::AutoLock lock(mtx());
-    bool switching_client = (is_vc != vc_applied_ || client_id != applied_client_id_);
     // The fact that there could already be a vsync waiting to be handled when a config
     // is applied means that a vsync with no handle for a layer could be interpreted as either
     // nothing in the layer has been presented or everything in the layer can be retired. To
@@ -628,7 +626,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
     // can apply a new configuration. We allow the client to apply a more complete version of
     // the configuration, although Client::HandleApplyConfig won't migrate a layer's current
     // image if there is also a pending image.
-    if (switching_client || applied_stamp_ != client_stamp) {
+    if (vc_applied_ != is_vc || applied_stamp_ != client_stamp) {
       for (int i = 0; i < count; i++) {
         auto* config = configs[i];
         auto display = displays_.find(config->id);
@@ -650,7 +648,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
         continue;
       }
 
-      display->switching_client = switching_client;
+      display->switching_client = (is_vc != vc_applied_ || client_id != applied_client_id_);
       display->pending_layer_change = config->apply_layer_change() || display->switching_client;
       display->vsync_layer_count = config->vsync_layer_count();
       display->delayed_apply = false;
@@ -969,27 +967,12 @@ void Controller::DdkUnbindNew(ddk::UnbindTxn txn) {
 void Controller::DdkRelease() {
   // Clients may have active work holding mtx_ in loop_.dispatcher(), so shut it down without mtx_
   loop_.Shutdown();
-  const display_config_t* configs;
-  dc_.ApplyConfiguration(&configs, 0);
   delete this;
 }
 
 Controller::Controller(zx_device_t* parent)
     : ControllerParent(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   mtx_init(&mtx_, mtx_plain);
-}
-
-size_t Controller::TEST_imported_images_count() const {
-  fbl::AutoLock lock(mtx());
-  size_t vc_images = vc_client_ ? vc_client_->TEST_imported_images_count() : 0;
-  size_t primary_images = primary_client_ ? primary_client_->TEST_imported_images_count() : 0;
-  size_t display_images = 0;
-  for (const auto& display : displays_) {
-    image_node_t* cur;
-    image_node_t* tmp;
-    list_for_every_entry_safe (&display.images, cur, tmp, image_node_t, link) { ++display_images; }
-  }
-  return vc_images + primary_images + display_images;
 }
 
 // ControllerInstance methods
