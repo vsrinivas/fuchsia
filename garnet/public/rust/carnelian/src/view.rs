@@ -22,7 +22,7 @@ use fidl_fuchsia_ui_views::ViewToken;
 use fuchsia_async::{self as fasync, Interval};
 use fuchsia_framebuffer::ImageId;
 use fuchsia_scenic::{EntityNode, SessionPtr, View};
-use fuchsia_zircon::{Duration, Event};
+use fuchsia_zircon::{Duration, Event, Time};
 use futures::{channel::mpsc::UnboundedSender, StreamExt, TryFutureExt};
 use std::{cell::RefCell, collections::BTreeMap};
 
@@ -445,5 +445,9 @@ impl ViewController {
 
     pub(crate) fn image_freed(&mut self, image_id: u64, collection_id: u32) {
         self.strategy.image_freed(image_id, collection_id);
+    }
+
+    pub fn handle_vsync_parameters_changed(&mut self, phase: Time, interval: Duration) {
+        self.strategy.handle_vsync_parameters_changed(phase, interval);
     }
 }

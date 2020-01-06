@@ -14,7 +14,7 @@ use crate::{
 use async_trait::async_trait;
 use fuchsia_async::{self as fasync};
 use fuchsia_framebuffer::{FrameSet, ImageId};
-use fuchsia_zircon::{self as zx, ClockId, Event, HandleBased, Time};
+use fuchsia_zircon::{self as zx, ClockId, Duration, Event, HandleBased, Time};
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
     StreamExt,
@@ -30,6 +30,8 @@ pub(crate) struct FrameBufferViewStrategy {
     image_sender: futures::channel::mpsc::UnboundedSender<u64>,
     wait_events: WaitEvents,
     signals_wait_event: bool,
+    vsync_phase: Time,
+    vsync_interval: Duration,
 }
 
 impl FrameBufferViewStrategy {
@@ -84,6 +86,8 @@ impl FrameBufferViewStrategy {
             image_sender: image_sender,
             wait_events,
             signals_wait_event,
+            vsync_phase: Time::get(ClockId::Monotonic),
+            vsync_interval: Duration::from_millis(16),
         })
     }
 
@@ -99,12 +103,25 @@ impl FrameBufferViewStrategy {
             None
         };
 
+        let time_now = Time::get(ClockId::Monotonic);
+        // |interval_offset| is the offset from |time_now| to the next multiple
+        // of vsync interval after vsync phase, possibly negative if in the past.
+        let mut interval_offset = Duration::from_nanos(
+            (self.vsync_phase.into_nanos() - time_now.into_nanos())
+                % self.vsync_interval.into_nanos(),
+        );
+        // Unless |time_now| is exactly on the interval, adjust forward to the next
+        // vsync after |time_now|.
+        if interval_offset != Duration::from_nanos(0) && self.vsync_phase < time_now {
+            interval_offset += self.vsync_interval;
+        }
+
         ViewAssistantContext {
             key: view_details.key,
             logical_size: view_details.logical_size,
             size: view_details.physical_size,
             metrics: view_details.metrics,
-            presentation_time: Time::get(ClockId::Monotonic),
+            presentation_time: time_now + interval_offset,
             messages: Vec::new(),
             scenic_resources: None,
             canvas: Some(
@@ -158,5 +175,10 @@ impl ViewStrategy for FrameBufferViewStrategy {
 
     fn image_freed(&mut self, image_id: u64, _collection_id: u32) {
         self.frame_set.mark_done_presenting(image_id);
+    }
+
+    fn handle_vsync_parameters_changed(&mut self, phase: Time, interval: Duration) {
+        self.vsync_phase = phase;
+        self.vsync_interval = interval;
     }
 }

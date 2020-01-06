@@ -299,6 +299,57 @@ rustc_binary("ink") {
   ]
 }
 
+rustc_binary("infinite_scroll") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/infinite_scroll.rs"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/carnelian",
+    "//garnet/public/rust/fuchsia-framebuffer",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
+    "//src/graphics/lib/compute/mold",
+    "//src/graphics/lib/compute/spinel-mold",
+    "//src/graphics/lib/compute/spinel-rs-sys",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/mapped-vmo",
+    "//src/lib/trace/rust:trace",
+    "//src/lib/trace/rust:trace-provider",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:lipsum",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:rusttype",
+    "//third_party/rust_crates:textwrap",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:vk-sys",
+    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
+  ]
+  non_rust_deps = [
+    "//src/graphics/lib/vulkan",
+    "//src/graphics/lib/compute/common",
+    "//src/graphics/lib/compute/common/vk",
+    "//src/graphics/lib/compute/hotsort/platforms/vk",
+    "//src/graphics/lib/compute/spinel",
+    "//src/graphics/lib/compute/spinel/platforms/vk",
+    "//src/graphics/lib/compute/spinel/platforms/vk:vk_find_target",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
+  ]
+}
+
 package("spinning_square_rs") {
   deps = [
     ":spinning_square_example",
@@ -525,6 +576,45 @@ package("ink_rs") {
   public_deps = vulkan_validation_layers.public_deps
   loadable_modules = vulkan_validation_layers.loadable_modules
   resources = vulkan_validation_layers.resources
+}
+
+package("infinite_scroll_rs") {
+  deps = [
+    ":infinite_scroll",
+  ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "infinite_scroll"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "infinite_scroll_rs.cmx"
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
+
+  shaders = [
+    "copy.comp.spv",
+    "motioncopy.comp.spv",
+  ]
+
+  foreach(shader, shaders) {
+    resources += [
+      {
+        path = rebase_path("examples/shaders/${shader}")
+        file_name = get_path_info(shader, "file")
+        dest = "shaders/${file_name}"
+      },
+    ]
+  }
 }
 
 unittest_package("carnelian_tests") {

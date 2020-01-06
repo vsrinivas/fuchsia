@@ -170,6 +170,7 @@ mod tests {
             display_id: 0,
             width: WIDTH as u32,
             height: HEIGHT as u32,
+            refresh_rate_e2: 6000,
             linear_stride_bytes: (WIDTH * 4) as u32,
             format: PixelFormat::Argb8888,
             pixel_size_bytes: 4,

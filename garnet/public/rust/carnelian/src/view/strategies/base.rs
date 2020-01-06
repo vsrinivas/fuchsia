@@ -6,6 +6,7 @@ use crate::{
     view::{ViewAssistantPtr, ViewDetails},
 };
 use async_trait::async_trait;
+use fuchsia_zircon::{Duration, Time};
 
 #[async_trait(?Send)]
 pub(crate) trait ViewStrategy {
@@ -32,6 +33,8 @@ pub(crate) trait ViewStrategy {
     ) -> Vec<Message>;
 
     fn image_freed(&mut self, _image_id: u64, _collection_id: u32) {}
+
+    fn handle_vsync_parameters_changed(&mut self, _phase: Time, _interval: Duration) {}
 }
 
 pub(crate) type ViewStrategyPtr = Box<dyn ViewStrategy>;

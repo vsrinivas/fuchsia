@@ -264,6 +264,7 @@ pub struct Config {
     pub display_id: u64,
     pub width: u32,
     pub height: u32,
+    pub refresh_rate_e2: u32,
     pub linear_stride_bytes: u32,
     pub format: PixelFormat,
     pub pixel_size_bytes: u32,
@@ -443,6 +444,7 @@ impl FrameBuffer {
         let pixel_format;
         let width;
         let height;
+        let refresh_rate_e2;
 
         loop {
             let timeout = 2_i64.seconds().after_now();
@@ -454,6 +456,7 @@ impl FrameBuffer {
                     pixel_format = first_added.pixel_format[0];
                     width = first_added.modes[0].horizontal_resolution;
                     height = first_added.modes[0].vertical_resolution;
+                    refresh_rate_e2 = first_added.modes[0].refresh_rate_e2;
                     break;
                 }
             } else {
@@ -466,6 +469,7 @@ impl FrameBuffer {
             display_id: display_id,
             width: width,
             height: height,
+            refresh_rate_e2: refresh_rate_e2,
             linear_stride_bytes: 0,
             format: pixel_format.into(),
             pixel_size_bytes: pixel_format_bytes(pixel_format) as u32,
@@ -637,6 +641,7 @@ impl FrameBuffer {
             display_id: self.config.display_id,
             width: self.config.width,
             height: self.config.height,
+            refresh_rate_e2: self.config.refresh_rate_e2,
             linear_stride_bytes: 0,
             format: format.into(),
             pixel_size_bytes: pixel_format_bytes(format.into()) as u32,

@@ -18,7 +18,7 @@ use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_component::{self as component, client::connect_to_service};
 use fuchsia_framebuffer::{FrameBuffer, FrameUsage, VSyncMessage};
 use fuchsia_scenic::{Session, SessionPtr, ViewTokenPair};
-use fuchsia_zircon::{self as zx, DurationNum};
+use fuchsia_zircon::{self as zx, Duration, DurationNum, Time};
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
     future::{Either, Future},
@@ -233,12 +233,22 @@ async fn create_app_strategy(
         Ok::<AppStrategyPtr, Error>(Box::new(ScenicAppStrategy { scenic }))
     } else {
         let fb = fb.unwrap();
+        let vsync_interval =
+            Duration::from_nanos(100_000_000_000 / fb.get_config().refresh_rate_e2 as i64);
         let internal_sender = internal_sender.clone();
 
         // TODO: improve scheduling of updates
         fasync::spawn_local(
             async move {
-                while let Some(_) = receiver.next().await {
+                while let Some(VSyncMessage { display_id: _, timestamp, .. }) =
+                    receiver.next().await
+                {
+                    internal_sender
+                        .unbounded_send(MessageInternal::HandleVSyncParametersChanged(
+                            Time::from_nanos(timestamp as i64),
+                            vsync_interval,
+                        ))
+                        .expect("unbounded_send");
                     internal_sender
                         .unbounded_send(MessageInternal::UpdateAllViews)
                         .expect("unbounded_send");
@@ -310,6 +320,7 @@ pub(crate) enum MessageInternal {
     Update(ViewKey),
     UpdateAllViews,
     ImageFreed(ViewKey, u64, u32),
+    HandleVSyncParametersChanged(Time, Duration),
     TargetedMessage(ViewKey, Message),
 }
 
@@ -384,6 +395,9 @@ impl App {
             MessageInternal::UpdateAllViews => self.update_all_views(),
             MessageInternal::ImageFreed(view_id, image_id, collection_id) => {
                 self.image_freed(view_id, image_id, collection_id)
+            }
+            MessageInternal::HandleVSyncParametersChanged(phase, interval) => {
+                self.handle_vsync_parameters_changed(phase, interval);
             }
             MessageInternal::TargetedMessage(view_id, message) => {
                 let view = self.get_view(view_id);
@@ -686,5 +700,11 @@ impl App {
     pub(crate) fn image_freed(&mut self, view_id: ViewKey, image_id: u64, collection_id: u32) {
         let view = self.get_view(view_id);
         view.image_freed(image_id, collection_id);
+    }
+
+    fn handle_vsync_parameters_changed(&mut self, phase: Time, interval: Duration) {
+        for (_, view_controller) in &mut self.view_controllers {
+            view_controller.handle_vsync_parameters_changed(phase, interval);
+        }
     }
 }
