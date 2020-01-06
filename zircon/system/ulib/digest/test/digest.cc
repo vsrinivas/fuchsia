@@ -28,7 +28,7 @@ TEST(DigestTestCase, Strings) {
   EXPECT_STATUS(actual.Parse(kZeroDigest, len - 1), ZX_ERR_INVALID_ARGS);
   EXPECT_STATUS(actual.Parse(kZeroDigest, len + 1), ZX_ERR_INVALID_ARGS);
   // Not hex
-  char bad[kSha256HexLength];
+  char bad[kSha256HexLength + 1];
   snprintf(bad, sizeof(bad), "%s", kZeroDigest);
   bad[0] = 'g';
   EXPECT_STATUS(actual.Parse(bad), ZX_ERR_INVALID_ARGS);

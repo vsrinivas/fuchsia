@@ -421,7 +421,7 @@ void QueryInfo(size_t expected_nodes, size_t expected_bytes) {
   const char* name = reinterpret_cast<const char*>(info.name.data());
   ASSERT_STR_EQ(kFsName, name, "Unexpected filesystem mounted");
   EXPECT_EQ(info.block_size, blobfs::kBlobfsBlockSize);
-  EXPECT_EQ(info.max_filename_size, digest::kSha256HexLength);
+  EXPECT_EQ(info.max_filename_size, 64U);
   EXPECT_EQ(info.fs_type, VFS_TYPE_BLOBFS);
   EXPECT_NE(info.fs_id, 0);
 
@@ -710,7 +710,7 @@ void RunCorruptDigestTest() {
     ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
     char hexdigits[17] = "0123456789abcdef";
-    size_t idx = strlen(info->path) - 1 - (rand() % (digest::kSha256HexLength - 1));
+    size_t idx = strlen(info->path) - 1 - (rand() % digest::kSha256HexLength);
     char newchar = hexdigits[rand() % 16];
     while (info->path[idx] == newchar) {
       newchar = hexdigits[rand() % 16];

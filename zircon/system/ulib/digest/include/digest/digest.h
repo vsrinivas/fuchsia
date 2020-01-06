@@ -16,8 +16,12 @@
 
 namespace digest {
 
+// The length (in bytes) of a SHA256 hash.
 constexpr size_t kSha256Length = 32;
-constexpr size_t kSha256HexLength = (kSha256Length * 2) + 1;
+
+// The length (in characters) of a stringified SHA256 hash. Does not include room for a
+// null-terminator character.
+constexpr size_t kSha256HexLength = (kSha256Length * 2);
 
 // This class represents a digest produced by a hash algorithm.
 // This class is not thread safe.
