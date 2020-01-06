@@ -9,7 +9,7 @@
   "num_threads": 4,
   // Directories to summarize in the archivist's diagnostics.
   "summarized_dirs": {
-    "archive": "/data/archive",
+    "archive_stats": "/data/archive",
     "global_data": "/global_data",
     "global_tmp": "/global_tmp"
   }

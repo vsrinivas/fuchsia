@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
-
 use {
-    anyhow::Error,
+    anyhow::{format_err, Error},
     json5,
     serde_derive::Deserialize,
     std::path::PathBuf,
@@ -34,7 +32,13 @@ pub fn parse_config(path: impl Into<PathBuf>) -> Result<Config, Error> {
     let path: PathBuf = path.into();
 
     let json_string: String = fs::read_to_string(path)?;
-    Ok(json5::from_str(&json_string)?)
+    let config: Config = json5::from_str(&json_string)?;
+    if let Some(summarized_dirs) = &config.summarized_dirs {
+        if summarized_dirs.iter().any(|(dir, _)| dir == "archive") {
+            return Err(format_err!("Invalid name 'archive' in summarized dirs"));
+        }
+    }
+    Ok(config)
 }
 
 #[cfg(test)]
@@ -47,6 +51,28 @@ mod tests {
         let mut file = fs::File::create(path).expect("failed to create file");
         write!(file, "{}", test_config).expect("failed to write file");
         file.sync_all().expect("failed to sync file");
+    }
+
+    #[test]
+    fn parse_config_with_invalid_summarized_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config");
+        fs::create_dir(&config_path).unwrap();
+
+        let test_config_file_name = config_path.join("test_config.json");
+        let test_config = r#"
+                {
+                  // Test comment for json5 portability.
+                  "max_archive_size_bytes": 10485760,
+                  "max_event_group_size_bytes": 262144,
+                  "num_threads": 4,
+                  "summarized_dirs": {
+                      "archive": "/data/archive"
+                  }
+                }"#;
+        write_test_config_to_file(&test_config_file_name, test_config);
+        let parsed_config_result = parse_config(&test_config_file_name);
+        assert!(parsed_config_result.is_err());
     }
 
     #[test]
