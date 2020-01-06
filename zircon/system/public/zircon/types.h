@@ -191,12 +191,15 @@ typedef struct zx_wait_item {
 #define ZX_VMO_OP_ZERO                   ((uint32_t)10u)
 
 // VM Object clone flags
-#define ZX_VMO_CLONE_COPY_ON_WRITE        ((uint32_t)1u << 0)
-#define ZX_VMO_CHILD_COPY_ON_WRITE        ((uint32_t)1u << 0)
+#define ZX_VMO_CHILD_SNAPSHOT             ((uint32_t)1u << 0)
+#define ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE ((uint32_t)1u << 4)
 #define ZX_VMO_CHILD_RESIZABLE            ((uint32_t)1u << 2)
 #define ZX_VMO_CHILD_SLICE                ((uint32_t)1u << 3)
-#define ZX_VMO_CHILD_PRIVATE_PAGER_COPY   ((uint32_t)1u << 4)
 #define ZX_VMO_CHILD_NO_WRITE             ((uint32_t)1u << 5)
+// Old clone flags that are on the path to deprecation.
+#define ZX_VMO_CLONE_COPY_ON_WRITE        ((uint32_t)1u << 4)
+#define ZX_VMO_CHILD_COPY_ON_WRITE        ((uint32_t)1u << 4)
+#define ZX_VMO_CHILD_PRIVATE_PAGER_COPY   ((uint32_t)1u << 4)
 
 typedef uint32_t zx_vm_option_t;
 // Mapping flags to vmar routines

@@ -227,7 +227,7 @@ std::unique_ptr<SystemCallTest> ZxVmoCreateChild(int64_t result, std::string_vie
   zx_handle_t out = kHandleOut;                                                             \
   PerformDisplayTest(                                                                       \
       "zx_vmo_create_child@plt",                                                            \
-      ZxVmoCreateChild(result, #result, kHandle, ZX_VMO_CHILD_COPY_ON_WRITE, 10, 20, &out), \
+      ZxVmoCreateChild(result, #result, kHandle, ZX_VMO_CHILD_SNAPSHOT, 10, 20, &out), \
       expected);
 
 #define VMO_CREATE_CHILD_DISPLAY_TEST(name, errno, expected) \
@@ -244,7 +244,7 @@ VMO_CREATE_CHILD_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_create_child("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-    "options:\x1B[32mzx_vmo_option_t\x1B[0m: \x1B[34mZX_VMO_CHILD_COPY_ON_WRITE\x1B[0m, "
+    "options:\x1B[32mzx_vmo_option_t\x1B[0m: \x1B[34mZX_VMO_CHILD_SNAPSHOT\x1B[0m, "
     "offset:\x1B[32muint64\x1B[0m: \x1B[34m10\x1B[0m, "
     "size:\x1B[32muint64\x1B[0m: \x1B[34m20\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (out:\x1B[32mhandle\x1B[0m: \x1B[31mbde90caf\x1B[0m)\n");

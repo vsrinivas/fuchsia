@@ -1465,7 +1465,7 @@ static bool vmo_lookup_clone_test() {
   ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
 
   fbl::RefPtr<VmObject> clone;
-  status = vmo->CreateClone(Resizability::NonResizable, CloneType::CopyOnWrite, 0, alloc_size,
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, alloc_size,
                             false, &clone);
   ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
   ASSERT_TRUE(clone, "vmobject creation\n");
@@ -1530,7 +1530,7 @@ static bool vmo_clone_removes_write_test() {
   // happy.
   vmo->set_user_id(42);
   fbl::RefPtr<VmObject> clone;
-  status = vmo->CreateClone(Resizability::NonResizable, CloneType::CopyOnWrite, 0, PAGE_SIZE, true,
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, PAGE_SIZE, true,
                             &clone);
   EXPECT_EQ(ZX_OK, status, "create clone");
 

@@ -837,10 +837,10 @@ void VmoOptionName(uint32_t options, std::ostream& os) {
     return;
   }
   const char* separator = "";
-  VmoOptionNameCase(ZX_VMO_CHILD_COPY_ON_WRITE);
+  VmoOptionNameCase(ZX_VMO_CHILD_SNAPSHOT);
   VmoOptionNameCase(ZX_VMO_CHILD_RESIZABLE);
   VmoOptionNameCase(ZX_VMO_CHILD_SLICE);
-  VmoOptionNameCase(ZX_VMO_CHILD_PRIVATE_PAGER_COPY);
+  VmoOptionNameCase(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE);
 }
 
 #define VmoTypeNameCase(name)      \

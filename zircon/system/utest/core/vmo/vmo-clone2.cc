@@ -1751,8 +1751,8 @@ TEST_F(VmoClone2TestCase, NoPhysical) {
             ZX_ERR_NOT_SUPPORTED);
 }
 
-// Tests that clones based on pager vmos can't be created.
-TEST_F(VmoClone2TestCase, NoPager) {
+// Tests that snapshots based on pager vmos can't be created.
+TEST_F(VmoClone2TestCase, NoSnapshotPager) {
   zx::pager pager;
   ASSERT_OK(zx::pager::create(0, &pager));
 
@@ -1766,9 +1766,9 @@ TEST_F(VmoClone2TestCase, NoPager) {
   ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, ZX_PAGE_SIZE, &uni_clone));
 
   zx::vmo clone;
-  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &clone),
+  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, ZX_PAGE_SIZE, &clone),
             ZX_ERR_NOT_SUPPORTED);
-  ASSERT_EQ(uni_clone.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &clone),
+  ASSERT_EQ(uni_clone.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, ZX_PAGE_SIZE, &clone),
             ZX_ERR_NOT_SUPPORTED);
 }
 

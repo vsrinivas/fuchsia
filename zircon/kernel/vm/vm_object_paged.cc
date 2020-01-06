@@ -585,7 +585,7 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
   fbl::RefPtr<VmObjectPaged> hidden_parent;
   // Optimistically create the hidden parent early as we want to do it outside the lock, but we
   // need to hold the lock to validate invariants.
-  if (type == CloneType::CopyOnWrite) {
+  if (type == CloneType::Snapshot) {
     uint32_t options = kHidden;
     if (is_contiguous()) {
       options |= kContiguous;
@@ -604,8 +604,8 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     Guard<fbl::Mutex> guard{&lock_};
     AssertHeld(vmo->lock_);
     switch (type) {
-      case CloneType::CopyOnWrite: {
-        // To create a copy-on-write clone, the kernel creates an artifical parent vmo
+      case CloneType::Snapshot: {
+        // To create an eager copy-on-write clone, the kernel creates an artifical parent vmo
         // called a 'hidden vmo'. The content of the original vmo is moved into the hidden
         // vmo, and the original vmo becomes a child of the hidden vmo. Then a second child
         // is created, which is the userspace visible clone.
@@ -647,7 +647,7 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     }
 
     VmObjectPaged* clone_parent;
-    if (type == CloneType::CopyOnWrite) {
+    if (type == CloneType::Snapshot) {
       clone_parent = hidden_parent.get();
 
       InsertHiddenParentLocked(ktl::move(hidden_parent));

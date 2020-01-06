@@ -370,7 +370,7 @@ pub const ZX_SOCKET_SHUTDOWN_WRITE: u32 = 1;
 pub const ZX_SOCKET_SHUTDOWN_READ: u32 = 1 << 1;
 
 // VM Object clone flags
-pub const ZX_VMO_CHILD_COPY_ON_WRITE: u32 = 1;
+pub const ZX_VMO_CHILD_COPY_ON_WRITE: u32 = 1 << 4;
 pub const ZX_VMO_CHILD_RESIZABLE: u32 = 1 << 2;
 pub const ZX_VMO_CHILD_PRIVATE_PAGER_COPY: u32 = 1 << 4;
 

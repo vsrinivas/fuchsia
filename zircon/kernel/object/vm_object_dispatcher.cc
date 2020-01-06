@@ -231,12 +231,16 @@ zx_status_t VmObjectDispatcher::CreateChild(uint32_t options, uint64_t offset, u
 
   // Check for mutually-exclusive child type flags.
   CloneType type;
-  if (options & ZX_VMO_CHILD_COPY_ON_WRITE) {
-    options &= ~ZX_VMO_CHILD_COPY_ON_WRITE;
-    type = CloneType::CopyOnWrite;
-  } else if (options & ZX_VMO_CHILD_PRIVATE_PAGER_COPY) {
-    options &= ~ZX_VMO_CHILD_PRIVATE_PAGER_COPY;
-    type = CloneType::PrivatePagerCopy;
+  if (options & ZX_VMO_CHILD_SNAPSHOT) {
+    options &= ~ZX_VMO_CHILD_SNAPSHOT;
+    type = CloneType::Snapshot;
+  } else if (options & ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE) {
+    options &= ~ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE;
+    if (vmo_->is_pager_backed()) {
+      type = CloneType::PrivatePagerCopy;
+    } else {
+      type = CloneType::Snapshot;
+    }
   } else {
     return ZX_ERR_INVALID_ARGS;
   }

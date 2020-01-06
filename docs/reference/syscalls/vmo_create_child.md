@@ -31,15 +31,23 @@ size.
 *options* must contain exactly one of the following flags to specify the
 child type:
 
-- **ZX_VMO_CHILD_COPY_ON_WRITE** - Create a copy-on-write clone. The cloned vmo will
-behave the same way the parent does, except that any write operation on the child will
-bring in a copy of the parent's page at the offset the write occurred. The new page in
-the child vmo is now a copy and may diverge from the parent. Any reads from ranges
-outside of the parent vmo's size will contain zeros, and writes will allocate new zero
-filled pages. Writes to the parent will not be reflected in the child. A vmo which has
-pinned regions cannot be cloned. See the NOTES section below for details on VMO
-syscall interactions with clones. This flag may not be used for vmos created with
-[`zx_vmo_create_physical()`] or descendants of such a vmo.
+- **ZX_VMO_CHILD_SNAPSHOT** -  Create a child that behaves as if an eager copy is performed. When a
+write occurs, both the parent and child perform a lazy copy. Lazy copying allows both the child and
+the parent to diverge from each other. Any reads from ranges outside of the parent VMO's size
+contain zeros, and writes allocate new zero filled pages.
+This flag is not supported on:
+ - VMOs with pinned regions.
+ - VMOs created with or descended from [`zx_vmo_create_physical()`]
+ - VMOs backed by a user pager.
+For information on VMO syscall interactions with children, see [NOTES](#notes).
+
+- **ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE** -  Create a child that behaves with at least copy on
+write semantics. Any write operation on the child brings in a copy of the page from the parent,
+after which its contents may diverge from the parent. Until a page is written to, and copied, reads
+are permitted, although not guaranteed, to return changing values if the parent performs writes.
+This flag may not be used for VMOs created with [`zx_vmo_create_physical()`] or descendants of such
+a VMO.
+For information on VMO syscall interactions with children, see [NOTES](#notes).
 
 - **ZX_VMO_CHILD_SLICE** - Create a slice that has direct read/write access into
 a section of the parent. All operations on the slice vmo behave as if they were
@@ -48,14 +56,10 @@ access to only a subrange of the parent vmo, and allowing for the
 **ZX_VMO_ZERO_CHILDREN** signal to be used. This flag may be used with vmos created with
 [`zx_vmo_create_physical()`] and their descendants.
 
-- **ZX_VMO_CHILD_PRIVATE_PAGER_COPY** - Create a private copy of a pager vmo. The child
-vmo will behave the same way the parent does, except that any write operation on the
-child will bring in a copy of the page at the offset the write occurred into the child
-vmo. The new page in the child vmo is now a copy and may diverge from the parent. Any
-reads from ranges outside of the parent vmo's size will contain zeros, and writes will
-allocate new zero filled pages.  See the NOTES section below for details on VMO syscall
-interactions with child. This flag is only supported for vmos created with
-[`zx_pager_create_vmo()`] or descendants of such a vmo.
+An alias child type of **ZX_VMO_CHILD_COPY_ON_WRITE** is also defined and is equivalent to
+**ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE**. This alias is intended to be used when
+**ZX_VMO_CHILD_SNAPSHOT** is desired, but the VMO may be backed by a user pager. In all other cases,
+you should use one of the precise child types as this alias may change or become deprecated.
 
 In addition, *options* can contain zero or more of the following flags to
 further specify the child's behavior:

@@ -252,18 +252,4 @@ TEST(VmoCloneTestCase, NoResize) {
   EXPECT_OK(status, "handle_close");
 }
 
-TEST(VmoCloneTestCase, NoPagerClone) {
-  zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo));
-
-  zx::vmo clone;
-  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, PAGE_SIZE, &clone),
-            ZX_ERR_NOT_SUPPORTED);
-
-  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, PAGE_SIZE, &clone));
-
-  ASSERT_EQ(clone.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, PAGE_SIZE, &clone),
-            ZX_ERR_NOT_SUPPORTED);
-}
-
 }  // namespace

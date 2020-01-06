@@ -53,7 +53,7 @@ enum class Resizability {
 
 // Argument which specifies the type of clone.
 enum class CloneType {
-  CopyOnWrite,
+  Snapshot,
   PrivatePagerCopy,
 };
 
