@@ -312,10 +312,16 @@ FUNCTION_LABEL(x86_syscall)
     // Any changes to the stack here need to be reflected in
     // pre_push and post_pop macros above to maintain alignment.
     // Verify the syscall is in range and jump to it.
+
+    // Bounds-check system call number and jump to handler.
     cmp     $ZX_SYS_COUNT, %rax
     jae     .Lunknown_syscall
     leaq    .Lcall_wrapper_table(%rip), %r11
-    jmp     *(%r11, %rax, 8)
+    movq    (%r11,%rax,8), %r11
+    // LFENCE stalls dispatch until outcome of bounds check is resolved and system call handler
+    // is known, preventing a Spectre V1 and V2 attack at this site.
+    lfence
+    jmp     *%r11
 .Lunknown_syscall:
     pre_0_args
     call    unknown_syscall
