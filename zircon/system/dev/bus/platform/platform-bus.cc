@@ -337,13 +337,14 @@ static void sys_device_release(void* ctx) {
 
 // cpu-trace provides access to the cpu's tracing and performance counters.
 // As such the "device" is the cpu itself.
-static zx_status_t InitCpuTrace(zx_device_t* parent, zx_handle_t dummy_iommu_handle) {
+static void InitCpuTrace(zx_device_t* parent, zx_handle_t dummy_iommu_handle) {
   zx::unowned_iommu iommu(dummy_iommu_handle);
   zx::bti cpu_trace_bti;
   zx_status_t status = zx::bti::create(*iommu, 0, CPU_TRACE_BTI_ID, &cpu_trace_bti);
   if (status != ZX_OK) {
+    // This is not fatal.
     zxlogf(ERROR, "platform-bus: error %d in bti_create(cpu_trace_bti)\n", status);
-    return status;
+    return;
   }
 
   status = publish_cpu_trace(cpu_trace_bti.release(), parent);
@@ -351,7 +352,6 @@ static zx_status_t InitCpuTrace(zx_device_t* parent, zx_handle_t dummy_iommu_han
     // This is not fatal.
     zxlogf(INFO, "publish_cpu_trace returned %d\n", status);
   }
-  return status;
 }
 
 static zx_protocol_device_t sys_device_proto = []() {
@@ -412,10 +412,8 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::chann
   // may create us without a root resource, and thus without the iommu
   // handle.
   if (bus->iommu_handle_.is_valid()) {
-    status = InitCpuTrace(suspend_buf->sys_root, bus->iommu_handle_.get());
-    if (status != ZX_OK) {
-      // This is not fatal. Error message already printed.
-    }
+    // Failure is not fatal. Error message already printed.
+    InitCpuTrace(suspend_buf->sys_root, bus->iommu_handle_.get());
   }
 
   // devmgr is now in charge of the device.
