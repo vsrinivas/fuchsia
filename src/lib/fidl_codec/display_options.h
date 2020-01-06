@@ -10,6 +10,7 @@ struct DisplayOptions {
   bool with_process_info = false;
   int columns = 0;
   bool needs_colors = false;
+  bool dump_messages = false;
 };
 
 #endif  // SRC_LIB_FIDL_CODEC_DISPLAY_OPTIONS_H_

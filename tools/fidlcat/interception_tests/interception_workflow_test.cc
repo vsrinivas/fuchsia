@@ -69,12 +69,13 @@ void InterceptionWorkflowTest::PerformCheckTest(const char* syscall_name,
 
 void InterceptionWorkflowTest::PerformDisplayTest(const char* syscall_name,
                                                   std::unique_ptr<SystemCallTest> syscall,
-                                                  const char* expected) {
+                                                  const char* expected,
+                                                  fidl_codec::LibraryLoader* loader) {
   ProcessController controller(this, session(), loop());
 
   PerformTest(syscall_name, std::move(syscall), nullptr, &controller,
               std::make_unique<SyscallDisplayDispatcherTest>(
-                  nullptr, decode_options_, display_options_, result_, &controller, aborted_),
+                  loader, decode_options_, display_options_, result_, &controller, aborted_),
               /*interleaved_test=*/false, /*multi_thread=*/true);
   std::string both_results = result_.str();
   // The second output starts with "test_2718"

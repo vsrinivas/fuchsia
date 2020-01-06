@@ -11,6 +11,7 @@ if (current_toolchain == host_toolchain) {
     sources = [
       "bti_test.cc",
       "cache_test.cc",
+      "channel_decoded_test.cc",
       "channel_test.cc",
       "clock_test.cc",
       "cprng_test.cc",
@@ -42,6 +43,7 @@ if (current_toolchain == host_toolchain) {
       "startup_test.cc",
       "system_test.cc",
       "task_test.cc",
+      "test_library.cc",
       "thread_test.cc",
       "ticks_test.cc",
       "timer_test.cc",

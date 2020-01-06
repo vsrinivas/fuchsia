@@ -127,6 +127,10 @@ const char* const kColumnsHelp = R"(  --columns=<size>
       For pretty print, width of the display. By default, on a terminal, use
       the terminal width.)";
 
+const char* const kDumpMessagesHelp = R"(  --dump-messages
+      Always display the message binary dump even if we can decode the message.
+      By default the dump is only displayed if we can't decode the message.)";
+
 const char* const kVerbosityHelp = R"(  --verbose=<number or log level>
       The log verbosity.  Legal values are "info", "warning", "error", "fatal",
       or a number, starting from 0. Extra verbosity comes with higher levels)";
@@ -210,6 +214,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   parser.AddSwitch("stack", 0, kStackHelp, &CommandLineOptions::stack_level);
   parser.AddSwitch("colors", 0, kColorsHelp, &CommandLineOptions::colors);
   parser.AddSwitch("columns", 0, kColumnsHelp, &CommandLineOptions::columns);
+  parser.AddSwitch("dump-messages", 0, kDumpMessagesHelp, &CommandLineOptions::dump_messages);
   parser.AddSwitch("verbose", 'v', kVerbosityHelp, &CommandLineOptions::verbose);
   parser.AddSwitch("quiet", 'q', kQuietHelp, &CommandLineOptions::quiet);
   parser.AddSwitch("log-file", 0, kLogFileHelp, &CommandLineOptions::log_file);
@@ -259,6 +264,8 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   } else {
     display_options->columns = options->columns;
   }
+
+  display_options->dump_messages = options->dump_messages;
 
   if (options->pretty_print) {
     display_options->needs_colors =

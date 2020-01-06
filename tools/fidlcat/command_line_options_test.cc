@@ -144,6 +144,7 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
                                    "zx_channel_*",
                                    "--exclude-syscalls",
                                    "zx_handle_close",
+                                   "--dump-messages",
                                    "--verbose",
                                    "error",
                                    "leftover",
@@ -173,6 +174,8 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   ASSERT_EQ(1U, options.exclude_syscall_filters.size());
   ASSERT_EQ("zx_handle_close", options.exclude_syscall_filters[0]);
   ASSERT_EQ(1U, decode_options.exclude_syscall_filters.size());
+
+  ASSERT_TRUE(display_options.dump_messages);
 
   ASSERT_TRUE(fxl::ShouldCreateLogMessage(fxl::LOG_ERROR));
   ASSERT_FALSE(fxl::ShouldCreateLogMessage(fxl::LOG_INFO));

@@ -1540,7 +1540,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
                            const DisplayOptions& display_options, std::ostream& os)
       : SyscallDecoderDispatcher(decode_options),
         message_decoder_dispatcher_(loader, display_options),
-        os_(os) {}
+        os_(os),
+        dump_messages_(display_options.dump_messages) {}
 
   fidl_codec::MessageDecoderDispatcher& message_decoder_dispatcher() {
     return message_decoder_dispatcher_;
@@ -1554,6 +1555,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   void set_last_displayed_syscall(const SyscallDisplay* last_displayed_syscall) {
     last_displayed_syscall_ = last_displayed_syscall;
   }
+
+  bool dump_messages() const { return dump_messages_; }
 
   void AddLaunchedProcess(uint64_t process_koid) override {
     message_decoder_dispatcher_.AddLaunchedProcess(process_koid);
@@ -1582,6 +1585,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   const SyscallDisplay* last_displayed_syscall_ = nullptr;
   // The stream which will receive the syscall decodings.
   std::ostream& os_;
+  // True if we always display the binary dump of the messages.
+  const bool dump_messages_;
 };
 
 class SyscallCompareDispatcher : public SyscallDisplayDispatcher {

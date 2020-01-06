@@ -333,6 +333,7 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   DataForSyscallTest& data() { return data_; }
 
   void set_with_process_info() { display_options_.with_process_info = true; }
+  void set_dump_messages(bool dump_messages) { display_options_.dump_messages = dump_messages; }
 
   void AddThread(zxdb::Thread* thread) { threads_[thread->GetKoid()] = thread; }
 
@@ -340,7 +341,7 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
                         std::unique_ptr<SystemCallTest> syscall2);
 
   void PerformDisplayTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall,
-                          const char* expected);
+                          const char* expected, fidl_codec::LibraryLoader* loader = nullptr);
 
   void PerformOneThreadDisplayTest(const char* syscall_name,
                                    std::unique_ptr<SystemCallTest> syscall, const char* expected);

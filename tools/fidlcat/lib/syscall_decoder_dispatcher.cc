@@ -20,12 +20,19 @@ namespace fidlcat {
 constexpr int kPatternColorSize = 4;
 constexpr int kPatternSize = 8;
 constexpr int kLineSize = 16;
+constexpr int kLineHandleSize = 4;
 
-void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
-                SyscallDisplayDispatcher* dispatcher, std::string_view line_header, int tabs,
-                std::ostream& os) {
-  os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ') << dispatcher->colors().red
-     << "Can't decode message num_bytes=" << num_bytes << " num_handles=" << num_handles;
+void DumpMessage(bool error, const uint8_t* bytes, uint32_t num_bytes,
+                 const zx_handle_info_t* handles, uint32_t num_handles,
+                 SyscallDisplayDispatcher* dispatcher, std::string_view line_header, int tabs,
+                 std::ostream& os) {
+  os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ');
+  if (error) {
+    os << dispatcher->colors().red << "Can't decode message: ";
+  } else {
+    os << "Message: ";
+  }
+  os << "num_bytes=" << num_bytes << " num_handles=" << num_handles;
   if ((bytes != nullptr) && (num_bytes >= sizeof(fidl_message_header_t))) {
     auto header = reinterpret_cast<const fidl_message_header_t*>(bytes);
     os << " ordinal=" << std::hex << header->ordinal << std::dec;
@@ -38,7 +45,7 @@ void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
       }
     }
   }
-  os << '\n';
+  os << dispatcher->colors().reset << '\n';
   os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << "data=";
   const char* separator = "";
   for (uint32_t i = 0; i < num_bytes; ++i) {
@@ -63,6 +70,26 @@ void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
     separator = ", ";
   }
   os << dispatcher->colors().reset << '\n';
+  if (num_handles > 0) {
+    os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << "handles=";
+    const char* separator = "";
+    for (uint32_t i = 0; i < num_handles; ++i) {
+      // Display 4 bytes per line.
+      if (i % kLineHandleSize == 0) {
+        std::vector<char> buffer(sizeof(uint32_t) * kCharactersPerByte + 1);
+        snprintf(buffer.data(), buffer.size(), "%04x", i);
+        os << separator << "\n"
+           << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << "  "
+           << buffer.data() << ": ";
+        separator = "";
+      }
+      std::vector<char> buffer(sizeof(zx_handle_t) * kCharactersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%08x", handles[i].handle);
+      os << separator << buffer.data();
+      separator = ", ";
+    }
+    os << '\n';
+  }
 }
 
 void DisplayString(const fidl_codec::Colors& colors, const char* string, size_t size,
@@ -160,7 +187,11 @@ void SyscallFidlMessageHandle::DisplayOutline(SyscallDisplayDispatcher* dispatch
   if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
           decoder->thread()->GetProcess()->GetKoid(), handle_value, bytes_value, num_bytes_value,
           handle_infos_value, num_handles_value, type(), os, line_header, tabs)) {
-    CantDecode(bytes_value, num_bytes_value, num_handles_value, dispatcher, line_header, tabs, os);
+    DumpMessage(/*error=*/true, bytes_value, num_bytes_value, handle_infos_value, num_handles_value,
+                dispatcher, line_header, tabs, os);
+  } else if (dispatcher->dump_messages()) {
+    DumpMessage(/*error=*/false, bytes_value, num_bytes_value, handle_infos_value,
+                num_handles_value, dispatcher, line_header, tabs, os);
   }
   delete[] handle_infos_value;
 }
@@ -177,7 +208,11 @@ void SyscallFidlMessageHandleInfo::DisplayOutline(SyscallDisplayDispatcher* disp
   if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
           decoder->thread()->GetProcess()->GetKoid(), handle_value, bytes_value, num_bytes_value,
           handle_infos_value, num_handles_value, type(), os, line_header, tabs)) {
-    CantDecode(bytes_value, num_bytes_value, num_handles_value, dispatcher, line_header, tabs, os);
+    DumpMessage(/*error=*/true, bytes_value, num_bytes_value, handle_infos_value, num_handles_value,
+                dispatcher, line_header, tabs, os);
+  } else if (dispatcher->dump_messages()) {
+    DumpMessage(/*error=*/false, bytes_value, num_bytes_value, handle_infos_value,
+                num_handles_value, dispatcher, line_header, tabs, os);
   }
 }
 

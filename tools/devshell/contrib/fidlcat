@@ -25,7 +25,7 @@
 ##
 ## Usage: fx fidlcat [--debug-mode] [(--port|-p) <PORT>] [--with-symbol-server]
 ##                   [--with-process-info] [--stack=<value>]
-##                   [--syscalls=<regexp>] [--exclude-syscalls=<regexp>]
+##                   [--syscalls=<regexp>] [--exclude-syscalls=<regexp>] [--dump-messages]
 ##                   [--verbose=<value> | --quiet=<value>] [--log-file <path>]
 ##                   [--remote-pid=<pid> | --remote-name=<name> | run <component specification>]
 ##
@@ -52,6 +52,8 @@
 ##                         --exclude-syscalls.
 ##                         To display all the syscalls but the zx_handle syscalls, use:
 ##                         --syscalls ".*" --exclude-syscalls "zx_handle_.*"
+##    --dump-messages      Always does a hexadecimal dump of the messages even if we can
+##                         decode them.
 ##    --verbose=<value>    The log verbosity.  Legal values are "info", "warning",
 ##                         "error", "fatal", or a number, starting from 0. Extra
 ##                         verbosity comes with higher levels.
@@ -112,6 +114,7 @@ agent_out="/dev/null"
 action=
 debug_mode=
 with_process_info=
+dump_messages=
 stack=
 syscalls=()
 verbose=
@@ -142,6 +145,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     --with-process-info)
       with_process_info="--with-process-info"
+      ;;
+    --dump-messages)
+      dump_messages="--dump-messages"
       ;;
     --stack=*)
       stack="$1"
@@ -240,6 +246,7 @@ if launch_debug_agent; then
     ${symbol_server} \
     ${server_url} \
     ${with_process_info} \
+    ${dump_messages} \
     ${stack} \
     ${syscalls} \
     ${verbose} \

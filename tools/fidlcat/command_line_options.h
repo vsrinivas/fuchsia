@@ -28,6 +28,7 @@ struct CommandLineOptions {
   int stack_level = 0;
   std::string colors = "auto";
   int columns = 0;
+  bool dump_messages = false;
 
   std::optional<std::string> verbose;
   std::optional<std::string> quiet;
