@@ -16,18 +16,21 @@ directory][glossary-outgoing] in one of the following ways:
       "expose": [{
           "directory": "/data",
           "from": "self",
+          "rights": ["r*"],
       }],
   }
   ```
 
 
-- Or [offering][offer] the directory to some of the component's children.
+- Or [offering][offer] the directory to some of the component's children with
+  read-write rights.
 
   ```
   {
       "offer": [{
           "directory": "/data",
           "from": "self",
+          "rights": ["rw*"],
           "to": [{
               { "dest": "#child-a" },
               { "dest": "#child-b" },
@@ -53,6 +56,7 @@ provider.
 {
     "use": [{
         "directory": "/data",
+        "rights": ["r*"],
     }],
 }
 ```
@@ -71,6 +75,7 @@ framework. When a component wants to use one of these directories, it does so by
     "use": [{
         "directory": "/hub",
         "from": "framework",
+        "rights": ["r*"],
     }],
 }
 ```
@@ -105,6 +110,7 @@ A.cml:
         "to": [{
             { "dest": "#B", "as": "/intermediary" },
         }],
+        "rights": ["rw*"],
     }],
     "children": [{
         "name": "B",
@@ -122,6 +128,7 @@ B.cml:
         "to": [{
             { "dest": "#C", "as": "/intermediary2" },
         }],
+        "rights": ["r*"],
     }],
     "children": [{
         "name": "C",
