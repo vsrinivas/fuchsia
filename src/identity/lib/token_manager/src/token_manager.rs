@@ -367,6 +367,9 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
             }
         }
 
+        // TODO(43340): define when revocation for id tokens are called, and behaviors when the
+        // corresponding protocols return errors or are not implemented.
+
         match self.token_cache.lock().delete_matching(&auth_provider_type, &user_profile_id) {
             Ok(()) | Err(AuthCacheError::KeyNotFound) => {}
             Err(err) => return Err(TokenManagerError::from(err)),

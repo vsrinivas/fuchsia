@@ -13,12 +13,14 @@ mod error;
 mod http;
 mod oauth;
 mod oauth_open_id_connect;
+mod open_id_connect;
 mod time;
 mod web;
 
 use crate::http::UrlLoaderHttpClient;
 use crate::oauth::Oauth;
 use crate::oauth_open_id_connect::OauthOpenIdConnect;
+use crate::open_id_connect::OpenIdConnect;
 use crate::time::UtcClock;
 use crate::web::DefaultStandaloneWebFrame;
 use anyhow::{Context as _, Error};
@@ -67,6 +69,17 @@ fn main() -> Result<(), Error> {
                 .handle_requests_from_stream(stream)
                 .await
                 .unwrap_or_else(|e| error!("Error handling Oauth channel {:?}", e));
+        });
+    });
+
+    let open_id_connect = Arc::new(OpenIdConnect::new());
+    fs.dir("svc").add_fidl_service(move |stream| {
+        let open_id_connect_clone = Arc::clone(&open_id_connect);
+        fasync::spawn(async move {
+            open_id_connect_clone
+                .handle_requests_from_stream(stream)
+                .await
+                .unwrap_or_else(|e| error!("Error handling OpenIdConnect channel {:?}", e));
         });
     });
 
