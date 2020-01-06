@@ -108,6 +108,78 @@ TEST_F(AudioConsumerTests, FactoryClosed) {
   EXPECT_FALSE(audio_consumer_connection_closed_);
 }
 
+TEST_F(AudioConsumerTests, ConsumerClosed) {
+  bool factory_closed = false;
+  fuchsia::media::AudioConsumerPtr audio_consumer2;
+  fuchsia::media::SessionAudioConsumerFactoryPtr session_audio_consumer_factory;
+  // Instantiate the audio consumer under test.
+  environment_->ConnectToService(session_audio_consumer_factory.NewRequest());
+
+  session_audio_consumer_factory.set_error_handler(
+      [&factory_closed](zx_status_t status) { factory_closed = true; });
+
+  {
+    fuchsia::media::AudioStreamType stream_type;
+    stream_type.frames_per_second = kFramesPerSecond;
+    stream_type.channels = kSamplesPerFrame;
+    stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+
+    fuchsia::media::StreamSinkPtr sink;
+    fuchsia::media::AudioConsumerPtr audio_consumer;
+    bool sink_connection_closed = false;
+    session_audio_consumer_factory->CreateAudioConsumer(0, audio_consumer.NewRequest());
+
+    audio_consumer.set_error_handler(
+        [this](zx_status_t status) { audio_consumer_connection_closed_ = true; });
+
+    auto compression = fuchsia::media::Compression::New();
+    compression->type = fuchsia::media::AUDIO_ENCODING_AACLATM;
+
+    std::vector<zx::vmo> vmos(kNumVmos);
+    for (uint32_t i = 0; i < kNumVmos; i++) {
+      zx_status_t status = zx::vmo::create(kVmoSize, 0, &vmos[i]);
+      EXPECT_EQ(status, ZX_OK);
+    }
+
+    audio_consumer.events().WatchStatus([this](fuchsia::media::AudioConsumerStatus status) {
+      EXPECT_FALSE(status.has_presentation_timeline());
+      got_status_ = true;
+    });
+
+    got_status_ = false;
+    RunLoopUntil([this]() { return got_status_; });
+
+    audio_consumer->CreateStreamSink(std::move(vmos), stream_type, std::move(compression),
+                                     sink.NewRequest());
+
+    sink.set_error_handler(
+        [&sink_connection_closed](zx_status_t status) { sink_connection_closed = true; });
+
+    audio_consumer->Start(fuchsia::media::AudioConsumerStartFlags::SUPPLY_DRIVEN, 0,
+                          fuchsia::media::NO_TIMESTAMP);
+
+    audio_consumer->Stop();
+
+    audio_consumer.events().WatchStatus(
+        [this](fuchsia::media::AudioConsumerStatus status) { got_status_ = true; });
+
+    got_status_ = false;
+    RunLoopUntil([this]() { return got_status_; });
+
+    session_audio_consumer_factory->CreateAudioConsumer(0, audio_consumer2.NewRequest());
+  }
+
+  audio_consumer2.events().WatchStatus([this](fuchsia::media::AudioConsumerStatus status) {
+    EXPECT_FALSE(status.has_presentation_timeline());
+    got_status_ = true;
+  });
+
+  got_status_ = false;
+  RunLoopUntil([this]() { return got_status_; });
+
+  EXPECT_FALSE(factory_closed);
+}
+
 // Test packet flow of AudioConsumer interface by using a synthetic environment
 // to push a packet through and checking that it is processed.
 TEST_F(AudioConsumerTests, CreateStreamSink) {
@@ -480,10 +552,7 @@ TEST_F(AudioConsumerTests, CheckPtsRate) {
 
   RunLoopUntil([&sent_packet]() { return sent_packet; });
 
-  EXPECT_TRUE(sent_packet);
-
-  RunLoopUntil([this]() { return fake_audio_.renderer().received() > 0; });
-  EXPECT_TRUE(fake_audio_.renderer().expected());
+  RunLoopUntil([this]() { return fake_audio_.renderer().expected(); });
 
   EXPECT_FALSE(sink_connection_closed);
 }

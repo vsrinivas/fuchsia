@@ -13,6 +13,7 @@
 #include <lib/zx/vmo.h>
 
 #include <memory>
+#include <unordered_set>
 
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/media/cpp/timeline_rate.h"
@@ -47,24 +48,27 @@ class SessionAudioConsumerFactoryImpl : public fuchsia::media::SessionAudioConsu
       fidl::InterfaceRequest<fuchsia::media::AudioConsumer> audio_consumer_request) override;
 
  private:
-  std::vector<std::unique_ptr<AudioConsumerImpl>> audio_consumers_;
+  // Call quit_callback_ if audio_consumers_ set is empty
+  void MaybeQuit();
+
+  std::unordered_set<std::shared_ptr<AudioConsumerImpl>> audio_consumers_;
   sys::ComponentContext* component_context_;
   fit::closure quit_callback_;
-
-  using BindingType = fidl::Binding<fuchsia::media::SessionAudioConsumerFactory>;
-  std::unique_ptr<BindingType> binding_;
-
-  fidl::BindingSet<fuchsia::media::AudioConsumer, std::unique_ptr<fuchsia::media::AudioConsumer>>
-      audio_consumer_bindings_;
+  fidl::Binding<fuchsia::media::SessionAudioConsumerFactory> binding_;
 };
 
 // Fidl service that gives out StreamSinks.
-class AudioConsumerImpl : public fuchsia::media::AudioConsumer, public ServiceProvider {
+class AudioConsumerImpl : public fuchsia::media::AudioConsumer,
+                          public ServiceProvider,
+                          public std::enable_shared_from_this<AudioConsumerImpl> {
  public:
-  static std::unique_ptr<AudioConsumerImpl> Create(uint64_t session_id,
-                                                   sys::ComponentContext* component_context);
+  static std::shared_ptr<AudioConsumerImpl> Create(
+      uint64_t session_id, fidl::InterfaceRequest<fuchsia::media::AudioConsumer> request,
+      sys::ComponentContext* component_context);
 
-  AudioConsumerImpl(uint64_t session_id, sys::ComponentContext* component_context);
+  AudioConsumerImpl(uint64_t session_id,
+                    fidl::InterfaceRequest<fuchsia::media::AudioConsumer> request,
+                    sys::ComponentContext* component_context);
 
   ~AudioConsumerImpl() override;
 
@@ -89,6 +93,9 @@ class AudioConsumerImpl : public fuchsia::media::AudioConsumer, public ServicePr
   // ServiceProvider implementation.
   void ConnectToService(std::string service_path, zx::channel channel) override;
 
+  // Set callback to be called when binding closes
+  void SetQuitCallback(fit::closure quit_callback) { quit_callback_ = std::move(quit_callback); }
+
  private:
   static constexpr int64_t kMinimumLeadTime = ZX_MSEC(30);
   static constexpr int64_t kMaximumLeadTime = ZX_MSEC(500);
@@ -106,6 +113,15 @@ class AudioConsumerImpl : public fuchsia::media::AudioConsumer, public ServicePr
 
   // Calls |watch_status_callback_| with current status if present
   void SendStatusUpdate();
+
+  // Callback handler for |core_| status updates
+  void HandlePlayerStatusUpdate();
+
+  // Callback handler for after |core_| is done updating timeline
+  void OnTimelineUpdated(float rate);
+
+  fidl::Binding<fuchsia::media::AudioConsumer> binding_;
+  fit::closure quit_callback_;
 
   async_dispatcher_t* dispatcher_;
   sys::ComponentContext* component_context_;

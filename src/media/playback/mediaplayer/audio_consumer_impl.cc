@@ -54,26 +54,13 @@ std::unique_ptr<SessionAudioConsumerFactoryImpl> SessionAudioConsumerFactoryImpl
 SessionAudioConsumerFactoryImpl::SessionAudioConsumerFactoryImpl(
     fidl::InterfaceRequest<fuchsia::media::SessionAudioConsumerFactory> request,
     sys::ComponentContext* component_context, fit::closure quit_callback)
-    : component_context_(component_context), quit_callback_(std::move(quit_callback)) {
+    : component_context_(component_context),
+      quit_callback_(std::move(quit_callback)),
+      binding_(this, std::move(request)) {
   FX_DCHECK(component_context_);
   FX_DCHECK(quit_callback_);
 
-  binding_ = std::make_unique<BindingType>(this, std::move(request));
-
-  binding_->set_error_handler([this](zx_status_t status) {
-    // don't quit when factory channel closes unless no audio consumers are active
-    if (audio_consumer_bindings_.size() == 0 && quit_callback_) {
-      quit_callback_();
-      quit_callback_ = nullptr;
-    }
-  });
-
-  audio_consumer_bindings_.set_empty_set_handler([this]() {
-    if (quit_callback_) {
-      quit_callback_();
-      quit_callback_ = nullptr;
-    }
-  });
+  binding_.set_error_handler([this](zx_status_t status) { MaybeQuit(); });
 }
 
 void SessionAudioConsumerFactoryImpl::CreateAudioConsumer(
@@ -81,28 +68,54 @@ void SessionAudioConsumerFactoryImpl::CreateAudioConsumer(
     fidl::InterfaceRequest<fuchsia::media::AudioConsumer> audio_consumer_request) {
   FX_DCHECK(audio_consumer_request);
 
-  // binding set wants the underlying impl, so construct one manually and let bindings_ take over
-  // ownership
-  std::unique_ptr<fuchsia::media::AudioConsumer> audio_consumer(
-      new AudioConsumerImpl(session_id, component_context_));
-  audio_consumer_bindings_.AddBinding(std::move(audio_consumer), std::move(audio_consumer_request));
+  auto audio_consumer =
+      AudioConsumerImpl::Create(session_id, std::move(audio_consumer_request), component_context_);
+  audio_consumer->SetQuitCallback([this, audio_consumer]() {
+    audio_consumers_.erase(audio_consumer);
+    MaybeQuit();
+  });
+  audio_consumers_.insert(audio_consumer);
+}
+
+void SessionAudioConsumerFactoryImpl::MaybeQuit() {
+  // don't quit when factory channel closes unless no audio consumers are active
+  if (audio_consumers_.empty() && quit_callback_) {
+    auto callback = std::move(quit_callback_);
+    callback();
+  }
 }
 
 // static
-std::unique_ptr<AudioConsumerImpl> AudioConsumerImpl::Create(
-    uint64_t session_id, sys::ComponentContext* component_context) {
-  return std::make_unique<AudioConsumerImpl>(session_id, component_context);
+std::shared_ptr<AudioConsumerImpl> AudioConsumerImpl::Create(
+    uint64_t session_id, fidl::InterfaceRequest<fuchsia::media::AudioConsumer> request,
+    sys::ComponentContext* component_context) {
+  return std::make_shared<AudioConsumerImpl>(session_id, std::move(request), component_context);
 }
 
-AudioConsumerImpl::AudioConsumerImpl(uint64_t session_id, sys::ComponentContext* component_context)
-    : dispatcher_(async_get_default_dispatcher()),
+AudioConsumerImpl::AudioConsumerImpl(uint64_t session_id,
+                                     fidl::InterfaceRequest<fuchsia::media::AudioConsumer> request,
+                                     sys::ComponentContext* component_context)
+    : binding_(this, std::move(request)),
+      dispatcher_(async_get_default_dispatcher()),
       component_context_(component_context),
       core_(dispatcher_),
+      renderer_primed_(false),
+      timeline_started_(false),
       rate_(kDefaultRate),
       status_dirty_(true) {
   FX_DCHECK(component_context_);
 
   ThreadPriority::SetToHigh();
+
+  binding_.set_error_handler([this](zx_status_t status) {
+    core_.SetUpdateCallback(nullptr);
+    if (quit_callback_) {
+      // after quit_callback_ returns last reference could be dropped, so don't reference 'this'
+      // after
+      auto callback = std::move(quit_callback_);
+      callback();
+    }
+  });
 
   decoder_factory_ = DecoderFactory::Create(this);
   FX_DCHECK(decoder_factory_);
@@ -122,21 +135,21 @@ AudioConsumerImpl::AudioConsumerImpl(uint64_t session_id, sys::ComponentContext*
 
             return ZX_OK;
           }));
-
-  core_.SetUpdateCallback([this]() {
-    if (core_.problem()) {
-      if (core_.problem()->type == fuchsia::media::playback::PROBLEM_AUDIO_ENCODING_NOT_SUPPORTED) {
-        FX_LOGS(WARNING) << "Unsupported codec";
-        if (simple_stream_sink_) {
-          simple_stream_sink_->Close(ZX_ERR_INVALID_ARGS);
-          simple_stream_sink_ = nullptr;
-        }
-      }
-    }
-  });
 }
 
 AudioConsumerImpl::~AudioConsumerImpl() { core_.SetUpdateCallback(nullptr); }
+
+void AudioConsumerImpl::HandlePlayerStatusUpdate() {
+  if (core_.problem()) {
+    if (core_.problem()->type == fuchsia::media::playback::PROBLEM_AUDIO_ENCODING_NOT_SUPPORTED) {
+      FX_LOGS(WARNING) << "Unsupported codec";
+      if (simple_stream_sink_) {
+        simple_stream_sink_->Close(ZX_ERR_INVALID_ARGS);
+        simple_stream_sink_ = nullptr;
+      }
+    }
+  }
+}
 
 void AudioConsumerImpl::CreateStreamSink(
     std::vector<zx::vmo> buffers, fuchsia::media::AudioStreamType audio_stream_type,
@@ -164,9 +177,10 @@ void AudioConsumerImpl::CreateStreamSink(
   pending_simple_stream_sink_ = SimpleStreamSinkImpl::Create(
       stream_type, media::TimelineRate::NsPerSecond,
       /* discard_requested_callback= */
-      [this]() { core_.Flush(false, []() {}); }, std::move(stream_sink_request),
+      [shared_this = shared_from_this(), this]() { core_.Flush(false, []() {}); },
+      std::move(stream_sink_request),
       /* connection_failure_callback= */
-      [this]() {
+      [shared_this = shared_from_this(), this]() {
         // On disconnect, check for any pending sinks
         MaybeSetNewSource();
       });
@@ -203,7 +217,10 @@ void AudioConsumerImpl::MaybeSetNewSource() {
 
   core_.SetSourceSegment(
       audio_consumer_source->TakeSourceSegment(),
-      [simple_stream_sink = std::move(simple_stream_sink), buffers = std::move(buffers)]() mutable {
+      [shared_this = shared_from_this(), simple_stream_sink = std::move(simple_stream_sink),
+       buffers = std::move(buffers)]() mutable {
+        // capture shared this to make sure we live long enough for |core_| to complete setting
+        // source.
         for (size_t i = 0; i < buffers.size(); ++i) {
           simple_stream_sink->AddPayloadBuffer(i, std::move(buffers[i]));
         }
@@ -224,21 +241,28 @@ void AudioConsumerImpl::EnsureRenderer() {
     core_.SetSinkSegment(RendererSinkSegment::Create(audio_renderer_, decoder_factory_.get()),
                          StreamType::Medium::kAudio);
     core_.SetProgramRange(0, 0, Packet::kMaxPts);
+
+    core_.SetUpdateCallback(
+        [shared_this = shared_from_this(), this]() { HandlePlayerStatusUpdate(); });
   }
+}
+
+void AudioConsumerImpl::OnTimelineUpdated(float rate) {
+  if (rate > 0.0f && !renderer_primed_) {
+    core_.Prime([]() {});
+    renderer_primed_ = true;
+  } else if (rate == 0.0f) {
+    renderer_primed_ = false;
+  }
+  SendStatusUpdate();
 }
 
 void AudioConsumerImpl::SetTimelineFunction(float rate, int64_t subject_time,
                                             int64_t reference_time, fit::closure callback) {
   core_.SetTimelineFunction(
       media::TimelineFunction(subject_time, reference_time, media::TimelineRate(rate)),
-      [this, rate, callback = std::move(callback)]() {
-        if (rate > 0.0f && !renderer_primed_) {
-          core_.Prime([]() {});
-          renderer_primed_ = true;
-        } else if (rate == 0.0f) {
-          renderer_primed_ = false;
-        }
-        SendStatusUpdate();
+      [shared_this = shared_from_this(), rate, callback = std::move(callback), this]() {
+        OnTimelineUpdated(rate);
         callback();
       });
 }
