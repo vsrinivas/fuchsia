@@ -8,6 +8,8 @@
 #include <zircon/syscalls.h>
 
 #include <fstream>
+#include <optional>
+#include <utility>
 
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
@@ -28,6 +30,9 @@ TimezoneImpl::TimezoneImpl(std::unique_ptr<sys::ComponentContext> context,
       icu_data_path_(icu_data_path),
       tz_id_path_(tz_id_path),
       valid_(Init()) {
+  if (valid_) {
+    LoadTimezone();
+  }
   context_->outgoing()->AddPublicService(deprecated_bindings_.GetHandler(this));
 }
 
@@ -66,8 +71,11 @@ void TimezoneImpl::GetTimezoneOffsetMinutes(int64_t milliseconds_since_epoch,
     callback(0, 0);
     return;
   }
-  std::string timezone_id = GetTimezoneIdImpl();
-  std::unique_ptr<icu::TimeZone> timezone(icu::TimeZone::createTimeZone(timezone_id.c_str()));
+
+  // If valid_ is true, then cached_state_ must be valid.
+  FXL_CHECK(cached_state_.has_value());
+  auto& timezone = cached_state_->timezone;
+
   int32_t local_offset = 0, dst_offset = 0;
   UErrorCode error = U_ZERO_ERROR;
   // Local time is set to false, and local_offset/dst_offset/error are mutated
@@ -93,12 +101,13 @@ void TimezoneImpl::NotifyWatchers(const std::string& new_timezone_id) {
   }
 }
 
-bool TimezoneImpl::IsValidTimezoneId(const std::string& timezone_id) {
+std::pair<bool, std::unique_ptr<icu::TimeZone>> TimezoneImpl::ValidateTimezoneId(
+    const std::string& timezone_id) {
   std::unique_ptr<icu::TimeZone> timezone(icu::TimeZone::createTimeZone(timezone_id.c_str()));
   if ((*timezone) == icu::TimeZone::getUnknown()) {
-    return false;
+    return {false, nullptr};
   }
-  return true;
+  return {true, std::move(timezone)};
 }
 
 void TimezoneImpl::SetTimezone(std::string timezone_id, SetTimezoneCallback callback) {
@@ -107,11 +116,16 @@ void TimezoneImpl::SetTimezone(std::string timezone_id, SetTimezoneCallback call
     callback(false);
     return;
   }
-  if (!IsValidTimezoneId(timezone_id)) {
+
+  auto [is_valid, timezone] = ValidateTimezoneId(timezone_id);
+  if (!is_valid) {
     FXL_LOG(ERROR) << "Timezone '" << timezone_id << "' is not valid.";
     callback(false);
     return;
   }
+
+  cached_state_ = {timezone_id, std::move(timezone)};
+
   std::ofstream out_fstream(tz_id_path_, std::ofstream::trunc);
   if (!out_fstream.is_open()) {
     FXL_LOG(ERROR) << "Unable to open file for write '" << tz_id_path_ << "'";
@@ -124,29 +138,34 @@ void TimezoneImpl::SetTimezone(std::string timezone_id, SetTimezoneCallback call
   callback(true);
 }
 
-void TimezoneImpl::GetTimezoneId(GetTimezoneIdCallback callback) { callback(GetTimezoneIdImpl()); }
+void TimezoneImpl::GetTimezoneId(GetTimezoneIdCallback callback) {
+  callback(cached_state_ ? cached_state_->timezone_id : kDefaultTimezone);
+}
 
-std::string TimezoneImpl::GetTimezoneIdImpl() {
-  if (!valid_) {
-    return kDefaultTimezone;
-  }
+void TimezoneImpl::LoadTimezone() {
+  std::string timezone_id;
+
   std::ifstream in_fstream(tz_id_path_);
   if (!in_fstream.is_open()) {
-    return kDefaultTimezone;
+    timezone_id = kDefaultTimezone;
+  } else {
+    in_fstream >> timezone_id;
+    in_fstream.close();
   }
-  std::string id_str;
-  in_fstream >> id_str;
-  in_fstream.close();
 
-  if (id_str.empty()) {
+  if (timezone_id.empty()) {
     FXL_LOG(ERROR) << "TZ file empty at '" << tz_id_path_ << "'";
-    return kDefaultTimezone;
+    timezone_id = kDefaultTimezone;
   }
-  if (!IsValidTimezoneId(id_str)) {
-    FXL_LOG(ERROR) << "Saved TZ ID invalid: '" << id_str << "'";
-    return kDefaultTimezone;
+
+  auto [is_valid, timezone] = ValidateTimezoneId(timezone_id);
+  if (!is_valid) {
+    FXL_LOG(ERROR) << "Saved TZ ID invalid: '" << timezone_id << "'";
+    timezone_id = kDefaultTimezone;
+    timezone = ValidateTimezoneId(kDefaultTimezone).second;
   }
-  return id_str;
+
+  cached_state_ = {timezone_id, std::move(timezone)};
 }
 
 void TimezoneImpl::ReleaseWatcher(fuchsia::deprecatedtimezone::TimezoneWatcher* watcher) {

@@ -9,9 +9,14 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "third_party/icu/source/common/unicode/strenum.h"
+#include "third_party/icu/source/i18n/unicode/timezone.h"
 
 namespace time_zone {
 
@@ -45,11 +50,14 @@ class TimezoneImpl : public fuchsia::deprecatedtimezone::Timezone {
   void ReleaseWatcher(fuchsia::deprecatedtimezone::TimezoneWatcher* watcher);
   // Alerts all watchers when an update has occurred.
   void NotifyWatchers(const std::string& new_timezone_id);
-  // Returns true if |timezone_id| is a valid timezone.
-  bool IsValidTimezoneId(const std::string& timezone_id);
-  // Private implementation of TimezoneImpl::GetTimezoneId, for use in other
-  // methods. Returns a guaranteed-valid timezone ID.
-  std::string GetTimezoneIdImpl();
+
+  // Loads the stored timezone, if any, and sets up the cached state.
+  void LoadTimezone();
+
+  // Returns true and an allocated instance of icu::TimeZone if |timezone_id| is
+  // a valid timezone.
+  static std::pair<bool, std::unique_ptr<icu::TimeZone>> ValidateTimezoneId(
+      const std::string& timezone_id);
 
   std::unique_ptr<sys::ComponentContext> context_;
   const char* const icu_data_path_;
@@ -58,6 +66,14 @@ class TimezoneImpl : public fuchsia::deprecatedtimezone::Timezone {
   // Set to true iff |icu_data_| has been mapped, and the data contained therein
   // is the correct format (when Init() is successful).
   bool valid_;
+
+  // Cached id and timezone object to avoid performing file IO and allocation on
+  // every request.
+  struct State {
+    std::string timezone_id;
+    std::unique_ptr<icu::TimeZone> timezone;
+  };
+  std::optional<State> cached_state_;
 
   // |fuchsia.deprecatedtimezone.Timezone|:
   fidl::BindingSet<fuchsia::deprecatedtimezone::Timezone> deprecated_bindings_;
