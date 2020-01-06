@@ -6,6 +6,7 @@
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_SHADER_STRUCTS_H_
 
 #include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/renderer/frame.h"
 
 // This file contains structs with the same names and fields as those found in
 // the GLSL shader files.  In addition, they all declare the static fields

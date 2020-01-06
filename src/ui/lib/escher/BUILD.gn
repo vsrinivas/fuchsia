@@ -386,8 +386,6 @@ template("escher_library") {
       "renderer/render_queue.h",
       "renderer/render_queue_context.h",
       "renderer/render_queue_item.h",
-      "renderer/renderer.cc",
-      "renderer/renderer.h",
       "renderer/semaphore.cc",
       "renderer/semaphore.h",
       "renderer/uniform_allocation.h",

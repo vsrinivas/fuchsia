@@ -8,7 +8,6 @@
 #include "src/ui/examples/shadertoy/service/pipeline.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/impl/descriptor_set_pool.h"
-#include "src/ui/lib/escher/renderer/renderer.h"
 #include "src/ui/lib/escher/vk/texture.h"
 
 namespace shadertoy {
@@ -16,7 +15,7 @@ namespace shadertoy {
 class Renderer;
 using RendererPtr = fxl::RefPtr<Renderer>;
 
-class Renderer : public escher::Renderer {
+class Renderer {
  public:
   struct Params {
     glm::vec3 iResolution;
@@ -33,6 +32,11 @@ class Renderer : public escher::Renderer {
   };
 
   explicit Renderer(escher::EscherWeakPtr escher, vk::Format color_format);
+
+  const escher::VulkanContext& vulkan_context() { return context_; }
+
+  escher::Escher* escher() const { return escher_.get(); }
+  escher::EscherWeakPtr GetEscherWeakPtr() { return escher_; }
 
   void DrawFrame(const escher::FramebufferPtr& framebuffer, const PipelinePtr& pipeline,
                  const Params& params, escher::Texture* channel0, escher::Texture* channel1,
@@ -55,6 +59,11 @@ class Renderer : public escher::Renderer {
                                      escher::Texture* texture_or_null);
 
   escher::TexturePtr CreateWhiteTexture(escher::BatchGpuUploader* gpu_uploader);
+
+  const escher::VulkanContext context_;
+  const escher::EscherWeakPtr escher_;
+  std::vector<escher::TexturePtr> depth_buffers_;
+  std::vector<escher::TexturePtr> msaa_buffers_;
 
   vk::Device device_;
   vk::Format framebuffer_format_;

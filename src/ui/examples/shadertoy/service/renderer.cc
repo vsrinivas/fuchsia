@@ -89,7 +89,8 @@ static vk::RenderPass CreateRenderPass(vk::Device device, vk::Format framebuffer
 }
 
 Renderer::Renderer(escher::EscherWeakPtr weak_escher, vk::Format framebuffer_format)
-    : escher::Renderer(std::move(weak_escher)),
+    : context_(weak_escher->vulkan_context()),
+      escher_(std::move(weak_escher)),
       device_(escher()->vulkan_context().device),
       framebuffer_format_(framebuffer_format),
       render_pass_(CreateRenderPass(device_, framebuffer_format)),

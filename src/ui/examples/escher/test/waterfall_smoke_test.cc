@@ -4,6 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "src/ui/examples/escher/waterfall/waterfall_demo.h"
+#include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 

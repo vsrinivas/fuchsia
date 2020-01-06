@@ -34,7 +34,8 @@ PaperRendererPtr PaperRenderer::New(EscherWeakPtr escher, const PaperRendererCon
 }
 
 PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher, const PaperRendererConfig& config)
-    : Renderer(weak_escher),
+    : escher_(weak_escher),
+      context_(weak_escher->vulkan_context()),
       config_(config),
 
       draw_call_factory_(weak_escher, config),
@@ -52,7 +53,7 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher, const PaperRendererConfi
   msaa_buffers_.resize(config.num_depth_buffers);
 }
 
-PaperRenderer::~PaperRenderer() { escher()->Cleanup(); }
+PaperRenderer::~PaperRenderer() = default;
 
 PaperRenderer::FrameData::FrameData(const FramePtr& frame_in,
                                     std::shared_ptr<BatchGpuUploader> gpu_uploader_in,

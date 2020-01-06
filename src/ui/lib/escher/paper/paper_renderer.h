@@ -7,6 +7,7 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/debug/debug_rects.h"
+#include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/paper/paper_draw_call_factory.h"
 #include "src/ui/lib/escher/paper/paper_drawable.h"
 #include "src/ui/lib/escher/paper/paper_light.h"
@@ -15,8 +16,8 @@
 #include "src/ui/lib/escher/paper/paper_renderer_config.h"
 #include "src/ui/lib/escher/paper/paper_shape_cache.h"
 #include "src/ui/lib/escher/paper/paper_transform_stack.h"
-#include "src/ui/lib/escher/renderer/renderer.h"
 #include "src/ui/lib/escher/renderer/uniform_binding.h"
+#include "src/ui/lib/escher/vk/texture.h"
 
 namespace escher {
 
@@ -63,12 +64,18 @@ namespace escher {
 // controlled by two parameters passed to the queue:
 //   - |PaperRenderQueueFlags|, to control iteration over draw calls.
 //   - |PaperRenderQueueContext|, used by draw calls to emit Vulkan commands.
-class PaperRenderer final : public Renderer {
+// TODO: Consider removing fxl::RefCountedThreadSafe.
+class PaperRenderer final : public fxl::RefCountedThreadSafe<PaperRenderer> {
  public:
   static PaperRendererPtr New(EscherWeakPtr escher,
                               const PaperRendererConfig& config = {
                                   .shadow_type = PaperRendererShadowType::kNone});
-  ~PaperRenderer() override;
+  ~PaperRenderer();
+
+  const VulkanContext& vulkan_context() { return context_; }
+
+  Escher* escher() const { return escher_.get(); }
+  EscherWeakPtr GetEscherWeakPtr() { return escher_; }
 
   // Set configuration parameters which affect how the renderer will render
   // subsequent frames.
@@ -178,7 +185,6 @@ class PaperRenderer final : public Renderer {
 
  private:
   explicit PaperRenderer(EscherWeakPtr escher, const PaperRendererConfig& config);
-  PaperRenderer(const PaperRenderer&) = delete;
 
   // Store relevant info from cameras passed to BeginFrame().
   struct CameraData {
@@ -247,6 +253,8 @@ class PaperRenderer final : public Renderer {
   // Returns true if the material is valid and supported by the Escher device.
   bool SupportsMaterial(const PaperMaterialPtr& material);
 
+  const EscherWeakPtr escher_;
+  const VulkanContext context_;
   PaperRendererConfig config_;
 
   PaperDrawCallFactory draw_call_factory_;
@@ -263,6 +271,9 @@ class PaperRenderer final : public Renderer {
   ShaderProgramPtr shadow_volume_geometry_program_;
   ShaderProgramPtr shadow_volume_geometry_debug_program_;
   ShaderProgramPtr shadow_volume_lighting_program_;
+
+  std::vector<TexturePtr> depth_buffers_;
+  std::vector<TexturePtr> msaa_buffers_;
 
   std::unique_ptr<DebugFont> debug_font_;
   std::unique_ptr<DebugRects> debug_lines_;

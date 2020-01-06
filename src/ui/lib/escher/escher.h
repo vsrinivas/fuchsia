@@ -154,12 +154,6 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   bool allow_protected_memory() const { return device_->caps().allow_protected_memory; }
 
  private:
-  // Called by Renderer constructor and destructor, respectively.
-  friend class Renderer;
-  void IncrementRendererCount() { ++renderer_count_; }
-  void DecrementRendererCount() { --renderer_count_; }
-  std::atomic<uint32_t> renderer_count_;
-
   // |ShaderProgramFactory|
   ShaderProgramPtr GetProgramImpl(const std::string shader_paths[EnumCount<ShaderStage>()],
                                   ShaderVariantArgs args) override;

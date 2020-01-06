@@ -71,8 +71,7 @@ std::unique_ptr<impl::MeshManager> NewMeshManager(impl::CommandBufferPool* main_
 Escher::Escher(VulkanDeviceQueuesPtr device) : Escher(std::move(device), HackFilesystem::New()) {}
 
 Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
-    : renderer_count_(0),
-      device_(std::move(device)),
+    : device_(std::move(device)),
       vulkan_context_(device_->GetVulkanContext()),
       gpu_allocator_(std::make_unique<VmaGpuAllocator>(vulkan_context_)),
       command_buffer_sequencer_(std::make_unique<impl::CommandBufferSequencer>()),
@@ -120,7 +119,6 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
 }
 
 Escher::~Escher() {
-  FXL_DCHECK(renderer_count_ == 0);
   shader_program_factory_->Clear();
   vk_device().waitIdle();
   Cleanup();

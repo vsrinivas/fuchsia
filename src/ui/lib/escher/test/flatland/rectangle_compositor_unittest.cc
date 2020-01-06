@@ -169,9 +169,9 @@ VK_TEST_F(RectangleCompositorTest, SimpleTextureTest) {
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
   ren_->DrawBatch(cmd_buf, {renderable}, frame_data_.color_attachment, depth_texture);
 
-  auto bytes =
-      ReadbackFromColorAttachment(frame_data_.frame, frame_data_.color_attachment->swapchain_layout(),
-                                  vk::ImageLayout::eColorAttachmentOptimal);
+  auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
+                                           frame_data_.color_attachment->swapchain_layout(),
+                                           vk::ImageLayout::eColorAttachmentOptimal);
 
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
 
@@ -232,9 +232,9 @@ VK_TEST_F(RectangleCompositorTest, RotatedTextureTest) {
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
   ren_->DrawBatch(cmd_buf, {renderable}, frame_data_.color_attachment, depth_texture);
 
-  auto bytes =
-      ReadbackFromColorAttachment(frame_data_.frame, frame_data_.color_attachment->swapchain_layout(),
-                                  vk::ImageLayout::eColorAttachmentOptimal);
+  auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
+                                           frame_data_.color_attachment->swapchain_layout(),
+                                           vk::ImageLayout::eColorAttachmentOptimal);
 
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
 
@@ -278,9 +278,9 @@ VK_TEST_F(RectangleCompositorTest, MultiRenderableTest) {
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
   ren_->DrawBatch(cmd_buf, renderables, frame_data_.color_attachment, depth_texture);
 
-  auto bytes =
-      ReadbackFromColorAttachment(frame_data_.frame, frame_data_.color_attachment->swapchain_layout(),
-                                  vk::ImageLayout::eColorAttachmentOptimal);
+  auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
+                                           frame_data_.color_attachment->swapchain_layout(),
+                                           vk::ImageLayout::eColorAttachmentOptimal);
 
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
 
@@ -328,9 +328,9 @@ VK_TEST_F(RectangleCompositorTest, OverlapTest) {
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
   ren_->DrawBatch(cmd_buf, renderables, frame_data_.color_attachment, depth_texture);
 
-  auto bytes =
-      ReadbackFromColorAttachment(frame_data_.frame, frame_data_.color_attachment->swapchain_layout(),
-                                  vk::ImageLayout::eColorAttachmentOptimal);
+  auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
+                                           frame_data_.color_attachment->swapchain_layout(),
+                                           vk::ImageLayout::eColorAttachmentOptimal);
 
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
 
@@ -378,9 +378,9 @@ VK_TEST_F(RectangleCompositorTest, TransparencyTest) {
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
   ren_->DrawBatch(cmd_buf, renderables, frame_data_.color_attachment, depth_texture);
 
-  auto bytes =
-      ReadbackFromColorAttachment(frame_data_.frame, frame_data_.color_attachment->swapchain_layout(),
-                                  vk::ImageLayout::eColorAttachmentOptimal);
+  auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
+                                           frame_data_.color_attachment->swapchain_layout(),
+                                           vk::ImageLayout::eColorAttachmentOptimal);
 
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
 
@@ -402,10 +402,9 @@ VK_TEST_F(RectangleCompositorTest, TransparencyTest) {
   renderables[1].is_transparent = false;
   ren_->DrawBatch(cmd_buf, renderables, frame_data_.color_attachment, depth_texture);
 
-  bytes =
-      ReadbackFromColorAttachment(frame_data_.frame, 
-                                  frame_data_.color_attachment->swapchain_layout(),
-                                  vk::ImageLayout::eColorAttachmentOptimal);
+  bytes = ReadbackFromColorAttachment(frame_data_.frame,
+                                      frame_data_.color_attachment->swapchain_layout(),
+                                      vk::ImageLayout::eColorAttachmentOptimal);
 
   const ColorHistogram<ColorBgra> histogram2(bytes.data(), kFramebufferWidth * kFramebufferHeight);
   constexpr ColorBgra kBlue2(0, 0, 255, 153);
@@ -443,9 +442,9 @@ VK_TEST_F(RectangleCompositorTest, StressTest) {
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
   ren_->DrawBatch(cmd_buf, renderables, frame_data_.color_attachment, depth_texture);
 
-  auto bytes =
-      ReadbackFromColorAttachment(frame_data_.frame, frame_data_.color_attachment->swapchain_layout(),
-                                  vk::ImageLayout::eColorAttachmentOptimal);
+  auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
+                                           frame_data_.color_attachment->swapchain_layout(),
+                                           vk::ImageLayout::eColorAttachmentOptimal);
 
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
 
