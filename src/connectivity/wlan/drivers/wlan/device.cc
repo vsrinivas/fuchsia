@@ -26,7 +26,6 @@
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/ap/ap_mlme.h>
-#include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mesh/mesh_mlme.h>

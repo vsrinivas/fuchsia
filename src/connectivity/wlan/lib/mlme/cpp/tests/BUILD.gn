@@ -19,7 +19,6 @@ group("tests") {
     ":common_tests",
     ":mac_tests",
     ":mesh_tests",
-    ":scanner_tests",
     ":service_tests",
     ":timer_manager_tests",
   ]
@@ -155,24 +154,6 @@ executable("mesh_tests") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
-executable("scanner_tests") {
-  output_name = "wlan_scanner_unittest"
-
-  testonly = true
-
-  sources = [
-    "scanner_unittest.cc",
-  ]
-
-  deps = [
-    ":test_main",
-    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
-    "//third_party/googletest:gtest",
-  ]
-
-  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
-}
-
 executable("service_tests") {
   output_name = "wlan_service_unittest"
 
@@ -237,7 +218,6 @@ executable("common_tests") {
   testonly = true
 
   sources = [
-    "channel_scheduler_unittest.cc",
     "device_caps_unittest.cc",
     "moving_average_unittest.cc",
     "rates_elements_unittest.cc",
@@ -307,11 +287,6 @@ test_package("wlan_tests") {
 
     {
       name = "wlan_mesh_unittest"
-      environments = basic_envs
-    },
-
-    {
-      name = "wlan_scanner_unittest"
       environments = basic_envs
     },
 

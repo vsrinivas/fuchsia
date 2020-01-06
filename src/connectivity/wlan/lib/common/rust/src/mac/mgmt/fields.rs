@@ -159,6 +159,16 @@ pub struct DisassocHdr {
     pub reason_code: ReasonCode,
 }
 
+// IEEE Std 802.11-2016, 9.3.3.11
+#[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
+#[repr(C, packed)]
+pub struct ProbeRespHdr {
+    pub timestamp: u64,
+    pub beacon_interval: TimeUnit,
+    // IEEE Std 802.11-2016, 9.4.1.4
+    pub capabilities: CapabilityInfo,
+}
+
 // IEEE Std 802.11-2016, 9.3.3.14
 #[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
 #[repr(C, packed)]

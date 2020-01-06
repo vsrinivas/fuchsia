@@ -802,7 +802,7 @@ mod tests {
             buffer::FakeBufferProvider,
             client::{
                 channel_listener::ChannelListenerState, channel_scheduler::ChannelScheduler,
-                cpp_proxy::FakeCppChannelScheduler, scanner::Scanner, Client, ClientConfig,
+                scanner::Scanner, Client, ClientConfig,
             },
             device::{Device, FakeDevice},
         },
@@ -823,7 +823,6 @@ mod tests {
     struct MockObjects {
         fake_device: FakeDevice,
         fake_scheduler: FakeScheduler,
-        fake_chan_sched: FakeCppChannelScheduler,
         scanner: Scanner,
         chan_sched: ChannelScheduler,
         channel_state: ChannelListenerState,
@@ -834,7 +833,6 @@ mod tests {
             Self {
                 fake_device: FakeDevice::new(),
                 fake_scheduler: FakeScheduler::new(),
-                fake_chan_sched: FakeCppChannelScheduler::new(),
                 scanner: Scanner::new(IFACE_MAC),
                 chan_sched: ChannelScheduler::new(),
                 channel_state: Default::default(),
@@ -857,7 +855,6 @@ mod tests {
                 buf_provider: FakeBufferProvider::new(),
                 timer,
                 seq_mgr: SequenceManager::new(),
-                cpp_chan_sched: self.fake_chan_sched.as_chan_sched(),
             }
         }
     }

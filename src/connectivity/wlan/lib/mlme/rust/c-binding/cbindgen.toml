@@ -15,7 +15,7 @@ language = "C"
 sys_includes = [
     # Banjo types.
     "ddk/protocol/wlan/info.h",  # wlan_channel_t
-    "ddk/protocol/wlan/mac.h",   # wlanmac_info_t, wlan_hw_scan_config_t
+    "ddk/protocol/wlan/mac.h",   # wlanmac_info_t, wlan_hw_scan_config_t, wlan_rx_info_t
 
     # Other existing types.
     "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h",  # wlan_key_config_t
@@ -52,6 +52,7 @@ exclude = [
     "WlanHwScanConfig",
     "WlanIndication",
     "WlanmacInfo",
+    "WlanRxInfo",
 
     # Other existing types.
     "KeyConfig",
@@ -83,6 +84,7 @@ exclude = [
 "WlanHwScanConfig" = "wlan_hw_scan_config_t"
 "WlanmacInfo" = "wlanmac_info_t"
 "WlanIndication" = "wlan_indication_t"
+"WlanRxInfo" = "wlan_rx_info_t"
 
 # Other existing types.
 "KeyConfig" = "wlan_key_config_t"

@@ -17,8 +17,17 @@ use {
     zerocopy::ByteSlice,
 };
 
+pub fn c_ensure_on_channel(sta: &mut Client, mlme: &mut ClientMlme) {
+    sta.bind(&mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
+        .ensure_on_channel(&mut mlme.ctx);
+}
+
 pub fn c_start_lost_bss_counter(sta: &mut Client, mlme: &mut ClientMlme, beacon_period: TimeUnit) {
     sta.start_lost_bss_counter(&mut mlme.ctx, beacon_period);
+}
+
+pub fn c_reset_lost_bss_timeout(sta: &mut Client, mlme: &mut ClientMlme) {
+    sta.reset_lost_bss_timeout(&mut mlme.ctx);
 }
 
 pub fn c_send_open_auth_frame(sta: &mut Client, mlme: &mut ClientMlme) -> Result<(), Error> {

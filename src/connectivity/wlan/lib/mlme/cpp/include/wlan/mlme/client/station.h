@@ -18,7 +18,6 @@
 #include <wlan/common/moving_average.h>
 #include <wlan/common/stats.h>
 #include <wlan/mlme/assoc_context.h>
-#include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/client_interface.h>
 #include <wlan/mlme/client/join_context.h>
 #include <wlan/mlme/device_interface.h>
@@ -37,8 +36,8 @@ class Packet;
 class Station : public ClientInterface {
  public:
   Station(DeviceInterface* device, wlan_client_mlme_config_t* mlme_config,
-          TimerManager<TimeoutTarget>* timer_mgr, ChannelScheduler* chan_sched,
-          JoinContext* join_ctx, wlan_client_mlme_t* rust_mlme);
+          TimerManager<TimeoutTarget>* timer_mgr, JoinContext* join_ctx,
+          wlan_client_mlme_t* rust_mlme);
   ~Station() = default;
 
   enum class WlanState {
@@ -61,13 +60,11 @@ class Station : public ClientInterface {
   zx_status_t SetKeys(fbl::Span<const ::fuchsia::wlan::mlme::SetKeyDescriptor> keys) override;
   void UpdateControlledPort(::fuchsia::wlan::mlme::ControlledPortState state) override;
 
-  void PreSwitchOffChannel() override;
-  void BackToMainChannel() override;
-
   ::fuchsia::wlan::stats::ClientMlmeStats stats() const override;
   void ResetStats() override;
 
   wlan_client_sta_t* GetRustClientSta() override;
+  void NotifyAutoDeauth() override;
 
  private:
   static constexpr size_t kAssocBcnCountTimeout = 20;
@@ -113,6 +110,7 @@ class Station : public ClientInterface {
                                             const wlan_channel_t& join_chan,
                                             wlan_info_phy_type_t join_phy,
                                             uint16_t listen_interval);
+  void UpdateState(WlanState state);
 
   zx_status_t NotifyAssocContext();
 
@@ -120,7 +118,6 @@ class Station : public ClientInterface {
   wlan_client_mlme_config_t* mlme_config_;
   ClientStation rust_client_;
   TimerManager<TimeoutTarget>* timer_mgr_;
-  ChannelScheduler* chan_sched_;
   JoinContext* join_ctx_;
   wlan_client_mlme_t* rust_mlme_;
 
@@ -128,16 +125,6 @@ class Station : public ClientInterface {
   TimeoutId auth_timeout_;
   TimeoutId assoc_timeout_;
   TimeoutId signal_report_timeout_;
-  TimeoutId auto_deauth_timeout_;
-  // The remaining time we'll wait for a beacon before deauthenticating (while
-  // we are on channel) Note: Off-channel time does not count against
-  // `remaining_auto_deauth_timeout_`
-  zx::duration remaining_auto_deauth_timeout_ = zx::duration::infinite();
-  // The last time we re-calculated the `remaining_auto_deauth_timeout_`
-  // Note: During channel switching, `auto_deauth_last_accounted_` is set to the
-  // timestamp
-  //       we go back on channel (to make computation easier).
-  zx::time auto_deauth_last_accounted_;
 
   common::MovingAverageDbm<20> avg_rssi_dbm_;
   eapol::PortState controlled_port_ = eapol::PortState::kBlocked;

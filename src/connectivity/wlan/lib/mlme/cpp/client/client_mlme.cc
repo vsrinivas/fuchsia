@@ -17,7 +17,6 @@
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/client/client_mlme.h>
-#include <wlan/mlme/client/scanner.h>
 #include <wlan/mlme/client/station.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
@@ -32,7 +31,6 @@ namespace wlan {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
-#define CHAN_SCHED(c) static_cast<ChannelScheduler*>(c)
 #define TIMER_MGR(c) static_cast<TimerManager<TimeoutTarget>*>(c)
 #define DEVICE(c) static_cast<DeviceInterface*>(c)
 
@@ -48,10 +46,7 @@ ClientMlme::ClientMlme(DeviceInterface* device) : ClientMlme(device, ClientMlmeD
 }
 
 ClientMlme::ClientMlme(DeviceInterface* device, wlan_client_mlme_config_t config)
-    : device_(device),
-      on_channel_handler_(this),
-      rust_mlme_(nullptr, client_mlme_delete),
-      config_(config) {
+    : device_(device), rust_mlme_(nullptr, client_mlme_delete), config_(config) {
   debugfn();
 }
 
@@ -70,9 +65,6 @@ zx_status_t ClientMlme::Init() {
     return status;
   }
   timer_mgr_ = std::make_unique<TimerManager<TimeoutTarget>>(std::move(timer));
-
-  chan_sched_ = std::make_unique<ChannelScheduler>(&on_channel_handler_, device_, timer_mgr_.get());
-  scanner_ = std::make_unique<Scanner>(device_, chan_sched_.get(), timer_mgr_.get());
 
   // Initialize Rust dependencies
   auto rust_device = mlme_device_ops_t{
@@ -132,16 +124,8 @@ zx_status_t ClientMlme::Init() {
       .cancel = [](void* cookie,
                    wlan_scheduler_event_id_t id) { TIMER_MGR(cookie)->Cancel(TimeoutId(id._0)); },
   };
-  auto chan_sched_proxy = wlan_cpp_chan_sched_t{
-      .chan_sched = static_cast<void*>(this->chan_sched_.get()),
-      .ensure_on_channel =
-          [](void* chan_sched, zx_time_t end) {
-            CHAN_SCHED(chan_sched)->EnsureOnChannel(zx::time(end));
-          },
-  };
   rust_mlme_ = RustClientMlme(
-      client_mlme_new(config_, rust_device, rust_buffer_provider, scheduler, chan_sched_proxy),
-      client_mlme_delete);
+      client_mlme_new(config_, rust_device, rust_buffer_provider, scheduler), client_mlme_delete);
 
   return status;
 }
@@ -168,14 +152,11 @@ zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
         } else {
           rust_client = nullptr;
         }
-        client_mlme_timeout_fired(rust_mlme_.get(), rust_client,
-                                  wlan_scheduler_event_id_t{._0 = timeout_id.raw()});
-        break;
-      case TimeoutTarget::kChannelScheduler:
-        chan_sched_->HandleTimeout();
-        break;
-      case TimeoutTarget::kScanner:
-        scanner_->HandleTimeout();
+        auto auto_deauth = client_mlme_timeout_fired(
+            rust_mlme_.get(), rust_client, wlan_scheduler_event_id_t{._0 = timeout_id.raw()});
+        if (sta_ != nullptr && auto_deauth) {
+          sta_->NotifyAutoDeauth();
+        }
         break;
     }
   });
@@ -188,11 +169,7 @@ zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
 }
 
 void ClientMlme::HwScanComplete(uint8_t result_code) {
-  if (result_code == WLAN_HW_SCAN_SUCCESS) {
-    scanner_->HandleHwScanComplete();
-  } else {
-    scanner_->HandleHwScanAborted();
-  }
+  client_mlme_hw_scan_complete(rust_mlme_.get(), result_code);
 }
 
 zx_status_t ClientMlme::HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) {
@@ -205,10 +182,7 @@ zx_status_t ClientMlme::HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) {
 }
 
 zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
-  if (auto scan_req = msg.As<wlan_mlme::ScanRequest>()) {
-    // Let the Scanner handle all MLME-SCAN.requests.
-    return scanner_->HandleMlmeScanReq(*scan_req);
-  } else if (auto join_req = msg.As<wlan_mlme::JoinRequest>()) {
+  if (auto join_req = msg.As<wlan_mlme::JoinRequest>()) {
     // An MLME-JOIN-request will synchronize the MLME with the request's BSS.
     // Synchronization is mandatory for spawning a client and starting its
     // association flow.
@@ -295,7 +269,22 @@ zx_status_t ClientMlme::HandleFramePacket(std::unique_ptr<Packet> pkt) {
       return ZX_ERR_BAD_STATE;
     }
     case Packet::Peer::kWlan: {
-      chan_sched_->HandleIncomingFrame(std::move(pkt));
+      wlan_client_sta_t* rust_client = nullptr;
+      if (sta_ != nullptr) {
+        rust_client = sta_->GetRustClientSta();
+      }
+      auto frame_span = fbl::Span<uint8_t>{pkt->data(), pkt->len()};
+      const wlan_rx_info_t* rx_info = nullptr;
+      if (pkt->has_ctrl_data<wlan_rx_info_t>()) {
+        rx_info = pkt->ctrl_data<wlan_rx_info_t>();
+      }
+      client_mlme_on_mac_frame(rust_mlme_.get(), rust_client, AsWlanSpan(frame_span), rx_info);
+
+      if (OnChannel()) {
+        if (sta_ != nullptr) {
+          sta_->HandleWlanFrame(std::move(pkt));
+        }
+      }
       return ZX_OK;
     }
     default:
@@ -317,7 +306,7 @@ zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>&
 
   auto join_chan = join_ctx.channel();
   debugjoin("setting channel to %s\n", common::ChanStrLong(join_chan).c_str());
-  status = chan_sched_->SetChannel(join_chan);
+  status = client_mlme_set_main_channel(rust_mlme_.get(), join_chan);
   if (status != ZX_OK) {
     errorf("could not set WLAN channel to %s: %d\n", common::ChanStrLong(join_chan).c_str(),
            status);
@@ -349,52 +338,14 @@ zx_status_t ClientMlme::SpawnStation() {
     return ZX_ERR_BAD_STATE;
   }
 
-  auto client = std::make_unique<Station>(device_, &config_, timer_mgr_.get(), chan_sched_.get(),
-                                          &join_ctx_.value(), rust_mlme_.get());
+  auto client = std::make_unique<Station>(device_, &config_, timer_mgr_.get(), &join_ctx_.value(),
+                                          rust_mlme_.get());
 
   if (!client) {
     return ZX_ERR_INTERNAL;
   }
   sta_ = std::move(client);
   return ZX_OK;
-}
-
-void ClientMlme::OnChannelHandlerImpl::PreSwitchOffChannel() {
-  debugfn();
-  if (mlme_->sta_ != nullptr) {
-    mlme_->sta_->PreSwitchOffChannel();
-  }
-}
-
-void ValidateOnChannelFrame(const Packet& pkt) {
-  debugfn();
-  // Only WLAN frames are handed to channel handler since all Ethernet frames
-  // are handed over to the station directly.
-  ZX_DEBUG_ASSERT(pkt.peer() == Packet::Peer::kWlan);
-}
-
-void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(std::unique_ptr<Packet> packet) {
-  debugfn();
-  ValidateOnChannelFrame(*packet);
-
-  if (auto mgmt_frame = MgmtFrameView<>::CheckType(packet.get()).CheckLength()) {
-    if (auto bcn_frame = mgmt_frame.CheckBodyType<Beacon>().CheckLength()) {
-      mlme_->scanner_->HandleBeacon(bcn_frame);
-    } else if (auto probe_frame = mgmt_frame.CheckBodyType<ProbeResponse>().CheckLength()) {
-      mlme_->scanner_->HandleProbeResponse(probe_frame);
-    }
-  }
-
-  if (mlme_->sta_ != nullptr) {
-    mlme_->sta_->HandleWlanFrame(std::move(packet));
-  }
-}
-
-void ClientMlme::OnChannelHandlerImpl::ReturnedOnChannel() {
-  debugfn();
-  if (mlme_->sta_ != nullptr) {
-    mlme_->sta_->BackToMainChannel();
-  }
 }
 
 wlan_stats::MlmeStats ClientMlme::GetMlmeStats() const {
@@ -411,12 +362,7 @@ void ClientMlme::ResetMlmeStats() {
   }
 }
 
-bool ClientMlme::OnChannel() {
-  if (chan_sched_ != nullptr) {
-    return chan_sched_->OnChannel();
-  }
-  return false;
-}
+bool ClientMlme::OnChannel() { return client_mlme_on_channel(rust_mlme_.get()); }
 
 void ClientMlme::Unjoin() {
   join_ctx_.reset();

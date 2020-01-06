@@ -97,11 +97,7 @@ impl LostBssCounter {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::{client::TimedEvent, timer::FakeScheduler},
-        wlan_common::assert_variant,
-    };
+    use {super::*, crate::timer::FakeScheduler, wlan_common::assert_variant};
 
     const TEST_TIMEOUT_BCN_COUNT: u32 = 1000;
 
@@ -113,7 +109,7 @@ mod tests {
 
         let (id, deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
         assert!(timer.triggered(&id).is_some());
-        assert_eq!(deadline, (bcn_period() * TEST_TIMEOUT_BCN_COUNT).into_nanos());
+        assert_eq!(deadline, zx::Time::from_nanos(0) + (bcn_period() * TEST_TIMEOUT_BCN_COUNT));
         // Verify `handle_timeout` returns true, indicating auto-deauth
         fake_scheduler.increment_time(bcn_period() * TEST_TIMEOUT_BCN_COUNT);
         assert!(counter.handle_timeout(&mut timer, id));
@@ -127,7 +123,7 @@ mod tests {
 
         let (id, deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
         assert!(timer.triggered(&id).is_some());
-        assert_eq!(deadline, (bcn_period() * TEST_TIMEOUT_BCN_COUNT).into_nanos());
+        assert_eq!(deadline, zx::Time::from_nanos(0) + (bcn_period() * TEST_TIMEOUT_BCN_COUNT));
 
         // Beacon received some time later, resetting the timeout.
         fake_scheduler.increment_time(bcn_period() * (TEST_TIMEOUT_BCN_COUNT - 1));
@@ -141,7 +137,10 @@ mod tests {
         // LostBssCounter should schedule another timeout
         let (id, deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
         assert!(timer.triggered(&id).is_some());
-        assert_eq!(deadline, (bcn_period() * (TEST_TIMEOUT_BCN_COUNT * 2 - 1)).into_nanos());
+        assert_eq!(
+            deadline,
+            zx::Time::from_nanos(0) + (bcn_period() * (TEST_TIMEOUT_BCN_COUNT * 2 - 1))
+        );
 
         // Verify `handle_timeout` returns true, indicating auto-deauth
         fake_scheduler.increment_time(bcn_period() * (TEST_TIMEOUT_BCN_COUNT - 1));
@@ -154,7 +153,7 @@ mod tests {
         let mut timer = Timer::new(fake_scheduler.as_scheduler());
         let mut counter = LostBssCounter::start(&mut timer, bcn_period(), TEST_TIMEOUT_BCN_COUNT);
 
-        let (id, deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
+        let (id, _deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
         assert_eq!(timer.scheduled_event_count(), 1);
         counter.pause(&mut timer);
         assert_eq!(timer.scheduled_event_count(), 0);
@@ -168,7 +167,7 @@ mod tests {
         counter.unpause(&mut timer);
         let (id, deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
         assert!(timer.triggered(&id).is_some());
-        assert_eq!(deadline, 0i64 + (bcn_period() * TEST_TIMEOUT_BCN_COUNT * 3).into_nanos());
+        assert_eq!(deadline, zx::Time::from_nanos(0) + (bcn_period() * TEST_TIMEOUT_BCN_COUNT * 3));
 
         // Verify `handle_timeout` returns true, indicating auto-deauth
         fake_scheduler.increment_time(bcn_period() * TEST_TIMEOUT_BCN_COUNT);
@@ -190,7 +189,7 @@ mod tests {
         counter.unpause(&mut timer);
         let (id, deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
         assert!(timer.triggered(&id).is_some());
-        assert_eq!(deadline, (timer.now() + TimeUnit(1).into()).into_nanos());
+        assert_eq!(deadline, timer.now() + TimeUnit(1).into());
 
         // Verify `handle_timeout` returns true, indicating auto-deauth
         fake_scheduler.increment_time(TimeUnit(1).into());

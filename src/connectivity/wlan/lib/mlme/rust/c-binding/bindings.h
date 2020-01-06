@@ -190,17 +190,6 @@ typedef struct {
 } wlan_client_mlme_config_t;
 
 /**
- * Proxy to C++ channel scheduler
- */
-typedef struct {
-  void *chan_sched;
-  /**
-   * Make sure that MLME remains on the main channel until deadline
-   */
-  void (*ensure_on_channel)(void *chan_sched, zx_time_t end);
-} wlan_cpp_chan_sched_t;
-
-/**
  * The power management state of a station.
  *
  * Represents the possible power states from IEEE-802.11-2016, 11.2.7.
@@ -231,18 +220,32 @@ extern "C" void client_mlme_delete(wlan_client_mlme_t *mlme);
 extern "C" int32_t client_mlme_handle_mlme_msg(wlan_client_mlme_t *mlme, wlan_client_sta_t *sta,
                                                wlan_span_t bytes);
 
+extern "C" void client_mlme_hw_scan_complete(wlan_client_mlme_t *mlme, uint8_t status);
+
 extern "C" wlan_client_mlme_t *client_mlme_new(wlan_client_mlme_config_t config,
                                                mlme_device_ops_t device,
                                                mlme_buffer_provider_ops_t buf_provider,
-                                               wlan_scheduler_ops_t scheduler,
-                                               wlan_cpp_chan_sched_t cpp_chan_sched);
+                                               wlan_scheduler_ops_t scheduler);
+
+extern "C" bool client_mlme_on_channel(wlan_client_mlme_t *mlme);
+
+extern "C" void client_mlme_on_mac_frame(wlan_client_mlme_t *mlme, wlan_client_sta_t *sta,
+                                         wlan_span_t frame, const wlan_rx_info_t *rx_info);
 
 extern "C" mlme_sequence_manager_t *client_mlme_seq_mgr(wlan_client_mlme_t *mlme);
 
-extern "C" void client_mlme_timeout_fired(wlan_client_mlme_t *mlme, wlan_client_sta_t *sta,
+extern "C" int32_t client_mlme_set_main_channel(wlan_client_mlme_t *mlme,
+                                                wlan_channel_t main_channel);
+
+/**
+ * Return true if auto-deauth triggers. Return false otherwise
+ */
+extern "C" bool client_mlme_timeout_fired(wlan_client_mlme_t *mlme, wlan_client_sta_t *sta,
                                           wlan_scheduler_event_id_t event_id);
 
 extern "C" void client_sta_delete(wlan_client_sta_t *sta);
+
+extern "C" void client_sta_ensure_on_channel(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme);
 
 extern "C" int32_t client_sta_handle_data_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
                                                 wlan_span_t data_frame, bool has_padding,
@@ -280,6 +283,11 @@ extern "C" int32_t client_sta_send_power_state_frame(wlan_client_sta_t *sta,
 
 extern "C" int32_t client_sta_send_ps_poll_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
                                                  uint16_t aid);
+
+extern "C" void client_sta_start_lost_bss_counter(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
+                                                  uint16_t beacon_period);
+
+extern "C" void client_sta_stop_lost_bss_counter(wlan_client_sta_t *sta);
 
 extern "C" int32_t mlme_is_valid_open_auth_resp(wlan_span_t auth_resp);
 

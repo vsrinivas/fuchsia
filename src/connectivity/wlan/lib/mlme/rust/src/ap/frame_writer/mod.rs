@@ -175,8 +175,7 @@ pub fn write_probe_resp_frame<B: Appendable>(
         None,
     )?;
 
-    // Probe responses have the same headers as beacons.
-    buf.append_value(&mac::BeaconHdr { timestamp, beacon_interval, capabilities })?;
+    buf.append_value(&mac::ProbeRespHdr { timestamp, beacon_interval, capabilities })?;
 
     let rates_writer = RatesWriter::try_new(rates)?;
 

@@ -24,6 +24,8 @@ rustc_staticlib("wlan-mlme-c") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:thiserror",
+    "//zircon/system/banjo/ddk.protocol.wlan.info:ddk.protocol.wlan.info-rustc",
+    "//zircon/system/banjo/ddk.protocol.wlan.mac:ddk.protocol.wlan.mac-rustc",
   ]
   non_rust_deps = [
     "//garnet/lib/wlan/protocol",

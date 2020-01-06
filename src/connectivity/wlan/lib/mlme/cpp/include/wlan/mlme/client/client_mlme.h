@@ -11,7 +11,6 @@
 #include <memory>
 #include <optional>
 
-#include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/client_interface.h>
 #include <wlan/mlme/client/join_context.h>
 #include <wlan/mlme/client/timeout_target.h>
@@ -51,28 +50,15 @@ class ClientMlme : public Mlme {
   bool OnChannel();
 
  private:
-  struct OnChannelHandlerImpl : OnChannelHandler {
-    ClientMlme* mlme_;
-
-    explicit OnChannelHandlerImpl(ClientMlme* mlme) : mlme_(mlme) {}
-
-    virtual void HandleOnChannelFrame(std::unique_ptr<Packet>) override;
-    virtual void PreSwitchOffChannel() override;
-    virtual void ReturnedOnChannel() override;
-  };
-
   zx_status_t HandleMlmeJoinReq(const MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>& msg);
   zx_status_t SpawnStation();
 
   void Unjoin();
 
   DeviceInterface* const device_;
-  OnChannelHandlerImpl on_channel_handler_;
   std::unique_ptr<TimerManager<TimeoutTarget>> timer_mgr_;
   RustClientMlme rust_mlme_;
   wlan_client_mlme_config_t config_;
-  std::unique_ptr<ChannelScheduler> chan_sched_;
-  std::unique_ptr<Scanner> scanner_;
   // TODO(tkilbourn): track other STAs
   std::unique_ptr<ClientInterface> sta_;
   // The BSS the MLME synchronized with.

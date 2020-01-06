@@ -19,6 +19,12 @@ use {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RequestId(pub u64, pub ChannelListenerSource);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QueueState {
+    Nonempty,
+    Empty,
+}
+
 /// ChannelScheduler let the client schedule to go to some channel at a particular time or
 /// queue up channel to be transitioned on the best-effort basis. Scheduled channel request
 /// has higher priority over queued request and would cancel in-progress queued request.
@@ -107,7 +113,7 @@ impl<'a, CL: ChannelListener> BoundChannelScheduler<'a, CL> {
 
                 // Notify completion of previously cancelled request, if any
                 if let Some(id) = ended_request_id {
-                    self.listener.on_req_complete(id);
+                    self.listener.on_req_complete(id, QueueState::Nonempty);
                 }
             }
             ChannelPolicy::Queue => {
@@ -120,19 +126,23 @@ impl<'a, CL: ChannelListener> BoundChannelScheduler<'a, CL> {
     }
 
     /// Handle end of channel period. Returning true if channel scheduler is still servicing
-    /// requests
-    pub fn handle_timeout(&mut self) -> bool {
+    /// requests.
+    pub fn handle_timeout(&mut self) {
         self.cancel_existing_timeout();
         let interrupted = false;
         let ended_request_id = self.chan_sched.queue.mark_end_current_channel(interrupted);
         self.maybe_service_front_req();
         if let Some(id) = ended_request_id {
-            self.listener.on_req_complete(id);
+            let queue_state = if self.chan_sched.queue.front().is_some() {
+                QueueState::Nonempty
+            } else {
+                QueueState::Empty
+            };
+            self.listener.on_req_complete(id, queue_state);
         }
-        self.chan_sched.queue.front().is_some()
     }
 
-    /// Service request at front of the queue if there's one
+    /// Service request at front of the queue if there's one.
     fn maybe_service_front_req(&mut self) {
         let (channel, meta) = match self.chan_sched.queue.front() {
             Some(info) => info,
@@ -282,10 +292,13 @@ mod tests {
             ]
         );
 
-        // Trigger timeout, should stay on same channel and notify req complete
+        // Trigger timeout, should stay on same channel and notify req complete.
         chan_sched.handle_timeout();
         assert_eq!(m.fake_device.wlan_channel, IMMEDIATE_CHANNEL);
-        assert_eq!(m.listener_state.drain_events(), vec![LEvent::ReqComplete(req_id)]);
+        assert_eq!(
+            m.listener_state.drain_events(),
+            vec![LEvent::ReqComplete(req_id, QueueState::Empty)]
+        );
     }
 
     #[test]
@@ -306,10 +319,13 @@ mod tests {
             ]
         );
 
-        // Trigger timeout, should stay on same channel and notify req complete
+        // Trigger timeout, should stay on same channel and notify req complete.
         chan_sched.handle_timeout();
         assert_eq!(m.fake_device.wlan_channel, QUEUE_CHANNEL_1);
-        assert_eq!(m.listener_state.drain_events(), vec![LEvent::ReqComplete(req_id)]);
+        assert_eq!(
+            m.listener_state.drain_events(),
+            vec![LEvent::ReqComplete(req_id, QueueState::Empty)]
+        );
     }
 
     #[test]
@@ -319,12 +335,12 @@ mod tests {
         let mut listener = m.listener_state.bind(&mut m.device, &mut m.timer);
         let mut chan_sched = chan_sched.bind(&mut listener, ChannelListenerSource::Others);
 
-        // Schedule back request. Should switch immediately since queue is empty
+        // Schedule back request. Should switch immediately since queue is empty.
         let id1 = chan_sched.queue_channels(vec![QUEUE_CHANNEL_1], 200.millis());
         assert_eq!(m.fake_device.wlan_channel, QUEUE_CHANNEL_1);
         m.listener_state.drain_events();
 
-        // Schedule immediate request. Verify switch immediately
+        // Schedule immediate request. Verify switch immediately.
         let id2 = chan_sched.schedule_immediate(IMMEDIATE_CHANNEL, 100.millis());
         assert_eq!(m.fake_device.wlan_channel, IMMEDIATE_CHANNEL);
         assert_eq!(
@@ -335,7 +351,7 @@ mod tests {
             ]
         );
 
-        // Trigger timeout, should retry first channel request
+        // Trigger timeout, should retry first channel request.
         chan_sched.handle_timeout();
         assert_eq!(m.fake_device.wlan_channel, QUEUE_CHANNEL_1);
         assert_eq!(
@@ -343,14 +359,17 @@ mod tests {
             vec![
                 LEvent::PreSwitch { from: IMMEDIATE_CHANNEL, to: QUEUE_CHANNEL_1, req_id: id1 },
                 LEvent::PostSwitch { from: IMMEDIATE_CHANNEL, to: QUEUE_CHANNEL_1, req_id: id1 },
-                LEvent::ReqComplete(id2),
+                LEvent::ReqComplete(id2, QueueState::Nonempty),
             ]
         );
 
-        // Trigger timeout, should stay on same channel and notify first req complete
+        // Trigger timeout, should stay on same channel and notify first req complete.
         chan_sched.handle_timeout();
         assert_eq!(m.fake_device.wlan_channel, QUEUE_CHANNEL_1);
-        assert_eq!(m.listener_state.drain_events(), vec![LEvent::ReqComplete(id1)]);
+        assert_eq!(
+            m.listener_state.drain_events(),
+            vec![LEvent::ReqComplete(id1, QueueState::Empty)]
+        );
     }
 
     #[test]
@@ -364,12 +383,12 @@ mod tests {
         assert_eq!(m.fake_device.wlan_channel, IMMEDIATE_CHANNEL);
         m.listener_state.drain_events();
 
-        // Queue back request, which should not fire yet
+        // Queue back request, which should not fire yet.
         let id2 = chan_sched.queue_channels(vec![QUEUE_CHANNEL_1, QUEUE_CHANNEL_2], 200.millis());
         assert_eq!(m.fake_device.wlan_channel, IMMEDIATE_CHANNEL);
         assert_eq!(m.listener_state.drain_events(), vec![]);
 
-        // Trigger timeout, should transition to first back channel
+        // Trigger timeout, should transition to first back channel.
         chan_sched.handle_timeout();
         assert_eq!(m.fake_device.wlan_channel, QUEUE_CHANNEL_1);
         assert_eq!(
@@ -377,7 +396,7 @@ mod tests {
             vec![
                 LEvent::PreSwitch { from: IMMEDIATE_CHANNEL, to: QUEUE_CHANNEL_1, req_id: id2 },
                 LEvent::PostSwitch { from: IMMEDIATE_CHANNEL, to: QUEUE_CHANNEL_1, req_id: id2 },
-                LEvent::ReqComplete(id1),
+                LEvent::ReqComplete(id1, QueueState::Nonempty),
             ]
         );
 
@@ -395,7 +414,10 @@ mod tests {
         // Trigger timeout, should stay on same channel and notify req complete
         chan_sched.handle_timeout();
         assert_eq!(m.fake_device.wlan_channel, QUEUE_CHANNEL_2);
-        assert_eq!(m.listener_state.drain_events(), vec![LEvent::ReqComplete(id2)]);
+        assert_eq!(
+            m.listener_state.drain_events(),
+            vec![LEvent::ReqComplete(id2, QueueState::Empty)]
+        );
     }
 
     #[test]
@@ -422,14 +444,17 @@ mod tests {
             vec![
                 LEvent::PreSwitch { from: IMMEDIATE_CHANNEL, to: IMMEDIATE_CHANNEL, req_id: id2 },
                 LEvent::PostSwitch { from: IMMEDIATE_CHANNEL, to: IMMEDIATE_CHANNEL, req_id: id2 },
-                LEvent::ReqComplete(id1),
+                LEvent::ReqComplete(id1, QueueState::Nonempty),
             ]
         );
 
         // Trigger timeout, should stay on same channel and notify req complete
         chan_sched.handle_timeout();
         assert_eq!(m.fake_device.wlan_channel, IMMEDIATE_CHANNEL);
-        assert_eq!(m.listener_state.drain_events(), vec![LEvent::ReqComplete(id2)]);
+        assert_eq!(
+            m.listener_state.drain_events(),
+            vec![LEvent::ReqComplete(id2, QueueState::Empty)]
+        );
     }
 
     #[test]
@@ -457,14 +482,17 @@ mod tests {
             vec![
                 LEvent::PreSwitch { from: IMMEDIATE_CHANNEL, to: IMMEDIATE_CHANNEL, req_id: id2 },
                 LEvent::PostSwitch { from: IMMEDIATE_CHANNEL, to: IMMEDIATE_CHANNEL, req_id: id2 },
-                LEvent::ReqComplete(id1)
+                LEvent::ReqComplete(id1, QueueState::Nonempty)
             ]
         );
 
         // Trigger timeout, should stay on same channel and notify req complete
         chan_sched.handle_timeout();
         assert_eq!(m.fake_device.wlan_channel, IMMEDIATE_CHANNEL);
-        assert_eq!(m.listener_state.drain_events(), vec![LEvent::ReqComplete(id2)]);
+        assert_eq!(
+            m.listener_state.drain_events(),
+            vec![LEvent::ReqComplete(id2, QueueState::Empty)]
+        );
     }
 
     struct MockObjects {

@@ -14,7 +14,6 @@
 #include <gtest/gtest.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/assoc_context.h>
-#include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/client/station.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>

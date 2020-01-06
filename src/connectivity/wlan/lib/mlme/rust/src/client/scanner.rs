@@ -29,7 +29,7 @@ use {
     wlan_common::{
         buffer_writer::BufferWriter,
         frame_len,
-        ie::{self, IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN},
+        ie::{IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN},
         mac::{self, Bssid, CapabilityInfo, MacAddr},
         time::TimeUnit,
     },
@@ -226,7 +226,7 @@ impl<'a> BoundScanner<'a> {
         beacon_interval: TimeUnit,
         capability_info: CapabilityInfo,
         ies: &[u8],
-        rx_info: banjo_wlan_mac::WlanRxInfo,
+        rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
     ) {
         let seen_bss = match &mut self.scanner.ongoing_scan {
             Some(req) => &mut req.seen_bss,
@@ -264,11 +264,18 @@ impl<'a> BoundScanner<'a> {
                     {
                         new_bss_description.ssid = bss_description.ssid.clone();
                     }
-                    // TIM element is present in beacon frame but no probe response. In case we
+                    // TIM element is present in beacon frame but not probe response. In case we
                     // see no DTIM period in latest frame, use value from previous one.
                     if new_bss_description.dtim_period == 0 {
                         new_bss_description.dtim_period = bss_description.dtim_period;
                     }
+                    // If there's no RX info, keep old values
+                    if rx_info.is_none() {
+                        new_bss_description.rssi_dbm = bss_description.rssi_dbm;
+                        new_bss_description.rcpi_dbmh = bss_description.rcpi_dbmh;
+                        new_bss_description.rsni_dbh = bss_description.rsni_dbh;
+                    }
+
                     *bss_description = new_bss_description;
                     *existing_hash = hash;
                 }
@@ -364,18 +371,8 @@ impl<'a> BoundScanner<'a> {
         let ssid_len = IE_PREFIX_LEN + ssid.len();
         let rates_len = (IE_PREFIX_LEN + rates.len())
             + if rates.len() > SUPPORTED_RATES_MAX_LEN { IE_PREFIX_LEN } else { 0 };
-        let (ht_cap, ht_cap_len) = if band_info.ht_supported {
-            (Some(band_info.ht_caps.into()), IE_PREFIX_LEN + frame_len!(ie::HtCapabilities))
-        } else {
-            (None, 0)
-        };
-        let (vht_cap, vht_cap_len) = if band_info.vht_supported {
-            (Some(band_info.vht_caps.into()), IE_PREFIX_LEN + frame_len!(ie::VhtCapabilities))
-        } else {
-            (None, 0)
-        };
 
-        let frame_len = mgmt_hdr_len + ssid_len + rates_len + ht_cap_len + vht_cap_len;
+        let frame_len = mgmt_hdr_len + ssid_len + rates_len;
         let mut buf = self.ctx.buf_provider.get_buffer(frame_len)?;
         let mut w = BufferWriter::new(&mut buf[..]);
 
@@ -385,8 +382,6 @@ impl<'a> BoundScanner<'a> {
             &mut self.ctx.seq_mgr,
             &ssid,
             &rates[..],
-            ht_cap,
-            vht_cap,
         )?;
         let bytes_written = w.bytes_written();
         let out_buf = OutBuf::from(buf, bytes_written);
@@ -464,9 +459,7 @@ mod tests {
             buffer::FakeBufferProvider,
             client::{
                 channel_listener::{LEvent, MockListenerState},
-                channel_scheduler,
-                cpp_proxy::FakeCppChannelScheduler,
-                ClientConfig,
+                channel_scheduler, ClientConfig,
             },
             device::FakeDevice,
             timer::{FakeScheduler, Timer},
@@ -587,13 +580,6 @@ mod tests {
             115, 115, 105, 100, // SSID
             1, 6, // supp_rates id and length
             12, 24, 48, 54, 96, 108, // supp_rates
-            // HT cap header
-            45, 26,
-            // HT cap body
-            0x63, 0x00, 0x17,
-            0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x01, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ][..]);
     }
 
@@ -643,13 +629,6 @@ mod tests {
             115, 115, 105, 100, // SSID
             1, 6, // supp_rates id and length
             12, 24, 48, 54, 96, 108, // supp_rates
-            // HT cap header
-            45, 26,
-            // HT cap body
-            0x63, 0x00, 0x17,
-            0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x01, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ][..]);
     }
 
@@ -1106,6 +1085,50 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_handle_beacon_or_probe_response_no_rx_info() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut scanner = Scanner::new(IFACE_MAC);
+
+        scanner
+            .bind(&mut ctx)
+            .handle_mlme_scan_req(
+                scan_req(),
+                m.listener_state.create_channel_listener_fn(),
+                &mut m.chan_sched,
+            )
+            .expect("expect scan req accepted");
+        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies()[..]);
+        // No RX info
+        scanner.bind(&mut ctx).handle_beacon_or_probe_response(
+            BSSID,
+            TIMESTAMP,
+            TimeUnit(BEACON_INTERVAL),
+            CAPABILITY_INFO,
+            &beacon_ies()[..],
+            None,
+        );
+        scanner.bind(&mut ctx).handle_channel_req_complete();
+
+        // Verify that we keep existing channel and signal strength measurements
+        let scan_result = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanResult>()
+            .expect("error reading MLME ScanResult");
+        assert_eq!(scan_result.bss.rssi_dbm, -40);
+        assert_eq!(scan_result.bss.rcpi_dbmh, 30);
+        assert_eq!(scan_result.bss.rsni_dbh, 35);
+        assert_eq!(
+            scan_result.bss.chan,
+            fidl_common::WlanChan {
+                primary: RX_INFO.chan.primary,
+                cbw: fidl_common::Cbw::Cbw20,
+                secondary80: 0,
+            }
+        );
+    }
+
     fn handle_beacon(scanner: &mut Scanner, ctx: &mut Context, timestamp: u64, ies: &[u8]) {
         scanner.bind(ctx).handle_beacon_or_probe_response(
             BSSID,
@@ -1113,7 +1136,7 @@ mod tests {
             TimeUnit(BEACON_INTERVAL),
             CAPABILITY_INFO,
             ies,
-            RX_INFO,
+            Some(RX_INFO),
         );
     }
 
@@ -1178,7 +1201,6 @@ mod tests {
     struct MockObjects {
         fake_device: FakeDevice,
         fake_scheduler: FakeScheduler,
-        fake_cpp_chan_sched: FakeCppChannelScheduler,
         listener_state: MockListenerState,
         chan_sched: ChannelScheduler,
     }
@@ -1188,7 +1210,6 @@ mod tests {
             Self {
                 fake_device: FakeDevice::new(),
                 fake_scheduler: FakeScheduler::new(),
-                fake_cpp_chan_sched: FakeCppChannelScheduler::new(),
                 listener_state: MockListenerState { events: Rc::new(RefCell::new(vec![])) },
                 chan_sched: ChannelScheduler::new(),
             }
@@ -1210,7 +1231,6 @@ mod tests {
                 buf_provider: FakeBufferProvider::new(),
                 timer,
                 seq_mgr: SequenceManager::new(),
-                cpp_chan_sched: self.fake_cpp_chan_sched.as_chan_sched(),
             }
         }
     }

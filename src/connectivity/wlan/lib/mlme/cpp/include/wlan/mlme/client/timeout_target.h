@@ -10,8 +10,6 @@ namespace wlan {
 enum TimeoutTarget : uint8_t {
   kDefault = 0,
   kRust = 1,
-  kChannelScheduler = 2,
-  kScanner = 3,
 };
 
 }

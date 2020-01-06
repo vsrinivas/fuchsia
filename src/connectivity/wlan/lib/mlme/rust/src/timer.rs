@@ -77,7 +77,7 @@ impl<E> Timer<E> {
 #[cfg(test)]
 pub struct FakeScheduler {
     pub next_id: u64,
-    pub deadlines: HashMap<EventId, i64>,
+    pub deadlines: HashMap<EventId, zx::Time>,
     now: i64,
 }
 
@@ -87,7 +87,7 @@ impl FakeScheduler {
         let scheduler = unsafe { &mut *(cookie as *mut Self) };
         scheduler.next_id += 1;
         let event_id = EventId(scheduler.next_id);
-        scheduler.deadlines.insert(event_id, deadline);
+        scheduler.deadlines.insert(event_id, zx::Time::from_nanos(deadline));
         event_id
     }
     pub extern "C" fn cancel(cookie: *mut c_void, id: EventId) {
@@ -112,7 +112,7 @@ impl FakeScheduler {
     }
 
     /// Evict and return ID and deadline of the earliest scheduled event
-    pub fn next_event(&mut self) -> Option<(EventId, i64)> {
+    pub fn next_event(&mut self) -> Option<(EventId, zx::Time)> {
         let event =
             self.deadlines.iter().min_by_key(|(_, deadline)| *deadline).map(|(id, d)| (*id, *d));
         if let Some((id, _)) = event {
@@ -191,10 +191,10 @@ mod tests {
         let event_id_3 = FakeScheduler::schedule(scheduler.cookie, 1i64);
         let event_id_4 = FakeScheduler::schedule(scheduler.cookie, 3i64);
 
-        assert_eq!(fake_scheduler.next_event(), Some((event_id_3, 1i64)));
-        assert_eq!(fake_scheduler.next_event(), Some((event_id_1, 2i64)));
-        assert_eq!(fake_scheduler.next_event(), Some((event_id_4, 3i64)));
-        assert_eq!(fake_scheduler.next_event(), Some((event_id_2, 4i64)));
+        assert_eq!(fake_scheduler.next_event(), Some((event_id_3, zx::Time::from_nanos(1i64))));
+        assert_eq!(fake_scheduler.next_event(), Some((event_id_1, zx::Time::from_nanos(2i64))));
+        assert_eq!(fake_scheduler.next_event(), Some((event_id_4, zx::Time::from_nanos(3i64))));
+        assert_eq!(fake_scheduler.next_event(), Some((event_id_2, zx::Time::from_nanos(4i64))));
         assert_eq!(fake_scheduler.next_event(), None);
     }
 }

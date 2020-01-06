@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    banjo_ddk_protocol_wlan_info as banjo_wlan_info, banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::error,
+    wlan_common::TimeUnit,
     wlan_mlme::{
         buffer::BufferProvider,
-        client::{temporary_c_binding::*, Client, ClientConfig, ClientMlme, CppChannelScheduler},
+        client::{temporary_c_binding::*, Client, ClientConfig, ClientMlme},
         common::{
             mac::{self, Bssid, PowerState},
             sequence::SequenceManager,
@@ -25,15 +27,8 @@ pub extern "C" fn client_mlme_new(
     device: Device,
     buf_provider: BufferProvider,
     scheduler: Scheduler,
-    cpp_chan_sched: CppChannelScheduler,
 ) -> *mut ClientMlme {
-    Box::into_raw(Box::new(ClientMlme::new(
-        config,
-        device,
-        buf_provider,
-        scheduler,
-        cpp_chan_sched,
-    )))
+    Box::into_raw(Box::new(ClientMlme::new(config, device, buf_provider, scheduler)))
 }
 #[no_mangle]
 pub extern "C" fn client_mlme_delete(mlme: *mut ClientMlme) {
@@ -58,14 +53,15 @@ pub extern "C" fn client_sta_delete(sta: *mut Client) {
     }
 }
 
+/// Return true if auto-deauth triggers. Return false otherwise
 #[no_mangle]
 pub extern "C" fn client_mlme_timeout_fired(
     mlme: &mut ClientMlme,
     sta: *mut Client,
     event_id: EventId,
-) {
+) -> bool {
     let sta = if !sta.is_null() { unsafe { Some(&mut *sta) } } else { None };
-    mlme.handle_timed_event(sta, event_id);
+    mlme.handle_timed_event(sta, event_id)
 }
 
 #[no_mangle]
@@ -88,6 +84,60 @@ pub extern "C" fn client_mlme_handle_mlme_msg(
             zx::Status::IO.into_raw()
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn client_mlme_on_channel(mlme: &mut ClientMlme) -> bool {
+    mlme.on_channel()
+}
+
+#[no_mangle]
+pub extern "C" fn client_mlme_set_main_channel(
+    mlme: &mut ClientMlme,
+    main_channel: banjo_wlan_info::WlanChannel,
+) -> i32 {
+    let result = mlme.set_main_channel(main_channel);
+    if result.is_ok() {
+        zx::sys::ZX_OK
+    } else {
+        result.unwrap_err().into_raw()
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn client_mlme_on_mac_frame(
+    mlme: &mut ClientMlme,
+    sta: *mut Client,
+    frame: CSpan<'_>,
+    rx_info: *const banjo_wlan_mac::WlanRxInfo,
+) {
+    let sta = if !sta.is_null() { unsafe { Some(&mut *sta) } } else { None };
+    let rx_info = if !rx_info.is_null() { unsafe { Some((&*rx_info).clone()) } } else { None };
+    mlme.on_mac_frame(sta, frame.into(), rx_info);
+}
+
+#[no_mangle]
+pub extern "C" fn client_mlme_hw_scan_complete(mlme: &mut ClientMlme, status: u8) {
+    mlme.handle_hw_scan_complete(banjo_wlan_mac::WlanHwScan(status));
+}
+
+#[no_mangle]
+pub extern "C" fn client_sta_ensure_on_channel(sta: &mut Client, mlme: &mut ClientMlme) {
+    c_ensure_on_channel(sta, mlme)
+}
+
+#[no_mangle]
+pub extern "C" fn client_sta_start_lost_bss_counter(
+    sta: &mut Client,
+    mlme: &mut ClientMlme,
+    beacon_period: u16,
+) {
+    c_start_lost_bss_counter(sta, mlme, TimeUnit(beacon_period));
+}
+
+#[no_mangle]
+pub extern "C" fn client_sta_stop_lost_bss_counter(sta: &mut Client) {
+    sta.stop_lost_bss_counter();
 }
 
 #[no_mangle]

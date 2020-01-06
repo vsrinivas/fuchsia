@@ -37,13 +37,11 @@ class ClientInterface {
   virtual zx_status_t SetKeys(fbl::Span<const ::fuchsia::wlan::mlme::SetKeyDescriptor> keys) = 0;
   virtual void UpdateControlledPort(::fuchsia::wlan::mlme::ControlledPortState state) = 0;
 
-  virtual void PreSwitchOffChannel() = 0;
-  virtual void BackToMainChannel() = 0;
-
   virtual ::fuchsia::wlan::stats::ClientMlmeStats stats() const = 0;
   virtual void ResetStats() = 0;
 
   virtual wlan_client_sta_t* GetRustClientSta() = 0;
+  virtual void NotifyAutoDeauth() = 0;
 
  protected:
   ClientInterface() = default;

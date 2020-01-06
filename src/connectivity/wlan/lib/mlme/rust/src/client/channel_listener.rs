@@ -9,7 +9,7 @@ use {
         timer::Timer,
     },
     banjo_ddk_protocol_wlan_info as banjo_wlan_info,
-    log::warn,
+    log::{error, warn},
 };
 
 #[cfg(test)]
@@ -40,7 +40,11 @@ pub trait ChannelListener {
     );
     /// Triggered when request is fully serviced, or the request is interrupted but will not
     /// be retried anymore.
-    fn on_req_complete(&mut self, request_id: channel_scheduler::RequestId);
+    fn on_req_complete(
+        &mut self,
+        request_id: channel_scheduler::RequestId,
+        queue_state: channel_scheduler::QueueState,
+    );
 }
 
 /// Source of channel scheduling event. Used to help ChannelListener differentiate where
@@ -111,7 +115,8 @@ impl<'a> ChannelListener for MlmeChannelListener<'a> {
         request_id: channel_scheduler::RequestId,
     ) {
         if let ChannelListenerSource::Scanner = request_id.1 {
-            if let Some(_old_id) = self.state.off_channel_req_id.replace(request_id) {
+            let old_id = self.state.off_channel_req_id.replace(request_id);
+            if old_id.is_some() && old_id != self.state.off_channel_req_id {
                 warn!("evicted old off-channel request from listener");
             }
             self.scanner.bind(self.ctx).begin_requested_channel_time(to);
@@ -131,13 +136,29 @@ impl<'a> ChannelListener for MlmeChannelListener<'a> {
         }
     }
 
-    fn on_req_complete(&mut self, request_id: channel_scheduler::RequestId) {
-        match self.state.off_channel_req_id {
-            Some(id) if id == request_id => (),
-            _ => return,
-        };
-        self.state.off_channel_req_id.take();
-        self.scanner.bind(self.ctx).handle_channel_req_complete();
+    fn on_req_complete(
+        &mut self,
+        request_id: channel_scheduler::RequestId,
+        queue_state: channel_scheduler::QueueState,
+    ) {
+        if Some(request_id) == self.state.off_channel_req_id {
+            self.state.off_channel_req_id.take();
+            self.scanner.bind(self.ctx).handle_channel_req_complete();
+        }
+
+        match (queue_state, self.state.main_channel) {
+            (channel_scheduler::QueueState::Empty, Some(main_channel))
+                if self.ctx.device.channel() != main_channel =>
+            {
+                if let Err(e) = self.ctx.device.set_channel(main_channel) {
+                    error!("Unable to revert back to main channel {:?}", e);
+                }
+                if let Some(station) = self.station.as_mut() {
+                    station.handle_back_on_channel(self.ctx);
+                }
+            }
+            _ => (),
+        }
     }
 }
 
@@ -191,7 +212,7 @@ mod test_utils {
             to: banjo_wlan_info::WlanChannel,
             req_id: channel_scheduler::RequestId,
         },
-        ReqComplete(channel_scheduler::RequestId),
+        ReqComplete(channel_scheduler::RequestId, channel_scheduler::QueueState),
     }
 
     impl ChannelListener for MockListener<'_> {
@@ -221,8 +242,12 @@ mod test_utils {
             self.events.borrow_mut().push(LEvent::PostSwitch { from, to, req_id: request_id });
         }
 
-        fn on_req_complete(&mut self, req_id: channel_scheduler::RequestId) {
-            self.events.borrow_mut().push(LEvent::ReqComplete(req_id));
+        fn on_req_complete(
+            &mut self,
+            req_id: channel_scheduler::RequestId,
+            queue_state: channel_scheduler::QueueState,
+        ) {
+            self.events.borrow_mut().push(LEvent::ReqComplete(req_id, queue_state));
         }
     }
 }

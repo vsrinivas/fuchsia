@@ -983,7 +983,7 @@ mod tests {
             90, 3, 90, 0, 0, // BSS max idle period
         ][..]);
         assert_eq!(
-            *fake_scheduler.deadlines.get(active_timeout_event_id).unwrap(),
+            fake_scheduler.deadlines.get(active_timeout_event_id).unwrap().into_nanos(),
             1000 /* TUs */ * 1024 /* us per TU */ * 1000 /* ns per us */ *
             (BSS_MAX_IDLE_PERIOD as i64),
         );

@@ -23,7 +23,7 @@ pub fn construct_bss_description(
     beacon_interval: TimeUnit,
     capability_info: CapabilityInfo,
     ies: &[u8],
-    rx_info: banjo_wlan_mac::WlanRxInfo,
+    rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
 ) -> Result<fidl_mlme::BssDescription, Error> {
     type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
     type HtOpArray = [u8; fidl_mlme::HT_OP_LEN as usize];
@@ -100,7 +100,13 @@ pub fn construct_bss_description(
     let ssid = ssid.ok_or(format_err!("Missing SSID IE"))?;
     let rates = rates.ok_or(format_err!("Missing rates IE"))?;
     let bss_type = get_bss_type(capability_info);
-    let chan = derive_channel(rx_info.chan.primary, dsss_chan, parsed_ht_op, parsed_vht_op);
+    let chan = derive_channel(
+        rx_info.map(|info| info.chan.primary),
+        dsss_chan,
+        parsed_ht_op,
+        parsed_vht_op,
+    )
+    .ok_or(format_err!("unable to derive channel"))?;
 
     Ok(fidl_mlme::BssDescription {
         bssid: bssid.0,
@@ -121,9 +127,9 @@ pub fn construct_bss_description(
         vht_op: fidl_vht_op,
 
         chan,
-        rssi_dbm: rx_info.rssi_dbm,
-        rcpi_dbmh: rx_info.rcpi_dbmh,
-        rsni_dbh: rx_info.snr_dbh,
+        rssi_dbm: rx_info.as_ref().map(|info| info.rssi_dbm).unwrap_or(0),
+        rcpi_dbmh: rx_info.as_ref().map(|info| info.rcpi_dbmh).unwrap_or(0),
+        rsni_dbh: rx_info.as_ref().map(|info| info.snr_dbh).unwrap_or(0),
     })
 }
 
@@ -244,7 +250,7 @@ mod tests {
             TimeUnit(BEACON_INTERVAL),
             CAPABILITY_INFO,
             &ies[..],
-            RX_INFO,
+            Some(RX_INFO),
         )
         .expect("expect convert_beacon to succeed");
 
