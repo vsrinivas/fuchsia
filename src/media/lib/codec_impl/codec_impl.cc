@@ -97,6 +97,9 @@ CodecImpl::CodecImpl(fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
   ZX_DEBUG_ASSERT(tmp_sysmem_);
   ZX_DEBUG_ASSERT(tmp_interface_request_);
 
+  if (codec_admission_)
+    codec_admission_->SetChannelToWaitOn(tmp_interface_request_.channel());
+
   // If the fuchsia::sysmem::Allocator connection dies, so does this CodecImpl.
   sysmem_.set_error_handler([this](zx_status_t status) {
     // This handler can't run until after sysmem_ is bound.
@@ -107,8 +110,6 @@ CodecImpl::CodecImpl(fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
   // This is the binding_'s error handler, not the owner_error_handler_ which
   // is related but separate.
   binding_.set_error_handler([this](zx_status_t status) {
-    if (codec_admission_)
-      codec_admission_->SetChannelToWaitOn(zx::unowned_channel());
     // This handler can't run until after binding_ is bound.
     ZX_DEBUG_ASSERT(was_logically_bound_);
     this->Fail("CodecImpl binding_ channel failed");
@@ -120,8 +121,6 @@ CodecImpl::CodecImpl(fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
 }
 
 CodecImpl::~CodecImpl() {
-  if (codec_admission_)
-    codec_admission_->SetChannelToWaitOn(zx::unowned_channel());
   // We need ~binding_ to run on fidl_thread() else it's not safe to
   // un-bind unilaterally.  We could potentially relax this if BindAsync() was
   // never called, but for now we just require this always.
@@ -258,8 +257,6 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
         return;
       }
       ZX_DEBUG_ASSERT(!tmp_interface_request_);
-      if (codec_admission_)
-        codec_admission_->SetChannelToWaitOn(zx::unowned_channel(binding_.channel()));
     });
 
     input_constraints_ = CoreCodecBuildNewInputConstraints();

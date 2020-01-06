@@ -6,6 +6,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/zx/clock.h>
+#include <lib/zx/port.h>
 
 #include <array>
 
@@ -110,7 +111,7 @@ TEST(AdmissionControl, ChannelClose) {
 
   zx::channel server_end, client_end;
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server_end, &client_end));
-  admission->SetChannelToWaitOn(zx::unowned_channel(client_end));
+  admission->SetChannelToWaitOn(client_end);
 
   bool got_callback = false;
   control.TryAddCodec(false, [&got_callback](std::unique_ptr<CodecAdmission> new_admission) {
@@ -124,6 +125,9 @@ TEST(AdmissionControl, ChannelClose) {
   EXPECT_TRUE(got_callback);
 
   server_end.reset();
+  // Server end closing should be detected before client end closing cancels the wait.
+  client_end.reset();
+
   // Server end is closed, so this should wait for the existing admission to exit.
   got_callback = false;
   control.TryAddCodec(false, [&got_callback](std::unique_ptr<CodecAdmission> new_admission) {

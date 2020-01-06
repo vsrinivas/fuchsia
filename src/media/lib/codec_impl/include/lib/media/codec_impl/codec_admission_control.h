@@ -9,10 +9,11 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/port.h>
 #include <zircon/compiler.h>
 
 #include <mutex>
-#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
 #include <fbl/macros.h>
@@ -58,21 +59,28 @@ class CodecAdmissionControl {
 
   // This is called after all previous closes are done.
   std::unique_ptr<CodecAdmission> TryAddCodecInternal(bool multi_instance);
-  std::shared_ptr<PreviousCloseHandle> OnCodecIsClosing();
+  std::shared_ptr<PreviousCloseHandle> OnCodecIsClosing() __TA_REQUIRES(lock_);
 
-  void RemoveCodec(bool multi_instance);
+  void RemoveCodec(bool multi_instance, uint64_t key_value);
   void CleanOutPreviousClosures() __TA_REQUIRES(lock_);
+  void CheckForClosedChannels() __TA_REQUIRES(lock_);
 
   async_dispatcher_t* shared_fidl_dispatcher_ = nullptr;
-
-  // Must only be accessed from the shared fidl thread.
-  std::unordered_set<CodecAdmission*> codecs_to_check_for_close_;
 
   std::mutex lock_;
   uint32_t single_instance_codec_count_ __TA_GUARDED(lock_) = 0;
   uint32_t multi_instance_codec_count_ __TA_GUARDED(lock_) = 0;
 
   std::vector<std::weak_ptr<PreviousCloseHandle>> previous_closes_ __TA_GUARDED(lock_);
+  // We need to generate unique keys instead of using the CodecAdmission pointer, because if the
+  // CodecAdmission is closed not in response to a PEER_CLOSED then we may leave a port message
+  // queued up once the channel actually closes. Then a new CodecAdmission could be allocated at the
+  // same address and we don't want the old port message interpreted as going to the new
+  // CodecAdmission.
+  uint64_t next_port_key_ __TA_GUARDED(lock_) = 1;
+  std::unordered_map</*port_key*/ uint64_t, CodecAdmission*> codecs_to_check_for_close_
+      __TA_GUARDED(lock_);
+  zx::port close_port_ __TA_GUARDED(lock_);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdmissionControl);
 };
@@ -84,24 +92,14 @@ class CodecAdmission {
   CodecAdmission(const CodecAdmission& from) = delete;
   CodecAdmission& operator=(const CodecAdmission& from) = delete;
 
-  // Must be called from the shared fidl thread.
-  void SetChannelToWaitOn(zx::unowned_channel channel) {
-    channel_ = channel;
-    if (*channel_) {
-      codec_admission_control_->codecs_to_check_for_close_.insert(this);
-    } else {
-      codec_admission_control_->codecs_to_check_for_close_.erase(this);
-    }
-  }
-
-  // Must be called from the shared fidl thread.
-  void CheckIfChannelClosing();
-
+  // Sets the channel CodecAdmissionControl should check for ZX_CHANNEL_PEER_CLOSED - if that's
+  // received, the CodecAdmission is assumed to be closing soon.
+  void SetChannelToWaitOn(const zx::channel& channel);
   // Tell the codec admission control that this codec will be closing soon. When the class is
   // destroyed |close_handle_| will be destructed and that allows pending callbacks to run.
   void SetCodecIsClosing() {
-    if (!close_handle_)
-      close_handle_ = codec_admission_control_->OnCodecIsClosing();
+    std::lock_guard<std::mutex> lock(codec_admission_control_->lock_);
+    SetCodecIsClosingLocked();
   }
 
   ~CodecAdmission();
@@ -109,11 +107,15 @@ class CodecAdmission {
  private:
   friend class CodecAdmissionControl;
   CodecAdmission(CodecAdmissionControl* codec_admission_control, bool multi_instance);
+  void SetCodecIsClosingLocked() __TA_NO_THREAD_SAFETY_ANALYSIS {
+    if (!close_handle_)
+      close_handle_ = codec_admission_control_->OnCodecIsClosing();
+  }
 
   CodecAdmissionControl* codec_admission_control_ = nullptr;
   bool multi_instance_;
   std::shared_ptr<CodecAdmissionControl::PreviousCloseHandle> close_handle_;
-  zx::unowned_channel channel_;
+  uint64_t port_key_ = 0;
 };
 
 #endif  // SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_ADMISSION_CONTROL_H_

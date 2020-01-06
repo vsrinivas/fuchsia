@@ -19,31 +19,33 @@ void CodecAdmissionControl::TryAddCodec(bool multi_instance,
 }
 
 void CodecAdmissionControl::PostAfterPreviouslyStartedClosesDone(fit::closure to_run) {
-  zx_status_t result =
-      async::PostTask(shared_fidl_dispatcher_, [this, to_run = std::move(to_run)]() mutable {
-        for (auto& codec : codecs_to_check_for_close_) {
-          // Needs to run outside the lock because it may call into OnCodecIsClosing, which takes
-          // the lock.
-          codec->CheckIfChannelClosing();
-        }
-        std::lock_guard<std::mutex> lock(lock_);
-        CleanOutPreviousClosures();
-        auto deferred_action = fit::defer_callback([this, to_run = std::move(to_run)]() mutable {
-          zx_status_t result = async::PostTask(shared_fidl_dispatcher_, std::move(to_run));
-          ZX_ASSERT(result == ZX_OK);
-        });
-        auto new_callback = std::make_shared<fit::deferred_callback>(std::move(deferred_action));
-        // Every existing close should hold a reference to this deferred callback so it'll run when
-        // they've all completed.
-        for (auto& handle : previous_closes_) {
-          auto locked = handle.lock();
-          if (locked) {
-            locked->AddClosureToReference(new_callback);
-          }
-        }
-      });
+  std::lock_guard<std::mutex> lock(lock_);
+  while (true) {
+    zx_port_packet_t packet;
+    if (close_port_.wait(zx::deadline_after(zx::sec(0)), &packet) != ZX_OK) {
+      break;
+    }
+    auto it = codecs_to_check_for_close_.find(packet.key);
+    if (it == codecs_to_check_for_close_.end())
+      continue;
+    it->second->SetCodecIsClosingLocked();
+    codecs_to_check_for_close_.erase(it);
+  }
+  CleanOutPreviousClosures();
+  auto deferred_action = fit::defer_callback([this, to_run = std::move(to_run)]() mutable {
+    zx_status_t result = async::PostTask(shared_fidl_dispatcher_, std::move(to_run));
+    ZX_ASSERT(result == ZX_OK);
+  });
+  auto new_callback = std::make_shared<fit::deferred_callback>(std::move(deferred_action));
+  // Every existing close should hold a reference to this deferred callback so it'll run when
+  // they've all completed.
+  for (auto& handle : previous_closes_) {
+    auto locked = handle.lock();
+    if (locked) {
+      locked->AddClosureToReference(new_callback);
+    }
+  }
   // If there are no valid previous_closes_s, then deferred_callback may be run at this point.
-  ZX_ASSERT(result == ZX_OK);
 }
 
 std::unique_ptr<CodecAdmission> CodecAdmissionControl::TryAddCodecInternal(bool multi_instance) {
@@ -76,10 +78,12 @@ CodecAdmissionControl::CodecAdmissionControl(async_dispatcher_t* shared_fidl_dis
     : shared_fidl_dispatcher_(shared_fidl_dispatcher),
       single_instance_codec_count_(0),
       multi_instance_codec_count_(0) {
+  zx_status_t status = zx::port::create(0, &close_port_);
+  ZX_ASSERT(status == ZX_OK);
   ZX_DEBUG_ASSERT(shared_fidl_dispatcher_);
 }
 
-void CodecAdmissionControl::RemoveCodec(bool multi_instance) {
+void CodecAdmissionControl::RemoveCodec(bool multi_instance, uint64_t port_key) {
   std::lock_guard<std::mutex> lock(lock_);
   // Else bug in caller.
   if (multi_instance) {
@@ -89,11 +93,13 @@ void CodecAdmissionControl::RemoveCodec(bool multi_instance) {
     ZX_DEBUG_ASSERT(single_instance_codec_count_ == 1);
     single_instance_codec_count_--;
   }
+  if (port_key != 0) {
+    codecs_to_check_for_close_.erase(port_key);
+  }
 }
 
 std::shared_ptr<CodecAdmissionControl::PreviousCloseHandle>
 CodecAdmissionControl::OnCodecIsClosing() {
-  std::lock_guard<std::mutex> lock(lock_);
   CleanOutPreviousClosures();
   auto new_close_handle = std::make_shared<PreviousCloseHandle>();
   previous_closes_.push_back(new_close_handle);
@@ -107,8 +113,7 @@ void CodecAdmissionControl::CleanOutPreviousClosures() {
 }
 
 CodecAdmission::~CodecAdmission() {
-  codec_admission_control_->RemoveCodec(multi_instance_);
-  codec_admission_control_->codecs_to_check_for_close_.erase(this);
+  codec_admission_control_->RemoveCodec(multi_instance_, port_key_);
 }
 
 CodecAdmission::CodecAdmission(CodecAdmissionControl* codec_admission_control, bool multi_instance)
@@ -116,16 +121,16 @@ CodecAdmission::CodecAdmission(CodecAdmissionControl* codec_admission_control, b
   ZX_DEBUG_ASSERT(codec_admission_control_);
 }
 
-void CodecAdmission::CheckIfChannelClosing() {
-  if (close_handle_)
-    return;
-  ZX_DEBUG_ASSERT(*channel_);
-
-  // This is only safe to call from the shared fidl thread, because otherwise this syscall could
-  // race with the fidl::Binding's peer-closed detection, which closes the handle.
-  zx_status_t status =
-      channel_->wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), nullptr);
-  if (status == ZX_OK) {
-    SetCodecIsClosing();
-  }
+void CodecAdmission::SetChannelToWaitOn(const zx::channel& channel) {
+  ZX_DEBUG_ASSERT(channel);
+  ZX_DEBUG_ASSERT(!port_key_);
+  std::lock_guard<std::mutex> lock(codec_admission_control_->lock_);
+  // It should be impossible for next_port_key_ to wrap around within a
+  // reasonable timespan (see logic for koids).
+  ZX_DEBUG_ASSERT(codec_admission_control_->next_port_key_ != 0);
+  port_key_ = codec_admission_control_->next_port_key_++;
+  codec_admission_control_->codecs_to_check_for_close_[port_key_] = this;
+  zx_status_t status = channel.wait_async(codec_admission_control_->close_port_, port_key_,
+                                          ZX_CHANNEL_PEER_CLOSED, 0);
+  ZX_ASSERT(status == ZX_OK);
 }
