@@ -333,6 +333,44 @@ macro_rules! add_functions {
 
         /// Adds a FIDL service to the directory.
         ///
+        /// `service` is a closure that accepts a `RequestStream`.
+        /// Each service being served must return an instance of the same type
+        /// (`ServiceObjTy::Output`). This is necessary in order to multiplex
+        /// multiple services over the same dispatcher code. The typical way
+        /// to do this is to create an `enum` with variants for each service
+        /// you want to serve.
+        ///
+        /// ```ignore
+        /// enum MyServices {
+        ///     EchoServer(EchoRequestStream),
+        ///     CustomServer(CustomRequestStream),
+        ///     // ...
+        /// }
+        /// ```
+        ///
+        /// The constructor for a variant of the `MyServices` enum can be passed
+        /// as the `service` parameter.
+        ///
+        /// ```ignore
+        /// let mut fs = ServiceFs::new_local();
+        /// fs
+        ///     .add_fidl_service(MyServices::EchoServer)
+        ///     .add_fidl_service(MyServices::CustomServer)
+        ///     .take_and_serve_directory_handle()?;
+        /// ```
+        ///
+        /// `ServiceFs` can now be treated as a `Stream` of type `MyServices`.
+        ///
+        /// ```ignore
+        /// const MAX_CONCURRENT: usize = 10_000;
+        /// fs.for_each_concurrent(MAX_CONCURRENT, |request: MyServices| {
+        ///     match request {
+        ///         MyServices::EchoServer(request) => handle_echo(request),
+        ///         MyServices::CustomServer(request) => handle_custom(request),
+        ///     }
+        /// }).await;
+        /// ```
+        ///
         /// The FIDL service will be hosted at the name provided by the
         /// `[Discoverable]` annotation in the FIDL source.
         pub fn add_fidl_service<F, RS>(
@@ -354,6 +392,8 @@ macro_rules! add_functions {
         /// Adds a FIDL service to the directory at the given path.
         ///
         /// The path must be a single component containing no `/` characters.
+        ///
+        /// See [`add_fidl_service`](#method.add_fidl_service) for details.
         pub fn add_fidl_service_at<F, RS>(
             &mut self,
             path: impl Into<String>,

@@ -36,42 +36,54 @@ We'll use the `echo.test.fidl` sample that we discussed in the
 The echo server implementation can be found at:
 [//garnet/examples/fidl/echo_server_rust/src/main.rs](/garnet/examples/fidl/echo_server_rust/src/main.rs).
 
-This file has two functions: `main()`, and `spawn_echo_server`:
+This file has two functions:
 
--   The `main()` function creates an asynchronous task executor
-    and a `ServicesServer` and runs the `ServicesServer` to completion on
-    the executor.
--   `spawn_echo_server` spawns a new asynchronous task which will handle
-    incoming echo service requests.
+-   `main()`: An async task executor starts this function through the
+    `#[fasync::run_singlethreaded]` annotation. This function starts an
+    instance of `ServiceFs` and runs it to completion by `await`ing
+    on its future.
+-   `run_echo_server()`: This is an async function that handles incoming
+    service requests. It returns a future that completes once the client
+    channel is closed.
 
-To understand how the code works, here's a summary of what happens in the server
-to execute an IPC call. We will dig into what each of these lines means, so it's
-not necessary to understand all of this before you move on.
+To understand how the code works, here's a summary of what happens in the
+server to execute an IPC call. This section explains what each of these lines
+means, so it's not necessary to understand all of this before you move on.
 
-1.  **Services Server:** The `ServicesServer` is the main top-level future
+NOTE: Rust uses a polling asynchronous execution model. Futures do not make
+progress unless they are polled through the `poll` method or by `await`ing
+them.
+
+1.  **ServiceFs:** The `ServiceFs` is the main top-level future
     being run on the executor. It binds itself to the startup handle of the
-    current process and listens for incoming service requests.
+    current process through `ServiceFs::take_and_serve_directory_handle` and
+    listens for incoming service requests.
 1.  **Service Request:** When another component needs to access an "Echo"
-    server, it sends a request to the `ServicesServer` containing the name of
+    server, it sends a request to the `ServiceFs` containing the name of
     the service to connect to ("Echo") and a channel to connect.
 1.  **Service Lookup:** The incoming service request wakes up the
-    `async::Executor` executor and tells it that the `ServicesServer` task
-    can now make progress and should be run. The `ServicesServer` wakes up,
-    sees the request available on the startup handle of the process, and looks
-    up the name of the requested service in the list of
+    `async::Executor` executor and tells it that the `ServiceFs` task
+    can now make progress and should be run. The `ServiceFs` wakes up,
+    sees the request available on the startup handle of the process, and
+    looks up the name of the requested service in the list of
     `(service_name, service_startup_func)` provided through calls to
-    `add_service`. If a matching `service_name` exists, it calls
-    `service_startup_func` with the channel to connect to the new service.
+    `add_service`, `add_fidl_service`, etc. If a matching `service_name`
+    exists, it calls `service_startup_func` with the channel to connect to
+    the new service.
 1.  **Server Creation:**  At this point in our example,
-    `|chan| spawn_echo_server(chan)` is called with the channel that wants to
-    be connected to an `Echo` service. `spawn_echo_server` creates a new
-    future which loops over each value in the incoming stream of requests.
-    It spawns that future to be run on the thread-local `async::Executor`.
+    `IncomingService::Echo` is called with a `RequestStream` (typed-channel)
+    of the `Echo` FIDL protocol that is registered with `add_fidl_service`.
+    The incoming request channel is stored in `IncomingService::Echo` and
+    is added to the stream of incoming requests.
+    `for_each_concurrent` consumes the `ServiceFs` into a [`Stream`] of type
+    `IncomingService`. A handler is run for each entry in the stream, which
+    matches over the incoming requests and dispatches to the `run_echo_server`.
+    The resulting futures from each call to `run_echo_server` are run
+    concurrently when the `ServiceFs` stream is `await`ed.
 1.  **API Request:** An `echo_string` request is sent on the channel.
     This makes the channel the `Echo` service is running on readable, which
-    wakes up the asynchronous task spawned in `spawn_echo_server`. The task
-    reads the request off of the channel and yields a value from the
-    `try_next()` future.
+    wakes up the asynchronous code in the body of `run_echo_server`. The
+    request is read from the channel and yielded by the `try_next()` future.
 1.  **API Response:** Upon receiving a request, the task sends a response
     back to the client with `responder.send`.
 
@@ -103,7 +115,7 @@ Here are the import declarations in the Rust server implementation:
     sockets, and TCP/UDP.
 -   `futures` is a crate for working with asynchronous tasks. These tasks are
     composed of asynchronous units of work that may produce a single value
-    (a `Future`) or many values (a `Stream`). Futures can be `await!`ed inside
+    (a `Future`) or many values (a `Stream`). Futures can be `await`ed inside
     an `async` function or block, which will cause the current task to be
     suspended until the future is able to make more progress.
     For more about futures, see [the crate's documentation][docs].
@@ -153,7 +165,7 @@ and returns a value of type `IncomingService`. In this simple example, the
 `IncomingService` enum is redundant and could be replaced with a simple
 function `|stream| stream` that directly passed-through the
 `EchoRequestStream` (causing the `ServiceFs` stream to yield values of type
-`EchoRequestSTream` rather than values of type `IncomingService`).
+`EchoRequestStream` rather than values of type `IncomingService`).
 However, more complex servers may offer multiple services, in which case the
 various types of incoming `RequestStream`s will need to be returned from the
 stream as a single `enum` type.
@@ -185,9 +197,9 @@ when processing a request, there's no value in processing requests concurrently,
 so we use a simple `while let` loop to iterate over and respond to each request.
 
 The `.try_next()` function will return a future which yields a value of type
-`Result<Option<EchoRequest>, fidl::Error>`. We `await!` the future, causing
+`Result<Option<EchoRequest>, fidl::Error>`. We `await` the future, causing
 the current task to yield if no request is yet available. When a value
-becomes available, `await!` returns the result. We apply a `context("...")`
+becomes available, `await` returns the result. We apply a `context("...")`
 to give some information about the error that may have occurred, and use
 `?` to return early in the error case. If no request is available, this
 expression will result in `None`, the `while` loop will exit, and we return
@@ -217,8 +229,8 @@ Once we've done the conversion from `Option<String>` to `Option<&str>`, we call
 `send`, which returns a `Result<(), Error>` which we use `?` on to return an
 error on failure.
 
-Finally, we call `.unwrap_or_else(|e| ...)` on our `async move { ... }` block
-to handle the case in which an error occurred.
+Finally, we call `.unwrap_or_else(|e| ...)` on the future returned from
+`run_echo_server` to handle the case in which an error occurred.
 
 ## `Echo` client
 
