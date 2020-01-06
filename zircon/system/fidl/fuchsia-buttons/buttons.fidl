@@ -35,5 +35,5 @@ protocol Buttons {
     /// Notify event. Called when state of previously registered button changes.
     /// |type| : Button type.
     /// |pressed| : True if button is pressed.
-    -> Notify(ButtonType type, bool pressed);
+    -> OnNotify(ButtonType type, bool pressed);
 };

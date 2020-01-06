@@ -53,7 +53,7 @@ int HidButtonsDevice::Thread() {
         // Notify
         fbl::AutoLock lock(&channels_lock_);
         for (auto const& interface : button2channels_[type]) {
-          Buttons::SendNotifyEvent(zx::unowned_channel(interface->chan()),
+          Buttons::SendOnNotifyEvent(zx::unowned_channel(interface->chan()),
                                    static_cast<ButtonType>(buttons_[type].id),
                                    static_cast<bool>(val));
         }

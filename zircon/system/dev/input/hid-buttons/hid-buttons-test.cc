@@ -538,7 +538,7 @@ TEST(HidButtonsTest, Notify1) {
     // Interrupts
     device.FakeInterrupt(ButtonType::MUTE);
     EXPECT_OK(client.HandleEvents(Buttons::EventHandlers{
-        .notify =
+        .on_notify =
             [](ButtonType type, bool pressed) {
               if (type == ButtonType::MUTE && pressed == true) {
                 return ZX_OK;
@@ -549,7 +549,7 @@ TEST(HidButtonsTest, Notify1) {
     }));
     device.FakeInterrupt(ButtonType::MUTE);
     EXPECT_OK(client.HandleEvents(Buttons::EventHandlers{
-        .notify =
+        .on_notify =
             [](ButtonType type, bool pressed) {
               if (type == ButtonType::MUTE && pressed == false) {
                 return ZX_OK;
@@ -562,7 +562,7 @@ TEST(HidButtonsTest, Notify1) {
     EXPECT_OK(result2.status());
     device.FakeInterrupt(ButtonType::VOLUME_UP);
     EXPECT_OK(client.HandleEvents(Buttons::EventHandlers{
-        .notify =
+        .on_notify =
             [](ButtonType type, bool pressed) {
               if (type == ButtonType::VOLUME_UP && pressed == true) {
                 return ZX_OK;
@@ -653,7 +653,7 @@ TEST(HidButtonsTest, Notify2) {
       // Interrupts
       device.FakeInterrupt(ButtonType::MUTE);
       EXPECT_OK(client1.HandleEvents(Buttons::EventHandlers{
-          .notify =
+          .on_notify =
               [](ButtonType type, bool pressed) {
                 if (type == ButtonType::MUTE && pressed == true) {
                   return ZX_OK;
@@ -663,7 +663,7 @@ TEST(HidButtonsTest, Notify2) {
           .unknown = [] { return ZX_ERR_INVALID_ARGS; },
       }));
       EXPECT_OK(client2.HandleEvents(Buttons::EventHandlers{
-          .notify =
+          .on_notify =
               [](ButtonType type, bool pressed) {
                 if (type == ButtonType::MUTE && pressed == true) {
                   return ZX_OK;
@@ -674,7 +674,7 @@ TEST(HidButtonsTest, Notify2) {
       }));
       device.FakeInterrupt(ButtonType::MUTE);
       EXPECT_OK(client1.HandleEvents(Buttons::EventHandlers{
-          .notify =
+          .on_notify =
               [](ButtonType type, bool pressed) {
                 if (type == ButtonType::MUTE && pressed == false) {
                   return ZX_OK;
@@ -684,7 +684,7 @@ TEST(HidButtonsTest, Notify2) {
           .unknown = [] { return ZX_ERR_INVALID_ARGS; },
       }));
       EXPECT_OK(client2.HandleEvents(Buttons::EventHandlers{
-          .notify =
+          .on_notify =
               [](ButtonType type, bool pressed) {
                 if (type == ButtonType::MUTE && pressed == false) {
                   return ZX_OK;
@@ -700,7 +700,7 @@ TEST(HidButtonsTest, Notify2) {
       EXPECT_OK(result2_2.status());
       device.FakeInterrupt(ButtonType::MUTE);
       EXPECT_OK(client1.HandleEvents(Buttons::EventHandlers{
-          .notify =
+          .on_notify =
               [](ButtonType type, bool pressed) {
                 if (type == ButtonType::MUTE && pressed == true) {
                   return ZX_OK;
@@ -711,7 +711,7 @@ TEST(HidButtonsTest, Notify2) {
       }));
       device.FakeInterrupt(ButtonType::VOLUME_UP);
       EXPECT_OK(client1.HandleEvents(Buttons::EventHandlers{
-          .notify =
+          .on_notify =
               [](ButtonType type, bool pressed) {
                 if (type == ButtonType::VOLUME_UP && pressed == false) {
                   return ZX_OK;
@@ -721,7 +721,7 @@ TEST(HidButtonsTest, Notify2) {
           .unknown = [] { return ZX_ERR_INVALID_ARGS; },
       }));
       EXPECT_OK(client2.HandleEvents(Buttons::EventHandlers{
-          .notify =
+          .on_notify =
               [](ButtonType type, bool pressed) {
                 if (type == ButtonType::VOLUME_UP && pressed == false) {
                   return ZX_OK;
@@ -735,7 +735,7 @@ TEST(HidButtonsTest, Notify2) {
     device.Wait();
     device.FakeInterrupt(ButtonType::VOLUME_UP);
     EXPECT_OK(client2.HandleEvents(Buttons::EventHandlers{
-        .notify =
+        .on_notify =
             [](ButtonType type, bool pressed) {
               if (type == ButtonType::VOLUME_UP && pressed == true) {
                 return ZX_OK;

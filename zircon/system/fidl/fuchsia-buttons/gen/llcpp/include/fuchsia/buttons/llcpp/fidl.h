@@ -148,10 +148,10 @@ extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
-extern "C" const fidl_type_t fuchsia_buttons_ButtonsNotifyRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsNotifyRequestTable;
-extern "C" const fidl_type_t fuchsia_buttons_ButtonsNotifyEventTable;
-extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsNotifyEventTable;
+extern "C" const fidl_type_t fuchsia_buttons_ButtonsOnNotifyRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsOnNotifyRequestTable;
+extern "C" const fidl_type_t fuchsia_buttons_ButtonsOnNotifyEventTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsOnNotifyEventTable;
 
 // Protocol for other devices to get the state of buttons and register for
 // notifications of state change.
@@ -232,14 +232,14 @@ class Buttons final {
     using ResponseType = RegisterNotifyResponse;
   };
 
-  struct NotifyResponse final {
+  struct OnNotifyResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::buttons::ButtonType type;
     bool pressed;
 
-    static constexpr const fidl_type_t* Type = &v1_fuchsia_buttons_ButtonsNotifyEventTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_buttons_ButtonsNotifyEventTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_buttons_ButtonsOnNotifyEventTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_buttons_ButtonsOnNotifyEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -255,7 +255,7 @@ class Buttons final {
     // Notify event. Called when state of previously registered button changes.
     // |type| : Button type.
     // |pressed| : True if button is pressed.
-    fit::callback<zx_status_t(::llcpp::fuchsia::buttons::ButtonType type, bool pressed)> notify;
+    fit::callback<zx_status_t(::llcpp::fuchsia::buttons::ButtonType type, bool pressed)> on_notify;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
@@ -527,19 +527,19 @@ class Buttons final {
   // Notify event. Called when state of previously registered button changes.
   // |type| : Button type.
   // |pressed| : True if button is pressed.
-  static zx_status_t SendNotifyEvent(::zx::unowned_channel _chan, ::llcpp::fuchsia::buttons::ButtonType type, bool pressed);
+  static zx_status_t SendOnNotifyEvent(::zx::unowned_channel _chan, ::llcpp::fuchsia::buttons::ButtonType type, bool pressed);
 
   // Notify event. Called when state of previously registered button changes.
   // |type| : Button type.
   // |pressed| : True if button is pressed.
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendNotifyEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::llcpp::fuchsia::buttons::ButtonType type, bool pressed);
+  static zx_status_t SendOnNotifyEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::llcpp::fuchsia::buttons::ButtonType type, bool pressed);
 
   // Notify event. Called when state of previously registered button changes.
   // |type| : Button type.
   // |pressed| : True if button is pressed.
   // Messages are encoded in-place.
-  static zx_status_t SendNotifyEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<NotifyResponse> params);
+  static zx_status_t SendOnNotifyEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnNotifyResponse> params);
 
 
   // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
@@ -550,7 +550,7 @@ class Buttons final {
     static void GetStateResponse(const ::fidl::DecodedMessage<Buttons::GetStateResponse>& _msg);
     static void RegisterNotifyRequest(const ::fidl::DecodedMessage<Buttons::RegisterNotifyRequest>& _msg);
     static void RegisterNotifyResponse(const ::fidl::DecodedMessage<Buttons::RegisterNotifyResponse>& _msg);
-    static void NotifyResponse(const ::fidl::DecodedMessage<Buttons::NotifyResponse>& _msg);
+    static void OnNotifyResponse(const ::fidl::DecodedMessage<Buttons::OnNotifyResponse>& _msg);
   };
 };
 
@@ -603,12 +603,12 @@ static_assert(sizeof(::llcpp::fuchsia::buttons::Buttons::RegisterNotifyResponse)
 static_assert(offsetof(::llcpp::fuchsia::buttons::Buttons::RegisterNotifyResponse, result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::buttons::Buttons::NotifyResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::buttons::Buttons::OnNotifyResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::buttons::Buttons::NotifyResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::buttons::Buttons::NotifyResponse)
-    == ::llcpp::fuchsia::buttons::Buttons::NotifyResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::buttons::Buttons::NotifyResponse, type) == 16);
-static_assert(offsetof(::llcpp::fuchsia::buttons::Buttons::NotifyResponse, pressed) == 17);
+struct IsFidlMessage<::llcpp::fuchsia::buttons::Buttons::OnNotifyResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::buttons::Buttons::OnNotifyResponse)
+    == ::llcpp::fuchsia::buttons::Buttons::OnNotifyResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::buttons::Buttons::OnNotifyResponse, type) == 16);
+static_assert(offsetof(::llcpp::fuchsia::buttons::Buttons::OnNotifyResponse, pressed) == 17);
 
 }  // namespace fidl

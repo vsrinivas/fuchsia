@@ -31,12 +31,12 @@ extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kButtons_Notify_Ordinal = 0x551dd30100000000lu;
+constexpr uint64_t kButtons_OnNotify_Ordinal = 0x5affb3b600000000lu;
 [[maybe_unused]]
-constexpr uint64_t kButtons_Notify_GenOrdinal = 0x49f747239d72f910lu;
-extern "C" const fidl_type_t fuchsia_buttons_ButtonsNotifyRequestTable;
-extern "C" const fidl_type_t fuchsia_buttons_ButtonsNotifyEventTable;
-extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsNotifyEventTable;
+constexpr uint64_t kButtons_OnNotify_GenOrdinal = 0x5cdd3f9d680dc674lu;
+extern "C" const fidl_type_t fuchsia_buttons_ButtonsOnNotifyRequestTable;
+extern "C" const fidl_type_t fuchsia_buttons_ButtonsOnNotifyEventTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsOnNotifyEventTable;
 
 }  // namespace
 template <>
@@ -176,15 +176,15 @@ zx_status_t Buttons::Call::HandleEvents(::zx::unowned_channel client_end, Button
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::internal::ClampedMessageSize<NotifyResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<NotifyResponse, ::fidl::MessageDirection::kReceiving>();
+    if (::fidl::internal::ClampedMessageSize<OnNotifyResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
+      x = ::fidl::internal::ClampedMessageSize<OnNotifyResponse, ::fidl::MessageDirection::kReceiving>();
     }
     return x;
   })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (NotifyResponse::MaxNumHandles >= x) {
-      x = NotifyResponse::MaxNumHandles;
+    if (OnNotifyResponse::MaxNumHandles >= x) {
+      x = OnNotifyResponse::MaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
       x = ZX_CHANNEL_MAX_MSG_HANDLES;
@@ -225,15 +225,15 @@ zx_status_t Buttons::Call::HandleEvents(::zx::unowned_channel client_end, Button
     return status;
   }
   switch (hdr->ordinal) {
-    case kButtons_Notify_Ordinal:
-    case kButtons_Notify_GenOrdinal:
+    case kButtons_OnNotify_Ordinal:
+    case kButtons_OnNotify_GenOrdinal:
     {
-      auto result = ::fidl::DecodeAs<NotifyResponse>(&msg);
+      auto result = ::fidl::DecodeAs<OnNotifyResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
       }
       auto message = result.message.message();
-      return handlers.notify(std::move(message->type), std::move(message->pressed));
+      return handlers.on_notify(std::move(message->type), std::move(message->pressed));
     }
     default:
       zx_handle_close_many(read_handles, actual_handles);
@@ -390,39 +390,39 @@ void Buttons::Interface::RegisterNotifyCompleterBase::Reply(::fidl::DecodedMessa
 }
 
 
-zx_status_t Buttons::SendNotifyEvent(::zx::unowned_channel _chan, ::llcpp::fuchsia::buttons::ButtonType type, bool pressed) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NotifyResponse, ::fidl::MessageDirection::kSending>();
+zx_status_t Buttons::SendOnNotifyEvent(::zx::unowned_channel _chan, ::llcpp::fuchsia::buttons::ButtonType type, bool pressed) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnNotifyResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<NotifyResponse*>(_write_bytes);
-  Buttons::SetTransactionHeaderFor::NotifyResponse(
-      ::fidl::DecodedMessage<NotifyResponse>(
+  auto& _response = *reinterpret_cast<OnNotifyResponse*>(_write_bytes);
+  Buttons::SetTransactionHeaderFor::OnNotifyResponse(
+      ::fidl::DecodedMessage<OnNotifyResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              NotifyResponse::PrimarySize,
-              NotifyResponse::PrimarySize)));
+              OnNotifyResponse::PrimarySize,
+              OnNotifyResponse::PrimarySize)));
   _response.type = std::move(type);
   _response.pressed = std::move(pressed);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NotifyResponse));
-  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<NotifyResponse>(std::move(_response_bytes)));
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnNotifyResponse));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnNotifyResponse>(std::move(_response_bytes)));
 }
 
-zx_status_t Buttons::SendNotifyEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::llcpp::fuchsia::buttons::ButtonType type, bool pressed) {
-  if (_buffer.capacity() < NotifyResponse::PrimarySize) {
+zx_status_t Buttons::SendOnNotifyEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::llcpp::fuchsia::buttons::ButtonType type, bool pressed) {
+  if (_buffer.capacity() < OnNotifyResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  auto& _response = *reinterpret_cast<NotifyResponse*>(_buffer.data());
-  Buttons::SetTransactionHeaderFor::NotifyResponse(
-      ::fidl::DecodedMessage<NotifyResponse>(
+  auto& _response = *reinterpret_cast<OnNotifyResponse*>(_buffer.data());
+  Buttons::SetTransactionHeaderFor::OnNotifyResponse(
+      ::fidl::DecodedMessage<OnNotifyResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              NotifyResponse::PrimarySize,
-              NotifyResponse::PrimarySize)));
+              OnNotifyResponse::PrimarySize,
+              OnNotifyResponse::PrimarySize)));
   _response.type = std::move(type);
   _response.pressed = std::move(pressed);
-  _buffer.set_actual(sizeof(NotifyResponse));
-  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<NotifyResponse>(std::move(_buffer)));
+  _buffer.set_actual(sizeof(OnNotifyResponse));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnNotifyResponse>(std::move(_buffer)));
 }
 
-zx_status_t Buttons::SendNotifyEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<NotifyResponse> params) {
-  Buttons::SetTransactionHeaderFor::NotifyResponse(params);
+zx_status_t Buttons::SendOnNotifyEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnNotifyResponse> params) {
+  Buttons::SetTransactionHeaderFor::OnNotifyResponse(params);
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
@@ -446,8 +446,8 @@ void Buttons::SetTransactionHeaderFor::RegisterNotifyResponse(const ::fidl::Deco
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
-void Buttons::SetTransactionHeaderFor::NotifyResponse(const ::fidl::DecodedMessage<Buttons::NotifyResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_Notify_GenOrdinal);
+void Buttons::SetTransactionHeaderFor::OnNotifyResponse(const ::fidl::DecodedMessage<Buttons::OnNotifyResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_OnNotify_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
