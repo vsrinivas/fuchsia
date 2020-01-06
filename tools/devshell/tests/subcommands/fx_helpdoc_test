@@ -1,0 +1,76 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected behavior from fx helpdoc
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "scripts/fx-help.awk"
+  "tools/devshell/helpdoc"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+)
+BT_MOCKED_TOOLS=(
+  "tools/devshell/lib/metrics.sh"
+)
+
+BT_MKDIR_DEPS=(
+  ".jiri_root"
+  "helpdoc_out"
+)
+
+BT_SET_UP() {
+  _FUCHSIA_DIR="${BT_TEMP_DIR}"
+  _FUCHSIA_BUILD_DIR="${_FUCHSIA_DIR}/out/default"
+  fx="${_FUCHSIA_DIR}/scripts/fx"
+  BT_ASSERT_FILE_EXISTS "${fx}"
+  export PATH="${_FUCHSIA_DIR}/scripts:${PATH}"
+
+  # Fake fuchsia dir configuration.
+  mkdir -p "${_FUCHSIA_BUILD_DIR}"
+  echo "out/default" > "${_FUCHSIA_DIR}/.fx-build-dir"
+  touch "${_FUCHSIA_BUILD_DIR}/args.gn"
+  touch "${_FUCHSIA_BUILD_DIR}/fx.config"
+
+  cat > "${_FUCHSIA_DIR}/tools/devshell/lib/metrics.sh.mock_side_effects" <<EOF
+  function track-command-execution {
+    echo ""
+  }
+  function track-command-finished {
+    echo ""
+  }
+EOF
+  cd "${BT_TEMP_DIR}"
+}
+
+# ensure that "fx helpdoc" does not generate docs for vendor commands when
+# executed with the default arguments
+TEST_check-no-vendor() {
+  mkdir -p vendor/mycompany/scripts/devshell
+  local vendor_cmd="vendor_command"
+  cp "tools/devshell/helpdoc" "vendor/mycompany/scripts/devshell/${vendor_cmd}"
+  BT_EXPECT fx helpdoc helpdoc_out
+  BT_EXPECT_EMPTY "$(find "helpdoc_out" -name "${vendor_cmd}*")"
+}
+
+# ensure that "fx helpdoc" does generate docs for vendor commands when
+# executed with the "--vendor" argument
+TEST_check-no-vendor() {
+  mkdir -p vendor/mycompany/scripts/devshell
+  local vendor_cmd="vendor_command"
+  cp "tools/devshell/helpdoc" "vendor/mycompany/scripts/devshell/${vendor_cmd}"
+  BT_EXPECT fx helpdoc --vendor helpdoc_out
+  BT_EXPECT_NOT_EMPTY "$(find "helpdoc_out" -name "${vendor_cmd}*")"
+}
+
+# ensure that paths in _toc.yaml files created by "fx helpdoc" have the
+# correct prefix
+TEST_check-paths() {
+  local prefix="/mycustom_path/should/work"
+  BT_EXPECT fx helpdoc --toc-prefix "${prefix}" helpdoc_out
+  BT_EXPECT_EMPTY "$(find "helpdoc_out" -name "*_toc.yaml" | xargs grep -E "^\s*(path|include):" | grep -v -E "\s${prefix}")"
+}
+
+BT_RUN_TESTS "$@"

@@ -221,9 +221,9 @@ function create-main-toc {
   {
     echo "toc:"
     echo "- title: Overview"
-    echo "  path: /${toc_prefix}/index.md"
+    echo "  path: ${toc_prefix}/index.md"
     echo "- title: fx command"
-    echo "  path: /${toc_prefix}/fx.md"
+    echo "  path: ${toc_prefix}/fx.md"
     echo "- heading: \"fx subcommands\""
   } > "${base_out}/_toc.yaml"
 
