@@ -220,10 +220,10 @@ class BoolValue : public InlineValue {
   std::optional<uint8_t> value_;
 };
 
-// An object. This represents a struct, a request or a response.
-class Object : public NullableValue {
+// An instance of a Struct. This includes requests and responses which are also structs.
+class StructValue : public NullableValue {
  public:
-  Object(const Type* type, const Struct& struct_definition)
+  StructValue(const Type* type, const Struct& struct_definition)
       : NullableValue(type), struct_definition_(struct_definition) {}
 
   const std::map<std::string, std::unique_ptr<Value>>& fields() const { return fields_; }

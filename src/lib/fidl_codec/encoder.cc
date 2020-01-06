@@ -15,7 +15,7 @@
 namespace fidl_codec {
 
 Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, uint8_t flags[3],
-                                       uint8_t magic, const Object& object) {
+                                       uint8_t magic, const StructValue& object) {
   Encoder encoder(flags[0] & FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG);
 
   encoder.Write(tx_id);
@@ -28,7 +28,7 @@ Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, uint8_t
 
   // The offsets for the primary object include the header size, so we have to specify an existing
   // size equal to the size of what we've already written above.
-  encoder.VisitObjectBody(&object, /*existing_size=*/sizeof(fidl_message_header_t));
+  encoder.VisitStructValueBody(&object, /*existing_size=*/sizeof(fidl_message_header_t));
 
   encoder.Pump();
   encoder.Align8();
@@ -119,7 +119,7 @@ void Encoder::VisitUnionBody(const UnionValue* node) {
   FXL_NOTREACHED() << "Invalid union field '" << node->field().name() << "'";
 }
 
-void Encoder::VisitObjectBody(const Object* node, size_t existing_size) {
+void Encoder::VisitStructValueBody(const StructValue* node, size_t existing_size) {
   FXL_DCHECK(!node->is_null());
   FXL_DCHECK(existing_size <= bytes_.size());
 
@@ -278,14 +278,14 @@ void Encoder::VisitHandleValue(const HandleValue* node) {
   }
 }
 
-void Encoder::VisitObject(const Object* node) {
+void Encoder::VisitStructValue(const StructValue* node) {
   if (!node->type()->Nullable()) {
-    VisitObjectBody(node);
+    VisitStructValueBody(node);
   } else if (node->is_null()) {
     Write<uint64_t>(0);
   } else {
     Write<uint64_t>(UINTPTR_MAX);
-    Defer([this, node]() mutable { VisitObjectBody(node); });
+    Defer([this, node]() mutable { VisitStructValueBody(node); });
   }
 }
 

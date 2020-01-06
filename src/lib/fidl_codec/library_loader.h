@@ -57,8 +57,8 @@ class InterfaceMethod;
 class Library;
 class LibraryLoader;
 class MessageDecoder;
-class Object;
 class Struct;
+class StructValue;
 class Table;
 class Type;
 class TypeVisitor;
@@ -253,8 +253,8 @@ class Struct {
 
   uint32_t Size(MessageDecoder* decoder) const;
 
-  std::unique_ptr<Object> DecodeObject(MessageDecoder* decoder, const Type* type, uint64_t offset,
-                                       bool nullable) const;
+  std::unique_ptr<StructValue> DecodeStruct(MessageDecoder* decoder, const Type* type,
+                                            uint64_t offset, bool nullable) const;
 
   // Wrap this Struct in a non-nullable type and use the given visitor on it.
   void VisitAsType(TypeVisitor* visitor) const;

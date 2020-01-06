@@ -185,7 +185,7 @@ void BoolValue::PrettyPrint(std::ostream& os, const Colors& colors,
 
 void BoolValue::Visit(Visitor* visitor) const { visitor->VisitBoolValue(this); }
 
-int Object::DisplaySize(int remaining_size) const {
+int StructValue::DisplaySize(int remaining_size) const {
   if (is_null()) {
     return 4;
   }
@@ -209,9 +209,11 @@ int Object::DisplaySize(int remaining_size) const {
   return size;
 }
 
-void Object::DecodeContent(MessageDecoder* decoder, uint64_t offset) { DecodeAt(decoder, offset); }
+void StructValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
+  DecodeAt(decoder, offset);
+}
 
-void Object::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
+void StructValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
   for (const auto& member : struct_definition_.members()) {
     std::unique_ptr<Value> value =
         member->type()->Decode(decoder, base_offset + member->Offset(decoder));
@@ -221,16 +223,16 @@ void Object::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
   }
 }
 
-void Object::ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                         rapidjson::Value& result) const {
+void StructValue::ExtractJson(rapidjson::Document::AllocatorType& allocator,
+                              rapidjson::Value& result) const {
   JsonVisitor visitor(&result, &allocator);
 
   Visit(&visitor);
 }
 
-void Object::PrettyPrint(std::ostream& os, const Colors& colors,
-                         const fidl_message_header_t* header, std::string_view line_header,
-                         int tabs, int remaining_size, int max_line_size) const {
+void StructValue::PrettyPrint(std::ostream& os, const Colors& colors,
+                              const fidl_message_header_t* header, std::string_view line_header,
+                              int tabs, int remaining_size, int max_line_size) const {
   if (is_null()) {
     os << colors.blue << "null" << colors.reset;
   } else if (fields_.empty()) {
@@ -277,7 +279,7 @@ void Object::PrettyPrint(std::ostream& os, const Colors& colors,
   }
 }
 
-void Object::Visit(Visitor* visitor) const { visitor->VisitObject(this); }
+void StructValue::Visit(Visitor* visitor) const { visitor->VisitStructValue(this); }
 
 EnvelopeValue::EnvelopeValue(const Type* type) : NullableValue(type) {}
 

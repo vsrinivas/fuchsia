@@ -17,7 +17,7 @@ class Visitor {
   virtual void VisitNullableValue(const NullableValue* node) { VisitValue(node); }
   virtual void VisitInlineValue(const InlineValue* node) { VisitValue(node); }
   virtual void VisitRawValue(const RawValue* node) { VisitValue(node); }
-  virtual void VisitObject(const Object* node) { VisitNullableValue(node); }
+  virtual void VisitStructValue(const StructValue* node) { VisitNullableValue(node); }
   virtual void VisitStringValue(const StringValue* node) { VisitNullableValue(node); }
   virtual void VisitBoolValue(const BoolValue* node) { VisitInlineValue(node); }
   virtual void VisitEnvelopeValue(const EnvelopeValue* node) { VisitNullableValue(node); }
@@ -50,7 +50,7 @@ class Visitor {
   friend class NumericValue;
   friend class StringValue;
   friend class BoolValue;
-  friend class Object;
+  friend class StructValue;
   friend class EnvelopeValue;
   friend class TableValue;
   friend class UnionValue;

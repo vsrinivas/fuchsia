@@ -244,7 +244,7 @@ size_t StructType::InlineSize(MessageDecoder* decoder) const {
 }
 
 std::unique_ptr<Value> StructType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return struct_.DecodeObject(decoder, this, offset, nullable_);
+  return struct_.DecodeStruct(decoder, this, offset, nullable_);
 }
 
 void StructType::Visit(TypeVisitor* visitor) const { visitor->VisitStructType(this); }

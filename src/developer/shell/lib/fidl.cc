@@ -106,7 +106,7 @@ JSValue DecodeResponse(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
       loader->GetByOrdinal(header->ordinal);
   // Test method not found, but...
   const fidl_codec::InterfaceMethod* method = (*methods)[0];
-  std::unique_ptr<fidl_codec::Object> object;
+  std::unique_ptr<fidl_codec::StructValue> object;
   std::ostringstream errors;
   if (!fidl_codec::DecodeResponse(method, message_buf, message_len, handle_buf.data(), handles_len,
                                   &object, errors)) {

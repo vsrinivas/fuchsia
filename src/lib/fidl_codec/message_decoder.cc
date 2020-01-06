@@ -256,12 +256,13 @@ MessageDecoder::MessageDecoder(MessageDecoder* container, uint64_t offset, uint6
   container->handle_pos_ += num_handles;
 }
 
-std::unique_ptr<Object> MessageDecoder::DecodeMessage(const Struct& message_format) {
+std::unique_ptr<StructValue> MessageDecoder::DecodeMessage(const Struct& message_format) {
   // Set the offset for the next object (just after this one).
   SkipObject(message_format.Size(this));
   // Decode the object.
-  std::unique_ptr<Object> object = message_format.DecodeObject(this, /*type=*/nullptr,
-                                                               /*offset=*/0, /*nullable=*/false);
+  std::unique_ptr<StructValue> object =
+      message_format.DecodeStruct(this, /*type=*/nullptr,
+                                  /*offset=*/0, /*nullable=*/false);
   // It's an error if we didn't use all the bytes in the buffer.
   if (next_object_offset_ != num_bytes_) {
     AddError() << "Message not fully decoded (decoded=" << next_object_offset_

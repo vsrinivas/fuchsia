@@ -23,8 +23,8 @@
 namespace fidl_codec {
 
 class MessageDecoderDispatcher;
-class Object;
 class Struct;
+class StructValue;
 class Type;
 class Value;
 
@@ -60,10 +60,10 @@ class DecodedMessage {
  private:
   const fidl_message_header_t* header_ = nullptr;
   const InterfaceMethod* method_ = nullptr;
-  std::unique_ptr<Object> decoded_request_;
+  std::unique_ptr<StructValue> decoded_request_;
   std::stringstream request_error_stream_;
   bool matched_request_ = false;
-  std::unique_ptr<Object> decoded_response_;
+  std::unique_ptr<StructValue> decoded_response_;
   std::stringstream response_error_stream_;
   bool matched_response_ = false;
   Direction direction_ = Direction::kUnknown;
@@ -116,7 +116,7 @@ class MessageDecoderDispatcher {
   std::map<std::tuple<zx_handle_t, uint64_t>, Direction> handle_directions_;
 };
 
-// Helper to decode a message (request or response). It generates an Object.
+// Helper to decode a message (request or response). It generates a StructValue.
 class MessageDecoder {
  public:
   MessageDecoder(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_info_t* handles,
@@ -200,8 +200,8 @@ class MessageDecoder {
     return *handle_pos_++;
   }
 
-  // Decodes a whole message (request or response) and return an Object.
-  std::unique_ptr<Object> DecodeMessage(const Struct& message_format);
+  // Decodes a whole message (request or response) and return a StructValue.
+  std::unique_ptr<StructValue> DecodeMessage(const Struct& message_format);
 
   // Decodes a field. Used by envelopes.
   std::unique_ptr<Value> DecodeValue(const Type* type);

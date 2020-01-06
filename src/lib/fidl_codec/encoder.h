@@ -21,7 +21,7 @@ class Encoder : public Visitor {
   };
 
   static Result EncodeMessage(uint32_t tx_id, uint64_t ordinal, uint8_t flags[3], uint8_t magic,
-                              const Object& object);
+                              const StructValue& object);
 
  private:
   Encoder(bool union_as_xunion) : union_as_xunion_(union_as_xunion) {}
@@ -54,7 +54,7 @@ class Encoder : public Visitor {
   // current position. If existing_size is specified, it indicates some number of bytes which have
   // already been written that should be considered part of the object for the purpose of
   // calculating member offsets.
-  void VisitObjectBody(const Object* node, size_t existing_size = 0);
+  void VisitStructValueBody(const StructValue* node, size_t existing_size = 0);
 
   // Visit any union and encode it as an XUnion.
   void VisitUnionAsXUnion(const UnionValue* node);
@@ -77,7 +77,7 @@ class Encoder : public Visitor {
   void VisitEnumValue(const EnumValue* node) override;
   void VisitBitsValue(const BitsValue* node) override;
   void VisitHandleValue(const HandleValue* node) override;
-  void VisitObject(const Object* node) override;
+  void VisitStructValue(const StructValue* node) override;
   void VisitU8Value(const NumericValue<uint8_t>* node) override;
   void VisitU16Value(const NumericValue<uint16_t>* node) override;
   void VisitU32Value(const NumericValue<uint32_t>* node) override;

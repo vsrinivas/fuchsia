@@ -32,7 +32,7 @@ class JsonVisitor : public Visitor {
     }
   }
 
-  void VisitObject(const Object* node) override {
+  void VisitStructValue(const StructValue* node) override {
     if (node->is_null()) {
       result_->SetNull();
     } else {

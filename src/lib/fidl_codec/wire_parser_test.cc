@@ -106,7 +106,7 @@ TEST_F(WireParserTest, ParseSingleString) {
     }
   }
 
-  std::unique_ptr<fidl_codec::Object> decoded_request;
+  std::unique_ptr<fidl_codec::StructValue> decoded_request;
   std::stringstream error_stream;
   fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(), handle_infos,
                             message.handles().size(), &decoded_request, error_stream);
@@ -174,7 +174,7 @@ TEST_F(WireParserTest, ParseSingleString) {
     MessageDecoder decoder(message.bytes().data(),                                                 \
                            (num_bytes == -1) ? message.bytes().size() : num_bytes, handle_infos,   \
                            message.handles().size(), error_stream);                                \
-    std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());                    \
+    std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());               \
     if ((num_bytes == -1) && (patched_offset == -1)) {                                             \
       std::cerr << error_stream.str();                                                             \
       ASSERT_FALSE(decoder.HasError()) << "Could not decode message";                              \
@@ -209,7 +209,7 @@ TEST_F(WireParserTest, ParseSingleString) {
       std::stringstream error_stream;                                                              \
       MessageDecoder decoder(message.bytes().data(), actual, handle_infos,                         \
                              message.handles().size(), error_stream);                              \
-      std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());                  \
+      std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());             \
       ASSERT_TRUE(decoder.HasError()) << "expect decoder error for buffer size " << actual         \
                                       << " instead of " << message.bytes().actual();               \
     }                                                                                              \
@@ -218,7 +218,7 @@ TEST_F(WireParserTest, ParseSingleString) {
       std::stringstream error_stream;                                                              \
       MessageDecoder decoder(message.bytes().data(), message.bytes().size(), handle_infos, actual, \
                              error_stream);                                                        \
-      std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());                  \
+      std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());             \
       ASSERT_TRUE(decoder.HasError()) << "expect decoder error for handle size " << actual         \
                                       << " instead of " << message.handles().actual();             \
     }                                                                                              \
@@ -1567,7 +1567,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   // If this is null, you probably have to update the schema above.
   ASSERT_NE(method, nullptr);
 
-  std::unique_ptr<fidl_codec::Object> decoded_request;
+  std::unique_ptr<fidl_codec::StructValue> decoded_request;
   std::stringstream error_stream;
   fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(), handle_infos,
                             message.handles().size(), &decoded_request, error_stream);

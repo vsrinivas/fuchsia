@@ -248,9 +248,9 @@ uint32_t Struct::Size(MessageDecoder* decoder) const {
   return decoder->unions_are_xunions() ? v1_size_ : v0_size_;
 }
 
-std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder, const Type* type,
-                                             uint64_t offset, bool nullable) const {
-  std::unique_ptr<Object> result = std::make_unique<Object>(type, *this);
+std::unique_ptr<StructValue> Struct::DecodeStruct(MessageDecoder* decoder, const Type* type,
+                                                  uint64_t offset, bool nullable) const {
+  std::unique_ptr<StructValue> result = std::make_unique<StructValue>(type, *this);
   if (nullable) {
     result->DecodeNullable(decoder, offset, Size(decoder));
   } else {
