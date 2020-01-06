@@ -180,8 +180,8 @@ A *rights* field can be defined by the combination of any of the following right
             "update_attributes", "get_attributes", "traverse", "modify_directory"]
 ```
 
-Note: See [`fuchsia.io2.Rights`](/zircon/system/fidl/fuchsia-io2/rights-abilities.fidl) for the
-  equivalent FIDL definitions.
+See [`fuchsia.io2.Rights`](/zircon/system/fidl/fuchsia-io2/rights-abilities.fidl) for the
+equivalent FIDL definitions.
 
 However *rights aliases* should be prefered where possible for clarity.
 
@@ -189,10 +189,8 @@ However *rights aliases* should be prefered where possible for clarity.
 "rights": ["r*", "w*", "x*", "rw*", "rx*"]
 ```
 
-Note: Except in special circumstances you will almost always want either `["r*"]` or `["rw*"]`.
-
-Note: Only one alias can be provided to a rights field and it must not conflict
-      with any longform rights.
+Except in special circumstances you will almost always want either `["r*"]` or `["rw*"]`.
+Only one alias can be provided to a rights field and it must not conflict with any longform rights.
 
 Right aliases are simply expanded into their longform counterparts:
 
@@ -202,7 +200,7 @@ Right aliases are simply expanded into their longform counterparts:
 "x*" -> ["connect", "enumerate", "traverse", "execute_bytes"]
 ```
 
-Note: Merged aliases line `rw*` are simply `r*` and `w*` merged without duplicates.
+Merged aliases line `rw*` are simply `r*` and `w*` merged without duplicates.
 
 This example shows usage of a directory use declaration annotated with rights:
 
