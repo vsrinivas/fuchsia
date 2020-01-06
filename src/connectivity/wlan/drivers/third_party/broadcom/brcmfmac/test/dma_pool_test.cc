@@ -27,9 +27,8 @@ namespace {
 TEST(DmaPoolTest, CreationParameters) {
   constexpr size_t kVmoSize = 1024 * 8;
   constexpr size_t kItemSize = 512;
-  zx_handle_t fake_bti_handle = ZX_HANDLE_INVALID;
-  ASSERT_EQ(ZX_OK, fake_bti_create(&fake_bti_handle));
-  zx::bti bti(fake_bti_handle);
+  zx::bti bti;
+  ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
   std::unique_ptr<DmaBuffer> dma_buffer;
   std::unique_ptr<DmaPool> dma_pool;
 
@@ -47,17 +46,14 @@ TEST(DmaPoolTest, CreationParameters) {
             DmaPool::Create(kItemSize, kVmoSize / kItemSize + 1, std::move(dma_buffer), &dma_pool));
   ASSERT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
   EXPECT_NE(ZX_OK, DmaPool::Create(kItemSize, 0, std::move(dma_buffer), &dma_pool));
-
-  fake_bti_destroy(bti.release());
 }
 
 // Test that we can use allocate, free, release, and acquire released Buffer instances.
 TEST(DmaPoolTest, AllocateAcquire) {
   constexpr size_t kVmoSize = 4096;
   constexpr size_t kItemSize = 512;
-  zx_handle_t fake_bti_handle = ZX_HANDLE_INVALID;
-  ASSERT_EQ(ZX_OK, fake_bti_create(&fake_bti_handle));
-  zx::bti bti(fake_bti_handle);
+  zx::bti bti;
+  ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
   std::unique_ptr<DmaBuffer> dma_buffer;
   std::unique_ptr<DmaPool> dma_pool;
 
@@ -129,8 +125,6 @@ TEST(DmaPoolTest, AllocateAcquire) {
     const bool buffer_is_released = (released_buffers.find(i) != released_buffers.end());
     EXPECT_EQ(buffer_is_released, dma_pool->Acquire(i, &buffer) == ZX_OK) << "i=" << i;
   }
-
-  fake_bti_destroy(bti.release());
 }
 
 // This is a smoke test for the thread safety of DmaPool.  We create Lots Of Threads and make them
@@ -140,9 +134,8 @@ TEST(DmaPoolTest, ThreadSafety) {
   constexpr size_t kItemSize = 32;
   constexpr int kThreadCount = 16;
   constexpr int kIterationCount = 8 * 1024;
-  zx_handle_t fake_bti_handle = ZX_HANDLE_INVALID;
-  ASSERT_EQ(ZX_OK, fake_bti_create(&fake_bti_handle));
-  zx::bti bti(fake_bti_handle);
+  zx::bti bti;
+  ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
   std::unique_ptr<DmaBuffer> dma_buffer;
   std::unique_ptr<DmaPool> dma_pool;
 
@@ -189,8 +182,6 @@ TEST(DmaPoolTest, ThreadSafety) {
   }
   DmaPool::Buffer buffer;
   EXPECT_NE(ZX_OK, dma_pool->Allocate(&buffer));
-
-  fake_bti_destroy(bti.release());
 }
 
 }  // namespace

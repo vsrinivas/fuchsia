@@ -27,9 +27,8 @@ TEST(DmaRingTest, CreationParameters) {
   constexpr size_t kVmoSize = 1024 * 8;
   constexpr size_t kItemSize = 512;
 
-  zx_handle_t fake_bti_handle = ZX_HANDLE_INVALID;
-  ASSERT_EQ(ZX_OK, fake_bti_create(&fake_bti_handle));
-  zx::bti bti(fake_bti_handle);
+  zx::bti bti;
+  ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
   std::unique_ptr<DmaBuffer> dma_buffer;
 
   volatile std::atomic<uint16_t> read_index = {};
@@ -73,8 +72,6 @@ TEST(DmaRingTest, CreationParameters) {
             WriteDmaRing::Create(std::move(dma_buffer), kItemSize, (kVmoSize / kItemSize) + 1,
                                  &read_index, &write_index, &write_signal, &write_ring));
   EXPECT_EQ(nullptr, write_ring);
-
-  fake_bti_destroy(bti.release());
 }
 
 // Test reading from a ReadDmaRing.
@@ -82,9 +79,8 @@ TEST(DmaRingTest, ReadTest) {
   constexpr size_t kVmoSize = 1024 * 8;
   constexpr size_t kItemCount = kVmoSize / sizeof(uint32_t);
 
-  zx_handle_t fake_bti_handle = ZX_HANDLE_INVALID;
-  ASSERT_EQ(ZX_OK, fake_bti_create(&fake_bti_handle));
-  zx::bti bti(fake_bti_handle);
+  zx::bti bti;
+  ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
   zx::vmar vmar;
   zx_vaddr_t vmar_address = 0;
   std::unique_ptr<DmaBuffer> dma_buffer;
@@ -153,7 +149,6 @@ TEST(DmaRingTest, ReadTest) {
   EXPECT_EQ(0u, write_index.load());
 
   vmar.destroy();
-  fake_bti_destroy(bti.release());
 }
 
 // Test writing to a WriteDmaRing.
@@ -161,9 +156,8 @@ TEST(DmaRingTest, WriteTest) {
   constexpr size_t kVmoSize = 1024 * 8;
   constexpr size_t kItemCount = kVmoSize / sizeof(uint32_t);
 
-  zx_handle_t fake_bti_handle = ZX_HANDLE_INVALID;
-  ASSERT_EQ(ZX_OK, fake_bti_create(&fake_bti_handle));
-  zx::bti bti(fake_bti_handle);
+  zx::bti bti;
+  ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
   zx::vmar vmar;
   zx_vaddr_t vmar_address = 0;
   std::unique_ptr<DmaBuffer> dma_buffer;
@@ -281,7 +275,6 @@ TEST(DmaRingTest, WriteTest) {
   }
 
   vmar.destroy();
-  fake_bti_destroy(bti.release());
 }
 
 }  // namespace

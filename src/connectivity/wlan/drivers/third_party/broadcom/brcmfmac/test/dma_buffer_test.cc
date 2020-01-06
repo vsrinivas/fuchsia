@@ -25,9 +25,8 @@ TEST(DmaBufferTest, CreationParameters) {
   constexpr size_t kSmallBufferSize = 512;       // Not page-aligned.
   constexpr size_t kUnalignedBufferSize = 4127;  // Not page-aligned (and also prime).
 
-  zx_handle_t fake_bti_handle = ZX_HANDLE_INVALID;
-  ASSERT_EQ(ZX_OK, fake_bti_create(&fake_bti_handle));
-  zx::bti bti(fake_bti_handle);
+  zx::bti bti;
+  ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
   std::unique_ptr<DmaBuffer> dma_buffer;
 
   EXPECT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kLargeBufferSize, &dma_buffer));
@@ -39,17 +38,14 @@ TEST(DmaBufferTest, CreationParameters) {
   EXPECT_EQ(ZX_OK,
             DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kUnalignedBufferSize, &dma_buffer));
   EXPECT_LE(kUnalignedBufferSize, dma_buffer->size());
-
-  fake_bti_destroy(bti.release());
 }
 
 // Test that we can write and read back data written on the CPU to the DmaBuffer.
 TEST(DmaBufferTest, ReadWriteTest) {
   constexpr size_t kBufferSize = 1024 * 8;
 
-  zx_handle_t fake_bti_handle = ZX_HANDLE_INVALID;
-  ASSERT_EQ(ZX_OK, fake_bti_create(&fake_bti_handle));
-  zx::bti bti(fake_bti_handle);
+  zx::bti bti;
+  ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
   std::unique_ptr<DmaBuffer> dma_buffer;
 
   ASSERT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kBufferSize, &dma_buffer));
@@ -65,8 +61,6 @@ TEST(DmaBufferTest, ReadWriteTest) {
 
   EXPECT_EQ(ZX_OK, dma_buffer->Unmap());
   EXPECT_EQ(0u, dma_buffer->address());
-
-  fake_bti_destroy(bti.release());
 }
 
 }  // namespace
