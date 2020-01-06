@@ -176,11 +176,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       // build the info structure
       zx_info_process_t info = {};
-
-      auto err = process->GetInfo(&info);
-      if (err != ZX_OK)
-        return err;
-
+      process->GetInfo(&info);
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
     case ZX_INFO_PROCESS_THREADS: {

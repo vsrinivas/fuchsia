@@ -546,7 +546,7 @@ zx_status_t ProcessDispatcher::GetDispatcherInternal(zx_handle_t handle_value,
   return ZX_OK;
 }
 
-zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) const {
+void ProcessDispatcher::GetInfo(zx_info_process_t* info) const {
   canary_.Assert();
 
   State state;
@@ -571,8 +571,6 @@ zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) const {
     default:
       break;
   }
-
-  return ZX_OK;
 }
 
 zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) const {

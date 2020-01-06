@@ -227,7 +227,7 @@ class ProcessDispatcher final
   void Resume();
 
   // Syscall helpers
-  zx_status_t GetInfo(zx_info_process_t* info) const;
+  void GetInfo(zx_info_process_t* info) const;
   zx_status_t GetStats(zx_info_task_stats_t* stats) const;
   // NOTE: Code outside of the syscall layer should not typically know about
   // user_ptrs; do not use this pattern as an example.
