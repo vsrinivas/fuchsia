@@ -17,6 +17,7 @@ group("tests") {
   testonly = true
   public_deps = [
     "//src/connectivity/telephony/lib:tel_devmgr",
+    "//src/connectivity/telephony/lib/qmi-protocol:tests",
     "//src/connectivity/telephony/telephony:tests",
     "//src/connectivity/telephony/telephony-snooper",
     "//src/connectivity/telephony/tests:telephony-tests",

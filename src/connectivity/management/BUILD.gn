@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("management") {
+  testonly = true
+  deps = [
+    ":tests",
+    "network_manager",
+    "network_manager_cli",
+    "reachability",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "integration_tests/network_manager:tests",
+    "reachability:tests",
+  ]
+}

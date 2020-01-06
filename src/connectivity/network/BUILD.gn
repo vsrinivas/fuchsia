@@ -23,7 +23,16 @@ group("config") {
 group("tests") {
   testonly = true
   deps = [
+    "dhcp:dhcp_tests",
+    "dhcp:dhcpd_tests",
+    "dhcpd-cli:dhcpd_cli_tests",
+    "http_client:tests",
+    "mdns/service:mdns_tests",
+    "net-cli:net-cli-tests",
+    "netcfg:netcfg_tests",
+    "netdump:tests",
     "netstack:tests",
+    "testing/netemul:tests",
     "tests",
   ]
 }

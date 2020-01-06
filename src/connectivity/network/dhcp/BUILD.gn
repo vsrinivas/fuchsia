@@ -129,3 +129,13 @@ group("dhcp") {
     "//src/connectivity/network/dhcp/config",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":dhcp",
+    ":dhcp_tests",
+    ":dhcpd",
+    ":dhcpd_tests",
+  ]
+}
