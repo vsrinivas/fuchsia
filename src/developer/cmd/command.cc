@@ -6,11 +6,11 @@
 
 namespace cmd {
 
-static const char kWhitespace[] = " \t\r\n";
-
 Command::Command() = default;
 
 Command::~Command() = default;
+
+const char Command::kWhitespace[] = " \t\r\n";
 
 bool Command::Parse(const std::string& line) {
   args_.clear();
@@ -83,7 +83,8 @@ bool Command::ParseQuotedToken(const std::string& line, size_t pos, std::string*
         if (pos < line.size()) {
           ch = line[pos];
           if (strchr(kWhitespace, ch) == nullptr) {
-            parse_error_ = "Ending quotation mark did not terminate token."; return false;
+            parse_error_ = "Ending quotation mark did not terminate token.";
+            return false;
           }
         }
         *token = std::string(buffer.data(), buffer.size());
@@ -94,7 +95,8 @@ bool Command::ParseQuotedToken(const std::string& line, size_t pos, std::string*
         break;
     }
   }
-  parse_error_ = "Unterminated quotation."; return false;
+  parse_error_ = "Unterminated quotation.";
+  return false;
 }
 
 }  // namespace cmd

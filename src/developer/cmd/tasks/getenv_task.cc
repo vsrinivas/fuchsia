@@ -33,4 +33,10 @@ zx_status_t GetenvTask::Execute(Command command, Task::CompletionCallback callba
   return ZX_ERR_NEXT;
 }
 
+void GetenvTask::Complete(Autocomplete* autocomplete) {
+  if (autocomplete->tokens().size() == 1) {
+    autocomplete->CompleteAsEnvironmentVariable();
+  }
+}
+
 }  // namespace cmd

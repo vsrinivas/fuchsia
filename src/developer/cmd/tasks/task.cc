@@ -10,4 +10,6 @@ Task::Task(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 Task::~Task() = default;
 
+void Task::Complete(Autocomplete* autocomplete) { autocomplete->CompleteAsPath(); }
+
 }  // namespace cmd

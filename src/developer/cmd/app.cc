@@ -49,4 +49,8 @@ void App::OnConsoleError(zx_status_t status) {
   quit_callback();
 }
 
+void App::OnConsoleAutocomplete(Autocomplete* autocomplete) {
+  return executor_.Complete(autocomplete);
+}
+
 }  // namespace cmd

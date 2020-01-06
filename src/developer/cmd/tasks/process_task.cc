@@ -15,10 +15,32 @@
 #include <sstream>
 #include <vector>
 
+#include "src/developer/cmd/autocomplete.h"
+
 namespace cmd {
 namespace {
 
 const char kDefaultPath[] = ZX_SHELL_ENV_PATH_VALUE;
+
+const char* GetPath() {
+  const char* path = getenv("PATH");
+  if (!path) {
+    path = kDefaultPath;
+  }
+  return path;
+}
+
+void EnumeratePath(fit::function<bool(const std::string&)> callback) {
+  const char* path = GetPath();
+
+  std::istringstream input;
+  input.str(path);
+  for (std::string entry; std::getline(input, entry, ':');) {
+    if (!callback(entry)) {
+      return;
+    }
+  }
+}
 
 }  // namespace
 
@@ -69,23 +91,19 @@ std::string ProcessTask::SearchPath(const std::string& name) {
   if (name.find('/') != std::string::npos) {
     return name;
   }
-  const char* path = getenv("PATH");
-  if (!path) {
-    path = kDefaultPath;
-  }
 
-  std::istringstream input;
-  input.str(path);
-  for (std::string prefix; std::getline(input, prefix, ':');) {
-    std::string fullname = prefix + '/' + name;
+  std::string result;
+  EnumeratePath([&name, &result](const std::string& directory) {
+    std::string fullname = directory + '/' + name;
     struct stat sb = {};
     if (stat(fullname.c_str(), &sb) < 0 || !S_ISREG(sb.st_mode)) {
-      continue;
+      return true;
     }
-    return fullname;
-  }
+    result = fullname;
+    return false;
+  });
 
-  return std::string();
+  return result;
 }
 
 void ProcessTask::OnProcessTerminated(zx_status_t status) {
@@ -95,6 +113,17 @@ void ProcessTask::OnProcessTerminated(zx_status_t status) {
   process_.reset();
   auto callback = std::move(callback_);
   callback();
+}
+
+void ProcessTask::CompleteCommand(Autocomplete* autocomplete) {
+  if (autocomplete->fragment().find('/') != std::string::npos) {
+    autocomplete->CompleteAsPath();
+  } else {
+    EnumeratePath([autocomplete](const std::string& directory) {
+      autocomplete->CompleteAsDirectoryEntry(directory);
+      return true;
+    });
+  }
 }
 
 }  // namespace cmd

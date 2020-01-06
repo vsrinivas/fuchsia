@@ -24,6 +24,8 @@ class ProcessTask : public Task {
 
   std::string SearchPath(const std::string& name);
 
+  static void CompleteCommand(Autocomplete* autocomplete);
+
  private:
   void OnProcessTerminated(zx_status_t status);
 

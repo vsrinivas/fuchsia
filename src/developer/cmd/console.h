@@ -8,7 +8,9 @@
 #include <lib/async/dispatcher.h>
 
 #include <string>
+#include <vector>
 
+#include "src/developer/cmd/autocomplete.h"
 #include "src/developer/cmd/command.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/line_input/modal_line_input.h"
@@ -41,6 +43,13 @@ class Console {
     // If the console reaches the end of the input stream, |status| will be
     // |ZX_ERR_PEER_CLOSED|.
     virtual void OnConsoleError(zx_status_t status) = 0;
+
+    // The user is asking for autocomplete suggestions.
+    //
+    // The client is expected to provide zero or more completions synchronously
+    // during this method. The given |autocomplete| is valid only for the
+    // duration of this method.
+    virtual void OnConsoleAutocomplete(Autocomplete* autocomplete) = 0;
 
    protected:
     virtual ~Client();

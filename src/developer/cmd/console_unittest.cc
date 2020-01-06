@@ -29,9 +29,13 @@ class CallbackClient : public cmd::Console::Client {
     return console_command_callback(std::move(command));
   }
   void OnConsoleError(zx_status_t status) override { console_error_callback(status); }
+  void OnConsoleAutocomplete(cmd::Autocomplete* autocomplete) override {
+    return console_autocomplete_callback(autocomplete);
+  }
 
   fit::function<zx_status_t(cmd::Command)> console_command_callback;
   fit::function<void(zx_status_t status)> console_error_callback;
+  fit::function<void(cmd::Autocomplete* autocomplete)> console_autocomplete_callback;
 };
 
 TEST_F(Console, Control) {
@@ -49,10 +53,14 @@ TEST_F(Console, Control) {
     EXPECT_TRUE(false) << "OnConsoleError called unexpectedly; status = " << status << " ("
                        << zx_status_get_string(status) << ")";
   };
+  auto unexpected_autocomplete_callback = [](cmd::Autocomplete* autocomplete) {
+    EXPECT_TRUE(false) << "OnConsoleAutocomplete called unexpectedly";
+  };
 
   CallbackClient client;
   client.console_command_callback = unexpected_command_callback;
   client.console_error_callback = unexpected_error_callback;
+  client.console_autocomplete_callback = unexpected_autocomplete_callback;
 
   cmd::Console console(&client, dispatcher(), input_fd.get());
   console.Init("test> ");

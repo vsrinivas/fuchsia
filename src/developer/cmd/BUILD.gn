@@ -18,6 +18,8 @@ source_set("lib") {
   sources = [
     "app.cc",
     "app.h",
+    "autocomplete.cc",
+    "autocomplete.h",
     "command.cc",
     "command.h",
     "console.cc",
@@ -68,6 +70,7 @@ executable("cmd_unittests") {
 
   sources = [
     "app_unittest.cc",
+    "autocomplete_unittest.cc",
     "command_unittest.cc",
     "console_unittest.cc",
     "executor_unittest.cc",

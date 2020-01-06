@@ -4,6 +4,7 @@
 
 #include "src/developer/cmd/executor.h"
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
@@ -31,6 +32,30 @@ TEST_F(Executor, Quit) {
 TEST_F(Executor, FailToExecute) {
   cmd::Executor exec(dispatcher());
   EXPECT_EQ(ZX_ERR_NOT_FOUND, exec.Execute(MakeCommand("/does/not/exist"), nullptr));
+}
+
+TEST_F(Executor, CompleteBuiltin) {
+  cmd::Executor exec(dispatcher());
+  cmd::Autocomplete autocomplete("seten");
+  exec.Complete(&autocomplete);
+  ASSERT_THAT(autocomplete.TakeCompletions(), testing::ElementsAre("setenv"));
+}
+
+TEST_F(Executor, CompletePath) {
+  cmd::Executor exec(dispatcher());
+  cmd::Autocomplete autocomplete("/pkg/met");
+  exec.Complete(&autocomplete);
+  ASSERT_THAT(autocomplete.TakeCompletions(), testing::ElementsAre("/pkg/meta"));
+}
+
+TEST_F(Executor, CompleteDelegateToTask) {
+  cmd::Executor exec(dispatcher());
+  cmd::Autocomplete autocomplete("getenv ANOTHER_TEST_ENVIRON_VAR_FOR_TES");
+
+  setenv("ANOTHER_TEST_ENVIRON_VAR_FOR_TEST", "BANANA", 1);
+  exec.Complete(&autocomplete);
+  ASSERT_THAT(autocomplete.TakeCompletions(),
+              testing::ElementsAre("getenv ANOTHER_TEST_ENVIRON_VAR_FOR_TEST"));
 }
 
 }  // namespace

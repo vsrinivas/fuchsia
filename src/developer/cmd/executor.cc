@@ -46,14 +46,37 @@ zx_status_t Executor::Execute(Command command, Task::CompletionCallback callback
     return ZX_ERR_NEXT;
   }
 
-  auto it = builtin_commands_.find(command.args()[0]);
-  if (it != builtin_commands_.end()) {
-    current_task_ = it->second(dispatcher_);
-  } else {
-    current_task_ = std::make_unique<ProcessTask>(dispatcher_);
-  }
-
+  current_task_ = FindAndCreateTask(command.args()[0]);
   return current_task_->Execute(std::move(command), std::move(callback));
+}
+
+void Executor::Complete(Autocomplete* autocomplete) {
+  if (autocomplete->tokens().empty()) {
+    CompleteCommand(autocomplete);
+    return;
+  }
+  std::vector<std::string> result;
+  FindAndCreateTask(autocomplete->tokens().front())->Complete(autocomplete);
+}
+
+std::unique_ptr<Task> Executor::FindAndCreateTask(const std::string& name) {
+  auto it = builtin_commands_.find(name);
+  if (it != builtin_commands_.end()) {
+    return it->second(dispatcher_);
+  } else {
+    return std::make_unique<ProcessTask>(dispatcher_);
+  }
+}
+
+void Executor::CompleteCommand(Autocomplete* autocomplete) {
+  std::vector<std::string> result;
+  for (const auto& entry : builtin_commands_) {
+    const std::string& key = entry.first;
+    if (key.find(autocomplete->fragment()) == 0u) {
+      autocomplete->AddCompletion(key);
+    }
+  }
+  ProcessTask::CompleteCommand(autocomplete);
 }
 
 }  // namespace cmd

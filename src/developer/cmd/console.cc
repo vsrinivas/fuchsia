@@ -25,6 +25,11 @@ void Console::Init(std::string prompt) {
   fcntl(input_fd_, F_SETFL, fcntl(input_fd_, F_GETFL, 0) | O_NONBLOCK);
   line_input_.Init([this](const std::string& line) { OnAccept(line); }, std::move(prompt));
   line_input_.SetEofCallback([this] { OnError(ZX_ERR_PEER_CLOSED); });
+  line_input_.SetAutocompleteCallback([this](const std::string& line) {
+    Autocomplete autocomplete(line);
+    client_->OnConsoleAutocomplete(&autocomplete);
+    return autocomplete.TakeCompletions();
+  });
 }
 
 void Console::GetNextCommand() {

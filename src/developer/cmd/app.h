@@ -33,6 +33,7 @@ class App : public cmd::Console::Client {
   // |cmd::Console::Client| implementation:
   zx_status_t OnConsoleCommand(Command command) override;
   void OnConsoleError(zx_status_t status) override;
+  void OnConsoleAutocomplete(Autocomplete* autocomplete) override;
 
  private:
   QuitCallback quit_callback_;

@@ -16,6 +16,7 @@ class GetenvTask : public Task {
 
   // |Task| implementation:
   zx_status_t Execute(Command command, CompletionCallback callback) override;
+  void Complete(Autocomplete* autocomplete) override;
 };
 
 }  // namespace cmd

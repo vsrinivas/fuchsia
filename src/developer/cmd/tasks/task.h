@@ -11,6 +11,7 @@
 
 #include <memory>
 
+#include "src/developer/cmd/autocomplete.h"
 #include "src/developer/cmd/command.h"
 
 namespace cmd {
@@ -48,6 +49,8 @@ class Task {
   // Can also return any other negative zx_status_t value to signal synchronous
   // error. In those cases, this function must not call |callback|.
   virtual zx_status_t Execute(Command command, CompletionCallback callback) = 0;
+
+  virtual void Complete(Autocomplete* autocomplete);
 
   // The dispatcher on which the task will schedule asynchronous work, if any.
   async_dispatcher_t* dispatcher() const { return dispatcher_; }

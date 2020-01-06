@@ -21,6 +21,8 @@ class Command {
   Command(Command&&) = default;
   Command& operator=(Command&&) = default;
 
+  static const char kWhitespace[];
+
   bool Parse(const std::string& line);
   const std::vector<std::string>& args() const { return args_; }
 

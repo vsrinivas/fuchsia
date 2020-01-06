@@ -7,6 +7,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #include "src/developer/cmd/command.h"
 #include "src/developer/cmd/tasks/task.h"
@@ -24,7 +25,13 @@ class Executor {
   // documentation.
   zx_status_t Execute(Command command, Task::CompletionCallback callback);
 
+  // Offer suggestions for how to complete the given input state.
+  void Complete(Autocomplete* autocomplete);
+
  private:
+  std::unique_ptr<Task> FindAndCreateTask(const std::string& name);
+  void CompleteCommand(Autocomplete* autocomplete);
+
   async_dispatcher_t* dispatcher_;
   std::map<std::string, Task::Factory> builtin_commands_;
   std::unique_ptr<Task> current_task_;
