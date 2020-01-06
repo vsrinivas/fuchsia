@@ -467,6 +467,7 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
   if (post_process != NULL)
     {
       imgbar.dstAccessMask = post_process->access_mask;
+      imgbar.newLayout     = render->image_info.imageLayout;
 
       imgbar_count = 1;
 
@@ -505,6 +506,9 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
                     post_process->group_count_z);
 
       imgbar.srcAccessMask = imgbar.dstAccessMask;
+      imgbar.dstAccessMask = 0;
+
+      imgbar_count = 0;
     }
 
   //
