@@ -20,7 +20,6 @@
 
 #include "src/cobalt/bin/system-metrics/activity_listener.h"
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher.h"
-#include "src/cobalt/bin/system-metrics/memory_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/system-metrics/temperature_fetcher.h"
 #include "src/cobalt/bin/utils/clock.h"
@@ -58,7 +57,6 @@ class SystemMetricsDaemon {
   SystemMetricsDaemon(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                       fuchsia::cobalt::Logger_Sync* logger,
                       std::unique_ptr<cobalt::SteadyClock> clock,
-                      std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher,
                       std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
                       std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher,
                       std::unique_ptr<cobalt::ActivityListener> activity_listener);
@@ -78,11 +76,6 @@ class SystemMetricsDaemon {
   // Calls LogFuchsiaUptime and then uses the |dispatcher| passed to the
   // constructor to schedule the next round.
   void RepeatedlyLogUptime();
-
-  // Calls LogMemoryUsage,
-  // then uses the |dispatcher| passed to the constructor to schedule
-  // the next round.
-  void RepeatedlyLogMemoryUsage();
 
   // Calls LogCpuUsage,
   // then uses the |dispatcher| passed to the constructor to schedule
@@ -142,27 +135,6 @@ class SystemMetricsDaemon {
   // This is the number of seconds until the uptime reaches the next full hour.
   std::chrono::seconds LogFuchsiaUptime();
 
-  // Logs several different measurements of system-wide memory usage.
-  //
-  // Returns the amount of time before this method needs to be invoked again.
-  std::chrono::seconds LogMemoryUsage();
-
-  // Helper function to call Cobalt logger's LogCobaltEvent to log
-  // information in one zx_info_kmem_stats_t stats data point.
-  void LogMemoryUsageToCobalt(const llcpp::fuchsia::kernel::MemoryStats& stats,
-                              const std::chrono::seconds& uptime);
-
-  // Helper function to translate uptime in seconds to
-  // corresponding cobalt event code.
-  fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot GetUpTimeEventCode(
-      const std::chrono::seconds& uptime);
-
-  // TODO(PT-128) To be removed after we start populating
-  // fuchsia_memory_experimental_2.
-  // Helper function to call Cobalt logger's LogCobaltEvent to log
-  // information in one zx_info_kmem_stats_t stats data point.
-  void LogMemoryUsageToCobalt(const llcpp::fuchsia::kernel::MemoryStats& stats);
-
   // Fetches and logs system-wide CPU usage.
   //
   // Returns the amount of time before this method needs to be invoked again.
@@ -197,7 +169,6 @@ class SystemMetricsDaemon {
   fuchsia::cobalt::Logger_Sync* logger_;
   std::chrono::steady_clock::time_point start_time_;
   std::unique_ptr<cobalt::SteadyClock> clock_;
-  std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher_;
   std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher_;
   std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher_;
   std::unique_ptr<cobalt::ActivityListener> activity_listener_;

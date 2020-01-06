@@ -17,7 +17,6 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_cpu_stats_fetcher.h"
-#include "src/cobalt/bin/system-metrics/testing/fake_memory_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_temperature_fetcher.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_temperature_fetcher_not_supported.h"
 #include "src/cobalt/bin/testing/fake_clock.h"
@@ -26,15 +25,12 @@
 
 using cobalt::FakeCpuStatsFetcher;
 using cobalt::FakeLogger_Sync;
-using cobalt::FakeMemoryStatsFetcher;
 using cobalt::FakeSteadyClock;
 using cobalt::FakeTemperatureFetcher;
 using cobalt::FakeTemperatureFetcherNotSupported;
 using cobalt::LogMethod;
 using cobalt::TemperatureFetchStatus;
 using fuchsia_system_metrics::FuchsiaLifetimeEventsMetricDimensionEvents;
-using TimeSinceBoot =
-    fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot;
 using DeviceState =
     fuchsia_system_metrics::FuchsiaCpuPercentageExperimentalMetricDimensionDeviceState;
 using fuchsia_system_metrics::FuchsiaUpPingMetricDimensionUptime;
@@ -59,7 +55,6 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
       : fake_clock_(new FakeSteadyClock()),
         daemon_(new SystemMetricsDaemon(
             dispatcher(), nullptr, &fake_logger_, std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
-            std::unique_ptr<cobalt::MemoryStatsFetcher>(new FakeMemoryStatsFetcher()),
             std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
             std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()), nullptr)) {
     daemon_->cpu_bucket_config_ = daemon_->InitializeLinearBucketConfig(
@@ -99,8 +94,6 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
     return (daemon_->temperature_bucket_config_)->BucketIndex(temperature);
   }
 
-  seconds LogMemoryUsage() { return daemon_->LogMemoryUsage(); }
-
   seconds LogCpuUsage() { return daemon_->LogCpuUsage(); }
 
   void PrepareForLogCpuUsageDeprecated() {
@@ -127,10 +120,6 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
 
   void SetTemperatureFetcher(std::unique_ptr<cobalt::TemperatureFetcher> fetcher) {
     daemon_->SetTemperatureFetcher(std::move(fetcher));
-  }
-
-  TimeSinceBoot GetUpTimeEventCode(const std::chrono::seconds& uptime) {
-    return daemon_->GetUpTimeEventCode(uptime);
   }
 
   void CheckValues(LogMethod expected_log_method_invoked, size_t expected_call_count,
@@ -547,22 +536,6 @@ TEST_F(SystemMetricsDaemonTest, RepeatedlyLogUpPingAndLifeTimeEvents) {
                       FuchsiaUpPingMetricDimensionUptime::UpOneHour, cobalt::kLogEvent);
 }
 
-// Tests the method LogMemoryUsage(). Uses a local FakeLogger_Sync and
-// does not use FIDL. Does not use the message loop.
-TEST_F(SystemMetricsDaemonTest, LogMemoryUsage) {
-  fake_logger_.reset();
-  SetClockToDaemonStartTime();
-  fake_clock_->Increment(seconds(kHour * 3));
-  // When LogMemoryUsage() is invoked it should log 10 events
-  // for each of the memory breakdowns and return 1 minute.
-  // Call count is 2, both are LogCobaltEvents.
-  EXPECT_EQ(seconds(60).count(), LogMemoryUsage().count());
-  CheckValues(
-      cobalt::kLogCobaltEvents, 2, fuchsia_system_metrics::kFuchsiaMemoryExperimental2MetricId,
-      fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionMemoryBreakdown::OtherBytes,
-      TimeSinceBoot::UpOneHour, 10);
-}
-
 // Tests the method LogCpuUsage(). Uses a local FakeLogger_Sync and
 // does not use FIDL. Does not use the message loop.
 TEST_F(SystemMetricsDaemonTest, LogCpuUsage) {
@@ -676,20 +649,17 @@ TEST_F(SystemMetricsDaemonTest, LogTemperatureIfSupportedSucceed2) {
                       cobalt::kLogIntHistogram);
 }
 
-TEST_F(SystemMetricsDaemonTest, GetUpTimeEventCode) {
-  EXPECT_EQ(TimeSinceBoot::UpSixDays, GetUpTimeEventCode(seconds(518400)));
-  EXPECT_EQ(TimeSinceBoot::UpSixDays, GetUpTimeEventCode(seconds(600000)));
-  EXPECT_EQ(TimeSinceBoot::UpThreeDays, GetUpTimeEventCode(seconds(360000)));
-  EXPECT_EQ(TimeSinceBoot::UpTwoDays, GetUpTimeEventCode(seconds(172800)));
-  EXPECT_EQ(TimeSinceBoot::Up, GetUpTimeEventCode(seconds(59)));
-}
-
 class MockLogger : public ::fuchsia::cobalt::testing::Logger_TestBase {
  public:
   void LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> events,
                        LogCobaltEventsCallback callback) override {
     num_calls_++;
     num_events_ += events.size();
+    callback(fuchsia::cobalt::Status::OK);
+  }
+  void LogEvent(uint32_t metric_id, uint32_t event_code, LogCobaltEventsCallback callback) override {
+    num_calls_++;
+    num_events_ += 1;
     callback(fuchsia::cobalt::Status::OK);
   }
   void NotImplemented_(const std::string& name) override {
@@ -731,12 +701,15 @@ class SystemMetricsDaemonInitializationTest : public gtest::TestLoopFixture {
  public:
   ~SystemMetricsDaemonInitializationTest() override = default;
 
-  seconds LogMemoryUsage() {
+  seconds LogFuchsiaLifetimeEvents() {
     // The SystemMetricsDaemon will make asynchronous calls to the MockLogger*s that are also
     // running in this class/tests thread. So the call to the SystemMetricsDaemon needs to be made
     // on a different thread, such that the MockLogger*s running on the main thread can respond to
     // those calls.
-    std::future<seconds> result = std::async([this]() { return daemon_->LogMemoryUsage(); });
+    std::future<seconds> result = std::async([this]() {
+      daemon_->boot_reported_ = false;
+      return daemon_->LogFuchsiaLifetimeEvents();
+    });
     while (result.wait_for(milliseconds(1)) != std::future_status::ready) {
       // Run the main thread's loop, allowing the MockLogger* objects to respond to requests.
       RunLoopUntilIdle();
@@ -755,7 +728,6 @@ class SystemMetricsDaemonInitializationTest : public gtest::TestLoopFixture {
     daemon_ = std::unique_ptr<SystemMetricsDaemon>(new SystemMetricsDaemon(
         dispatcher(), context_provider_.context(), nullptr,
         std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
-        std::unique_ptr<cobalt::MemoryStatsFetcher>(new FakeMemoryStatsFetcher()),
         std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
         std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()), nullptr));
   }
@@ -776,9 +748,9 @@ TEST_F(SystemMetricsDaemonInitializationTest, LogSomethingAnything) {
   EXPECT_EQ(0u, logger_factory_->received_project_id());
   EXPECT_EQ(nullptr, logger_factory_->logger());
 
-  // When LogMemoryUsage() is invoked the first time, it connects to the LoggerFactory and gets a
-  // logger, and returns a longer time to the next run.
-  EXPECT_EQ(seconds(300).count(), LogMemoryUsage().count());
+  // When LogFuchsiaLifetimeEvents() is invoked the first time, it connects to the LoggerFactory and
+  // gets a logger, and returns a longer time to the next run.
+  EXPECT_EQ(seconds(300).count(), LogFuchsiaLifetimeEvents().count());
 
   // Make sure the Logger has now been initialized, and for the correct project, but has not yet
   // logged anything.
@@ -786,7 +758,8 @@ TEST_F(SystemMetricsDaemonInitializationTest, LogSomethingAnything) {
   ASSERT_NE(nullptr, logger_factory_->logger());
   EXPECT_EQ(0, logger_factory_->logger()->num_calls());
 
-  // Second call to LogMemoryUsage() succeeds at logging the metric, and returns a shorter time.
-  EXPECT_EQ(seconds(60).count(), LogMemoryUsage().count());
-  EXPECT_EQ(2, logger_factory_->logger()->num_calls());
+  // Second call to LogFuchsiaLifetimeEvents() succeeds at logging the metric, and returns infinite
+  // time.
+  EXPECT_EQ(seconds::max(), LogFuchsiaLifetimeEvents());
+  EXPECT_EQ(1, logger_factory_->logger()->num_calls());
 }
