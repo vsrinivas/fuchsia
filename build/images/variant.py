@@ -73,6 +73,9 @@ def make_variant(name, info):
             # Fuchsia-built fuzzers don't have their own separate libprefix.
             # They just use the base variant.
             libprefix = name[:-len(FUZZER_VARIANT_SUFFIX)] + '/'
+        if 'lto' in name:
+            # LTO variants don't get their own libprefix like instrumented ones.
+            libprefix = ''
     return variant(tc, libprefix, runtime, aux, has_libcxx)
 
 

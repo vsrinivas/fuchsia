@@ -84,10 +84,16 @@ if (asan_default_options != "") {
 
 variant("ubsan") {
   common_flags = [ "-fsanitize=undefined" ]
-  if (toolchain_variant.name == "asan-ubsan") {
-    ldflags = [ "-Wl,-dynamic-linker,asan-ubsan/ld.so.1" ]
-    rustflags = [ "-Clink-arg=-dynamic-linker=asan-ubsan/ld.so.1" ]
+
+  libprefix = toolchain_variant.name
+  if (libprefix == "ubsan-fuzzer") {
+    # Fuchsia-built fuzzers don't have their own separate libprefix.
+    # They just use the base variant.
+    libprefix = "ubsan"
   }
+  dynamic_linker_flags = "-dynamic-linker,$libprefix/ld.so.1"
+  ldflags = [ "-Wl,$dynamic_linker_flags" ]
+  rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
 
   if (ubsan_default_options != "") {
     deps = [
