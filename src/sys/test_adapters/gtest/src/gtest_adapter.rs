@@ -153,6 +153,12 @@ impl GTestAdapter {
 
             let mut test_logger = fasync::Socket::from_socket(test_logger)?;
 
+            // collect stdout in background before waiting for process termination.
+            let (logger_handle, logger_fut) = logger.try_concat().remote_handle();
+            fasync::spawn_local(async move {
+                logger_handle.await;
+            });
+
             fx_log_info!("waiting for test to finish: {}", test);
 
             fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
@@ -160,7 +166,7 @@ impl GTestAdapter {
                 .context("Error waiting for test process to exit")?;
 
             fx_log_info!("collecting logs for {}", test);
-            let logs = logger.try_concat().await?;
+            let logs = logger_fut.await?;
             let output = from_utf8(&logs)?;
 
             fx_log_info!("open output file for {}", test);
