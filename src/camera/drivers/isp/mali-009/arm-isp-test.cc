@@ -297,6 +297,9 @@ void ArmIspDeviceTester::TestCallbacks(fuchsia_camera_test_TestReport* report) {
                      "Full res callbacks increased after stop was called");
   isp_->full_resolution_dma_->Disable();
   isp_->downscaled_dma_->Disable();
+
+  ISP_TEST_EXPECT_OK(camera::DestroyContiguousBufferCollection(buffer_collection),
+                     "Failed to destroy contiguous buffer collection");
 }
 
 // DDKMessage Helper Functions.
