@@ -164,13 +164,6 @@ class Mesh final : public Shape {
                    fuchsia::ui::gfx::MeshVertexFormat vertex_format, uint64_t vertex_offset,
                    uint32_t vertex_count, const std::array<float, 3>& bounding_box_min,
                    const std::array<float, 3>& bounding_box_max);
-
-  // Deprecated. Use the std::array version instead.
-  void BindBuffers(const Buffer& index_buffer, fuchsia::ui::gfx::MeshIndexFormat index_format,
-                   uint64_t index_offset, uint32_t index_count, const Buffer& vertex_buffer,
-                   fuchsia::ui::gfx::MeshVertexFormat vertex_format, uint64_t vertex_offset,
-                   uint32_t vertex_count, const float bounding_box_min[3],
-                   const float bounding_box_max[3]);
 };
 
 // Represents a material resource in a session.
@@ -199,25 +192,17 @@ class Node : public Resource {
   void SetTranslation(float tx, float ty, float tz) { SetTranslation({tx, ty, tz}); }
 
   void SetTranslation(const std::array<float, 3>& translation);
-  // Deprecated. Use the std::array version instead.
-  void SetTranslation(const float translation[3]);
 
   void SetTranslation(uint32_t variable_id);
 
   void SetScale(float sx, float sy, float sz) { SetScale({sx, sy, sz}); }
   void SetScale(const std::array<float, 3>& scale);
-  // Deprecated. Use the std::array version instead.
-  void SetScale(const float scale[3]);
   void SetScale(uint32_t variable_id);
   void SetRotation(float qi, float qj, float qk, float qw) { SetRotation({qi, qj, qk, qw}); }
   void SetRotation(const std::array<float, 4>& quaternion);
-  // Deprecated. Use the std::array version instead.
-  void SetRotation(const float quaternion[4]);
   void SetRotation(uint32_t variable_id);
   void SetAnchor(float ax, float ay, float az) { SetAnchor({ax, ay, az}); }
   void SetAnchor(const std::array<float, 3>& anchor);
-  // Deprecated. Use the std::array version instead.
-  void SetAnchor(const float anchor[3]);
   void SetAnchor(uint32_t variable_id);
 
   void SendSizeChangeHint(float width_change_factor, float height_change_factor);
@@ -349,9 +334,6 @@ class ViewHolder final : public Node {
                          const std::array<float, 3>& bounding_box_max,
                          const std::array<float, 3>& inset_from_min,
                          const std::array<float, 3>& inset_from_max);
-  // Deprecated. Use std::array version instead.
-  void SetViewProperties(const float bounding_box_min[3], const float bounding_box_max[3],
-                         const float inset_from_min[3], const float inset_from_max[3]);
   void SetViewProperties(const fuchsia::ui::gfx::ViewProperties& props);
 
   void SetDebugBoundsColor(uint8_t red, uint8_t green, uint8_t blue);
@@ -415,8 +397,6 @@ class Light : public Resource {
   // Sets the light's color.
   void SetColor(float red, float green, float blue) { SetColor({red, green, blue}); }
   void SetColor(const std::array<float, 3>& rgb);
-  // Deprecated. Use std::array version instead.
-  void SetColor(const float rgb[3]);
   void SetColor(uint32_t variable_id);
 
   // Detach light from the scene it is attached to, if any.
@@ -446,8 +426,6 @@ class DirectionalLight final : public Light {
   // Sets the light's direction.
   void SetDirection(float dx, float dy, float dz) { SetDirection({dx, dy, dz}); }
   void SetDirection(const std::array<float, 3>& direction);
-  // Deprecated. Use std::array version instead.
-  void SetDirection(const float direction[3]);
   void SetDirection(uint32_t variable_id);
 };
 
@@ -461,8 +439,6 @@ class PointLight final : public Light {
   // Sets the light's direction.
   void SetPosition(float dx, float dy, float dz) { SetPosition({dx, dy, dz}); }
   void SetPosition(const std::array<float, 3>& position);
-  // Deprecated. Use std::array version instead.
-  void SetPosition(const float position[3]);
   void SetPosition(uint32_t variable_id);
 
   // Set the light's falloff.
@@ -514,8 +490,6 @@ class CameraBase : public Resource {
   // Sets the camera's view parameters.
   void SetTransform(const std::array<float, 3>& eye_position,
                     const std::array<float, 3>& eye_look_at, const std::array<float, 3>& eye_up);
-  // Deprecated. Use std::array instead.
-  void SetTransform(const float eye_position[3], const float eye_look_at[3], const float eye_up[3]);
   // Sets the camera's 2-D clip-space transform. Translation is in Vulkan NDC ([-1, 1]^2), after
   // scaling, so for example, under a scale of 3, (-3, -3) would translate to center the lower right
   // corner, whereas (-2, -2) would align the lower right corner with that of the clipping volume.
@@ -552,9 +526,6 @@ class StereoCamera final : public CameraBase {
   // Sets the camera's projection parameters.
   void SetStereoProjection(const std::array<float, 4 * 4>& left_projection,
                            const std::array<float, 4 * 4>& right_projection);
-
-  // Deprecated. Use std::array version instead.
-  void SetStereoProjection(const float left_projection[4 * 4], const float right_projection[4 * 4]);
 };
 
 // Represents a renderer resource in a session.
@@ -595,13 +566,9 @@ class Layer final : public Resource {
   // Sets the layer's XY translation and Z-order.
   void SetTranslation(float tx, float ty, float tz) { SetTranslation({tx, ty, tz}); }
   void SetTranslation(const std::array<float, 3>& translation);
-  // Deprecated. Use std::array version instead.
-  void SetTranslation(const float translation[3]);
 
   void SetSize(float width, float height) { SetSize({width, height}); }
   void SetSize(const std::array<float, 2>& size);
-  // Deprecated. Use std::array version instead.
-  void SetSize(const float size[2]);
 
   void SetRenderer(const Renderer& renderer) {
     ZX_DEBUG_ASSERT(session() == renderer.session());

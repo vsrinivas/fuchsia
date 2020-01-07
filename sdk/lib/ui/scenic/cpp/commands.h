@@ -125,12 +125,6 @@ fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(uint32_t view_holder_id,
                                                   const std::array<float, 3>& bounding_box_max,
                                                   const std::array<float, 3>& inset_from_min,
                                                   const std::array<float, 3>& inset_from_max);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(uint32_t view_holder_id,
-                                                  const float bounding_box_min[3],
-                                                  const float bounding_box_max[3],
-                                                  const float inset_from_min[3],
-                                                  const float inset_from_max[3]);
 fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(uint32_t view_holder_id,
                                                   const fuchsia::ui::gfx::ViewProperties& props);
 
@@ -141,21 +135,13 @@ fuchsia::ui::gfx::Command NewDetachCmd(uint32_t node_id);
 fuchsia::ui::gfx::Command NewDetachChildrenCmd(uint32_t node_id);
 fuchsia::ui::gfx::Command NewSetTranslationCmd(uint32_t node_id,
                                                const std::array<float, 3>& translation);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewSetTranslationCmd(uint32_t node_id, const float translation[3]);
 fuchsia::ui::gfx::Command NewSetTranslationCmd(uint32_t node_id, uint32_t variable_id);
 fuchsia::ui::gfx::Command NewSetScaleCmd(uint32_t node_id, const std::array<float, 3>& scale);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewSetScaleCmd(uint32_t node_id, const float scale[3]);
 fuchsia::ui::gfx::Command NewSetScaleCmd(uint32_t node_id, uint32_t variable_id);
 fuchsia::ui::gfx::Command NewSetRotationCmd(uint32_t node_id,
                                             const std::array<float, 4>& quaternion);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewSetRotationCmd(uint32_t node_id, const float quaternion[4]);
 fuchsia::ui::gfx::Command NewSetRotationCmd(uint32_t node_id, uint32_t variable_id);
 fuchsia::ui::gfx::Command NewSetAnchorCmd(uint32_t node_id, const std::array<float, 3>& anchor);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewSetAnchorCmd(uint32_t node_id, const float anchor[3]);
 fuchsia::ui::gfx::Command NewSetAnchorCmd(uint32_t node_id, uint32_t variable_id);
 
 fuchsia::ui::gfx::Command NewSetOpacityCmd(uint32_t node_id, float opacity);
@@ -189,10 +175,6 @@ fuchsia::ui::gfx::Command NewSetCameraTransformCmd(uint32_t camera_id,
                                                    const std::array<float, 3>& eye_position,
                                                    const std::array<float, 3>& eye_look_at,
                                                    const std::array<float, 3>& eye_up);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewSetCameraTransformCmd(uint32_t camera_id, const float eye_position[3],
-                                                   const float eye_look_at[3],
-                                                   const float eye_up[3]);
 fuchsia::ui::gfx::Command NewSetCameraProjectionCmd(uint32_t camera_id, const float fovy);
 fuchsia::ui::gfx::Command NewSetCameraClipSpaceTransformCmd(uint32_t camera_id, float x, float y,
                                                             float scale);
@@ -209,29 +191,17 @@ fuchsia::ui::gfx::Command NewSetCameraPoseBufferCmd(uint32_t camera_id, uint32_t
 fuchsia::ui::gfx::Command NewSetStereoCameraProjectionCmd(
     uint32_t camera_id, const std::array<float, 4 * 4>& left_projection,
     const std::array<float, 4 * 4>& right_projection);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewSetStereoCameraProjectionCmd(uint32_t camera_id,
-                                                          const float left_projection[4 * 4],
-                                                          const float right_projection[4 * 4]);
 
 fuchsia::ui::gfx::Command NewSetLightColorCmd(uint32_t light_id, const std::array<float, 3>& rgb);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewSetLightColorCmd(uint32_t light_id, const float rgb[3]);
 fuchsia::ui::gfx::Command NewSetLightColorCmd(uint32_t light_id, uint32_t variable_id);
 fuchsia::ui::gfx::Command NewSetLightDirectionCmd(uint32_t light_id,
                                                   const std::array<float, 3>& direction);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewSetLightDirectionCmd(uint32_t light_id, const float direction[3]);
 fuchsia::ui::gfx::Command NewSetLightDirectionCmd(uint32_t light_id, uint32_t variable_id);
 fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id,
                                                       const std::array<float, 3>& position);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id, const float position[3]);
 fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id, uint32_t variable_id);
 fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id,
                                                       const std::array<float, 3>& position);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id, const float position[3]);
 fuchsia::ui::gfx::Command NewSetPointLightFalloffCmd(uint32_t light_id, float falloff);
 fuchsia::ui::gfx::Command NewAddLightCmd(uint32_t scene_id, uint32_t light_id);
 fuchsia::ui::gfx::Command NewSceneAddAmbientLightCmd(uint32_t scene_id, uint32_t light_id);
@@ -255,12 +225,6 @@ fuchsia::ui::gfx::Command NewBindMeshBuffersCmd(
     uint64_t index_offset, uint32_t index_count, uint32_t vertex_buffer_id,
     fuchsia::ui::gfx::MeshVertexFormat vertex_format, uint64_t vertex_offset, uint32_t vertex_count,
     const std::array<float, 3>& bounding_box_min, const std::array<float, 3>& bounding_box_max);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewBindMeshBuffersCmd(
-    uint32_t mesh_id, uint32_t index_buffer_id, fuchsia::ui::gfx::MeshIndexFormat index_format,
-    uint64_t index_offset, uint32_t index_count, uint32_t vertex_buffer_id,
-    fuchsia::ui::gfx::MeshVertexFormat vertex_format, uint64_t vertex_offset, uint32_t vertex_count,
-    const float bounding_box_min[3], const float bounding_box_max[3]);
 
 // Layer / LayerStack / Compositor operations.
 fuchsia::ui::gfx::Command NewAddLayerCmd(uint32_t layer_stack_id, uint32_t layer_id);
@@ -271,8 +235,6 @@ fuchsia::ui::gfx::Command NewSetRendererCmd(uint32_t layer_id, uint32_t renderer
 fuchsia::ui::gfx::Command NewSetRendererParamCmd(uint32_t renderer_id,
                                                  fuchsia::ui::gfx::RendererParam param);
 fuchsia::ui::gfx::Command NewSetSizeCmd(uint32_t node_id, const std::array<float, 2>& size);
-// Deprecated. Use std::array version instead.
-fuchsia::ui::gfx::Command NewSetSizeCmd(uint32_t node_id, const float size[2]);
 
 // Event operations.
 fuchsia::ui::gfx::Command NewSetEventMaskCmd(uint32_t resource_id, uint32_t event_mask);
@@ -287,33 +249,23 @@ fuchsia::ui::gfx::Command NewSetDisableClippingCmd(uint32_t renderer_id, bool di
 // All functions with C-style array arguments are deprecated. Use the std::array version instead.
 fuchsia::ui::gfx::FloatValue NewFloatValue(float value);
 fuchsia::ui::gfx::Vector2Value NewVector2Value(const std::array<float, 2>& value);
-fuchsia::ui::gfx::Vector2Value NewVector2Value(const float value[2]);
 fuchsia::ui::gfx::Vector2Value NewVector2Value(uint32_t variable_id);
 fuchsia::ui::gfx::Vector3Value NewVector3Value(const std::array<float, 3>& value);
-fuchsia::ui::gfx::Vector3Value NewVector3Value(const float value[3]);
 fuchsia::ui::gfx::Vector3Value NewVector3Value(uint32_t variable_id);
 fuchsia::ui::gfx::Vector4Value NewVector4Value(const std::array<float, 4>& value);
-fuchsia::ui::gfx::Vector4Value NewVector4Value(const float value[4]);
 fuchsia::ui::gfx::Vector4Value NewVector4Value(uint32_t variable_id);
 fuchsia::ui::gfx::QuaternionValue NewQuaternionValue(const std::array<float, 4>& value);
-fuchsia::ui::gfx::QuaternionValue NewQuaternionValue(const float value[4]);
 fuchsia::ui::gfx::QuaternionValue NewQuaternionValue(uint32_t variable_id);
 fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(const std::array<float, 4 * 4>& matrix);
-fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(const float matrix[4 * 4]);
 fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(uint32_t variable_id);
 fuchsia::ui::gfx::ColorRgbValue NewColorRgbValue(float red, float green, float blue);
 fuchsia::ui::gfx::ColorRgbValue NewColorRgbValue(uint32_t variable_id);
 fuchsia::ui::gfx::ColorRgbaValue NewColorRgbaValue(const std::array<uint8_t, 4>& value);
-fuchsia::ui::gfx::ColorRgbaValue NewColorRgbaValue(const uint8_t value[4]);
 fuchsia::ui::gfx::ColorRgbaValue NewColorRgbaValue(uint32_t variable_id);
 fuchsia::ui::gfx::QuaternionValue NewQuaternionValue(const std::array<float, 4>& value);
-fuchsia::ui::gfx::QuaternionValue NewQuaternionValue(const float value[4]);
 fuchsia::ui::gfx::vec2 NewVector2(const std::array<float, 2>& value);
-fuchsia::ui::gfx::vec2 NewVector2(const float value[2]);
 fuchsia::ui::gfx::vec3 NewVector3(const std::array<float, 3>& value);
-fuchsia::ui::gfx::vec3 NewVector3(const float value[3]);
 fuchsia::ui::gfx::vec4 NewVector4(const std::array<float, 4>& value);
-fuchsia::ui::gfx::vec4 NewVector4(const float value[4]);
 
 // Utilities.
 

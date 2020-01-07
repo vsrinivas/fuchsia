@@ -588,16 +588,6 @@ fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(uint32_t view_holder_id,
 }
 
 fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(uint32_t view_holder_id,
-                                                  const float bounding_box_min[3],
-                                                  const float bounding_box_max[3],
-                                                  const float inset_from_min[3],
-                                                  const float inset_from_max[3]) {
-  return NewSetViewPropertiesCmd(view_holder_id, ToStdArray<3>(bounding_box_min),
-                                 ToStdArray<3>(bounding_box_max), ToStdArray<3>(inset_from_min),
-                                 ToStdArray<3>(inset_from_max));
-}
-
-fuchsia::ui::gfx::Command NewSetViewPropertiesCmd(uint32_t view_holder_id,
                                                   const fuchsia::ui::gfx::ViewProperties& props) {
   fuchsia::ui::gfx::SetViewPropertiesCmd set_view_properties;
   set_view_properties.view_holder_id = view_holder_id;
@@ -652,10 +642,6 @@ fuchsia::ui::gfx::Command NewSetTranslationCmd(uint32_t node_id,
   return command;
 }
 
-fuchsia::ui::gfx::Command NewSetTranslationCmd(uint32_t node_id, const float translation[3]) {
-  return NewSetTranslationCmd(node_id, ToStdArray<3>(translation));
-}
-
 fuchsia::ui::gfx::Command NewSetTranslationCmd(uint32_t node_id, uint32_t variable_id) {
   fuchsia::ui::gfx::SetTranslationCmd set_translation;
   set_translation.id = node_id;
@@ -676,10 +662,6 @@ fuchsia::ui::gfx::Command NewSetScaleCmd(uint32_t node_id, const std::array<floa
   command.set_set_scale(set_scale);
 
   return command;
-}
-
-fuchsia::ui::gfx::Command NewSetScaleCmd(uint32_t node_id, const float scale[3]) {
-  return NewSetScaleCmd(node_id, ToStdArray<3>(scale));
 }
 
 fuchsia::ui::gfx::Command NewSetScaleCmd(uint32_t node_id, uint32_t variable_id) {
@@ -705,10 +687,6 @@ fuchsia::ui::gfx::Command NewSetRotationCmd(uint32_t node_id,
   return command;
 }
 
-fuchsia::ui::gfx::Command NewSetRotationCmd(uint32_t node_id, const float quaternion[4]) {
-  return NewSetRotationCmd(node_id, ToStdArray<4>(quaternion));
-}
-
 fuchsia::ui::gfx::Command NewSetRotationCmd(uint32_t node_id, uint32_t variable_id) {
   fuchsia::ui::gfx::SetRotationCmd set_rotation;
   set_rotation.id = node_id;
@@ -729,10 +707,6 @@ fuchsia::ui::gfx::Command NewSetAnchorCmd(uint32_t node_id, const std::array<flo
   command.set_set_anchor(set_anchor);
 
   return command;
-}
-
-fuchsia::ui::gfx::Command NewSetAnchorCmd(uint32_t node_id, const float anchor[3]) {
-  return NewSetAnchorCmd(node_id, ToStdArray<3>(anchor));
 }
 
 fuchsia::ui::gfx::Command NewSetAnchorCmd(uint32_t node_id, uint32_t variable_id) {
@@ -969,16 +943,6 @@ fuchsia::ui::gfx::Command NewBindMeshBuffersCmd(
   return command;
 }
 
-fuchsia::ui::gfx::Command NewBindMeshBuffersCmd(
-    uint32_t mesh_id, uint32_t index_buffer_id, fuchsia::ui::gfx::MeshIndexFormat index_format,
-    uint64_t index_offset, uint32_t index_count, uint32_t vertex_buffer_id,
-    fuchsia::ui::gfx::MeshVertexFormat vertex_format, uint64_t vertex_offset, uint32_t vertex_count,
-    const float bounding_box_min[3], const float bounding_box_max[3]) {
-  return NewBindMeshBuffersCmd(mesh_id, index_buffer_id, index_format, index_offset, index_count,
-                               vertex_buffer_id, vertex_format, vertex_offset, vertex_count,
-                               ToStdArray<3>(bounding_box_min), ToStdArray<3>(bounding_box_max));
-}
-
 fuchsia::ui::gfx::Command NewAddLayerCmd(uint32_t layer_stack_id, uint32_t layer_id) {
   fuchsia::ui::gfx::AddLayerCmd add_layer;
   add_layer.layer_stack_id = layer_stack_id;
@@ -1053,10 +1017,6 @@ fuchsia::ui::gfx::Command NewSetSizeCmd(uint32_t node_id, const std::array<float
   return command;
 }
 
-fuchsia::ui::gfx::Command NewSetSizeCmd(uint32_t node_id, const float size[2]) {
-  return NewSetSizeCmd(node_id, ToStdArray<2>(size));
-}
-
 fuchsia::ui::gfx::Command NewSetCameraTransformCmd(uint32_t camera_id,
                                                    const std::array<float, 3>& eye_position,
                                                    const std::array<float, 3>& eye_look_at,
@@ -1071,13 +1031,6 @@ fuchsia::ui::gfx::Command NewSetCameraTransformCmd(uint32_t camera_id,
   command.set_set_camera_transform(set_command);
 
   return command;
-}
-
-fuchsia::ui::gfx::Command NewSetCameraTransformCmd(uint32_t camera_id, const float eye_position[3],
-                                                   const float eye_look_at[3],
-                                                   const float eye_up[3]) {
-  return NewSetCameraTransformCmd(camera_id, ToStdArray<3>(eye_position),
-                                  ToStdArray<3>(eye_look_at), ToStdArray<3>(eye_up));
 }
 
 fuchsia::ui::gfx::Command NewSetCameraProjectionCmd(uint32_t camera_id, const float fovy) {
@@ -1103,13 +1056,6 @@ fuchsia::ui::gfx::Command NewSetStereoCameraProjectionCmd(
   command.set_set_stereo_camera_projection(set_command);
 
   return command;
-}
-
-fuchsia::ui::gfx::Command NewSetStereoCameraProjectionCmd(uint32_t camera_id,
-                                                          const float left_projection[4 * 4],
-                                                          const float right_projection[4 * 4]) {
-  return NewSetStereoCameraProjectionCmd(camera_id, ToStdArray<4 * 4>(left_projection),
-                                         ToStdArray<4 * 4>(right_projection));
 }
 
 fuchsia::ui::gfx::Command NewSetCameraClipSpaceTransformCmd(uint32_t camera_id, float x, float y,
@@ -1159,10 +1105,6 @@ fuchsia::ui::gfx::Command NewSetLightColorCmd(uint32_t light_id, const std::arra
   return command;
 }
 
-fuchsia::ui::gfx::Command NewSetLightColorCmd(uint32_t light_id, const float rgb[3]) {
-  return NewSetLightColorCmd(light_id, ToStdArray<3>(rgb));
-}
-
 fuchsia::ui::gfx::Command NewSetLightColorCmd(uint32_t light_id, uint32_t variable_id) {
   fuchsia::ui::gfx::SetLightColorCmd set_command;
   set_command.light_id = light_id;
@@ -1186,10 +1128,6 @@ fuchsia::ui::gfx::Command NewSetLightDirectionCmd(uint32_t light_id,
   return command;
 }
 
-fuchsia::ui::gfx::Command NewSetLightDirectionCmd(uint32_t light_id, const float dir[3]) {
-  return NewSetLightDirectionCmd(light_id, ToStdArray<3>(dir));
-}
-
 fuchsia::ui::gfx::Command NewSetLightDirectionCmd(uint32_t light_id, uint32_t variable_id) {
   fuchsia::ui::gfx::SetLightDirectionCmd set_command;
   set_command.light_id = light_id;
@@ -1211,10 +1149,6 @@ fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id,
   command.set_set_point_light_position(set_command);
 
   return command;
-}
-
-fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id, const float pos[3]) {
-  return NewSetPointLightPositionCmd(light_id, ToStdArray<3>(pos));
 }
 
 fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id, uint32_t variable_id) {
@@ -1350,21 +1284,7 @@ fuchsia::ui::gfx::vec2 NewVector2(const std::array<float, 2>& value) {
   return val;
 }
 
-fuchsia::ui::gfx::vec2 NewVector2(const float value[2]) {
-  fuchsia::ui::gfx::vec2 val;
-  val.x = value[0];
-  val.y = value[1];
-  return val;
-}
-
 fuchsia::ui::gfx::Vector2Value NewVector2Value(const std::array<float, 2> value) {
-  fuchsia::ui::gfx::Vector2Value val;
-  val.variable_id = 0;
-  val.value = NewVector2(value);
-  return val;
-}
-
-fuchsia::ui::gfx::Vector2Value NewVector2Value(const float value[2]) {
   fuchsia::ui::gfx::Vector2Value val;
   val.variable_id = 0;
   val.value = NewVector2(value);
@@ -1385,22 +1305,7 @@ fuchsia::ui::gfx::vec3 NewVector3(const std::array<float, 3>& value) {
   return val;
 }
 
-fuchsia::ui::gfx::vec3 NewVector3(const float value[3]) {
-  fuchsia::ui::gfx::vec3 val;
-  val.x = value[0];
-  val.y = value[1];
-  val.z = value[2];
-  return val;
-}
-
 fuchsia::ui::gfx::Vector3Value NewVector3Value(const std::array<float, 3>& value) {
-  fuchsia::ui::gfx::Vector3Value val;
-  val.variable_id = 0;
-  val.value = NewVector3(value);
-  return val;
-}
-
-fuchsia::ui::gfx::Vector3Value NewVector3Value(const float value[3]) {
   fuchsia::ui::gfx::Vector3Value val;
   val.variable_id = 0;
   val.value = NewVector3(value);
@@ -1422,23 +1327,7 @@ fuchsia::ui::gfx::vec4 NewVector4(const std::array<float, 4>& value) {
   return val;
 }
 
-fuchsia::ui::gfx::vec4 NewVector4(const float value[4]) {
-  fuchsia::ui::gfx::vec4 val;
-  val.x = value[0];
-  val.y = value[1];
-  val.z = value[2];
-  val.w = value[3];
-  return val;
-}
-
 fuchsia::ui::gfx::Vector4Value NewVector4Value(const std::array<float, 4>& value) {
-  fuchsia::ui::gfx::Vector4Value val;
-  val.variable_id = 0;
-  val.value = NewVector4(value);
-  return val;
-}
-
-fuchsia::ui::gfx::Vector4Value NewVector4Value(const float value[4]) {
   fuchsia::ui::gfx::Vector4Value val;
   val.variable_id = 0;
   val.value = NewVector4(value);
@@ -1460,23 +1349,7 @@ fuchsia::ui::gfx::Quaternion NewQuaternion(const std::array<float, 4>& value) {
   return val;
 }
 
-fuchsia::ui::gfx::Quaternion NewQuaternion(const float value[4]) {
-  fuchsia::ui::gfx::Quaternion val;
-  val.x = value[0];
-  val.y = value[1];
-  val.z = value[2];
-  val.w = value[3];
-  return val;
-}
-
 fuchsia::ui::gfx::QuaternionValue NewQuaternionValue(const std::array<float, 4>& value) {
-  fuchsia::ui::gfx::QuaternionValue val;
-  val.variable_id = 0;
-  val.value = NewQuaternion(value);
-  return val;
-}
-
-fuchsia::ui::gfx::QuaternionValue NewQuaternionValue(const float value[4]) {
   fuchsia::ui::gfx::QuaternionValue val;
   val.variable_id = 0;
   val.value = NewQuaternion(value);
@@ -1497,22 +1370,7 @@ fuchsia::ui::gfx::mat4 NewMatrix4(const std::array<float, 4 * 4>& matrix) {
   return val;
 }
 
-fuchsia::ui::gfx::mat4 NewMatrix4(const float matrix[4 * 4]) {
-  fuchsia::ui::gfx::mat4 val;
-  for (size_t index = 0; index < 4 * 4; index++) {
-    val.matrix[index] = matrix[index];
-  }
-  return val;
-}
-
 fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(const std::array<float, 4 * 4>& matrix) {
-  fuchsia::ui::gfx::Matrix4Value val;
-  val.variable_id = 0;
-  val.value = NewMatrix4(matrix);
-  return val;
-}
-
-fuchsia::ui::gfx::Matrix4Value NewMatrix4Value(const float matrix[4 * 4]) {
   fuchsia::ui::gfx::Matrix4Value val;
   val.variable_id = 0;
   val.value = NewMatrix4(matrix);
@@ -1544,18 +1402,6 @@ fuchsia::ui::gfx::ColorRgbValue NewColorRgbValue(uint32_t variable_id) {
 }
 
 fuchsia::ui::gfx::ColorRgbaValue NewColorRgbaValue(const std::array<uint8_t, 4>& value) {
-  fuchsia::ui::gfx::ColorRgbaValue val;
-  val.variable_id = 0;
-  auto& color = val.value;
-  color.red = value[0];
-  color.green = value[1];
-  color.blue = value[2];
-  color.alpha = value[3];
-
-  return val;
-}
-
-fuchsia::ui::gfx::ColorRgbaValue NewColorRgbaValue(const uint8_t value[4]) {
   fuchsia::ui::gfx::ColorRgbaValue val;
   val.variable_id = 0;
   auto& color = val.value;
