@@ -28,6 +28,7 @@
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
+#include <soc/aml-common/aml-guid.h>
 #include <zxtest/zxtest.h>
 
 #include "device-partitioner.h"
@@ -41,105 +42,118 @@ namespace partition = ::llcpp::fuchsia::hardware::block::partition;
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
 
-constexpr fuchsia_hardware_nand_RamNandInfo kNandInfo = {
-    .vmo = ZX_HANDLE_INVALID,
-    .nand_info =
+constexpr fuchsia_hardware_nand_RamNandInfo
+    kNandInfo =
         {
-            .page_size = kPageSize,
-            .pages_per_block = kPagesPerBlock,
-            .num_blocks = kNumBlocks,
-            .ecc_bits = 8,
-            .oob_size = kOobSize,
-            .nand_class = fuchsia_hardware_nand_Class_PARTMAP,
-            .partition_guid = {},
-        },
-    .partition_map =
-        {
-            .device_guid = {},
-            .partition_count = 7,
-            .partitions =
+            .vmo = ZX_HANDLE_INVALID,
+            .nand_info =
                 {
-                    {
-                        .type_guid = {},
-                        .unique_guid = {},
-                        .first_block = 0,
-                        .last_block = 3,
-                        .copy_count = 0,
-                        .copy_byte_offset = 0,
-                        .name = {},
-                        .hidden = true,
-                        .bbt = true,
-                    },
-                    {
-                        .type_guid = GUID_BOOTLOADER_VALUE,
-                        .unique_guid = {},
-                        .first_block = 4,
-                        .last_block = 7,
-                        .copy_count = 0,
-                        .copy_byte_offset = 0,
-                        .name = {'b', 'o', 'o', 't', 'l', 'o', 'a', 'd', 'e', 'r'},
-                        .hidden = false,
-                        .bbt = false,
-                    },
-                    {
-                        .type_guid = GUID_ZIRCON_A_VALUE,
-                        .unique_guid = {},
-                        .first_block = 8,
-                        .last_block = 9,
-                        .copy_count = 0,
-                        .copy_byte_offset = 0,
-                        .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'a'},
-                        .hidden = false,
-                        .bbt = false,
-                    },
-                    {
-                        .type_guid = GUID_ZIRCON_B_VALUE,
-                        .unique_guid = {},
-                        .first_block = 10,
-                        .last_block = 11,
-                        .copy_count = 0,
-                        .copy_byte_offset = 0,
-                        .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'b'},
-                        .hidden = false,
-                        .bbt = false,
-                    },
-                    {
-                        .type_guid = GUID_ZIRCON_R_VALUE,
-                        .unique_guid = {},
-                        .first_block = 12,
-                        .last_block = 13,
-                        .copy_count = 0,
-                        .copy_byte_offset = 0,
-                        .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'r'},
-                        .hidden = false,
-                        .bbt = false,
-                    },
-                    {
-                        .type_guid = GUID_SYS_CONFIG_VALUE,
-                        .unique_guid = {},
-                        .first_block = 14,
-                        .last_block = 17,
-                        .copy_count = 0,
-                        .copy_byte_offset = 0,
-                        .name = {'s', 'y', 's', 'c', 'o', 'n', 'f', 'i', 'g'},
-                        .hidden = false,
-                        .bbt = false,
-                    },
-                    {
-                        .type_guid = GUID_FVM_VALUE,
-                        .unique_guid = {},
-                        .first_block = 18,
-                        .last_block = 39,
-                        .copy_count = 0,
-                        .copy_byte_offset = 0,
-                        .name = {'f', 'v', 'm'},
-                        .hidden = false,
-                        .bbt = false,
-                    },
+                    .page_size = kPageSize,
+                    .pages_per_block = kPagesPerBlock,
+                    .num_blocks = kNumBlocks,
+                    .ecc_bits = 8,
+                    .oob_size = kOobSize,
+                    .nand_class = fuchsia_hardware_nand_Class_PARTMAP,
+                    .partition_guid = {},
                 },
-        },
-    .export_nand_config = true,
-    .export_partition_map = true,
+            .partition_map =
+                {
+                    .device_guid = {},
+                    .partition_count = 8,
+                    .partitions =
+                        {
+                            {
+                                .type_guid = {},
+                                .unique_guid = {},
+                                .first_block = 0,
+                                .last_block = 3,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {},
+                                .hidden = true,
+                                .bbt = true,
+                            },
+                            {
+                                .type_guid = GUID_BOOTLOADER_VALUE,
+                                .unique_guid = {},
+                                .first_block = 4,
+                                .last_block = 7,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'b', 'o', 'o', 't', 'l', 'o', 'a', 'd', 'e', 'r'},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                            {
+                                .type_guid = GUID_ZIRCON_A_VALUE,
+                                .unique_guid = {},
+                                .first_block = 8,
+                                .last_block = 9,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'a'},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                            {
+                                .type_guid = GUID_ZIRCON_B_VALUE,
+                                .unique_guid = {},
+                                .first_block = 10,
+                                .last_block = 11,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'b'},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                            {
+                                .type_guid = GUID_ZIRCON_R_VALUE,
+                                .unique_guid = {},
+                                .first_block = 12,
+                                .last_block = 13,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'r'},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                            {
+                                .type_guid = GUID_SYS_CONFIG_VALUE,
+                                .unique_guid = {},
+                                .first_block = 14,
+                                .last_block = 17,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'s', 'y', 's', 'c', 'o', 'n', 'f', 'i', 'g'},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                            {
+                                .type_guid = GUID_FVM_VALUE,
+                                .unique_guid = {},
+                                .first_block = 18,
+                                .last_block = 38,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'f', 'v', 'm'},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                            {
+                                .type_guid = GUID_BL2_VALUE,
+                                .unique_guid = {},
+                                .first_block = 39,
+                                .last_block = 39,
+                                .copy_count = 0,
+                                .copy_byte_offset = 0,
+                                .name = {'b', 'l', '2',},
+                                .hidden = false,
+                                .bbt = false,
+                            },
+                        },
+                },
+            .export_nand_config = true,
+            .export_partition_map = true,
 };
 
 class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
@@ -756,7 +770,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigA) {
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   auto result = data_sink_->ReadAsset(::llcpp::fuchsia::paver::Configuration::A,
-                                   ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
+                                      ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 32);
@@ -767,7 +781,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigB) {
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   auto result = data_sink_->ReadAsset(::llcpp::fuchsia::paver::Configuration::B,
-                                   ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
+                                      ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 32);
@@ -778,7 +792,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigRecovery) {
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   auto result = data_sink_->ReadAsset(::llcpp::fuchsia::paver::Configuration::RECOVERY,
-                                   ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
+                                      ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 32);
@@ -800,10 +814,14 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloader) {
 // we don't actually pave the image, so the extra page stays as 0xFF.
 TEST_F(PaverServiceSkipBlockTest, WriteBootloaderNotAligned) {
   ::llcpp::fuchsia::mem::Buffer payload;
-  CreatePayload(4 * kPagesPerBlock, &payload);
+  CreatePayload(5 * kPagesPerBlock, &payload);
+  constexpr uint32_t kTplMagic = 0x4C4D4140;
+  ASSERT_OK(payload.vmo.write(&kTplMagic, 16, sizeof(kTplMagic)));
+
   payload.size = 4 * kPagesPerBlock - 1;
   WriteData(4 * kPagesPerBlock, 4 * kPagesPerBlock - 1, 0x4a);
   WriteData(8 * kPagesPerBlock - 1, 1, 0xff);
+  WriteData(39 * kPagesPerBlock, 1, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   auto result = data_sink_->WriteBootloader(std::move(payload));
@@ -884,9 +902,7 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
 #if defined(__x86_64__)
 class PaverServiceBlockTest : public PaverServiceTest {
  public:
-  PaverServiceBlockTest() {
-    ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgr());
-  }
+  PaverServiceBlockTest() { ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgr()); }
 
  protected:
   void SpawnIsolatedDevmgr() {
@@ -920,8 +936,8 @@ constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 TEST_F(PaverServiceBlockTest, InitializePartitionTables) {
   std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
-  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
-                                               &gpt_dev));
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
   zx::channel gpt_chan;
   ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
@@ -936,10 +952,10 @@ TEST_F(PaverServiceBlockTest, InitializePartitionTables) {
 TEST_F(PaverServiceBlockTest, InitializePartitionTablesMultipleDevices) {
   std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
   constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
-  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
-                                               &gpt_dev1));
-  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
-                                               &gpt_dev2));
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev1));
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev2));
 
   zx::channel gpt_chan;
   ASSERT_OK(fdio_fd_clone(gpt_dev1->fd(), gpt_chan.reset_and_get_address()));
@@ -954,8 +970,8 @@ TEST_F(PaverServiceBlockTest, InitializePartitionTablesMultipleDevices) {
 TEST_F(PaverServiceBlockTest, WipePartitionTables) {
   std::unique_ptr<BlockDevice> gpt_dev;
   constexpr uint64_t block_count = (1LU << 34) / kBlockSize;
-  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
-                                               &gpt_dev));
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
   zx::channel gpt_chan;
   ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));

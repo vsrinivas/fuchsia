@@ -14,6 +14,7 @@ zx_library("paver") {
     "stream-reader.cc",
   ]
   deps = [
+    "$zx/system/dev/lib/amlogic:amlogic.headers",
     "$zx/system/fidl/fuchsia-boot:llcpp",
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block:llcpp",
@@ -23,7 +24,6 @@ zx_library("paver") {
     "$zx/system/fidl/fuchsia-hardware-zxcrypt:llcpp",
     "$zx/system/fidl/fuchsia-paver:llcpp",
     "$zx/system/fidl/fuchsia-sysinfo:llcpp",
-    "$zx/system/dev/lib/amlogic",
     "$zx/system/ulib/block-client",
     "$zx/system/ulib/chromeos-disk-setup",
     "$zx/system/ulib/ddk",
@@ -65,6 +65,7 @@ zx_test("paver-test") {
   include_dirs = [ "." ]
   deps = [
     ":paver",
+    "$zx/system/dev/lib/amlogic:amlogic.headers",
     "$zx/system/fidl/fuchsia-boot:llcpp",
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block:llcpp",

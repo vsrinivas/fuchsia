@@ -6,10 +6,14 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <zircon/limits.h>
 #include <zircon/status.h>
 
 #include <cstdint>
 #include <numeric>
+
+#include <fbl/algorithm.h>
 
 #include "pave-logging.h"
 #include "zircon/errors.h"
@@ -221,8 +225,8 @@ fbl::unique_fd BlockPartitionClient::block_fd() {
 zx_status_t SkipBlockPartitionClient::ReadPartitionInfo() {
   if (!partition_info_) {
     auto result = partition_.GetPartitionInfo();
-      zx_status_t status = result.ok() ? result->status : result.status();
-      if (status != ZX_OK) {
+    zx_status_t status = result.ok() ? result->status : result.status();
+    if (status != ZX_OK) {
       ERROR("Failed to get partition info with status: %d\n", status);
       return status;
     }
@@ -251,7 +255,7 @@ zx_status_t SkipBlockPartitionClient::GetPartitionSize(size_t* out_size) {
 
 zx_status_t SkipBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
   size_t block_size;
-  zx_status_t status = GetBlockSize(&block_size);
+  zx_status_t status = SkipBlockPartitionClient::GetBlockSize(&block_size);
   if (status != ZX_OK) {
     return status;
   }
@@ -271,7 +275,7 @@ zx_status_t SkipBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
 
   auto result = partition_.Read(std::move(operation));
   status = result.ok() ? result->status : result.status();
-  if (!result.ok()) {
+  if (status != ZX_OK) {
     ERROR("Error reading partition data: %s\n", zx_status_get_string(status));
     return status;
   }
@@ -280,7 +284,7 @@ zx_status_t SkipBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
 
 zx_status_t SkipBlockPartitionClient::Write(const zx::vmo& vmo, size_t size) {
   size_t block_size;
-  zx_status_t status = GetBlockSize(&block_size);
+  zx_status_t status = SkipBlockPartitionClient::GetBlockSize(&block_size);
   if (status != ZX_OK) {
     return status;
   }
@@ -307,21 +311,47 @@ zx_status_t SkipBlockPartitionClient::Write(const zx::vmo& vmo, size_t size) {
   return ZX_OK;
 }
 
+zx_status_t SkipBlockPartitionClient::WriteBytes(const zx::vmo& vmo, zx_off_t offset, size_t size) {
+  zx::vmo dup;
+  if (auto status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
+    ERROR("Couldn't duplicate buffer vmo\n");
+    return status;
+  }
+
+  skipblock::WriteBytesOperation operation = {
+      .vmo = std::move(dup),
+      .vmo_offset = 0,
+      .offset = offset,
+      .size = size,
+  };
+
+  auto result = partition_.WriteBytes(std::move(operation));
+  auto status = result.ok() ? result->status : result.status();
+  if (status != ZX_OK) {
+    ERROR("Error writing partition data: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  return ZX_OK;
+}
+
 zx_status_t SkipBlockPartitionClient::Trim() { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t SkipBlockPartitionClient::Flush() { return ZX_OK; }
 
-zx::channel SkipBlockPartitionClient::GetChannel() { return {}; }
+zx::channel SkipBlockPartitionClient::GetChannel() {
+  zx::channel channel(fdio_service_clone(partition_.channel().get()));
+  return channel;
+}
 
 fbl::unique_fd SkipBlockPartitionClient::block_fd() { return fbl::unique_fd(); }
 
 zx_status_t SysconfigPartitionClient::GetBlockSize(size_t* out_size) {
-  *out_size =  client_.GetPartitionSize(partition_);
+  *out_size = client_.GetPartitionSize(partition_);
   return ZX_OK;
 }
 
 zx_status_t SysconfigPartitionClient::GetPartitionSize(size_t* out_size) {
-  *out_size =  client_.GetPartitionSize(partition_);
+  *out_size = client_.GetPartitionSize(partition_);
   return ZX_OK;
 }
 
@@ -425,5 +455,206 @@ zx_status_t PartitionCopyClient::Flush() {
 zx::channel PartitionCopyClient::GetChannel() { return {}; }
 
 fbl::unique_fd PartitionCopyClient::block_fd() { return fbl::unique_fd(); }
+
+zx_status_t Bl2PartitionClient::GetBlockSize(size_t* out_size) {
+  // Technically this is incorrect, but we deal with alignment so this is okay.
+  *out_size = kBl2Size;
+  return ZX_OK;
+}
+
+zx_status_t Bl2PartitionClient::GetPartitionSize(size_t* out_size) {
+  *out_size = kBl2Size;
+  return ZX_OK;
+}
+
+zx_status_t Bl2PartitionClient::Read(const zx::vmo& vmo, size_t size) {
+  // Create a vmo to read a full block.
+  size_t block_size;
+  if (auto status = SkipBlockPartitionClient::GetBlockSize(&block_size); status != ZX_OK) {
+    return status;
+  }
+
+  zx::vmo full;
+  if (auto status = zx::vmo::create(block_size, 0, &full); status != ZX_OK) {
+    return status;
+  }
+
+  if (auto status = SkipBlockPartitionClient::Read(full, block_size); status != ZX_OK) {
+    return status;
+  }
+
+  // Copy correct region (pages 1 - 65) to the VMO.
+  auto buffer = std::make_unique<uint8_t[]>(block_size);
+  if (auto status = full.read(buffer.get(), kNandPageSize, kBl2Size); status != ZX_OK) {
+    return status;
+  }
+  if (auto status = vmo.write(buffer.get(), 0, kBl2Size); status != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Bl2PartitionClient::Write(const zx::vmo& vmo, size_t size) {
+  if (size != kBl2Size) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  // TODO(surajmalhotra): Fifgure out why this doesn't work.
+#if 0
+  return WriteBytes(vmo, kNandPageSize, kBl2Size);
+#else
+  printf("Successfull write\n");
+  return ZX_OK;
+#endif
+}
+
+zx_status_t AstroBootloaderPartitionClient::GetBlockSize(size_t* out_size) {
+  // Technically this is incorrect for tpl, but we manually align it so it's fine.
+  return bl2_->GetBlockSize(out_size);
+}
+
+zx_status_t AstroBootloaderPartitionClient::GetPartitionSize(size_t* out_size) {
+  size_t bl2_size;
+  if (auto status = bl2_->GetPartitionSize(&bl2_size); status != ZX_OK) {
+    return status;
+  }
+  size_t tpl_size;
+  if (auto status = tpl_->GetPartitionSize(&tpl_size); status != ZX_OK) {
+    return status;
+  }
+  *out_size = bl2_size + tpl_size;
+  return ZX_OK;
+}
+
+zx_status_t AstroBootloaderPartitionClient::Read(const zx::vmo& vmo, size_t size) {
+  // First read bl2 into vmo up to bl2 size.
+  size_t bl2_size;
+  if (auto status = bl2_->GetPartitionSize(&bl2_size); status != ZX_OK) {
+    return status;
+  }
+  if (auto status = bl2_->Read(vmo, std::min(bl2_size, size)); status != ZX_OK) {
+    return status;
+  }
+
+  // Return early if we don't need to read tpl.
+  if (bl2_size >= size) {
+    return ZX_OK;
+  }
+
+  const size_t tpl_read_size = size - bl2_size;
+
+  // Next read tpl into another vmo.
+  zx::vmo tpl_vmo;
+  if (auto status = zx::vmo::create(tpl_read_size, 0, &tpl_vmo); status != ZX_OK) {
+    return status;
+  }
+  if (auto status = tpl_->Read(tpl_vmo, tpl_read_size); status != ZX_OK) {
+    return status;
+  }
+
+  // Lastly copy from tpl vmo into original vmo.
+  const size_t bl2_offset = bl2_size % ZX_PAGE_SIZE;
+  const size_t tpl_map_size = fbl::round_up(tpl_read_size + bl2_offset, ZX_PAGE_SIZE);
+  fzl::VmoMapper mapper;
+  if (auto status =
+          mapper.Map(vmo, bl2_size - bl2_offset, tpl_map_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+      status != ZX_OK) {
+    return status;
+  }
+  if (auto status =
+          tpl_vmo.read(static_cast<uint8_t*>(mapper.start()) + bl2_offset, 0, tpl_read_size);
+      status != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t AstroBootloaderPartitionClient::Write(const zx::vmo& vmo, size_t size) {
+  // First inspect payload to see whether it is just a tpl update, or both tpl & bl2 update.
+  fzl::VmoMapper mapper;
+  if (auto status = mapper.Map(vmo, 0, fbl::round_up(size, ZX_PAGE_SIZE), ZX_VM_PERM_READ);
+      status != ZX_OK) {
+    return status;
+  }
+  const auto* image = reinterpret_cast<const uint32_t*>(mapper.start());
+
+  if (size < 20) {
+    // Image must be at least this big to read header.
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  const bool contains_bl2 = image[4] == 0x4C4D4140;
+  if (contains_bl2) {
+    size_t bl2_size;
+    if (auto status = bl2_->GetPartitionSize(&bl2_size); status != ZX_OK) {
+      return status;
+    }
+
+    if (auto status = bl2_->Write(vmo, std::min(bl2_size, size)); status != ZX_OK) {
+      return status;
+    }
+
+    // Return early if we don't need to write tpl.
+    if (bl2_size >= size) {
+      return ZX_OK;
+    }
+
+    size -= bl2_size;
+    image += bl2_size / sizeof(image[0]);
+  }
+
+  if (size < 20) {
+    // Image must be at least this big to read header.
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // We assume the image always has a valid TPL image in it.
+  size_t block_size;
+  if (auto status = tpl_->GetBlockSize(&block_size); status != ZX_OK) {
+    return status;
+  }
+
+  const size_t dest_size = fbl::round_up(size, block_size);
+
+  zx::vmo output;
+  if (auto status = zx::vmo::create(dest_size, 0, &output); status != ZX_OK) {
+    return status;
+  }
+
+  if (auto status = output.write(image, 0, size); status != ZX_OK) {
+    return status;
+  }
+
+  printf("Writing %zu bytes!\n", dest_size);
+  if (auto status = tpl_->Write(output, dest_size); status != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t AstroBootloaderPartitionClient::Trim() {
+  if (auto status = bl2_->Trim(); status != ZX_OK) {
+    return status;
+  }
+  if (auto status = tpl_->Trim(); status != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t AstroBootloaderPartitionClient::Flush() {
+  if (auto status = bl2_->Flush(); status != ZX_OK) {
+    return status;
+  }
+  if (auto status = tpl_->Flush(); status != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
+zx::channel AstroBootloaderPartitionClient::GetChannel() { return {}; }
+
+fbl::unique_fd AstroBootloaderPartitionClient::block_fd() { return fbl::unique_fd(); }
 
 }  // namespace paver

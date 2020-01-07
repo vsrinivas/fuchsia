@@ -39,6 +39,7 @@
 #include <zxcrypt/volume.h>
 
 #include "lib/fidl/llcpp/string_view.h"
+#include "partition-client.h"
 #include "pave-logging.h"
 #include "zircon/errors.h"
 #include "zircon/hw/gpt.h"
@@ -1622,8 +1623,23 @@ zx_status_t AstroPartitioner::FindPartition(Partition partition_type,
                                             std::unique_ptr<PartitionClient>* out_partition) const {
   switch (partition_type) {
     case Partition::kBootloader: {
-      const uint8_t bootloader_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
-      return skip_block_->FindPartition(bootloader_type, out_partition);
+      const uint8_t bl2_type[GPT_GUID_LEN] = GUID_BL2_VALUE;
+      std::unique_ptr<PartitionClient> bl2_skip_block;
+      if (auto status = skip_block_->FindPartition(bl2_type, &bl2_skip_block); status != ZX_OK) {
+        return status;
+      }
+      // Upgrade this into a more specialized partition client.
+      auto bl2 = std::make_unique<Bl2PartitionClient>(bl2_skip_block->GetChannel());
+
+      const uint8_t tpl_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
+      std::unique_ptr<PartitionClient> tpl;
+      if (auto status = skip_block_->FindPartition(tpl_type, &tpl); status != ZX_OK) {
+        return status;
+      }
+
+      *out_partition =
+          std::make_unique<AstroBootloaderPartitionClient>(std::move(bl2), std::move(tpl));
+      return ZX_OK;
     }
     case Partition::kZirconA: {
       const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;

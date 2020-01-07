@@ -25,6 +25,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/span.h>
 #include <gpt/gpt.h>
+#include <soc/aml-common/aml-guid.h>
 #include <zxtest/zxtest.h>
 
 #include "test/test-utils.h"
@@ -68,7 +69,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo kNandInfo = {
     .partition_map =
         {
             .device_guid = {},
-            .partition_count = 6,
+            .partition_count = 7,
             .partitions =
                 {
                     {
@@ -134,6 +135,22 @@ constexpr fuchsia_hardware_nand_RamNandInfo kNandInfo = {
                         .copy_count = 0,
                         .copy_byte_offset = 0,
                         .name = {'s', 'y', 's', 'c', 'o', 'n', 'f', 'i', 'g'},
+                        .hidden = false,
+                        .bbt = false,
+                    },
+                    {
+                        .type_guid = GUID_BL2_VALUE,
+                        .unique_guid = {},
+                        .first_block = 18,
+                        .last_block = 22,
+                        .copy_count = 0,
+                        .copy_byte_offset = 0,
+                        .name =
+                            {
+                                'b',
+                                'l',
+                                '2',
+                            },
                         .hidden = false,
                         .bbt = false,
                     },
@@ -645,8 +662,7 @@ TEST(AstroPartitionerTests, IsFvmWithinFtl) {
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner),
-            ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
   ASSERT_TRUE(partitioner->IsFvmWithinFtl());
 }
 
@@ -668,8 +684,7 @@ TEST(AstroPartitionerTests, AddPartitionTest) {
   SkipBlockDevice::Create(kNandInfo, &device);
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner),
-            ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
   ASSERT_EQ(partitioner->AddPartition(paver::Partition::kZirconB, nullptr), ZX_ERR_NOT_SUPPORTED);
 }
 
@@ -678,8 +693,7 @@ TEST(AstroPartitionerTests, WipeFvmTest) {
   SkipBlockDevice::Create(kNandInfo, &device);
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner),
-            ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
   ASSERT_OK(partitioner->WipeFvm());
 }
 
@@ -688,8 +702,7 @@ TEST(AstroPartitionerTests, FinalizePartitionTest) {
   SkipBlockDevice::Create(kNandInfo, &device);
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner),
-            ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner), ZX_OK);
 
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kBootloader));
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kZirconA));
@@ -708,8 +721,7 @@ TEST(AstroPartitionerTests, FindPartitionTest) {
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kFvmType, &fvm));
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_EQ(paver::AstroPartitioner::Initialize(std::move(devfs_root), &partitioner),
-            ZX_OK);
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(std::move(devfs_root), &partitioner), ZX_OK);
 
   std::unique_ptr<paver::PartitionClient> partition;
   ASSERT_OK(partitioner->FindPartition(paver::Partition::kBootloader, &partition));

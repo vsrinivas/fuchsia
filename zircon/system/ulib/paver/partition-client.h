@@ -80,24 +80,27 @@ class BlockPartitionClient final : public PartitionClient {
   std::optional<::llcpp::fuchsia::hardware::block::BlockInfo> block_info_;
 };
 
-class SkipBlockPartitionClient final : public PartitionClient {
+class SkipBlockPartitionClient : public PartitionClient {
  public:
   explicit SkipBlockPartitionClient(zx::channel partition) : partition_(std::move(partition)) {}
 
-  zx_status_t GetBlockSize(size_t* out_size) final;
-  zx_status_t GetPartitionSize(size_t* out_size) final;
-  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
-  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx_status_t Trim() final;
-  zx_status_t Flush() final;
-  zx::channel GetChannel() final;
-  fbl::unique_fd block_fd() final;
+  zx_status_t GetBlockSize(size_t* out_size) override;
+  zx_status_t GetPartitionSize(size_t* out_size) override;
+  zx_status_t Read(const zx::vmo& vmo, size_t size) override;
+  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) override;
+  zx_status_t Trim() override;
+  zx_status_t Flush() override;
+  zx::channel GetChannel() override;
+  fbl::unique_fd block_fd() override;
 
   // No copy, no move.
   SkipBlockPartitionClient(const SkipBlockPartitionClient&) = delete;
   SkipBlockPartitionClient& operator=(const SkipBlockPartitionClient&) = delete;
   SkipBlockPartitionClient(SkipBlockPartitionClient&&) = delete;
   SkipBlockPartitionClient& operator=(SkipBlockPartitionClient&&) = delete;
+
+ protected:
+  zx_status_t WriteBytes(const zx::vmo& vmo, zx_off_t offset, size_t vmo_size);
 
  private:
   zx_status_t ReadPartitionInfo();
@@ -156,8 +159,56 @@ class PartitionCopyClient final : public PartitionClient {
   PartitionCopyClient& operator=(PartitionCopyClient&&) = delete;
 
  private:
-
   std::vector<std::unique_ptr<PartitionClient>> partitions_;
+};
+
+// Specialized layer on top of SkipBlockPartitionClient to deal with page0 quirk and block size
+// quirk.
+class Bl2PartitionClient final : public SkipBlockPartitionClient {
+ public:
+  explicit Bl2PartitionClient(zx::channel partition)
+      : SkipBlockPartitionClient(std::move(partition)) {}
+
+  zx_status_t GetBlockSize(size_t* out_size) final;
+  zx_status_t GetPartitionSize(size_t* out_size) final;
+  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
+  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
+
+  // No copy, no move.
+  Bl2PartitionClient(const Bl2PartitionClient&) = delete;
+  Bl2PartitionClient& operator=(const Bl2PartitionClient&) = delete;
+  Bl2PartitionClient(Bl2PartitionClient&&) = delete;
+  Bl2PartitionClient& operator=(Bl2PartitionClient&&) = delete;
+
+ private:
+  static constexpr size_t kNandPageSize = 4 * 1024;
+  static constexpr size_t kBl2Size = 64 * 1024;
+};
+
+class AstroBootloaderPartitionClient final : public PartitionClient {
+ public:
+  explicit AstroBootloaderPartitionClient(std::unique_ptr<PartitionClient> bl2,
+                                          std::unique_ptr<PartitionClient> tpl)
+      : bl2_(std::move(bl2)), tpl_(std::move(tpl)) {}
+
+  zx_status_t GetBlockSize(size_t* out_size) final;
+  zx_status_t GetPartitionSize(size_t* out_size) final;
+  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
+  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx_status_t Trim() final;
+  zx_status_t Flush() final;
+  zx::channel GetChannel() final;
+  fbl::unique_fd block_fd() final;
+
+  // No copy, no move.
+  AstroBootloaderPartitionClient(const AstroBootloaderPartitionClient&) = delete;
+  AstroBootloaderPartitionClient& operator=(const AstroBootloaderPartitionClient&) = delete;
+  AstroBootloaderPartitionClient(AstroBootloaderPartitionClient&&) = delete;
+  AstroBootloaderPartitionClient& operator=(AstroBootloaderPartitionClient&&) = delete;
+
+ private:
+  std::unique_ptr<PartitionClient> bl2_;
+  std::unique_ptr<PartitionClient> tpl_;
 };
 
 }  // namespace paver

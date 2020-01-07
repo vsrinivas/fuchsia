@@ -103,7 +103,6 @@ bool CheckIfSame(PartitionClient* partition, const zx::vmo& vmo, size_t payload_
     ERROR("Error mapping vmo: %s\n", zx_status_get_string(status));
     return false;
   }
-
   return memcmp(first_mapper.start(), second_mapper.start(), payload_size) == 0;
 }
 
