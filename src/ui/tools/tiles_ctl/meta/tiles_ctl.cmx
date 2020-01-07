@@ -3,6 +3,9 @@
         "binary": "bin/tiles_ctl"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.tracing.provider.Registry"
         ]
