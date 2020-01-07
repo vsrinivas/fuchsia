@@ -243,7 +243,12 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
   }
 
   uint32_t dfsc = BITS(iss, 5, 0);
-  if (likely(dfsc != DFSC_ALIGNMENT_FAULT)) {
+  // Only invoke the page fault handler for translation, access and permission faults. Any other
+  // kind of fault cannot be resolved by the handler.
+  // 0b0001XX is translation faults
+  // 0b0010XX is access faults
+  // 0b0011XX is permission faults
+  if (likely((dfsc & 0b001100) != 0 && (dfsc & 0b110000) == 0)) {
     arch_enable_ints();
     kcounter_add(exceptions_page, 1);
     zx_status_t err = vmm_page_fault_handler(far, pf_flags);

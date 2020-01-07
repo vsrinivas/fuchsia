@@ -128,7 +128,11 @@ static void print_exception_report(FILE* out, const zx_exception_report_t& repor
     static constexpr uint32_t kIssCacheOp = (1 << 8);
     static constexpr uint32_t kIssWrite = (1 << 6);
     static constexpr uint32_t kDccNoLvlMask = 0b111100;
-    static constexpr uint32_t kDccPermissionFault = 0b1100;
+    static constexpr uint32_t kDccPermissionFault = 0b001100;
+    static constexpr uint32_t kDccTranslationFault = 0b000100;
+    static constexpr uint32_t kDccAddressSizeFault = 0b000000;
+    static constexpr uint32_t kDccAccessFlagFault = 0b001000;
+    static constexpr uint32_t kDccSynchronousExternalFault = 0b010000;
 
     if (report.context.arch.u.arm_64.esr & kEcDataAbortBit) {
       if (report.context.arch.u.arm_64.esr & kIssWrite &&
@@ -141,10 +145,25 @@ static void print_exception_report(FILE* out, const zx_exception_report_t& repor
       access_type = "execute";
     }
 
-    if ((report.context.arch.u.arm_64.esr & kDccNoLvlMask) == kDccPermissionFault) {
-      violation = "protection";
-    } else {
-      violation = "not-present";
+    switch ((report.context.arch.u.arm_64.esr & kDccNoLvlMask)) {
+      case kDccPermissionFault:
+        violation = "protection";
+        break;
+      case kDccTranslationFault:
+        violation = "not-present";
+        break;
+      case kDccAddressSizeFault:
+        violation = "address-size";
+        break;
+      case kDccAccessFlagFault:
+        violation = "access-flag";
+        break;
+      case kDccSynchronousExternalFault:
+        violation = "external-abort";
+        break;
+      default:
+        violation = "undecoded";
+        break;
     }
 #else
 #error unsupported architecture
