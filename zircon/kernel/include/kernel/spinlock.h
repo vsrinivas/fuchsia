@@ -85,6 +85,11 @@ class TA_CAP("mutex") SpinLock {
   void Acquire() TA_ACQ() { spin_lock(&spinlock_); }
   bool TryAcquire() TA_TRY_ACQ(false) { return spin_trylock(&spinlock_); }
   void Release() TA_REL() { spin_unlock(&spinlock_); }
+
+  // Returns true if held by the calling CPU.
+  //
+  // Interrupts must be disabled before calling this method, otherwise it could return true when it
+  // should return false.
   bool IsHeld() { return spin_lock_held(&spinlock_); }
 
   void AcquireIrqSave(spin_lock_saved_state_t& state,
