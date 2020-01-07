@@ -116,6 +116,11 @@ group("entry") {
       "zircon:entry",
     ]
   }
+  if (is_linux) {
+    deps = [
+      "linux:entry",
+    ]
+  }
 }
 
 group("entry_test") {
