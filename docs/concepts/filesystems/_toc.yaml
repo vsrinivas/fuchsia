@@ -6,6 +6,8 @@ toc:
   path: /docs/concepts/filesystems/filesystems.md
 - title: "'dot dot' considered harmful"
   path: /docs/concepts/filesystems/dotdot.md
+- title: "Blobfs"
+  path: /docs/concepts/filesystems/blobfs.md
 - title: "Minfs"
   path: /docs/concepts/filesystems/minfs.md
 - title: "Zxcrypt"
