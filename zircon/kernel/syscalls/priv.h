@@ -14,6 +14,16 @@
 // Forward declaration so it can be used in abigen-generated sys_* prototypes.
 class user_out_handle;
 
+#if defined(__clang__)
+#define ZX_ACQUIRE_HANDLE __attribute__((acquire_handle("Fuchsia")))
+#define ZX_RELEASE_HANDLE __attribute__((release_handle("Fuchsia")))
+#define ZX_USE_HANDLE __attribute__((use_handle("Fuchsia")))
+#else
+#define ZX_ACQUIRE_HANDLE
+#define ZX_RELEASE_HANDLE
+#define ZX_USE_HANDLE
+#endif
+
 #include <zircon/syscall-definitions.h>
 
 #include <object/handle.h>

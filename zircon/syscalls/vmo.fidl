@@ -67,7 +67,7 @@ protocol vmo {
     /// Add execute rights to a VMO.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO.
     /// Rights: vmex must have resource kind ZX_RSRC_KIND_VMEX.
-    vmo_replace_as_executable(handle<vmo> handle, handle<resource> vmex)
+    vmo_replace_as_executable([Release] handle<vmo> handle, handle<resource> vmex)
         -> (status status, handle<vmo> out);
 
     /// Rights: bti must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.

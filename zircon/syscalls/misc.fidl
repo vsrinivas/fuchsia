@@ -33,7 +33,7 @@ protocol misc {
     [vdsocall]
     vmar_unmap_handle_close_thread_exit(handle<vmar> vmar_handle,
                                         vaddr addr, usize size,
-                                        handle close_handle)
+                                        [Release] handle close_handle)
         -> (status status);
 
     /// Write to futex, wake futex, close handle, exit.
@@ -42,7 +42,7 @@ protocol misc {
     futex_wake_handle_close_thread_exit(const_futexptr value_ptr,
                                         uint32 wake_count,
                                         int32 new_value,
-                                        handle close_handle);
+                                        [Release] handle close_handle);
 
     // Read the number of high-precision timer ticks since boot, but demand
     // that the read be performed using a syscall, instead of a vdso call.

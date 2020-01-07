@@ -69,4 +69,8 @@ void CSignatureLine(const Syscall& syscall, const char* prefix, const char* name
 void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_prefix,
                   Writer* writer);
 
+// Get the Clang attribute that describes the ownership of the handle.
+// Returns empty string for non-handle arguments.
+std::string GetHandleOwnershipAttribute(const StructMember &arg);
+
 #endif  // TOOLS_KAZOO_OUTPUT_UTIL_H_

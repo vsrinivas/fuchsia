@@ -16,8 +16,12 @@ void KernelDeclaration(const Syscall& syscall, Writer* writer) {
     for (size_t i = 0; i < syscall.kernel_arguments().size(); ++i) {
       const StructMember& arg = syscall.kernel_arguments()[i];
       const bool last = i == syscall.kernel_arguments().size() - 1;
-      writer->Printf("    %s %s%s", GetCKernelModeName(arg.type()).c_str(), arg.name().c_str(),
-                     last ? "" : ",\n");
+      std::string attributes = GetHandleOwnershipAttribute(arg);
+      if (!attributes.empty()) {
+        attributes = " " + attributes;
+      }
+      writer->Printf("    %s %s%s%s", GetCKernelModeName(arg.type()).c_str(), arg.name().c_str(),
+                     attributes.c_str(), last ? "" : ",\n");
     }
   }
   writer->Printf(")");

@@ -29,7 +29,7 @@ __LOCAL extern zx_status_t VDSO_zx_selection_futex_requeue(
     zx_futex_t current_value,
     const zx_futex_t* requeue_ptr,
     uint32_t requeue_count,
-    zx_handle_t new_requeue_owner) __LEAF_FN;
+    zx_handle_t new_requeue_owner ZX_USE_HANDLE) __LEAF_FN;
 
 __LOCAL extern zx_status_t SYSCALL_zx_selection_futex_requeue(
     const zx_futex_t* value_ptr,
@@ -37,36 +37,36 @@ __LOCAL extern zx_status_t SYSCALL_zx_selection_futex_requeue(
     zx_futex_t current_value,
     const zx_futex_t* requeue_ptr,
     uint32_t requeue_count,
-    zx_handle_t new_requeue_owner) __LEAF_FN;
+    zx_handle_t new_requeue_owner ZX_USE_HANDLE) __LEAF_FN;
 
 __LOCAL extern zx_status_t VDSO_zx_selection_object_wait_one(
-    zx_handle_t handle,
+    zx_handle_t handle ZX_USE_HANDLE,
     zx_signals_t signals,
     zx_time_t deadline,
     zx_signals_t* observed) __LEAF_FN;
 
 __LOCAL extern zx_status_t SYSCALL_zx_selection_object_wait_one(
-    zx_handle_t handle,
+    zx_handle_t handle ZX_USE_HANDLE,
     zx_signals_t signals,
     zx_time_t deadline,
     zx_signals_t* observed) __LEAF_FN;
 
 __LOCAL extern zx_status_t VDSO_zx_selection_ktrace_read(
-    zx_handle_t handle,
+    zx_handle_t handle ZX_USE_HANDLE,
     void* data,
     uint32_t offset,
     size_t data_size,
     size_t* actual) __NONNULL((5)) __LEAF_FN;
 
 __LOCAL extern zx_status_t SYSCALL_zx_selection_ktrace_read(
-    zx_handle_t handle,
+    zx_handle_t handle ZX_USE_HANDLE,
     void* data,
     uint32_t offset,
     size_t data_size,
     size_t* actual) __NONNULL((5)) __LEAF_FN;
 
 __LOCAL extern zx_status_t VDSO_zx_selection_pci_cfg_pio_rw(
-    zx_handle_t handle,
+    zx_handle_t handle ZX_USE_HANDLE,
     uint8_t bus,
     uint8_t dev,
     uint8_t func,
@@ -76,7 +76,7 @@ __LOCAL extern zx_status_t VDSO_zx_selection_pci_cfg_pio_rw(
     bool write) __LEAF_FN;
 
 __LOCAL extern zx_status_t SYSCALL_zx_selection_pci_cfg_pio_rw(
-    zx_handle_t handle,
+    zx_handle_t handle ZX_USE_HANDLE,
     uint8_t bus,
     uint8_t dev,
     uint8_t func,
@@ -86,14 +86,14 @@ __LOCAL extern zx_status_t SYSCALL_zx_selection_pci_cfg_pio_rw(
     bool write) __LEAF_FN;
 
 __LOCAL extern zx_status_t VDSO_zx_selection_job_set_policy(
-    zx_handle_t handle,
+    zx_handle_t handle ZX_USE_HANDLE,
     uint32_t options,
     uint32_t topic,
     const void* policy,
     uint32_t policy_size) __LEAF_FN;
 
 __LOCAL extern zx_status_t SYSCALL_zx_selection_job_set_policy(
-    zx_handle_t handle,
+    zx_handle_t handle ZX_USE_HANDLE,
     uint32_t options,
     uint32_t topic,
     const void* policy,

@@ -9,11 +9,11 @@ library zz;
 protocol handle {
     /// Close a handle.
     /// Rights: None.
-    handle_close(handle handle) -> (status status);
+    handle_close([Release] handle handle) -> (status status);
 
     /// Close a number of handles.
     /// Rights: None.
-    handle_close_many(vector<handle> handles) -> (status status);
+    handle_close_many([Release] vector<handle> handles) -> (status status);
 
     /// Duplicate a handle.
     /// Rights: handle must have ZX_RIGHT_DUPLICATE.
@@ -21,5 +21,5 @@ protocol handle {
 
     /// Replace a handle.
     /// Rights: None.
-    handle_replace(handle handle, rights rights) -> (status status, handle out);
+    handle_replace([Release] handle handle, rights rights) -> (status status, handle out);
 };

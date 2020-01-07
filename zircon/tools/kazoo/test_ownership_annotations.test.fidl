@@ -1,0 +1,17 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zz;
+
+using zx;
+
+[Transport="Syscall"]
+protocol HandleOwnership {
+    fun0(vector<handle> in) -> (vector<handle> out);
+    fun1([Release] vector<handle> in);
+    fun2([Use] vector<handle> in) -> ([Use] vector<handle> out);
+    fun3(vector<handle> in) -> ([Acquire] vector<handle> out);
+    fun4(handle in) -> (zx.status status, handle out);
+    fun5([Release] handle in) -> (zx.status status, [Use] handle out);
+};

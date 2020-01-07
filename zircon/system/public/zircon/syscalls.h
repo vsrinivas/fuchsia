@@ -12,6 +12,16 @@
 #include <zircon/syscalls/pci.h>
 #include <zircon/syscalls/profile.h>
 
+#if defined(__clang__)
+#define ZX_ACQUIRE_HANDLE __attribute__((acquire_handle("Fuchsia")))
+#define ZX_RELEASE_HANDLE __attribute__((release_handle("Fuchsia")))
+#define ZX_USE_HANDLE __attribute__((use_handle("Fuchsia")))
+#else
+#define ZX_ACQUIRE_HANDLE
+#define ZX_RELEASE_HANDLE
+#define ZX_USE_HANDLE
+#endif
+
 __BEGIN_CDECLS
 
 #include <zircon/syscalls/definitions.h>

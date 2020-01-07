@@ -172,9 +172,11 @@ class Type {
   bool IsPointer() const { return std::holds_alternative<TypePointer>(type_data_); }
   bool IsString() const { return std::holds_alternative<TypeString>(type_data_); }
   bool IsStruct() const { return std::holds_alternative<TypeStruct>(type_data_); }
+  bool IsHandle() const { return std::holds_alternative<TypeHandle>(type_data_); }
 
   const TypeVector& DataAsVector() const { return std::get<TypeVector>(type_data_); }
   const TypePointer& DataAsPointer() const { return std::get<TypePointer>(type_data_); }
+  const TypeStruct& DataAsStruct() const { return std::get<TypeStruct>(type_data_); }
 
   bool IsSimpleType() const { return !IsVector() && !IsString() && !IsStruct(); }
 
@@ -187,7 +189,9 @@ class Type {
 class StructMember {
  public:
   StructMember() = default;
-  StructMember(const std::string& name, const Type& type) : name_(name), type_(type) {}
+  StructMember(const std::string& name, const Type& type,
+               const std::map<std::string, std::string>& attributes)
+      : name_(name), type_(type), attributes_(attributes) {}
   ~StructMember() = default;
 
   const std::string& name() const { return name_; }
@@ -195,11 +199,14 @@ class StructMember {
   const Type& type() const { return type_; }
   void set_type(const Type& type) { type_ = type; }
 
+  const std::map<std::string, std::string>& attributes() const { return attributes_; }
+
  private:
   friend class SyscallLibraryLoader;
 
   std::string name_;
   Type type_;
+  std::map<std::string, std::string> attributes_;
 };
 
 class Struct {

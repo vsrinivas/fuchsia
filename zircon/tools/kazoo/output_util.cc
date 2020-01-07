@@ -349,6 +349,10 @@ void CSignatureLine(const Syscall& syscall, const char* prefix, const char* name
         writer->Puts(" ");  // No space after open ( for single line.
       }
       writer->Printf("%s %s", GetCUserModeName(arg.type()).c_str(), arg.name().c_str());
+      std::string attributes = GetHandleOwnershipAttribute(arg);
+      if (!attributes.empty()) {
+        writer->Printf(" %s", attributes.c_str());
+      }
       if (!last) {
         writer->Printf(",%s", newline);
       }
@@ -384,4 +388,47 @@ void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_p
     writer->Puts(" __NO_RETURN");
   }
   writer->Puts(";\n\n");
+}
+
+namespace {
+
+std::string GetHandleOwnershipAttributeImpl(const StructMember &arg, bool output) {
+  if (arg.attributes().count("Acquire")) {
+    return "ZX_ACQUIRE_HANDLE";
+  } else if (arg.attributes().count("Release")) {
+    return "ZX_RELEASE_HANDLE";
+  } else if (arg.attributes().count("Use")) {
+    return "ZX_USE_HANDLE";
+  }
+
+  Type innermost_type = arg.type();
+  bool changed;
+  do {
+    changed = false;
+    if (innermost_type.IsPointer()) {
+      innermost_type = arg.type().DataAsPointer().pointed_to_type();
+      changed = true;
+    } else if (innermost_type.IsVector()) {
+      innermost_type = arg.type().DataAsVector().contained_type();
+      changed = true;
+    }
+  } while (changed);
+
+  if (innermost_type.IsHandle()) {
+    if (output) {
+      return "ZX_ACQUIRE_HANDLE";
+    } else {
+      return "ZX_USE_HANDLE";
+    }
+  }
+
+  return std::string();
+}
+
+} // namespace
+
+std::string GetHandleOwnershipAttribute(const StructMember &arg) {
+  bool output = arg.type().optionality() == Optionality::kOutputOptional ||
+      arg.type().optionality() == Optionality::kOutputNonOptional;
+  return GetHandleOwnershipAttributeImpl(arg, output);
 }

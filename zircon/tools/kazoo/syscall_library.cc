@@ -215,26 +215,30 @@ bool Syscall::MapRequestResponseToKernelAbi() {
       Type pointer_to_subtype(
           TypePointer(type.DataAsVector().contained_type(), IsDecayedVectorTag{}),
           default_to_const(type.constness()), Optionality::kInputArgument);
-      kernel_arguments_.emplace_back(m.name(), pointer_to_subtype);
+      kernel_arguments_.emplace_back(m.name(), pointer_to_subtype, m.attributes());
       auto [size_name, is_u32] = get_vector_size_name(m);
-      kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeSizeT{}));
+      kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeSizeT{}),
+                                     std::map<std::string, std::string>{});
     } else if (type.IsString()) {
       // char*, using the same constness as the string was specified as.
       kernel_arguments_.emplace_back(
           m.name(), Type(TypePointer(Type(TypeChar{})), default_to_const(type.constness()),
-                         Optionality::kInputArgument));
-      kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeSizeT{}));
+                         Optionality::kInputArgument), m.attributes());
+      kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeSizeT{}),
+                                     std::map<std::string, std::string>{});
     } else if (type.IsStruct()) {
       // If it's a struct, map to struct*, const unless otherwise specified. The pointer takes the
       // constness of the struct.
       kernel_arguments_.emplace_back(
           m.name(),
-          Type(TypePointer(type), default_to_const(type.constness()), Optionality::kInputArgument));
+          Type(TypePointer(type), default_to_const(type.constness()), Optionality::kInputArgument),
+          m.attributes());
     } else {
       // Otherwise, copy it over, unchanged other than to tag it as input.
       kernel_arguments_.emplace_back(m.name(),
                                      Type(type.type_data(), default_to_const(m.type().constness()),
-                                          Optionality::kInputArgument));
+                                          Optionality::kInputArgument),
+                                     m.attributes());
     }
   }
 
@@ -257,21 +261,26 @@ bool Syscall::MapRequestResponseToKernelAbi() {
       Type pointer_to_subtype(
           TypePointer(type.DataAsVector().contained_type(), IsDecayedVectorTag{}),
           Constness::kMutable, Optionality::kOutputOptional);
-      kernel_arguments_.emplace_back(m.name(), pointer_to_subtype);
+      kernel_arguments_.emplace_back(m.name(), pointer_to_subtype, m.attributes());
       auto [size_name, is_u32] = get_vector_size_name(m);
-      kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeSizeT{}));
+      kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeSizeT{}),
+                                     std::map<std::string, std::string>{});
     } else if (type.IsString()) {
       kernel_arguments_.emplace_back(
           m.name(),
-          Type(TypePointer(Type(TypeChar{})), Constness::kMutable, Optionality::kOutputOptional));
-      kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeSizeT{}));
+          Type(TypePointer(Type(TypeChar{})), Constness::kMutable, Optionality::kOutputOptional),
+          m.attributes());
+      kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeSizeT{}),
+                                     std::map<std::string, std::string>{});
     } else if (type.IsPointer()) {
       kernel_arguments_.emplace_back(
-          m.name(), Type(type.type_data(), Constness::kMutable, Optionality::kOutputOptional));
+          m.name(), Type(type.type_data(), Constness::kMutable, Optionality::kOutputOptional),
+          m.attributes());
     } else {
       // Everything else becomes a T* (to make it an out parameter).
       kernel_arguments_.emplace_back(m.name(), Type(TypePointer(type), Constness::kMutable,
-                                                    output_optionality(type.optionality())));
+                                                    output_optionality(type.optionality())),
+                                     m.attributes());
     }
   }
 
@@ -476,7 +485,14 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
                                      ? &arg["experimental_maybe_from_type_alias"]
                                      : nullptr;
         strukt->members_.emplace_back(arg["name"].GetString(),
-                                      TypeFromJson(*library, arg["type"], type_alias));
+                                      TypeFromJson(*library, arg["type"], type_alias),
+                                      std::map<std::string, std::string>{});
+        if (arg.HasMember("maybe_attributes")) {
+          for (const auto& attrib : arg["maybe_attributes"].GetArray()) {
+            strukt->members_.back().attributes_[attrib["name"].GetString()] =
+                attrib["value"].GetString();
+          }
+        }
       };
 
       Struct& req = syscall->request_;
