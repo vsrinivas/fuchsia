@@ -144,9 +144,6 @@ __BEGIN_CDECLS
 // PWM binding variables at 0x0A5X
 #define BIND_PWM_ID 0x0A50
 
-// Init Step binding variables at 0x0A6X
-#define BIND_INIT_STEP 0x0A60
-
 // Fuchsia-defined topological path properties are at 0x0B00 through 0x0B7F.
 // Vendor-defined topological path properties are at 0x0B80 to 0x0BFF.
 // For vendor properties, it is recommended that a vendor ID be included
