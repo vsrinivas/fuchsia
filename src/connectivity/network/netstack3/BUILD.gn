@@ -90,3 +90,12 @@ test_package("netstack3_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":netstack3",
+    ":netstack3_tests",
+    "tools:netstack3_tools",
+  ]
+}

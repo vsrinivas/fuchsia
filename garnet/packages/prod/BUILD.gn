@@ -198,7 +198,6 @@ group("all") {
     "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:memory_monitor",
     "//garnet/packages/prod:netstack",
-    "//garnet/packages/prod:netstack3",
     "//garnet/packages/prod:network",
     "//garnet/packages/prod:network-speed-test",
     "//garnet/packages/prod:odu",
@@ -302,14 +301,6 @@ group("netstack") {
   public_deps = [
     ":netcfg",
     "//src/connectivity/network/netstack",
-  ]
-}
-
-group("netstack3") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/network/netstack3",
-    "//src/connectivity/network/netstack3/tools:netstack3_tools",
   ]
 }
 

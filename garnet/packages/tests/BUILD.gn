@@ -328,7 +328,6 @@ group("all") {
     ":memory_metrics",
     ":netemul",
     ":netfilter",
-    ":netstack3",
     ":network",
     ":network_time",
     ":odu_host_tests",
@@ -476,13 +475,6 @@ group("memory_metrics") {
   public_deps = [
     "//src/developer/memory/metrics/tests",
     "//src/developer/memory/monitor/tests",
-  ]
-}
-
-group("netstack3") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/network/netstack3:netstack3_tests",
   ]
 }
 
