@@ -9,6 +9,7 @@
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/arm64/hypervisor/gic/el2.h>
 #include <arch/arm64/hypervisor/gic/gicv3.h>
+#include <arch/hypervisor.h>
 #include <arch/ops.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv3_regs.h>
@@ -58,11 +59,11 @@ static void gicv3_write_gich_state(IchState* state, uint32_t hcr) {
   cpu_num_t cpu_num = arch_curr_cpu_num();
   for (uint8_t i = 0; i < state->num_lrs; i++) {
     uint64_t lr = state->lr[i];
-    if (lr & ICH_LR_HARDWARE) {
-      // We are adding a physical interrupt to a list register, therefore we
-      // mark the physical interrupt as active on the physical distributor so
-      // that the guest can deactivate it directly.
-      uint32_t vector = ICH_LR_VIRTUAL_ID(lr);
+    uint32_t vector = ICH_LR_VIRTUAL_ID(lr);
+    if ((lr & ICH_LR_HARDWARE) && vector == kTimerVector) {
+      // We are translating the physical timer interrupt to the virtual
+      // timer interrupt, therefore we are marking the virtual timer interrupt
+      // as active on the GIC distributor for the guest to deactivate.
       uint32_t reg = vector / 32;
       uint32_t mask = 1u << (vector % 32);
       // Since we use affinity routing, if this vector is associated with an

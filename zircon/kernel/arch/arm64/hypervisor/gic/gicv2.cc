@@ -9,6 +9,7 @@
 
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/arm64/hypervisor/gic/gicv2.h>
+#include <arch/hypervisor.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv2_regs.h>
 #include <vm/pmm.h>
@@ -93,11 +94,11 @@ static void gicv2_write_gich_state(IchState* state, uint32_t hcr) {
   gich->apr = static_cast<uint32_t>(state->apr[0][0]);
   for (uint8_t i = 0; i < state->num_lrs; i++) {
     uint32_t lr = static_cast<uint32_t>(state->lr[i]);
-    if (lr & GICH_LR_HARDWARE) {
-      // We are adding a physical interrupt to a list register, therefore
-      // we mark the physical interrupt as active on the physical
-      // distributor so that the guest can deactivate it directly.
-      uint32_t vector = GICH_LR_VIRTUAL_ID(lr);
+    uint32_t vector = GICH_LR_VIRTUAL_ID(lr);
+    if ((lr & GICH_LR_HARDWARE) && vector == kTimerVector) {
+      // We are translating the physical timer interrupt to the virtual
+      // timer interrupt, therefore we are marking the virtual timer interrupt
+      // as active on the GIC distributor for the guest to deactivate.
       uint32_t reg = vector / 32;
       uint32_t mask = 1u << (vector % 32);
       GICREG(0, GICD_ISACTIVER(reg)) = mask;
