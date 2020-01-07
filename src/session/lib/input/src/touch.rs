@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::input_device,
-    crate::input_device::InputDeviceBinding,
+    crate::input_device::{self, InputDeviceBinding, InputEvent},
     anyhow::{format_err, Error},
     async_trait::async_trait,
     fidl_fuchsia_input_report as fidl,
@@ -14,35 +13,37 @@ use {
     futures::StreamExt,
 };
 
-#[derive(Copy, Clone)]
-pub struct TouchInputMessage {}
+pub struct TouchEventDescriptor {}
 
-#[derive(Copy, Clone)]
-pub struct TouchDescriptor {}
+#[derive(Clone)]
+pub struct TouchDeviceDescriptor {}
 
 /// A [`TouchBinding`] represents a connection to a touch input device.
 ///
 /// The [`TouchBinding`] parses and exposes touch descriptor properties (e.g., the range of
 /// possible x values for touch contacts) for the device it is associated with.
 /// It also parses [`InputReport`]s from the device, and sends them to clients
-/// via [`TouchBinding::input_message_stream()`].
+/// via [`TouchBinding::input_event_stream()`].
 ///
 /// # Example
 /// ```
 /// let mut touch_device: TouchBinding = input_device::InputDeviceBinding::new().await?;
 ///
-/// while let Some(report) = touch_device.input_message_stream().next().await {}
+/// while let Some(report) = touch_device.input_event_stream().next().await {}
 /// ```
 pub struct TouchBinding {
-    /// The channel to stream InputReports to
-    message_sender: Sender<input_device::InputMessage>,
+    /// The channel to stream InputEvents to.
+    event_sender: Sender<InputEvent>,
 
-    message_receiver: Receiver<input_device::InputMessage>,
+    /// The receiving end of the input event channel. Clients use this indirectly via
+    /// [`input_event_stream()`].
+    event_receiver: Receiver<InputEvent>,
 
-    descriptor: TouchDescriptor,
+    /// Holds information about this device.
+    device_descriptor: TouchDeviceDescriptor,
 }
 
-/// A [`ContactInputDescriptor`] describes the possible values touch contact properties can take on.
+/// A [`ContactDeviceDescriptor`] describes the possible values touch contact properties can take on.
 ///
 /// This descriptor can be used, for example, to determine where on a screen a touch made contact.
 ///
@@ -55,8 +56,8 @@ pub struct TouchBinding {
 /// // Use the scaling factor to scale the contact report's x position.
 /// let hit_location = scaling_factor * contact_report.position_x;
 /// ```
-#[derive(Copy, Clone)]
-pub struct ContactInputDescriptor {
+#[derive(Clone)]
+pub struct ContactDeviceDescriptor {
     /// The range of possible x values for this touch contact.
     _x_range: fidl::Range,
 
@@ -75,23 +76,23 @@ pub struct ContactInputDescriptor {
 
 #[async_trait]
 impl input_device::InputDeviceBinding for TouchBinding {
-    fn input_message_sender(&self) -> Sender<input_device::InputMessage> {
-        self.message_sender.clone()
+    fn input_event_sender(&self) -> Sender<InputEvent> {
+        self.event_sender.clone()
     }
 
-    fn input_message_stream(&mut self) -> &mut Receiver<input_device::InputMessage> {
-        return &mut self.message_receiver;
+    fn input_event_stream(&mut self) -> &mut Receiver<InputEvent> {
+        return &mut self.event_receiver;
     }
 
-    fn get_descriptor(&self) -> input_device::InputDescriptor {
-        input_device::InputDescriptor::Touch(self.descriptor)
+    fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Touch(self.device_descriptor.clone())
     }
 
     fn process_reports(
         report: InputReport,
         _previous_report: Option<InputReport>,
-        _device_descriptor: &mut input_device::InputDescriptor,
-        _input_message_sender: &mut Sender<input_device::InputMessage>,
+        _device_descriptor: input_device::InputDeviceDescriptor,
+        _input_event_sender: &mut Sender<InputEvent>,
     ) -> Option<InputReport> {
         Some(report)
     }
@@ -115,19 +116,13 @@ impl input_device::InputDeviceBinding for TouchBinding {
                         touch_type: _,
                     }),
             }) => {
-                let (message_sender, message_receiver) =
-                    futures::channel::mpsc::channel(input_device::INPUT_MESSAGE_BUFFER_SIZE);
+                let (event_sender, event_receiver) =
+                    futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
 
                 Ok(TouchBinding {
-                    message_sender,
-                    message_receiver,
-                    descriptor: TouchDescriptor {
-                        // _contacts: contacts
-                        //     .iter()
-                        //     .map(TouchBinding::parse_contact_descriptor)
-                        //     .filter_map(Result::ok)
-                        //     .collect(),
-                    },
+                    event_sender,
+                    event_receiver,
+                    device_descriptor: TouchDeviceDescriptor {},
                 })
             }
             descriptor => Err(format_err!("Touch Descriptor failed to parse: \n {:?}", descriptor)),
@@ -136,25 +131,25 @@ impl input_device::InputDeviceBinding for TouchBinding {
 }
 
 impl TouchBinding {
-    /// Parses a FIDL contact descriptor into a [`ContactInputDescriptor`]
+    /// Parses a FIDL contact descriptor into a [`ContactDeviceDescriptor`]
     ///
     /// # Parameters
-    /// - `contact_descriptor`: The contact descriptor to parse.
+    /// - `contact_device_descriptor`: The contact descriptor to parse.
     ///
     /// # Errors
     /// If the contact descripto fails to parse because required fields aren't present.
     #[allow(dead_code)]
     fn parse_contact_descriptor(
-        contact_descriptor: &fidl::ContactInputDescriptor,
-    ) -> Result<ContactInputDescriptor, Error> {
-        match contact_descriptor {
+        contact_device_descriptor: &fidl::ContactInputDescriptor,
+    ) -> Result<ContactDeviceDescriptor, Error> {
+        match contact_device_descriptor {
             fidl::ContactInputDescriptor {
                 position_x: Some(x_axis),
                 position_y: Some(y_axis),
                 pressure: pressure_axis,
                 contact_width: width_axis,
                 contact_height: height_axis,
-            } => Ok(ContactInputDescriptor {
+            } => Ok(ContactDeviceDescriptor {
                 _x_range: x_axis.range,
                 _y_range: y_axis.range,
                 _pressure_range: Some(pressure_axis.unwrap().range), // Unwrap may be unsafe here
@@ -185,23 +180,23 @@ async fn all_touch_bindings() -> Result<Vec<TouchBinding>, Error> {
     Ok(device_bindings)
 }
 
-/// Returns a stream of InputMessages from all touch devices.
+/// Returns a stream of InputEvents from all touch devices.
 ///
 /// # Errors
 /// If there was an error binding to any touch device.
-pub async fn all_touch_messages() -> Result<Receiver<input_device::InputMessage>, Error> {
+pub async fn all_touch_events() -> Result<Receiver<InputEvent>, Error> {
     let bindings = all_touch_bindings().await?;
-    let (message_sender, message_receiver) =
-        futures::channel::mpsc::channel(input_device::INPUT_MESSAGE_BUFFER_SIZE);
+    let (event_sender, event_receiver) =
+        futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
 
     for mut touch in bindings {
-        let mut sender = message_sender.clone();
+        let mut sender = event_sender.clone();
         fasync::spawn(async move {
-            while let Some(report) = touch.input_message_stream().next().await {
-                let _ = sender.try_send(report);
+            while let Some(input_event) = touch.input_event_stream().next().await {
+                let _ = sender.try_send(input_event);
             }
         });
     }
 
-    Ok(message_receiver)
+    Ok(event_receiver)
 }

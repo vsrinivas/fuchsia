@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::input_device,
-    crate::input_device::InputDeviceBinding,
+    crate::input_device::{self, InputDeviceBinding},
     anyhow::{format_err, Error},
     async_trait::async_trait,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
@@ -19,9 +18,9 @@ use {
     std::collections::HashMap,
 };
 
-/// A [`KeyboardInputMessage`] represents an input event from a keyboard device.
+/// A [`KeyboardEventDescriptor`] represents an input event from a keyboard device.
 ///
-/// The input message contains information about which keys are pressed, and which
+/// The input event descriptor contains information about which keys are pressed, and which
 /// keys were released.
 ///
 /// Clients can expect the following sequence of events for a given key:
@@ -31,65 +30,65 @@ use {
 ///
 /// No duplicate [`KeyEventPhase::Pressed`] events will be sent for keys, even if the
 /// key is present in a subsequent [`InputReport`]. Clients can assume that
-/// a key is pressed for all received input messages until the key is present in
+/// a key is pressed for all received input events until the key is present in
 /// the [`KeyEventPhase::Released`] entry of [`keys`].
-pub struct KeyboardInputMessage {
-    /// The keys associated with this input message, sorted by their `KeyEventPhase`
+pub struct KeyboardEventDescriptor {
+    /// The keys associated with this input event, sorted by their `KeyEventPhase`
     /// (e.g., whether they are pressed or released).
     pub keys: HashMap<KeyEventPhase, Vec<Key>>,
 }
 
-/// A [`KeyboardDescriptor`] contains information about a specific keyboard device.
+/// A [`KeyboardDeviceDescriptor`] contains information about a specific keyboard device.
 #[derive(Clone)]
-pub struct KeyboardDescriptor {
+pub struct KeyboardDeviceDescriptor {
     /// All the keys available on the keyboard device.
     pub keys: Vec<Key>,
 }
 
 /// A [`KeyboardBinding`] represents a connection to a keyboard input device.
 ///
-/// The [`KeyboardBinding`] parses and exposes keyboard descriptor properties (e.g., the available
+/// The [`KeyboardBinding`] parses and exposes keyboard device descriptor properties (e.g., the available
 /// keyboard keys) for the device it is associated with. It also parses [`InputReport`]s
 /// from the device, and sends them to clients via the stream available at
-/// [`KeyboardBinding::input_message_stream()`].
+/// [`KeyboardBinding::input_event_stream()`].
 ///
 /// # Example
 /// ```
 /// let mut keyboard_device: KeyboardBinding = input_device::InputDeviceBinding::new().await?;
 ///
-/// while let Some(report) = keyboard_device.input_message_stream().next().await {}
+/// while let Some(report) = keyboard_device.input_event_stream().next().await {}
 /// ```
 pub struct KeyboardBinding {
-    /// The channel to stream InputReports to
-    message_sender: Sender<input_device::InputMessage>,
+    /// The channel to stream InputEvents to.
+    event_sender: Sender<input_device::InputEvent>,
 
-    /// The receiving end of the input report channel. Clients use this indirectly via
-    /// [`input_messages()`].
-    message_receiver: Receiver<input_device::InputMessage>,
+    /// The receiving end of the input event channel. Clients use this indirectly via
+    /// [`input_event_stream()`].
+    event_receiver: Receiver<input_device::InputEvent>,
 
     /// Holds information about this device.
-    descriptor: KeyboardDescriptor,
+    device_descriptor: KeyboardDeviceDescriptor,
 }
 
 #[async_trait]
 impl input_device::InputDeviceBinding for KeyboardBinding {
-    fn input_message_sender(&self) -> Sender<input_device::InputMessage> {
-        self.message_sender.clone()
+    fn input_event_sender(&self) -> Sender<input_device::InputEvent> {
+        self.event_sender.clone()
     }
 
-    fn input_message_stream(&mut self) -> &mut Receiver<input_device::InputMessage> {
-        return &mut self.message_receiver;
+    fn input_event_stream(&mut self) -> &mut Receiver<input_device::InputEvent> {
+        return &mut self.event_receiver;
     }
 
-    fn get_descriptor(&self) -> input_device::InputDescriptor {
-        input_device::InputDescriptor::Keyboard(self.descriptor.clone())
+    fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Keyboard(self.device_descriptor.clone())
     }
 
     fn process_reports(
         report: InputReport,
         previous_report: Option<InputReport>,
-        _device_descriptor: &mut input_device::InputDescriptor,
-        input_message_sender: &mut Sender<input_device::InputMessage>,
+        device_descriptor: input_device::InputDeviceDescriptor,
+        input_event_sender: &mut Sender<input_device::InputEvent>,
     ) -> Option<InputReport> {
         let new_keys = match KeyboardBinding::parse_pressed_keys(&report) {
             Some(keys) => keys,
@@ -111,7 +110,12 @@ impl input_device::InputDeviceBinding for KeyboardBinding {
             .and_then(|unwrapped_report| KeyboardBinding::parse_pressed_keys(&unwrapped_report))
             .unwrap_or_default();
 
-        KeyboardBinding::send_key_events(&new_keys, &previous_keys, input_message_sender.clone());
+        KeyboardBinding::send_key_events(
+            &new_keys,
+            &previous_keys,
+            device_descriptor.clone(),
+            input_event_sender.clone(),
+        );
 
         Some(report)
     }
@@ -130,17 +134,18 @@ impl input_device::InputDeviceBinding for KeyboardBinding {
             Some(fidl_fuchsia_input_report::KeyboardDescriptor {
                 input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor { keys }),
             }) => {
-                let (message_sender, message_receiver) =
-                    futures::channel::mpsc::channel(input_device::INPUT_MESSAGE_BUFFER_SIZE);
+                let (event_sender, event_receiver) =
+                    futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
                 Ok(KeyboardBinding {
-                    message_sender,
-                    message_receiver,
-                    descriptor: KeyboardDescriptor { keys: keys.unwrap_or_default() },
+                    event_sender,
+                    event_receiver,
+                    device_descriptor: KeyboardDeviceDescriptor { keys: keys.unwrap_or_default() },
                 })
             }
-            descriptor => {
-                Err(format_err!("Keyboard Descriptor failed to parse: \n {:?}", descriptor))
-            }
+            device_descriptor => Err(format_err!(
+                "Keyboard Device Descriptor failed to parse: \n {:?}",
+                device_descriptor
+            )),
         }
     }
 }
@@ -162,25 +167,25 @@ async fn all_keyboard_bindings() -> Result<Vec<KeyboardBinding>, Error> {
     Ok(device_bindings)
 }
 
-/// Returns a stream of InputMessages from all keyboard devices.
+/// Returns a stream of InputEvents from all keyboard devices.
 ///
 /// # Errors
 /// If there was an error binding to any keyboard.
-pub async fn all_keyboard_messages() -> Result<Receiver<input_device::InputMessage>, Error> {
+pub async fn all_keyboard_events() -> Result<Receiver<input_device::InputEvent>, Error> {
     let bindings = all_keyboard_bindings().await?;
-    let (message_sender, message_receiver) =
-        futures::channel::mpsc::channel(input_device::INPUT_MESSAGE_BUFFER_SIZE);
+    let (event_sender, event_receiver) =
+        futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
 
     for mut keyboard in bindings {
-        let mut sender = message_sender.clone();
+        let mut sender = event_sender.clone();
         fasync::spawn(async move {
-            while let Some(report) = keyboard.input_message_stream().next().await {
-                let _ = sender.try_send(report);
+            while let Some(input_event) = keyboard.input_event_stream().next().await {
+                let _ = sender.try_send(input_event);
             }
         });
     }
 
-    Ok(message_receiver)
+    Ok(event_receiver)
 }
 
 impl KeyboardBinding {
@@ -246,7 +251,8 @@ impl KeyboardBinding {
     fn send_key_events(
         new_keys: &Vec<Key>,
         previous_keys: &Vec<Key>,
-        mut input_message_sender: Sender<input_device::InputMessage>,
+        device_descriptor: input_device::InputDeviceDescriptor,
+        mut input_event_sender: Sender<input_device::InputEvent>,
     ) {
         // Filter out the keys which were present in the previous keyboard report to avoid sending
         // multiple `KeyEventPhase::Pressed` events for a key.
@@ -264,10 +270,13 @@ impl KeyboardBinding {
         };
 
         fasync::spawn(async move {
-            match input_message_sender
-                .send(input_device::InputMessage::Keyboard(KeyboardInputMessage {
-                    keys: keys_to_send,
-                }))
+            match input_event_sender
+                .send(input_device::InputEvent {
+                    event_descriptor: input_device::InputEventDescriptor::Keyboard(
+                        KeyboardEventDescriptor { keys: keys_to_send },
+                    ),
+                    device_descriptor,
+                })
                 .await
             {
                 Err(error) => {
@@ -303,27 +312,33 @@ mod tests {
         let previous_report = None;
         let report = create_input_report(vec![Key::A]);
 
-        let mut descriptor =
-            input_device::InputDescriptor::Keyboard(KeyboardDescriptor { keys: vec![] });
+        let device_descriptor =
+            input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
+                keys: vec![],
+            });
 
-        let (message_sender, mut message_receiver) = futures::channel::mpsc::channel(1);
+        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
         let _ = KeyboardBinding::process_reports(
             report,
             previous_report,
-            &mut descriptor,
-            &mut message_sender.clone(),
+            device_descriptor,
+            &mut event_sender.clone(),
         );
 
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Keyboard(keyboard_message) => {
-                    assert_eq!(keyboard_message.keys[&KeyEventPhase::Pressed].len(), 1);
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Keyboard(keyboard_event_descriptor),
+                    device_descriptor: _,
+                } => {
+                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].len(), 1);
                     assert_eq!(
-                        keyboard_message.keys[&KeyEventPhase::Pressed].first(),
+                        keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].first(),
                         Some(&Key::A)
                     );
 
-                    assert_eq!(keyboard_message.keys[&KeyEventPhase::Released].len(), 0);
+                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Released].len(), 0);
                 }
                 _ => assert!(false),
             }
@@ -339,27 +354,33 @@ mod tests {
         let previous_report = create_input_report(vec![Key::A]);
         let report = create_input_report(vec![]);
 
-        let mut descriptor =
-            input_device::InputDescriptor::Keyboard(KeyboardDescriptor { keys: vec![] });
+        let device_descriptor =
+            input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
+                keys: vec![],
+            });
 
-        let (message_sender, mut message_receiver) = futures::channel::mpsc::channel(1);
+        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
         let _ = KeyboardBinding::process_reports(
             report,
             Some(previous_report),
-            &mut descriptor,
-            &mut message_sender.clone(),
+            device_descriptor,
+            &mut event_sender.clone(),
         );
 
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Keyboard(keyboard_message) => {
-                    assert_eq!(keyboard_message.keys[&KeyEventPhase::Released].len(), 1);
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Keyboard(keyboard_event_descriptor),
+                    device_descriptor: _,
+                } => {
+                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Released].len(), 1);
                     assert_eq!(
-                        keyboard_message.keys[&KeyEventPhase::Released].first(),
+                        keyboard_event_descriptor.keys[&KeyEventPhase::Released].first(),
                         Some(&Key::A)
                     );
 
-                    assert_eq!(keyboard_message.keys[&KeyEventPhase::Pressed].len(), 0);
+                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].len(), 0);
                 }
                 _ => assert!(false),
             }
@@ -375,22 +396,28 @@ mod tests {
         let previous_report = create_input_report(vec![Key::A]);
         let report = create_input_report(vec![Key::A]);
 
-        let mut descriptor =
-            input_device::InputDescriptor::Keyboard(KeyboardDescriptor { keys: vec![] });
+        let device_descriptor =
+            input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
+                keys: vec![],
+            });
 
-        let (message_sender, mut message_receiver) = futures::channel::mpsc::channel(1);
+        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
         let _ = KeyboardBinding::process_reports(
             report,
             Some(previous_report),
-            &mut descriptor,
-            &mut message_sender.clone(),
+            device_descriptor,
+            &mut event_sender.clone(),
         );
 
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Keyboard(keyboard_message) => {
-                    assert_eq!(keyboard_message.keys[&KeyEventPhase::Released].len(), 0);
-                    assert_eq!(keyboard_message.keys[&KeyEventPhase::Pressed].len(), 0);
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Keyboard(keyboard_event_descriptor),
+                    device_descriptor: _,
+                } => {
+                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Released].len(), 0);
+                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].len(), 0);
                 }
                 _ => assert!(false),
             }
@@ -405,29 +432,35 @@ mod tests {
         let previous_report = create_input_report(vec![Key::A]);
         let report = create_input_report(vec![Key::B]);
 
-        let mut descriptor =
-            input_device::InputDescriptor::Keyboard(KeyboardDescriptor { keys: vec![] });
+        let device_descriptor =
+            input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
+                keys: vec![],
+            });
 
-        let (message_sender, mut message_receiver) = futures::channel::mpsc::channel(1);
+        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
         let _ = KeyboardBinding::process_reports(
             report,
             Some(previous_report),
-            &mut descriptor,
-            &mut message_sender.clone(),
+            device_descriptor,
+            &mut event_sender.clone(),
         );
 
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Keyboard(keyboard_message) => {
-                    assert_eq!(keyboard_message.keys[&KeyEventPhase::Released].len(), 1);
-                    assert_eq!(keyboard_message.keys[&KeyEventPhase::Pressed].len(), 1);
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Keyboard(keyboard_event_descriptor),
+                    device_descriptor: _,
+                } => {
+                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Released].len(), 1);
+                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].len(), 1);
 
                     assert_eq!(
-                        keyboard_message.keys[&KeyEventPhase::Released].first(),
+                        keyboard_event_descriptor.keys[&KeyEventPhase::Released].first(),
                         Some(&Key::A)
                     );
                     assert_eq!(
-                        keyboard_message.keys[&KeyEventPhase::Pressed].first(),
+                        keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].first(),
                         Some(&Key::B)
                     );
                 }
@@ -438,30 +471,36 @@ mod tests {
         }
     }
 
-    /// Tests that modifier keys are propagated to the message receiver.
+    /// Tests that modifier keys are propagated to the event receiver.
     #[fasync::run_singlethreaded(test)]
     async fn modifier_keys() {
         let previous_report = None;
         let report = create_input_report(vec![Key::LeftShift]);
 
-        let mut descriptor =
-            input_device::InputDescriptor::Keyboard(KeyboardDescriptor { keys: vec![] });
+        let device_descriptor =
+            input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
+                keys: vec![],
+            });
 
-        let (message_sender, mut message_receiver) = futures::channel::mpsc::channel(1);
+        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
         let _ = KeyboardBinding::process_reports(
             report,
             previous_report,
-            &mut descriptor,
-            &mut message_sender.clone(),
+            device_descriptor,
+            &mut event_sender.clone(),
         );
 
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Keyboard(keyboard_message) => {
-                    assert_eq!(keyboard_message.keys[&KeyEventPhase::Pressed].len(), 1);
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Keyboard(keyboard_event_descriptor),
+                    device_descriptor: _,
+                } => {
+                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].len(), 1);
 
                     assert_eq!(
-                        keyboard_message.keys[&KeyEventPhase::Pressed].first(),
+                        keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].first(),
                         Some(&Key::LeftShift)
                     );
                 }

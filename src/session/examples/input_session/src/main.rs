@@ -15,15 +15,17 @@ use {
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["input_session"]).expect("Failed to initialize logger.");
 
-    let mut mouse_receiver: Receiver<input_device::InputMessage> =
-        mouse::all_mouse_messages().await?;
-    while let Some(message) = mouse_receiver.next().await {
-        match message {
-            input_device::InputMessage::Mouse(mouse_message) => {
-                fx_log_info!("movement_x: {}", mouse_message.movement_x);
-                fx_log_info!("movement_y: {}", mouse_message.movement_y);
-                fx_log_info!("phase: {:?}", mouse_message.phase);
-                fx_log_info!("buttons: {}", mouse_message.buttons);
+    let mut mouse_receiver: Receiver<input_device::InputEvent> = mouse::all_mouse_events().await?;
+    while let Some(input_event) = mouse_receiver.next().await {
+        match input_event {
+            input_device::InputEvent {
+                event_descriptor: input_device::InputEventDescriptor::Mouse(mouse_event_descriptor),
+                device_descriptor: _,
+            } => {
+                fx_log_info!("movement_x: {}", mouse_event_descriptor.movement_x);
+                fx_log_info!("movement_y: {}", mouse_event_descriptor.movement_y);
+                fx_log_info!("phase: {:?}", mouse_event_descriptor.phase);
+                fx_log_info!("buttons: {}", mouse_event_descriptor.buttons);
             }
             _ => {}
         }

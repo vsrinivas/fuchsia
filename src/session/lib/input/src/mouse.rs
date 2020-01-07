@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::input_device,
-    crate::input_device::InputDeviceBinding,
+    crate::input_device::{self, InputDeviceBinding, InputDeviceDescriptor},
     anyhow::{format_err, Error},
     async_trait::async_trait,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
@@ -14,16 +13,16 @@ use {
     futures::StreamExt,
 };
 
-/// A [`MouseInputMessage`] represents a pointer event with a specified phase, and the buttons
+/// A [`MouseEventDescriptor`] represents a pointer event with a specified phase, and the buttons
 /// involved in said phase. The supported phases for mice include Up, Down, and Move.
 ///
 /// # Example
-/// The following MouseInputMessage represents a movement of 40 units in the x axis and 20 units
+/// The following MouseEventDescriptor represents a movement of 40 units in the x axis and 20 units
 /// in the y axis while hold the primary button down.
 ///
 /// ```
-/// let message = input_device::InputMessage::Mouse({
-///     MouseInputMessage {
+/// let mouse_event_descriptor = input_device::InputEventDescriptor::Mouse({
+///     MouseEventDescriptor {
 ///         movement_x: 40,
 ///         movement_y: 20,
 ///         phase: fidl_fuchsia_ui_input::PointerEventPhase::Move,
@@ -31,7 +30,7 @@ use {
 ///     }});
 /// ```
 #[derive(Copy, Clone)]
-pub struct MouseInputMessage {
+pub struct MouseEventDescriptor {
     /// The movement in the x axis.
     pub movement_x: i64,
 
@@ -50,49 +49,53 @@ pub struct MouseInputMessage {
 ///
 /// The [`MouseBinding`] parses and exposes mouse descriptor properties (e.g., the range of
 /// possible x values) for the device it is associated with. It also parses [`InputReport`]s
-/// from the device, and sends them to clients via [`MouseBinding::input_message_stream()`].
+/// from the device, and sends them to clients via [`MouseBinding::input_event_stream()`].
 ///
 /// # Example
 /// ```
 /// let mut mouse_device: MouseBinding = input_device::InputDeviceBinding::new().await?;
 ///
-/// while let Some(report) = mouse_device.input_message_stream().next().await {}
+/// while let Some(report) = mouse_device.input_event_stream().next().await {}
 /// ```
 pub struct MouseBinding {
-    /// The sender used to send available input reports.
-    message_sender: Sender<input_device::InputMessage>,
+    /// The channel to stream InputEvents to.
+    event_sender: Sender<input_device::InputEvent>,
 
-    /// The receiving end of the input report channel. Clients use this indirectly via
-    /// [`input_message_stream()`].
-    message_receiver: Receiver<input_device::InputMessage>,
+    /// The receiving end of the input event channel. Clients use this indirectly via
+    /// [`input_event_stream()`].
+    event_receiver: Receiver<input_device::InputEvent>,
 
     /// Holds information about this device. Currently empty because no information is needed for
     /// the supported use cases.
-    descriptor: MouseDescriptor,
+    device_descriptor: MouseDeviceDescriptor,
 }
 
-#[derive(Copy, Clone)]
-pub struct MouseDescriptor {}
+#[derive(Clone)]
+#[allow(dead_code)]
+pub struct MouseDeviceDescriptor {
+    /// The id of the connected mouse input device.
+    device_id: u32,
+}
 
 #[async_trait]
 impl input_device::InputDeviceBinding for MouseBinding {
-    fn input_message_sender(&self) -> Sender<input_device::InputMessage> {
-        self.message_sender.clone()
+    fn input_event_sender(&self) -> Sender<input_device::InputEvent> {
+        self.event_sender.clone()
     }
 
-    fn input_message_stream(&mut self) -> &mut Receiver<input_device::InputMessage> {
-        return &mut self.message_receiver;
+    fn input_event_stream(&mut self) -> &mut Receiver<input_device::InputEvent> {
+        return &mut self.event_receiver;
     }
 
-    fn get_descriptor(&self) -> input_device::InputDescriptor {
-        input_device::InputDescriptor::Mouse(self.descriptor)
+    fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Mouse(self.device_descriptor.clone())
     }
 
     fn process_reports(
         report: InputReport,
         previous_report: Option<InputReport>,
-        _device_descriptor: &mut input_device::InputDescriptor,
-        input_message_sender: &mut Sender<input_device::InputMessage>,
+        device_descriptor: input_device::InputDeviceDescriptor,
+        input_event_sender: &mut Sender<input_device::InputEvent>,
     ) -> Option<InputReport> {
         // Fail early if the new InputReport isn't a MouseInputReport
         let mouse_report: &fidl_fuchsia_input_report::MouseInputReport = match &report.mouse {
@@ -110,37 +113,40 @@ impl input_device::InputDeviceBinding for MouseBinding {
         }
         let buttons: u32 = buttons(&report.mouse);
 
-        // Send a Move InputMessage with the buttons that remained pressed buttons
+        // Send a Move InputEventDescriptor with the buttons that remained pressed buttons
         let moving_buttons: u32 = previous_buttons & buttons;
-        send_mouse_message(
+        send_mouse_event(
             mouse_report.movement_x.unwrap_or_default(),
             mouse_report.movement_y.unwrap_or_default(),
             fidl_fuchsia_ui_input::PointerEventPhase::Move,
             moving_buttons,
-            input_message_sender,
+            device_descriptor.clone(),
+            input_event_sender,
         );
 
-        // Send an Up InputMessage for released buttons
+        // Send an Up InputEventDescriptor for released buttons
         let released_buttons: u32 = (previous_buttons ^ buttons) & previous_buttons;
         if released_buttons != 0 {
-            send_mouse_message(
+            send_mouse_event(
                 mouse_report.movement_x.unwrap_or_default(),
                 mouse_report.movement_y.unwrap_or_default(),
                 fidl_fuchsia_ui_input::PointerEventPhase::Up,
                 released_buttons,
-                input_message_sender,
+                device_descriptor.clone(),
+                input_event_sender,
             );
         }
 
-        // Send a Down InputMessage for pressed buttons
+        // Send a Down InputEventDescriptor for pressed buttons
         let pressed_buttons: u32 = (buttons ^ previous_buttons) & buttons;
         if pressed_buttons != 0 {
-            send_mouse_message(
+            send_mouse_event(
                 mouse_report.movement_x.unwrap_or_default(),
                 mouse_report.movement_y.unwrap_or_default(),
                 fidl_fuchsia_ui_input::PointerEventPhase::Down,
                 pressed_buttons,
-                input_message_sender,
+                device_descriptor.clone(),
+                input_event_sender,
             );
         }
 
@@ -157,39 +163,52 @@ impl input_device::InputDeviceBinding for MouseBinding {
     }
 
     async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
-        match device.get_descriptor().await?.mouse {
+        let device_descriptor: fidl_fuchsia_input_report::DeviceDescriptor =
+            device.get_descriptor().await?;
+        match device_descriptor.mouse {
             Some(_) => {
-                let (message_sender, message_receiver) =
-                    futures::channel::mpsc::channel(input_device::INPUT_MESSAGE_BUFFER_SIZE);
+                let (event_sender, event_receiver) =
+                    futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
 
-                let descriptor: MouseDescriptor = MouseDescriptor {};
+                let device_id = match device_descriptor.device_info {
+                    Some(info) => info.product_id,
+                    None => {
+                        return Err(format_err!("Mouse Descriptor doesn't contain a product id."))
+                    }
+                };
 
-                Ok(MouseBinding { message_sender, message_receiver, descriptor })
+                let device_descriptor: MouseDeviceDescriptor = MouseDeviceDescriptor { device_id };
+
+                Ok(MouseBinding { event_sender, event_receiver, device_descriptor })
             }
             descriptor => Err(format_err!("Mouse Descriptor failed to parse: \n {:?}", descriptor)),
         }
     }
 }
 
-/// Sends a MouseInputMessage over `sender`.
+/// Sends an InputEvent over `sender`.
 ///
 /// # Parameters
 /// - `movement_x`: The movement in the x axis.
 /// - `movement_y`: The movement in the y axis.
-/// - `phase`: The phase of the [`buttons`] associated with the input message.
-/// - `buttons`: The buttons relevant to the message represented as flipped bits.
-/// - `sender`: The stream to send the MouseInputMessage to.
-fn send_mouse_message(
+/// - `phase`: The phase of the [`buttons`] associated with the input event.
+/// - `buttons`: The buttons relevant to the event represented as flipped bits.
+/// - `sender`: The stream to send the MouseInputEvent to.
+fn send_mouse_event(
     movement_x: i64,
     movement_y: i64,
     phase: fidl_fuchsia_ui_input::PointerEventPhase,
     buttons: u32,
-    sender: &mut Sender<input_device::InputMessage>,
+    device_descriptor: InputDeviceDescriptor,
+    sender: &mut Sender<input_device::InputEvent>,
 ) {
-    match sender.try_send(input_device::InputMessage::Mouse({
-        MouseInputMessage { movement_x, movement_y, phase, buttons }
-    })) {
-        Err(e) => fx_log_info!("Failed to send MouseInputMessage with error: {:?}", e),
+    match sender.try_send(input_device::InputEvent {
+        event_descriptor: input_device::InputEventDescriptor::Mouse({
+            MouseEventDescriptor { movement_x, movement_y, phase, buttons }
+        }),
+        device_descriptor,
+    }) {
+        Err(e) => fx_log_info!("Failed to send InputEvent for mouse with error: {:?}", e),
         _ => {}
     }
 }
@@ -250,30 +269,52 @@ async fn all_mouse_bindings() -> Result<Vec<MouseBinding>, Error> {
     Ok(device_bindings)
 }
 
-/// Returns a stream of InputMessages from all mouse devices.
+/// Returns a stream of InputEvents from all mouse devices.
 ///
 /// # Errors
 /// If there was an error binding to any mouse.
-pub async fn all_mouse_messages() -> Result<Receiver<input_device::InputMessage>, Error> {
+pub async fn all_mouse_events() -> Result<Receiver<input_device::InputEvent>, Error> {
     let bindings = all_mouse_bindings().await?;
-    let (message_sender, message_receiver) =
-        futures::channel::mpsc::channel(input_device::INPUT_MESSAGE_BUFFER_SIZE);
+    let (event_sender, event_receiver) =
+        futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
 
     for mut mouse in bindings {
-        let mut sender = message_sender.clone();
+        let mut sender = event_sender.clone();
         fasync::spawn(async move {
-            while let Some(report) = mouse.input_message_stream().next().await {
-                let _ = sender.try_send(report);
+            while let Some(input_event) = mouse.input_event_stream().next().await {
+                let _ = sender.try_send(input_event);
             }
         });
     }
 
-    Ok(message_receiver)
+    Ok(event_receiver)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, futures::TryStreamExt};
+
+    fn create_input_device_proxy_and_stream(
+        device_descriptor: fidl_fuchsia_input_report::DeviceDescriptor,
+    ) -> InputDeviceProxy {
+        let (input_device_proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<
+            fidl_fuchsia_input_report::InputDeviceMarker,
+        >()
+        .expect("Failed to create InputDeviceProxy and stream.");
+        fasync::spawn(async move {
+            let request = stream.try_next().await.expect("Failed to read request.");
+            match request {
+                Some(fidl_fuchsia_input_report::InputDeviceRequest::GetDescriptor {
+                    responder,
+                }) => {
+                    let _ = responder.send(device_descriptor);
+                }
+                _ => assert!(false),
+            }
+        });
+
+        input_device_proxy
+    }
 
     fn create_input_report(x: i64, y: i64, buttons: Vec<u8>) -> InputReport {
         InputReport {
@@ -332,178 +373,292 @@ mod tests {
         assert_eq!(bits, 2147483653 /* 10...00000101 */)
     }
 
-    // Tests that two InputMessages are sent for a button press
     #[fasync::run_singlethreaded(test)]
-    async fn down_input_message() {
+    async fn bind_device_success() {
+        let input_device_proxy: InputDeviceProxy =
+            create_input_device_proxy_and_stream(fidl_fuchsia_input_report::DeviceDescriptor {
+                device_info: Some(fidl_fuchsia_input_report::DeviceInfo {
+                    vendor_id: 1,
+                    product_id: 2,
+                    version: 3,
+                    name: "mouse".to_string(),
+                }),
+                mouse: Some(fidl_fuchsia_input_report::MouseDescriptor { input: None }),
+                sensor: None,
+                touch: None,
+                keyboard: None,
+            });
+
+        let mouse_binding_result: Result<MouseBinding, Error> =
+            MouseBinding::bind_device(&input_device_proxy).await;
+        match mouse_binding_result {
+            Ok(binding) => match binding.get_device_descriptor() {
+                input_device::InputDeviceDescriptor::Mouse(mouse_device_descriptor) => {
+                    assert_eq!(mouse_device_descriptor.device_id, 2)
+                }
+                _ => assert!(false),
+            },
+            Err(_) => assert!(false),
+        };
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn bind_device_without_device_info() {
+        let input_device_proxy: InputDeviceProxy =
+            create_input_device_proxy_and_stream(fidl_fuchsia_input_report::DeviceDescriptor {
+                device_info: None,
+                mouse: Some(fidl_fuchsia_input_report::MouseDescriptor { input: None }),
+                sensor: None,
+                touch: None,
+                keyboard: None,
+            });
+
+        match MouseBinding::bind_device(&input_device_proxy).await {
+            Ok(_) => assert!(false),
+            Err(_) => {}
+        };
+    }
+
+    // Tests that two InputEvents are sent for a button press
+    #[fasync::run_singlethreaded(test)]
+    async fn down_input_event() {
         const MOUSE_X: i64 = 0;
         const MOUSE_Y: i64 = 0;
 
         let previous_report = Some(create_input_report(0, 0, vec![]));
         let report = create_input_report(MOUSE_X, MOUSE_Y, vec![3]);
-        let mut descriptor = input_device::InputDescriptor::Mouse(MouseDescriptor {});
-        let (message_sender, mut message_receiver) = futures::channel::mpsc::channel(1);
+        let descriptor =
+            input_device::InputDeviceDescriptor::Mouse(MouseDeviceDescriptor { device_id: 0 });
+        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
         let _ = MouseBinding::process_reports(
             report,
             previous_report,
-            &mut descriptor,
-            &mut message_sender.clone(),
+            descriptor,
+            &mut event_sender.clone(),
         );
 
-        // First message received is a move
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Mouse(mouse_message) => {
-                    assert_eq!(mouse_message.movement_x, MOUSE_X);
-                    assert_eq!(mouse_message.movement_y, MOUSE_Y);
-                    assert_eq!(mouse_message.phase, fidl_fuchsia_ui_input::PointerEventPhase::Move);
-                    assert_eq!(mouse_message.buttons, 0);
+        // First event received is a move
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Mouse(mouse_event_descriptor),
+                    device_descriptor:
+                        input_device::InputDeviceDescriptor::Mouse(_mouse_device_descriptor),
+                } => {
+                    assert_eq!(mouse_event_descriptor.movement_x, MOUSE_X);
+                    assert_eq!(mouse_event_descriptor.movement_y, MOUSE_Y);
+                    assert_eq!(
+                        mouse_event_descriptor.phase,
+                        fidl_fuchsia_ui_input::PointerEventPhase::Move
+                    );
+                    assert_eq!(mouse_event_descriptor.buttons, 0);
                 }
                 _ => assert!(false),
             }
         }
 
-        // Second message received is a down
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Mouse(mouse_message) => {
-                    assert_eq!(mouse_message.movement_x, MOUSE_X);
-                    assert_eq!(mouse_message.movement_y, MOUSE_Y);
-                    assert_eq!(mouse_message.phase, fidl_fuchsia_ui_input::PointerEventPhase::Down);
-                    assert_eq!(mouse_message.buttons, 4);
+        // Second event received is a down
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Mouse(mouse_event_descriptor),
+                    device_descriptor:
+                        input_device::InputDeviceDescriptor::Mouse(_mouse_device_descriptor),
+                } => {
+                    assert_eq!(mouse_event_descriptor.movement_x, MOUSE_X);
+                    assert_eq!(mouse_event_descriptor.movement_y, MOUSE_Y);
+                    assert_eq!(
+                        mouse_event_descriptor.phase,
+                        fidl_fuchsia_ui_input::PointerEventPhase::Down
+                    );
+                    assert_eq!(mouse_event_descriptor.buttons, 4);
                 }
                 _ => assert!(false),
             }
         }
     }
 
-    // Tests that two InputMessages are sent for a button release
+    // Tests that two InputEvents are sent for a button release
     #[fasync::run_singlethreaded(test)]
-    async fn up_input_message() {
+    async fn up_input_event() {
         const MOUSE_X: i64 = 0;
         const MOUSE_Y: i64 = 0;
 
         let previous_report = Some(create_input_report(0, 0, vec![3]));
         let report = create_input_report(MOUSE_X, MOUSE_Y, vec![]);
-        let mut descriptor = input_device::InputDescriptor::Mouse(MouseDescriptor {});
-        let (message_sender, mut message_receiver) = futures::channel::mpsc::channel(1);
+        let descriptor =
+            input_device::InputDeviceDescriptor::Mouse(MouseDeviceDescriptor { device_id: 0 });
+        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
         let _ = MouseBinding::process_reports(
             report,
             previous_report,
-            &mut descriptor,
-            &mut message_sender.clone(),
+            descriptor,
+            &mut event_sender.clone(),
         );
 
-        // First message received is a move
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Mouse(mouse_message) => {
-                    assert_eq!(mouse_message.movement_x, MOUSE_X);
-                    assert_eq!(mouse_message.movement_y, MOUSE_Y);
-                    assert_eq!(mouse_message.phase, fidl_fuchsia_ui_input::PointerEventPhase::Move);
-                    assert_eq!(mouse_message.buttons, 0);
+        // First event received is a move
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Mouse(mouse_event_descriptor),
+                    device_descriptor:
+                        input_device::InputDeviceDescriptor::Mouse(_mouse_device_descriptor),
+                } => {
+                    assert_eq!(mouse_event_descriptor.movement_x, MOUSE_X);
+                    assert_eq!(mouse_event_descriptor.movement_y, MOUSE_Y);
+                    assert_eq!(
+                        mouse_event_descriptor.phase,
+                        fidl_fuchsia_ui_input::PointerEventPhase::Move
+                    );
+                    assert_eq!(mouse_event_descriptor.buttons, 0);
                 }
                 _ => assert!(false),
             }
         }
 
-        // Second message received is an up
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Mouse(mouse_message) => {
-                    assert_eq!(mouse_message.movement_x, MOUSE_X);
-                    assert_eq!(mouse_message.movement_y, MOUSE_Y);
-                    assert_eq!(mouse_message.phase, fidl_fuchsia_ui_input::PointerEventPhase::Up);
-                    assert_eq!(mouse_message.buttons, 4);
+        // Second event received is an up
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Mouse(mouse_event_descriptor),
+                    device_descriptor:
+                        input_device::InputDeviceDescriptor::Mouse(_mouse_device_descriptor),
+                } => {
+                    assert_eq!(mouse_event_descriptor.movement_x, MOUSE_X);
+                    assert_eq!(mouse_event_descriptor.movement_y, MOUSE_Y);
+                    assert_eq!(
+                        mouse_event_descriptor.phase,
+                        fidl_fuchsia_ui_input::PointerEventPhase::Up
+                    );
+                    assert_eq!(mouse_event_descriptor.buttons, 4);
                 }
                 _ => assert!(false),
             }
         }
     }
 
-    // Tests an InputMessage representing a move
+    // Tests an InputEvent representing a move
     #[fasync::run_singlethreaded(test)]
-    async fn move_input_message() {
+    async fn move_input_event() {
         const MOUSE_X: i64 = 30;
         const MOUSE_Y: i64 = 40;
 
         let previous_report = Some(create_input_report(10, 20, vec![3]));
         let report = create_input_report(MOUSE_X, MOUSE_Y, vec![3]);
-        let mut descriptor = input_device::InputDescriptor::Mouse(MouseDescriptor {});
-        let (message_sender, mut message_receiver) = futures::channel::mpsc::channel(1);
+        let descriptor =
+            input_device::InputDeviceDescriptor::Mouse(MouseDeviceDescriptor { device_id: 0 });
+        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
         let _ = MouseBinding::process_reports(
             report,
             previous_report,
-            &mut descriptor,
-            &mut message_sender.clone(),
+            descriptor,
+            &mut event_sender.clone(),
         );
 
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Mouse(mouse_message) => {
-                    assert_eq!(mouse_message.movement_x, MOUSE_X);
-                    assert_eq!(mouse_message.movement_y, MOUSE_Y);
-                    assert_eq!(mouse_message.phase, fidl_fuchsia_ui_input::PointerEventPhase::Move);
-                    assert_eq!(mouse_message.buttons, 4);
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Mouse(mouse_event_descriptor),
+                    device_descriptor:
+                        input_device::InputDeviceDescriptor::Mouse(_mouse_device_descriptor),
+                } => {
+                    assert_eq!(mouse_event_descriptor.movement_x, MOUSE_X);
+                    assert_eq!(mouse_event_descriptor.movement_y, MOUSE_Y);
+                    assert_eq!(
+                        mouse_event_descriptor.phase,
+                        fidl_fuchsia_ui_input::PointerEventPhase::Move
+                    );
+                    assert_eq!(mouse_event_descriptor.buttons, 4);
                 }
                 _ => assert!(false),
             }
         }
     }
 
-    // Tests that three InputMessages are sent when there is a move, a button press, and
+    // Tests that three InputEvents are sent when there is a move, a button press, and
     // a button release
     #[fasync::run_singlethreaded(test)]
-    async fn move_input_message_with_buttons() {
+    async fn move_input_event_with_buttons() {
         const MOUSE_X: i64 = 30;
         const MOUSE_Y: i64 = 40;
 
         let previous_report = Some(create_input_report(10, 20, vec![1, 3]));
         let report = create_input_report(MOUSE_X, MOUSE_Y, vec![2, 3]);
-        let mut descriptor = input_device::InputDescriptor::Mouse(MouseDescriptor {});
+        let descriptor =
+            input_device::InputDeviceDescriptor::Mouse(MouseDeviceDescriptor { device_id: 0 });
 
-        // This channel's buffer needs to hold an extra message
-        let (message_sender, mut message_receiver) = futures::channel::mpsc::channel(2);
+        // This channel's buffer needs to hold an extra event
+        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(2);
         let _ = MouseBinding::process_reports(
             report,
             previous_report,
-            &mut descriptor,
-            &mut message_sender.clone(),
+            descriptor,
+            &mut event_sender.clone(),
         );
 
-        // First message received is a move
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Mouse(mouse_message) => {
-                    assert_eq!(mouse_message.movement_x, MOUSE_X);
-                    assert_eq!(mouse_message.movement_y, MOUSE_Y);
-                    assert_eq!(mouse_message.phase, fidl_fuchsia_ui_input::PointerEventPhase::Move);
-                    assert_eq!(mouse_message.buttons, 4); // Button 3 was held
+        // First event received is a move
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Mouse(mouse_event_descriptor),
+                    device_descriptor:
+                        input_device::InputDeviceDescriptor::Mouse(_mouse_device_descriptor),
+                } => {
+                    assert_eq!(mouse_event_descriptor.movement_x, MOUSE_X);
+                    assert_eq!(mouse_event_descriptor.movement_y, MOUSE_Y);
+                    assert_eq!(
+                        mouse_event_descriptor.phase,
+                        fidl_fuchsia_ui_input::PointerEventPhase::Move
+                    );
+                    assert_eq!(mouse_event_descriptor.buttons, 4); // Button 3 was held
                 }
                 _ => assert!(false),
             }
         }
 
-        // Second message received is an up
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Mouse(mouse_message) => {
-                    assert_eq!(mouse_message.movement_x, MOUSE_X);
-                    assert_eq!(mouse_message.movement_y, MOUSE_Y);
-                    assert_eq!(mouse_message.phase, fidl_fuchsia_ui_input::PointerEventPhase::Up);
-                    assert_eq!(mouse_message.buttons, 1); // Button 1 was released
+        // Second event received is an up
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Mouse(mouse_event_descriptor),
+                    device_descriptor:
+                        input_device::InputDeviceDescriptor::Mouse(_mouse_device_descriptor),
+                } => {
+                    assert_eq!(mouse_event_descriptor.movement_x, MOUSE_X);
+                    assert_eq!(mouse_event_descriptor.movement_y, MOUSE_Y);
+                    assert_eq!(
+                        mouse_event_descriptor.phase,
+                        fidl_fuchsia_ui_input::PointerEventPhase::Up
+                    );
+                    assert_eq!(mouse_event_descriptor.buttons, 1); // Button 1 was released
                 }
                 _ => assert!(false),
             }
         }
 
-        // Third message received is a down
-        if let Some(input_message) = message_receiver.next().await {
-            match input_message {
-                input_device::InputMessage::Mouse(mouse_message) => {
-                    assert_eq!(mouse_message.movement_x, MOUSE_X);
-                    assert_eq!(mouse_message.movement_y, MOUSE_Y);
-                    assert_eq!(mouse_message.phase, fidl_fuchsia_ui_input::PointerEventPhase::Down);
-                    assert_eq!(mouse_message.buttons, 2); // Button 2 was pressed
+        // Third event received is a down
+        if let Some(input_event) = event_receiver.next().await {
+            match input_event {
+                input_device::InputEvent {
+                    event_descriptor:
+                        input_device::InputEventDescriptor::Mouse(mouse_event_descriptor),
+                    device_descriptor:
+                        input_device::InputDeviceDescriptor::Mouse(_mouse_device_descriptor),
+                } => {
+                    assert_eq!(mouse_event_descriptor.movement_x, MOUSE_X);
+                    assert_eq!(mouse_event_descriptor.movement_y, MOUSE_Y);
+                    assert_eq!(
+                        mouse_event_descriptor.phase,
+                        fidl_fuchsia_ui_input::PointerEventPhase::Down
+                    );
+                    assert_eq!(mouse_event_descriptor.buttons, 2); // Button 2 was pressed
                 }
                 _ => assert!(false),
             }

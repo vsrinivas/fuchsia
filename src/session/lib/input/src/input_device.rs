@@ -16,21 +16,27 @@ use {
     },
 };
 
-/// The buffer size for the stream that InputMessages are sent over.
-pub const INPUT_MESSAGE_BUFFER_SIZE: usize = 15;
+/// The buffer size for the stream that InputEvents are sent over.
+pub const INPUT_EVENT_BUFFER_SIZE: usize = 15;
 
-/// An [`InputMessage`] represents an input event from an input device.
+/// An [`InputEvent`] holds information about an input event and the device that produced the event.
+pub struct InputEvent {
+    pub event_descriptor: InputEventDescriptor,
+    pub device_descriptor: InputDeviceDescriptor,
+}
+
+/// An [`InputEventDescriptor`] represents an input event from an input device.
 ///
-/// [`InputMessage`]s contain more context than the raw [`InputReport`] they are parsed from.
-/// For example, [`KeyboardInputMessage`] contains all the pressed keys, as well as the key's
+/// [`InputEventDescriptor`]s contain more context than the raw [`InputReport`] they are parsed from.
+/// For example, [`KeyboardEventDescriptor`] contains all the pressed keys, as well as the key's
 /// phase (pressed, released, etc.).
 ///
-/// Each [`InputDeviceBinding`] generates the type of [`InputMessage`]s that are appropriate
+/// Each [`InputDeviceBinding`] generates the type of [`InputEventDescriptor`]s that are appropriate
 /// for their device.
-pub enum InputMessage {
-    Keyboard(keyboard::KeyboardInputMessage),
-    Mouse(mouse::MouseInputMessage),
-    Touch(touch::TouchInputMessage),
+pub enum InputEventDescriptor {
+    Keyboard(keyboard::KeyboardEventDescriptor),
+    Mouse(mouse::MouseEventDescriptor),
+    Touch(touch::TouchEventDescriptor),
 }
 
 /// An [`InputDescriptor`] describes the ranges of values a particular input device can generate.
@@ -39,13 +45,14 @@ pub enum InputMessage {
 /// and a [`InputDescriptor::Touch`] contains the maximum number of touch contacts and the
 /// range of x- and y-values each contact can take on.
 ///
-/// The descriptor is sent alongside [`InputMessage`]s so clients can, for example, convert a
+/// The descriptor is sent alongside [`InputEventDescriptor`]s so clients can, for example, convert a
 /// touch coordinate to a display coordinate. The descriptor is not expected to change for the
 /// lifetime of a device binding.
-pub enum InputDescriptor {
-    Keyboard(keyboard::KeyboardDescriptor),
-    Mouse(mouse::MouseDescriptor),
-    Touch(touch::TouchDescriptor),
+#[derive(Clone)]
+pub enum InputDeviceDescriptor {
+    Keyboard(keyboard::KeyboardDeviceDescriptor),
+    Mouse(mouse::MouseDeviceDescriptor),
+    Touch(touch::TouchDeviceDescriptor),
 }
 
 /// An [`InputDeviceBinding`] represents a binding to an input device (e.g., a mouse).
@@ -55,14 +62,14 @@ pub enum InputDescriptor {
 ///
 /// An [`InputDeviceBinding`] also forwards the bound input device's input report stream.
 /// The receiving end of the input stream is accessed by
-/// [`InputDeviceBinding::input_message_stream()`].
+/// [`InputDeviceBinding::input_event_stream()`].
 ///
 /// # Example
 ///
 /// ```
 /// let mouse_binding = InputDeviceBinding::new().await;
-/// while let Some(input_message) = mouse_binding.input_message_stream().next().await {
-///     // Handle the input message.
+/// while let Some(input_event) = mouse_binding.input_event_stream().next().await {
+///     // Handle the input event.
 /// }
 /// ```
 #[async_trait]
@@ -103,26 +110,26 @@ pub trait InputDeviceBinding: Sized {
     async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error>;
 
     /// Returns information about the input device.
-    fn get_descriptor(&self) -> InputDescriptor;
+    fn get_device_descriptor(&self) -> InputDeviceDescriptor;
 
     /// Returns a stream of input events generated from the bound device.
-    fn input_message_stream(&mut self) -> &mut Receiver<InputMessage>;
+    fn input_event_stream(&mut self) -> &mut Receiver<InputEvent>;
 
     /// Returns the input event stream's sender.
-    fn input_message_sender(&self) -> Sender<InputMessage>;
+    fn input_event_sender(&self) -> Sender<InputEvent>;
 
-    /// Parses an [`InputReport`] into one or more [`InputMessage`]s.
+    /// Parses an [`InputReport`] into one or more [`InputEvent`]s.
     ///
-    /// The [`InputMessage`]s are sent to the device binding owner via [`sender`].
+    /// The [`InputEvent`]s are sent to the device binding owner via [`sender`].
     ///
     /// # Parameters
     /// `report`: The incoming [`InputReport`].
     /// `previous_report`: The previous [`InputReport`] seen for the same device. This can be
     ///                    used to determine, for example, which keys are no longer present in
-    ///                    a keyboard report to generate key released messages. If `None`, no
+    ///                    a keyboard report to generate key released events. If `None`, no
     ///                    previous report was found.
     /// `device_descriptor`: The descriptor for the input device generating the input reports.
-    /// `input_message_sender`: The sender for the device binding's input message stream.
+    /// `input_event_sender`: The sender for the device binding's input event stream.
     ///
     /// # Returns
     /// An [`InputReport`] which will be passed to the next call to [`process_reports`], as
@@ -130,14 +137,14 @@ pub trait InputDeviceBinding: Sized {
     fn process_reports(
         report: InputReport,
         previous_report: Option<InputReport>,
-        device_descriptor: &mut InputDescriptor,
-        input_message_sender: &mut Sender<InputMessage>,
+        device_descriptor: InputDeviceDescriptor,
+        input_event_sender: &mut Sender<InputEvent>,
     ) -> Option<InputReport>;
 
     /// Creates a new [`InputDeviceBinding`] for the input type's default input device.
     ///
     /// The binding will start listening for input reports immediately, and they
-    /// can be read from [`input_message_stream()`].
+    /// can be read from [`input_event_stream()`].
     ///
     /// # Errors
     /// If there was an error finding or binding to the default input device.
@@ -152,7 +159,7 @@ pub trait InputDeviceBinding: Sized {
     /// Creates a new [`InputDeviceBinding`] from the `device_proxy`.
     ///
     /// The binding will start listening for input reports immediately, and they
-    /// can be read from [`input_message_stream()`].
+    /// can be read from [`input_event_stream()`].
     ///
     /// # Parameters
     /// `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
@@ -169,14 +176,14 @@ pub trait InputDeviceBinding: Sized {
     /// Initializes the input report stream for the bound device.
     ///
     /// Spawns a future which awaits input reports from the device and forwards them to
-    /// clients via [`input_message_sender()`]. The reports are observed via
-    /// [`input_message_stream()`].
+    /// clients via [`input_event_sender()`]. The reports are observed via
+    /// [`input_event_stream()`].
     ///
     /// # Parameters
     /// - `device_proxy`: The device proxy which is used to get input reports.
     fn initialize_report_stream(&self, device_proxy: fidl_fuchsia_input_report::InputDeviceProxy) {
-        let mut message_sender = self.input_message_sender();
-        let mut descriptor = self.get_descriptor();
+        let mut event_sender = self.input_event_sender();
+        let descriptor = self.get_device_descriptor();
         fasync::spawn(async move {
             let mut previous_report: Option<InputReport> = None;
             if let Ok((_status, event)) = device_proxy.get_reports_event().await {
@@ -186,8 +193,8 @@ pub trait InputDeviceBinding: Sized {
                             previous_report = Self::process_reports(
                                 report,
                                 previous_report,
-                                &mut descriptor,
-                                &mut message_sender,
+                                descriptor.clone(),
+                                &mut event_sender,
                             );
                         }
                     }
