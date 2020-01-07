@@ -195,14 +195,14 @@ impl DeviceState {
     async fn configure_wan(&mut self, pid: PortId, topological_path: &str) -> error::Result<()> {
         let wan_name = self.config.get_wan_interface_name(topological_path)?;
         let properties = self.config.create_wan_properties(topological_path)?;
-        let lif = self.create_lif(LIFType::WAN, wan_name, None, vec![pid]).await?;
+        let lif = self.create_lif(LIFType::WAN, wan_name, None, &[pid]).await?;
         self.update_lif_properties(lif.id().uuid(), &properties.to_fidl_wan()).await?;
         info!("WAN configured: pid: {:?}, lif: {:?}, properties: {:?} ", pid, lif, properties);
         Ok(())
     }
 
     async fn configure_lan(&mut self, pids: &[PortId]) -> error::Result<()> {
-        let lif = self.create_lif(LIFType::LAN, "lan".to_string(), Some(2), pids.to_vec()).await?;
+        let lif = self.create_lif(LIFType::LAN, "lan".to_string(), Some(2), pids).await?;
         let properties = crate::lifmgr::LIFProperties {
             enabled: true,
             dhcp: false,
@@ -375,12 +375,18 @@ impl DeviceState {
         lif_type: LIFType,
         name: String,
         vlan: Option<u16>,
-        ports: Vec<PortId>,
+        ports: &[PortId],
     ) -> error::Result<lifmgr::LIF> {
-        // Verify ports exist and can be used.
-        let x = ports.iter().find(|p| !self.port_manager.use_port(**p));
-        if x.is_some() {
-            self.release_ports(&ports);
+        if ports.is_empty() {
+            // At least one port is needed.
+            return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+        }
+        let reserved: Vec<PortId> = ports
+            .iter()
+            .filter_map(|p| if self.port_manager.use_port(*p) { Some(*p) } else { None })
+            .collect();
+        if reserved.len() != ports.len() {
+            self.release_ports(&reserved);
             return Err(error::NetworkManager::LIF(error::Lif::InvalidPort));
         }
 
@@ -396,28 +402,28 @@ impl DeviceState {
             lif_type,
             &name,
             PortId::from(0),
-            ports.clone(),
+            reserved.clone(),
             vid,
             Some(LIFProperties::default()),
         )
         .or_else(|e| {
-            self.release_ports(&ports);
+            self.release_ports(&reserved);
             Err(e)
         })?;
-        if ports.len() > 1 {
+        if reserved.len() > 1 {
             // Multiple ports, bridge them.
-            let i = self.hal.create_bridge(ports.clone()).await.or_else(|e| {
-                self.release_ports(&ports);
+            let i = self.hal.create_bridge(reserved.clone()).await.or_else(|e| {
+                self.release_ports(&reserved);
                 Err(e)
             })?;
             // LIF ID is associated with the bridge.
             l.set_pid(i.id);
-        } else if ports.len() == 1 {
-            l.set_pid(ports[0]);
+        } else {
+            l.set_pid(reserved[0]);
         }
         let r = self.lif_manager.add_lif(&l);
         if let Err(e) = r {
-            self.release_ports(&ports);
+            self.release_ports(&reserved);
             // nothing to do if delete_bridge fails, all state changes have been reverted
             // already, just return an error to let caller handle it as appropriate.
             self.hal.delete_bridge(l.pid()).await?;

@@ -354,7 +354,7 @@ impl EventLoop {
         vlan: u16,
         ports: Vec<PortId>,
     ) -> Result<Id, fidl_fuchsia_router_config::Error> {
-        let lif = self.device.create_lif(lif_type, name, Some(vlan), ports).await;
+        let lif = self.device.create_lif(lif_type, name, Some(vlan), &ports).await;
         match lif {
             Err(e) => {
                 error!("Error creating lif {:?}", e);
