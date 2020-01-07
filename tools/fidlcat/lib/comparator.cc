@@ -11,65 +11,105 @@
 
 namespace fidlcat {
 
-void Comparator::CompareInput(std::string_view syscall_inputs) {
-  // A difference has already been found, no need for anymore comparison.
+void Comparator::CompareInput(std::string_view syscall_inputs, uint64_t actual_pid,
+                              uint64_t actual_tid) {
+  // A difference has already been found, no need for anymore comparing.
   if (found_difference_) {
     return;
   }
-  std::string_view expected_inputs = GetNextExpectedMessage();
-  std::string actual_inputs = syscall_inputs.length() > 0 && syscall_inputs[0] == '\n'
-                                  ? static_cast<std::string>(syscall_inputs.substr(1))
-                                  : static_cast<std::string>(syscall_inputs);
-  if (!SameProcessNamePidTid(&actual_inputs, expected_inputs)) {
+
+  std::unique_ptr<Message> expected_inputs = GetNextExpectedMessage(actual_pid, actual_tid);
+  if (!expected_inputs) {
     found_difference_ = true;
     return;
   }
 
+  // Now get process name, and remove the header from syscall_inputs.
+  std::string_view actual_process_name =
+      syscall_inputs.length() > 0 && syscall_inputs[0] == '\n'
+          ? syscall_inputs.substr(1, syscall_inputs.find(' ') - 1)
+          : syscall_inputs.substr(0, syscall_inputs.find(' '));
+  if (actual_process_name.compare(expected_inputs->process_name) != 0) {
+    found_difference_ = true;
+    compare_results_ << "Different process names for actual pid:tid " << actual_pid << ":"
+                     << actual_tid << ", matched with expected pid:tid "
+                     << expected_pids_[actual_pid] << ":"
+                     << expected_pids_tids_[std::make_pair(actual_pid, actual_tid)].second
+                     << ", expected " << expected_inputs->process_name << " actual was "
+                     << actual_process_name;
+    return;
+  }
+  std::string actual_inputs = static_cast<std::string>(
+      syscall_inputs.substr(syscall_inputs.find(' ', syscall_inputs.find(":")) + 1));
+
   // Now we replace handles ids, then compare.
   static std::vector<std::string> handle_texts = {"handle: ", "handle = "};
   for (size_t i = 0; i < handle_texts.size(); i++) {
-    if (!CouldReplaceHandles(&actual_inputs, expected_inputs, handle_texts[i])) {
+    if (!CouldReplaceHandles(&actual_inputs, expected_inputs->message, handle_texts[i])) {
       found_difference_ = true;
       return;
     }
   }
 
-  if (actual_inputs.compare(expected_inputs) != 0) {
-    compare_results_ << "Different messages. expected " << expected_inputs << " got "
+  if (actual_inputs.compare(expected_inputs->message) != 0) {
+    compare_results_ << "Different messages. expected " << expected_inputs->message << " got "
                      << actual_inputs;
     found_difference_ = true;
     return;
   }
 }
 
-void Comparator::CompareOutput(std::string_view syscall_outputs) {
+void Comparator::CompareOutput(std::string_view syscall_outputs, uint64_t actual_pid,
+                               uint64_t actual_tid) {
   // A difference has already been found, no need for anymore comparison.
   if (found_difference_) {
     return;
   }
-  std::string actual_outputs = syscall_outputs.length() > 0 && syscall_outputs[0] == '\n'
-                                   ? static_cast<std::string>(syscall_outputs.substr(1))
-                                   : static_cast<std::string>(syscall_outputs);
 
-  std::string_view expected_outputs = GetNextExpectedMessage();
+  std::unique_ptr<Message> expected_outputs = GetNextExpectedMessage(actual_pid, actual_tid);
+  if (!expected_outputs) {
+    found_difference_ = true;
+    return;
+  }
+
   // Does output begin with process name, pid and tid?
-  if (actual_outputs.find("  ->") != 0) {
-    if (!SameProcessNamePidTid(&actual_outputs, expected_outputs)) {
+  std::string actual_outputs;
+  //'process_name pid:tid ' with one char for process_name/pid/tid
+  constexpr size_t kMinNbCharHeader = 5;
+  if (syscall_outputs.find("->") > kMinNbCharHeader) {
+    // We check that processes names match.
+    std::string_view actual_process_name =
+        syscall_outputs.length() > 0 && syscall_outputs[0] == '\n'
+            ? syscall_outputs.substr(1, syscall_outputs.find(' ') - 1)
+            : syscall_outputs.substr(0, syscall_outputs.find(' '));
+    if (actual_process_name.compare(expected_outputs->process_name) != 0) {
       found_difference_ = true;
+      compare_results_ << "Different process names for actual pid:tid " << actual_pid << ":"
+                       << actual_tid << ", matched with expected pid:tid "
+                       << expected_pids_[actual_pid] << ":"
+                       << expected_pids_tids_[std::make_pair(actual_pid, actual_tid)].second
+                       << ", expected " << expected_outputs->process_name << " actual was "
+                       << actual_process_name;
       return;
     }
+    actual_outputs = static_cast<std::string>(
+        syscall_outputs.substr(syscall_outputs.find(' ', syscall_outputs.find(":")) + 1));
+  } else {
+    actual_outputs = syscall_outputs.length() > 0 && syscall_outputs[0] == '\n'
+                         ? static_cast<std::string>(syscall_outputs.substr(1))
+                         : static_cast<std::string>(syscall_outputs);
   }
   // Now we replace handle ids, then compare.
   static std::vector<std::string> handle_texts = {"handle: ", "handle = "};
   for (size_t i = 0; i < handle_texts.size(); i++) {
-    if (!CouldReplaceHandles(&actual_outputs, expected_outputs, handle_texts[i])) {
+    if (!CouldReplaceHandles(&actual_outputs, expected_outputs->message, handle_texts[i])) {
       found_difference_ = true;
       return;
     }
   }
 
-  if (actual_outputs.compare(expected_outputs) != 0) {
-    compare_results_ << "Different messages, expected " << expected_outputs << " got "
+  if (actual_outputs.compare(expected_outputs->message) != 0) {
+    compare_results_ << "Different messages, expected " << expected_outputs->message << " got "
                      << actual_outputs;
     found_difference_ = true;
     return;
@@ -78,75 +118,6 @@ void Comparator::CompareOutput(std::string_view syscall_outputs) {
 void Comparator::DecodingError(std::string error) {
   found_difference_ = true;
   compare_results_ << "Unexpected decoding error in the current execution:\n" << error;
-}
-
-bool Comparator::SameProcessNamePidTid(std::string* actual, std::string_view expected) {
-  size_t actual_name_position = actual->find(' ');
-  size_t expected_name_position = expected.find(' ');
-  if (expected_name_position != actual_name_position ||
-      expected.substr(0, expected_name_position).compare(actual->substr(0, actual_name_position)) !=
-          0) {
-    compare_results_ << "Different process names, expected "
-                     << expected.substr(0, expected_name_position) << " actual was "
-                     << actual->substr(0, actual_name_position);
-    return false;
-  }
-  // Replacing pid and tid.
-  uint64_t actual_pid = ExtractUint64(actual->substr(actual_name_position + 1));
-  uint64_t expected_pid = ExtractUint64(expected.substr(expected_name_position + 1));
-  uint64_t actual_tid = ExtractUint64(actual->substr(actual->find(':', actual_name_position) + 1));
-  uint64_t expected_tid =
-      ExtractUint64(expected.substr(expected.find(':', expected_name_position) + 1));
-
-  // The actual pid matches the expected pid
-  if (expected_pids_.find(actual_pid) == expected_pids_.end()) {
-    expected_pids_[actual_pid] = expected_pid;
-  } else if (expected_pids_[actual_pid] != expected_pid) {
-    compare_results_ << "Different pids, actual pid " << actual_pid << " should be "
-                     << expected_pids_[actual_pid] << " in golden file but was " << expected_pid;
-    return false;
-  }
-  // and no other actual pid does.
-  if (actual_pids_.find(expected_pid) == actual_pids_.end()) {
-    actual_pids_[expected_pid] = actual_pid;
-  } else if (actual_pids_[expected_pid] != actual_pid) {
-    compare_results_ << "Different pids, expected pid " << expected_pid << " should be "
-                     << actual_pids_[expected_pid] << " in this execution but was " << actual_pid;
-    return false;
-  }
-
-  // The actual pid:tid matches the expected pid:tid
-  if (expected_pids_tids_.find(std::make_pair(actual_pid, actual_tid)) ==
-      expected_pids_tids_.end()) {
-    expected_pids_tids_[std::make_pair(actual_pid, actual_tid)] =
-        std::make_pair(expected_pid, expected_tid);
-  } else if (expected_pids_tids_[std::make_pair(actual_pid, actual_tid)] !=
-             std::make_pair(expected_pid, expected_tid)) {
-    compare_results_ << "Different tids, actual pid:tid " << actual_pid << ":" << actual_tid
-                     << " should be "
-                     << expected_pids_tids_[std::make_pair(actual_pid, actual_tid)].first << ":"
-                     << expected_pids_tids_[std::make_pair(actual_pid, actual_tid)].second
-                     << " in golden file but was " << expected_pid << ":" << expected_tid;
-    return false;
-  }
-  // and no other actual pid:tid does.
-  if (actual_pids_tids.find(std::make_pair(expected_pid, expected_tid)) == actual_pids_tids.end()) {
-    actual_pids_tids[std::make_pair(expected_pid, expected_tid)] =
-        std::make_pair(actual_pid, actual_tid);
-  } else if (actual_pids_tids[std::make_pair(expected_pid, expected_tid)] !=
-             std::make_pair(actual_pid, actual_tid)) {
-    compare_results_ << "Different tids, expected pid:tid " << expected_pid << ":" << expected_tid
-                     << " should be "
-                     << actual_pids_tids[std::make_pair(expected_pid, expected_tid)].first << ":"
-                     << actual_pids_tids[std::make_pair(expected_pid, expected_tid)].second
-                     << " in this execution but was " << actual_pid << ":" << actual_tid;
-    return false;
-  }
-  actual->replace(actual_name_position,
-                  actual->find(' ', actual_name_position + 1) - actual_name_position, expected,
-                  expected_name_position,
-                  expected.find(' ', expected_name_position + 1) - expected_name_position);
-  return true;
 }
 
 bool Comparator::CouldReplaceHandles(std::string* actual, std::string_view expected,
@@ -219,12 +190,107 @@ uint32_t Comparator::ExtractHexUint32(std::string_view str) {
   return result;
 }
 
-std::string_view Comparator::GetNextExpectedMessage() {
+std::unique_ptr<Message> Comparator::GetNextExpectedMessage(uint64_t actual_pid,
+                                                            uint64_t actual_tid) {
+  uint64_t expected_pid = 0;
+  uint64_t expected_tid = 0;
+
+  // Have we already seen this pid?
+  if (expected_pids_.find(actual_pid) == expected_pids_.end()) {
+    if (pids_by_order_of_appearance_.empty()) {
+      compare_results_ << "More actual processes than expected.";
+      return nullptr;
+    }
+    // We assume the order of appearance of pids are the same in the golden file and in the current
+    // execution.
+    expected_pid = pids_by_order_of_appearance_.front();
+    pids_by_order_of_appearance_.pop_front();
+    expected_pids_[actual_pid] = expected_pid;
+    // As each expected pid appears only once in pids_by_order_of_appearance_, we know for sure that
+    // only this actual_pid can link to this expected_pid, no need for a reverse map.
+  } else {
+    expected_pid = expected_pids_[actual_pid];
+  }
+
+  // Have we already seen this tid?
+  if (expected_pids_tids_.find(std::make_pair(actual_pid, actual_tid)) ==
+      expected_pids_tids_.end()) {
+    expected_pid = expected_pids_[actual_pid];
+    if (tids_by_order_of_appearance_[expected_pid].empty()) {
+      compare_results_ << "More actual threads than expected for actual pid " << actual_pid
+                       << " matched with expected pid " << expected_pid;
+      return nullptr;
+    }
+    // We assume the order of appearance of tids per pid are the same in the golden file and in the
+    // current execution.
+    expected_tid = tids_by_order_of_appearance_[expected_pid].front();
+    tids_by_order_of_appearance_[expected_pid].pop_front();
+    expected_pids_tids_[std::make_pair(actual_pid, actual_tid)] =
+        std::make_pair(expected_pid, expected_tid);
+    // Same as above, no need for a reverse map.
+  } else {
+    expected_tid = expected_pids_tids_[std::make_pair(actual_pid, actual_tid)].second;
+  }
+
+  if (messages_[std::make_pair(expected_pid, expected_tid)].empty()) {
+    compare_results_ << "More actual messages than expected for actual pid:tid " << actual_pid
+                     << ":" << actual_tid << " matched with expected pid:tid " << expected_pid
+                     << ":" << expected_tid;
+    return nullptr;
+  }
+  std::unique_ptr<Message> expected_message =
+      std::move(messages_[std::make_pair(expected_pid, expected_tid)].front());
+  messages_[std::make_pair(expected_pid, expected_tid)].pop_front();
+  return expected_message;
+}
+
+void Comparator::ParseGolden(std::string_view golden_file_contents) {
   size_t processed_char_count = 0;
-  std::string_view message =
-      GetMessage(expected_output_.substr(position_in_golden_file_), &processed_char_count);
-  position_in_golden_file_ += processed_char_count;
-  return message;
+
+  std::string_view cur_msg = GetMessage(golden_file_contents, &processed_char_count);
+  uint64_t previous_pid = 0;
+  uint64_t previous_tid = 0;
+  std::string_view previous_process_name;
+  while (!cur_msg.empty()) {
+    uint64_t pid, tid;
+    std::string_view process_name;
+    //'process_name pid:tid ' with one char for process_name/pid/tid
+    constexpr size_t kMinNbCharHeader = 5;
+
+    // The message does not contain the process name and pid:tid.
+    if (cur_msg.find("->") <= kMinNbCharHeader) {
+      pid = previous_pid;
+      tid = previous_tid;
+      process_name = previous_process_name;
+    } else {
+      pid = ExtractUint64(cur_msg.substr(cur_msg.find(' ') + 1));
+      tid = ExtractUint64(cur_msg.substr(cur_msg.find(':') + 1));
+      process_name = cur_msg.substr(0, cur_msg.find(' '));
+      // We remove process name, pid and tid from the message, as those are now saved in the map
+      // explicitely
+      cur_msg = cur_msg.substr(cur_msg.find(' ', cur_msg.find(':')) + 1);
+    }
+
+    // Have we already seen this pid?
+    if (tids_by_order_of_appearance_.find(pid) == tids_by_order_of_appearance_.end()) {
+      std::deque<uint64_t> tids = {tid};
+      tids_by_order_of_appearance_[pid] = tids;
+      pids_by_order_of_appearance_.push_back(pid);
+      messages_[std::make_pair(pid, tid)] = std::deque<std::unique_ptr<Message>>();
+    }
+
+    // Have we already seen this tid?
+    else if (messages_.find(std::make_pair(pid, tid)) == messages_.end()) {
+      tids_by_order_of_appearance_[pid].push_back(tid);
+      messages_[std::make_pair(pid, tid)] = std::deque<std::unique_ptr<Message>>();
+    }
+    messages_[std::make_pair(pid, tid)].push_back(std::make_unique<Message>(process_name, cur_msg));
+    golden_file_contents = golden_file_contents.substr(processed_char_count);
+    cur_msg = GetMessage(golden_file_contents, &processed_char_count);
+    previous_pid = pid;
+    previous_tid = tid;
+    previous_process_name = process_name;
+  }
 }
 
 std::string_view Comparator::GetMessage(std::string_view messages, size_t* processed_char_count) {
@@ -239,6 +305,7 @@ std::string_view Comparator::GetMessage(std::string_view messages, size_t* proce
     begin = end + 1;
     end = messages.find('\n', begin);
   }
+
   // Now we get the message.
   size_t bpos = begin;
   while (end != std::string::npos) {
@@ -266,7 +333,8 @@ bool Comparator::IgnoredLine(std::string_view line) {
   if (line.length() == 1 && line[0] == '\n') {
     return true;
   }
-  static std::vector<std::string> to_be_ignored = {"Checking", "Debug", "Launched", "Monitoring"};
+  static std::vector<std::string> to_be_ignored = {"Checking", "Debug", "Launched", "Monitoring",
+                                                   "Stop"};
   for (size_t i = 0; i < to_be_ignored.size(); i++) {
     if (line.find(to_be_ignored[i]) == 0) {
       return true;
