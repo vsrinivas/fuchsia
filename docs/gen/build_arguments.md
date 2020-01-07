@@ -2094,7 +2094,7 @@ From //build/config/lto/config.gni:7
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:25](https://fuchsia.googlesource.com/third_party/mesa/+/ddebe0486a033812e0df176a9ebc8c88d41fe3f8/src/intel/vulkan/BUILD.gn#25)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:25](https://fuchsia.googlesource.com/third_party/mesa/+/089bdef5d9ea2f1469d840e54677f834c81da28d/src/intel/vulkan/BUILD.gn#25)
 
 ### use_netstack3
 
