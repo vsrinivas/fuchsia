@@ -98,7 +98,7 @@ protocol-event = ( attribute-list ) , "->" , IDENTIFIER , parameter-list ;
 
 parameter-list = "(" , ( parameter ( "," , parameter )+ ) , ")" ;
 
-parameter = type-constructor , IDENTIFIER ;
+parameter = ( attribute-list ) , type-constructor , IDENTIFIER ;
 
 protocol-compose = "compose" , compound-identifier ;
 
