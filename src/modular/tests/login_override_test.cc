@@ -40,9 +40,9 @@ class LoginOverrideTest : public modular_testing::TestHarnessFixture {
 };
 
 TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
-  constexpr char kSingleUserBaseShellUrl[] =
-      "fuchsia-pkg://fuchsia.com/single_user_base_shell#meta/"
-      "single_user_base_shell.cmx";
+  constexpr char kBaseShellUrl[] =
+      "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/"
+      "dev_base_shell.cmx";
 
   modular_testing::TestHarnessBuilder builder;
   builder.AddServiceFromComponent<fuchsia::setui::SetUiService>(
@@ -58,7 +58,7 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
 
   bool intercepted = false;
   builder.InterceptBaseShell(modular_testing::TestHarnessBuilder::InterceptOptions{
-      .url = kSingleUserBaseShellUrl,
+      .url = kBaseShellUrl,
       .launch_handler =
           [&](fuchsia::sys::StartupInfo startup_info,
               fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
