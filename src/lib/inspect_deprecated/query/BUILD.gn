@@ -65,7 +65,7 @@ source_set("json_formatter") {
 
   public_deps = [
     ":formatter",
-    "//third_party/cobalt/src/lib/crypto_util",
+    "//third_party/modp_b64",
     "//third_party/rapidjson",
   ]
 }

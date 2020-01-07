@@ -13,9 +13,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/health/health.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
-#include "third_party/cobalt/src/lib/crypto_util/base64.h"
-
-using cobalt::crypto::Base64Encode;
+#include "third_party/modp_b64/modp_b64.h"
 
 namespace inspect_deprecated {
 
@@ -136,8 +134,9 @@ void InternalFormatSource(WriterType& writer, const inspect_deprecated::Source& 
         break;
       case inspect_deprecated::hierarchy::PropertyFormat::BYTES: {
         auto& val = property.Get<inspect_deprecated::hierarchy::ByteVectorProperty>().value();
-        std::string content;
-        Base64Encode((uint8_t*)val.data(), val.size(), &content);
+        std::string content(modp_b64_encode_len(val.size()), '\0');
+        modp_b64_encode(const_cast<char*>(content.data()),
+                        reinterpret_cast<const char*>(val.data()), val.size());
         writer->String("b64:" + content);
         break;
       }

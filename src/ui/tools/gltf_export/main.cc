@@ -24,9 +24,8 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/snapshot/snapshot_generated.h"
 #include "src/ui/scenic/lib/gfx/snapshot/version.h"
-#include "third_party/cobalt/src/lib/crypto_util/base64.h"
+#include "third_party/modp_b64/modp_b64.h"
 
-using cobalt::crypto::Base64Encode;
 using namespace rapidjson;
 using namespace scenic_impl::gfx;
 
@@ -68,6 +67,9 @@ const char *EMPTY_COLOR_MATERIAL = R"glTF({
 
 // Converts uncompressed raw image to PNG.
 bool RawToPNG(size_t width, size_t height, const uint8_t *data, std::vector<uint8_t> &out);
+
+// Encode bytes to base64.
+std::string Base64Encode(const uint8_t *bytes, size_t size);
 
 // Dumps rapidjson Value to ostream.
 std::ostream &operator<<(std::ostream &os, const Value &v) {
@@ -267,8 +269,7 @@ class SnapshotTaker {
                                  : mesh->indices()->index_count();
 
     // Create a glTF buffer.
-    std::string base64_bytes;
-    Base64Encode(bytes, size, &base64_bytes);
+    std::string base64_bytes = Base64Encode(bytes, size);
     std::ostringstream data;
     data << "data:application/octet-stream;base64," << base64_bytes;
 
@@ -389,8 +390,8 @@ class SnapshotTaker {
         return -1;
       }
       // Encode to base64.
-      std::string base64_bytes;
-      Base64Encode(out.data(), out.size(), &base64_bytes);
+      std::string base64_bytes = Base64Encode(out.data(), out.size());
+
       std::ostringstream data;
       data << "data:image/png;base64," << base64_bytes;
 
@@ -503,4 +504,13 @@ bool RawToPNG(size_t width, size_t height, const uint8_t *data, std::vector<uint
 
   png_destroy_write_struct(&png_ptr, NULL);
   return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Base64 encode.
+
+std::string Base64Encode(const uint8_t *bytes, size_t size) {
+  std::string encoded(modp_b64_encode_len(size), '\0');
+  modp_b64_encode(const_cast<char *>(encoded.data()), reinterpret_cast<const char *>(bytes), size);
+  return encoded;
 }
