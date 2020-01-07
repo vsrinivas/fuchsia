@@ -99,4 +99,10 @@ This list tracks the reasons for which we disabled in particular [checks]:
  - `readability-uppercase-literal-suffix` - Fuchsia C++ code chooses not to impose
    a style on this.
 
+# Static analysis
+
+Strictly speaking it is not linting, but the Clang static analyzer can do
+deep analysis to find bugs. See [Static analysis][static_analysis] for details.
+
+[static_analysis]: /docs/development/build/static_analysis.md
 [checks]: https://clang.llvm.org/extra/clang-tidy/checks/list.html

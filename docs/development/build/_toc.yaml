@@ -20,6 +20,8 @@ toc:
   path: /docs/development/build/multi_device.md
 - title: "Toolchain"
   path: /docs/development/build/toolchain.md
+- title: "Static analysis"
+  path: /docs/development/build/static_analysis.md
 - title: "Tools dashboards"
   path: /docs/development/build/tools-dashboards.md
 - title: "Fuchsia build system: variants"
