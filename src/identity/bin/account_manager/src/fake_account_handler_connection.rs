@@ -94,10 +94,20 @@ impl AccountHandlerConnection for FakeAccountHandlerConnection {
                     AccountHandlerControlRequest::Terminate { .. } => {
                         break;
                     }
-                    // TODO(dnordstrom): Support LockAccount/UnlockAccount
-                    // TODO(dnordstrom): Remove wildcard and panic instead
-                    _ => {
-                        break;
+                    AccountHandlerControlRequest::PrepareForAccountTransfer { .. }
+                    | AccountHandlerControlRequest::PerformAccountTransfer { .. }
+                    | AccountHandlerControlRequest::FinalizeAccountTransfer { .. }
+                    | AccountHandlerControlRequest::EncryptAccountData { .. }
+                    | AccountHandlerControlRequest::RemoveAccount { .. }
+                    | AccountHandlerControlRequest::GetAccount { .. }
+                    | AccountHandlerControlRequest::GetPublicKey { .. }
+                    | AccountHandlerControlRequest::GetGlobalIdHash { .. }
+
+                    // TODO(dnordstrom): Support LockAccount and UnlockAccount
+                    | AccountHandlerControlRequest::LockAccount { .. }
+                    | AccountHandlerControlRequest::UnlockAccount{..}
+                    => {
+                        panic!("Unsupported method call");
                     }
                 };
             }
@@ -223,12 +233,13 @@ mod tests {
     }
 
     #[fuchsia_async::run_until_stalled(test)]
-    async fn unsupported_method() -> Result<(), AccountManagerError> {
+    #[should_panic(expected = "Unsupported method call")]
+    async fn unsupported_method() {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
             DEFAULT_ACCOUNT_ID.clone(),
-        )?;
+        )
+        .unwrap();
         assert!(conn.proxy().prepare_for_account_transfer().await.unwrap_err().is_closed());
-        Ok(())
     }
 }
