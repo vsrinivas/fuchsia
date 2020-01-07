@@ -368,7 +368,21 @@ type endpointWithEvent struct {
 func (epe *endpointWithEvent) close() int64 {
 	epe.wq.EventUnregister(&epe.entry)
 
-	return epe.endpoint.close(func() { epe.endpoint.metadata.removeEndpoint(epe.local) })
+	return epe.endpoint.close(func() {
+		// Copy the handle before closing below; (*zx.Handle).Close sets the
+		// receiver to zx.HandleInvalid.
+		key := epe.local
+
+		if err := epe.local.Close(); err != nil {
+			panic(err)
+		}
+
+		if err := epe.peer.Close(); err != nil {
+			panic(err)
+		}
+
+		epe.endpoint.metadata.removeEndpoint(key)
+	})
 }
 
 func (epe *endpointWithEvent) Describe() (io.NodeInfo, error) {
@@ -445,6 +459,10 @@ func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) int64 {
 				<-ch
 			}
 
+			// Copy the handle before closing below; (*zx.Handle).Close sets the
+			// receiver to zx.HandleInvalid.
+			key := zx.Handle(eps.local)
+
 			if err := eps.local.Close(); err != nil {
 				panic(err)
 			}
@@ -453,7 +471,7 @@ func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) int64 {
 				panic(err)
 			}
 
-			eps.endpoint.metadata.removeEndpoint(zx.Handle(eps.local))
+			eps.endpoint.metadata.removeEndpoint(key)
 		})
 	})
 }

@@ -340,29 +340,27 @@ auto timeout = [](int client_fd, zx::socket server_socket) {
   ASSERT_EQ(setsockopt(client_fd, SOL_SOCKET, optname, &tv, sizeof(tv)), 0, "%s", strerror(errno));
   // Wrap the read/write in a future to enable a timeout. We expect the future
   // to time out.
-  {
-    auto fut = std::async(std::launch::async, [&]() -> std::pair<ssize_t, int> {
-      switch (optname) {
-        case SO_RCVTIMEO:
-          return std::make_pair(read(client_fd, buf, sizeof(buf)), errno);
-        case SO_SNDTIMEO:
-          return std::make_pair(write(client_fd, buf, sizeof(buf)), errno);
-      }
-    });
-    EXPECT_EQ(fut.wait_for(margin), std::future_status::timeout);
-    // Resetting the remote end socket should cause the read/write to complete.
-    server_socket.reset();
-    auto return_code_and_errno = fut.get();
+  auto fut = std::async(std::launch::async, [&]() -> std::pair<ssize_t, int> {
     switch (optname) {
       case SO_RCVTIMEO:
-        EXPECT_EQ(return_code_and_errno.first, 0, "%s", strerror(return_code_and_errno.second));
-        break;
+        return std::make_pair(read(client_fd, buf, sizeof(buf)), errno);
       case SO_SNDTIMEO:
-        EXPECT_EQ(return_code_and_errno.first, -1);
-        ASSERT_EQ(return_code_and_errno.second, EPIPE, "%s",
-                  strerror(return_code_and_errno.second));
-        break;
+        return std::make_pair(write(client_fd, buf, sizeof(buf)), errno);
     }
+  });
+  EXPECT_EQ(fut.wait_for(margin), std::future_status::timeout);
+  // Resetting the remote end socket should cause the read/write to complete.
+  server_socket.reset();
+  auto return_code_and_errno = fut.get();
+  switch (optname) {
+    case SO_RCVTIMEO:
+      EXPECT_EQ(return_code_and_errno.first, 0, "%s", strerror(return_code_and_errno.second));
+      break;
+    case SO_SNDTIMEO:
+      EXPECT_EQ(return_code_and_errno.first, -1);
+      ASSERT_EQ(return_code_and_errno.second, ECONNRESET, "%s",
+                strerror(return_code_and_errno.second));
+      break;
   }
 
   ASSERT_EQ(close(client_fd), 0, "%s", strerror(errno));

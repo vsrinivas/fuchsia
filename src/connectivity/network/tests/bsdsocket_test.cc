@@ -1874,7 +1874,7 @@ TEST_P(SendSocketTest, CloseWhileSending) {
 
   switch (whichSocket) {
     case closeSocket::CLIENT: {
-      EXPECT_EQ(close(client.get()), 0) << strerror(errno);
+      EXPECT_EQ(close(client.release()), 0) << strerror(errno);
       // This is weird! The I/O is allowed to proceed past the close call - at least on Linux.
       // Therefore we have to fallthrough to closing the server, which will actually unblock the
       // future.
@@ -1888,7 +1888,7 @@ TEST_P(SendSocketTest, CloseWhileSending) {
 #endif
     }
     case closeSocket::SERVER: {
-      EXPECT_EQ(close(server.get()), 0) << strerror(errno);
+      EXPECT_EQ(close(server.release()), 0) << strerror(errno);
       break;
     }
   }
@@ -1896,9 +1896,8 @@ TEST_P(SendSocketTest, CloseWhileSending) {
   EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(50)), std::future_status::ready);
 }
 
-// TODO(35619): deflake and re-enable this test.
 INSTANTIATE_TEST_SUITE_P(
-    DISABLED_NetStreamTest, SendSocketTest,
+    NetStreamTest, SendSocketTest,
     ::testing::Combine(::testing::Values(sendMethod::WRITE, sendMethod::WRITEV, sendMethod::SEND,
                                          sendMethod::SENDTO, sendMethod::SENDMSG),
                        ::testing::Values(closeSocket::CLIENT, closeSocket::SERVER)),

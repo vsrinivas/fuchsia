@@ -2172,7 +2172,7 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
           break;
         case ZX_OK:
           if (pending & POLLHUP) {
-            status = ZX_ERR_PEER_CLOSED;
+            status = ZX_ERR_CONNECTION_RESET;
             break;
           }
           __FALLTHROUGH;
