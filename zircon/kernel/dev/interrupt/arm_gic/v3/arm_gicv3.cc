@@ -520,9 +520,6 @@ static void arm_gic_v3_init(const void* driver_data, uint32_t length) {
   arm_gicv3_gicr_stride = driver->gicr_stride;
   ipi_base = driver->ipi_base;
 
-  arm_gicv3_gic_base = periph_paddr_to_vaddr(driver->mmio_phys);
-  ASSERT(arm_gicv3_gic_base);
-
   if (gic_init() != ZX_OK) {
     if (driver->optional) {
       // failed to detect gic v3 but it's marked optional. continue
