@@ -1267,6 +1267,8 @@ struct InfiniteScrollViewAssistant<T> {
     touch_device: Option<TouchDevice>,
     touch_points: Vec<Point>,
     touch_time: Time,
+    previous_touch_points: Vec<Point>,
+    previous_touch_time: Time,
     scroll_origin: Vector2D<f32>,
     fling_curve: Option<FlingCurve>,
     fake_scroll_start: Time,
@@ -1298,6 +1300,8 @@ impl<T: Context> InfiniteScrollViewAssistant<T> {
             touch_device,
             touch_points: Vec::new(),
             touch_time: Time::from_nanos(0),
+            previous_touch_points: Vec::new(),
+            previous_touch_time: Time::from_nanos(0),
             scroll_origin: Vector2D::zero(),
             fling_curve: None,
             fake_scroll_start,
@@ -1330,18 +1334,13 @@ impl<T: Context> ViewAssistant for InfiniteScrollViewAssistant<T> {
         // presentation time and approximating the touch location at
         // the exact sampling time.
         if let Some(device) = self.touch_device.as_mut() {
-            // Initialize current touch state.
-            let mut previous_origin_count = 0;
-            let mut previous_origin_sum = Vector2D::zero();
-            let mut previous_time = Time::from_nanos(0);
-            let mut origin_count = self.touch_points.len();
-            let mut origin_sum = Vector2D::zero();
-            for point in &self.touch_points {
-                origin_sum += point.to_vector();
-            }
-
             // Determine sample time by removing sampling offset from presentation time.
             let sample_time = presentation_time - self.touch_sampling_offset;
+
+            fn average(points: &Vec<Point>) -> Vector2D<f32> {
+                points.iter().fold(Vector2D::zero(), |sum, x| sum + x.to_vector())
+                    / points.len() as f32
+            }
 
             // Read new reports until we have one report past the sample time.
             while self.touch_time <= sample_time {
@@ -1351,14 +1350,11 @@ impl<T: Context> ViewAssistant for InfiniteScrollViewAssistant<T> {
                         let contacts = touch.unwrap().contacts.as_ref().unwrap();
 
                         // Save previous touch state.
-                        previous_origin_count = self.touch_points.len();
-                        previous_origin_sum = origin_sum;
-                        previous_time = self.touch_time;
-
+                        self.previous_touch_time = self.touch_time;
+                        self.previous_touch_points.clear();
+                        self.previous_touch_points.extend(self.touch_points.drain(..));
                         // Update touch points and origin. Origin is the average of
                         // all touch points.
-                        origin_sum = Vector2D::zero();
-                        self.touch_points.clear();
                         for contact in contacts.iter() {
                             let point = Point::new(
                                 size.width * contact.position_x.unwrap() as f32
@@ -1366,20 +1362,18 @@ impl<T: Context> ViewAssistant for InfiniteScrollViewAssistant<T> {
                                 size.height * contact.position_y.unwrap() as f32
                                     / device.y_range.max as f32,
                             );
-                            origin_sum += point.to_vector();
                             self.touch_points.push(point);
                         }
-                        origin_count = self.touch_points.len();
-                        counter!("input", "touch_y", 0, "y" => (origin_sum / origin_count as f32).y.round() as u32);
+                        counter!("input", "touch_y", 0, "y" => (average(&self.touch_points)).y.round() as u32);
 
                         // Update touch time.
                         self.touch_time = Time::from_nanos(report.event_time.unwrap());
 
                         // Ignore previous touch points and set scroll origin if number of
                         // touch points changed.
-                        if previous_origin_count != self.touch_points.len() {
-                            self.scroll_origin = origin_sum / origin_count as f32;
-                            previous_origin_count = 0;
+                        if self.previous_touch_points.len() != self.touch_points.len() {
+                            self.scroll_origin = average(&self.touch_points);
+                            self.previous_touch_points.clear();
                         }
                     }
                     // Stop when no more reports are available.
@@ -1387,31 +1381,28 @@ impl<T: Context> ViewAssistant for InfiniteScrollViewAssistant<T> {
                 }
             }
 
-            if origin_count > 0 {
-                let touch_latency = presentation_time - self.touch_time;
-                let origin = origin_sum / origin_count as f32;
-                if previous_origin_count > 0 {
-                    // Approximate origin at the sample time by assuming a linear
-                    // change to touch location over the sampling interval.
-                    if self.touch_time > sample_time && self.touch_time > previous_time {
-                        let interval = (self.touch_time - previous_time).into_nanos() as f32;
-                        let scalar = (sample_time - previous_time).into_nanos() as f32 / interval;
-                        let previous_origin = previous_origin_sum / previous_origin_count as f32;
-                        let estimated_origin =
-                            previous_origin + (origin - previous_origin) * scalar;
-                        scroll_distance = Some(-(estimated_origin.y - self.scroll_origin.y));
-                    } else {
-                        // Increase touch sampling offset if too low accurate
-                        // touch point sampling.
-                        if touch_latency > self.touch_sampling_offset {
-                            println!(
-                                "warning: touch sampling offset increased to {:?} ms",
-                                touch_latency.into_nanos() as f32 / 1e+6
-                            );
-                            self.touch_sampling_offset = touch_latency;
-                        }
-                        scroll_distance = Some(-(origin.y - self.scroll_origin.y));
+            if !self.touch_points.is_empty() && !self.previous_touch_points.is_empty() {
+                let origin = average(&self.touch_points);
+                // Approximate origin at the sample time by assuming a linear
+                // change to touch location over the sampling interval.
+                if self.touch_time > sample_time && self.touch_time > self.previous_touch_time {
+                    let interval = (self.touch_time - self.previous_touch_time).into_nanos() as f32;
+                    let scalar =
+                        (sample_time - self.previous_touch_time).into_nanos() as f32 / interval;
+                    let previous_origin = average(&self.previous_touch_points);
+                    let estimated_origin = previous_origin + (origin - previous_origin) * scalar;
+                    scroll_distance = Some(-(estimated_origin.y - self.scroll_origin.y));
+                } else {
+                    let touch_latency = presentation_time - self.touch_time;
+                    // Print a warning if touch sampling offset is too low for
+                    // accurate touch point sampling.
+                    if touch_latency > self.touch_sampling_offset {
+                        println!(
+                            "warning: high touch latency {:?} ms",
+                            touch_latency.into_nanos() as f32 / 1e+6
+                        );
                     }
+                    scroll_distance = Some(-(origin.y - self.scroll_origin.y));
                 }
 
                 // Delay the start of fake scrolling.
