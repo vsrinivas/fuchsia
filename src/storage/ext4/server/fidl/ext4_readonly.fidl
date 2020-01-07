@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.storage.ext4server;
+library fuchsia.storage.ext4;
 
 using fuchsia.io;
 using fuchsia.mem;
@@ -175,7 +175,7 @@ xunion MountVmoResult {
 };
 
 [Discoverable]
-protocol Ext4Server {
+protocol Server {
     /// Read the VMO content as an Ext4 image and return a channel to the
     /// root of the mounted file system.
     ///
@@ -202,8 +202,8 @@ protocol Ext4Server {
         ) -> (MountVmoResult result);
 };
 
-service Ext4Service {
+service Service {
     /// An Ext4 server that can parse a file system image and present it
     /// using fuchsia-io FIDL API.
-    Ext4Server server;
+    Server server;
 };

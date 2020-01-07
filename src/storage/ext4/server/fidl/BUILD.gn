@@ -4,11 +4,11 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("ext4_server") {
-  name = "fuchsia.storage.ext4server"
+fidl("ext4_readonly") {
+  name = "fuchsia.storage.ext4"
 
   sources = [
-    "ext4_server.fidl",
+    "ext4_readonly.fidl",
   ]
 
   public_deps = [

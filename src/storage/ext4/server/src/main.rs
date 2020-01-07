@@ -9,14 +9,14 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_mem::Buffer,
-    fidl_fuchsia_storage_ext4server::{
+    fidl_fuchsia_storage_ext4::{
         BadDirectory, BadEntryType, BadFile, BannedFeatureIncompat, BlockNumberOutOfBounds,
-        BlockSizeInvalid, DirEntry2NonUtf8, Ext4Server_Request, Ext4Server_RequestStream,
-        Ext4ServiceRequest, ExtentUnexpectedLength, Incompatible, InvalidBlockGroupDesc,
-        InvalidDirEntry2, InvalidExtent, InvalidExtentHeader, InvalidExtentHeaderMagic,
-        InvalidINode, InvalidInputPath, InvalidSuperBlock, InvalidSuperBlockMagic, MountVmoResult,
-        ParseError, PathNotFound, ReaderOutOfBounds, ReaderReadError, RequiredFeatureIncompat,
-        Success,
+        BlockSizeInvalid, DirEntry2NonUtf8, ExtentUnexpectedLength, Incompatible,
+        InvalidBlockGroupDesc, InvalidDirEntry2, InvalidExtent, InvalidExtentHeader,
+        InvalidExtentHeaderMagic, InvalidINode, InvalidInputPath, InvalidSuperBlock,
+        InvalidSuperBlockMagic, MountVmoResult, ParseError, PathNotFound, ReaderOutOfBounds,
+        ReaderReadError, RequiredFeatureIncompat, Server_Request, Server_RequestStream,
+        ServiceRequest, Success,
     },
     fuchsia_async::{self, EHandle, Executor},
     fuchsia_component::server::ServiceFs,
@@ -27,13 +27,10 @@ use {
     },
 };
 
-async fn run_ext4_server(
-    ehandle: EHandle,
-    mut stream: Ext4Server_RequestStream,
-) -> Result<(), Error> {
+async fn run_ext4_server(ehandle: EHandle, mut stream: Server_RequestStream) -> Result<(), Error> {
     while let Some(req) = stream.try_next().await.context("Error while reading request")? {
         match req {
-            Ext4Server_Request::MountVmo { source, flags, root, responder } => {
+            Server_Request::MountVmo { source, flags, root, responder } => {
                 // Each mount get's its own scope.  We may provide additional control over this
                 // scope in the future.  For example, one thing we may want to do is also return an
                 // "administrative chanel" that would allow calling "shutdown" on a mount.
@@ -153,8 +150,8 @@ fn serve_vmo(
 }
 
 enum IncomingService {
-    Server(Ext4Server_RequestStream),
-    Svc(Ext4ServiceRequest),
+    Server(Server_RequestStream),
+    Svc(ServiceRequest),
 }
 
 // `run` argument is the number of thread to use for the server.
@@ -174,7 +171,7 @@ async fn main() -> Result<(), Error> {
     let fut = fs.for_each_concurrent(MAX_CONCURRENT, move |request| {
         match request {
             IncomingService::Server(stream) => run_ext4_server(ehandle.clone(), stream),
-            IncomingService::Svc(Ext4ServiceRequest::Server(stream)) => {
+            IncomingService::Svc(ServiceRequest::Server(stream)) => {
                 run_ext4_server(ehandle.clone(), stream)
             }
         }
