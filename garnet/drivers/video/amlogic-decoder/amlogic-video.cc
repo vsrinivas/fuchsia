@@ -748,44 +748,50 @@ zx_status_t AmlogicVideo::PreloadFirmwareViaTee() {
   uint32_t firmware_size;
   firmware_->GetWholeBlob(&firmware_data, &firmware_size);
 
-  zx::channel tee_client;
-  zx::channel tee_server;
-  zx_status_t status = zx::channel::create(/*flags=*/0, &tee_client, &tee_server);
-  if (status != ZX_OK) {
-    LOG(ERROR, "zx::channel::create() failed - status: %d", status);
-    return status;
+  zx_status_t status = ZX_OK;
+  // TODO(fxb/43583): Remove retry when video_firmware crash is fixed.
+  constexpr uint32_t kRetryCount = 10;
+  for (uint32_t i = 0; i < kRetryCount; i++) {
+    zx::channel tee_client;
+    zx::channel tee_server;
+    status = zx::channel::create(/*flags=*/0, &tee_client, &tee_server);
+    if (status != ZX_OK) {
+      LOG(ERROR, "zx::channel::create() failed - status: %d", status);
+      return status;
+    }
+
+    status = tee_connect(&tee_, tee_server.release(), /*service_provider=*/ZX_HANDLE_INVALID);
+    if (status != ZX_OK) {
+      LOG(ERROR, "tee_connect() failed - status: %d", status);
+      return status;
+    }
+
+    TEEC_Context tee_context{};
+    // Ownership stays with tee_client so the channel will get closed at the end of this method, or
+    // on early return.
+    //
+    // TODO(dustingreen): Find a way to use TEEC_InitializeContext(), or create a more official way
+    // to do this.
+    tee_context.imp.tee_channel = tee_client.get();
+
+    VideoFirmwareSession video_firmware_session(&tee_context);
+    status = video_firmware_session.Init();
+    if (status != ZX_OK) {
+      LOG(ERROR, "video_firmware_session.Init() failed - status: %d", status);
+      continue;
+    }
+
+    status = video_firmware_session.LoadVideoFirmware(firmware_data, firmware_size);
+    if (status != ZX_OK) {
+      LOG(ERROR, "video_firmware_session.LoadVideoFirmware() failed - status: %d", status);
+      continue;
+    }
+
+    // ~video_firmware_session
+    // ~tee_client
+    return ZX_OK;
   }
-
-  status = tee_connect(&tee_, tee_server.release(), /*service_provider=*/ZX_HANDLE_INVALID);
-  if (status != ZX_OK) {
-    LOG(ERROR, "tee_connect() failed - status: %d", status);
-    return status;
-  }
-
-  TEEC_Context tee_context{};
-  // Ownership stays with tee_client so the channel will get closed at the end of this method, or
-  // on early return.
-  //
-  // TODO(dustingreen): Find a way to use TEEC_InitializeContext(), or create a more official way to
-  // do this.
-  tee_context.imp.tee_channel = tee_client.get();
-
-  VideoFirmwareSession video_firmware_session(&tee_context);
-  status = video_firmware_session.Init();
-  if (status != ZX_OK) {
-    LOG(ERROR, "video_firmware_session.Init() failed - status: %d", status);
-    return status;
-  }
-
-  status = video_firmware_session.LoadVideoFirmware(firmware_data, firmware_size);
-  if (status != ZX_OK) {
-    LOG(ERROR, "video_firmware_session.LoadVideoFirmware() failed - status: %d", status);
-    return status;
-  }
-
-  // ~video_firmware_session
-  // ~tee_client
-  return ZX_OK;
+  return status;
 }
 
 void AmlogicVideo::InitializeInterrupts() {
