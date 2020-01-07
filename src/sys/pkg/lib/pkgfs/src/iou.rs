@@ -58,6 +58,8 @@ pub enum NodeKind {
     Device,
     Tty,
     Socket,
+    DatagramSocket,
+    StreamSocket,
 }
 
 impl NodeKind {
@@ -71,6 +73,8 @@ impl NodeKind {
             NodeInfo::Device(_) => NodeKind::Device,
             NodeInfo::Tty(_) => NodeKind::Tty,
             NodeInfo::Socket(_) => NodeKind::Socket,
+            NodeInfo::DatagramSocket(_) => NodeKind::DatagramSocket,
+            NodeInfo::StreamSocket(_) => NodeKind::StreamSocket,
         }
     }
 

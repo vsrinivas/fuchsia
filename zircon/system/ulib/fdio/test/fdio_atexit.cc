@@ -15,7 +15,7 @@
 
 namespace {
 
-class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
+class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interface {
  public:
   Server(zx_handle_t channel, zx::socket peer) : channel_(channel), peer_(std::move(peer)) {}
 
@@ -28,14 +28,14 @@ class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
   }
 
   void Describe(DescribeCompleter::Sync completer) override {
-    llcpp::fuchsia::io::Socket socket;
+    llcpp::fuchsia::io::StreamSocket stream_socket;
     zx_status_t status =
-        peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &socket.socket);
+        peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &stream_socket.socket);
     if (status != ZX_OK) {
       return completer.Close(status);
     }
     llcpp::fuchsia::io::NodeInfo info;
-    info.set_socket(&socket);
+    info.set_stream_socket(&stream_socket);
     return completer.Reply(std::move(info));
   }
 

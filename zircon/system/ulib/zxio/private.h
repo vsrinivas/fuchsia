@@ -68,12 +68,6 @@ zx_status_t zxio_datagram_pipe_write_vector(zxio_t* io, const zx_iovec_t* vector
                                             size_t vector_count, zxio_flags_t flags,
                                             size_t* out_actual);
 
-zx_status_t zxio_stream_pipe_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                         zxio_flags_t flags, size_t* out_actual);
-
-zx_status_t zxio_stream_pipe_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                          zxio_flags_t flags, size_t* out_actual);
-
 zx_status_t zxio_vmo_seek(zxio_t* io, zx_off_t offset, zxio_seek_origin_t start,
                           size_t* out_offset);
 

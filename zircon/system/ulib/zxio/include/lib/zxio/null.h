@@ -100,16 +100,11 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
 
 // Null implementations of the ZXIO operations.
 //
-// These default implementations coorespond to how a null I/O object (e.g., what
+// These default implementations correspond to how a null I/O object (e.g., what
 // you might get from /dev/null) behaves.
 //
 // The null implementation is similar to the default implementation, except the
 // read, write, and close operations succeed with null effects.
-
-zx_status_t zxio_null_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                  size_t* out_actual);
-zx_status_t zxio_null_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                   size_t* out_actual);
 
 // Initializes a |zxio_t| object with a null ops table.
 zx_status_t zxio_null_init(zxio_t* io);

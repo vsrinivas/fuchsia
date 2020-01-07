@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// These tests ensure the zircon libc can talk to netstack.
+// These tests ensure fdio can talk to netstack.
 // No network connection is required, only a running netstack binary.
 
 #include <arpa/inet.h>
@@ -123,24 +123,13 @@ TEST(LocalhostTest, BindToDevice) {
 // protocols through structured FIDL APIs in the future, so this test ensures that raw sockets are
 // disabled to prevent them from accidentally becoming load-bearing.
 TEST(LocalhostTest, RawSocketsNotSupported) {
-  int s;
-
   // No raw INET sockets.
-  ASSERT_EQ(s = socket(AF_INET, SOCK_RAW, 0), -1);
-  int expected = EPROTONOSUPPORT;
-  ASSERT_EQ(errno, expected) << strerror(errno);
+  ASSERT_EQ(socket(AF_INET, SOCK_RAW, 0), -1);
+  ASSERT_EQ(errno, EPROTONOSUPPORT) << strerror(errno);
 
   // No packet sockets.
-  ASSERT_EQ(s = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)), -1);
-  expected =
-#if defined(__Fuchsia__)
-      EPFNOSUPPORT;
-#else
-      // Creating an AF_PACKET socket typically requires superuser privilege, so this should fail
-      // outside of Fuchsia with a different errno.
-      EPERM;
-#endif
-  ASSERT_EQ(errno, expected) << strerror(errno);
+  ASSERT_EQ(socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)), -1);
+  ASSERT_EQ(errno, EPERM) << strerror(errno);
 }
 
 TEST(LocalhostTest, IP_ADD_MEMBERSHIP_INADDR_ANY) {

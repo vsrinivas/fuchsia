@@ -25,6 +25,7 @@ import (
 	"fidl/fuchsia/posix/socket"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -44,22 +45,20 @@ import (
 // #include <netinet/in.h>
 import "C"
 
-type socketProviderImpl struct {
-	ns *Netstack
-}
-
 type providerImpl struct {
-	ns             *Netstack
-	controlService socket.ControlService
-	metadata       socketMetadata
+	ns                    *Netstack
+	controlService        socket.ControlService
+	datagramSocketService socket.DatagramSocketService
+	streamSocketService   socket.StreamSocketService
+	metadata              socketMetadata
 }
 
 var _ socket.Provider = (*providerImpl)(nil)
 
-// Highest two bits are used to modify the socket type.
+// Highest two bits modify the socket type.
 const sockTypesMask = 0x7fff &^ (C.SOCK_CLOEXEC | C.SOCK_NONBLOCK)
 
-func toTransProto(typ, protocol int16) (int16, tcpip.TransportProtocolNumber) {
+func toTransProto(typ, protocol int16) (int32, tcpip.TransportProtocolNumber) {
 	switch typ & sockTypesMask {
 	case C.SOCK_STREAM:
 		switch protocol {
@@ -79,36 +78,51 @@ func toTransProto(typ, protocol int16) (int16, tcpip.TransportProtocolNumber) {
 	return C.EPROTONOSUPPORT, 0
 }
 
-func (sp *providerImpl) Socket(domain, typ, protocol int16) (int16, socket.ControlInterface, error) {
-	var netProto tcpip.NetworkProtocolNumber
+func toNetProto(domain int16) (int32, tcpip.NetworkProtocolNumber) {
 	switch domain {
 	case C.AF_INET:
-		netProto = ipv4.ProtocolNumber
+		return 0, ipv4.ProtocolNumber
 	case C.AF_INET6:
-		netProto = ipv6.ProtocolNumber
+		return 0, ipv6.ProtocolNumber
+	case C.AF_PACKET:
+		return C.EPERM, 0
 	default:
-		return C.EPFNOSUPPORT, socket.ControlInterface{}, nil
+		return C.EPFNOSUPPORT, 0
 	}
+}
 
+func (sp *providerImpl) Socket(domain, typ, protocol int16) (int16, socket.ControlInterface, error) {
+	code, netProto := toNetProto(domain)
+	if code != 0 {
+		return int16(code), socket.ControlInterface{}, nil
+	}
 	code, transProto := toTransProto(typ, protocol)
 	if code != 0 {
-		return code, socket.ControlInterface{}, nil
+		return int16(code), socket.ControlInterface{}, nil
 	}
-
 	wq := new(waiter.Queue)
 	sp.ns.mu.Lock()
 	ep, err := sp.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
 	sp.ns.mu.Unlock()
 	if err != nil {
-		return tcpipErrorToCode(err), socket.ControlInterface{}, nil
+		return int16(tcpipErrorToCode(err)), socket.ControlInterface{}, nil
 	}
 	{
-		controlInterface, err := sp.newSocket(netProto, transProto, wq, ep)
+		ep, err := newEndpointWithSocket(ep, wq, transProto, netProto, &sp.metadata)
+		if err != nil {
+			return 0, socket.ControlInterface{}, err
+		}
+		controlInterface, err := newControl(ep, &sp.controlService)
 		return 0, controlInterface, err
 	}
 }
 
-const localSignalClosing = zx.SignalUser5
+const (
+	localSignalClosing = zx.SignalUser1
+	// TODO(tamird): use definitions from third_party/go when they're available.
+	zxsioSignalShutdownRead  = zx.SignalUser4
+	zxsioSignalShutdownWrite = zx.SignalUser5
+)
 
 // Data owned by providerImpl used for statistics and other
 // introspection.
@@ -124,7 +138,11 @@ type socketMetadata struct {
 	newSocketNotifications chan<- struct{}
 }
 
+// endpoint is the base structure that models all network sockets.
 type endpoint struct {
+	// TODO(fxb/37419): Remove TransitionalBase after methods landed.
+	*io.NodeTransitionalBase
+
 	wq *waiter.Queue
 	ep tcpip.Endpoint
 
@@ -133,20 +151,63 @@ type endpoint struct {
 		sockOptTimestamp bool
 	}
 
-	// The number of live `socketImpl`s that reference this endpoint.
+	// The number of live bindings that reference this structure.
 	clones int64
 
-	netProto   tcpip.NetworkProtocolNumber
 	transProto tcpip.TransportProtocolNumber
+	netProto   tcpip.NetworkProtocolNumber
+
+	metadata *socketMetadata
+}
+
+func (ep *endpoint) close(cleanup func()) int64 {
+	clones := atomic.AddInt64(&ep.clones, -1)
+
+	if clones == 0 {
+		if cleanup != nil {
+			cleanup()
+		}
+		ep.ep.Close()
+	}
+
+	return clones
+}
+
+func (ep *endpoint) Sync() (int32, error) {
+	syslog.VLogTf(syslog.DebugVerbosity, "Sync", "%p", ep)
+
+	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
+}
+
+func (ep *endpoint) GetAttr() (int32, io.NodeAttributes, error) {
+	syslog.VLogTf(syslog.DebugVerbosity, "GetAttr", "%p", ep)
+
+	return 0, io.NodeAttributes{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
+}
+
+func (ep *endpoint) SetAttr(flags uint32, attributes io.NodeAttributes) (int32, error) {
+	syslog.VLogTf(syslog.DebugVerbosity, "SetAttr", "%p", ep)
+
+	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
+}
+
+type boolWithMutex struct {
+	mu struct {
+		sync.Mutex
+		asserted bool
+	}
+}
+
+// endpointWithSocket implements a network socket that uses a zircon socket for
+// its data plane. This structure creates a pair of goroutines which are
+// responsible for moving data and signals between the underlying
+// tcpip.Endpoint and the zircon socket.
+type endpointWithSocket struct {
+	endpoint
 
 	local, peer zx.Socket
 
-	incoming struct {
-		mu struct {
-			sync.Mutex
-			asserted bool
-		}
-	}
+	incoming boolWithMutex
 
 	// Along with (*endpoint).close, these channels are used to coordinate
 	// orderly shutdown of loops, handles, and endpoints. See the comment
@@ -164,27 +225,25 @@ type endpoint struct {
 	// This is used to make sure that endpoint.close only cleans up its
 	// resources once - the first time it was closed.
 	closeOnce sync.Once
-
-	metadata *socketMetadata
 }
 
-// loopWrite connects libc write to the network stack.
-func (ios *endpoint) loopWrite() {
-	closeFn := func() { ios.close(ios.loopReadDone) }
+// loopWrite shuttles signals and data from the zircon socket to the tcpip.Endpoint.
+func (eps *endpointWithSocket) loopWrite() {
+	closeFn := func() { eps.close(eps.loopReadDone) }
 
 	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled |
 		zx.SignalSocketPeerClosed | localSignalClosing
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
-	ios.wq.EventRegister(&waitEntry, waiter.EventOut)
-	defer ios.wq.EventUnregister(&waitEntry)
+	eps.wq.EventRegister(&waitEntry, waiter.EventOut)
+	defer eps.wq.EventUnregister(&waitEntry)
 
 	for {
 		// TODO: obviously allocating for each read is silly. A quick hack we can
 		// do is store these in a ring buffer, as the lifecycle of this buffer.View
 		// starts here, and ends in nearby code we control in link.go.
 		v := make([]byte, 0, 2048)
-		n, err := ios.local.Read(v[:cap(v)], 0)
+		n, err := eps.local.Read(v[:cap(v)], 0)
 		if err != nil {
 			if err, ok := err.(*zx.Error); ok {
 				switch err.Status {
@@ -195,12 +254,12 @@ func (ios *endpoint) loopWrite() {
 					return
 				case zx.ErrBadState:
 					// Reading has been disabled for this socket endpoint.
-					if err := ios.ep.Shutdown(tcpip.ShutdownWrite); err != nil && err != tcpip.ErrNotConnected {
+					if err := eps.ep.Shutdown(tcpip.ShutdownWrite); err != nil && err != tcpip.ErrNotConnected {
 						panic(err)
 					}
 					return
 				case zx.ErrShouldWait:
-					obs, err := zxwait.Wait(zx.Handle(ios.local), sigs, zx.TimensecInfinite)
+					obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
 					if err != nil {
 						panic(err)
 					}
@@ -227,7 +286,7 @@ func (ios *endpoint) loopWrite() {
 		v = v[:n]
 
 		var opts tcpip.WriteOptions
-		if ios.transProto != tcp.ProtocolNumber {
+		if eps.transProto != tcp.ProtocolNumber {
 			const size = C.sizeof_struct_fdio_socket_msg
 			var fdioSocketMsg C.struct_fdio_socket_msg
 			if n := copy((*[size]byte)(unsafe.Pointer(&fdioSocketMsg))[:], v); n != size {
@@ -248,12 +307,12 @@ func (ios *endpoint) loopWrite() {
 		}
 
 		for {
-			n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), opts)
+			n, resCh, err := eps.ep.Write(tcpip.SlicePayload(v), opts)
 			if resCh != nil {
 				if err != tcpip.ErrNoLinkAddress {
 					panic(fmt.Sprintf("err=%v inconsistent with presence of resCh", err))
 				}
-				if ios.transProto == tcp.ProtocolNumber {
+				if eps.transProto == tcp.ProtocolNumber {
 					panic(fmt.Sprintf("TCP link address resolutions happen on connect; saw %d/%d", n, len(v)))
 				}
 				<-resCh
@@ -262,7 +321,7 @@ func (ios *endpoint) loopWrite() {
 			// TODO(fxb.dev/35006): Handle all transport write errors.
 			switch err {
 			case nil:
-				if ios.transProto != tcp.ProtocolNumber {
+				if eps.transProto != tcp.ProtocolNumber {
 					if n < int64(len(v)) {
 						panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", n, len(v)))
 					}
@@ -272,18 +331,18 @@ func (ios *endpoint) loopWrite() {
 					continue
 				}
 			case tcpip.ErrWouldBlock:
-				if ios.transProto != tcp.ProtocolNumber {
+				if eps.transProto != tcp.ProtocolNumber {
 					panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(v)))
 				}
 
-				// NB: we can't select on ios.closing here because the client may have
+				// NB: we can't select on closing here because the client may have
 				// written some data into the buffer and then immediately closed the
 				// socket. We don't have a choice but to wait around until we get the
 				// data out or the connection fails.
 				<-notifyCh
 				continue
 			case tcpip.ErrClosedForSend:
-				if err := ios.local.Shutdown(zx.SocketShutdownRead); err != nil {
+				if err := eps.local.Shutdown(zx.SocketShutdownRead); err != nil {
 					panic(err)
 				}
 				return
@@ -303,26 +362,26 @@ func (ios *endpoint) loopWrite() {
 	}
 }
 
-// loopRead connects libc read to the network stack.
-func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
+// loopRead shuttles signals and data from the tcpip.Endpoint to the zircon socket.
+func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 	var initOnce sync.Once
 	initDone := func() { initOnce.Do(func() { close(initCh) }) }
 
-	closeFn := func() { ios.close(ios.loopWriteDone) }
+	closeFn := func() { eps.close(eps.loopWriteDone) }
 
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled |
 		zx.SignalSocketPeerClosed | localSignalClosing
 
 	outEntry, outCh := waiter.NewChannelEntry(nil)
-	connected := ios.transProto != tcp.ProtocolNumber
+	connected := eps.transProto != tcp.ProtocolNumber
 	if !connected {
-		ios.wq.EventRegister(&outEntry, waiter.EventOut)
+		eps.wq.EventRegister(&outEntry, waiter.EventOut)
 		defer func() {
 			if !connected {
 				// If connected became true then we must have already unregistered
 				// below. We must never unregister the same entry twice because that
 				// can corrupt the waiter queue.
-				ios.wq.EventUnregister(&outEntry)
+				eps.wq.EventUnregister(&outEntry)
 			}
 		}()
 	}
@@ -333,7 +392,7 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 
 		for {
 			var err *tcpip.Error
-			v, _, err = ios.ep.Read(&sender)
+			v, _, err = eps.ep.Read(&sender)
 			if err == tcpip.ErrInvalidEndpointState {
 				if connected {
 					panic(fmt.Sprintf("connected endpoint returned %s", err))
@@ -341,7 +400,7 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 				// We're not connected; unblock the caller before waiting for incoming packets.
 				initDone()
 				select {
-				case <-ios.closing:
+				case <-eps.closing:
 					// We're shutting down.
 					return
 				case <-inCh:
@@ -350,12 +409,12 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 					// outbound events so there's no harm in letting outEntry remain
 					// registered until the end of the function.
 					var err error
-					ios.incoming.mu.Lock()
-					if !ios.incoming.mu.asserted {
-						err = ios.local.Handle().SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING)
-						ios.incoming.mu.asserted = true
+					eps.incoming.mu.Lock()
+					if !eps.incoming.mu.asserted {
+						err = eps.local.Handle().SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING)
+						eps.incoming.mu.asserted = true
 					}
-					ios.incoming.mu.Unlock()
+					eps.incoming.mu.Unlock()
 					if err != nil {
 						if err, ok := err.(*zx.Error); ok {
 							switch err.Status {
@@ -378,12 +437,12 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 				switch err {
 				case nil, tcpip.ErrWouldBlock, tcpip.ErrClosedForReceive:
 					connected = true
-					ios.wq.EventUnregister(&outEntry)
+					eps.wq.EventUnregister(&outEntry)
 
 					signals |= mxnet.MXSIO_SIGNAL_CONNECTED
 				}
 
-				if err := ios.local.Handle().SignalPeer(0, signals); err != nil {
+				if err := eps.local.Handle().SignalPeer(0, signals); err != nil {
 					if err, ok := err.(*zx.Error); ok {
 						switch err.Status {
 						case zx.ErrPeerClosed:
@@ -442,7 +501,7 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 				select {
 				case <-outCh:
 					continue
-				case <-ios.closing:
+				case <-eps.closing:
 					// We're shutting down.
 					return
 				}
@@ -450,12 +509,12 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 				select {
 				case <-inCh:
 					continue
-				case <-ios.closing:
+				case <-eps.closing:
 					// We're shutting down.
 					return
 				}
 			case tcpip.ErrClosedForReceive:
-				if err := ios.local.Shutdown(zx.SocketShutdownWrite); err != nil {
+				if err := eps.local.Shutdown(zx.SocketShutdownWrite); err != nil {
 					panic(err)
 				}
 				return
@@ -469,16 +528,16 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 			break
 		}
 
-		if ios.transProto != tcp.ProtocolNumber {
+		if eps.transProto != tcp.ProtocolNumber {
 			var fdioSocketMsg C.struct_fdio_socket_msg
-			fdioSocketMsg.addrlen = C.socklen_t(fdioSocketMsg.addr.Encode(ios.netProto, sender))
+			fdioSocketMsg.addrlen = C.socklen_t(fdioSocketMsg.addr.Encode(eps.netProto, sender))
 
 			const size = C.sizeof_struct_fdio_socket_msg
 			v = append((*[size]byte)(unsafe.Pointer(&fdioSocketMsg))[:], v...)
 		}
 
 		for {
-			n, err := ios.local.Write(v, 0)
+			n, err := eps.local.Write(v, 0)
 			if err != nil {
 				if err, ok := err.(*zx.Error); ok {
 					switch err.Status {
@@ -489,7 +548,7 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 						return
 					case zx.ErrBadState:
 						// Writing has been disabled for this socket endpoint.
-						if err := ios.ep.Shutdown(tcpip.ShutdownRead); err != nil {
+						if err := eps.ep.Shutdown(tcpip.ShutdownRead); err != nil {
 							// An ErrNotConnected while connected is expected if there
 							// is pending data to be read and the connection has been
 							// reset by the other end of the endpoint. The endpoint will
@@ -499,11 +558,11 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 							if !(connected && err == tcpip.ErrNotConnected) {
 								panic(err)
 							}
-							syslog.InfoTf("loopRead", "%p: client shutdown a closed endpoint with %d bytes pending data; ep info: %+v", ios, len(v), ios.ep.Info())
+							syslog.InfoTf("loopRead", "%p: client shutdown a closed endpoint with %d bytes pending data; ep info: %+v", eps, len(v), eps.endpoint.ep.Info())
 						}
 						return
 					case zx.ErrShouldWait:
-						obs, err := zxwait.Wait(zx.Handle(ios.local), sigs, zx.TimensecInfinite)
+						obs, err := zxwait.Wait(zx.Handle(eps.local), sigs, zx.TimensecInfinite)
 						if err != nil {
 							panic(err)
 						}
@@ -524,7 +583,7 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 				}
 				panic(err)
 			}
-			if ios.transProto != tcp.ProtocolNumber {
+			if eps.transProto != tcp.ProtocolNumber {
 				if n < len(v) {
 					panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", n, len(v)))
 				}
@@ -537,7 +596,7 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 	}
 }
 
-func (sp *providerImpl) newSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint) (socket.ControlInterface, error) {
+func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip.TransportProtocolNumber, netProto tcpip.NetworkProtocolNumber, metadata *socketMetadata) (*endpointWithSocket, error) {
 	var flags uint32
 	if transProto == tcp.ProtocolNumber {
 		flags |= zx.SocketStream
@@ -546,30 +605,55 @@ func (sp *providerImpl) newSocket(netProto tcpip.NetworkProtocolNumber, transPro
 	}
 	localS, peerS, err := zx.NewSocket(flags)
 	if err != nil {
-		return socket.ControlInterface{}, err
-	}
-	localC, peerC, err := zx.NewChannel(0)
-	if err != nil {
-		return socket.ControlInterface{}, err
+		return nil, err
 	}
 
-	ios := &endpoint{
-		netProto:      netProto,
-		transProto:    transProto,
-		wq:            wq,
-		ep:            ep,
+	eps := &endpointWithSocket{
+		endpoint: endpoint{
+			ep:         ep,
+			wq:         wq,
+			transProto: transProto,
+			netProto:   netProto,
+			metadata:   metadata,
+		},
 		local:         localS,
 		peer:          peerS,
 		loopReadDone:  make(chan struct{}),
 		loopWriteDone: make(chan struct{}),
 		closing:       make(chan struct{}),
-		metadata:      &sp.metadata,
 	}
 
-	// As the ios.local would be unique across all endpoints for the netstack,
-	// we can use that as a key for the endpoints. The ep.ID is not yet initialized
-	// at this point and hence we cannot use that as a key.
-	if ep, loaded := ios.metadata.endpoints.LoadOrStore(zx.Handle(ios.local), ios.ep); loaded {
+	// Register synchronously to avoid missing incoming event notifications
+	// between this function returning and the goroutines below being scheduled.
+	// Such races can lead to deadlock.
+	inEntry, inCh := waiter.NewChannelEntry(nil)
+	eps.wq.EventRegister(&inEntry, waiter.EventIn)
+
+	initCh := make(chan struct{})
+	go func() {
+		defer close(eps.loopReadDone)
+		defer eps.wq.EventUnregister(&inEntry)
+
+		eps.loopRead(inCh, initCh)
+	}()
+	go func() {
+		defer close(eps.loopWriteDone)
+
+		eps.loopWrite()
+	}()
+
+	syslog.VLogTf(syslog.DebugVerbosity, "socket", "%p", eps)
+
+	// Wait for initial state checking to complete.
+	<-initCh
+
+	metadata.addEndpoint(zx.Handle(localS), ep)
+
+	return eps, nil
+}
+
+func (metadata *socketMetadata) addEndpoint(handle zx.Handle, ep tcpip.Endpoint) {
+	if ep, loaded := metadata.endpoints.LoadOrStore(handle, ep); loaded {
 		var info stack.TransportEndpointInfo
 		switch t := ep.Info().(type) {
 		case *tcp.EndpointInfo:
@@ -577,71 +661,35 @@ func (sp *providerImpl) newSocket(netProto tcpip.NetworkProtocolNumber, transPro
 		case *stack.TransportEndpointInfo:
 			info = *t
 		}
-		syslog.Errorf("endpoint map store error, key %d exists with endpoint %+v", ios.local, info)
+		syslog.Errorf("endpoint map store error, key %d exists with endpoint %+v", handle, info)
 	}
 
-	// This must be registered before returning to prevent a race
-	// condition.
-	inEntry, inCh := waiter.NewChannelEntry(nil)
-	ios.wq.EventRegister(&inEntry, waiter.EventIn)
-
-	initCh := make(chan struct{})
-	go func() {
-		defer close(ios.loopReadDone)
-		defer ios.wq.EventUnregister(&inEntry)
-
-		ios.loopRead(inCh, initCh)
-	}()
-	go func() {
-		defer close(ios.loopWriteDone)
-
-		ios.loopWrite()
-	}()
-
-	syslog.VLogTf(syslog.DebugVerbosity, "socket", "%p", ios)
-
-	s := &socketImpl{
-		endpoint: ios,
-		sp:       sp,
-	}
-	if err := s.Clone(0, io.NodeInterfaceRequest{Channel: localC}); err != nil {
-		s.close()
-		return socket.ControlInterface{}, err
-	}
-
-	ios.metadata.socketsCreated.Increment()
+	metadata.socketsCreated.Increment()
 	select {
-	case ios.metadata.newSocketNotifications <- struct{}{}:
+	case metadata.newSocketNotifications <- struct{}{}:
 	default:
 	}
-
-	// Wait for initial state checking to complete.
-	<-initCh
-
-	return socket.ControlInterface{Channel: peerC}, nil
 }
 
 // close destroys the endpoint and releases associated resources, taking its
 // reference count into account.
 //
-// When called, close signals loopRead and loopWrite (via endpoint.closing and
-// ios.local) to exit, and then blocks until its arguments are signaled. close
-// is typically called with ios.loop{Read,Write}Done.
+// When called, close signals loopRead and loopWrite (via closing and
+// local) to exit, and then blocks until its arguments are signaled. close
+// is typically called with loop{Read,Write}Done.
 //
 // Note, calling close on an endpoint that has already been closed is safe as
 // the cleanup work will only be done once.
-func (ios *endpoint) close(loopDone ...<-chan struct{}) int64 {
-	clones := atomic.AddInt64(&ios.clones, -1)
-
-	if clones == 0 {
-		ios.closeOnce.Do(func() {
+func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) int64 {
+	return eps.endpoint.close(func() {
+		eps.closeOnce.Do(func() {
 			// Interrupt waits on notification channels. Notification reads
-			// are always combined with ios.closing in a select statement.
-			close(ios.closing)
+			// are always combined with closing in a select statement.
+			close(eps.closing)
 
 			// Interrupt waits on endpoint.local. Handle waits always
 			// include localSignalClosing.
-			if err := ios.local.Handle().Signal(0, localSignalClosing); err != nil {
+			if err := eps.local.Handle().Signal(0, localSignalClosing); err != nil {
 				panic(err)
 			}
 
@@ -651,27 +699,25 @@ func (ios *endpoint) close(loopDone ...<-chan struct{}) int64 {
 				<-ch
 			}
 
-			ios.ep.Close()
-
-			// Delete this endpoint from the global endpoints.
-			ios.metadata.endpoints.Delete(zx.Handle(ios.local))
-
-			if err := ios.local.Close(); err != nil {
+			if err := eps.local.Close(); err != nil {
 				panic(err)
 			}
 
-			if err := ios.peer.Close(); err != nil {
+			if err := eps.peer.Close(); err != nil {
 				panic(err)
 			}
 
-			ios.metadata.socketsDestroyed.Increment()
+			eps.endpoint.metadata.removeEndpoint(zx.Handle(eps.local))
 		})
-	}
-
-	return clones
+	})
 }
 
-func tcpipErrorToCode(err *tcpip.Error) int16 {
+func (metadata *socketMetadata) removeEndpoint(handle zx.Handle) {
+	metadata.endpoints.Delete(handle)
+	metadata.socketsDestroyed.Increment()
+}
+
+func tcpipErrorToCode(err *tcpip.Error) int32 {
 	if err != tcpip.ErrConnectStarted {
 		if pc, file, line, ok := runtime.Caller(1); ok {
 			if i := strings.LastIndexByte(file, '/'); i != -1 {
@@ -762,48 +808,61 @@ func tcpipErrorToCode(err *tcpip.Error) int16 {
 	}
 }
 
-var _ socket.Control = (*socketImpl)(nil)
-
-// TODO(fxb/37419): Remove TransitionalBase after methods landed.
-type socketImpl struct {
-	*endpoint
-	*io.NodeTransitionalBase
+type controlImpl struct {
+	*endpointWithSocket
 	bindingKey fidl.BindingKey
-	// listening sockets can call Accept.
-	sp *providerImpl
+	service    *socket.ControlService
 }
 
-func (s *socketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
-	clones := atomic.AddInt64(&s.endpoint.clones, 1)
+var _ socket.Control = (*controlImpl)(nil)
+
+func newControl(eps *endpointWithSocket, service *socket.ControlService) (socket.ControlInterface, error) {
+	localC, peerC, err := zx.NewChannel(0)
+	if err != nil {
+		return socket.ControlInterface{}, err
+	}
+	s := &controlImpl{
+		endpointWithSocket: eps,
+		service:            service,
+	}
+	if err := s.Clone(0, io.NodeInterfaceRequest{Channel: localC}); err != nil {
+		s.close()
+		return socket.ControlInterface{}, err
+	}
+	return socket.ControlInterface{Channel: peerC}, nil
+}
+
+func (s *controlImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
+	clones := atomic.AddInt64(&s.clones, 1)
 	{
 		sCopy := *s
 		s := &sCopy
-		bindingKey, err := s.sp.controlService.Add(s, object.Channel, func(error) { s.close() })
+		bindingKey, err := s.service.Add(s, object.Channel, func(error) { s.close() })
 		sCopy.bindingKey = bindingKey
 
-		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b key=%d err=%v", s.endpoint, clones, flags, bindingKey, err)
+		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b key=%d err=%v", s.endpointWithSocket, clones, flags, bindingKey, err)
 
 		return err
 	}
 }
 
-func (s *socketImpl) close() {
-	clones := s.endpoint.close(s.endpoint.loopReadDone, s.endpoint.loopWriteDone)
+func (s *controlImpl) close() {
+	clones := s.endpointWithSocket.close(s.loopReadDone, s.loopWriteDone)
 
-	removed := s.sp.controlService.Remove(s.bindingKey)
+	removed := s.service.Remove(s.bindingKey)
 
-	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d key=%d removed=%t", s.endpoint, clones, s.bindingKey, removed)
+	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d key=%d removed=%t", s.endpointWithSocket, clones, s.bindingKey, removed)
 }
 
-func (s *socketImpl) Close() (int32, error) {
+func (s *controlImpl) Close() (int32, error) {
 	s.close()
 	return int32(zx.ErrOk), nil
 }
 
-func (s *socketImpl) Describe() (io.NodeInfo, error) {
+func (s *controlImpl) Describe() (io.NodeInfo, error) {
 	var info io.NodeInfo
-	h, err := s.endpoint.peer.Handle().Duplicate(zx.RightsBasic | zx.RightRead | zx.RightWrite)
-	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", s.endpoint, err)
+	h, err := s.endpointWithSocket.peer.Handle().Duplicate(zx.RightsBasic | zx.RightRead | zx.RightWrite)
+	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", s.endpointWithSocket, err)
 	if err != nil {
 		return info, err
 	}
@@ -811,49 +870,33 @@ func (s *socketImpl) Describe() (io.NodeInfo, error) {
 	return info, nil
 }
 
-func (s *socketImpl) Sync() (int32, error) {
-	syslog.VLogTf(syslog.DebugVerbosity, "Sync", "%p", s.endpoint)
-
-	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: "fuchsia.posix.socket.Control"}
-}
-func (s *socketImpl) GetAttr() (int32, io.NodeAttributes, error) {
-	syslog.VLogTf(syslog.DebugVerbosity, "GetAttr", "%p", s.endpoint)
-
-	return 0, io.NodeAttributes{}, &zx.Error{Status: zx.ErrNotSupported, Text: "fuchsia.posix.socket.Control"}
-}
-func (s *socketImpl) SetAttr(flags uint32, attributes io.NodeAttributes) (int32, error) {
-	syslog.VLogTf(syslog.DebugVerbosity, "SetAttr", "%p", s.endpoint)
-
-	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: "fuchsia.posix.socket.Control"}
-}
-func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error) {
-	ep, wq, err := s.endpoint.ep.Accept()
+func (eps *endpointWithSocket) Accept() (int32, *endpointWithSocket, error) {
+	ep, wq, err := eps.endpoint.ep.Accept()
 	if err != nil {
-		return tcpipErrorToCode(err), socket.ControlInterface{}, nil
+		return tcpipErrorToCode(err), nil, nil
 	}
 	{
 		var err error
 		// We lock here to ensure that no incoming connection changes readiness
 		// while we clear the signal.
-		s.endpoint.incoming.mu.Lock()
-		if s.endpoint.incoming.mu.asserted && s.endpoint.ep.Readiness(waiter.EventIn) == 0 {
-			err = s.endpoint.local.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0)
-			s.endpoint.incoming.mu.asserted = false
+		eps.incoming.mu.Lock()
+		if eps.incoming.mu.asserted && eps.endpoint.ep.Readiness(waiter.EventIn) == 0 {
+			err = eps.local.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0)
+			eps.incoming.mu.asserted = false
 		}
-		s.endpoint.incoming.mu.Unlock()
+		eps.incoming.mu.Unlock()
 		if err != nil {
 			ep.Close()
-			return 0, socket.ControlInterface{}, err
+			return 0, nil, err
 		}
 	}
 
-	localAddr, err := ep.GetLocalAddress()
-	if err == tcpip.ErrNotConnected {
+	if localAddr, err := ep.GetLocalAddress(); err == tcpip.ErrNotConnected {
 		// This should never happen as of writing as GetLocalAddress
 		// does not actually return any errors. However, we handle
 		// the tcpip.ErrNotConnected case now for the same reasons
 		// as mentioned below for the ep.GetRemoteAddress case.
-		syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: disconnected", s.endpoint)
+		syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: disconnected", eps)
 	} else if err != nil {
 		panic(err)
 	} else {
@@ -863,173 +906,635 @@ func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error)
 		// was actually witnessed was when a TCP RST was received after the call
 		// to Accept returned, but before this point. If GetRemoteAddress
 		// returns other (unexpected) errors, panic.
-		remoteAddr, err := ep.GetRemoteAddress()
-		if err == tcpip.ErrNotConnected {
-			syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, disconnected", s.endpoint, localAddr)
+		if remoteAddr, err := ep.GetRemoteAddress(); err == tcpip.ErrNotConnected {
+			syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, disconnected", eps, localAddr)
 		} else if err != nil {
 			panic(err)
 		} else {
-			syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", s.endpoint, localAddr, remoteAddr)
+			syslog.VLogTf(syslog.DebugVerbosity, "accept", "%p: local=%+v, remote=%+v", eps, localAddr, remoteAddr)
 		}
 	}
-
 	{
-		controlInterface, err := s.sp.newSocket(s.endpoint.netProto, s.endpoint.transProto, wq, ep)
-		return 0, controlInterface, err
+		ep, err := newEndpointWithSocket(ep, wq, eps.transProto, eps.netProto, eps.endpoint.metadata)
+		return 0, ep, err
 	}
 }
 
-func (ios *endpoint) Connect(sockaddr []uint8) (int16, error) {
+func (s *controlImpl) Accept(int16) (int16, socket.ControlInterface, error) {
+	code, eps, err := s.endpointWithSocket.Accept()
+	if err != nil {
+		return 0, socket.ControlInterface{}, err
+	}
+	if code != 0 {
+		return int16(code), socket.ControlInterface{}, nil
+	}
+	controlInterface, err := newControl(eps, s.service)
+	return 0, controlInterface, err
+}
+
+func (ep *endpoint) Connect(sockaddr []uint8) (socket.BaseSocketConnectResult, error) {
 	addr, err := decodeAddr(sockaddr)
 	if err != nil {
-		return tcpipErrorToCode(tcpip.ErrBadAddress), nil
+		return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
 	}
 	// NB: We can't just compare the length to zero because that would
 	// mishandle the IPv6-mapped IPv4 unspecified address.
 	disconnect := addr.Port == 0 && (len(addr.Addr) == 0 || net.IP(addr.Addr).IsUnspecified())
 	if disconnect {
-		if err := ios.ep.Disconnect(); err != nil {
-			return tcpipErrorToCode(err), nil
+		if err := ep.ep.Disconnect(); err != nil {
+			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
 		}
 	} else {
 		if l := len(addr.Addr); l > 0 {
-			if ios.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
-				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: unsupported address %s", ios, addr.Addr)
-				return C.EAFNOSUPPORT, nil
+			if ep.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
+				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: unsupported address %s", ep, addr.Addr)
+				return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrAddressFamilyNotSupported)), nil
 			}
 		}
-		if err := ios.ep.Connect(addr); err != nil {
+		if err := ep.ep.Connect(addr); err != nil {
 			if err == tcpip.ErrConnectStarted {
-				localAddr, err := ios.ep.GetLocalAddress()
+				localAddr, err := ep.ep.GetLocalAddress()
 				if err != nil {
 					panic(err)
 				}
-				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: started, local=%+v, addr=%+v", ios, localAddr, addr)
+				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: started, local=%+v, addr=%+v", ep, localAddr, addr)
 			}
-			return tcpipErrorToCode(err), nil
+			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
 		}
 	}
 
 	{
-		localAddr, err := ios.ep.GetLocalAddress()
+		localAddr, err := ep.ep.GetLocalAddress()
 		if err != nil {
 			panic(err)
 		}
 
 		if disconnect {
-			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=disconnected", ios, localAddr)
+			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=disconnected", ep, localAddr)
 		} else {
-			remoteAddr, err := ios.ep.GetRemoteAddress()
+			remoteAddr, err := ep.ep.GetRemoteAddress()
 			if err != nil {
 				panic(err)
 			}
-			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
+			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=%+v", ep, localAddr, remoteAddr)
 		}
 	}
 
-	return 0, nil
+	return socket.BaseSocketConnectResultWithResponse(socket.BaseSocketConnectResponse{}), nil
 }
 
-func (ios *endpoint) Bind(sockaddr []uint8) (int16, error) {
+func (s *controlImpl) Connect(sockaddr []uint8) (int16, error) {
+	result, err := s.endpointWithSocket.Connect(sockaddr)
+	if err != nil {
+		return 0, err
+	}
+	switch w := result.Which(); w {
+	case socket.BaseSocketConnectResultResponse:
+		return 0, nil
+	case socket.BaseSocketConnectResultErr:
+		return int16(result.Err), nil
+	default:
+		panic(fmt.Sprintf("unknown variant %d", w))
+	}
+}
+
+func (ep *endpoint) Bind(sockaddr []uint8) (socket.BaseSocketBindResult, error) {
 	addr, err := decodeAddr(sockaddr)
 	if err != nil {
-		return tcpipErrorToCode(tcpip.ErrBadAddress), nil
+		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
 	}
-	if err := ios.ep.Bind(addr); err != nil {
-		return tcpipErrorToCode(err), nil
+	if err := ep.ep.Bind(addr); err != nil {
+		return socket.BaseSocketBindResultWithErr(tcpipErrorToCode(err)), nil
 	}
 
 	{
-		localAddr, err := ios.ep.GetLocalAddress()
+		localAddr, err := ep.ep.GetLocalAddress()
 		if err != nil {
 			panic(err)
 		}
-		syslog.VLogTf(syslog.DebugVerbosity, "bind", "%p: local=%+v", ios, localAddr)
+		syslog.VLogTf(syslog.DebugVerbosity, "bind", "%p: local=%+v", ep, localAddr)
 	}
 
-	return 0, nil
+	return socket.BaseSocketBindResultWithResponse(socket.BaseSocketBindResponse{}), nil
 }
 
-func (ios *endpoint) Listen(backlog int16) (int16, error) {
-	if err := ios.ep.Listen(int(backlog)); err != nil {
-		return tcpipErrorToCode(err), nil
+func (s *controlImpl) Bind(sockaddr []uint8) (int16, error) {
+	result, err := s.endpointWithSocket.Bind(sockaddr)
+	if err != nil {
+		return 0, err
 	}
-
-	syslog.VLogTf(syslog.DebugVerbosity, "listen", "%p: backlog=%d", ios, backlog)
-
-	return 0, nil
+	switch w := result.Which(); w {
+	case socket.BaseSocketBindResultResponse:
+		return 0, nil
+	case socket.BaseSocketBindResultErr:
+		return int16(result.Err), nil
+	default:
+		panic(fmt.Sprintf("unknown variant %d", w))
+	}
 }
 
-func (ios *endpoint) GetSockOpt(level, optName int16) (int16, []uint8, error) {
+func (s *controlImpl) Listen(backlog int16) (int16, error) {
+	result, err := s.endpointWithSocket.Listen(backlog)
+	if err != nil {
+		return 0, err
+	}
+	switch w := result.Which(); w {
+	case socket.StreamSocketListenResultResponse:
+		return 0, nil
+	case socket.StreamSocketListenResultErr:
+		return int16(result.Err), nil
+	default:
+		panic(fmt.Sprintf("unknown variant %d", w))
+	}
+}
+
+func (s *controlImpl) GetSockName() (int16, []uint8, error) {
+	result, err := s.endpointWithSocket.GetSockName()
+	if err != nil {
+		return 0, nil, err
+	}
+	switch w := result.Which(); w {
+	case socket.BaseSocketGetSockNameResultResponse:
+		return 0, result.Response.Addr, nil
+	case socket.BaseSocketGetSockNameResultErr:
+		return int16(result.Err), nil, nil
+	default:
+		panic(fmt.Sprintf("unknown variant %d", w))
+	}
+}
+
+func (s *controlImpl) GetPeerName() (int16, []uint8, error) {
+	result, err := s.endpointWithSocket.GetPeerName()
+	if err != nil {
+		return 0, nil, err
+	}
+	switch w := result.Which(); w {
+	case socket.BaseSocketGetPeerNameResultResponse:
+		return 0, result.Response.Addr, nil
+	case socket.BaseSocketGetPeerNameResultErr:
+		return int16(result.Err), nil, nil
+	default:
+		panic(fmt.Sprintf("unknown variant %d", w))
+	}
+}
+
+func (s *controlImpl) SetSockOpt(level, optName int16, optVal []uint8) (int16, error) {
+	result, err := s.endpointWithSocket.SetSockOpt(level, optName, optVal)
+	if err != nil {
+		return 0, err
+	}
+	switch w := result.Which(); w {
+	case socket.BaseSocketSetSockOptResultResponse:
+		return 0, nil
+	case socket.BaseSocketSetSockOptResultErr:
+		return int16(result.Err), nil
+	default:
+		panic(fmt.Sprintf("unknown variant %d", w))
+	}
+}
+
+func (s *controlImpl) GetSockOpt(level, optName int16) (int16, []uint8, error) {
+	result, err := s.endpointWithSocket.GetSockOpt(level, optName)
+	if err != nil {
+		return 0, nil, err
+	}
+	switch w := result.Which(); w {
+	case socket.BaseSocketGetSockOptResultResponse:
+		return 0, result.Response.Optval, nil
+	case socket.BaseSocketGetSockOptResultErr:
+		return int16(result.Err), nil, nil
+	default:
+		panic(fmt.Sprintf("unknown variant %d", w))
+	}
+}
+
+func (ep *endpoint) GetSockName() (socket.BaseSocketGetSockNameResult, error) {
+	addr, err := ep.ep.GetLocalAddress()
+	if err != nil {
+		return socket.BaseSocketGetSockNameResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketGetSockNameResultWithResponse(socket.BaseSocketGetSockNameResponse{
+		Addr: encodeAddr(ep.netProto, addr),
+	}), nil
+}
+
+func (ep *endpoint) GetPeerName() (socket.BaseSocketGetPeerNameResult, error) {
+	addr, err := ep.ep.GetRemoteAddress()
+	if err != nil {
+		return socket.BaseSocketGetPeerNameResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketGetPeerNameResultWithResponse(socket.BaseSocketGetPeerNameResponse{
+		Addr: encodeAddr(ep.netProto, addr),
+	}), nil
+}
+
+func (ep *endpoint) GetSockOpt(level, optName int16) (socket.BaseSocketGetSockOptResult, error) {
 	var val interface{}
 	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
-		ios.mu.Lock()
-		if ios.mu.sockOptTimestamp {
+		ep.mu.Lock()
+		if ep.mu.sockOptTimestamp {
 			val = int32(1)
 		} else {
 			val = int32(0)
 		}
-		ios.mu.Unlock()
+		ep.mu.Unlock()
 	} else {
 		var err *tcpip.Error
-		val, err = GetSockOpt(ios.ep, ios.netProto, ios.transProto, level, optName)
+		val, err = GetSockOpt(ep.ep, ep.netProto, ep.transProto, level, optName)
 		if err != nil {
-			return tcpipErrorToCode(err), nil, nil
+			return socket.BaseSocketGetSockOptResultWithErr(tcpipErrorToCode(err)), nil
 		}
 	}
 	if val, ok := val.([]byte); ok {
-		return 0, val, nil
+		return socket.BaseSocketGetSockOptResultWithResponse(socket.BaseSocketGetSockOptResponse{
+			Optval: val,
+		}), nil
 	}
 	b := make([]byte, reflect.TypeOf(val).Size())
 	n := copyAsBytes(b, val)
 	if n < len(b) {
 		panic(fmt.Sprintf("short %T: %d/%d", val, n, len(b)))
 	}
-	syslog.VLogTf(syslog.DebugVerbosity, "getsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ios, level, optName, len(b), b)
+	syslog.VLogTf(syslog.DebugVerbosity, "getsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ep, level, optName, len(b), b)
 
-	return 0, b, nil
+	return socket.BaseSocketGetSockOptResultWithResponse(socket.BaseSocketGetSockOptResponse{
+		Optval: b,
+	}), nil
 }
 
-func (ios *endpoint) SetSockOpt(level, optName int16, optVal []uint8) (int16, error) {
+func (ep *endpoint) SetSockOpt(level, optName int16, optVal []uint8) (socket.BaseSocketSetSockOptResult, error) {
 	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
 		if len(optVal) < sizeOfInt32 {
-			return tcpipErrorToCode(tcpip.ErrInvalidOptionValue), nil
+			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(tcpip.ErrInvalidOptionValue)), nil
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		ios.mu.Lock()
-		ios.mu.sockOptTimestamp = v != 0
-		ios.mu.Unlock()
+		ep.mu.Lock()
+		ep.mu.sockOptTimestamp = v != 0
+		ep.mu.Unlock()
 	} else {
-		if err := SetSockOpt(ios.ep, level, optName, optVal); err != nil {
-			return tcpipErrorToCode(err), nil
+		if err := SetSockOpt(ep.ep, level, optName, optVal); err != nil {
+			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(err)), nil
 		}
 	}
-	syslog.VLogTf(syslog.DebugVerbosity, "setsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ios, level, optName, len(optVal), optVal)
+	syslog.VLogTf(syslog.DebugVerbosity, "setsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ep, level, optName, len(optVal), optVal)
 
-	return 0, nil
+	return socket.BaseSocketSetSockOptResultWithResponse(socket.BaseSocketSetSockOptResponse{}), nil
 }
 
-func (ios *endpoint) GetSockName() (int16, []uint8, error) {
-	addr, err := ios.ep.GetLocalAddress()
+type endpointWithEvent struct {
+	endpoint
+
+	mu struct {
+		sync.Mutex
+		readView buffer.View
+		sender   tcpip.FullAddress
+	}
+
+	local, peer zx.Handle
+
+	incoming boolWithMutex
+
+	entry waiter.Entry
+}
+
+func (epe *endpointWithEvent) close() int64 {
+	epe.wq.EventUnregister(&epe.entry)
+
+	return epe.endpoint.close(func() { epe.endpoint.metadata.removeEndpoint(epe.local) })
+}
+
+func (epe *endpointWithEvent) Describe() (io.NodeInfo, error) {
+	var info io.NodeInfo
+	event, err := epe.peer.Duplicate(zx.RightsBasic)
+	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", epe, err)
 	if err != nil {
-		return tcpipErrorToCode(err), nil, nil
+		return info, err
 	}
-	return 0, encodeAddr(ios.netProto, addr), nil
+	info.SetDatagramSocket(io.DatagramSocket{Event: event})
+	return info, nil
 }
 
-func (ios *endpoint) GetPeerName() (int16, []uint8, error) {
-	addr, err := ios.ep.GetRemoteAddress()
+func (epe *endpointWithEvent) Shutdown(how int16) (socket.DatagramSocketShutdownResult, error) {
+	var signals zx.Signals
+	var flags tcpip.ShutdownFlags
+	switch how {
+	case C.SHUT_RD:
+		signals = zxsioSignalShutdownRead
+		flags = tcpip.ShutdownRead
+	case C.SHUT_WR:
+		signals = zxsioSignalShutdownWrite
+		flags = tcpip.ShutdownWrite
+	case C.SHUT_RDWR:
+		signals = zxsioSignalShutdownRead | zxsioSignalShutdownWrite
+		flags = tcpip.ShutdownRead | tcpip.ShutdownWrite
+	default:
+		return socket.DatagramSocketShutdownResultWithErr(C.EINVAL), nil
+	}
+	if err := epe.ep.Shutdown(flags); err != nil {
+		return socket.DatagramSocketShutdownResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	if flags&tcpip.ShutdownRead != 0 {
+		epe.wq.EventUnregister(&epe.entry)
+	}
+	if err := epe.local.SignalPeer(0, signals); err != nil {
+		return socket.DatagramSocketShutdownResult{}, err
+	}
+	return socket.DatagramSocketShutdownResultWithResponse(socket.DatagramSocketShutdownResponse{}), nil
+}
+
+func (eps *endpointWithSocket) Listen(backlog int16) (socket.StreamSocketListenResult, error) {
+	if err := eps.ep.Listen(int(backlog)); err != nil {
+		return socket.StreamSocketListenResultWithErr(tcpipErrorToCode(err)), nil
+	}
+
+	syslog.VLogTf(syslog.DebugVerbosity, "listen", "%p: backlog=%d", eps, backlog)
+
+	return socket.StreamSocketListenResultWithResponse(socket.StreamSocketListenResponse{}), nil
+}
+
+type datagramSocketImpl struct {
+	*endpointWithEvent
+	bindingKey fidl.BindingKey
+	service    *socket.DatagramSocketService
+}
+
+var _ socket.DatagramSocket = (*datagramSocketImpl)(nil)
+
+func (s *datagramSocketImpl) close() {
+	clones := s.endpointWithEvent.close()
+
+	removed := s.service.Remove(s.bindingKey)
+
+	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d key=%d removed=%t", s.endpointWithEvent, clones, s.bindingKey, removed)
+}
+
+func (s *datagramSocketImpl) Close() (int32, error) {
+	s.close()
+	return int32(zx.ErrOk), nil
+}
+
+func (s *datagramSocketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
+	clones := atomic.AddInt64(&s.clones, 1)
+	{
+		sCopy := *s
+		s := &sCopy
+		bindingKey, err := s.service.Add(s, object.Channel, func(error) { s.close() })
+		sCopy.bindingKey = bindingKey
+
+		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b key=%d err=%v", s.endpointWithEvent, clones, flags, bindingKey, err)
+
+		return err
+	}
+}
+
+func (s *datagramSocketImpl) RecvMsg(addrLen, dataLen, controlLen uint32, flags int16) (socket.DatagramSocketRecvMsgResult, error) {
+	s.mu.Lock()
+	var err *tcpip.Error
+	if len(s.mu.readView) == 0 {
+		// TODO(21106): do something with control messages.
+		s.mu.readView, _, err = s.ep.Read(&s.mu.sender)
+	}
+	v, sender := s.mu.readView, s.mu.sender
+	if flags&C.MSG_PEEK == 0 {
+		s.mu.readView = nil
+		s.mu.sender = tcpip.FullAddress{}
+	}
+	s.mu.Unlock()
 	if err != nil {
-		return tcpipErrorToCode(err), nil, nil
+		return socket.DatagramSocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	return 0, encodeAddr(ios.netProto, addr), nil
+	{
+		var err error
+		// We lock here to ensure that no incoming connection changes readiness
+		// while we clear the signal.
+		s.incoming.mu.Lock()
+		if s.incoming.mu.asserted && s.endpoint.ep.Readiness(waiter.EventIn) == 0 {
+			err = s.local.SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0)
+			s.incoming.mu.asserted = false
+		}
+		s.incoming.mu.Unlock()
+		if err != nil {
+			panic(err)
+		}
+	}
+	var addr []byte
+	if addrLen != 0 {
+		addr = encodeAddr(s.netProto, sender)
+		if len(addr) > int(addrLen) {
+			addr = addr[:addrLen]
+		}
+	}
+	var truncated uint32
+	if t := len(v) - int(dataLen); t > 0 {
+		truncated = uint32(t)
+		v = v[:dataLen]
+	}
+	return socket.DatagramSocketRecvMsgResultWithResponse(socket.DatagramSocketRecvMsgResponse{
+		Addr:      addr,
+		Data:      v,
+		Truncated: truncated,
+	}), nil
 }
 
-func decodeAddr(addr []uint8) (tcpip.FullAddress, error) {
-	var sockaddrStorage C.struct_sockaddr_storage
-	if err := sockaddrStorage.Unmarshal(addr); err != nil {
-		return tcpip.FullAddress{}, err
+func (s *datagramSocketImpl) SendMsg(addr []uint8, data [][]uint8, control []uint8, flags int16) (socket.DatagramSocketSendMsgResult, error) {
+	var writeOpts tcpip.WriteOptions
+	if len(addr) != 0 {
+		addr, err := decodeAddr(addr)
+		if err != nil {
+			return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
+		}
+		writeOpts.To = &addr
 	}
-	return sockaddrStorage.Decode()
+	// TODO(21106): do something with control.
+	// TODO(tamird): do something with flags.
+
+	dataLen := 0
+	for _, data := range data {
+		dataLen += len(data)
+	}
+	b := make([]byte, 0, dataLen)
+	for _, data := range data {
+		b = append(b, data...)
+	}
+
+	for {
+		n, resCh, err := s.ep.Write(tcpip.SlicePayload(b), writeOpts)
+		if resCh != nil {
+			if err != tcpip.ErrNoLinkAddress {
+				panic(fmt.Sprintf("err=%v inconsistent with presence of resCh", err))
+			}
+			<-resCh
+			continue
+		}
+		if err != nil {
+			return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
+		}
+		return socket.DatagramSocketSendMsgResultWithResponse(socket.DatagramSocketSendMsgResponse{Len: n}), nil
+	}
+}
+
+type streamSocketImpl struct {
+	*endpointWithSocket
+	bindingKey fidl.BindingKey
+	service    *socket.StreamSocketService
+}
+
+var _ socket.StreamSocket = (*streamSocketImpl)(nil)
+
+func newStreamSocket(eps *endpointWithSocket, service *socket.StreamSocketService) (socket.StreamSocketInterface, error) {
+	localC, peerC, err := zx.NewChannel(0)
+	if err != nil {
+		return socket.StreamSocketInterface{}, err
+	}
+	s := &streamSocketImpl{
+		endpointWithSocket: eps,
+		service:            service,
+	}
+	if err := s.Clone(0, io.NodeInterfaceRequest{Channel: localC}); err != nil {
+		s.close()
+		return socket.StreamSocketInterface{}, err
+	}
+	return socket.StreamSocketInterface{Channel: peerC}, nil
+}
+
+func (s *streamSocketImpl) close() {
+	clones := s.endpointWithSocket.close(s.loopReadDone, s.loopWriteDone)
+
+	removed := s.service.Remove(s.bindingKey)
+
+	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d key=%d removed=%t", s.endpointWithSocket, clones, s.bindingKey, removed)
+}
+
+func (s *streamSocketImpl) Close() (int32, error) {
+	s.close()
+	return int32(zx.ErrOk), nil
+}
+
+func (s *streamSocketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
+	clones := atomic.AddInt64(&s.clones, 1)
+	{
+		sCopy := *s
+		s := &sCopy
+		bindingKey, err := s.service.Add(s, object.Channel, func(error) { s.close() })
+		sCopy.bindingKey = bindingKey
+
+		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b key=%d err=%v", s.endpointWithSocket, clones, flags, bindingKey, err)
+
+		return err
+	}
+}
+
+func (s *streamSocketImpl) Describe() (io.NodeInfo, error) {
+	var info io.NodeInfo
+	h, err := s.endpointWithSocket.peer.Handle().Duplicate(zx.RightsBasic | zx.RightRead | zx.RightWrite)
+	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", s.endpointWithSocket, err)
+	if err != nil {
+		return info, err
+	}
+	info.SetStreamSocket(io.StreamSocket{Socket: zx.Socket(h)})
+	return info, nil
+}
+
+func (s *streamSocketImpl) Accept(flags int16) (socket.StreamSocketAcceptResult, error) {
+	code, eps, err := s.endpointWithSocket.Accept()
+	if err != nil {
+		return socket.StreamSocketAcceptResult{}, err
+	}
+	if code != 0 {
+		return socket.StreamSocketAcceptResultWithErr(code), nil
+	}
+	streamSocketInterface, err := newStreamSocket(eps, s.service)
+	if err != nil {
+		return socket.StreamSocketAcceptResult{}, err
+	}
+	return socket.StreamSocketAcceptResultWithResponse(socket.StreamSocketAcceptResponse{S: streamSocketInterface}), nil
+}
+
+type callback func(*waiter.Entry)
+
+func (cb callback) Callback(e *waiter.Entry) {
+	cb(e)
+}
+
+func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSocket2Result, error) {
+	code, netProto := toNetProto(domain)
+	if code != 0 {
+		return socket.ProviderSocket2ResultWithErr(code), nil
+	}
+	code, transProto := toTransProto(typ, protocol)
+	if code != 0 {
+		return socket.ProviderSocket2ResultWithErr(code), nil
+	}
+	wq := new(waiter.Queue)
+	sp.ns.mu.Lock()
+	ep, err := sp.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
+	sp.ns.mu.Unlock()
+	if err != nil {
+		return socket.ProviderSocket2ResultWithErr(tcpipErrorToCode(err)), nil
+	}
+
+	if transProto == tcp.ProtocolNumber {
+		ep, err := newEndpointWithSocket(ep, wq, transProto, netProto, &sp.metadata)
+		if err != nil {
+			return socket.ProviderSocket2Result{}, err
+		}
+		streamSocketInterface, err := newStreamSocket(ep, &sp.streamSocketService)
+		if err != nil {
+			return socket.ProviderSocket2Result{}, err
+		}
+		return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{
+			S: socket.BaseSocketInterface(streamSocketInterface),
+		}), nil
+	} else {
+		var localE, peerE zx.Handle
+		if status := zx.Sys_eventpair_create(0, &localE, &peerE); status != zx.ErrOk {
+			return socket.ProviderSocket2Result{}, &zx.Error{Status: status, Text: "zx.EventPair"}
+		}
+		localC, peerC, err := zx.NewChannel(0)
+		if err != nil {
+			return socket.ProviderSocket2Result{}, err
+		}
+		s := &datagramSocketImpl{
+			endpointWithEvent: &endpointWithEvent{
+				endpoint: endpoint{
+					ep:         ep,
+					wq:         wq,
+					transProto: transProto,
+					netProto:   netProto,
+					metadata:   &sp.metadata,
+				},
+				local: localE,
+				peer:  peerE,
+			},
+			service: &sp.datagramSocketService,
+		}
+
+		s.entry.Callback = callback(func(*waiter.Entry) {
+			var err error
+			s.endpointWithEvent.incoming.mu.Lock()
+			if !s.endpointWithEvent.incoming.mu.asserted {
+				err = s.endpointWithEvent.local.SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING)
+				s.endpointWithEvent.incoming.mu.asserted = true
+			}
+			s.endpointWithEvent.incoming.mu.Unlock()
+			if err != nil {
+				panic(err)
+			}
+		})
+
+		s.wq.EventRegister(&s.entry, waiter.EventIn)
+
+		if err := s.Clone(0, io.NodeInterfaceRequest{Channel: localC}); err != nil {
+			s.close()
+			return socket.ProviderSocket2Result{}, err
+		}
+		datagramSocketInterface := socket.DatagramSocketInterface{Channel: peerC}
+
+		sp.metadata.addEndpoint(localE, ep)
+
+		return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{
+			S: socket.BaseSocketInterface(datagramSocketInterface),
+		}), nil
+	}
 }

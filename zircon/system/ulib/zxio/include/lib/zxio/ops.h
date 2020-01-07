@@ -80,6 +80,17 @@ typedef struct zxio_ops {
 // Initialize a |zxio_t| object with the given |ops| table.
 void zxio_init(zxio_t* io, const zxio_ops_t* ops);
 
+// Vector operations on stream pipes and sockets. These are exported for reuse in fdio.
+//
+// TODO(tamird/abarth/yifeit): this leaks implementation details; figure out a better place for
+// this.
+
+zx_status_t zxio_stream_pipe_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                         zxio_flags_t flags, size_t* out_actual);
+
+zx_status_t zxio_stream_pipe_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                          zxio_flags_t flags, size_t* out_actual);
+
 __END_CDECLS
 
 #endif  // LIB_ZXIO_OPS_H_

@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/vnode.h>
-
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
 #include <utility>
 
 #include <fs/vfs_types.h>
+#include <fs/vnode.h>
 
 #ifdef __Fuchsia__
 
 #include <fuchsia/io/llcpp/fidl.h>
+
 #include <fs/mount_channel.h>
 
 namespace fio = ::llcpp::fuchsia::io;
@@ -71,6 +71,12 @@ zx_status_t Vnode::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
       break;
     case VnodeProtocol::kSocket:
       ZX_DEBUG_ASSERT(info->is_socket());
+      break;
+    case VnodeProtocol::kDatagramSocket:
+      ZX_DEBUG_ASSERT(info->is_datagram_socket());
+      break;
+    case VnodeProtocol::kStreamSocket:
+      ZX_DEBUG_ASSERT(info->is_stream_socket());
       break;
   }
   return ZX_OK;

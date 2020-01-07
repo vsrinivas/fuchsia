@@ -5,16 +5,10 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/unsafe.h>
-#include <string.h>
+#include <poll.h>
 #include <zircon/device/vfs.h>
-#include <zircon/syscalls.h>
-
-#include <mutex>
 
 #include "lib/zx/channel.h"
 #include "private-socket.h"
@@ -242,10 +236,29 @@ zx_status_t fdio_service_clone_to(zx_handle_t handle, zx_handle_t request_raw) {
   return fio::Node::Call::Clone(zx::unowned_channel(handle), flags, std::move(request)).status();
 }
 
+static zx_status_t check_connected(const zx::socket& socket, bool* out_connected) {
+  zx_signals_t observed;
+
+  zx_status_t status =
+      socket.wait_one(ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed);
+  switch (status) {
+    case ZX_OK:
+      __FALLTHROUGH;
+    case ZX_ERR_TIMED_OUT:
+      break;
+    default:
+      return status;
+  }
+  *out_connected = observed & ZXSIO_SIGNAL_CONNECTED;
+  return ZX_OK;
+}
+
 zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t** out_io) {
   if (!handle.is_valid()) {
     return ZX_ERR_INVALID_ARGS;
   }
+
+  bool connected = false;
 
   fdio_t* io = nullptr;
   switch (info.which()) {
@@ -284,27 +297,31 @@ zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t**
       break;
     }
     case fio::NodeInfo::Tag::kSocket: {
-      // check the connection state.
-      zx_signals_t observed;
+      zx_status_t status;
 
-      switch (zx_status_t status = info.socket().socket.wait_one(
-                  ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed)) {
-        case ZX_OK:
-          __FALLTHROUGH;
-        case ZX_ERR_TIMED_OUT:
-          break;
-        default:
-          return status;
-      }
-
-      zx_status_t status = fdio_socket_create(fsocket::Control::SyncClient(std::move(handle)),
-                                              std::move(info.mutable_socket().socket), &io);
+      status = check_connected(info.socket().socket, &connected);
       if (status != ZX_OK) {
         return status;
       }
-      if (observed & ZXSIO_SIGNAL_CONNECTED) {
-        *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTED;
+      status = fdio_socket_create(fsocket::Control::SyncClient(std::move(handle)),
+                                  std::move(info.mutable_socket().socket), &io);
+      if (status != ZX_OK) {
+        return status;
       }
+      break;
+    }
+    case fio::NodeInfo::Tag::kDatagramSocket: {
+      io = fdio_datagram_socket_create(std::move(info.mutable_datagram_socket().event),
+                                       fsocket::DatagramSocket::SyncClient(std::move(handle)));
+      break;
+    }
+    case fio::NodeInfo::Tag::kStreamSocket: {
+      zx_status_t status = check_connected(info.stream_socket().socket, &connected);
+      if (status != ZX_OK) {
+        return status;
+      }
+      io = fdio_stream_socket_create(std::move(info.mutable_stream_socket().socket),
+                                     fsocket::StreamSocket::SyncClient(std::move(handle)));
       break;
     }
     default:
@@ -313,6 +330,10 @@ zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t**
 
   if (io == nullptr) {
     return ZX_ERR_NO_RESOURCES;
+  }
+
+  if (connected) {
+    *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTED;
   }
 
   *out_io = io;
@@ -372,15 +393,16 @@ zx_status_t fdio_from_on_open_event(zx::channel channel, fdio_t** out_io) {
   zx_handle_t event_channel_handle = channel.get();
   return fio::Directory::Call::HandleEvents(
       zx::unowned_channel(event_channel_handle),
-      fio::Directory::EventHandlers{
-          .on_open =
-              [channel = std::move(channel), out_io](zx_status_t status, fio::NodeInfo info) mutable {
-                if (status != ZX_OK) {
-                  return status;
-                }
-                return fdio_from_node_info(std::move(channel), info, out_io);
-              },
-          .unknown = [] { return ZX_ERR_IO; }});
+      fio::Directory::EventHandlers{.on_open =
+                                        [channel = std::move(channel), out_io](
+                                            zx_status_t status, fio::NodeInfo info) mutable {
+                                          if (status != ZX_OK) {
+                                            return status;
+                                          }
+                                          return fdio_from_node_info(std::move(channel), info,
+                                                                     out_io);
+                                        },
+                                    .unknown = [] { return ZX_ERR_IO; }});
 }
 
 zx_status_t fdio_remote_clone(zx_handle_t node, fdio_t** out_io) {

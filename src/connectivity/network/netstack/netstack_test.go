@@ -8,6 +8,7 @@ import (
 	"net"
 	"sort"
 	"syscall/zx"
+	"syscall/zx/fidl"
 	"testing"
 	"time"
 
@@ -45,6 +46,64 @@ const (
 	testLinkLocalV6Addr2 tcpip.Address = "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02"
 )
 
+func TestBindingSetCounterStat_Value(t *testing.T) {
+	var b1, b2 fidl.BindingSet
+
+	s := bindingSetCounterStat{bindingSets: []*fidl.BindingSet{&b1, &b2}}
+
+	if got, want := uint64(0), s.Value(); got != want {
+		t.Errorf("got s.Value() = %d want = %d", got, want)
+	}
+
+	ch1, ch2, err := zx.NewChannel(0)
+	if err != nil {
+		t.Fatal("zx.NewChannel(...) failed:", err)
+	}
+	defer func() {
+		// Explicitly ignore the errors; if the test runs past the
+		// (*fidl.BindingSet).Remove calls below, these channels will have been
+		// closed, and these Close calls will return ErrBadHandle. If the test does
+		// not, then these Close calls will return nil. Either way, that's not what
+		// we're testing here.
+		_ = ch1.Close()
+		_ = ch2.Close()
+	}()
+
+	key1, err := b1.Add(nil, ch1, nil)
+	if err != nil {
+		t.Fatalf("%T.Add(...) failed: %s", b1, err)
+	}
+
+	if got, want := uint64(1), s.Value(); got != want {
+		t.Errorf("got s.Value() = %d want = %d", got, want)
+	}
+
+	key2, err := b2.Add(nil, ch2, nil)
+	if err != nil {
+		t.Fatalf("%T.Add(...) failed: %s", b2, err)
+	}
+
+	if got, want := uint64(2), s.Value(); got != want {
+		t.Errorf("got s.Value() = %d want = %d", got, want)
+	}
+
+	if !b1.Remove(key1) {
+		t.Fatalf("got %T.Remove(...) = false want = true", b1)
+	}
+
+	if got, want := uint64(1), s.Value(); got != want {
+		t.Errorf("got s.Value() = %d want = %d", got, want)
+	}
+
+	if !b2.Remove(key2) {
+		t.Fatalf("got %T.Remove(...) = false want = true", b2)
+	}
+
+	if got, want := uint64(0), s.Value(); got != want {
+		t.Errorf("got s.Value() = %d want = %d", got, want)
+	}
+}
+
 func containsRoute(rs []tcpip.Route, r tcpip.Route) bool {
 	for _, i := range rs {
 		if i == r {
@@ -69,17 +128,19 @@ func TestEndpointDoubleClose(t *testing.T) {
 		t.Fatalf("NewEndpoint = %s", err)
 	}
 
-	ios := &endpoint{
-		netProto:      ipv6.ProtocolNumber,
-		transProto:    tcp.ProtocolNumber,
-		wq:            wq,
-		ep:            ep,
+	ios := endpointWithSocket{
+		endpoint: endpoint{
+			netProto:   ipv6.ProtocolNumber,
+			transProto: tcp.ProtocolNumber,
+			wq:         wq,
+			ep:         ep,
+			metadata: &socketMetadata{
+				endpoints: &ns.endpoints,
+			},
+		},
 		loopReadDone:  make(chan struct{}),
 		loopWriteDone: make(chan struct{}),
 		closing:       make(chan struct{}),
-		metadata: &socketMetadata{
-			endpoints: &ns.endpoints,
-		},
 	}
 
 	{
@@ -133,17 +194,19 @@ func TestCloseEndpointsMap(t *testing.T) {
 		t.Fatalf("NewEndpoint = %s", err)
 	}
 
-	ios := &endpoint{
-		netProto:      ipv6.ProtocolNumber,
-		transProto:    tcp.ProtocolNumber,
-		wq:            wq,
-		ep:            ep,
+	ios := endpointWithSocket{
+		endpoint: endpoint{
+			netProto:   ipv6.ProtocolNumber,
+			transProto: tcp.ProtocolNumber,
+			wq:         wq,
+			ep:         ep,
+			metadata: &socketMetadata{
+				endpoints: &ns.endpoints,
+			},
+		},
 		loopReadDone:  make(chan struct{}),
 		loopWriteDone: make(chan struct{}),
 		closing:       make(chan struct{}),
-		metadata: &socketMetadata{
-			endpoints: &ns.endpoints,
-		},
 	}
 	{
 		localS, peerS, err := zx.NewSocket(uint32(zx.SocketStream))

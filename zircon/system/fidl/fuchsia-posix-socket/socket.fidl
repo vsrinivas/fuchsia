@@ -45,9 +45,76 @@ protocol Control {
     GetSockOpt(int16 level, int16 optname) -> (int16 code, sockopt optval);
 };
 
+/// A network socket.
+///
+/// Once a socket has been retrieved from a `Provider`, this interface is then used to further
+/// configure and use the socket. This interface is essentially POSIX. Its implementation must
+/// support Linux-specific arguments to {Get,Set}SockOpt.
+///
+/// All methods on this type are nonblocking; their exact behaviors match their Linux counterparts.
+///
+/// *Warning:* This protocol is not yet ready for direct use by clients. Instead, clients should
+/// use the BSD sockets API to interact with sockets. We plan to change this protocol substantially
+/// and clients that couple directly to this protocol will make those changes more difficult.
+[FragileBase]
+protocol BaseSocket {
+    compose fuchsia.io.Node;
+
+    /// Sets the local address used for the socket.
+    Bind(sockaddr addr) -> () error int32;
+    /// Initiates a connection to a remote address.
+    Connect(sockaddr addr) -> () error int32;
+    /// Retrieves the local socket address.
+    GetSockName() -> (sockaddr addr) error int32;
+    /// Retrieves the remote socket address.
+    GetPeerName() -> (sockaddr addr) error int32;
+    /// Sets the value of a socket option.
+    SetSockOpt(int16 level, int16 optname, sockopt optval) -> () error int32;
+    /// Retrieves the value of a socket option.
+    GetSockOpt(int16 level, int16 optname) -> (sockopt optval) error int32;
+};
+
+/// A datagram socket.
+///
+/// This type's [`fuchsia.io.Node/Describe`] method returns an eventpair which is used to signal
+/// additional information about the state of the socket such as readiness or shutdown-ness.
+///
+/// All methods on this type are nonblocking; their exact behaviors match their Linux counterparts.
+protocol DatagramSocket {
+    compose BaseSocket;
+
+    /// Shuts down part of the socket.
+    Shutdown(int16 how) -> () error int32;
+    /// Receives a message from the socket.
+    RecvMsg(uint32 addr_len, uint32 data_len, uint32 control_len, int16 flags) -> (sockaddr addr, bytes data, bytes control, uint32 truncated) error int32;
+    /// Sends a message on the socket.
+    SendMsg(sockaddr addr, vector<bytes>:MAX data, bytes control, int16 flags) -> (int64 len) error int32;
+};
+
+/// A stream socket.
+///
+/// This type's [`fuchsia.io.Node/Describe`] method returns a socket which is used to transfer data
+/// to and from the caller. Signals are used to communicate additional information about the state
+/// of the socket such as connectedness and the presence of incoming connections in the case of a
+/// listening socket.
+///
+/// All methods on this type are nonblocking; their exact behaviors match their Linux counterparts.
+protocol StreamSocket {
+    compose BaseSocket;
+
+    /// Begins listening for new incoming connections. At most `backlog` connections will be
+    /// buffered.
+    Listen(int16 backlog) -> () error int32;
+    /// Accepts a buffered incoming connection.
+    Accept(int16 flags) -> (StreamSocket s) error int32;
+};
+
 /// Provider implements the POSIX sockets API.
 [Discoverable]
 protocol Provider {
     /// Requests a socket with the specified parameters. Values for `code` are defined in errno.h.
     Socket(int16 domain, int16 type, int16 protocol) -> (int16 code, Control? s);
+
+    /// Requests a socket with the specified parameters. Error values are defined in errno.h.
+    Socket2(int16 domain, int16 type, int16 protocol) -> (BaseSocket s) error int32;
 };

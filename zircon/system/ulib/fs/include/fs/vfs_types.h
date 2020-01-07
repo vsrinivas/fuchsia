@@ -85,9 +85,7 @@ union Rights {
   constexpr static Rights All() { return Rights{0xf}; }
 };
 
-constexpr Rights operator&(Rights lhs, Rights rhs) {
-  return Rights(lhs.raw_value & rhs.raw_value);
-}
+constexpr Rights operator&(Rights lhs, Rights rhs) { return Rights(lhs.raw_value & rhs.raw_value); }
 
 // Identifies the different operational contracts used to interact with a vnode.
 // For example, the |kFile| protocol allows reading and writing byte contents through
@@ -111,10 +109,12 @@ enum class VnodeProtocol : uint32_t {
   kDevice,
   kTty,
   kSocket,
+  kDatagramSocket,
+  kStreamSocket,
   // Note: when appending more members, adjust |kVnodeProtocolCount| accordingly.
 };
 
-constexpr size_t kVnodeProtocolCount = static_cast<uint32_t>(VnodeProtocol::kSocket) + 1;
+constexpr size_t kVnodeProtocolCount = static_cast<uint32_t>(VnodeProtocol::kStreamSocket) + 1;
 
 // A collection of |VnodeProtocol|s, stored internally as a bit-field.
 // The N-th bit corresponds to the N-th element in the |VnodeProtocol| enum, under zero-based index.
@@ -144,9 +144,7 @@ class VnodeProtocolSet {
   }
 
   // True iff at least one element is present in the set.
-  constexpr bool any() const {
-    return protocol_bits_ != 0;
-  }
+  constexpr bool any() const { return protocol_bits_ != 0; }
 
   // Returns the first element in the set, if any. The ordering of elements is defined by their
   // declaration order within |VnodeProtocol|.
@@ -170,9 +168,7 @@ class VnodeProtocolSet {
     return protocol_bits_ == rhs.protocol_bits_;
   }
 
-  constexpr bool operator!=(const VnodeProtocolSet& rhs) const {
-    return !operator==(rhs);
-  }
+  constexpr bool operator!=(const VnodeProtocolSet& rhs) const { return !operator==(rhs); }
 
   // The set of all defined protocols.
   constexpr static VnodeProtocolSet All() {
@@ -180,9 +176,7 @@ class VnodeProtocolSet {
   }
 
   // The empty set of protocols.
-  constexpr static VnodeProtocolSet Empty() {
-    return VnodeProtocolSet(0);
-  }
+  constexpr static VnodeProtocolSet Empty() { return VnodeProtocolSet(0); }
 
  private:
   constexpr explicit VnodeProtocolSet(uint64_t raw_bits) : protocol_bits_(raw_bits) {}
@@ -408,6 +402,14 @@ class VnodeRepresentation {
     zx::socket socket = {};
   };
 
+  struct DatagramSocket {
+    zx::eventpair event = {};
+  };
+
+  struct StreamSocket {
+    zx::socket socket = {};
+  };
+
   VnodeRepresentation() = default;
 
   // Forwards the constructor arguments into the underlying |std::variant|.
@@ -458,9 +460,16 @@ class VnodeRepresentation {
 
   bool is_socket() const { return std::holds_alternative<Socket>(variants_); }
 
+  DatagramSocket& datagram_socket() { return std::get<DatagramSocket>(variants_); }
+
+  bool is_datagram_socket() const { return std::holds_alternative<DatagramSocket>(variants_); }
+
+  StreamSocket& stream_socket() { return std::get<StreamSocket>(variants_); }
+  bool is_stream_socket() const { return std::holds_alternative<StreamSocket>(variants_); }
+
  private:
-  using Variants =
-      std::variant<std::monostate, Connector, File, Directory, Pipe, Memory, Device, Tty, Socket>;
+  using Variants = std::variant<std::monostate, Connector, File, Directory, Pipe, Memory, Device,
+                                Tty, Socket, DatagramSocket, StreamSocket>;
 
   Variants variants_ = {};
 };

@@ -224,6 +224,12 @@ fdio_t* fdio_vmofile_create(llcpp::fuchsia::io::File::SyncClient control, zx::vm
 zx_status_t fdio_socket_create(llcpp::fuchsia::posix::socket::Control::SyncClient control,
                                zx::socket socket, fdio_t** out_io);
 
+fdio_t* fdio_datagram_socket_create(
+    zx::eventpair event, llcpp::fuchsia::posix::socket::DatagramSocket::SyncClient client);
+
+fdio_t* fdio_stream_socket_create(zx::socket socket,
+                                  llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client);
+
 // Creates a message port and pair of simple io fdio_t's
 int fdio_pipe_pair(fdio_t** a, fdio_t** b);
 

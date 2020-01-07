@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/vfs_types.h>
-
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fit/function.h>
+
+#include <fs/vfs_types.h>
 
 namespace fio = ::llcpp::fuchsia::io;
 
@@ -132,15 +132,13 @@ VnodeConnectionOptions VnodeConnectionOptions::FilterForNewConnection(
 }
 
 fio::NodeAttributes VnodeAttributes::ToIoV1NodeAttributes() const {
-  return fio::NodeAttributes{
-      .mode = mode,
-      .id = inode,
-      .content_size = content_size,
-      .storage_size = storage_size,
-      .link_count = link_count,
-      .creation_time = creation_time,
-      .modification_time = modification_time
-  };
+  return fio::NodeAttributes{.mode = mode,
+                             .id = inode,
+                             .content_size = content_size,
+                             .storage_size = storage_size,
+                             .link_count = link_count,
+                             .creation_time = creation_time,
+                             .modification_time = modification_time};
 }
 
 void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
@@ -153,9 +151,7 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
       info.set_service(&service);
       callback(info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::File>) {
-      fio::FileObject file = {
-          .event = std::move(repr.observer)
-      };
+      fio::FileObject file = {.event = std::move(repr.observer)};
       info.set_file(&file);
       callback(info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
@@ -163,36 +159,33 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
       info.set_directory(&directory);
       callback(info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Pipe>) {
-      fio::Pipe pipe = {
-          .socket = std::move(repr.socket)
-      };
+      fio::Pipe pipe = {.socket = std::move(repr.socket)};
       info.set_pipe(&pipe);
       callback(info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Memory>) {
       fio::Vmofile vmofile = {
-          .vmo = std::move(repr.vmo),
-          .offset = repr.offset,
-          .length = repr.length
-      };
+          .vmo = std::move(repr.vmo), .offset = repr.offset, .length = repr.length};
       info.set_vmofile(&vmofile);
       callback(info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Device>) {
-      fio::Device device = {
-          .event = std::move(repr.event)
-      };
+      fio::Device device = {.event = std::move(repr.event)};
       info.set_device(&device);
       callback(info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
-      fio::Tty tty = {
-          .event = std::move(repr.event)
-      };
+      fio::Tty tty = {.event = std::move(repr.event)};
       info.set_tty(&tty);
       callback(info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Socket>) {
-      fio::Socket socket = {
-          .socket = std::move(repr.socket)
-      };
+      fio::Socket socket = {.socket = std::move(repr.socket)};
       info.set_socket(&socket);
+      callback(info);
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::DatagramSocket>) {
+      fio::DatagramSocket datagram_socket = {.event = std::move(repr.event)};
+      info.set_datagram_socket(&datagram_socket);
+      callback(info);
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::StreamSocket>) {
+      fio::StreamSocket stream_socket = {.socket = std::move(repr.socket)};
+      info.set_stream_socket(&stream_socket);
       callback(info);
     } else {
       ZX_PANIC("Representation variant is not initialized");

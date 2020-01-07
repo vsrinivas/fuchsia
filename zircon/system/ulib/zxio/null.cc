@@ -108,8 +108,8 @@ zx_status_t zxio_default_readdir(zxio_t* io, void* buffer, size_t capacity, size
 
 zx_status_t zxio_default_rewind(zxio_t* io) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t zxio_null_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                  zxio_flags_t flags, size_t* out_actual) {
+static zx_status_t zxio_null_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                         zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -120,8 +120,8 @@ zx_status_t zxio_null_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t v
                         });
 }
 
-zx_status_t zxio_null_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                   zxio_flags_t flags, size_t* out_actual) {
+static zx_status_t zxio_null_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                          zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }

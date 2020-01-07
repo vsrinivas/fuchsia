@@ -110,6 +110,7 @@ pub(crate) fn handle_fidl_socket_provider_request(
     req: psocket::ProviderRequest,
 ) {
     match req {
+        psocket::ProviderRequest::Socket2 { .. } => {}
         psocket::ProviderRequest::Socket { domain, type_, protocol: _, responder } => {
             let nonblock = i32::from(type_) & libc::SOCK_NONBLOCK != 0;
             let type_ = i32::from(type_) & !(libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC);

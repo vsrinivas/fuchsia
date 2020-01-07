@@ -203,7 +203,7 @@ TEST_F(TcpSocketTest, RecvmsgNonblockBoundary) {
   msg.msg_iov = iov;
   msg.msg_iovlen = sizeof(iov) / sizeof(*iov);
 
-  EXPECT_EQ(recvmsg(client_fd.get(), &msg, 0), sizeof(data_out));
+  EXPECT_EQ(recvmsg(client_fd.get(), &msg, 0), sizeof(data_out), "%s", strerror(errno));
 
   EXPECT_EQ(close(client_fd.release()), 0, "%s", strerror(errno));
 }
@@ -238,7 +238,7 @@ TEST_F(TcpSocketTest, SendmsgNonblockBoundary) {
   EXPECT_EQ(memlength, actual);
 
   // 3. Push again 2 packets of <memlength> bytes, observe only one sent.
-  EXPECT_EQ((ssize_t)memlength, sendmsg(client_fd.get(), &msg, 0));
+  EXPECT_EQ(sendmsg(client_fd.get(), &msg, 0), (ssize_t)memlength, "%s", strerror(errno));
 
   EXPECT_EQ(close(client_fd.release()), 0, "%s", strerror(errno));
 }
@@ -274,7 +274,7 @@ TEST_F(UdpSocketTest, DatagramSendMsg) {
 
   // Expect sendmsg() to fail when msg_namelen is greater than sizeof(struct sockaddr_storage).
   msg.msg_namelen = sizeof(sockaddr_storage) + 1;
-  EXPECT_EQ(sendmsg(client_fd.get(), &msg, 0), -1);
+  EXPECT_EQ(sendmsg(client_fd.get(), &msg, 0), -1, "%s", strerror(errno));
   EXPECT_EQ(errno, EINVAL, "%s", strerror(errno));
 
   EXPECT_OK(server_socket.read(0, rcv_buf, sizeof(rcv_buf), &actual));

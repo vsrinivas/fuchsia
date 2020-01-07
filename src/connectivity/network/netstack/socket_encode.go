@@ -171,6 +171,14 @@ func (v *C.struct_sockaddr_storage) Encode(netProto tcpip.NetworkProtocolNumber,
 	}
 }
 
+func decodeAddr(addr []uint8) (tcpip.FullAddress, error) {
+	var sockaddrStorage C.struct_sockaddr_storage
+	if err := sockaddrStorage.Unmarshal(addr); err != nil {
+		return tcpip.FullAddress{}, err
+	}
+	return sockaddrStorage.Decode()
+}
+
 func encodeAddr(netProto tcpip.NetworkProtocolNumber, addr tcpip.FullAddress) []uint8 {
 	var v C.struct_sockaddr_storage
 	n := v.Encode(netProto, addr)

@@ -484,7 +484,7 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
     return vnode->ConnectService(std::move(channel));
   }
 
-  auto connection = ([&, this] () -> std::unique_ptr<internal::Connection> {
+  auto connection = ([&, this]() -> std::unique_ptr<internal::Connection> {
     switch (protocol) {
       case VnodeProtocol::kFile:
       case VnodeProtocol::kDevice:
@@ -505,6 +505,14 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
         // The posix socket protocol is used by netstack and served through the
         // src/lib/component/go library.
         ZX_PANIC("fuchsia.posix.socket/Control is not implemented");
+      case VnodeProtocol::kDatagramSocket:
+        // The posix socket protocol is used by netstack and served through the
+        // src/lib/component/go library.
+        ZX_PANIC("fuchsia.posix.socket/DatagramSocket is not implemented");
+      case VnodeProtocol::kStreamSocket:
+        // The posix socket protocol is used by netstack and served through the
+        // src/lib/component/go library.
+        ZX_PANIC("fuchsia.posix.socket/StreamSocket is not implemented");
     }
 #ifdef __GNUC__
     // GCC does not infer that the above switch statement will always return by

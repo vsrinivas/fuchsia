@@ -32,6 +32,7 @@ namespace io {
 struct WatchedEvent;
 struct Vmofile;
 struct Tty;
+struct StreamSocket;
 class DirectoryWatcher;
 struct Socket;
 struct Service;
@@ -48,6 +49,7 @@ struct FilesystemInfo;
 struct FileObject;
 struct DirectoryObject;
 struct Device;
+struct DatagramSocket;
 struct NodeInfo;
 class Node;
 class File;
@@ -73,6 +75,8 @@ struct NodeInfo {
     kDevice = 6,  // 0x6
     kTty = 7,  // 0x7
     kSocket = 8,  // 0x8
+    kDatagramSocket = 9,  // 0x9
+    kStreamSocket = 10,  // 0xa
   };
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
@@ -252,6 +256,50 @@ struct NodeInfo {
     ZX_ASSERT(ordinal() == Ordinal::kSocket);
     return *static_cast<::llcpp::fuchsia::io::Socket*>(envelope_.data);
   }
+
+  bool is_datagram_socket() const { return ordinal() == Ordinal::kDatagramSocket; }
+
+  static NodeInfo WithDatagramSocket(::llcpp::fuchsia::io::DatagramSocket* val) {
+    NodeInfo result;
+    result.set_datagram_socket(val);
+    return result;
+  }
+
+  void set_datagram_socket(::llcpp::fuchsia::io::DatagramSocket* elem) {
+    ordinal_ = Ordinal::kDatagramSocket;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::io::DatagramSocket& mutable_datagram_socket() {
+    ZX_ASSERT(ordinal() == Ordinal::kDatagramSocket);
+    return *static_cast<::llcpp::fuchsia::io::DatagramSocket*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::io::DatagramSocket& datagram_socket() const {
+    ZX_ASSERT(ordinal() == Ordinal::kDatagramSocket);
+    return *static_cast<::llcpp::fuchsia::io::DatagramSocket*>(envelope_.data);
+  }
+
+  bool is_stream_socket() const { return ordinal() == Ordinal::kStreamSocket; }
+
+  static NodeInfo WithStreamSocket(::llcpp::fuchsia::io::StreamSocket* val) {
+    NodeInfo result;
+    result.set_stream_socket(val);
+    return result;
+  }
+
+  void set_stream_socket(::llcpp::fuchsia::io::StreamSocket* elem) {
+    ordinal_ = Ordinal::kStreamSocket;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::io::StreamSocket& mutable_stream_socket() {
+    ZX_ASSERT(ordinal() == Ordinal::kStreamSocket);
+    return *static_cast<::llcpp::fuchsia::io::StreamSocket*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::io::StreamSocket& stream_socket() const {
+    ZX_ASSERT(ordinal() == Ordinal::kStreamSocket);
+    return *static_cast<::llcpp::fuchsia::io::StreamSocket*>(envelope_.data);
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal());
@@ -278,6 +326,8 @@ struct NodeInfo {
     kDevice = 6,  // 0x6
     kTty = 7,  // 0x7
     kSocket = 8,  // 0x8
+    kDatagramSocket = 9,  // 0x9
+    kStreamSocket = 10,  // 0xa
   };
 
   Ordinal ordinal() const {
@@ -408,6 +458,24 @@ struct Tty {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::eventpair event = {};
+};
+
+extern "C" const fidl_type_t fuchsia_io_StreamSocketTable;
+extern "C" const fidl_type_t v1_fuchsia_io_StreamSocketTable;
+
+// The object may be cast to interface [`fuchsia.posix.socket.StreamSocket`].
+struct StreamSocket {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_StreamSocketTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_StreamSocketTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  ::zx::socket socket = {};
 };
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
@@ -571,7 +639,7 @@ class DirectoryWatcher final {
 extern "C" const fidl_type_t fuchsia_io_SocketTable;
 extern "C" const fidl_type_t v1_fuchsia_io_SocketTable;
 
-// The object is accompanied by a socket.
+// The object may be cast to interface [`fuchsia.posix.socket.Control`].
 struct Socket {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_SocketTable;
   static constexpr const fidl_type_t* AltType = &fuchsia_io_SocketTable;
@@ -893,6 +961,25 @@ struct Device {
   // An optional event which transmits information about a device's state.
   //
   // The "`DEVICE_SIGNAL_`" values may be observed on this event.
+  ::zx::eventpair event = {};
+};
+
+extern "C" const fidl_type_t fuchsia_io_DatagramSocketTable;
+extern "C" const fidl_type_t v1_fuchsia_io_DatagramSocketTable;
+
+// The object may be cast to interface [`fuchsia.posix.socket.DatagramSocket`].
+struct DatagramSocket {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DatagramSocketTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_DatagramSocketTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  // See [`fuchsia.posix.socket.DatagramSocket`] for details.
   ::zx::eventpair event = {};
 };
 
@@ -9828,6 +9915,12 @@ static_assert(offsetof(::llcpp::fuchsia::io::Tty, event) == 0);
 static_assert(sizeof(::llcpp::fuchsia::io::Tty) == ::llcpp::fuchsia::io::Tty::PrimarySize);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::io::StreamSocket> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io::StreamSocket>);
+static_assert(offsetof(::llcpp::fuchsia::io::StreamSocket, socket) == 0);
+static_assert(sizeof(::llcpp::fuchsia::io::StreamSocket) == ::llcpp::fuchsia::io::StreamSocket::PrimarySize);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::io::DirectoryWatcher::OnEventRequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::io::DirectoryWatcher::OnEventRequest> : public std::true_type {};
@@ -9898,6 +9991,12 @@ struct IsFidlType<::llcpp::fuchsia::io::Device> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io::Device>);
 static_assert(offsetof(::llcpp::fuchsia::io::Device, event) == 0);
 static_assert(sizeof(::llcpp::fuchsia::io::Device) == ::llcpp::fuchsia::io::Device::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io::DatagramSocket> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io::DatagramSocket>);
+static_assert(offsetof(::llcpp::fuchsia::io::DatagramSocket, event) == 0);
+static_assert(sizeof(::llcpp::fuchsia::io::DatagramSocket) == ::llcpp::fuchsia::io::DatagramSocket::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::io::NodeInfo> : public std::true_type {};

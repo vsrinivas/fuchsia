@@ -46,11 +46,15 @@ import (
 )
 
 type bindingSetCounterStat struct {
-	bindingSet *fidl.BindingSet
+	bindingSets []*fidl.BindingSet
 }
 
 func (s *bindingSetCounterStat) Value() uint64 {
-	return uint64(s.bindingSet.Size())
+	var sum int
+	for _, s := range s.bindingSets {
+		sum += s.Size()
+	}
+	return uint64(sum)
 }
 
 func Main() {
@@ -164,8 +168,12 @@ func Main() {
 	socketNotifications := make(chan struct{}, 1)
 	socketProviderImpl := providerImpl{ns: ns, metadata: socketMetadata{endpoints: &ns.endpoints, newSocketNotifications: socketNotifications}}
 	ns.stats = stats{
-		Stats:            stk.Stats(),
-		SocketCount:      bindingSetCounterStat{bindingSet: &socketProviderImpl.controlService.BindingSet},
+		Stats: stk.Stats(),
+		SocketCount: bindingSetCounterStat{bindingSets: []*fidl.BindingSet{
+			&socketProviderImpl.controlService.BindingSet,
+			&socketProviderImpl.datagramSocketService.BindingSet,
+			&socketProviderImpl.streamSocketService.BindingSet,
+		}},
 		SocketsCreated:   &socketProviderImpl.metadata.socketsCreated,
 		SocketsDestroyed: &socketProviderImpl.metadata.socketsDestroyed,
 	}
