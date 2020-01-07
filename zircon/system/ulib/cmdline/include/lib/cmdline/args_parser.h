@@ -5,14 +5,14 @@
 #ifndef CMDLINE_ARGS_PARSER_H_
 #define CMDLINE_ARGS_PARSER_H_
 
+#include <lib/cmdline/optional_bool.h>
+#include <lib/cmdline/status.h>
+
 #include <functional>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <cmdline/optional_bool.h>
-#include <cmdline/status.h>
 
 namespace cmdline {
 

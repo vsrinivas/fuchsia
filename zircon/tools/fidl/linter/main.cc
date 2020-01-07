@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <errno.h>
+#include <lib/cmdline/status.h>
 #include <stdio.h>
 
 #include <fstream>
@@ -11,7 +12,6 @@
 #include <string>
 #include <vector>
 
-#include <cmdline/status.h>
 #include <fidl/findings_json.h>
 #include <fidl/lexer.h>
 #include <fidl/linter.h>

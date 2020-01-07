@@ -4,6 +4,7 @@
 
 #include "tools/fidlcat/command_line_options.h"
 
+#include <lib/cmdline/args_parser.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -14,8 +15,6 @@
 #include <set>
 #include <string>
 #include <vector>
-
-#include <cmdline/args_parser.h>
 
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"

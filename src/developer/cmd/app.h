@@ -7,6 +7,9 @@
 
 #include <lib/fit/function.h>
 
+#include <optional>
+#include <string>
+
 #include "src/developer/cmd/console.h"
 #include "src/developer/cmd/executor.h"
 
@@ -15,6 +18,10 @@ namespace cmd {
 class App : public cmd::Console::Client {
  public:
   using QuitCallback = fit::closure;
+
+  struct Options {
+    std::optional<std::string> command;
+  };
 
   explicit App(async_dispatcher_t* dispatcher);
   ~App() override;
@@ -28,7 +35,9 @@ class App : public cmd::Console::Client {
   // processing commands.
   //
   // Can be called at most once.
-  void Init(QuitCallback quit_callback);
+  //
+  // Returns whether initialization succeeds.
+  bool Init(int argc, const char** argv, QuitCallback quit_callback);
 
   // |cmd::Console::Client| implementation:
   zx_status_t OnConsoleCommand(Command command) override;
@@ -36,9 +45,12 @@ class App : public cmd::Console::Client {
   void OnConsoleAutocomplete(Autocomplete* autocomplete) override;
 
  private:
+  void Quit();
+
   QuitCallback quit_callback_;
-  cmd::Console console_;
-  cmd::Executor executor_;
+  Options options_;
+  Console console_;
+  Executor executor_;
 };
 
 }  // namespace cmd

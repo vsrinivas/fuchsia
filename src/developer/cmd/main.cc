@@ -9,7 +9,9 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   cmd::App app(loop.dispatcher());
-  app.Init([&]() { loop.Quit(); });
+  if (!app.Init(argc, argv, [&] { loop.Quit(); })) {
+    return -1;
+  }
   loop.Run();
   return 0;
 }

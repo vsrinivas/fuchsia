@@ -5,9 +5,10 @@
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async/dispatcher.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
+#include <lib/async/dispatcher.h>
+#include <lib/cmdline/args_parser.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -15,10 +16,9 @@
 #include <memory>
 #include <variant>
 
-#include <cmdline/args_parser.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace activity_ctl {
 

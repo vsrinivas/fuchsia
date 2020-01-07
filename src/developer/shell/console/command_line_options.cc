@@ -4,7 +4,7 @@
 
 #include "src/developer/shell/console/command_line_options.h"
 
-#include <cmdline/args_parser.h>
+#include <lib/cmdline/args_parser.h>
 
 namespace shell {
 

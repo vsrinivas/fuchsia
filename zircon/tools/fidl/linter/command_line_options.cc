@@ -4,9 +4,9 @@
 
 #include "command_line_options.h"
 
-#include <iostream>
+#include <lib/cmdline/args_parser.h>
 
-#include <cmdline/args_parser.h>
+#include <iostream>
 
 namespace fidl {
 namespace linter {

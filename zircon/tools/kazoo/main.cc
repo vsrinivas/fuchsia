@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/cmdline/args_parser.h>
 #include <stdio.h>
-
-#include <cmdline/args_parser.h>
 
 #include "tools/kazoo/outputs.h"
 #include "tools/kazoo/string_util.h"

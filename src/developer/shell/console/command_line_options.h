@@ -5,11 +5,11 @@
 #ifndef SRC_DEVELOPER_SHELL_CONSOLE_COMMAND_LINE_OPTIONS_H_
 #define SRC_DEVELOPER_SHELL_CONSOLE_COMMAND_LINE_OPTIONS_H_
 
+#include <lib/cmdline/status.h>
+
 #include <optional>
 #include <string>
 #include <vector>
-
-#include <cmdline/status.h>
 
 namespace shell {
 

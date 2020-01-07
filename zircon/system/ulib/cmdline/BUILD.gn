@@ -5,9 +5,9 @@
 zx_library("cmdline") {
   sdk = "source"
   sdk_headers = [
-    "cmdline/args_parser.h",
-    "cmdline/optional_bool.h",
-    "cmdline/status.h",
+    "lib/cmdline/args_parser.h",
+    "lib/cmdline/optional_bool.h",
+    "lib/cmdline/status.h",
   ]
   host = true
 

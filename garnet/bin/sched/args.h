@@ -5,11 +5,11 @@
 #ifndef GARNET_BIN_SCHED_ARGS_H_
 #define GARNET_BIN_SCHED_ARGS_H_
 
+#include <lib/cmdline/args_parser.h>
+
 #include <optional>
 #include <string>
 #include <vector>
-
-#include <cmdline/args_parser.h>
 
 namespace sched {
 

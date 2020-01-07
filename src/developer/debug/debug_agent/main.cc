@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/cmdline/args_parser.h>
 #include <lib/zx/thread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,8 +12,6 @@
 
 #include <memory>
 #include <thread>
-
-#include <cmdline/args_parser.h>
 
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/socket_connection.h"

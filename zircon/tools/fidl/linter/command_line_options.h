@@ -5,11 +5,11 @@
 #ifndef ZIRCON_TOOLS_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_
 #define ZIRCON_TOOLS_FIDL_LINTER_COMMAND_LINE_OPTIONS_H_
 
+#include <lib/cmdline/status.h>
+
 #include <optional>
 #include <string>
 #include <vector>
-
-#include <cmdline/status.h>
 
 namespace fidl {
 namespace linter {

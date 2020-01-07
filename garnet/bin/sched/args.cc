@@ -4,14 +4,13 @@
 
 #include "args.h"
 
+#include <lib/cmdline/args_parser.h>
 #include <stdlib.h>
 
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
-
-#include <cmdline/args_parser.h>
 
 namespace sched {
 namespace {

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/cmdline/args_parser.h>
+
 #include <string>
 #include <vector>
-
-#include <cmdline/args_parser.h>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   if (size < 2) {
