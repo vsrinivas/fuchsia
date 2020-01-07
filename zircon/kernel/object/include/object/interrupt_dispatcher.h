@@ -56,15 +56,21 @@ class InterruptDispatcher
 
   InterruptDispatcher();
   void Signal() { event_signal_etc(&event_, true, ZX_OK); }
-  void set_flags(uint32_t flags) { flags_ = flags; }
+  zx_status_t set_flags(uint32_t flags);
   bool SendPacketLocked(zx_time_t timestamp) TA_REQ(spinlock_);
   bool HasPort() const TA_REQ(spinlock_) { return !!port_dispatcher_; }
   InterruptState state() const TA_REQ(spinlock_) { return state_; }
 
   // Bits for Interrupt.flags
+  // The interrupt is virtual.
   static constexpr uint32_t INTERRUPT_VIRTUAL = (1u << 0);
+  // The interrupt should be unmasked before waiting on the event.
   static constexpr uint32_t INTERRUPT_UNMASK_PREWAIT = (1u << 1);
-  static constexpr uint32_t INTERRUPT_MASK_POSTWAIT = (1u << 2);
+  // The same as |INTERRUPT_UNMASK_PREWAIT| except release the dispatcher
+  // spinlock before waiting.
+  static constexpr uint32_t INTERRUPT_UNMASK_PREWAIT_UNLOCKED = (1u << 2);
+  // The interrupt should be masked following waiting.
+  static constexpr uint32_t INTERRUPT_MASK_POSTWAIT = (1u << 4);
 
   // Controls the access to Interrupt properties
   DECLARE_SPINLOCK(InterruptDispatcher) spinlock_;

@@ -18,6 +18,7 @@ InterruptDispatcher::InterruptDispatcher() : timestamp_(0), state_(InterruptStat
 }
 
 zx_status_t InterruptDispatcher::WaitForInterrupt(zx_time_t* out_timestamp) {
+  bool defer_unmask = false;
   while (true) {
     {
       Guard<SpinLock, IrqSave> guard{&spinlock_};
@@ -35,6 +36,8 @@ zx_status_t InterruptDispatcher::WaitForInterrupt(zx_time_t* out_timestamp) {
         case InterruptState::NEEDACK:
           if (flags_ & INTERRUPT_UNMASK_PREWAIT) {
             UnmaskInterrupt();
+          } else if (flags_ & INTERRUPT_UNMASK_PREWAIT_UNLOCKED) {
+            defer_unmask = true;
           }
           break;
         case InterruptState::IDLE:
@@ -43,6 +46,10 @@ zx_status_t InterruptDispatcher::WaitForInterrupt(zx_time_t* out_timestamp) {
           return ZX_ERR_BAD_STATE;
       }
       state_ = InterruptState::WAITING;
+    }
+
+    if (defer_unmask) {
+      UnmaskInterrupt();
     }
 
     {
@@ -174,6 +181,14 @@ zx_status_t InterruptDispatcher::Bind(fbl::RefPtr<PortDispatcher> port_dispatche
     return ZX_ERR_ALREADY_BOUND;
   }
 
+  // If an interrupt is bound to a port there is a conflict between UNMASK_PREWAIT_UNLOCKED
+  // and MASK_POSTWAIT because the mask operation will by necessity happen before leaving the
+  // dispatcher spinlock, leading to a mask operation immediately followed by the deferred
+  // unmask operation.
+  if ((flags_ & INTERRUPT_UNMASK_PREWAIT_UNLOCKED) && (flags_ & INTERRUPT_MASK_POSTWAIT)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   port_dispatcher_ = ktl::move(port_dispatcher);
   port_packet_.key = key;
   return ZX_OK;
@@ -203,34 +218,51 @@ zx_status_t InterruptDispatcher::Unbind(fbl::RefPtr<PortDispatcher> port_dispatc
 }
 
 zx_status_t InterruptDispatcher::Ack() {
+  bool defer_unmask = false;
   // Using AutoReschedDisable is necessary for correctness to prevent
   // context-switching to the woken thread while holding spinlock_.
   AutoReschedDisable resched_disable;
   resched_disable.Disable();
-  Guard<SpinLock, IrqSave> guard{&spinlock_};
-  if (port_dispatcher_ == nullptr) {
-    return ZX_ERR_BAD_STATE;
-  }
-  if (state_ == InterruptState::DESTROYED) {
-    return ZX_ERR_CANCELED;
-  }
-  if (state_ == InterruptState::NEEDACK) {
-    if (flags_ & INTERRUPT_UNMASK_PREWAIT) {
-      UnmaskInterrupt();
+  {
+    Guard<SpinLock, IrqSave> guard{&spinlock_};
+    if (port_dispatcher_ == nullptr) {
+      return ZX_ERR_BAD_STATE;
     }
-    if (timestamp_) {
-      if (!SendPacketLocked(timestamp_)) {
-        // We cannot queue another packet here.
-        // If we reach here it means that the
-        // interrupt packet has not been processed,
-        // another interrupt has occurred & then the
-        // interrupt was ACK'd
-        return ZX_ERR_BAD_STATE;
+    if (state_ == InterruptState::DESTROYED) {
+      return ZX_ERR_CANCELED;
+    }
+    if (state_ == InterruptState::NEEDACK) {
+      if (flags_ & INTERRUPT_UNMASK_PREWAIT) {
+        UnmaskInterrupt();
+      } else if (flags_ & INTERRUPT_UNMASK_PREWAIT_UNLOCKED) {
+        defer_unmask = true;
       }
-    } else {
-      state_ = InterruptState::IDLE;
+      if (timestamp_) {
+        if (!SendPacketLocked(timestamp_)) {
+          // We cannot queue another packet here.
+          // If we reach here it means that the
+          // interrupt packet has not been processed,
+          // another interrupt has occurred & then the
+          // interrupt was ACK'd
+          return ZX_ERR_BAD_STATE;
+        }
+      } else {
+        state_ = InterruptState::IDLE;
+      }
     }
   }
+
+  if (defer_unmask) {
+    UnmaskInterrupt();
+  }
+  return ZX_OK;
+}
+
+zx_status_t InterruptDispatcher::set_flags(uint32_t flags) {
+  if ((flags & INTERRUPT_UNMASK_PREWAIT) && (flags & INTERRUPT_UNMASK_PREWAIT_UNLOCKED)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  flags_ = flags;
   return ZX_OK;
 }
 

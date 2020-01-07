@@ -22,8 +22,9 @@ KCOUNTER(dispatcher_interrupt_event_destroy_count, "dispatcher.interrupt_event.d
 zx_status_t InterruptEventDispatcher::Create(KernelHandle<InterruptDispatcher>* handle,
                                              zx_rights_t* rights, uint32_t vector,
                                              uint32_t options) {
-  if (options & ZX_INTERRUPT_VIRTUAL)
+  if (options & ZX_INTERRUPT_VIRTUAL) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   // Attempt to construct the dispatcher.
   // Do not create a KernelHandle until all initialization has succeeded;
@@ -31,22 +32,26 @@ zx_status_t InterruptEventDispatcher::Create(KernelHandle<InterruptDispatcher>* 
   // tear down the existing interrupt when creation fails.
   fbl::AllocChecker ac;
   auto disp = fbl::AdoptRef(new (&ac) InterruptEventDispatcher(vector));
-  if (!ac.check())
+  if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
+  }
 
   Guard<fbl::Mutex> guard{disp->get_lock()};
 
   uint32_t interrupt_flags = 0;
 
-  if (options & ~(ZX_INTERRUPT_REMAP_IRQ | ZX_INTERRUPT_MODE_MASK))
+  if (options & ~(ZX_INTERRUPT_REMAP_IRQ | ZX_INTERRUPT_MODE_MASK)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   // Remap the vector if we have been asked to do so.
-  if (options & ZX_INTERRUPT_REMAP_IRQ)
+  if (options & ZX_INTERRUPT_REMAP_IRQ) {
     vector = remap_interrupt(vector);
+  }
 
-  if (!is_valid_interrupt(vector, 0))
+  if (!is_valid_interrupt(vector, 0)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   bool default_mode = false;
   enum interrupt_trigger_mode tm = IRQ_TRIGGER_MODE_EDGE;
@@ -79,16 +84,21 @@ zx_status_t InterruptEventDispatcher::Create(KernelHandle<InterruptDispatcher>* 
 
   if (!default_mode) {
     zx_status_t status = configure_interrupt(vector, tm, pol);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
+    }
   }
 
-  disp->set_flags(interrupt_flags);
+  zx_status_t status = disp->set_flags(interrupt_flags);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   // Register the interrupt
-  zx_status_t status = disp->RegisterInterruptHandler();
-  if (status != ZX_OK)
+  status = disp->RegisterInterruptHandler();
+  if (status != ZX_OK) {
     return status;
+  }
 
   unmask_interrupt(vector);
 

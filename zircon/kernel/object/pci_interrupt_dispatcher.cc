@@ -4,9 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "arch/ops.h"
 #if WITH_KERNEL_PCIE
-
-#include "object/pci_interrupt_dispatcher.h"
 
 #include <lib/counters.h>
 #include <platform.h>
@@ -14,7 +13,9 @@
 
 #include <fbl/alloc_checker.h>
 #include <kernel/auto_lock.h>
+#include <object/interrupt_dispatcher.h>
 #include <object/pci_device_dispatcher.h>
+#include <object/pci_interrupt_dispatcher.h>
 
 KCOUNTER(dispatcher_pci_interrupt_create_count, "dispatcher.pci_interrupt.create")
 KCOUNTER(dispatcher_pci_interrupt_destroy_count, "dispatcher.pci_interrupt.destroy")
@@ -52,17 +53,28 @@ zx_status_t PciInterruptDispatcher::Create(const fbl::RefPtr<PcieDevice>& device
   fbl::AllocChecker ac;
   auto interrupt_dispatcher =
       fbl::AdoptRef(new (&ac) PciInterruptDispatcher(device, irq_id, maskable));
-  if (!ac.check())
+  if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
+  }
 
   Guard<fbl::Mutex> guard{interrupt_dispatcher->get_lock()};
 
-  interrupt_dispatcher->set_flags(INTERRUPT_UNMASK_PREWAIT);
+  // The PcieDevice class contains a mutex that guards device access and can be
+  // contended between the PciInterruptDispatcher and the protocol methods used
+  // by the drivers downstream. For safe locking & scheduling considerations we
+  // need to ensure the InterruptDispatcher's spinlock is not held when calling
+  // into this dispatcher to unmask an interrupt. Masking is handled by the pci
+  // bus driver itself during operation.
+  zx_status_t status = interrupt_dispatcher->set_flags(INTERRUPT_UNMASK_PREWAIT_UNLOCKED);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   // Register the interrupt
-  zx_status_t status = interrupt_dispatcher->RegisterInterruptHandler();
-  if (status != ZX_OK)
+  status = interrupt_dispatcher->RegisterInterruptHandler();
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Everything seems to have gone well.  Make sure the interrupt is unmasked
   // (if it is maskable) then transfer our dispatcher reference to the
@@ -75,14 +87,22 @@ zx_status_t PciInterruptDispatcher::Create(const fbl::RefPtr<PcieDevice>& device
   return ZX_OK;
 }
 
+// This is only called in the InterruptDispatcher::Destroy() path which does not
+// hold the InterruptDispatcher spinlock. The interrupt is masked before the
+// interrupt handler is unregistered and the InterruptDispatcher is freed.
 void PciInterruptDispatcher::MaskInterrupt() {
-  if (maskable_)
+  DEBUG_ASSERT(arch_num_spinlocks_held() == 0);
+  // MaskInterrupt should never be called by the InterruptDispatcher.
+  if (maskable_) {
     device_->MaskIrq(vector_);
+  }
 }
 
 void PciInterruptDispatcher::UnmaskInterrupt() {
-  if (maskable_)
+  DEBUG_ASSERT(arch_num_spinlocks_held() == 0);
+  if (maskable_) {
     device_->UnmaskIrq(vector_);
+  }
 }
 
 PciInterruptDispatcher::PciInterruptDispatcher(const fbl::RefPtr<PcieDevice>& device,
