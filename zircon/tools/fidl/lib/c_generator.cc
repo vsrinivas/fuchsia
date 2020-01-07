@@ -75,6 +75,7 @@ const std::set<std::string> allowed_c_unions{{
     "fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_Result",
     "fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_Result",
     "fuchsia_wlan_stats_MlmeStats",
+    "fuchsia_hardware_audio_RingBuffer_GetVmo_Result",
 }};
 
 const std::vector<std::string> allowed_c_union_prefixes{
