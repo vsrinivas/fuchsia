@@ -102,6 +102,7 @@ if (current_cpu != "") {
       "$zx/system/dev/power/msm8x53-power:msm8x53-power-test",
       "$zx/system/dev/power/mtk-power:mtk-power-test",
       "$zx/system/dev/pwm/aml-pwm:aml-pwm-test",
+      "$zx/system/dev/pwm/aml-pwm-init:aml-pwm-init-test",
       "$zx/system/dev/pwm/pwm:pwm-test",
       "$zx/system/dev/securemem/aml-securemem:aml-securemem-test",
       "$zx/system/dev/serial/aml-uart:aml-uart-test",

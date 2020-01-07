@@ -5,6 +5,7 @@
 group("pwm") {
   deps = [
     "aml-pwm",
+    "aml-pwm-init",
     "pwm",
   ]
 }
