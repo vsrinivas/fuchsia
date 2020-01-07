@@ -223,7 +223,7 @@ impl Ap {
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_set_controlled_port_req(req)
             }
             fidl_mlme::MlmeRequestMessage::EapolReq { req } => {
-                self.bss.as_ref().ok_or_bss_err()?.handle_mlme_eapol_req(&mut self.ctx, req)
+                self.bss.as_mut().ok_or_bss_err()?.handle_mlme_eapol_req(&mut self.ctx, req)
             }
             _ => Err(Error::Status(format!("not supported"), zx::Status::NOT_SUPPORTED)),
         }

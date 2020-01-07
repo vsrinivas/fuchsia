@@ -9,6 +9,8 @@ use {
             remote_client::{ClientRejection, RemoteClient},
             Context, Rejection, TimedEvent,
         },
+        buffer::OutBuf,
+        device::TxFlags,
         error::Error,
         key::KeyConfig,
         timer::EventId,
@@ -16,8 +18,8 @@ use {
     anyhow::format_err,
     banjo_ddk_hw_wlan_wlaninfo::WlanInfoDriverFeature,
     banjo_ddk_protocol_wlan_info::{WlanChannel, WlanChannelBandwidth},
-    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     std::collections::HashMap,
     wlan_common::{
         appendable::Appendable,
@@ -36,15 +38,6 @@ pub struct InfraBss {
     pub rates: Vec<u8>,
     pub channel: u8,
     pub clients: HashMap<MacAddr, RemoteClient>,
-}
-
-fn get_client(
-    clients: &HashMap<MacAddr, RemoteClient>,
-    addr: MacAddr,
-) -> Result<&RemoteClient, Error> {
-    clients
-        .get(&addr)
-        .ok_or(Error::Status(format!("client {:02X?} not found", addr), zx::Status::NOT_FOUND))
 }
 
 fn get_client_mut(
@@ -200,11 +193,11 @@ impl InfraBss {
     }
 
     pub fn handle_mlme_eapol_req(
-        &self,
+        &mut self,
         ctx: &mut Context,
         req: fidl_mlme::EapolRequest,
     ) -> Result<(), Error> {
-        let client = get_client(&self.clients, req.dst_addr)?;
+        let client = get_client_mut(&mut self.clients, req.dst_addr)?;
         client
             .handle_mlme_eapol_req(ctx, req.src_addr, &req.data)
             .map_err(|e| make_client_error(client.addr, e))
@@ -236,17 +229,29 @@ impl InfraBss {
         // According to IEEE Std 802.11-2016, 11.1.4.1, we should intersect our IEs with the probe
         // request IEs. However, the client is able to do this anyway so we just send the same IEs
         // as we would with a beacon frame.
-        ctx.send_probe_resp_frame(
-            client_addr,
-            0,
-            self.beacon_interval,
-            self.capabilities,
-            &self.ssid,
-            &self.rates,
-            self.channel,
-            self.rsne.as_ref().map_or(&[], |rsne| &rsne),
+        let (in_buf, bytes_written) = ctx
+            .make_probe_resp_frame(
+                client_addr,
+                0,
+                self.beacon_interval,
+                self.capabilities,
+                &self.ssid,
+                &self.rates,
+                self.channel,
+                self.rsne.as_ref().map_or(&[], |rsne| &rsne),
+            )
+            .map_err(|e| Rejection::Client(client_addr, ClientRejection::WlanSendError(e)))?;
+        ctx.device.send_wlan_frame(OutBuf::from(in_buf, bytes_written), TxFlags::NONE).map_err(
+            |s| {
+                Rejection::Client(
+                    client_addr,
+                    ClientRejection::WlanSendError(Error::Status(
+                        format!("failed to send probe resp"),
+                        s,
+                    )),
+                )
+            },
         )
-        .map_err(|e| Rejection::Client(client_addr, ClientRejection::WlanSendError(e)))
     }
 
     pub fn handle_mgmt_frame<B: ByteSlice>(

@@ -5,6 +5,8 @@
 use {
     crate::{
         ap::{Context, TimedEvent},
+        buffer::{InBuf, OutBuf},
+        device::TxFlags,
         error::Error,
         timer::EventId,
     },
@@ -200,8 +202,15 @@ impl RemoteClient {
 
         // On BSS idle timeout, we need to tell the client that they've been disassociated, and the
         // SME to transition the client to Authenticated.
-        ctx.send_disassoc_frame(self.addr.clone(), ReasonCode::REASON_INACTIVITY)
+        let (in_buf, bytes_written) = ctx
+            .make_disassoc_frame(self.addr.clone(), ReasonCode::REASON_INACTIVITY)
             .map_err(ClientRejection::WlanSendError)?;
+        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE).map_err(|s| {
+            ClientRejection::WlanSendError(Error::Status(
+                format!("error sending disassoc frame on BSS idle timeout"),
+                s,
+            ))
+        })?;
         ctx.send_mlme_disassoc_ind(self.addr.clone(), ReasonCode::REASON_INACTIVITY.0)
             .map_err(ClientRejection::SmeSendError)?;
         Ok(())
@@ -273,7 +282,7 @@ impl RemoteClient {
         // We only support open system auth in the SME.
         // IEEE Std 802.11-2016, 12.3.3.2.3 & Table 9-36: Sequence number 2 indicates the response
         // and final part of Open System authentication.
-        ctx.send_auth_frame(
+        let (in_buf, bytes_written) = ctx.make_auth_frame(
             self.addr.clone(),
             AuthAlgorithmNumber::OPEN,
             2,
@@ -293,7 +302,9 @@ impl RemoteClient {
                     StatusCode::REJECTED_SEQUENCE_TIMEOUT
                 }
             },
-        )
+        )?;
+        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE)
+            .map_err(|s| Error::Status(format!("error sending auth frame"), s))
     }
 
     /// Handles MLME-DEAUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.6.2) from the SME.
@@ -313,7 +324,10 @@ impl RemoteClient {
         // has already forgotten about the client on its side, so sending
         // MLME-DEAUTHENTICATE.confirm is redundant.
 
-        ctx.send_deauth_frame(self.addr.clone(), ReasonCode(reason_code as u16))
+        let (in_buf, bytes_written) =
+            ctx.make_deauth_frame(self.addr.clone(), ReasonCode(reason_code as u16))?;
+        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE)
+            .map_err(|s| Error::Status(format!("error sending deauth frame"), s))
     }
 
     /// Handles MLME-ASSOCIATE.response (IEEE Std 802.11-2016, 6.3.7.5) from the SME.
@@ -390,15 +404,15 @@ impl RemoteClient {
                 .map_err(|s| Error::Status(format!("failed to configure association"), s))?;
         }
 
-        match result_code {
-            fidl_mlme::AssociateResultCodes::Success => ctx.send_assoc_resp_frame(
+        let (in_buf, bytes_written) = match result_code {
+            fidl_mlme::AssociateResultCodes::Success => ctx.make_assoc_resp_frame(
                 self.addr,
                 capabilities,
                 aid,
                 rates,
                 Some(BSS_MAX_IDLE_PERIOD),
             ),
-            _ => ctx.send_assoc_resp_frame_error(
+            _ => ctx.make_assoc_resp_frame_error(
                 self.addr,
                 capabilities,
                 match result_code {
@@ -431,7 +445,9 @@ impl RemoteClient {
                     }
                 },
             ),
-        }
+        }?;
+        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE)
+            .map_err(|s| Error::Status(format!("error sending assoc frame"), s))
     }
 
     /// Handles MLME-DISASSOCIATE.request (IEEE Std 802.11-2016, 6.3.9.1) from the SME.
@@ -451,7 +467,10 @@ impl RemoteClient {
         // to the SME on success. Like MLME-DEAUTHENTICATE.confirm, our SME has already forgotten
         // about this client, so sending MLME-DISASSOCIATE.confirm is redundant.
 
-        ctx.send_disassoc_frame(self.addr.clone(), ReasonCode(reason_code))
+        let (in_buf, bytes_written) =
+            ctx.make_disassoc_frame(self.addr.clone(), ReasonCode(reason_code))?;
+        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE)
+            .map_err(|s| Error::Status(format!("error sending disassoc frame"), s))
     }
 
     /// Handles SET_CONTROLLED_PORT.request (fuchsia.wlan.mlme.SetControlledPortRequest) from the
@@ -478,7 +497,7 @@ impl RemoteClient {
     ///
     /// The MLME should forward these frames to the PHY layer.
     pub fn handle_mlme_eapol_req(
-        &self,
+        &mut self,
         ctx: &mut Context,
         src_addr: MacAddr,
         data: &[u8],
@@ -486,8 +505,9 @@ impl RemoteClient {
         // IEEE Std 802.11-2016, 6.3.22.2.3 states that we should send MLME-EAPOL.confirm to the
         // SME on success. Our SME employs a timeout for EAPoL negotiation, so MLME-EAPOL.confirm is
         // redundant.
-
-        ctx.send_eapol_frame(self.addr, src_addr, false, data)
+        let (in_buf, bytes_written) = ctx.make_eapol_frame(self.addr, src_addr, false, data)?;
+        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::FAVOR_RELIABILITY)
+            .map_err(|s| Error::Status(format!("error sending eapol frame"), s))
     }
 
     // WLAN frame handlers.
@@ -543,14 +563,22 @@ impl RemoteClient {
 
                     // Don't even bother sending this to the SME if we don't understand the auth
                     // algorithm.
-                    return ctx
-                        .send_auth_frame(
+                    let (in_buf, bytes_written) = ctx
+                        .make_auth_frame(
                             self.addr.clone(),
                             auth_alg_num,
                             2,
                             StatusCode::UNSUPPORTED_AUTH_ALGORITHM,
                         )
-                        .map_err(ClientRejection::WlanSendError);
+                        .map_err(ClientRejection::WlanSendError)?;
+                    return self
+                        .send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE)
+                        .map_err(|s| {
+                            ClientRejection::WlanSendError(Error::Status(
+                                format!("failed to send auth frame"),
+                                s,
+                            ))
+                        });
                 }
             },
         )
@@ -617,7 +645,7 @@ impl RemoteClient {
     /// If a frame is sent, the client's state is not in sync with the AP's, e.g. the AP may have
     /// been restarted and the client needs to reset its state.
     fn reject_frame_class_if_not_permitted(
-        &self,
+        &mut self,
         ctx: &mut Context,
         frame_class: FrameClass,
     ) -> Result<(), ClientRejection> {
@@ -634,8 +662,16 @@ impl RemoteClient {
         // Safe: |state| is never None and always replaced with Some(..).
         match self.state.as_ref() {
             State::Deauthenticated | State::Authenticating => {
-                ctx.send_deauth_frame(self.addr, reason_code)
+                let (in_buf, bytes_written) = ctx
+                    .make_deauth_frame(self.addr, reason_code)
                     .map_err(ClientRejection::WlanSendError)?;
+                self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE).map_err(|s| {
+                    ClientRejection::WlanSendError(Error::Status(
+                        format!("failed to send deauth frame"),
+                        s,
+                    ))
+                })?;
+
                 ctx.send_mlme_deauth_ind(
                     self.addr,
                     // Safe: fidl_mlme::ReasonCode has a 1:1 mapping with ReasonCode.
@@ -644,8 +680,16 @@ impl RemoteClient {
                 .map_err(ClientRejection::SmeSendError)?;
             }
             State::Authenticated => {
-                ctx.send_disassoc_frame(self.addr, reason_code)
+                let (in_buf, bytes_written) = ctx
+                    .make_disassoc_frame(self.addr, reason_code)
                     .map_err(ClientRejection::WlanSendError)?;
+                self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE).map_err(|s| {
+                    ClientRejection::WlanSendError(Error::Status(
+                        format!("failed to send disassoc frame"),
+                        s,
+                    ))
+                })?;
+
                 ctx.send_mlme_disassoc_ind(self.addr, reason_code.0)
                     .map_err(ClientRejection::SmeSendError)?;
             }
@@ -809,11 +853,26 @@ impl RemoteClient {
             }
         };
 
-        ctx.send_data_frame(
-            dst_addr, src_addr, protection, false, // TODO(37891): Support QoS.
-            ether_type, body,
-        )
-        .map_err(ClientRejection::WlanSendError)
+        let (in_buf, bytes_written) = ctx
+            .make_data_frame(
+                dst_addr, src_addr, protection, false, // TODO(37891): Support QoS.
+                ether_type, body,
+            )
+            .map_err(ClientRejection::WlanSendError)?;
+        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE).map_err(|s| {
+            ClientRejection::WlanSendError(Error::Status(format!("error sending eapol frame"), s))
+        })
+    }
+
+    pub fn send_wlan_frame(
+        &mut self,
+        ctx: &mut Context,
+        in_buf: InBuf,
+        bytes_written: usize,
+        tx_flags: TxFlags,
+    ) -> Result<(), zx::Status> {
+        // TODO(41759): Add queuing for PS-Poll.
+        ctx.device.send_wlan_frame(OutBuf::from(in_buf, bytes_written), tx_flags)
     }
 }
 
@@ -1203,7 +1262,7 @@ mod tests {
     #[test]
     fn handle_mlme_eapol_req() {
         let mut fake_device = FakeDevice::new();
-        let r_sta = make_remote_client();
+        let mut r_sta = make_remote_client();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta.handle_mlme_eapol_req(&mut ctx, CLIENT_ADDR2, &[1, 2, 3][..]).expect("expected OK");

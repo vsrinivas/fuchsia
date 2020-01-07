@@ -5,8 +5,8 @@
 use {
     crate::{
         ap::{frame_writer::*, TimedEvent},
-        buffer::{BufferProvider, OutBuf},
-        device::{Device, TxFlags},
+        buffer::{BufferProvider, InBuf},
+        device::Device,
         error::Error,
         timer::{EventId, Timer},
         write_eth_frame,
@@ -146,13 +146,13 @@ impl Context {
     // WLAN frame sender functions.
 
     /// Sends a WLAN authentication frame (IEEE Std 802.11-2016, 9.3.3.12) to the PHY.
-    pub fn send_auth_frame(
+    pub fn make_auth_frame(
         &mut self,
         addr: MacAddr,
         auth_alg_num: AuthAlgorithmNumber,
         auth_txn_seq_num: u16,
         status_code: StatusCode,
-    ) -> Result<(), Error> {
+    ) -> Result<(InBuf, usize), Error> {
         const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::AuthHdr);
         let mut buf = self.buf_provider.get_buffer(FRAME_LEN)?;
         let mut w = BufferWriter::new(&mut buf[..]);
@@ -166,21 +166,18 @@ impl Context {
             status_code,
         )?;
         let bytes_written = w.bytes_written();
-        let out_buf = OutBuf::from(buf, bytes_written);
-        self.device
-            .send_wlan_frame(out_buf, TxFlags::NONE)
-            .map_err(|s| Error::Status(format!("error sending auth frame"), s))
+        Ok((buf, bytes_written))
     }
 
     /// Sends a WLAN association response frame (IEEE Std 802.11-2016, 9.3.3.7) to the PHY.
-    pub fn send_assoc_resp_frame(
+    pub fn make_assoc_resp_frame(
         &mut self,
         addr: MacAddr,
         capabilities: mac::CapabilityInfo,
         aid: Aid,
         rates: &[u8],
         max_idle_period: Option<u16>,
-    ) -> Result<(), Error> {
+    ) -> Result<(InBuf, usize), Error> {
         let frame_len = frame_len!(mac::MgmtHdr, mac::AssocRespHdr);
         let rates_len = IE_PREFIX_LEN
             + rates.len()
@@ -210,20 +207,17 @@ impl Context {
             max_idle_period,
         )?;
         let bytes_written = w.bytes_written();
-        let out_buf = OutBuf::from(buf, bytes_written);
-        self.device
-            .send_wlan_frame(out_buf, TxFlags::NONE)
-            .map_err(|s| Error::Status(format!("error sending assoc resp frame"), s))
+        Ok((buf, bytes_written))
     }
 
     /// Sends a WLAN association response frame (IEEE Std 802.11-2016, 9.3.3.7) to the PHY, but only
     /// with the status code.
-    pub fn send_assoc_resp_frame_error(
+    pub fn make_assoc_resp_frame_error(
         &mut self,
         addr: MacAddr,
         capabilities: mac::CapabilityInfo,
         status_code: StatusCode,
-    ) -> Result<(), Error> {
+    ) -> Result<(InBuf, usize), Error> {
         const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::AssocRespHdr);
         let mut buf = self.buf_provider.get_buffer(FRAME_LEN)?;
         let mut w = BufferWriter::new(&mut buf[..]);
@@ -236,48 +230,39 @@ impl Context {
             status_code,
         )?;
         let bytes_written = w.bytes_written();
-        let out_buf = OutBuf::from(buf, bytes_written);
-        self.device
-            .send_wlan_frame(out_buf, TxFlags::NONE)
-            .map_err(|s| Error::Status(format!("error sending assoc resp error frame"), s))
+        Ok((buf, bytes_written))
     }
 
     /// Sends a WLAN deauthentication frame (IEEE Std 802.11-2016, 9.3.3.1) to the PHY.
-    pub fn send_deauth_frame(
+    pub fn make_deauth_frame(
         &mut self,
         addr: MacAddr,
         reason_code: mac::ReasonCode,
-    ) -> Result<(), Error> {
+    ) -> Result<(InBuf, usize), Error> {
         let mut buf = self.buf_provider.get_buffer(frame_len!(mac::MgmtHdr, mac::DeauthHdr))?;
         let mut w = BufferWriter::new(&mut buf[..]);
         write_deauth_frame(&mut w, addr, self.bssid.clone(), &mut self.seq_mgr, reason_code)?;
         let bytes_written = w.bytes_written();
-        let out_buf = OutBuf::from(buf, bytes_written);
-        self.device
-            .send_wlan_frame(out_buf, TxFlags::NONE)
-            .map_err(|s| Error::Status(format!("error sending deauth frame"), s))
+        Ok((buf, bytes_written))
     }
 
     /// Sends a WLAN disassociation frame (IEEE Std 802.11-2016, 9.3.3.5) to the PHY.
-    pub fn send_disassoc_frame(
+    pub fn make_disassoc_frame(
         &mut self,
         addr: MacAddr,
         reason_code: mac::ReasonCode,
-    ) -> Result<(), Error> {
+    ) -> Result<(InBuf, usize), Error> {
         let mut buf = self.buf_provider.get_buffer(frame_len!(mac::MgmtHdr, mac::DeauthHdr))?;
         let mut w = BufferWriter::new(&mut buf[..]);
         write_disassoc_frame(&mut w, addr, self.bssid.clone(), &mut self.seq_mgr, reason_code)?;
         let bytes_written = w.bytes_written();
-        let out_buf = OutBuf::from(buf, bytes_written);
-        self.device
-            .send_wlan_frame(out_buf, TxFlags::NONE)
-            .map_err(|s| Error::Status(format!("error sending disassoc frame"), s))
+        Ok((buf, bytes_written))
     }
 
     /// Sends a WLAN probe response frame (IEEE Std 802.11-2016, 9.3.3.11) to the PHY.
     // TODO(42088): Use this for devices that don't support probe request offload.
     #[allow(dead_code)]
-    pub fn send_probe_resp_frame(
+    pub fn make_probe_resp_frame(
         &mut self,
         addr: MacAddr,
         timestamp: u64,
@@ -287,7 +272,7 @@ impl Context {
         rates: &[u8],
         channel: u8,
         rsne: &[u8],
-    ) -> Result<(), Error> {
+    ) -> Result<(InBuf, usize), Error> {
         let frame_len = frame_len!(mac::MgmtHdr, mac::BeaconHdr);
         let ssid_len = IE_PREFIX_LEN + ssid.len();
         let dsss_len = IE_PREFIX_LEN + std::mem::size_of::<ie::DsssParamSet>();
@@ -316,14 +301,11 @@ impl Context {
             rsne,
         )?;
         let bytes_written = w.bytes_written();
-        let out_buf = OutBuf::from(buf, bytes_written);
-        self.device
-            .send_wlan_frame(out_buf, TxFlags::NONE)
-            .map_err(|s| Error::Status(format!("error sending probe resp frame"), s))
+        Ok((buf, bytes_written))
     }
 
     /// Sends a WLAN data frame (IEEE Std 802.11-2016, 9.3.2) to the PHY.
-    pub fn send_data_frame(
+    pub fn make_data_frame(
         &mut self,
         dst_addr: MacAddr,
         src_addr: MacAddr,
@@ -331,7 +313,7 @@ impl Context {
         qos_ctrl: bool,
         ether_type: u16,
         payload: &[u8],
-    ) -> Result<(), Error> {
+    ) -> Result<(InBuf, usize), Error> {
         let qos_presence = Presence::from_bool(qos_ctrl);
         let data_hdr_len =
             mac::FixedDataHdrFields::len(mac::Addr4::ABSENT, qos_presence, mac::HtControl::ABSENT);
@@ -350,27 +332,18 @@ impl Context {
             payload,
         )?;
         let bytes_written = w.bytes_written();
-        let out_buf = OutBuf::from(buf, bytes_written);
-        self.device
-            .send_wlan_frame(
-                out_buf,
-                match ether_type {
-                    mac::ETHER_TYPE_EAPOL => TxFlags::FAVOR_RELIABILITY,
-                    _ => TxFlags::NONE,
-                },
-            )
-            .map_err(|s| Error::Status(format!("error sending data frame"), s))
+        Ok((buf, bytes_written))
     }
 
     /// Sends an EAPoL data frame (IEEE Std 802.1X, 11.3) to the PHY.
-    pub fn send_eapol_frame(
+    pub fn make_eapol_frame(
         &mut self,
         dst_addr: MacAddr,
         src_addr: MacAddr,
         is_protected: bool,
         eapol_frame: &[u8],
-    ) -> Result<(), Error> {
-        self.send_data_frame(
+    ) -> Result<(InBuf, usize), Error> {
+        self.make_data_frame(
             dst_addr,
             src_addr,
             is_protected,
@@ -560,170 +533,180 @@ mod test {
     }
 
     #[test]
-    fn send_auth_frame() {
+    fn make_auth_frame() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        ctx.send_auth_frame(
-            CLIENT_ADDR,
-            AuthAlgorithmNumber::FAST_BSS_TRANSITION,
-            3,
-            StatusCode::TRANSACTION_SEQUENCE_ERROR,
-        )
-        .expect("error delivering WLAN frame");
-        assert_eq!(fake_device.wlan_queue.len(), 1);
-        #[rustfmt::skip]
-        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
-            // Mgmt header
-            0b10110000, 0, // Frame Control
-            0, 0, // Duration
-            1, 1, 1, 1, 1, 1, // addr1
-            2, 2, 2, 2, 2, 2, // addr2
-            2, 2, 2, 2, 2, 2, // addr3
-            0x10, 0, // Sequence Control
-            // Auth header:
-            2, 0, // auth algorithm
-            3, 0, // auth txn seq num
-            14, 0, // Status code
-        ][..]);
-    }
-
-    #[test]
-    fn send_assoc_resp_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        ctx.send_assoc_resp_frame(
-            CLIENT_ADDR,
-            mac::CapabilityInfo(0),
-            1,
-            &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
-            Some(99),
-        )
-        .expect("error delivering WLAN frame");
-        assert_eq!(fake_device.wlan_queue.len(), 1);
-        #[rustfmt::skip]
-        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
-            // Mgmt header
-            0b00010000, 0, // Frame Control
-            0, 0, // Duration
-            1, 1, 1, 1, 1, 1, // addr1
-            2, 2, 2, 2, 2, 2, // addr2
-            2, 2, 2, 2, 2, 2, // addr3
-            0x10, 0, // Sequence Control
-            // Association response header:
-            0, 0, // Capabilities
-            0, 0, // status code
-            1, 0, // AID
-            // IEs
-            1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
-            50, 2, 9, 10, // Extended rates
-            90, 3, 99, 0, 0, // BSS max idle period
-        ][..]);
-    }
-
-    #[test]
-    fn send_assoc_resp_frame_error() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        ctx.send_assoc_resp_frame_error(
-            CLIENT_ADDR,
-            mac::CapabilityInfo(0),
-            StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED,
-        )
-        .expect("error delivering WLAN frame");
-        assert_eq!(fake_device.wlan_queue.len(), 1);
-        #[rustfmt::skip]
-        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
-            // Mgmt header
-            0b00010000, 0, // Frame Control
-            0, 0, // Duration
-            1, 1, 1, 1, 1, 1, // addr1
-            2, 2, 2, 2, 2, 2, // addr2
-            2, 2, 2, 2, 2, 2, // addr3
-            0x10, 0, // Sequence Control
-            // Association response header:
-            0, 0, // Capabilities
-            94, 0, // status code
-            0, 0, // AID
-        ][..]);
-    }
-
-    #[test]
-    fn send_assoc_resp_frame_no_bss_max_idle_period() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        ctx.send_assoc_resp_frame(
-            CLIENT_ADDR,
-            mac::CapabilityInfo(0),
-            1,
-            &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
-            None,
-        )
-        .expect("error delivering WLAN frame");
-        assert_eq!(fake_device.wlan_queue.len(), 1);
-        #[rustfmt::skip]
-        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
-            // Mgmt header
-            0b00010000, 0, // Frame Control
-            0, 0, // Duration
-            1, 1, 1, 1, 1, 1, // addr1
-            2, 2, 2, 2, 2, 2, // addr2
-            2, 2, 2, 2, 2, 2, // addr3
-            0x10, 0, // Sequence Control
-            // Association response header:
-            0, 0, // Capabilities
-            0, 0, // status code
-            1, 0, // AID
-            // IEs
-            1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
-            50, 2, 9, 10, // Extended rates
-        ][..]);
-    }
-
-    #[test]
-    fn send_disassoc_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        ctx.send_disassoc_frame(CLIENT_ADDR, mac::ReasonCode::LEAVING_NETWORK_DISASSOC)
-            .expect("error delivering WLAN frame");
-        assert_eq!(fake_device.wlan_queue.len(), 1);
-        #[rustfmt::skip]
-        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
-            // Mgmt header
-            0b10100000, 0, // Frame Control
-            0, 0, // Duration
-            1, 1, 1, 1, 1, 1, // addr1
-            2, 2, 2, 2, 2, 2, // addr2
-            2, 2, 2, 2, 2, 2, // addr3
-            0x10, 0, // Sequence Control
-            // Disassoc header:
-            8, 0, // reason code
-        ][..]);
-    }
-
-    #[test]
-    fn send_probe_resp_frame() {
-        let mut fake_device = FakeDevice::new();
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        ctx.send_probe_resp_frame(
-            CLIENT_ADDR,
-            0,
-            TimeUnit(10),
-            mac::CapabilityInfo(33),
-            &[1, 2, 3, 4, 5],
-            &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
-            2,
-            &[48, 2, 77, 88][..],
-        )
-        .expect("error delivering WLAN frame");
-        assert_eq!(fake_device.wlan_queue.len(), 1);
+        let (in_buf, bytes_written) = ctx
+            .make_auth_frame(
+                CLIENT_ADDR,
+                AuthAlgorithmNumber::FAST_BSS_TRANSITION,
+                3,
+                StatusCode::TRANSACTION_SEQUENCE_ERROR,
+            )
+            .expect("error making auth frame");
         assert_eq!(
-            &fake_device.wlan_queue[0].0[..],
+            &in_buf.as_slice()[..bytes_written],
+            &[
+                // Mgmt header
+                0b10110000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Auth header:
+                2, 0, // auth algorithm
+                3, 0, // auth txn seq num
+                14, 0, // Status code
+            ][..]
+        );
+    }
+
+    #[test]
+    fn make_assoc_resp_frame() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let (in_buf, bytes_written) = ctx
+            .make_assoc_resp_frame(
+                CLIENT_ADDR,
+                mac::CapabilityInfo(0),
+                1,
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+                Some(99),
+            )
+            .expect("error making assoc resp frame");
+        assert_eq!(
+            &in_buf.as_slice()[..bytes_written],
+            &[
+                // Mgmt header
+                0b00010000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Association response header:
+                0, 0, // Capabilities
+                0, 0, // status code
+                1, 0, // AID
+                // IEs
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+                50, 2, 9, 10, // Extended rates
+                90, 3, 99, 0, 0, // BSS max idle period
+            ][..]
+        );
+    }
+
+    #[test]
+    fn make_assoc_resp_frame_error() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let (in_buf, bytes_written) = ctx
+            .make_assoc_resp_frame_error(
+                CLIENT_ADDR,
+                mac::CapabilityInfo(0),
+                StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED,
+            )
+            .expect("error making assoc resp frame error");
+        assert_eq!(
+            &in_buf.as_slice()[..bytes_written],
+            &[
+                // Mgmt header
+                0b00010000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Association response header:
+                0, 0, // Capabilities
+                94, 0, // status code
+                0, 0, // AID
+            ][..]
+        );
+    }
+
+    #[test]
+    fn make_assoc_resp_frame_no_bss_max_idle_period() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let (in_buf, bytes_written) = ctx
+            .make_assoc_resp_frame(
+                CLIENT_ADDR,
+                mac::CapabilityInfo(0),
+                1,
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+                None,
+            )
+            .expect("error making assoc resp frame");
+        assert_eq!(
+            &in_buf.as_slice()[..bytes_written],
+            &[
+                // Mgmt header
+                0b00010000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Association response header:
+                0, 0, // Capabilities
+                0, 0, // status code
+                1, 0, // AID
+                // IEs
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+                50, 2, 9, 10, // Extended rates
+            ][..]
+        );
+    }
+
+    #[test]
+    fn make_disassoc_frame() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let (in_buf, bytes_written) = ctx
+            .make_disassoc_frame(CLIENT_ADDR, mac::ReasonCode::LEAVING_NETWORK_DISASSOC)
+            .expect("error making disassoc frame");
+        assert_eq!(
+            &in_buf.as_slice()[..bytes_written],
+            &[
+                // Mgmt header
+                0b10100000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Disassoc header:
+                8, 0, // reason code
+            ][..]
+        );
+    }
+
+    #[test]
+    fn make_probe_resp_frame() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let (in_buf, bytes_written) = ctx
+            .make_probe_resp_frame(
+                CLIENT_ADDR,
+                0,
+                TimeUnit(10),
+                mac::CapabilityInfo(33),
+                &[1, 2, 3, 4, 5],
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+                2,
+                &[48, 2, 77, 88][..],
+            )
+            .expect("error making probe resp frame");
+        assert_eq!(
+            &in_buf.as_slice()[..bytes_written],
             &[
                 // Mgmt header
                 0b01010000, 0, // Frame Control
@@ -747,53 +730,57 @@ mod test {
     }
 
     #[test]
-    fn send_data_frame() {
+    fn make_data_frame() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        ctx.send_data_frame(CLIENT_ADDR2, CLIENT_ADDR, false, false, 0x1234, &[1, 2, 3, 4, 5])
-            .expect("error delivering WLAN frame");
-        assert_eq!(fake_device.wlan_queue.len(), 1);
-        #[rustfmt::skip]
-        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
-            // Mgmt header
-            0b00001000, 0b00000010, // Frame Control
-            0, 0, // Duration
-            3, 3, 3, 3, 3, 3, // addr1
-            2, 2, 2, 2, 2, 2, // addr2
-            1, 1, 1, 1, 1, 1, // addr3
-            0x10, 0, // Sequence Control
-            0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
-            0, 0, 0, // OUI
-            0x12, 0x34, // Protocol ID
-            // Data
-            1, 2, 3, 4, 5,
-        ][..]);
+        let (in_buf, bytes_written) = ctx
+            .make_data_frame(CLIENT_ADDR2, CLIENT_ADDR, false, false, 0x1234, &[1, 2, 3, 4, 5])
+            .expect("error making data frame");
+        assert_eq!(
+            &in_buf.as_slice()[..bytes_written],
+            &[
+                // Mgmt header
+                0b00001000, 0b00000010, // Frame Control
+                0, 0, // Duration
+                3, 3, 3, 3, 3, 3, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                0x10, 0, // Sequence Control
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x12, 0x34, // Protocol ID
+                // Data
+                1, 2, 3, 4, 5,
+            ][..]
+        );
     }
 
     #[test]
-    fn send_eapol_frame() {
+    fn make_eapol_frame() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        ctx.send_eapol_frame(CLIENT_ADDR2, CLIENT_ADDR, false, &[1, 2, 3, 4, 5])
-            .expect("error delivering WLAN frame");
-        assert_eq!(fake_device.wlan_queue.len(), 1);
-        #[rustfmt::skip]
-        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
-            // Mgmt header
-            0b00001000, 0b00000010, // Frame Control
-            0, 0, // Duration
-            3, 3, 3, 3, 3, 3, // addr1
-            2, 2, 2, 2, 2, 2, // addr2
-            1, 1, 1, 1, 1, 1, // addr3
-            0x10, 0, // Sequence Control
-            0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
-            0, 0, 0, // OUI
-            0x88, 0x8E, // EAPOL protocol ID
-            // Data
-            1, 2, 3, 4, 5,
-        ][..]);
+        let (in_buf, bytes_written) = ctx
+            .make_eapol_frame(CLIENT_ADDR2, CLIENT_ADDR, false, &[1, 2, 3, 4, 5])
+            .expect("error making eapol frame");
+        assert_eq!(
+            &in_buf.as_slice()[..bytes_written],
+            &[
+                // Mgmt header
+                0b00001000, 0b00000010, // Frame Control
+                0, 0, // Duration
+                3, 3, 3, 3, 3, 3, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                0x10, 0, // Sequence Control
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x88, 0x8E, // EAPOL protocol ID
+                // Data
+                1, 2, 3, 4, 5,
+            ][..]
+        );
     }
 
     #[test]
