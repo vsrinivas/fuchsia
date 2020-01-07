@@ -319,7 +319,7 @@ std::string NameFlatConstant(const flat::Constant* constant) {
   switch (constant->kind) {
     case flat::Constant::Kind::kLiteral: {
       auto literal_constant = static_cast<const flat::LiteralConstant*>(constant);
-      return std::string(literal_constant->literal->location().data());
+      return std::string(literal_constant->literal->span().data());
     }
     case flat::Constant::Kind::kIdentifier: {
       auto identifier_constant = static_cast<const flat::IdentifierConstant*>(constant);
@@ -449,7 +449,7 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind,
   }
 }
 
-std::string NameIdentifier(SourceLocation name) { return std::string(name.data()); }
+std::string NameIdentifier(SourceSpan name) { return std::string(name.data()); }
 
 std::string NameLibrary(const std::vector<std::unique_ptr<raw::Identifier>>& components) {
   std::string id;
@@ -457,7 +457,7 @@ std::string NameLibrary(const std::vector<std::unique_ptr<raw::Identifier>>& com
     if (!id.empty()) {
       id.append(".");
     }
-    id.append(component->location().data());
+    id.append(component->span().data());
   }
   return id;
 }

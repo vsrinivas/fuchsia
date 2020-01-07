@@ -102,8 +102,8 @@ class TestLibrary final {
     auto ast = parser.Parse();
     if (!parser.Ok()) {
       std::string_view beginning(source_file->data().data(), 0);
-      fidl::SourceLocation location(beginning, *source_file);
-      findings->emplace_back(location, "parser-error", error_reporter_->errors().front() + "\n");
+      fidl::SourceSpan span(beginning, *source_file);
+      findings->emplace_back(span, "parser-error", error_reporter_->errors().front() + "\n");
       return false;
     }
     fidl::linter::Linter linter;
@@ -229,12 +229,12 @@ class TestLibrary final {
     return *all_sources_.at(0);
   }
 
-  fidl::SourceLocation SourceLocation(size_t start, size_t size) const {
+  fidl::SourceSpan source_span(size_t start, size_t size) const {
     assert(all_sources_.size() == 1 && "convenience method only possible with single source");
     std::string_view data = all_sources_.at(0)->data();
     data.remove_prefix(start);
     data.remove_suffix(data.size() - size);
-    return fidl::SourceLocation(data, *all_sources_.at(0));
+    return fidl::SourceSpan(data, *all_sources_.at(0));
   }
 
   const std::vector<std::string>& errors() const { return error_reporter_->errors(); }

@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-#include "fidl/source_location.h"
+#include "fidl/source_span.h"
 #include "findings.h"
 #include "json_writer.h"
 
@@ -27,15 +27,15 @@ class FindingsJson : public utils::JsonWriter<FindingsJson> {
   using utils::JsonWriter<FindingsJson>::Generate;
   using utils::JsonWriter<FindingsJson>::GenerateArray;
 
-  // Suggested replacement string and location, per the JSON schema used by
+  // Suggested replacement string and span, per the JSON schema used by
   // Tricium for a findings/diagnostics
   struct Replacement {
-    const SourceLocation& location;  // From the Finding
+    const SourceSpan& span;  // From the Finding
     std::string replacement;
   };
 
-  struct SuggestionWithReplacementLocation {
-    const SourceLocation& location;  // From the Finding
+  struct SuggestionWithReplacementSpan {
+    const SourceSpan& span;  // From the Finding
     Suggestion suggestion;
   };
 
@@ -45,10 +45,10 @@ class FindingsJson : public utils::JsonWriter<FindingsJson> {
 
   std::ostringstream Produce();
 
-  void Generate(const Finding& value);
-  void Generate(const SuggestionWithReplacementLocation& value);
-  void Generate(const Replacement& value);
-  void Generate(const SourceLocation& value);
+  void Generate(const Finding& finding);
+  void Generate(const SuggestionWithReplacementSpan& suggestion_with_span);
+  void Generate(const Replacement& replacement);
+  void Generate(const SourceSpan& span);
 
  private:
   const Findings& findings_;

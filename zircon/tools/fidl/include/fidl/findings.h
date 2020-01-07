@@ -20,7 +20,7 @@
 #include <sstream>
 #include <string>
 
-#include <fidl/source_location.h>
+#include <fidl/source_span.h>
 
 namespace fidl {
 
@@ -54,9 +54,9 @@ struct Suggestion {
 class Finding {
  public:
   // Construct a Finding with an analyzer-specific subcategory string (for
-  // example, fidl-lint's check-id), SourceLocation, and message
-  Finding(SourceLocation location, std::string subcategory, std::string message)
-      : location_(location), subcategory_(subcategory), message_(message) {}
+  // example, fidl-lint's check-id), SourceSpan, and message
+  Finding(SourceSpan span, std::string subcategory, std::string message)
+      : span_(span), subcategory_(subcategory), message_(message) {}
 
   // move constructor
   Finding(Finding&& rhs) = default;
@@ -73,7 +73,7 @@ class Finding {
   // methods to get the relative location of the reference within the file
   // (line and column), and std::string_view (substring) representing the characters
   // from reference start to end.
-  inline const SourceLocation& location() const { return location_; }
+  inline const SourceSpan& span() const { return span_; }
 
   // Subcategory of the result (for example, fidl-lint's check-id). Used
   // to construct a Comment category, as described in the Tricium protobuf:
@@ -93,7 +93,7 @@ class Finding {
   inline const std::optional<Suggestion>& suggestion() const { return suggestion_; }
 
  private:
-  SourceLocation location_;
+  SourceSpan span_;
   std::string subcategory_;
   std::string message_;
   std::optional<Suggestion> suggestion_;

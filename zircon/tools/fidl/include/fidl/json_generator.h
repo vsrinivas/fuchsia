@@ -16,17 +16,16 @@
 
 namespace fidl {
 
-struct NameLocation {
-  explicit NameLocation(const SourceLocation& location)
-      : filename(location.source_file().filename()) {
-    location.SourceLine(&position);
+struct NameSpan {
+  explicit NameSpan(const SourceSpan& span) : filename(span.source_file().filename()) {
+    span.SourceLine(&position);
   }
 
   // TODO(FIDL-596): We are incorrectly assuming that the provided name is not
   // anonymous, and relying on callers to avoid derefencing a nullptr
   // location.
-  explicit NameLocation(const flat::Name& name) : NameLocation(name.location().value()) {
-    assert(name.location().has_value() && "NameLocation was passed an anonymous name");
+  explicit NameSpan(const flat::Name& name) : NameSpan(name.span().value()) {
+    assert(name.span().has_value() && "NameSpan was passed an anonymous name");
   }
 
   const std::string filename;
@@ -89,8 +88,8 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
 
   void Generate(const flat::Decl* decl);
 
-  void Generate(SourceLocation value);
-  void Generate(NameLocation value);
+  void Generate(SourceSpan value);
+  void Generate(NameSpan value);
 
   void Generate(types::HandleSubtype value);
   void Generate(types::Nullability value);

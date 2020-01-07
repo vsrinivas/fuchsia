@@ -34,50 +34,50 @@ constexpr uint32_t kXunionOrdinalCutoff = 512;
 
 class ScopeInsertResult {
  public:
-  explicit ScopeInsertResult(std::unique_ptr<SourceLocation> previous_occurrence)
+  explicit ScopeInsertResult(std::unique_ptr<SourceSpan> previous_occurrence)
       : previous_occurrence_(std::move(previous_occurrence)) {}
 
   static ScopeInsertResult Ok() { return ScopeInsertResult(nullptr); }
-  static ScopeInsertResult FailureAt(SourceLocation previous) {
-    return ScopeInsertResult(std::make_unique<SourceLocation>(previous));
+  static ScopeInsertResult FailureAt(SourceSpan previous) {
+    return ScopeInsertResult(std::make_unique<SourceSpan>(previous));
   }
 
   bool ok() const { return previous_occurrence_ == nullptr; }
 
-  const SourceLocation& previous_occurrence() const {
+  const SourceSpan& previous_occurrence() const {
     assert(!ok());
     return *previous_occurrence_;
   }
 
  private:
-  std::unique_ptr<SourceLocation> previous_occurrence_;
+  std::unique_ptr<SourceSpan> previous_occurrence_;
 };
 
 template <typename T>
 class Scope {
  public:
-  ScopeInsertResult Insert(const T& t, SourceLocation location) {
+  ScopeInsertResult Insert(const T& t, SourceSpan span) {
     auto iter = scope_.find(t);
     if (iter != scope_.end()) {
       return ScopeInsertResult::FailureAt(iter->second);
     } else {
-      scope_.emplace(t, location);
+      scope_.emplace(t, span);
       return ScopeInsertResult::Ok();
     }
   }
 
-  typename std::map<T, SourceLocation>::const_iterator begin() const { return scope_.begin(); }
+  typename std::map<T, SourceSpan>::const_iterator begin() const { return scope_.begin(); }
 
-  typename std::map<T, SourceLocation>::const_iterator end() const { return scope_.end(); }
+  typename std::map<T, SourceSpan>::const_iterator end() const { return scope_.end(); }
 
  private:
-  std::map<T, SourceLocation> scope_;
+  std::map<T, SourceSpan> scope_;
 };
 
 using Ordinal32Scope = Scope<uint32_t>;
 using Ordinal64Scope = Scope<uint64_t>;
 
-std::optional<std::pair<uint32_t, SourceLocation>> FindFirstNonDenseOrdinal(
+std::optional<std::pair<uint32_t, SourceSpan>> FindFirstNonDenseOrdinal(
     const Ordinal32Scope& scope) {
   uint32_t last_ordinal_seen = 0;
   for (const auto& ordinal_and_loc : scope) {
@@ -212,7 +212,7 @@ bool IsSimple(const Type* type, const TypeShape& typeshape, ErrorReporter* error
           std::string message("union '");
           message.append(identifier_type->name.name_part());
           message.append("' is not allowed to be simple");
-          error_reporter->ReportError(identifier_type->name.location(), message);
+          error_reporter->ReportError(identifier_type->name.span(), message);
           return false;
         }
       }
@@ -286,11 +286,11 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
   if (type_template == nullptr) {
     std::string message("unknown type ");
     message.append(name.name_full());
-    error_reporter_->ReportError(name.location(), message);
+    error_reporter_->ReportError(name.span(), message);
     return false;
   }
-  return type_template->Create(name.location(), arg_type, handle_subtype, size, nullability,
-                               out_type, out_from_type_alias);
+  return type_template->Create(name.span(), arg_type, handle_subtype, size, nullability, out_type,
+                               out_from_type_alias);
 }
 
 void Typespace::AddTemplate(std::unique_ptr<TypeTemplate> type_template) {
@@ -310,12 +310,11 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
   return nullptr;
 }
 
-bool TypeTemplate::Fail(const std::optional<SourceLocation>& location,
-                        const std::string& content) const {
+bool TypeTemplate::Fail(const std::optional<SourceSpan>& span, const std::string& content) const {
   std::string message(NameFlatName(name_));
   message.append(" ");
   message.append(content);
-  error_reporter_->ReportError(location, message);
+  error_reporter_->ReportError(span, message);
   return false;
 }
 
@@ -325,18 +324,18 @@ class PrimitiveTypeTemplate : public TypeTemplate {
                         const std::string& name, types::PrimitiveSubtype subtype)
       : TypeTemplate(Name(nullptr, name), typespace, error_reporter), subtype_(subtype) {}
 
-  bool Create(const std::optional<SourceLocation>& location, const Type* maybe_arg_type,
+  bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (maybe_arg_type != nullptr)
-      return CannotBeParameterized(location);
+      return CannotBeParameterized(span);
     if (maybe_size != nullptr)
-      return CannotHaveSize(location);
+      return CannotHaveSize(span);
     if (nullability == types::Nullability::kNullable)
-      return CannotBeNullable(location);
+      return CannotBeNullable(span);
 
     *out_type = std::make_unique<PrimitiveType>(name_, subtype_);
     return true;
@@ -351,14 +350,14 @@ class BytesTypeTemplate final : public TypeTemplate {
   BytesTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter), uint8_type_(kUint8Type) {}
 
-  bool Create(const std::optional<SourceLocation>& location, const Type* maybe_arg_type,
+  bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (maybe_arg_type != nullptr)
-      return CannotBeParameterized(location);
+      return CannotBeParameterized(span);
     if (size == nullptr)
       size = &max_size;
 
@@ -380,20 +379,20 @@ class ArrayTypeTemplate final : public TypeTemplate {
   ArrayTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "array"), typespace, error_reporter) {}
 
-  bool Create(const std::optional<SourceLocation>& location, const Type* arg_type,
+  bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (arg_type == nullptr)
-      return MustBeParameterized(location);
+      return MustBeParameterized(span);
     if (size == nullptr)
-      return MustHaveSize(location);
+      return MustHaveSize(span);
     if (size->value == 0)
-      return MustHaveNonZeroSize(location);
+      return MustHaveNonZeroSize(span);
     if (nullability == types::Nullability::kNullable)
-      return CannotBeNullable(location);
+      return CannotBeNullable(span);
 
     *out_type = std::make_unique<ArrayType>(name_, arg_type, size);
     return true;
@@ -405,14 +404,14 @@ class VectorTypeTemplate final : public TypeTemplate {
   VectorTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter) {}
 
-  bool Create(const std::optional<SourceLocation>& location, const Type* arg_type,
+  bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (arg_type == nullptr)
-      return MustBeParameterized(location);
+      return MustBeParameterized(span);
     if (size == nullptr)
       size = &max_size;
 
@@ -429,14 +428,14 @@ class StringTypeTemplate final : public TypeTemplate {
   StringTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "string"), typespace, error_reporter) {}
 
-  bool Create(const std::optional<SourceLocation>& location, const Type* arg_type,
+  bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (arg_type != nullptr)
-      return CannotBeParameterized(location);
+      return CannotBeParameterized(span);
     if (size == nullptr)
       size = &max_size;
 
@@ -453,14 +452,14 @@ class HandleTypeTemplate final : public TypeTemplate {
   HandleTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "handle"), typespace, error_reporter) {}
 
-  bool Create(const std::optional<SourceLocation>& location, const Type* maybe_arg_type,
+  bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& opt_handle_subtype, const Size* maybe_size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(maybe_arg_type == nullptr);
 
     if (maybe_size != nullptr)
-      return CannotHaveSize(location);
+      return CannotHaveSize(span);
 
     auto handle_subtype = opt_handle_subtype.value_or(types::HandleSubtype::kHandle);
 
@@ -474,21 +473,21 @@ class RequestTypeTemplate final : public TypeTemplate {
   RequestTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "request"), typespace, error_reporter) {}
 
-  bool Create(const std::optional<SourceLocation>& location, const Type* arg_type,
+  bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (arg_type == nullptr)
-      return MustBeParameterized(location);
+      return MustBeParameterized(span);
     if (arg_type->kind != Type::Kind::kIdentifier)
-      return Fail(location, "must be a protocol");
+      return Fail(span, "must be a protocol");
     auto protocol_type = static_cast<const IdentifierType*>(arg_type);
     if (protocol_type->type_decl->kind != Decl::Kind::kProtocol)
-      return Fail(location, "must be a protocol");
+      return Fail(span, "must be a protocol");
     if (maybe_size != nullptr)
-      return CannotHaveSize(location);
+      return CannotHaveSize(span);
 
     *out_type = std::make_unique<RequestHandleType>(name_, protocol_type, nullability);
     return true;
@@ -508,7 +507,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
         library_(library),
         type_decl_(type_decl) {}
 
-  bool Create(const std::optional<SourceLocation>& location, const Type* arg_type,
+  bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
@@ -525,7 +524,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
     }
     switch (type_decl_->kind) {
       case Decl::Kind::kService:
-        return Fail(location, "cannot use services in other declarations");
+        return Fail(span, "cannot use services in other declarations");
 
       case Decl::Kind::kProtocol:
         break;
@@ -539,7 +538,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
       case Decl::Kind::kEnum:
       case Decl::Kind::kTable:
         if (nullability == types::Nullability::kNullable)
-          return CannotBeNullable(location);
+          return CannotBeNullable(span);
         break;
 
       default:
@@ -562,7 +561,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
                         Library* library, TypeAlias* decl)
       : TypeTemplate(std::move(name), typespace, error_reporter), library_(library), decl_(decl) {}
 
-  bool Create(const std::optional<SourceLocation>& location, const Type* maybe_arg_type,
+  bool Create(const std::optional<SourceSpan>& span, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
               types::Nullability maybe_nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
@@ -579,7 +578,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     const Type* arg_type = nullptr;
     if (decl_->partial_type_ctor->maybe_arg_type_ctor) {
       if (maybe_arg_type) {
-        return Fail(location, "cannot parametrize twice");
+        return Fail(span, "cannot parametrize twice");
       }
       arg_type = decl_->partial_type_ctor->maybe_arg_type_ctor->type;
     } else {
@@ -589,7 +588,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     const Size* size = nullptr;
     if (decl_->partial_type_ctor->maybe_size) {
       if (maybe_size) {
-        return Fail(location, "cannot bound twice");
+        return Fail(span, "cannot bound twice");
       }
       size = static_cast<const Size*>(&decl_->partial_type_ctor->maybe_size->Value());
     } else {
@@ -599,7 +598,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     types::Nullability nullability;
     if (decl_->partial_type_ctor->nullability == types::Nullability::kNullable) {
       if (maybe_nullability == types::Nullability::kNullable) {
-        return Fail(location, "cannot indicate nullability twice");
+        return Fail(span, "cannot indicate nullability twice");
       }
       nullability = types::Nullability::kNullable;
     } else {
@@ -685,7 +684,7 @@ void AttributeSchema::ValidatePlacement(ErrorReporter* error_reporter,
   std::string message("placement of attribute '");
   message.append(attribute.name);
   message.append("' disallowed here");
-  error_reporter->ReportError(attribute.location(), message);
+  error_reporter->ReportError(attribute.span(), message);
 }
 
 void AttributeSchema::ValidateValue(ErrorReporter* error_reporter,
@@ -708,7 +707,7 @@ void AttributeSchema::ValidateValue(ErrorReporter* error_reporter,
     message.append("'");
     first = false;
   }
-  error_reporter->ReportError(attribute.location(), message);
+  error_reporter->ReportError(attribute.span(), message);
 }
 
 void AttributeSchema::ValidateConstraint(ErrorReporter* error_reporter,
@@ -723,9 +722,9 @@ void AttributeSchema::ValidateConstraint(ErrorReporter* error_reporter,
     message.append("' with value '");
     message.append(attribute.value);
     message.append("'");
-    // TODO(pascallouis): It would be nicer to use the location of
+    // TODO(pascallouis): It would be nicer to use the span of
     // the declaration, however we do not keep it around today.
-    error_reporter->ReportError(attribute.location(), message);
+    error_reporter->ReportError(attribute.span(), message);
   }
 }
 
@@ -747,18 +746,18 @@ bool SimpleLayoutConstraint(ErrorReporter* error_reporter, const raw::Attribute&
   return ok;
 }
 
-bool ParseBound(ErrorReporter* error_reporter, const SourceLocation& location,
-                const std::string& input, uint32_t* out_value) {
+bool ParseBound(ErrorReporter* error_reporter, const SourceSpan& span, const std::string& input,
+                uint32_t* out_value) {
   auto result = utils::ParseNumeric(input, out_value, 10);
   switch (result) {
     case utils::ParseNumericResult::kOutOfBounds:
-      error_reporter->ReportError(location, "bound is too big");
+      error_reporter->ReportError(span, "bound is too big");
       return false;
     case utils::ParseNumericResult::kMalformed: {
       std::string message("unable to parse bound '");
       message.append(input);
       message.append("'");
-      error_reporter->ReportError(location, message);
+      error_reporter->ReportError(span, message);
       return false;
     }
     case utils::ParseNumericResult::kSuccess:
@@ -770,7 +769,7 @@ bool ParseBound(ErrorReporter* error_reporter, const SourceLocation& location,
 bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
                         const Decl* decl) {
   uint32_t bound;
-  if (!ParseBound(error_reporter, attribute.location(), attribute.value, &bound))
+  if (!ParseBound(error_reporter, attribute.span(), attribute.value, &bound))
     return false;
   uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
   switch (decl->kind) {
@@ -809,7 +808,7 @@ bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& att
     message << " bytes allowed, but ";
     message << max_bytes;
     message << " bytes found";
-    error_reporter->ReportError(attribute.location(), message.str());
+    error_reporter->ReportError(attribute.span(), message.str());
     return false;
   }
   return true;
@@ -819,7 +818,7 @@ bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& att
 bool MaxHandlesConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
                           const Decl* decl) {
   uint32_t bound;
-  if (!ParseBound(error_reporter, attribute.location(), attribute.value.c_str(), &bound))
+  if (!ParseBound(error_reporter, attribute.span(), attribute.value.c_str(), &bound))
     return false;
   uint32_t max_handles = std::numeric_limits<uint32_t>::max();
   switch (decl->kind) {
@@ -854,7 +853,7 @@ bool MaxHandlesConstraint(ErrorReporter* error_reporter, const raw::Attribute& a
     message << " allowed, but ";
     message << max_handles;
     message << " found";
-    error_reporter->ReportError(attribute.location(), message.str());
+    error_reporter->ReportError(attribute.span(), message.str());
     return false;
   }
   return true;
@@ -883,7 +882,7 @@ bool ResultShapeConstraint(ErrorReporter* error_reporter, const raw::Attribute& 
 
   if (!error_primitive || (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
                            error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
-    error_reporter->ReportError(decl->name.location(),
+    error_reporter->ReportError(decl->name.span(),
                                 "invalid error type: must be int32, uint32 or an enum therof");
     return false;
   }
@@ -935,7 +934,7 @@ bool TransportConstraint(ErrorReporter* error_reporter, const raw::Attribute& at
         first = false;
         out << t;
       }
-      error_reporter->ReportError(decl->name.location(), out.str());
+      error_reporter->ReportError(decl->name.span(), out.str());
       return false;
     }
   }
@@ -1086,7 +1085,7 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(ErrorReporter* error_r
       message.append("'; did you mean '");
       message.append(name_and_schema.first);
       message.append("'?");
-      error_reporter->ReportWarning(attribute.location(), message);
+      error_reporter->ReportWarning(attribute.span(), message);
       return nullptr;
     }
   }
@@ -1094,10 +1093,9 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(ErrorReporter* error_r
   return nullptr;
 }
 
-bool Dependencies::Register(const SourceLocation& location, std::string_view filename,
-                            Library* dep_library,
+bool Dependencies::Register(const SourceSpan& span, std::string_view filename, Library* dep_library,
                             const std::unique_ptr<raw::Identifier>& maybe_alias) {
-  refs_.push_back(std::make_unique<LibraryRef>(location, dep_library));
+  refs_.push_back(std::make_unique<LibraryRef>(span, dep_library));
   auto ref = refs_.back().get();
 
   auto library_name = dep_library->name();
@@ -1106,7 +1104,7 @@ bool Dependencies::Register(const SourceLocation& location, std::string_view fil
   }
 
   if (maybe_alias) {
-    std::vector<std::string_view> alias_name = {maybe_alias->location().data()};
+    std::vector<std::string_view> alias_name = {maybe_alias->span().data()};
     if (!InsertByName(filename, alias_name, ref)) {
       return false;
     }
@@ -1176,7 +1174,7 @@ bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library,
       message.append(" but does not use it. Either use ");
       message.append(NameLibrary(ref->library_->name()));
       message.append(", or remove import.");
-      error_reporter->ReportError(ref->location_, message);
+      error_reporter->ReportError(ref->span_, message);
     }
   }
   return checkpoint.NoNewErrors();
@@ -1200,8 +1198,8 @@ bool Library::Fail(std::string_view message) {
   return false;
 }
 
-bool Library::Fail(const std::optional<SourceLocation>& location, std::string_view message) {
-  error_reporter_->ReportError(location, message);
+bool Library::Fail(const std::optional<SourceSpan>& span, std::string_view message) {
+  error_reporter_->ReportError(span, message);
   return false;
 }
 
@@ -1229,7 +1227,7 @@ void Library::ValidateAttributesConstraints(const Decl* decl,
   }
 }
 
-SourceLocation Library::GeneratedSimpleName(const std::string& name) {
+SourceSpan Library::GeneratedSimpleName(const std::string& name) {
   return generated_source_file_.AddLine(name);
 }
 
@@ -1252,7 +1250,7 @@ std::optional<Name> Library::CompileCompoundIdentifier(
   const auto& components = compound_identifier->components;
   assert(components.size() >= 1);
 
-  SourceLocation decl_name = components.back()->location();
+  SourceSpan decl_name = components.back()->span();
 
   // First try resolving the identifier in the library.
   if (components.size() == 1) {
@@ -1261,10 +1259,10 @@ std::optional<Name> Library::CompileCompoundIdentifier(
 
   std::vector<std::string_view> library_name;
   for (auto iter = components.begin(); iter != components.end() - 1; ++iter) {
-    library_name.push_back((*iter)->location().data());
+    library_name.push_back((*iter)->span().data());
   }
 
-  auto filename = compound_identifier->location().source_file().filename();
+  auto filename = compound_identifier->span().source_file().filename();
   Library* dep_library = nullptr;
   if (dependencies_.LookupAndUse(filename, library_name, &dep_library)) {
     return Name(dep_library, decl_name);
@@ -1272,8 +1270,8 @@ std::optional<Name> Library::CompileCompoundIdentifier(
 
   // If the identifier is not found in the library it might refer to a
   // declaration with a member (e.g. library.EnumX.val or BitsY.val).
-  SourceLocation member_name = decl_name;
-  SourceLocation member_decl_name = components.rbegin()[1]->location();
+  SourceSpan member_name = decl_name;
+  SourceSpan member_decl_name = components.rbegin()[1]->span();
 
   if (components.size() == 2) {
     return Name(this, member_decl_name, std::string(member_name.data()));
@@ -1292,8 +1290,8 @@ std::optional<Name> Library::CompileCompoundIdentifier(
   message += " or reference to member of library ";
   message += NameLibrary(member_library_name);
   message += ". Did you require it with `using`?";
-  const auto& location = components[0]->location();
-  Fail(location, message);
+  const auto& span = components[0]->span();
+  Fail(span, message);
   return std::nullopt;
 }
 
@@ -1353,9 +1351,8 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     message.append(name->name_part());
     return Fail(*name, message);
   }
-  if (name->location()) {
-    if (dependencies_.Contains(name->location()->source_file().filename(),
-                               {name->location()->data()})) {
+  if (name->span()) {
+    if (dependencies_.Contains(name->span()->source_file().filename(), {name->span()->data()})) {
       std::string message = "Declaration name '";
       message.append(name->name_full());
       message.append(
@@ -1395,7 +1392,7 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   return true;
 }
 
-bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceLocation location,
+bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceSpan span,
                               std::unique_ptr<Constant>* out_constant) {
   switch (raw_constant->kind) {
     case raw::Constant::Kind::kIdentifier: {
@@ -1416,7 +1413,7 @@ bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, Sourc
 }
 
 bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
-                                     SourceLocation location,
+                                     SourceSpan span,
                                      std::unique_ptr<TypeConstructor>* out_type_ctor) {
   auto name = CompileCompoundIdentifier(raw_type_ctor->identifier.get());
   if (!name)
@@ -1424,14 +1421,14 @@ bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_t
 
   std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
   if (raw_type_ctor->maybe_arg_type_ctor != nullptr) {
-    if (!ConsumeTypeConstructor(std::move(raw_type_ctor->maybe_arg_type_ctor), location,
+    if (!ConsumeTypeConstructor(std::move(raw_type_ctor->maybe_arg_type_ctor), span,
                                 &maybe_arg_type_ctor))
       return false;
   }
 
   std::unique_ptr<Constant> maybe_size;
   if (raw_type_ctor->maybe_size != nullptr) {
-    if (!ConsumeConstant(std::move(raw_type_ctor->maybe_size), location, &maybe_size))
+    if (!ConsumeConstant(std::move(raw_type_ctor->maybe_size), span, &maybe_size))
       return false;
   }
 
@@ -1455,13 +1452,13 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     }
     std::string message("no attributes allowed on library import, found: ");
     message.append(attributes_found);
-    const auto& location = using_directive->location();
-    return Fail(location, message);
+    const auto& span = using_directive->span();
+    return Fail(span, message);
   }
 
   std::vector<std::string_view> library_name;
   for (const auto& component : using_directive->using_path->components) {
-    library_name.push_back(component->location().data());
+    library_name.push_back(component->span().data());
   }
 
   Library* dep_library = nullptr;
@@ -1469,12 +1466,12 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     std::string message("Could not find library named ");
     message += NameLibrary(library_name);
     message += ". Did you include its sources with --files?";
-    const auto& location = using_directive->using_path->components[0]->location();
-    return Fail(location, message);
+    const auto& span = using_directive->using_path->components[0]->span();
+    return Fail(span, message);
   }
 
-  auto filename = using_directive->location().source_file().filename();
-  if (!dependencies_.Register(using_directive->location(), filename, dep_library,
+  auto filename = using_directive->span().source_file().filename();
+  if (!dependencies_.Register(using_directive->span(), filename, dep_library,
                               using_directive->maybe_alias)) {
     std::string message("Library ");
     message += NameLibrary(library_name);
@@ -1491,10 +1488,10 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
 bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
   assert(using_directive->maybe_type_ctor);
 
-  auto location = using_directive->using_path->components[0]->location();
-  auto alias_name = Name(this, location);
+  auto span = using_directive->using_path->components[0]->span();
+  auto alias_name = Name(this, span);
   std::unique_ptr<TypeConstructor> partial_type_ctor_;
-  if (!ConsumeTypeConstructor(std::move(using_directive->maybe_type_ctor), location,
+  if (!ConsumeTypeConstructor(std::move(using_directive->maybe_type_ctor), span,
                               &partial_type_ctor_))
     return false;
   return RegisterDecl(std::make_unique<TypeAlias>(std::move(using_directive->attributes),
@@ -1505,11 +1502,11 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
 bool Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration) {
   std::vector<Bits::Member> members;
   for (auto& member : bits_declaration->members) {
-    auto location = member->identifier->location();
+    auto span = member->identifier->span();
     std::unique_ptr<Constant> value;
-    if (!ConsumeConstant(std::move(member->value), location, &value))
+    if (!ConsumeConstant(std::move(member->value), span, &value))
       return false;
-    members.emplace_back(location, std::move(value), std::move(member->attributes));
+    members.emplace_back(span, std::move(value), std::move(member->attributes));
     // TODO(pascallouis): right now, members are not registered. Look into
     // registering them, potentially under the bits name qualifier such as
     // <name_of_bits>.<name_of_member>.
@@ -1518,27 +1515,27 @@ bool Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_
   std::unique_ptr<TypeConstructor> type_ctor;
   if (bits_declaration->maybe_type_ctor) {
     if (!ConsumeTypeConstructor(std::move(bits_declaration->maybe_type_ctor),
-                                bits_declaration->location(), &type_ctor))
+                                bits_declaration->span(), &type_ctor))
       return false;
   } else {
     type_ctor = TypeConstructor::CreateSizeType();
   }
 
   return RegisterDecl(std::make_unique<Bits>(
-      std::move(bits_declaration->attributes), Name(this, bits_declaration->identifier->location()),
+      std::move(bits_declaration->attributes), Name(this, bits_declaration->identifier->span()),
       std::move(type_ctor), std::move(members), bits_declaration->strictness));
 }
 
 bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
   auto attributes = std::move(const_declaration->attributes);
-  auto location = const_declaration->identifier->location();
-  auto name = Name(this, location);
+  auto span = const_declaration->identifier->span();
+  auto name = Name(this, span);
   std::unique_ptr<TypeConstructor> type_ctor;
-  if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), location, &type_ctor))
+  if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), span, &type_ctor))
     return false;
 
   std::unique_ptr<Constant> constant;
-  if (!ConsumeConstant(std::move(const_declaration->constant), location, &constant))
+  if (!ConsumeConstant(std::move(const_declaration->constant), span, &constant))
     return false;
 
   return RegisterDecl(std::make_unique<Const>(std::move(attributes), std::move(name),
@@ -1548,11 +1545,11 @@ bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
 bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
   std::vector<Enum::Member> members;
   for (auto& member : enum_declaration->members) {
-    auto location = member->identifier->location();
+    auto span = member->identifier->span();
     std::unique_ptr<Constant> value;
-    if (!ConsumeConstant(std::move(member->value), location, &value))
+    if (!ConsumeConstant(std::move(member->value), span, &value))
       return false;
-    members.emplace_back(location, std::move(value), std::move(member->attributes));
+    members.emplace_back(span, std::move(value), std::move(member->attributes));
     // TODO(pascallouis): right now, members are not registered. Look into
     // registering them, potentially under the enum name qualifier such as
     // <name_of_enum>.<name_of_member>.
@@ -1561,29 +1558,28 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
   std::unique_ptr<TypeConstructor> type_ctor;
   if (enum_declaration->maybe_type_ctor) {
     if (!ConsumeTypeConstructor(std::move(enum_declaration->maybe_type_ctor),
-                                enum_declaration->location(), &type_ctor))
+                                enum_declaration->span(), &type_ctor))
       return false;
   } else {
     type_ctor = TypeConstructor::CreateSizeType();
   }
 
   return RegisterDecl(std::make_unique<Enum>(
-      std::move(enum_declaration->attributes), Name(this, enum_declaration->identifier->location()),
+      std::move(enum_declaration->attributes), Name(this, enum_declaration->identifier->span()),
       std::move(type_ctor), std::move(members), enum_declaration->strictness));
 }
 
 bool Library::CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod* method,
                                  Struct* in_response, Struct** out_response) {
   // Compile the error type.
-  auto error_location = method->maybe_error_ctor->location();
+  auto error_span = method->maybe_error_ctor->span();
   std::unique_ptr<TypeConstructor> error_type_ctor;
-  if (!ConsumeTypeConstructor(std::move(method->maybe_error_ctor), error_location,
-                              &error_type_ctor))
+  if (!ConsumeTypeConstructor(std::move(method->maybe_error_ctor), error_span, &error_type_ctor))
     return false;
 
   // Make the Result union containing the response struct and the
   // error type.
-  SourceLocation method_name = method->identifier->location();
+  SourceSpan method_name = method->identifier->span();
   Name result_name = DerivedName({protocol_name.name_part(), method_name.data(), "Result"});
   raw::SourceElement sourceElement = raw::SourceElement(fidl::Token(), fidl::Token());
   Union::Member response_member{
@@ -1624,7 +1620,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod*
 bool Library::ConsumeProtocolDeclaration(
     std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
   auto attributes = std::move(protocol_declaration->attributes);
-  auto name = Name(this, protocol_declaration->identifier->location());
+  auto name = Name(this, protocol_declaration->identifier->span());
 
   std::set<Name> composed_protocols;
   for (auto& composed_protocol : protocol_declaration->composed_protocols) {
@@ -1633,7 +1629,7 @@ bool Library::ConsumeProtocolDeclaration(
     if (!composed_protocol_name)
       return false;
     if (!composed_protocols.insert(std::move(composed_protocol_name.value())).second)
-      return Fail(composed_protocol_name->location(), "protocol composed multiple times");
+      return Fail(composed_protocol_name->span(), "protocol composed multiple times");
   }
 
   std::vector<Protocol::Method> methods;
@@ -1643,7 +1639,7 @@ bool Library::ConsumeProtocolDeclaration(
     auto generated_ordinal64 = std::make_unique<raw::Ordinal64>(
         fidl::ordinals::GetGeneratedOrdinal64(library_name_, name.name_part(), *method));
     auto attributes = std::move(method->attributes);
-    SourceLocation method_name = method->identifier->location();
+    SourceSpan method_name = method->identifier->span();
 
     Struct* maybe_request = nullptr;
     if (method->maybe_request != nullptr) {
@@ -1691,7 +1687,7 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
                                    bool is_request_or_response, Struct** out_struct_decl) {
   std::vector<Struct::Member> members;
   for (auto& parameter : parameter_list->parameter_list) {
-    const SourceLocation name = parameter->identifier->location();
+    const SourceSpan name = parameter->identifier->span();
     std::unique_ptr<TypeConstructor> type_ctor;
     if (!ConsumeTypeConstructor(std::move(parameter->type_ctor), name, &type_ctor))
       return false;
@@ -1710,15 +1706,15 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
 
 bool Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
   auto attributes = std::move(service_decl->attributes);
-  auto name = Name(this, service_decl->identifier->location());
+  auto name = Name(this, service_decl->identifier->span());
 
   std::vector<Service::Member> members;
   for (auto& member : service_decl->members) {
     std::unique_ptr<TypeConstructor> type_ctor;
-    auto location = member->identifier->location();
-    if (!ConsumeTypeConstructor(std::move(member->type_ctor), location, &type_ctor))
+    auto span = member->identifier->span();
+    if (!ConsumeTypeConstructor(std::move(member->type_ctor), span, &type_ctor))
       return false;
-    members.emplace_back(std::move(type_ctor), member->identifier->location(),
+    members.emplace_back(std::move(type_ctor), member->identifier->span(),
                          std::move(member->attributes));
   }
 
@@ -1728,21 +1724,21 @@ bool Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
 
 bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
   auto attributes = std::move(struct_declaration->attributes);
-  auto name = Name(this, struct_declaration->identifier->location());
+  auto name = Name(this, struct_declaration->identifier->span());
 
   std::vector<Struct::Member> members;
   for (auto& member : struct_declaration->members) {
     std::unique_ptr<TypeConstructor> type_ctor;
-    auto location = member->identifier->location();
-    if (!ConsumeTypeConstructor(std::move(member->type_ctor), location, &type_ctor))
+    auto span = member->identifier->span();
+    if (!ConsumeTypeConstructor(std::move(member->type_ctor), span, &type_ctor))
       return false;
     std::unique_ptr<Constant> maybe_default_value;
     if (member->maybe_default_value != nullptr) {
-      if (!ConsumeConstant(std::move(member->maybe_default_value), location, &maybe_default_value))
+      if (!ConsumeConstant(std::move(member->maybe_default_value), span, &maybe_default_value))
         return false;
     }
     auto attributes = std::move(member->attributes);
-    members.emplace_back(std::move(type_ctor), member->identifier->location(),
+    members.emplace_back(std::move(type_ctor), member->identifier->span(),
                          std::move(maybe_default_value), std::move(attributes));
   }
 
@@ -1752,7 +1748,7 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
 
 bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
   auto attributes = std::move(table_declaration->attributes);
-  auto name = Name(this, table_declaration->identifier->location());
+  auto name = Name(this, table_declaration->identifier->span());
 
   std::vector<Table::Member> members;
   for (auto& member : table_declaration->members) {
@@ -1760,25 +1756,25 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
 
     if (member->maybe_used) {
       std::unique_ptr<TypeConstructor> type_ctor;
-      if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), member->location(),
+      if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), member->span(),
                                   &type_ctor))
         return false;
       std::unique_ptr<Constant> maybe_default_value;
       if (member->maybe_used->maybe_default_value) {
         // TODO(FIDL-609): Support defaults on tables.
         const auto default_value = member->maybe_used->maybe_default_value.get();
-        error_reporter_->ReportError(default_value->location(),
+        error_reporter_->ReportError(default_value->span(),
                                      "Defaults on tables are not yet supported.");
       }
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
-        return Fail(member->location(), "Table members cannot be nullable");
+        return Fail(member->span(), "Table members cannot be nullable");
       }
       auto attributes = std::move(member->maybe_used->attributes);
       members.emplace_back(std::move(ordinal_literal), std::move(type_ctor),
-                           member->maybe_used->identifier->location(),
-                           std::move(maybe_default_value), std::move(attributes));
+                           member->maybe_used->identifier->span(), std::move(maybe_default_value),
+                           std::move(attributes));
     } else {
-      members.emplace_back(std::move(ordinal_literal), member->location());
+      members.emplace_back(std::move(ordinal_literal), member->span());
     }
   }
 
@@ -1787,32 +1783,32 @@ bool Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
 }
 
 bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
-  auto name = Name(this, union_declaration->identifier->location());
+  auto name = Name(this, union_declaration->identifier->span());
 
   assert(!union_declaration->members.empty() && "unions must have at least one member");
   std::vector<Union::Member> members;
   for (auto& member : union_declaration->members) {
     auto xunion_ordinal = std::move(member->ordinal);
     if (xunion_ordinal->value > kXunionOrdinalCutoff) {
-      return Fail(member->location(), "explicit union ordinal must be <= 512");
+      return Fail(member->span(), "explicit union ordinal must be <= 512");
     }
 
     if (member->maybe_used) {
-      auto location = member->maybe_used->identifier->location();
+      auto span = member->maybe_used->identifier->span();
       std::unique_ptr<TypeConstructor> type_ctor;
-      if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), location, &type_ctor))
+      if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), span, &type_ctor))
         return false;
 
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
-        return Fail(member->location(), "Union members cannot be nullable");
+        return Fail(member->span(), "Union members cannot be nullable");
       }
 
       auto attributes = std::move(member->maybe_used->attributes);
-      members.emplace_back(std::move(xunion_ordinal), std::move(type_ctor), location,
+      members.emplace_back(std::move(xunion_ordinal), std::move(type_ctor), span,
                            std::move(attributes));
     } else {
       assert(xunion_ordinal && "Reserved union members must have an ordinal specified");
-      members.emplace_back(std::move(xunion_ordinal), member->location());
+      members.emplace_back(std::move(xunion_ordinal), member->span());
     }
   }
 
@@ -1823,7 +1819,7 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 }
 
 bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> xunion_declaration) {
-  auto name = Name(this, xunion_declaration->identifier->location());
+  auto name = Name(this, xunion_declaration->identifier->span());
 
   assert(!xunion_declaration->members.empty() && "unions must have at least one member");
   auto xunion_name =
@@ -1834,31 +1830,31 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
   for (auto& member : xunion_declaration->members) {
     auto explicit_ordinal = std::move(member->ordinal);
     if (explicit_ordinal->value > kXunionOrdinalCutoff) {
-      return Fail(member->location(), "xunion ordinal must be <= 512");
+      return Fail(member->span(), "xunion ordinal must be <= 512");
     }
 
     if (member->maybe_used) {
-      auto location = member->maybe_used->identifier->location();
+      auto span = member->maybe_used->identifier->span();
       auto hashed_ordinal = std::make_unique<raw::Ordinal32>(
           fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *member));
       if (hashed_ordinal->value <= kXunionOrdinalCutoff) {
-        return Fail(member->location(),
+        return Fail(member->span(),
                     "hashed ordinal is <= 512, and conflicts with explicit ordinal space, try "
                     "using a different Selector");
       }
       std::unique_ptr<TypeConstructor> type_ctor;
-      if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), location, &type_ctor))
+      if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), span, &type_ctor))
         return false;
 
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
-        return Fail(member->location(), "Extensible union members cannot be nullable");
+        return Fail(member->span(), "Extensible union members cannot be nullable");
       }
 
       members.emplace_back(std::move(explicit_ordinal), std::move(hashed_ordinal),
-                           std::move(type_ctor), location,
-                           std::move(member->maybe_used->attributes), should_write_explicit);
+                           std::move(type_ctor), span, std::move(member->maybe_used->attributes),
+                           should_write_explicit);
     } else {
-      members.emplace_back(std::move(explicit_ordinal), member->location());
+      members.emplace_back(std::move(explicit_ordinal), member->span());
     }
   }
 
@@ -1887,11 +1883,11 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   // All fidl files in a library should agree on the library name.
   std::vector<std::string_view> new_name;
   for (const auto& part : file->library_name->components) {
-    new_name.push_back(part->location().data());
+    new_name.push_back(part->span().data());
   }
   if (!library_name_.empty()) {
     if (new_name != library_name_) {
-      return Fail(file->library_name->components[0]->location(),
+      return Fail(file->library_name->components[0]->span(),
                   "Two files in the library disagree about the name of the library");
     }
   } else {
@@ -2046,7 +2042,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
     default: {
       std::ostringstream msg_stream;
       msg_stream << NameFlatConstant(identifier_constant) << " is a type, but a value was expected";
-      return Fail(identifier_constant->name.location(), msg_stream.str());
+      return Fail(identifier_constant->name.span(), msg_stream.str());
     }
   }
 
@@ -2152,7 +2148,7 @@ bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Ty
         goto return_fail;
       auto string_type = static_cast<const StringType*>(type);
       auto string_literal = static_cast<raw::StringLiteral*>(literal_constant->literal.get());
-      auto string_data = string_literal->location().data();
+      auto string_data = string_literal->span().data();
 
       // TODO(pascallouis): because data() contains the raw content,
       // with the two " to identify strings, we need to take this
@@ -2163,11 +2159,11 @@ bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Ty
         std::ostringstream msg_stream;
         msg_stream << NameFlatConstant(literal_constant) << " (string:" << string_size;
         msg_stream << ") exceeds the size bound of type " << NameFlatType(type);
-        return Fail(literal_constant->literal->location(), msg_stream.str());
+        return Fail(literal_constant->literal->span(), msg_stream.str());
       }
 
       literal_constant->ResolveTo(
-          std::make_unique<StringConstantValue>(string_literal->location().data()));
+          std::make_unique<StringConstantValue>(string_literal->span().data()));
       return true;
     }
     case raw::Literal::Kind::kTrue: {
@@ -2282,7 +2278,7 @@ bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Ty
       std::ostringstream msg_stream;
       msg_stream << NameFlatConstant(literal_constant) << " cannot be interpreted as type ";
       msg_stream << NameFlatType(type);
-      return Fail(literal_constant->literal->location(), msg_stream.str());
+      return Fail(literal_constant->literal->span(), msg_stream.str());
     }
   }
 }
@@ -2365,7 +2361,7 @@ bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
   assert(literal != nullptr);
   assert(out_value != nullptr);
 
-  auto data = literal->location().data();
+  auto data = literal->span().data();
   std::string string_data(data.data(), data.data() + data.size());
   auto result = utils::ParseNumeric(string_data, out_value);
   return result == utils::ParseNumericResult::kSuccess;
@@ -2994,9 +2990,9 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
         return Fail(name, message);
       }
       auto composed_protocol = static_cast<const Protocol*>(decl);
-      auto location = composed_protocol->name.location();
-      assert(location);
-      if (method_scope.protocols.Insert(composed_protocol, location.value()).ok()) {
+      auto span = composed_protocol->name.span();
+      assert(span);
+      if (method_scope.protocols.Insert(composed_protocol, span.value()).ok()) {
         if (!Visitor(composed_protocol, Visitor))
           return false;
       } else {
@@ -3013,12 +3009,12 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
       auto ordinal_result =
           method_scope.ordinals.Insert(method.generated_ordinal32->value, method.name);
       if (method.generated_ordinal32->value == 0)
-        return Fail(method.generated_ordinal32->location(), "Ordinal value 0 disallowed.");
+        return Fail(method.generated_ordinal32->span(), "Ordinal value 0 disallowed.");
       if (!ordinal_result.ok()) {
         std::string replacement_method(
             fidl::ordinals::GetSelector(method.attributes.get(), method.name));
         replacement_method.push_back('_');
-        return Fail(method.generated_ordinal32->location(),
+        return Fail(method.generated_ordinal32->span(),
                     "Multiple methods with the same ordinal in a protocol; previous was at " +
                         ordinal_result.previous_occurrence().position_str() +
                         ". Consider using attribute " + "[Selector=\"" + replacement_method +
@@ -3110,9 +3106,9 @@ bool Library::CompileTable(Table* table_declaration) {
   Ordinal32Scope ordinal_scope;
 
   for (auto& member : table_declaration->members) {
-    auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->location());
+    auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
     if (!ordinal_result.ok())
-      return Fail(member.ordinal->location(),
+      return Fail(member.ordinal->span(),
                   "Multiple table fields with the same ordinal; previous was at " +
                       ordinal_result.previous_occurrence().position_str());
     if (member.maybe_used) {
@@ -3127,11 +3123,11 @@ bool Library::CompileTable(Table* table_declaration) {
   }
 
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
-    auto [ordinal, location] = *ordinal_and_loc;
+    auto [ordinal, span] = *ordinal_and_loc;
     std::ostringstream msg_stream;
     msg_stream << "missing ordinal " << ordinal;
     msg_stream << " (ordinals must be dense); consider marking it reserved";
-    return Fail(location, msg_stream.str());
+    return Fail(span, msg_stream.str());
   }
 
   return true;
@@ -3143,9 +3139,9 @@ bool Library::CompileUnion(Union* union_declaration) {
 
   for (auto& member : union_declaration->members) {
     auto ordinal_result =
-        ordinal_scope.Insert(member.xunion_ordinal->value, member.xunion_ordinal->location());
+        ordinal_scope.Insert(member.xunion_ordinal->value, member.xunion_ordinal->span());
     if (!ordinal_result.ok())
-      return Fail(member.xunion_ordinal->location(),
+      return Fail(member.xunion_ordinal->span(),
                   "Multiple union fields with the same ordinal; previous was at " +
                       ordinal_result.previous_occurrence().position_str());
     if (member.maybe_used) {
@@ -3160,11 +3156,11 @@ bool Library::CompileUnion(Union* union_declaration) {
   }
 
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
-    auto [ordinal, location] = *ordinal_and_loc;
+    auto [ordinal, span] = *ordinal_and_loc;
     std::ostringstream msg_stream;
     msg_stream << "missing ordinal " << ordinal;
     msg_stream << " (ordinals must be dense); consider marking it reserved";
-    return Fail(location, msg_stream.str());
+    return Fail(span, msg_stream.str());
   }
 
   return true;
@@ -3177,16 +3173,16 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
 
   for (auto& member : xunion_declaration->members) {
     auto ordinal_result =
-        explicit_scope.Insert(member.explicit_ordinal->value, member.explicit_ordinal->location());
+        explicit_scope.Insert(member.explicit_ordinal->value, member.explicit_ordinal->span());
     if (!ordinal_result.ok())
-      return Fail(member.explicit_ordinal->location(),
+      return Fail(member.explicit_ordinal->span(),
                   "Multiple xunion fields with the same ordinal; previous was at " +
                       ordinal_result.previous_occurrence().position_str());
     if (member.maybe_used) {
       ordinal_result = hashed_scope.Insert(member.maybe_used->hashed_ordinal->value,
-                                           member.maybe_used->hashed_ordinal->location());
+                                           member.maybe_used->hashed_ordinal->span());
       if (!ordinal_result.ok())
-        return Fail(member.maybe_used->hashed_ordinal->location(),
+        return Fail(member.maybe_used->hashed_ordinal->span(),
                     "Multiple xunion fields with the same ordinal; previous was at " +
                         ordinal_result.previous_occurrence().position_str());
       auto name_result = scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
@@ -3201,11 +3197,11 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
   }
 
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(explicit_scope)) {
-    auto [ordinal, location] = *ordinal_and_loc;
+    auto [ordinal, span] = *ordinal_and_loc;
     std::ostringstream msg_stream;
     msg_stream << "missing ordinal " << ordinal;
     msg_stream << " (ordinals must be dense); consider marking it reserved";
-    return Fail(location, msg_stream.str());
+    return Fail(span, msg_stream.str());
   }
 
   return true;
@@ -3296,7 +3292,7 @@ bool Library::ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size
     }
   }
   if (!size_constant->IsResolved()) {
-    return Fail(type_ctor->name.location(), "unable to parse size bound");
+    return Fail(type_ctor->name.span(), "unable to parse size bound");
   }
   if (out_size) {
     *out_size = static_cast<const Size*>(&size_constant->Value());

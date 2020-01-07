@@ -57,10 +57,10 @@ std::string LibraryName(const Library* library, std::string_view separator);
 // appear in source, or are synthesized by the compiler (e.g. an anonymous
 // struct name).
 struct Name final {
-  Name(const Library* library, const SourceLocation name)
+  Name(const Library* library, const SourceSpan name)
       : library_(library), name_(name), member_name_(std::nullopt) {}
 
-  Name(const Library* library, const SourceLocation name, const std::string member)
+  Name(const Library* library, const SourceSpan name, const std::string member)
       : library_(library), name_(name), member_name_(member) {}
 
   Name(const Library* library, const std::string& name)
@@ -72,16 +72,16 @@ struct Name final {
 
   const Library* library() const { return library_; }
 
-  std::optional<SourceLocation> location() const {
-    return std::holds_alternative<SourceLocation>(name_)
-               ? std::make_optional(std::get<SourceLocation>(name_))
+  std::optional<SourceSpan> span() const {
+    return std::holds_alternative<SourceSpan>(name_)
+               ? std::make_optional(std::get<SourceSpan>(name_))
                : std::nullopt;
   }
   const std::string_view name_part() const {
     if (std::holds_alternative<AnonymousName>(name_)) {
       return std::get<AnonymousName>(name_);
     } else {
-      return std::get<SourceLocation>(name_).data();
+      return std::get<SourceSpan>(name_).data();
     }
   }
   const std::string name_full() const {
@@ -123,13 +123,13 @@ struct Name final {
  private:
   using AnonymousName = std::string;
 
-  Name(const Library* library, const std::variant<SourceLocation, AnonymousName>& name,
+  Name(const Library* library, const std::variant<SourceSpan, AnonymousName>& name,
        std::optional<std::string> member_name)
       : library_(library), name_(name), member_name_(member_name) {}
 
   const Library* library_ = nullptr;
-  std::variant<SourceLocation, AnonymousName> name_;
-  // TODO(FIDL-705): Either a source location, or an anonymous member should be allowed.
+  std::variant<SourceSpan, AnonymousName> name_;
+  // TODO(FIDL-705): Either a source span, or an anonymous member should be allowed.
   std::optional<std::string> member_name_;
 };
 
@@ -774,10 +774,10 @@ struct Const final : public Decl {
 
 struct Enum final : public TypeDecl {
   struct Member {
-    Member(SourceLocation name, std::unique_ptr<Constant> value,
+    Member(SourceSpan name, std::unique_ptr<Constant> value,
            std::unique_ptr<raw::AttributeList> attributes)
         : name(name), value(std::move(value)), attributes(std::move(attributes)) {}
-    SourceLocation name;
+    SourceSpan name;
     std::unique_ptr<Constant> value;
     std::unique_ptr<raw::AttributeList> attributes;
   };
@@ -803,10 +803,10 @@ struct Enum final : public TypeDecl {
 
 struct Bits final : public TypeDecl {
   struct Member {
-    Member(SourceLocation name, std::unique_ptr<Constant> value,
+    Member(SourceSpan name, std::unique_ptr<Constant> value,
            std::unique_ptr<raw::AttributeList> attributes)
         : name(name), value(std::move(value)), attributes(std::move(attributes)) {}
-    SourceLocation name;
+    SourceSpan name;
     std::unique_ptr<Constant> value;
     std::unique_ptr<raw::AttributeList> attributes;
   };
@@ -832,14 +832,14 @@ struct Bits final : public TypeDecl {
 
 struct Service final : public TypeDecl {
   struct Member {
-    Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+    Member(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
            std::unique_ptr<raw::AttributeList> attributes)
         : type_ctor(std::move(type_ctor)),
           name(std::move(name)),
           attributes(std::move(attributes)) {}
 
     std::unique_ptr<TypeConstructor> type_ctor;
-    SourceLocation name;
+    SourceSpan name;
     std::unique_ptr<raw::AttributeList> attributes;
   };
 
@@ -859,7 +859,7 @@ struct Struct;
 // backward-compatibility, Struct::Member is now an alias for this top-level StructMember.
 // TODO(fxb/37535): Move this to a nested class inside Struct.
 struct StructMember : public Object {
-  StructMember(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+  StructMember(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<raw::AttributeList> attributes)
       : type_ctor(std::move(type_ctor)),
@@ -867,7 +867,7 @@ struct StructMember : public Object {
         maybe_default_value(std::move(maybe_default_value)),
         attributes(std::move(attributes)) {}
   std::unique_ptr<TypeConstructor> type_ctor;
-  SourceLocation name;
+  SourceSpan name;
   std::unique_ptr<Constant> maybe_default_value;
   std::unique_ptr<raw::AttributeList> attributes;
 
@@ -904,7 +904,7 @@ struct Table;
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxb/37535): Move this to a nested class inside Table::Member.
 struct TableMemberUsed : public Object {
-  TableMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+  TableMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                   std::unique_ptr<Constant> maybe_default_value,
                   std::unique_ptr<raw::AttributeList> attributes)
       : type_ctor(std::move(type_ctor)),
@@ -912,7 +912,7 @@ struct TableMemberUsed : public Object {
         maybe_default_value(std::move(maybe_default_value)),
         attributes(std::move(attributes)) {}
   std::unique_ptr<TypeConstructor> type_ctor;
-  SourceLocation name;
+  SourceSpan name;
   std::unique_ptr<Constant> maybe_default_value;
   std::unique_ptr<raw::AttributeList> attributes;
 
@@ -927,18 +927,18 @@ struct TableMember : public Object {
   using Used = TableMemberUsed;
 
   TableMember(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type,
-              SourceLocation name, std::unique_ptr<Constant> maybe_default_value,
+              SourceSpan name, std::unique_ptr<Constant> maybe_default_value,
               std::unique_ptr<raw::AttributeList> attributes)
       : ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type), std::move(name),
                                           std::move(maybe_default_value), std::move(attributes))) {}
-  TableMember(std::unique_ptr<raw::Ordinal32> ordinal, SourceLocation location)
-      : ordinal(std::move(ordinal)), location(location) {}
+  TableMember(std::unique_ptr<raw::Ordinal32> ordinal, SourceSpan span)
+      : ordinal(std::move(ordinal)), span(span) {}
 
   std::unique_ptr<raw::Ordinal32> ordinal;
 
-  // The location for reserved table members.
-  std::optional<SourceLocation> location;
+  // The span for reserved table members.
+  std::optional<SourceSpan> span;
 
   std::unique_ptr<Used> maybe_used;
 
@@ -965,11 +965,11 @@ struct Union;
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxb/37535): Move this to a nested class inside Union.
 struct UnionMemberUsed : public Object {
-  UnionMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+  UnionMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                   std::unique_ptr<raw::AttributeList> attributes)
       : type_ctor(std::move(type_ctor)), name(name), attributes(std::move(attributes)) {}
   std::unique_ptr<TypeConstructor> type_ctor;
-  SourceLocation name;
+  SourceSpan name;
   std::unique_ptr<raw::AttributeList> attributes;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
@@ -985,17 +985,17 @@ struct UnionMember : public Object {
   using Used = UnionMemberUsed;
 
   UnionMember(std::unique_ptr<raw::Ordinal32> xunion_ordinal,
-              std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+              std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
               std::unique_ptr<raw::AttributeList> attributes)
       : xunion_ordinal(std::move(xunion_ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
-  UnionMember(std::unique_ptr<raw::Ordinal32> xunion_ordinal, SourceLocation location)
-      : xunion_ordinal(std::move(xunion_ordinal)), location(location) {}
+  UnionMember(std::unique_ptr<raw::Ordinal32> xunion_ordinal, SourceSpan span)
+      : xunion_ordinal(std::move(xunion_ordinal)), span(span) {}
 
   std::unique_ptr<raw::Ordinal32> xunion_ordinal;
 
-  // The location for reserved members.
-  std::optional<SourceLocation> location;
+  // The span for reserved members.
+  std::optional<SourceSpan> span;
 
   std::unique_ptr<Used> maybe_used;
 
@@ -1034,7 +1034,7 @@ struct XUnion;
 // TODO(fxb/37535): Move this to a nested class inside Union.
 struct XUnionMemberUsed : public Object {
   XUnionMemberUsed(std::unique_ptr<raw::Ordinal32> hashed_ordinal,
-                   std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+                   std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                    std::unique_ptr<raw::AttributeList> attributes)
       : hashed_ordinal(std::move(hashed_ordinal)),
         type_ctor(std::move(type_ctor)),
@@ -1042,7 +1042,7 @@ struct XUnionMemberUsed : public Object {
         attributes(std::move(attributes)) {}
   std::unique_ptr<raw::Ordinal32> hashed_ordinal;
   std::unique_ptr<TypeConstructor> type_ctor;
-  SourceLocation name;
+  SourceSpan name;
   std::unique_ptr<raw::AttributeList> attributes;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
@@ -1059,19 +1059,19 @@ struct XUnionMember : public Object {
 
   XUnionMember(std::unique_ptr<raw::Ordinal32> explicit_ordinal,
                std::unique_ptr<raw::Ordinal32> hashed_ordinal,
-               std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+               std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                std::unique_ptr<raw::AttributeList> attributes, bool using_explicit_ordinal = false)
       : explicit_ordinal(std::move(explicit_ordinal)),
         maybe_used(std::make_unique<Used>(std::move(hashed_ordinal), std::move(type_ctor), name,
                                           std::move(attributes))),
         using_explicit_ordinal(using_explicit_ordinal) {}
-  XUnionMember(std::unique_ptr<raw::Ordinal32> explicit_ordinal, SourceLocation location)
-      : explicit_ordinal(std::move(explicit_ordinal)), location(location) {}
+  XUnionMember(std::unique_ptr<raw::Ordinal32> explicit_ordinal, SourceSpan span)
+      : explicit_ordinal(std::move(explicit_ordinal)), span(span) {}
 
   std::unique_ptr<raw::Ordinal32> explicit_ordinal;
 
-  // The location for reserved members.
-  std::optional<SourceLocation> location;
+  // The span for reserved members.
+  std::optional<SourceSpan> span;
 
   std::unique_ptr<Used> maybe_used;
 
@@ -1118,7 +1118,7 @@ struct Protocol final : public TypeDecl {
 
     Method(std::unique_ptr<raw::AttributeList> attributes,
            std::unique_ptr<raw::Ordinal32> generated_ordinal32,
-           std::unique_ptr<raw::Ordinal64> generated_ordinal64, SourceLocation name,
+           std::unique_ptr<raw::Ordinal64> generated_ordinal64, SourceSpan name,
            Struct* maybe_request, Struct* maybe_response)
         : attributes(std::move(attributes)),
           generated_ordinal32(std::move(generated_ordinal32)),
@@ -1133,7 +1133,7 @@ struct Protocol final : public TypeDecl {
     // To be removed when FIDL-524 has completed.
     std::unique_ptr<raw::Ordinal32> generated_ordinal32;
     std::unique_ptr<raw::Ordinal64> generated_ordinal64;
-    SourceLocation name;
+    SourceSpan name;
     Struct* maybe_request;
     Struct* maybe_response;
     // This is set to the |Protocol| instance that owns this |Method|,
@@ -1188,31 +1188,31 @@ class TypeTemplate {
 
   const Name* name() const { return &name_; }
 
-  virtual bool Create(const std::optional<SourceLocation>& location, const Type* arg_type,
+  virtual bool Create(const std::optional<SourceSpan>& span, const Type* arg_type,
                       const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
                       types::Nullability nullability, std::unique_ptr<Type>* out_type,
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const = 0;
 
  protected:
-  bool MustBeParameterized(const std::optional<SourceLocation>& location) const {
-    return Fail(location, "must be parametrized");
+  bool MustBeParameterized(const std::optional<SourceSpan>& span) const {
+    return Fail(span, "must be parametrized");
   }
-  bool MustHaveSize(const std::optional<SourceLocation>& location) const {
-    return Fail(location, "must have size");
+  bool MustHaveSize(const std::optional<SourceSpan>& span) const {
+    return Fail(span, "must have size");
   }
-  bool MustHaveNonZeroSize(const std::optional<SourceLocation>& location) const {
-    return Fail(location, "must have non-zero size");
+  bool MustHaveNonZeroSize(const std::optional<SourceSpan>& span) const {
+    return Fail(span, "must have non-zero size");
   }
-  bool CannotBeParameterized(const std::optional<SourceLocation>& location) const {
-    return Fail(location, "cannot be parametrized");
+  bool CannotBeParameterized(const std::optional<SourceSpan>& span) const {
+    return Fail(span, "cannot be parametrized");
   }
-  bool CannotHaveSize(const std::optional<SourceLocation>& location) const {
-    return Fail(location, "cannot have size");
+  bool CannotHaveSize(const std::optional<SourceSpan>& span) const {
+    return Fail(span, "cannot have size");
   }
-  bool CannotBeNullable(const std::optional<SourceLocation>& location) const {
-    return Fail(location, "cannot be nullable");
+  bool CannotBeNullable(const std::optional<SourceSpan>& span) const {
+    return Fail(span, "cannot be nullable");
   }
-  bool Fail(const std::optional<SourceLocation>& location, const std::string& content) const;
+  bool Fail(const std::optional<SourceSpan>& span, const std::string& content) const;
 
   Typespace* typespace_;
 
@@ -1350,7 +1350,7 @@ class Dependencies {
   // Register a dependency to a library. The newly recorded dependent library
   // will be referenced by its name, and may also be optionally be referenced
   // by an alias.
-  bool Register(const SourceLocation& location, std::string_view filename, Library* dep_library,
+  bool Register(const SourceSpan& span, std::string_view filename, Library* dep_library,
                 const std::unique_ptr<raw::Identifier>& maybe_alias);
 
   // Returns true if this dependency set contains a library with the given name and filename.
@@ -1371,10 +1371,9 @@ class Dependencies {
 
  private:
   struct LibraryRef {
-    LibraryRef(const SourceLocation location, Library* library)
-        : location_(location), library_(library) {}
+    LibraryRef(const SourceSpan span, Library* library) : span_(span), library_(library) {}
 
-    const SourceLocation location_;
+    const SourceSpan span_;
     Library* library_;
     bool used_ = false;
   };
@@ -1404,8 +1403,8 @@ class Library {
 
  private:
   bool Fail(std::string_view message);
-  bool Fail(const std::optional<SourceLocation>& location, std::string_view message);
-  bool Fail(const Name& name, std::string_view message) { return Fail(name.location(), message); }
+  bool Fail(const std::optional<SourceSpan>& span, std::string_view message);
+  bool Fail(const Name& name, std::string_view message) { return Fail(name.span(), message); }
   bool Fail(const Decl& decl, std::string_view message) { return Fail(decl.name, message); }
 
   void ValidateAttributesPlacement(AttributeSchema::Placement placement,
@@ -1417,7 +1416,7 @@ class Library {
   // is guaranteed to be unique within the library, and a derived name is one
   // that is library scoped but derived from the concatenated components using
   // underscores as delimiters.
-  SourceLocation GeneratedSimpleName(const std::string& name);
+  SourceSpan GeneratedSimpleName(const std::string& name);
   Name NextAnonymousName();
   Name DerivedName(const std::vector<std::string_view>& components);
 
@@ -1428,10 +1427,10 @@ class Library {
   std::optional<Name> CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier);
   bool RegisterDecl(std::unique_ptr<Decl> decl);
 
-  bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceLocation location,
+  bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceSpan span,
                        std::unique_ptr<Constant>* out_constant);
-  bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
-                              SourceLocation location, std::unique_ptr<TypeConstructor>* out_type);
+  bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor, SourceSpan span,
+                              std::unique_ptr<TypeConstructor>* out_type);
 
   bool ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
   bool ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive);

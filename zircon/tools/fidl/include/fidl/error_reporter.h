@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-#include "source_location.h"
+#include "source_span.h"
 #include "token.h"
 
 namespace fidl {
@@ -58,13 +58,13 @@ class ErrorReporter {
     const size_t num_warnings_;
   };
 
-  void ReportErrorWithSquiggle(const SourceLocation& location, std::string_view message);
-  void ReportError(const std::optional<SourceLocation>& location, std::string_view message);
+  void ReportErrorWithSquiggle(const SourceSpan& span, std::string_view message);
+  void ReportError(const std::optional<SourceSpan>& span, std::string_view message);
   void ReportError(const Token& token, std::string_view message);
   void ReportError(std::string_view message);
 
-  void ReportWarningWithSquiggle(const SourceLocation& location, std::string_view message);
-  void ReportWarning(const std::optional<SourceLocation>& location, std::string_view message);
+  void ReportWarningWithSquiggle(const SourceSpan& span, std::string_view message);
+  void ReportWarning(const std::optional<SourceSpan>& span, std::string_view message);
   void ReportWarning(const Token& token, std::string_view message);
 
   void PrintReports();

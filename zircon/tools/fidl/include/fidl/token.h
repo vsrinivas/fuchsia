@@ -9,7 +9,7 @@
 
 #include <string_view>
 
-#include "source_location.h"
+#include "source_span.h"
 
 namespace fidl {
 
@@ -46,13 +46,12 @@ class Token {
     Subkind subkind_;
   };
 
-  Token(SourceLocation previous_end, SourceLocation location, Kind kind, Subkind subkind)
+  Token(SourceSpan previous_end, SourceSpan span, Kind kind, Subkind subkind)
       : previous_end_(previous_end),
-        location_(location),
+        span_(span),
         kind_and_subkind_(KindAndSubkind(kind, subkind)) {}
 
-  Token()
-      : Token(SourceLocation(), SourceLocation(), Token::Kind::kNotAToken, Token::Subkind::kNone) {}
+  Token() : Token(SourceSpan(), SourceSpan(), Token::Kind::kNotAToken, Token::Subkind::kNone) {}
 
   static const char* Name(KindAndSubkind kind_and_subkind) {
     switch (kind_and_subkind.combined()) {
@@ -71,20 +70,20 @@ class Token {
     }
   }
 
-  std::string_view data() const { return location_.data(); }
-  const SourceLocation& location() const { return location_; }
-  void set_previous_end(SourceLocation location) { previous_end_ = location; }
-  SourceLocation previous_end() const { return previous_end_; }
+  std::string_view data() const { return span_.data(); }
+  const SourceSpan& span() const { return span_; }
+  void set_previous_end(SourceSpan span) { previous_end_ = span; }
+  SourceSpan previous_end() const { return previous_end_; }
   Kind kind() const { return kind_and_subkind_.kind(); }
   Subkind subkind() const { return kind_and_subkind_.subkind(); }
   KindAndSubkind kind_and_subkind() const { return kind_and_subkind_; }
 
  private:
-  // The end of the previous token.  Everything between this and location_ is
+  // The end of the previous token.  Everything between this and span_ is
   // somehow uninteresting to the parser (whitespace, comments, discarded
   // braces, etc).
-  SourceLocation previous_end_;
-  SourceLocation location_;
+  SourceSpan previous_end_;
+  SourceSpan span_;
   KindAndSubkind kind_and_subkind_;
 };
 

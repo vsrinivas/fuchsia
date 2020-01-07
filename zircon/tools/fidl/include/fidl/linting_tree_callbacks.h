@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include <fidl/source_location.h>
+#include <fidl/source_span.h>
 #include <fidl/tree_visitor.h>
 
 namespace fidl {
@@ -54,22 +54,21 @@ class LintingTreeCallbacks {
   }
 
   // The OnLineComment callback takes two parameters:
-  // * |SourceLocation| containing the comment
+  // * |SourceSpan| containing the comment
   // * |line_prefix_view| a std::string_view of all characters on the same line,
   //   preceeding the comment
-  void OnLineComment(fit::function<void(const SourceLocation&, std::string_view)> callback) {
+  void OnLineComment(fit::function<void(const SourceSpan&, std::string_view)> callback) {
     line_comment_callbacks_.push_back(std::move(callback));
   }
   // The OnLineComment callback takes two parameters:
-  // * |SourceLocation| containing the whitespace characters, and if the whitespace characters
+  // * |SourceSpan| containing the whitespace characters, and if the whitespace characters
   //   end the line, it includes the newline character
   // * |line_prefix_view| a std::string_view of all characters on the same line,
   //   preceeding the whitespace
-  void OnWhiteSpaceUpToNewline(
-      fit::function<void(const SourceLocation&, std::string_view)> callback) {
+  void OnWhiteSpaceUpToNewline(fit::function<void(const SourceSpan&, std::string_view)> callback) {
     white_space_up_to_newline_callbacks_.push_back(std::move(callback));
   }
-  void OnIgnoredToken(fit::function<void(const SourceLocation&)> callback) {
+  void OnIgnoredToken(fit::function<void(const SourceSpan&)> callback) {
     ignored_token_callbacks_.push_back(std::move(callback));
   }
 
@@ -172,10 +171,10 @@ class LintingTreeCallbacks {
   std::vector<fit::function<void(const raw::File&)>> exit_file_callbacks_;
   std::vector<fit::function<void(const raw::Attribute&)>> attribute_callbacks_;
   std::vector<fit::function<void(const raw::SourceElement&)>> source_element_callbacks_;
-  std::vector<fit::function<void(const SourceLocation&, std::string_view)>> line_comment_callbacks_;
-  std::vector<fit::function<void(const SourceLocation&, std::string_view)>>
+  std::vector<fit::function<void(const SourceSpan&, std::string_view)>> line_comment_callbacks_;
+  std::vector<fit::function<void(const SourceSpan&, std::string_view)>>
       white_space_up_to_newline_callbacks_;
-  std::vector<fit::function<void(const SourceLocation&)>> ignored_token_callbacks_;
+  std::vector<fit::function<void(const SourceSpan&)>> ignored_token_callbacks_;
   std::vector<fit::function<void(const raw::Using&)>> using_callbacks_;
   std::vector<fit::function<void(const raw::BitsDeclaration&)>> bits_declaration_callbacks_;
   std::vector<fit::function<void(const raw::BitsDeclaration&)>> exit_bits_declaration_callbacks_;

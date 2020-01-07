@@ -8,14 +8,14 @@ namespace fidl {
 
 bool AttributesBuilder::Insert(raw::Attribute attribute) {
   auto attribute_name = attribute.name;
-  auto attribute_location = attribute.location();
+  auto attribute_span = attribute.span();
   auto result = InsertHelper(std::move(attribute));
   switch (result.kind) {
     case InsertResult::Kind::kDuplicate: {
       std::string message("duplicate attribute with name '");
       message.append(attribute_name);
       message.append("'");
-      error_reporter_->ReportError(attribute_location, message);
+      error_reporter_->ReportError(attribute_span, message);
       return false;
     }
     case InsertResult::Kind::kOk:

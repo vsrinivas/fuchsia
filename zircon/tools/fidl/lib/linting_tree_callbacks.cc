@@ -277,13 +277,13 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
           // doc comment marker ("///"), they will be merged (including
           // newlines, but with the 3 slashes stripped off) into a single
           // string, and generate an "Attribute" with |name| "Doc", and
-          // |value| the multi-line string. BUT the location()
+          // |value| the multi-line string. BUT the span()
           // std::string_view for the Attribute SourceElement has ONLY the
           // first line. So when LintingTreeCallbacks processes the |gap_text|,
           // the first line is not part of the gap, but the remaining lines
           // show up as gap text comments.
           if (utils::FirstLineIsRegularComment(match[0].str())) {  // not Doc Comment
-            auto line_comment = SourceLocation(view, source_file);
+            auto line_comment = SourceSpan(view, source_file);
             for (auto& callback : callbacks_.line_comment_callbacks_) {
               // starts with the comment marker (2 slashes) and ends with
               // the last non-space character before the first newline
@@ -291,13 +291,13 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
             }
           }
         } else if (match[kIgnoredToken].matched) {
-          auto ignored_token = SourceLocation(view, source_file);
+          auto ignored_token = SourceSpan(view, source_file);
           for (auto& callback : callbacks_.ignored_token_callbacks_) {
             // includes (but may not be limited to): "as" : ; , { } [ ] ( )
             callback(ignored_token);
           }
         } else if (match[kWhiteSpace].matched) {
-          auto white_space = SourceLocation(view, source_file);
+          auto white_space = SourceSpan(view, source_file);
           for (auto& callback : callbacks_.white_space_up_to_newline_callbacks_) {
             // All whitespace only (space, tab, newline)
             callback(white_space, line_prefix_view);
@@ -317,7 +317,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
     void ProcessGapText(const fidl::Token& next_token) {
       const char* gap_start = next_token.previous_end().data().data();
       if (gap_start > end_of_last_gap_) {
-        auto const& source_file = next_token.location().source_file();
+        auto const& source_file = next_token.span().source_file();
         auto const& source_view = source_file.data();
         const char* source_start = source_view.data();
         const char* source_end = source_view.data() + source_view.size();

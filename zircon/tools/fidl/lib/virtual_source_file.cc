@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cassert>
-
 #include "fidl/virtual_source_file.h"
+
+#include <cassert>
 
 namespace fidl {
 
-SourceLocation VirtualSourceFile::AddLine(const std::string& line) {
+SourceSpan VirtualSourceFile::AddLine(const std::string& line) {
   assert(line.find('\n') == std::string::npos &&
          "A single line should not contain a newline character");
-  return SourceLocation(*virtual_lines_.emplace_back(std::make_unique<std::string>(line)), *this);
+  return SourceSpan(*virtual_lines_.emplace_back(std::make_unique<std::string>(line)), *this);
 }
 
 std::string_view VirtualSourceFile::LineContaining(std::string_view view,

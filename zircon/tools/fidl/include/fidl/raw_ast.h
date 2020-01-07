@@ -11,14 +11,14 @@
 #include <utility>
 #include <vector>
 
-#include "source_location.h"
+#include "source_span.h"
 #include "token.h"
 #include "types.h"
 
 // ASTs fresh out of the oven. This is a tree-shaped bunch of nodes
 // pretty much exactly corresponding to the grammar of a single fidl
 // file. File is the root of the tree, and consists of lists of
-// Declarations, and so on down to individual SourceLocations.
+// Declarations, and so on down to individual SourceSpans.
 // See
 // https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#compiler_internals
 // for additional context
@@ -57,12 +57,12 @@ class SourceElement {
 
   explicit SourceElement(Token start, Token end) : start_(start), end_(end) {}
 
-  SourceLocation location() const {
-    assert(&start_.location().source_file() == &end_.location().source_file());
-    const char* start_pos = start_.location().data().data();
-    const char* end_pos = end_.location().data().data() + end_.location().data().length();
-    return SourceLocation(std::string_view(start_pos, end_pos - start_pos),
-                          start_.location().source_file());
+  SourceSpan span() const {
+    assert(&start_.span().source_file() == &end_.span().source_file());
+    const char* start_pos = start_.span().data().data();
+    const char* end_pos = end_.span().data().data() + end_.span().data().length();
+    return SourceSpan(std::string_view(start_pos, end_pos - start_pos),
+                      start_.span().source_file());
   }
 
   virtual ~SourceElement() {}

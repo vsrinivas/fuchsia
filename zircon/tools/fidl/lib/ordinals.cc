@@ -12,7 +12,7 @@
 namespace fidl {
 namespace ordinals {
 
-std::string GetSelector(const raw::AttributeList* attributes, SourceLocation name) {
+std::string GetSelector(const raw::AttributeList* attributes, SourceSpan name) {
   if (attributes != nullptr) {
     const size_t size = attributes->attributes.size();
     for (size_t i = 0; i < size; i++) {
@@ -40,7 +40,7 @@ raw::Ordinal32 GetGeneratedOrdinal32(const std::string_view& full_name,
 
 raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& library_name,
                                      const std::string_view& container_name,
-                                     const raw::AttributeList* attributes, SourceLocation name,
+                                     const raw::AttributeList* attributes, SourceSpan name,
                                      const raw::SourceElement& source_element) {
   std::string selector_name = GetSelector(attributes, name);
   // TODO(pascallouis): Move this closer (code wise) to NameFlatName, ideally
@@ -108,7 +108,7 @@ raw::Ordinal64 GetGeneratedOrdinal64(const std::string_view& full_name,
 
 raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& library_name,
                                      const std::string_view& container_name,
-                                     const raw::AttributeList* attributes, SourceLocation name,
+                                     const raw::AttributeList* attributes, SourceSpan name,
                                      const raw::SourceElement& source_element) {
   std::string selector_name = GetSelector(attributes, name);
   // TODO(pascallouis): Move this closer (code wise) to NameFlatName, ideally
@@ -145,14 +145,14 @@ raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& librar
                                      const std::string_view& protocol_name,
                                      const raw::ProtocolMethod& method) {
   return GetGeneratedOrdinal32(library_name, protocol_name, method.attributes.get(),
-                               method.identifier->location(), method);
+                               method.identifier->span(), method);
 }
 
 raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& library_name,
                                      const std::string_view& protocol_name,
                                      const raw::ProtocolMethod& method) {
   return GetGeneratedOrdinal64(library_name, protocol_name, method.attributes.get(),
-                               method.identifier->location(), method);
+                               method.identifier->span(), method);
 }
 
 raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& library_name,
@@ -163,7 +163,7 @@ raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& librar
   // hashing algorithm as for FIDL methods, which results in 31 bits, not 32.
   return GetGeneratedOrdinal32(library_name, xunion_declaration_name,
                                xunion_member.maybe_used->attributes.get(),
-                               xunion_member.maybe_used->identifier->location(), xunion_member);
+                               xunion_member.maybe_used->identifier->span(), xunion_member);
 }
 
 raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& library_name,
@@ -173,7 +173,7 @@ raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& librar
   // Copy the alogrithm used by xunions for the union to xunion migration.
   return GetGeneratedOrdinal32(library_name, union_declaration_name,
                                union_member.maybe_used->attributes.get(),
-                               union_member.maybe_used->identifier->location(), union_member);
+                               union_member.maybe_used->identifier->span(), union_member);
 }
 
 }  // namespace ordinals

@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/source_location.h"
+#include "fidl/source_span.h"
 
 namespace fidl {
 
-std::string_view SourceLocation::SourceLine(SourceFile::Position* position_out) const {
+std::string_view SourceSpan::SourceLine(SourceFile::Position* position_out) const {
   return source_file_->LineContaining(data(), position_out);
 }
 
-SourceFile::Position SourceLocation::position() const {
+SourceFile::Position SourceSpan::position() const {
   SourceFile::Position pos;
   SourceLine(&pos);
   return pos;
 }
 
-std::string SourceLocation::position_str() const {
+std::string SourceSpan::position_str() const {
   std::string position(source_file_->filename());
   SourceFile::Position pos;
   SourceLine(&pos);

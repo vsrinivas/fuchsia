@@ -79,7 +79,8 @@ const std::set<std::string> allowed_c_unions{{
 }};
 
 const std::vector<std::string> allowed_c_union_prefixes{
-  "example_", "fidl_test_example_codingtables_",
+    "example_",
+    "fidl_test_example_codingtables_",
 };
 
 bool CUnionAllowed(const std::string& union_name) {
@@ -937,12 +938,11 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
             method.maybe_request->typeshape(WireFormat::kV1NoEe)});
       }
       if (method.maybe_response != nullptr) {
-        auto message_kind = method.maybe_request ? types::MessageKind::kResponse
-                                                 : types::MessageKind::kEvent;
+        auto message_kind =
+            method.maybe_request ? types::MessageKind::kResponse : types::MessageKind::kEvent;
         std::string c_name = NameMessage(method_name, message_kind);
         std::string coded_name = NameTable(c_name);
-        std::string alt_coded_name =
-            NameTable(NameMessage(alt_method_name, message_kind));
+        std::string alt_coded_name = NameTable(NameMessage(alt_method_name, message_kind));
         named_method.response = std::make_unique<NamedMessage>(NamedMessage{
             std::move(c_name), std::move(coded_name), std::move(alt_coded_name),
             method.maybe_response->members, method.maybe_response->typeshape(WireFormat::kOld),
@@ -1105,12 +1105,12 @@ void CGenerator::ProduceConstDeclaration(const NamedConst& named_const) {
     case flat::Type::Kind::kPrimitive:
       GeneratePrimitiveDefine(
           named_const.name, static_cast<const flat::PrimitiveType*>(ci.type_ctor->type)->subtype,
-          static_cast<flat::LiteralConstant*>(ci.value.get())->literal->location().data());
+          static_cast<flat::LiteralConstant*>(ci.value.get())->literal->span().data());
       break;
     case flat::Type::Kind::kString:
       GenerateStringDefine(
           named_const.name,
-          static_cast<flat::LiteralConstant*>(ci.value.get())->literal->location().data());
+          static_cast<flat::LiteralConstant*>(ci.value.get())->literal->span().data());
       break;
     default:
       abort();
@@ -1367,8 +1367,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
         file_ << kIndent << "if (fidl_should_decode_union_from_xunion(&_response->hdr)) {\n";
         file_ << kIndent << kIndent << "_transformer_dest = alloca(_rd_num_bytes);\n";
         file_ << kIndent << kIndent << "_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &"
-              << method_info.response->alt_coded_name
-              << ", _rd_bytes, _actual_num_bytes"
+              << method_info.response->alt_coded_name << ", _rd_bytes, _actual_num_bytes"
               << ", _transformer_dest, _rd_num_bytes, &_actual_num_bytes"
               << ", NULL);\n";
         file_ << kIndent << kIndent << "if (_status != ZX_OK) {\n";
@@ -1662,8 +1661,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
       file_ << kIndent << kIndent << "uint8_t* _transformer_dest = "
             << "alloca(_transformer_dest_capacity);\n";
       file_ << kIndent << kIndent << "_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &"
-            << method_info.response->coded_name
-            << ", _msg.bytes, _msg.num_bytes"
+            << method_info.response->coded_name << ", _msg.bytes, _msg.num_bytes"
             << ", _transformer_dest, _transformer_dest_capacity, &_msg.num_bytes"
             << ", NULL);\n";
       file_ << kIndent << kIndent << "if (_status != ZX_OK) {\n";

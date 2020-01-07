@@ -12,7 +12,7 @@ namespace ordinals {
 
 // Returns the Selector. If the Selector attribute is present, the
 // function returns its value; otherwise, it returns the name parameter.
-std::string GetSelector(const raw::AttributeList* attributes, SourceLocation name);
+std::string GetSelector(const raw::AttributeList* attributes, SourceSpan name);
 
 // Computes the 32bits ordinal for this |method|.
 //

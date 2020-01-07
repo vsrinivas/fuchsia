@@ -148,9 +148,8 @@ std::string_view Lexer::Reset(Token::Kind kind) {
 Token Lexer::Finish(Token::Kind kind) {
   assert(kind != Token::Kind::kIdentifier);
   std::string_view previous(previous_end_, token_start_ - previous_end_);
-  SourceLocation previous_location(previous, source_file_);
-  return Token(previous_location, SourceLocation(Reset(kind), source_file_), kind,
-               Token::Subkind::kNone);
+  SourceSpan previous_span(previous, source_file_);
+  return Token(previous_span, SourceSpan(Reset(kind), source_file_), kind, Token::Subkind::kNone);
 }
 
 Token Lexer::LexEndOfStream() { return Finish(Token::Kind::kEndOfFile); }
@@ -165,14 +164,14 @@ Token Lexer::LexIdentifier() {
   while (IsIdentifierBody(Peek()))
     Consume();
   std::string_view previous(previous_end_, token_start_ - previous_end_);
-  SourceLocation previous_end(previous, source_file_);
+  SourceSpan previous_end(previous, source_file_);
   std::string_view identifier_data = Reset(Token::Kind::kIdentifier);
   auto subkind = Token::Subkind::kNone;
   auto lookup = keyword_table_.find(identifier_data);
   if (lookup != keyword_table_.end())
     subkind = lookup->second;
-  return Token(previous_end, SourceLocation(identifier_data, source_file_),
-               Token::Kind::kIdentifier, subkind);
+  return Token(previous_end, SourceSpan(identifier_data, source_file_), Token::Kind::kIdentifier,
+               subkind);
 }
 
 Token Lexer::LexStringLiteral() {
@@ -338,11 +337,11 @@ Token Lexer::Lex() {
           case '/':
             return LexCommentOrDocComment();
           default: {
-            SourceLocation location(std::string_view(token_start_, token_size_), source_file_);
+            SourceSpan span(std::string_view(token_start_, token_size_), source_file_);
             std::string msg("invalid character '");
-            msg.append(location.data());
+            msg.append(span.data());
             msg.append("'");
-            error_reporter_->ReportError(location, msg);
+            error_reporter_->ReportError(span, msg);
             continue;
           }
         }  // switch
@@ -380,11 +379,11 @@ Token Lexer::Lex() {
         return Finish(Token::Kind::kAmpersand);
 
       default: {
-        SourceLocation location(std::string_view(token_start_, token_size_), source_file_);
+        SourceSpan span(std::string_view(token_start_, token_size_), source_file_);
         std::string msg("invalid character '");
-        msg.append(location.data());
+        msg.append(span.data());
         msg.append("'");
-        error_reporter_->ReportError(location, msg);
+        error_reporter_->ReportError(span, msg);
         continue;
       }
     }  // switch

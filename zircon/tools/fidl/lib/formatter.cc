@@ -378,7 +378,7 @@ void FormattingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& eleme
   size_t offset = strspn(start_ptr, utils::kWhitespaceChars);
   std::string_view processed_file_start(start_ptr + offset, initial_length - offset);
   element->start_.set_previous_end(
-      fidl::SourceLocation(processed_file_start, real_start.previous_end().source_file()));
+      fidl::SourceSpan(processed_file_start, real_start.previous_end().source_file()));
 
   DeclarationOrderTreeVisitor::OnFile(element);
   // Remove EOF whitespace

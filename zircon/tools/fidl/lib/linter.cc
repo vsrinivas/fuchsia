@@ -25,7 +25,7 @@ namespace {
 // of the end token. The three methods support classes derived from
 // SourceElement, by reference, pointer, or unique_ptr.
 static std::string_view to_string_view(const fidl::raw::SourceElement& element) {
-  return element.location().data();
+  return element.span().data();
 }
 
 static std::string_view to_string_view(const fidl::raw::SourceElement* element) {
@@ -106,8 +106,8 @@ const fidl::raw::SourceElement& GetElementAsRef(
 // Add a finding with |Finding| constructor arguments.
 // This function is const because the Findings (TreeVisitor) object
 // is not modified. It's Findings object (not owned) is updated.
-Finding* Linter::AddFinding(SourceLocation location, std::string check_id, std::string message) {
-  auto result = current_findings_.emplace(new Finding(location, check_id, message));
+Finding* Linter::AddFinding(SourceSpan span, std::string check_id, std::string message) {
+  auto result = current_findings_.emplace(new Finding(span, check_id, message));
   // Future checks may need to allow multiple findings of the
   // same check ID at the same location.
   assert(result.second && "Duplicate key. Check criteria in Finding.operator==() and operator<()");
@@ -115,11 +115,10 @@ Finding* Linter::AddFinding(SourceLocation location, std::string check_id, std::
 }
 
 // Add a finding with optional suggestion and replacement
-const Finding* Linter::AddFinding(SourceLocation location, const CheckDef& check,
+const Finding* Linter::AddFinding(SourceSpan span, const CheckDef& check,
                                   Substitutions substitutions, std::string suggestion_template,
                                   std::string replacement_template) {
-  auto* finding =
-      AddFinding(location, check.id(), check.message_template().Substitute(substitutions));
+  auto* finding = AddFinding(span, check.id(), check.message_template().Substitute(substitutions));
   if (finding == nullptr) {
     return nullptr;
   }
@@ -140,7 +139,7 @@ const Finding* Linter::AddFinding(const SourceElementSubtypeRefOrPtr& element,
                                   const CheckDef& check, Substitutions substitutions,
                                   std::string suggestion_template,
                                   std::string replacement_template) {
-  return AddFinding(GetElementAsRef(element).location(), check, substitutions, suggestion_template,
+  return AddFinding(GetElementAsRef(element).span(), check, substitutions, suggestion_template,
                     replacement_template);
 }
 
@@ -184,8 +183,7 @@ void Linter::NewFile(const raw::File& element) {
   library_is_platform_source_library_ =
       (kPermittedLibraryPrefixes.find(library_prefix_) != kPermittedLibraryPrefixes.end());
 
-  auto location = element.location();
-  filename_ = location.source_file().filename();
+  filename_ = element.span().source_file().filename();
 
   file_is_in_platform_source_tree_ = false;
   auto in_fuchsia_dir_regex = std::regex(R"REGEX(\bfuchsia/)REGEX");
@@ -212,8 +210,8 @@ void Linter::NewFile(const raw::File& element) {
   // fuchsia.hardware.* libraries, where we allow four library components.
   bool libraryNameTooDeep = false;
   if (element.library_name->components.size() > 3) {
-    if (element.library_name->components.at(0)->location().data() == "fuchsia" &&
-        element.library_name->components.at(1)->location().data() == "hardware") {
+    if (element.library_name->components.at(0)->span().data() == "fuchsia" &&
+        element.library_name->components.at(1)->span().data() == "hardware") {
       if (element.library_name->components.size() > 4) {
         libraryNameTooDeep = true;
       }
@@ -260,7 +258,7 @@ void Linter::CheckRepeatedName(std::string type,
     std::set_intersection(words.begin(), words.end(), context.words().begin(),
                           context.words().end(), std::inserter(repeats, repeats.begin()));
     if (!repeats.empty()) {
-      context.AddRepeatsContextNames(type, identifier->location(), repeats);
+      context.AddRepeatsContextNames(type, identifier->span(), repeats);
     }
   }
 }
@@ -274,7 +272,7 @@ const Finding* Linter::AddRepeatedNameFinding(const Context& context,
     }
     repeated_names.append(repeat);
   }
-  return AddFinding(name_repeater.location, context.context_check(),
+  return AddFinding(name_repeater.span, context.context_check(),
                     {
                         {"TYPE", name_repeater.type},
                         {"REPEATED_NAMES", repeated_names},
@@ -295,14 +293,14 @@ std::string Linter::GetCopyrightSuggestion() {
   }
 }
 
-void Linter::AddInvalidCopyrightFinding(SourceLocation location) {
+void Linter::AddInvalidCopyrightFinding(SourceSpan span) {
   if (!added_invalid_copyright_finding_) {
     added_invalid_copyright_finding_ = true;
-    AddFinding(location, kInvalidCopyrightCheck, {}, GetCopyrightSuggestion());
+    AddFinding(span, kInvalidCopyrightCheck, {}, GetCopyrightSuggestion());
   }
 }
 
-void Linter::CheckInvalidCopyright(SourceLocation location, std::string line_comment,
+void Linter::CheckInvalidCopyright(SourceSpan span, std::string line_comment,
                                    std::string line_to_match) {
   if (line_comment == line_to_match) {
     good_copyright_lines_found_++;
@@ -318,12 +316,12 @@ void Linter::CheckInvalidCopyright(SourceLocation location, std::string line_com
   auto first_mismatch = std::mismatch(line_comment.begin(), end_it, line_to_match.begin());
   auto index = first_mismatch.first - line_comment.begin();
   if (index > 0) {
-    std::string_view error_view = location.data();
+    std::string_view error_view = span.data();
     error_view.remove_prefix(index);
-    auto& source_file = location.source_file();
-    location = SourceLocation(error_view, source_file);
+    auto& source_file = span.source_file();
+    span = SourceSpan(error_view, source_file);
   }
-  AddInvalidCopyrightFinding(location);
+  AddInvalidCopyrightFinding(span);
 }
 
 bool Linter::CopyrightCheckIsComplete() {
@@ -511,20 +509,20 @@ Linter::Linter()
   callbacks_.OnLineComment(
       [&linter = *this]
       //
-      (const SourceLocation& location, std::string_view line_prefix_view) {
+      (const SourceSpan& span, std::string_view line_prefix_view) {
         linter.line_comments_checked_++;
         if (linter.CopyrightCheckIsComplete() &&
             linter.line_comments_checked_ > linter.kCopyrightLines.size()) {
           return;
         }
-        // location.position() is not a lightweight operation, but as long as
+        // span.position() is not a lightweight operation, but as long as
         // the conditions above are checked first, the line number only needs
         // to be computed a minimum number of times.
-        size_t line_number = location.position().line;
-        std::string line_comment = std::string(location.data());
+        size_t line_number = span.position().line;
+        std::string line_comment = std::string(span.data());
         if (line_number > linter.kCopyrightLines.size()) {
           if (!linter.CopyrightCheckIsComplete()) {
-            linter.AddInvalidCopyrightFinding(location);
+            linter.AddInvalidCopyrightFinding(span);
           }
           return;
         }
@@ -539,21 +537,20 @@ Linter::Linter()
           line_to_match =
               TemplateString(line_to_match).Substitute({{"YYYY", linter.copyright_date_}});
         }
-        linter.CheckInvalidCopyright(location, line_comment, line_to_match);
+        linter.CheckInvalidCopyright(span, line_comment, line_to_match);
       });
 
-  callbacks_.OnExitFile(
-      [&linter = *this]
-      //
-      (const raw::File& element) {
-        if (!linter.CopyrightCheckIsComplete()) {
-          auto& source_file = element.location().source_file();
-          std::string_view error_view = source_file.data();
-          error_view.remove_suffix(source_file.data().size());
-          linter.AddInvalidCopyrightFinding(SourceLocation(error_view, source_file));
-        }
-        linter.ExitContext();
-      });
+  callbacks_.OnExitFile([&linter = *this]
+                        //
+                        (const raw::File& element) {
+                          if (!linter.CopyrightCheckIsComplete()) {
+                            auto& source_file = element.span().source_file();
+                            std::string_view error_view = source_file.data();
+                            error_view.remove_suffix(source_file.data().size());
+                            linter.AddInvalidCopyrightFinding(SourceSpan(error_view, source_file));
+                          }
+                          linter.ExitContext();
+                        });
 
   callbacks_.OnAttribute(
       [&linter = *this,
@@ -589,9 +586,9 @@ Linter::Linter()
        trailing_comment_check = DefineCheck("no-trailing-comment",
                                             "Place comments above the thing being described")]
       //
-      (const SourceLocation& location, std::string_view line_prefix_view) {
+      (const SourceSpan& span, std::string_view line_prefix_view) {
         if (!utils::IsBlank(line_prefix_view)) {
-          linter.AddFinding(location, trailing_comment_check);
+          linter.AddFinding(span, trailing_comment_check);
         }
       });
   // clang-format on

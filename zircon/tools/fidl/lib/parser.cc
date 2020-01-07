@@ -98,7 +98,7 @@ Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
 
 bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
                                  std::optional<types::HandleSubtype>* out_handle_subtype) {
-  auto lookup = handle_subtype_table_.find(identifier->location().data());
+  auto lookup = handle_subtype_table_.find(identifier->span().data());
   if (lookup == handle_subtype_table_.end()) {
     return false;
   }
@@ -215,7 +215,7 @@ std::unique_ptr<raw::Ordinal32> Parser::ParseOrdinal32() {
   ConsumeToken(OfKind(Token::Kind::kNumericLiteral));
   if (!Ok())
     return Fail();
-  auto data = scope.GetSourceElement().location().data();
+  auto data = scope.GetSourceElement().span().data();
   std::string string_data(data.data(), data.data() + data.size());
   errno = 0;
   unsigned long long value = strtoull(string_data.data(), nullptr, 0);
@@ -285,12 +285,11 @@ std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
   std::string str_name("");
   std::string str_value("");
   if (name)
-    str_name = std::string(name->location().data().data(), name->location().data().size());
+    str_name = std::string(name->span().data().data(), name->span().data().size());
   if (value) {
-    auto data = value->location().data();
+    auto data = value->span().data();
     if (data.size() >= 2 && data[0] == '"' && data[data.size() - 1] == '"') {
-      str_value =
-          std::string(value->location().data().data() + 1, value->location().data().size() - 2);
+      str_value = std::string(value->span().data().data() + 1, value->span().data().size() - 2);
     }
   }
   return std::make_unique<raw::Attribute>(scope.GetSourceElement(), str_name, str_value);
@@ -344,8 +343,7 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
     if (!Ok())
       return Fail();
     // NOTE: we currently explicitly only support UNIX line endings
-    str_value +=
-        std::string(doc_line.location().data().data() + 3, doc_line.location().data().size() - 2);
+    str_value += std::string(doc_line.span().data().data() + 3, doc_line.span().data().size() - 2);
   }
 
   if (Peek().kind() == Token::Kind::kEndOfFile)
@@ -442,8 +440,8 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
   if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     if (!Ok())
       return Fail();
-    bool is_handle_identifier = identifier->components.size() == 1 &&
-                                identifier->components[0]->location().data() == "handle";
+    bool is_handle_identifier =
+        identifier->components.size() == 1 && identifier->components[0]->span().data() == "handle";
     if (is_handle_identifier) {
       auto identifier = ParseIdentifier(true);
       if (!Ok())
@@ -789,7 +787,7 @@ void Parser::ParseProtocolMember(
         auto method = ParseProtocolMethod(std::move(attributes), scope, std::move(identifier));
         methods->push_back(std::move(method));
         break;
-      } else if (identifier->location().data() == "compose") {
+      } else if (identifier->span().data() == "compose") {
         if (attributes) {
           Fail("Cannot attach attributes to compose stanza");
           break;
@@ -1338,7 +1336,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         } else if (done_with_library_imports) {
           // TODO(FIDL-582): Give one week warning, then turn this into
           // an error.
-          error_reporter_->ReportWarning(using_decl->location(),
+          error_reporter_->ReportWarning(using_decl->span(),
                                          "library imports must be grouped at top-of-file");
         }
         using_list.emplace_back(std::move(using_decl));

@@ -371,7 +371,7 @@ struct UseDependent {
   END_TEST;
 }
 
-bool multiline_comment_has_correct_source_location() {
+bool multiline_comment_has_correct_source_span() {
   BEGIN_TEST;
 
   TestLibrary library("example.fidl", R"FIDL(
@@ -389,7 +389,7 @@ bool multiline_comment_has_correct_source_location() {
   fidl::raw::Attribute attribute =
       ast->struct_declaration_list.front()->attributes->attributes.front();
   ASSERT_STR_EQ(attribute.name.c_str(), "Doc");
-  ASSERT_STR_EQ(std::string(attribute.location().data()).c_str(),
+  ASSERT_STR_EQ(std::string(attribute.span().data()).c_str(),
                 R"EXPECTED(/// A
   /// multiline
   /// comment!)EXPECTED");
@@ -581,7 +581,7 @@ RUN_TEST(bad_identifier_test)
 RUN_TEST(invalid_character_test)
 RUN_TEST(empty_struct_test)
 RUN_TEST(warn_on_type_alias_before_imports)
-RUN_TEST(multiline_comment_has_correct_source_location)
+RUN_TEST(multiline_comment_has_correct_source_span)
 RUN_TEST(doc_comment_blank_line_test)
 RUN_TEST(doc_comment_with_comment_blank_line_test)
 RUN_TEST(doc_comment_not_allowed_on_params)

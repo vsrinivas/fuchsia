@@ -6,7 +6,7 @@
 
 #include <cassert>
 
-#include "fidl/source_location.h"
+#include "fidl/source_span.h"
 #include "fidl/token.h"
 
 namespace fidl {
@@ -25,9 +25,9 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
   return squiggle;
 }
 
-std::string Format(std::string qualifier, const std::optional<SourceLocation>& location,
+std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
                    std::string_view message, size_t squiggle_size = 0u) {
-  if (!location) {
+  if (!span) {
     std::string error = qualifier;
     error.append(": ");
     error.append(message);
@@ -35,7 +35,7 @@ std::string Format(std::string qualifier, const std::optional<SourceLocation>& l
   }
 
   SourceFile::Position position;
-  std::string surrounding_line = std::string(location->SourceLine(&position));
+  std::string surrounding_line = std::string(span->SourceLine(&position));
   assert(surrounding_line.find('\n') == std::string::npos &&
          "A single line should not contain a newline character");
 
@@ -58,7 +58,7 @@ std::string Format(std::string qualifier, const std::optional<SourceLocation>& l
 
   // Many editors and IDEs recognize errors in the form of
   // filename:linenumber:column: error: descriptive-test-here\n
-  std::string error = location->position_str();
+  std::string error = span->position_str();
   error.append(": ");
   error.append(qualifier);
   error.append(": ");
@@ -86,41 +86,39 @@ void ErrorReporter::AddWarning(std::string formatted_message) {
   }
 }
 
-// ReportError records an error with the location, message, source line, and
+// ReportError records an error with the span, message, source line, and
 // position indicator.
 //
 //     filename:line:col: error: message
 //     sourceline
 //        ^
-void ErrorReporter::ReportError(const std::optional<SourceLocation>& location,
-                                std::string_view message) {
-  auto error = Format("error", location, message);
+void ErrorReporter::ReportError(const std::optional<SourceSpan>& span, std::string_view message) {
+  auto error = Format("error", span, message);
   AddError(std::move(error));
 }
 
-// Records an error with the location, message, source line,
+// Records an error with the span, message, source line,
 // position indicator, and tildes under the token reported.
 //
 //     filename:line:col: error: message
 //     sourceline
 //        ^~~~
-void ErrorReporter::ReportErrorWithSquiggle(const SourceLocation& location,
-                                            std::string_view message) {
-  auto token_data = location.data();
-  auto error = Format("error", std::make_optional(location), message, token_data.size());
+void ErrorReporter::ReportErrorWithSquiggle(const SourceSpan& span, std::string_view message) {
+  auto token_data = span.data();
+  auto error = Format("error", std::make_optional(span), message, token_data.size());
   AddError(std::move(error));
 }
 
-// ReportError records an error with the location, message, source line,
+// ReportError records an error with the span, message, source line,
 // position indicator, and tildes under the token reported.
-// Uses the given Token to get its location, and then calls
-// ReportErrortLocationWithSquiggle()
+// Uses the given Token to get its span, and then calls
+// ReportErrorWithSquiggle()
 //
 //     filename:line:col: error: message
 //     sourceline
 //        ^~~~
 void ErrorReporter::ReportError(const Token& token, std::string_view message) {
-  ReportErrorWithSquiggle(token.location(), message);
+  ReportErrorWithSquiggle(token.span(), message);
 }
 
 // ReportError records the provided message.
@@ -130,33 +128,31 @@ void ErrorReporter::ReportError(std::string_view message) {
   AddError(std::move(error));
 }
 
-// ReportWarning records a warning with the location, message, source line, and
+// ReportWarning records a warning with the span, message, source line, and
 // position indicator.
 //
 //     filename:line:col: warning: message
 //     sourceline
 //        ^
-void ErrorReporter::ReportWarning(const std::optional<SourceLocation>& location,
-                                  std::string_view message) {
-  auto warning = Format("warning", location, message);
+void ErrorReporter::ReportWarning(const std::optional<SourceSpan>& span, std::string_view message) {
+  auto warning = Format("warning", span, message);
   AddWarning(std::move(warning));
 }
 
-// Records a warning with the location, message, source line,
+// Records a warning with the span, message, source line,
 // position indicator, and tildes under the token reported.
 //
 //     filename:line:col: warning: message
 //     sourceline
 //        ^~~~
-void ErrorReporter::ReportWarningWithSquiggle(const SourceLocation& location,
-                                              std::string_view message) {
-  auto token_data = location.data();
-  auto warning = Format("warning", std::make_optional(location), message, token_data.size());
+void ErrorReporter::ReportWarningWithSquiggle(const SourceSpan& span, std::string_view message) {
+  auto token_data = span.data();
+  auto warning = Format("warning", std::make_optional(span), message, token_data.size());
   AddWarning(std::move(warning));
 }
 
 void ErrorReporter::ReportWarning(const Token& token, std::string_view message) {
-  ReportWarningWithSquiggle(token.location(), message);
+  ReportWarningWithSquiggle(token.span(), message);
 }
 
 void ErrorReporter::PrintReports() {

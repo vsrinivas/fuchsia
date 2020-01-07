@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "source_file.h"
-#include "source_location.h"
+#include "source_span.h"
 
 namespace fidl {
 
@@ -24,7 +24,7 @@ class VirtualSourceFile : public SourceFile {
 
   virtual std::string_view LineContaining(std::string_view view, Position* position_out) const;
 
-  SourceLocation AddLine(const std::string& line);
+  SourceSpan AddLine(const std::string& line);
 
  private:
   std::vector<std::unique_ptr<std::string>> virtual_lines_;

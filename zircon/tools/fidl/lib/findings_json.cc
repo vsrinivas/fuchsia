@@ -11,24 +11,24 @@ void FindingsJson::Generate(const Finding& finding) {
     GenerateObjectMember("category", "fidl-lint/" + finding.subcategory(), Position::kFirst);
     GenerateObjectMember("message", finding.message());
     // TODO(FIDL-668) Add "url" to related FIDL documentation, per Tricium spec
-    Generate(finding.location());
-    std::vector<SuggestionWithReplacementLocation> suggestions;
+    Generate(finding.span());
+    std::vector<SuggestionWithReplacementSpan> suggestions;
     if (finding.suggestion().has_value()) {
       suggestions.emplace_back(
-          SuggestionWithReplacementLocation{finding.location(), finding.suggestion().value()});
+          SuggestionWithReplacementSpan{finding.span(), finding.suggestion().value()});
     }
     GenerateObjectMember("suggestions", suggestions);
   });
 }
 
-void FindingsJson::Generate(const SuggestionWithReplacementLocation& suggestion_with_location) {
-  auto& suggestion = suggestion_with_location.suggestion;
-  auto& location = suggestion_with_location.location;
+void FindingsJson::Generate(const SuggestionWithReplacementSpan& suggestion_with_span) {
+  auto& suggestion = suggestion_with_span.suggestion;
+  auto& span = suggestion_with_span.span;
   GenerateObject([&]() {
     GenerateObjectMember("description", suggestion.description(), Position::kFirst);
     std::vector<Replacement> replacements;
     if (suggestion.replacement().has_value()) {
-      replacements.emplace_back(Replacement{location, suggestion.replacement().value()});
+      replacements.emplace_back(Replacement{span, suggestion.replacement().value()});
     }
     GenerateObjectMember("replacements", replacements);
   });
@@ -37,21 +37,21 @@ void FindingsJson::Generate(const SuggestionWithReplacementLocation& suggestion_
 void FindingsJson::Generate(const Replacement& replacement) {
   GenerateObject([&]() {
     GenerateObjectMember("replacement", replacement.replacement, Position::kFirst);
-    Generate(replacement.location);
+    Generate(replacement.span);
   });
 }
 
-void FindingsJson::Generate(const SourceLocation& location) {
-  GenerateObjectMember("path", location.source_file().filename());
+void FindingsJson::Generate(const SourceSpan& span) {
+  GenerateObjectMember("path", span.source_file().filename());
 
-  auto start = location.data();
-  auto end = location.data();
+  auto start = span.data();
+  auto end = span.data();
   end.remove_prefix(start.size());
 
-  auto end_location = SourceLocation(end, location.source_file());
+  auto end_span = SourceSpan(end, span.source_file());
 
-  SourceFile::Position start_position = location.position();
-  SourceFile::Position end_position = end_location.position();
+  SourceFile::Position start_position = span.position();
+  SourceFile::Position end_position = end_span.position();
 
   GenerateObjectMember("start_line", static_cast<uint32_t>(start_position.line));
   GenerateObjectMember("start_char", static_cast<uint32_t>(start_position.column - 1));

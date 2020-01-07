@@ -134,12 +134,11 @@ class Linter {
     // names help differentiate two identifiers that represent different
     // parts of the concept represented by the context identifier.
     struct RepeatsContextNames {
-      RepeatsContextNames(std::string a_type, SourceLocation a_location,
-                          std::set<std::string> a_repeats)
-          : type(a_type), location(a_location), repeats(a_repeats) {}
+      RepeatsContextNames(std::string a_type, SourceSpan a_span, std::set<std::string> a_repeats)
+          : type(std::move(a_type)), span(a_span), repeats(std::move(a_repeats)) {}
 
       const std::string type;
-      const SourceLocation location;
+      const SourceSpan span;
       const std::set<std::string> repeats;
     };
 
@@ -156,9 +155,9 @@ class Linter {
 
   CheckDef DefineCheck(std::string check_id, std::string message_template);
 
-  Finding* AddFinding(SourceLocation source_location, std::string check_id, std::string message);
+  Finding* AddFinding(SourceSpan source_span, std::string check_id, std::string message);
 
-  const Finding* AddFinding(SourceLocation location, const CheckDef& check,
+  const Finding* AddFinding(SourceSpan span, const CheckDef& check,
                             Substitutions substitutions = {}, std::string suggestion_template = "",
                             std::string replacement_template = "");
 
@@ -200,9 +199,8 @@ class Linter {
   void ExitContext();
 
   std::string GetCopyrightSuggestion();
-  void AddInvalidCopyrightFinding(SourceLocation location);
-  void CheckInvalidCopyright(SourceLocation location, std::string line_comment,
-                             std::string line_to_match);
+  void AddInvalidCopyrightFinding(SourceSpan span);
+  void CheckInvalidCopyright(SourceSpan span, std::string line_comment, std::string line_to_match);
   bool CopyrightCheckIsComplete();
 
   std::string MakeCopyrightBlock();
@@ -274,14 +272,14 @@ class Linter {
   // Compare type provides the function for ordering elements in the set, and
   // ensuring elements are set-wise unique. The current assumption is that no
   // two findings from the same subcategory at the same location are expected.
-  // By including both source location and subcategory, all expected Findings
+  // By including both source span and subcategory, all expected Findings
   // will be unique, and any Finding added with the same location and
   // subcategory as another will be considered a bug.
   struct FindingPtrCompare {
     // Return true if lhs < rhs.
     bool operator()(const FindingPtr& lhs, const FindingPtr& rhs) const {
-      return lhs->location() < rhs->location() ||
-             (lhs->location() == rhs->location() && lhs->subcategory() < rhs->subcategory());
+      return lhs->span() < rhs->span() ||
+             (lhs->span() == rhs->span() && lhs->subcategory() < rhs->subcategory());
     }
   };
 
@@ -299,7 +297,7 @@ class Linter {
   // |Finding| objects must be returned in source order (filename, starting
   // character, and ending character).
   //
-  // |Finding| objects are sorted by SourceLocation, with additional criteria
+  // |Finding| objects are sorted by SourceSpan, with additional criteria
   // to sort multiple findings for the same source element. If a Finding is
   // added to an ordered collection that does not allow duplicates, and the
   // sort criteria is not specific enough to avoid a key collision, an

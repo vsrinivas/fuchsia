@@ -292,7 +292,7 @@ class Parser {
   std::vector<raw::SourceElement> active_ast_scopes_;
   // The most recent start of a "gap" - the uninteresting source prior to the
   // beginning of a token (usually mostly containing whitespace).
-  SourceLocation gap_start_;
+  SourceSpan gap_start_;
   // Indicates that the last element was the start of a gap, and that the
   // scope should be updated accordingly.
   bool last_was_gap_start_ = false;

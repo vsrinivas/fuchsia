@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fstream>
+
 #include <fidl/findings_json.h>
 #include <fidl/template_string.h>
 #include <fidl/utils.h>
-
-#include <fstream>
 
 #include "test_library.h"
 #include "unittest_helpers.h"
@@ -89,9 +89,9 @@ class JsonFindingsTest {
 
     source_data.remove_prefix(start);
     source_data.remove_suffix(source_data.size() - size);
-    auto location = fidl::SourceLocation(source_data, source_file);
+    auto span = fidl::SourceSpan(source_data, source_file);
 
-    return &findings_.emplace_back(location, args.check_id, args.message);
+    return &findings_.emplace_back(span, args.check_id, args.message);
   }
 
   bool ExpectJson(std::string expected_json) {

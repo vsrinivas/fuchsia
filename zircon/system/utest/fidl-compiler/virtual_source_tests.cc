@@ -4,7 +4,7 @@
 
 #include <unittest/unittest.h>
 
-#include "fidl/source_location.h"
+#include "fidl/source_span.h"
 #include "test_library.h"
 
 namespace {
@@ -14,9 +14,9 @@ bool AddLine() {
 
   fidl::VirtualSourceFile file("imaginary-test-file");
 
-  fidl::SourceLocation one = file.AddLine("one");
-  fidl::SourceLocation two = file.AddLine("two");
-  fidl::SourceLocation three = file.AddLine("three");
+  fidl::SourceSpan one = file.AddLine("one");
+  fidl::SourceSpan two = file.AddLine("two");
+  fidl::SourceSpan three = file.AddLine("three");
 
   EXPECT_STR_EQ(std::string(one.data()).c_str(), "one");
   EXPECT_STR_EQ(std::string(two.data()).c_str(), "two");
@@ -31,7 +31,7 @@ bool LineContaining() {
   fidl::VirtualSourceFile file("imaginary-test-file");
 
   file.AddLine("one");
-  fidl::SourceLocation two = file.AddLine("two");
+  fidl::SourceSpan two = file.AddLine("two");
   file.AddLine("three");
 
   fidl::SourceFile::Position pos{};
