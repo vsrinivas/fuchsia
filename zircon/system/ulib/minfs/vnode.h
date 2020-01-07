@@ -490,6 +490,14 @@ class VnodeMinfs : public fs::Vnode,
   uint32_t fd_count_{};
 };
 
+// Given vnode block offset returns the indirect vmo size needed to hold the
+// vnode block map.
+// Note: Vnode block offset 0 cover vnode size from 0 to 8192 bytes.
+//                   offset 1 covers vnode size from 8193 to 16384 bytes. So on.
+//       Vnode block offset is different from vnode size in blocks.
+// TODO(43586).
+uint64_t VnodeBlockOffsetToIndirectVmoSize(blk_t vnode_block_offset);
+
 }  // namespace minfs
 
 #endif  // ZIRCON_SYSTEM_ULIB_MINFS_VNODE_H_

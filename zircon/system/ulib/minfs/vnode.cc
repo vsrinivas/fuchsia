@@ -37,6 +37,24 @@
 
 namespace minfs {
 
+uint64_t VnodeBlockOffsetToIndirectVmoSize(blk_t vnode_block_offset) {
+  if (vnode_block_offset < kMinfsDirect) {
+    return 0;
+  }
+
+  // Number of blocks prior to dindirect blocks
+  blk_t pre_dindirect = kMinfsDirect + (kMinfsDirectPerIndirect * kMinfsIndirect);
+
+  if (vnode_block_offset < pre_dindirect) {
+    return GetVmoSizeForDoublyIndirect();
+  }
+
+  // Index of last doubly indirect block
+  blk_t dibindex = (vnode_block_offset - pre_dindirect) / kMinfsDirectPerDindirect;
+  ZX_DEBUG_ASSERT(dibindex < kMinfsDoublyIndirect);
+  return GetVmoSizeForIndirect(dibindex);
+}
+
 #ifdef __Fuchsia__
 
 void VnodeMinfs::HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* transaction) {
@@ -611,28 +629,22 @@ zx_status_t VnodeMinfs::ApplyOperation(BlockOpArgs* op_args) {
 
 zx_status_t VnodeMinfs::EnsureIndirectVmoSize(blk_t n) {
 #ifdef __Fuchsia__
-  if (n >= kMinfsDirect) {
-    zx_status_t status;
-    // If the vmo_indirect_ vmo has not been created, make it now.
-    if ((status = InitIndirectVmo()) != ZX_OK) {
-      return status;
-    }
-
-    // Number of blocks prior to dindirect blocks
-    blk_t pre_dindirect = kMinfsDirect + kMinfsDirectPerIndirect * kMinfsIndirect;
-    if (n >= pre_dindirect) {
-      // Index of last doubly indirect block
-      blk_t dibindex = (n - pre_dindirect) / kMinfsDirectPerDindirect;
-      ZX_DEBUG_ASSERT(dibindex < kMinfsDoublyIndirect);
-      uint64_t vmo_size = GetVmoSizeForIndirect(dibindex);
-      // Grow VMO if we need more space to fit doubly indirect blocks
-      if (vmo_indirect_->size() < vmo_size) {
-        if ((status = vmo_indirect_->Grow(vmo_size)) != ZX_OK) {
-          return status;
-        }
-      }
-    }
+  uint64_t vmo_size = VnodeBlockOffsetToIndirectVmoSize(n);
+  if (vmo_size == 0) {
+    return ZX_OK;
   }
+
+  zx_status_t status;
+  // If the vmo_indirect_ vmo has not been created, make it now.
+  if ((status = InitIndirectVmo()) != ZX_OK) {
+    return status;
+  }
+
+  // Grow VMO if we need more space to fit doubly indirect blocks
+  if (vmo_indirect_->size() < vmo_size) {
+    return vmo_indirect_->Grow(vmo_size);
+  }
+
 #endif
   return ZX_OK;
 }

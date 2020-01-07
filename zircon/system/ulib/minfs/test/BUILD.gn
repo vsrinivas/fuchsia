@@ -21,6 +21,7 @@ zx_test("minfs-unit") {
     "unit/mkfs-test.cc",
     "unit/superblock-test.cc",
     "unit/transaction-test.cc",
+    "unit/vnode-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-minfs:c",
