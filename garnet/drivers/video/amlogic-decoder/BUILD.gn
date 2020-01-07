@@ -157,6 +157,7 @@ if (target_cpu == "arm64") {
       ":test_support",
       "//sdk/fidl/fuchsia.mediacodec",
       "//src/media/lib/codec_impl",
+      "//third_party/boringssl:crypto",
       "//third_party/googletest:gtest",
     ]
     sources = [
@@ -164,6 +165,8 @@ if (target_cpu == "arm64") {
       "tests/integration/test_mpeg2.cc",
       "tests/integration/test_parser.cc",
       "tests/integration/test_vp9.cc",
+      "tests/integration/video_frame_helpers.cc",
+      "tests/integration/video_frame_helpers.h",
       "tests/test_support.cc",
       "tests/unit_tests/test_binding.cc",
       "tests/unit_tests/test_vp9.cc",

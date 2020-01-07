@@ -5,13 +5,17 @@
 #include <byteswap.h>
 #include <zircon/compiler.h>
 
+#include <openssl/sha.h>
+
 #include "amlogic-video.h"
 #include "gtest/gtest.h"
 #include "hevcdec.h"
 #include "macros.h"
 #include "pts_manager.h"
+#include "test_25fps_vp9_hashes.h"
 #include "test_frame_allocator.h"
 #include "tests/test_support.h"
+#include "video_frame_helpers.h"
 #include "vp9_decoder.h"
 #include "vp9_utils.h"
 
@@ -120,7 +124,7 @@ constexpr uint32_t kTestVideoFrameCount = 249;
 class TestVP9 {
  public:
   static void Decode(bool use_parser, bool use_compressed_output, bool delayed_return,
-                     const char* input_filename, const char* filename) {
+                     const char* input_filename, const char* filename, bool test_hashes) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
@@ -154,29 +158,35 @@ class TestVP9 {
     std::vector<std::weak_ptr<VideoFrame>> frames_to_return;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_->SetFrameReadyNotifier([&video, &frames_to_return, &frame_count,
-                                                    &wait_valid, &frames_returned, delayed_return,
-                                                    filename](std::shared_ptr<VideoFrame> frame) {
-        ++frame_count;
-        DLOG("Got frame %d\n", frame_count);
-        EXPECT_EQ(320u, frame->display_width);
-        EXPECT_EQ(240u, frame->display_height);
-        (void)filename;
+      video->video_decoder_->SetFrameReadyNotifier(
+          [&video, &frames_to_return, &frame_count, &wait_valid, &frames_returned, delayed_return,
+           filename, test_hashes](std::shared_ptr<VideoFrame> frame) {
+            ++frame_count;
+            DLOG("Got frame %d\n", frame_count);
+            EXPECT_EQ(320u, frame->display_width);
+            EXPECT_EQ(240u, frame->display_height);
+            (void)filename;
 #if DUMP_VIDEO_TO_FILE
-        DumpVideoFrameToFile(frame.get(), filename);
+            DumpVideoFrameToFile(frame.get(), filename);
 #endif
-        if (frames_returned || !delayed_return)
-          ReturnFrame(video.get(), frame);
-        else
-          frames_to_return.push_back(frame);
-        if (frame_count == kTestVideoFrameCount)
-          wait_valid.set_value();
+            if (test_hashes) {
+              uint8_t md[SHA256_DIGEST_LENGTH];
+              HashFrame(frame.get(), md);
+              EXPECT_EQ(0, memcmp(md, test_25fps_hashes[frame_count - 1], sizeof(md)))
+                  << "Incorrect hash for frame " << frame_count << ": " << StringifyHash(md);
+            }
+            if (frames_returned || !delayed_return)
+              ReturnFrame(video.get(), frame);
+            else
+              frames_to_return.push_back(frame);
+            if (frame_count == kTestVideoFrameCount)
+              wait_valid.set_value();
 
-        // Testing delayed return doesn't work well with reallocating buffers, since the
-        // decoder will throw out the old buffers and continue decoding anyway.
-        if (!delayed_return && (frame_count % 5 == 0))
-          SetReallocateBuffersNextFrameForTesting(video.get());
-      });
+            // Testing delayed return doesn't work well with reallocating buffers, since the
+            // decoder will throw out the old buffers and continue decoding anyway.
+            if (!delayed_return && (frame_count % 5 == 0))
+              SetReallocateBuffersNextFrameForTesting(video.get());
+          });
     }
     auto test_ivf = TestSupport::LoadFirmwareFile(input_filename);
     ASSERT_NE(nullptr, test_ivf);
@@ -637,21 +647,23 @@ class TestVP9 {
 class VP9Compression : public ::testing::TestWithParam</*compressed_output=*/bool> {};
 
 TEST_P(VP9Compression, Decode) {
-  TestVP9::Decode(true, GetParam(), false, "video_test_data/test-25fps.vp9", "/tmp/bearvp9.yuv");
+  TestVP9::Decode(true, GetParam(), false, "video_test_data/test-25fps.vp9", "/tmp/bearvp9.yuv",
+                  true);
 }
 
 TEST_P(VP9Compression, DecodeDelayedReturn) {
-  TestVP9::Decode(true, GetParam(), true, "video_test_data/test-25fps.vp9", "/tmp/bearvp9.yuv");
+  TestVP9::Decode(true, GetParam(), true, "video_test_data/test-25fps.vp9", "/tmp/bearvp9.yuv",
+                  true);
 }
 
 TEST_P(VP9Compression, DecodeNoParser) {
   TestVP9::Decode(false, GetParam(), false, "video_test_data/test-25fps.vp9",
-                  "/tmp/bearvp9noparser.yuv");
+                  "/tmp/bearvp9noparser.yuv", true);
 }
 
 TEST_P(VP9Compression, Decode10Bit) {
   TestVP9::Decode(false, GetParam(), false, "video_test_data/test-25fps.vp9_2",
-                  "/tmp/bearvp9noparser.yuv");
+                  "/tmp/bearvp9noparser.yuv", false);
 }
 
 INSTANTIATE_TEST_SUITE_P(VP9CompressionOptional, VP9Compression, ::testing::Bool());
