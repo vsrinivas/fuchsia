@@ -11,6 +11,7 @@
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/zircon-internal/paths.h>
 #include <lib/zx/debuglog.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -659,7 +660,7 @@ int SystemInstance::ConsoleStarter(const devmgr::BootArgs* arg) {
       return 1;
     }
 
-    const char* argv_sh[] = {"/boot/bin/sh", nullptr};
+    const char* argv_sh[] = {ZX_SHELL_DEFAULT, nullptr};
     zx::process proc;
     status = launcher_.LaunchWithLoader(svc_job_, "sh:console", zx::vmo(), std::move(ldsvc),
                                         argv_sh, envp, fd.release(), zx::resource(), nullptr,

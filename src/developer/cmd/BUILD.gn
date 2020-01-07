@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//build/unification/images/migrated_manifest.gni")
 
 group("tests") {
   testonly = true
@@ -124,5 +125,11 @@ test_package("cmd_tests") {
       name = "cmd_unittests"
       environments = basic_envs
     },
+  ]
+}
+
+migrated_manifest("bin-manifest") {
+  deps = [
+    ":bin",
   ]
 }

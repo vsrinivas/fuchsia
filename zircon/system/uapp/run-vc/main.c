@@ -10,6 +10,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/watcher.h>
+#include <lib/zircon-internal/paths.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -67,7 +68,7 @@ int main(int argc, const char** argv) {
 
   // start shell if no arguments
   if (argc == 1) {
-    argv[0] = "/boot/bin/sh";
+    argv[0] = ZX_SHELL_DEFAULT;
   } else {
     argv++;
   }

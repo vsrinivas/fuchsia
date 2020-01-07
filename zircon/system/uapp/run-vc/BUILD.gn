@@ -9,6 +9,7 @@ zx_executable("run-vc") {
   deps = [
     "$zx/system/fidl/fuchsia-virtualconsole:c",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zircon",
   ]
 }

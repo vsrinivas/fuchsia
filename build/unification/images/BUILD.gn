@@ -1556,6 +1556,7 @@ aggregate_manifest("legacy-tests") {
 
 aggregate_manifest("migrated-image") {
   deps = [
+    "//src/developer/cmd:bin-manifest",
     "//zircon/system/uapp/audio:bin-manifest",
     "//zircon/system/uapp/audio:test-manifest",
     "//zircon/system/uapp/backlight:backlight-manifest",

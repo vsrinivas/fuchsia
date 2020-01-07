@@ -14,6 +14,7 @@
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
+#include <lib/zircon-internal/paths.h>
 #include <lib/zx/channel.h>
 #include <poll.h>
 #include <stdio.h>
@@ -43,7 +44,7 @@
 port_t port;
 static port_handler_t new_vc_ph;
 static zx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
-  const char* argv[] = {"/boot/bin/sh", nullptr, nullptr, nullptr};
+  const char* argv[] = {ZX_SHELL_DEFAULT, nullptr, nullptr, nullptr};
 
   if (cmd) {
     argv[1] = "-c";
