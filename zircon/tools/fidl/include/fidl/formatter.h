@@ -429,8 +429,9 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     // token for the first identifier, so we need to make sure we don't
     // print that token twice.
     if (ws_location > last_location_) {
-      int size = (int)(current_token.data().data() - current_token.previous_end().data().data());
-      std::string gap(ws_location, size);
+      auto gap_size = static_cast<size_t>(current_token.data().data() -
+                                          current_token.previous_end().data().data());
+      std::string gap(ws_location, gap_size);
       std::string content(current_token.data().data(), current_token.data().size());
       std::string total_string = FormatAndPrintSegment(gap + content);
       TrackProtocolMethodAlignment(total_string);
