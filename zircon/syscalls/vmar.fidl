@@ -15,7 +15,7 @@ protocol vmar {
     /// Rights: If options & ZX_VM_CAN_MAP_READ, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
     /// Rights: If options & ZX_VM_CAN_MAP_WRITE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
     /// Rights: If options & ZX_VM_CAN_MAP_EXECUTE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
-    vmar_allocate(handle<vmar> parent_vmar, VmOption options, uint64 offset, uint64 size)
+    vmar_allocate(handle<vmar> parent_vmar, VmOption options, usize offset, usize size)
         -> (status status, handle<vmar> child_vmar, vaddr child_addr);
 
     // TODO(ZX-2967): handle No rights required?
@@ -26,28 +26,28 @@ protocol vmar {
     /// Add a memory mapping.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMAR.
     /// Rights: vmo must be of type ZX_OBJ_TYPE_VMO.
-    vmar_map(handle<vmar> handle, VmOption options, uint64 vmar_offset,
+    vmar_map(handle<vmar> handle, VmOption options, usize vmar_offset,
              handle<vmo> vmo, uint64 vmo_offset,
-             uint64 len)
+             usize len)
         -> (status status, vaddr mapped_addr);
 
     // TODO(ZX-2967): handle No rights required?
     /// Unmap virtual memory pages.
-    vmar_unmap(handle<vmo> handle, vaddr addr, uint64 len) -> (status status);
+    vmar_unmap(handle<vmo> handle, vaddr addr, usize len) -> (status status);
 
     /// Set protection of virtual memory pages.
     /// Rights: If options & ZX_VM_PERM_READ, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
     /// Rights: If options & ZX_VM_PERM_WRITE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
     /// Rights: If options & ZX_VM_PERM_EXECUTE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
-    vmar_protect(handle<vmo> handle, VmOption options, vaddr addr, uint64 len) -> (status status);
+    vmar_protect(handle<vmo> handle, VmOption options, vaddr addr, usize len) -> (status status);
 
     /// Perform an operation on VMOs mapped into this VMAR.
     /// Rights: If op is ZX_VMO_OP_DECOMMIT, affected mappings must be writable.
     [Blocking]
     vmar_op_range(handle<vmar> handle,
                   uint32 op,
-                  uint64 address,
-                  uint64 size,
+                  vaddr address,
+                  usize size,
                   mutable_vector_void buffer)
         -> (status status);
 };

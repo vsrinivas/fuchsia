@@ -127,8 +127,7 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     };
 
     let mut eth_client =
-        ethernet::Client::new(eth_proxy, vmo, ethernet::DEFAULT_BUFFER_SIZE as u64, &ep_name)
-            .await?;
+        ethernet::Client::new(eth_proxy, vmo, ethernet::DEFAULT_BUFFER_SIZE, &ep_name).await?;
 
     eth_client.start().await?;
 

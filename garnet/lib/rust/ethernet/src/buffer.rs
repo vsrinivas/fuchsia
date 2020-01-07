@@ -32,16 +32,16 @@ fn fifo_entry(offset: u32, length: u16) -> FifoEntry {
 
 pub struct RxBuffer {
     data: SharedBuffer,
-    offset: u64,
+    offset: usize,
     buflist: Arc<Mutex<BufferMap>>,
 }
 
 impl RxBuffer {
-    pub fn len(&self) -> u64 {
+    pub fn len(&self) -> usize {
         self.data.len()
     }
 
-    pub fn read(&self, dst: &mut [u8]) -> u64 {
+    pub fn read(&self, dst: &mut [u8]) -> usize {
         self.data.read(dst)
     }
 }
@@ -63,13 +63,13 @@ impl fmt::Debug for RxBuffer {
 
 pub struct TxBuffer<'a> {
     data: SharedBuffer,
-    offset: u64,
-    length: u64,
+    offset: usize,
+    length: usize,
     marker: ::std::marker::PhantomData<&'a BufferPool>,
 }
 
 impl<'a> TxBuffer<'a> {
-    pub fn write(&mut self, src: &[u8]) -> u64 {
+    pub fn write(&mut self, src: &[u8]) -> usize {
         self.length = self.data.write(src);
         self.length
     }
@@ -89,11 +89,11 @@ impl<'a> TxBuffer<'a> {
 pub struct BufferPool {
     /// The pointer and length representing the entire memory available to the pool.
     base: *mut u8,
-    len: u64,
+    len: usize,
     /// The total number of buffers of each type.
-    num_buffers: u64,
+    num_buffers: usize,
     /// The size of a buffer in the pool.
-    buffer_size: u64,
+    buffer_size: usize,
     /// The offsets of the available buffers within the pool.
     rx_avail: Arc<Mutex<BufferMap>>,
     tx_avail: BufferMap,
@@ -116,8 +116,8 @@ unsafe impl Send for BufferPool {}
 impl BufferPool {
     /// Create a new `BufferPool` out of the given VMO, with each buffer having length
     /// `buffer_size`.
-    pub fn new(vmo: zx::Vmo, buffer_size: u64) -> Result<BufferPool, zx::Status> {
-        let len = vmo.get_size()?;
+    pub fn new(vmo: zx::Vmo, buffer_size: usize) -> Result<BufferPool, zx::Status> {
+        let len = vmo.get_size()? as usize;
         let mapped = vmar_root_self().map(
             0,
             &vmo,
@@ -175,7 +175,7 @@ impl BufferPool {
 
     /// Return a transmit buffer returned by the Ethernet device via the tx fifo. The index is
     /// determined by the offset from the `base` of the pool.
-    pub fn release_tx_buffer(&mut self, fifo_offset: u64) {
+    pub fn release_tx_buffer(&mut self, fifo_offset: usize) {
         assert!(fifo_offset % self.buffer_size == 0);
         let offset = fifo_offset / self.buffer_size - self.num_buffers;
         assert!(self.tx_in_flight.get_bit(offset));
@@ -185,7 +185,7 @@ impl BufferPool {
 
     /// Create an `RxBuffer` from the offset+len obtained from the rx fifo from the Ethernet
     /// device. The buffer is no longer considered either available or in-flight.
-    pub fn map_rx_buffer(&mut self, fifo_offset: u64, len: u64) -> RxBuffer {
+    pub fn map_rx_buffer(&mut self, fifo_offset: usize, len: usize) -> RxBuffer {
         assert!(fifo_offset % self.buffer_size == 0);
         assert!(len <= self.buffer_size);
         let offset = fifo_offset / self.buffer_size;
@@ -226,49 +226,49 @@ impl Drop for BufferPool {
 #[derive(Debug)]
 struct BufferMap {
     map: Vec<u64>,
-    len: u64,
+    len: usize,
 }
 
 impl BufferMap {
     /// Create a new `BufferMap` with the given number of bits. The underlying storage may use more
     /// bits, but these are not accessible.
-    fn new(size: u64) -> BufferMap {
-        assert!(size < u64::max_value() - 63);
+    fn new(size: usize) -> BufferMap {
+        assert!(size < usize::max_value() - 63);
         let byte_size = (size + 63) / 64;
-        BufferMap { map: vec![0; byte_size as usize], len: size }
+        BufferMap { map: vec![0; byte_size], len: size }
     }
 
     /// Set the given bit. Panics if the bit is out of the range.
-    fn set_bit(&mut self, bit: u64) {
+    fn set_bit(&mut self, bit: usize) {
         assert!(bit < self.len, "bit index out of bounds");
         let byte_offset = bit / 64;
         let bit_offset = bit % 64;
-        self.map[byte_offset as usize] |= 1 << bit_offset;
+        self.map[byte_offset] |= 1 << bit_offset;
     }
 
     /// Clear the given bit. Panics if the bit is out of range.
-    fn clear_bit(&mut self, bit: u64) {
+    fn clear_bit(&mut self, bit: usize) {
         assert!(bit < self.len, "bit index out of bounds");
         let byte_offset = bit / 64;
         let bit_offset = bit % 64;
-        self.map[byte_offset as usize] &= !(1 << bit_offset);
+        self.map[byte_offset] &= !(1 << bit_offset);
     }
 
     /// Check whether the given bit is set. Panics if the bit is out of range.
-    fn get_bit(&self, bit: u64) -> bool {
+    fn get_bit(&self, bit: usize) -> bool {
         assert!(bit < self.len, "bit index out of bounds");
         let byte_offset = bit / 64;
         let bit_offset = bit % 64;
-        self.map[byte_offset as usize] & (1 << bit_offset) != 0
+        self.map[byte_offset] & (1 << bit_offset) != 0
     }
 
     /// Finds the lowest index bit that is set in the map or `None` if all bits are cleared. The
     /// bit is *not* cleared after returning from this method.
-    fn find_first_set(&self) -> Option<u64> {
+    fn find_first_set(&self) -> Option<usize> {
         for (i, byte) in self.map.iter().enumerate() {
-            let ntz = byte.trailing_zeros() as u64;
+            let ntz = byte.trailing_zeros();
             if ntz < 64 {
-                return Some(i as u64 * 64 + ntz);
+                return Some(i * 64 + ntz as usize);
             }
         }
         None

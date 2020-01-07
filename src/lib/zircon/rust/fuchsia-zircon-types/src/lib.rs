@@ -769,7 +769,7 @@ struct_decl_macro! {
     #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
     pub struct <zx_info_vmar_t> {
         pub base: usize,
-        pub len: u64,
+        pub len: usize,
     }
 }
 

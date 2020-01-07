@@ -1025,7 +1025,7 @@ mod tests {
     }
 
     fn get_state(size: usize) -> State {
-        let (mapping, _) = Mapping::allocate(size as u64).unwrap();
+        let (mapping, _) = Mapping::allocate(size).unwrap();
         let heap = Heap::new(Arc::new(mapping)).unwrap();
         State::create(heap).unwrap()
     }

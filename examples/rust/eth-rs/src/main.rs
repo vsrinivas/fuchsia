@@ -18,8 +18,7 @@ fn main() -> Result<(), Error> {
     let dev = File::open(path)?;
     let fut = async {
         let client =
-            ethernet::Client::from_file(dev, vmo, ethernet::DEFAULT_BUFFER_SIZE as u64, "eth-rs")
-                .await?;
+            ethernet::Client::from_file(dev, vmo, ethernet::DEFAULT_BUFFER_SIZE, "eth-rs").await?;
         println!("created client {:?}", client);
         println!("info: {:?}", client.info().await?);
         println!("status: {:?}", client.get_status().await?);

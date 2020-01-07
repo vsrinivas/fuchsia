@@ -62,7 +62,7 @@ impl Plumber {
 
             let mapping = Mapping::create_from_vmo(
                 vmo,
-                buffer_size as u64,
+                buffer_size as usize,
                 zx::VmarFlags::PERM_READ
                     | zx::VmarFlags::PERM_WRITE
                     | zx::VmarFlags::MAP_RANGE

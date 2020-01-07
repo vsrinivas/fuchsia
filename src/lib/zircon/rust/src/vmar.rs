@@ -36,8 +36,8 @@ unsafe impl ObjectQuery for VmarInfo {
 impl Vmar {
     pub fn allocate(
         &self,
-        offset: u64,
-        size: u64,
+        offset: usize,
+        size: usize,
         flags: VmarFlags,
     ) -> Result<(Vmar, usize), Status> {
         let mut mapped = 0;
@@ -58,10 +58,10 @@ impl Vmar {
 
     pub fn map(
         &self,
-        vmar_offset: u64,
+        vmar_offset: usize,
         vmo: &Vmo,
         vmo_offset: u64,
-        len: u64,
+        len: usize,
         flags: VmarFlags,
     ) -> Result<usize, Status> {
         let flags = VmarFlagsExtended::from_bits_truncate(flags.bits());
@@ -76,10 +76,10 @@ impl Vmar {
     /// replace an existing mapping which is referenced elsewhere.
     pub unsafe fn map_unsafe(
         &self,
-        vmar_offset: u64,
+        vmar_offset: usize,
         vmo: &Vmo,
         vmo_offset: u64,
-        len: u64,
+        len: usize,
         flags: VmarFlagsExtended,
     ) -> Result<usize, Status> {
         let mut mapped = 0;
@@ -95,12 +95,12 @@ impl Vmar {
         ok(status).map(|_| mapped)
     }
 
-    pub unsafe fn unmap(&self, addr: usize, len: u64) -> Result<(), Status> {
-        ok(sys::zx_vmar_unmap(self.0.raw_handle(), addr, len as u64))
+    pub unsafe fn unmap(&self, addr: usize, len: usize) -> Result<(), Status> {
+        ok(sys::zx_vmar_unmap(self.0.raw_handle(), addr, len))
     }
 
     pub unsafe fn protect(&self, addr: usize, len: usize, flags: VmarFlags) -> Result<(), Status> {
-        ok(sys::zx_vmar_protect(self.raw_handle(), flags.bits(), addr, len as u64))
+        ok(sys::zx_vmar_protect(self.raw_handle(), flags.bits(), addr, len))
     }
 
     pub unsafe fn destroy(&self) -> Result<(), Status> {
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn allocate_and_info() -> Result<(), Status> {
-        let size = u64::pow(2, 20); // 1MiB
+        let size = usize::pow(2, 20); // 1MiB
         let root_vmar = fuchsia_runtime::vmar_root_self();
         let (vmar, base) = root_vmar.allocate(0, size, VmarFlags::empty())?;
 

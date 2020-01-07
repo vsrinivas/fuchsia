@@ -42,8 +42,8 @@ impl Mapping {
     /// Returns the VMO that was mapped.
     ///
     /// The resulting VMO will not be resizeable.
-    pub fn allocate(size: u64) -> Result<(Self, zx::Vmo), zx::Status> {
-        let vmo = zx::Vmo::create(size)?;
+    pub fn allocate(size: usize) -> Result<(Self, zx::Vmo), zx::Status> {
+        let vmo = zx::Vmo::create(size as u64)?;
         let flags = zx::VmarFlags::PERM_READ
             | zx::VmarFlags::PERM_WRITE
             | zx::VmarFlags::MAP_RANGE
@@ -58,7 +58,7 @@ impl Mapping {
     /// option, and returns `ZX_ERR_NOT_SUPPORTED` otherwise.
     pub fn create_from_vmo(
         vmo: &zx::Vmo,
-        size: u64,
+        size: usize,
         flags: zx::VmarFlags,
     ) -> Result<Self, zx::Status> {
         let flags = flags | zx::VmarFlags::REQUIRE_NON_RESIZABLE;
@@ -79,14 +79,14 @@ impl Mapping {
     }
 
     /// Return the size of the mapping.
-    pub fn len(&self) -> u64 {
+    pub fn len(&self) -> usize {
         self.buffer.len()
     }
 }
 
 impl Drop for Mapping {
     fn drop(&mut self) {
-        let (addr, size): (*mut u8, u64) = self.buffer.as_ptr_len();
+        let (addr, size): (*mut u8, usize) = self.buffer.as_ptr_len();
         let addr = addr as usize;
 
         // Safety:
@@ -96,7 +96,7 @@ impl Drop for Mapping {
         // have all been invalidated at this point. The memory is
         // therefore safe to unmap.
         unsafe {
-            let _ = vmar_root_self().unmap(addr, size as u64);
+            let _ = vmar_root_self().unmap(addr, size);
         }
     }
 }
@@ -106,7 +106,7 @@ mod tests {
     use super::*;
     use fuchsia_zircon as zx;
 
-    const PAGE_SIZE: u64 = 4096;
+    const PAGE_SIZE: usize = 4096;
 
     #[test]
     fn test_create() {

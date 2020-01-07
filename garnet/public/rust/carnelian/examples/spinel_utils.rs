@@ -2481,7 +2481,7 @@ impl mold::ColorBuffer for MoldColorBuffer {
     }
 
     unsafe fn write_at(&mut self, offset: usize, src: *const u8, len: usize) {
-        self.mapping.write_at(offset as u64, std::slice::from_raw_parts(src, len));
+        self.mapping.write_at(offset, std::slice::from_raw_parts(src, len));
     }
 }
 
@@ -2500,7 +2500,7 @@ impl MoldImage {
     fn new(width: u32, height: u32) -> Self {
         let size_bytes = width * height * 4;
         let (mapping, vmo) =
-            mapped_vmo::Mapping::allocate(size_bytes as u64).expect("Mapping::allocate");
+            mapped_vmo::Mapping::allocate(size_bytes as usize).expect("Mapping::allocate");
 
         MoldImage {
             vmo,
@@ -2537,7 +2537,7 @@ impl MoldImage {
         let mapping = Arc::new(
             mapped_vmo::Mapping::create_from_vmo(
                 &vmo,
-                size_bytes as u64,
+                size_bytes as usize,
                 zx::VmarFlags::PERM_READ
                     | zx::VmarFlags::PERM_WRITE
                     | zx::VmarFlags::MAP_RANGE

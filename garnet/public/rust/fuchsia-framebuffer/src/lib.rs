@@ -353,7 +353,7 @@ impl Frame {
         let mapping = match framebuffer.usage {
             FrameUsage::Cpu => Mapping::create_from_vmo(
                 &image_vmo,
-                framebuffer.byte_size() as u64,
+                framebuffer.byte_size(),
                 zx::VmarFlags::PERM_READ
                     | zx::VmarFlags::PERM_WRITE
                     | zx::VmarFlags::MAP_RANGE
@@ -393,7 +393,7 @@ impl Frame {
     }
 
     pub fn write_pixel_at_offset(&mut self, offset: usize, value: &[u8]) {
-        self.mapping.write_at(offset as u64, value);
+        self.mapping.write_at(offset, value);
     }
 
     pub fn fill_rectangle(&mut self, x: u32, y: u32, width: u32, height: u32, value: &[u8]) {

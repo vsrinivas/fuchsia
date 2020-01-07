@@ -113,48 +113,48 @@ use core::sync::atomic::{fence, Ordering};
 // reference semantics, and to only call methods when apporpriate.
 #[derive(Debug)]
 struct SharedBufferInner {
-    // invariant: '(buf as u64) + len' doesn't overflow u64
+    // invariant: '(buf as usize) + len' doesn't overflow usize
     buf: *mut u8,
-    len: u64,
+    len: usize,
 }
 
 impl SharedBufferInner {
-    fn read_at(&self, offset: u64, dst: &mut [u8]) -> u64 {
-        if let Some(to_copy) = overlap(offset, dst.len() as u64, self.len) {
+    fn read_at(&self, offset: usize, dst: &mut [u8]) -> usize {
+        if let Some(to_copy) = overlap(offset, dst.len(), self.len) {
             // Since overlap returned Some, we're guaranteed that 'offset +
             // to_copy <= self.len'. That in turn means that, so long as the
-            // invariant holds that '(self.buf as u64) + self.len' doesn't
-            // overflow u64, then this call to offset_from won't overflow, and
+            // invariant holds that '(self.buf as usize) + self.len' doesn't
+            // overflow usize, then this call to offset_from won't overflow, and
             // neither will the call to copy_nonoverlapping.
             let base = offset_from(self.buf, offset);
-            unsafe { ptr::copy_nonoverlapping(base, dst.as_mut_ptr(), to_copy as usize) };
+            unsafe { ptr::copy_nonoverlapping(base, dst.as_mut_ptr(), to_copy) };
             to_copy
         } else {
             panic!("byte offset {} out of range for SharedBuffer of length {}", offset, self.len);
         }
     }
 
-    fn write_at(&self, offset: u64, src: &[u8]) -> u64 {
-        if let Some(to_copy) = overlap(offset, src.len() as u64, self.len) {
+    fn write_at(&self, offset: usize, src: &[u8]) -> usize {
+        if let Some(to_copy) = overlap(offset, src.len(), self.len) {
             // Since overlap returned Some, we're guaranteed that 'offset +
             // to_copy <= self.len'. That in turn means that, so long as the
-            // invariant holds that '(self.buf as u64) + self.len' doesn't
-            // overflow u64, then this call to offset_from won't overflow, and
+            // invariant holds that '(self.buf as usize) + self.len' doesn't
+            // overflow usize, then this call to offset_from won't overflow, and
             // neither will the call to copy_nonoverlapping.
             let base = offset_from(self.buf, offset);
-            unsafe { ptr::copy_nonoverlapping(src.as_ptr(), base, to_copy as usize) };
+            unsafe { ptr::copy_nonoverlapping(src.as_ptr(), base, to_copy) };
             to_copy
         } else {
             panic!("byte offset {} out of range for SharedBuffer of length {}", offset, self.len);
         }
     }
 
-    fn slice<R: RangeBounds<u64>>(&self, range: R) -> SharedBufferInner {
+    fn slice<R: RangeBounds<usize>>(&self, range: R) -> SharedBufferInner {
         let range = canonicalize_range_infallible(self.len, range);
         SharedBufferInner { buf: offset_from(self.buf, range.start), len: range.end - range.start }
     }
 
-    fn split_at(&self, idx: u64) -> (SharedBufferInner, SharedBufferInner) {
+    fn split_at(&self, idx: usize) -> (SharedBufferInner, SharedBufferInner) {
         assert!(idx <= self.len, "split index out of bounds");
         let a = SharedBufferInner { buf: self.buf, len: idx };
         let b = SharedBufferInner { buf: offset_from(self.buf, idx), len: self.len - idx };
@@ -167,13 +167,12 @@ impl SharedBufferInner {
 // starting at 'offset' and a buffer of length 'range_len'. The number it
 // returns is guaranteed to be less than or equal to 'range_len'.
 //
-// overlap is guaranteed to be correct for any three u64 values.
-fn overlap(offset: u64, copy_len: u64, range_len: u64) -> Option<u64> {
-    let range_len = range_len as u64;
+// overlap is guaranteed to be correct for any three usize values.
+fn overlap(offset: usize, copy_len: usize, range_len: usize) -> Option<usize> {
     if offset > range_len {
         None
     } else if offset.checked_add(copy_len).map(|sum| sum <= range_len).unwrap_or(false) {
-        // if 'offset + copy_len' overflows u64, then 'offset + copy_len >
+        // if 'offset + copy_len' overflows usize, then 'offset + copy_len >
         // range_len', so we unwrap_or(false)
         Some(copy_len)
     } else {
@@ -186,16 +185,16 @@ fn overlap(offset: u64, copy_len: u64, range_len: u64) -> Option<u64> {
 // the offset cannot overflow an isize or else it will cause UB. offset_from
 // function has no such restriction.
 //
-// The caller must guarantee that '(ptr as u64) + offset' doesn't overflow
-// u64.
-fn offset_from(ptr: *mut u8, offset: u64) -> *mut u8 {
+// The caller must guarantee that '(ptr as usize) + offset' doesn't overflow
+// usize.
+fn offset_from(ptr: *mut u8, offset: usize) -> *mut u8 {
     // just in case our logic is wrong, better to catch it at runtime than
     // invoke UB
-    (ptr as u64).checked_add(offset).unwrap() as *mut u8
+    (ptr as usize).checked_add(offset).unwrap() as *mut u8
 }
 
 // Return the inclusive equivalent of the bound.
-fn canonicalize_lower_bound(bound: Bound<&u64>) -> u64 {
+fn canonicalize_lower_bound(bound: Bound<&usize>) -> usize {
     match bound {
         Bound::Included(x) => *x,
         Bound::Excluded(x) => *x + 1,
@@ -204,7 +203,7 @@ fn canonicalize_lower_bound(bound: Bound<&u64>) -> u64 {
 }
 // Return the exclusive equivalent of the bound, verifying that it is in range
 // of len.
-fn canonicalize_upper_bound(len: u64, bound: Bound<&u64>) -> Option<u64> {
+fn canonicalize_upper_bound(len: usize, bound: Bound<&usize>) -> Option<usize> {
     let bound = match bound {
         Bound::Included(x) => *x + 1,
         Bound::Excluded(x) => *x,
@@ -217,7 +216,7 @@ fn canonicalize_upper_bound(len: u64, bound: Bound<&u64>) -> Option<u64> {
 }
 // Return the inclusive-exclusive equivalent of the bound, verifying that it is
 // in range of len, and panicking if it is not or if the range is nonsensical.
-fn canonicalize_range_infallible<R: RangeBounds<u64>>(len: u64, range: R) -> Range<u64> {
+fn canonicalize_range_infallible<R: RangeBounds<usize>>(len: usize, range: R) -> Range<usize> {
     let lower = canonicalize_lower_bound(range.start_bound());
     let upper =
         canonicalize_upper_bound(len, range.end_bound()).expect("slice range out of bounds");
@@ -265,7 +264,7 @@ impl SharedBuffer {
     /// If any of these guarantees are violated, it may cause undefined
     /// behavior.
     #[inline]
-    pub unsafe fn new(buf: *mut u8, len: u64) -> SharedBuffer {
+    pub unsafe fn new(buf: *mut u8, len: usize) -> SharedBuffer {
         // Write the pointer and the length using a volatile write so that LLVM
         // must assume that the memory has escaped, and that all future writes
         // to it are observable. See the NOTE above for more details.
@@ -295,7 +294,7 @@ impl SharedBuffer {
     /// process that the memory may be read. See the `acquire_writes`
     /// documentation for more details.
     #[inline]
-    pub fn read(&self, dst: &mut [u8]) -> u64 {
+    pub fn read(&self, dst: &mut [u8]) -> usize {
         self.inner.read_at(0, dst)
     }
 
@@ -320,7 +319,7 @@ impl SharedBuffer {
     ///
     /// `read_at` panics if `offset` is greater than the length of the buffer.
     #[inline]
-    pub fn read_at(&self, offset: u64, dst: &mut [u8]) -> u64 {
+    pub fn read_at(&self, offset: usize, dst: &mut [u8]) -> usize {
         self.inner.read_at(offset, dst)
     }
 
@@ -340,7 +339,7 @@ impl SharedBuffer {
     /// the memory may be read. See the `release_writes` documentation for more
     /// details.
     #[inline]
-    pub fn write(&self, src: &[u8]) -> u64 {
+    pub fn write(&self, src: &[u8]) -> usize {
         self.inner.write_at(0, src)
     }
 
@@ -365,7 +364,7 @@ impl SharedBuffer {
     ///
     /// `write_at` panics if `offset` is greater than the length of the buffer.
     #[inline]
-    pub fn write_at(&self, offset: u64, src: &[u8]) -> u64 {
+    pub fn write_at(&self, offset: usize, src: &[u8]) -> usize {
         self.inner.write_at(offset, src)
     }
 
@@ -423,7 +422,7 @@ impl SharedBuffer {
 
     /// The number of bytes in this `SharedBuffer`.
     #[inline]
-    pub fn len(&self) -> u64 {
+    pub fn len(&self) -> usize {
         self.inner.len
     }
 
@@ -439,7 +438,7 @@ impl SharedBuffer {
     /// `slice` panics if `range` is out of bounds of `self` or if `range` is
     /// nonsensical (its lower bound is larger than its upper bound).
     #[inline]
-    pub fn slice<'a, R: RangeBounds<u64>>(&'a self, range: R) -> SharedBufferSlice<'a> {
+    pub fn slice<'a, R: RangeBounds<usize>>(&'a self, range: R) -> SharedBufferSlice<'a> {
         SharedBufferSlice { inner: self.inner.slice(range), _marker: PhantomData }
     }
 
@@ -455,7 +454,10 @@ impl SharedBuffer {
     /// `slice_mut` panics if `range` is out of bounds of `self` or if `range`
     /// is nonsensical (its lower bound is larger than its upper bound).
     #[inline]
-    pub fn slice_mut<'a, R: RangeBounds<u64>>(&'a mut self, range: R) -> SharedBufferSliceMut<'a> {
+    pub fn slice_mut<'a, R: RangeBounds<usize>>(
+        &'a mut self,
+        range: R,
+    ) -> SharedBufferSliceMut<'a> {
         SharedBufferSliceMut { inner: self.inner.slice(range), _marker: PhantomData }
     }
 
@@ -470,7 +472,7 @@ impl SharedBuffer {
     ///
     /// `split_at` panics if `idx > self.len()`.
     #[inline]
-    pub fn split_at<'a>(&'a self, idx: u64) -> (SharedBufferSlice<'a>, SharedBufferSlice<'a>) {
+    pub fn split_at<'a>(&'a self, idx: usize) -> (SharedBufferSlice<'a>, SharedBufferSlice<'a>) {
         let (a, b) = self.inner.split_at(idx);
         let a = SharedBufferSlice { inner: a, _marker: PhantomData };
         let b = SharedBufferSlice { inner: b, _marker: PhantomData };
@@ -490,7 +492,7 @@ impl SharedBuffer {
     #[inline]
     pub fn split_at_mut<'a>(
         &'a mut self,
-        idx: u64,
+        idx: usize,
     ) -> (SharedBufferSliceMut<'a>, SharedBufferSliceMut<'a>) {
         let (a, b) = self.inner.split_at(idx);
         let a = SharedBufferSliceMut { inner: a, _marker: PhantomData };
@@ -517,7 +519,7 @@ impl SharedBuffer {
     /// `as_ptr_len`. The only scenario in which the object may be used again is
     /// if the caller does nothing at all with the return value of this method
     /// (although that would be kind of pointless...).
-    pub fn as_ptr_len(&mut self) -> (*mut u8, u64) {
+    pub fn as_ptr_len(&mut self) -> (*mut u8, usize) {
         (self.inner.buf, self.inner.len)
     }
 
@@ -528,7 +530,7 @@ impl SharedBuffer {
     /// resources are not leaked is to `consume` a `SharedBuffer` and then unmap
     /// the memory manually.
     #[inline]
-    pub fn consume(self) -> (*mut u8, u64) {
+    pub fn consume(self) -> (*mut u8, usize) {
         (self.inner.buf, self.inner.len)
     }
 }
@@ -568,7 +570,7 @@ impl<'a> SharedBufferSlice<'a> {
     /// process that the memory may be read. See the `acquire_writes`
     /// documentation for more details.
     #[inline]
-    pub fn read(&self, dst: &mut [u8]) -> u64 {
+    pub fn read(&self, dst: &mut [u8]) -> usize {
         self.inner.read_at(0, dst)
     }
 
@@ -593,7 +595,7 @@ impl<'a> SharedBufferSlice<'a> {
     ///
     /// `read_at` panics if `offset` is greater than the length of the buffer.
     #[inline]
-    pub fn read_at(&self, offset: u64, dst: &mut [u8]) -> u64 {
+    pub fn read_at(&self, offset: usize, dst: &mut [u8]) -> usize {
         self.inner.read_at(offset, dst)
     }
 
@@ -635,7 +637,7 @@ impl<'a> SharedBufferSlice<'a> {
     /// `slice` panics if `range` is out of bounds of `self` or if `range` is
     /// nonsensical (its lower bound is larger than its upper bound).
     #[inline]
-    pub fn slice<R: RangeBounds<u64>>(&self, range: R) -> SharedBufferSlice<'a> {
+    pub fn slice<R: RangeBounds<usize>>(&self, range: R) -> SharedBufferSlice<'a> {
         SharedBufferSlice { inner: self.inner.slice(range), _marker: PhantomData }
     }
 
@@ -650,7 +652,7 @@ impl<'a> SharedBufferSlice<'a> {
     ///
     /// `split_at` panics if `idx > self.len()`.
     #[inline]
-    pub fn split_at(&self, idx: u64) -> (SharedBufferSlice<'a>, SharedBufferSlice<'a>) {
+    pub fn split_at(&self, idx: usize) -> (SharedBufferSlice<'a>, SharedBufferSlice<'a>) {
         let (a, b) = self.inner.split_at(idx);
         let a = SharedBufferSlice { inner: a, _marker: PhantomData };
         let b = SharedBufferSlice { inner: b, _marker: PhantomData };
@@ -659,7 +661,7 @@ impl<'a> SharedBufferSlice<'a> {
 
     /// The number of bytes in this `SharedBufferSlice`.
     #[inline]
-    pub fn len(&self) -> u64 {
+    pub fn len(&self) -> usize {
         self.inner.len
     }
 }
@@ -691,7 +693,7 @@ impl<'a> SharedBufferSliceMut<'a> {
     /// process that the memory may be read. See the `acquire_writes`
     /// documentation for more details.
     #[inline]
-    pub fn read(&self, dst: &mut [u8]) -> u64 {
+    pub fn read(&self, dst: &mut [u8]) -> usize {
         self.inner.read_at(0, dst)
     }
 
@@ -716,7 +718,7 @@ impl<'a> SharedBufferSliceMut<'a> {
     ///
     /// `read_at` panics if `offset` is greater than the length of the buffer.
     #[inline]
-    pub fn read_at(&self, offset: u64, dst: &mut [u8]) -> u64 {
+    pub fn read_at(&self, offset: usize, dst: &mut [u8]) -> usize {
         self.inner.read_at(offset, dst)
     }
 
@@ -736,7 +738,7 @@ impl<'a> SharedBufferSliceMut<'a> {
     /// the memory may be read. See the `release_writes` documentation for more
     /// details.
     #[inline]
-    pub fn write(&self, src: &[u8]) -> u64 {
+    pub fn write(&self, src: &[u8]) -> usize {
         self.inner.write_at(0, src)
     }
 
@@ -761,7 +763,7 @@ impl<'a> SharedBufferSliceMut<'a> {
     ///
     /// `write_at` panics if `offset` is greater than the length of the buffer.
     #[inline]
-    pub fn write_at(&self, offset: u64, src: &[u8]) -> u64 {
+    pub fn write_at(&self, offset: usize, src: &[u8]) -> usize {
         self.inner.write_at(offset, src)
     }
 
@@ -829,7 +831,7 @@ impl<'a> SharedBufferSliceMut<'a> {
     /// `slice` panics if `range` is out of bounds of `self` or if `range` is
     /// nonsensical (its lower bound is larger than its upper bound).
     #[inline]
-    pub fn slice<R: RangeBounds<u64>>(&self, range: R) -> SharedBufferSlice<'a> {
+    pub fn slice<R: RangeBounds<usize>>(&self, range: R) -> SharedBufferSlice<'a> {
         SharedBufferSlice { inner: self.inner.slice(range), _marker: PhantomData }
     }
 
@@ -845,7 +847,7 @@ impl<'a> SharedBufferSliceMut<'a> {
     /// `slice_mut` panics if `range` is out of bounds of `self` or if `range`
     /// is nonsensical (its lower bound is larger than its upper bound).
     #[inline]
-    pub fn slice_mut<R: RangeBounds<u64>>(&mut self, range: R) -> SharedBufferSliceMut<'a> {
+    pub fn slice_mut<R: RangeBounds<usize>>(&mut self, range: R) -> SharedBufferSliceMut<'a> {
         SharedBufferSliceMut { inner: self.inner.slice(range), _marker: PhantomData }
     }
 
@@ -860,7 +862,7 @@ impl<'a> SharedBufferSliceMut<'a> {
     ///
     /// `split_at` panics if `idx > self.len()`.
     #[inline]
-    pub fn split_at(&self, idx: u64) -> (SharedBufferSlice<'a>, SharedBufferSlice<'a>) {
+    pub fn split_at(&self, idx: usize) -> (SharedBufferSlice<'a>, SharedBufferSlice<'a>) {
         let (a, b) = self.inner.split_at(idx);
         let a = SharedBufferSlice { inner: a, _marker: PhantomData };
         let b = SharedBufferSlice { inner: b, _marker: PhantomData };
@@ -880,7 +882,7 @@ impl<'a> SharedBufferSliceMut<'a> {
     #[inline]
     pub fn split_at_mut(
         &mut self,
-        idx: u64,
+        idx: usize,
     ) -> (SharedBufferSliceMut<'a>, SharedBufferSliceMut<'a>) {
         let (a, b) = self.inner.split_at(idx);
         let a = SharedBufferSliceMut { inner: a, _marker: PhantomData };
@@ -890,7 +892,7 @@ impl<'a> SharedBufferSliceMut<'a> {
 
     /// The number of bytes in this `SharedBufferSlice`.
     #[inline]
-    pub fn len(&self) -> u64 {
+    pub fn len(&self) -> usize {
         self.inner.len
     }
 }
@@ -921,7 +923,7 @@ mod tests {
     // use the referent as the backing memory for a SharedBuffer
     unsafe fn buf_from_ref<T>(x: &mut T) -> SharedBuffer {
         let size = mem::size_of::<T>();
-        SharedBuffer::new(x as *mut _ as *mut u8, size as u64)
+        SharedBuffer::new(x as *mut _ as *mut u8, size)
     }
 
     #[test]
@@ -1044,8 +1046,8 @@ mod tests {
         assert_eq!(overlap(0, 4, 8), Some(4));
         assert_eq!(overlap(4, 4, 8), Some(4));
 
-        // middle branch: 'offset + copy_len' overflows u64
-        assert_eq!(overlap(4, ::core::u64::MAX, 8), Some(4));
+        // middle branch: 'offset + copy_len' overflows usize
+        assert_eq!(overlap(4, ::core::usize::MAX, 8), Some(4));
 
         // last branch: else
         assert_eq!(overlap(6, 4, 8), Some(2));

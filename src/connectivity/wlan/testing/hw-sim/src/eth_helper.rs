@@ -31,13 +31,9 @@ pub async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>
 
         let path = Path::new(ETH_PATH).join(file.name);
         let dev = IsolatedDeviceEnv::open_file(path)?;
-        if let Ok(client) = ethernet::Client::from_file(
-            dev,
-            vmo,
-            ethernet::DEFAULT_BUFFER_SIZE as u64,
-            "wlan-hw-sim",
-        )
-        .await
+        if let Ok(client) =
+            ethernet::Client::from_file(dev, vmo, ethernet::DEFAULT_BUFFER_SIZE, "wlan-hw-sim")
+                .await
         {
             if let Ok(info) = client.info().await {
                 if &info.mac.octets == mac {

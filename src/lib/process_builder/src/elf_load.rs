@@ -111,7 +111,7 @@ impl ElfVmar {
         // the overall VMAR to the maximum permissions required across all load segments.
         let flags = zx::VmarFlags::CAN_MAP_SPECIFIC | elf_to_vmar_can_map_flags(&max_perm);
         let (vmar, vmar_base) =
-            root_vmar.allocate(0, size as u64, flags).map_err(|s| ElfLoadError::VmarAllocate(s))?;
+            root_vmar.allocate(0, size, flags).map_err(|s| ElfLoadError::VmarAllocate(s))?;
 
         // We intentionally use wrapping subtraction here, in case the ELF file happens to use
         // vaddr's that are higher than the VMAR base chosen by the kernel. Wrapping addition will
@@ -185,7 +185,7 @@ impl ElfVmar {
             let flags = zx::VmarFlags::SPECIFIC | elf_to_vmar_perm_flags(&hdr.flags());
             if map_size == vmo_size {
                 self.vmar
-                    .map(map_start as u64, vmo_to_map, vmo_start as u64, vmo_size as u64, flags)
+                    .map(map_start, vmo_to_map, vmo_start as u64, vmo_size, flags)
                     .map_err(ElfLoadError::VmarMap)?;
                 continue;
             }
@@ -196,13 +196,7 @@ impl ElfVmar {
             let vmo_full_page_size = vmo_full_page_end - vmo_start;
             if vmo_full_page_size > 0 {
                 self.vmar
-                    .map(
-                        map_start as u64,
-                        vmo_to_map,
-                        vmo_start as u64,
-                        vmo_full_page_size as u64,
-                        flags,
-                    )
+                    .map(map_start, vmo_to_map, vmo_start as u64, vmo_full_page_size, flags)
                     .map_err(ElfLoadError::VmarMap)?;
             }
 
@@ -227,7 +221,7 @@ impl ElfVmar {
 
             // Map the anonymous vmo and done with this segment!
             self.vmar
-                .map(anon_map_start as u64, &anon_vmo, 0, anon_size as u64, flags)
+                .map(anon_map_start, &anon_vmo, 0, anon_size, flags)
                 .map_err(ElfLoadError::VmarMap)?;
         }
         Ok(())
