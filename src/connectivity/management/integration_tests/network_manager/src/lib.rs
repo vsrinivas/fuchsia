@@ -556,6 +556,38 @@ async fn test_lan_state() {
 
 #[fasync::run_singlethreaded]
 #[test]
+async fn test_interface_config_persists() {
+    let device = test_device().await;
+    execute_test_suite(&device, test_suite![
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+         (" add lan lan1 --ports 2",
+    "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
+    "add lan interface using existing port; should succeed."),
+        ("show lans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: None, enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(false\\) \\}\\)\\) \\}\\]\n",
+         "interface up."),
+        (" set lan-state 5 down",
+         "enable: Some\\(false\\)",
+         "change to down."),
+        (" set lan-ip 5 2.2.2.2/24",
+         "address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), enable_dhcp_server: None, dhcp_config",
+         "change ip."),
+        ("show lan 5",
+         "address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), enable_dhcp_server: Some\\(false\\), dhcp_config",
+         "show new ip."),
+        (" set lan-state 5 up",
+         "enable: Some\\(true\\)",
+         "interface up."),
+        ("show lan 5",
+         "address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), enable_dhcp_server: Some\\(false\\), dhcp_config",
+         "should still have same config."),
+    ]).await;
+}
+
+#[fasync::run_singlethreaded]
+#[test]
 async fn test_wan_connection() {
     let device = test_device().await;
     execute_test_suite(&device, test_suite![

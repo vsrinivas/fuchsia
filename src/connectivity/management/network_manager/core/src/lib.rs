@@ -491,7 +491,7 @@ impl DeviceState {
             // Report result.
             LifProperties::Wan(p) => {
                 let old = lif.properties();
-                let mut lp = LIFProperties::default();
+                let mut lp = old.clone();
 
                 match &p.connection_type {
                     None => {}
@@ -630,7 +630,7 @@ impl DeviceState {
             }
             LifProperties::Lan(p) => {
                 let old = lif.properties();
-                let mut lp = LIFProperties::default();
+                let mut lp = old.clone();
 
                 match p.enable_dhcp_server {
                     None => {}
