@@ -1850,8 +1850,8 @@ impl Drop for SpinelContext {
 impl Context for SpinelContext {
     fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
         match self.vulkan.format {
-            vk::FORMAT_R8G8B8A8_UNORM => fuchsia_framebuffer::PixelFormat::Abgr8888,
-            _ => fuchsia_framebuffer::PixelFormat::Argb8888,
+            vk::FORMAT_R8G8B8A8_UNORM => fuchsia_framebuffer::PixelFormat::BgrX888,
+            _ => fuchsia_framebuffer::PixelFormat::RgbX888,
         }
     }
 
@@ -2725,7 +2725,7 @@ impl MoldContext {
 
 impl Context for MoldContext {
     fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
-        fuchsia_framebuffer::PixelFormat::Argb8888
+        fuchsia_framebuffer::PixelFormat::RgbX888
     }
 
     fn styling(&mut self) -> &mut dyn Styling {
