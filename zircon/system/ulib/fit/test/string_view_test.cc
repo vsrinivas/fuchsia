@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
+
 #include <lib/fit/string_view.h>
 
 #include <cstring>
@@ -149,12 +151,14 @@ TEST(StringViewTest, AtReturnsElementAtIndex) {
   }
 }
 
+#if !defined(NDEBUG)
 TEST(StringViewTest, AtThrowsExceptionWhenIndexIsOOR) {
   ASSERT_DEATH([] {
     constexpr fit::string_view kFitLiteral("12345");
     kFitLiteral.at(5);
   });
 }
+#endif
 
 // Even though we use a custom compare implementation, because we lack a constexpr compare
 // function, we use this test to verify that the expectations are equivalent.
@@ -377,6 +381,7 @@ TEST(StringViewTest, Copy) {
   EXPECT_STR_EQ(dest_traits, dest);
 }
 
+#if !defined(NDEBUG)
 TEST(StringViewTest, CopyThrowsExceptionOnOOR) {
   ASSERT_DEATH([]() {
     constexpr fit::string_view v_str = "Base";
@@ -386,6 +391,7 @@ TEST(StringViewTest, CopyThrowsExceptionOnOOR) {
     v_str.copy(dest, v_str.length(), v_str.length());
   });
 }
+#endif
 
 TEST(StringViewTest, MaxSizeIsMaxAddressableSize) {
   fit::string_view str_view("12345");
