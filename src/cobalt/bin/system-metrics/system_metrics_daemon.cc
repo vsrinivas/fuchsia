@@ -43,8 +43,6 @@ using fuchsia::cobalt::HistogramBucket;
 using fuchsia::cobalt::Logger_Sync;
 using fuchsia::ui::activity::State;
 using fuchsia_system_metrics::FuchsiaLifetimeEventsMetricDimensionEvents;
-using TimeSinceBoot =
-    fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot;
 using fuchsia_system_metrics::FuchsiaUpPingMetricDimensionUptime;
 using fuchsia_system_metrics::FuchsiaUptimeMetricDimensionUptimeRange;
 using std::chrono::steady_clock;
