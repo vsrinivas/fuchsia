@@ -160,13 +160,15 @@ void AudioDriverTest::AddDevice(int dir_fd, const std::string& name, DeviceType 
   // Obtain the stream channel
   auto dev =
       fidl::InterfaceHandle<fuchsia::hardware::audio::Device>(std::move(dev_channel)).BindSync();
+  fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> intf_req = {};
 
-  status = dev->GetChannel(&stream_channel_);
+  status = dev->GetChannel(&intf_req);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to open channel to audio "
                             << ((device_type == DeviceType::Input) ? "input" : "output");
     FAIL();
   }
+  stream_channel_ = intf_req.TakeChannel();
 
   AUD_VLOG(TRACE) << "Successfully opened devnode '" << name << "' for audio "
                   << ((device_type == DeviceType::Input) ? "input" : "output");

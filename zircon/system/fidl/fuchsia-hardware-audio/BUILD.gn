@@ -7,5 +7,7 @@ import("$zx_build/public/gn/fidl.gni")
 fidl_library("fuchsia-hardware-audio") {
   sources = [
     "audio.fidl",
+    "ring_buffer.fidl",
+    "stream.fidl",
   ]
 }

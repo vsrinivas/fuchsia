@@ -204,7 +204,7 @@ TEST(SimpleAudioTest, SetAndGetGain) {
 
   // After we get the channel we use audio::utils serialization until we convert to FIDL.
   auto channel_client = audio::utils::AudioOutput::Create(1);
-  channel_client->SetStreamChannel(std::move(channel_wrap->ch));
+  channel_client->SetStreamChannel(std::move(channel_wrap->channel));
 
   auto gain = 1.2345f;
   channel_client->SetGain(gain);
@@ -243,7 +243,7 @@ TEST(SimpleAudioTest, EnumerateMultipleRates) {
 
   // After we get the channel we use audio::utils serialization until we convert to FIDL.
   auto channel_client = audio::utils::AudioOutput::Create(1);
-  channel_client->SetStreamChannel(std::move(channel_wrap->ch));
+  channel_client->SetStreamChannel(std::move(channel_wrap->channel));
 
   fbl::Vector<audio_stream_format_range_t> ranges;
   channel_client->GetSupportedFormats(&ranges);
@@ -275,7 +275,7 @@ TEST(SimpleAudioTest, GetIds) {
 
   // After we get the channel we use audio::utils serialization until we convert to FIDL.
   auto channel_client = audio::utils::AudioOutput::Create(1);
-  channel_client->SetStreamChannel(std::move(channel_wrap->ch));
+  channel_client->SetStreamChannel(std::move(channel_wrap->channel));
 
   audio_stream_cmd_get_unique_id_resp_t id = {};
   channel_client->GetUniqueId(&id);
@@ -302,8 +302,8 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   // After we get the channel we use audio::utils serialization until we convert to FIDL.
   auto channel_client1 = audio::utils::AudioOutput::Create(1);
   auto channel_client2 = audio::utils::AudioOutput::Create(2);
-  channel_client1->SetStreamChannel(std::move(channel_wrap1->ch));
-  channel_client2->SetStreamChannel(std::move(channel_wrap2->ch));
+  channel_client1->SetStreamChannel(std::move(channel_wrap1->channel));
+  channel_client2->SetStreamChannel(std::move(channel_wrap2->channel));
 
   audio_stream_cmd_plug_detect_resp resp = {};
   channel_client1->GetPlugState(&resp, false);
@@ -330,9 +330,9 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   auto channel_client1 = audio::utils::AudioOutput::Create(1);
   auto channel_client2 = audio::utils::AudioOutput::Create(1);
   auto channel_client3 = audio::utils::AudioOutput::Create(1);
-  channel_client1->SetStreamChannel(std::move(channel_wrap1->ch));
-  channel_client2->SetStreamChannel(std::move(channel_wrap2->ch));
-  channel_client3->SetStreamChannel(std::move(channel_wrap3->ch));
+  channel_client1->SetStreamChannel(std::move(channel_wrap1->channel));
+  channel_client2->SetStreamChannel(std::move(channel_wrap2->channel));
+  channel_client3->SetStreamChannel(std::move(channel_wrap3->channel));
 
   // Create threads to wait for notifications on them.
   auto f = [](void* arg) -> int {
@@ -382,7 +382,7 @@ TEST(SimpleAudioTest, RingBufferTests) {
 
   // After we get the channel we use audio::utils serialization until we convert to FIDL.
   auto channel_client = audio::utils::AudioOutput::Create(1);
-  channel_client->SetStreamChannel(std::move(channel_wrap->ch));
+  channel_client->SetStreamChannel(std::move(channel_wrap->channel));
 
   audio_sample_format_t format = AUDIO_SAMPLE_FORMAT_16BIT;
   ASSERT_OK(channel_client->SetFormat(MockSimpleAudio::kTestFrameRate,

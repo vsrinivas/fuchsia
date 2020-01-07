@@ -39,7 +39,9 @@ class FakeAudioDevice : public fuchsia::hardware::audio::Device {
  private:
   void GetChannel(GetChannelCallback callback) override {
     FX_CHECK(client_);
-    callback(std::move(client_));
+    fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> intf_req = {};
+    intf_req.set_channel(std::move(client_));
+    callback(std::move(intf_req));
   }
 
   zx::channel client_, server_;

@@ -4,12 +4,10 @@
 
 library fuchsia.hardware.audio;
 
+// For an overview see //zircon/driver_interfaces/audio_streaming.md
+
 [Layout = "Simple"]
 protocol Device {
-    // Note: this method obtains a channel to the codec device which
-    // communicates using a legacy custom binary serialized format.  Once the
-    // system has been updated to use FIDL as its serialization format instead
-    // of the legacy custom format, this method can be updated to use an
-    // interface request instead of returning a channel.
-    GetChannel() -> (handle<channel> ch);
+    /// This method obtains a channel in order to serve FIDL over it outside the devhost's control.
+    GetChannel() -> (request<StreamConfig> channel);
 };

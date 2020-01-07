@@ -9,6 +9,68 @@ namespace fuchsia {
 namespace hardware {
 namespace audio {
 
+::llcpp::fuchsia::hardware::audio::PlugState::Builder PlugState::Build() {
+  return PlugState::Builder();
+}
+
+auto ::llcpp::fuchsia::hardware::audio::PlugState::Builder::set_plugged(bool* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::PlugState::Builder::set_plug_state_time(int64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+::llcpp::fuchsia::hardware::audio::RingBufferProperties::Builder RingBufferProperties::Build() {
+  return RingBufferProperties::Builder();
+}
+
+auto ::llcpp::fuchsia::hardware::audio::RingBufferProperties::Builder::set_external_delay(int64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::RingBufferProperties::Builder::set_fifo_depth(uint32_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::RingBufferProperties::Builder::set_clock_domain(uint32_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::RingBufferProperties::Builder::set_needs_cache_flush_or_invalidate(bool* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[4 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 4) {
+    max_ordinal_ = 4;
+  }
+  return std::move(*this);
+}
+
 namespace {
 
 [[maybe_unused]]
@@ -123,7 +185,7 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 }
 
 
-void Device::Interface::GetChannelCompleterBase::Reply(::zx::channel ch) {
+void Device::Interface::GetChannelCompleterBase::Reply(::zx::channel channel) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChannelResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetChannelResponse*>(_write_bytes);
@@ -132,12 +194,12 @@ void Device::Interface::GetChannelCompleterBase::Reply(::zx::channel ch) {
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetChannelResponse::PrimarySize,
               GetChannelResponse::PrimarySize)));
-  _response.ch = std::move(ch);
+  _response.channel = std::move(channel);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetChannelResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetChannelResponse>(std::move(_response_bytes)));
 }
 
-void Device::Interface::GetChannelCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::channel ch) {
+void Device::Interface::GetChannelCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::channel channel) {
   if (_buffer.capacity() < GetChannelResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -148,7 +210,7 @@ void Device::Interface::GetChannelCompleterBase::Reply(::fidl::BytePart _buffer,
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetChannelResponse::PrimarySize,
               GetChannelResponse::PrimarySize)));
-  _response.ch = std::move(ch);
+  _response.channel = std::move(channel);
   _buffer.set_actual(sizeof(GetChannelResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetChannelResponse>(std::move(_buffer)));
 }
@@ -166,6 +228,1585 @@ void Device::SetTransactionHeaderFor::GetChannelRequest(const ::fidl::DecodedMes
 }
 void Device::SetTransactionHeaderFor::GetChannelResponse(const ::fidl::DecodedMessage<Device::GetChannelResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetChannel_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+::llcpp::fuchsia::hardware::audio::SupportedFormats::Builder SupportedFormats::Build() {
+  return SupportedFormats::Builder();
+}
+
+auto ::llcpp::fuchsia::hardware::audio::SupportedFormats::Builder::set_pcm_supported_formats(::llcpp::fuchsia::hardware::audio::PcmSupportedFormats* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+::llcpp::fuchsia::hardware::audio::Format::Builder Format::Build() {
+  return Format::Builder();
+}
+
+auto ::llcpp::fuchsia::hardware::audio::Format::Builder::set_pcm_format(::llcpp::fuchsia::hardware::audio::PcmFormat* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+::llcpp::fuchsia::hardware::audio::StreamProperties::Builder StreamProperties::Build() {
+  return StreamProperties::Builder();
+}
+
+auto ::llcpp::fuchsia::hardware::audio::StreamProperties::Builder::set_unique_id(::fidl::Array<uint8_t, 16>* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::StreamProperties::Builder::set_is_input(bool* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::StreamProperties::Builder::set_can_mute(bool* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::StreamProperties::Builder::set_can_agc(bool* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[4 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 4) {
+    max_ordinal_ = 4;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::StreamProperties::Builder::set_min_gain_db(float* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[5 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 5) {
+    max_ordinal_ = 5;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::StreamProperties::Builder::set_max_gain_db(float* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[6 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 6) {
+    max_ordinal_ = 6;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::StreamProperties::Builder::set_gain_step_db(float* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[7 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 7) {
+    max_ordinal_ = 7;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::StreamProperties::Builder::set_plug_detect_capabilities(::llcpp::fuchsia::hardware::audio::PlugDetectCapabilities* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[8 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 8) {
+    max_ordinal_ = 8;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::StreamProperties::Builder::set_manufacturer(::fidl::StringView* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[9 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 9) {
+    max_ordinal_ = 9;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::StreamProperties::Builder::set_product(::fidl::StringView* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[10 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 10) {
+    max_ordinal_ = 10;
+  }
+  return std::move(*this);
+}
+
+void ::llcpp::fuchsia::hardware::audio::RingBuffer_GetVmo_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(RingBuffer_GetVmo_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(RingBuffer_GetVmo_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(RingBuffer_GetVmo_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
+}
+
+namespace {
+
+[[maybe_unused]]
+constexpr uint64_t kRingBuffer_GetProperties_Ordinal = 0x72b8bf3600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kRingBuffer_GetProperties_GenOrdinal = 0x12947f061a8fe1lu;
+extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferGetPropertiesRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferGetPropertiesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferGetPropertiesResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kRingBuffer_WatchClockRecoveryPositionInfo_Ordinal = 0x428b0f8300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kRingBuffer_WatchClockRecoveryPositionInfo_GenOrdinal = 0x694d5b898a4167e5lu;
+extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kRingBuffer_GetVmo_Ordinal = 0x330599f00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kRingBuffer_GetVmo_GenOrdinal = 0x44c8f4f5680e853alu;
+extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferGetVmoRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferGetVmoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferGetVmoResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kRingBuffer_Start_Ordinal = 0x6028425000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kRingBuffer_Start_GenOrdinal = 0x5dd780a769a8892dlu;
+extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferStartRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferStartResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferStartResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kRingBuffer_Stop_Ordinal = 0x25c2cd8800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kRingBuffer_Stop_GenOrdinal = 0x49a73d9cf1d4e110lu;
+extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferStopRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferStopResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferStopResponseTable;
+
+}  // namespace
+template <>
+RingBuffer::ResultOf::GetProperties_Impl<RingBuffer::GetPropertiesResponse>::GetProperties_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPropertiesRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetPropertiesRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPropertiesRequest));
+  ::fidl::DecodedMessage<GetPropertiesRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      RingBuffer::InPlace::GetProperties(std::move(_client_end), Super::response_buffer()));
+}
+
+RingBuffer::ResultOf::GetProperties RingBuffer::SyncClient::GetProperties() {
+    return ResultOf::GetProperties(::zx::unowned_channel(this->channel_));
+}
+
+RingBuffer::ResultOf::GetProperties RingBuffer::Call::GetProperties(::zx::unowned_channel _client_end) {
+  return ResultOf::GetProperties(std::move(_client_end));
+}
+
+template <>
+RingBuffer::UnownedResultOf::GetProperties_Impl<RingBuffer::GetPropertiesResponse>::GetProperties_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPropertiesRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetPropertiesRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetPropertiesRequest));
+  ::fidl::DecodedMessage<GetPropertiesRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      RingBuffer::InPlace::GetProperties(std::move(_client_end), std::move(_response_buffer)));
+}
+
+RingBuffer::UnownedResultOf::GetProperties RingBuffer::SyncClient::GetProperties(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetProperties(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+RingBuffer::UnownedResultOf::GetProperties RingBuffer::Call::GetProperties(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetProperties(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<RingBuffer::GetPropertiesResponse> RingBuffer::InPlace::GetProperties(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetPropertiesRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetPropertiesRequest> params(std::move(_request_buffer));
+  RingBuffer::SetTransactionHeaderFor::GetPropertiesRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RingBuffer::GetPropertiesResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetPropertiesRequest, GetPropertiesResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RingBuffer::GetPropertiesResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+RingBuffer::ResultOf::WatchClockRecoveryPositionInfo_Impl<RingBuffer::WatchClockRecoveryPositionInfoResponse>::WatchClockRecoveryPositionInfo_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WatchClockRecoveryPositionInfoRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, WatchClockRecoveryPositionInfoRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WatchClockRecoveryPositionInfoRequest));
+  ::fidl::DecodedMessage<WatchClockRecoveryPositionInfoRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      RingBuffer::InPlace::WatchClockRecoveryPositionInfo(std::move(_client_end), Super::response_buffer()));
+}
+
+RingBuffer::ResultOf::WatchClockRecoveryPositionInfo RingBuffer::SyncClient::WatchClockRecoveryPositionInfo() {
+    return ResultOf::WatchClockRecoveryPositionInfo(::zx::unowned_channel(this->channel_));
+}
+
+RingBuffer::ResultOf::WatchClockRecoveryPositionInfo RingBuffer::Call::WatchClockRecoveryPositionInfo(::zx::unowned_channel _client_end) {
+  return ResultOf::WatchClockRecoveryPositionInfo(std::move(_client_end));
+}
+
+template <>
+RingBuffer::UnownedResultOf::WatchClockRecoveryPositionInfo_Impl<RingBuffer::WatchClockRecoveryPositionInfoResponse>::WatchClockRecoveryPositionInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WatchClockRecoveryPositionInfoRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, WatchClockRecoveryPositionInfoRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(WatchClockRecoveryPositionInfoRequest));
+  ::fidl::DecodedMessage<WatchClockRecoveryPositionInfoRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      RingBuffer::InPlace::WatchClockRecoveryPositionInfo(std::move(_client_end), std::move(_response_buffer)));
+}
+
+RingBuffer::UnownedResultOf::WatchClockRecoveryPositionInfo RingBuffer::SyncClient::WatchClockRecoveryPositionInfo(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WatchClockRecoveryPositionInfo(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+RingBuffer::UnownedResultOf::WatchClockRecoveryPositionInfo RingBuffer::Call::WatchClockRecoveryPositionInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WatchClockRecoveryPositionInfo(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<RingBuffer::WatchClockRecoveryPositionInfoResponse> RingBuffer::InPlace::WatchClockRecoveryPositionInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(WatchClockRecoveryPositionInfoRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<WatchClockRecoveryPositionInfoRequest> params(std::move(_request_buffer));
+  RingBuffer::SetTransactionHeaderFor::WatchClockRecoveryPositionInfoRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RingBuffer::WatchClockRecoveryPositionInfoResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<WatchClockRecoveryPositionInfoRequest, WatchClockRecoveryPositionInfoResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RingBuffer::WatchClockRecoveryPositionInfoResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+RingBuffer::ResultOf::GetVmo_Impl<RingBuffer::GetVmoResponse>::GetVmo_Impl(::zx::unowned_channel _client_end, uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetVmoRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetVmoRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<GetVmoRequest*>(_write_bytes);
+  _request.min_frames = std::move(min_frames);
+  _request.clock_recovery_notifications_per_ring = std::move(clock_recovery_notifications_per_ring);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetVmoRequest));
+  ::fidl::DecodedMessage<GetVmoRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      RingBuffer::InPlace::GetVmo(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+RingBuffer::ResultOf::GetVmo RingBuffer::SyncClient::GetVmo(uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring) {
+    return ResultOf::GetVmo(::zx::unowned_channel(this->channel_), std::move(min_frames), std::move(clock_recovery_notifications_per_ring));
+}
+
+RingBuffer::ResultOf::GetVmo RingBuffer::Call::GetVmo(::zx::unowned_channel _client_end, uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring) {
+  return ResultOf::GetVmo(std::move(_client_end), std::move(min_frames), std::move(clock_recovery_notifications_per_ring));
+}
+
+template <>
+RingBuffer::UnownedResultOf::GetVmo_Impl<RingBuffer::GetVmoResponse>::GetVmo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < GetVmoRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<GetVmoResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, GetVmoRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<GetVmoRequest*>(_request_buffer.data());
+  _request.min_frames = std::move(min_frames);
+  _request.clock_recovery_notifications_per_ring = std::move(clock_recovery_notifications_per_ring);
+  _request_buffer.set_actual(sizeof(GetVmoRequest));
+  ::fidl::DecodedMessage<GetVmoRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      RingBuffer::InPlace::GetVmo(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+RingBuffer::UnownedResultOf::GetVmo RingBuffer::SyncClient::GetVmo(::fidl::BytePart _request_buffer, uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetVmo(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(min_frames), std::move(clock_recovery_notifications_per_ring), std::move(_response_buffer));
+}
+
+RingBuffer::UnownedResultOf::GetVmo RingBuffer::Call::GetVmo(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetVmo(std::move(_client_end), std::move(_request_buffer), std::move(min_frames), std::move(clock_recovery_notifications_per_ring), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<RingBuffer::GetVmoResponse> RingBuffer::InPlace::GetVmo(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetVmoRequest> params, ::fidl::BytePart response_buffer) {
+  RingBuffer::SetTransactionHeaderFor::GetVmoRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RingBuffer::GetVmoResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetVmoRequest, GetVmoResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RingBuffer::GetVmoResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+RingBuffer::ResultOf::Start_Impl<RingBuffer::StartResponse>::Start_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, StartRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(StartRequest));
+  ::fidl::DecodedMessage<StartRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      RingBuffer::InPlace::Start(std::move(_client_end), Super::response_buffer()));
+}
+
+RingBuffer::ResultOf::Start RingBuffer::SyncClient::Start() {
+    return ResultOf::Start(::zx::unowned_channel(this->channel_));
+}
+
+RingBuffer::ResultOf::Start RingBuffer::Call::Start(::zx::unowned_channel _client_end) {
+  return ResultOf::Start(std::move(_client_end));
+}
+
+template <>
+RingBuffer::UnownedResultOf::Start_Impl<RingBuffer::StartResponse>::Start_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(StartRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, StartRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(StartRequest));
+  ::fidl::DecodedMessage<StartRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      RingBuffer::InPlace::Start(std::move(_client_end), std::move(_response_buffer)));
+}
+
+RingBuffer::UnownedResultOf::Start RingBuffer::SyncClient::Start(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Start(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+RingBuffer::UnownedResultOf::Start RingBuffer::Call::Start(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Start(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<RingBuffer::StartResponse> RingBuffer::InPlace::Start(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(StartRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<StartRequest> params(std::move(_request_buffer));
+  RingBuffer::SetTransactionHeaderFor::StartRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RingBuffer::StartResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<StartRequest, StartResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RingBuffer::StartResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+RingBuffer::ResultOf::Stop_Impl<RingBuffer::StopResponse>::Stop_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StopRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, StopRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(StopRequest));
+  ::fidl::DecodedMessage<StopRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      RingBuffer::InPlace::Stop(std::move(_client_end), Super::response_buffer()));
+}
+
+RingBuffer::ResultOf::Stop RingBuffer::SyncClient::Stop() {
+    return ResultOf::Stop(::zx::unowned_channel(this->channel_));
+}
+
+RingBuffer::ResultOf::Stop RingBuffer::Call::Stop(::zx::unowned_channel _client_end) {
+  return ResultOf::Stop(std::move(_client_end));
+}
+
+::fidl::DecodeResult<RingBuffer::StopResponse> RingBuffer::InPlace::Stop(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(StopRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<StopRequest> params(std::move(_request_buffer));
+  RingBuffer::SetTransactionHeaderFor::StopRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RingBuffer::StopResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<StopRequest, StopResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RingBuffer::StopResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+bool RingBuffer::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
+  switch (hdr->ordinal) {
+    case kRingBuffer_GetProperties_Ordinal:
+    case kRingBuffer_GetProperties_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<GetPropertiesRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetProperties(
+          Interface::GetPropertiesCompleter::Sync(txn));
+      return true;
+    }
+    case kRingBuffer_WatchClockRecoveryPositionInfo_Ordinal:
+    case kRingBuffer_WatchClockRecoveryPositionInfo_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<WatchClockRecoveryPositionInfoRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->WatchClockRecoveryPositionInfo(
+          Interface::WatchClockRecoveryPositionInfoCompleter::Sync(txn));
+      return true;
+    }
+    case kRingBuffer_GetVmo_Ordinal:
+    case kRingBuffer_GetVmo_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<GetVmoRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->GetVmo(std::move(message->min_frames), std::move(message->clock_recovery_notifications_per_ring),
+          Interface::GetVmoCompleter::Sync(txn));
+      return true;
+    }
+    case kRingBuffer_Start_Ordinal:
+    case kRingBuffer_Start_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<StartRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->Start(
+          Interface::StartCompleter::Sync(txn));
+      return true;
+    }
+    case kRingBuffer_Stop_Ordinal:
+    case kRingBuffer_Stop_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<StopRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->Stop(
+          Interface::StopCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool RingBuffer::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void RingBuffer::Interface::GetPropertiesCompleterBase::Reply(::llcpp::fuchsia::hardware::audio::RingBufferProperties properties) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPropertiesResponse, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  GetPropertiesResponse _response = {};
+  RingBuffer::SetTransactionHeaderFor::GetPropertiesResponse(
+      ::fidl::DecodedMessage<GetPropertiesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetPropertiesResponse::PrimarySize,
+              GetPropertiesResponse::PrimarySize)));
+  _response.properties = std::move(properties);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void RingBuffer::Interface::GetPropertiesCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::audio::RingBufferProperties properties) {
+  if (_buffer.capacity() < GetPropertiesResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  GetPropertiesResponse _response = {};
+  RingBuffer::SetTransactionHeaderFor::GetPropertiesResponse(
+      ::fidl::DecodedMessage<GetPropertiesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetPropertiesResponse::PrimarySize,
+              GetPropertiesResponse::PrimarySize)));
+  _response.properties = std::move(properties);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void RingBuffer::Interface::GetPropertiesCompleterBase::Reply(::fidl::DecodedMessage<GetPropertiesResponse> params) {
+  RingBuffer::SetTransactionHeaderFor::GetPropertiesResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void RingBuffer::Interface::WatchClockRecoveryPositionInfoCompleterBase::Reply(::llcpp::fuchsia::hardware::audio::RingBufferPositionInfo position_info) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WatchClockRecoveryPositionInfoResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<WatchClockRecoveryPositionInfoResponse*>(_write_bytes);
+  RingBuffer::SetTransactionHeaderFor::WatchClockRecoveryPositionInfoResponse(
+      ::fidl::DecodedMessage<WatchClockRecoveryPositionInfoResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WatchClockRecoveryPositionInfoResponse::PrimarySize,
+              WatchClockRecoveryPositionInfoResponse::PrimarySize)));
+  _response.position_info = std::move(position_info);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WatchClockRecoveryPositionInfoResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WatchClockRecoveryPositionInfoResponse>(std::move(_response_bytes)));
+}
+
+void RingBuffer::Interface::WatchClockRecoveryPositionInfoCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::audio::RingBufferPositionInfo position_info) {
+  if (_buffer.capacity() < WatchClockRecoveryPositionInfoResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<WatchClockRecoveryPositionInfoResponse*>(_buffer.data());
+  RingBuffer::SetTransactionHeaderFor::WatchClockRecoveryPositionInfoResponse(
+      ::fidl::DecodedMessage<WatchClockRecoveryPositionInfoResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WatchClockRecoveryPositionInfoResponse::PrimarySize,
+              WatchClockRecoveryPositionInfoResponse::PrimarySize)));
+  _response.position_info = std::move(position_info);
+  _buffer.set_actual(sizeof(WatchClockRecoveryPositionInfoResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WatchClockRecoveryPositionInfoResponse>(std::move(_buffer)));
+}
+
+void RingBuffer::Interface::WatchClockRecoveryPositionInfoCompleterBase::Reply(::fidl::DecodedMessage<WatchClockRecoveryPositionInfoResponse> params) {
+  RingBuffer::SetTransactionHeaderFor::WatchClockRecoveryPositionInfoResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void RingBuffer::Interface::GetVmoCompleterBase::Reply(::llcpp::fuchsia::hardware::audio::RingBuffer_GetVmo_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetVmoResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetVmoResponse _response = {};
+  RingBuffer::SetTransactionHeaderFor::GetVmoResponse(
+      ::fidl::DecodedMessage<GetVmoResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetVmoResponse::PrimarySize,
+              GetVmoResponse::PrimarySize)));
+  _response.result = std::move(result);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+void RingBuffer::Interface::GetVmoCompleterBase::ReplySuccess(uint32_t num_frames, ::zx::vmo ring_buffer) {
+  RingBuffer_GetVmo_Response response;
+  response.num_frames = std::move(num_frames);
+  response.ring_buffer = std::move(ring_buffer);
+
+  Reply(RingBuffer_GetVmo_Result::WithResponse(&response));
+}
+void RingBuffer::Interface::GetVmoCompleterBase::ReplyError(GetVmoError error) {
+  Reply(RingBuffer_GetVmo_Result::WithErr(&error));
+}
+
+void RingBuffer::Interface::GetVmoCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::audio::RingBuffer_GetVmo_Result result) {
+  if (_buffer.capacity() < GetVmoResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  GetVmoResponse _response = {};
+  RingBuffer::SetTransactionHeaderFor::GetVmoResponse(
+      ::fidl::DecodedMessage<GetVmoResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetVmoResponse::PrimarySize,
+              GetVmoResponse::PrimarySize)));
+  _response.result = std::move(result);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+void RingBuffer::Interface::GetVmoCompleterBase::ReplySuccess(::fidl::BytePart _buffer, uint32_t num_frames, ::zx::vmo ring_buffer) {
+  RingBuffer_GetVmo_Response response;
+  response.num_frames = std::move(num_frames);
+  response.ring_buffer = std::move(ring_buffer);
+
+  Reply(std::move(_buffer), RingBuffer_GetVmo_Result::WithResponse(&response));
+}
+
+void RingBuffer::Interface::GetVmoCompleterBase::Reply(::fidl::DecodedMessage<GetVmoResponse> params) {
+  RingBuffer::SetTransactionHeaderFor::GetVmoResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void RingBuffer::Interface::StartCompleterBase::Reply(int64_t start_time) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<StartResponse*>(_write_bytes);
+  RingBuffer::SetTransactionHeaderFor::StartResponse(
+      ::fidl::DecodedMessage<StartResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              StartResponse::PrimarySize,
+              StartResponse::PrimarySize)));
+  _response.start_time = std::move(start_time);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(StartResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<StartResponse>(std::move(_response_bytes)));
+}
+
+void RingBuffer::Interface::StartCompleterBase::Reply(::fidl::BytePart _buffer, int64_t start_time) {
+  if (_buffer.capacity() < StartResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<StartResponse*>(_buffer.data());
+  RingBuffer::SetTransactionHeaderFor::StartResponse(
+      ::fidl::DecodedMessage<StartResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              StartResponse::PrimarySize,
+              StartResponse::PrimarySize)));
+  _response.start_time = std::move(start_time);
+  _buffer.set_actual(sizeof(StartResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<StartResponse>(std::move(_buffer)));
+}
+
+void RingBuffer::Interface::StartCompleterBase::Reply(::fidl::DecodedMessage<StartResponse> params) {
+  RingBuffer::SetTransactionHeaderFor::StartResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void RingBuffer::Interface::StopCompleterBase::Reply() {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StopResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<StopResponse*>(_write_bytes);
+  RingBuffer::SetTransactionHeaderFor::StopResponse(
+      ::fidl::DecodedMessage<StopResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              StopResponse::PrimarySize,
+              StopResponse::PrimarySize)));
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(StopResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<StopResponse>(std::move(_response_bytes)));
+}
+
+
+
+void RingBuffer::SetTransactionHeaderFor::GetPropertiesRequest(const ::fidl::DecodedMessage<RingBuffer::GetPropertiesRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kRingBuffer_GetProperties_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void RingBuffer::SetTransactionHeaderFor::GetPropertiesResponse(const ::fidl::DecodedMessage<RingBuffer::GetPropertiesResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kRingBuffer_GetProperties_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void RingBuffer::SetTransactionHeaderFor::WatchClockRecoveryPositionInfoRequest(const ::fidl::DecodedMessage<RingBuffer::WatchClockRecoveryPositionInfoRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kRingBuffer_WatchClockRecoveryPositionInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void RingBuffer::SetTransactionHeaderFor::WatchClockRecoveryPositionInfoResponse(const ::fidl::DecodedMessage<RingBuffer::WatchClockRecoveryPositionInfoResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kRingBuffer_WatchClockRecoveryPositionInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void RingBuffer::SetTransactionHeaderFor::GetVmoRequest(const ::fidl::DecodedMessage<RingBuffer::GetVmoRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kRingBuffer_GetVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void RingBuffer::SetTransactionHeaderFor::GetVmoResponse(const ::fidl::DecodedMessage<RingBuffer::GetVmoResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kRingBuffer_GetVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void RingBuffer::SetTransactionHeaderFor::StartRequest(const ::fidl::DecodedMessage<RingBuffer::StartRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kRingBuffer_Start_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void RingBuffer::SetTransactionHeaderFor::StartResponse(const ::fidl::DecodedMessage<RingBuffer::StartResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kRingBuffer_Start_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void RingBuffer::SetTransactionHeaderFor::StopRequest(const ::fidl::DecodedMessage<RingBuffer::StopRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kRingBuffer_Stop_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void RingBuffer::SetTransactionHeaderFor::StopResponse(const ::fidl::DecodedMessage<RingBuffer::StopResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kRingBuffer_Stop_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+::llcpp::fuchsia::hardware::audio::GainState::Builder GainState::Build() {
+  return GainState::Builder();
+}
+
+auto ::llcpp::fuchsia::hardware::audio::GainState::Builder::set_muted(bool* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[1 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 1) {
+    max_ordinal_ = 1;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::GainState::Builder::set_agc_enabled(bool* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[2 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 2) {
+    max_ordinal_ = 2;
+  }
+  return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::hardware::audio::GainState::Builder::set_gain_db(float* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[3 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 3) {
+    max_ordinal_ = 3;
+  }
+  return std::move(*this);
+}
+
+namespace {
+
+[[maybe_unused]]
+constexpr uint64_t kStreamConfig_GetProperties_Ordinal = 0x64e8e22600000000lu;
+[[maybe_unused]]
+constexpr uint64_t kStreamConfig_GetProperties_GenOrdinal = 0x7d89c02f3e2d3c01lu;
+extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigGetPropertiesRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigGetPropertiesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigGetPropertiesResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kStreamConfig_GetSupportedFormats_Ordinal = 0x436ffebd00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kStreamConfig_GetSupportedFormats_GenOrdinal = 0x448efa7850cafe7elu;
+extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigGetSupportedFormatsRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigGetSupportedFormatsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigGetSupportedFormatsResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kStreamConfig_CreateRingBuffer_Ordinal = 0x2f12bd3800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kStreamConfig_CreateRingBuffer_GenOrdinal = 0x2afb19dd13faa1balu;
+extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigCreateRingBufferRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigCreateRingBufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigCreateRingBufferResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kStreamConfig_WatchGainState_Ordinal = 0x1e82e2b00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kStreamConfig_WatchGainState_GenOrdinal = 0x4772506136ab65c1lu;
+extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigWatchGainStateRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigWatchGainStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigWatchGainStateResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kStreamConfig_SetGain_Ordinal = 0x7104625900000000lu;
+[[maybe_unused]]
+constexpr uint64_t kStreamConfig_SetGain_GenOrdinal = 0x3943b41498c6a384lu;
+extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigSetGainRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigSetGainResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigSetGainResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kStreamConfig_WatchPlugState_Ordinal = 0x3174894d00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kStreamConfig_WatchPlugState_GenOrdinal = 0x497345a6f048b2a6lu;
+extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigWatchPlugStateRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigWatchPlugStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigWatchPlugStateResponseTable;
+
+}  // namespace
+template <>
+StreamConfig::ResultOf::GetProperties_Impl<StreamConfig::GetPropertiesResponse>::GetProperties_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPropertiesRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetPropertiesRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPropertiesRequest));
+  ::fidl::DecodedMessage<GetPropertiesRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      StreamConfig::InPlace::GetProperties(std::move(_client_end), Super::response_buffer()));
+}
+
+StreamConfig::ResultOf::GetProperties StreamConfig::SyncClient::GetProperties() {
+    return ResultOf::GetProperties(::zx::unowned_channel(this->channel_));
+}
+
+StreamConfig::ResultOf::GetProperties StreamConfig::Call::GetProperties(::zx::unowned_channel _client_end) {
+  return ResultOf::GetProperties(std::move(_client_end));
+}
+
+template <>
+StreamConfig::UnownedResultOf::GetProperties_Impl<StreamConfig::GetPropertiesResponse>::GetProperties_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPropertiesRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetPropertiesRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetPropertiesRequest));
+  ::fidl::DecodedMessage<GetPropertiesRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      StreamConfig::InPlace::GetProperties(std::move(_client_end), std::move(_response_buffer)));
+}
+
+StreamConfig::UnownedResultOf::GetProperties StreamConfig::SyncClient::GetProperties(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetProperties(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+StreamConfig::UnownedResultOf::GetProperties StreamConfig::Call::GetProperties(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetProperties(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<StreamConfig::GetPropertiesResponse> StreamConfig::InPlace::GetProperties(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetPropertiesRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetPropertiesRequest> params(std::move(_request_buffer));
+  StreamConfig::SetTransactionHeaderFor::GetPropertiesRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<StreamConfig::GetPropertiesResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetPropertiesRequest, GetPropertiesResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<StreamConfig::GetPropertiesResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+StreamConfig::ResultOf::GetSupportedFormats_Impl<StreamConfig::GetSupportedFormatsResponse>::GetSupportedFormats_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSupportedFormatsRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetSupportedFormatsRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetSupportedFormatsRequest));
+  ::fidl::DecodedMessage<GetSupportedFormatsRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      StreamConfig::InPlace::GetSupportedFormats(std::move(_client_end), Super::response_buffer()));
+}
+
+StreamConfig::ResultOf::GetSupportedFormats StreamConfig::SyncClient::GetSupportedFormats() {
+    return ResultOf::GetSupportedFormats(::zx::unowned_channel(this->channel_));
+}
+
+StreamConfig::ResultOf::GetSupportedFormats StreamConfig::Call::GetSupportedFormats(::zx::unowned_channel _client_end) {
+  return ResultOf::GetSupportedFormats(std::move(_client_end));
+}
+
+template <>
+StreamConfig::UnownedResultOf::GetSupportedFormats_Impl<StreamConfig::GetSupportedFormatsResponse>::GetSupportedFormats_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetSupportedFormatsRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetSupportedFormatsRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetSupportedFormatsRequest));
+  ::fidl::DecodedMessage<GetSupportedFormatsRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      StreamConfig::InPlace::GetSupportedFormats(std::move(_client_end), std::move(_response_buffer)));
+}
+
+StreamConfig::UnownedResultOf::GetSupportedFormats StreamConfig::SyncClient::GetSupportedFormats(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetSupportedFormats(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+StreamConfig::UnownedResultOf::GetSupportedFormats StreamConfig::Call::GetSupportedFormats(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetSupportedFormats(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<StreamConfig::GetSupportedFormatsResponse> StreamConfig::InPlace::GetSupportedFormats(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetSupportedFormatsRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetSupportedFormatsRequest> params(std::move(_request_buffer));
+  StreamConfig::SetTransactionHeaderFor::GetSupportedFormatsRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<StreamConfig::GetSupportedFormatsResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetSupportedFormatsRequest, GetSupportedFormatsResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<StreamConfig::GetSupportedFormatsResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+StreamConfig::ResultOf::CreateRingBuffer_Impl::CreateRingBuffer_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::audio::Format format, ::zx::channel ring_buffer) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateRingBufferRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  CreateRingBufferRequest _request = {};
+  _request.format = std::move(format);
+  _request.ring_buffer = std::move(ring_buffer);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<CreateRingBufferRequest> _decoded_request = std::move(_linearize_result.message);
+  Super::operator=(
+      StreamConfig::InPlace::CreateRingBuffer(std::move(_client_end), std::move(_decoded_request)));
+}
+
+StreamConfig::ResultOf::CreateRingBuffer StreamConfig::SyncClient::CreateRingBuffer(::llcpp::fuchsia::hardware::audio::Format format, ::zx::channel ring_buffer) {
+    return ResultOf::CreateRingBuffer(::zx::unowned_channel(this->channel_), std::move(format), std::move(ring_buffer));
+}
+
+StreamConfig::ResultOf::CreateRingBuffer StreamConfig::Call::CreateRingBuffer(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::audio::Format format, ::zx::channel ring_buffer) {
+  return ResultOf::CreateRingBuffer(std::move(_client_end), std::move(format), std::move(ring_buffer));
+}
+
+
+StreamConfig::UnownedResultOf::CreateRingBuffer_Impl::CreateRingBuffer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::audio::Format format, ::zx::channel ring_buffer) {
+  if (_request_buffer.capacity() < CreateRingBufferRequest::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  CreateRingBufferRequest _request = {};
+  _request.format = std::move(format);
+  _request.ring_buffer = std::move(ring_buffer);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<CreateRingBufferRequest> _decoded_request = std::move(_linearize_result.message);
+  Super::operator=(
+      StreamConfig::InPlace::CreateRingBuffer(std::move(_client_end), std::move(_decoded_request)));
+}
+
+StreamConfig::UnownedResultOf::CreateRingBuffer StreamConfig::SyncClient::CreateRingBuffer(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::audio::Format format, ::zx::channel ring_buffer) {
+  return UnownedResultOf::CreateRingBuffer(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(format), std::move(ring_buffer));
+}
+
+StreamConfig::UnownedResultOf::CreateRingBuffer StreamConfig::Call::CreateRingBuffer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::audio::Format format, ::zx::channel ring_buffer) {
+  return UnownedResultOf::CreateRingBuffer(std::move(_client_end), std::move(_request_buffer), std::move(format), std::move(ring_buffer));
+}
+
+::fidl::internal::StatusAndError StreamConfig::InPlace::CreateRingBuffer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateRingBufferRequest> params) {
+  StreamConfig::SetTransactionHeaderFor::CreateRingBufferRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
+}
+
+template <>
+StreamConfig::ResultOf::WatchGainState_Impl<StreamConfig::WatchGainStateResponse>::WatchGainState_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WatchGainStateRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, WatchGainStateRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WatchGainStateRequest));
+  ::fidl::DecodedMessage<WatchGainStateRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      StreamConfig::InPlace::WatchGainState(std::move(_client_end), Super::response_buffer()));
+}
+
+StreamConfig::ResultOf::WatchGainState StreamConfig::SyncClient::WatchGainState() {
+    return ResultOf::WatchGainState(::zx::unowned_channel(this->channel_));
+}
+
+StreamConfig::ResultOf::WatchGainState StreamConfig::Call::WatchGainState(::zx::unowned_channel _client_end) {
+  return ResultOf::WatchGainState(std::move(_client_end));
+}
+
+template <>
+StreamConfig::UnownedResultOf::WatchGainState_Impl<StreamConfig::WatchGainStateResponse>::WatchGainState_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WatchGainStateRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, WatchGainStateRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(WatchGainStateRequest));
+  ::fidl::DecodedMessage<WatchGainStateRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      StreamConfig::InPlace::WatchGainState(std::move(_client_end), std::move(_response_buffer)));
+}
+
+StreamConfig::UnownedResultOf::WatchGainState StreamConfig::SyncClient::WatchGainState(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WatchGainState(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+StreamConfig::UnownedResultOf::WatchGainState StreamConfig::Call::WatchGainState(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WatchGainState(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<StreamConfig::WatchGainStateResponse> StreamConfig::InPlace::WatchGainState(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(WatchGainStateRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<WatchGainStateRequest> params(std::move(_request_buffer));
+  StreamConfig::SetTransactionHeaderFor::WatchGainStateRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<StreamConfig::WatchGainStateResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<WatchGainStateRequest, WatchGainStateResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<StreamConfig::WatchGainStateResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+StreamConfig::ResultOf::SetGain_Impl::SetGain_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::audio::GainState target_state) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetGainRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  SetGainRequest _request = {};
+  _request.target_state = std::move(target_state);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<SetGainRequest> _decoded_request = std::move(_linearize_result.message);
+  Super::operator=(
+      StreamConfig::InPlace::SetGain(std::move(_client_end), std::move(_decoded_request)));
+}
+
+StreamConfig::ResultOf::SetGain StreamConfig::SyncClient::SetGain(::llcpp::fuchsia::hardware::audio::GainState target_state) {
+    return ResultOf::SetGain(::zx::unowned_channel(this->channel_), std::move(target_state));
+}
+
+StreamConfig::ResultOf::SetGain StreamConfig::Call::SetGain(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::audio::GainState target_state) {
+  return ResultOf::SetGain(std::move(_client_end), std::move(target_state));
+}
+
+
+StreamConfig::UnownedResultOf::SetGain_Impl::SetGain_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::audio::GainState target_state) {
+  if (_request_buffer.capacity() < SetGainRequest::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  SetGainRequest _request = {};
+  _request.target_state = std::move(target_state);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<SetGainRequest> _decoded_request = std::move(_linearize_result.message);
+  Super::operator=(
+      StreamConfig::InPlace::SetGain(std::move(_client_end), std::move(_decoded_request)));
+}
+
+StreamConfig::UnownedResultOf::SetGain StreamConfig::SyncClient::SetGain(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::audio::GainState target_state) {
+  return UnownedResultOf::SetGain(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(target_state));
+}
+
+StreamConfig::UnownedResultOf::SetGain StreamConfig::Call::SetGain(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::audio::GainState target_state) {
+  return UnownedResultOf::SetGain(std::move(_client_end), std::move(_request_buffer), std::move(target_state));
+}
+
+::fidl::internal::StatusAndError StreamConfig::InPlace::SetGain(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetGainRequest> params) {
+  StreamConfig::SetTransactionHeaderFor::SetGainRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
+}
+
+template <>
+StreamConfig::ResultOf::WatchPlugState_Impl<StreamConfig::WatchPlugStateResponse>::WatchPlugState_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WatchPlugStateRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, WatchPlugStateRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WatchPlugStateRequest));
+  ::fidl::DecodedMessage<WatchPlugStateRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      StreamConfig::InPlace::WatchPlugState(std::move(_client_end), Super::response_buffer()));
+}
+
+StreamConfig::ResultOf::WatchPlugState StreamConfig::SyncClient::WatchPlugState() {
+    return ResultOf::WatchPlugState(::zx::unowned_channel(this->channel_));
+}
+
+StreamConfig::ResultOf::WatchPlugState StreamConfig::Call::WatchPlugState(::zx::unowned_channel _client_end) {
+  return ResultOf::WatchPlugState(std::move(_client_end));
+}
+
+template <>
+StreamConfig::UnownedResultOf::WatchPlugState_Impl<StreamConfig::WatchPlugStateResponse>::WatchPlugState_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WatchPlugStateRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, WatchPlugStateRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(WatchPlugStateRequest));
+  ::fidl::DecodedMessage<WatchPlugStateRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      StreamConfig::InPlace::WatchPlugState(std::move(_client_end), std::move(_response_buffer)));
+}
+
+StreamConfig::UnownedResultOf::WatchPlugState StreamConfig::SyncClient::WatchPlugState(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WatchPlugState(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+StreamConfig::UnownedResultOf::WatchPlugState StreamConfig::Call::WatchPlugState(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WatchPlugState(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<StreamConfig::WatchPlugStateResponse> StreamConfig::InPlace::WatchPlugState(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(WatchPlugStateRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<WatchPlugStateRequest> params(std::move(_request_buffer));
+  StreamConfig::SetTransactionHeaderFor::WatchPlugStateRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<StreamConfig::WatchPlugStateResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<WatchPlugStateRequest, WatchPlugStateResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<StreamConfig::WatchPlugStateResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+bool StreamConfig::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
+  switch (hdr->ordinal) {
+    case kStreamConfig_GetProperties_Ordinal:
+    case kStreamConfig_GetProperties_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<GetPropertiesRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetProperties(
+          Interface::GetPropertiesCompleter::Sync(txn));
+      return true;
+    }
+    case kStreamConfig_GetSupportedFormats_Ordinal:
+    case kStreamConfig_GetSupportedFormats_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<GetSupportedFormatsRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetSupportedFormats(
+          Interface::GetSupportedFormatsCompleter::Sync(txn));
+      return true;
+    }
+    case kStreamConfig_CreateRingBuffer_Ordinal:
+    case kStreamConfig_CreateRingBuffer_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<CreateRingBufferRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->CreateRingBuffer(std::move(message->format), std::move(message->ring_buffer),
+          Interface::CreateRingBufferCompleter::Sync(txn));
+      return true;
+    }
+    case kStreamConfig_WatchGainState_Ordinal:
+    case kStreamConfig_WatchGainState_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<WatchGainStateRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->WatchGainState(
+          Interface::WatchGainStateCompleter::Sync(txn));
+      return true;
+    }
+    case kStreamConfig_SetGain_Ordinal:
+    case kStreamConfig_SetGain_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<SetGainRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->SetGain(std::move(message->target_state),
+          Interface::SetGainCompleter::Sync(txn));
+      return true;
+    }
+    case kStreamConfig_WatchPlugState_Ordinal:
+    case kStreamConfig_WatchPlugState_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<WatchPlugStateRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->WatchPlugState(
+          Interface::WatchPlugStateCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool StreamConfig::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void StreamConfig::Interface::GetPropertiesCompleterBase::Reply(::llcpp::fuchsia::hardware::audio::StreamProperties properties) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPropertiesResponse, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  GetPropertiesResponse _response = {};
+  StreamConfig::SetTransactionHeaderFor::GetPropertiesResponse(
+      ::fidl::DecodedMessage<GetPropertiesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetPropertiesResponse::PrimarySize,
+              GetPropertiesResponse::PrimarySize)));
+  _response.properties = std::move(properties);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void StreamConfig::Interface::GetPropertiesCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::audio::StreamProperties properties) {
+  if (_buffer.capacity() < GetPropertiesResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  GetPropertiesResponse _response = {};
+  StreamConfig::SetTransactionHeaderFor::GetPropertiesResponse(
+      ::fidl::DecodedMessage<GetPropertiesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetPropertiesResponse::PrimarySize,
+              GetPropertiesResponse::PrimarySize)));
+  _response.properties = std::move(properties);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void StreamConfig::Interface::GetPropertiesCompleterBase::Reply(::fidl::DecodedMessage<GetPropertiesResponse> params) {
+  StreamConfig::SetTransactionHeaderFor::GetPropertiesResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void StreamConfig::Interface::GetSupportedFormatsCompleterBase::Reply(::fidl::VectorView<::llcpp::fuchsia::hardware::audio::SupportedFormats> supported_formats) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSupportedFormatsResponse, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  GetSupportedFormatsResponse _response = {};
+  StreamConfig::SetTransactionHeaderFor::GetSupportedFormatsResponse(
+      ::fidl::DecodedMessage<GetSupportedFormatsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetSupportedFormatsResponse::PrimarySize,
+              GetSupportedFormatsResponse::PrimarySize)));
+  _response.supported_formats = std::move(supported_formats);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void StreamConfig::Interface::GetSupportedFormatsCompleterBase::Reply(::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::hardware::audio::SupportedFormats> supported_formats) {
+  if (_buffer.capacity() < GetSupportedFormatsResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  GetSupportedFormatsResponse _response = {};
+  StreamConfig::SetTransactionHeaderFor::GetSupportedFormatsResponse(
+      ::fidl::DecodedMessage<GetSupportedFormatsResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetSupportedFormatsResponse::PrimarySize,
+              GetSupportedFormatsResponse::PrimarySize)));
+  _response.supported_formats = std::move(supported_formats);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void StreamConfig::Interface::GetSupportedFormatsCompleterBase::Reply(::fidl::DecodedMessage<GetSupportedFormatsResponse> params) {
+  StreamConfig::SetTransactionHeaderFor::GetSupportedFormatsResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void StreamConfig::Interface::WatchGainStateCompleterBase::Reply(::llcpp::fuchsia::hardware::audio::GainState gain_state) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WatchGainStateResponse, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  WatchGainStateResponse _response = {};
+  StreamConfig::SetTransactionHeaderFor::WatchGainStateResponse(
+      ::fidl::DecodedMessage<WatchGainStateResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WatchGainStateResponse::PrimarySize,
+              WatchGainStateResponse::PrimarySize)));
+  _response.gain_state = std::move(gain_state);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void StreamConfig::Interface::WatchGainStateCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::audio::GainState gain_state) {
+  if (_buffer.capacity() < WatchGainStateResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  WatchGainStateResponse _response = {};
+  StreamConfig::SetTransactionHeaderFor::WatchGainStateResponse(
+      ::fidl::DecodedMessage<WatchGainStateResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WatchGainStateResponse::PrimarySize,
+              WatchGainStateResponse::PrimarySize)));
+  _response.gain_state = std::move(gain_state);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void StreamConfig::Interface::WatchGainStateCompleterBase::Reply(::fidl::DecodedMessage<WatchGainStateResponse> params) {
+  StreamConfig::SetTransactionHeaderFor::WatchGainStateResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void StreamConfig::Interface::WatchPlugStateCompleterBase::Reply(::llcpp::fuchsia::hardware::audio::PlugState plug_state) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WatchPlugStateResponse, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  WatchPlugStateResponse _response = {};
+  StreamConfig::SetTransactionHeaderFor::WatchPlugStateResponse(
+      ::fidl::DecodedMessage<WatchPlugStateResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WatchPlugStateResponse::PrimarySize,
+              WatchPlugStateResponse::PrimarySize)));
+  _response.plug_state = std::move(plug_state);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void StreamConfig::Interface::WatchPlugStateCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::audio::PlugState plug_state) {
+  if (_buffer.capacity() < WatchPlugStateResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  WatchPlugStateResponse _response = {};
+  StreamConfig::SetTransactionHeaderFor::WatchPlugStateResponse(
+      ::fidl::DecodedMessage<WatchPlugStateResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WatchPlugStateResponse::PrimarySize,
+              WatchPlugStateResponse::PrimarySize)));
+  _response.plug_state = std::move(plug_state);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void StreamConfig::Interface::WatchPlugStateCompleterBase::Reply(::fidl::DecodedMessage<WatchPlugStateResponse> params) {
+  StreamConfig::SetTransactionHeaderFor::WatchPlugStateResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+
+void StreamConfig::SetTransactionHeaderFor::GetPropertiesRequest(const ::fidl::DecodedMessage<StreamConfig::GetPropertiesRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kStreamConfig_GetProperties_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void StreamConfig::SetTransactionHeaderFor::GetPropertiesResponse(const ::fidl::DecodedMessage<StreamConfig::GetPropertiesResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kStreamConfig_GetProperties_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void StreamConfig::SetTransactionHeaderFor::GetSupportedFormatsRequest(const ::fidl::DecodedMessage<StreamConfig::GetSupportedFormatsRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kStreamConfig_GetSupportedFormats_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void StreamConfig::SetTransactionHeaderFor::GetSupportedFormatsResponse(const ::fidl::DecodedMessage<StreamConfig::GetSupportedFormatsResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kStreamConfig_GetSupportedFormats_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void StreamConfig::SetTransactionHeaderFor::CreateRingBufferRequest(const ::fidl::DecodedMessage<StreamConfig::CreateRingBufferRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kStreamConfig_CreateRingBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void StreamConfig::SetTransactionHeaderFor::WatchGainStateRequest(const ::fidl::DecodedMessage<StreamConfig::WatchGainStateRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kStreamConfig_WatchGainState_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void StreamConfig::SetTransactionHeaderFor::WatchGainStateResponse(const ::fidl::DecodedMessage<StreamConfig::WatchGainStateResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kStreamConfig_WatchGainState_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void StreamConfig::SetTransactionHeaderFor::SetGainRequest(const ::fidl::DecodedMessage<StreamConfig::SetGainRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kStreamConfig_SetGain_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void StreamConfig::SetTransactionHeaderFor::WatchPlugStateRequest(const ::fidl::DecodedMessage<StreamConfig::WatchPlugStateRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kStreamConfig_WatchPlugState_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void StreamConfig::SetTransactionHeaderFor::WatchPlugStateResponse(const ::fidl::DecodedMessage<StreamConfig::WatchPlugStateResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kStreamConfig_WatchPlugState_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

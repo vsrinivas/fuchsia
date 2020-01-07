@@ -1,0 +1,193 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.audio;
+
+using zx;
+
+// For an overview see //zircon/driver_interfaces/audio_streaming.md
+
+const uint32 UNIQUE_ID_SIZE = 16;
+const uint32 MAX_UI_STRING_SIZE = 256;
+const uint32 MAX_COUNT_CHANNELS_TO_USE = 64;
+const uint32 MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS = 64;
+const uint32 MAX_COUNT_SUPPORTED_SAMPLE_FORMATS = 3;
+const uint32 MAX_COUNT_SUPPORTED_RATES = 64;
+const uint32 MAX_COUNT_SUPPORTED_BYTES_PER_SAMPLE = 8;
+const uint32 MAX_COUNT_SUPPORTED_VALID_BITS_PER_SAMPLE = 8;
+const uint32 MAX_COUNT_FORMATS = 64;
+
+enum SampleFormat : uint8 {
+    /// Signed Linear Pulse Code Modulation samples at the host endianness.
+    PCM_SIGNED = 1;
+
+    /// Unsigned Linear Pulse Code Modulation samples at the host endianness.
+    PCM_UNSIGNED = 2;
+
+    /// Floating point samples IEEE-754 encoded.
+    PCM_FLOAT = 3;
+};
+
+table SupportedFormats {
+    /// Supported formats for non-compressed PCM samples.
+    1: PcmSupportedFormats pcm_supported_formats;
+};
+
+/// Format supporting non-compressed PCM audio. Frames are made up of |number_of_channels| samples
+/// which have |valid_bits_per_sample| bits of left-justified data within |bytes_per_sample|
+/// bytes. All values listed in each vector are supported. When not all combinations supported by
+/// the driver can be described with one |SupportedFormats| (and hence one |PcmSupportedFormats|),
+/// |GetSupportedFormats| returns more than one |SupportedFormats| in the returned vector.
+/// For more detailed information see //zircon/driver_interfaces/audio_streaming.md.
+struct PcmSupportedFormats {
+    /// Vector of possible number of channels supported in ascending order.
+    vector<uint8>:MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS number_of_channels;
+
+    /// Vector of possible |SampleFormat|s supported.
+    vector<SampleFormat>:MAX_COUNT_SUPPORTED_SAMPLE_FORMATS sample_formats;
+
+    /// Vector of possible number of bits allocated to hold a sample,
+    /// equal or bigger than the actual sample size in |valid_bits_per_sample| in ascending order.
+    vector<uint8>:MAX_COUNT_SUPPORTED_BYTES_PER_SAMPLE bytes_per_sample;
+
+    /// Vector of possible number of bits in a sample in ascending order, must be equal or smaller
+    /// than |bytes_per_channel| for samples to fit. If smaller, bits are left justified, and any
+    /// additional bits will be ignored.
+    vector<uint8>:MAX_COUNT_SUPPORTED_VALID_BITS_PER_SAMPLE valid_bits_per_sample;
+
+    /// Vector of possible frame rates supported in ascending order.
+    vector<uint32>:MAX_COUNT_SUPPORTED_RATES frame_rates;
+};
+
+table Format {
+    /// Format supporting non-compressed PCM samples.
+    1: PcmFormat pcm_format;
+};
+
+/// Format supporting non-compressed PCM audio. Frames are made up of |number_of_channels| samples
+/// which have |valid_bits_per_sample| bits of left-justified data within |bytes_per_channel|.
+/// bytes. For more detailed information see //zircon/driver_interfaces/audio_streaming.md.
+struct PcmFormat {
+    /// Number of channels.
+    uint8 number_of_channels;
+
+    /// Which channels to use as a bitmask. Channels not set in the bitmask are ignored.
+    /// The least significant bit corresponds to index 0.
+    uint64 channels_to_use_bitmask;
+
+    /// The format of all samples.
+    SampleFormat sample_format;
+
+    /// Bytes allocated to hold a sample, equal or bigger than the valid sample size in
+    /// |valid_bits_per_sample|.
+    uint8 bytes_per_sample;
+
+    /// Number of valid bits in a sample, must be equal or smaller than bits in |bytes_per_sample|.
+    /// If smaller, bits are left justified, and any additional bits must be ignored by the
+    /// receiver.
+    uint8 valid_bits_per_sample;
+
+    /// The frame rate for all samples.
+    uint32 frame_rate;
+};
+
+/// Gain state requested by the client or returned a current by the driver.
+table GainState {
+    /// Current mute state. If not included, the state is unmuted.
+    1: bool muted;
+
+    /// Current Automatic Gain Control (AGC) state. If not included, AGC is disabled.
+    2: bool agc_enabled;
+
+    /// Current gain in decibels. Must be included.
+    3: float32 gain_db;
+};
+
+/// Plug state as returned by the driver.
+table PlugState {
+    /// Stream is currently plugged in. Must be included.
+    1: bool plugged;
+
+    /// Timestamps the information provided in the rest of the fields of this struct.
+    /// Must be included.
+    2: zx.time plug_state_time;
+};
+
+enum PlugDetectCapabilities {
+    /// Stream is hardwired (will always be plugged in).
+    HARDWIRED = 0;
+
+    /// Stream is able to asynchronously notify of plug state changes.
+    CAN_ASYNC_NOTIFY = 1;
+};
+
+table StreamProperties {
+    /// A unique identifier. If not included, there is no unique id for the StreamConfig.
+    1: array<uint8>:UNIQUE_ID_SIZE unique_id;
+
+    /// Stream type is input or output. Must be included.
+    2: bool is_input;
+
+    /// Gain mute capability. If not included, the StreamConfig can't mute.
+    3: bool can_mute;
+
+    /// Automatic Gain Control (AGC) capability. If not included, the StreamConfig can't AGC.
+    4: bool can_agc;
+
+    /// Minimum gain in decibels. Must be included.
+    5: float32 min_gain_db;
+
+    /// Maximum gain in decibels. Must be included.
+    6: float32 max_gain_db;
+
+    /// Gain step in decibels, this value must not be negative, but may be zero to convey an
+    /// effectively continuous range of values. Must be included.
+    7: float32 gain_step_db;
+
+    /// Plug Detect Capabilities. Must be included.
+    8: PlugDetectCapabilities plug_detect_capabilities;
+
+    /// UI string for the manufacturer name. If not included, the manufacturer is unspecified.
+    9: string:MAX_UI_STRING_SIZE manufacturer;
+
+    /// UI string for the product name. If not included, the product name is unspecified.
+    10: string:MAX_UI_STRING_SIZE product;
+};
+
+protocol StreamConfig {
+    /// Retrieves top level static properties.
+    GetProperties() -> (StreamProperties properties);
+
+    /// Gets formats supported by a given driver. When not all combinations supported by the
+    /// driver can be described with one |SupportedFormats|, the driver returns more than one
+    /// |SupportedFormats| in the returned vector. For example, if one |SupportedFormats| allows
+    /// for 32 bits samples at 48KHz, and 16 bits samples at 96KHz, but not 32 bits samples at
+    /// 96KHz, then the driver replies with 2 |SupportedFormats|: <<32bits>,<48KHz>> and
+    /// <<16bits>,<96KHz>>. For simplicity, this example ignores parameters other than rate and
+    /// bits per sample. In the case where the driver supports either 16 or 32 bits samples at
+    /// either 48 or 96KHz, the driver would reply with 1 |SupportedFormats|:
+    /// <<16bits,32bits>,<48KHz,96KHz>>.
+    GetSupportedFormats() -> (vector<SupportedFormats>:MAX_COUNT_FORMATS supported_formats);
+
+    /// |CreateRingBuffer| is sent by clients to select a stream format based on information that
+    /// the driver provides in |GetSupportedFormats| what is supported by the client, and any other
+    /// requirement. The |ring_buffer| channel is used to control the audio buffer, if a previous
+    /// ring buffer channel had been established and was still active, the driver must close that
+    /// (ring buffer) channel and make every attempt to gracefully quiesce any on-going streaming
+    /// operations in the process.
+    CreateRingBuffer(Format format, request<RingBuffer> ring_buffer);
+
+    /// Get the gain state via a hanging get. The driver will reply to the first |WatchGainState|
+    /// sent by the client. The driver will not respond to subsequent client |WatchGainState| calls
+    /// until the gain state changes from what was most recently reported.
+    WatchGainState() -> (GainState gain_state);
+
+    /// Client update of the gain state.
+    SetGain(GainState target_state);
+
+    /// Get the plug detect state via a hanging get. The driver will reply to the first
+    /// |WatchPlugState| sent by the client. The driver will not respond to subsequent client
+    /// |WatchPlugState| calls until the plug state changes from what was most recently reported.
+    WatchPlugState() -> (PlugState plug_state);
+};

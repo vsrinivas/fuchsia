@@ -104,8 +104,9 @@ void AudioPlugDetectorImpl::AddAudioDevice(int dir_fd, const std::string& name, 
     REP(FailedToObtainStreamChannel(name, is_input, res));
     FX_PLOGS(ERROR, res) << "Failed to open channel to audio " << (is_input ? "input" : "output");
   });
-  device->GetChannel([d = std::move(device), this, is_input, name](zx::channel channel) {
-    observer_(std::move(channel), name, is_input);
+  device->GetChannel([d = std::move(device), this, is_input,
+                      name](::fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> req) {
+    observer_(req.TakeChannel(), name, is_input);
   });
 }
 
