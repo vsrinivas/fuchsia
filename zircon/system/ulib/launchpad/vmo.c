@@ -26,7 +26,6 @@ zx_status_t launchpad_vmo_from_file(const char* filename, zx_handle_t* out) {
 
   status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &exec_vmo);
   if (status != ZX_OK) {
-    zx_handle_close(vmo);
     return status;
   }
 
