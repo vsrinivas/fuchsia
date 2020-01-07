@@ -364,6 +364,8 @@ func (i *Instance) Start() error {
 
 	// Look for very early log message to validate that qemu likely started
 	// correctly. Loop for a while to give qemu a chance to boot.
+
+	fmt.Println("Checking for QEMU boot...")
 	for j := 0; j < 100; j++ {
 		if i.CheckForLogMessage("SeaBIOS") == nil {
 			break
@@ -432,6 +434,13 @@ func (i *Instance) CheckForLogMessage(msg string) error {
 	for {
 		line, err := i.stdout.ReadString('\n')
 		if err != nil {
+			for {
+				stderr, err2 := i.stderr.ReadString('\n')
+				if err2 != nil {
+					break
+				}
+				fmt.Print(stderr)
+			}
 			panic(err)
 		}
 
