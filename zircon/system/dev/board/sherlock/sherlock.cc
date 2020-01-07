@@ -125,6 +125,12 @@ int Sherlock::Thread() {
     zxlogf(ERROR, "EmmcInit() failed\n");
   }
 
+  // The BMC43458 chip requires this hardware clock for bluetooth and wifi.
+  // Called here to avoid a dep. between sdio and bluetooth init order.
+  if (BCM43458LpoClockInit() != ZX_OK) {
+    zxlogf(ERROR, "Bcm43458LpoClockInit() failed\n");
+  }
+
   if (SdioInit() != ZX_OK) {
     zxlogf(ERROR, "SdioInit() failed\n");
   }

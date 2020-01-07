@@ -18,9 +18,16 @@
 #include <ddk/protocol/serialimpl/async.h>
 #include <ddktl/protocol/platform/device.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
+#include <mock/ddktl/protocol/pwm.h>
 #include <zxtest/zxtest.h>
 
 #include "registers.h"
+
+bool operator==(const pwm_config_t& lhs, const pwm_config_t& rhs) {
+  return (lhs.polarity == rhs.polarity) && (lhs.period_ns == rhs.period_ns) &&
+         (lhs.duty_cycle == rhs.duty_cycle) && (lhs.mode_config_size == rhs.mode_config_size) &&
+         !memcmp(lhs.mode_config_buffer, rhs.mode_config_buffer, lhs.mode_config_size);
+}
 
 namespace {
 
@@ -237,7 +244,13 @@ class AmlUartHarness : public zxtest::Test {
     info.serial_pid = PDEV_PID_BCM43458;
     auto uart = std::make_unique<serial::AmlUart>(fake_ddk::kFakeParent, *pdev_.proto(), info,
                                                   ddk::MmioBuffer(pdev_.GetMmio()));
-    zx_status_t status = uart->Init();
+    pwm_.ExpectEnable(ZX_OK);
+    aml_pwm::mode_config two_timer = {.mode = aml_pwm::TWO_TIMER,
+                                      .two_timer = {30052, 50.0, 0x0a, 0x0a}};
+    pwm_config_t cfg = {false, 30053, static_cast<float>(49.931787176), &two_timer,
+                        sizeof(two_timer)};
+    pwm_.ExpectSetConfig(ZX_OK, cfg);
+    zx_status_t status = uart->Init(pwm_.GetProto());
     ASSERT_OK(status);
     // The AmlUart* is now owned by the fake_ddk.
     uart.release();
@@ -245,6 +258,7 @@ class AmlUartHarness : public zxtest::Test {
   }
 
   void TearDown() override {
+    pwm_.VerifyAndClear();
     auto device = device_.release();
     ddk::UnbindTxn txn(device->zxdev());
     device->DdkUnbindNew(std::move(txn));
@@ -258,6 +272,7 @@ class AmlUartHarness : public zxtest::Test {
   Ddk ddk_;
   FakePDev pdev_;
   std::unique_ptr<serial::AmlUart> device_;
+  ddk::MockPwm pwm_;
 };
 
 TEST_F(AmlUartHarness, SerialImplAsyncGetInfo) {

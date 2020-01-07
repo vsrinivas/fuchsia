@@ -47,29 +47,6 @@ TEST(PwmInitDeviceTest, InitTest) {
   ddk::MockGpio wifi_gpio_;
   ddk::MockGpio bt_gpio_;
 
-  wifi_gpio_.ExpectSetAltFunction(ZX_OK, 1);
-  pwm_.ExpectEnable(ZX_OK);
-  aml_pwm::mode_config two_timer = {
-      .mode = aml_pwm::TWO_TIMER,
-      .two_timer =
-          {
-              .period_ns2 = 30052,
-              .duty_cycle2 = 50.0,
-              .timer1 = 0x0a,
-              .timer2 = 0x0a,
-          },
-  };
-  pwm_config_t init_cfg = {
-      .polarity = false,
-      .period_ns = 30053,
-      .duty_cycle = static_cast<float>(49.931787176),
-      .mode_config_buffer = &two_timer,
-      .mode_config_size = sizeof(two_timer),
-  };
-  pwm_.ExpectSetConfig(ZX_OK, init_cfg);
-  bt_gpio_.ExpectConfigOut(ZX_OK, 0);
-  bt_gpio_.ExpectWrite(ZX_OK, 1);
-
   std::unique_ptr<FakePwmInitDevice> dev_ =
       FakePwmInitDevice::Create(pwm_.GetProto(), wifi_gpio_.GetProto(), bt_gpio_.GetProto());
   ASSERT_NOT_NULL(dev_);

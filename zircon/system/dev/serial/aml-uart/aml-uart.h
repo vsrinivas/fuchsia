@@ -19,6 +19,7 @@
 #include <ddk/protocol/serial.h>
 #include <ddk/protocol/serialimpl/async.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/pwm.h>
 #include <ddktl/protocol/serialimpl/async.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
@@ -51,7 +52,7 @@ class AmlUart : public DeviceType,
   void SerialImplAsyncWriteAsync(const void* buf_buffer, size_t buf_size,
                                  serial_impl_async_write_async_callback callback, void* cookie);
 
-  zx_status_t Init();
+  zx_status_t Init(ddk::PwmProtocolClient pwm);
 
   explicit AmlUart(zx_device_t* parent, const pdev_protocol_t& pdev,
                    const serial_port_info_t& serial_port_info, ddk::MmioBuffer mmio)
@@ -65,6 +66,12 @@ class AmlUart : public DeviceType,
   void HandleRXRaceForTest();
 
  private:
+  enum {
+    COMPONENT_PDEV,
+    COMPONENT_PWM_E,
+    COMPONENT_COUNT,
+  };
+
   using Callback = fit::function<void(uint32_t)>;
 
   // Reads the current state from the status register and calls notify_cb if it has changed.

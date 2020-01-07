@@ -41,7 +41,7 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[1];
+  zx_device_t* components[COMPONENT_COUNT];
   size_t component_count;
   composite.GetComponents(components, fbl::count_of(components), &component_count);
   // Only pdev component is required.
@@ -50,7 +50,12 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  ddk::PDev pdev(components[0]);
+  ddk::PwmProtocolClient pwm;
+  if (component_count > COMPONENT_PWM_E) {
+    pwm = components[COMPONENT_PWM_E];
+  }
+
+  ddk::PDev pdev(components[COMPONENT_PDEV]);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "AmlUart::Create: Could not get pdev\n");
     return ZX_ERR_NO_RESOURCES;
@@ -83,10 +88,26 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  return uart->Init();
+  return uart->Init(pwm);
 }
 
-zx_status_t AmlUart::Init() {
+zx_status_t AmlUart::Init(ddk::PwmProtocolClient pwm) {
+  zx_status_t status = ZX_OK;
+  if (pwm.is_valid()) {
+    if ((status = pwm.Enable()) != ZX_OK) {
+      zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
+      return status;
+    }
+    aml_pwm::mode_config two_timer = {.mode = aml_pwm::TWO_TIMER,
+                                      .two_timer = {30052, 50.0, 0x0a, 0x0a}};
+    pwm_config_t init_cfg = {false, 30053, static_cast<float>(49.931787176), &two_timer,
+                             sizeof(two_timer)};
+    if ((status = pwm.SetConfig(&init_cfg)) != ZX_OK) {
+      zxlogf(ERROR, "%s: Could not initialize PWM\n", __func__);
+      return status;
+    }
+  }
+
   auto cleanup = fbl::MakeAutoCall([this]() { DdkRelease(); });
 
   // Default configuration for the case that serial_impl_config is not called.
@@ -97,7 +118,7 @@ zx_status_t AmlUart::Init() {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_SERIAL_IMPL_ASYNC},
       {BIND_SERIAL_CLASS, 0, serial_port_info_.serial_class},
   };
-  auto status = DdkAdd("aml-uart", 0, props, fbl::count_of(props));
+  status = DdkAdd("aml-uart", 0, props, fbl::count_of(props));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DdkDeviceAdd failed\n", __func__);
     return status;

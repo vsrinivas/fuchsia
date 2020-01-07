@@ -15,9 +15,11 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/pwm.h>
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/auto_lock.h>
 #include <fbl/span.h>
+#include <soc/aml-common/aml-pwm-regs.h>
 #include <soc/aml-common/aml-sd-emmc.h>
 
 namespace sdmmc {
@@ -76,6 +78,7 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   enum {
     COMPONENT_PDEV,
     COMPONENT_GPIO_RESET,
+    COMPONENT_PWM_E,
     COMPONENT_COUNT,
   };
 
