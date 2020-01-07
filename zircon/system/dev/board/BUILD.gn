@@ -19,6 +19,7 @@ group("board") {
       "msm8998",
       "msm8x53-som",
       "mt8167s_ref",
+      "nelson",
       "sherlock",
       "vim2",
     ]

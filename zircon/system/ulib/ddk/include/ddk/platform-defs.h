@@ -76,6 +76,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_EAGLE              7
 #define PDEV_PID_VISALIA            8
 #define PDEV_PID_C18                9
+#define PDEV_PID_NELSON             10
 
 #define PDEV_DID_GAUSS_AUDIO_IN     1
 #define PDEV_DID_GAUSS_AUDIO_OUT    2
@@ -96,6 +97,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_AMLOGIC_S912       2
 #define PDEV_PID_AMLOGIC_S905D2     3
 #define PDEV_PID_AMLOGIC_T931       4
+#define PDEV_PID_AMLOGIC_S905D3     5
 
 #define PDEV_DID_AMLOGIC_GPIO        1
 #define PDEV_DID_AMLOGIC_I2C         2
@@ -128,6 +130,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AMLOGIC_PWM         29
 #define PDEV_DID_AMLOGIC_CPU         30
 #define PDEV_DID_AMLOGIC_PWM_INIT    31
+#define PDEV_DID_NELSON_PDM          32
 
 // Broadcom
 #define PDEV_VID_BROADCOM           6

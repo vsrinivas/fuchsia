@@ -1,0 +1,56 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_driver("nelson") {
+  sources = [
+    "nelson-audio.cc",
+    "nelson-backlight.cc",
+    "nelson-bluetooth.cc",
+    "nelson-buttons.cc",
+    "nelson-canvas.cc",
+    "nelson-clk.cc",
+    "nelson-cpu.cc",
+    "nelson-display.cc",
+    "nelson-gpio.cc",
+    "nelson-i2c.cc",
+    "nelson-light.cc",
+    "nelson-mali.cc",
+    "nelson-rawnand.cc",
+    "nelson-sdio.cc",
+    "nelson-securemem.cc",
+    "nelson-sysmem.cc",
+    "nelson-tee.cc",
+    "nelson-thermal.cc",
+    "nelson-touch.cc",
+    "nelson-usb.cc",
+    "nelson-video.cc",
+    "nelson.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.clockimpl",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.gpioimpl",
+    "$zx/system/banjo/ddk.protocol.iommu",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.scpi",
+    "$zx/system/banjo/ddk.protocol.serial",
+    "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/broadcom",
+    "$zx/system/dev/lib/focaltech",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/fidl/fuchsia-hardware-light:c",
+    "$zx/system/fidl/fuchsia-hardware-serial:c",
+    "$zx/system/fidl/fuchsia-hardware-thermal:c",
+    "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}

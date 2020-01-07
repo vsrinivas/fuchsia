@@ -360,6 +360,7 @@ aggregate_manifest("legacy-image") {
       ":driver.msm8998",
       ":driver.msm8x53-som",
       ":driver.mt8167s_ref",
+      ":driver.nelson",
       ":driver.sherlock",
       ":driver.vim2",
     ]

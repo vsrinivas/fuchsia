@@ -66,7 +66,7 @@ enum CaptureState {
 
 constexpr uint8_t PANEL_DISPLAY_ID = 1;
 
-// Astro Display dimension
+// Astro/Nelson Display dimension
 constexpr uint32_t ASTRO_DISPLAY_WIDTH = 600;
 constexpr uint32_t ASTRO_DISPLAY_HEIGHT = 1024;
 
