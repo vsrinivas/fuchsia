@@ -335,12 +335,12 @@ void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory =
 
   // Protected memory should not be accessible by the host.
   EXPECT_TRUE(use_protected_memory || image0->host_ptr() != nullptr);
-  EXPECT_EQ(kMemorySize, image0->size());
+  EXPECT_BETWEEN_INCL(image0->size(), kMemorySize, kMemorySize + kMemorySizeAllowableError);
 
   auto image1 = allocator->AllocateImage(nullptr, info);
 
   EXPECT_TRUE(use_protected_memory || image1->host_ptr() != nullptr);
-  EXPECT_EQ(kMemorySize, image1->size());
+  EXPECT_BETWEEN_INCL(image1->size(), kMemorySize, kMemorySize + kMemorySizeAllowableError);
   UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[2]
 
   // We ensure that for each allocation, the allocated byte size satisfies
@@ -353,7 +353,7 @@ void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory =
   GpuMemPtr ptr;
   auto image_dedicated0 = allocator->AllocateImage(nullptr, info, &ptr);
   EXPECT_TRUE(ptr);
-  EXPECT_EQ(kMemorySize, ptr->size());
+  EXPECT_BETWEEN_INCL(ptr->size(), kMemorySize, kMemorySize + kMemorySizeAllowableError);
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_TRUE(use_protected_memory || ptr->mapped_ptr() != nullptr);
   UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[3]
@@ -378,7 +378,7 @@ void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory =
   // Allocate another dedicated memory object.
   image_dedicated0 = allocator->AllocateImage(nullptr, info, &ptr);
   EXPECT_TRUE(ptr);
-  EXPECT_EQ(kMemorySize, ptr->size());
+  EXPECT_BETWEEN_INCL(ptr->size(), kMemorySize, kMemorySize + kMemorySizeAllowableError);
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_TRUE(use_protected_memory || ptr->mapped_ptr() != nullptr);
   UpdateAllocationCount(allocation_stat_each_test, allocator);  // Set allocation_stat_each_test[6]
