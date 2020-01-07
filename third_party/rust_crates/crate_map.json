@@ -226,6 +226,11 @@
             "package_name": "matches"
         },
         {
+            "crate_name": "maybe_owned",
+            "crate_type": "lib",
+            "package_name": "maybe-owned"
+        },
+        {
             "crate_name": "memchr",
             "crate_type": "lib",
             "package_name": "memchr"
@@ -741,6 +746,11 @@
             "crate_name": "matches",
             "crate_type": "lib",
             "package_name": "matches"
+        },
+        {
+            "crate_name": "maybe_owned",
+            "crate_type": "lib",
+            "package_name": "maybe-owned"
         },
         {
             "crate_name": "memchr",

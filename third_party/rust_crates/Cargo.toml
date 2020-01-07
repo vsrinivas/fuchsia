@@ -43,6 +43,7 @@ libc = "0.2"
 log = { version = "0.4.4", features = ["std"] }
 maplit = "1.0"
 matches = "0.1.8"
+maybe-owned = "0.3.2"
 memchr = "2.0"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
 numtoa = "0.1.0"
