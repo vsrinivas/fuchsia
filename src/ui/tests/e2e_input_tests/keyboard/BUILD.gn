@@ -65,13 +65,7 @@ test_package("keyboard-e2e") {
   tests = [
     {
       name = "keyboard_e2e_lib_test"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [ nuc_env ]
     },
   ]
 }

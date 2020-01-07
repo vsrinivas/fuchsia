@@ -23,33 +23,15 @@ test_package("e2e_input_tests") {
   tests = [
     {
       name = "base_view_ime_test"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [ nuc_env ]
     },
     {
       name = "minimal_input_test"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [ nuc_env ]
     },
     {
       name = "mediabuttons_listener_test"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [ nuc_env ]
     },
   ]
 }

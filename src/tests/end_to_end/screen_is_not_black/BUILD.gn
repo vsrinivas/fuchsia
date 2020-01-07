@@ -20,11 +20,7 @@ dart_test("screen_is_not_black_test") {
 
   environments = [
     # Runs on "main" builders (try and ci) in NUC environments.
-    {
-      dimensions = {
-        device_type = "Intel NUC Kit NUC7i5DNHE"
-      }
-    },
+    nuc_env,
 
     # Also runs on fyi builders in NUC environments, so it doesn't look empty
     # there, and we have a second data set of flakiness information if needed.

@@ -48,13 +48,7 @@ test_package("shortcut-e2e") {
   tests = [
     {
       name = "shortcut_e2e_lib_test"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [ nuc_env ]
     },
   ]
 }

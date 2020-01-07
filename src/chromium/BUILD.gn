@@ -64,13 +64,7 @@ prebuilt_package("web_runner_pkg") {
 }
 
 # Prebuilt FAR tests
-test_env = [
-  {
-    dimensions = {
-      device_type = "Intel NUC Kit NUC7i5DNHE"
-    }
-  },
-]
+test_env = [ nuc_env ]
 
 prebuilt_test_manifest("chromium_tests") {
   archive_dir = "//prebuilt/third_party/chromium_tests/arch/x64"

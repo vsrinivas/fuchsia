@@ -34,11 +34,7 @@ foreach(target_name, test_list) {
 
     environments = [
       # Runs on "main" builders (try and ci) in NUC environments.
-      {
-        dimensions = {
-          device_type = "Intel NUC Kit NUC7i5DNHE"
-        }
-      },
+      nuc_env,
     ]
   }
 }

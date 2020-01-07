@@ -24,11 +24,7 @@ dart_test("sl4f_test") {
   ]
 
   environments = [
-    {
-      dimensions = {
-        device_type = "Intel NUC Kit NUC7i5DNHE"
-      }
-    },
+    nuc_env,
 
     # The astro environment has tags as it is still to be run on an FYI builder.
     {

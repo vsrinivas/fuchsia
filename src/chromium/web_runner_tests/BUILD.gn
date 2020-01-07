@@ -123,24 +123,12 @@ test_package("web_runner_tests") {
       # FLK-148
       # environments = basic_envs
       # This does not seem to flake on NUCs.
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [ nuc_env ]
     },
     {
       name = "web_runner_pixel_tests"
       manifest = rebase_path("meta/web_runner_pixel_tests.cmx")
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [ nuc_env ]
     },
   ]
 

@@ -236,33 +236,15 @@ test_package("netemul_guest_test") {
     {
       # Running guests is resource intensive.  Limit this test to only run on NUCs.
       name = "guest_test"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [ nuc_env ]
     },
     {
       name = "grpc_client_stress_test"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [ nuc_env ]
     },
     {
       name = "multiple_guests_test"
-      environments = [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments = [ nuc_env ]
     },
   ]
 }
