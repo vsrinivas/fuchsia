@@ -239,6 +239,12 @@ impl From<Result<(), Status>> for Status {
     }
 }
 
+impl From<Status> for Result<(), Status> {
+    fn from(src: Status) -> Result<(), Status> {
+        Status::ok(src.into_raw())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::Status;
@@ -254,5 +260,14 @@ mod test {
         for &(expected, value) in &cases {
             assert_eq!(expected, format!("{:?}", value));
         }
+    }
+
+    #[test]
+    fn status_into_result() {
+        let ok_result: Result<(), Status> = Status::OK.into();
+        assert_eq!(ok_result, Ok(()));
+
+        let err_result: Result<(), Status> = Status::BAD_SYSCALL.into();
+        assert_eq!(err_result, Err(Status::BAD_SYSCALL));
     }
 }
