@@ -2,66 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/ui/lib/escher/shaders/shaders.gni")
+
 assert(is_linux,
        "shaders need only be copied to the build directory for linux tests")
-
-shaders = [
-  "model_renderer/default_position.vert",
-  "model_renderer/main.frag",
-  "model_renderer/main.vert",
-  "model_renderer/shadow_map_generation.frag",
-  "model_renderer/shadow_map_lighting.frag",
-  "model_renderer/wobble_position.vert",
-  "paper/common/use.glsl",
-  "paper/frag/main_ambient_light.frag",
-  "paper/frag/main_point_light.frag",
-  "paper/vert/compute_model_space_position.vert",
-  "paper/vert/compute_world_space_position.vert",
-  "paper/vert/main_shadow_volume_extrude.vert",
-  "paper/vert/vertex_attributes.vert",
-]
-
-shaders_spirv = [
-  "shaders_model_renderer_main_frag17553292397499926694.spirv",
-  "shaders_model_renderer_main_frag8280587512758179706.spirv",
-  "shaders_model_renderer_main_vert11112688489391456647.spirv",
-  "shaders_model_renderer_main_vert17553292397499926694.spirv",
-  "shaders_model_renderer_main_vert4295183060635058569.spirv",
-  "shaders_model_renderer_main_vert8280587512758179706.spirv",
-  "shaders_paper_frag_main_ambient_light_frag17553292397499926694.spirv",
-  "shaders_paper_frag_main_point_light_frag11112688489391456647.spirv",
-  "shaders_paper_frag_main_point_light_frag4295183060635058569.spirv",
-  "pose_buffer_latching_comp14695981039346656037.spirv",
-]
 
 # Copies shaders needed for escher linux tests to a specific test data
 # directory near the test binary.
 group_deps = []
 test_data = []
-foreach(shader, shaders) {
-  name = get_path_info(shader, "file")
+foreach(shader, escher_shaders_resources) {
+  name = get_path_info(shader.path, "file")
   copy_name = "copy_$name"
   copy(copy_name) {
     sources = [
-      shader,
+      shader.path,
     ]
     outputs = [
-      "$root_out_dir/test_data/escher/shaders/$shader",
+      "$root_out_dir/test_data/escher/" + shader.dest,
     ]
   }
   group_deps += [ ":$copy_name" ]
   test_data += get_target_outputs(":$copy_name")
 }
 
-foreach(shader, shaders_spirv) {
-  name = get_path_info(shader, "file")
+foreach(shader, escher_shaders_spirv_resources) {
+  name = get_path_info(shader.path, "file")
   copy_name = "copy_$name"
   copy(copy_name) {
     sources = [
-      "spirv/$shader",
+      shader.path,
     ]
     outputs = [
-      "$root_out_dir/test_data/escher/shaders/$shader",
+      "$root_out_dir/test_data/escher/" + shader.dest,
     ]
   }
   group_deps += [ ":$copy_name" ]

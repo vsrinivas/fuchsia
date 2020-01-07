@@ -1,0 +1,69 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+_shader_files = [
+  # Flatland renderer.
+  "flatland/flat_main.frag",
+  "flatland/flat_main.vert",
+
+  # Paper renderer.
+  "model_renderer/default_position.vert",
+  "model_renderer/main.frag",
+  "model_renderer/main.vert",
+  "model_renderer/shadow_map_generation.frag",
+  "model_renderer/shadow_map_lighting.frag",
+  "model_renderer/wobble_position.vert",
+  "paper/common/use.glsl",
+  "paper/frag/main_ambient_light.frag",
+  "paper/frag/main_point_light.frag",
+  "paper/vert/compute_model_space_position.vert",
+  "paper/vert/compute_world_space_position.vert",
+  "paper/vert/main_shadow_volume_extrude.vert",
+  "paper/vert/vertex_attributes.vert",
+]
+
+_shader_files_spirv = [
+  # Flatland renderer.
+  "shaders_flatland_flat_main_frag14695981039346656037.spirv",
+  "shaders_flatland_flat_main_vert14695981039346656037.spirv",
+
+  # Paper renderer.
+  "shaders_model_renderer_main_frag17553292397499926694.spirv",
+  "shaders_model_renderer_main_frag8280587512758179706.spirv",
+  "shaders_model_renderer_main_vert11112688489391456647.spirv",
+  "shaders_model_renderer_main_vert17553292397499926694.spirv",
+  "shaders_model_renderer_main_vert4295183060635058569.spirv",
+  "shaders_model_renderer_main_vert8280587512758179706.spirv",
+  "shaders_paper_frag_main_ambient_light_frag17553292397499926694.spirv",
+  "shaders_paper_frag_main_point_light_frag11112688489391456647.spirv",
+  "shaders_paper_frag_main_point_light_frag4295183060635058569.spirv",
+
+  # Pose buffer latching compute shader, from pose_buffer_latching_shader.cc.
+  "pose_buffer_latching_comp14695981039346656037.spirv",
+]
+
+# Exported for Escher and Scenic. |path| is the path in host file system,
+# |dest| is the destination in packages / test_data directory.
+
+escher_shaders_resources = []
+
+escher_shaders_spirv_resources = []
+
+foreach(shader, _shader_files) {
+  escher_shaders_resources += [
+    {
+      path = rebase_path(shader)
+      dest = "shaders/$shader"
+    },
+  ]
+}
+
+foreach(spirv, _shader_files_spirv) {
+  escher_shaders_spirv_resources += [
+    {
+      path = rebase_path("spirv/$spirv")
+      dest = "shaders/$spirv"
+    },
+  ]
+}
