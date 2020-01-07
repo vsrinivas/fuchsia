@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/sockscripter"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.SocketProvider",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

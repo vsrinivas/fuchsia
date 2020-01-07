@@ -35,5 +35,6 @@ group("tests") {
     "netstack3:tests",
     "testing/netemul:tests",
     "tests",
+    "tools:tests",
   ]
 }
