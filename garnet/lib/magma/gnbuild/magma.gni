@@ -96,9 +96,6 @@ template("magma_vulkan_icd") {
       inputs += [ version_script ]
       ldflags += [ "-Wl,--version-script=$version_script" ]
     }
-
-    #TODO:(43369): Remove when exceptions disabled in mali driver.
-    configs -= [ "//build/config:no_exceptions" ]
   }
 
   if (has_allowlist) {
