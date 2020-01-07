@@ -36,9 +36,9 @@ source_set("lib") {
 }
 
 metrics_registry("memory_metrics_registry") {
-  # This must match the name of our Cobalt project as specified in:
-  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
-  project_name = "memory"
+  # This must match the ID of our Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  project_id = 3509424520
   namespace = "cobalt_registry"
   generate_cc = true
   generate_binarypb = false

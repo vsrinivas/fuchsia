@@ -69,9 +69,9 @@ source_set("src") {
 }
 
 metrics_registry("metrics_registry") {
-  # This must match the name of our Cobalt project as specified in:
-  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
-  project_name = "feedback"
+  # This must match the ID of our Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  project_id = 4228153068
   namespace = "cobalt_registry"
   generate_cc = true
   generate_binarypb = false

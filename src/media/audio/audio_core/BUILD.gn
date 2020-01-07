@@ -43,7 +43,9 @@ action_foreach("json_schema_headers") {
 }
 
 metrics_registry("media_metrics_registry") {
-  project_name = "media"
+  # This must match the ID of our Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  project_id = 3142410971
   generate_cc = true
 }
 

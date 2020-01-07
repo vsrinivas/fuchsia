@@ -16,9 +16,9 @@ group("testapp") {
 }
 
 metrics_registry("testapp_metrics_registry") {
-  # This must match the name of our Cobalt project as specified in:
-  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
-  project_name = "test_app2"
+  # This must match the ID of our Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  project_id = 657579885
   namespace = "cobalt_registry"
   for_testing = true
   generate_cc = true
@@ -26,9 +26,9 @@ metrics_registry("testapp_metrics_registry") {
 }
 
 metrics_registry("prober_metrics_registry") {
-  # This must match the name of our Cobalt project as specified in:
-  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
-  project_name = "prober"
+  # This must match the ID of our Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  project_id = 929352809
   namespace = "cobalt_prober_registry"
   for_testing = true
   generate_cc = true

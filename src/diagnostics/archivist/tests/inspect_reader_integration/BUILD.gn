@@ -4,7 +4,6 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//third_party/cobalt/metrics_registry.gni")
 
 rustc_binary("bin") {
   name = "inspect_reader_integration_test"

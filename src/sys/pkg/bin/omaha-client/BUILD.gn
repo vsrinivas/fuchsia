@@ -95,7 +95,9 @@ test_package("omaha-client-service-bin-tests") {
 }
 
 metrics_registry("mos_metrics_registry") {
-  project_name = "managed_os"
+  # This must match the ID of our Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  project_id = 285903809
   generate_rust = true
   generate_binarypb = false
 }

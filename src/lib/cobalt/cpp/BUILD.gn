@@ -5,7 +5,7 @@
 import("//third_party/cobalt/metrics_registry.gni")
 
 metrics_registry("test_metrics_registry") {
-  project_name = "test_app2"
+  project_id = 657579885
   generate_cc = true
   namespace = "cobalt_test_metrics"
 }

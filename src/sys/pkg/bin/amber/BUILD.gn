@@ -44,7 +44,7 @@ go_library("lib") {
 }
 
 metrics_registry("cobalt_sw_delivery_registry") {
-  project_name = "software_delivery"
+  project_id = 4247972873
   generate_rust = true
   generate_binarypb = false
 }

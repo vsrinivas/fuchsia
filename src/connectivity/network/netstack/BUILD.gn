@@ -49,9 +49,9 @@ package("tools") {
 }
 
 metrics_registry("networking_metrics") {
-  # This must match the name of our Cobalt project as specified in:
-  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
-  project_name = "networking"
+  # This must match the ID of our Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  project_id = 1
   go_package_name = "networking_metrics"
   generate_go = true
   generate_rust = true
