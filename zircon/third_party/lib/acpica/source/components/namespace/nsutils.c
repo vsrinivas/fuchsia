@@ -717,6 +717,47 @@ AcpiNsTerminate (
     }
 #endif
 
+    {
+        /* Prior to deleting the entire namespace we want to manually check for and delete some top
+         * level nodes. On some NuC devices, these nodes are mistakenly placed under the root,
+         * despite referencing regions in a different sub tree. This results in a use after free
+         * due to the sub tree being deleted before these root level objects.
+         * This is described in the github issue https://github.com/acpica/acpica/issues/416
+         * There is no correctness requirement to deleting the tree in any particular order,
+         * AcpiNsDeleteNamespaceSubtree is simply doing the most optimal traversal. Therefore if we
+         * are not on a NuC and manage to find these nodes there is no harm to performing this early
+         * deletion.
+         * TODO(32590)
+         */
+        const char *EarlyDeleteList[] = {
+          "\\CARN",
+          "\\CBDR",
+          "\\LTDR",
+          "\\FDDR",
+          "\\CALE",
+          "\\CBLE",
+          "\\LTLE",
+          "\\FDLE",
+          "\\GLLE",
+          "\\GHLE",
+          "\\KCLE",
+          "\\MCLE",
+          "\\C1LE",
+          "\\C2LE",
+          NULL,
+        };
+        int Index;
+        for (Index = 0; EarlyDeleteList[Index] != NULL; Index++) {
+            ACPI_NAMESPACE_NODE *Node;
+            Status = AcpiNsGetNode(AcpiGbl_RootNode, EarlyDeleteList[Index], ACPI_NS_NO_UPSEARCH, &Node);
+            if (Status == AE_OK) {
+                AcpiNsDeleteChildren(Node);
+                AcpiUtRemoveReference(Node->Object);
+                AcpiNsRemoveNode(Node);
+            }
+        }
+    }
+
     /*
      * Free the entire namespace -- all nodes and all objects
      * attached to the nodes

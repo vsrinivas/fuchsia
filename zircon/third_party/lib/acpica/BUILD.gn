@@ -64,20 +64,6 @@ static_library("acpica") {
   # strict-aliasing-based optimizations, rather than disabling warnings.
   cflags = [ "-fno-strict-aliasing" ]
 
-  # Current version of ACPICA is old and has a use after free. The ASAN reporting of this causes
-  # problems with device shutdown and can lock up the system and so we use a blacklist to suppress
-  # the reporting for the moment.
-  # https://github.com/acpica/acpica/issues/416
-  # TODO(32590)
-  # TODO(32809)
-  if (!is_gcc) {
-    blacklist = rebase_path("asan_blacklist.txt")
-    inputs = [
-      "$blacklist",
-    ]
-    cflags += [ "-fsanitize-blacklist=$blacklist" ]
-  }
-
   sources = [
     "source/components/hardware/hwregs.c",
     "source/components/hardware/hwsleep.c",

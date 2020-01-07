@@ -20,3 +20,4 @@ Modifications:
 - Made AcpiHwSetFirmwareWakingVector an exported function
 - Fix instances of undefined behavior reported by UBSan (misaligned pointer
   accesses, member accesses on nullptrs, and left shifting by 31 on ints)
+- Added workaround for use-after-free on NuC in AcpiNsTerminate
