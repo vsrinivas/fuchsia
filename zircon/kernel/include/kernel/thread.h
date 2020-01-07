@@ -155,9 +155,6 @@ struct thread_t {
   uint64_t user_tid;
   uint64_t user_pid;
 
-  // non-NULL if stopped in an exception
-  const struct arch_exception_context* exception_context;
-
   // architecture stuff
   struct arch_thread arch;
 
@@ -325,11 +322,6 @@ void thread_print_current_backtrace_at_frame(void* caller_frame);
 
 // print the backtrace of the passed in thread, if possible
 zx_status_t thread_print_backtrace(thread_t* t);
-
-// Return true if stopped in an exception.
-static inline bool thread_stopped_in_exception(const thread_t* thread) {
-  return !!thread->exception_context;
-}
 
 // wait until the deadline has occurred.
 //
