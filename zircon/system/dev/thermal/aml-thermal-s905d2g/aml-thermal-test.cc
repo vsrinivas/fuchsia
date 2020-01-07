@@ -530,7 +530,8 @@ TEST_F(AmlPwmTest, SherlockDvfsSpecPwmB) {
 // Voltage Regulator
 class FakeAmlVoltageRegulator : public AmlVoltageRegulator {
  public:
-  static std::unique_ptr<FakeAmlVoltageRegulator> Create(const pwm_protocol_t* pwm_AO_D,
+  static std::unique_ptr<FakeAmlVoltageRegulator> Create(ddk::MmioBuffer pwm_AO_D_mmio,
+                                                         const pwm_protocol_t* pwm_AO_D,
                                                          const pwm_protocol_t* pwm_A,
                                                          uint32_t pid) {
     fbl::AllocChecker ac;
@@ -540,7 +541,7 @@ class FakeAmlVoltageRegulator : public AmlVoltageRegulator {
       return nullptr;
     }
 
-    EXPECT_OK(test->Init(pwm_AO_D, pwm_A, pid, &fake_voltage_table));
+    EXPECT_OK(test->Init(std::move(pwm_AO_D_mmio), pwm_AO_D, pwm_A, pid, &fake_voltage_table));
     return test;
   }
 
@@ -549,10 +550,27 @@ class FakeAmlVoltageRegulator : public AmlVoltageRegulator {
 
 class AmlVoltageRegulatorTest : public zxtest::Test {
  public:
+  void SetUp() override {
+    fbl::AllocChecker ac;
+
+    pwm_AO_D_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
+    if (!ac.check()) {
+      zxlogf(ERROR, "AmlVoltageRegulatorTest::SetUp: pwm_AO_D_regs_ alloc failed\n");
+      return;
+    }
+    mock_pwm_AO_D_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
+        &ac, pwm_AO_D_regs_.get(), sizeof(uint32_t), kRegSize);
+    if (!ac.check()) {
+      zxlogf(ERROR, "AmlVoltageRegulatorTest::SetUp: mock_pwm_AO_D_mmio_ alloc failed\n");
+      return;
+    }
+  }
+
   void TearDown() override {
     // Verify
     pwm_AO_D_.VerifyAndClear();
     pwm_A_.VerifyAndClear();
+    mock_pwm_AO_D_mmio_->VerifyAll();
   }
 
   void Create(uint32_t pid) {
@@ -571,9 +589,9 @@ class AmlVoltageRegulatorTest : public zxtest::Test {
         break;
       }
       case 3: {  // Astro
-        pwm_AO_D_.ExpectEnable(ZX_OK);
-        cfg.duty_cycle = 13;
-        pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+        // SetBigClusterVoltage(981000);
+        (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00030019);
+        (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
         break;
       }
       default:
@@ -581,9 +599,11 @@ class AmlVoltageRegulatorTest : public zxtest::Test {
         return;
     }
 
+    ddk::MmioBuffer pwm_AO_D_mmio(mock_pwm_AO_D_mmio_->GetMmioBuffer());
     auto pwm_AO_D = pwm_AO_D_.GetProto();
     auto pwm_A = pwm_A_.GetProto();
-    voltage_regulator_ = FakeAmlVoltageRegulator::Create(pwm_AO_D, pwm_A, pid);
+    voltage_regulator_ =
+        FakeAmlVoltageRegulator::Create(std::move(pwm_AO_D_mmio), pwm_AO_D, pwm_A, pid);
     ASSERT_TRUE(voltage_regulator_ != nullptr);
   }
 
@@ -593,6 +613,8 @@ class AmlVoltageRegulatorTest : public zxtest::Test {
   // Mmio Regs and Regions
   ddk::MockPwm pwm_AO_D_;
   ddk::MockPwm pwm_A_;
+  fbl::Array<ddk_mock::MockMmioReg> pwm_AO_D_regs_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pwm_AO_D_mmio_;
 };
 
 TEST_F(AmlVoltageRegulatorTest, SherlockGetVoltageTest) {
@@ -644,15 +666,17 @@ TEST_F(AmlVoltageRegulatorTest, SherlockSetVoltageTest) {
 TEST_F(AmlVoltageRegulatorTest, AstroSetVoltageTest) {
   Create(3);
   // SetBigClusterVoltage(861000)
-  aml_pwm::mode_config on = {aml_pwm::ON, {}};
-  pwm_config_t cfg = {false, 1250, 23, &on, sizeof(on)};
-  pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
-  cfg.duty_cycle = 33;
-  pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
-  cfg.duty_cycle = 43;
-  pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
-  cfg.duty_cycle = 53;
-  pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00060016);
+  (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
+
+  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00090013);
+  (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
+
+  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x000C0010);
+  (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
+
+  (*mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x000F000D);
+  (*mock_pwm_AO_D_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(0x00800002);
   EXPECT_OK(voltage_regulator_->SetVoltage(0, 861000));
   uint32_t val = voltage_regulator_->GetVoltage(0);
   EXPECT_EQ(val, 861000);
@@ -881,7 +905,8 @@ class FakeAmlThermal : public AmlThermal {
  public:
   static std::unique_ptr<FakeAmlThermal> Create(
       ddk::MmioBuffer tsensor_pll_mmio, ddk::MmioBuffer tsensor_ao_mmio,
-      ddk::MmioBuffer tsensor_hiu_mmio, const pwm_protocol_t* pwm_AO_D, const pwm_protocol_t* pwm_A,
+      ddk::MmioBuffer tsensor_hiu_mmio, ddk::MmioBuffer voltage_regulator_pwm_AO_D_mmio,
+      const pwm_protocol_t* pwm_AO_D, const pwm_protocol_t* pwm_A,
       ddk::MmioBuffer cpufreq_scaling_hiu_mmio,
       mmio_buffer_t cpufreq_scaling_mock_hiu_internal_mmio, uint32_t pid) {
     fbl::AllocChecker ac;
@@ -900,7 +925,8 @@ class FakeAmlThermal : public AmlThermal {
     if (!ac.check() || (status != ZX_OK)) {
       return nullptr;
     }
-    EXPECT_OK(voltage_regulator->Init(pwm_AO_D, pwm_A, pid, &fake_voltage_table));
+    EXPECT_OK(voltage_regulator->Init(std::move(voltage_regulator_pwm_AO_D_mmio), pwm_AO_D, pwm_A,
+                                      pid, &fake_voltage_table));
 
     // CPU Frequency and Scaling
     auto cpufreq_scaling = fbl::make_unique_checked<AmlCpuFrequency>(
@@ -1026,6 +1052,20 @@ class AmlThermalTest : public zxtest::Test {
         .ExpectRead(0x00000000)  // enable IRQs
         .ExpectWrite(0x0F008000);
 
+    // Voltage Regulator
+    voltage_regulator_pwm_AO_D_regs_ =
+        fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
+    if (!ac.check()) {
+      zxlogf(ERROR, "AmlThermalTest::SetUp: voltage_regulator_pwm_AO_D_regs_ alloc failed\n");
+      return;
+    }
+    voltage_regulator_mock_pwm_AO_D_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
+        &ac, voltage_regulator_pwm_AO_D_regs_.get(), sizeof(uint32_t), kRegSize);
+    if (!ac.check()) {
+      zxlogf(ERROR, "AmlThermalTest::SetUp: voltage_regulator_mock_pwm_AO_D_mmio_ alloc failed\n");
+      return;
+    }
+
     // CPU Frequency and Scaling
     cpufreq_scaling_hiu_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
     if (!ac.check()) {
@@ -1056,6 +1096,7 @@ class AmlThermalTest : public zxtest::Test {
     tsensor_mock_pll_mmio_->VerifyAll();
     tsensor_mock_ao_mmio_->VerifyAll();
     tsensor_mock_hiu_mmio_->VerifyAll();
+    voltage_regulator_mock_pwm_AO_D_mmio_->VerifyAll();
     pwm_AO_D_.VerifyAndClear();
     pwm_A_.VerifyAndClear();
     cpufreq_scaling_mock_hiu_mmio_->VerifyAll();
@@ -1105,9 +1146,11 @@ class AmlThermalTest : public zxtest::Test {
       }
       case 3: {  // Astro
         // Voltage Regulator
-        pwm_AO_D_.ExpectEnable(ZX_OK);
-        cfg.duty_cycle = 13;
-        pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+        // SetBigClusterVoltage(981000);
+        (*voltage_regulator_mock_pwm_AO_D_mmio_)[(0x1 * 4)].ExpectWrite(0x00030019);
+        (*voltage_regulator_mock_pwm_AO_D_mmio_)[(0x2 * 4)]
+            .ExpectRead(0x00000000)
+            .ExpectWrite(0x00800002);
 
         // CPU Frequency and Scaling
         (*cpufreq_scaling_mock_hiu_mmio_)[412]
@@ -1118,12 +1161,6 @@ class AmlThermalTest : public zxtest::Test {
             .ExpectWrite(0x00010400);  // Dynamic mux 0 is in use
 
         // SetTarget
-        cfg.duty_cycle = 23;
-        pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
-        cfg.duty_cycle = 33;
-        pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
-        cfg.duty_cycle = 43;
-        pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
         (*cpufreq_scaling_mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectRead(0x00000000);
         (*cpufreq_scaling_mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00000800);
         break;
@@ -1136,13 +1173,15 @@ class AmlThermalTest : public zxtest::Test {
     ddk::MmioBuffer tsensor_pll_mmio(tsensor_mock_pll_mmio_->GetMmioBuffer());
     ddk::MmioBuffer tsensor_ao_mmio(tsensor_mock_ao_mmio_->GetMmioBuffer());
     ddk::MmioBuffer tsensor_hiu_mmio(tsensor_mock_hiu_mmio_->GetMmioBuffer());
+    ddk::MmioBuffer voltage_regulator_pwm_AO_D_mmio(
+        voltage_regulator_mock_pwm_AO_D_mmio_->GetMmioBuffer());
     auto pwm_AO_D = pwm_AO_D_.GetProto();
     auto pwm_A = pwm_A_.GetProto();
     ddk::MmioBuffer cpufreq_scaling_hiu_mmio(cpufreq_scaling_mock_hiu_mmio_->GetMmioBuffer());
     thermal_device_ = FakeAmlThermal::Create(
         std::move(tsensor_pll_mmio), std::move(tsensor_ao_mmio), std::move(tsensor_hiu_mmio),
-        pwm_AO_D, pwm_A, std::move(cpufreq_scaling_hiu_mmio),
-        cpufreq_scaling_mock_hiu_internal_mmio_, pid);
+        std::move(voltage_regulator_pwm_AO_D_mmio), pwm_AO_D, pwm_A,
+        std::move(cpufreq_scaling_hiu_mmio), cpufreq_scaling_mock_hiu_internal_mmio_, pid);
     ASSERT_TRUE(thermal_device_ != nullptr);
   }
 
@@ -1164,6 +1203,8 @@ class AmlThermalTest : public zxtest::Test {
   std::unique_ptr<ddk_mock::MockMmioRegRegion> tsensor_mock_hiu_mmio_;
 
   // Voltage Regulator
+  fbl::Array<ddk_mock::MockMmioReg> voltage_regulator_pwm_AO_D_regs_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> voltage_regulator_mock_pwm_AO_D_mmio_;
   ddk::MockPwm pwm_AO_D_;
   ddk::MockPwm pwm_A_;
 

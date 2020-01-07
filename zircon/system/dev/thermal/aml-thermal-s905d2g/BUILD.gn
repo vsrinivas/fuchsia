@@ -6,6 +6,7 @@ zx_driver("aml-thermal-s905d2g") {
   sources = [
     "aml-cpufreq.cc",
     "aml-fclk-rates.c",
+    "aml-pwm.cc",
     "aml-thermal.cc",
     "aml-tsensor.cc",
     "aml-voltage.cc",
