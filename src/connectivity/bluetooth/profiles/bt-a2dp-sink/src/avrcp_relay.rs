@@ -280,6 +280,7 @@ fn attributes_to_metadata(attributes: &avrcp::MediaAttributes) -> media::Metadat
     nonempty_to_property!(attributes.track_number, media::METADATA_LABEL_TRACK_NUMBER, properties);
     nonempty_to_property!(attributes.total_number_of_tracks, "total_number_of_tracks", properties);
     nonempty_to_property!(attributes.genre, media::METADATA_LABEL_GENRE, properties);
+    nonempty_to_property!(String::from("Bluetooth"), media::METADATA_SOURCE_TITLE, properties);
     media::Metadata { properties }
 }
 
