@@ -18,9 +18,6 @@ __BEGIN_CDECLS
 
 zx_status_t fake_bti_create(zx_handle_t* out);
 
-// no-op implementation for soft api transition
-inline void fake_bti_destroy(zx_handle_t bti) {}
-
 __END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_DEV_LIB_FAKE_BTI_INCLUDE_LIB_FAKE_BTI_BTI_H_
