@@ -120,6 +120,16 @@ zx_status_t VnodeMinfs::BlocksShrink(Transaction* transaction, blk_t start) {
 
   // Shrink the indirect vmo if necessary
   if (vmo_indirect_ != nullptr && vmo_indirect_->size() > size) {
+    // Shrink uses different math to compute indirect vmo size than the math used
+    // while growing the vmo in EnsureIndirectVmoSize.
+    // We are about to shrink the vmo. Ensure that the new indirect vmo size
+    // addresses all the file offsets.
+    uint64_t grow_size = VnodeBlockOffsetToIndirectVmoSize(start == 0 ? 0 : start - 1);
+    if (grow_size > size) {
+      FS_TRACE_ERROR("Minfs: Shrinking indirect vmo more that we should: %lu > %lu\n", grow_size,
+                     size);
+    }
+
     if ((status = vmo_indirect_->Shrink(size)) != ZX_OK) {
       return status;
     }
