@@ -58,6 +58,13 @@ bool App::Init(int argc, const char** argv, QuitCallback quit_callback) {
     return true;
   }
 
+  // Initialize the PWD environment variable, which is how we signal to child
+  // processes what their current working directory ought to be. We update this
+  // value in cd_task.cc.
+  char cwd[PATH_MAX];
+  getcwd(cwd, sizeof(cwd));
+  setenv("PWD", cwd, 1);
+
   console_.Init("% ");
 
   if (options_.command) {

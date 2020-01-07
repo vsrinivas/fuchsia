@@ -14,6 +14,16 @@ namespace {
 
 using App = gtest::TestLoopFixture;
 
+TEST_F(App, InitializePWD) {
+  const char* args[] = {"/boot/bin/cmd", nullptr};
+  int quit_count = 0;
+  cmd::App app(dispatcher());
+
+  unsetenv("PWD");
+  EXPECT_TRUE(app.Init(1, args, [&] { ++quit_count; }));
+  EXPECT_NE(nullptr, getenv("PWD"));
+}
+
 TEST_F(App, Quit) {
   const char* args[] = {"/boot/bin/cmd", nullptr};
   int quit_count = 0;
