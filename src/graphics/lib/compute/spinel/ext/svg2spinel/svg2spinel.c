@@ -523,7 +523,7 @@ spn_svg_layers_decode(struct svg const * const   svg,
 
               spn_styling_cmd_t * cmds;
 
-// #define SPN_SVG2SPINEL_DISABLE_OPACITY
+#define SPN_SVG2SPINEL_DISABLE_OPACITY
 #ifndef SPN_SVG2SPINEL_DISABLE_OPACITY
               spn(styling_group_layer(styling, group_id, layer_id, 6, &cmds));
 #else

@@ -109,7 +109,6 @@ TEST_F(Svg2SpinelTest, polyline)
       0,  // filled later.
       0,  // filled later.
       static_cast<uint32_t>(SPN_STYLING_OPCODE_BLEND_OVER),
-      static_cast<uint32_t>(SPN_STYLING_OPCODE_COLOR_ACC_TEST_OPACITY),
     };
     static const float kRedRgba[4] = { 1., 0., 0., 1. };
     mock_spinel::Spinel::rgbaToCmds(kRedRgba, kExpectedCommands + 2);
