@@ -637,7 +637,7 @@ config("user_executable") {
   # in the default case because the compiler driver is not inherently
   # configured for Fuchsia as it is in Clang.
   if (is_gcc || toolchain.libprefix != "") {
-    ldflags += [ "-Wl,-dynamic-linker,${toolchain.libprefix}ld.so.1" ]
+    ldflags += [ "-Wl,-dynamic-linker=${toolchain.libprefix}ld.so.1" ]
   }
 }
 

@@ -91,7 +91,7 @@ variant("ubsan") {
     # They just use the base variant.
     libprefix = "ubsan"
   }
-  dynamic_linker_flags = "-dynamic-linker,$libprefix/ld.so.1"
+  dynamic_linker_flags = "-dynamic-linker=$libprefix/ld.so.1"
   ldflags = [ "-Wl,$dynamic_linker_flags" ]
   rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
 
