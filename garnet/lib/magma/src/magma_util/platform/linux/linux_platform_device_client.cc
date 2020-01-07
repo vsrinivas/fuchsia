@@ -4,6 +4,8 @@
 
 #include <dlfcn.h>
 
+#include <string>
+
 #include "linux_entry.h"
 #include "linux_platform_connection_client.h"
 #include "magma_util/macros.h"
@@ -97,8 +99,11 @@ std::unique_ptr<PlatformDeviceClient> PlatformDeviceClient::Create(uint32_t devi
   error_str = dlerror();
 
   if (!magma_open_device) {
+    assert(error_str);
+    // Copy the error string before we dlclose
+    std::string print_str = error_str;
     dlclose(lib_handle);
-    return DRETP(nullptr, "Failed to find magma_open_device: %s", error_str);
+    return DRETP(nullptr, "Failed to find magma_open_device: %s", print_str.c_str());
   }
 
   auto client =
