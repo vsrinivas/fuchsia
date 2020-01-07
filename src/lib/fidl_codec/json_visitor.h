@@ -23,7 +23,7 @@ class JsonVisitor : public Visitor {
   }
 
   void VisitStringValue(const StringValue* node) override {
-    if (node->is_null()) {
+    if (node->IsNull()) {
       result_->SetNull();
     } else if (auto str = node->string()) {
       result_->SetString(str->data(), str->size(), *allocator_);
@@ -33,26 +33,25 @@ class JsonVisitor : public Visitor {
   }
 
   void VisitStructValue(const StructValue* node) override {
-    if (node->is_null()) {
+    if (node->IsNull()) {
       result_->SetNull();
     } else {
       result_->SetObject();
       for (const auto& member : node->struct_definition().members()) {
-        auto it = node->fields().find(std::string(member->name()));
+        auto it = node->fields().find(member.get());
         if (it == node->fields().end())
           continue;
-        const auto& [name, value] = *it;
         rapidjson::Value key;
-        key.SetString(name.c_str(), *allocator_);
+        key.SetString(it->first->name().c_str(), *allocator_);
         result_->AddMember(key, rapidjson::Value(), *allocator_);
-        JsonVisitor visitor(&(*result_)[name.c_str()], allocator_);
-        value->Visit(&visitor);
+        JsonVisitor visitor(&(*result_)[it->first->name().c_str()], allocator_);
+        it->second->Visit(&visitor);
       }
     }
   }
 
   void VisitEnvelopeValue(const EnvelopeValue* node) override {
-    if (node->is_null() || (node->value() == nullptr)) {
+    if (node->IsNull() || (node->value() == nullptr)) {
       result_->SetNull();
     } else {
       node->value()->Visit(this);
@@ -61,28 +60,31 @@ class JsonVisitor : public Visitor {
 
   void VisitTableValue(const TableValue* node) override {
     result_->SetObject();
-    for (const auto& field : node->envelopes()) {
-      if ((field.value() != nullptr) && !field.value()->is_null()) {
+    for (const auto& member : node->table_definition().members()) {
+      if ((member != nullptr) && !member->reserved()) {
+        auto it = node->members().find(member.get());
+        if ((it == node->members().end()) || it->second->IsNull())
+          continue;
         rapidjson::Value key;
-        key.SetString(field.name().c_str(), *allocator_);
+        key.SetString(member->name().c_str(), *allocator_);
         result_->AddMember(key, rapidjson::Value(), *allocator_);
-        JsonVisitor visitor(&(*result_)[field.name().c_str()], allocator_);
-        field.value()->Visit(&visitor);
+        JsonVisitor visitor(&(*result_)[member->name().c_str()], allocator_);
+        it->second->Visit(&visitor);
       }
     }
   }
 
   void VisitUnionValue(const UnionValue* node) override {
-    if (node->is_null() || (node->field().value()->is_null())) {
+    if (node->IsNull() || (node->value()->IsNull())) {
       result_->SetNull();
     } else {
       result_->SetObject();
       rapidjson::Value key;
-      key.SetString(node->field().name().c_str(), *allocator_);
+      key.SetString(node->member()->name().c_str(), *allocator_);
       result_->AddMember(key, rapidjson::Value(), *allocator_);
-      JsonVisitor visitor(&(*result_)[node->field().name().c_str()], allocator_);
-      if (node->field().value() != nullptr) {
-        node->field().value()->Visit(&visitor);
+      JsonVisitor visitor(&(*result_)[node->member()->name().c_str()], allocator_);
+      if (node->value() != nullptr) {
+        node->value()->Visit(&visitor);
       }
     }
   }
@@ -98,7 +100,7 @@ class JsonVisitor : public Visitor {
   }
 
   void VisitVectorValue(const VectorValue* node) override {
-    if (node->is_null()) {
+    if (node->IsNull()) {
       result_->SetNull();
     } else {
       result_->SetArray();

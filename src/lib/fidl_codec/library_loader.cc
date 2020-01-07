@@ -179,18 +179,11 @@ std::unique_ptr<XUnionValue> Union::DecodeXUnion(MessageDecoder* decoder, const 
 
   std::unique_ptr<XUnionValue> result = std::make_unique<XUnionValue>(type, *this);
 
-  std::unique_ptr<EnvelopeValue> envelope;
   const UnionMember* member = MemberWithOrdinal(ordinal);
-  std::string key_name;
-  if (member == nullptr) {
-    key_name = std::string("unknown$") + std::to_string(ordinal);
-    envelope = std::make_unique<EnvelopeValue>(nullptr);
-  } else {
-    key_name = member->name();
-    envelope = std::make_unique<EnvelopeValue>(member->type());
-  }
+  std::unique_ptr<EnvelopeValue> envelope =
+      std::make_unique<EnvelopeValue>((member == nullptr) ? nullptr : member->type());
   envelope->DecodeAt(decoder, offset);
-  result->set_field(Field(key_name, std::move(envelope)));
+  result->SetValue(member, std::move(envelope));
   return result;
 }
 
@@ -332,17 +325,13 @@ void Table::DecodeTypes() {
     enclosing_library_->FieldNotFound("table", name_, "members");
   } else {
     auto member_arr = value_["members"].GetArray();
-    Ordinal32 max_ordinal = 0;
     for (auto& member : member_arr) {
-      backing_members_.push_back(std::make_unique<TableMember>(enclosing_library_, member));
-      max_ordinal = std::max(max_ordinal, backing_members_.back()->ordinal());
-    }
-
-    // There is one element in this array for each possible ordinal value.  The
-    // array is dense, so there are unlikely to be gaps.
-    members_.resize(max_ordinal + 1, nullptr);
-    for (const auto& backing_member : backing_members_) {
-      members_[backing_member->ordinal()] = backing_member.get();
+      auto table_member = std::make_unique<TableMember>(enclosing_library_, member);
+      Ordinal32 ordinal = table_member->ordinal();
+      if (ordinal >= members_.size()) {
+        members_.resize(ordinal + 1);
+      }
+      members_[ordinal] = std::move(table_member);
     }
   }
 }

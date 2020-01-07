@@ -17,8 +17,10 @@
 #include "gtest/gtest.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
+#include "src/lib/fidl_codec/fidl_codec_test.h"
 #include "src/lib/fidl_codec/json_visitor.h"
 #include "src/lib/fidl_codec/wire_parser.h"
+#include "test/fidlcodec/examples/cpp/fidl.h"
 
 namespace fidl_codec {
 
@@ -50,6 +52,17 @@ class WireObjectTest : public ::testing::Test {
     std::string actual_json = actual_string.GetString();
     ASSERT_EQ(json, actual_json) << "expected = " << json << " and actual = " << actual_json;
   }
+
+ protected:
+  void SetUp() override {
+    loader_ = GetLoader();
+    ASSERT_NE(loader_, nullptr);
+  }
+
+  LibraryLoader* loader() const { return loader_; }
+
+ private:
+  LibraryLoader* loader_;
 };
 
 #define TEST_PRINT_OBJECT(_testname, field, pretty_print, json) \
@@ -57,18 +70,25 @@ class WireObjectTest : public ::testing::Test {
 
 TEST_PRINT_OBJECT(EnvelopeValue, EnvelopeValue(nullptr), "#red#null#rst#", "null");
 
-rapidjson::Value json_value;
-Table table_definition(nullptr, json_value);
-
 class TableValueWithNullFields : public TableValue {
  public:
-  TableValueWithNullFields() : TableValue(nullptr, table_definition, 2) {
-    AddField("x", nullptr);
-    AddField("y", nullptr);
+  TableValueWithNullFields(LibraryLoader* loader)
+      : TableValue(nullptr, GetTableDefinition(loader), 2) {
+    AddMember("first_int16", nullptr);
+    AddMember("third_union", nullptr);
+  }
+
+ private:
+  const Table& GetTableDefinition(LibraryLoader* loader) {
+    Library* library = loader->GetLibraryFromName("test.fidlcodec.examples");
+    FXL_DCHECK(library != nullptr);
+    const Table* table = library->GetTable("test.fidlcodec.examples/ValueTable");
+    FXL_DCHECK(table != nullptr);
+    return *table;
   }
 };
 
-TEST_PRINT_OBJECT(TableValue, TableValueWithNullFields(), "{}", "{}");
+TEST_PRINT_OBJECT(TableValue, TableValueWithNullFields(loader()), "{}", "{}");
 
 TEST_PRINT_OBJECT(RawValue, RawValue(nullptr, std::nullopt), "", "\"\"");
 

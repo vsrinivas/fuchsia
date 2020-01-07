@@ -225,7 +225,7 @@ class StructMember {
   StructMember(Library* enclosing_library, const rapidjson::Value& value);
   ~StructMember();
 
-  std::string_view name() const { return name_; }
+  const std::string& name() const { return name_; }
   uint64_t v0_offset() const { return v0_offset_; }
   uint64_t v1_offset() const { return v1_offset_; }
   const Type* type() const { return type_.get(); }
@@ -296,7 +296,7 @@ class TableMember {
   ~TableMember();
 
   bool reserved() const { return reserved_; }
-  const std::string_view name() const { return name_; }
+  const std::string& name() const { return name_; }
   Ordinal32 ordinal() const { return ordinal_; }
   uint64_t size() const { return size_; }
   const Type* type() const { return type_.get(); }
@@ -319,13 +319,23 @@ class Table {
   Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
   uint32_t size() const { return size_; }
+  const std::vector<std::unique_ptr<TableMember>>& members() const { return members_; }
   const Type* unknown_member_type() const { return unknown_member_type_.get(); }
 
-  // Returns a vector of pointers to the table's members.  The ordinal of each
-  // member is its index in the vector.  Omitted ordinals are indicated by
-  // nullptr.  Also, note that ordinal 0 is disallowed, so element 0 is always
-  // nullptr.
-  const std::vector<const TableMember*>& members() const { return members_; }
+  const TableMember* GetMember(uint64_t ordinal) const {
+    if (ordinal >= members_.size()) {
+      return nullptr;
+    }
+    return members_[ordinal].get();
+  }
+  const TableMember* GetMember(std::string_view name) const {
+    for (const auto& member : members_) {
+      if (member->name() == name) {
+        return member.get();
+      }
+    }
+    return nullptr;
+  }
 
  private:
   // Decode all the values from the JSON definition.
@@ -337,13 +347,7 @@ class Table {
   std::string name_;
   uint64_t size_;
   std::unique_ptr<Type> unknown_member_type_;
-
-  // This indirection - elements of members_ pointing to elements of
-  // backing_members_ - is so that we can have empty members.  The author
-  // thought that use sites would be more usable than a map.
-  // These structures are not modified after the constructor.
-  std::vector<const TableMember*> members_;
-  std::vector<std::unique_ptr<TableMember>> backing_members_;
+  std::vector<std::unique_ptr<TableMember>> members_;
 };
 
 class InterfaceMethod {
@@ -351,10 +355,10 @@ class InterfaceMethod {
   friend class Interface;
 
   const Interface& enclosing_interface() const { return enclosing_interface_; }
+  const std::string& name() const { return name_; }
   Ordinal64 ordinal() const { return ordinal_; }
   Ordinal64 old_ordinal() const { return old_ordinal_; }
   bool is_composed() const { return is_composed_; }
-  std::string name() const { return name_; }
   Struct* request() const {
     if (request_ != nullptr) {
       request_->DecodeRequestTypes();
@@ -393,7 +397,7 @@ class Interface {
   Interface& operator=(const Interface&) = delete;
 
   Library* enclosing_library() const { return enclosing_library_; }
-  std::string_view name() const { return name_; }
+  const std::string& name() const { return name_; }
 
   void AddMethodsToIndex(
       std::map<Ordinal64, std::unique_ptr<std::vector<const InterfaceMethod*>>>& index) {
@@ -486,6 +490,14 @@ class Library {
   // Display an error when a field is not found.
   void FieldNotFound(std::string_view container_type, std::string_view container_name,
                      const char* field_name);
+
+  const Table* GetTable(const std::string& table_name) const {
+    auto result = tables_.find(table_name);
+    if (result == tables_.end()) {
+      return nullptr;
+    }
+    return result->second.get();
+  }
 
   Library& operator=(const Library&) = delete;
   Library(const Library&) = delete;

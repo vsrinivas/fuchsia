@@ -28,7 +28,7 @@ class Value {
 
   const Type* type() const { return type_; }
 
-  virtual bool is_null() const { return false; }
+  virtual bool IsNull() const { return false; }
 
   // Returns the size needed to display the value. If the needed size is
   // greater than |remaining_size|, the return value can be anything greater
@@ -58,27 +58,12 @@ class Value {
   const Type* const type_;
 };
 
-// A name-value pair.
-class Field {
- public:
-  Field() = default;
-  Field(const std::string& name, std::unique_ptr<Value> value)
-      : name_(name), value_(std::move(value)) {}
-
-  const std::string& name() const { return name_; }
-  const std::unique_ptr<Value>& value() const { return value_; }
-
- private:
-  std::string name_;
-  std::unique_ptr<Value> value_;
-};
-
 // Base class for values which are nullable.
 class NullableValue : public Value {
  public:
   NullableValue(const Type* type) : Value(type) {}
 
-  bool is_null() const override { return is_null_; }
+  bool IsNull() const override { return is_null_; }
 
   bool DecodeNullable(MessageDecoder* decoder, uint64_t offset, uint64_t size);
 
@@ -86,21 +71,6 @@ class NullableValue : public Value {
 
  private:
   bool is_null_ = false;
-};
-
-// A name-value pair where the value is nullable.
-class NullableField {
- public:
-  NullableField() = default;
-  NullableField(const std::string& name, std::unique_ptr<NullableValue> value)
-      : name_(name), value_(std::move(value)) {}
-
-  const std::string& name() const { return name_; }
-  const std::unique_ptr<NullableValue>& value() const { return value_; }
-
- private:
-  std::string name_;
-  std::unique_ptr<NullableValue> value_;
 };
 
 // Base class for inlined values (the data is not in a secondary object).
@@ -226,11 +196,11 @@ class StructValue : public NullableValue {
   StructValue(const Type* type, const Struct& struct_definition)
       : NullableValue(type), struct_definition_(struct_definition) {}
 
-  const std::map<std::string, std::unique_ptr<Value>>& fields() const { return fields_; }
   const Struct& struct_definition() const { return struct_definition_; }
+  const std::map<const StructMember*, std::unique_ptr<Value>>& fields() const { return fields_; }
 
-  void AddField(const std::string& field_name, std::unique_ptr<Value> value) {
-    fields_.emplace(std::make_pair(field_name, std::move(value)));
+  void AddField(const StructMember* member, std::unique_ptr<Value> value) {
+    fields_.emplace(std::make_pair(member, std::move(value)));
   }
 
   int DisplaySize(int remaining_size) const override;
@@ -250,7 +220,7 @@ class StructValue : public NullableValue {
 
  private:
   const Struct& struct_definition_;
-  std::map<std::string, std::unique_ptr<Value>> fields_;
+  std::map<const StructMember*, std::unique_ptr<Value>> fields_;
 };
 
 // An envelope (used by TableValue and XUnion).
@@ -286,11 +256,18 @@ class TableValue : public NullableValue {
  public:
   TableValue(const Type* type, const Table& table_definition, uint64_t envelope_count);
 
-  const std::vector<NullableField>& envelopes() const { return envelopes_; }
+  const Table& table_definition() const { return table_definition_; }
+  const std::map<const TableMember*, std::unique_ptr<Value>>& members() const { return members_; }
+  Ordinal32 highest_member() const { return highest_member_; }
 
-  void AddField(const std::string& field_name, std::unique_ptr<NullableValue> value) {
-    envelopes_.emplace_back(field_name, std::move(value));
+  void AddMember(const TableMember* member, std::unique_ptr<Value> value) {
+    members_.emplace(std::make_pair(member, std::move(value)));
+    if (member->ordinal() > highest_member_) {
+      highest_member_ = member->ordinal();
+    }
   }
+
+  bool AddMember(std::string_view name, std::unique_ptr<Value> value);
 
   int DisplaySize(int remaining_size) const override;
 
@@ -307,7 +284,8 @@ class TableValue : public NullableValue {
  private:
   const Table& table_definition_;
   const uint64_t envelope_count_;
-  std::vector<NullableField> envelopes_;
+  std::map<const TableMember*, std::unique_ptr<Value>> members_;
+  Ordinal32 highest_member_ = 0;
 };
 
 // An union.
@@ -316,10 +294,14 @@ class UnionValue : public NullableValue {
   UnionValue(const Type* type, const Union& union_definition)
       : NullableValue(type), union_definition_(union_definition) {}
 
-  const Union& definition() const { return union_definition_; }
+  const Union& union_definition() const { return union_definition_; }
+  const UnionMember* member() const { return member_; }
+  const std::unique_ptr<Value>& value() const { return value_; }
 
-  const Field& field() const { return field_; }
-  void set_field(Field field) { field_ = std::move(field); }
+  void SetValue(const UnionMember* member, std::unique_ptr<Value> value) {
+    member_ = member;
+    value_ = std::move(value);
+  }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -335,14 +317,15 @@ class UnionValue : public NullableValue {
 
  private:
   const Union& union_definition_;
-  Field field_;
+  const UnionMember* member_ = nullptr;
+  std::unique_ptr<Value> value_;
 };
 
 // An xunion.
 class XUnionValue : public UnionValue {
  public:
-  XUnionValue(const Type* type, const Union& xunion_definition)
-      : UnionValue(type, xunion_definition) {}
+  XUnionValue(const Type* type, const Union& union_definition)
+      : UnionValue(type, union_definition) {}
 
   void Visit(Visitor* visitor) const override;
 };

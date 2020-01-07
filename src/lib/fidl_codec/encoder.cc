@@ -90,23 +90,23 @@ void Encoder::Pump() {
 }
 
 void Encoder::VisitUnionBody(const UnionValue* node) {
-  FXL_DCHECK(!node->is_null());
-  auto target_size = bytes_.size() + node->definition().size();
-  const size_t align_to = node->definition().alignment();
+  FXL_DCHECK(!node->IsNull());
+  auto target_size = bytes_.size() + node->union_definition().size();
+  const size_t align_to = node->union_definition().alignment();
   const size_t align_mask = align_to - 1;
 
   FXL_CHECK(!(align_to & align_mask));
   bytes_.resize((bytes_.size() + align_mask) & ~align_mask);
 
   uint32_t tag = 0;
-  for (const auto& member : node->definition().members()) {
+  for (const auto& member : node->union_definition().members()) {
     if (!member->reserved()) {
-      if (member->name() == node->field().name()) {
+      if (member.get() == node->member()) {
         auto target_offset = bytes_.size() + member->offset();
         Write<uint32_t>(tag);
         bytes_.resize(target_offset);
-        if (node->field().value() != nullptr) {
-          node->field().value()->Visit(this);
+        if (node->value() != nullptr) {
+          node->value()->Visit(this);
         }
         bytes_.resize(target_size);
         return;
@@ -116,11 +116,11 @@ void Encoder::VisitUnionBody(const UnionValue* node) {
     }
   }
 
-  FXL_NOTREACHED() << "Invalid union field '" << node->field().name() << "'";
+  FXL_NOTREACHED() << "Invalid union field '" << node->member()->name() << "'";
 }
 
 void Encoder::VisitStructValueBody(const StructValue* node, size_t existing_size) {
-  FXL_DCHECK(!node->is_null());
+  FXL_DCHECK(!node->IsNull());
   FXL_DCHECK(existing_size <= bytes_.size());
 
   size_t object_offset = bytes_.size() - existing_size;
@@ -128,7 +128,7 @@ void Encoder::VisitStructValueBody(const StructValue* node, size_t existing_size
       union_as_xunion_ ? node->struct_definition().v1_size() : node->struct_definition().v0_size();
 
   for (const auto& member : node->struct_definition().members()) {
-    auto it = node->fields().find(std::string(member->name()));
+    auto it = node->fields().find(member.get());
     FXL_DCHECK(it != node->fields().end());
     // Pad the buffer so the next object appended will be at the offset of the member.
     bytes_.resize(object_offset + (union_as_xunion_ ? member->v1_offset() : member->v0_offset()));
@@ -141,17 +141,17 @@ void Encoder::VisitStructValueBody(const StructValue* node, size_t existing_size
 
 void Encoder::VisitUnionAsXUnion(const UnionValue* node) {
   uint32_t ordinal = 0;
-  for (const auto& member : node->definition().members()) {
-    if (member->name() == node->field().name()) {
+  for (const auto& member : node->union_definition().members()) {
+    if (member.get() == node->member()) {
       ordinal = member->ordinal();
       break;
     }
   }
 
-  FXL_DCHECK(ordinal || node->is_null() || node->field().value()->is_null())
-      << "Invalid xunion field '" << node->field().name() << "'";
+  FXL_DCHECK(ordinal || node->IsNull() || node->value()->IsNull())
+      << "Invalid xunion field '" << node->member()->name() << "'";
 
-  auto field = node->field().value().get();
+  auto field = node->value().get();
   Write<uint64_t>(ordinal);
 
   if (field) {
@@ -175,7 +175,7 @@ void Encoder::VisitRawValue(const RawValue* node) {
 }
 
 void Encoder::VisitStringValue(const StringValue* node) {
-  if (node->is_null()) {
+  if (node->IsNull()) {
     Write<uint64_t>(0);
     Write<uint64_t>(0);
   } else {
@@ -204,7 +204,7 @@ void Encoder::VisitEnvelopeValue(const EnvelopeValue* node) {
   Write<uint32_t>(node->num_bytes());
   Write<uint32_t>(node->num_handles());
 
-  if (node->is_null() || (node->value() == nullptr)) {
+  if (node->IsNull() || (node->value() == nullptr)) {
     Write<uint64_t>(0);
   } else {
     Write<uint64_t>(UINTPTR_MAX);
@@ -213,14 +213,15 @@ void Encoder::VisitEnvelopeValue(const EnvelopeValue* node) {
 }
 
 void Encoder::VisitTableValue(const TableValue* node) {
-  const auto& envelopes = node->envelopes();
-
-  Write<uint64_t>(envelopes.size());
+  Write<uint64_t>(node->highest_member());
   Write<uint64_t>(UINTPTR_MAX);
 
-  Defer([this, &envelopes]() mutable {
-    for (const auto& field : envelopes) {
-      field.value()->Visit(this);
+  Defer([this, node]() mutable {
+    for (Ordinal32 i = 1; i <= node->highest_member(); ++i) {
+      auto it = node->members().find(node->table_definition().members()[i].get());
+      if (it != node->members().end()) {
+        it->second->Visit(this);
+      }
     }
   });
 }
@@ -230,7 +231,7 @@ void Encoder::VisitUnionValue(const UnionValue* node) {
     VisitUnionAsXUnion(node);
   } else if (!node->type()->Nullable()) {
     VisitUnionBody(node);
-  } else if (node->is_null()) {
+  } else if (node->IsNull()) {
     Write<uint64_t>(0);
   } else {
     Write<uint64_t>(UINTPTR_MAX);
@@ -247,7 +248,7 @@ void Encoder::VisitArrayValue(const ArrayValue* node) {
 }
 
 void Encoder::VisitVectorValue(const VectorValue* node) {
-  if (node->is_null()) {
+  if (node->IsNull()) {
     Write<uint64_t>(0);
     Write<uint64_t>(0);
   } else {
@@ -281,7 +282,7 @@ void Encoder::VisitHandleValue(const HandleValue* node) {
 void Encoder::VisitStructValue(const StructValue* node) {
   if (!node->type()->Nullable()) {
     VisitStructValueBody(node);
-  } else if (node->is_null()) {
+  } else if (node->IsNull()) {
     Write<uint64_t>(0);
   } else {
     Write<uint64_t>(UINTPTR_MAX);

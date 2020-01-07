@@ -134,7 +134,7 @@ void NumericValue<double>::Visit(Visitor* visitor) const {
 }
 
 int StringValue::DisplaySize(int /*remaining_size*/) const {
-  if (is_null()) {
+  if (IsNull()) {
     return strlen(kNull);
   }
   if (!string_) {
@@ -153,7 +153,7 @@ void StringValue::PrettyPrint(std::ostream& os, const Colors& colors,
                               std::string_view /*line_header*/, int /*tabs*/,
                               int /*remaining_size*/, int /*max_line_size*/) const {
   os << colors.red;
-  if (is_null()) {
+  if (IsNull()) {
     os << kNull;
   } else if (!string_) {
     os << kInvalid;
@@ -186,20 +186,21 @@ void BoolValue::PrettyPrint(std::ostream& os, const Colors& colors,
 void BoolValue::Visit(Visitor* visitor) const { visitor->VisitBoolValue(this); }
 
 int StructValue::DisplaySize(int remaining_size) const {
-  if (is_null()) {
+  if (IsNull()) {
     return 4;
   }
   int size = 0;
-  for (const auto& [name, value] : fields_) {
+  for (const auto& member : struct_definition_.members()) {
+    auto it = fields_.find(member.get());
+    if (it == fields_.end())
+      continue;
     // Two characters for the separator ("{ " or ", ") and three characters for
     // equal (" = ").
     constexpr int kExtraSize = 5;
-    size += static_cast<int>(name.size()) + kExtraSize;
-    if (value->type() != nullptr) {
-      // Two characters for ": ".
-      size += static_cast<int>(value->type()->Name().size()) + 2;
-    }
-    size += value->DisplaySize(remaining_size - size);
+    size += static_cast<int>(member->name().size()) + kExtraSize;
+    // Two characters for ": ".
+    size += static_cast<int>(member->type()->Name().size()) + 2;
+    size += it->second->DisplaySize(remaining_size - size);
     if (size > remaining_size) {
       return size;
     }
@@ -218,7 +219,7 @@ void StructValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
     std::unique_ptr<Value> value =
         member->type()->Decode(decoder, base_offset + member->Offset(decoder));
     if (value != nullptr) {
-      fields_[std::string(member->name())] = std::move(value);
+      fields_.emplace(std::make_pair(member.get(), std::move(value)));
     }
   }
 }
@@ -233,46 +234,37 @@ void StructValue::ExtractJson(rapidjson::Document::AllocatorType& allocator,
 void StructValue::PrettyPrint(std::ostream& os, const Colors& colors,
                               const fidl_message_header_t* header, std::string_view line_header,
                               int tabs, int remaining_size, int max_line_size) const {
-  if (is_null()) {
+  if (IsNull()) {
     os << colors.blue << "null" << colors.reset;
   } else if (fields_.empty()) {
     os << "{}";
   } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
     const char* separator = "{ ";
     for (const auto& member : struct_definition_.members()) {
-      auto it = fields_.find(std::string(member->name()));
+      auto it = fields_.find(member.get());
       if (it == fields_.end())
         continue;
-      const auto& [name, value] = *it;
-      os << separator << name;
+      os << separator << member->name() << ": " << colors.green << member->type()->Name()
+         << colors.reset << " = ";
+      it->second->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size,
+                              max_line_size);
       separator = ", ";
-      if (value->type() != nullptr) {
-        std::string type_name = value->type()->Name();
-        os << ": " << colors.green << type_name << colors.reset;
-      }
-      os << " = ";
-      value->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size, max_line_size);
     }
     os << " }";
   } else {
     os << "{\n";
     for (const auto& member : struct_definition_.members()) {
-      auto it = fields_.find(std::string(member->name()));
+      auto it = fields_.find(member.get());
       if (it == fields_.end())
         continue;
-      const auto& [name, value] = *it;
-      int size = (tabs + 1) * kTabSize + static_cast<int>(name.size());
-      os << line_header << std::string((tabs + 1) * kTabSize, ' ') << name;
-      if (value->type() != nullptr) {
-        std::string type_name = value->type()->Name();
-        // Two characters for ": ".
-        size += static_cast<int>(type_name.size()) + 2;
-        os << ": " << colors.green << type_name << colors.reset;
-      }
-      size += 3;
-      os << " = ";
-      value->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
-                         max_line_size);
+      int size = (tabs + 1) * kTabSize + static_cast<int>(member->name().size());
+      os << line_header << std::string((tabs + 1) * kTabSize, ' ') << member->name();
+      std::string type_name = member->type()->Name();
+      // Two characters for ": ", three characters for " = ".
+      os << ": " << colors.green << type_name << colors.reset << " = ";
+      size += static_cast<int>(type_name.size()) + 2 + 3;
+      it->second->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
+                              max_line_size);
       os << "\n";
     }
     os << line_header << std::string(tabs * kTabSize, ' ') << '}';
@@ -284,7 +276,7 @@ void StructValue::Visit(Visitor* visitor) const { visitor->VisitStructValue(this
 EnvelopeValue::EnvelopeValue(const Type* type) : NullableValue(type) {}
 
 int EnvelopeValue::DisplaySize(int remaining_size) const {
-  if (is_null() || (value_ == nullptr)) {
+  if (IsNull() || (value_ == nullptr)) {
     return 4;
   }
   return value_->DisplaySize(remaining_size);
@@ -313,12 +305,12 @@ void EnvelopeValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
 
   if (DecodeNullable(decoder, base_offset, num_bytes_)) {
     if (type() == nullptr) {
-      if (!is_null()) {
+      if (!IsNull()) {
         decoder->AddError() << std::hex << (decoder->absolute_offset() + base_offset) << std::dec
                             << ": The envelope should be null\n";
       }
     }
-    if (is_null()) {
+    if (IsNull()) {
       if (num_bytes_ != 0) {
         decoder->AddError() << std::hex << (decoder->absolute_offset() + base_offset) << std::dec
                             << ": Null envelope shouldn't have bytes\n";
@@ -334,7 +326,7 @@ void EnvelopeValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
 void EnvelopeValue::PrettyPrint(std::ostream& os, const Colors& colors,
                                 const fidl_message_header_t* header, std::string_view line_header,
                                 int tabs, int remaining_size, int max_line_size) const {
-  if (is_null() || (value_ == nullptr)) {
+  if (IsNull() || (value_ == nullptr)) {
     os << colors.red << "null" << colors.reset;
   } else {
     value_->PrettyPrint(os, colors, header, line_header, tabs, remaining_size, max_line_size);
@@ -346,18 +338,27 @@ void EnvelopeValue::Visit(Visitor* visitor) const { visitor->VisitEnvelopeValue(
 TableValue::TableValue(const Type* type, const Table& table_definition, uint64_t envelope_count)
     : NullableValue(type), table_definition_(table_definition), envelope_count_(envelope_count) {}
 
+bool TableValue::AddMember(std::string_view name, std::unique_ptr<Value> value) {
+  const TableMember* member = table_definition_.GetMember(name);
+  if (member == nullptr) {
+    return false;
+  }
+  AddMember(member, std::move(value));
+  return true;
+}
+
 int TableValue::DisplaySize(int remaining_size) const {
   int size = 0;
-  for (const auto& field : envelopes_) {
-    if ((field.value() != nullptr) && !field.value()->is_null()) {
-      // Two characters for the separator ("{ " or ", ") and three characters
-      // for equal (" = ").
-      constexpr int kExtraSize = 5;
-      size += static_cast<int>(field.name().size()) + kExtraSize;
-      if (field.value()->type() != nullptr) {
-        size += static_cast<int>(field.value()->type()->Name().size()) + 2;
-      }
-      size += field.value()->DisplaySize(remaining_size - size);
+  for (const auto& member : table_definition_.members()) {
+    if ((member != nullptr) && !member->reserved()) {
+      auto it = members_.find(member.get());
+      if ((it == members_.end()) || it->second->IsNull())
+        continue;
+      // Two characters for the separator ("{ " or ", "), three characters for " = ".
+      size += static_cast<int>(member->name().size()) + 2 + 3;
+      // Two characters for ": ".
+      size += static_cast<int>(member->type()->Name().size()) + 2;
+      size += it->second->DisplaySize(remaining_size - size);
       if (size > remaining_size) {
         return size;
       }
@@ -370,20 +371,11 @@ int TableValue::DisplaySize(int remaining_size) const {
 
 void TableValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
   for (uint64_t envelope_id = 0; envelope_id < envelope_count_; ++envelope_id) {
-    const TableMember* member = (envelope_id < table_definition_.members().size() - 1)
-                                    ? table_definition_.members()[envelope_id + 1]
-                                    : nullptr;
-    std::unique_ptr<EnvelopeValue> envelope;
-    std::string key_name;
-    if (member == nullptr) {
-      key_name = std::string("unknown$") + std::to_string(envelope_id + 1);
-      envelope = std::make_unique<EnvelopeValue>(table_definition_.unknown_member_type());
-    } else {
-      key_name = member->name();
-      envelope = std::make_unique<EnvelopeValue>(member->type());
-    }
+    const TableMember* member = table_definition_.GetMember(envelope_id + 1);
+    std::unique_ptr<EnvelopeValue> envelope = std::make_unique<EnvelopeValue>(
+        (member == nullptr) ? table_definition_.unknown_member_type() : member->type());
     envelope->DecodeAt(decoder, offset);
-    envelopes_.emplace_back(key_name, std::move(envelope));
+    AddMember(member, std::move(envelope));
     offset += 2 * sizeof(uint64_t);
   }
 }
@@ -396,34 +388,34 @@ void TableValue::PrettyPrint(std::ostream& os, const Colors& colors,
     os << "{}";
   } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
     const char* separator = "{ ";
-    for (const auto& field : envelopes_) {
-      if ((field.value() != nullptr) && !field.value()->is_null()) {
-        os << separator << field.name();
+    for (const auto& member : table_definition_.members()) {
+      if ((member != nullptr) && !member->reserved()) {
+        auto it = members_.find(member.get());
+        if ((it == members_.end()) || it->second->IsNull())
+          continue;
+        os << separator << member->name() << ": " << colors.green << member->type()->Name()
+           << colors.reset << " = ";
         separator = ", ";
-        if (field.value()->type() != nullptr) {
-          std::string type_name = field.value()->type()->Name();
-          os << ": " << colors.green << type_name << colors.reset;
-        }
-        os << " = ";
-        field.value()->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size,
-                                   max_line_size);
+        it->second->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size,
+                                max_line_size);
       }
     }
     os << " }";
   } else {
     os << "{\n";
-    for (const auto& field : envelopes_) {
-      if ((field.value() != nullptr) && !field.value()->is_null()) {
-        int size = (tabs + 1) * kTabSize + static_cast<int>(field.name().size()) + 3;
-        os << line_header << std::string((tabs + 1) * kTabSize, ' ') << field.name();
-        if (field.value()->type() != nullptr) {
-          std::string type_name = field.value()->type()->Name();
-          size += static_cast<int>(type_name.size()) + 2;
-          os << ": " << colors.green << type_name << colors.reset;
-        }
-        os << " = ";
-        field.value()->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
-                                   max_line_size);
+    for (const auto& member : table_definition_.members()) {
+      if ((member != nullptr) && !member->reserved()) {
+        auto it = members_.find(member.get());
+        if ((it == members_.end()) || it->second->IsNull())
+          continue;
+        int size = (tabs + 1) * kTabSize + static_cast<int>(member->name().size());
+        os << line_header << std::string((tabs + 1) * kTabSize, ' ') << member->name();
+        std::string type_name = member->type()->Name();
+        // Two characters for ": ", three characters for " = ".
+        size += static_cast<int>(type_name.size()) + 2 + 3;
+        os << ": " << colors.green << type_name << colors.reset << " = ";
+        it->second->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
+                                max_line_size);
         os << "\n";
       }
     }
@@ -434,20 +426,16 @@ void TableValue::PrettyPrint(std::ostream& os, const Colors& colors,
 void TableValue::Visit(Visitor* visitor) const { visitor->VisitTableValue(this); }
 
 int UnionValue::DisplaySize(int remaining_size) const {
-  if (is_null() || field_.value()->is_null()) {
+  if (IsNull() || value_->IsNull()) {
     return 4;
   }
   // Two characters for the opening brace ("{ ") + three characters for equal
   // (" = ") and two characters for the closing brace (" }").
   constexpr int kExtraSize = 7;
-  int size = static_cast<int>(field_.name().size()) + kExtraSize;
-  if (field_.value() != nullptr) {
-    if (field_.value()->type() != nullptr) {
-      // Two characters for ": ".
-      size += static_cast<int>(field_.value()->type()->Name().size()) + 2;
-    }
-    size += field_.value()->DisplaySize(remaining_size - size);
-  }
+  int size = static_cast<int>(member_->name().size()) + kExtraSize;
+  // Two characters for ": ".
+  size += static_cast<int>(member_->type()->Name().size()) + 2;
+  size += value_->DisplaySize(remaining_size - size);
   return size;
 }
 
@@ -458,13 +446,11 @@ void UnionValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
 void UnionValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
   uint32_t tag = 0;
   decoder->GetValueAt(base_offset, &tag);
-  const UnionMember* member = union_definition_.MemberWithTag(tag);
-  if (member == nullptr) {
-    field_ =
-        Field("unknown$" + std::to_string(tag), std::make_unique<RawValue>(nullptr, std::nullopt));
+  member_ = union_definition_.MemberWithTag(tag);
+  if (member_ == nullptr) {
+    value_ = std::make_unique<RawValue>(nullptr, std::nullopt);
   } else {
-    field_ = Field(std::string(member->name()),
-                   member->type()->Decode(decoder, base_offset + member->offset()));
+    value_ = member_->type()->Decode(decoder, base_offset + member_->offset());
   }
 }
 
@@ -474,42 +460,32 @@ void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors,
   if (header != nullptr) {
     os << (fidl_should_decode_union_from_xunion(header) ? "v1!" : "v0!");
   }
-  if (is_null() || field_.value()->is_null()) {
+  if (IsNull() || value_->IsNull()) {
     os << colors.blue << "null" << colors.reset;
   } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
     // Two characters for the opening brace ("{ ") + three characters for equal
     // (" = ") and two characters for the closing brace (" }").
     constexpr int kExtraSize = 7;
-    int size = static_cast<int>(field_.name().size()) + kExtraSize;
-    os << "{ " << field_.name();
-    if (field_.value() != nullptr) {
-      if (field_.value()->type() != nullptr) {
-        std::string type_name = field_.value()->type()->Name();
-        // Two characters for ": ".
-        size += static_cast<int>(type_name.size()) + 2;
-        os << ": " << colors.green << type_name << colors.reset;
-      }
-      os << " = ";
-      field_.value()->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
-                                  max_line_size);
-    }
+    int size = static_cast<int>(member_->name().size()) + kExtraSize;
+    os << "{ " << member_->name();
+    std::string type_name = member_->type()->Name();
+    // Two characters for ": ".
+    size += static_cast<int>(type_name.size()) + 2;
+    os << ": " << colors.green << type_name << colors.reset << " = ";
+    value_->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
+                        max_line_size);
     os << " }";
   } else {
     os << "{\n";
     // Three characters for " = ".
-    int size = (tabs + 1) * kTabSize + static_cast<int>(field_.name().size()) + 3;
-    os << line_header << std::string((tabs + 1) * kTabSize, ' ') << field_.name();
-    if (field_.value() != nullptr) {
-      if (field_.value()->type() != nullptr) {
-        std::string type_name = field_.value()->type()->Name();
-        // Two characters for ": ".
-        size += static_cast<int>(type_name.size()) + 2;
-        os << ": " << colors.green << type_name << colors.reset;
-      }
-      os << " = ";
-      field_.value()->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
-                                  max_line_size);
-    }
+    int size = (tabs + 1) * kTabSize + static_cast<int>(member_->name().size()) + 3;
+    os << line_header << std::string((tabs + 1) * kTabSize, ' ') << member_->name();
+    std::string type_name = member_->type()->Name();
+    // Two characters for ": ".
+    size += static_cast<int>(type_name.size()) + 2;
+    os << ": " << colors.green << type_name << colors.reset << " = ";
+    value_->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
+                        max_line_size);
     os << '\n';
     os << line_header << std::string(tabs * kTabSize, ' ') << "}";
   }
@@ -564,7 +540,7 @@ void ArrayValue::PrettyPrint(std::ostream& os, const Colors& colors,
 void ArrayValue::Visit(Visitor* visitor) const { visitor->VisitArrayValue(this); }
 
 int VectorValue::DisplaySize(int remaining_size) const {
-  if (is_null()) {
+  if (IsNull()) {
     return 4;
   }
   if (is_string_) {
@@ -610,7 +586,7 @@ void VectorValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
 void VectorValue::PrettyPrint(std::ostream& os, const Colors& colors,
                               const fidl_message_header_t* header, std::string_view line_header,
                               int tabs, int remaining_size, int max_line_size) const {
-  if (is_null()) {
+  if (IsNull()) {
     os << colors.blue << "null" << colors.reset;
   } else if (values_.empty()) {
     os << "[]";

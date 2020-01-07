@@ -81,23 +81,23 @@ class ToStringVisitor : public TypeVisitor {
   }
 
   void VisitTableType(const TableType* type) override {
-    VisitTypeWithMembers<const TableMember*>(type, "table", type->table_definition().members(),
-                                             [this](const TableMember* const& member) {
-                                               if (!member) {
-                                                 return false;
-                                               }
-                                               *result_ += indent_ + "  ";
-                                               *result_ += std::to_string(member->ordinal()) + ": ";
-                                               if (member->reserved()) {
-                                                 *result_ += "reserved";
-                                                 return true;
-                                               }
-                                               ToStringVisitor visitor(indent_ + "  ",
-                                                                       NextExpandLevels(), result_);
-                                               member->type()->Visit(&visitor);
-                                               *result_ += " " + std::string(member->name());
-                                               return true;
-                                             });
+    VisitTypeWithMembers<std::unique_ptr<TableMember>>(
+        type, "table", type->table_definition().members(),
+        [this](const std::unique_ptr<TableMember>& member) {
+          if (!member) {
+            return false;
+          }
+          *result_ += indent_ + "  ";
+          *result_ += std::to_string(member->ordinal()) + ": ";
+          if (member->reserved()) {
+            *result_ += "reserved";
+            return true;
+          }
+          ToStringVisitor visitor(indent_ + "  ", NextExpandLevels(), result_);
+          member->type()->Visit(&visitor);
+          *result_ += " " + std::string(member->name());
+          return true;
+        });
   }
 
   void VisitUnionType(const UnionType* type) override {
@@ -258,7 +258,7 @@ std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offse
 
   auto result = std::make_unique<TableValue>(this, table_, size);
   if (result->DecodeNullable(decoder, offset, size * 2 * sizeof(uint64_t))) {
-    if (result->is_null()) {
+    if (result->IsNull()) {
       decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
                           << ": Invalid null value for table pointer\n";
     }
