@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod component;
+
 use {
     cm_rust::data::DictionaryExt, fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
     std::path::Path, thiserror::Error,

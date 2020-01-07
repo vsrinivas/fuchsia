@@ -15,7 +15,10 @@ rustc_library("runner") {
   deps = [
     "//garnet/lib/rust/cm_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
 }
