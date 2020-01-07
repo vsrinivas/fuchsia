@@ -32,7 +32,7 @@ use {
     std::iter::Iterator,
     std::{
         collections::{HashMap, HashSet},
-        sync::Arc,
+        sync::{Arc, Weak},
     },
 };
 
@@ -48,6 +48,8 @@ pub struct Realm {
     pub component_url: String,
     /// The mode of startup (lazy or eager).
     pub startup: fsys::StartupMode,
+    /// The parent, a.k.a. containing realm. `None` for the root realm.
+    parent: Option<Weak<Realm>>,
     /// The absolute moniker of this realm.
     pub abs_moniker: AbsoluteMoniker,
     /// The hooks scoped to this realm.
@@ -71,6 +73,7 @@ impl Realm {
             component_url,
             // Started by main().
             startup: fsys::StartupMode::Lazy,
+            parent: None,
             state: Mutex::new(None),
             execution: Mutex::new(ExecutionState::new()),
             actions: Mutex::new(ActionSet::new()),
@@ -86,6 +89,23 @@ impl Realm {
     /// Locks and returns the realm's execution state.
     pub fn lock_execution(&self) -> MutexLockFuture<ExecutionState> {
         self.execution.lock()
+    }
+
+    /// Locks and returns the realm's action set.
+    pub fn lock_actions(&self) -> MutexLockFuture<ActionSet> {
+        self.actions.lock()
+    }
+
+    /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error. Returns `None`
+    /// for the root component.
+    pub fn try_get_parent(&self) -> Result<Option<Arc<Realm>>, ModelError> {
+        self.parent
+            .as_ref()
+            .map(|p| {
+                p.upgrade()
+                    .ok_or(ModelError::instance_not_found(self.abs_moniker.parent().unwrap()))
+            })
+            .transpose()
     }
 
     /// Resolves and populates the component declaration of this realm's Instance, if not already
@@ -117,12 +137,12 @@ impl Realm {
     /// already, and returns a reference to the handle. If this component does not use meta storage
     /// Ok(None) will be returned.
     pub async fn resolve_meta_dir(
-        &self,
+        realm: &Arc<Realm>,
         model: &Model,
     ) -> Result<Option<Arc<DirectoryProxy>>, ModelError> {
         {
             // If our meta directory has already been resolved, just return the answer.
-            let state = self.lock_state().await;
+            let state = realm.lock_state().await;
             let state = state.as_ref().expect("resolve_meta_dir: not resolved");
             if state.meta_dir.is_some() {
                 return Ok(Some(state.meta_dir.as_ref().unwrap().clone()));
@@ -144,7 +164,7 @@ impl Realm {
             &model,
             &UseStorageDecl::Meta,
             MODE_TYPE_DIRECTORY,
-            self.abs_moniker.clone(),
+            realm,
             server_chan,
         )
         .await?;
@@ -152,7 +172,7 @@ impl Realm {
             fasync::Channel::from_channel(meta_client_chan).unwrap(),
         ));
 
-        let mut state = self.lock_state().await;
+        let mut state = realm.lock_state().await;
         let state = state.as_mut().expect("resolve_meta_dir: not resolved");
         state.meta_dir = Some(meta_dir.clone());
         Ok(Some(meta_dir))
@@ -168,13 +188,13 @@ impl Realm {
     // Rust 1.40 doesn't support recursive async functions, so we
     // manually write out the type.
     pub fn resolve_runner<'a>(
-        &'a self,
+        realm: &'a Arc<Realm>,
         model: &'a Model,
     ) -> BoxFuture<'a, Result<Arc<dyn Runner + Send + Sync + 'static>, ModelError>> {
         async move {
             // Fetch component declaration.
             let decl = {
-                let state = self.lock_state().await;
+                let state = realm.lock_state().await;
                 state.as_ref().expect("resolve_runner: not resolved").decl().clone()
             };
 
@@ -194,7 +214,7 @@ impl Realm {
                     /*open_mode=*/ 0,
                     String::new(),
                     &UseDecl::Runner(runner_decl),
-                    self.abs_moniker.clone(),
+                    realm,
                     server_channel.into_channel(),
                 )
                 .await?;
@@ -215,26 +235,6 @@ impl Realm {
             }
         }
         .boxed()
-    }
-
-    /// Register an action on a realm.
-    pub async fn register_action(
-        realm: Arc<Realm>,
-        model: Arc<Model>,
-        action: Action,
-    ) -> Notification {
-        let mut actions = realm.actions.lock().await;
-        let (nf, needs_handle) = actions.register(action.clone());
-        if needs_handle {
-            action.handle(model, realm.clone());
-        }
-        nf
-    }
-
-    /// Finish an action on a realm.
-    pub async fn finish_action(realm: Arc<Realm>, action: &Action, res: Result<(), ModelError>) {
-        let mut actions = realm.actions.lock().await;
-        actions.finish(action, res).await
     }
 
     /// Adds the dynamic child defined by `child_decl` to the given `collection_name`. Once
@@ -286,12 +286,13 @@ impl Realm {
         Ok(())
     }
 
-    /// Removes the dynamic child `partial_moniker`.
+    /// Removes the dynamic child `partial_moniker`, returning the notification for the destroy
+    /// action which the caller may await on.
     pub async fn remove_dynamic_child(
         model: Arc<Model>,
         realm: Arc<Realm>,
         partial_moniker: &PartialMoniker,
-    ) -> Result<(), ModelError> {
+    ) -> Result<Notification, ModelError> {
         Realm::resolve_decl(&realm).await?;
         let mut state = realm.lock_state().await;
         let state = state.as_mut().expect("remove_dynamic_child: not resolved");
@@ -300,15 +301,13 @@ impl Realm {
 
             state.mark_child_realm_deleting(&partial_moniker);
             let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
-            // Dropping the notification is fine. As long as the action is
-            // registered the action will run.
-            let _ = Self::register_action(
+            let nf = ActionSet::register(
                 realm.clone(),
                 model,
                 Action::DeleteChild(child_moniker.clone()),
             )
             .await;
-            Ok(())
+            Ok(nf)
         } else {
             Err(ModelError::instance_not_found_in_realm(
                 realm.abs_moniker.clone(),
@@ -391,8 +390,7 @@ impl Realm {
         };
         for use_ in decl.uses.iter() {
             if let UseDecl::Storage(use_storage) = use_ {
-                routing::route_and_delete_storage(&model, &use_storage, realm.abs_moniker.clone())
-                    .await?;
+                routing::route_and_delete_storage(&model, &use_storage, &realm).await?;
                 break;
             }
         }
@@ -425,7 +423,7 @@ impl Realm {
                     let partial_moniker = m.to_partial();
                     state.mark_child_realm_deleting(&partial_moniker);
                     let nf =
-                        Self::register_action(realm.clone(), model.clone(), Action::DeleteChild(m))
+                        ActionSet::register(realm.clone(), model.clone(), Action::DeleteChild(m))
                             .await;
                     futures.push(nf);
                 }
@@ -551,7 +549,7 @@ pub struct RealmState {
 }
 
 impl RealmState {
-    pub async fn new(realm: &Realm, decl: &ComponentDecl) -> Result<Self, ModelError> {
+    pub async fn new(realm: &Arc<Realm>, decl: &ComponentDecl) -> Result<Self, ModelError> {
         let mut state = Self {
             child_realms: HashMap::new(),
             live_child_realms: HashMap::new(),
@@ -656,7 +654,7 @@ impl RealmState {
     /// or None if it already existed.
     async fn add_child_realm(
         &mut self,
-        realm: &Realm,
+        realm: &Arc<Realm>,
         child: &ChildDecl,
         collection: Option<String>,
     ) -> Option<Arc<Realm>> {
@@ -677,6 +675,7 @@ impl RealmState {
                 abs_moniker: abs_moniker,
                 component_url: child.url.clone(),
                 startup: child.startup,
+                parent: Some(Arc::downgrade(realm)),
                 state: Mutex::new(None),
                 execution: Mutex::new(ExecutionState::new()),
                 actions: Mutex::new(ActionSet::new()),
@@ -690,7 +689,7 @@ impl RealmState {
         }
     }
 
-    async fn add_static_child_realms(&mut self, realm: &Realm, decl: &ComponentDecl) {
+    async fn add_static_child_realms(&mut self, realm: &Arc<Realm>, decl: &ComponentDecl) {
         for child in decl.children.iter() {
             self.add_child_realm(realm, child, None).await;
         }

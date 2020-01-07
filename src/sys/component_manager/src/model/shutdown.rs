@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        actions::Action,
+        actions::{Action, ActionSet},
         error::ModelError,
         hooks::Event,
         hooks::EventPayload,
@@ -52,7 +52,7 @@ fn find_storage_provider(storage_decls: &Vec<StorageDecl>, name: &str) -> Option
 }
 
 async fn shutdown_component(child: ShutdownInfo) -> Result<ChildMoniker, ModelError> {
-    Realm::register_action(child.realm, child.model, Action::Shutdown).await.await?;
+    ActionSet::register(child.realm, child.model, Action::Shutdown).await.await?;
     Ok(child.moniker.clone())
 }
 

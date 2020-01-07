@@ -10,6 +10,7 @@ use {
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
+            routing,
             testing::{routing_test_helpers::*, test_helpers::*},
         },
     },
@@ -17,6 +18,7 @@ use {
     async_trait::async_trait,
     cm_rust::*,
     fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon as zx,
     futures::{
@@ -1820,6 +1822,108 @@ async fn use_not_exposed() {
         CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
+}
+
+///   a
+///    \
+///    [b]
+///      \
+///       c
+///
+/// a: offers service /svc/foo from self
+/// [b]: offers service /svc/foo to c
+/// [b]: is destroyed
+/// c: uses service /svc/foo, which should fail
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_with_destroyed_parent() {
+    let use_decl = UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+        source: UseSource::Realm,
+        source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+    });
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                    source: UseSource::Framework,
+                    source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                })],
+                offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                    source: OfferServiceSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                    target: OfferTarget::Collection("coll".to_string()),
+                })],
+                collections: vec![CollectionDecl {
+                    name: "coll".to_string(),
+                    durability: fsys::Durability::Transient,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                    source: OfferServiceSource::Realm,
+                    source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                    target: OfferTarget::Child("c".to_string()),
+                })],
+                children: vec![ChildDecl {
+                    name: "c".to_string(),
+                    url: "test:///c".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        ("c", ComponentDecl { uses: vec![use_decl.clone()], ..default_component_decl() }),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.create_dynamic_child(
+        vec![].into(),
+        "coll",
+        ChildDecl {
+            name: "b".to_string(),
+            url: "test:///b".to_string(),
+            startup: fsys::StartupMode::Lazy,
+        },
+    )
+    .await;
+
+    // Confirm we can use service from "c".
+    test.check_use(
+        vec!["coll:b:1", "c:0"].into(),
+        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+    )
+    .await;
+
+    // Destroy "b", but preserve a reference to "c" so we can route from it below.
+    let moniker = vec!["coll:b:1", "c:0"].into();
+    let realm_c = test.model.look_up_realm(&moniker).await.expect("failed to look up realm b");
+    test.destroy_dynamic_child(vec![].into(), "coll", "b").await;
+
+    // Now attempt to route the service from "c". Should fail because "b" does not exist so we
+    // cannot follow it.
+    let (_client, server) = zx::Channel::create().unwrap();
+    let err = routing::route_use_capability(
+        &test.model,
+        OPEN_RIGHT_READABLE,
+        MODE_TYPE_SERVICE,
+        "hippo".to_string(),
+        &use_decl,
+        &realm_c,
+        server,
+    )
+    .await
+    .expect_err("routing unexpectedly succeeded");
+    assert_eq!(
+        format!("{:?}", err),
+        format!("{:?}", ModelError::instance_not_found(vec!["coll:b:1"].into()))
+    );
 }
 
 ///   (cm)

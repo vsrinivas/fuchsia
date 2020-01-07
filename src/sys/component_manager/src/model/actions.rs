@@ -103,12 +103,12 @@ impl ActionStatus {
 /// `register()` and `finish()` return a boolean that indicates whether the set of actions changed
 /// as a result of the call. If so, the caller should invoke `Action::handle()` to
 /// ensure the change in actions is acted upon.
-pub(super) struct ActionSet {
+pub struct ActionSet {
     rep: HashMap<Action, Arc<ActionStatus>>,
 }
 
 /// Type of notification returned by `ActionSet::register()`.
-pub(super) type Notification = BoxFuture<'static, Result<(), ModelError>>;
+pub type Notification = BoxFuture<'static, Result<(), ModelError>>;
 
 impl ActionSet {
     pub fn new() -> Self {
@@ -118,13 +118,46 @@ impl ActionSet {
     /// Registers an action in the set, returning a notification that completes when the action
     /// is finished.
     ///
+    /// Returns a notification, i.e. a Future that completes when the action is finished. This can
+    /// be chained with other futures to perform additional work when the action completes.
+    pub async fn register(realm: Arc<Realm>, model: Arc<Model>, action: Action) -> Notification {
+        let mut actions = realm.lock_actions().await;
+        let (nf, needs_handle) = actions.register_inner(action.clone());
+        if needs_handle {
+            action.handle(model, realm.clone());
+        }
+        nf
+    }
+
+    /// Removes an action from the set, waking its notifications. `realm` will be dropped before
+    /// waking (this ensures that no strong reference to the Realm is held at the time the action
+    /// is marked complete).
+    pub async fn finish<'a>(realm: Arc<Realm>, action: &'a Action, res: Result<(), ModelError>) {
+        let status = {
+            let mut action_set = realm.lock_actions().await;
+            if let Some(s) = action_set.rep.remove(action) {
+                s
+            } else {
+                return;
+            }
+        };
+        drop(realm);
+        let mut inner = status.inner.lock().await;
+        inner.result = Some(res);
+        if let Some(waker) = inner.waker.take() {
+            waker.wake();
+        }
+    }
+
+    /// Registers, but does not execute, an action.
+    ///
     /// The return value is as follows:
     /// - A notification, i.e. a Future that completes when the action is finished. This can be
     ///   chained with other futures to perform additional work when the action completes.
     /// - A boolean that indicates whether `Action::handle()` should be called to reify the action
     ///   update.
     #[must_use]
-    pub fn register(&mut self, action: Action) -> (Notification, bool) {
+    fn register_inner(&mut self, action: Action) -> (Notification, bool) {
         let needs_handle = !self.rep.contains_key(&action);
         let status = self.rep.entry(action).or_insert(Arc::new(ActionStatus::new())).clone();
         let nf = async move {
@@ -146,17 +179,6 @@ impl ActionSet {
         };
         (Box::pin(nf), needs_handle)
     }
-
-    /// Removes an action from the set, completing its notifications.
-    pub async fn finish<'a>(&'a mut self, action: &'a Action, res: Result<(), ModelError>) {
-        if let Some(status) = self.rep.remove(action) {
-            let mut inner = status.inner.lock().await;
-            inner.result = Some(res);
-            if let Some(waker) = inner.waker.take() {
-                waker.wake();
-            }
-        }
-    }
 }
 
 impl Action {
@@ -175,7 +197,7 @@ impl Action {
                 Action::Destroy => do_destroy(model, realm.clone()).await,
                 Action::Shutdown => shutdown::do_shutdown(model, realm.clone()).await,
             };
-            Realm::finish_action(realm, &action, res).await;
+            ActionSet::finish(realm, &action, res).await;
         });
     }
 }
@@ -198,7 +220,7 @@ async fn do_delete_child(
 
         child_realm.hooks.dispatch(&event).await?;
 
-        Realm::register_action(child_realm.clone(), model.clone(), Action::Destroy).await.await?;
+        ActionSet::register(child_realm.clone(), model.clone(), Action::Destroy).await.await?;
 
         {
             let mut state = realm.lock_state().await;
@@ -214,14 +236,14 @@ async fn do_delete_child(
 
 async fn do_destroy(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
     // For destruction to behave correctly, the component has to be shut down first.
-    Realm::register_action(realm.clone(), model.clone(), Action::Shutdown).await.await?;
+    ActionSet::register(realm.clone(), model.clone(), Action::Shutdown).await.await?;
 
     let nfs = if let Some(state) = realm.lock_state().await.as_ref() {
         let mut nfs = vec![];
         for (m, _) in state.all_child_realms().iter() {
             let realm = realm.clone();
             let nf =
-                Realm::register_action(realm, model.clone(), Action::DeleteChild(m.clone())).await;
+                ActionSet::register(realm, model.clone(), Action::DeleteChild(m.clone())).await;
             nfs.push(nf);
         }
         nfs
@@ -274,14 +296,17 @@ pub mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn action_set() {
-        let mut action_set = ActionSet::new();
+        let test = ActionsTest::new("root", vec![], None).await;
+        let realm = test.model.root_realm.clone();
+        let mut action_set = realm.lock_actions().await;
 
-        // Register some actions, and get notifications.
-        let (mut nf1, needs_handle) = action_set.register(Action::Destroy);
+        // Register some actions, and get notifications. Use `register_inner` because this test
+        // does not cover the actions themselves.
+        let (mut nf1, needs_handle) = action_set.register_inner(Action::Destroy);
         assert!(needs_handle);
-        let (mut nf2, needs_handle) = action_set.register(Action::Shutdown);
+        let (mut nf2, needs_handle) = action_set.register_inner(Action::Shutdown);
         assert!(needs_handle);
-        let (mut nf3, needs_handle) = action_set.register(Action::Destroy);
+        let (mut nf3, needs_handle) = action_set.register_inner(Action::Destroy);
         assert!(!needs_handle);
 
         // Notifications have not completed yet, because they have not finished. Note calling
@@ -292,39 +317,48 @@ pub mod tests {
         assert!(is_pending(nf2.as_mut().poll(&mut cx)));
         assert!(is_pending(nf3.as_mut().poll(&mut cx)));
 
+        drop(action_set);
+
         // Complete actions, while checking notifications.
-        action_set.finish(&Action::Destroy, Ok(())).await;
+        ActionSet::finish(realm.clone(), &Action::Destroy, Ok(())).await;
         let ok: Result<(), ModelError> = Ok(());
         let err: Result<(), ModelError> = Err(ModelError::ComponentInvalid);
         results_eq!(nf1.await, ok);
         assert!(is_pending(nf2.as_mut().poll(&mut cx)));
         results_eq!(nf3.await, ok);
-        action_set.finish(&Action::Shutdown, Err(ModelError::ComponentInvalid)).await;
-        action_set.finish(&Action::Shutdown, Ok(())).await;
+        ActionSet::finish(realm.clone(), &Action::Shutdown, Err(ModelError::ComponentInvalid))
+            .await;
+        ActionSet::finish(realm.clone(), &Action::Shutdown, Ok(())).await;
         results_eq!(nf2.await, err);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn action_set_no_wake() {
-        let mut action_set = ActionSet::new();
+        let test = ActionsTest::new("root", vec![], None).await;
+        let realm = test.model.root_realm.clone();
+        let mut action_set = realm.lock_actions().await;
 
-        // Register some actions, and get notifications.
-        let (nf1, needs_handle) = action_set.register(Action::Destroy);
+        // Register some actions, and get notifications. Use `register_inner` because this test
+        // does not cover the actions themselves.
+        let (nf1, needs_handle) = action_set.register_inner(Action::Destroy);
         assert!(needs_handle);
-        let (nf2, needs_handle) = action_set.register(Action::Shutdown);
+        let (nf2, needs_handle) = action_set.register_inner(Action::Shutdown);
         assert!(needs_handle);
-        let (nf3, needs_handle) = action_set.register(Action::Destroy);
+        let (nf3, needs_handle) = action_set.register_inner(Action::Destroy);
         assert!(!needs_handle);
+
+        drop(action_set);
 
         // Complete actions, while checking notifications. Note that no waker was set because
         // `poll()` was never called on the notification before the action completed.
-        action_set.finish(&Action::Destroy, Ok(())).await;
+        ActionSet::finish(realm.clone(), &Action::Destroy, Ok(())).await;
         let ok: Result<(), ModelError> = Ok(());
         let err: Result<(), ModelError> = Err(ModelError::ComponentInvalid);
         results_eq!(nf1.await, ok);
         results_eq!(nf3.await, ok);
-        action_set.finish(&Action::Shutdown, Err(ModelError::ComponentInvalid)).await;
-        action_set.finish(&Action::Shutdown, Ok(())).await;
+        ActionSet::finish(realm.clone(), &Action::Shutdown, Err(ModelError::ComponentInvalid))
+            .await;
+        ActionSet::finish(realm.clone(), &Action::Shutdown, Ok(())).await;
         results_eq!(nf2.await, err);
     }
 
@@ -2197,7 +2231,7 @@ pub mod tests {
         realm: Arc<Realm>,
         action: Action,
     ) -> Result<(), ModelError> {
-        Realm::register_action(realm, model, action).await.await
+        ActionSet::register(realm, model, action).await.await
     }
 
     async fn is_executing(realm: &Realm) -> bool {

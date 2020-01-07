@@ -459,7 +459,7 @@ async fn use_in_collection_from_parent() {
         test.list_directory_in_storage(RelativeMoniker::new(vec![], vec![]), "").await,
         vec!["coll:c:1".to_string(), "foo".to_string()],
     );
-    test.destroy_dynamic_child(vec!["b:0"].into(), "coll", "c", 1).await;
+    test.destroy_dynamic_child(vec!["b:0"].into(), "coll", "c").await;
 
     // Confirm storage no longer exists.
     assert_eq!(
@@ -597,7 +597,7 @@ async fn use_in_collection_from_grandparent() {
         .await,
         vec!["coll:c:1".to_string()]
     );
-    test.destroy_dynamic_child(vec!["b:0"].into(), "coll", "c", 1).await;
+    test.destroy_dynamic_child(vec!["b:0"].into(), "coll", "c").await;
 
     // Confirm storage no longer exists.
     assert_eq!(

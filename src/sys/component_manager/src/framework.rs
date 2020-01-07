@@ -116,27 +116,30 @@ impl RealmCapabilityHostInner {
         // We only need to look up the realm matching this scope.
         // These realm operations should all work, even if the scope realm is not running.
         // A successful call to BindChild will cause the scope realm to start running.
-        let realm = self.model.look_up_realm(&scope_moniker).await?;
+        let realm = Arc::downgrade(&self.model.look_up_realm(&scope_moniker).await?);
         while let Some(request) = stream.try_next().await? {
+            let realm = match realm.upgrade() {
+                Some(r) => r,
+                None => {
+                    break;
+                }
+            };
             match request {
                 fsys::RealmRequest::CreateChild { responder, collection, decl } => {
-                    let mut res = Self::create_child(realm.clone(), collection, decl).await;
+                    let mut res = Self::create_child(realm, collection, decl).await;
                     responder.send(&mut res)?;
                 }
                 fsys::RealmRequest::BindChild { responder, child, exposed_dir } => {
                     let mut res =
-                        Self::bind_child(self.model.clone(), realm.clone(), child, exposed_dir)
-                            .await;
+                        Self::bind_child(self.model.clone(), realm, child, exposed_dir).await;
                     responder.send(&mut res)?;
                 }
                 fsys::RealmRequest::DestroyChild { responder, child } => {
-                    let mut res =
-                        Self::destroy_child(self.model.clone(), realm.clone(), child).await;
+                    let mut res = Self::destroy_child(self.model.clone(), realm, child).await;
                     responder.send(&mut res)?;
                 }
                 fsys::RealmRequest::ListChildren { responder, collection, iter } => {
-                    let mut res =
-                        Self::list_children(&self.config, realm.clone(), collection, iter).await;
+                    let mut res = Self::list_children(&self.config, realm, collection, iter).await;
                     responder.send(&mut res)?;
                 }
             }
@@ -225,14 +228,18 @@ impl RealmCapabilityHostInner {
     ) -> Result<(), fsys::Error> {
         child.collection.as_ref().ok_or(fsys::Error::InvalidArguments)?;
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
-        Realm::remove_dynamic_child(model, realm, &partial_moniker).await.map_err(|e| match e {
-            ModelError::InstanceNotFoundInRealm { .. } => fsys::Error::InstanceNotFound,
-            ModelError::Unsupported { .. } => fsys::Error::Unsupported,
-            e => {
-                error!("remove_dynamic_child() failed: {}", e);
-                fsys::Error::Internal
-            }
-        })
+        let _ =
+            Realm::remove_dynamic_child(model, realm, &partial_moniker).await.map_err(
+                |e| match e {
+                    ModelError::InstanceNotFoundInRealm { .. } => fsys::Error::InstanceNotFound,
+                    ModelError::Unsupported { .. } => fsys::Error::Unsupported,
+                    e => {
+                        error!("remove_dynamic_child() failed: {}", e);
+                        fsys::Error::Internal
+                    }
+                },
+            )?;
+        Ok(())
     }
 
     async fn list_children(

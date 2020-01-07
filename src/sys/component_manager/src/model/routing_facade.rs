@@ -67,15 +67,20 @@ fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> Ro
             let abs_moniker = abs_moniker.clone();
             let use_ = use_.clone();
             fasync::spawn(async move {
-                let res = route_use_capability(
-                    &model,
-                    flags,
-                    mode,
-                    relative_path,
-                    &use_,
-                    abs_moniker.clone(),
-                    server_end.into_channel(),
-                )
+                let abs_moniker_clone = abs_moniker.clone();
+                let res = async move {
+                    let target_realm = model.look_up_realm(&abs_moniker_clone).await?;
+                    route_use_capability(
+                        &model,
+                        flags,
+                        mode,
+                        relative_path,
+                        &use_,
+                        &target_realm,
+                        server_end.into_channel(),
+                    )
+                    .await
+                }
                 .await;
                 if let Err(e) = res {
                     error!("failed to route service for exposed dir {}: {:?}", abs_moniker, e);
@@ -96,15 +101,20 @@ fn route_capability_source(
             let abs_moniker = abs_moniker.clone();
             let source = source.clone();
             fasync::spawn(async move {
-                let res = open_capability_at_source(
-                    &model,
-                    flags,
-                    mode,
-                    relative_path,
-                    source,
-                    abs_moniker.clone(),
-                    server_end.into_channel(),
-                )
+                let abs_moniker_clone = abs_moniker.clone();
+                let res = async move {
+                    let target_realm = model.look_up_realm(&abs_moniker_clone).await?;
+                    open_capability_at_source(
+                        &model,
+                        flags,
+                        mode,
+                        relative_path,
+                        source,
+                        &target_realm,
+                        server_end.into_channel(),
+                    )
+                    .await
+                }
                 .await;
                 if let Err(e) = res {
                     error!("failed to route service for {}: {:?}", abs_moniker, e);
@@ -121,14 +131,19 @@ fn route_expose_fn(model: Model, abs_moniker: AbsoluteMoniker, expose: ExposeDec
             let abs_moniker = abs_moniker.clone();
             let expose = expose.clone();
             fasync::spawn(async move {
-                let res = route_expose_capability(
-                    &model,
-                    flags,
-                    mode,
-                    &expose,
-                    abs_moniker.clone(),
-                    server_end.into_channel(),
-                )
+                let abs_moniker_clone = abs_moniker.clone();
+                let res = async move {
+                    let target_realm = model.look_up_realm(&abs_moniker_clone).await?;
+                    route_expose_capability(
+                        &model,
+                        flags,
+                        mode,
+                        &expose,
+                        &target_realm,
+                        server_end.into_channel(),
+                    )
+                    .await
+                }
                 .await;
                 if let Err(e) = res {
                     error!("failed to route service for exposed dir {}: {:?}", abs_moniker, e);

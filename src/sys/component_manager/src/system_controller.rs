@@ -6,11 +6,10 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
-            actions::Action,
+            actions::{Action, ActionSet},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
-            realm::Realm,
         },
     },
     anyhow::{Context as _, Error},
@@ -121,7 +120,7 @@ impl SystemControllerCapabilityProvider {
                 // exit. main.rs waits on the model to observe the root realm
                 // disappear.
                 SystemControllerRequest::Shutdown { responder } => {
-                    Realm::register_action(
+                    ActionSet::register(
                         self.model.root_realm.clone(),
                         self.model.clone(),
                         Action::Shutdown,
@@ -129,7 +128,6 @@ impl SystemControllerCapabilityProvider {
                     .await
                     .await
                     .context("got error waiting for shutdown action to complete")?;
-
                     match responder.send() {
                         Ok(()) => {}
                         Err(e) => {

@@ -8,11 +8,11 @@ use {
         klog,
         model::{
             binding::Binder,
-            breakpoints::*,
             error::ModelError,
-            hooks::{EventType, HooksRegistration},
+            hooks::HooksRegistration,
             model::{ComponentManagerConfig, Model, ModelParams},
-            moniker::{AbsoluteMoniker, ChildMoniker, InstanceId, RelativeMoniker},
+            moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
+            realm::Realm,
             resolver::ResolverRegistry,
             runner::Runner,
             testing::{echo_service::*, mocks::*, test_helpers::*},
@@ -314,32 +314,15 @@ impl RoutingTest {
         moniker: AbsoluteMoniker,
         collection: &'a str,
         name: &'a str,
-        instance: InstanceId,
     ) {
-        let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
-        let component_resolved_url = Self::resolved_url(&component_name);
-        let instance_moniker = moniker.child(ChildMoniker::new(
-            name.to_string(),
-            Some(collection.to_string()),
-            instance.clone(),
-        ));
-        let breakpoint_system = BreakpointSystem::new();
-        let breakpoint_receiver =
-            breakpoint_system.register(vec![EventType::PostDestroyInstance]).await;
-        self.model.root_realm.hooks.install(breakpoint_system.hooks()).await;
-        capability_util::call_destroy_child(
-            &self
-                .mock_runner
-                .get_namespace(&component_resolved_url)
-                .expect("could not find child namespace"),
-            collection,
-            name,
-        )
-        .await;
-        breakpoint_receiver
-            .wait_until(EventType::PostDestroyInstance, instance_moniker)
+        let realm = self.model.look_up_realm(&moniker).await.expect("failed to look up realm");
+        self.model.bind_single_instance(realm.clone()).await.expect("bind instance failed");
+        let partial_moniker = PartialMoniker::new(name.to_string(), Some(collection.to_string()));
+        let nf = Realm::remove_dynamic_child(self.model.clone(), realm, &partial_moniker)
             .await
-            .resume();
+            .expect("failed to remove child");
+        // Wait for destruction to fully complete.
+        nf.await.expect("failed to destroy child");
     }
 
     /// Checks a `use` declaration at `moniker` by trying to use `capability`.
@@ -649,7 +632,7 @@ pub mod capability_util {
         should_succeed: bool,
     ) {
         let realm = model.look_up_realm(&moniker).await.expect("failed to look up realm");
-        let meta_dir_res = realm.resolve_meta_dir(model).await;
+        let meta_dir_res = Realm::resolve_meta_dir(&realm, model).await;
         match (meta_dir_res, should_succeed) {
             (Ok(Some(meta_dir)), true) => write_hippo_file_to_directory(&meta_dir, true).await,
             (Err(ModelError::CapabilityDiscoveryError { .. }), false) => (),

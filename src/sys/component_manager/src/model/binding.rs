@@ -37,7 +37,10 @@ impl Model {
     /// running. Returns the list of child realms whose instances need to be eagerly started after
     /// this function returns. The caller is responsible for calling
     /// `bind_eager_children_recursive` to ensure eager children are recursively binded.
-    async fn bind_single_instance(&self, realm: Arc<Realm>) -> Result<Vec<Arc<Realm>>, ModelError> {
+    pub async fn bind_single_instance(
+        &self,
+        realm: Arc<Realm>,
+    ) -> Result<Vec<Arc<Realm>>, ModelError> {
         let component = realm.resolver_registry.resolve(&realm.component_url).await?;
         // The realm's lock needs to be held during `Runner::start` until the `Execution` is set in
         // case there are concurrent calls to `bind_single_instance`.
@@ -48,13 +51,13 @@ impl Model {
                     component.decl.unwrap().try_into().map_err(|e| {
                         ModelError::manifest_invalid(realm.component_url.clone(), e)
                     })?;
-                *state = Some(RealmState::new(&*realm, &decl).await?);
+                *state = Some(RealmState::new(&realm, &decl).await?);
             }
             state.as_ref().unwrap().decl().clone()
         };
 
         // Fetch the component's runner.
-        let runner = realm.resolve_runner(self).await?;
+        let runner = Realm::resolve_runner(&realm, self).await?;
         {
             let mut execution = realm.lock_execution().await;
             if execution.is_shut_down() {

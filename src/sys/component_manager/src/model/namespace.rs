@@ -202,15 +202,20 @@ impl IncomingNamespace {
             // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
             // the same directory rights as the parent directory connection.
             let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
-            let res = routing::route_use_capability(
-                &model,
-                flags,
-                fio::MODE_TYPE_DIRECTORY,
-                String::new(),
-                &use_,
-                abs_moniker.clone(),
-                server_end.into_zx_channel(),
-            )
+            let abs_moniker_clone = abs_moniker.clone();
+            let res = async move {
+                let target_realm = model.look_up_realm(&abs_moniker_clone).await?;
+                routing::route_use_capability(
+                    &model,
+                    flags,
+                    fio::MODE_TYPE_DIRECTORY,
+                    String::new(),
+                    &use_,
+                    &target_realm,
+                    server_end.into_zx_channel(),
+                )
+                .await
+            }
             .await;
             if let Err(e) = res {
                 error!("failed to route directory for component {}: {:?}", abs_moniker, e);
@@ -262,15 +267,20 @@ impl IncomingNamespace {
                 let model = model.clone();
                 let abs_moniker = abs_moniker.clone();
                 fasync::spawn(async move {
-                    let res = routing::route_use_capability(
-                        &model,
-                        flags,
-                        mode,
-                        relative_path,
-                        &use_,
-                        abs_moniker.clone(),
-                        server_end.into_channel(),
-                    )
+                    let abs_moniker_clone = abs_moniker.clone();
+                    let res = async move {
+                        let target_realm = model.look_up_realm(&abs_moniker_clone).await?;
+                        routing::route_use_capability(
+                            &model,
+                            flags,
+                            mode,
+                            relative_path,
+                            &use_,
+                            &target_realm,
+                            server_end.into_channel(),
+                        )
+                        .await
+                    }
                     .await;
                     if let Err(e) = res {
                         error!("failed to route service for component {}: {:?}", abs_moniker, e);
