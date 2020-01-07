@@ -5,6 +5,8 @@
 use anyhow::Context as _;
 
 #[fuchsia_async::run_singlethreaded(test)]
+// TODO(43614): Deflake and re-enable this test.
+#[ignore]
 async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     // NB: netstack aggregates observations and logs them to cobalt once per minute.  We wait for
     // calls to LogCobaltEvents to be made, so this test takes about 180 seconds to run at the time
