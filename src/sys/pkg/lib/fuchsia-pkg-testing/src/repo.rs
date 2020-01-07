@@ -24,6 +24,7 @@ use {
         prelude::*,
     },
     hyper::{Body, Request, StatusCode},
+    maybe_owned::MaybeOwned,
     serde_derive::Deserialize,
     std::{
         collections::{BTreeMap, BTreeSet},
@@ -42,7 +43,7 @@ use {
 /// A builder to simplify construction of TUF repositories containing Fuchsia packages.
 #[derive(Debug)]
 pub struct RepositoryBuilder<'a> {
-    packages: Vec<PackageRef<'a>>,
+    packages: Vec<MaybeOwned<'a, Package>>,
     encryption_key: Option<BlobEncryptionKey>,
     repodir: Option<PathBuf>,
 }
@@ -59,7 +60,7 @@ impl<'a> RepositoryBuilder<'a> {
     }
 
     /// Adds a package (or a reference to one) to the repository.
-    pub fn add_package(mut self, package: impl Into<PackageRef<'a>>) -> Self {
+    pub fn add_package(mut self, package: impl Into<MaybeOwned<'a, Package>>) -> Self {
         self.packages.push(package.into());
         self
     }
@@ -78,7 +79,7 @@ impl<'a> RepositoryBuilder<'a> {
         {
             let mut manifest = File::create(indir.path().join("manifests.list"))?;
             for package in &self.packages {
-                writeln!(manifest, "/packages/{}/manifest.json", package.get().name())?;
+                writeln!(manifest, "/packages/{}/manifest.json", package.name())?;
             }
         }
 
@@ -116,7 +117,7 @@ impl<'a> RepositoryBuilder<'a> {
         }
 
         for package in &self.packages {
-            let package = package.get();
+            let package = package.as_ref();
             pm = pm.add_dir_to_namespace(
                 format!("/packages/{}", package.name()),
                 File::open(package.artifacts()).context("open package dir")?,
@@ -126,34 +127,6 @@ impl<'a> RepositoryBuilder<'a> {
         pm.output(&launcher()?)?.await?.ok()?;
 
         Ok(Repository { dir: repodir, encryption_key: self.encryption_key })
-    }
-}
-
-/// An owned [`Package`] or a reference to one.
-#[derive(Debug)]
-pub enum PackageRef<'a> {
-    Owned(Package),
-    Ref(&'a Package),
-}
-
-impl PackageRef<'_> {
-    fn get(&self) -> &Package {
-        match *self {
-            PackageRef::Owned(ref p) => p,
-            PackageRef::Ref(p) => p,
-        }
-    }
-}
-
-impl From<Package> for PackageRef<'_> {
-    fn from(p: Package) -> Self {
-        PackageRef::Owned(p)
-    }
-}
-
-impl<'a> From<&'a Package> for PackageRef<'a> {
-    fn from(p: &'a Package) -> Self {
-        PackageRef::Ref(p)
     }
 }
 
