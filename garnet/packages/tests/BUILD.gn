@@ -806,7 +806,7 @@ group("magma") {
     "//garnet/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
     "//garnet/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
     "//garnet/lib/magma/gnbuild/magma-img-rgx:magma-vulkan-no-hardware",
-    "//garnet/lib/magma/gnbuild/magma-vsl-gc:nonhardware-tests",
+    "//garnet/lib/magma/gnbuild/magma-vsl-gc:msd_vsl_gc_nonhardware_tests",
     "//garnet/lib/magma/tests",
     "//garnet/packages/prod:vulkan",
   ]

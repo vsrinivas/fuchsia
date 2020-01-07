@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/msd_vsl_gc_nonhardware_tests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

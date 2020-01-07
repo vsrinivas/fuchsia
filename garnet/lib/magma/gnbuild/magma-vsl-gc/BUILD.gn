@@ -79,9 +79,7 @@ if (build_libvulkan_vsl_gc != []) {
   }
 }
 
-unittest_package("nonhardware-tests") {
-  package_name = "magma_vsl_gc_nonhardware_tests"
-
+test_package("msd_vsl_gc_nonhardware_tests") {
   deps = [
     "//garnet/drivers/gpu/msd-vsl-gc:tests",
   ]
