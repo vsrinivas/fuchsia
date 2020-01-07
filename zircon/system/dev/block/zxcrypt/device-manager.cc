@@ -4,7 +4,7 @@
 
 #include "device-manager.h"
 
-#include <fuchsia/hardware/zxcrypt/c/fidl.h>
+#include <fuchsia/hardware/block/encrypted/c/fidl.h>
 #include <threads.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -81,19 +81,19 @@ zx_status_t Unseal(void* ctx, const uint8_t* key_data, const size_t key_count, u
   DeviceManager* device = reinterpret_cast<DeviceManager*>(ctx);
   key_slot_t key_slot = static_cast<key_slot_t>(slot);  // widens
   zx_status_t status = device->Unseal(key_data, key_count, key_slot);
-  return fuchsia_hardware_zxcrypt_DeviceManagerUnseal_reply(txn, status);
+  return fuchsia_hardware_block_encrypted_DeviceManagerUnseal_reply(txn, status);
 }
 
 zx_status_t Seal(void* ctx, fidl_txn_t* txn) {
   DeviceManager* device = reinterpret_cast<DeviceManager*>(ctx);
   zx_status_t status = device->Seal();
-  return fuchsia_hardware_zxcrypt_DeviceManagerSeal_reply(txn, status);
+  return fuchsia_hardware_block_encrypted_DeviceManagerSeal_reply(txn, status);
 }
 
-static fuchsia_hardware_zxcrypt_DeviceManager_ops_t fidl_ops = {.Unseal = Unseal, .Seal = Seal};
+static fuchsia_hardware_block_encrypted_DeviceManager_ops_t fidl_ops = {.Unseal = Unseal, .Seal = Seal};
 
 zx_status_t DeviceManager::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_zxcrypt_DeviceManager_dispatch(this, txn, msg, &fidl_ops);
+  return fuchsia_hardware_block_encrypted_DeviceManager_dispatch(this, txn, msg, &fidl_ops);
 }
 
 zx_status_t DeviceManager::Unseal(const uint8_t* ikm, size_t ikm_len, key_slot_t slot) {

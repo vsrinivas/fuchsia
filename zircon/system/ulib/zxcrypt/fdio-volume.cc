@@ -7,8 +7,8 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/encrypted/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <fuchsia/hardware/zxcrypt/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
@@ -186,8 +186,10 @@ FdioVolumeManager::FdioVolumeManager(zx::channel&& chan) : chan_(std::move(chan)
 zx_status_t FdioVolumeManager::Unseal(const uint8_t* key, size_t key_len, uint8_t slot) {
   zx_status_t rc;
   zx_status_t call_status;
-  if ((rc = fuchsia_hardware_zxcrypt_DeviceManagerUnseal(chan_.get(), key, key_len, slot,
-                                                         &call_status)) != ZX_OK) {
+  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerUnseal(chan_.get(),
+                                                                 key, key_len,
+                                                                 slot,
+                                                                 &call_status)) != ZX_OK) {
     xprintf("failed to call Unseal: %s\n", zx_status_get_string(rc));
     return rc;
   }
@@ -217,7 +219,8 @@ zx_status_t FdioVolumeManager::UnsealWithDeviceKey(uint8_t slot) {
 zx_status_t FdioVolumeManager::Seal() {
   zx_status_t rc;
   zx_status_t call_status;
-  if ((rc = fuchsia_hardware_zxcrypt_DeviceManagerSeal(chan_.get(), &call_status)) != ZX_OK) {
+  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerSeal(chan_.get(),
+                                                               &call_status)) != ZX_OK) {
     xprintf("failed to call Seal: %s\n", zx_status_get_string(rc));
     return rc;
   }

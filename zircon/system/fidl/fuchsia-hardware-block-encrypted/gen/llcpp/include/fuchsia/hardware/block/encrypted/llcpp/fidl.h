@@ -21,18 +21,19 @@ namespace llcpp {
 
 namespace fuchsia {
 namespace hardware {
-namespace zxcrypt {
+namespace block {
+namespace encrypted {
 
 class DeviceManager;
 
-extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerUnsealRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_zxcrypt_DeviceManagerUnsealRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerUnsealResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_zxcrypt_DeviceManagerUnsealResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerSealRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_zxcrypt_DeviceManagerSealRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_zxcrypt_DeviceManagerSealResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_zxcrypt_DeviceManagerSealResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_encrypted_DeviceManagerUnsealRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_encrypted_DeviceManagerUnsealRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_encrypted_DeviceManagerUnsealResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_encrypted_DeviceManagerUnsealResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_encrypted_DeviceManagerSealRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_encrypted_DeviceManagerSealRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_block_encrypted_DeviceManagerSealResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_encrypted_DeviceManagerSealResponseTable;
 
 // An interface to the zxcrypt driver, as bound to a single block device with
 // a zxcrypt superblock.  zxcrypt devices are encrypted, and before their
@@ -49,8 +50,8 @@ class DeviceManager final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_zxcrypt_DeviceManagerUnsealResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_zxcrypt_DeviceManagerUnsealResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_encrypted_DeviceManagerUnsealResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_encrypted_DeviceManagerUnsealResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -67,8 +68,8 @@ class DeviceManager final {
     ::fidl::VectorView<uint8_t> key;
     uint8_t slot;
 
-    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_zxcrypt_DeviceManagerUnsealRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_zxcrypt_DeviceManagerUnsealRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_encrypted_DeviceManagerUnsealRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_encrypted_DeviceManagerUnsealRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 256;
@@ -86,8 +87,8 @@ class DeviceManager final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_zxcrypt_DeviceManagerSealResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_zxcrypt_DeviceManagerSealResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_encrypted_DeviceManagerSealResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_encrypted_DeviceManagerSealResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -387,7 +388,8 @@ class DeviceManager final {
 // large key length here so we can use the simple layout.
 constexpr uint32_t MAX_KEY_SIZE = 256u;
 
-}  // namespace zxcrypt
+}  // namespace encrypted
+}  // namespace block
 }  // namespace hardware
 }  // namespace fuchsia
 }  // namespace llcpp
@@ -395,28 +397,28 @@ constexpr uint32_t MAX_KEY_SIZE = 256u;
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::UnsealRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::UnsealRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::UnsealRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::UnsealRequest)
-    == ::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::UnsealRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::UnsealRequest, key) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::UnsealRequest, slot) == 32);
+struct IsFidlMessage<::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::UnsealRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::UnsealRequest)
+    == ::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::UnsealRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::UnsealRequest, key) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::UnsealRequest, slot) == 32);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::UnsealResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::UnsealResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::UnsealResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::UnsealResponse)
-    == ::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::UnsealResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::UnsealResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::UnsealResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::UnsealResponse)
+    == ::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::UnsealResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::UnsealResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::SealResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::SealResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::SealResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::SealResponse)
-    == ::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::SealResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::zxcrypt::DeviceManager::SealResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::SealResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::SealResponse)
+    == ::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::SealResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::block::encrypted::DeviceManager::SealResponse, status) == 16);
 
 }  // namespace fidl

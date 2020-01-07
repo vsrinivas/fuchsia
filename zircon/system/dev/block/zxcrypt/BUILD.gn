@@ -21,7 +21,7 @@ zx_driver("zxcrypt") {
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.block.partition",
     "$zx/system/banjo/ddk.protocol.block.volume",
-    "$zx/system/fidl/fuchsia-hardware-zxcrypt:c",
+    "$zx/system/fidl/fuchsia-hardware-block-encrypted:c",
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
