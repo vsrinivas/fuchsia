@@ -579,7 +579,7 @@ void VectorValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
       }
       values_.push_back(std::move(value));
     }
-    offset += component_type_->InlineSize(decoder);
+    offset += component_type_->InlineSize(decoder->unions_are_xunions());
   }
 }
 

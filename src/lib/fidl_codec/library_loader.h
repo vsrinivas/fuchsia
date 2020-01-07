@@ -251,7 +251,7 @@ class Struct {
   uint32_t v1_size() const { return v1_size_; }
   const std::vector<std::unique_ptr<StructMember>>& members() const { return members_; }
 
-  uint32_t Size(MessageDecoder* decoder) const;
+  uint32_t Size(bool unions_are_xunions) const;
 
   std::unique_ptr<StructValue> DecodeStruct(MessageDecoder* decoder, const Type* type,
                                             uint64_t offset, bool nullable) const;

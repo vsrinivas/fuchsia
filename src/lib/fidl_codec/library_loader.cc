@@ -52,7 +52,7 @@ void EnumOrBits::DecodeTypes(bool is_scalar, const std::string& supertype_name,
     members_ = ret;
   }
 
-  size_ = type_->InlineSize(nullptr);
+  size_ = type_->InlineSize(false);
 }
 
 Enum::~Enum() = default;
@@ -237,15 +237,15 @@ void Struct::DecodeResponseTypes() {
               "maybe_response_type_shape_v1");
 }
 
-uint32_t Struct::Size(MessageDecoder* decoder) const {
-  return decoder->unions_are_xunions() ? v1_size_ : v0_size_;
+uint32_t Struct::Size(bool unions_are_xunions) const {
+  return unions_are_xunions ? v1_size_ : v0_size_;
 }
 
 std::unique_ptr<StructValue> Struct::DecodeStruct(MessageDecoder* decoder, const Type* type,
                                                   uint64_t offset, bool nullable) const {
   std::unique_ptr<StructValue> result = std::make_unique<StructValue>(type, *this);
   if (nullable) {
-    result->DecodeNullable(decoder, offset, Size(decoder));
+    result->DecodeNullable(decoder, offset, Size(decoder->unions_are_xunions()));
   } else {
     result->DecodeAt(decoder, offset);
   }
