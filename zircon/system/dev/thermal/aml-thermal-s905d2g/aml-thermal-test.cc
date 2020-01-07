@@ -376,6 +376,157 @@ TEST_F(AmlTSensorTest, GetStateChangePortTest) {
 
 TEST_F(AmlTSensorTest, LessTripPointsTest) { Create(true); }
 
+// PWM
+class FakeAmlPwm : public AmlPwm {
+ public:
+  static std::unique_ptr<FakeAmlPwm> Create(ddk::MmioBuffer pwm_mmio, uint32_t period,
+                                            uint32_t hwpwm) {
+    fbl::AllocChecker ac;
+
+    auto test = fbl::make_unique_checked<FakeAmlPwm>(&ac, std::move(pwm_mmio));
+    if (!ac.check()) {
+      return nullptr;
+    }
+
+    EXPECT_OK(test->Init(period, hwpwm));
+    return test;
+  }
+
+  explicit FakeAmlPwm(ddk::MmioBuffer pwm_mmio) : AmlPwm() { MapMmio(std::move(pwm_mmio)); }
+};
+
+class AmlPwmTest : public zxtest::Test {
+ public:
+  void SetUp() override {
+    fbl::AllocChecker ac;
+
+    pwm_regs_ = fbl::Array(new (&ac) ddk_mock::MockMmioReg[kRegSize], kRegSize);
+    if (!ac.check()) {
+      zxlogf(ERROR, "AmlPwmTest::SetUp: pwm_regs_ alloc failed\n");
+      return;
+    }
+    mock_pwm_mmio_ = fbl::make_unique_checked<ddk_mock::MockMmioRegRegion>(
+        &ac, pwm_regs_.get(), sizeof(uint32_t), kRegSize);
+    if (!ac.check()) {
+      zxlogf(ERROR, "AmlPwmTest::SetUp: mock_pwm_mmio_ alloc failed\n");
+      return;
+    }
+  }
+
+  void TearDown() override {
+    // Verify
+    mock_pwm_mmio_->VerifyAll();
+  }
+
+  void Create(uint32_t period, uint32_t hwpwm) {
+    ddk::MmioBuffer pwm_mmio(mock_pwm_mmio_->GetMmioBuffer());
+    pwm_ = FakeAmlPwm::Create(std::move(pwm_mmio), period, hwpwm);
+    ASSERT_TRUE(pwm_ != nullptr);
+  }
+
+ protected:
+  std::unique_ptr<FakeAmlPwm> pwm_;
+
+  // Mmio Regs and Regions
+  fbl::Array<ddk_mock::MockMmioReg> pwm_regs_;
+  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_pwm_mmio_;
+
+  void TestPwmAConfigure(uint32_t duty_cycle, uint32_t expected, uint32_t expected_misc) {
+    (*mock_pwm_mmio_)[(0x0 * 4)].ExpectWrite(expected);
+    (*mock_pwm_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(expected_misc);
+    EXPECT_OK(pwm_->Configure(duty_cycle));
+    ASSERT_NO_FATAL_FAILURES(mock_pwm_mmio_->VerifyAll());
+  }
+
+  void TestPwmBConfigure(uint32_t duty_cycle, uint32_t expected, uint32_t expected_misc) {
+    (*mock_pwm_mmio_)[(0x1 * 4)].ExpectWrite(expected);
+    (*mock_pwm_mmio_)[(0x2 * 4)].ExpectRead(0x00000000).ExpectWrite(expected_misc);
+    EXPECT_OK(pwm_->Configure(duty_cycle));
+    ASSERT_NO_FATAL_FAILURES(mock_pwm_mmio_->VerifyAll());
+  }
+};
+
+TEST_F(AmlPwmTest, ConfigureFail) {
+  Create(10, 0);
+  EXPECT_NOT_OK(pwm_->Configure(101));
+}
+
+TEST_F(AmlPwmTest, SherlockDvfsSpecPwmA) {
+  Create(1250, 0);
+
+  // clang-format off
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(0,   0x0000'001e, 0x1000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(3,   0x0000'001c, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(6,   0x0001'001b, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(10,  0x0002'001a, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(13,  0x0003'0019, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(16,  0x0004'0018, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(20,  0x0005'0017, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(23,  0x0006'0016, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(26,  0x0007'0015, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(30,  0x0008'0014, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(33,  0x0009'0013, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(36,  0x000a'0012, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(40,  0x000b'0011, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(43,  0x000c'0010, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(46,  0x000d'000f, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(50,  0x000e'000e, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(53,  0x000f'000d, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(56,  0x0010'000c, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(60,  0x0011'000b, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(63,  0x0012'000a, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(67,  0x0013'0009, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(70,  0x0014'0008, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(73,  0x0015'0007, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(76,  0x0016'0006, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(80,  0x0017'0005, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(83,  0x0018'0004, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(86,  0x0019'0003, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(90,  0x001a'0002, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(93,  0x001b'0001, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(96,  0x001c'0000, 0x0000'8001));
+  ASSERT_NO_FATAL_FAILURES(TestPwmAConfigure(100, 0x001e'0000, 0x1000'8001));
+  // clang-format on
+}
+
+TEST_F(AmlPwmTest, SherlockDvfsSpecPwmB) {
+  Create(1250, 1);
+
+  // clang-format off
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(0,   0x0000'001e, 0x2080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(3,   0x0000'001c, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(6,   0x0001'001b, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(10,  0x0002'001a, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(13,  0x0003'0019, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(16,  0x0004'0018, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(20,  0x0005'0017, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(23,  0x0006'0016, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(26,  0x0007'0015, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(30,  0x0008'0014, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(33,  0x0009'0013, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(36,  0x000a'0012, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(40,  0x000b'0011, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(43,  0x000c'0010, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(46,  0x000d'000f, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(50,  0x000e'000e, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(53,  0x000f'000d, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(56,  0x0010'000c, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(60,  0x0011'000b, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(63,  0x0012'000a, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(67,  0x0013'0009, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(70,  0x0014'0008, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(73,  0x0015'0007, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(76,  0x0016'0006, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(80,  0x0017'0005, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(83,  0x0018'0004, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(86,  0x0019'0003, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(90,  0x001a'0002, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(93,  0x001b'0001, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(96,  0x001c'0000, 0x0080'0002));
+  ASSERT_NO_FATAL_FAILURES(TestPwmBConfigure(100, 0x001e'0000, 0x2080'0002));
+  // clang-format on
+}
+
 // Voltage Regulator
 class FakeAmlVoltageRegulator : public AmlVoltageRegulator {
  public:
