@@ -202,20 +202,31 @@ func resolvePackage(pkgURL string, resolver *pkg.PackageResolverInterface) (*fuc
 func ValidateImgs(imgs []string, imgsPath string) error {
 	boardPath := filepath.Join(imgsPath, "board")
 	actual, err := ioutil.ReadFile(boardPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		} else {
+	if err == nil {
+		expected, err := ioutil.ReadFile("/config/build-info/board")
+		if err != nil {
 			return err
 		}
-	}
-	expected, err := ioutil.ReadFile("/config/build-info/board")
-	if err != nil {
+		if !bytes.Equal(actual, expected) {
+			return fmt.Errorf("parser: expected board name %s found %s", expected, actual)
+		}
+	} else if !os.IsNotExist(err) {
 		return err
 	}
-	if !bytes.Equal(actual, expected) {
-		return fmt.Errorf("parser: expected board name %s found %s", expected, actual)
+
+	// Require a 'zbi' or 'zbi.signed' partition in the update package.
+	found := false
+	for _, img := range []string{"zbi", "zbi.signed"} {
+		if _, err := os.Stat(filepath.Join(imgsPath, img)); err == nil {
+			found = true
+			break
+		}
 	}
+
+	if !found {
+		return fmt.Errorf("parser: missing 'zbi' or 'zbi.signed'")
+	}
+
 	return nil
 }
 
@@ -231,8 +242,11 @@ func WriteImgs(svc *paver.DataSinkInterface, imgs []string, imgsPath string) err
 }
 
 func writeAsset(svc *paver.DataSinkInterface, configuration paver.Configuration, asset paver.Asset, payload *mem.Buffer) error {
+	syslog.Infof("img_writer: writing asset %q to %q", asset, configuration)
+
 	status, err := svc.WriteAsset(configuration, asset, *payload)
 	if err != nil {
+		syslog.Errorf("img_writer: failed to write asset %q: %s", asset, err)
 		return err
 	}
 	statusErr := zx.Status(status)

@@ -537,10 +537,12 @@ impl OtaMetrics {
 async fn test_system_update() {
     let mut env = TestEnv::new();
 
-    env.register_package("update", "upd4t3").add_file(
-        "packages",
-        "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-    );
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
         initiator: "manual",
@@ -577,10 +579,12 @@ async fn test_system_update() {
 async fn test_system_update_no_reboot() {
     let mut env = TestEnv::new();
 
-    env.register_package("update", "upd4t3").add_file(
-        "packages",
-        "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-    );
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
         initiator: "manual",
@@ -617,10 +621,12 @@ async fn test_system_update_no_reboot() {
 async fn test_broken_logger() {
     let mut env = TestEnv::new();
 
-    env.register_package("update", "upd4t3").add_file(
-        "packages",
-        "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-    );
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi");
 
     *env.logger_factory.broken.lock() = true;
 
@@ -688,6 +694,28 @@ async fn test_failing_package_fetch() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_requires_zbi() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("bootloader", "new bootloader");
+
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
+        })
+        .await;
+    assert!(result.is_err(), "system_updater succeeded when it should fail");
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_writes_bootloader() {
     let mut env = TestEnv::new();
 
@@ -696,6 +724,7 @@ async fn test_writes_bootloader() {
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
         )
+        .add_file("zbi", "fake zbi")
         .add_file("bootloader", "new bootloader");
 
     env.run_system_updater(SystemUpdaterArgs {
@@ -709,7 +738,19 @@ async fn test_writes_bootloader() {
 
     assert_eq!(
         env.paver_service.take_events(),
-        vec![PaverEvent::WriteBootloader(b"new bootloader".to_vec())]
+        vec![
+            PaverEvent::WriteBootloader(b"new bootloader".to_vec(),),
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            },
+        ]
     );
 
     assert_eq!(*env.reboot_service.called.lock(), 1);
@@ -724,6 +765,7 @@ async fn test_writes_recovery() {
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
         )
+        .add_file("zbi", "fake zbi")
         .add_file("zedboot", "new recovery");
 
     env.run_system_updater(SystemUpdaterArgs {
@@ -737,11 +779,23 @@ async fn test_writes_recovery() {
 
     assert_eq!(
         env.paver_service.take_events(),
-        vec![PaverEvent::WriteAsset {
-            configuration: paver::Configuration::Recovery,
-            asset: paver::Asset::Kernel,
-            payload: b"new recovery".to_vec(),
-        }]
+        vec![
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::Recovery,
+                asset: paver::Asset::Kernel,
+                payload: b"new recovery".to_vec(),
+            },
+        ]
     );
 
     assert_eq!(*env.reboot_service.called.lock(), 1);
@@ -756,6 +810,7 @@ async fn test_writes_recovery_vbmeta() {
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
         )
+        .add_file("zbi", "fake zbi")
         .add_file("zedboot", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
 
@@ -771,6 +826,16 @@ async fn test_writes_recovery_vbmeta() {
     assert_eq!(
         env.paver_service.take_events(),
         vec![
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            },
             PaverEvent::WriteAsset {
                 configuration: paver::Configuration::Recovery,
                 asset: paver::Asset::Kernel,
@@ -993,10 +1058,12 @@ async fn test_failing_image_write() {
 async fn test_uses_custom_update_package() {
     let mut env = TestEnv::new();
 
-    env.register_package("another-update/4", "upd4t3r").add_file(
-        "packages",
-        "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
-    );
+    env.register_package("another-update/4", "upd4t3r")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi");
 
     env.run_system_updater(SystemUpdaterArgs {
         initiator: "manual",
