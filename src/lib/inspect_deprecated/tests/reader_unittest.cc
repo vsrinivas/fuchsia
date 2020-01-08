@@ -29,7 +29,7 @@ using testing::UnorderedElementsAre;
 
 using namespace inspect_deprecated::testing;
 
-const char kObjectsName[] = "objects";
+const char kObjectsName[] = "diagnostics";
 
 class TestReader : public gtest::RealLoopFixture {
  public:

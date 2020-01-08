@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 
   auto vmo_file =
       std::make_unique<VmoFileWithUpdate>(std::move(buffer.vmo), 0, buffer.size, &kcounter);
-  vfs::PseudoDir* dir = context->outgoing()->GetOrCreateDirectory("objects");
+  vfs::PseudoDir* dir = context->outgoing()->GetOrCreateDirectory("diagnostics");
   dir->AddEntry("root.inspect", std::move(vmo_file));
   loop.Run();
 

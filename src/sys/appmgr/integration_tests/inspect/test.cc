@@ -57,7 +57,7 @@ class InspectTest : public sys::testing::TestWithEnvironment {
   // Open the root object connection on the given sync pointer.
   // Returns ZX_OK on success.
   zx_status_t GetInspectConnection(fuchsia::inspect::deprecated::InspectSyncPtr* out_ptr) {
-    files::Glob glob(Substitute("/hub/r/test/*/c/$0/*/out/objects", kTestProcessName));
+    files::Glob glob(Substitute("/hub/r/test/*/c/$0/*/out/diagnostics", kTestProcessName));
     if (glob.size() == 0) {
       return ZX_ERR_NOT_FOUND;
     }

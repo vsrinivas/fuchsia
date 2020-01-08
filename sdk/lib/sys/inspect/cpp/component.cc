@@ -15,8 +15,9 @@ ComponentInspector::ComponentInspector(sys::ComponentContext* startup_context) :
   zx::vmo read_only_vmo = inspector_.DuplicateVmo();
   if (read_only_vmo.get() != ZX_HANDLE_INVALID) {
     auto vmo_file = std::make_unique<vfs::VmoFile>(std::move(read_only_vmo), 0, 4096);
-    ZX_ASSERT(startup_context->outgoing()->GetOrCreateDirectory("inspect")->AddEntry(
-                  "root.inspect", std::move(vmo_file)) == ZX_OK);
+    ZX_ASSERT(startup_context->outgoing()
+                  ->GetOrCreateDirectory("diagnostics")
+                  ->AddEntry("root.inspect", std::move(vmo_file)) == ZX_OK);
   }
 }
 

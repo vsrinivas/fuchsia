@@ -289,9 +289,11 @@ int main(int argc, const char** argv) {
   auto root_object_dir = component::ObjectDir::Make("root");
   inspect_deprecated::Node root_object(root_object_dir);
   fidl::BindingSet<fuchsia::inspect::deprecated::Inspect> inspect_bindings_;
-  context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
-      fuchsia::inspect::deprecated::Inspect::Name_,
-      std::make_unique<vfs::Service>(inspect_bindings_.GetHandler(root_object_dir.object().get())));
+  context->outgoing()
+      ->GetOrCreateDirectory("diagnostics")
+      ->AddEntry(fuchsia::inspect::deprecated::Inspect::Name_,
+                 std::make_unique<vfs::Service>(
+                     inspect_bindings_.GetHandler(root_object_dir.object().get())));
 
   // Create global metrics and globally publish pointers to them.
   auto employee_count = root_object.CreateUIntMetric("employee_count", 0);

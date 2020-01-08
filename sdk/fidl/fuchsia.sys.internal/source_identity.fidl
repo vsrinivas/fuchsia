@@ -10,7 +10,7 @@ const uint16 STRING_MAX_LENGTH = 100;
 const uint16 MAX_URL_LENGTH = 4096;
 
 /// Identifies a component uniquely within the observing realm.
-/// Example: hub/r/sys/4566/c/http.cmx/19226/out/objects
+/// Example: hub/r/sys/4566/c/http.cmx/19226
 ///   moniker: [root, sys, http.cmx]
 ///   component_url: "fuchsia-pkg://fuchsia.com/http#meta/http.cmx"
 ///   component_name: "http.cmx"

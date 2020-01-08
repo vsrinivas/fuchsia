@@ -43,7 +43,7 @@ using testing::Not;
 
 constexpr char kFakeModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
 constexpr char kSessionmgrInspectRootGlobPath[] =
-    "/hub/r/mth_*_inspect/*/c/sessionmgr.cmx/*/out/inspect/root.inspect";
+    "/hub/r/mth_*_inspect/*/c/sessionmgr.cmx/*/out/diagnostics/root.inspect";
 // The initial module's intent parameter data. This needs to be JSON formatted.
 constexpr char kInitialIntentParameterData[] = "\"initial\"";
 constexpr char kIntentAction[] = "action";

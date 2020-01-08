@@ -63,7 +63,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
     exit(EXIT_FAILURE);
   }
 
-  vfs::PseudoDir* dir = component_context_->outgoing()->GetOrCreateDirectory("objects");
+  vfs::PseudoDir* dir = component_context_->outgoing()->GetOrCreateDirectory("diagnostics");
   auto capture_file = std::make_unique<vfs::PseudoFile>(
       1024 * 1024, [this](std::vector<uint8_t>* output, size_t max_bytes) {
         return Inspect(output, max_bytes);

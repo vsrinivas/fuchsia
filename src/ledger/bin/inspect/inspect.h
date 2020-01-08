@@ -13,7 +13,7 @@
 namespace ledger {
 
 // The filesystem directory in which the Inspect hierarchy appears.
-inline absl::string_view kInspectNodesDirectory = "inspect";
+inline absl::string_view kInspectNodesDirectory = "diagnostics";
 // The name given to the top-level object at the root of the Inspect hierarchy.
 inline absl::string_view kTopLevelNodeName = "ledger_component";
 inline absl::string_view kRepositoriesInspectPathComponent = "repositories";

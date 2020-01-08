@@ -278,8 +278,8 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
   // Checks the Inspect tree for "feedback_agent.cmx".
   void CheckFeedbackAgentInspectTree(const uint64_t expected_total_num_connections,
                                      const uint64_t expected_current_num_connections) {
-    const std::string glob_pattern =
-        fxl::Substitute("/hub/r/$0/*/c/feedback_agent.cmx/*/*/inspect/root.inspect", test_name_);
+    const std::string glob_pattern = fxl::Substitute(
+        "/hub/r/$0/*/c/feedback_agent.cmx/*/*/diagnostics/root.inspect", test_name_);
     // Wait until the |root.inspect| file is created.
     RunLoopUntil([&glob_pattern] {
       files::Glob glob(glob_pattern);

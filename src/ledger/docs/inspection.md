@@ -7,17 +7,17 @@ The Ledger is integrated with Fuchsia's Inspect system.
 `iquery` is the utility used by developers to read data exposed by a running
 Ledger binary. A typical command may look something like
  ```
-$ fx shell iquery --find /hub/c/ledger.cmx/*/out/inspect
-/hub/c/ledger.cmx/4042026/out/inspect
+$ fx shell iquery --find /hub/c/ledger.cmx/*/out/diagnostics
+/hub/c/ledger.cmx/4042026/out/diagnostics
 ```
 or
 ```
-$ fx shell iquery --ls /hub/c/ledger.cmx/4042026/out/inspect#repositories/4B0958A113F62EF7AF81988906CC847F/ledgers/modular_sessionmgr
+$ fx shell iquery --ls /hub/c/ledger.cmx/4042026/out/diagnostics#repositories/4B0958A113F62EF7AF81988906CC847F/ledgers/modular_sessionmgr
 pages
 ```
 A particular "dump everything" recipe to keep handy is
 ```
-$ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/inspect
+$ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/diagnostics
 ```
 This will show all data exposed by all discovered Ledger processes.
 
@@ -61,7 +61,7 @@ Need help getting started? Demo-it-yourself by following these steps:
    ![login screen after bringup](device-bringup.png)
 * Execute
    ```
-   $ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/inspect
+   $ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/diagnostics
    ```
    and observe that the command fails because there is not yet a Ledger binary
    running anywhere on the system.
@@ -73,7 +73,7 @@ Need help getting started? Demo-it-yourself by following these steps:
    ![screen after logging in as guest](after-guest-login.png)
 * Execute
    ```
-   $ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/inspect
+   $ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/diagnostics
    ```
    again, and observe output generally appearing as
    ```
@@ -151,7 +151,7 @@ Need help getting started? Demo-it-yourself by following these steps:
    ![empty Todo List mod](empty-todo-list.png)
 * Execute
    ```
-   $ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/inspect
+   $ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/diagnostics
    ```
    a third time and observe that:
    * Entries now appear:
@@ -181,7 +181,7 @@ Need help getting started? Demo-it-yourself by following these steps:
    ![populated Todo List mod](populated-todo-list.png)
 * Execute
    ```
-   $ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/inspect
+   $ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/diagnostics
    ```
    a fourth time and observe that the ledger associated with
    `fuchsia-pkg://fuchsia.com/todo_list#meta/todo_list.cmx` now contains the
@@ -211,7 +211,7 @@ Need help getting started? Demo-it-yourself by following these steps:
    ![mostly-empty user interface after deleting story](after-deleting-story.png)
 * Execute
    ```
-   $ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/inspect
+   $ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/diagnostics
    ```
    a fifth time, and observe that the output is exactly the same as the last
    execution - as long as the data is disk-resident and a `LedgerRepository`
@@ -225,7 +225,7 @@ Need help getting started? Demo-it-yourself by following these steps:
    ![the login screen again after having logged out](after-logout.png)
 * Execute
    ```
-   $ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/inspect
+   $ fx shell iquery --cat --recursive /hub/c/ledger.cmx/*/out/diagnostics
    ```
    one last time, and again observe that (as was the case before logging in)
    Inspect is not able to find anything because there is no running Ledger
@@ -235,19 +235,19 @@ Need help getting started? Demo-it-yourself by following these steps:
 * Use `iquery --find` (without `--recursive`) to determine [the values against
    which the asterisks in other commands match](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=36554):
    ```
-   $ fx shell iquery --find /hub/c/ledger.cmx/*/out/inspect
-   /hub/c/ledger.cmx/1896955/out/inspect
+   $ fx shell iquery --find /hub/c/ledger.cmx/*/out/diagnostics
+   /hub/c/ledger.cmx/1896955/out/diagnostics
    ```
 * Then use `iquery --cat` to view the properties and metrics attached to each
    node and `iquery --ls` to view the direct children of each node:
    ```
-   $ fx shell iquery --find /hub/c/ledger.cmx/*/out/inspect
-   /hub/c/ledger.cmx/1896955/out/inspect
-   $ fx shell iquery --ls /hub/c/ledger.cmx/1896955/out/inspect#repositories
+   $ fx shell iquery --find /hub/c/ledger.cmx/*/out/diagnostics
+   /hub/c/ledger.cmx/1896955/out/diagnostics
+   $ fx shell iquery --ls /hub/c/ledger.cmx/1896955/out/diagnostics#repositories
    3235C737627E9D24B7AB7152B0593F2E
-   $ fx shell iquery --ls /hub/c/ledger.cmx/1896955/out/inspect#repositories/3235C737627E9D24B7AB7152B0593F2E
+   $ fx shell iquery --ls /hub/c/ledger.cmx/1896955/out/diagnostics#repositories/3235C737627E9D24B7AB7152B0593F2E
    ledgers
-   $ fx shell iquery --ls /hub/c/ledger.cmx/1896955/out/inspect#repositories/3235C737627E9D24B7AB7152B0593F2E/ledgers
+   $ fx shell iquery --ls /hub/c/ledger.cmx/1896955/out/diagnostics#repositories/3235C737627E9D24B7AB7152B0593F2E/ledgers
    fuchsia-pkg://fuchsia.com/clipboard_agent#meta/clipboard_agent.cmx
    fuchsia-pkg://fuchsia.com/discovermgr#meta/discovermgr.cmx
    fuchsia-pkg://fuchsia.com/todo_list#meta/todo_list.cmx

@@ -42,7 +42,7 @@ constexpr char kFrameStatsNodeName[] = "FrameStatsTest";
 // to trigger execution of a LazyStringProperty.
 class FrameStatsTest : public gtest::RealLoopFixture {
  public:
-  static constexpr char kObjectsName[] = "objects";
+  static constexpr char kObjectsName[] = "diagnostics";
 
   FrameStatsTest()
       : object_(component::Object::Make(kObjectsName)),
@@ -169,7 +169,7 @@ TEST_F(FrameStatsTest, SmokeTest_DummyFrameTimings) {
 
 class FrameStatsCobaltTest : public gtest::TestLoopFixture {
  public:
-  static constexpr char kObjectsName[] = "objects";
+  static constexpr char kObjectsName[] = "diagnostics";
   FrameStatsCobaltTest()
       : object_(component::Object::Make(kObjectsName)),
         root_object_(component::ObjectDir(object_)) {}

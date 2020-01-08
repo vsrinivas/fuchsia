@@ -29,11 +29,13 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::ComponentContext> app_context(sys::ComponentContext::Create());
 
   // Set up an inspect_deprecated::Node to inject into the App.
-  auto object_dir = component::ObjectDir(component::Object::Make("objects"));
+  auto object_dir = component::ObjectDir(component::Object::Make("diagnostics"));
   fidl::BindingSet<fuchsia::inspect::deprecated::Inspect> inspect_bindings;
-  app_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
-      fuchsia::inspect::deprecated::Inspect::Name_,
-      std::make_unique<vfs::Service>(inspect_bindings.GetHandler(object_dir.object().get())));
+  app_context->outgoing()
+      ->GetOrCreateDirectory("diagnostics")
+      ->AddEntry(
+          fuchsia::inspect::deprecated::Inspect::Name_,
+          std::make_unique<vfs::Service>(inspect_bindings.GetHandler(object_dir.object().get())));
 
   scenic_impl::App app(std::move(app_context), inspect_deprecated::Node(std::move(object_dir)),
                        [&loop] { loop.Quit(); });

@@ -71,7 +71,7 @@ class InspectTest : public sys::testing::TestWithEnvironment {
   // Open the root object connection on the given sync pointer.
   // Returns ZX_OK on success.
   fit::result<inspect::Hierarchy> GetInspectHierarchy() {
-    files::Glob glob(Substitute("/hub/r/$1/*/c/$0/*/out/objects/root.inspect", kTestProcessName,
+    files::Glob glob(Substitute("/hub/r/$1/*/c/$0/*/out/diagnostics/root.inspect", kTestProcessName,
                                 fxl::StringView(test_case_)));
     if (glob.size() == 0) {
       return fit::error();
