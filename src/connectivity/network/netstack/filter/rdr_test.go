@@ -39,21 +39,17 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 	linkEP1 := channel.New(1, 100, testRouterLinkAddress1)
 	nic1 := tcpip.NICID(testRouterNICID1)
 	filtered1 := NewEndpoint(f, linkEP1)
-	err := s.CreateDisabledNIC(nic1, filtered1)
-	if err != nil {
-		t.Fatalf("CreateDisableNIC error: %s", err)
+	if err := s.CreateNIC(nic1, filtered1); err != nil {
+		t.Fatalf("CreateNIC error: %s", err)
 	}
-	s.EnableNIC(nic1)
 	s.AddAddress(nic1, header.IPv4ProtocolNumber, testRouterNICAddr1)
 
 	linkEP2 := channel.New(1, 100, testRouterLinkAddress2)
 	nic2 := tcpip.NICID(testRouterNICID2)
 	filtered2 := NewEndpoint(f, linkEP2)
-	err = s.CreateDisabledNIC(nic2, filtered2)
-	if err != nil {
-		t.Fatalf("CreateDisableNIC error: %s", err)
+	if err := s.CreateNIC(nic2, filtered2); err != nil {
+		t.Fatalf("CreateNIC error: %s", err)
 	}
-	s.EnableNIC(nic2)
 	s.AddAddress(nic2, header.IPv4ProtocolNumber, testRouterNICAddr2)
 
 	s.SetRouteTable([]tcpip.Route{

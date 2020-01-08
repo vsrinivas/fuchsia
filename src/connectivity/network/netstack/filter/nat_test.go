@@ -63,10 +63,9 @@ func createTestStackLan(t *testing.T) (*stack.Stack, *channel.Endpoint) {
 	})
 	linkEP := channel.New(1, 100, testLanLinkAddress)
 	nic := tcpip.NICID(testLanNICID)
-	if err := s.CreateDisabledNIC(nic, linkEP); err != nil {
-		t.Fatalf("CreateDisableNIC error: %s", err)
+	if err := s.CreateNIC(nic, linkEP); err != nil {
+		t.Fatalf("CreateNIC error: %s", err)
 	}
-	s.EnableNIC(nic)
 	s.AddAddress(nic, header.IPv4ProtocolNumber, testLanNICAddr)
 	s.SetRouteTable([]tcpip.Route{
 		{
@@ -93,10 +92,9 @@ func createTestStackWan(t *testing.T) (*stack.Stack, *channel.Endpoint) {
 	})
 	linkEP := channel.New(1, 100, testWanLinkAddress)
 	nic := tcpip.NICID(testWanNICID)
-	if err := s.CreateDisabledNIC(nic, linkEP); err != nil {
-		t.Fatalf("CreateDisableNIC error: %s", err)
+	if err := s.CreateNIC(nic, linkEP); err != nil {
+		t.Fatalf("CreateNIC error: %s", err)
 	}
-	s.EnableNIC(nic)
 	s.AddAddress(nic, header.IPv4ProtocolNumber, testWanNICAddr)
 	s.SetRouteTable([]tcpip.Route{
 		{
@@ -131,19 +129,17 @@ func createTestStackRouterNAT(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 	linkEP1 := channel.New(1, 100, testRouterLinkAddress1)
 	nic1 := tcpip.NICID(testRouterNICID1)
 	filtered1 := NewEndpoint(f, linkEP1)
-	if err := s.CreateDisabledNIC(nic1, filtered1); err != nil {
-		t.Fatalf("CreateDisableNIC error: %s", err)
+	if err := s.CreateNIC(nic1, filtered1); err != nil {
+		t.Fatalf("CreateNIC error: %s", err)
 	}
-	s.EnableNIC(nic1)
 	s.AddAddress(nic1, header.IPv4ProtocolNumber, testRouterNICAddr1)
 
 	linkEP2 := channel.New(1, 100, testRouterLinkAddress2)
 	nic2 := tcpip.NICID(testRouterNICID2)
 	filtered2 := NewEndpoint(f, linkEP2)
-	if err := s.CreateDisabledNIC(nic2, filtered2); err != nil {
-		t.Fatalf("CreateDisableNIC error: %s", err)
+	if err := s.CreateNIC(nic2, filtered2); err != nil {
+		t.Fatalf("CreateNIC error: %s", err)
 	}
-	s.EnableNIC(nic2)
 	s.AddAddress(nic2, header.IPv4ProtocolNumber, testRouterNICAddr2)
 
 	s.SetRouteTable([]tcpip.Route{
