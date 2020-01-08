@@ -51,7 +51,7 @@ func TestBindingSetCounterStat_Value(t *testing.T) {
 
 	s := bindingSetCounterStat{bindingSets: []*fidl.BindingSet{&b1, &b2}}
 
-	if got, want := uint64(0), s.Value(); got != want {
+	if got, want := s.Value(), uint64(0); got != want {
 		t.Errorf("got s.Value() = %d want = %d", got, want)
 	}
 
@@ -74,7 +74,7 @@ func TestBindingSetCounterStat_Value(t *testing.T) {
 		t.Fatalf("%T.Add(...) failed: %s", b1, err)
 	}
 
-	if got, want := uint64(1), s.Value(); got != want {
+	if got, want := s.Value(), uint64(1); got != want {
 		t.Errorf("got s.Value() = %d want = %d", got, want)
 	}
 
@@ -83,7 +83,7 @@ func TestBindingSetCounterStat_Value(t *testing.T) {
 		t.Fatalf("%T.Add(...) failed: %s", b2, err)
 	}
 
-	if got, want := uint64(2), s.Value(); got != want {
+	if got, want := s.Value(), uint64(2); got != want {
 		t.Errorf("got s.Value() = %d want = %d", got, want)
 	}
 
@@ -91,7 +91,7 @@ func TestBindingSetCounterStat_Value(t *testing.T) {
 		t.Fatalf("got %T.Remove(...) = false want = true", b1)
 	}
 
-	if got, want := uint64(1), s.Value(); got != want {
+	if got, want := s.Value(), uint64(1); got != want {
 		t.Errorf("got s.Value() = %d want = %d", got, want)
 	}
 
@@ -99,7 +99,7 @@ func TestBindingSetCounterStat_Value(t *testing.T) {
 		t.Fatalf("got %T.Remove(...) = false want = true", b2)
 	}
 
-	if got, want := uint64(0), s.Value(); got != want {
+	if got, want := s.Value(), uint64(0); got != want {
 		t.Errorf("got s.Value() = %d want = %d", got, want)
 	}
 }
