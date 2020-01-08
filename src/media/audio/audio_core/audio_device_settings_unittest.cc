@@ -38,21 +38,34 @@ static constexpr HwGainState kDefaultInitialHwGainState = {
 
 class AudioDeviceSettingsTest : public gtest::TestLoopFixture {};
 
-TEST_F(AudioDeviceSettingsTest, AgcMuteFalseWhenNotSupported) {
+// If agc is not supported, then always return 'false' for agc enabled.
+TEST_F(AudioDeviceSettingsTest, AgcFalseWhenNotSupported) {
   // Set AGC/Mute to 'true' but not supported.
   HwGainState hw_gain_state = kDefaultInitialHwGainState;
-  hw_gain_state.cur_mute = true;
   hw_gain_state.cur_agc = true;
-  hw_gain_state.can_mute = false;
   hw_gain_state.can_agc = false;
   AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
 
   fuchsia::media::AudioGainInfo gain_info;
   settings.GetGainInfo(&gain_info);
 
-  EXPECT_FALSE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
   EXPECT_FALSE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
   EXPECT_FALSE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
+}
+
+// If can_mute is false, still allow the device to be muted. In cases without the hardware mute
+// we'll implement mute in software.
+TEST_F(AudioDeviceSettingsTest, MuteTrueWhenNotSupported) {
+  // Set AGC/Mute to 'true' but not supported.
+  HwGainState hw_gain_state = kDefaultInitialHwGainState;
+  hw_gain_state.cur_mute = true;
+  hw_gain_state.can_mute = false;
+  AudioDeviceSettings settings(kTestUniqueId, hw_gain_state, false);
+
+  fuchsia::media::AudioGainInfo gain_info;
+  settings.GetGainInfo(&gain_info);
+
+  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
 }
 
 TEST_F(AudioDeviceSettingsTest, SetGainInfoDoesNothingWithNoFlags) {

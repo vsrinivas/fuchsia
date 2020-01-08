@@ -106,7 +106,6 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
 
   const audio_stream_unique_id_t uid_;
   const bool is_input_;
-  const bool can_mute_;
   const bool can_agc_;
 
   // These should only be accessed from the AudioDeviceManager's message loop thread.

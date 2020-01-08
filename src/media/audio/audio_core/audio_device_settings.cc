@@ -21,14 +21,14 @@ fbl::RefPtr<AudioDeviceSettings> AudioDeviceSettings::Create(const AudioDriver& 
 
 AudioDeviceSettings::AudioDeviceSettings(const audio_stream_unique_id_t& uid, const HwGainState& hw,
                                          bool is_input)
-    : uid_(uid), is_input_(is_input), can_mute_(hw.can_mute), can_agc_(hw.can_agc) {
+    : uid_(uid), is_input_(is_input), can_agc_(hw.can_agc) {
   gain_state_.gain_db = hw.cur_gain;
-  gain_state_.muted = hw.can_mute && hw.cur_mute;
+  gain_state_.muted = hw.cur_mute;
   gain_state_.agc_enabled = hw.can_agc && hw.cur_agc;
 }
 
 AudioDeviceSettings::AudioDeviceSettings(const AudioDeviceSettings& o)
-    : uid_(o.uid_), is_input_(o.is_input_), can_mute_(o.can_mute_), can_agc_(o.can_agc_) {
+    : uid_(o.uid_), is_input_(o.is_input_), can_agc_(o.can_agc_) {
   std::lock_guard<std::mutex> lock(o.settings_lock_);
   gain_state_.gain_db = o.gain_state_.gain_db;
   gain_state_.muted = o.gain_state_.muted;
@@ -105,7 +105,7 @@ void AudioDeviceSettings::GetGainInfo(fuchsia::media::AudioGainInfo* out_info) c
   out_info->gain_db = gain_state_.gain_db;
   out_info->flags = 0;
 
-  if (can_mute_ && gain_state_.muted) {
+  if (gain_state_.muted) {
     out_info->flags |= fuchsia::media::AudioGainInfoFlag_Mute;
   }
 
