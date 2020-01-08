@@ -273,10 +273,8 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			return onStruct(value, decl)
 		case *gidlmixer.TableDecl:
 			return onTable(value, decl)
-		case *gidlmixer.UnionDecl:
-			return onUnion(value, decl)
 		case *gidlmixer.XUnionDecl:
-			return onUnion(value, decl)
+			return onXUnion(value, decl)
 		}
 	case []interface{}:
 		switch decl := decl.(type) {
@@ -334,7 +332,7 @@ func wrapNullable(decl gidlmixer.Declaration, valueStr string) string {
 	switch decl.(type) {
 	case *gidlmixer.ArrayDecl, *gidlmixer.VectorDecl, *gidlmixer.StringDecl:
 		return fmt.Sprintf("Some(%s)", valueStr)
-	case *gidlmixer.StructDecl, *gidlmixer.UnionDecl, *gidlmixer.XUnionDecl:
+	case *gidlmixer.StructDecl, *gidlmixer.XUnionDecl:
 		return fmt.Sprintf("Some(Box::new(%s))", valueStr)
 	case *gidlmixer.BoolDecl, *gidlmixer.NumberDecl, *gidlmixer.FloatDecl, *gidlmixer.TableDecl:
 		panic(fmt.Sprintf("decl %v should not be nullable", decl))
@@ -395,7 +393,7 @@ func onTable(value gidlir.Object, decl *gidlmixer.TableDecl) string {
 	return wrapNullable(decl, valueStr)
 }
 
-func onUnion(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
+func onXUnion(value gidlir.Object, decl *gidlmixer.XUnionDecl) string {
 	if len(value.Fields) != 1 {
 		panic(fmt.Sprintf("union has %d fields, expected 1", len(value.Fields)))
 	}

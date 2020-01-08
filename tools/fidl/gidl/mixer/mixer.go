@@ -52,7 +52,6 @@ type ValueVisitor interface {
 	OnStruct(value gidlir.Object, decl *StructDecl)
 	OnTable(value gidlir.Object, decl *TableDecl)
 	OnXUnion(value gidlir.Object, decl *XUnionDecl)
-	OnUnion(value gidlir.Object, decl *UnionDecl)
 	OnArray(value []interface{}, decl *ArrayDecl)
 	OnVector(value []interface{}, decl *VectorDecl)
 	OnNull(decl Declaration)
@@ -85,8 +84,6 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 			visitor.OnTable(value, decl)
 		case *XUnionDecl:
 			visitor.OnXUnion(value, decl)
-		case *UnionDecl:
-			visitor.OnUnion(value, decl)
 		default:
 			panic(fmt.Sprintf("expected %T, got %T: %v", decl, value, value))
 		}
@@ -127,7 +124,6 @@ var _ = []Declaration{
 	&StringDecl{},
 	&StructDecl{},
 	&TableDecl{},
-	&UnionDecl{},
 	&XUnionDecl{},
 	&ArrayDecl{},
 	&VectorDecl{},
@@ -156,7 +152,6 @@ type KeyedDeclaration interface {
 var _ = []KeyedDeclaration{
 	&StructDecl{},
 	&TableDecl{},
-	&UnionDecl{},
 	&XUnionDecl{},
 }
 
@@ -456,55 +451,6 @@ func (decl XUnionDecl) conforms(value interface{}) error {
 	return nil
 }
 
-// UnionDecl describes a xunion declaration.
-type UnionDecl struct {
-	fidlir.Union
-	schema   schema
-	nullable bool
-}
-
-func (decl *UnionDecl) IsNullable() bool {
-	return decl.nullable
-}
-
-func (decl *UnionDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
-	for _, member := range decl.Members {
-		if string(member.Name) == key.Name {
-			return member.Type, true
-		}
-	}
-	return fidlir.Type{}, false
-}
-
-// TODO(bprosnitz) Don't repeat this across types.
-func (decl UnionDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
-	if typ, ok := decl.MemberType(key); ok {
-		return decl.schema.LookupDeclByType(typ)
-	}
-	return nil, false
-}
-
-func (decl UnionDecl) conforms(value interface{}) error {
-	object, err := objectConforms(value, "union", decl.Name, decl.schema, decl.nullable)
-	if err != nil {
-		return err
-	}
-	if object == nil {
-		return nil
-	}
-	if num := len(object.Fields); num != 1 {
-		return fmt.Errorf("must have one field, found %d", num)
-	}
-	for _, field := range object.Fields {
-		if fieldDecl, ok := decl.ForKey(field.Key); !ok {
-			return fmt.Errorf("field %s: unknown", field.Key.Name)
-		} else if err := fieldDecl.conforms(field.Value); err != nil {
-			return fmt.Errorf("field %s: %s", field.Key.Name, err)
-		}
-	}
-	return nil
-}
-
 type ArrayDecl struct {
 	NeverNullable
 	schema schema
@@ -623,8 +569,8 @@ func (s schema) LookupDeclByName(name string, nullable bool) (Declaration, bool)
 	}
 	for _, decl := range s.Unions {
 		if decl.Name == s.name(name) {
-			return &UnionDecl{
-				Union:    decl,
+			return &XUnionDecl{
+				XUnion:   fidlir.ConvertUnionToXUnion(decl),
 				schema:   s,
 				nullable: nullable,
 			}, true

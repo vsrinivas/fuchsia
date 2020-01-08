@@ -355,10 +355,6 @@ func (b *cppValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnionDe
 	b.onObject(value, decl)
 }
 
-func (b *cppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) {
-	b.onObject(value, decl)
-}
-
 func (b *cppValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) {
 	containerVar := b.newVar()
 	nullable := decl.IsNullable()
@@ -452,11 +448,6 @@ func typeName(decl gidlmixer.Declaration) string {
 		}
 		return identifierName(decl.Name)
 	case *gidlmixer.TableDecl:
-		return identifierName(decl.Name)
-	case *gidlmixer.UnionDecl:
-		if decl.IsNullable() {
-			return fmt.Sprintf("std::unique_ptr<%s>", identifierName(decl.Name))
-		}
 		return identifierName(decl.Name)
 	case *gidlmixer.XUnionDecl:
 		if decl.IsNullable() {

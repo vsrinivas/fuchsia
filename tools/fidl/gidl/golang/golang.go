@@ -383,10 +383,6 @@ func (b *goValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnionDec
 	b.onObject(value, decl)
 }
 
-func (b *goValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) {
-	b.onObject(value, decl)
-}
-
 func (b *goValueBuilder) onList(value []interface{}, decl gidlmixer.ListDeclaration) {
 	var argStr string
 	elemDecl, _ := decl.Elem()
@@ -438,8 +434,6 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 	case *gidlmixer.StructDecl:
 		return pointerPrefix + identifierName(decl.Name)
 	case *gidlmixer.TableDecl:
-		return pointerPrefix + identifierName(decl.Name)
-	case *gidlmixer.UnionDecl:
 		return pointerPrefix + identifierName(decl.Name)
 	case *gidlmixer.XUnionDecl:
 		return pointerPrefix + identifierName(decl.Name)

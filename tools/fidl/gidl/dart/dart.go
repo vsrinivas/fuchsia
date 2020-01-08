@@ -292,10 +292,8 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			return onObject(value, decl)
 		case *gidlmixer.TableDecl:
 			return onObject(value, decl)
-		case *gidlmixer.UnionDecl:
-			return onUnion(value, decl)
 		case *gidlmixer.XUnionDecl:
-			return onUnion(value, decl)
+			return onXUnion(value, decl)
 		}
 	case []interface{}:
 		switch decl := decl.(type) {
@@ -327,7 +325,7 @@ func onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
 	return fmt.Sprintf("%s(%s)", fidlcommon.ToUpperCamelCase(value.Name), strings.Join(args, ", "))
 }
 
-func onUnion(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
+func onXUnion(value gidlir.Object, decl *gidlmixer.XUnionDecl) string {
 	for _, field := range value.Fields {
 		if field.Key.Name == "" {
 			panic("unknown field not supported")

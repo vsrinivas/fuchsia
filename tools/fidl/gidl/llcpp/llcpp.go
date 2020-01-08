@@ -377,24 +377,6 @@ func (b *llcppValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnion
 	b.lastVar = containerVar
 }
 
-func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) {
-	containerVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf(
-		"llcpp::conformance::%s %s;\n", value.Name, containerVar))
-
-	for _, field := range value.Fields {
-		if field.Key.Name == "" {
-			panic("unknown field not supported")
-		}
-		fieldDecl, _ := decl.ForKey(field.Key)
-		gidlmixer.Visit(b, field.Value, fieldDecl)
-		fieldVar := b.lastVar
-		b.Builder.WriteString(fmt.Sprintf(
-			"%s.set_%s(&%s);\n", containerVar, field.Key.Name, fieldVar))
-	}
-	b.lastVar = containerVar
-}
-
 func (b *llcppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
 	var elements []string
 	elemDecl, _ := decl.Elem()
@@ -452,8 +434,6 @@ func typeName(decl gidlmixer.Declaration) string {
 		}
 		return identifierName(decl.Name)
 	case *gidlmixer.TableDecl:
-		return identifierName(decl.Name)
-	case *gidlmixer.UnionDecl:
 		return identifierName(decl.Name)
 	case *gidlmixer.XUnionDecl:
 		return identifierName(decl.Name)
