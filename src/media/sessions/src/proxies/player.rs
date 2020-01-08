@@ -240,7 +240,7 @@ impl Player {
                                     SessionControlRequest::WatchStatus { responder } => {
                                         if hanging_get.is_some() {
                                             fx_log_warn!(
-                                                tag: "mediasession",
+                                                tag: "player",
                                                 "Session observer sent duplicate watch"
                                             );
                                             // Close the channel.

@@ -5,7 +5,7 @@
 use crate::Result;
 use anyhow::Context as _;
 use fidl::encoding::Decodable;
-use fidl::endpoints::{create_endpoints, create_proxy};
+use fidl::endpoints::{create_endpoints, create_proxy, create_request_stream};
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_async as fasync;
 use fuchsia_component as comp;
@@ -40,9 +40,12 @@ impl TestService {
     }
 
     fn new_watcher(&self, watch_options: WatchOptions) -> Result<TestWatcher> {
-        let (watcher_client, watcher_server) = create_endpoints()?;
+        let (watcher_client, watcher_server) =
+            create_endpoints().context("Creating watcher endpoints")?;
         self.discovery.watch_sessions(watch_options, watcher_client)?;
-        Ok(TestWatcher { watcher: watcher_server.into_stream()? })
+        Ok(TestWatcher {
+            watcher: watcher_server.into_stream().context("Turning watcher into stream")?,
+        })
     }
 }
 
@@ -59,8 +62,8 @@ impl TestWatcher {
                 .try_next()
                 .await?
                 .and_then(|r| r.into_session_updated())
-                .expect(&format!("Unwrapping watcher request {:?}", i));
-            responder.send()?;
+                .with_context(|| format!("Unwrapping watcher request {:?}", i))?;
+            responder.send().with_context(|| format!("Sending ack for watcher request {:?}", i))?;
             updates.push((id, delta));
         }
         Ok(updates)
@@ -72,8 +75,8 @@ impl TestWatcher {
             .try_next()
             .await?
             .and_then(|r| r.into_session_removed())
-            .expect("Unwrapping watcher request");
-        responder.send()?;
+            .context("Unwrapping watcher request for awaited removal")?;
+        responder.send().context("Sending ack for removal")?;
         Ok(id)
     }
 }
@@ -85,12 +88,13 @@ struct TestPlayer {
 
 impl TestPlayer {
     async fn new(service: &TestService) -> Result<Self> {
-        let (player_client, player_server) = create_endpoints()?;
+        let (player_client, requests) =
+            create_request_stream().context("Creating player request stream")?;
         let id = service
             .publisher
             .publish(player_client, PlayerRegistration { domain: Some(test_domain()) })
-            .await?;
-        let requests = player_server.into_stream()?;
+            .await
+            .context("Registering new player")?;
         Ok(Self { requests, id })
     }
 
@@ -98,7 +102,7 @@ impl TestPlayer {
         match self.requests.try_next().await? {
             Some(PlayerRequest::WatchInfoChange { responder }) => responder.send(delta)?,
             _ => {
-                panic!("Expected status change request.");
+                return Err(anyhow::anyhow!("Expected status change request."));
             }
         }
 
@@ -111,7 +115,7 @@ impl TestPlayer {
                 return Ok(());
             }
         }
-        panic!("Did not receive request that matched predicate. ")
+        Err(anyhow::anyhow!("Did not receive request that matched predicate."))
     }
 }
 
@@ -358,7 +362,7 @@ async fn users_can_watch_session_status() -> Result<()> {
     service.discovery.connect_to_session(player1.id, session1_request)?;
 
     player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
-    let status1 = session1.watch_status().await?;
+    let status1 = session1.watch_status().await.context("Watching session status (1st time)")?;
     assert_matches!(
         status1.player_status,
         Some(PlayerStatus { player_state: Some(PlayerState::Playing), .. })
@@ -366,7 +370,11 @@ async fn users_can_watch_session_status() -> Result<()> {
 
     player2.emit_delta(delta_with_state(PlayerState::Buffering)).await?;
     player1.emit_delta(delta_with_state(PlayerState::Paused)).await?;
-    let _status2 = session1.watch_status().await?;
+    let status1 = session1.watch_status().await.context("Watching session status (2nd time)")?;
+    assert_matches!(
+        status1.player_status,
+        Some(PlayerStatus { player_state: Some(PlayerState::Paused), .. })
+    );
 
     Ok(())
 }
