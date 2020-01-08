@@ -280,5 +280,9 @@ group("tests") {
     ":audio_core_unittests",
     "mixer:tests",
     "test",
+
+    # include this explicitly, in case product includes a custom audio_core package by other name
+    "//src/media/audio/audio_core",
+    "//src/media/audio/bundles:config",
   ]
 }
