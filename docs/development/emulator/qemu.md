@@ -8,7 +8,7 @@ locally.
 
 QEMU is downloaded by `jiri` as part of `jiri update` or `jiri run-hooks`.
 
-QEMU is fetched into `//prebuilts/third_party/qemu`. You can run it most
+QEMU is fetched into `//prebuilt/third_party/qemu`. You can run it most
 conveniently using `fx qemu` (see below).
 
 ## Build QEMU
