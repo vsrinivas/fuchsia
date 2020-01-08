@@ -110,12 +110,12 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
     return fit::ok(std::make_unique<audio::mixer::NoOp>());
   }
   virtual fit::result<fbl::RefPtr<Stream>, zx_status_t> InitializeDestLink(
-      const fbl::RefPtr<AudioLink>& link) {
+      const AudioObject& dest) {
     return fit::ok(nullptr);
   }
 
   virtual void CleanupSourceLink(const fbl::RefPtr<AudioLink>& link) {}
-  virtual void CleanupDestLink(const fbl::RefPtr<AudioLink>& link) {}
+  virtual void CleanupDestLink(const AudioObject& dest) {}
 
   // Called immediately after a new link is added to the object.
   virtual void OnLinkAdded() {}

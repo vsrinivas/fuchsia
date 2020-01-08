@@ -35,7 +35,7 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& 
   // Create the link.
   fbl::RefPtr<AudioLink> link = fbl::MakeRefCounted<AudioLink>(source, dest);
 
-  auto dest_init_result = source->InitializeDestLink(link);
+  auto dest_init_result = source->InitializeDestLink(*dest);
   if (dest_init_result.is_error()) {
     return nullptr;
   }
@@ -72,17 +72,19 @@ void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
 
   const fbl::RefPtr<AudioObject>& source = link->GetSource();
   FX_DCHECK(source != nullptr);
+
+  const fbl::RefPtr<AudioObject>& dest = link->GetDest();
+  FX_DCHECK(dest != nullptr);
+
   {
     std::lock_guard<std::mutex> slock(source->links_lock_);
     auto iter = source->dest_links_.find(link.get());
     if (iter != source->dest_links_.end()) {
-      source->CleanupDestLink(link);
+      source->CleanupDestLink(*dest);
       source->dest_links_.erase(iter);
     }
   }
 
-  const fbl::RefPtr<AudioObject>& dest = link->GetDest();
-  FX_DCHECK(dest != nullptr);
   {
     std::lock_guard<std::mutex> dlock(dest->links_lock_);
     auto iter = dest->source_links_.find(link.get());

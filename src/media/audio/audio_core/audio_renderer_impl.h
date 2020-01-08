@@ -139,8 +139,8 @@ class AudioRendererImpl : public AudioObject,
   void OnLinkAdded() override;
   const fbl::RefPtr<Format>& format() const final { return format_; }
   fit::result<fbl::RefPtr<Stream>, zx_status_t> InitializeDestLink(
-      const fbl::RefPtr<AudioLink>& link) override;
-  void CleanupDestLink(const fbl::RefPtr<AudioLink>& link) override;
+      const AudioObject& dest) override;
+  void CleanupDestLink(const AudioObject& dest) override;
 
   // |media::audio::StreamVolume|
   bool GetStreamMute() const final;
@@ -180,7 +180,7 @@ class AudioRendererImpl : public AudioObject,
 
   fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames_;
 
-  std::unordered_map<AudioLink*, fbl::RefPtr<PacketQueue>> packet_queues_;
+  std::unordered_map<const AudioObject*, fbl::RefPtr<PacketQueue>> packet_queues_;
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
 };
