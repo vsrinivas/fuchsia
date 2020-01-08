@@ -26,8 +26,6 @@
 #ifndef SRC_UI_LIB_ESCHER_THIRD_PARTY_GRANITE_VK_PIPELINE_LAYOUT_H_
 #define SRC_UI_LIB_ESCHER_THIRD_PARTY_GRANITE_VK_PIPELINE_LAYOUT_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/resources/resource.h"
 #include "src/ui/lib/escher/third_party/granite/vk/descriptor_set_layout.h"
@@ -39,6 +37,8 @@
 #include "src/ui/lib/escher/vk/sampler.h"
 #include "src/ui/lib/escher/vk/shader_stage.h"
 #include "src/ui/lib/escher/vk/vulkan_limits.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 namespace impl {
@@ -52,7 +52,7 @@ struct PipelineLayoutSpec : public Hashable {
   PipelineLayoutSpec(
       uint32_t attribute_mask, uint32_t render_target_mask,
       const std::array<DescriptorSetLayout, VulkanLimits::kNumDescriptorSets>& layouts,
-      const std::array<vk::PushConstantRange, kMaxPushConstantRanges>& ranges, uint32_t num_ranges,
+      const std::vector<vk::PushConstantRange>& ranges, uint32_t num_ranges,
       SamplerPtr immutable_sampler)
       : immutable_sampler_(immutable_sampler),
         attribute_mask_(attribute_mask),
@@ -86,7 +86,7 @@ struct PipelineLayoutSpec : public Hashable {
     return descriptor_set_layouts_[index];
   }
   uint32_t num_push_constant_ranges() const { return num_push_constant_ranges_; }
-  const std::array<vk::PushConstantRange, kMaxPushConstantRanges>& push_constant_ranges() const {
+  const std::vector<vk::PushConstantRange>& push_constant_ranges() const {
     return push_constant_ranges_;
   }
 
@@ -105,7 +105,7 @@ struct PipelineLayoutSpec : public Hashable {
   uint32_t descriptor_set_mask_ = 0;
   std::array<DescriptorSetLayout, VulkanLimits::kNumDescriptorSets> descriptor_set_layouts_ = {};
   uint32_t num_push_constant_ranges_ = 0;
-  std::array<vk::PushConstantRange, kMaxPushConstantRanges> push_constant_ranges_ = {};
+  std::vector<vk::PushConstantRange> push_constant_ranges_ = {};
 
   // Allows quick comparison to decide whether the push constant ranges have
   // changed.  If so, all descriptor sets are invalidated.

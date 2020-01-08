@@ -50,6 +50,16 @@ PipelineLayoutSpec GeneratePipelineLayoutSpec(
     const std::array<ShaderModulePtr, EnumCount<ShaderStage>()>& shader_modules,
     const SamplerPtr& immutable_sampler);
 
+// Given an array of raw push constants, consolidate overlapping and equivalent ranges.
+// The resulting array of push constants may therefore have fewer ranges and with each
+// range potentially having more than one associated shader stage flag.
+//
+// Any two (or more) ranges that overlap will be merged into a single range, with the
+// resulting range's stage flags containing each of the flags for the ranges that it
+// was created from.
+std::vector<vk::PushConstantRange> ConsolidatePushConstantRanges(
+    const std::vector<vk::PushConstantRange>& ranges);
+
 }  // namespace impl
 }  // namespace escher
 

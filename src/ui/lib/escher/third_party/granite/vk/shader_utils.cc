@@ -31,6 +31,7 @@
 #include "src/ui/lib/escher/util/enum_cast.h"
 #include "src/ui/lib/escher/util/hasher.h"
 #include "src/ui/lib/escher/vk/shader_module.h"
+
 #include "third_party/spirv-cross/spirv_cross.hpp"
 
 namespace escher {
@@ -48,9 +49,9 @@ void GenerateShaderModuleResourceLayoutFromSpirv(std::vector<uint32_t> spirv, Sh
 
   auto resources = compiler.get_shader_resources();
   for (auto& image : resources.sampled_images) {
-    auto set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
-    auto binding = compiler.get_decoration(image.id, spv::DecorationBinding);
-    auto& type = compiler.get_type(image.base_type_id);
+    uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+    uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
+    const spirv_cross::SPIRType& type = compiler.get_type(image.base_type_id);
     if (type.image.dim == spv::DimBuffer)
       layout->sets[set].sampled_buffer_mask |= 1u << binding;
     else
@@ -62,8 +63,8 @@ void GenerateShaderModuleResourceLayoutFromSpirv(std::vector<uint32_t> spirv, Sh
   }
 
   for (auto& image : resources.subpass_inputs) {
-    auto set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
-    auto binding = compiler.get_decoration(image.id, spv::DecorationBinding);
+    uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+    uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
     layout->sets[set].input_attachment_mask |= 1u << binding;
     layout->sets[set].stages |= stage_flags;
 
@@ -73,8 +74,8 @@ void GenerateShaderModuleResourceLayoutFromSpirv(std::vector<uint32_t> spirv, Sh
   }
 
   for (auto& image : resources.storage_images) {
-    auto set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
-    auto binding = compiler.get_decoration(image.id, spv::DecorationBinding);
+    uint32_t set = compiler.get_decoration(image.id, spv::DecorationDescriptorSet);
+    uint32_t binding = compiler.get_decoration(image.id, spv::DecorationBinding);
     layout->sets[set].storage_image_mask |= 1u << binding;
     layout->sets[set].stages |= stage_flags;
 
@@ -84,15 +85,15 @@ void GenerateShaderModuleResourceLayoutFromSpirv(std::vector<uint32_t> spirv, Sh
   }
 
   for (auto& buffer : resources.uniform_buffers) {
-    auto set = compiler.get_decoration(buffer.id, spv::DecorationDescriptorSet);
-    auto binding = compiler.get_decoration(buffer.id, spv::DecorationBinding);
+    uint32_t set = compiler.get_decoration(buffer.id, spv::DecorationDescriptorSet);
+    uint32_t binding = compiler.get_decoration(buffer.id, spv::DecorationBinding);
     layout->sets[set].uniform_buffer_mask |= 1u << binding;
     layout->sets[set].stages |= stage_flags;
   }
 
   for (auto& buffer : resources.storage_buffers) {
-    auto set = compiler.get_decoration(buffer.id, spv::DecorationDescriptorSet);
-    auto binding = compiler.get_decoration(buffer.id, spv::DecorationBinding);
+    uint32_t set = compiler.get_decoration(buffer.id, spv::DecorationDescriptorSet);
+    uint32_t binding = compiler.get_decoration(buffer.id, spv::DecorationBinding);
     layout->sets[set].storage_buffer_mask |= 1u << binding;
     layout->sets[set].stages |= stage_flags;
   }
@@ -112,12 +113,79 @@ void GenerateShaderModuleResourceLayoutFromSpirv(std::vector<uint32_t> spirv, Sh
   }
 
   if (!resources.push_constant_buffers.empty()) {
+    // In the general case, it is possible for a single shader module to contain
+    // multiple push constant blocks, however since it is unlikely that any shaders
+    // that we write will have multiple blocks per module, we assume that there is
+    // at most one to simplify the following implementation. It is possible that in
+    // the future we may wish to change this.
+    FXL_DCHECK(resources.push_constant_buffers.size() == 1);
+
     // Need to declare the entire block.
-    size_t size = compiler.get_declared_struct_size(
-        compiler.get_type(resources.push_constant_buffers.front().base_type_id));
-    layout->push_constant_offset = 0;
-    layout->push_constant_range = size;
+    // Get the type for the current push constant range (e.g. vertex, fragment, etc).
+    const spirv_cross::SPIRType& type =
+        compiler.get_type(resources.push_constant_buffers.front().base_type_id);
+
+    // The offset for the current push constant range should be equal to the offset of the
+    // first declared member of that range.
+    layout->push_constant_offset = compiler.type_struct_member_offset(type, /*first member*/ 0);
+
+    // The total size of the range can be calculated by adding together the offset + size of the
+    // *last* member of the struct, and subtracting out the offset of the *first* member of the
+    // struct. It would also be possible to simply loop over each of the member types and sum their
+    // sizes, but the first approach gives us a constant time solution (and allows us to avoid
+    // having to reason about padding).
+    uint32_t last = uint32_t(type.member_types.size() - 1);
+    uint32_t last_offset = compiler.type_struct_member_offset(type, last);
+    layout->push_constant_range = last_offset +
+                                  compiler.get_declared_struct_member_size(type, last) -
+                                  layout->push_constant_offset;
   }
+}
+
+// This function uses a generic interval merging algorithm. We start by sorting
+// the ranges by their offsets, and then traverse the sorted vector, combining
+// ranges that overlap as we go.
+std::vector<vk::PushConstantRange> ConsolidatePushConstantRanges(
+    const std::vector<vk::PushConstantRange>& input_ranges) {
+  // Do nothing if the ranges are empty or if there is only one range.
+  if (input_ranges.size() <= 1) {
+    return input_ranges;
+  }
+
+  // Copy the input vector and sort it based off the starting offsets.
+  auto ranges = input_ranges;
+  std::sort(ranges.begin(), ranges.end(),
+            [](vk::PushConstantRange& a, vk::PushConstantRange& b) { return a.offset < b.offset; });
+
+  // Get the starting data from the first range in the vector.
+  auto& first = ranges[0];
+  uint32_t start = first.offset;
+  uint32_t end = start + first.size;
+  auto flags = first.stageFlags;
+
+  // Iterate over all of the subsequent ranges. If the current range's offset is
+  // less than ending point of the previous range, we combine the two, and update
+  // the stage flags. If the current offset starts after the end of the previous
+  // range, then we have a new range that we can push back into our result vector.
+  std::vector<vk::PushConstantRange> result;
+  for (uint32_t i = 1; i < ranges.size(); i++) {
+    auto& current = ranges[i];
+    // This is specifically a less-than and not less-than-or-equal-to so that
+    // adjacent but not overlapping ranges are not merged.
+    if (current.offset < end) {
+      end = std::max(current.offset + current.size, end);
+      flags |= current.stageFlags;
+    } else {
+      result.push_back(vk::PushConstantRange(flags, start, end - start));
+      start = current.offset;
+      end = start + current.size;
+      flags = current.stageFlags;
+    }
+  }
+
+  // Perform one more push back for the very last range, then return the result.
+  result.push_back(vk::PushConstantRange(flags, start, end - start));
+  return result;
 }
 
 PipelineLayoutSpec GeneratePipelineLayoutSpec(
@@ -135,9 +203,8 @@ PipelineLayoutSpec GeneratePipelineLayoutSpec(
   std::array<DescriptorSetLayout, VulkanLimits::kNumDescriptorSets> descriptor_set_layouts;
 
   // Store the initial push constant ranges locally, then de-dup further down.
-  std::array<vk::PushConstantRange, PipelineLayoutSpec::kMaxPushConstantRanges> raw_ranges = {};
-  std::array<vk::PushConstantRange, PipelineLayoutSpec::kMaxPushConstantRanges>
-      push_constant_ranges = {};
+  std::vector<vk::PushConstantRange> raw_ranges;
+
   for (uint32_t i = 0; i < EnumCount<ShaderStage>(); ++i) {
     auto& module = shader_modules[i];
     if (!module)
@@ -158,33 +225,15 @@ PipelineLayoutSpec GeneratePipelineLayoutSpec(
       pipe_dsl.fp_mask |= mod_dsl.fp_mask;
       pipe_dsl.stages |= mod_dsl.stages;
     }
-
-    raw_ranges[i].stageFlags = ShaderStageToFlags(ShaderStage(i));
-    raw_ranges[i].offset = module_layout.push_constant_offset;
-    raw_ranges[i].size = module_layout.push_constant_range;
+    vk::PushConstantRange range;
+    range.stageFlags = ShaderStageToFlags(ShaderStage(i));
+    range.offset = module_layout.push_constant_offset;
+    range.size = module_layout.push_constant_range;
+    raw_ranges.push_back(range);
   }
 
-  unsigned num_ranges = 0;
-  for (auto& range : raw_ranges) {
-    if (range.size != 0) {
-      bool unique = true;
-      for (unsigned i = 0; i < num_ranges; i++) {
-        // Try to merge equivalent ranges for multiple stages.
-        // TODO(ES-83): what to do about overlapping ranges?  Should DCHECK?
-        if (push_constant_ranges[i].offset == range.offset &&
-            push_constant_ranges[i].size == range.size) {
-          unique = false;
-          push_constant_ranges[i].stageFlags |= range.stageFlags;
-          break;
-        }
-      }
-
-      if (unique)
-        push_constant_ranges[num_ranges++] = range;
-    }
-  }
-
-  uint32_t num_push_constant_ranges = num_ranges;
+  auto push_constant_ranges = ConsolidatePushConstantRanges(raw_ranges);
+  uint32_t num_push_constant_ranges = push_constant_ranges.size();
 
   return PipelineLayoutSpec(attribute_mask, render_target_mask, descriptor_set_layouts,
                             push_constant_ranges, num_push_constant_ranges, immutable_sampler);
