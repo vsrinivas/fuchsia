@@ -501,25 +501,7 @@ template("rustc_artifact") {
         public_deps = non_rust_deps
         rustflags = rflags
 
-        stripped_output_file = "$root_out_dir/$output_name"
         metadata = {
-          binaries = [
-            {
-              type = "executable"
-              label =
-                  get_label_info(":$build_target_name", "label_with_toolchain")
-              cpu = current_cpu
-              os = current_os
-              debug = rebase_path(output_file, root_build_dir)
-              dist = rebase_path(stripped_output_file, root_build_dir)
-              if (current_os != "mac" && current_os != "win") {
-                elf_build_id = "$debug.build-id.stamp"
-              }
-              if (output_breakpad_syms && current_os == "fuchsia") {
-                breakpad = rebase_path("$output_file.sym", root_build_dir)
-              }
-            },
-          ]
           if (is_host) {
             tool_paths = [
               {
@@ -616,26 +598,6 @@ template("rustc_artifact") {
         }
         if (defined(invoker.test_deps)) {
           deps += invoker.test_deps
-        }
-
-        metadata = {
-          binaries = [
-            {
-              type = "executable"
-              label = get_label_info(":$build_test_target_name",
-                                     "label_with_toolchain")
-              cpu = current_cpu
-              os = current_os
-              dist = rebase_path(test_output_file, root_build_dir)
-              debug = rebase_path("$root_out_dir/exe.unstripped/$test_filename")
-              if (current_os != "mac" && current_os != "win") {
-                elf_build_id = "$debug.build-id.stamp"
-              }
-              if (output_breakpad_syms && current_os == "fuchsia") {
-                breakpad = rebase_path("$output_file.sym", root_build_dir)
-              }
-            },
-          ]
         }
       }
     }
