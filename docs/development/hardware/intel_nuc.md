@@ -86,7 +86,7 @@ If you want to remotely manage the device, see [Remote Management for NUC](nuc-r
 ## 4. Build Fuchsia {#build-fuchsia}
 
 1. Follow the [getting started guidelines](/docs/getting_started.md). Make sure to
-use the board configuration `x86` when running `fx set`. For example `fx set core.x86`.
+use the board configuration `x64` when running `fx set`. For example `fx set core.x64`.
 
 ## 5. Pave Fuchsia {#pave-fuchsia}
 
