@@ -32,6 +32,7 @@ use {
 /// key is present in a subsequent [`InputReport`]. Clients can assume that
 /// a key is pressed for all received input events until the key is present in
 /// the [`KeyEventPhase::Released`] entry of [`keys`].
+#[derive(Debug, PartialEq)]
 pub struct KeyboardEventDescriptor {
     /// The keys associated with this input event, sorted by their `KeyEventPhase`
     /// (e.g., whether they are pressed or released).
@@ -39,7 +40,7 @@ pub struct KeyboardEventDescriptor {
 }
 
 /// A [`KeyboardDeviceDescriptor`] contains information about a specific keyboard device.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct KeyboardDeviceDescriptor {
     /// All the keys available on the keyboard device.
     pub keys: Vec<Key>,
@@ -87,7 +88,7 @@ impl input_device::InputDeviceBinding for KeyboardBinding {
     fn process_reports(
         report: InputReport,
         previous_report: Option<InputReport>,
-        device_descriptor: input_device::InputDeviceDescriptor,
+        device_descriptor: &input_device::InputDeviceDescriptor,
         input_event_sender: &mut Sender<input_device::InputEvent>,
     ) -> Option<InputReport> {
         let new_keys = match KeyboardBinding::parse_pressed_keys(&report) {
@@ -291,223 +292,125 @@ impl KeyboardBinding {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn create_input_report(pressed_keys: Vec<Key>) -> InputReport {
-        InputReport {
-            event_time: None,
-            keyboard: Some(fidl_fuchsia_input_report::KeyboardInputReport {
-                pressed_keys: Some(pressed_keys),
-            }),
-            mouse: None,
-            touch: None,
-            sensor: None,
-            trace_id: None,
-        }
-    }
+    use crate::testing_utilities;
 
     /// Tests that a key that is present in the new report, but was not present in the previous report
     /// is propagated as pressed.
     #[fasync::run_singlethreaded(test)]
     async fn pressed_key() {
-        let previous_report = None;
-        let report = create_input_report(vec![Key::A]);
+        let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
+            keys: vec![Key::A],
+        });
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
-                keys: vec![],
-            });
+        let reports = vec![testing_utilities::create_keyboard_input_report(vec![Key::A])];
+        let expected_events =
+            vec![testing_utilities::create_keyboard_event(vec![Key::A], vec![], &descriptor)];
 
-        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
-        let _ = KeyboardBinding::process_reports(
-            report,
-            previous_report,
-            device_descriptor,
-            &mut event_sender.clone(),
+        assert_input_report_sequence_generates_events!(
+            input_reports: reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: KeyboardBinding,
         );
-
-        if let Some(input_event) = event_receiver.next().await {
-            match input_event {
-                input_device::InputEvent {
-                    event_descriptor:
-                        input_device::InputEventDescriptor::Keyboard(keyboard_event_descriptor),
-                    device_descriptor: _,
-                } => {
-                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].len(), 1);
-                    assert_eq!(
-                        keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].first(),
-                        Some(&Key::A)
-                    );
-
-                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Released].len(), 0);
-                }
-                _ => assert!(false),
-            }
-        } else {
-            assert!(false);
-        }
     }
 
     /// Tests that a key that is not present in the new report, but was present in the previous report
     /// is propagated as released.
     #[fasync::run_singlethreaded(test)]
     async fn released_key() {
-        let previous_report = create_input_report(vec![Key::A]);
-        let report = create_input_report(vec![]);
+        let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
+            keys: vec![Key::A],
+        });
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
-                keys: vec![],
-            });
+        let reports = vec![
+            testing_utilities::create_keyboard_input_report(vec![Key::A]),
+            testing_utilities::create_keyboard_input_report(vec![]),
+        ];
 
-        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
-        let _ = KeyboardBinding::process_reports(
-            report,
-            Some(previous_report),
-            device_descriptor,
-            &mut event_sender.clone(),
+        let expected_events = vec![
+            testing_utilities::create_keyboard_event(vec![Key::A], vec![], &descriptor),
+            testing_utilities::create_keyboard_event(vec![], vec![Key::A], &descriptor),
+        ];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor.clone(),
+            device_type: KeyboardBinding,
         );
-
-        if let Some(input_event) = event_receiver.next().await {
-            match input_event {
-                input_device::InputEvent {
-                    event_descriptor:
-                        input_device::InputEventDescriptor::Keyboard(keyboard_event_descriptor),
-                    device_descriptor: _,
-                } => {
-                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Released].len(), 1);
-                    assert_eq!(
-                        keyboard_event_descriptor.keys[&KeyEventPhase::Released].first(),
-                        Some(&Key::A)
-                    );
-
-                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].len(), 0);
-                }
-                _ => assert!(false),
-            }
-        } else {
-            assert!(false);
-        }
     }
 
     /// Tests that a key that is present in multiple consecutive input reports is not propagated
     /// as a pressed event more than once.
     #[fasync::run_singlethreaded(test)]
     async fn multiple_pressed_event_filtering() {
-        let previous_report = create_input_report(vec![Key::A]);
-        let report = create_input_report(vec![Key::A]);
+        let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
+            keys: vec![Key::A],
+        });
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
-                keys: vec![],
-            });
+        let reports = vec![
+            testing_utilities::create_keyboard_input_report(vec![Key::A]),
+            testing_utilities::create_keyboard_input_report(vec![Key::A]),
+        ];
 
-        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
-        let _ = KeyboardBinding::process_reports(
-            report,
-            Some(previous_report),
-            device_descriptor,
-            &mut event_sender.clone(),
+        let expected_events = vec![
+            testing_utilities::create_keyboard_event(vec![Key::A], vec![], &descriptor),
+            testing_utilities::create_keyboard_event(vec![], vec![], &descriptor),
+        ];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: KeyboardBinding,
         );
-
-        if let Some(input_event) = event_receiver.next().await {
-            match input_event {
-                input_device::InputEvent {
-                    event_descriptor:
-                        input_device::InputEventDescriptor::Keyboard(keyboard_event_descriptor),
-                    device_descriptor: _,
-                } => {
-                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Released].len(), 0);
-                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].len(), 0);
-                }
-                _ => assert!(false),
-            }
-        } else {
-            assert!(false);
-        }
     }
 
     /// Tests that both pressed and released keys are sent at once.
     #[fasync::run_singlethreaded(test)]
     async fn pressed_and_released_keys() {
-        let previous_report = create_input_report(vec![Key::A]);
-        let report = create_input_report(vec![Key::B]);
+        let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
+            keys: vec![Key::A, Key::B],
+        });
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
-                keys: vec![],
-            });
+        let reports = vec![
+            testing_utilities::create_keyboard_input_report(vec![Key::A]),
+            testing_utilities::create_keyboard_input_report(vec![Key::B]),
+        ];
 
-        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
-        let _ = KeyboardBinding::process_reports(
-            report,
-            Some(previous_report),
-            device_descriptor,
-            &mut event_sender.clone(),
+        let expected_events = vec![
+            testing_utilities::create_keyboard_event(vec![Key::A], vec![], &descriptor),
+            testing_utilities::create_keyboard_event(vec![Key::B], vec![Key::A], &descriptor),
+        ];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: KeyboardBinding,
         );
-
-        if let Some(input_event) = event_receiver.next().await {
-            match input_event {
-                input_device::InputEvent {
-                    event_descriptor:
-                        input_device::InputEventDescriptor::Keyboard(keyboard_event_descriptor),
-                    device_descriptor: _,
-                } => {
-                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Released].len(), 1);
-                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].len(), 1);
-
-                    assert_eq!(
-                        keyboard_event_descriptor.keys[&KeyEventPhase::Released].first(),
-                        Some(&Key::A)
-                    );
-                    assert_eq!(
-                        keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].first(),
-                        Some(&Key::B)
-                    );
-                }
-                _ => assert!(false),
-            }
-        } else {
-            assert!(false);
-        }
     }
 
     /// Tests that modifier keys are propagated to the event receiver.
     #[fasync::run_singlethreaded(test)]
     async fn modifier_keys() {
-        let previous_report = None;
-        let report = create_input_report(vec![Key::LeftShift]);
+        let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
+            keys: vec![Key::LeftShift],
+        });
 
-        let device_descriptor =
-            input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
-                keys: vec![],
-            });
+        let reports = vec![testing_utilities::create_keyboard_input_report(vec![Key::LeftShift])];
 
-        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
-        let _ = KeyboardBinding::process_reports(
-            report,
-            previous_report,
-            device_descriptor,
-            &mut event_sender.clone(),
+        let expected_events = vec![testing_utilities::create_keyboard_event(
+            vec![Key::LeftShift],
+            vec![],
+            &descriptor,
+        )];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: KeyboardBinding,
         );
-
-        if let Some(input_event) = event_receiver.next().await {
-            match input_event {
-                input_device::InputEvent {
-                    event_descriptor:
-                        input_device::InputEventDescriptor::Keyboard(keyboard_event_descriptor),
-                    device_descriptor: _,
-                } => {
-                    assert_eq!(keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].len(), 1);
-
-                    assert_eq!(
-                        keyboard_event_descriptor.keys[&KeyEventPhase::Pressed].first(),
-                        Some(&Key::LeftShift)
-                    );
-                }
-                _ => assert!(false),
-            }
-        } else {
-            assert!(false);
-        }
     }
 }

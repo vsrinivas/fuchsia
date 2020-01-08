@@ -13,9 +13,10 @@ use {
     futures::StreamExt,
 };
 
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TouchEventDescriptor {}
 
-#[derive(Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TouchDeviceDescriptor {}
 
 /// A [`TouchBinding`] represents a connection to a touch input device.
@@ -91,7 +92,7 @@ impl input_device::InputDeviceBinding for TouchBinding {
     fn process_reports(
         report: InputReport,
         _previous_report: Option<InputReport>,
-        _device_descriptor: input_device::InputDeviceDescriptor,
+        _device_descriptor: &input_device::InputDeviceDescriptor,
         _input_event_sender: &mut Sender<InputEvent>,
     ) -> Option<InputReport> {
         Some(report)

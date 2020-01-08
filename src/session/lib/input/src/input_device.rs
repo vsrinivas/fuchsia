@@ -20,6 +20,7 @@ use {
 pub const INPUT_EVENT_BUFFER_SIZE: usize = 15;
 
 /// An [`InputEvent`] holds information about an input event and the device that produced the event.
+#[derive(Debug, PartialEq)]
 pub struct InputEvent {
     pub event_descriptor: InputEventDescriptor,
     pub device_descriptor: InputDeviceDescriptor,
@@ -33,6 +34,7 @@ pub struct InputEvent {
 ///
 /// Each [`InputDeviceBinding`] generates the type of [`InputEventDescriptor`]s that are appropriate
 /// for their device.
+#[derive(Debug, PartialEq)]
 pub enum InputEventDescriptor {
     Keyboard(keyboard::KeyboardEventDescriptor),
     Mouse(mouse::MouseEventDescriptor),
@@ -48,7 +50,7 @@ pub enum InputEventDescriptor {
 /// The descriptor is sent alongside [`InputEventDescriptor`]s so clients can, for example, convert a
 /// touch coordinate to a display coordinate. The descriptor is not expected to change for the
 /// lifetime of a device binding.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum InputDeviceDescriptor {
     Keyboard(keyboard::KeyboardDeviceDescriptor),
     Mouse(mouse::MouseDeviceDescriptor),
@@ -137,7 +139,7 @@ pub trait InputDeviceBinding: Sized {
     fn process_reports(
         report: InputReport,
         previous_report: Option<InputReport>,
-        device_descriptor: InputDeviceDescriptor,
+        device_descriptor: &InputDeviceDescriptor,
         input_event_sender: &mut Sender<InputEvent>,
     ) -> Option<InputReport>;
 
@@ -193,7 +195,7 @@ pub trait InputDeviceBinding: Sized {
                             previous_report = Self::process_reports(
                                 report,
                                 previous_report,
-                                descriptor.clone(),
+                                &descriptor,
                                 &mut event_sender,
                             );
                         }

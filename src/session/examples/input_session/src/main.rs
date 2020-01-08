@@ -25,7 +25,7 @@ async fn main() -> Result<(), Error> {
                 fx_log_info!("movement_x: {}", mouse_event_descriptor.movement_x);
                 fx_log_info!("movement_y: {}", mouse_event_descriptor.movement_y);
                 fx_log_info!("phase: {:?}", mouse_event_descriptor.phase);
-                fx_log_info!("buttons: {}", mouse_event_descriptor.buttons);
+                fx_log_info!("buttons: {:?}", mouse_event_descriptor.buttons);
             }
             _ => {}
         }
