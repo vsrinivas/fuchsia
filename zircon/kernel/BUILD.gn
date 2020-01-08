@@ -231,7 +231,7 @@ if (current_toolchain == default_toolchain) {
       if (is_gcc) {
         cflags += [ "-mindirect-branch=thunk-inline", "-mindirect-branch-register" ]
       } else {
-        cflags += [ "-mretpoline" ]
+        cflags += [ "-mretpoline", "-mretpoline-external-thunk" ]
       }
       defines += [ "KERNEL_RETPOLINE=1" ]
     }

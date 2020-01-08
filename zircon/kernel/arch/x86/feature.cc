@@ -53,6 +53,8 @@ bool g_has_ibpb;
 bool g_should_ibpb_on_ctxt_switch;
 bool g_ras_fill_on_entry;
 bool g_has_enhanced_ibrs;
+bool g_enhanced_ibrs_enabled;
+bool g_amd_retpoline;
 // True if we should disable all speculative execution mitigations.
 bool g_disable_spec_mitigations;
 
@@ -429,6 +431,8 @@ void x86_feature_debug(void) {
     printf("enhanced_ibrs ");
 #ifdef KERNEL_RETPOLINE
   printf("retpoline ");
+  if (g_amd_retpoline)
+    printf("amd_retpoline ");
 #endif
   printf("\n");
 }
@@ -959,6 +963,25 @@ extern "C" void x86_ras_fill_select(const CodePatchInfo* patch) {
      DEBUG_ASSERT(&x86_ras_fill_end - &x86_ras_fill_start == kSize);
      memcpy(patch->dest_addr, (void*) x86_ras_fill, kSize);
      g_ras_fill_on_entry = true;
+  }
+}
+
+void x86_retpoline_select(const CodePatchInfo* patch) {
+  if (g_disable_spec_mitigations || g_enhanced_ibrs_enabled) {
+    const size_t kSize = 3;
+    extern char __x86_indirect_thunk_unsafe_r11;
+    extern char __x86_indirect_thunk_unsafe_r11_end;
+    DEBUG_ASSERT(&__x86_indirect_thunk_unsafe_r11_end - &__x86_indirect_thunk_unsafe_r11 == kSize);
+    memcpy(patch->dest_addr, &__x86_indirect_thunk_unsafe_r11, kSize);
+  } else if (x86_vendor == X86_VENDOR_AMD) {
+    const size_t kSize = 6;
+    extern char __x86_indirect_thunk_amd_r11;
+    extern char __x86_indirect_thunk_amd_r11_end;
+    DEBUG_ASSERT(&__x86_indirect_thunk_amd_r11_end - &__x86_indirect_thunk_amd_r11 == kSize);
+    memcpy(patch->dest_addr, &__x86_indirect_thunk_amd_r11, kSize);
+    g_amd_retpoline = true;
+  } else {
+    // Default thunk is the generic x86 version.
   }
 }
 

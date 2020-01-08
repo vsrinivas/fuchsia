@@ -98,6 +98,7 @@ zx_library("x86") {
     "proc_trace.cc",
     "pvclock.cc",
     "registers.cc",
+    "retpoline.S",
     "smp.cc",
     "spinlock.cc",
     "start.S",
