@@ -22,9 +22,8 @@ class FilterSink : public RemoteAPI {
     filters[request.job_koid] = request.filters;
     filter_requests_.push_back(request);
 
-    MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
-      cb(Err(), debug_ipc::JobFilterReply());
-    });
+    MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err(), debug_ipc::JobFilterReply()); });
   }
 
   void Attach(const debug_ipc::AttachRequest& request,
@@ -33,9 +32,8 @@ class FilterSink : public RemoteAPI {
     reply.koid = request.koid;
     reply.name = "test";
 
-    MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb), reply]() mutable {
-      cb(Err(), reply);
-    });
+    MessageLoop::Current()->PostTask(FROM_HERE,
+                                     [cb = std::move(cb), reply]() mutable { cb(Err(), reply); });
   }
 
   const std::vector<debug_ipc::JobFilterRequest>& filter_requests() const {
@@ -149,7 +147,7 @@ TEST_F(FilterTest, SetSpecificFilters) {
   auto contexts = session().system().GetJobContexts();
   ASSERT_EQ(1u, contexts.size());
   auto context_a = contexts[0];
-  auto context_b = session().system().CreateNewJobContext(context_a);
+  auto context_b = session().system().CreateNewJobContext();
   bool job_context_alive;
   Err ctx_err;
 
@@ -221,7 +219,7 @@ TEST_F(FilterTest, SetExAnteFilters) {
   auto contexts = session().system().GetJobContexts();
   ASSERT_EQ(1u, contexts.size());
   auto context_a = contexts[0];
-  auto context_b = session().system().CreateNewJobContext(context_a);
+  auto context_b = session().system().CreateNewJobContext();
   bool job_context_alive;
   Err ctx_err;
 

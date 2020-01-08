@@ -17,73 +17,62 @@ namespace zxdb {
 
 namespace {
 
-constexpr int kAttachComponentRootSwitch = 1;
-constexpr int kAttachSystemRootSwitch = 2;
-
 const char kAttachShortHelp[] = "attach: Attach to a running process/job.";
 const char kAttachHelp[] =
-    R"(attach <pattern>
+    R"(attach <what>
 
-  Attaches to an existing process or job. When no noun is provided it will
-  assume the KOID refers to a process. To be explicit, prefix with a "process"
-  or "job" noun.
+  Attaches to a current or future process.
 
-  If the argument is not a number, it will be interpreted as a pattern. A
-  process in the given job (or anywhere if not given) whose name matches the
-  given pattern will be attached to if it exists, and going forward, new
-  processes in said job whose name matches the pattern will be attached to
-  automatically. If given a filter as a noun, that filter will be updated.
+Atttaching to a specific process
 
-  When attaching to a job, two switches are accepted to refer to special jobs:
+  To attach to a specific process, supply the process' koid (process ID).
+  For example:
 
-    --root | -r
-        Attaches to the system's root job.
+    attach 12345
 
-    --app | -a
-        Attaches to the component manager's job which is the root of all
-        components.
+  Use the "ps" command to view the active processes, their names, and koids.
 
-  Each job and process can have only one attached debugger system-wide. New
-  process notifications are delivered to the most specific attached job (they
-  don't "bubble up").
+Attaching to processes by name
 
-   • Using job filters with multiple debuggers is not advised unless watching
-     completely non-overlapping jobs.
+  Non-numeric arguments will be interpreted as a filter. A filter is a substring
+  that matches any part of the process name. The filter "t" will match any
+  process with the letter "t" in its name. Filters are not regular expressions.
 
-   • Even within the same debugger, if there are multiple overapping job
-     contexts only the most specific one's filters will apply to a launched
-     process.
+  Filters are applied to processes launched in jobs the debugger is attached to,
+  both current processes and future ones.
 
-Hints
+    • See the currently attached jobs with the "job" command.
 
-  Use the "ps" command to view the active process and job tree.
+    • Attach to a new job with the "attach-job" command.
 
-  To debug more than one process/job at a time, use "new" to create a new
-  process ("process new") or job ("job new") context.
+    • See the current filters with the "filter" command.
+
+    • Delete a filter with "filter [X] rm" where X is the filter index from the
+      "filter" list. If no filter index is provided, the current filter will be
+      deleted.
+
+  If a job prefix is specified, only processes launched in that job matching the
+  pattern will be attached to:
+
+    job attach foo      // Uses the current job context.
+    job 2 attach foo    // Specifies job context #2.
+
+  If you have a specific job koid (12345) and want to watch "foo" processes in
+  it, a faster way is:
+
+    attach-job 12345 foo
 
 Examples
 
   attach 2371
       Attaches to the process with koid 2371.
 
-  job attach 2323
-      Attaches to job with koid 2323.
-
-  job attach -a
-      Attaches to the component manager's root job.
-
-  job attach -r
-      Attaches to the system's root job.
-
   process 4 attach 2371
       Attaches process context 4 to the process with koid 2371.
 
-  job 3 attach 2323
-      Attaches job context 3 to the job with koid 2323.
-
   attach foobar
-      Attaches to any process that spawns under a job we can see with "foobar"
-      in the name.
+      Attaches to any process that spawns under any job the debugger is attached
+      to with "foobar" in the name.
 
   job 3 attach foobar
       Attaches to any process that spawns under job 3 with "foobar" in the
@@ -97,20 +86,6 @@ Examples
       Attach to any process that spawns under the current job with "1234" in
       the name.
 )";
-
-// Verifies that the given job_context can be run or attached.
-Err AssertRunnableJobContext(JobContext* job_context) {
-  JobContext::State state = job_context->GetState();
-  if (state == JobContext::State::kAttaching) {
-    return Err("The current job is in the process of attaching.");
-  }
-  if (state == JobContext::State::kAttached) {
-    return Err(
-        "The current job is already attached.\n"
-        "Either \"job detach\" it or create a new context with \"job new\".");
-  }
-  return Err();
-}
 
 Err DoAttachFilter(ConsoleContext* context, const Command& cmd,
                    CommandCallback callback = nullptr) {
@@ -144,57 +119,15 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
   if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob, Noun::kFilter}); err.has_error())
     return err;
 
-  if (cmd.HasNoun(Noun::kJob)) {
-    if (Err err = cmd.ValidateNouns({Noun::kJob, Noun::kFilter}); err.has_error())
+  if (cmd.HasNoun(Noun::kFilter)) {
+    // Repurpose a filter. The "filter" noun can't be combined with anything else.
+    if (Err err = cmd.ValidateNouns({Noun::kFilter}); err.has_error())
       return err;
+    return DoAttachFilter(context, cmd, std::move(callback));
+  }
 
-    if (cmd.HasNoun(Noun::kFilter))
-      return DoAttachFilter(context, cmd, std::move(callback));
-
-    // Attach a job.
-    if (Err err = AssertRunnableJobContext(cmd.job_context()); err.has_error())
-      return err;
-
-    auto cb = [callback = std::move(callback)](fxl::WeakPtr<JobContext> job_context,
-                                               const Err& err) mutable {
-      JobCommandCallback("attach", job_context, true, err, std::move(callback));
-    };
-
-    if (cmd.HasSwitch(kAttachComponentRootSwitch) && cmd.HasSwitch(kAttachSystemRootSwitch))
-      return Err("Can't specify both component and root job.");
-
-    if (cmd.HasSwitch(kAttachComponentRootSwitch)) {
-      if (!cmd.args().empty())
-        return Err("No argument expected attaching to the component root.");
-      cmd.job_context()->AttachToComponentRoot(std::move(cb));
-    } else if (cmd.HasSwitch(kAttachSystemRootSwitch)) {
-      if (!cmd.args().empty())
-        return Err("No argument expected attaching to the system root.");
-      cmd.job_context()->AttachToSystemRoot(std::move(cb));
-    } else {
-      // Expect a numeric KOID.
-      uint64_t koid = 0;
-      if (Err err = ReadUint64Arg(cmd, 0, "job koid", &koid); err.has_error())
-        return DoAttachFilter(context, cmd, std::move(callback));
-      cmd.job_context()->Attach(koid, std::move(cb));
-    }
-  } else {
-    if (cmd.HasNoun(Noun::kFilter)) {
-      if (Err err = cmd.ValidateNouns({Noun::kFilter}); err.has_error())
-        return err;
-      return DoAttachFilter(context, cmd, std::move(callback));
-    }
-
-    // Attach a process: Should have one arg which is the koid or PID.
-    uint64_t koid = 0;
-    if (Err err = ReadUint64Arg(cmd, 0, "process koid", &koid); err.has_error()) {
-      // Not a number, make a filter instead.
-      if (!cmd.HasNoun(Noun::kProcess)) {
-        return DoAttachFilter(context, cmd, std::move(callback));
-      }
-      return err;
-    }
-
+  uint64_t koid = 0;
+  if (ReadUint64Arg(cmd, 0, "process koid", &koid).ok()) {
     // Attach to a process by KOID.
     auto err_or_target = GetRunnableTarget(context, cmd);
     if (err_or_target.has_error())
@@ -203,8 +136,13 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
                                             fxl::WeakPtr<Target> target, const Err& err) mutable {
       ProcessCommandCallback(target, true, err, std::move(callback));
     });
+    return Err();
   }
-  return Err();
+
+  // Not a number, make a filter instead. This only supports "job" and "filter nouns.
+  if (Err err = cmd.ValidateNouns({Noun::kJob, Noun::kFilter}); err.has_error())
+    return err;
+  return DoAttachFilter(context, cmd, std::move(callback));
 }
 
 }  // namespace
@@ -212,8 +150,6 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
 VerbRecord GetAttachVerbRecord() {
   VerbRecord attach(&RunVerbAttach, {"attach"}, kAttachShortHelp, kAttachHelp,
                     CommandGroup::kProcess);
-  attach.switches.push_back(SwitchRecord(kAttachComponentRootSwitch, false, "app", 'a'));
-  attach.switches.push_back(SwitchRecord(kAttachSystemRootSwitch, false, "root", 'r'));
   return attach;
 }
 

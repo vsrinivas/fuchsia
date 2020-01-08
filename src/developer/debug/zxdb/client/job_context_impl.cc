@@ -37,10 +37,6 @@ JobContextImpl::~JobContextImpl() {
   session()->RemoveFilterObserver(this);
 }
 
-std::unique_ptr<JobContextImpl> JobContextImpl::Clone(SystemImpl* system) {
-  return std::make_unique<JobContextImpl>(system, false);
-}
-
 void JobContextImpl::ImplicitlyDetach() {
   if (GetJob())
     OnDetachReply(Err(), 0, [](fxl::WeakPtr<JobContext>, const Err&) {});

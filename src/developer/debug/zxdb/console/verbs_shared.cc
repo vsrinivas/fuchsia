@@ -69,8 +69,7 @@ Err DoNew(ConsoleContext* context, const Command& cmd) {
     return Err("Use \"process new\" or \"job new\" to create a new context.");
 
   if (cmd.HasNoun(Noun::kJob)) {
-    JobContext* new_job_context =
-        context->session()->system().CreateNewJobContext(cmd.job_context());
+    JobContext* new_job_context = context->session()->system().CreateNewJobContext();
     context->SetActiveJobContext(new_job_context);
     Console::get()->Output(FormatJobContext(context, new_job_context));
   } else {

@@ -33,10 +33,6 @@ class JobContextImpl : public JobContext, public SettingStoreObserver, public Fi
   // responsibility for where it's attached).
   bool is_implicit_root() const { return is_implicit_root_; }
 
-  // Allocates a new job_context with the same settings as this one. This isn't a real copy, because
-  // any job information is not cloned.
-  std::unique_ptr<JobContextImpl> Clone(SystemImpl* system);
-
   // Removes the job from this job_context without making any IPC calls. This can be used to clean
   // up after a CreateJobForTesting(), and during final shutdown. In final shutdown, we assume
   // anything still left running will continue running as-is and just clean up local references.

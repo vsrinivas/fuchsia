@@ -25,6 +25,16 @@ class Thread;
 //   InjectExceptionWithStack(ConsoleTest::kProcessKoid, ConsoleTest::kThreadKoid,
 //                            debug_ipc::ExceptionType::kSingleStep, std::move(frames), true);
 //
+// Then to inject commands:
+//
+//   console().ProcessInputLine("do something");
+//
+// And to check output:
+//
+//    auto event = console().GetOutputEvent();
+//    EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+//    EXPECT_EQ("Some output", event.output.AsString());
+//
 class ConsoleTest : public RemoteAPITest {
  public:
   // The IDs associated with the process/thread that are set up by default.

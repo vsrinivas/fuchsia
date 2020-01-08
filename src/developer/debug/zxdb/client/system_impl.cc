@@ -412,9 +412,8 @@ Target* SystemImpl::CreateNewTarget(Target* clone) {
   return CreateNewTargetImpl(static_cast<TargetImpl*>(clone));
 }
 
-JobContext* SystemImpl::CreateNewJobContext(JobContext* clone) {
-  auto job_context = clone ? static_cast<JobContextImpl*>(clone)->Clone(this)
-                           : std::make_unique<JobContextImpl>(this, false);
+JobContext* SystemImpl::CreateNewJobContext() {
+  auto job_context = std::make_unique<JobContextImpl>(this, false);
   JobContext* to_return = job_context.get();
   AddNewJobContext(std::move(job_context));
   return to_return;

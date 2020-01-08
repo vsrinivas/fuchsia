@@ -20,7 +20,7 @@ class FormatJobTest : public RemoteAPITest {};
 
 TEST_F(FormatJobTest, FormatJobContext) {
   // There should already be one default job context.
-  session().system().CreateNewJobContext(nullptr);
+  session().system().CreateNewJobContext();
   auto job_contexts = session().system().GetJobContexts();
   EXPECT_EQ(2u, job_contexts.size());
 

@@ -49,7 +49,7 @@ class SystemImpl final : public System,
   Process* ProcessFromKoid(uint64_t koid) const override;
   void GetProcessTree(ProcessTreeCallback callback) override;
   Target* CreateNewTarget(Target* clone) override;
-  JobContext* CreateNewJobContext(JobContext* clone) override;
+  JobContext* CreateNewJobContext() override;
   Breakpoint* CreateNewBreakpoint() override;
   Breakpoint* CreateNewInternalBreakpoint() override;
   void DeleteBreakpoint(Breakpoint* breakpoint) override;
