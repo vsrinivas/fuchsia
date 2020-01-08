@@ -51,6 +51,7 @@ struct brcmf_proto_bcdc_header {
 #define BCDC_DCMD_ID_MASK   0xFFFF0000       /* id an cmd pairing */
 #define BCDC_DCMD_ID_SHIFT  16               /* ID Mask shift bits */
 #define BCDC_DCMD_ID(flags) (((flags)&BCDC_DCMD_ID_MASK) >> BCDC_DCMD_ID_SHIFT)
+#define BCDC_DCMD_IFIDX(flags) (((flags)&BCDC_DCMD_IF_MASK) >> BCDC_DCMD_IF_SHIFT)
 
 /*
  * BCDC header - Broadcom specific extension of CDC.

@@ -45,11 +45,21 @@ SimFirmware::SimFirmware(brcmf_simdev* simdev, simulation::Environment* env)
       .rx_assoc_resp_handler = std::bind(&SimFirmware::RxAssocResp, this, std::placeholders::_1,
                                          std::placeholders::_2, std::placeholders::_3),
 
+      .rx_disassoc_req_handler = std::bind(&SimFirmware::RxDisassocReq, this, std::placeholders::_1,
+                                           std::placeholders::_2, std::placeholders::_3),
+
       .rx_probe_resp_handler = std::bind(&SimFirmware::RxProbeResp, this, std::placeholders::_1,
                                          std::placeholders::_2, std::placeholders::_3),
   };
   hw_.SetCallbacks(handlers);
   country_code_ = {};
+
+  struct brcmf_mbss_ssid_le default_mbss = {};
+
+  // The real FW always creates the first interface
+  if (HandleIfaceTblReq(true, &default_mbss) != ZX_OK) {
+    ZX_PANIC("Unable to create default interface\n");
+  }
 }
 
 void SimFirmware::GetChipInfo(uint32_t* chip, uint32_t* chiprev) {
@@ -132,6 +142,9 @@ zx_status_t SimFirmware::BcdcVarOp(brcmf_proto_bcdc_dcmd* dcmd, uint8_t* data, s
 zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
   brcmf_proto_bcdc_dcmd* dcmd;
   constexpr size_t hdr_size = sizeof(struct brcmf_proto_bcdc_dcmd);
+  uint32_t value;
+  uint32_t ifidx;
+
   if (len < hdr_size) {
     BRCMF_DBG(SIM, "Message length (%u) smaller than BCDC header size (%zd)\n", len, hdr_size);
     return ZX_ERR_INVALID_ARGS;
@@ -146,13 +159,21 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  // Retrieve ifidx from the command and validate if the corresponding
+  // IF entry was previously allocated.
+  ifidx = BCDC_DCMD_IFIDX(dcmd->flags);
+  if (ifidx >= kMaxIfSupported || !iface_tbl_[ifidx].allocated) {
+    BRCMF_DBG(SIM, "IF idx: %d invalid or not allocated\n", ifidx);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   zx_status_t status = ZX_OK;
   switch (dcmd->cmd) {
     // Get/Set a firmware IOVAR. This message is comprised of a NULL-terminated string
     // for the variable name, followed by the value to assign to it.
     case BRCMF_C_SET_VAR:
     case BRCMF_C_GET_VAR:
-      status = BcdcVarOp(dcmd, data, len, dcmd->cmd == BRCMF_C_SET_VAR);
+      return BcdcVarOp(dcmd, data, len, dcmd->cmd == BRCMF_C_SET_VAR);
       break;
     case BRCMF_C_GET_REVINFO: {
       struct brcmf_rev_info_le rev_info;
@@ -164,7 +185,6 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
             dcmd->len, sizeof(rev_info));
       }
       memcpy(data, &rev_info, sizeof(rev_info));
-      bcdc_response_.Set(msg, len);
       break;
     }
     case BRCMF_C_GET_VERSION: {
@@ -177,7 +197,6 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
                   dcmd->len, sizeof(kIoType));
       }
       std::memcpy(data, &kIoType, sizeof(kIoType));
-      bcdc_response_.Set(msg, len);
       break;
     }
     case BRCMF_C_SET_PASSIVE_SCAN: {
@@ -187,7 +206,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
                   sizeof(uint32_t), dcmd->len);
         return ZX_ERR_INVALID_ARGS;
       }
-      uint32_t value = *(reinterpret_cast<uint32_t*>(data));
+      value = *(reinterpret_cast<uint32_t*>(data));
       default_passive_scan_ = value > 0;
       break;
     }
@@ -210,14 +229,29 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
     case BRCMF_C_SET_SCAN_CHANNEL_TIME:
     case BRCMF_C_SET_SCAN_UNASSOC_TIME:
       BRCMF_DBG(SIM, "Ignoring firmware message %d\n", dcmd->cmd);
-      bcdc_response_.Set(msg, len);
-      status = ZX_OK;
+      break;
+    case BRCMF_C_DISASSOC: {
+      if (dcmd->len >= sizeof(brcmf_scb_val_le)) {
+        // Initiate Disassoc from AP
+        auto scb_val = reinterpret_cast<brcmf_scb_val_le*>(data);
+        DisassocStart(scb_val);
+      } else {
+        // Driver indicating disassoc
+        if (assoc_state_.state == AssocState::ASSOCIATED) {
+          assoc_state_.state = AssocState::NOT_ASSOCIATED;
+        }
+      }
+      break;
+    }
+    case BRCMF_C_SET_ROAM_TRIGGER:
+    case BRCMF_C_SET_ROAM_DELTA:
+    case BRCMF_C_SET_INFRA:
       break;
     default:
       BRCMF_DBG(SIM, "Unimplemented firmware message %d\n", dcmd->cmd);
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
   }
+  bcdc_response_.Set(msg, len);
   return status;
 }
 
@@ -303,7 +337,8 @@ zx_status_t SimFirmware::HandleIfaceTblReq(const bool add_entry, const void* dat
         iface_tbl_[i].bsscfgidx = ssid_info->bsscfgidx;
         memcpy(iface_tbl_[i].ssid, ssid_info->SSID, ssid_info->SSID_len);
         iface_tbl_[i].ssid_len = ssid_info->SSID_len;
-        *iface_id = i;
+        if (iface_id)
+          *iface_id = i;
         return ZX_OK;
       }
     }
@@ -311,7 +346,8 @@ zx_status_t SimFirmware::HandleIfaceTblReq(const bool add_entry, const void* dat
     auto bsscfgidx = static_cast<const int32_t*>(data);
     for (int i = 0; i < kMaxIfSupported; i++) {
       if (iface_tbl_[i].allocated && iface_tbl_[i].bsscfgidx == *bsscfgidx) {
-        *iface_id = iface_tbl_[i].iface_id;
+        if (iface_id)
+          *iface_id = iface_tbl_[i].iface_id;
         iface_tbl_[i].allocated = false;
         return ZX_OK;
       }
@@ -344,6 +380,7 @@ zx_status_t SimFirmware::HandleIfaceRequest(const bool add_iface, const void* da
       ifevent->action = BRCMF_E_IF_DEL;
       ifevent->bsscfgidx = static_cast<const uint8_t>(*bsscfgidx);
     }
+    ifevent->ifidx = iface_id;
     msg_be->status = htobe32(BRCMF_E_STATUS_SUCCESS);
     sprintf(msg_be->ifname, "wl0.%d", iface_id);
     msg_be->ifidx = iface_id;
@@ -397,14 +434,16 @@ void SimFirmware::AssocScanDone() {
   AssocStart(std::move(assoc_opts));
 }
 
-void SimFirmware::AssocDone() {
+void SimFirmware::AssocClearContext() {
   assoc_state_.opts = nullptr;
   assoc_state_.scan_results.clear();
 }
 
 void SimFirmware::AssocTimeout() {
+  ZX_ASSERT_MSG(assoc_state_.state == AssocState::ASSOCIATING,
+                "This timer should be enabled only in ASSOCIATING state\n");
   SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL);
-  AssocDone();
+  AssocClearContext();
   assoc_state_.state = AssocState::NOT_ASSOCIATED;
 }
 
@@ -450,15 +489,60 @@ void SimFirmware::RxAssocResp(const common::MacAddr& src, const common::MacAddr&
   if (status == WLAN_ASSOC_RESULT_SUCCESS) {
     // Notify the driver that association succeeded
     assoc_state_.state = AssocState::ASSOCIATED;
-    AssocDone();
     SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, BRCMF_EVENT_MSG_LINK);
-    SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_SUCCESS);
+    SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_SUCCESS, 0, assoc_state_.opts->bssid);
   } else {
     // Notify the driver that association failed
     assoc_state_.state = AssocState::NOT_ASSOCIATED;
-    AssocDone();
+    AssocClearContext();
     SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL);
   }
+}
+
+void SimFirmware::DisassocStart(brcmf_scb_val_le* scb_val) {
+  uint32_t reason = scb_val->val;
+  common::MacAddr* bssid;
+
+  bssid = reinterpret_cast<common::MacAddr*>(scb_val->ea);
+  if (assoc_state_.state == AssocState::ASSOCIATED) {
+    common::MacAddr srcAddr(mac_addr_);
+    assoc_state_.state = AssocState::DISASSOCIATING;
+
+    // Transmit the disassoc req and since there is no response for
+    // it, indicate disassoc done to driver.
+    hw_.TxDisassocReq(srcAddr, *bssid, reason);
+    assoc_state_.state = AssocState::NOT_ASSOCIATED;
+    SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS);
+  } else {
+    SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_FAIL);
+  }
+  AssocClearContext();
+}
+
+// Disassoc Request from FakeAP
+void SimFirmware::RxDisassocReq(const common::MacAddr& src, const common::MacAddr& dst,
+                                const uint16_t reason) {
+  // Ignore if we are not associated
+  if (assoc_state_.state != AssocState::ASSOCIATED) {
+    return;
+  }
+
+  // Ignore if this is not intended for us
+  common::MacAddr mac_addr(mac_addr_);
+  if (dst != mac_addr) {
+    return;
+  }
+
+  // Ignore if this is not from the bssid with which we are associated
+  common::MacAddr bssid(assoc_state_.opts->bssid);
+  if (src != bssid) {
+    return;
+  }
+
+  assoc_state_.state = AssocState::NOT_ASSOCIATED;
+  // Notify the driver that the AP has disassoc'ed us
+  SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS);
+  AssocClearContext();
 }
 
 zx_status_t SimFirmware::HandleJoinRequest(const void* value, size_t value_len) {
@@ -941,12 +1025,15 @@ void SimFirmware::SendEventToDriver(std::unique_ptr<std::vector<uint8_t>> buffer
   brcmf_sim_rx_event(simdev_, std::move(buffer));
 }
 
-void SimFirmware::SendSimpleEventToDriver(uint32_t event_type, uint32_t status, uint16_t flags) {
+void SimFirmware::SendSimpleEventToDriver(uint32_t event_type, uint32_t status, uint16_t flags,
+                                          std::optional<common::MacAddr> addr) {
   brcmf_event_msg_be* msg_be;
   auto buf = CreateEventBuffer(0, &msg_be, nullptr);
   msg_be->flags = htobe16(flags);
   msg_be->event_type = htobe32(event_type);
   msg_be->status = htobe32(status);
+  if (addr)
+    memcpy(msg_be->addr, addr->byte, ETH_ALEN);
   SendEventToDriver(std::move(buf));
 }
 

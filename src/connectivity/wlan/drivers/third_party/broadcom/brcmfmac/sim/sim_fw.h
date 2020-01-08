@@ -104,7 +104,13 @@ class SimFirmware {
   };
 
   struct AssocState {
-    enum { NOT_ASSOCIATED, SCANNING, ASSOCIATING, ASSOCIATED } state = NOT_ASSOCIATED;
+    enum {
+      NOT_ASSOCIATED,
+      SCANNING,
+      ASSOCIATING,
+      ASSOCIATED,
+      DISASSOCIATING
+    } state = NOT_ASSOCIATED;
 
     std::unique_ptr<AssocOpts> opts;
 
@@ -147,6 +153,7 @@ class SimFirmware {
    * allocated - maintained by SIM FW to indicate entry is allocated
    * iface_id - the iface id allocated by SIM FW - in this case always the array index of the table
    */
+
   typedef struct sim_iface_entry {
     char ssid[IEEE80211_SSID_LEN_MAX];
     uint8_t ssid_len;
@@ -172,7 +179,8 @@ class SimFirmware {
   // Iovar handlers
   zx_status_t SetMacAddr(const uint8_t* mac_addr);
   zx_status_t HandleEscanRequest(const brcmf_escan_params_le* value, size_t value_len);
-  zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data, uint8_t* iface_id);
+  zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data,
+                                uint8_t* iface_id = nullptr);
   zx_status_t HandleIfaceRequest(const bool add_iface, const void* data, const size_t len);
   zx_status_t HandleJoinRequest(const void* value, size_t value_len);
 
@@ -190,14 +198,15 @@ class SimFirmware {
   void AssocScanDone();
   void AssocStart(std::unique_ptr<AssocOpts> opts);  // Scan complete, start association process
   void AssocTimeout();
-  void AssocDone();
+  void AssocClearContext();
+  void DisassocStart(brcmf_scb_val_le* scb_val);
 
   // Handlers for events from hardware
   void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                 const common::MacAddr& bssid);
-
   void RxAssocResp(const common::MacAddr& src, const common::MacAddr& dst, uint16_t status);
-
+  void RxDisassocReq(const common::MacAddr& src, const common::MacAddr& dst, uint16_t reason);
+  void RxAssocReq(const common::MacAddr& src, const common::MacAddr& dst, uint16_t status);
   void RxProbeResp(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                    const common::MacAddr& bssid);
 
@@ -210,7 +219,8 @@ class SimFirmware {
   void SendEventToDriver(std::unique_ptr<std::vector<uint8_t>> buffer);
 
   // Send an event without a payload back to the driver
-  void SendSimpleEventToDriver(uint32_t event_type, uint32_t status, uint16_t flags = 0);
+  void SendSimpleEventToDriver(uint32_t event_type, uint32_t status, uint16_t flags = 0,
+                               std::optional<common::MacAddr> addr = {});
 
   // This is the simulator object that represents the interface between the driver and the
   // firmware. We will use it to send back events.
@@ -225,6 +235,11 @@ class SimFirmware {
   // Simulated hardware state
   SimHardware hw_;
 
+  // Interface table made up of IF entries. Each entry is analogous to an IF
+  // created in the driver (see the comments above for the contents of each
+  // entry). Interface specific config/parameters are stored in this table
+  sim_iface_entry_t iface_tbl_[kMaxIfSupported] = {};
+
   // Internal firmware state variables
   std::array<uint8_t, ETH_ALEN> mac_addr_;
   common::MacAddr pfn_mac_addr_;
@@ -233,7 +248,6 @@ class SimFirmware {
   bool default_passive_scan_ = true;
   uint32_t default_passive_time_ = -1;  // In ms. -1 indicates value has not been set.
   int32_t power_mode_ = -1;             // -1 indicates value has not been set.
-  sim_iface_entry_t iface_tbl_[kMaxIfSupported];
   struct brcmf_fil_country_le country_code_;
 };
 
