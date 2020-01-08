@@ -121,6 +121,12 @@ class LinearHistogram final {
   // Operations on the metric will have no effect.
   LinearHistogram() = default;
 
+  // Movable but not copyable.
+  LinearHistogram(const LinearHistogram& other) = delete;
+  LinearHistogram(LinearHistogram&& other) = default;
+  LinearHistogram& operator=(const LinearHistogram& other) = delete;
+  LinearHistogram& operator=(LinearHistogram&& other) = default;
+
   // Insert the given value once to the correct bucket of the histogram.
   void Insert(T value) { Insert(value, 1); }
 
@@ -158,9 +164,9 @@ class LinearHistogram final {
     array_.Set(1, step_size_);
   }
 
-  const T floor_ = 0;
-  const T step_size_ = 0;
-  const size_t array_size_ = 0;
+  T floor_ = 0;
+  T step_size_ = 0;
+  size_t array_size_ = 0;
   ArrayValue<T> array_;
 };
 
@@ -170,6 +176,12 @@ class ExponentialHistogram final {
   // Create a default histogram.
   // Operations on the metric will have no effect.
   ExponentialHistogram() = default;
+
+  // Movable but not copyable.
+  ExponentialHistogram(const ExponentialHistogram& other) = delete;
+  ExponentialHistogram(ExponentialHistogram&& other) = default;
+  ExponentialHistogram& operator=(const ExponentialHistogram& other) = delete;
+  ExponentialHistogram& operator=(ExponentialHistogram&& other) = default;
 
   // Insert the given value once to the correct bucket of the histogram.
   void Insert(T value) { Insert(value, 1); }
@@ -218,10 +230,10 @@ class ExponentialHistogram final {
     array_.Set(2, step_multiplier_);
   }
 
-  const T floor_ = 0;
-  const T initial_step_ = 0;
-  const T step_multiplier_ = 0;
-  const size_t array_size_ = 0;
+  T floor_ = 0;
+  T initial_step_ = 0;
+  T step_multiplier_ = 0;
+  size_t array_size_ = 0;
   ArrayValue<T> array_;
 };
 

@@ -507,6 +507,13 @@ TEST(State, CreateLinearHistogramChildren) {
   auto b = root.CreateLinearUintHistogram("b", 10 /*floor*/, 5 /*step_size*/, 6 /*buckets*/);
   auto c = root.CreateLinearDoubleHistogram("c", 10 /*floor*/, 5 /*step_size*/, 6 /*buckets*/);
 
+  // Test moving of underlying LinearHistogram type.
+  {
+    inspect::LinearIntHistogram temp;
+    temp = std::move(a);
+    a = std::move(temp);
+  }
+
   a.Insert(0, 3);
   a.Insert(10);
   a.Insert(1000);
@@ -614,6 +621,13 @@ TEST(State, CreateExponentialHistogramChildren) {
                                                2 /*step_multiplier*/, 5 /*buckets*/);
   auto c = root.CreateExponentialDoubleHistogram("c", 1 /*floor*/, 1 /*initial_step*/,
                                                  2 /*step_multiplier*/, 5 /*buckets*/);
+
+  // Test moving of underlying ExponentialHistogram type.
+  {
+    inspect::ExponentialIntHistogram temp;
+    temp = std::move(a);
+    a = std::move(temp);
+  }
 
   a.Insert(0, 3);
   a.Insert(4);
