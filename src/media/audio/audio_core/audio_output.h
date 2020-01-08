@@ -31,6 +31,60 @@ class AudioOutput : public AudioDevice {
 
   AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry);
 
+  void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+
+  zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) final;
+
+  void SetNextSchedTime(zx::time next_sched_time) {
+    next_sched_time_ = next_sched_time;
+    next_sched_time_known_ = true;
+  }
+
+  void SetupMixTask(const Format& format, size_t max_block_size_frames)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {
+    FX_CHECK(format.sample_format() == fuchsia::media::AudioSampleFormat::FLOAT);
+    mix_format_ = {format};
+    SetupMixBuffer(max_block_size_frames);
+  }
+
+  void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }
+
+  void Cleanup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+
+  struct FrameSpan {
+    int64_t start;
+    size_t length;
+
+    // If |true| then the output is muted and no mix is needed for these frames, but the mix loop
+    // can consume and release any packets that cover this span.
+    bool muted;
+
+    // A mapping between reference clock to frame number. If the same
+    // |reference_clock_to_destination_frame_generation| is returned between consecutive calls to
+    // |StartMixJob|, then the |reference_clock_to_frame| function is guaranteed to be the same.
+    TimelineFunction reference_clock_to_frame;
+    uint32_t reference_clock_to_destination_frame_generation;
+  };
+  virtual std::optional<FrameSpan> StartMixJob(zx::time process_start)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
+  virtual void FinishMixJob(const FrameSpan& span, float* buffer)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
+
+ private:
+  // Timer used to schedule periodic mixing.
+  void MixTimerThunk() {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
+    Process();
+  }
+  async::TaskClosureMethod<AudioOutput, &AudioOutput::MixTimerThunk> mix_timer_
+      FXL_GUARDED_BY(mix_domain().token()){this};
+
+  zx::duration min_lead_time_;
+  zx::time next_sched_time_;
+  bool next_sched_time_known_;
+
+  void SetupMixBuffer(uint32_t max_mix_frames) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+
   struct MixJob {
     // Job state set up once by an output implementation, used by all renderers.
     float* buf;
@@ -50,48 +104,6 @@ class AudioOutput : public AudioDevice {
   void UpdateSourceTrans(const Stream& stream, Mixer::Bookkeeping* bk);
   void UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk);
 
-  void Cleanup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-
-  void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-
-  zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) final;
-
-  void SetNextSchedTime(zx::time next_sched_time) {
-    next_sched_time_ = next_sched_time;
-    next_sched_time_known_ = true;
-  }
-
-  void SetNextSchedDelay(const zx::duration& next_sched_delay) {
-    auto now = async::Now(mix_domain().dispatcher());
-    SetNextSchedTime(now + next_sched_delay);
-  }
-
-  void SetMixFormat(const Format& format) {
-    FX_CHECK(format.sample_format() == fuchsia::media::AudioSampleFormat::FLOAT);
-    mix_format_ = {format};
-  }
-
-  struct FrameSpan {
-    int64_t start;
-    size_t length;
-  };
-  virtual std::optional<FrameSpan> StartMixJob(MixJob* job, zx::time process_start)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
-  virtual void FinishMixJob(const MixJob& job)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
-  void SetupMixBuffer(uint32_t max_mix_frames) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-
-  // Timer used to schedule periodic mixing.
-  void MixTimerThunk() {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
-    Process();
-  }
-  async::TaskClosureMethod<AudioOutput, &AudioOutput::MixTimerThunk> mix_timer_
-      FXL_GUARDED_BY(mix_domain().token()){this};
-
-  zx::duration min_lead_time_;
-
- private:
   enum class TaskType { Mix, Trim };
 
   void ForEachSource(TaskType task_type, zx::time ref_time)
@@ -104,9 +116,6 @@ class AudioOutput : public AudioDevice {
   void SetupTrim(Mixer* mixer, zx::time trim_point)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   bool ProcessTrim(const Stream::Buffer& buffer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-
-  zx::time next_sched_time_;
-  bool next_sched_time_known_;
 
   // Vector used to hold references to source links while mixing (instead of
   // holding a lock, preventing source_links_ mutation for the entire mix job).

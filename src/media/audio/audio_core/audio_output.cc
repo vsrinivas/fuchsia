@@ -46,7 +46,7 @@ void AudioOutput::Process() {
     // finish the mix job, mix some more.
     memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
-    auto mix_frames = StartMixJob(&cur_mix_job_, now);
+    auto mix_frames = StartMixJob(now);
     if (mix_frames) {
       // If we have a mix job, then we must have an intermediate buffer allocated, and it must be
       // large enough for the mix job we were given.
@@ -57,6 +57,10 @@ void AudioOutput::Process() {
       cur_mix_job_.buf = mix_buf_.get();
       cur_mix_job_.buf_frames = mix_frames->length;
       cur_mix_job_.start_pts_of = mix_frames->start;
+      cur_mix_job_.sw_output_muted = mix_frames->muted;
+      cur_mix_job_.reference_clock_to_destination_frame = &mix_frames->reference_clock_to_frame;
+      cur_mix_job_.reference_clock_to_destination_frame_gen =
+          mix_frames->reference_clock_to_destination_frame_generation;
 
       // Fill the intermediate buffer with silence.
       size_t bytes_to_zero =
@@ -70,7 +74,7 @@ void AudioOutput::Process() {
         needs_trim = false;
       }
 
-      FinishMixJob(cur_mix_job_);
+      FinishMixJob(*mix_frames, cur_mix_job_.buf);
     }
   }
 

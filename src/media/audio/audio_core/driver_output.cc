@@ -86,7 +86,7 @@ void DriverOutput::OnWakeup() {
   state_ = State::FetchingFormats;
 }
 
-std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(MixJob* job, zx::time uptime) {
+std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
   TRACE_DURATION("audio", "DriverOutput::StartMixJob");
   if (state_ != State::Started) {
     FX_LOGS(ERROR) << "Bad state during StartMixJob " << static_cast<uint32_t>(state_);
@@ -111,14 +111,12 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(MixJob* job, zx:
   //    the SW component), and then in the other (as the HW gain command takes
   //    effect).
   //
+  bool output_muted = true;
   const auto& settings = device_settings();
   if (settings != nullptr) {
     AudioDeviceSettings::GainState cur_gain_state;
     settings->SnapshotGainState(&cur_gain_state);
-    job->sw_output_muted = cur_gain_state.muted;
-  } else {
-    //  TODO(mpuryear): make this false, consistent w/audio_device_settings.h?
-    job->sw_output_muted = true;
+    output_muted = cur_gain_state.muted;
   }
 
   FX_DCHECK(driver_ring_buffer() != nullptr);
@@ -210,20 +208,22 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(MixJob* job, zx:
 
   uint32_t frames_to_mix = static_cast<uint32_t>(std::min<int64_t>(rb_space, desired_frames));
 
-  job->reference_clock_to_destination_frame = &clock_monotonic_to_output_frame;
-  job->reference_clock_to_destination_frame_gen = clock_monotonic_to_output_frame_generation_.get();
   return {FrameSpan{
       .start = frames_sent_,
       .length = frames_to_mix,
+      .muted = output_muted,
+      .reference_clock_to_frame = clock_monotonic_to_output_frame,
+      .reference_clock_to_destination_frame_generation =
+          clock_monotonic_to_output_frame_generation_.get(),
   }};
 }
 
-void DriverOutput::FinishMixJob(const MixJob& job) {
+void DriverOutput::FinishMixJob(const FrameSpan& span, float* buffer) {
   TRACE_DURATION("audio", "DriverOutput::FinishMixJob");
   const auto& rb = driver_ring_buffer();
   FX_DCHECK(rb != nullptr);
 
-  int32_t frames_left = job.buf_frames;
+  size_t frames_left = span.length;
   size_t job_buf_offset = 0;
   while (frames_left > 0) {
     uint32_t wr_ptr = frames_sent_ % rb->frames();
@@ -233,7 +233,7 @@ void DriverOutput::FinishMixJob(const MixJob& job) {
       to_send = contig_space;
     }
     void* dest_buf = rb->virt() + (rb->frame_size() * wr_ptr);
-    output_producer_->ProduceOutput(job.buf + job_buf_offset, dest_buf, to_send);
+    output_producer_->ProduceOutput(buffer + job_buf_offset, dest_buf, to_send);
 
     size_t dest_buf_len = to_send * rb->frame_size();
     wav_writer_.Write(dest_buf, dest_buf_len);
@@ -246,11 +246,11 @@ void DriverOutput::FinishMixJob(const MixJob& job) {
   }
 
   if (VERBOSE_TIMING_DEBUG) {
-    const auto& reference_clock_to_ring_buffer_frame = clock_monotonic_to_output_frame_;
+    const auto& reference_clock_to_ring_buffer_frame = span.reference_clock_to_frame;
     auto now = async::Now(mix_domain().dispatcher());
     int64_t output_frames_consumed = reference_clock_to_ring_buffer_frame.Apply(now.get());
     int64_t playback_lead_start = frames_sent_ - output_frames_consumed;
-    int64_t playback_lead_end = playback_lead_start + job.buf_frames;
+    int64_t playback_lead_end = playback_lead_start + span.length;
 
     FX_LOGS(INFO) << "PLead [" << std::setw(4) << playback_lead_start << ", " << std::setw(4)
                   << playback_lead_end << "]";
@@ -354,17 +354,6 @@ void DriverOutput::OnDriverInfoFetched() {
                            format.bytes_per_frame() * 8 / pref_chan);
   }
 
-  // Configure our mix job output format. Note we want the same format (frame rate, channelization)
-  // as our output, except output audio as FLOAT samples since that's the only output sample format
-  // the Mixer supports. The conversion to the format required by the hardware ring buffer is done
-  // after the mix is done (see FinishMixJob).
-  Format mix_format = Format(fuchsia::media::AudioStreamType{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = format.channels(),
-      .frames_per_second = format.frames_per_second(),
-  });
-  SetMixFormat(mix_format);
-
   // Tell AudioDeviceManager we are ready to be an active audio device.
   ActivateSelf();
 
@@ -386,8 +375,8 @@ void DriverOutput::OnDriverConfigComplete() {
   }
 
   // Driver is configured, we have all the needed info to compute minimum lead time for this output.
-  min_lead_time_ =
-      driver()->external_delay() + driver()->fifo_depth_duration() + kDefaultHighWaterNsec;
+  SetMinLeadTime(driver()->external_delay() + driver()->fifo_depth_duration() +
+                 kDefaultHighWaterNsec);
 
   // Fill our brand new ring buffer with silence
   FX_CHECK(driver_ring_buffer() != nullptr);
@@ -396,11 +385,26 @@ void DriverOutput::OnDriverConfigComplete() {
   FX_DCHECK(rb.virt() != nullptr);
   output_producer_->FillWithSilence(rb.virt(), rb.frames());
 
-  // Set up the intermediate buffer at the AudioOutput level
+  // Set up the mix task in the AudioOutput.
+  //
+  // Configure our mix job output format. Note we want the same format (frame rate, channelization)
+  // as our output, except output audio as FLOAT samples since that's the only output sample format
+  // the Mixer supports. The conversion to the format required by the hardware ring buffer is done
+  // after the mix is done (see FinishMixJob).
   //
   // TODO(39886): The intermediate buffer probably does not need to be as large as the entire ring
   // buffer.  Consider limiting this to be something only slightly larger than a nominal mix job.
-  SetupMixBuffer(rb.frames());
+  auto format = driver()->GetFormat();
+  if (!format) {
+    FX_LOGS(ERROR) << "OnDriverConfigComplete without a configured format";
+    return;
+  }
+  Format mix_format = Format(fuchsia::media::AudioStreamType{
+      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+      .channels = format->channels(),
+      .frames_per_second = format->frames_per_second(),
+  });
+  SetupMixTask(mix_format, rb.frames());
 
   // Start the ring buffer running
   //

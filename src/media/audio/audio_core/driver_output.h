@@ -32,9 +32,10 @@ class DriverOutput : public AudioOutput {
   // AudioOutput implementation
   zx_status_t Init() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
-  std::optional<FrameSpan> StartMixJob(MixJob* job, zx::time process_start)
+  std::optional<FrameSpan> StartMixJob(zx::time process_start)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
-  void FinishMixJob(const MixJob& job) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
+  void FinishMixJob(const FrameSpan& span, float* buffer)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
 
   // AudioDevice implementation
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override;

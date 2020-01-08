@@ -17,41 +17,39 @@ class TestAudioOutput : public AudioOutput {
       : AudioOutput(threading_model, registry) {}
 
   using AudioOutput::FrameSpan;
-  using AudioOutput::MixJob;
-  using AudioOutput::SetMixFormat;
   using AudioOutput::SetNextSchedTime;
+  void SetupMixTask(const Format& format, uint32_t max_frames) {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
+    AudioOutput::SetupMixTask(format, max_frames);
+  }
   void Process() {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
     AudioOutput::Process();
   }
-  void SetupMixBuffer(uint32_t max_mix_frames) {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
-    AudioOutput::SetupMixBuffer(max_mix_frames);
-  }
 
   // Allow a test to provide a delegate to handle |AudioOutput::StartMixJob| invocations.
-  using StartMixDelegate = fit::function<std::optional<FrameSpan>(MixJob*, zx::time)>;
+  using StartMixDelegate = fit::function<std::optional<FrameSpan>(zx::time)>;
   void set_start_mix_delegate(StartMixDelegate delegate) {
     start_mix_delegate_ = std::move(delegate);
   }
 
   // Allow a test to provide a delegate to handle |AudioOutput::FinishMixJob| invocations.
-  using FinishMixDelegate = fit::function<void(const MixJob&)>;
+  using FinishMixDelegate = fit::function<void(const FrameSpan&, float* buffer)>;
   void set_finish_mix_delegate(FinishMixDelegate delegate) {
     finish_mix_delegate_ = std::move(delegate);
   }
 
   // |AudioOutput|
-  std::optional<FrameSpan> StartMixJob(MixJob* job, zx::time process_start) override {
+  std::optional<FrameSpan> StartMixJob(zx::time process_start) override {
     if (start_mix_delegate_) {
-      return start_mix_delegate_(job, process_start);
+      return start_mix_delegate_(process_start);
     } else {
       return std::nullopt;
     }
   }
-  void FinishMixJob(const MixJob& job) {
+  void FinishMixJob(const FrameSpan& span, float* buffer) {
     if (finish_mix_delegate_) {
-      finish_mix_delegate_(job);
+      finish_mix_delegate_(span, buffer);
     }
   }
   // |AudioDevice|
@@ -71,18 +69,16 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
 };
 
 using FrameSpan = TestAudioOutput::FrameSpan;
-using MixJob = TestAudioOutput::MixJob;
 
 TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
   auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher());
   AudioObject::LinkObjects(renderer, audio_output_);
 
   // StartMixJob always returns nullopt (no work) and schedules another mix 1ms in the future.
-  audio_output_->set_start_mix_delegate(
-      [this, audio_output = audio_output_.get()](MixJob* mix_job, zx::time now) {
-        audio_output->SetNextSchedTime(Now() + zx::msec(1));
-        return std::nullopt;
-      });
+  audio_output_->set_start_mix_delegate([this, audio_output = audio_output_.get()](zx::time now) {
+    audio_output->SetNextSchedTime(Now() + zx::msec(1));
+    return std::nullopt;
+  });
 
   // Enqueue 2 packets:
   //   * packet 1 from 0ms -> 5ms.
@@ -125,20 +121,18 @@ TEST_F(AudioOutputTest, ProcessReleasesPacketsIfOutputIsMuted) {
 
   // StartMixJob always returns nullopt (no work) and schedules another mix 1ms in the future.
   audio_output_->set_start_mix_delegate(
-      [audio_output = audio_output_.get()](MixJob* mix_job,
-                                           zx::time now) -> std::optional<FrameSpan> {
+      [audio_output = audio_output_.get()](zx::time now) -> std::optional<FrameSpan> {
         audio_output->SetNextSchedTime(now + zx::msec(1));
         static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
-        mix_job->sw_output_muted = true;
-        mix_job->reference_clock_to_destination_frame = &kOneFramePerMs;
-        mix_job->reference_clock_to_destination_frame_gen = 1;
         return {FrameSpan{
             .start = (now - zx::time(0)).to_msecs(),
             .length = zx::msec(1).to_msecs(),
+            .muted = true,
+            .reference_clock_to_frame = kOneFramePerMs,
+            .reference_clock_to_destination_frame_generation = 1,
         }};
       });
-  audio_output_->SetMixFormat(link->stream()->format().stream_type());
-  audio_output_->SetupMixBuffer(zx::msec(1).to_msecs());
+  audio_output_->SetupMixTask(link->stream()->format().stream_type(), zx::msec(1).to_msecs());
 
   // Enqueue 2 packets:
   //   * packet 1 from 0ms -> 5ms.
