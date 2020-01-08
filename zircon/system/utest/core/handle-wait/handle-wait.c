@@ -16,6 +16,9 @@
 #include <zircon/threads.h>
 
 #include <zxtest/zxtest.h>
+#include "zircon/errors.h"
+#include "zircon/time.h"
+#include "zircon/types.h"
 
 // We have to poll a thread's state as there is no way to wait for it to
 // transition states. Wait this amount of time. Generally the thread won't
@@ -263,4 +266,45 @@ TEST(HandleWaitTest, HandleWaitTest) {
   EXPECT_EQ(thrd_join(thread1, NULL), thrd_success, "failed to join thread");
   EXPECT_EQ(thrd_join(thread2, NULL), thrd_success, "failed to join thread");
   EXPECT_EQ(zx_handle_close(event_handle_dup), ZX_OK, "handle close failed");
+}
+
+TEST(HandleWaitTest, HandleWaitMultipleThreads) {
+  zx_handle_t event = ZX_HANDLE_INVALID;
+  ASSERT_EQ(zx_event_create(0u, &event), 0, "");
+  ASSERT_NE(event, ZX_HANDLE_INVALID, "event creation failed");
+
+  zx_handle_t event_dup[3] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
+  ASSERT_OK(zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &event_dup[0]));
+  ASSERT_OK(zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &event_dup[1]));
+  ASSERT_OK(zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &event_dup[2]));
+
+  wait_data_t thread1_data = {event_dup[0], ZX_EVENT_SIGNALED, ZX_TIME_INFINITE, ZX_ERR_INTERNAL};
+  wait_data_t thread2_data = {event_dup[1], ZX_EVENT_SIGNALED, ZX_TIME_INFINITE, ZX_ERR_INTERNAL};
+  wait_data_t thread3_data = {event_dup[2], ZX_EVENT_SIGNALED, ZX_TIME_INFINITE, ZX_ERR_INTERNAL};
+
+  thrd_t thread1;
+  ASSERT_EQ(thrd_create(&thread1, wait_thread_func, &thread1_data), thrd_success,
+            "thread creation failed");
+  thrd_t thread2;
+  ASSERT_EQ(thrd_create(&thread2, wait_thread_func, &thread2_data), thrd_success,
+            "thread creation failed");
+  thrd_t thread3;
+  ASSERT_EQ(thrd_create(&thread3, wait_thread_func, &thread3_data), thrd_success,
+            "thread creation failed");
+  printf("threads started\n");
+
+  ASSERT_OK(zx_object_signal(event, 0, ZX_EVENT_SIGNALED));
+
+  EXPECT_EQ(thrd_join(thread1, NULL), thrd_success, "failed to join thread");
+  EXPECT_EQ(thrd_join(thread2, NULL), thrd_success, "failed to join thread");
+  EXPECT_EQ(thrd_join(thread3, NULL), thrd_success, "failed to join thread");
+
+  EXPECT_OK(zx_handle_close(event), "handle close failed");
+  EXPECT_OK(zx_handle_close(event_dup[0]), "handle close failed");
+  EXPECT_OK(zx_handle_close(event_dup[1]), "handle close failed");
+  EXPECT_OK(zx_handle_close(event_dup[2]), "handle close failed");
+
+  EXPECT_OK(thread1_data.status);
+  EXPECT_OK(thread2_data.status);
+  EXPECT_OK(thread3_data.status);
 }
