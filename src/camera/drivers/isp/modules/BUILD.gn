@@ -24,6 +24,7 @@ source_set("modules") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/banjo/ddk.protocol.camerahwaccel",
     "//zircon/system/banjo/ddk.protocol.camerasensor",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
