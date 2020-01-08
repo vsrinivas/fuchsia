@@ -219,12 +219,25 @@ impl ApSme {
                 State::Idle { ctx }
             }
             State::Started { bss } => {
-                // TODO(37891): IEEE Std 802.11-2016, 6.3.12.2.3: The SME should notify associated
-                // non-AP STAs of imminent infrastructure BSS termination before issuing the
-                // MLME-STOP.request primitive. This can be done with the BSS transition management
-                // procedure, using the Termination information.
-                let req = fidl_mlme::StopRequest { ssid: bss.ssid.clone() };
-                bss.ctx.mlme_sink.send(MlmeRequest::Stop(req));
+                // IEEE Std 802.11-2016, 6.3.12.2.3: The SME should notify associated non-AP STAs of
+                // imminent infrastructure BSS termination before issuing the MLME-STOP.request
+                // primitive.
+                for (client_addr, _) in bss.clients {
+                    bss.ctx.mlme_sink.send(MlmeRequest::Deauthenticate(
+                        fidl_mlme::DeauthenticateRequest {
+                            peer_sta_address: client_addr,
+                            // This seems to be the most appropriate reason code (IEEE Std
+                            // 802.11-2016, Table 9-45): Requesting STA is leaving the BSS (or
+                            // resetting). The spec doesn't seem to mandate a choice of reason code
+                            // here, so Fuchsia picks STA_LEAVING.
+                            reason_code: fidl_mlme::ReasonCode::StaLeaving,
+                        },
+                    ));
+                }
+
+                bss.ctx
+                    .mlme_sink
+                    .send(MlmeRequest::Stop(fidl_mlme::StopRequest { ssid: bss.ssid.clone() }));
                 // Currently, MLME doesn't send any response back. We simply assume
                 // that the stop request succeeded immediately
                 stop_responder.respond(());
@@ -770,6 +783,27 @@ mod tests {
     fn ap_stops_after_started() {
         let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
         let mut receiver = sme.on_stop_command();
+
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
+            assert_eq!(stop_req.ssid, SSID.to_vec());
+        });
+        assert_eq!(Ok(Some(())), receiver.try_recv());
+    }
+
+    #[test]
+    fn ap_stops_after_started_and_deauths_all_clients() {
+        let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
+        let client = Client::default();
+        sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
+        client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
+
+        let mut receiver = sme.on_stop_command();
+        assert_variant!(
+            mlme_stream.try_next(),
+            Ok(Some(MlmeRequest::Deauthenticate(deauth_req))) => {
+                assert_eq!(deauth_req.peer_sta_address, client.addr);
+                assert_eq!(deauth_req.reason_code, fidl_mlme::ReasonCode::StaLeaving);
+            });
 
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
             assert_eq!(stop_req.ssid, SSID.to_vec());
