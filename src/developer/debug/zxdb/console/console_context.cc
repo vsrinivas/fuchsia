@@ -483,6 +483,17 @@ void ConsoleContext::DidCreateFilter(Filter* filter) {
   filter_to_id_[filter] = id;
 }
 
+void ConsoleContext::WillDestroyFilter(Filter* filter) {
+  auto found = filter_to_id_.find(filter);
+  if (found == filter_to_id_.end()) {
+    FXL_NOTREACHED();
+    return;
+  }
+
+  id_to_filter_.erase(found->second);
+  filter_to_id_.erase(found);
+}
+
 void ConsoleContext::WillDestroyBreakpoint(Breakpoint* breakpoint) {
   auto found_breakpoint = breakpoint_to_id_.find(breakpoint);
   if (found_breakpoint == breakpoint_to_id_.end()) {

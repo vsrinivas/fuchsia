@@ -201,15 +201,19 @@ void ListFilters(ConsoleContext* context, JobContext* job) {
     }
   }
 
-  if (rows.empty()) {
-    Console::get()->Output("No filters.\n");
-    return;
-  }
-
   OutputBuffer out;
-  FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-               ColSpec(Align::kLeft, 0, "Pattern"), ColSpec(Align::kRight, 0, "Job")},
-              rows, &out);
+  if (rows.empty()) {
+    if (job)
+      out.Append(fxl::StringPrintf("No filters for job %d.\n", context->IdForJobContext(job)));
+    else
+      out.Append("No filters.\n");
+  } else {
+    if (job)
+      out.Append(fxl::StringPrintf("Filters for job %d only:\n", context->IdForJobContext(job)));
+    FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
+                 ColSpec(Align::kLeft, 0, "Pattern"), ColSpec(Align::kRight, 0, "Job")},
+                rows, &out);
+  }
   Console::get()->Output(out);
 }
 
@@ -224,8 +228,12 @@ bool HandleFilterNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     return true;
 
   if (cmd.GetNounIndex(Noun::kFilter) == Command::kNoIndex) {
-    // Just "filter", this lists available filters.
-    ListFilters(context, cmd.job_context());
+    // Just "filter", this lists available filters. If a job is given, it lists only filters
+    // for that job. Otherwise it lists all filters.
+    if (cmd.HasNoun(Noun::kJob))
+      ListFilters(context, cmd.job_context());
+    else
+      ListFilters(context, nullptr);
     return true;
   }
 

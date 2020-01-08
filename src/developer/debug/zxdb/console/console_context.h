@@ -151,6 +151,7 @@ class ConsoleContext : public ProcessObserver,
   void DidCreateBreakpoint(Breakpoint* breakpoint) override;
   void WillDestroyBreakpoint(Breakpoint* breakpoint) override;
   void DidCreateFilter(Filter* filter) override;
+  void WillDestroyFilter(Filter* filter) override;
   void DidCreateSymbolServer(SymbolServer* symbol_server) override;
   void OnSymbolIndexingInformation(const std::string& msg) override;
 

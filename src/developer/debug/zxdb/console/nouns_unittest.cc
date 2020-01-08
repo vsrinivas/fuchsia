@@ -101,12 +101,35 @@ TEST_F(NounsTest, FilterTest) {
   console.ProcessInputLine("filter");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ(R"( # Pattern Job
- 1 newcar    *
- 2 boofar    1
- 3 hoodar    *
-)",
-            event.output.AsString());
+  ASSERT_EQ(
+      " # Pattern Job\n"
+      " 1 newcar    *\n"
+      " 2 boofar    1\n"
+      " 3 hoodar    *\n",
+      event.output.AsString());
+
+  // Delete the wildcard filters.
+  console.ProcessInputLine("filter 1 rm");
+  console.ProcessInputLine("filter 3 rm");
+  console.FlushOutputEvents();
+
+  // Job-specific filter listing.
+  console.ProcessInputLine("job 1 filter");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  ASSERT_EQ(
+      "Filters for job 1 only:\n"
+      " # Pattern Job\n"
+      " 2 boofar    1\n",
+      event.output.AsString());
+
+  // List current job's filters when there aren't any.
+  console.ProcessInputLine("job new");
+  console.FlushOutputEvents();
+  console.ProcessInputLine("job filter");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  ASSERT_EQ("No filters for job 2.\n", event.output.AsString());
 }
 
 }  // namespace zxdb
