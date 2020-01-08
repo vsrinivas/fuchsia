@@ -160,10 +160,17 @@ class TestMsdVslDevice : public drm_test_info {
 
   std::shared_ptr<AddressSpace> address_space() { return address_space_; }
 
+  bool AllocInterruptEvent(uint32_t* out_id) {
+    return device_.msd_vsl_device->AllocInterruptEvent(out_id);
+  }
+  bool FreeInterruptEvent(uint32_t id) { return device_.msd_vsl_device->FreeInterruptEvent(id); }
+
   bool SubmitCommandBuffer(TestMsdVslDevice::EtnaBuffer* etna_buf, uint32_t length,
+                           uint32_t event_id, std::shared_ptr<magma::PlatformSemaphore> signal,
                            uint16_t* prefetch_out) {
     return device_.msd_vsl_device->SubmitCommandBuffer(address_space_, etna_buf->buffer.get(),
-                                                       etna_buf->gpu_addr, length, prefetch_out);
+                                                       etna_buf->gpu_addr, length,
+                                                       event_id, signal, prefetch_out);
   }
 
   uint32_t next_gpu_addr(uint32_t size) {
@@ -311,24 +318,24 @@ void etna_cmd_stream_finish(struct etna_cmd_stream* stream) {
 
   DLOG("etna_cmd_stream_finish length %u", length);
 
-  EXPECT_TRUE(
-      cmd_stream->test->SubmitCommandBuffer(cmd_stream->etna_buffer, length, &prefetch));
+  uint32_t event_id;
+  EXPECT_TRUE(cmd_stream->test->AllocInterruptEvent(&event_id));
+  auto semaphore = magma::PlatformSemaphore::Create();
+  EXPECT_NE(semaphore, nullptr);
+
+  EXPECT_TRUE(cmd_stream->test->SubmitCommandBuffer(cmd_stream->etna_buffer, length,
+                                                    event_id, semaphore->Clone(), &prefetch));
   // The prefetch should be 1 longer than expected, as the driver inserts an additional
   // LINK at the end.
   EXPECT_EQ((magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t)) + 1, prefetch);
 
+  auto start = std::chrono::high_resolution_clock::now();
+
   // When the command buffer completes, we expect to return back to the next WAIT-LINK
   // in the ringbuffer. Wait until that happens or we timeout.
-  auto start = std::chrono::high_resolution_clock::now();
-  while (std::chrono::duration_cast<std::chrono::milliseconds>(
-             std::chrono::high_resolution_clock::now() - start)
-                 .count() < 1000) {
-    auto dma_addr = registers::DmaAddress::Get().ReadFrom(cmd_stream->test->register_io());
-    if (matches_last_wait_link(cmd_stream->test->ringbuffer(), dma_addr.reg_value())) {
-      break;
-    }
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  }
+  constexpr uint64_t kTimeoutMs = 1000;
+  EXPECT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());
+
   {
     auto dma_addr = registers::DmaAddress::Get().ReadFrom(cmd_stream->test->register_io());
     EXPECT_TRUE(matches_last_wait_link(cmd_stream->test->ringbuffer(), dma_addr.reg_value()));
@@ -353,6 +360,8 @@ void etna_cmd_stream_finish(struct etna_cmd_stream* stream) {
         registers::MmuSecureExceptionAddress::Get().ReadFrom(cmd_stream->test->register_io());
     EXPECT_EQ(0u, reg.reg_value());
   }
+
+  EXPECT_TRUE(cmd_stream->test->FreeInterruptEvent(event_id));
 }
 
 TEST(MsdVslDevice, AllocFreeInterruptEvents) {

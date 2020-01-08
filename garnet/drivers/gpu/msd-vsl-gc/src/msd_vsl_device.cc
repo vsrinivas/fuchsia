@@ -425,11 +425,13 @@ bool MsdVslDevice::WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,
 
 // When submitting a command buffer, we modify the following:
 //  1) add a LINK from the command buffer to the end of the ringbuffer
-//  2) add a WAIT-LINK pair to the end of the ringbuffer
+//  2) add an EVENT and WAIT-LINK pair to the end of the ringbuffer
 //  3) modify the penultimate WAIT in the ringbuffer to LINK to the command buffer
 bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_space,
                                        magma::PlatformBuffer* buf, uint32_t gpu_addr,
-                                       uint32_t length, uint16_t* prefetch_out) {
+                                       uint32_t length, uint32_t event_id,
+                                       std::shared_ptr<magma::PlatformSemaphore> signal,
+                                       uint16_t* prefetch_out) {
   if (!InitRingbuffer(address_space)) {
     return DRETF(false, "Error initializing ringbuffer");
   }
@@ -440,9 +442,8 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
   }
   length = magma::round_up(length, sizeof(uint64_t));
 
-  // Number of new commands to be added to the ringbuffer. This should be changed once we add
-  // more than just WAIT-LINK.
-  const uint16_t kRbPrefetch = 2;
+  // Number of new commands to be added to the ringbuffer - EVENT WAIT LINK.
+  const uint16_t kRbPrefetch = 3;
 
   // Write a LINK at the end of the command buffer that links back to the ringbuffer.
   if (!WriteLinkCommand(buf, length, kRbPrefetch,
@@ -458,6 +459,11 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
 
   *prefetch_out = prefetch & 0xFFFF;
 
+  // Write the new commands to the end of the ringbuffer.
+  // Add an EVENT to the end to the ringbuffer.
+  if (!WriteInterruptEvent(event_id, signal)) {
+    return DRETF(false, "Failed to write interrupt event %u\n", event_id);
+  }
   // Add a new WAIT-LINK to the end of the ringbuffer.
   if (!AddRingbufferWaitLink()) {
     return DRETF(false, "Failed to add WAIT-LINK to ringbuffer");

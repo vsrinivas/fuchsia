@@ -89,7 +89,9 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
 
   bool SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length, uint16_t* prefetch_out);
   bool SubmitCommandBuffer(std::shared_ptr<AddressSpace>, magma::PlatformBuffer* buf,
-                           uint32_t gpu_addr, uint32_t length, uint16_t* prefetch_out);
+                           uint32_t gpu_addr, uint32_t length,
+                           uint32_t event_id, std::shared_ptr<magma::PlatformSemaphore> signal,
+                           uint16_t* prefetch_out);
 
   magma::RegisterIo* register_io() { return register_io_.get(); }
 
