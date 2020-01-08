@@ -23,9 +23,9 @@ enum {
   BTI_BOARD,
   BTI_USB,
   BTI_DISPLAY,
+  BTI_EMMC,
   BTI_MALI,
   BTI_VIDEO,
-  BTI_AML_RAW_NAND,
   BTI_SDIO,
   BTI_CANVAS,
   BTI_THERMAL,
@@ -103,11 +103,11 @@ class Nelson : public NelsonType {
   zx_status_t CanvasInit();
   zx_status_t ClkInit();
   zx_status_t DisplayInit();
+  zx_status_t EmmcInit();
   zx_status_t GpioInit();
   zx_status_t I2cInit();
   zx_status_t LightInit();
   zx_status_t MaliInit();
-  zx_status_t RawNandInit();
   zx_status_t SdioInit();
   zx_status_t Start();
   zx_status_t SecureMemInit();

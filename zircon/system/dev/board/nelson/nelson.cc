@@ -129,8 +129,8 @@ int Nelson::Thread() {
     zxlogf(ERROR, "%s: DeviceAdd failed - RTC: %d\n", __func__, status);
   }
 
-  if ((status = RawNandInit()) != ZX_OK) {
-    zxlogf(ERROR, "RawNandInit failed: %d\n", status);
+  if (EmmcInit() != ZX_OK) {
+    zxlogf(ERROR, "EmmcInit() failed\n");
   }
 
   if ((status = SdioInit()) != ZX_OK) {
