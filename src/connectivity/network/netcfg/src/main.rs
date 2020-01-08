@@ -13,15 +13,13 @@ use std::sync::Arc;
 use anyhow::Context as _;
 use fuchsia_async::DurationExt;
 use fuchsia_component::client::connect_to_service;
-use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::fx_log_info;
 use fuchsia_zircon::DurationNum;
 use futures::lock::Mutex;
-use futures::{future::try_join3, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{future::try_join, TryFutureExt, TryStreamExt};
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use serde_derive::Deserialize;
 
-mod dns_policy_service;
 mod interface;
 mod matchers;
 
@@ -395,17 +393,7 @@ fn main() -> Result<(), anyhow::Error> {
         Ok(())
     };
 
-    let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(move |stream| {
-        dns_policy_service::spawn_net_dns_fidl_server(resolver_admin.clone(), stream);
-    });
-    fs.take_and_serve_directory_handle()?;
-
-    let ((), (), ()) = executor.run_singlethreaded(try_join3(
-        filter_setup,
-        ethernet_device,
-        fs.collect().map(Ok),
-    ))?;
+    let ((), ()) = executor.run_singlethreaded(try_join(filter_setup, ethernet_device))?;
     Ok(())
 }
 
