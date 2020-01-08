@@ -60,19 +60,28 @@ func newNDPDispatcherForTest() *ndpDispatcher {
 	return n
 }
 
-// waitForEmptyQueue returns after n's event queue is empty. If n's event queue
-// is empty when waitForEmptyQueue is called, waitForEmptyQueue returns
-// immediately.
+// waitForEmptyQueue returns after the last event in the event queue is handled.
+//
+// If n's event queue is empty when waitForEmptyQueue is called,
+// waitForEmptyQueue will block until an event is added and the queue is
+// emptied.
 func waitForEmptyQueue(n *ndpDispatcher) {
 	// Wait for an empty event queue.
 	for {
+		// Wait for a signal on `n.testNotifyCh` before checking if the event queue
+		// is empty. This is to avoid a race condition where a test will check the
+		// event queue if it is empty after the last event has been popped from the
+		// event queue but has not been handled. Since the signal will only be sent
+		// after handling the last event in the queue, if queue is empty after
+		// receiving the signal, then all events in the queue must have been
+		// handled.
+		<-n.testNotifyCh
 		n.mu.Lock()
 		empty := len(n.mu.events) == 0
 		n.mu.Unlock()
 		if empty {
 			break
 		}
-		<-n.testNotifyCh
 	}
 }
 
@@ -647,7 +656,6 @@ func TestLinkDown(t *testing.T) {
 	if err := ifs2.eth.Down(); err != nil {
 		t.Fatalf("ifs2.eth.Down(): %s", err)
 	}
-	waitForEmptyQueue(ndpDisp)
 	ns.mu.Lock()
 	nicInfos = ns.mu.stack.NICInfo()
 	rts = ns.mu.stack.GetRouteTable()
@@ -714,9 +722,8 @@ func TestLinkDown(t *testing.T) {
 	// routers and prefixes are added again, and the auto-generated
 	// addresses remain removed.
 	if err := ifs2.eth.Up(); err != nil {
-		t.Fatalf("ifs2.eth.Down(): %s", err)
+		t.Fatalf("ifs2.eth.Up(): %s", err)
 	}
-	waitForEmptyQueue(ndpDisp)
 	ns.mu.Lock()
 	nicInfos = ns.mu.stack.NICInfo()
 	rts = ns.mu.stack.GetRouteTable()
