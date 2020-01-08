@@ -47,6 +47,12 @@ pub struct Bssid(pub MacAddr);
 
 pub const BCAST_ADDR: MacAddr = [0xFF; 6];
 
+pub fn is_multicast(addr: MacAddr) -> bool {
+    // IEEE Std 802.3-2015, 3.2.3: The least significant bit of the first octet of a MAC address
+    // denotes multicast.
+    addr[0] & 0x01 != 0
+}
+
 pub enum MacFrame<B> {
     Mgmt {
         // Management Header: fixed fields
@@ -212,5 +218,15 @@ mod tests {
         assert_eq!(4, round_up(3u32, 4));
         assert_eq!(4, round_up(4u32, 4));
         assert_eq!(8, round_up(5u32, 4));
+    }
+
+    #[test]
+    fn is_multicast_valid_addr() {
+        assert!(is_multicast([33, 33, 33, 33, 33, 33]));
+    }
+
+    #[test]
+    fn is_multicast_not_valid_addr() {
+        assert!(!is_multicast([34, 33, 33, 33, 33, 33]));
     }
 }
