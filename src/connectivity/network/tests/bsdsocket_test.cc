@@ -782,6 +782,69 @@ TEST_P(SocketOptsTest, SetUDPMulticastTTLChar) {
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
+TEST_P(SocketOptsTest, SetUDPMulticastIf_ifindex) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip multicast tests on TCP socket";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  constexpr int kOne = 1;
+  SockOption t = GetMcastIfOption();
+  if (IsIPv6()) {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kOne, sizeof(kOne)), 0) << strerror(errno);
+
+    int param_out;
+    socklen_t len = sizeof(param_out);
+    ASSERT_EQ(getsockopt(s.get(), t.level, t.option, &param_out, &len), 0) << strerror(errno);
+    ASSERT_EQ(len, sizeof(param_out));
+
+    ASSERT_EQ(param_out, kOne);
+  } else {
+    ip_mreqn param_in = {};
+    param_in.imr_ifindex = kOne;
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &param_in, sizeof(param_in)), 0)
+        << strerror(errno);
+
+    in_addr param_out;
+    socklen_t len = sizeof(param_out);
+    ASSERT_EQ(getsockopt(s.get(), t.level, t.option, &param_out, &len), 0) << strerror(errno);
+    ASSERT_EQ(len, sizeof(param_out));
+
+    ASSERT_EQ(param_out.s_addr, INADDR_ANY);
+  }
+
+  ASSERT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetUDPMulticastIf_ifaddr) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip multicast tests on TCP socket";
+  }
+  if (IsIPv6()) {
+    GTEST_SKIP() << "V6 sockets don't support setting IP_MULTICAST_IF by addr";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  SockOption t = GetMcastIfOption();
+  ip_mreqn param_in = {};
+  param_in.imr_address.s_addr = htonl(INADDR_LOOPBACK);
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &param_in, sizeof(param_in)), 0)
+      << strerror(errno);
+
+  in_addr param_out;
+  socklen_t len = sizeof(param_out);
+  ASSERT_EQ(getsockopt(s.get(), t.level, t.option, &param_out, &len), 0) << strerror(errno);
+  ASSERT_EQ(len, sizeof(param_out));
+
+  ASSERT_EQ(param_out.s_addr, param_in.imr_address.s_addr);
+
+  ASSERT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
 INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
                          ::testing::Combine(::testing::Values(AF_INET, AF_INET6),
                                             ::testing::Values(SOCK_DGRAM, SOCK_STREAM)),
@@ -812,56 +875,6 @@ INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
 
                            return domain + "_" + type;
                          });
-
-TEST(LocalhostTest, IP_MULTICAST_IF_ifindex) {
-  int s;
-  ASSERT_GE(s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
-
-  ip_mreqn param_in = {};
-  param_in.imr_ifindex = 1;
-  ASSERT_EQ(setsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, &param_in, sizeof(param_in)), 0)
-      << strerror(errno);
-
-  in_addr param_out = {};
-  socklen_t len = sizeof(param_out);
-  ASSERT_EQ(getsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, &param_in, &len), 0) << strerror(errno);
-  ASSERT_EQ(len, sizeof(param_out));
-
-  EXPECT_EQ(param_out.s_addr, INADDR_ANY);
-}
-
-TEST(LocalhostTest, IP_MULTICAST_IF_ifaddr) {
-  int s;
-  ASSERT_GE(s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
-
-  ip_mreqn param_in = {};
-  param_in.imr_address.s_addr = htonl(INADDR_LOOPBACK);
-  ASSERT_EQ(setsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, &param_in, sizeof(param_in)), 0)
-      << strerror(errno);
-
-  in_addr param_out = {};
-  socklen_t len = sizeof(param_out);
-  ASSERT_EQ(getsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, &param_out, &len), 0) << strerror(errno);
-  ASSERT_EQ(len, sizeof(param_out));
-
-  EXPECT_EQ(param_out.s_addr, param_in.imr_address.s_addr);
-}
-
-TEST(LocalhostTest, IPV6_MULTICAST_IF_ifindex) {
-  int s;
-  ASSERT_GE(s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP), 0) << strerror(errno);
-
-  int param_in = 1;
-  ASSERT_EQ(setsockopt(s, IPPROTO_IPV6, IPV6_MULTICAST_IF, &param_in, sizeof(param_in)), 0)
-      << strerror(errno);
-
-  int param_out = 0;
-  socklen_t len = sizeof(param_out);
-  ASSERT_EQ(getsockopt(s, IPPROTO_IPV6, IPV6_MULTICAST_IF, &param_out, &len), 0) << strerror(errno);
-  ASSERT_EQ(len, sizeof(param_out));
-
-  EXPECT_EQ(param_out, 1);
-}
 
 class ReuseTest
     : public ::testing::TestWithParam<::std::tuple<int /* type */, in_addr_t /* address */>> {};
