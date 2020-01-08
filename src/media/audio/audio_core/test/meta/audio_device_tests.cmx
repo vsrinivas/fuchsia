@@ -1,6 +1,9 @@
 {
     "facets": {
         "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.media.AudioTestDevmgr": "fuchsia-pkg://fuchsia.com/audio_test_devmgr#meta/audio_test_devmgr.cmx"
+            },
             "system-services": [
                 "fuchsia.scheduler.ProfileProvider"
             ]
@@ -12,14 +15,10 @@
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.virtualaudio.Input",
-            "fuchsia.virtualaudio.Output",
-            "fuchsia.media.AudioDeviceEnumerator",
+            "fuchsia.media.AudioTestDevmgr",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",
-            "fuchsia.media.AudioTestDevmgr",
-            "fuchsia.sys.Loader",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Loader"
         ]
     }
 }
