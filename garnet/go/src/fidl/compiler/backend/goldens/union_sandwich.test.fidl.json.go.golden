@@ -82,7 +82,7 @@ const (
 
 type UnionSize8Alignment4 struct {
 	I_unionSize8Alignment4Tag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Variant uint32  `fidl:"1"`
+	Variant uint32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
 }
 
 func (_m *UnionSize8Alignment4) Which() I_unionSize8Alignment4Tag {
@@ -113,7 +113,7 @@ const (
 
 type UnionSize12Alignment4 struct {
 	I_unionSize12Alignment4Tag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Variant [6]uint8  `fidl:"1"`
+	Variant [6]uint8  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
 }
 
 func (_m *UnionSize12Alignment4) Which() I_unionSize12Alignment4Tag {
@@ -144,7 +144,7 @@ const (
 
 type UnionSize24Alignment8 struct {
 	I_unionSize24Alignment8Tag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Variant StructSize16Alignment8  `fidl:"1"`
+	Variant StructSize16Alignment8  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
 }
 
 func (_m *UnionSize24Alignment8) Which() I_unionSize24Alignment8Tag {
@@ -175,7 +175,7 @@ const (
 
 type UnionSize36Alignment4 struct {
 	I_unionSize36Alignment4Tag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Variant [32]uint8  `fidl:"1"`
+	Variant [32]uint8  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
 }
 
 func (_m *UnionSize36Alignment4) Which() I_unionSize36Alignment4Tag {

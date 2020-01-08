@@ -43,8 +43,8 @@ const (
 type OlderSimpleUnion struct {
 	I_olderSimpleUnionTag `fidl:"x,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	I_unknownData []byte
-	I int64  `fidl:"1026732503"`
-	F float32  `fidl:"1362546558"`
+	I int64  `fidl:"1026732503" fidl_hashed_ord:"1026732503" fidl_explicit_ord:"1"`
+	F float32  `fidl:"1362546558" fidl_hashed_ord:"1362546558" fidl_explicit_ord:"2"`
 }
 
 func (_m *OlderSimpleUnion) Which() I_olderSimpleUnionTag {
@@ -97,9 +97,9 @@ const (
 type NewerSimpleUnion struct {
 	I_newerSimpleUnionTag `fidl:"x,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	I_unknownData []byte
-	I int64  `fidl:"693944286"`
-	S string  `fidl:"473666119,"`
-	V []string  `fidl:"1815655055,,"`
+	I int64  `fidl:"693944286" fidl_hashed_ord:"693944286" fidl_explicit_ord:"1"`
+	S string  `fidl:"473666119," fidl_hashed_ord:"473666119" fidl_explicit_ord:"2"`
+	V []string  `fidl:"1815655055,," fidl_hashed_ord:"1815655055" fidl_explicit_ord:"3"`
 }
 
 func (_m *NewerSimpleUnion) Which() I_newerSimpleUnionTag {
@@ -163,9 +163,9 @@ const (
 
 type StrictSimpleXUnion struct {
 	I_strictSimpleXUnionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	I int32  `fidl:"1851697276"`
-	F float32  `fidl:"855207063"`
-	S string  `fidl:"850602487,"`
+	I int32  `fidl:"1851697276" fidl_hashed_ord:"1851697276" fidl_explicit_ord:"1"`
+	F float32  `fidl:"855207063" fidl_hashed_ord:"855207063" fidl_explicit_ord:"2"`
+	S string  `fidl:"850602487," fidl_hashed_ord:"850602487" fidl_explicit_ord:"3"`
 }
 
 func (_m *StrictSimpleXUnion) Which() I_strictSimpleXUnionTag {
@@ -220,7 +220,7 @@ const (
 type XUnionContainingEmptyStruct struct {
 	I_xUnionContainingEmptyStructTag `fidl:"x,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	I_unknownData []byte
-	Empty Empty  `fidl:"424858069"`
+	Empty Empty  `fidl:"424858069" fidl_hashed_ord:"424858069" fidl_explicit_ord:"1"`
 }
 
 func (_m *XUnionContainingEmptyStruct) Which() I_xUnionContainingEmptyStructTag {
@@ -256,7 +256,7 @@ const (
 
 type StrictBoundedXUnion struct {
 	I_strictBoundedXUnionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	V []uint8  `fidl:"2024555624,10"`
+	V []uint8  `fidl:"2024555624,10" fidl_hashed_ord:"2024555624" fidl_explicit_ord:"1"`
 }
 
 func (_m *StrictBoundedXUnion) Which() I_strictBoundedXUnionTag {
@@ -290,8 +290,8 @@ const (
 type ExplicitXUnion struct {
 	I_explicitXUnionTag `fidl:"x,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	I_unknownData []byte
-	I int64  `fidl:"625512649"`
-	F float32  `fidl:"182552961"`
+	I int64  `fidl:"625512649" fidl_hashed_ord:"625512649" fidl_explicit_ord:"1"`
+	F float32  `fidl:"182552961" fidl_hashed_ord:"182552961" fidl_explicit_ord:"4"`
 }
 
 func (_m *ExplicitXUnion) Which() I_explicitXUnionTag {

@@ -202,11 +202,13 @@ type XUnion struct {
 
 type XUnionMember struct {
 	types.Attributes
-	Ordinal     int
-	Name        string
-	PrivateName string
-	Type        Type
-	FidlTag     string
+	Ordinal         uint64
+	ExplicitOrdinal uint64
+	HashedOrdinal   uint64
+	Name            string
+	PrivateName     string
+	Type            Type
+	FidlTag         string
 }
 
 // Table represents a FIDL table as a golang struct.
@@ -745,12 +747,14 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		ty, tag := c.compileType(member.Type)
 		tag.reverseOfBounds = append(tag.reverseOfBounds, member.Ordinal)
 		members = append(members, XUnionMember{
-			Attributes:  member.Attributes,
-			Ordinal:     member.Ordinal,
-			Type:        ty,
-			Name:        c.compileIdentifier(member.Name, true, ""),
-			PrivateName: c.compileIdentifier(member.Name, false, ""),
-			FidlTag:     tag.String(),
+			Attributes:      member.Attributes,
+			Ordinal:         uint64(member.Ordinal),
+			ExplicitOrdinal: uint64(member.ExplicitOrdinal),
+			HashedOrdinal:   uint64(member.HashedOrdinal),
+			Type:            ty,
+			Name:            c.compileIdentifier(member.Name, true, ""),
+			PrivateName:     c.compileIdentifier(member.Name, false, ""),
+			FidlTag:         tag.String(),
 		})
 	}
 	return XUnion{

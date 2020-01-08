@@ -85,7 +85,7 @@ type Union struct {
 	// union member comment #1
 	//
 	// union member comment #3
-	Field int32  `fidl:"1"`
+	Field int32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
 }
 
 func (_m *Union) Which() I_unionTag {

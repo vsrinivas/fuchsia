@@ -68,8 +68,8 @@ const (
 
 type WithErrorSyntaxResponseAsStructResult struct {
 	I_withErrorSyntaxResponseAsStructResultTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Response WithErrorSyntaxResponseAsStructResponse  `fidl:"1"`
-	Err uint32  `fidl:"2"`
+	Response WithErrorSyntaxResponseAsStructResponse  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
+	Err uint32  `fidl:"2" fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
 }
 
 func (_m *WithErrorSyntaxResponseAsStructResult) Which() I_withErrorSyntaxResponseAsStructResultTag {
@@ -112,8 +112,8 @@ const (
 
 type WithErrorSyntaxErrorAsPrimitiveResult struct {
 	I_withErrorSyntaxErrorAsPrimitiveResultTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Response WithErrorSyntaxErrorAsPrimitiveResponse  `fidl:"1"`
-	Err uint32  `fidl:"2"`
+	Response WithErrorSyntaxErrorAsPrimitiveResponse  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
+	Err uint32  `fidl:"2" fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
 }
 
 func (_m *WithErrorSyntaxErrorAsPrimitiveResult) Which() I_withErrorSyntaxErrorAsPrimitiveResultTag {
@@ -156,8 +156,8 @@ const (
 
 type WithErrorSyntaxErrorAsEnumResult struct {
 	I_withErrorSyntaxErrorAsEnumResultTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	Response WithErrorSyntaxErrorAsEnumResponse  `fidl:"1"`
-	Err ErrorEnun  `fidl:"2"`
+	Response WithErrorSyntaxErrorAsEnumResponse  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
+	Err ErrorEnun  `fidl:"2" fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
 }
 
 func (_m *WithErrorSyntaxErrorAsEnumResult) Which() I_withErrorSyntaxErrorAsEnumResultTag {

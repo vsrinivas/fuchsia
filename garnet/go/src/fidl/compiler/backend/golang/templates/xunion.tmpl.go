@@ -28,7 +28,7 @@ type {{ .Name }} struct {
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
-	{{ .Name }} {{ .Type }}  ` + "`" + `fidl:"{{ .FidlTag }}"` + "`" + `
+	{{ .Name }} {{ .Type }}  ` + "`" + `fidl:"{{ .FidlTag }}" fidl_hashed_ord:"{{ .HashedOrdinal }}" fidl_explicit_ord:"{{ .ExplicitOrdinal }}"` + "`" + `
 	{{- end }}
 }
 
