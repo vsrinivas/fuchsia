@@ -138,8 +138,7 @@ root_manifests_target_name = get_label_info(root_manifests_label, "name")
 root_manifests_manifest =
     root_manifests_target_dir + "/" + root_manifests_target_name
 
-# Note: This output is also used by a test in
-# //src/connectivity/management/integration_tests:verify_cmdline_params_zedboot
+# Note: This output is also used by a script in //scripts/verify_cmdline_params.
 zbi("zbi") {
   output_name = "zedboot"
   deps = [

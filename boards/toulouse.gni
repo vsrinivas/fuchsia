@@ -7,7 +7,7 @@ target_cpu = "x64"
 board_package_labels = [
   # Include all drivers for now.
   "//garnet/packages/prod:drivers",
-  "//src/connectivity/management/integration_tests:verify_cmdline_params_zedboot",
+  "//boards:verify_zedboot_cmdline_params_for_toulouse",
   "//src/media/audio/bundles:virtual_audio_driver",
 ]
 

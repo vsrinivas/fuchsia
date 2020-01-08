@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//scripts/verify_cmdline_params/verify_cmdline_params.gni")
+
+verify_zedboot_cmdline_params("verify_zedboot_cmdline_params_for_toulouse") {
+  params = [
+    # Fuchsia does not have a deterministic ordering for bringing up PCI devices, so the
+    # /dev/class/ethernet/xxx paths have no well-defined mapping to the ports on the front of the
+    # device.
+    # In order for netbooting and loglistener to work, we need to let netsvc know which path corresponds
+    # to the left-most ethernet port.
+    "netsvc.interface=/dev/sys/pci/00:1f.6/e1000/ethernet",
+
+    # Make sure netsvc is enabled since paving depends on it.
+    "netsvc.disable=false",
+  ]
+}

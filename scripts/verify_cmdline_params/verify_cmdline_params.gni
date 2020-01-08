@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/zircon.gni")
+
+# Verifies that the generated zedboot image has the specified commandline parameters set.
+#
+# Parameters:
+#
+#   params: (required) [array of strings]
+#     List of params to look for in the generated zedboot image's cmdline section. Supports
+#     wildcards, defaults to partial line search.
+template("verify_zedboot_cmdline_params") {
+  cmd = "$zircon_tools_dir/zbi"
+  in = "$root_out_dir/zedboot.zbi"
+  out = "$root_out_dir/verify_zedboot_cmdline_params_" + target_name + ".empty"
+  action(target_name) {
+    script = "//scripts/verify_cmdline_params/verify_cmdline_params.sh"
+    sources = [
+      in,
+    ]
+    deps = [
+      "//build/images/zedboot:zbi",
+    ]
+    outputs = [
+      out,
+    ]
+
+    args = [
+             "-z",
+             rebase_path(cmd),
+             "-i",
+             rebase_path(in),
+             "-o",
+             rebase_path(out),
+             "--",
+           ] + invoker.params
+  }
+}
