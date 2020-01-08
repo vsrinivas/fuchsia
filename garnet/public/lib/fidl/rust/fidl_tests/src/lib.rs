@@ -4,6 +4,5 @@
 
 #![cfg(test)]
 
-mod conformance_test;
 mod server_sender;
 mod stream_handler_test;

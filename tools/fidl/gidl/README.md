@@ -22,45 +22,35 @@ product configuration and `x64` architecture:
 
     fx set core.x64 --with //bundles:tests
 
-To re-generate all of GIDL's conformance tests:
-
-    fx build host-tools/gidl
-    fx exec $FUCHSIA_DIR/tools/fidl/gidl-conformance-suite/regen.sh
-
-After generating the conformance tests, you must run them to validate that the
-conformance test passes. This is dependent on the language:
+The conformance tests will be generated at build-time and included in tests
+for each language / binding.
 
 * Go:
-    * Bindings: <third_party/go/src/syscall/zx/fidl/conformance/impl.go>
-    * Test: <third_party/go/src/syscall/zx/fidl/fidl_test/conformance_test.go>
-    * Build: `fx build third_party/go:go_fidl_tests`
-    * Run: `fx run-test go_fidl_tests -- -test.v`
+    * Build: `fx build src/tests/fidl_go_conformance:fidl_go_conformance_tests`
+    * Run: `fx run-test go_fidl_conformance -- -test.v`
 
 * C++ (HLCPP):
-    * Bindings: <sdk/lib/fidl/cpp/conformance.fidl.h>
-    * Test: <sdk/lib/fidl/cpp/conformance_test.cc>
     * Build: `fx build sdk/lib/fidl/cpp:conformance_test`
     * Run: `fx run-test fidl_tests`
     * Build (host): `fx build host_x64/fidl_cpp_host_conformance_test`
     * Run (host): `fx run-host-tests fidl_cpp_host_conformance_test`
 
 * C++ (LLCPP):
-    * Bindings: <out/default/fidling/gen/tools/fidl/gidl-conformance-suite/conformance/llcpp/fidl.h>
-    * Test: <garnet/public/lib/fidl/llcpp/conformance_test.cc>
     * Build: `fx build garnet/public/lib/fidl/llcpp:fidl_llcpp_conformance_test`
     * Run: `fx run-test fidl_llcpp_conformance_test`
 
 * Rust:
-    * Bindings: <out/default/fidling/gen/tools/fidl/gidl-conformance-suite/fidl_conformance.rs>
-    * Test: <garnet/public/lib/fidl/rust/fidl_tests/src/conformance_test.rs>
-    * Build: `fx build garnet/public/lib/fidl/rust/fidl_tests:fidl_external_tests`
+    * Build: `fx build garnet/public/lib/fidl/rust/fidl_tests`
     * Run: `fx run-test rust_fidl_tests`
 
 * Dart:
-    * Bindings: <topaz/bin/fidl_bindings_test/test/test/conformance_test_types.dart>
-    * Test: <topaz/bin/fidl_bindings_test/test/test/conformance_test.dart>
     * Build: `fx build topaz/bin/fidl_bindings_test/test:fidl_bindings_test`
     * Run: `fx run-test fidl_bindings_test`
+
+* Transformer:
+    * Build: `fx build src/tests/fidl_transformer:tests`
+    * Run: `fx run-test fidl_transformer_conformance`
+    * Run (host): `fx run-host-tests fidl_transformer_host_tests`
 
 ## Writing Conformance Tests
 

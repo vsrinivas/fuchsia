@@ -67,6 +67,7 @@ test_package("rust_fidl_tests") {
     ":fidl.rust.test.compilation-rustc",
     ":fidl.rust.test.compilation-rustc($host_toolchain)",
     ":fidl_test",
+    "//garnet/public/lib/fidl/rust/fidl_tests:fidl_conformance_tests",
     "//garnet/public/lib/fidl/rust/fidl_tests:fidl_external_tests",
   ]
   tests = [
@@ -78,6 +79,11 @@ test_package("rust_fidl_tests") {
     {
       name = "fidl_external_tests"
       dest = "fidl_external_tests"
+      environments = basic_envs
+    },
+    {
+      name = "fidl_conformance_tests"
+      dest = "fidl_conformance_tests"
       environments = basic_envs
     },
   ]

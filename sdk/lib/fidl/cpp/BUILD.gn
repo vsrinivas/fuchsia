@@ -9,6 +9,8 @@ import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//tools/fidl/gidl-conformance-suite/gidl-conformance-suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
 
 sdk_source_set("cpp") {
   category = "partner"
@@ -166,17 +168,13 @@ fidl("fidl_test") {
   ]
 }
 
-source_set("conformance_test_sources") {
+gidl_cpp("conformance_test_sources") {
   testonly = true
-
-  sources = [
-    "conformance_test.cc",
-  ]
-
+  inputs = conformance_suite_gidl_files
+  fidl = conformance_suite_fidl_target
   deps = [
     ":test_util",
     "//third_party/googletest:gtest",
-    "//tools/fidl/gidl-conformance-suite:conformance_fidl",
   ]
 }
 

@@ -8,7 +8,7 @@
 #include <cstring>
 #include <string>
 
-#include <unittest/unittest.h>
+#include <gtest/gtest.h>
 
 static void dump_array(const char* name, const uint8_t* buffer, size_t size) {
   printf("%s = [", name);
@@ -54,8 +54,6 @@ void run_fidl_transform(fidl_transformation_t transformation, const fidl_type_t*
 bool check_fidl_transform(fidl_transformation_t transformation, const fidl_type_t* type,
                           const uint8_t* src_bytes, uint32_t src_num_bytes,
                           const uint8_t* expected_bytes, uint32_t expected_num_bytes) {
-  BEGIN_HELPER;
-
   uint8_t actual_dst_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   uint32_t actual_dst_num_bytes;
   memset(actual_dst_bytes, 0xcc /* poison */, ZX_CHANNEL_MAX_MSG_BYTES);
@@ -68,9 +66,6 @@ bool check_fidl_transform(fidl_transformation_t transformation, const fidl_type_
     printf("ERROR: %s\n", error);
   }
 
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_TRUE(
-      cmp_payload(actual_dst_bytes, actual_dst_num_bytes, expected_bytes, expected_num_bytes));
-
-  END_HELPER;
+  return (status == ZX_OK) &&
+         cmp_payload(actual_dst_bytes, actual_dst_num_bytes, expected_bytes, expected_num_bytes);
 }

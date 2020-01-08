@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/fidl_go_conformance_tests"
+    }
+}

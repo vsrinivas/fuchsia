@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -52,6 +53,7 @@ var allLanguages = func() []string {
 type GIDLFlags struct {
 	JSONPath *string
 	Language *string
+	Out      *string
 }
 
 // Valid indicates whether the parsed Flags are valid to be used.
@@ -64,6 +66,7 @@ var flags = GIDLFlags{
 		"relative path to the FIDL intermediate representation."),
 	Language: flag.String("language", "",
 		fmt.Sprintf("target language (%s)", strings.Join(allLanguages, "/"))),
+	Out: flag.String("out", "-", "optional path to write output to"),
 }
 
 func parseGidlIr(filename string) gidlir.All {
@@ -133,7 +136,20 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	_, err = os.Stdout.Write(buf.Bytes())
+	var writer = os.Stdout
+	if *flags.Out != "-" {
+		err := os.MkdirAll(filepath.Dir(*flags.Out), os.ModePerm)
+		if err != nil {
+			panic(err)
+		}
+		writer, err = os.Create(*flags.Out)
+		if err != nil {
+			panic(err)
+		}
+		defer writer.Close()
+	}
+
+	_, err = writer.Write(buf.Bytes())
 	if err != nil {
 		panic(err)
 	}

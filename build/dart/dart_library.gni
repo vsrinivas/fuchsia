@@ -512,6 +512,7 @@ if (current_toolchain == dart_toolchain) {
 } else {  # Not the Dart toolchain.
   template("dart_library") {
     group(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
       not_needed(invoker, "*")
 
       public_deps = [

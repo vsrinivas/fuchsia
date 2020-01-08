@@ -1,0 +1,96 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/fidl/toolchain.gni")
+
+template("gidl") {
+  assert(defined(invoker.language))
+  assert(defined(invoker.output))
+  assert(defined(invoker.fidl))
+  assert(defined(invoker.inputs))
+
+  fidl_target =
+      get_label_info(invoker.fidl, "label_no_toolchain") + "($fidl_toolchain)"
+  json_file = get_label_info(fidl_target, "target_gen_dir") + "/" +
+              get_label_info(fidl_target, "name") + ".fidl.json"
+
+  compiled_action(target_name) {
+    tool = "//tools/fidl/gidl:gidl"
+    args = [
+             "-language",
+             invoker.language,
+             "-json",
+             rebase_path(json_file),
+             "-out",
+             rebase_path(invoker.output),
+           ] + rebase_path(invoker.inputs)
+    inputs = invoker.inputs
+    outputs = [
+      invoker.output,
+    ]
+    deps = [
+      fidl_target,
+    ]
+    forward_variables_from(invoker, [ "testonly" ])
+  }
+}
+
+template("gidl_source_set") {
+  assert(defined(invoker.fidl))
+  assert(defined(invoker.inputs))
+  assert(defined(invoker.language))
+  assert(!defined(invoker.sources))
+
+  generated_file = "${target_gen_dir}/gidl_generated_${target_name}.cc"
+
+  fidl_bindings = get_label_info(invoker.fidl, "dir") + ":" +
+                  get_label_info(invoker.fidl, "name")
+  if (defined(invoker.bindings_suffix)) {
+    fidl_bindings = fidl_bindings + invoker.bindings_suffix
+  }
+
+  gidl_target = "${target_name}_gidl"
+  gidl(gidl_target) {
+    language = invoker.language
+    output = generated_file
+    fidl = invoker.fidl
+    inputs = invoker.inputs
+    forward_variables_from(invoker, [ "testonly" ])
+  }
+
+  source_set(target_name) {
+    sources = [
+      generated_file,
+    ]
+    deps = [
+      ":${gidl_target}",
+      fidl_bindings,
+    ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "fidl",
+                             "deps",
+                           ])
+  }
+}
+
+template("gidl_cpp") {
+  gidl_source_set(target_name) {
+    language = "cpp"
+    forward_variables_from(invoker, "*")
+  }
+}
+
+template("gidl_llcpp") {
+  gidl_source_set(target_name) {
+    language = "llcpp"
+    bindings_suffix = "_llcpp"
+    forward_variables_from(invoker, "*")
+  }
+}

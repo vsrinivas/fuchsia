@@ -22,9 +22,9 @@ import 'dart:typed_data';
 
 import 'package:test/test.dart';
 import 'package:fidl/fidl.dart' as fidl;
+import 'package:topaz.lib.gidl/gidl.dart';
 
-import 'conformance_test_types.dart';
-import 'gidl.dart';
+import 'package:fidl_conformance/fidl_async.dart';
 
 void main() {
 	group('conformance', () {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_FIDL_TRANSFORMER_CONFORMANCE_UTILS_H_
-#define ZIRCON_SYSTEM_UTEST_FIDL_TRANSFORMER_CONFORMANCE_UTILS_H_
+#ifndef SRC_TESTS_FIDL_TRANSFORMER_TRANSFORMER_CONFORMANCE_UTILS_H_
+#define SRC_TESTS_FIDL_TRANSFORMER_TRANSFORMER_CONFORMANCE_UTILS_H_
 
 #include <lib/fidl/transformer.h>
 
@@ -23,4 +23,4 @@ bool check_fidl_transform(fidl_transformation_t transformation, const fidl_type_
 
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_UTEST_FIDL_TRANSFORMER_CONFORMANCE_UTILS_H_
+#endif  // SRC_TESTS_FIDL_TRANSFORMER_TRANSFORMER_CONFORMANCE_UTILS_H_

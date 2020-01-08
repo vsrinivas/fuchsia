@@ -16,52 +16,44 @@ import (
 )
 
 var tmpl = template.Must(template.New("tmpls").Parse(`
-#include <unittest/unittest.h>
+#include <gtest/gtest.h>
 
-#include "generated/transformer_conformance_tables.h"
 #include "transformer_conformance_utils.h"
 
 {{ range .TestArrays }}
-static uint8_t {{ .Name }}[] = { {{ .Bytes }} };
+alignas(8) static uint8_t {{ .Name }}[] = { {{ .Bytes }} };
+{{ end }}
+
+{{ range .CodingTables }}
+extern "C" const fidl_type_t {{ . }};
 {{ end }}
 
 {{ range .SuccessCases }}
-static bool test_{{ .Name }}(void) {
-	BEGIN_TEST;
+TEST(Conformance, {{ .Name }}_Success) {
 	ASSERT_TRUE(check_fidl_transform(
 		{{ .Transformation }},
 		&{{ .FidlType }},
 		{{ .SrcBytesVar }}, sizeof {{ .SrcBytesVar }},
 		{{ .ExpectedBytesVar }}, sizeof {{ .ExpectedBytesVar }}
-	), "");
-	END_TEST;
+	));
 }
 {{ end }}
 
 {{ range .FailureCases }}
-static bool test_{{ .Name }}_failure(void) {
-	BEGIN_TEST;
+TEST(Conformance, {{ .Name }}_Failure) {
 	run_fidl_transform(
 		{{ .Transformation }},
 		&{{ .FidlType }},
 		{{ .SrcBytesVar }}, sizeof {{ .SrcBytesVar }}
 	);
-	END_TEST;
 }
 {{ end }}
 
-BEGIN_TEST_CASE(transformer_conformance)
-{{ range .SuccessCases }}
-RUN_TEST(test_{{ .Name }})
-{{ end }}
-{{ range .FailureCases }}
-RUN_TEST(test_{{ .Name }}_failure)
-{{ end }}
-END_TEST_CASE(transformer_conformance)
 `))
 
 type tmplInput struct {
 	TestArrays   []testArray
+	CodingTables []string
 	SuccessCases []successCase
 	FailureCases []failureCase
 }
@@ -88,8 +80,22 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	if err != nil {
 		return err
 	}
+
+	codingTableNames := make(map[string]bool)
+	for _, successCase := range successCases {
+		codingTableNames[successCase.FidlType] = true
+	}
+	for _, failureCase := range failureCases {
+		codingTableNames[failureCase.FidlType] = true
+	}
+	var codingTables []string
+	for codingTableName := range codingTableNames {
+		codingTables = append(codingTables, codingTableName)
+	}
+
 	input := tmplInput{
 		TestArrays:   append(successArrays, failureArrays...),
+		CodingTables: codingTables,
 		SuccessCases: successCases,
 		FailureCases: failureCases,
 	}

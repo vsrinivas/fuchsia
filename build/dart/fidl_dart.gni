@@ -72,6 +72,7 @@ template("fidl_dart") {
       ]
       deps += dart_sdk_deps
     }
+    forward_variables_from(invoker, [ "testonly" ])
   }
 
   copy_pubspec_target_name = "${target_name}_dart_pubspec"

@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
+import("//tools/fidl/gidl-conformance-suite/gidl-conformance-suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
 
 rustc_test("fidl_external_tests") {
   edition = "2018"
@@ -10,6 +12,26 @@ rustc_test("fidl_external_tests") {
     "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+  ]
+}
+
+conformance_test_source = "$target_gen_dir/src/lib.rs"
+
+gidl("generate_conformance_test") {
+  language = "rust"
+  inputs = conformance_suite_gidl_files
+  fidl = conformance_suite_fidl_target
+  output = conformance_test_source
+  testonly = true
+}
+
+rustc_test("fidl_conformance_tests") {
+  edition = "2018"
+  source_root = conformance_test_source
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//tools/fidl/gidl-conformance-suite:conformance_fidl-rustc",
   ]
+  non_rust_deps = [ ":generate_conformance_test" ]
 }

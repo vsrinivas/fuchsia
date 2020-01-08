@@ -23,7 +23,7 @@ package fidl_test
 import (
 	"testing"
 
-	"syscall/zx/fidl/conformance"
+	"fidl/conformance"
 	"syscall/zx/fidl"
 )
 

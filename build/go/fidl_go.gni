@@ -60,6 +60,8 @@ template("fidl_go") {
     deps = [
       ":$main_target_name($fidl_toolchain)",
     ]
+
+    forward_variables_from(invoker, [ "testonly" ])
   }
 
   go_library(main_target_name) {
@@ -80,5 +82,7 @@ template("fidl_go") {
     if (defined(invoker.public_deps)) {
       deps += invoker.public_deps
     }
+
+    forward_variables_from(invoker, [ "testonly" ])
   }
 }

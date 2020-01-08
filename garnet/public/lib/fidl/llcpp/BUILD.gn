@@ -5,6 +5,17 @@
 import("//build/fidl/fidl.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//tools/fidl/gidl-conformance-suite/gidl-conformance-suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
+
+gidl_llcpp("generated_conformance_test") {
+  testonly = true
+  inputs = conformance_suite_gidl_files
+  fidl = conformance_suite_fidl_target
+  deps = [
+    "//third_party/googletest:gtest",
+  ]
+}
 
 executable("fidl_llcpp_conformance_test_bin") {
   testonly = true
@@ -12,12 +23,12 @@ executable("fidl_llcpp_conformance_test_bin") {
   output_name = "fidl_llcpp_conformance_test"
 
   sources = [
-    "conformance_test.cc",
     "manual_conformance_test.cc",
     "test_utils.cc",
   ]
 
   deps = [
+    ":generated_conformance_test",
     "//sdk/lib/fidl/cpp:fidl_test_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
