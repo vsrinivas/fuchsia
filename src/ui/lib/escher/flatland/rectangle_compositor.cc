@@ -22,29 +22,32 @@ void DrawSingle(CommandBuffer* cmd_buf, const RectangleRenderable& renderable, c
   FXL_DCHECK(renderable.texture);
   cmd_buf->BindTexture(/*set*/ 0, /*binding*/ 0, renderable.texture);
 
-  // Struct to store all the push constant data so we only need
-  // to make a single call to PushConstants().
-  struct PushConstants {
+  // Struct to store all the push constant data in the vertex shader
+  // so we only need to make a single call to PushConstants().
+  struct VertexShaderPushConstants {
     alignas(16) vec3 origin;
     alignas(8) vec2 extent;
     alignas(8) vec2 uvs[4];
-    alignas(16) vec4 color;
   };
 
   // Set up the push constants struct with data from the renderable and z value.
-  PushConstants constants = {
+  VertexShaderPushConstants constants = {
       .origin = vec3(renderable.dest.origin, z),
       .extent = renderable.dest.extent,
       .uvs = {renderable.source.uv_top_left, renderable.source.uv_top_right,
               renderable.source.uv_bottom_right, renderable.source.uv_bottom_left},
-      .color = renderable.color,
-
   };
 
   // We offset by 16U to account for the fact that the previous call to
   // PushConstants() for the batch-level bounds was a glm::vec3, which
   // takes up 16 bytes with padding in the vertex shader.
   cmd_buf->PushConstants(constants, /*offset*/ 16U);
+
+  // We make one more call to PushConstants() to push the color to the
+  // fragment shader. This is so that the data aligns with the push constant
+  // range for the fragment shader only, otherwise it would overlap the ranges
+  // for both the vertex and fragment shaders.
+  cmd_buf->PushConstants(renderable.color, /*offset*/ 80U);
 
   // Draw two triangles. The vertex shader knows how to use the gl_VertexIndex
   // of each vertex to compute the appropriate position and UV values.

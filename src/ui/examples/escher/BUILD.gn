@@ -10,6 +10,7 @@ import("//src/lib/vulkan/layers.gni")
 # //src/ui/lib/escher/test:force_waterfall_to_build_on_host
 group("escher") {
   deps = [
+    ":escher_rainfall",
     ":escher_waterfall",
   ]
 }
@@ -89,4 +90,37 @@ package("escher_waterfall") {
                 },
               ] + vulkan_validation_layers.resources +
               image_pipe_swapchain_fb.resources
+}
+
+package("escher_rainfall") {
+  deps = [
+    "rainfall",
+    "//src/lib/vulkan:validation_layers",
+  ]
+
+  binary = "rainfall"
+
+  meta = [
+    {
+      path = rebase_path("meta/escher_examples.cmx")
+      dest = "escher_rainfall.cmx"
+    },
+  ]
+
+  public_deps =
+      vulkan_validation_layers.public_deps + image_pipe_swapchain_fb.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain_fb.loadable_modules
+
+  resources =
+      [
+        {
+          path = "//src/ui/lib/escher/shaders/flatland/flat_main.vert"
+          dest = "shaders/flatland/flat_main.vert"
+        },
+        {
+          path = "//src/ui/lib/escher/shaders/flatland/flat_main.frag"
+          dest = "shaders/flatland/flat_main.frag"
+        },
+      ] + vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
 }

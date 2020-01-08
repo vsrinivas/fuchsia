@@ -66,6 +66,7 @@ group("scenic") {
 group("escher") {
   testonly = true
   public_deps = [
+    "//src/ui/examples/escher:escher_rainfall",
     "//src/ui/examples/escher:escher_waterfall",
   ]
 }

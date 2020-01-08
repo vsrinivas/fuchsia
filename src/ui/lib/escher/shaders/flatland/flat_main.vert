@@ -24,7 +24,7 @@ uint remapped_indices[6] = uint[](
   0,1,2,0,2,3
 );
 
-// Push constants needed to render each FlatlandRenderable.
+// Push constants needed to render each RectangleRenderable.
 layout(push_constant) uniform PushConstant {
   // Normalizing bounds for the renderable.
   // This is the only per-batch value; the others below

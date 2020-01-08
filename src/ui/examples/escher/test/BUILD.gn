@@ -19,12 +19,14 @@ if (is_mac) {
 } else {
   test("escher_examples_test") {
     sources = [
+      "rainfall_smoke_test.cc",
       "run_all_unittests.cc",
       "waterfall_smoke_test.cc",
     ]
 
     deps = [
       "//src/lib/fxl",
+      "//src/ui/examples/escher/rainfall:rainfall_demo",
       "//src/ui/examples/escher/waterfall:waterfall_demo",
       "//src/ui/lib/escher/test:gtest_escher_with_runtime_glsl",
     ]

@@ -1,0 +1,53 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("rainfall") {
+  sources = [
+    "rainfall_main.cc",
+  ]
+
+  deps = [
+    ":rainfall_demo",
+    "//src/ui/examples/escher/common",
+    "//src/ui/lib/escher:vulkan",
+  ]
+
+  include_dirs = [
+    "//lib",
+    "//src/ui/lib/escher",
+    "//third_party/glm",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "//zircon/public/lib/trace" ]
+  }
+}
+
+source_set("rainfall_demo") {
+  sources = [
+    "rainfall_demo.cc",
+    "rainfall_demo.h",
+  ]
+
+  deps = [
+    ":rainfall_scenes",
+    "//src/ui/examples/escher/common:demo_base",
+    "//src/ui/lib/escher:vulkan",
+  ]
+}
+
+source_set("rainfall_scenes") {
+  sources = [
+    "scenes/flatland_demo_scene1.cc",
+    "scenes/flatland_demo_scene1.h",
+    "scenes/flatland_demo_scene2.cc",
+    "scenes/flatland_demo_scene2.h",
+    "scenes/scene.h",
+     "rainfall_demo.h",
+  ]
+
+  deps = [
+    "//src/ui/examples/escher/common:demo_base",
+  ]
+}

@@ -107,8 +107,8 @@ if (is_mac) {
     }
 
     deps = [
+      ":force_examples_to_build_on_host",
       ":force_paper_shader_compiler_to_build_on_host",
-      ":force_waterfall_to_build_on_host",
       ":gtest_escher",
       "base:base_unittests",
       "//src/lib/fxl",
@@ -230,9 +230,10 @@ gtest_escher_library("gtest_escher_with_runtime_glsl") {
 
 # Guarantees that buildbots at least build the Escher examples on Linux,
 # even if they are not run.
-group("force_waterfall_to_build_on_host") {
+group("force_examples_to_build_on_host") {
   if (is_linux) {
     deps = [
+      "//src/ui/examples/escher/rainfall($host_toolchain)",
       "//src/ui/examples/escher/waterfall($host_toolchain)",
     ]
   }
