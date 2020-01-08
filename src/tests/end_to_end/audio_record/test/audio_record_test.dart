@@ -10,8 +10,19 @@ import 'package:sl4f/sl4f.dart' as sl4f;
 const _timeout = Duration(seconds: 60);
 const extension = 'wav';
 const int kWavHeaderLength = 44;
+const int kSamplesPerFrame = 2;
+const int kFramesPerSecond = 48000;
+const int kCaptureDurationSeconds = 2;
 const int kBitsPerSample = 16;
-int kBytesPerSample = (kBitsPerSample ~/ 8);
+const int kBytesPerSample = (kBitsPerSample ~/ 8);
+const int kExpectedFileLength = kWavHeaderLength +
+    (kBytesPerSample *
+        kSamplesPerFrame *
+        kFramesPerSecond *
+        kCaptureDurationSeconds);
+// audio record is stopped due to timeout and hence the whole duration is not
+// recorded.
+int kMinFileSize = (kExpectedFileLength * 0.75).toInt();
 
 // Create an int16 value from two incoming uint8 values
 int _int16FromBytes(int lsbyte, int msbyte) {
@@ -56,10 +67,12 @@ void _validateFile(File file) {
   if (!file.existsSync()) {
     fail('${file.path} does not exist');
   }
-  if (file.lengthSync() != 288644) {
-    fail('${file.path} is not of right size');
+  int fileSize = file.lengthSync();
+  if (fileSize < kMinFileSize) {
+    fail(
+        '${file.path} is too small in size, actual size: $fileSize, expected size at least $kMinFileSize');
   }
-  int numSamples = ((288644 - kWavHeaderLength) ~/ kBytesPerSample);
+  int numSamples = (fileSize - kWavHeaderLength) ~/ kBytesPerSample;
   final audioBytes = file.readAsBytesSync();
   if (_isDataAllZeros(audioBytes)) {
     fail('${file.path} has only silence and no real data');
@@ -110,10 +123,10 @@ void main() {
     // before trying the audio record command.
     await sl4fDriver.ssh.run('killall audio_core.cmx');
     String fileNameOne = 'test_1';
-    // 'audio' utility will capture 48kHz 2-chan 16-bit audio directly from
-    // the audio driver for 2 secs and save it to a WAV file.
+    // 'audio' utility will capture audio directly from the audio driver for
+    // kCaptureDurationSeconds and save it to a WAV file.
     final proc1 = await sl4fDriver.ssh.run(
-        'audio -r 48000 -c 2 -b $kBitsPerSample record ${_fileNameToTargetPath(fileNameOne)} 2');
+        'audio -r $kFramesPerSecond -c $kSamplesPerFrame -b $kBitsPerSample record ${_fileNameToTargetPath(fileNameOne)} $kCaptureDurationSeconds');
     expect(proc1.exitCode, equals(235)); // ZX_ERR_TIMED_OUT
 
     File fileOne =
@@ -122,7 +135,7 @@ void main() {
 
     String fileNameTwo = 'test_2';
     final proc2 = await sl4fDriver.ssh.run(
-        'audio -r 48000 -c 2 -b $kBitsPerSample record ${_fileNameToTargetPath(fileNameTwo)} 2');
+        'audio -r $kFramesPerSecond -c $kSamplesPerFrame -b $kBitsPerSample record ${_fileNameToTargetPath(fileNameTwo)} $kCaptureDurationSeconds');
     expect(proc2.exitCode, equals(235)); // ZX_ERR_TIMED_OUT
     File fileTwo =
         await _downloadAudioFile(sl4fDriver, dumpDriver, fileNameTwo);
