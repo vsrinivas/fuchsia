@@ -47,60 +47,80 @@ const (
 )
 
 func TestBindingSetCounterStat_Value(t *testing.T) {
-	var b1, b2 fidl.BindingSet
-
-	s := bindingSetCounterStat{bindingSets: []*fidl.BindingSet{&b1, &b2}}
-
-	if got, want := s.Value(), uint64(0); got != want {
-		t.Errorf("got s.Value() = %d want = %d", got, want)
-	}
-
-	ch1, ch2, err := zx.NewChannel(0)
-	if err != nil {
-		t.Fatal("zx.NewChannel(...) failed:", err)
-	}
+	s := bindingSetCounterStat{bindingSets: []*fidl.BindingSet{
+		new(fidl.BindingSet),
+		new(fidl.BindingSet),
+	}}
 	defer func() {
-		// Explicitly ignore the errors; if the test runs past the
-		// (*fidl.BindingSet).Remove calls below, these channels will have been
-		// closed, and these Close calls will return ErrBadHandle. If the test does
-		// not, then these Close calls will return nil. Either way, that's not what
-		// we're testing here.
-		_ = ch1.Close()
-		_ = ch2.Close()
+		for _, b := range s.bindingSets {
+			b.Close()
+		}
 	}()
 
-	key1, err := b1.Add(nil, ch1, nil)
-	if err != nil {
-		t.Fatalf("%T.Add(...) failed: %s", b1, err)
+	// Create a pair of channels for each call to (*fidl.BindingSet).Add;
+	// (*fidl.BindingSet).Remove closes the channel being removed, which causes
+	// its peer to return ZX_ERR_PEER_CLOSED, which in turn would cause the peer
+	// to be removed from any fidl.BindingSet to which it has been added, which
+	// would cause this test to flake (if some other test has started the FIDL
+	// dispatcher).
+	type Pair struct {
+		ch, peer zx.Channel
+	}
+	var pairs []Pair
+	defer func() {
+		for _, pair := range pairs {
+			// Explicitly ignore the errors; if the test runs past the
+			// (*fidl.BindingSet).Remove calls below, these channels will have been
+			// closed, and these Close calls will return ErrBadHandle. If the test
+			// does not, then these Close calls will return nil. Either way, that's
+			// not what we're testing here.
+			_ = pair.ch.Close()
+			_ = pair.peer.Close()
+		}
+	}()
+
+	var want uint64
+	if got := s.Value(); got != want {
+		t.Errorf("got s.Value() = %d want = %d", got, want)
+	}
+	for _, b := range s.bindingSets {
+		for i := 0; i < 2; i++ {
+			ch, peer, err := zx.NewChannel(0)
+			if err != nil {
+				t.Fatal("zx.NewChannel(...) failed:", err)
+			}
+			pairs = append(pairs, Pair{ch: ch, peer: peer})
+
+			if _, err := b.Add(nil, ch, nil); err != nil {
+				t.Fatalf("%T.Add(...) failed: %s", b, err)
+			}
+			want++
+
+			if got := s.Value(); got != want {
+				t.Errorf("got s.Value() = %d want = %d", got, want)
+			}
+		}
 	}
 
-	if got, want := s.Value(), uint64(1); got != want {
+	for _, b := range s.bindingSets {
+		for _, key := range b.BindingKeys() {
+			if !b.Remove(key) {
+				t.Fatalf("got %T.Remove(...) = false want = true", b)
+			}
+			want--
+
+			if got := s.Value(); got != want {
+				t.Errorf("got s.Value() = %d want = %d", got, want)
+			}
+		}
+	}
+	if got := s.Value(); got != want {
 		t.Errorf("got s.Value() = %d want = %d", got, want)
 	}
 
-	key2, err := b2.Add(nil, ch2, nil)
-	if err != nil {
-		t.Fatalf("%T.Add(...) failed: %s", b2, err)
-	}
-
-	if got, want := s.Value(), uint64(2); got != want {
-		t.Errorf("got s.Value() = %d want = %d", got, want)
-	}
-
-	if !b1.Remove(key1) {
-		t.Fatalf("got %T.Remove(...) = false want = true", b1)
-	}
-
-	if got, want := s.Value(), uint64(1); got != want {
-		t.Errorf("got s.Value() = %d want = %d", got, want)
-	}
-
-	if !b2.Remove(key2) {
-		t.Fatalf("got %T.Remove(...) = false want = true", b2)
-	}
-
-	if got, want := s.Value(), uint64(0); got != want {
-		t.Errorf("got s.Value() = %d want = %d", got, want)
+	// Ensure the test is self-consistent.
+	if want != 0 {
+		t.Errorf("got `want` = %d want = 0", want)
 	}
 }
 

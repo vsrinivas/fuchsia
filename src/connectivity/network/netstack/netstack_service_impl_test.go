@@ -7,6 +7,7 @@ package netstack
 import (
 	"net"
 	"netstack/fidlconv"
+	"sync"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"testing"
@@ -43,8 +44,18 @@ func MakeNetstackService() netstackImpl {
 	}
 }
 
+var fidlOnce sync.Once
+
+// ensureFIDL ensures that a single goroutine servicing the FIDL dispatcher is
+// running. This is useful for tests that require FIDL dispatch to be running
+// but wish to avoid N goroutines being created when `go test` is run with
+// `--test.count N`.
+func ensureFIDL() {
+	fidlOnce.Do(func() { go fidl.Serve() })
+}
+
 func TestRouteTableTransactions(t *testing.T) {
-	go fidl.Serve()
+	ensureFIDL()
 	t.Run("no contentions", func(t *testing.T) {
 		// Create a basic netstack instance with a single interface. We need at
 		// least one interface in order to add routes.
