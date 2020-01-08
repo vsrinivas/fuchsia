@@ -27,6 +27,8 @@ pub fn write_beacon_frame<B: Appendable>(
     ssid: &[u8],
     rates: &[u8],
     channel: u8,
+    tim_header: TimHeader,
+    tim_bitmap: &[u8],
     rsne: &[u8],
 ) -> Result<BeaconOffloadParams, Error> {
     let frame_ctrl = mac::FrameControl(0)
@@ -56,21 +58,8 @@ pub fn write_beacon_frame<B: Appendable>(
     // 9. Traffic indication map (TIM)
     // Write a placeholder TIM element, which the firmware will fill in. We only support hardware
     // with hardware offload beaconing for now (e.g. ath10k).
-    //
-    // While this isn't a real TIM element, we still put 4 bytes in it as that is the minimum legal
-    // TIM element value (IEEE Std 802.11-2016, 9.4.2.6: In the event that all bits other than bit 0
-    // in the traffic indication virtual bitmap are 0, the Partial Virtual Bitmap field is encoded
-    // as a single octet equal to 0, the Bitmap Offset subfield is 0, and the Length field is 4.)
     let tim_ele_offset = buf.bytes_written();
-    buf.append_value(&ie::Header { id: Id::TIM, body_len: 4 })?;
-    buf.append_bytes(
-        &[
-            0, // DTIM Count
-            0, // DTIM Period
-            0, // Bitmap Control
-            0, // Partial Virtual Bitmap
-        ][..],
-    )?;
+    write_tim(buf, &tim_header, tim_bitmap)?;
 
     // 17. Extended Supported Rates and BSS Membership Selectors
     rates_writer.write_ext_supported_rates(buf);
@@ -98,6 +87,8 @@ mod tests {
             &[1, 2, 3, 4, 5],
             &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             2,
+            TimHeader { dtim_count: 1, dtim_period: 2, bmp_ctrl: BitmapControl(0) },
+            &[1, 2, 3][..],
             &[48, 2, 77, 88][..],
         )
         .expect("failed making beacon template");
@@ -119,7 +110,7 @@ mod tests {
                 0, 5, 1, 2, 3, 4, 5, // SSID
                 1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Supported rates
                 3, 1, 2, // DSSS parameter set
-                5, 4, 0, 0, 0, 0, // TIM
+                5, 6, 1, 2, 0, 1, 2, 3, // TIM
                 50, 2, 9, 10, // Extended rates
                 48, 2, 77, 88, // RSNE
             ][..],
@@ -140,6 +131,8 @@ mod tests {
             &[1, 2, 3, 4, 5],
             &[1, 2, 3, 4, 5, 6][..],
             2,
+            TimHeader { dtim_count: 1, dtim_period: 2, bmp_ctrl: BitmapControl(0) },
+            &[1, 2, 3][..],
             &[48, 2, 77, 88][..],
         )
         .expect("failed making beacon template");
@@ -160,7 +153,7 @@ mod tests {
                 0, 5, 1, 2, 3, 4, 5, // SSID
                 1, 6, 1, 2, 3, 4, 5, 6, // Supported rates
                 3, 1, 2, // DSSS parameter set
-                5, 4, 0, 0, 0, 0, // TIM
+                5, 6, 1, 2, 0, 1, 2, 3, // TIM
                 48, 2, 77, 88, // RSNE
             ][..],
             &buf[..]

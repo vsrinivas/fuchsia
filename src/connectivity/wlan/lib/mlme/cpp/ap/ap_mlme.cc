@@ -44,15 +44,16 @@ ApMlme::ApMlme(DeviceInterface* device) : device_(device), rust_ap_(nullptr, ap_
       .configure_bss = [](void* mlme, wlan_bss_config_t* cfg) -> zx_status_t {
         return MLME(mlme)->device_->ConfigureBss(cfg);
       },
-      .enable_beaconing = [](void* mlme, const uint8_t* beacon_tmpl_data, size_t beacon_tmpl_len,
-                             size_t tim_ele_offset, uint16_t beacon_interval) -> zx_status_t {
+      .enable_beaconing = [](void* mlme, mlme_out_buf_t buf, size_t tim_ele_offset,
+                             uint16_t beacon_interval) -> zx_status_t {
+        auto pkt = FromRustOutBuf(buf);
         wlan_bcn_config_t bcn_cfg = {
             .tmpl =
                 {
                     .packet_head =
                         {
-                            .data_buffer = beacon_tmpl_data,
-                            .data_size = beacon_tmpl_len,
+                            .data_buffer = pkt->data(),
+                            .data_size = pkt->size(),
                         },
                 },
             .tim_ele_offset = tim_ele_offset,
@@ -62,6 +63,9 @@ ApMlme::ApMlme(DeviceInterface* device) : device_(device), rust_ap_(nullptr, ap_
       },
       .disable_beaconing = [](void* mlme) -> zx_status_t {
         return MLME(mlme)->device_->EnableBeaconing(nullptr);
+      },
+      .configure_beacon = [](void* mlme, mlme_out_buf_t buf) -> zx_status_t {
+        return MLME(mlme)->device_->ConfigureBeacon(FromRustOutBuf(buf));
       },
       .set_link_status = [](void* mlme, uint8_t status) -> zx_status_t {
         (void)mlme;

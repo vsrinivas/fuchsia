@@ -295,7 +295,7 @@ impl Ap {
         };
 
         if let Err(e) = bss.handle_hw_indication(&mut self.ctx, ind) {
-            log!(e.log_level(), "failed to handle HW indication {:?}: {}", ind, e)
+            error!("failed to handle HW indication {:?}: {}", ind, e)
         }
     }
 }

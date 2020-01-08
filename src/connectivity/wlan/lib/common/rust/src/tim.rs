@@ -1,6 +1,4 @@
-use crate::{
-    mac::{Aid, MAX_AID},
-};
+use crate::mac::{Aid, MAX_AID};
 
 const TIM_BITMAP_LEN: usize = (MAX_AID as usize + 1) / 8;
 
@@ -15,15 +13,14 @@ impl TrafficIndicationMap {
 
     /// Sets a given AID to have buffered traffic (or not) in the traffic indication map.
     ///
-    /// There is no special handling for AID 0 (i.e. for group traffic), and should not be set as
-    /// the TIM header will indicate it, as per IEEE Std 802.11-2016, 9.4.2.6: The bit numbered 0 in
-    /// the traffic indication virtual bitmap need not be included in the Partial Virtual Bitmap
-    /// field even if that bit is set.
+    /// There is no special handling for AID 0 (i.e. for group traffic), we do not set it as the TIM
+    /// header will indicate it, as per IEEE Std 802.11-2016, 9.4.2.6: The bit numbered 0 in the
+    /// traffic indication virtual bitmap need not be included in the Partial Virtual Bitmap field
+    /// even if that bit is set.
     pub fn set_traffic_buffered(&mut self, aid: Aid, buffered: bool) {
         let octet = aid as usize / 8;
         let bit_offset = aid as usize % 8;
-        self.0[octet] =
-            (self.0[octet] & !(1 << bit_offset)) | ((buffered as u8) << bit_offset)
+        self.0[octet] = (self.0[octet] & !(1 << bit_offset)) | ((buffered as u8) << bit_offset)
     }
 
     /// IEEE Std 802.11-2016, 9.4.2.6: N1 is the largest even number such that bits numbered 1 to
@@ -42,8 +39,8 @@ impl TrafficIndicationMap {
         0
     }
 
-     /// IEEE Std 802.11-2016, 9.4.2.6: N2 is the smallest number such that bits numbered
-     /// (N2 + 1) * 8 to 2007 in the traffic indication virtual bitmap are all 0.
+    /// IEEE Std 802.11-2016, 9.4.2.6: N2 is the smallest number such that bits numbered
+    /// (N2 + 1) * 8 to 2007 in the traffic indication virtual bitmap are all 0.
     fn n2(&self) -> usize {
         // TODO(40099): Consider using u64 and CLZ instead of checking all the bytes individually.
         for (i, b) in self.0.iter().enumerate().rev() {
@@ -54,33 +51,21 @@ impl TrafficIndicationMap {
 
         0
     }
-}
 
-/// A view into TrafficIndicationMap suitable for use as a TIM IE.
-struct PartialVirtualBitmap<'a> {
-    pub offset: u8,
-    pub bitmap: &'a [u8],
-}
-
-impl<'a> From<&'a TrafficIndicationMap> for PartialVirtualBitmap<'a> {
-    fn from(tim: &'a TrafficIndicationMap) -> Self {
+    /// Creates a view into TrafficIndicationMap suitable for use in a TIM IE.
+    pub fn make_partial_virtual_bitmap(&self) -> (u8, &[u8]) {
         // Invariant: n1 <= n2. This is guaranteed as n1 scans from the front and n2 scans from the
         // back, so the range of n1..n2 is always non-decreasing.
-        let n1 = tim.n1();
-        let n2 = tim.n2();
-
-        Self {
-            offset: (n1 / 2) as u8,
-
-            // IEEE Std 802.11-2016, 9.4.2.6: In the event that all bits other than bit 0 in the
-            // traffic indication virtual bitmap are 0, the Partial Virtual Bitmap field is
-            // encoded as a single octet equal to 0, [...].
-            //
-            // We always have at least one item in the bitmap here, even if there are no items in
-            // the traffic indication bitmap: both n1 and n2 will be 0, which will take the first
-            // octet from the bitmap (which will always be 0).
-            bitmap: &tim.0[n1..n2 + 1],
-        }
+        let n1 = self.n1();
+        let n2 = self.n2();
+        // IEEE Std 802.11-2016, 9.4.2.6: In the event that all bits other than bit 0 in the traffic
+        // indication virtual bitmap are 0, the Partial Virtual Bitmap field is encoded as a single
+        // octet equal to 0, [...].
+        //
+        // We always have at least one item in the bitmap here, even if there are no items in the
+        // traffic indication bitmap: both n1 and n2 will be 0, which will take the first octet from
+        // the bitmap (which will always be 0).
+        ((n1 / 2) as u8, &self.0[n1..n2 + 1])
     }
 }
 
@@ -154,50 +139,23 @@ mod tests {
     }
 
     #[test]
-    fn traffic_indication_map_set_traffic_buffered_multiple_octets_offset() {
-        let mut tim = TrafficIndicationMap::new();
-        tim.set_traffic_buffered(20, true);
-        tim.set_traffic_buffered(35, true);
-        let mut expected_bitmap = [0; TIM_BITMAP_LEN];
-        expected_bitmap[2] = 0b00010000;
-        expected_bitmap[4] = 0b00001000;
-        assert_eq!(&tim.0[..], &expected_bitmap[..]);
-        assert_eq!(tim.n1(), 2);
-        assert_eq!(tim.n2(), 4);
-    }
-
-    #[test]
-    fn traffic_indication_map_set_traffic_unbuffered() {
-        let mut tim = TrafficIndicationMap::new();
-        tim.set_traffic_buffered(12, true);
-        tim.set_traffic_buffered(12, false);
-        assert_eq!(&tim.0[..], &[0; TIM_BITMAP_LEN][..]);
-        assert_eq!(tim.n1(), 0);
-        assert_eq!(tim.n2(), 0);
-    }
-
-    #[test]
     fn from_partial_virtual_bitmap() {
         let mut tim = TrafficIndicationMap::new();
         tim.set_traffic_buffered(12, true);
-
-        let partial = PartialVirtualBitmap::from(&tim);
-        assert_eq!(partial.offset, 0);
-        assert_eq!(partial.bitmap, &[0b00000000, 0b00010000]);
-
-        assert!(is_traffic_buffered(partial.offset, partial.bitmap, 12));
+        let (offset, bitmap) = tim.make_partial_virtual_bitmap();
+        assert_eq!(offset, 0);
+        assert_eq!(bitmap, &[0b00000000, 0b00010000]);
+        assert!(is_traffic_buffered(offset, bitmap, 12));
     }
 
     #[test]
     fn from_partial_virtual_bitmap_bigger_offset() {
         let mut tim = TrafficIndicationMap::new();
         tim.set_traffic_buffered(49, true);
-
-        let partial = PartialVirtualBitmap::from(&tim);
-        assert_eq!(partial.offset, 3);
-        assert_eq!(partial.bitmap, &[0b00000010]);
-
-        assert!(is_traffic_buffered(partial.offset, partial.bitmap, 49));
+        let (offset, bitmap) = tim.make_partial_virtual_bitmap();
+        assert_eq!(offset, 3);
+        assert_eq!(bitmap, &[0b00000010]);
+        assert!(is_traffic_buffered(offset, bitmap, 49));
     }
 
     #[test]
@@ -205,21 +163,18 @@ mod tests {
         let mut tim = TrafficIndicationMap::new();
         tim.set_traffic_buffered(12, true);
         tim.set_traffic_buffered(35, true);
-
-        let partial = PartialVirtualBitmap::from(&tim);
-        assert_eq!(partial.offset, 0);
-        assert_eq!(partial.bitmap, &[0b00000000, 0b00010000, 0b00000000, 0b00000000, 0b00001000]);
-
-        assert!(is_traffic_buffered(partial.offset, partial.bitmap, 12));
-        assert!(is_traffic_buffered(partial.offset, partial.bitmap, 35));
+        let (offset, bitmap) = tim.make_partial_virtual_bitmap();
+        assert_eq!(offset, 0);
+        assert_eq!(bitmap, &[0b00000000, 0b00010000, 0b00000000, 0b00000000, 0b00001000]);
+        assert!(is_traffic_buffered(offset, bitmap, 12));
+        assert!(is_traffic_buffered(offset, bitmap, 35));
     }
 
     #[test]
     fn from_partial_virtual_bitmap_no_traffic() {
         let tim = TrafficIndicationMap::new();
-
-        let partial = PartialVirtualBitmap::from(&tim);
-        assert_eq!(partial.offset, 0);
-        assert_eq!(partial.bitmap, &[0b00000000]);
+        let (offset, bitmap) = tim.make_partial_virtual_bitmap();
+        assert_eq!(offset, 0);
+        assert_eq!(bitmap, &[0b00000000]);
     }
 }

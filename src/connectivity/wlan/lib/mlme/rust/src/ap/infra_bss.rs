@@ -5,11 +5,11 @@
 use {
     crate::{
         ap::{
-            frame_writer::{write_beacon_frame, BeaconOffloadParams},
+            frame_writer::BeaconOffloadParams,
             remote_client::{ClientRejection, RemoteClient},
             Context, Rejection, TimedEvent,
         },
-        buffer::OutBuf,
+        buffer::{InBuf, OutBuf},
         device::TxFlags,
         error::Error,
         key::KeyConfig,
@@ -20,12 +20,12 @@ use {
     banjo_ddk_protocol_wlan_info::{WlanChannel, WlanChannelBandwidth},
     banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
+    log::error,
     std::collections::HashMap,
     wlan_common::{
-        appendable::Appendable,
         ie,
         mac::{self, CapabilityInfo, MacAddr},
-        TimeUnit,
+        tim, TimeUnit,
     },
     zerocopy::ByteSlice,
 };
@@ -89,11 +89,13 @@ impl InfraBss {
 
         // TODO(37891): Support DTIM.
 
-        // We only support drivers that perform beaconing in hardware, for now.
-        let mut buf = vec![];
-        let beacon_offload_params = bss.write_beacon_template(ctx, &mut buf)?;
+        let (in_buf, bytes_written, beacon_offload_params) = bss.make_beacon_frame(ctx)?;
         ctx.device
-            .enable_beaconing(&buf, beacon_offload_params.tim_ele_offset, beacon_interval)
+            .enable_beaconing(
+                OutBuf::from(in_buf, bytes_written),
+                beacon_offload_params.tim_ele_offset,
+                beacon_interval,
+            )
             .map_err(|s| Error::Status(format!("failed to enable beaconing"), s))?;
 
         Ok(bss)
@@ -103,6 +105,20 @@ impl InfraBss {
         ctx.device
             .disable_beaconing()
             .map_err(|s| Error::Status(format!("failed to disable beaconing"), s))
+    }
+
+    fn make_tim(&self) -> tim::TrafficIndicationMap {
+        let mut tim = tim::TrafficIndicationMap::new();
+        for client in self.clients.values() {
+            let aid = match client.aid() {
+                Some(aid) => aid,
+                None => {
+                    continue;
+                }
+            };
+            tim.set_traffic_buffered(aid, client.has_buffered_frames());
+        }
+        tim
     }
 
     pub fn handle_mlme_setkeys_req(
@@ -203,20 +219,29 @@ impl InfraBss {
             .map_err(|e| make_client_error(client.addr, e))
     }
 
-    fn write_beacon_template<B: Appendable>(
+    fn make_beacon_frame(
         &self,
         ctx: &Context,
-        buf: &mut B,
-    ) -> Result<BeaconOffloadParams, Error> {
-        write_beacon_frame(
-            buf,
-            ctx.bssid,
+    ) -> Result<(InBuf, usize, BeaconOffloadParams), Error> {
+        let tim = self.make_tim();
+        let (pvb_offset, pvb_bitmap) = tim.make_partial_virtual_bitmap();
+
+        ctx.make_beacon_frame(
             0,
             self.beacon_interval,
             self.capabilities,
             &self.ssid,
             &self.rates,
             self.channel,
+            ie::TimHeader {
+                // TODO(41759): Handle DTIM and group traffic.
+                dtim_count: 0,
+                dtim_period: 0,
+                bmp_ctrl: ie::BitmapControl(0)
+                    .with_group_traffic(false)
+                    .with_offset(pvb_offset),
+            },
+            pvb_bitmap,
             self.rsne.as_ref().map_or(&[], |rsne| &rsne),
         )
     }
@@ -324,6 +349,18 @@ impl InfraBss {
             return Err(Rejection::Client(client_addr, e));
         }
 
+        // IEEE Std 802.11-2016, 9.2.4.1.7: The value [of the Power Management subfield] indicates
+        // the mode of the STA after the successful completion of the frame exchange sequence.
+        match client.set_power_state(ctx, { mgmt_hdr.frame_ctrl }.power_mgmt()) {
+            Err(ClientRejection::NotAssociated) => {
+                error!("client {:02X?} tried to doze but is not associated", client_addr);
+            }
+            Err(e) => {
+                return Err(Rejection::Client(client.addr, e));
+            }
+            Ok(()) => {}
+        }
+
         if client.deauthenticated() {
             if new_client.is_none() {
                 // The client needs to be removed from the map, as it was not freshly allocated from
@@ -371,9 +408,24 @@ impl InfraBss {
             .clients
             .get_mut(&src_addr)
             .unwrap_or_else(|| maybe_client.get_or_insert(RemoteClient::new(src_addr)));
+
         client
             .handle_data_frame(ctx, fixed_fields, addr4, qos_ctrl, body)
-            .map_err(|e| Rejection::Client(client.addr, e))
+            .map_err(|e| Rejection::Client(client.addr, e))?;
+
+        // IEEE Std 802.11-2016, 9.2.4.1.7: The value [of the Power Management subfield] indicates
+        // the mode of the STA after the successful completion of the frame exchange sequence.
+        match client.set_power_state(ctx, { fixed_fields.frame_ctrl }.power_mgmt()) {
+            Err(ClientRejection::NotAssociated) => {
+                error!("client {:02X?} tried to doze but is not associated", client.addr);
+            }
+            Err(e) => {
+                return Err(Rejection::Client(client.addr, e));
+            }
+            Ok(()) => {}
+        }
+
+        Ok(())
     }
 
     pub fn handle_eth_frame(&mut self, ctx: &mut Context, frame: &[u8]) -> Result<(), Rejection> {
@@ -396,7 +448,7 @@ impl InfraBss {
         &mut self,
         ctx: &mut Context,
         ind: banjo_wlan_mac::WlanIndication,
-    ) -> Result<(), Rejection> {
+    ) -> Result<(), Error> {
         match ind {
             banjo_wlan_mac::WlanIndication::PRE_TBTT => self.handle_pre_tbtt_hw_indication(ctx),
             banjo_wlan_mac::WlanIndication::BCN_TX_COMPLETE => {
@@ -404,19 +456,23 @@ impl InfraBss {
             }
             _ => {
                 // Ignore unknown HW indications.
+                error!("unknown HW indication: {:?}", ind);
                 Ok(())
             }
         }
     }
 
-    pub fn handle_pre_tbtt_hw_indication(&mut self, _ctx: &mut Context) -> Result<(), Rejection> {
+    pub fn handle_pre_tbtt_hw_indication(&mut self, ctx: &mut Context) -> Result<(), Error> {
+        // We don't need the parameters here again (i.e. tim_ele_offset), as the offset of the TIM
+        // element never changes within the beacon frame template.
+        let (in_buf, bytes_written, _) = self.make_beacon_frame(ctx)?;
+        ctx.device
+            .configure_beacon(OutBuf::from(in_buf, bytes_written))
+            .map_err(|s| Error::Status(format!("failed to enable beaconing"), s))?;
         Ok(())
     }
 
-    pub fn handle_bcn_tx_complete_indication(
-        &mut self,
-        _ctx: &mut Context,
-    ) -> Result<(), Rejection> {
+    pub fn handle_bcn_tx_complete_indication(&mut self, _ctx: &mut Context) -> Result<(), Error> {
         Ok(())
     }
 
@@ -2007,6 +2063,141 @@ mod tests {
             )
             .expect_err("expected InfraBss::handle_mgmt_frame error"),
             Rejection::OtherBss
+        );
+    }
+
+    #[test]
+    fn make_tim() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::new ok");
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
+        client
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .expect("expected OK");
+        client
+            .handle_mlme_assoc_resp(
+                &mut ctx,
+                false,
+                1,
+                mac::CapabilityInfo(0),
+                fidl_mlme::AssociateResultCodes::Success,
+                1,
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            )
+            .expect("expected OK");
+        client.set_power_state(&mut ctx, mac::PowerState::DOZE).expect("expected doze OK");
+
+        bss.handle_eth_frame(
+            &mut ctx,
+            &make_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..]),
+        )
+        .expect("expected OK");
+
+        let tim = bss.make_tim();
+        let (pvb_offset, pvb_bitmap) = tim.make_partial_virtual_bitmap();
+        assert_eq!(pvb_offset, 0);
+        assert_eq!(pvb_bitmap, &[0b00000010][..]);
+    }
+
+    #[test]
+    fn make_tim_empty() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let bss = InfraBss::new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::new ok");
+
+        let tim = bss.make_tim();
+        let (pvb_offset, pvb_bitmap) = tim.make_partial_virtual_bitmap();
+        assert_eq!(pvb_offset, 0);
+        assert_eq!(pvb_bitmap, &[0b00000000][..]);
+    }
+
+    #[test]
+    fn handle_pre_tbtt_hw_indication() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::new ok");
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
+        client
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .expect("expected OK");
+        client
+            .handle_mlme_assoc_resp(
+                &mut ctx,
+                false,
+                1,
+                mac::CapabilityInfo(0),
+                fidl_mlme::AssociateResultCodes::Success,
+                1,
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            )
+            .expect("expected OK");
+        client.set_power_state(&mut ctx, mac::PowerState::DOZE).expect("expected doze OK");
+
+        bss.handle_eth_frame(
+            &mut ctx,
+            &make_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..]),
+        )
+        .expect("expected OK");
+
+        bss.handle_pre_tbtt_hw_indication(&mut ctx)
+            .expect("expected handle pre-TBTT hw indication OK");
+
+        let (bcn, _, _) = fake_device.bcn_cfg.expect("expected beacon configuration");
+        assert_eq!(
+            &bcn[..],
+            &[
+                // Mgmt header
+                0b10000000, 0, // Frame Control
+                0, 0, // Duration
+                255, 255, 255, 255, 255, 255, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                100, 0, // Beacon interval
+                0, 0, // Capabilities
+                // IEs:
+                0, 7, 99, 111, 111, 108, 110, 101, 116, // SSID
+                1, 1, 248, // Supported rates
+                3, 1, 1, // DSSS parameter set
+                5, 4, 0, 0, 0, 2, // TIM
+            ][..],
         );
     }
 }

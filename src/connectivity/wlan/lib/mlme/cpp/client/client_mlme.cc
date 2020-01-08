@@ -95,13 +95,17 @@ zx_status_t ClientMlme::Init() {
       .configure_bss = [](void* device, wlan_bss_config_t* cfg) -> zx_status_t {
         return DEVICE(device)->ConfigureBss(cfg);
       },
-      .enable_beaconing = [](void* device, const uint8_t* beacon_tmpl_data, size_t beacon_tmpl_len,
-                             size_t tim_ele_offset, uint16_t beacon_interval) -> zx_status_t {
+      .enable_beaconing = [](void* device, mlme_out_buf_t buf, size_t tim_ele_offset,
+                             uint16_t beacon_interval) -> zx_status_t {
         // The client never needs to enable beaconing.
         return ZX_ERR_NOT_SUPPORTED;
       },
       .disable_beaconing = [](void* device) -> zx_status_t {
         // The client never needs to disable beaconing.
+        return ZX_ERR_NOT_SUPPORTED;
+      },
+      .configure_beacon = [](void* device, mlme_out_buf_t buf) -> zx_status_t {
+        // The client never needs to enable beaconing.
         return ZX_ERR_NOT_SUPPORTED;
       },
       .set_link_status = [](void* device,

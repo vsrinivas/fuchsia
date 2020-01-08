@@ -261,7 +261,6 @@ impl Context {
 
     /// Sends a WLAN probe response frame (IEEE Std 802.11-2016, 9.3.3.11) to the PHY.
     // TODO(42088): Use this for devices that don't support probe request offload.
-    #[allow(dead_code)]
     pub fn make_probe_resp_frame(
         &mut self,
         addr: MacAddr,
@@ -304,6 +303,49 @@ impl Context {
         Ok((buf, bytes_written))
     }
 
+    pub fn make_beacon_frame(
+        &self,
+        timestamp: u64,
+        beacon_interval: TimeUnit,
+        capabilities: mac::CapabilityInfo,
+        ssid: &[u8],
+        rates: &[u8],
+        channel: u8,
+        tim_header: ie::TimHeader,
+        tim_bitmap: &[u8],
+        rsne: &[u8],
+    ) -> Result<(InBuf, usize, BeaconOffloadParams), Error> {
+        let frame_len = frame_len!(mac::MgmtHdr, mac::BeaconHdr);
+        let ssid_len = IE_PREFIX_LEN + ssid.len();
+        let dsss_len = IE_PREFIX_LEN + std::mem::size_of::<ie::DsssParamSet>();
+        let rates_len = IE_PREFIX_LEN
+            + rates.len()
+            // If there are too many rates, they will be split into two IEs.
+            // In this case, the total length would be the sum of:
+            // 1) 1st IE: IE_PREFIX_LEN + SUPPORTED_RATES_MAX_LEN
+            // 2) 2nd IE: IE_PREFIX_LEN + rates().len - SUPPORTED_RATES_MAX_LEN
+            // The total length is IE_PREFIX_LEN + rates.len() + IE_PREFIX_LEN.
+            + if rates.len() > SUPPORTED_RATES_MAX_LEN { IE_PREFIX_LEN } else { 0 };
+        let tim_len = IE_PREFIX_LEN + std::mem::size_of::<ie::TimHeader>() + tim_bitmap.len();
+        let frame_len = frame_len + ssid_len + rates_len + dsss_len + tim_len + rsne.len();
+        let mut buf = self.buf_provider.get_buffer(frame_len)?;
+        let mut w = BufferWriter::new(&mut buf[..]);
+        let params = write_beacon_frame(
+            &mut w,
+            self.bssid,
+            timestamp,
+            beacon_interval,
+            capabilities,
+            ssid,
+            rates,
+            channel,
+            tim_header,
+            tim_bitmap,
+            rsne,
+        )?;
+        let bytes_written = w.bytes_written();
+        Ok((buf, bytes_written, params))
+    }
     /// Sends a WLAN data frame (IEEE Std 802.11-2016, 9.3.2) to the PHY.
     pub fn make_data_frame(
         &mut self,
@@ -727,6 +769,51 @@ mod test {
                 48, 2, 77, 88, // RSNE
             ][..]
         );
+    }
+
+    #[test]
+    fn make_beacon_frame() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        let (in_buf, bytes_written, params) = ctx
+            .make_beacon_frame(
+                0,
+                TimeUnit(10),
+                mac::CapabilityInfo(33),
+                &[1, 2, 3, 4, 5],
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+                2,
+                ie::TimHeader { dtim_count: 1, dtim_period: 2, bmp_ctrl: ie::BitmapControl(0) },
+                &[1, 2, 3][..],
+                &[48, 2, 77, 88][..],
+            )
+            .expect("error making probe resp frame");
+        assert_eq!(
+            &in_buf.as_slice()[..bytes_written],
+            &[
+                // Mgmt header
+                0b10000000, 0, // Frame Control
+                0, 0, // Duration
+                255, 255, 255, 255, 255, 255, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                10, 0, // Beacon interval
+                33, 0, // Capabilities
+                // IEs:
+                0, 5, 1, 2, 3, 4, 5, // SSID
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Supported rates
+                3, 1, 2, // DSSS parameter set
+                5, 6, 1, 2, 0, 1, 2, 3, // TIM
+                50, 2, 9, 10, // Extended rates
+                48, 2, 77, 88, // RSNE
+            ][..]
+        );
+        assert_eq!(params.tim_ele_offset, 56);
     }
 
     #[test]

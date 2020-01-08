@@ -106,13 +106,16 @@ typedef struct {
   /**
    * Enable hardware offload of beaconing on the device.
    */
-  int32_t (*enable_beaconing)(void *device, const uint8_t *beacon_tmpl_data,
-                              uintptr_t beacon_tmpl_len, uintptr_t tim_ele_offset,
+  int32_t (*enable_beaconing)(void *device, mlme_out_buf_t buf, uintptr_t tim_ele_offset,
                               uint16_t beacon_interval);
   /**
    * Disable beaconing on the device.
    */
   int32_t (*disable_beaconing)(void *device);
+  /**
+   * Reconfigure the enabled beacon on the device.
+   */
+  int32_t (*configure_beacon)(void *device, mlme_out_buf_t buf);
   /**
    * Sets the link status to be UP or DOWN.
    */

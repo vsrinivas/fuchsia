@@ -70,13 +70,14 @@ pub struct Device {
     /// Enable hardware offload of beaconing on the device.
     enable_beaconing: extern "C" fn(
         device: *mut c_void,
-        beacon_tmpl_data: *const u8,
-        beacon_tmpl_len: usize,
+        buf: OutBuf,
         tim_ele_offset: usize,
         beacon_interval: u16,
     ) -> i32,
     /// Disable beaconing on the device.
     disable_beaconing: extern "C" fn(device: *mut c_void) -> i32,
+    /// Reconfigure the enabled beacon on the device.
+    configure_beacon: extern "C" fn(device: *mut c_void, buf: OutBuf) -> i32,
     /// Sets the link status to be UP or DOWN.
     set_link_status: extern "C" fn(device: *mut c_void, status: u8) -> i32,
     /// Configure the association context.
@@ -149,22 +150,22 @@ impl Device {
 
     pub fn enable_beaconing(
         &self,
-        beacon_tmpl: &[u8],
+        buf: OutBuf,
         tim_ele_offset: usize,
         beacon_interval: TimeUnit,
     ) -> Result<(), zx::Status> {
-        let status = (self.enable_beaconing)(
-            self.device,
-            beacon_tmpl.as_ptr(),
-            beacon_tmpl.len(),
-            tim_ele_offset,
-            beacon_interval.into(),
-        );
+        let status =
+            (self.enable_beaconing)(self.device, buf, tim_ele_offset, beacon_interval.into());
         zx::ok(status)
     }
 
     pub fn disable_beaconing(&self) -> Result<(), zx::Status> {
         let status = (self.disable_beaconing)(self.device);
+        zx::ok(status)
+    }
+
+    pub fn configure_beacon(&self, buf: OutBuf) -> Result<(), zx::Status> {
+        let status = (self.configure_beacon)(self.device, buf);
         zx::ok(status)
     }
 
@@ -206,7 +207,12 @@ macro_rules! arr {
 
 #[cfg(test)]
 mod test_utils {
-    use {super::*, banjo_ddk_hw_wlan_ieee80211::*, banjo_ddk_hw_wlan_wlaninfo::*};
+    use {
+        super::*,
+        crate::buffer::{BufferProvider, FakeBufferProvider},
+        banjo_ddk_hw_wlan_ieee80211::*,
+        banjo_ddk_hw_wlan_wlaninfo::*,
+    };
 
     pub struct FakeDevice {
         pub eth_queue: Vec<Vec<u8>>,
@@ -220,6 +226,7 @@ mod test_utils {
         pub bcn_cfg: Option<(Vec<u8>, usize, TimeUnit)>,
         pub link_status: LinkStatus,
         pub assocs: std::collections::HashMap<MacAddr, WlanAssocCtx>,
+        pub buffer_provider: BufferProvider,
     }
 
     impl FakeDevice {
@@ -241,6 +248,7 @@ mod test_utils {
                 bcn_cfg: None,
                 link_status: LinkStatus::DOWN,
                 assocs: std::collections::HashMap::new(),
+                buffer_provider: FakeBufferProvider::new(),
             }
         }
 
@@ -339,17 +347,14 @@ mod test_utils {
 
         pub extern "C" fn enable_beaconing(
             device: *mut c_void,
-            beacon_tmpl_data: *const u8,
-            beacon_tmpl_len: usize,
+            buf: OutBuf,
             tim_ele_offset: usize,
             beacon_interval: u16,
         ) -> i32 {
             unsafe {
-                (*(device as *mut Self)).bcn_cfg = Some((
-                    std::slice::from_raw_parts(beacon_tmpl_data, beacon_tmpl_len).to_vec(),
-                    tim_ele_offset,
-                    TimeUnit(beacon_interval),
-                ));
+                (*(device as *mut Self)).bcn_cfg =
+                    Some((buf.as_slice().to_vec(), tim_ele_offset, TimeUnit(beacon_interval)));
+                buf.free();
             }
             zx::sys::ZX_OK
         }
@@ -359,6 +364,20 @@ mod test_utils {
                 (*(device as *mut Self)).bcn_cfg = None;
             }
             zx::sys::ZX_OK
+        }
+
+        pub extern "C" fn configure_beacon(device: *mut c_void, buf: OutBuf) -> i32 {
+            unsafe {
+                if let Some((_, tim_ele_offset, beacon_interval)) = (*(device as *mut Self)).bcn_cfg
+                {
+                    (*(device as *mut Self)).bcn_cfg =
+                        Some((buf.as_slice().to_vec(), tim_ele_offset, beacon_interval));
+                    buf.free();
+                    zx::sys::ZX_OK
+                } else {
+                    zx::sys::ZX_ERR_BAD_STATE
+                }
+            }
         }
 
         pub extern "C" fn configure_assoc(device: *mut c_void, cfg: *mut WlanAssocCtx) -> i32 {
@@ -409,6 +428,7 @@ mod test_utils {
                 configure_bss: Self::configure_bss,
                 enable_beaconing: Self::enable_beaconing,
                 disable_beaconing: Self::disable_beaconing,
+                configure_beacon: Self::configure_beacon,
                 set_link_status: Self::set_link_status,
                 configure_assoc: Self::configure_assoc,
                 clear_assoc: Self::clear_assoc,
@@ -684,10 +704,48 @@ mod tests {
     fn enable_disable_beaconing() {
         let mut fake_device = FakeDevice::new();
         let dev = fake_device.as_device();
-        dev.enable_beaconing(&[1, 2, 3, 4][..], 1, TimeUnit(2)).expect("error enabling beaconing");
-        assert!(fake_device.bcn_cfg.is_some());
+
+        let mut in_buf = fake_device.buffer_provider.get_buffer(4).expect("error getting buffer");
+        in_buf.as_mut_slice().copy_from_slice(&[1, 2, 3, 4][..]);
+
+        dev.enable_beaconing(OutBuf::from(in_buf, 4), 1, TimeUnit(2))
+            .expect("error enabling beaconing");
+        assert_variant!(
+            fake_device.bcn_cfg.as_ref(),
+            Some((buf, tim_ele_offset, beacon_interval)) => {
+                assert_eq!(&buf[..], &[1, 2, 3, 4][..]);
+                assert_eq!(*tim_ele_offset, 1);
+                assert_eq!(*beacon_interval, TimeUnit(2));
+            });
         dev.disable_beaconing().expect("error disabling beaconing");
-        assert!(fake_device.bcn_cfg.is_none());
+        assert_variant!(fake_device.bcn_cfg.as_ref(), None);
+    }
+
+    #[test]
+    fn configure_beacon() {
+        let mut fake_device = FakeDevice::new();
+        let dev = fake_device.as_device();
+
+        {
+            let mut in_buf =
+                fake_device.buffer_provider.get_buffer(4).expect("error getting buffer");
+            in_buf.as_mut_slice().copy_from_slice(&[1, 2, 3, 4][..]);
+            dev.enable_beaconing(OutBuf::from(in_buf, 4), 1, TimeUnit(2))
+                .expect("error enabling beaconing");
+            assert_variant!(fake_device.bcn_cfg.as_ref(), Some((buf, _, _)) => {
+                assert_eq!(&buf[..], &[1, 2, 3, 4][..]);
+            });
+        }
+
+        {
+            let mut in_buf =
+                fake_device.buffer_provider.get_buffer(4).expect("error getting buffer");
+            in_buf.as_mut_slice().copy_from_slice(&[1, 2, 3, 5][..]);
+            dev.configure_beacon(OutBuf::from(in_buf, 4)).expect("error enabling beaconing");
+            assert_variant!(fake_device.bcn_cfg.as_ref(), Some((buf, _, _)) => {
+                assert_eq!(&buf[..], &[1, 2, 3, 5][..]);
+            });
+        }
     }
 
     #[test]
