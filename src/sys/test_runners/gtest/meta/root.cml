@@ -1,0 +1,33 @@
+{
+    storage: [
+        {
+            name: "test_storage",
+            from: "#memfs",
+            path: "/memfs"
+        }
+    ],
+    offer: [
+        {
+            storage: "data",
+            from: "#test_storage",
+            to: ["#gtest_runner"]
+        }
+    ],
+    expose: [
+        {
+            service_protocol: "/svc/fuchsia.test.Suite",
+            from: "#gtest_runner"
+        }
+    ],
+    children: [
+        {
+            name: "gtest_runner",
+            url: "fuchsia-pkg://fuchsia.com/gtest_runner#meta/gtest_runner.cm",
+            startup: "eager"
+        },
+        {
+            name: "memfs",
+            url: "fuchsia-pkg://fuchsia.com/gtest_runner#meta/memfs.cm"
+        }
+    ]
+}

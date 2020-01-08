@@ -21,11 +21,30 @@ package("gtest_runner") {
   deps = [
     ":bin",
     ":bin_test",
+    "//src/sys/component_manager/tests/memfs",
   ]
 
   binaries = [
     {
       name = "gtest_runner"
+    },
+    {
+      name = "memfs"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/gtest_runner.cml")
+      dest = "gtest_runner.cm"
+    },
+    {
+      path = rebase_path("meta/root.cml")
+      dest = "root.cm"
+    },
+    {
+      path = rebase_path("meta/memfs.cml")
+      dest = "memfs.cm"
     },
   ]
 }

@@ -1,0 +1,18 @@
+{
+    program: {
+        binary: "bin/gtest_runner"
+    },
+    use: [
+        {
+            storage: "data"
+        }
+    ],
+    // TODO(anmittal): Remove this. It is temporary so that we can run this runner directly from
+    // component_manager_for_test for testing purposes.
+    expose: [
+        {
+            service_protocol: "/svc/fuchsia.test.Suite",
+            from: "self"
+        }
+    ]
+}
