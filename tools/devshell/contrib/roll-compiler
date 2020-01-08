@@ -1,0 +1,147 @@
+#!/usr/bin/env python2.7
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+## Roll a new compiler into goma or into Fuchsia
+
+## Usage: See `fx roll-compiler --help`
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+
+FUCHSIA_DIR = os.path.normpath(
+    os.path.join(__file__, os.pardir, os.pardir, os.pardir, os.pardir))
+JIRI_BIN = os.path.join(FUCHSIA_DIR, '.jiri_root', 'bin')
+CIPD = os.path.join(JIRI_BIN, 'cipd')
+JIRI = os.path.join(JIRI_BIN, 'jiri')
+
+
+def CallCipd(args):
+    with tempfile.NamedTemporaryFile(mode='r', suffix='.json') as f:
+        cmd = [CIPD] + args + ['-json-output', f.name]
+        with open(os.devnull, 'w') as devnull:
+            subprocess.check_call(cmd, stdout=devnull)
+        return json.load(f)['result']
+
+
+def ResolvePackage(package, version):
+    return CallCipd(['describe', package, '-version', version])
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        'fx roll-compiler',
+        description='Roll a new compiler into goma or into Fuchsia',
+        epilog='''
+With multiple --package switches, all packages must resolve successfully
+before commands are run for any package.
+''')
+    parser.add_argument(
+        'to', choices=('goma', 'fuchsia'), help='Either "goma" or "fuchsia"')
+    parser.add_argument('version', nargs='?', help='CIPD version to promote')
+    parser.add_argument(
+        '--package', '-p', action='append', help='CIPD package name')
+    parser.add_argument(
+        '--manifest',
+        default=os.path.join(
+            FUCHSIA_DIR, 'integration', 'fuchsia', 'prebuilts'),
+        help='Jiri manifest file to edit')
+    parser.add_argument('--ref', default='goma', help='CIPD ref to publish')
+    parser.add_argument(
+        '--tag', default='git_revision', help='CIPD tag to publish')
+    parser.add_argument(
+        '--platforms',
+        action='append',
+        metavar='PLATFORM',
+        help='CIPD platforms with matching packages')
+    parser.add_argument(
+        '--dry-run',
+        action='store_const',
+        default=False,
+        const=True,
+        help='Only print final command but do not run it')
+    args = parser.parse_args()
+
+    if args.version is None:
+        # When promoting to Goma (step 1), use the latest package by default.
+        # When promoting to Fuchsia (step 2), use the --ref value, i.e.
+        # the version that was presumably promoted in step 1.
+        args.version = 'latest' if args.to == 'goma' else args.ref
+
+    if not args.platforms:
+        args.platforms = ['linux-arm64', 'linux-amd64', 'mac-amd64']
+
+    if not args.package:
+        args.package = ['fuchsia/third_party/clang']
+
+    def PackageTag(package):
+        [tag] = [
+            tag['tag']
+            for tag in package['tags']
+            if tag['tag'].startswith(args.tag + ':')
+        ]
+        return tag
+
+    def ReifyPackage(package):
+        packages = [
+            ResolvePackage('%s/%s' % (package, platform), args.version)
+            for platform in args.platforms
+        ]
+
+        package_tags = {
+            package['pin']['package']: PackageTag(package)
+            for package in packages
+        }
+        tag_set = set(package_tags.itervalues())
+        if len(tag_set) != 1:
+            sys.stderr.write(
+                'Not all packages have matching %s tags at version %s:\n' %
+                (args.tag, args.version))
+            json.dump(package_tags, sys.stderr, sort_keys=True, indent=4)
+            sys.stderr.write('\n')
+            sys.exit(1)
+        [tag] = tag_set
+
+        print 'Resolved %s (%s) to %s' % (package, args.version, tag)
+        return package, tag
+
+    def DryRun(args):
+        print args
+
+    run = DryRun if args.dry_run else subprocess.check_call
+
+    for package, tag in map(ReifyPackage, args.package):
+        if args.to == 'goma':
+            run(
+                [
+                    CIPD,
+                    'set-ref',
+                    package + '/',
+                    '-ref',
+                    args.ref,
+                    '-version',
+                    tag,
+                ])
+        else:
+            run(
+                [
+                    JIRI,
+                    'edit',
+                    '-package',
+                    '%s/${platform}=%s' % (package, tag),
+                    args.manifest,
+                ])
+
+    if args.to == 'fuchsia':
+        run([os.path.join(FUCHSIA_DIR, 'integration', 'update-lockfiles.sh')])
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
