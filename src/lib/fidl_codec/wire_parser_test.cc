@@ -421,7 +421,7 @@ TEST_DECODE_WIRE(Array2, Array2, R"({"b_2":["1", "2"]})",
                  "{ b_2: #gre#array<int32>#rst# = [ #blu#1#rst#, #blu#2#rst# ] }", two_param_array);
 
 TEST_DECODE_WIRE(NullVector, Vector, R"({"v_1": null})",
-                 "{ v_1: #gre#vector<int32>#rst# = #blu#null#rst# }", nullptr)
+                 "{ v_1: #gre#vector<int32>#rst# = #red#null#rst# }", nullptr)
 
 TEST_DECODE_WIRE(VectorOneElt, Vector, R"({"v_1":["1"]})",
                  "{ v_1: #gre#vector<int32>#rst# = [ #blu#1#rst# ] }", one_param_vector);
@@ -500,11 +500,11 @@ TEST_DECODE_WIRE(
     "    #blu#0#rst#, #blu#1#rst#, #blu#2#rst#, #blu#3#rst#, #blu#4#rst#, #blu#5#rst#, "
     "#blu#6#rst#, #blu#7#rst#, #blu#8#rst#, #blu#9#rst#, #blu#10#rst#, #blu#11#rst#, #blu#12#rst#, "
     "#blu#13#rst#, #blu#14#rst#, #blu#15#rst#, #blu#16#rst#, #blu#17#rst#, #blu#18#rst#, "
-    "#blu#19#rst#, #blu#20#rst#,\n"
+    "#blu#19#rst#, #blu#20#rst#\n"
     "    #blu#21#rst#, #blu#22#rst#, #blu#23#rst#, #blu#24#rst#, #blu#25#rst#, #blu#26#rst#, "
     "#blu#27#rst#, #blu#28#rst#, #blu#29#rst#, #blu#30#rst#, #blu#31#rst#, #blu#32#rst#, "
     "#blu#33#rst#, #blu#34#rst#, #blu#35#rst#, #blu#36#rst#, #blu#37#rst#, #blu#38#rst#, "
-    "#blu#39#rst#,\n"
+    "#blu#39#rst#\n"
     "    #blu#40#rst#\n"
     "  ]\n"
     "}",
@@ -535,7 +535,7 @@ TEST_DECODE_WIRE(
     "  v: #gre#vector<uint32>#rst# = [\n"
     "    #blu#0#rst#, #blu#65537#rst#, #blu#2#rst#, #blu#65539#rst#, #blu#4#rst#, #blu#65541#rst#, "
     "#blu#6#rst#, #blu#65543#rst#, #blu#8#rst#, #blu#65545#rst#, #blu#10#rst#, #blu#65547#rst#, "
-    "#blu#12#rst#, #blu#65549#rst#, #blu#14#rst#,\n"
+    "#blu#12#rst#, #blu#65549#rst#, #blu#14#rst#\n"
     "    #blu#65551#rst#, #blu#16#rst#, #blu#65553#rst#, #blu#18#rst#, #blu#65555#rst#, "
     "#blu#20#rst#, #blu#65557#rst#, #blu#22#rst#, #blu#65559#rst#, #blu#24#rst#, #blu#65561#rst#\n"
     "  ]\n"
@@ -549,7 +549,7 @@ TEST_DECODE_WIRE_PATCHED(
     "  v: #gre#vector<uint32>#rst# = [\n"
     "    #blu#0#rst#, #blu#65537#rst#, #blu#2#rst#, #blu#65539#rst#, #blu#4#rst#, #blu#65541#rst#, "
     "#blu#6#rst#, #blu#65543#rst#, #blu#8#rst#, #blu#65545#rst#, #blu#10#rst#, #blu#65547#rst#, "
-    "#blu#12#rst#, #blu#65549#rst#, #blu#14#rst#,\n"
+    "#blu#12#rst#, #blu#65549#rst#, #blu#14#rst#\n"
     "    #blu#65551#rst#, #blu#16#rst#, #blu#65553#rst#, #blu#18#rst#, #blu#65555#rst#, "
     "#blu#20#rst#, #blu#65557#rst#, #blu#22#rst#, #blu#65559#rst#, #blu#24#rst#, #blu#65561#rst#\n"
     "  ]\n"
@@ -658,8 +658,7 @@ TEST_DECODE_WIRE(
     "{\n"
     "  a: #gre#array<test.fidlcodec.examples/TwoStringStruct>#rst# = [\n"
     "    { value1: #gre#string#rst# = #red#\"harpo\"#rst#, "
-    "value2: #gre#string#rst# = #red#\"chico\"#rst# }\n"
-    "    #red#null#rst#\n"
+    "value2: #gre#string#rst# = #red#\"chico\"#rst# }, #red#null#rst#\n"
     "    { value1: #gre#string#rst# = #red#\"groucho\"#rst#, "
     "value2: #gre#string#rst# = #red#\"zeppo\"#rst# }\n"
     "  ]\n"
@@ -742,9 +741,9 @@ TEST_DECODE_WIRE(VectorStruct, VectorStruct,
                  "{\n"
                  "  v: #gre#vector<test.fidlcodec.examples/SmallStruct>#rst# = [\n"
                  "    { a: #gre#uint8#rst# = #blu#1#rst#, b: #gre#uint8#rst# = #blu#2#rst#, c: "
-                 "#gre#uint8#rst# = #blu#3#rst# },\n"
+                 "#gre#uint8#rst# = #blu#3#rst# }\n"
                  "    { a: #gre#uint8#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst#, c: "
-                 "#gre#uint8#rst# = #blu#6#rst# },\n"
+                 "#gre#uint8#rst# = #blu#6#rst# }\n"
                  "    { a: #gre#uint8#rst# = #blu#3#rst#, b: #gre#uint8#rst# = #blu#6#rst#, c: "
                  "#gre#uint8#rst# = #blu#9#rst# }\n"
                  "  ]\n"
@@ -784,7 +783,7 @@ TEST_DECODE_WIRE(VectorStruct2, VectorStruct2,
                  "{\n"
                  "  v: #gre#vector<test.fidlcodec.examples/SmallUnevenStruct>#rst# = [\n"
                  "    { a: #gre#uint32#rst# = #blu#1#rst#, b: #gre#uint8#rst# = #blu#2#rst# },"
-                 " { a: #gre#uint32#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst# },\n"
+                 " { a: #gre#uint32#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst# }\n"
                  "    { a: #gre#uint32#rst# = #blu#3#rst#, b: #gre#uint8#rst# = #blu#6#rst# }\n"
                  "  ]\n"
                  "}",
@@ -795,8 +794,8 @@ TEST_DECODE_WIRE(ArrayStruct2, ArrayStruct2,
                  R"({"a":[{"a":"1","b":"2"},{"a":"2","b":"4"},{"a":"3","b":"6"}]})",
                  "{\n"
                  "  a: #gre#array<test.fidlcodec.examples/SmallUnevenStruct>#rst# = [\n"
-                 "    { a: #gre#uint32#rst# = #blu#1#rst#, b: #gre#uint8#rst# = #blu#2#rst# }\n"
-                 "    { a: #gre#uint32#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst# }\n"
+                 "    { a: #gre#uint32#rst# = #blu#1#rst#, b: #gre#uint8#rst# = #blu#2#rst# },"
+                 " { a: #gre#uint32#rst# = #blu#2#rst#, b: #gre#uint8#rst# = #blu#4#rst# }\n"
                  "    { a: #gre#uint32#rst# = #blu#3#rst#, b: #gre#uint8#rst# = #blu#6#rst# }\n"
                  "  ]\n"
                  "}",
@@ -969,9 +968,7 @@ TEST_DECODE_WIRE(
     "  a: #gre#array<test.fidlcodec.examples/IntStructUnion>#rst# = [\n"
     "    " +
         Version() +
-        "!{ variant_i: #gre#int32#rst# = #blu#1234#rst# }\n"
-        "    " +
-        "#red#null#rst#\n"
+        "!{ variant_i: #gre#int32#rst# = #blu#1234#rst# }, #red#null#rst#\n"
         "    " +
         Version() +
         "!{\n"
@@ -1463,7 +1460,7 @@ class TraversalMainSupport {
         HandleToPretty("b", out1_.get()) +
         "\n"
         "      }\n"
-        "    },\n"
+        "    }\n"
         "    {\n"
         "      x: #gre#uint32#rst# = #blu#30#rst#\n"
         "      y: #gre#test.fidlcodec.examples/TraversalStruct#rst# = {\n"

@@ -388,7 +388,7 @@ ArrayType::ArrayType(std::unique_ptr<Type>&& component_type, uint32_t count)
     : ElementSequenceType(std::move(component_type)), count_(count) {}
 
 std::unique_ptr<Value> ArrayType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  auto result = std::make_unique<ArrayValue>(this);
+  auto result = std::make_unique<VectorValue>(this);
   for (uint64_t i = 0; i < count_; ++i) {
     result->AddValue(component_type_->Decode(decoder, offset));
     offset += component_type_->InlineSize(decoder->unions_are_xunions());
@@ -402,16 +402,27 @@ VectorType::VectorType(std::unique_ptr<Type>&& component_type)
     : ElementSequenceType(std::move(component_type)) {}
 
 std::unique_ptr<Value> VectorType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  uint64_t size = 0;
-  decoder->GetValueAt(offset, &size);
-  offset += sizeof(size);
+  uint64_t element_count = 0;
+  decoder->GetValueAt(offset, &element_count);
+  offset += sizeof(element_count);
+  bool is_null;
+  uint64_t nullable_offset;
+  if (!decoder->DecodeNullableHeader(
+          offset, element_count * component_type_->InlineSize(decoder->unions_are_xunions()),
+          &is_null, &nullable_offset)) {
+    return std::make_unique<InvalidValue>(this);
+  }
+  if (is_null) {
+    return std::make_unique<NullValue>(this);
+  }
 
-  auto result = std::make_unique<VectorValue>(this, size);
-
-  // Don't need to check return value because the effects of returning false are
-  // dealt with in DecodeNullable.
-  result->DecodeNullable(decoder, offset,
-                         size * component_type_->InlineSize(decoder->unions_are_xunions()));
+  size_t component_size = component_type_->InlineSize(decoder->unions_are_xunions());
+  auto result = std::make_unique<VectorValue>(this);
+  for (uint64_t i = 0;
+       (i < element_count) && ((nullable_offset + component_size) <= decoder->num_bytes()); ++i) {
+    result->AddValue(component_type_->Decode(decoder, nullable_offset));
+    nullable_offset += component_size;
+  }
   return result;
 }
 

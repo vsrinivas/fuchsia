@@ -96,24 +96,6 @@ class NullValue : public Value {
   void Visit(Visitor* visitor) const override;
 };
 
-// Base class for values which are nullable.
-class NullableValue : public Value {
- public:
-  NullableValue(const Type* type) : Value(type) {}
-
-  bool IsNull() const override { return is_null_; }
-
-  bool DecodeNullable(MessageDecoder* decoder, uint64_t offset, uint64_t size);
-
-  // Decode the extra content of the value (in a secondary object).
-  virtual void DecodeContent(MessageDecoder* decoder, uint64_t offset) = 0;
-
-  void Visit(Visitor* visitor) const override;
-
- private:
-  bool is_null_ = false;
-};
-
 // A value with no known representation (we only print the raw data).
 class RawValue : public Value {
  public:
@@ -295,38 +277,30 @@ class UnionValue : public Value {
   const std::unique_ptr<Value> value_;
 };
 
-// An array.
-class ArrayValue : public Value {
- public:
-  ArrayValue(const Type* type) : Value(type) {}
-
-  const std::vector<std::unique_ptr<Value>>& values() const { return values_; }
-
-  void AddValue(std::unique_ptr<Value> value) { values_.push_back(std::move(value)); }
-
-  int DisplaySize(int remaining_size) const override;
-
-  void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
-                   std::string_view line_header, int tabs, int remaining_size,
-                   int max_line_size) const override;
-
-  void Visit(Visitor* visitor) const override;
-
- private:
-  std::vector<std::unique_ptr<Value>> values_;
-};
-
 // A vector.
-class VectorValue : public NullableValue {
+class VectorValue : public Value {
  public:
-  VectorValue(const Type* type, uint64_t size) : NullableValue(type), size_(size) {}
+  explicit VectorValue(const Type* type) : Value(type) {}
 
-  size_t size() const { return size_; }
   const std::vector<std::unique_ptr<Value>>& values() const { return values_; }
 
-  int DisplaySize(int remaining_size) const override;
+  void AddValue(std::unique_ptr<Value> value) {
+    if (value == nullptr) {
+      is_string_ = false;
+    } else {
+      uint8_t uvalue = value->GetUint8Value();
+      if (!std::isprint(uvalue)) {
+        if ((uvalue == '\r') || (uvalue == '\n')) {
+          has_new_line_ = true;
+        } else {
+          is_string_ = false;
+        }
+      }
+    }
+    values_.push_back(std::move(value));
+  }
 
-  void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
+  int DisplaySize(int remaining_size) const override;
 
   void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
                    std::string_view line_header, int tabs, int remaining_size,
@@ -335,9 +309,8 @@ class VectorValue : public NullableValue {
   void Visit(Visitor* visitor) const override;
 
  private:
-  const uint64_t size_;
   std::vector<std::unique_ptr<Value>> values_;
-  bool is_string_ = false;
+  bool is_string_ = true;
   bool has_new_line_ = false;
 };
 

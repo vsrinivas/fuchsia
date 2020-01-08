@@ -46,6 +46,12 @@ class NullVisitor : public TypeVisitor {
     encoder_->WriteValue<uint64_t>(0);
   }
 
+  void VisitVectorType(const VectorType* type) override {
+    FXL_DCHECK(type->Nullable());
+    encoder_->WriteValue<uint64_t>(0);
+    encoder_->WriteValue<uint64_t>(0);
+  }
+
   Encoder* encoder_;
 };
 
@@ -181,30 +187,22 @@ void Encoder::VisitUnionValue(const UnionValue* node) {
   }
 }
 
-void Encoder::VisitArrayValue(const ArrayValue* node) {
-  size_t component_size = node->type()->GetComponentType()->InlineSize(unions_are_xunions_);
-  size_t offset = current_offset_;
+void Encoder::VisitVectorValue(const VectorValue* node) {
+  const Type* component_type = node->type()->GetComponentType();
+  FXL_DCHECK(component_type != nullptr);
+  size_t component_size = component_type->InlineSize(unions_are_xunions_);
+  size_t offset;
+  if (node->type()->IsArray()) {
+    offset = current_offset_;
+  } else {
+    WriteValue<uint64_t>(node->values().size());
+    WriteValue<uint64_t>(UINTPTR_MAX);
+    offset = AllocateObject(component_size * node->values().size());
+  }
   for (const auto& value : node->values()) {
     current_offset_ = offset;
     value->Visit(this);
     offset += component_size;
-  }
-}
-
-void Encoder::VisitVectorValue(const VectorValue* node) {
-  if (node->IsNull()) {
-    WriteValue<uint64_t>(0);
-    WriteValue<uint64_t>(0);
-  } else {
-    WriteValue<uint64_t>(node->size());
-    WriteValue<uint64_t>(UINTPTR_MAX);
-    size_t component_size = node->type()->GetComponentType()->InlineSize(unions_are_xunions_);
-    size_t offset = AllocateObject(component_size * node->values().size());
-    for (const auto& value : node->values()) {
-      current_offset_ = offset;
-      value->Visit(this);
-      offset += component_size;
-    }
   }
 }
 

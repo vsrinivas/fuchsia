@@ -70,7 +70,6 @@ class Encoder : public Visitor {
   void VisitStructValue(const StructValue* node) override;
   void VisitTableValue(const TableValue* node) override;
   void VisitUnionValue(const UnionValue* node) override;
-  void VisitArrayValue(const ArrayValue* node) override;
   void VisitVectorValue(const VectorValue* node) override;
   void VisitEnumValue(const EnumValue* node) override;
   void VisitBitsValue(const BitsValue* node) override;

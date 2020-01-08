@@ -39,6 +39,9 @@ class Type {
   // Return true if the type is a XUnionType.
   virtual bool IsXUnion() const { return false; }
 
+  // Returns true if the type is a ArrayType.
+  virtual bool IsArray() const { return false; }
+
   // Return a readable representation of the type.
   virtual std::string Name() const = 0;
 
@@ -351,6 +354,8 @@ class ElementSequenceType : public Type {
 class ArrayType : public ElementSequenceType {
  public:
   ArrayType(std::unique_ptr<Type>&& component_type, uint32_t count);
+
+  bool IsArray() const override { return true; }
 
   std::string Name() const override {
     return std::string("array<") + component_type_->Name() + ">";

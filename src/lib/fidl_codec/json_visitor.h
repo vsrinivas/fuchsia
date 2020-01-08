@@ -71,27 +71,13 @@ class JsonVisitor : public Visitor {
     node->value()->Visit(&visitor);
   }
 
-  void VisitArrayValue(const ArrayValue* node) override {
+  void VisitVectorValue(const VectorValue* node) override {
     result_->SetArray();
     for (const auto& value : node->values()) {
       rapidjson::Value element;
       JsonVisitor visitor(&element, allocator_);
       value->Visit(&visitor);
       result_->PushBack(element, *allocator_);
-    }
-  }
-
-  void VisitVectorValue(const VectorValue* node) override {
-    if (node->IsNull()) {
-      result_->SetNull();
-    } else {
-      result_->SetArray();
-      for (const auto& value : node->values()) {
-        rapidjson::Value element;
-        JsonVisitor visitor(&element, allocator_);
-        value->Visit(&visitor);
-        result_->PushBack(element, *allocator_);
-      }
     }
   }
 

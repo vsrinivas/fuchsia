@@ -33,38 +33,6 @@ void InvalidValue::Visit(Visitor* visitor) const { visitor->VisitInvalidValue(th
 
 void NullValue::Visit(Visitor* visitor) const { visitor->VisitNullValue(this); }
 
-bool NullableValue::DecodeNullable(MessageDecoder* decoder, uint64_t offset, uint64_t size) {
-  uintptr_t data;
-  if (!decoder->GetValueAt(offset, &data)) {
-    return false;
-  }
-
-  if (data == FIDL_ALLOC_ABSENT) {
-    is_null_ = true;
-    return true;
-  }
-  if (data != FIDL_ALLOC_PRESENT) {
-    if (type() == nullptr) {
-      decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
-                          << ": Invalid value <" << std::hex << data << std::dec
-                          << "> for nullable\n";
-    } else {
-      decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
-                          << ": Invalid value <" << std::hex << data << std::dec
-                          << "> for nullable " << type()->Name() << "\n";
-    }
-    return false;
-  }
-  uint64_t nullable_offset = decoder->next_object_offset();
-  // Set the offset for the next object (just after this one).
-  decoder->SkipObject(size);
-  // Decode the object.
-  DecodeContent(decoder, nullable_offset);
-  return true;
-}
-
-void NullableValue::Visit(Visitor* visitor) const { visitor->VisitNullableValue(this); }
-
 int RawValue::DisplaySize(int /*remaining_size*/) const {
   return (data_.size() == 0) ? 0 : static_cast<int>(data_.size()) * 3 - 1;
 }
@@ -351,52 +319,12 @@ void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors,
 
 void UnionValue::Visit(Visitor* visitor) const { visitor->VisitUnionValue(this); }
 
-int ArrayValue::DisplaySize(int remaining_size) const {
-  int size = 2;
-  for (const auto& value : values_) {
-    // Two characters for ", ".
-    size += value->DisplaySize(remaining_size - size) + 2;
-    if (size > remaining_size) {
-      return size;
-    }
-  }
-  return size;
-}
-
-void ArrayValue::PrettyPrint(std::ostream& os, const Colors& colors,
-                             const fidl_message_header_t* header, std::string_view line_header,
-                             int tabs, int remaining_size, int max_line_size) const {
-  if (values_.empty()) {
-    os << "[]";
-  } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
-    const char* separator = "[ ";
-    for (const auto& value : values_) {
-      os << separator;
-      separator = ", ";
-      value->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size, max_line_size);
-    }
-    os << " ]";
-  } else {
-    os << "[\n";
-    for (const auto& value : values_) {
-      int size = (tabs + 1) * kTabSize;
-      os << line_header << std::string((tabs + 1) * kTabSize, ' ');
-      value->PrettyPrint(os, colors, header, line_header, tabs + 1, max_line_size - size,
-                         max_line_size);
-      os << "\n";
-    }
-    os << line_header << std::string(tabs * kTabSize, ' ') << ']';
-  }
-}
-
-void ArrayValue::Visit(Visitor* visitor) const { visitor->VisitArrayValue(this); }
-
 int VectorValue::DisplaySize(int remaining_size) const {
-  if (IsNull()) {
-    return 4;
+  if (values_.empty()) {
+    return 2;  // The two brackets.
   }
   if (is_string_) {
-    return static_cast<int>(size_ + 2);  // The string and the two quotes.
+    return static_cast<int>(values_.size() + 2);  // The string and the two quotes.
   }
   int size = 0;
   for (const auto& value : values_) {
@@ -411,36 +339,10 @@ int VectorValue::DisplaySize(int remaining_size) const {
   return size;
 }
 
-void VectorValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
-  if (size_ == 0) {
-    return;
-  }
-  is_string_ = true;
-  const Type* component_type = type()->GetComponentType();
-  size_t component_size = component_type->InlineSize(decoder->unions_are_xunions());
-  for (uint64_t i = 0; (i < size_) && (offset + component_size <= decoder->num_bytes()); ++i) {
-    std::unique_ptr<Value> value = component_type->Decode(decoder, offset);
-    if (value != nullptr) {
-      uint8_t uvalue = value->GetUint8Value();
-      if (!std::isprint(uvalue)) {
-        if ((uvalue == '\r') || (uvalue == '\n')) {
-          has_new_line_ = true;
-        } else {
-          is_string_ = false;
-        }
-      }
-      values_.push_back(std::move(value));
-    }
-    offset += component_size;
-  }
-}
-
 void VectorValue::PrettyPrint(std::ostream& os, const Colors& colors,
                               const fidl_message_header_t* header, std::string_view line_header,
                               int tabs, int remaining_size, int max_line_size) const {
-  if (IsNull()) {
-    os << colors.blue << "null" << colors.reset;
-  } else if (values_.empty()) {
+  if (values_.empty()) {
     os << "[]";
   } else if (is_string_) {
     if (has_new_line_) {
@@ -485,7 +387,7 @@ void VectorValue::PrettyPrint(std::ostream& os, const Colors& colors,
         os << line_header << std::string((tabs + 1) * kTabSize, ' ');
         size = (tabs + 1) * kTabSize;
       } else if (value_size + 3 > max_line_size - size) {
-        os << ",\n";
+        os << "\n";
         os << line_header << std::string((tabs + 1) * kTabSize, ' ');
         size = (tabs + 1) * kTabSize;
       } else {

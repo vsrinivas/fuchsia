@@ -16,15 +16,13 @@ class Visitor {
   virtual void VisitValue(const Value* node) {}
   virtual void VisitInvalidValue(const InvalidValue* node) { VisitValue(node); }
   virtual void VisitNullValue(const NullValue* node) { VisitValue(node); }
-  virtual void VisitNullableValue(const NullableValue* node) { VisitValue(node); }
   virtual void VisitRawValue(const RawValue* node) { VisitValue(node); }
   virtual void VisitStructValue(const StructValue* node) { VisitValue(node); }
   virtual void VisitStringValue(const StringValue* node) { VisitValue(node); }
   virtual void VisitBoolValue(const BoolValue* node) { VisitValue(node); }
   virtual void VisitTableValue(const TableValue* node) { VisitValue(node); }
   virtual void VisitUnionValue(const UnionValue* node) { VisitValue(node); }
-  virtual void VisitArrayValue(const ArrayValue* node) { VisitValue(node); }
-  virtual void VisitVectorValue(const VectorValue* node) { VisitNullableValue(node); }
+  virtual void VisitVectorValue(const VectorValue* node) { VisitValue(node); }
   virtual void VisitEnumValue(const EnumValue* node) { VisitValue(node); }
   virtual void VisitBitsValue(const BitsValue* node) { VisitValue(node); }
   virtual void VisitHandleValue(const HandleValue* node) { VisitValue(node); }
@@ -43,7 +41,6 @@ class Visitor {
   friend class Value;
   friend class InvalidValue;
   friend class NullValue;
-  friend class NullableValue;
   friend class RawValue;
   template <typename T>
   friend class NumericValue;
@@ -52,7 +49,6 @@ class Visitor {
   friend class StructValue;
   friend class TableValue;
   friend class UnionValue;
-  friend class ArrayValue;
   friend class VectorValue;
   friend class EnumValue;
   friend class BitsValue;
