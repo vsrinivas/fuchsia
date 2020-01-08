@@ -35,7 +35,8 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
 
   // |media::audio::AudioObject|
   const fbl::RefPtr<Format>& format() const override { return format_; }
-  zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link) override;
+  fit::result<fbl::RefPtr<Stream>, zx_status_t> InitializeDestLink(
+      const fbl::RefPtr<AudioLink>& link) override;
   void CleanupDestLink(const fbl::RefPtr<AudioLink>& link) override;
 
   // |fuchsia::media::AudioRenderer|

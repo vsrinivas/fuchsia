@@ -35,16 +35,19 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& 
   // Create the link.
   fbl::RefPtr<AudioLink> link = fbl::MakeRefCounted<AudioLink>(source, dest);
 
-  // Give source and destination a chance to initialize (or reject) the link.
-  zx_status_t res;
-  res = source->InitializeDestLink(link);
-  if (res != ZX_OK) {
+  auto dest_init_result = source->InitializeDestLink(link);
+  if (dest_init_result.is_error()) {
     return nullptr;
   }
-  res = dest->InitializeSourceLink(link);
-  if (res != ZX_OK) {
+  auto stream = dest_init_result.take_value();
+  link->set_stream(stream);
+
+  auto source_init_result = dest->InitializeSourceLink(link);
+  if (source_init_result.is_error()) {
     return nullptr;
   }
+  auto mixer = source_init_result.take_value();
+  link->set_mixer(std::move(mixer));
 
   // Now lock both objects then add the link to the proper sets in both source and destination.
   {

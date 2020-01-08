@@ -138,7 +138,8 @@ class AudioRendererImpl : public AudioObject,
   // |media::audio::AudioObject|
   void OnLinkAdded() override;
   const fbl::RefPtr<Format>& format() const final { return format_; }
-  zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link) override;
+  fit::result<fbl::RefPtr<Stream>, zx_status_t> InitializeDestLink(
+      const fbl::RefPtr<AudioLink>& link) override;
   void CleanupDestLink(const fbl::RefPtr<AudioLink>& link) override;
 
   // |media::audio::StreamVolume|

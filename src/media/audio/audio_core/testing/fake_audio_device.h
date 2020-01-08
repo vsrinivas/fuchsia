@@ -69,12 +69,6 @@ class FakeAudioOutput : public FakeAudioDevice {
   FakeAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry)
       : FakeAudioDevice(Type::Output, threading_model, registry) {}
 
-  // Required, to allocate and set the mixer+bookkeeping
-  zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) final {
-    link->set_mixer(std::make_unique<audio::mixer::NoOp>());
-    return ZX_OK;
-  }
-
   void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }
 
   // Must implement, because this class descends from AudioDevice, not AudioOutput

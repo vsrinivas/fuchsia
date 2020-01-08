@@ -60,7 +60,8 @@ class AudioCapturerImpl : public AudioObject,
 
  protected:
   friend class fbl::RefPtr<AudioCapturerImpl>;
-  zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) override;
+  fit::result<std::unique_ptr<Mixer>, zx_status_t> InitializeSourceLink(
+      const fbl::RefPtr<AudioLink>& link) override;
 
  private:
   // Notes about the AudioCapturerImpl state machine.
@@ -219,8 +220,8 @@ class AudioCapturerImpl : public AudioObject,
   void UpdateFormat(fuchsia::media::AudioSampleFormat sample_format, uint32_t channels,
                     uint32_t frames_per_second) FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
-  // Select a mixer for the link supplied and return true, or return false if one cannot be found.
-  zx_status_t ChooseMixer(const fbl::RefPtr<AudioLink>& link);
+  // Select a mixer for the link supplied.
+  fit::result<std::unique_ptr<Mixer>, zx_status_t> ChooseMixer(const fbl::RefPtr<AudioLink>& link);
 
   fit::promise<> Cleanup() FXL_LOCKS_EXCLUDED(mix_domain_->token());
   void CleanupFromMixThread() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());

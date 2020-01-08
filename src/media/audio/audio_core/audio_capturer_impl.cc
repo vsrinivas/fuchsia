@@ -219,7 +219,8 @@ void AudioCapturerImpl::RecycleObject(AudioObject* self) {
   Shutdown(std::unique_ptr<AudioCapturerImpl>(this));
 }
 
-zx_status_t AudioCapturerImpl::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) {
+fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioCapturerImpl::InitializeSourceLink(
+    const fbl::RefPtr<AudioLink>& link) {
   TRACE_DURATION("audio", "AudioCapturerImpl::InitializeSourceLink");
 
   // Choose a mixer
@@ -238,7 +239,7 @@ zx_status_t AudioCapturerImpl::InitializeSourceLink(const fbl::RefPtr<AudioLink>
     // to commit to a format. We should not be establishing links before the
     // capturer is ready.
     case State::WaitingForVmo:
-      return ZX_ERR_BAD_STATE;
+      return fit::error(ZX_ERR_BAD_STATE);
   }
 }
 
@@ -1557,7 +1558,8 @@ void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioSampleFormat sample_fo
   FX_DCHECK(max_frames_per_capture_ > 0);
 }
 
-zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
+fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioCapturerImpl::ChooseMixer(
+    const fbl::RefPtr<AudioLink>& link) {
   TRACE_DURATION("audio", "AudioCapturerImpl::ChooseMixer");
   FX_DCHECK(link != nullptr);
 
@@ -1567,7 +1569,7 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
   if (!source->is_input() && !source->is_output()) {
     FX_LOGS(ERROR) << "Failed to find mixer for source of type "
                    << static_cast<uint32_t>(source->type());
-    return ZX_ERR_INVALID_ARGS;
+    return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
   // Throttle outputs are the only driver-less devices. MTWN-52 is the work to
@@ -1575,14 +1577,14 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
   // queues, trimmed by a thread from the pool managed by the device manager.
   auto& device = static_cast<AudioDevice&>(*source);
   if (device.driver() == nullptr) {
-    return ZX_ERR_BAD_STATE;
+    return fit::error(ZX_ERR_BAD_STATE);
   }
 
   // Get the driver's current format. Without one, we can't setup the mixer.
   std::optional<Format> source_format = device.driver()->GetFormat();
   if (!source_format) {
     FX_LOGS(WARNING) << "Source driver has no configured format";
-    return ZX_ERR_BAD_STATE;
+    return fit::error(ZX_ERR_BAD_STATE);
   }
 
   // Select a mixer.
@@ -1595,7 +1597,7 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
     FX_LOGS(WARNING) << "Dest cfg  : rate " << format_.frames_per_second << " ch "
                      << format_.channels << " sample fmt "
                      << fidl::ToUnderlying(format_.sample_format);
-    return ZX_ERR_NOT_SUPPORTED;
+    return fit::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // The Gain object contains multiple stages. In capture, device (or
@@ -1613,10 +1615,7 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
               : std::clamp(device_info.gain_info.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
   }
 
-  // Else (if device is an Audio Output), use default SourceGain (Unity). Device
-  // gain has already been applied "on the way down" during the render mix.
-  link->set_mixer(std::move(mixer));
-  return ZX_OK;
+  return fit::ok(std::move(mixer));
 }
 
 void AudioCapturerImpl::BindGainControl(

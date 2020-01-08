@@ -69,7 +69,8 @@ void AudioOutput::Process() {
   }
 }
 
-zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) {
+fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLink(
+    const fbl::RefPtr<AudioLink>& link) {
   TRACE_DURATION("audio", "AudioOutput::InitializeSourceLink");
 
   auto stream = link->stream();
@@ -85,10 +86,10 @@ zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link
               ? fuchsia::media::audio::MUTED_GAIN_DB
               : fbl::clamp(cur_gain_state.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
     }
-    link->set_mixer(std::move(mixer));
+    return fit::ok(std::move(mixer));
   }
 
-  return ZX_OK;
+  return fit::ok(std::make_unique<audio::mixer::NoOp>());
 }
 
 void AudioOutput::CleanupSourceLink(const fbl::RefPtr<AudioLink>& link) {

@@ -86,12 +86,12 @@ void AudioRendererImpl::Shutdown() {
   payload_buffers_.clear();
 }
 
-zx_status_t AudioRendererImpl::InitializeDestLink(const fbl::RefPtr<AudioLink>& link) {
+fit::result<fbl::RefPtr<Stream>, zx_status_t> AudioRendererImpl::InitializeDestLink(
+    const fbl::RefPtr<AudioLink>& link) {
   TRACE_DURATION("audio", "AudioRendererImpl::InitializeDestLink");
   auto queue = fbl::MakeRefCounted<PacketQueue>(*format(), reference_clock_to_fractional_frames_);
   packet_queues_.insert({link.get(), queue});
-  link->set_stream(std::move(queue));
-  return ZX_OK;
+  return fit::ok(std::move(queue));
 }
 
 void AudioRendererImpl::CleanupDestLink(const fbl::RefPtr<AudioLink>& link) {

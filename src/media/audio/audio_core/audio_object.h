@@ -13,6 +13,7 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/format.h"
+#include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 
 namespace media::audio {
@@ -104,8 +105,14 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
   // filter.
   //
   // Returns ZX_OK if initialization succeeded, or an appropriate error code otherwise.
-  virtual zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) { return ZX_OK; }
-  virtual zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link) { return ZX_OK; }
+  virtual fit::result<std::unique_ptr<Mixer>, zx_status_t> InitializeSourceLink(
+      const fbl::RefPtr<AudioLink>& link) {
+    return fit::ok(std::make_unique<audio::mixer::NoOp>());
+  }
+  virtual fit::result<fbl::RefPtr<Stream>, zx_status_t> InitializeDestLink(
+      const fbl::RefPtr<AudioLink>& link) {
+    return fit::ok(nullptr);
+  }
 
   virtual void CleanupSourceLink(const fbl::RefPtr<AudioLink>& link) {}
   virtual void CleanupDestLink(const fbl::RefPtr<AudioLink>& link) {}
