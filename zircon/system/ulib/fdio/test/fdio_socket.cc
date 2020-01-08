@@ -108,7 +108,7 @@ class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void FillPeerSocket() {
+  void FillPeerSocket() const {
     zx_info_socket_t info;
     ASSERT_OK(peer_.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
     size_t tx_buf_available = info.tx_buf_max - info.tx_buf_size;
@@ -130,10 +130,10 @@ class BaseTest : public ::zxtest::Test {
   static_assert(sock_type == ZX_SOCKET_STREAM || sock_type == ZX_SOCKET_DATAGRAM);
 
  public:
-  BaseTest() : server(getClientSocket()) {
+  BaseTest() : server(clientSocket()) {
+    zx::channel client_channel, server_channel;
     ASSERT_OK(zx::channel::create(0, &client_channel, &server_channel));
-  }
-  void SetUp() override {
+
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
     ASSERT_OK(loop.StartThread("fake-socket-server"));
@@ -141,17 +141,17 @@ class BaseTest : public ::zxtest::Test {
   }
 
  protected:
-  zx::channel client_channel, server_channel;
-  zx::socket client_socket, server_socket;
+  zx::socket server_socket;
   fbl::unique_fd client_fd;
   Server server;
 
  private:
-  zx::socket getClientSocket() {
-    createSockets();
-    return std::move(client_socket);
+  zx::socket clientSocket() {
+    zx::socket client_socket;
+    // ASSERT_* macros return on failure; wrap it in a lambda to avoid returning void here.
+    [&]() { ASSERT_OK(zx::socket::create(sock_type, &client_socket, &server_socket)); }();
+    return client_socket;
   }
-  void createSockets() { ASSERT_OK(zx::socket::create(sock_type, &client_socket, &server_socket)); }
 };
 
 static void set_nonblocking_io(int fd) {
@@ -162,15 +162,19 @@ static void set_nonblocking_io(int fd) {
 
 using TcpSocketTest = BaseTest<ZX_SOCKET_STREAM>;
 TEST_F(TcpSocketTest, CloseZXSocketOnTransfer) {
-  zx_signals_t observed;
-  EXPECT_OK(server_socket.wait_one(ZX_SOCKET_WRITABLE, zx::time::infinite_past(), &observed));
-
-  zx_handle_t handle;
-  EXPECT_OK(fdio_fd_transfer(client_fd.get(), &handle));
-  // We need to reset the peer socket to trigger the signal ZX_SOCKET_PEER_CLOSED.
+  // A socket's peer is not closed until all copies of that peer are closed. Since the server holds
+  // one of those copies (and the file descriptor holds the other), we must destroy the server's
+  // copy before asserting that fdio_fd_transfer closes the file descriptor's copy.
   server.ResetSocket();
-  EXPECT_OK(server_socket.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), &observed));
-  EXPECT_OK(zx_handle_close(handle));
+
+  // The file descriptor still holds a copy of the peer; the peer is still open.
+  ASSERT_OK(server_socket.wait_one(ZX_SOCKET_WRITABLE, zx::time::infinite_past(), nullptr));
+
+  zx::handle handle;
+  ASSERT_OK(fdio_fd_transfer(client_fd.get(), handle.reset_and_get_address()));
+
+  // The file descriptor has been destroyed; the peer is closed.
+  ASSERT_OK(server_socket.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), nullptr));
 }
 
 // Verify scenario, where multi-segment recvmsg is requested, but the socket has
