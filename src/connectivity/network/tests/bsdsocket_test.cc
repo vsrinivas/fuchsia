@@ -150,30 +150,21 @@ struct SockOption {
 
 constexpr int INET_ECN_MASK = 3;
 
-struct SocketKind {
-  std::string description;
-  int domain;
-  int type;
-  int protocol;
-};
+using SocketKind = std::tuple<int, int>;
 
 constexpr int kSockOptOn = 1;
 constexpr int kSockOptOff = 0;
 
 class SocketOptsTest : public ::testing::TestWithParam<SocketKind> {
  protected:
-  SocketOptsTest() {
-    std::cout << "Testing with " << GetParam().description.c_str() << " socket." << std::endl;
-  }
-
   fbl::unique_fd NewSocket() const {
     SocketKind s = GetParam();
-    return fbl::unique_fd(socket(s.domain, s.type, s.protocol));
+    return fbl::unique_fd(socket(std::get<0>(s), std::get<1>(s), 0));
   }
 
-  bool IsTCP() const { return GetParam().protocol == IPPROTO_TCP; }
+  bool IsTCP() const { return std::get<1>(GetParam()) == SOCK_STREAM; }
 
-  bool IsIPv6() const { return GetParam().domain == AF_INET6; }
+  bool IsIPv6() const { return std::get<0>(GetParam()) == AF_INET6; }
 
   SockOption GetTOSOption() {
     if (IsIPv6()) {
@@ -340,11 +331,11 @@ TEST_P(SocketOptsTest, NullTOS) {
 
   socklen_t set_sz = sizeof(int);
   SockOption t = GetTOSOption();
-  if (GetParam().domain == AF_INET) {
+  if (IsIPv6()) {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, nullptr, set_sz), 0) << strerror(errno);
+  } else {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, nullptr, set_sz), -1);
     EXPECT_EQ(errno, EFAULT) << strerror(errno);
-  } else {
-    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, nullptr, set_sz), 0) << strerror(errno);
   }
   socklen_t get_sz = sizeof(int);
   EXPECT_EQ(getsockopt(s.get(), t.level, t.option, nullptr, &get_sz), -1);
@@ -380,11 +371,11 @@ TEST_P(SocketOptsTest, InvalidLargeTOS) {
   constexpr int kDefaultTOS = 0;
   socklen_t set_sz = sizeof(set);
   SockOption t = GetTOSOption();
-  if (GetParam().domain == AF_INET) {
-    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
-  } else {
+  if (IsIPv6()) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), -1);
     EXPECT_EQ(errno, EINVAL);
+  } else {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   }
   int get = -1;
   socklen_t get_sz = sizeof(get);
@@ -403,7 +394,7 @@ TEST_P(SocketOptsTest, CheckSkipECN) {
   SockOption t = GetTOSOption();
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   int expect = static_cast<uint8_t>(set);
-  if (GetParam().protocol == IPPROTO_TCP
+  if (IsTCP()
 #ifdef __linux__
       // gvisor-netstack`s implemention of setsockopt(..IPV6_TCLASS..)
       // clears the ECN bits from the TCLASS value. This keeps gvisor
@@ -430,11 +421,11 @@ TEST_P(SocketOptsTest, ZeroTOSOptionSize) {
   int set = 0xC0;
   socklen_t set_sz = 0;
   SockOption t = GetTOSOption();
-  if (GetParam().domain == AF_INET) {
-    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
-  } else {
+  if (IsIPv6()) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), -1);
     EXPECT_EQ(errno, EINVAL);
+  } else {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   }
   int get = -1;
   socklen_t get_sz = 0;
@@ -454,15 +445,15 @@ TEST_P(SocketOptsTest, SmallTOSOptionSize) {
   for (socklen_t i = 1; i < sizeof(int); i++) {
     int expect_tos;
     socklen_t expect_sz;
-    if (GetParam().domain == AF_INET) {
-      EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, i), 0) << strerror(errno);
-      expect_tos = set;
-      expect_sz = sizeof(uint8_t);
-    } else {
+    if (IsIPv6()) {
       EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, i), -1);
       EXPECT_EQ(errno, EINVAL);
       expect_tos = kDefaultTOS;
       expect_sz = i;
+    } else {
+      EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, i), 0) << strerror(errno);
+      expect_tos = set;
+      expect_sz = sizeof(uint8_t);
     }
     uint get = -1;
     socklen_t get_sz = i;
@@ -507,15 +498,15 @@ TEST_P(SocketOptsTest, NegativeTOS) {
   SockOption t = GetTOSOption();
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   int expect;
-  if (GetParam().domain == AF_INET) {
-    expect = static_cast<uint8_t>(set);
-    if (GetParam().protocol == IPPROTO_TCP) {
-      expect &= ~INET_ECN_MASK;
-    }
-  } else {
+  if (IsIPv6()) {
     // On IPv6 TCLASS, setting -1 has the effect of resetting the
     // TrafficClass.
     expect = 0;
+  } else {
+    expect = static_cast<uint8_t>(set);
+    if (IsTCP()) {
+      expect &= ~INET_ECN_MASK;
+    }
   }
   int get = -1;
   socklen_t get_sz = sizeof(get);
@@ -533,16 +524,16 @@ TEST_P(SocketOptsTest, InvalidNegativeTOS) {
   socklen_t set_sz = sizeof(set);
   SockOption t = GetTOSOption();
   int expect;
-  if (GetParam().domain == AF_INET) {
-    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
-    expect = static_cast<uint8_t>(set);
-    if (GetParam().protocol == IPPROTO_TCP) {
-      expect &= ~INET_ECN_MASK;
-    }
-  } else {
+  if (IsIPv6()) {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), -1);
     EXPECT_EQ(errno, EINVAL);
     expect = 0;
+  } else {
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
+    expect = static_cast<uint8_t>(set);
+    if (IsTCP()) {
+      expect &= ~INET_ECN_MASK;
+    }
   }
   int get = 0;
   socklen_t get_sz = sizeof(get);
@@ -791,12 +782,36 @@ TEST_P(SocketOptsTest, SetUDPMulticastTTLChar) {
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    LocalhostTest, SocketOptsTest,
-    ::testing::Values(SocketKind{"IPv4 UDP", AF_INET, SOCK_DGRAM, IPPROTO_UDP},
-                      SocketKind{"IPv4 TCP", AF_INET, SOCK_STREAM, IPPROTO_TCP},
-                      SocketKind{"IPv6 UDP", AF_INET6, SOCK_DGRAM, IPPROTO_UDP},
-                      SocketKind{"IPv6 TCP", AF_INET6, SOCK_STREAM, IPPROTO_TCP}));
+INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
+                         ::testing::Combine(::testing::Values(AF_INET, AF_INET6),
+                                            ::testing::Values(SOCK_DGRAM, SOCK_STREAM)),
+                         [](const ::testing::TestParamInfo<SocketKind>& info) {
+                           std::string domain;
+                           switch (std::get<0>(info.param)) {
+                             case AF_INET:
+                               domain = "IPv4";
+                               break;
+                             case AF_INET6:
+                               domain = "IPv6";
+                               break;
+                             default:
+                               domain = std::to_string(std::get<0>(info.param));
+                               break;
+                           }
+                           std::string type;
+                           switch (std::get<1>(info.param)) {
+                             case SOCK_DGRAM:
+                               type = "Datagram";
+                               break;
+                             case SOCK_STREAM:
+                               type = "Stream";
+                               break;
+                             default:
+                               type = std::to_string(std::get<1>(info.param));
+                           }
+
+                           return domain + "_" + type;
+                         });
 
 TEST(LocalhostTest, IP_MULTICAST_IF_ifindex) {
   int s;
@@ -849,7 +864,7 @@ TEST(LocalhostTest, IPV6_MULTICAST_IF_ifindex) {
 }
 
 class ReuseTest
-    : public ::testing::TestWithParam<::testing::tuple<int /* type */, in_addr_t /* address */>> {};
+    : public ::testing::TestWithParam<::std::tuple<int /* type */, in_addr_t /* address */>> {};
 
 TEST_P(ReuseTest, AllowsAddressReuse) {
   const int on = true;
@@ -1699,7 +1714,7 @@ TEST(NetStreamTest, ResetOnFullReceiveBufferShutdown) {
   ASSERT_TRUE(test_sock = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 }
 
-enum sendMethod {
+enum class sendMethod {
   WRITE,
   WRITEV,
   SEND,
@@ -1707,12 +1722,38 @@ enum sendMethod {
   SENDMSG,
 };
 
-enum closeSocket {
+constexpr const char* sendMethodToString(const sendMethod s) {
+  switch (s) {
+    case sendMethod::WRITE:
+      return "Write";
+    case sendMethod::WRITEV:
+      return "Writev";
+    case sendMethod::SEND:
+      return "Send";
+    case sendMethod::SENDTO:
+      return "Sendto";
+    case sendMethod::SENDMSG:
+      return "Sendmsg";
+  }
+}
+
+enum class closeSocket {
   CLIENT,
   SERVER,
 };
 
-class SendSocketTest : public ::testing::TestWithParam<std::tuple<sendMethod, closeSocket>> {};
+constexpr const char* closeSocketToString(const closeSocket s) {
+  switch (s) {
+    case closeSocket::CLIENT:
+      return "Client";
+    case closeSocket::SERVER:
+      return "Server";
+  }
+}
+
+using methodAndCloseTarget = std::tuple<sendMethod, closeSocket>;
+
+class SendSocketTest : public ::testing::TestWithParam<methodAndCloseTarget> {};
 
 TEST_P(SendSocketTest, CloseWhileSending) {
   sendMethod whichMethod = std::get<0>(GetParam());
@@ -1778,9 +1819,6 @@ TEST_P(SendSocketTest, CloseWhileSending) {
           msg.msg_iovlen = 1;
           return sendmsg(client.get(), &msg, 0);
         }
-        default:
-          ADD_FAILURE() << "unsupported test parameter";
-          return 0l;
       }
     };
 
@@ -1800,8 +1838,6 @@ TEST_P(SendSocketTest, CloseWhileSending) {
         EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
         break;
       }
-      default:
-        ADD_FAILURE() << "unsupported test parameter";
     }
 
     // Linux generates SIGPIPE when the peer on a stream-oriented socket has closed the connection.
@@ -1832,8 +1868,6 @@ TEST_P(SendSocketTest, CloseWhileSending) {
         EXPECT_EQ(errno, EPIPE) << strerror(errno);
         break;
       }
-      default:
-        ADD_FAILURE() << "unsupported test parameter";
     }
   });
   EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
@@ -1857,8 +1891,6 @@ TEST_P(SendSocketTest, CloseWhileSending) {
       EXPECT_EQ(close(server.get()), 0) << strerror(errno);
       break;
     }
-    default:
-      ADD_FAILURE() << "unsupported test parameter";
   }
 
   EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(50)), std::future_status::ready);
@@ -1869,7 +1901,13 @@ INSTANTIATE_TEST_SUITE_P(
     DISABLED_NetStreamTest, SendSocketTest,
     ::testing::Combine(::testing::Values(sendMethod::WRITE, sendMethod::WRITEV, sendMethod::SEND,
                                          sendMethod::SENDTO, sendMethod::SENDMSG),
-                       ::testing::Values(closeSocket::CLIENT, closeSocket::SERVER)));
+                       ::testing::Values(closeSocket::CLIENT, closeSocket::SERVER)),
+    [](const ::testing::TestParamInfo<methodAndCloseTarget>& info) {
+      std::string method = sendMethodToString(std::get<0>(info.param));
+      std::string target = closeSocketToString(std::get<1>(info.param));
+
+      return "close" + target + "During" + method;
+    });
 
 // Use this routine to test blocking socket reads. On failure, this attempts to recover the blocked
 // thread.
@@ -1955,18 +1993,18 @@ TEST_P(DatagramSendTest, DatagramSend) {
   int sendfd;
   EXPECT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
   switch (sendMethod) {
-    case SENDTO: {
+    case sendMethod::SENDTO: {
       EXPECT_EQ(sendto(sendfd, msg.data(), msg.size(), 0, (struct sockaddr*)&addr, addrlen),
                 (ssize_t)msg.size())
           << strerror(errno);
       break;
     }
-    case SENDMSG: {
+    case sendMethod::SENDMSG: {
       EXPECT_EQ(sendmsg(sendfd, &msghdr, 0), (ssize_t)msg.size()) << strerror(errno);
       break;
     }
     default: {
-      FAIL() << "unexpected test variant " << sendMethod;
+      FAIL() << "unexpected test variant";
       break;
     }
   }
@@ -1984,18 +2022,18 @@ TEST_P(DatagramSendTest, DatagramSend) {
   EXPECT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
   EXPECT_EQ(connect(sendfd, (struct sockaddr*)&addr, addrlen), 0) << strerror(errno);
   switch (sendMethod) {
-    case SENDTO: {
+    case sendMethod::SENDTO: {
       EXPECT_EQ(sendto(sendfd, msg.data(), msg.size(), 0, (struct sockaddr*)&addr, addrlen),
                 (ssize_t)msg.size())
           << strerror(errno);
       break;
     }
-    case SENDMSG: {
+    case sendMethod::SENDMSG: {
       EXPECT_EQ(sendmsg(sendfd, &msghdr, 0), (ssize_t)msg.size()) << strerror(errno);
       break;
     }
     default: {
-      FAIL() << "unexpected test variant " << sendMethod;
+      FAIL() << "unexpected test variant";
       break;
     }
   }
@@ -2007,18 +2045,18 @@ TEST_P(DatagramSendTest, DatagramSend) {
   // Test sending to an address that is different from what we're connected to.
   addr.sin_port = htons(ntohs(addr.sin_port) + 1);
   switch (sendMethod) {
-    case SENDTO: {
+    case sendMethod::SENDTO: {
       EXPECT_EQ(sendto(sendfd, msg.data(), msg.size(), 0, (struct sockaddr*)&addr, addrlen),
                 (ssize_t)msg.size())
           << strerror(errno);
       break;
     }
-    case SENDMSG: {
+    case sendMethod::SENDMSG: {
       EXPECT_EQ(sendmsg(sendfd, &msghdr, 0), (ssize_t)msg.size()) << strerror(errno);
       break;
     }
     default: {
-      FAIL() << "unexpected test variant " << sendMethod;
+      FAIL() << "unexpected test variant";
       break;
     }
   }
@@ -2035,7 +2073,11 @@ TEST_P(DatagramSendTest, DatagramSend) {
   EXPECT_EQ(close(recvfd), 0) << strerror(errno);
 }
 
-INSTANTIATE_TEST_SUITE_P(NetDatagramTest, DatagramSendTest, ::testing::Values(SENDTO, SENDMSG));
+INSTANTIATE_TEST_SUITE_P(NetDatagramTest, DatagramSendTest,
+                         ::testing::Values(sendMethod::SENDTO, sendMethod::SENDMSG),
+                         [](const ::testing::TestParamInfo<sendMethod>& info) {
+                           return sendMethodToString(info.param);
+                         });
 
 TEST(NetDatagramTest, DatagramConnectWrite) {
   int recvfd;
@@ -2418,7 +2460,7 @@ TEST_P(NetSocketTest, SocketPeekTest) {
       break;
     }
     default: {
-      FAIL() << "unexpected test variant " << socketType;
+      FAIL() << "unexpected test variant";
     }
   }
 
