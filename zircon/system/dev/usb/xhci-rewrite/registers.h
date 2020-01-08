@@ -146,11 +146,11 @@ class Control : public hwreg::RegisterBase<Control, uint32_t> {
 };
 
 // Section 6.4.3.4
-struct AddressDeviceCommand : TRB {
+struct AddressDeviceStruct : TRB {
   DEF_SUBFIELD(control, 31, 24, SlotID);
   // See section 4.6.5. This should normally be set to 0.
   DEF_SUBBIT(control, 9, BSR);
-  AddressDeviceCommand() {
+  AddressDeviceStruct() {
     Control::FromTRB(this).set_Type(Control::Type::AddressDeviceCommand).ToTrb(this);
   }
 };
