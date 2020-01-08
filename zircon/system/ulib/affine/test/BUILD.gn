@@ -24,6 +24,11 @@ zx_test("affine") {
     "$zx/system/ulib/fit",
     "$zx/system/ulib/zxtest",
   ]
+
+  # TODO(41888): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs +=
+      [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 fuzzer("affine-fuzzer") {
