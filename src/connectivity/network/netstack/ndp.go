@@ -188,6 +188,14 @@ func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip
 	return true
 }
 
+// OnAutoGenAddressDeprecated implements
+// stack.NDPDispatcher.OnAutoGenAddressDeprecated.
+func (*ndpDispatcher) OnAutoGenAddressDeprecated(tcpip.NICID, tcpip.AddressWithPrefix) {
+	// No need to do anything with this as deprecated addresses are still usable.
+	// stack.Stack will handle not returning deprecated addresses if more
+	// preferred addresses exist.
+}
+
 // OnAutoGenAddressInvalidated implements stack.NDPDispatcher.OnAutoGenAddressInvalidated.
 func (n *ndpDispatcher) OnAutoGenAddressInvalidated(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) {
 	syslog.Infof("ndp: OnAutoGenAddressInvalidated(%d, %s)", nicID, addrWithPrefix)
