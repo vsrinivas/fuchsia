@@ -620,7 +620,7 @@ TEST_F(WireParserTest, ParseStruct) {
 
 TEST_F(WireParserTest, BadBoolStruct) {
   test::fidlcodec::examples::BoolStructType s;
-  TEST_DECODE_WIRE_BODY_BAD(BoolStruct, "{\"s\":{\"b\":\"invalid\"}}",
+  TEST_DECODE_WIRE_BODY_BAD(BoolStruct, "{\"s\":{\"b\":\"(invalid)\"}}",
                             "{ s: #gre#test.fidlcodec.examples/BoolStructType#rst# = "
                             "{ b: #gre#bool#rst# = #red#invalid#rst# } }",
                             16, 16, s);

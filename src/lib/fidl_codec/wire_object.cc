@@ -65,26 +65,24 @@ bool NullableValue::DecodeNullable(MessageDecoder* decoder, uint64_t offset, uin
 
 void NullableValue::Visit(Visitor* visitor) const { visitor->VisitNullableValue(this); }
 
-void InlineValue::Visit(Visitor* visitor) const { visitor->VisitInlineValue(this); }
-
 int RawValue::DisplaySize(int /*remaining_size*/) const {
-  return data_ ? static_cast<int>(data_->size()) * 3 - 1 : 0;
+  return (data_.size() == 0) ? 0 : static_cast<int>(data_.size()) * 3 - 1;
 }
 
 void RawValue::PrettyPrint(std::ostream& os, const Colors& /*colors*/,
                            const fidl_message_header_t* /*header*/,
                            std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                            int /*max_line_size*/) const {
-  if (!data_ || data_->size() == 0) {
+  if (data_.size() == 0) {
     return;
   }
-  size_t buffer_size = data_->size() * 3;
+  size_t buffer_size = data_.size() * 3;
   std::vector<char> buffer(buffer_size);
-  for (size_t i = 0; i < data_->size(); ++i) {
+  for (size_t i = 0; i < data_.size(); ++i) {
     if (i != 0) {
       buffer[i * 3 - 1] = ' ';
     }
-    snprintf(buffer.data() + (i * 3), 4, "%02x", (*data_)[i]);
+    snprintf(buffer.data() + (i * 3), 4, "%02x", data_[i]);
   }
   os << buffer.data();
 }
@@ -148,19 +146,14 @@ void StringValue::Visit(Visitor* visitor) const { visitor->VisitStringValue(this
 int BoolValue::DisplaySize(int /*remaining_size*/) const {
   constexpr int kTrueSize = 4;
   constexpr int kFalseSize = 5;
-  constexpr int kInvalidSize = 7;
-  return value_ ? kInvalidSize : (*value_ ? kTrueSize : kFalseSize);
+  return value_ ? kTrueSize : kFalseSize;
 }
 
 void BoolValue::PrettyPrint(std::ostream& os, const Colors& colors,
                             const fidl_message_header_t* /*header*/,
                             std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                             int /*max_line_size*/) const {
-  if (!value_) {
-    os << colors.red << "invalid" << colors.reset;
-  } else {
-    os << colors.blue << (*value_ ? "true" : "false") << colors.reset;
-  }
+  os << colors.blue << (value_ ? "true" : "false") << colors.reset;
 }
 
 void BoolValue::Visit(Visitor* visitor) const { visitor->VisitBoolValue(this); }
@@ -428,7 +421,7 @@ void UnionValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
   decoder->GetValueAt(base_offset, &tag);
   member_ = union_definition_.MemberWithTag(tag);
   if (member_ == nullptr) {
-    value_ = std::make_unique<RawValue>(nullptr, std::nullopt);
+    value_ = std::make_unique<InvalidValue>(nullptr);
   } else {
     value_ = member_->type()->Decode(decoder, base_offset + member_->offset());
   }

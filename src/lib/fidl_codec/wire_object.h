@@ -114,21 +114,13 @@ class NullableValue : public Value {
   bool is_null_ = false;
 };
 
-// Base class for inlined values (the data is not in a secondary object).
-class InlineValue : public Value {
- public:
-  InlineValue(const Type* type) : Value(type) {}
-
-  void Visit(Visitor* visitor) const override;
-};
-
 // A value with no known representation (we only print the raw data).
-class RawValue : public InlineValue {
+class RawValue : public Value {
  public:
-  RawValue(const Type* type, std::optional<std::vector<uint8_t>> data)
-      : InlineValue(type), data_(std::move(data)) {}
+  RawValue(const Type* type, const uint8_t* data, size_t size)
+      : Value(type), data_(data, data + size) {}
 
-  const std::optional<std::vector<uint8_t>>& data() const { return data_; }
+  const std::vector<uint8_t>& data() const { return data_; }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -139,15 +131,15 @@ class RawValue : public InlineValue {
   void Visit(Visitor* visitor) const override;
 
  private:
-  std::optional<std::vector<uint8_t>> data_;
+  const std::vector<uint8_t> data_;
 };
 
 // All numeric values (integer and floating point numbers).
 template <typename T>
-class NumericValue : public InlineValue {
+class NumericValue : public Value {
  public:
   explicit NumericValue(const Type* type, std::optional<T> value = std::nullopt)
-      : InlineValue(type), value_(std::move(value)) {}
+      : Value(type), value_(std::move(value)) {}
   explicit NumericValue(const Type* type, const T* value)
       : NumericValue(type, value ? std::optional(*value) : std::nullopt) {}
 
@@ -201,14 +193,11 @@ class StringValue : public Value {
 };
 
 // A Boolean value.
-class BoolValue : public InlineValue {
+class BoolValue : public Value {
  public:
-  BoolValue(const Type* type, std::optional<uint8_t> value)
-      : InlineValue(type), value_(std::move(value)) {}
-  BoolValue(const Type* type, const uint8_t* value)
-      : BoolValue(type, value ? std::optional(*value) : std::nullopt) {}
+  BoolValue(const Type* type, uint8_t value) : Value(type), value_(value) {}
 
-  const std::optional<uint8_t> value() const { return value_; }
+  uint8_t value() const { return value_; }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -219,7 +208,7 @@ class BoolValue : public InlineValue {
   void Visit(Visitor* visitor) const override;
 
  private:
-  std::optional<uint8_t> value_;
+  const uint8_t value_;
 };
 
 // An instance of a Struct. This includes requests and responses which are also structs.
@@ -409,10 +398,10 @@ class VectorValue : public NullableValue {
 };
 
 // An enum.
-class EnumValue : public InlineValue {
+class EnumValue : public Value {
  public:
   EnumValue(const Type* type, std::optional<std::vector<uint8_t>> data, const Enum& enum_definition)
-      : InlineValue(type), enum_definition_(enum_definition), data_(std::move(data)) {}
+      : Value(type), enum_definition_(enum_definition), data_(std::move(data)) {}
 
   const std::optional<std::vector<uint8_t>>& data() const { return data_; }
 
@@ -432,10 +421,10 @@ class EnumValue : public InlineValue {
 };
 
 // Bits.
-class BitsValue : public InlineValue {
+class BitsValue : public Value {
  public:
   BitsValue(const Type* type, std::optional<std::vector<uint8_t>> data, const Bits& bits_definition)
-      : InlineValue(type), bits_definition_(bits_definition), data_(std::move(data)) {}
+      : Value(type), bits_definition_(bits_definition), data_(std::move(data)) {}
 
   const std::optional<std::vector<uint8_t>>& data() const { return data_; }
 

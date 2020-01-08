@@ -112,10 +112,7 @@ void Encoder::VisitNullValue(const NullValue* node) {
 }
 
 void Encoder::VisitRawValue(const RawValue* node) {
-  const auto& data = node->data();
-  if (data) {
-    WriteData(data->data(), data->size());
-  }
+  WriteData(node->data().data(), node->data().size());
 }
 
 void Encoder::VisitStringValue(const StringValue* node) {
@@ -125,13 +122,7 @@ void Encoder::VisitStringValue(const StringValue* node) {
   WriteData(reinterpret_cast<const uint8_t*>(node->string().data()), node->string().size());
 }
 
-void Encoder::VisitBoolValue(const BoolValue* node) {
-  if (auto value = node->value()) {
-    WriteValue<uint8_t>(*value);
-  } else {
-    WriteValue<uint8_t>(false);
-  }
-}
+void Encoder::VisitBoolValue(const BoolValue* node) { WriteValue<uint8_t>(node->value()); }
 
 void Encoder::VisitEnvelopeValue(const EnvelopeValue* node) {
   WriteValue<uint32_t>(node->num_bytes());

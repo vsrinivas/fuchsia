@@ -17,38 +17,35 @@ class Visitor {
   virtual void VisitInvalidValue(const InvalidValue* node) { VisitValue(node); }
   virtual void VisitNullValue(const NullValue* node) { VisitValue(node); }
   virtual void VisitNullableValue(const NullableValue* node) { VisitValue(node); }
-  virtual void VisitInlineValue(const InlineValue* node) { VisitValue(node); }
   virtual void VisitRawValue(const RawValue* node) { VisitValue(node); }
   virtual void VisitStructValue(const StructValue* node) { VisitNullableValue(node); }
   virtual void VisitStringValue(const StringValue* node) { VisitValue(node); }
-  virtual void VisitBoolValue(const BoolValue* node) { VisitInlineValue(node); }
+  virtual void VisitBoolValue(const BoolValue* node) { VisitValue(node); }
   virtual void VisitEnvelopeValue(const EnvelopeValue* node) { VisitNullableValue(node); }
   virtual void VisitTableValue(const TableValue* node) { VisitNullableValue(node); }
   virtual void VisitUnionValue(const UnionValue* node) { VisitNullableValue(node); }
   virtual void VisitXUnionValue(const XUnionValue* node) { VisitUnionValue(node); }
   virtual void VisitArrayValue(const ArrayValue* node) { VisitValue(node); }
   virtual void VisitVectorValue(const VectorValue* node) { VisitNullableValue(node); }
-  virtual void VisitEnumValue(const EnumValue* node) { VisitInlineValue(node); }
-  virtual void VisitBitsValue(const BitsValue* node) { VisitInlineValue(node); }
+  virtual void VisitEnumValue(const EnumValue* node) { VisitValue(node); }
+  virtual void VisitBitsValue(const BitsValue* node) { VisitValue(node); }
   virtual void VisitHandleValue(const HandleValue* node) { VisitValue(node); }
 
-  virtual void VisitNumericValue(const InlineValue* node) { VisitInlineValue(node); }
-  virtual void VisitU8Value(const NumericValue<uint8_t>* node) { VisitNumericValue(node); }
-  virtual void VisitU16Value(const NumericValue<uint16_t>* node) { VisitNumericValue(node); }
-  virtual void VisitU32Value(const NumericValue<uint32_t>* node) { VisitNumericValue(node); }
-  virtual void VisitU64Value(const NumericValue<uint64_t>* node) { VisitNumericValue(node); }
-  virtual void VisitI8Value(const NumericValue<int8_t>* node) { VisitNumericValue(node); }
-  virtual void VisitI16Value(const NumericValue<int16_t>* node) { VisitNumericValue(node); }
-  virtual void VisitI32Value(const NumericValue<int32_t>* node) { VisitNumericValue(node); }
-  virtual void VisitI64Value(const NumericValue<int64_t>* node) { VisitNumericValue(node); }
-  virtual void VisitF32Value(const NumericValue<float>* node) { VisitNumericValue(node); }
-  virtual void VisitF64Value(const NumericValue<double>* node) { VisitNumericValue(node); }
+  virtual void VisitU8Value(const NumericValue<uint8_t>* node) { VisitValue(node); }
+  virtual void VisitU16Value(const NumericValue<uint16_t>* node) { VisitValue(node); }
+  virtual void VisitU32Value(const NumericValue<uint32_t>* node) { VisitValue(node); }
+  virtual void VisitU64Value(const NumericValue<uint64_t>* node) { VisitValue(node); }
+  virtual void VisitI8Value(const NumericValue<int8_t>* node) { VisitValue(node); }
+  virtual void VisitI16Value(const NumericValue<int16_t>* node) { VisitValue(node); }
+  virtual void VisitI32Value(const NumericValue<int32_t>* node) { VisitValue(node); }
+  virtual void VisitI64Value(const NumericValue<int64_t>* node) { VisitValue(node); }
+  virtual void VisitF32Value(const NumericValue<float>* node) { VisitValue(node); }
+  virtual void VisitF64Value(const NumericValue<double>* node) { VisitValue(node); }
 
   friend class Value;
   friend class InvalidValue;
   friend class NullValue;
   friend class NullableValue;
-  friend class InlineValue;
   friend class RawValue;
   template <typename T>
   friend class NumericValue;

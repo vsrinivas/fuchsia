@@ -201,7 +201,11 @@ std::unique_ptr<Value> Type::Decode(MessageDecoder* /*decoder*/, uint64_t /*offs
 }
 
 std::unique_ptr<Value> RawType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return std::make_unique<RawValue>(this, decoder->CopyAddress(offset, inline_size_));
+  const uint8_t* data = decoder->GetAddress(offset, inline_size_);
+  if (data == nullptr) {
+    return std::make_unique<InvalidValue>(this);
+  }
+  return std::make_unique<RawValue>(this, data, inline_size_);
 }
 
 void RawType::Visit(TypeVisitor* visitor) const { visitor->VisitRawType(this); }
@@ -232,7 +236,10 @@ void StringType::Visit(TypeVisitor* visitor) const { visitor->VisitStringType(th
 
 std::unique_ptr<Value> BoolType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   auto byte = decoder->GetAddress(offset, sizeof(uint8_t));
-  return std::make_unique<BoolValue>(this, byte ? std::optional(*byte) : std::nullopt);
+  if (byte == nullptr) {
+    return std::make_unique<InvalidValue>(this);
+  }
+  return std::make_unique<BoolValue>(this, *byte);
 }
 
 void BoolType::Visit(TypeVisitor* visitor) const { visitor->VisitBoolType(this); };
