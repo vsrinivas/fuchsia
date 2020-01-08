@@ -7,6 +7,8 @@
 
 #include <threads.h>
 
+#include <memory>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform/bus.h>
@@ -19,11 +21,19 @@ class X86 : public ddk::Device<X86> {
  public:
   explicit X86(zx_device_t* parent, pbus_protocol_t* pbus, zx_device_t* sys_root)
       : ddk::Device<X86>(parent), pbus_(pbus), sys_root_(sys_root) {}
+  ~X86();
 
-  static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* out);
+  static zx_status_t CreateAndBind(void* ctx, zx_device_t* parent);
+  static bool RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel);
 
   // Device protocol implementation.
   void DdkRelease();
+
+  // Performs ACPICA initialization.
+  zx_status_t EarlyAcpiInit();
+
+  zx_status_t EarlyInit();
 
  private:
   X86(const X86&) = delete;
@@ -33,9 +43,8 @@ class X86 : public ddk::Device<X86> {
 
   zx_status_t SysmemInit();
 
-  // Performs ACPICA initialization.
-  zx_status_t EarlyAcpiInit();
-
+  // Register this instance with devmgr and launch the deferred initialization in Thread.
+  zx_status_t Bind();
   zx_status_t Start();
   int Thread();
 
@@ -45,6 +54,9 @@ class X86 : public ddk::Device<X86> {
   zx_device_t* sys_root_;
 
   thrd_t thread_;
+
+  // Whether the global ACPICA initialization has been performed or not
+  bool acpica_initialized_ = false;
 };
 
 }  // namespace x86

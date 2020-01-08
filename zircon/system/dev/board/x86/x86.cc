@@ -5,10 +5,12 @@
 #include "x86.h"
 
 #include <fuchsia/sysinfo/c/fidl.h>
+#include <lib/driver-unit-test/utils.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/status.h>
 
+#include <acpica/acpi.h>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
@@ -28,6 +30,12 @@ static zx_status_t sys_device_suspend(void* ctx, uint8_t requested_state, bool e
 }
 
 namespace x86 {
+
+X86::~X86() {
+  if (acpica_initialized_) {
+    AcpiTerminate();
+  }
+}
 
 int X86::Thread() {
   zx_status_t status = SysmemInit();
@@ -54,7 +62,7 @@ void X86::DdkRelease() {
   delete this;
 }
 
-zx_status_t X86::Create(void* ctx, zx_device_t* parent) {
+zx_status_t X86::Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* out) {
   pbus_protocol_t pbus;
 
   // Please do not use get_root_resource() in new code. See ZX-1467.
@@ -77,21 +85,41 @@ zx_status_t X86::Create(void* ctx, zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  auto board = fbl::make_unique_checked<X86>(&ac, parent, &pbus, sys_root);
+  *out = fbl::make_unique_checked<X86>(&ac, parent, &pbus, sys_root);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+  return ZX_OK;
+}
 
-  // Do ACPI init.
-  status = board->EarlyAcpiInit();
+zx_status_t X86::CreateAndBind(void* ctx, zx_device_t* parent) {
+  std::unique_ptr<X86> board;
+
+  zx_status_t status = Create(ctx, parent, &board);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to initialize ACPI %d \n", __func__, status);
+    return status;
+  }
+
+  status = board->Bind();
+  if (status == ZX_OK) {
+    // DevMgr now owns this pointer, release it to avoid destroying the
+    // object when device goes out of scope.
+    __UNUSED auto* ptr = board.release();
+  }
+  return status;
+}
+
+zx_status_t X86::Bind() {
+  // Do early init of ACPICA etc.
+  zx_status_t status = EarlyInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to perform early initialization %d \n", __func__, status);
     return status;
   }
 
   // publish the board as ACPI root under /dev/sys/platform. PCI will get created under /dev/sys
   // (to preserve compatibility).
-  status = board->DdkAdd("acpi", DEVICE_ADD_NON_BINDABLE);
+  status = DdkAdd("acpi", DEVICE_ADD_NON_BINDABLE);
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: error %d in device_add(sys/platform/acpi)\n", status);
@@ -113,15 +141,15 @@ zx_status_t X86::Create(void* ctx, zx_device_t* parent) {
   }
 
   // Publish board name to sysinfo driver.
-  status = board->DdkPublishMetadata("/dev/misc/sysinfo", DEVICE_METADATA_BOARD_NAME, board_name,
-                                     board_name_actual);
+  status = DdkPublishMetadata("/dev/misc/sysinfo", DEVICE_METADATA_BOARD_NAME, board_name,
+                              board_name_actual);
   if (status != ZX_OK) {
     zxlogf(ERROR, "DdkPublishMetadata(board_name) failed: %d\n", status);
   }
 
   constexpr uint32_t dummy_board_rev = 42;
-  status = board->DdkPublishMetadata("/dev/misc/sysinfo", DEVICE_METADATA_BOARD_REVISION,
-                                     &dummy_board_rev, sizeof(dummy_board_rev));
+  status = DdkPublishMetadata("/dev/misc/sysinfo", DEVICE_METADATA_BOARD_REVISION, &dummy_board_rev,
+                              sizeof(dummy_board_rev));
   if (status != ZX_OK) {
     zxlogf(ERROR, "DdkPublishMetadata(board_revision) failed: %d\n", status);
   }
@@ -129,7 +157,7 @@ zx_status_t X86::Create(void* ctx, zx_device_t* parent) {
   // Inform platform bus of our board name.
   pbus_board_info_t board_info = {};
   strlcpy(board_info.board_name, board_name, sizeof(board_info.board_name));
-  status = board->pbus_.SetBoardInfo(&board_info);
+  status = pbus_.SetBoardInfo(&board_info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "SetBoardInfo failed: %d\n", status);
   }
@@ -141,25 +169,24 @@ zx_status_t X86::Create(void* ctx, zx_device_t* parent) {
   // we must make sure that the coordinator code arranges for this suspend op to be
   // called last.
   pbus_sys_suspend_t suspend = {sys_device_suspend, NULL};
-  status = board->pbus_.RegisterSysSuspendCallback(&suspend);
+  status = pbus_.RegisterSysSuspendCallback(&suspend);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not register suspend callback: %d\n", __func__, status);
   }
 
   // Start up our protocol helpers and platform devices.
-  status = board->Start();
-  if (status == ZX_OK) {
-    // devmgr is now in charge of the device.
-    __UNUSED auto* dummy = board.release();
-  }
+  return Start();
+}
 
-  return status;
+bool X86::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel) {
+  return driver_unit_test::RunZxTests("X86Tests", parent, channel);
 }
 
 static zx_driver_ops_t x86_driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = X86::Create;
+  ops.bind = X86::CreateAndBind;
+  ops.run_unit_tests = X86::RunUnitTests;
   return ops;
 }();
 

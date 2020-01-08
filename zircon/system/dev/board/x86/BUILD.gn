@@ -69,6 +69,7 @@ zx_driver("platform-bus-x86") {
     "resources.cc",
     "sysmem.cc",
     "util.cc",
+    "x86-driver-tests.cc",
     "x86.cc",
     "x86.h",
   ]
@@ -98,6 +99,7 @@ zx_driver("platform-bus-x86") {
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver-unit-test",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/hid",
@@ -105,6 +107,7 @@ zx_driver("platform-bus-x86") {
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zxtest",
     "$zx/third_party/lib/acpica",
     "$zx/third_party/ulib/chromiumos-platform-ec",
   ]

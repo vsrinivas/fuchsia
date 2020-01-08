@@ -172,8 +172,18 @@ ACPI_STATUS acpi_sub_init(void) {
 namespace x86 {
 
 zx_status_t X86::EarlyAcpiInit() {
+  ZX_DEBUG_ASSERT(!acpica_initialized_);
   // First initialize the ACPI subsystem.
   zx_status_t status = acpi_to_zx_status(acpi_sub_init());
+  if (status != ZX_OK) {
+    return status;
+  }
+  acpica_initialized_ = true;
+  return ZX_OK;
+}
+
+zx_status_t X86::EarlyInit() {
+  zx_status_t status = EarlyAcpiInit();
   if (status != ZX_OK) {
     return status;
   }
