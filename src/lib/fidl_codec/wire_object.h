@@ -356,8 +356,7 @@ class ArrayValue : public Value {
 // A vector.
 class VectorValue : public NullableValue {
  public:
-  VectorValue(const Type* type, uint64_t size, const Type* component_type)
-      : NullableValue(type), size_(size), component_type_(component_type) {}
+  VectorValue(const Type* type, uint64_t size) : NullableValue(type), size_(size) {}
 
   size_t size() const { return size_; }
   const std::vector<std::unique_ptr<Value>>& values() const { return values_; }
@@ -374,7 +373,6 @@ class VectorValue : public NullableValue {
 
  private:
   const uint64_t size_;
-  const Type* const component_type_;
   std::vector<std::unique_ptr<Value>> values_;
   bool is_string_ = false;
   bool has_new_line_ = false;

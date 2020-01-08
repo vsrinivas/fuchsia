@@ -85,6 +85,7 @@ protocol FidlCodecTestInterface {
     HandleStructMessage(HandleStruct hs);
     HandleTableMessage(HandleTable t);
     TraversalOrderMessage(TraversalOrder t);
+    TraversalMainMessage(vector<TraversalMain?>:3 v, TraversalStruct? s);
 
     Protocol(ParamProtocol ch);
 };
@@ -236,6 +237,16 @@ struct TraversalOrder {
     OptHandleStruct? s;
     handle<channel>? h1;
     handle<channel>? h2;
+};
+
+struct TraversalStruct {
+    uint32 a;
+    handle<channel>? b;
+};
+
+struct TraversalMain {
+    uint32 x;
+    TraversalStruct? y;
 };
 
 [FragileBase]

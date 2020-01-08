@@ -564,10 +564,10 @@ void VectorValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
     return;
   }
   is_string_ = true;
-  for (uint64_t i = 0;
-       (i < size_) && (offset + component_type_->InlineSize(decoder) <= decoder->num_bytes());
-       ++i) {
-    std::unique_ptr<Value> value = component_type_->Decode(decoder, offset);
+  const Type* component_type = type()->GetComponentType();
+  size_t component_size = component_type->InlineSize(decoder->unions_are_xunions());
+  for (uint64_t i = 0; (i < size_) && (offset + component_size <= decoder->num_bytes()); ++i) {
+    std::unique_ptr<Value> value = component_type->Decode(decoder, offset);
     if (value != nullptr) {
       uint8_t uvalue = value->GetUint8Value();
       if (!std::isprint(uvalue)) {
@@ -579,7 +579,7 @@ void VectorValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
       }
       values_.push_back(std::move(value));
     }
-    offset += component_type_->InlineSize(decoder->unions_are_xunions());
+    offset += component_size;
   }
 }
 

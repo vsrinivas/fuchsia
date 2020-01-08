@@ -23,28 +23,27 @@ class Encoder : public Visitor {
   static Result EncodeMessage(uint32_t tx_id, uint64_t ordinal, uint8_t flags[3], uint8_t magic,
                               const StructValue& object);
 
- private:
-  Encoder(bool union_as_xunion) : union_as_xunion_(union_as_xunion) {}
-
-  // Pad the current buffer so the next value will be aligned to an 8-byte boundary.
-  void Align8();
-
-  // Write an immediate value to the buffer, naturally aligned.
+  // Write a literal value into our buffer.
   template <typename T>
-  void Write(T t);
+  void WriteValue(T value) {
+    WriteData(reinterpret_cast<uint8_t*>(&value), sizeof(T));
+  }
+  template <typename T>
+  void WriteValue(std::optional<T> value) {
+    if (value) {
+      WriteData(reinterpret_cast<uint8_t*>(&(*value)), sizeof(T));
+    }
+  }
+
+ private:
+  Encoder(bool unions_are_xunions) : unions_are_xunions_(unions_are_xunions) {}
+
+  // Reserve space in the buffer for one object.
+  size_t AllocateObject(size_t object_size);
 
   // Write data into our buffer.
   void WriteData(const uint8_t* data, size_t size);
-  void WriteData(const std::optional<std::vector<uint8_t>>& data, size_t size);
-
-  // Write a literal value into our buffer.
-  template <typename T>
-  void WriteValue(std::optional<T>);
-
-  // Execute all functions in the deferred queue. Manipulates the queue such that additional
-  // deferred actions caused by each call are executed depth-first. Also pads to 8-byte alignment
-  // before each call.
-  void Pump();
+  void WriteData(const std::vector<uint8_t>& data) { WriteData(data.data(), data.size()); }
 
   // Visit a union which is known to be non-null and which we want encoded immediately at the
   // current position.
@@ -54,15 +53,10 @@ class Encoder : public Visitor {
   // current position. If existing_size is specified, it indicates some number of bytes which have
   // already been written that should be considered part of the object for the purpose of
   // calculating member offsets.
-  void VisitStructValueBody(const StructValue* node, size_t existing_size = 0);
+  void VisitStructValueBody(size_t offset, const StructValue* node);
 
   // Visit any union and encode it as an XUnion.
   void VisitUnionAsXUnion(const UnionValue* node);
-
-  // Enqueue some work in the deferred queue. Used to defer the encoding of out-of-line data until
-  // the in-line data has been fully encoded. Before each callback is called the data will be padded
-  // to an 8-byte alignment.
-  void Defer(fit::function<void()> cb) { deferred_.push_back(std::move(cb)); }
 
   // Visitor overrides.
   void VisitRawValue(const RawValue* node) override;
@@ -89,10 +83,11 @@ class Encoder : public Visitor {
   void VisitF32Value(const NumericValue<float>* node) override;
   void VisitF64Value(const NumericValue<double>* node) override;
 
-  const bool union_as_xunion_;
-  std::vector<fit::function<void()>> deferred_;
+  const bool unions_are_xunions_;
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_info_t> handles_;
+  // Offset we are currently using to write into the buffer.
+  size_t current_offset_ = 0;
 };
 
 }  // namespace fidl_codec

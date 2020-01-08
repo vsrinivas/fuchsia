@@ -4,13 +4,12 @@
 
 #include "src/lib/fidl_codec/encoder.h"
 
-#include <lib/fidl/txn_header.h>
-
 #include <algorithm>
 
-#include <src/lib/fxl/logging.h>
-
+#include "lib/fidl/txn_header.h"
+#include "src/lib/fidl_codec/type_visitor.h"
 #include "src/lib/fidl_codec/wire_types.h"
+#include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
 
@@ -18,275 +17,206 @@ Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, uint8_t
                                        uint8_t magic, const StructValue& object) {
   Encoder encoder(flags[0] & FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG);
 
-  encoder.Write(tx_id);
-  encoder.Write(flags[0]);
-  encoder.Write(flags[1]);
-  encoder.Write(flags[2]);
-  encoder.Write(magic);
-  encoder.Write(ordinal);
-  FXL_DCHECK(sizeof(fidl_message_header_t) == encoder.bytes_.size());
+  size_t object_size = object.struct_definition().Size(encoder.unions_are_xunions_);
+  encoder.AllocateObject(object_size);
+  encoder.WriteValue(tx_id);
+  encoder.WriteValue(flags[0]);
+  encoder.WriteValue(flags[1]);
+  encoder.WriteValue(flags[2]);
+  encoder.WriteValue(magic);
+  encoder.WriteValue(ordinal);
+  FXL_DCHECK(sizeof(fidl_message_header_t) == encoder.current_offset_);
 
-  // The offsets for the primary object include the header size, so we have to specify an existing
-  // size equal to the size of what we've already written above.
-  encoder.VisitStructValueBody(&object, /*existing_size=*/sizeof(fidl_message_header_t));
-
-  encoder.Pump();
-  encoder.Align8();
+  // The primary object offsets include the header size, so the offset of the object is zero.
+  encoder.VisitStructValueBody(0, &object);
 
   return Result{std::move(encoder.bytes_), std::move(encoder.handles_)};
 }
 
-void Encoder::Align8() { bytes_.resize((bytes_.size() + 7) & ~7); }
-
-template <typename T>
-void Encoder::Write(T t) {
-  auto old_size = bytes_.size();
-  bytes_.resize(old_size + sizeof(T));
-  *reinterpret_cast<T*>(bytes_.data() + old_size) = t;
+size_t Encoder::AllocateObject(size_t size) {
+  size_t object_offset = bytes_.size();
+  bytes_.resize((bytes_.size() + size + 7) & ~7);
+  return object_offset;
 }
 
 void Encoder::WriteData(const uint8_t* data, size_t size) {
-  if (data == nullptr) {
-    bytes_.resize(bytes_.size() + size);
-  } else {
-    std::copy(data, data + size, std::back_inserter(bytes_));
-  }
-}
-
-void Encoder::WriteData(const std::optional<std::vector<uint8_t>>& data, size_t size) {
-  const uint8_t* data_ptr = nullptr;
-
-  if (data && data->size() >= size) {
-    data_ptr = data->data();
-  }
-
-  WriteData(data_ptr, size);
-}
-
-template <typename T>
-void Encoder::WriteValue(std::optional<T> value) {
-  T real_value = 0;
-
-  if (value) {
-    real_value = *value;
-  }
-
-  WriteData(reinterpret_cast<uint8_t*>(&real_value), sizeof(T));
-}
-
-void Encoder::Pump() {
-  if (deferred_.empty()) {
-    return;
-  }
-
-  auto deferred = std::move(deferred_);
-  deferred_.clear();
-
-  for (const auto& func : deferred) {
-    Align8();
-    func();
-    Pump();
-  }
+  FXL_DCHECK(current_offset_ + size <= bytes_.size())
+      << "needs " << size << " bytes at offset " << current_offset_ << " buffer size is "
+      << bytes_.size();
+  std::copy(data, data + size, bytes_.data() + current_offset_);
+  current_offset_ += size;
 }
 
 void Encoder::VisitUnionBody(const UnionValue* node) {
-  FXL_DCHECK(!node->IsNull());
-  auto target_size = bytes_.size() + node->union_definition().size();
-  const size_t align_to = node->union_definition().alignment();
-  const size_t align_mask = align_to - 1;
-
-  FXL_CHECK(!(align_to & align_mask));
-  bytes_.resize((bytes_.size() + align_mask) & ~align_mask);
-
-  uint32_t tag = 0;
-  for (const auto& member : node->union_definition().members()) {
-    if (!member->reserved()) {
-      if (member.get() == node->member()) {
-        auto target_offset = bytes_.size() + member->offset();
-        Write<uint32_t>(tag);
-        bytes_.resize(target_offset);
-        if (node->value() != nullptr) {
-          node->value()->Visit(this);
-        }
-        bytes_.resize(target_size);
-        return;
-      }
-
-      tag++;
-    }
-  }
-
-  FXL_NOTREACHED() << "Invalid union field '" << node->member()->name() << "'";
+  FXL_DCHECK(node->member() != nullptr);
+  WriteValue<uint32_t>(node->member()->ordinal());
+  node->value()->Visit(this);
 }
 
-void Encoder::VisitStructValueBody(const StructValue* node, size_t existing_size) {
+void Encoder::VisitStructValueBody(size_t offset, const StructValue* node) {
   FXL_DCHECK(!node->IsNull());
-  FXL_DCHECK(existing_size <= bytes_.size());
-
-  size_t object_offset = bytes_.size() - existing_size;
-  size_t object_size =
-      union_as_xunion_ ? node->struct_definition().v1_size() : node->struct_definition().v0_size();
 
   for (const auto& member : node->struct_definition().members()) {
     auto it = node->fields().find(member.get());
     FXL_DCHECK(it != node->fields().end());
-    // Pad the buffer so the next object appended will be at the offset of the member.
-    bytes_.resize(object_offset + (union_as_xunion_ ? member->v1_offset() : member->v0_offset()));
+    current_offset_ = offset + (unions_are_xunions_ ? member->v1_offset() : member->v0_offset());
     it->second->Visit(this);
   }
-
-  FXL_DCHECK(bytes_.size() <= object_offset + object_size);
-  bytes_.resize(object_offset + object_size);
 }
 
 void Encoder::VisitUnionAsXUnion(const UnionValue* node) {
-  uint32_t ordinal = 0;
-  for (const auto& member : node->union_definition().members()) {
-    if (member.get() == node->member()) {
-      ordinal = member->ordinal();
-      break;
-    }
-  }
+  uint32_t ordinal = (node->member() == nullptr) ? 0 : node->member()->ordinal();
 
   FXL_DCHECK(ordinal || node->IsNull() || node->value()->IsNull())
       << "Invalid xunion field '" << node->member()->name() << "'";
 
   auto field = node->value().get();
-  Write<uint64_t>(ordinal);
+  WriteValue<uint64_t>(ordinal);
 
   if (field) {
     field->Visit(this);
   } else {
     // Empty envelope
-    Write<uint32_t>(0);
-    Write<uint32_t>(0);
+    WriteValue<uint32_t>(0);
+    WriteValue<uint32_t>(0);
+    WriteValue<uint64_t>(0);
   }
 }
 
 void Encoder::VisitRawValue(const RawValue* node) {
   const auto& data = node->data();
-  size_t size = 0;
-
   if (data) {
-    size = data->size();
+    WriteData(data->data(), data->size());
   }
-
-  WriteData(data, size);
 }
 
 void Encoder::VisitStringValue(const StringValue* node) {
-  if (node->IsNull()) {
-    Write<uint64_t>(0);
-    Write<uint64_t>(0);
+  if (node->IsNull() || !node->string()) {
+    WriteValue<uint64_t>(0);
+    WriteValue<uint64_t>(0);
   } else {
-    Write<uint64_t>(node->size());
-    Write<uint64_t>(UINTPTR_MAX);
-    Defer([this, node]() mutable {
-      const uint8_t* data = nullptr;
-      if (node->string()) {
-        data = reinterpret_cast<const uint8_t*>(node->string()->data());
-      }
-
-      WriteData(data, node->size());
-    });
+    WriteValue<uint64_t>(node->size());
+    WriteValue<uint64_t>(UINTPTR_MAX);
+    current_offset_ = AllocateObject(node->string()->size());
+    WriteData(reinterpret_cast<const uint8_t*>(node->string()->data()), node->string()->size());
   }
 }
 
 void Encoder::VisitBoolValue(const BoolValue* node) {
   if (auto value = node->value()) {
-    bytes_.push_back(*value);
+    WriteValue<uint8_t>(*value);
   } else {
-    bytes_.push_back(false);
+    WriteValue<uint8_t>(false);
   }
 }
 
 void Encoder::VisitEnvelopeValue(const EnvelopeValue* node) {
-  Write<uint32_t>(node->num_bytes());
-  Write<uint32_t>(node->num_handles());
+  WriteValue<uint32_t>(node->num_bytes());
+  WriteValue<uint32_t>(node->num_handles());
 
   if (node->IsNull() || (node->value() == nullptr)) {
-    Write<uint64_t>(0);
+    WriteValue<uint64_t>(0);
   } else {
-    Write<uint64_t>(UINTPTR_MAX);
-    Defer([this, node]() mutable { node->value()->Visit(this); });
+    WriteValue<uint64_t>(UINTPTR_MAX);
+    current_offset_ = AllocateObject(node->type()->InlineSize(unions_are_xunions_));
+    node->value()->Visit(this);
   }
 }
 
 void Encoder::VisitTableValue(const TableValue* node) {
-  Write<uint64_t>(node->highest_member());
-  Write<uint64_t>(UINTPTR_MAX);
+  WriteValue<uint64_t>(node->highest_member());
+  WriteValue<uint64_t>(UINTPTR_MAX);
 
-  Defer([this, node]() mutable {
-    for (Ordinal32 i = 1; i <= node->highest_member(); ++i) {
-      auto it = node->members().find(node->table_definition().members()[i].get());
-      if (it != node->members().end()) {
-        it->second->Visit(this);
-      }
+  constexpr size_t kEnvelopeSize = 2 * sizeof(uint32_t) + sizeof(uint64_t);
+  size_t offset = AllocateObject(node->highest_member() * kEnvelopeSize);
+
+  for (Ordinal32 i = 1; i <= node->highest_member(); ++i) {
+    current_offset_ = offset;
+    auto it = node->members().find(node->table_definition().members()[i].get());
+    if ((it == node->members().end()) || it->second->IsNull()) {
+      WriteValue<uint32_t>(0);
+      WriteValue<uint32_t>(0);
+      WriteValue<uint64_t>(0);
+    } else {
+      it->second->Visit(this);
     }
-  });
+    offset += kEnvelopeSize;
+  }
 }
 
 void Encoder::VisitUnionValue(const UnionValue* node) {
-  if (union_as_xunion_) {
+  if (unions_are_xunions_) {
     VisitUnionAsXUnion(node);
   } else if (!node->type()->Nullable()) {
     VisitUnionBody(node);
   } else if (node->IsNull()) {
-    Write<uint64_t>(0);
+    WriteValue<uint64_t>(0);
   } else {
-    Write<uint64_t>(UINTPTR_MAX);
-    Defer([this, node]() mutable { VisitUnionBody(node); });
+    WriteValue<uint64_t>(UINTPTR_MAX);
+    current_offset_ = AllocateObject(node->union_definition().size());
+    VisitUnionBody(node);
   }
 }
 
 void Encoder::VisitXUnionValue(const XUnionValue* node) { VisitUnionAsXUnion(node); }
 
 void Encoder::VisitArrayValue(const ArrayValue* node) {
+  size_t component_size = node->type()->GetComponentType()->InlineSize(unions_are_xunions_);
+  size_t offset = current_offset_;
   for (const auto& value : node->values()) {
+    current_offset_ = offset;
     value->Visit(this);
+    offset += component_size;
   }
 }
 
 void Encoder::VisitVectorValue(const VectorValue* node) {
   if (node->IsNull()) {
-    Write<uint64_t>(0);
-    Write<uint64_t>(0);
+    WriteValue<uint64_t>(0);
+    WriteValue<uint64_t>(0);
   } else {
-    Write<uint64_t>(node->size());
-    Write<uint64_t>(UINTPTR_MAX);
-    Defer([this, node]() mutable {
-      for (const auto& value : node->values()) {
-        value->Visit(this);
-      }
-    });
+    WriteValue<uint64_t>(node->size());
+    WriteValue<uint64_t>(UINTPTR_MAX);
+    size_t component_size = node->type()->GetComponentType()->InlineSize(unions_are_xunions_);
+    size_t offset = AllocateObject(component_size * node->values().size());
+    for (const auto& value : node->values()) {
+      current_offset_ = offset;
+      value->Visit(this);
+      offset += component_size;
+    }
   }
 }
 
 void Encoder::VisitEnumValue(const EnumValue* node) {
-  WriteData(node->data(), node->enum_definition().size());
+  if (node->data()) {
+    WriteData(node->data()->data(), node->enum_definition().size());
+  }
 }
 
 void Encoder::VisitBitsValue(const BitsValue* node) {
-  WriteData(node->data(), node->bits_definition().size());
+  if (node->data()) {
+    WriteData(node->data()->data(), node->bits_definition().size());
+  }
 }
 
 void Encoder::VisitHandleValue(const HandleValue* node) {
   if (node->handle().handle == FIDL_HANDLE_ABSENT) {
-    Write<uint32_t>(FIDL_HANDLE_ABSENT);
+    WriteValue<uint32_t>(FIDL_HANDLE_ABSENT);
   } else {
-    Write<uint32_t>(FIDL_HANDLE_PRESENT);
-    Defer([this, node]() mutable { handles_.push_back(node->handle()); });
+    WriteValue<uint32_t>(FIDL_HANDLE_PRESENT);
+    handles_.push_back(node->handle());
   }
 }
 
 void Encoder::VisitStructValue(const StructValue* node) {
   if (!node->type()->Nullable()) {
-    VisitStructValueBody(node);
+    VisitStructValueBody(current_offset_, node);
   } else if (node->IsNull()) {
-    Write<uint64_t>(0);
+    WriteValue<uint64_t>(0);
   } else {
-    Write<uint64_t>(UINTPTR_MAX);
-    Defer([this, node]() mutable { VisitStructValueBody(node); });
+    WriteValue<uint64_t>(UINTPTR_MAX);
+    size_t object_size = node->struct_definition().Size(unions_are_xunions_);
+    VisitStructValueBody(AllocateObject(object_size), node);
   }
 }
 

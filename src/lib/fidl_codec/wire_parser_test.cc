@@ -1443,6 +1443,91 @@ TEST_F(WireParserTest, ParseTraversalOrder) {
   fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
 }
 
+namespace {
+
+class TraversalMainSupport {
+ public:
+  TraversalMainSupport() {
+    zx::channel::create(0, &out1_, &out2_);
+    json_ = R"JSON({"v":[{"x":"10","y":{"a":"20",)JSON" + HandleToJson("b", out1_.get()) +
+            R"JSON(}},{"x":"30","y":{"a":"40",)JSON" + HandleToJson("b", out2_.get()) +
+            R"JSON(}}],"s":{"a":"50","b":"00000000"}})JSON";
+    pretty_ =
+        "{\n"
+        "  v: #gre#vector<test.fidlcodec.examples/TraversalMain>#rst# = [\n"
+        "    {\n"
+        "      x: #gre#uint32#rst# = #blu#10#rst#\n"
+        "      y: #gre#test.fidlcodec.examples/TraversalStruct#rst# = {\n"
+        "        a: #gre#uint32#rst# = #blu#20#rst#\n"
+        "        " +
+        HandleToPretty("b", out1_.get()) +
+        "\n"
+        "      }\n"
+        "    },\n"
+        "    {\n"
+        "      x: #gre#uint32#rst# = #blu#30#rst#\n"
+        "      y: #gre#test.fidlcodec.examples/TraversalStruct#rst# = {\n"
+        "        a: #gre#uint32#rst# = #blu#40#rst#\n"
+        "        " +
+        HandleToPretty("b", out2_.get()) +
+        "\n"
+        "      }\n"
+        "    }\n"
+        "  ]\n"
+        "  s: #gre#test.fidlcodec.examples/TraversalStruct#rst# = { "
+        "a: #gre#uint32#rst# = #blu#50#rst#, "
+        "b: #gre#handle#rst# = #red#00000000#rst# }\n"
+        "}";
+  }
+  std::vector<std::unique_ptr<test::fidlcodec::examples::TraversalMain>> GetV() {
+    std::vector<std::unique_ptr<test::fidlcodec::examples::TraversalMain>> result;
+    auto object1 = std::make_unique<test::fidlcodec::examples::TraversalMain>();
+    object1->x = 10;
+    auto object2 = std::make_unique<test::fidlcodec::examples::TraversalStruct>();
+    object2->a = 20;
+    object2->b = std::move(out1_);
+    object1->y = std::move(object2);
+    result.emplace_back(std::move(object1));
+    auto object3 = std::make_unique<test::fidlcodec::examples::TraversalMain>();
+    object3->x = 30;
+    auto object4 = std::make_unique<test::fidlcodec::examples::TraversalStruct>();
+    object4->a = 40;
+    object4->b = std::move(out2_);
+    object3->y = std::move(object4);
+    result.emplace_back(std::move(object3));
+    return result;
+  }
+
+  std::unique_ptr<test::fidlcodec::examples::TraversalStruct> GetS() {
+    auto result = std::make_unique<test::fidlcodec::examples::TraversalStruct>();
+    result->a = 50;
+    return result;
+  }
+
+  std::string GetJSON() { return json_; }
+  std::string GetPretty() { return pretty_; }
+
+ private:
+  zx::channel out1_;
+  zx::channel out2_;
+
+  std::string json_;
+  std::string pretty_;
+};
+
+}  // namespace
+
+TEST_F(WireParserTest, ParseTraversalMain) {
+  TraversalMainSupport support_v0;
+  TEST_DECODE_WIRE_BODY_ONE(TraversalMainMessage, support_v0.GetJSON(), support_v0.GetPretty(),
+                            support_v0.GetV(), support_v0.GetS());
+  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
+  TraversalMainSupport support_v1;
+  TEST_DECODE_WIRE_BODY_ONE(TraversalMainMessage, support_v1.GetJSON(), support_v1.GetPretty(),
+                            support_v1.GetV(), support_v1.GetS());
+  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
+}
+
 // Corrupt data tests
 
 TEST_F(WireParserTest, BadSchemaPrintHex) {

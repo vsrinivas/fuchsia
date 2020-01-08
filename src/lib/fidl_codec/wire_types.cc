@@ -327,7 +327,7 @@ std::unique_ptr<Value> VectorType::Decode(MessageDecoder* decoder, uint64_t offs
   decoder->GetValueAt(offset, &size);
   offset += sizeof(size);
 
-  auto result = std::make_unique<VectorValue>(this, size, component_type_.get());
+  auto result = std::make_unique<VectorValue>(this, size);
 
   // Don't need to check return value because the effects of returning false are
   // dealt with in DecodeNullable.

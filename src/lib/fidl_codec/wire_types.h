@@ -58,6 +58,9 @@ class Type {
   // Returns the size of this type when embedded in another object.
   virtual size_t InlineSize(bool unions_are_xunions) const;
 
+  // For vectors and arrays, give the type of the components (members).
+  virtual const Type* GetComponentType() const { return nullptr; }
+
   // Decodes the type's inline part. It generates a Value and, eventually,
   // registers the field for further decoding (secondary objects).
   virtual std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const;
@@ -343,6 +346,8 @@ class ElementSequenceType : public Type {
   explicit ElementSequenceType(std::unique_ptr<Type>&& component_type);
 
   const Type* component_type() const { return component_type_.get(); }
+
+  const Type* GetComponentType() const override { return component_type_.get(); }
 
   void Visit(TypeVisitor* visitor) const override;
 
