@@ -63,6 +63,21 @@ static struct nand_chip_table nand_chip_table[] = {
      0,
      0,
      0},
+    {0x00,
+     0xDF,
+     "Toshiba",
+     "THGBMNG5D1LBAIL",
+     {25, 20, 25},
+     {.cmd_flush = {.min = zx::usec(130), .interval = zx::usec(10)},
+      .write = {.min = zx::usec(320), .interval = zx::usec(20)},
+      .erase = {.min = zx::msec(2), .interval = zx::usec(100)}},
+     25,
+     true,
+     4096,
+     0,
+     0,
+     0,
+     0},
 };
 
 #define NAND_CHIP_TABLE_SIZE (sizeof(nand_chip_table) / sizeof(struct nand_chip_table))

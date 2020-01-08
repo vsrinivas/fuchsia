@@ -75,7 +75,7 @@ int Nelson::Thread() {
   }
   zxlogf(INFO, "Detected board rev 0x%x\n", info.board_revision);
 
-  if (info.board_revision != BOARD_REV_PVT) {
+  if (info.board_revision != BOARD_REV_P1) {
     zxlogf(ERROR, "Unsupported board revision %u. Booting will not continue\n",
            info.board_revision);
     return -1;
@@ -221,7 +221,7 @@ static zx_driver_ops_t nelson_driver_ops = []() {
 
 }  // namespace nelson
 
-ZIRCON_DRIVER_BEGIN(aml_bus, nelson::nelson_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(nelson, nelson::nelson_driver_ops, "zircon", "0.1", 3)
 BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_NELSON), ZIRCON_DRIVER_END(nelson)

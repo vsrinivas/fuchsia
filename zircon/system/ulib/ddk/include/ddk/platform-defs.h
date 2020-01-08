@@ -49,6 +49,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_CADENCE_HPNFC      34  // Cadence NAND Flash controller
 #define PDEV_DID_OT_RADIO           35  // OpenThread radio
 #define PDEV_DID_CRASH_TEST         36  // Crash-device
+#define PDEV_DID_GOODIX_GTX8X       37  // Goodix GTx8X touch controllers
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1

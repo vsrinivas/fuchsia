@@ -507,7 +507,7 @@ void AstroDisplay::PopulatePanelType() {
   uint8_t pt;
   if ((gpio_config_in(&gpio_, GPIO_NO_PULL) == ZX_OK) && (gpio_read(&gpio_, &pt) == ZX_OK)) {
     panel_type_ = pt;
-    if (board_info_.pid == PDEV_PID_ASTRO) {
+    if ((board_info_.pid == PDEV_PID_ASTRO) || (board_info_.pid == PDEV_PID_NELSON)) {
       DISP_INFO("Detected panel type = %s (%d)\n", panel_type_ ? "P070ACB_FT" : "TV070WSM_FT",
                 panel_type_);
     } else if (board_info_.pid == PDEV_PID_SHERLOCK) {
@@ -527,8 +527,10 @@ void AstroDisplay::PopulatePanelType() {
 zx_status_t AstroDisplay::SetupDisplayInterface() {
   fbl::AutoLock lock(&display_lock_);
 
-  // Support Astro and Sherlock at the moment
-  if (board_info_.pid != PDEV_PID_ASTRO && board_info_.pid != PDEV_PID_SHERLOCK) {
+  // Support Astro, Sherlock and Nelson at the moment
+  if ((board_info_.pid != PDEV_PID_ASTRO) &&
+      (board_info_.pid != PDEV_PID_SHERLOCK) &&
+      (board_info_.pid != PDEV_PID_NELSON) ) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -819,7 +821,7 @@ zx_status_t AstroDisplay::Bind() {
     return status;
   }
 
-  if (board_info_.pid == PDEV_PID_ASTRO) {
+  if ((board_info_.pid == PDEV_PID_ASTRO) || (board_info_.pid == PDEV_PID_NELSON)) {
     width_ = ASTRO_DISPLAY_WIDTH;
     height_ = ASTRO_DISPLAY_HEIGHT;
   } else if (board_info_.pid == PDEV_PID_SHERLOCK) {

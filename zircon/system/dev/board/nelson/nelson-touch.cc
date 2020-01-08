@@ -77,22 +77,23 @@ static const device_component_t goodix_components[] = {
 
 zx_status_t Nelson::TouchInit() {
   // Check the display ID pin to determine which driver device to add
-  gpio_impl_.SetAltFunction(S905D2_GPIOH(5), 0);
-  gpio_impl_.ConfigIn(S905D2_GPIOH(5), GPIO_NO_PULL);
-  uint8_t gpio_state;
+  gpio_impl_.SetAltFunction(GPIO_PANEL_DETECT, 0);
+  gpio_impl_.ConfigIn(GPIO_PANEL_DETECT, GPIO_NO_PULL);
+  uint8_t gpio_state = 0;
+
   /* Two variants of display are supported, one with BOE display panel and
         ft3x27 touch controller, the other with INX panel and Goodix touch
         controller.  This GPIO input is used to identify each.
         Logic 0 for BOE/ft3x27 combination
         Logic 1 for Innolux/Goodix combination
   */
-  gpio_impl_.Read(S905D2_GPIOH(5), &gpio_state);
-
-  if (gpio_state) {
+  gpio_impl_.Read(GPIO_PANEL_DETECT, &gpio_state);
+  zxlogf(INFO, "%s - Touch type: %s\n", __func__, (gpio_state ? "GTx8x" : "FT3x27"));
+  if (!gpio_state) {
     const zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
         {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_NELSON},
-        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_ASTRO_GOODIXTOUCH},
+        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GOODIX_GTX8X},
     };
 
     const composite_device_desc_t comp_desc = {
@@ -104,8 +105,7 @@ zx_status_t Nelson::TouchInit() {
         .metadata_list = nullptr,
         .metadata_count = 0,
     };
-
-    zx_status_t status = DdkAddComposite("gt92xx-touch", &comp_desc);
+    zx_status_t status = DdkAddComposite("gtx8x-touch", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(INFO, "nelson_touch_init(gt92xx): composite_device_add failed: %d\n", status);
       return status;
