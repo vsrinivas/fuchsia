@@ -194,6 +194,17 @@ class NamedValue final {
     return value_.template get<T::format_index>();
   }
 
+  // Gets the value by type. If this NamedValue does not contain the given type, this method returns
+  // nullptr.
+  template <typename T>
+  const T* GetOrNull() const {
+    if (!Contains<T>()) {
+      return nullptr;
+    }
+
+    return &Get<T>();
+  }
+
   // Gets the name of this NamedValue.
   const std::string& name() const { return name_; }
 
@@ -291,6 +302,22 @@ class NodeValue final {
     std::vector<PropertyValue> ret;
     ret.swap(properties_);
     return ret;
+  }
+
+  // Gets a pointer to the property with the given name and type.
+  //
+  // Returns a pointer if the property exists and is the correct type, nullptr otherwise.
+  //
+  // Note: The returned pointer is invalidated if any mutation occurs to this NodeValue.
+  template <typename T>
+  const T* get_property(const std::string& name) const {
+    auto it = std::find_if(properties_.begin(), properties_.end(),
+                           [&](const PropertyValue& val) { return val.name() == name; });
+    if (it == properties_.end()) {
+      return nullptr;
+    }
+
+    return it->template GetOrNull<T>();
   }
 
   // Adds a property to this node.

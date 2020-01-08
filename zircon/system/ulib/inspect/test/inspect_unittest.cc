@@ -57,7 +57,9 @@ TEST(Inspect, CreateCopyVmo) {
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
 
-  EXPECT_EQ(s, hierarchy.node().properties()[0].Get<inspect::StringPropertyValue>().value());
+  auto* string_value = hierarchy.node().get_property<inspect::StringPropertyValue>("string");
+  ASSERT_TRUE(string_value != nullptr);
+  EXPECT_EQ(s, string_value->value());
 }
 
 TEST(Inspect, GetLinks) {
