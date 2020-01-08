@@ -286,7 +286,7 @@ struct OAuthErrorResponse {
 }
 
 /// Construct an Oauth access token request using an authorization code.
-pub fn build_request_with_auth_code(auth_code: AuthCode) -> TokenProviderResult<HttpRequest> {
+fn build_request_with_auth_code(auth_code: AuthCode) -> TokenProviderResult<HttpRequest> {
     let request_body = form_urlencoded::Serializer::new(String::new())
         .append_pair("code", auth_code.0.as_str())
         .append_pair("redirect_uri", REDIRECT_URI.as_str())
@@ -327,7 +327,7 @@ pub fn build_request_with_refresh_token(
 
 /// Construct an Oauth token revocation request.  `credential` may be either
 /// an access token or refresh token.
-pub fn build_revocation_request(credential: String) -> TokenProviderResult<HttpRequest> {
+fn build_revocation_request(credential: String) -> TokenProviderResult<HttpRequest> {
     let request_body =
         form_urlencoded::Serializer::new(String::new()).append_pair("token", &credential).finish();
 
@@ -342,7 +342,7 @@ pub fn build_revocation_request(credential: String) -> TokenProviderResult<HttpR
 /// token, and remaining lifetime of the access token.
 // TODO(satsukiu): directly return structs as defined in fuchsia.identity.tokens FIDL
 // to simplify
-pub fn parse_response_with_refresh_token(
+fn parse_response_with_refresh_token(
     response_body: Option<String>,
     status: StatusCode,
 ) -> TokenProviderResult<(RefreshToken, AccessToken, Duration)> {
@@ -374,7 +374,7 @@ pub fn parse_response_with_refresh_token(
 
 /// Parses a response for an OAuth access token request when a refresh token is
 /// not expected.  Returns an access token and the lifetime of the token.
-pub fn parse_response_without_refresh_token(
+fn parse_response_without_refresh_token(
     response_body: Option<String>,
     status: StatusCode,
 ) -> TokenProviderResult<(AccessToken, Duration)> {
@@ -404,7 +404,7 @@ pub fn parse_response_without_refresh_token(
 }
 
 /// Parses a response for an Oauth revocation request.
-pub fn parse_revocation_response(
+fn parse_revocation_response(
     response_body: Option<String>,
     status: StatusCode,
 ) -> TokenProviderResult<()> {
@@ -422,7 +422,7 @@ pub fn parse_revocation_response(
 
 /// Parses an auth code out of a redirect URL reached through an OAuth
 /// authorization flow.
-pub fn parse_auth_code_from_redirect(url: Url) -> TokenProviderResult<AuthCode> {
+fn parse_auth_code_from_redirect(url: Url) -> TokenProviderResult<AuthCode> {
     if (url.scheme(), url.domain(), url.path())
         != (REDIRECT_URI.scheme(), REDIRECT_URI.domain(), REDIRECT_URI.path())
     {

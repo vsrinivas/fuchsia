@@ -137,11 +137,8 @@ where
     }
 }
 
-// TODO(satsukiu): the following methods and structs don't need to be public once
-// they aren't used from the auth_provider mod.
-
 #[derive(Debug, PartialEq)]
-pub struct IdToken(pub String);
+struct IdToken(pub String);
 
 /// Response type for OpenID user info requests.
 #[derive(Debug, Deserialize, PartialEq)]
@@ -149,7 +146,6 @@ pub struct OpenIdUserInfoResponse {
     pub sub: String,
     pub name: Option<String>,
     pub email: Option<String>,
-    pub profile: Option<String>,
     pub picture: Option<String>,
 }
 
@@ -174,7 +170,7 @@ pub fn build_user_info_request(access_token: &AccessToken) -> TokenProviderResul
 }
 
 /// Construct an `HttpRequest` to request an OpenID ID token.
-pub fn build_id_token_request(
+fn build_id_token_request(
     refresh_token: RefreshToken,
     audience: Option<String>,
 ) -> TokenProviderResult<HttpRequest> {
@@ -204,7 +200,7 @@ pub fn parse_user_info_response(
 }
 
 /// Parse an OpenID ID token response.
-pub fn parse_id_token_response(
+fn parse_id_token_response(
     response_body: Option<String>,
     status_code: StatusCode,
 ) -> TokenProviderResult<(IdToken, Duration)> {
@@ -446,7 +442,6 @@ mod test {
                 sub: String::from("id-123"),
                 name: Some(String::from("Amanda")),
                 email: Some(String::from("id-123@example.com")),
-                profile: Some(String::from("profile-url")),
                 picture: Some(String::from("picture-url")),
             }
         );
@@ -461,7 +456,6 @@ mod test {
                 sub: String::from("id-321"),
                 name: None,
                 email: None,
-                profile: None,
                 picture: None,
             }
         );
