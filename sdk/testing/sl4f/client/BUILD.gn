@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dart/dart_library.gni")
+import("//build/dart/dart_tool.gni")
 import("//build/dart/test.gni")
 
 dart_library("client") {
@@ -90,5 +91,13 @@ group("tests") {
 
   deps = [
     ":sl4f_client_tests($host_toolchain)",
+  ]
+}
+
+dart_tool("process_trace") {
+  main_dart = "bin/process_trace.dart"
+
+  deps = [
+    ":client",
   ]
 }

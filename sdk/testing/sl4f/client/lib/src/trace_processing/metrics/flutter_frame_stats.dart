@@ -243,3 +243,62 @@ List<TestCaseResults> flutterFrameStatsMetricsProcessor(
       'Failed to find any matching flutter process in $model for flutter app '
       'name $flutterAppName');
 }
+
+String flutterFrameStatsReport(Model model) {
+  final buffer = StringBuffer();
+
+  // TODO(PT-212): Should only iterate on flutter processes.
+  // final flutterProcesses = model.processes
+  //     .where((process) => process.name.startsWith('io.flutter.'));
+  final flutterProcesses = model.processes;
+
+  for (final process in flutterProcesses) {
+    if (process.name == 'kernel') {
+      // TODO(PT-212): This can be removed once PT-212 is fixed.
+      continue;
+    }
+
+    final uiThreads =
+        process.threads.where((thread) => thread.name.endsWith('.ui')).toList();
+    final gpuThreads = process.threads
+        .where((thread) => thread.name.endsWith('.gpu'))
+        .toList();
+
+    if (uiThreads.isEmpty && gpuThreads.isEmpty) {
+      continue;
+    }
+    if (uiThreads.length != gpuThreads.length) {
+      // throw ArgumentError('Found unequal number of UI and GPU Flutter threads');
+      print('Found unequal number of UI and GPU Flutter threads');
+      continue;
+    }
+
+    final flutterAppName = uiThreads.first.name;
+
+    buffer.write('''
+===
+$flutterAppName Flutter Frame Stats
+===
+
+''');
+
+    // TODO: We are assuming that threads are in order, instead we should verify
+    // that they have the same name % suffix
+
+    for (var i = 0; i < uiThreads.length; i++) {
+      final results = _flutterFrameStats(model, uiThreads[i], gpuThreads[i]);
+      buffer
+        ..write('fps:\n')
+        ..write('  ${results.averageFps}\n')
+        ..write('\n')
+        ..write('frame_build_times:\n')
+        ..write(describeValues(results.frameBuildTimes, indent: 2))
+        ..write('\n')
+        ..write('frame_rasterizer_times:\n')
+        ..write(describeValues(results.frameRasterizerTimes, indent: 2))
+        ..write('\n');
+    }
+  }
+
+  return buffer.toString();
+}

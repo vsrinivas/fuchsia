@@ -17,8 +17,12 @@ double _legacyCalculateFpsForEvents(List<Event> fpsEvents) {
   return fpsEvents.length / totalDuration;
 }
 
-List<TestCaseResults> scenicFrameStatsMetricsProcessor(
-    Model model, MetricsSpec metricsSpec) {
+class _Results {
+  double averageFps;
+  List<double> renderFrameDurations;
+}
+
+_Results _scenicFrameStats(Model model) {
   final framePresentedEvents = filterEventsTyped<InstantEvent>(
           getAllEvents(model),
           category: 'gfx',
@@ -28,19 +32,48 @@ List<TestCaseResults> scenicFrameStatsMetricsProcessor(
       ? _legacyCalculateFpsForEvents(framePresentedEvents)
       : 0.0;
 
-  var renderFrameDurations = filterEventsTyped<DurationEvent>(
+  final renderFrameDurations = filterEventsTyped<DurationEvent>(
           getAllEvents(model),
           category: 'gfx',
           name: 'RenderFrame')
       .map((e) => e.duration.toMillisecondsF())
       .toList();
-  if (renderFrameDurations.isEmpty) {
-    renderFrameDurations = [0.0];
+
+  return _Results()
+    ..averageFps = fps
+    ..renderFrameDurations = renderFrameDurations;
+}
+
+List<TestCaseResults> scenicFrameStatsMetricsProcessor(
+    Model model, MetricsSpec metricsSpec) {
+  final results = _scenicFrameStats(model);
+  if (results.renderFrameDurations.isEmpty) {
+    results.renderFrameDurations = [0.0];
   }
 
   return [
-    TestCaseResults('scenic_fps', Unit.framesPerSecond, [fps]),
+    TestCaseResults('scenic_fps', Unit.framesPerSecond, [results.averageFps]),
     TestCaseResults(
-        'scenic_RenderFrame', Unit.milliseconds, renderFrameDurations),
+        'scenic_RenderFrame', Unit.milliseconds, results.renderFrameDurations),
   ];
+}
+
+String scenicFrameStatsReport(Model model) {
+  final buffer = StringBuffer()..write('''
+===
+Scenic Frame Stats
+===
+
+''');
+
+  final results = _scenicFrameStats(model);
+
+  buffer
+    ..write('scenic_fps:\n')
+    ..write('  ${results.averageFps}\n')
+    ..write('\n')
+    ..write('render_frame_durations:\n')
+    ..write(describeValues(results.renderFrameDurations, indent: 2));
+
+  return buffer.toString();
 }

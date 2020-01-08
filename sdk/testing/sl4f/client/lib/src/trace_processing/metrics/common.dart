@@ -177,3 +177,28 @@ List<T> differenceValues<T extends num>(Iterable<T> values) {
   }
   return result;
 }
+
+/// Generate a string summary of [values].
+///
+/// Example output:
+///   count: 1033
+///   mean:  1.5378480048402718
+///   std:   1.5095374570697047
+///   min:   0.626416
+///   25%:   1.105875
+///   50%:   1.173375
+///   75%:   1.3925
+///   max:   26.257833
+String describeValues<T extends num>(List<T> values, {int indent = 0}) => '''
+count: ${values.length}
+mean:  ${values.isNotEmpty ? computeMean(values) : double.nan}
+std:   ${values.length > 1 ? computeStandardDeviation(values) : double.nan}
+min:   ${values.isNotEmpty ? computeMin(values) : double.nan}
+25%:   ${values.isNotEmpty ? computePercentile(values, 25) : double.nan}
+50%:   ${values.isNotEmpty ? computePercentile(values, 50) : double.nan}
+75%:   ${values.isNotEmpty ? computePercentile(values, 75) : double.nan}
+max:   ${values.isNotEmpty ? computeMax(values) : double.nan}
+'''
+    .split('\n')
+    .map((line) => ' ' * indent + line)
+    .join('\n');
