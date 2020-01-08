@@ -56,10 +56,10 @@ For more information, see [A Short Introduction to GN](/docs/development/build/i
 1.  Open  the `BUILD.gn` in your chosen text editor.
 
     ```
-    vi ~/fuchsia/examples/hello_world/BUILD.gn
+    vi ~/fuchsia/examples/hello_world/rust/BUILD.gn
     ```
 
-1.  Add `"//garnet/public/rust/fuchsia-syslog"` to the dependencies array in the
+1.  Add `"//src/lib/syslog/rust:syslog"` to the dependencies array in the
    `rustc_binary` target, which defines the executable.
 
     After adding this dependency, the `rustc_binary` in your `BUILD.gn`  should
@@ -73,7 +73,7 @@ For more information, see [A Short Introduction to GN](/docs/development/build/i
     edition = "2018"
 
     deps = [
-    "//garnet/public/rust/fuchsia-syslog",
+    "//src/lib/syslog/rust:syslog",
     ]
     test_deps = [ "//garnet/public/rust/fuchsia-async" ]
     }
@@ -106,7 +106,7 @@ package. In this guide, the source file is `main.rs`.
 1.  Within `main()`, add your log message.
 
     ```
-    fx_log_info!("{}, log!", greeting());
+    syslog::fx_log_info!("{}, log!", greeting());
     ```
 
     At this point, `main.rs` should look like this:
@@ -116,7 +116,7 @@ package. In this guide, the source file is `main.rs`.
 
     fn main() {
         syslog::init().expect("should not fail");
-        fx_log_info!("{}, log!", greeting());
+        syslog::fx_log_info!("{}, log!", greeting());
         println!("{}, world!", greeting());
     }
     …
@@ -175,14 +175,14 @@ For more information, see [Component manifest](/docs/concepts/storage/component_
     fx serve
     ```
 
-1.  In a new shell tab, navigate to your `fuchsia` directory and run `fx syslog`.
+1.  In a new shell tab, navigate to your `fuchsia` directory and run `fx log`.
 
     ```
     cd ~/fuchsia
     ```
 
     ```
-    fx syslog
+    fx log
     ```
 
 1.  In a new shell tab, navigate to your fuchsia directory and run the
@@ -196,7 +196,7 @@ For more information, see [Component manifest](/docs/concepts/storage/component_
     fx shell run fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx
     ```
 
-1.  Navigate to the shell tab where you ran `fx syslog`.
+1.  Navigate to the shell tab where you ran `fx log`.
 
     You should be able to see your logging text, which in this example is
     `Hello log!`.

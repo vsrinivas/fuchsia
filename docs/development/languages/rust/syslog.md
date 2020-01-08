@@ -6,7 +6,7 @@ This document explains how to use rust syslogger library.
 ## BUILD.gn dependency
 
 ```gn
-"//garnet/public/rust/fuchsia-syslog"
+"//src/lib/syslog/rust:syslog"
 ```
 
 ### Initialization
@@ -16,8 +16,7 @@ Logger can only be initialized once.
 #### Basic initialization
 
 ```rust
-#[macro_use]
-extern crate fuchsia_syslog as syslog;
+use fuchsia_syslog as syslog;
 
 fn main() {
     syslog::init().expect("should not fail");
@@ -27,8 +26,7 @@ fn main() {
 #### Initialization with tags
 
 ```rust
-#[macro_use]
-extern crate fuchsia_syslog as syslog;
+use fuchsia_syslog as syslog;
 
 fn main() {
     syslog::init_with_tags(&["my_tags"]).expect("should not fail");
@@ -38,6 +36,10 @@ fn main() {
 ### Log messages
 
 ```rust
+use fuchsia_syslog::{fx_log_info, fx_log_warn, fx_log_err, fx_vlog};
+// alternate export for all the logging macros:
+// use fuchsia_syslog::{macros::*}
+
 fx_log_info!("my msg: {}", 10);
 fx_log_info!(tag: "tag", "my msg: {}", 10);
 
