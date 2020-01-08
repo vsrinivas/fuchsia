@@ -128,7 +128,7 @@ func TestParseBytes(t *testing.T) {
 			gidl: `[]`,
 			expectedValue: []ir.Encoding{
 				{
-					WireFormat: ir.OldWireFormat,
+					WireFormat: ir.V1WireFormat,
 					Bytes:      nil,
 				},
 			},
@@ -138,7 +138,7 @@ func TestParseBytes(t *testing.T) {
 			gidl: `[3:raw(1, 2, 3,),]`,
 			expectedValue: []ir.Encoding{
 				{
-					WireFormat: ir.OldWireFormat,
+					WireFormat: ir.V1WireFormat,
 					Bytes:      []byte{1, 2, 3},
 				},
 			},
@@ -148,7 +148,7 @@ func TestParseBytes(t *testing.T) {
 			gidl: `[5:raw(0x0, 0xff, 0xA, 0x0a, 7,),]`,
 			expectedValue: []ir.Encoding{
 				{
-					WireFormat: ir.OldWireFormat,
+					WireFormat: ir.V1WireFormat,
 					Bytes:      []byte{0, 255, 10, 10, 7},
 				},
 			},
@@ -158,7 +158,7 @@ func TestParseBytes(t *testing.T) {
 			gidl: `[5:raw('h', 'e', 'l', 'l', 'o',),]`,
 			expectedValue: []ir.Encoding{
 				{
-					WireFormat: ir.OldWireFormat,
+					WireFormat: ir.V1WireFormat,
 					Bytes:      []byte{'h', 'e', 'l', 'l', 'o'},
 				},
 			},
@@ -168,7 +168,7 @@ func TestParseBytes(t *testing.T) {
 			gidl: `[4:num(2147483647),]`,
 			expectedValue: []ir.Encoding{
 				{
-					WireFormat: ir.OldWireFormat,
+					WireFormat: ir.V1WireFormat,
 					Bytes:      []byte{0xff, 0xff, 0xff, 0x7f},
 				},
 			},
@@ -178,7 +178,7 @@ func TestParseBytes(t *testing.T) {
 			gidl: `[2:num(-32768),]`,
 			expectedValue: []ir.Encoding{
 				{
-					WireFormat: ir.OldWireFormat,
+					WireFormat: ir.V1WireFormat,
 					Bytes:      []byte{0x00, 0x80},
 				},
 			},
@@ -188,7 +188,7 @@ func TestParseBytes(t *testing.T) {
 			gidl: `[3:padding,]`,
 			expectedValue: []ir.Encoding{
 				{
-					WireFormat: ir.OldWireFormat,
+					WireFormat: ir.V1WireFormat,
 					Bytes:      []byte{0, 0, 0},
 				},
 			},
@@ -198,7 +198,7 @@ func TestParseBytes(t *testing.T) {
 			gidl: `[3:padding(0x33),]`,
 			expectedValue: []ir.Encoding{
 				{
-					WireFormat: ir.OldWireFormat,
+					WireFormat: ir.V1WireFormat,
 					Bytes:      []byte{0x33, 0x33, 0x33},
 				},
 			},
@@ -208,7 +208,7 @@ func TestParseBytes(t *testing.T) {
 			gidl: `[2:num(127), 3:padding(0x33),]`,
 			expectedValue: []ir.Encoding{
 				{
-					WireFormat: ir.OldWireFormat,
+					WireFormat: ir.V1WireFormat,
 					Bytes:      []byte{0x7f, 0x00, 0x33, 0x33, 0x33},
 				},
 			},
@@ -259,7 +259,7 @@ func TestParseBytes(t *testing.T) {
 			gidl: `[3:raw(1, 2, 3)]`,
 			expectedValue: []ir.Encoding{
 				{
-					WireFormat: ir.OldWireFormat,
+					WireFormat: ir.V1WireFormat,
 					Bytes:      []byte{1, 2, 3},
 				},
 			},
@@ -340,7 +340,7 @@ func TestParseSuccessCase(t *testing.T) {
 				},
 			},
 			Encodings: []ir.Encoding{{
-				WireFormat: ir.OldWireFormat,
+				WireFormat: ir.V1WireFormat,
 				Bytes: []byte{
 					0, 0, 0, 0, 0, 0, 0, 0, // length
 					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
@@ -361,7 +361,7 @@ func TestParseSuccessCase(t *testing.T) {
 				},
 			},
 			Encodings: []ir.Encoding{{
-				WireFormat: ir.OldWireFormat,
+				WireFormat: ir.V1WireFormat,
 				Bytes: []byte{
 					0, 0, 0, 0, 0, 0, 0, 0, // length
 					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
@@ -401,7 +401,7 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 				},
 			},
 			Encodings: []ir.Encoding{{
-				WireFormat: ir.OldWireFormat,
+				WireFormat: ir.V1WireFormat,
 				Bytes: []byte{
 					0, 0, 0, 0, 0, 0, 0, 0, // length
 					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
@@ -441,7 +441,7 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 				},
 			},
 			Encodings: []ir.Encoding{{
-				WireFormat: ir.OldWireFormat,
+				WireFormat: ir.V1WireFormat,
 				Bytes: []byte{
 					0, 0, 0, 0, 0, 0, 0, 0, // length
 					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
@@ -499,7 +499,7 @@ func TestParseDecodeFailureCase(t *testing.T) {
 			Name: "OneStringOfMaxLengthFive-wrong-length",
 			Type: "TypeName",
 			Encodings: []ir.Encoding{{
-				WireFormat: ir.OldWireFormat,
+				WireFormat: ir.V1WireFormat,
 				Bytes: []byte{
 					1, 0, 0, 0, 0, 0, 0, 0, // length
 					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
@@ -544,7 +544,7 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 					},
 				},
 				Encodings: []ir.Encoding{{
-					WireFormat: ir.OldWireFormat,
+					WireFormat: ir.V1WireFormat,
 					Bytes: []byte{
 						0, 0, 0, 0, 0, 0, 0, 0, // length
 						255, 255, 255, 255, 255, 255, 255, 255, // alloc present
@@ -569,7 +569,7 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 					},
 				},
 				Encodings: []ir.Encoding{{
-					WireFormat: ir.OldWireFormat,
+					WireFormat: ir.V1WireFormat,
 					Bytes: []byte{
 						0, 0, 0, 0, 0, 0, 0, 0, // length
 						255, 255, 255, 255, 255, 255, 255, 255, // alloc present

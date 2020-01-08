@@ -21,6 +21,7 @@ var tmpl = template.Must(template.New("tmpls").Parse(`
 package fidl_test
 
 import (
+	"reflect"
 	"testing"
 
 	"fidl/conformance"

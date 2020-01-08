@@ -18,7 +18,7 @@ import (
 )
 
 var tmpl = template.Must(template.New("tmpls").Parse(`
-use fidl::encoding::{Context, Decodable, Decoder, Encoder};
+use fidl::{Error, encoding::{Context, Decodable, Decoder, Encoder}};
 use fidl_conformance as conformance;
 
 const V1_CONTEXT: &Context = &Context {};

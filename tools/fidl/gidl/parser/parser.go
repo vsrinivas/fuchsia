@@ -528,8 +528,8 @@ func (p *Parser) parseByteSection() ([]ir.Encoding, error) {
 	if firstTok.kind == tLsquare {
 		if b, err := p.parseByteList(); err == nil {
 			return []ir.Encoding{{
-				// Default to the old wire format.
-				WireFormat: ir.OldWireFormat,
+				// Default to the V1 wire format.
+				WireFormat: ir.V1WireFormat,
 				Bytes:      b,
 			}}, nil
 		} else {
