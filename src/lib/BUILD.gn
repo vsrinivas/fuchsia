@@ -79,6 +79,7 @@ group("tests") {
     "testing:tests",
     "timekeeper:tests",
     "trace:tests",
+    "ui:rust-ui-crates-tests",
     "ui:tests",
     "waitgroup:tests",
     "watch_handler:tests",

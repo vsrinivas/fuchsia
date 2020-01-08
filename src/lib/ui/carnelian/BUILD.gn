@@ -16,8 +16,6 @@ rustc_library("carnelian") {
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-framebuffer",
-    "//garnet/public/rust/fuchsia-scenic",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
@@ -36,6 +34,8 @@ rustc_library("carnelian") {
     "//src/lib/fuchsia-component",
     "//src/lib/mapped-vmo",
     "//src/lib/syslog/rust:syslog",
+    "//src/lib/ui/fuchsia-framebuffer",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
@@ -60,10 +60,10 @@ rustc_binary("spinning_square_example") {
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-scenic",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -77,13 +77,13 @@ rustc_binary("embedding_example") {
   source_root = "examples/embedding.rs"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-scenic",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -97,10 +97,10 @@ rustc_binary("button_example") {
   edition = "2018"
   source_root = "examples/button.rs"
   deps = [
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-scenic",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -113,10 +113,10 @@ rustc_binary("perf_test_01") {
   edition = "2018"
   source_root = "examples/perf_test_01.rs"
   deps = [
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-scenic",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:euclid",
@@ -131,9 +131,9 @@ rustc_binary("perf_test_02") {
   edition = "2018"
   source_root = "examples/perf_test_02.rs"
   deps = [
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-scenic",
     "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:euclid",
@@ -147,9 +147,9 @@ rustc_binary("perf_test_03") {
   edition = "2018"
   source_root = "examples/perf_test_03.rs"
   deps = [
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-scenic",
     "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
@@ -163,9 +163,9 @@ rustc_binary("perf_test_04") {
   edition = "2018"
   source_root = "examples/perf_test_04.rs"
   deps = [
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-scenic",
     "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -178,12 +178,12 @@ rustc_binary("drawing") {
   edition = "2018"
   source_root = "examples/drawing.rs"
   deps = [
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-framebuffer",
-    "//garnet/public/rust/fuchsia-scenic",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-framebuffer",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:euclid",
@@ -197,12 +197,12 @@ rustc_binary("drawing_mold") {
   edition = "2018"
   source_root = "examples/drawing_mold.rs"
   deps = [
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-framebuffer",
-    "//garnet/public/rust/fuchsia-scenic",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//src/graphics/lib/compute/mold",
     "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-framebuffer",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:euclid",
@@ -218,15 +218,15 @@ rustc_binary("clockface") {
   source_root = "examples/clockface.rs"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-framebuffer",
-    "//garnet/public/rust/fuchsia-scenic",
     "//src/graphics/lib/compute/mold",
     "//src/graphics/lib/compute/spinel-mold",
     "//src/graphics/lib/compute/spinel-rs-sys",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/mapped-vmo",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-framebuffer",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
@@ -260,9 +260,6 @@ rustc_binary("ink") {
   source_root = "examples/ink.rs"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-framebuffer",
-    "//garnet/public/rust/fuchsia-scenic",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//src/graphics/lib/compute/mold",
     "//src/graphics/lib/compute/spinel-mold",
@@ -271,6 +268,9 @@ rustc_binary("ink") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/mapped-vmo",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-framebuffer",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:euclid",
@@ -305,9 +305,6 @@ rustc_binary("infinite_scroll") {
   source_root = "examples/infinite_scroll.rs"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-framebuffer",
-    "//garnet/public/rust/fuchsia-scenic",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//src/graphics/lib/compute/mold",
@@ -319,6 +316,9 @@ rustc_binary("infinite_scroll") {
     "//src/lib/mapped-vmo",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-framebuffer",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
@@ -635,10 +635,10 @@ rustc_binary("carnelian_integration_test_bin") {
   edition = "2018"
   source_root = "tests/carnelian_integration_test.rs"
   deps = [
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-framebuffer",
-    "//garnet/public/rust/fuchsia-scenic",
     "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-framebuffer",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -664,10 +664,10 @@ rustc_binary("carnelian_fb_integration_test_bin") {
   edition = "2018"
   source_root = "tests/carnelian_integration_test.rs"
   deps = [
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-framebuffer",
-    "//garnet/public/rust/fuchsia-scenic",
     "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-framebuffer",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -685,5 +685,22 @@ test_package("carnelian_fb_integration_test") {
       name = "carnelian_fb_integration_test"
       environments = [ nuc_env ]
     },
+  ]
+}
+
+group("examples") {
+  public_deps = [
+    "//src/lib/ui/carnelian:button_rs",
+    "//src/lib/ui/carnelian:clockface_rs",
+    "//src/lib/ui/carnelian:drawing_mold_rs",
+    "//src/lib/ui/carnelian:drawing_rs",
+    "//src/lib/ui/carnelian:embedding_rs",
+    "//src/lib/ui/carnelian:infinite_scroll_rs",
+    "//src/lib/ui/carnelian:ink_rs",
+    "//src/lib/ui/carnelian:perf_test_01_rs",
+    "//src/lib/ui/carnelian:perf_test_02_rs",
+    "//src/lib/ui/carnelian:perf_test_03_rs",
+    "//src/lib/ui/carnelian:perf_test_04_rs",
+    "//src/lib/ui/carnelian:spinning_square_rs",
   ]
 }

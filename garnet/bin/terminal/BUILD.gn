@@ -27,8 +27,6 @@ rustc_library("lib") {
     "third_party/term-model",
     "//garnet/bin/terminal/third_party/term-model",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/carnelian",
-    "//garnet/public/rust/fuchsia-scenic",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
@@ -41,6 +39,8 @@ rustc_library("lib") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/shared-buffer",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -60,7 +60,7 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    "//garnet/public/rust/carnelian",
+    "//src/lib/ui/carnelian",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]

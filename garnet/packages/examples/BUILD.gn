@@ -14,32 +14,6 @@ group("components") {
   ]
 }
 
-group("fuchsia-framebuffer") {
-  testonly = true
-  public_deps = [
-    "//garnet/public/rust/fuchsia-framebuffer:fb_box_rs",
-  ]
-}
-
-group("carnelian") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:scenic",
-    "//garnet/public/rust/carnelian:button_rs",
-    "//garnet/public/rust/carnelian:clockface_rs",
-    "//garnet/public/rust/carnelian:drawing_mold_rs",
-    "//garnet/public/rust/carnelian:drawing_rs",
-    "//garnet/public/rust/carnelian:embedding_rs",
-    "//garnet/public/rust/carnelian:infinite_scroll_rs",
-    "//garnet/public/rust/carnelian:ink_rs",
-    "//garnet/public/rust/carnelian:perf_test_01_rs",
-    "//garnet/public/rust/carnelian:perf_test_02_rs",
-    "//garnet/public/rust/carnelian:perf_test_03_rs",
-    "//garnet/public/rust/carnelian:perf_test_04_rs",
-    "//garnet/public/rust/carnelian:spinning_square_rs",
-  ]
-}
-
 group("scenic") {
   testonly = true
   public_deps = [
@@ -75,12 +49,10 @@ group("all") {
   public_deps = [
     "//garnet/packages/examples:benchmark",
     "//garnet/packages/examples:bluetooth",
-    "//garnet/packages/examples:carnelian",
     "//garnet/packages/examples:components",
     "//garnet/packages/examples:escher",
     "//garnet/packages/examples:eth-rs",
     "//garnet/packages/examples:fidl",
-    "//garnet/packages/examples:fuchsia-framebuffer",
     "//garnet/packages/examples:http",
     "//garnet/packages/examples:inspection",
     "//garnet/packages/examples:intl",

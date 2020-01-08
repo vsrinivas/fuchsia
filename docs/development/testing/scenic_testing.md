@@ -237,10 +237,10 @@ There are some examples available:
 
 * **spinning_square_rs**
   - An example written in Rust that shows the use of
-    [Carnelian](/garnet/public/rust/carnelian/README.md),
+    [Carnelian](/src/lib/ui/carnelian/README.md),
     a prototype framework for writing Fuchsia modules in Rust.
-  - **Source:** [`//garnet/public/rust/carnelian/examples/spinning_square.rs`](/garnet/public/rust/carnelian/examples/spinning_square.rs)
-  - **Build dependency:** `//garnet/public/rust/carnelian:spinning_square_rs`
+  - **Source:** [`//src/lib/ui/carnelian/examples/spinning_square.rs`](/src/lib/ui/carnelian/examples/spinning_square.rs)
+  - **Build dependency:** `//src/lib/ui/carnelian:spinning_square_rs`
   - **Package URI:** `fuchsia-pkg://fuchsia.com/spinning_square_rs#meta/spinning_square_rs.cmx`
 
 * **spinning_cube**
@@ -267,7 +267,7 @@ To run these applications, you need to include the following dependency in your 
 configuration:
 
 ```shell
-fx set terminal.x64 --with "//src/ui/examples:ui,//topaz/app/spinning_cube,//garnet/public/rust/carnelian"
+fx set terminal.x64 --with "//src/ui/examples:ui,//topaz/app/spinning_cube,//src/lib/ui"
 ```
 
 You can replace the product with `workstation.x64` as well; you can also use an all-in-one bundle
