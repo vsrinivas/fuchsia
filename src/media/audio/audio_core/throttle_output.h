@@ -30,7 +30,21 @@ class ThrottleOutput : public AudioOutput {
 
  protected:
   ThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry)
-      : AudioOutput(threading_model, registry) {}
+      : AudioOutput(threading_model, registry) {
+    // This is just some placeholder format that we can use to instantiate a mix
+    // stage for us. Since we never return a value from |StartMixJob|, we'll only
+    // ever trim on this mix stage, so the format here is not particularly
+    // important.
+    //
+    // Longer term we should just have something like a 'NullMixStage' that only
+    // has this trim capability.
+    Format mix_format = Format(fuchsia::media::AudioStreamType{
+        .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+        .channels = 1,
+        .frames_per_second = 48000,
+    });
+    SetupMixTask(mix_format, 0);
+  }
 
   // AudioOutput Implementation
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override {
@@ -42,7 +56,7 @@ class ThrottleOutput : public AudioOutput {
     }
   }
 
-  std::optional<FrameSpan> StartMixJob(zx::time process_start) override {
+  std::optional<MixStage::FrameSpan> StartMixJob(zx::time process_start) override {
     // Compute the next callback time; check whether trimming is falling behind.
     last_sched_time_ = last_sched_time_ + TRIM_PERIOD;
     if (process_start > last_sched_time_) {
@@ -66,7 +80,7 @@ class ThrottleOutput : public AudioOutput {
     return std::nullopt;
   }
 
-  void FinishMixJob(const FrameSpan& span, float* buffer) override {
+  void FinishMixJob(const MixStage::FrameSpan& span, float* buffer) override {
     // Since we never start any jobs, this should never be called.
     FX_DCHECK(false);
   }

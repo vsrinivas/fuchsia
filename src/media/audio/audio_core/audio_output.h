@@ -12,6 +12,7 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_link.h"
+#include "src/media/audio/audio_core/mix_stage.h"
 
 namespace media::audio {
 
@@ -34,6 +35,7 @@ class AudioOutput : public AudioDevice {
   void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) final;
+  void CleanupSourceLink(const fbl::RefPtr<AudioLink>& link) final;
 
   void SetNextSchedTime(zx::time next_sched_time) {
     next_sched_time_ = next_sched_time;
@@ -43,31 +45,16 @@ class AudioOutput : public AudioDevice {
   void SetupMixTask(const Format& format, size_t max_block_size_frames)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {
     FX_CHECK(format.sample_format() == fuchsia::media::AudioSampleFormat::FLOAT);
-    mix_format_ = {format};
-    SetupMixBuffer(max_block_size_frames);
+    mix_stage_ = std::make_unique<MixStage>(format, max_block_size_frames);
   }
 
   void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }
 
   void Cleanup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  struct FrameSpan {
-    int64_t start;
-    size_t length;
-
-    // If |true| then the output is muted and no mix is needed for these frames, but the mix loop
-    // can consume and release any packets that cover this span.
-    bool muted;
-
-    // A mapping between reference clock to frame number. If the same
-    // |reference_clock_to_destination_frame_generation| is returned between consecutive calls to
-    // |StartMixJob|, then the |reference_clock_to_frame| function is guaranteed to be the same.
-    TimelineFunction reference_clock_to_frame;
-    uint32_t reference_clock_to_destination_frame_generation;
-  };
-  virtual std::optional<FrameSpan> StartMixJob(zx::time process_start)
+  virtual std::optional<MixStage::FrameSpan> StartMixJob(zx::time process_start)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
-  virtual void FinishMixJob(const FrameSpan& span, float* buffer)
+  virtual void FinishMixJob(const MixStage::FrameSpan& span, float* buffer)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
 
  private:
@@ -83,54 +70,7 @@ class AudioOutput : public AudioDevice {
   zx::time next_sched_time_;
   bool next_sched_time_known_;
 
-  void SetupMixBuffer(uint32_t max_mix_frames) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-
-  struct MixJob {
-    // Job state set up once by an output implementation, used by all renderers.
-    float* buf;
-    uint32_t buf_frames;
-    int64_t start_pts_of;  // start PTS, expressed in output frames.
-    uint32_t reference_clock_to_destination_frame_gen;
-    bool accumulate;
-    const TimelineFunction* reference_clock_to_destination_frame;
-
-    bool sw_output_muted;
-
-    // Per-stream job state, set up for each renderer during SetupMix.
-    uint32_t frames_produced;
-  };
-
-  // TODO(13415): Integrate it into the Mixer class itself.
-  void UpdateSourceTrans(const Stream& stream, Mixer::Bookkeeping* bk);
-  void UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk);
-
-  enum class TaskType { Mix, Trim };
-
-  void ForEachSource(TaskType task_type, zx::time ref_time)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-
-  void SetupMix(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-  bool ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& buffer)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-
-  void SetupTrim(Mixer* mixer, zx::time trim_point)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-  bool ProcessTrim(const Stream::Buffer& buffer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-
-  // Vector used to hold references to source links while mixing (instead of
-  // holding a lock, preventing source_links_ mutation for the entire mix job).
-  std::vector<fbl::RefPtr<AudioLink>> source_link_refs_ FXL_GUARDED_BY(mix_domain().token());
-
-  // State for the internal buffer which holds intermediate mix results.
-  std::unique_ptr<float[]> mix_buf_ FXL_GUARDED_BY(mix_domain().token());
-  uint32_t mix_buf_frames_ FXL_GUARDED_BY(mix_domain().token()) = 0;
-
-  // State used by the mix task.
-  MixJob cur_mix_job_;
-  std::optional<Format> mix_format_;
-
-  // State used by the trim task.
-  FractionalFrames<int64_t> trim_threshold_;
+  std::unique_ptr<MixStage> mix_stage_;
 };
 
 }  // namespace media::audio
