@@ -326,7 +326,8 @@ fn spawn_avrcp_client(stream: PeerManagerRequestStream, sender: mpsc::Sender<Ser
     );
 }
 
-/// Polls the stream for the PeerManager FIDL interface and responds with new controller clients.
+/// Polls the stream for the PeerManager FIDL interface to set target handlers and respond with
+/// new controller clients.
 pub async fn avrcp_client_stream_handler<F>(
     mut stream: PeerManagerRequestStream,
     mut sender: mpsc::Sender<ServiceRequest>,
@@ -335,24 +336,43 @@ pub async fn avrcp_client_stream_handler<F>(
 where
     F: Fn(Controller, ControllerRequestStream),
 {
-    while let Some(PeerManagerRequest::GetControllerForTarget { peer_id, client, responder }) =
-        stream.try_next().await?
-    {
-        let client: fidl::endpoints::ServerEnd<ControllerMarker> = client;
+    while let Some(req) = stream.try_next().await? {
+        match req {
+            PeerManagerRequest::GetControllerForTarget { peer_id, client, responder } => {
+                let client: fidl::endpoints::ServerEnd<ControllerMarker> = client;
 
-        fx_log_info!("New connection request for {}", peer_id);
+                fx_log_info!("New connection request for {}", peer_id);
 
-        match client.into_stream() {
-            Err(err) => {
-                fx_log_warn!("Err unable to create server end point from stream {:?}", err);
-                responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
+                match client.into_stream() {
+                    Err(err) => {
+                        fx_log_warn!("Err unable to create server end point from stream {:?}", err);
+                        responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
+                    }
+                    Ok(client_stream) => {
+                        let (response, pcr) = ServiceRequest::new_controller_request(peer_id);
+                        sender.try_send(pcr)?;
+                        let controller = response.into_future().await?;
+                        spawn_fn(controller, client_stream);
+                        responder.send(&mut Ok(()))?;
+                    }
+                }
             }
-            Ok(client_stream) => {
-                let (response, pcr) = ServiceRequest::new_controller_request(peer_id);
-                sender.try_send(pcr)?;
-                let controller = response.into_future().await?;
-                spawn_fn(controller, client_stream);
-                responder.send(&mut Ok(()))?;
+            PeerManagerRequest::SetAbsoluteVolumeHandler { .. } => {}
+            PeerManagerRequest::RegisterTargetHandler { handler, responder } => {
+                match handler.into_proxy() {
+                    Ok(target_handler) => {
+                        let (response, rthr) =
+                            ServiceRequest::new_register_target_handler_request(target_handler);
+                        sender.try_send(rthr)?;
+                        match response.into_future().await? {
+                            Ok(_) => responder.send(&mut Ok(()))?,
+                            Err(_) => {
+                                responder.send(&mut Err(zx::Status::ALREADY_BOUND.into_raw()))?
+                            }
+                        }
+                    }
+                    Err(_) => responder.send(&mut Err(zx::Status::INVALID_ARGS.into_raw()))?,
+                };
             }
         }
     }
@@ -371,7 +391,7 @@ fn spawn_test_avrcp_client(
     );
 }
 
-/// polls the stream for the PeerManagerExt FIDL interface and responds with new test controller clients.
+/// Polls the stream for the PeerManagerExt FIDL interface and responds with new test controller clients.
 pub async fn test_avrcp_client_stream_handler<F>(
     mut stream: PeerManagerExtRequestStream,
     mut sender: mpsc::Sender<ServiceRequest>,
@@ -437,13 +457,98 @@ mod tests {
     use pin_utils::pin_mut;
     use std::collections::VecDeque;
 
+    fn handle_target_server(request: TargetHandlerRequest) -> Result<(), Error> {
+        match request {
+            TargetHandlerRequest::GetEventsSupported { responder } => {
+                let _ = responder.send(&mut Ok(vec![]))?;
+            }
+            TargetHandlerRequest::GetMediaAttributes { responder } => {
+                let _ = responder.send(&mut Ok(MediaAttributes {
+                    title: "".to_string(),
+                    artist_name: "".to_string(),
+                    album_name: "".to_string(),
+                    track_number: "".to_string(),
+                    total_number_of_tracks: "".to_string(),
+                    genre: "".to_string(),
+                    playing_time: "".to_string(),
+                }))?;
+            }
+            TargetHandlerRequest::GetPlayStatus { responder } => {
+                let _ = responder.send(&mut Ok(PlayStatus {
+                    song_length: None,
+                    song_position: None,
+                    playback_status: None,
+                }))?;
+            }
+            TargetHandlerRequest::SendCommand { command: _, pressed: _, responder } => {
+                let _ = responder.send(&mut Ok(()))?;
+            }
+            TargetHandlerRequest::ListPlayerApplicationSettingAttributes { responder } => {
+                let _ = responder.send(&mut Ok(vec![]))?;
+            }
+            TargetHandlerRequest::GetPlayerApplicationSettings { attribute_ids: _, responder } => {
+                let _ = responder.send(&mut Ok(PlayerApplicationSettings {
+                    equalizer: None,
+                    repeat_status_mode: None,
+                    shuffle_mode: None,
+                    scan_mode: None,
+                    custom_settings: None,
+                }))?;
+            }
+            TargetHandlerRequest::SetPlayerApplicationSettings {
+                requested_settings: _,
+                responder,
+            } => {
+                let _ = responder.send(&mut Ok(PlayerApplicationSettings {
+                    equalizer: None,
+                    repeat_status_mode: None,
+                    shuffle_mode: None,
+                    scan_mode: None,
+                    custom_settings: None,
+                }))?;
+            }
+            TargetHandlerRequest::GetNotification { event_id: _, responder } => {
+                let _ = responder.send(&mut Ok(Notification {
+                    status: None,
+                    track_id: None,
+                    pos: None,
+                    battery_status: None,
+                    system_status: None,
+                    application_settings: None,
+                    player_id: None,
+                    volume: None,
+                    device_connected: None,
+                }))?;
+            }
+            TargetHandlerRequest::WatchNotification {
+                event_id: _,
+                current: _,
+                pos_change_interval: _,
+                responder,
+            } => {
+                let _ = responder.send(&mut Ok(Notification {
+                    status: None,
+                    track_id: None,
+                    pos: None,
+                    battery_status: None,
+                    system_status: None,
+                    application_settings: None,
+                    player_id: None,
+                    volume: None,
+                    device_connected: None,
+                }))?;
+            }
+        };
+        Ok(())
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_spawn_avrcp_client() -> Result<(), Error> {
+    async fn test_spawn_avrcp_client_target() -> Result<(), Error> {
         let (client, server): (PeerManagerProxy, PeerManagerRequestStream) =
             create_fidl_endpoints::<PeerManagerMarker>()?;
 
         let control_handle = server.control_handle();
-        let (client_sender, peer_controller_request_receiver) = mpsc::channel(512);
+        let (client_sender, service_request_receiver) = mpsc::channel(512);
 
         let profile_service = MockProfileService { fake_events: Mutex::new(Some(VecDeque::new())) };
 
@@ -452,7 +557,62 @@ mod tests {
         };
 
         let mut peer_manager =
-            PeerManager::new(Box::new(profile_service), peer_controller_request_receiver)
+            PeerManager::new(Box::new(profile_service), service_request_receiver)
+                .expect("unable to create peer manager");
+
+        let (target_client, target_server) = create_endpoints::<TargetHandlerMarker>()
+            .expect("Error creating TargetHandler endpoint");
+
+        let handler_fut =
+            avrcp_client_stream_handler(server, client_sender.clone(), test_fn).fuse();
+        let client_fut = client.register_target_handler(target_client).fuse();
+
+        pin_mut!(handler_fut);
+        pin_mut!(client_fut);
+
+        let peer_manager_run_fut = peer_manager.run().fuse();
+        pin_mut!(peer_manager_run_fut);
+
+        let target_stream =
+            target_server.into_stream().expect("Unable to get target stream").fuse();
+        pin_mut!(target_stream);
+
+        loop {
+            futures::select! {
+                _= peer_manager_run_fut  => {
+                    return Err(format_err!("peer manager returned early"));
+                }
+                req = target_stream.select_next_some() => {
+                    let _ = handle_target_server(req.expect("unable to parse request"))?;
+                }
+                _ = client_fut => {
+                    control_handle.shutdown();
+                }
+                res = handler_fut => {
+                    drop(client);
+                    let _ = res.expect("error with spawning handler");
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_spawn_avrcp_client() -> Result<(), Error> {
+        let (client, server): (PeerManagerProxy, PeerManagerRequestStream) =
+            create_fidl_endpoints::<PeerManagerMarker>()?;
+
+        let control_handle = server.control_handle();
+        let (client_sender, service_request_receiver) = mpsc::channel(512);
+
+        let profile_service = MockProfileService { fake_events: Mutex::new(Some(VecDeque::new())) };
+
+        let test_fn = |_controller: Controller, _fidl_stream: ControllerRequestStream| {
+            control_handle.shutdown();
+        };
+
+        let mut peer_manager =
+            PeerManager::new(Box::new(profile_service), service_request_receiver)
                 .expect("unable to create peer manager");
         let (_c_client, c_server) =
             create_endpoints::<ControllerMarker>().expect("Error creating Controller endpoint");
@@ -472,7 +632,6 @@ mod tests {
                 return Err(format_err!("peer manager returned early"))
             }
             res = handler_fut => {
-                println!("handler_fut fired");
                 drop(client);
                 res.0.expect("error with spawning handler");
                 let _ = res.1.expect("error get_controller_for_target");
@@ -487,7 +646,7 @@ mod tests {
             create_fidl_endpoints::<PeerManagerExtMarker>()?;
 
         let control_handle = server.control_handle();
-        let (client_sender, peer_controller_request_receiver) = mpsc::channel(512);
+        let (client_sender, service_request_receiver) = mpsc::channel(512);
 
         let profile_service = MockProfileService { fake_events: Mutex::new(Some(VecDeque::new())) };
 
@@ -496,14 +655,15 @@ mod tests {
         };
 
         let mut peer_manager =
-            PeerManager::new(Box::new(profile_service), peer_controller_request_receiver)
+            PeerManager::new(Box::new(profile_service), service_request_receiver)
                 .expect("unable to create peer manager");
-        let (_t_client, t_server) = create_endpoints::<ControllerExtMarker>()
+
+        let (_target_client, target_server) = create_endpoints::<ControllerExtMarker>()
             .expect("Error creating Test Controller endpoint");
 
         let handler_fut = future::join(
             test_avrcp_client_stream_handler(server, client_sender.clone(), test_fn),
-            client.get_controller_for_target(&"123", t_server),
+            client.get_controller_for_target(&"123", target_server),
         )
         .fuse();
         pin_mut!(handler_fut);
@@ -516,7 +676,6 @@ mod tests {
                 return Err(format_err!("peer manager returned early"))
             }
             res = handler_fut => {
-                println!("handler_fut fired");
                 drop(client);
                 res.0.expect("error with spawning handler");
                 let _ = res.1.expect("error get_test_controller_for_target");

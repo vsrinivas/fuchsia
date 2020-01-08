@@ -4,30 +4,48 @@
 
 use super::*;
 
+use fidl_fuchsia_bluetooth_avrcp::TargetPassthroughError;
+
 /// Handles commands received from the peer, typically when we are acting in target role for A2DP
 /// source and absolute volume support for A2DP sink. Maintains state such as continuations and
 /// registered notifications by the peer.
 #[derive(Debug)]
 pub struct ControlChannelHandler {
     peer_id: PeerId,
+    target_delegate: Arc<TargetDelegate>,
 }
 
 impl ControlChannelHandler {
-    pub fn new(peer_id: &PeerId) -> Self {
-        Self { peer_id: peer_id.clone() }
+    pub fn new(peer_id: &PeerId, target_delegate: Arc<TargetDelegate>) -> Self {
+        Self { peer_id: peer_id.clone(), target_delegate }
     }
 
     async fn handle_passthrough_command(
-        _handler: Arc<Mutex<Self>>,
+        handler: Arc<Mutex<Self>>,
         command: &AvcCommand,
     ) -> Result<AvcResponseType, Error> {
         let body = command.body();
-        let command = AvcPanelCommand::from_primitive(body[0]);
 
-        fx_log_info!("Received passthrough command {:x?}", command);
+        let key = body[0] & 0x7f;
+        let pressed = body[0] & 0x80 != 0;
+        let command = AvcPanelCommand::from_primitive(key);
 
+        fx_log_info!(
+            "Received passthrough command {:x?} pressed {} {}",
+            command,
+            pressed,
+            handler.lock().peer_id
+        );
+
+        let delegate = handler.lock().target_delegate.clone();
         match command {
-            Some(_) => Ok(AvcResponseType::Accepted),
+            Some(cmd) => match delegate.send_passthrough_command(cmd, pressed).await {
+                Ok(()) => Ok(AvcResponseType::Accepted),
+                Err(TargetPassthroughError::CommandRejected) => Ok(AvcResponseType::Rejected),
+                Err(TargetPassthroughError::CommandNotImplemented) => {
+                    Ok(AvcResponseType::NotImplemented)
+                }
+            },
             None => Ok(AvcResponseType::Rejected),
         }
     }

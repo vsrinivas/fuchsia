@@ -33,7 +33,6 @@ pub enum PeerError {
 
     /// Error in protocol layer
     #[error("Protocol layer error: {:?}", _0)]
-    #[allow(dead_code)]
     AvctpError(AvctpError),
 
     #[error("Remote device was not connected")]
@@ -41,6 +40,9 @@ pub enum PeerError {
 
     #[error("Remote command is unsupported")]
     CommandNotSupported,
+
+    #[error("Target already set")]
+    TargetBound,
 
     #[error("Remote command rejected")]
     CommandFailed,

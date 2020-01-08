@@ -9,7 +9,9 @@ use {
         AvcResponseType, Error as AvctpError,
     },
     fidl::encoding::Decodable as FidlDecodable,
-    fidl_fuchsia_bluetooth_avrcp::{AvcPanelCommand, MediaAttributes, PlayStatus},
+    fidl_fuchsia_bluetooth_avrcp::{
+        AvcPanelCommand, MediaAttributes, PlayStatus, TargetHandlerProxy,
+    },
     fidl_fuchsia_bluetooth_bredr::PSM_AVCTP,
     fuchsia_async as fasync,
     fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_vlog},
@@ -38,6 +40,7 @@ mod controller;
 mod handlers;
 mod notification_stream;
 mod remote_peer;
+mod target_delegate;
 
 use crate::{
     packets::{Error as PacketError, *},
@@ -49,11 +52,18 @@ pub use controller::{Controller, ControllerEvent, ControllerEventStream};
 use handlers::ControlChannelHandler;
 use notification_stream::NotificationStream;
 use remote_peer::{RemotePeer, RemotePeerHandle};
+use target_delegate::TargetDelegate;
 
 #[derive(Debug)]
 pub enum ServiceRequest {
     /// Request for a `Controller` given a `peer_id`.
     Controller { peer_id: PeerId, reply: oneshot::Sender<Controller> },
+
+    /// Request to set the current target handler. Returns an error if one is already set.
+    RegisterTargetHandler {
+        target_handler: TargetHandlerProxy,
+        reply: oneshot::Sender<Result<(), Error>>,
+    },
 }
 
 impl ServiceRequest {
@@ -63,6 +73,13 @@ impl ServiceRequest {
         let (sender, receiver) = oneshot::channel();
         (receiver, ServiceRequest::Controller { peer_id: peer_id.clone(), reply: sender })
     }
+
+    pub fn new_register_target_handler_request(
+        target_handler: TargetHandlerProxy,
+    ) -> (oneshot::Receiver<Result<(), Error>>, ServiceRequest) {
+        let (sender, receiver) = oneshot::channel();
+        (receiver, ServiceRequest::RegisterTargetHandler { target_handler, reply: sender })
+    }
 }
 
 pub struct PeerManager {
@@ -71,10 +88,10 @@ pub struct PeerManager {
     /// shared internal state storage for all connected peers.
     remotes: RwLock<HashMap<PeerId, Arc<RemotePeerHandle>>>,
 
-    /// Incoming requests to obtain a PeerController proxy to a given peer id. Typically requested
-    /// by the frontend FIDL service. Using a channel so we can serialize all peer connection related
-    /// functions on to peer managers single select loop.
+    /// Incoming requests by the service front end.
     service_request: mpsc::Receiver<ServiceRequest>,
+
+    target_delegate: Arc<TargetDelegate>,
 }
 
 impl PeerManager {
@@ -86,13 +103,18 @@ impl PeerManager {
             profile_svc: Arc::new(profile_svc),
             remotes: RwLock::new(HashMap::new()),
             service_request,
+            target_delegate: Arc::new(TargetDelegate::new()),
         })
     }
 
     fn insert_peer_if_needed(&self, peer_id: &str) {
         let mut r = self.remotes.write();
         if !r.contains_key(peer_id) {
-            let peer = RemotePeer::new(String::from(peer_id), self.profile_svc.clone());
+            let peer = RemotePeer::new(
+                String::from(peer_id),
+                self.target_delegate.clone(),
+                self.profile_svc.clone(),
+            );
             r.insert(String::from(peer_id), peer.clone());
 
             fasync::spawn(async move {
@@ -156,6 +178,25 @@ impl PeerManager {
                 let peer_controller = Controller::new(peer);
                 // ignoring error if we failed to reply.
                 let _ = reply.send(peer_controller);
+            }
+            ServiceRequest::RegisterTargetHandler { target_handler, reply } => {
+                let target_event_stream = target_handler.take_event_stream();
+
+                // set the target handler. returns an error if one is already set.
+                match self.target_delegate.set_target_handler(target_handler) {
+                    Err(e) => {
+                        let _ = reply.send(Err(e));
+                    }
+                    Ok(remove_handle) => {
+                        // We were able to set the target delegate so spawn a task to watch for it
+                        // to close.
+                        fasync::spawn(async move {
+                            let _ = target_event_stream.map(|_| ()).collect::<()>().await;
+                            remove_handle.remove_target_handler();
+                        });
+                        let _ = reply.send(Ok(()));
+                    }
+                }
             }
         }
     }

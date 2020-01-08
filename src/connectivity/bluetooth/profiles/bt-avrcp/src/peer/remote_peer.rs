@@ -63,6 +63,7 @@ pub struct RemotePeer {
 impl RemotePeer {
     pub fn new(
         peer_id: PeerId,
+        target_delegate: Arc<TargetDelegate>,
         profile_svc: Arc<Box<dyn ProfileService + Send + Sync>>,
     ) -> Arc<RemotePeerHandle> {
         Arc::new(RwLock::new(Self {
@@ -74,7 +75,10 @@ impl RemotePeer {
             //browse_channel: PeerChannel::Disconnected,
             controller_listeners: Vec::new(),
             profile_svc,
-            command_handler: Arc::new(Mutex::new(ControlChannelHandler::new(&peer_id))),
+            command_handler: Arc::new(Mutex::new(ControlChannelHandler::new(
+                &peer_id,
+                target_delegate,
+            ))),
             state_change_listener: StateChangeListener::new(),
             attempt_connection: true,
         }))
