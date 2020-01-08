@@ -25,6 +25,9 @@ class Executor {
   // documentation.
   zx_status_t Execute(Command command, Task::CompletionCallback callback);
 
+  // Terminate the task the executor is currently executing in the foreground, if any.
+  void KillForegroundTask();
+
   // Offer suggestions for how to complete the given input state.
   void Complete(Autocomplete* autocomplete);
 
@@ -34,7 +37,7 @@ class Executor {
 
   async_dispatcher_t* dispatcher_;
   std::map<std::string, Task::Factory> builtin_commands_;
-  std::unique_ptr<Task> current_task_;
+  std::unique_ptr<Task> foreground_task_;
 };
 
 }  // namespace cmd

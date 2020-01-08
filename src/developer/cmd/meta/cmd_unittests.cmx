@@ -4,7 +4,15 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.hardware.pty.Device",
             "fuchsia.process.Launcher"
         ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.hardware.pty.Device"
+            ]
+        }
     }
 }

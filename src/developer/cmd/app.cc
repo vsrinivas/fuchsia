@@ -105,6 +105,11 @@ zx_status_t App::OnConsoleCommand(Command command) {
   return status;
 }
 
+void App::OnConsoleInterrupt() {
+  executor_.KillForegroundTask();
+  console_.GetNextCommand();
+}
+
 void App::OnConsoleError(zx_status_t status) {
   fprintf(stderr, "error: Failed to read console: %d (%s)\n", status, zx_status_get_string(status));
   Quit();

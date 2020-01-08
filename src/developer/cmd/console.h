@@ -5,7 +5,9 @@
 #ifndef SRC_DEVELOPER_CMD_CONSOLE_H_
 #define SRC_DEVELOPER_CMD_CONSOLE_H_
 
+#include <fuchsia/hardware/pty/c/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fdio/unsafe.h>
 
 #include <string>
 #include <vector>
@@ -35,6 +37,12 @@ class Console {
     // further commands from the console until the |GetNextCommand| method is
     // called on the console.
     virtual zx_status_t OnConsoleCommand(Command command) = 0;
+
+    // The console has been asked to interrupt the current command.
+    //
+    // Called only between |OnConsoleCommand| returning |ZX_ERR_ASYNC| and
+    // |GetNextCommand|.
+    virtual void OnConsoleInterrupt() = 0;
 
     // The console has encountered an error.
     //
@@ -86,12 +94,17 @@ class Console {
 
  private:
   void WaitForInputAsynchronously();
+  void WaitForInterruptAsynchronously();
   void OnAccept(const std::string& line);
   void OnError(zx_status_t status);
 
   Client* client_;
-  fsl::FDWaiter waiter_;
   int input_fd_;
+  fsl::FDWaiter input_waiter_;
+
+  fdio_t* tty_ = nullptr;
+  fsl::FDWaiter interrupt_waiter_;
+
   line_input::ModalLineInputStdout line_input_;
 
   bool should_read_ = false;

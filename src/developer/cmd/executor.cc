@@ -46,9 +46,11 @@ zx_status_t Executor::Execute(Command command, Task::CompletionCallback callback
     return ZX_ERR_NEXT;
   }
 
-  current_task_ = FindAndCreateTask(command.args()[0]);
-  return current_task_->Execute(std::move(command), std::move(callback));
+  foreground_task_ = FindAndCreateTask(command.args()[0]);
+  return foreground_task_->Execute(std::move(command), std::move(callback));
 }
+
+void Executor::KillForegroundTask() { foreground_task_.reset(); }
 
 void Executor::Complete(Autocomplete* autocomplete) {
   if (autocomplete->tokens().empty()) {
