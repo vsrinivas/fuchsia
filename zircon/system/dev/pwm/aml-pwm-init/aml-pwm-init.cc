@@ -63,7 +63,55 @@ zx_status_t PwmInitDevice::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t PwmInitDevice::Init() { return ZX_OK; }
+zx_status_t PwmInitDevice::Init() {
+  zx_status_t status = ZX_OK;
+
+  // Configure SOC_WIFI_LPO_32k768 pin for PWM_E
+  if (((status = wifi_gpio_.SetAltFunction(1)) != ZX_OK)) {
+    zxlogf(ERROR, "%s: could not initialize GPIO for WIFI\n", __func__);
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  if ((status = pwm_.Enable()) != ZX_OK) {
+    zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
+    return status;
+  }
+  aml_pwm::mode_config two_timer = {
+      .mode = aml_pwm::TWO_TIMER,
+      .two_timer =
+          {
+              .period_ns2 = 30052,
+              .duty_cycle2 = 50.0,
+              .timer1 = 0x0a,
+              .timer2 = 0x0a,
+          },
+  };
+  pwm_config_t init_cfg = {
+      .polarity = false,
+      .period_ns = 30053,
+      .duty_cycle = static_cast<float>(49.931787176),
+      .mode_config_buffer = &two_timer,
+      .mode_config_size = sizeof(two_timer),
+  };
+  if ((status = pwm_.SetConfig(&init_cfg)) != ZX_OK) {
+    zxlogf(ERROR, "%s: Could not initialize PWM\n", __func__);
+    return status;
+  }
+
+  // set GPIO to reset Bluetooth module
+  if ((status = bt_gpio_.ConfigOut(0)) != ZX_OK) {
+    zxlogf(ERROR, "%s: Could not initialize GPIO for Bluetooth\n", __func__);
+    return status;
+  }
+  usleep(10 * 1000);
+  if ((status = bt_gpio_.Write(1)) != ZX_OK) {
+    zxlogf(ERROR, "%s: Could not initialize GPIO for Bluetooth\n", __func__);
+    return status;
+  }
+  usleep(100 * 1000);
+
+  return ZX_OK;
+}
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};

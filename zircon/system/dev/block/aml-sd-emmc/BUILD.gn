@@ -3,15 +3,12 @@
 # found in the LICENSE file.
 
 zx_driver("aml-sd-emmc") {
-  sources = [
-    "aml-sd-emmc.cc",
-  ]
+  sources = [ "aml-sd-emmc.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.pwm",
     "$zx/system/banjo/ddk.protocol.sdmmc",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/device-protocol-pdev",
@@ -37,7 +34,6 @@ zx_test("aml-sd-emmc-test") {
     "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.pwm",
     "$zx/system/banjo/ddk.protocol.sdmmc",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/device-protocol-pdev",

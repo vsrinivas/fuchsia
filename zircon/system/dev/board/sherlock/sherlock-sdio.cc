@@ -10,6 +10,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/init-step.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <fbl/algorithm.h>
@@ -18,7 +19,6 @@
 #include <soc/aml-common/aml-sd-emmc.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
-#include <soc/aml-t931/t931-pwm.h>
 #include <wifi/wifi-config.h>
 
 #include "sherlock.h"
@@ -178,8 +178,7 @@ constexpr zx_bind_inst_t wifi_pwren_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, T931_WIFI_REG_ON),
 };
 constexpr zx_bind_inst_t pwm_e_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
-    BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_E),
+    BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
 };
 constexpr device_component_part_t wifi_pwren_gpio_component[] = {
     {fbl::count_of(root_match), root_match},
@@ -195,22 +194,6 @@ constexpr device_component_t sdio_components[] = {
 };
 
 }  // namespace
-
-zx_status_t Sherlock::BCM43458LpoClockInit() {
-  auto status = gpio_impl_.SetAltFunction(T931_WIFI_LPO_CLK, T931_WIFI_LPO_CLK_FN);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  zx::bti bti;
-  status = iommu_.GetBti(BTI_BOARD, 0, &bti);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBti() error: %d\n", __func__, status);
-    return status;
-  }
-
-  return ZX_OK;
-}
 
 zx_status_t Sherlock::SdioInit() {
   zx_status_t status;
