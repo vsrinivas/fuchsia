@@ -143,7 +143,7 @@ impl TestEnv {
         let fake_dir = File::open(&self.fake_path).expect("open fake stimulus dir");
 
         let mut system_updater = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/systemupdater-tests#meta/system_updater_isolated.cmx",
+            "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system_updater_isolated.cmx",
         )
         .add_dir_to_namespace("/blob".to_string(), blobfs_dir)
         .expect("/blob to mount")

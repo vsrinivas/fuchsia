@@ -39,7 +39,7 @@ rustc_test("driver") {
   ]
 }
 
-test_package("systemupdater-tests") {
+test_package("system-updater-integration-tests") {
   deps = [
     ":driver",
     "//garnet/go/src/grand_unified_binary",
@@ -79,6 +79,6 @@ test_package("systemupdater-tests") {
 group("tests") {
   testonly = true
   public_deps = [
-    ":systemupdater-tests",
+    ":system-updater-integration-tests",
   ]
 }
