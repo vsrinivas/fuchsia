@@ -52,8 +52,7 @@ if ! $(which ufw >/dev/null 2>&1); then
 fi
 
 # NOTE: Configuration will work whether the firewall is running or not.
-dryer sudo ufw allow proto udp from fe80::/10 to any port 33330:33332,33339:33341 comment 'Fuchsia Netboot Protocol'
-dryer sudo ufw allow proto udp from fe80::/10 to any port 33337:33338 comment 'Fuchsia Debuglog'
+dryer sudo ufw allow proto udp from fe80::/10 to any port 33331:33340 comment 'Fuchsia Netboot Protocol'
 dryer sudo ufw allow proto tcp from fe80::/10 to any port 8083 comment 'Fuchsia Package Server'
 dryer sudo ufw allow proto udp from fe80::/10 port 33340 comment 'Fuchsia Netboot TFTP Source Port'
 echo "Done!"

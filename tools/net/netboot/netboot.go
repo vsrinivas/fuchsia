@@ -31,8 +31,10 @@ const (
 
 // Port numbers used by the netboot protocol.
 const (
-	serverPort = 33330 // netboot server port
-	advertPort = 33331 // advertisement port
+	serverPort      = 33330 // netboot server port
+	advertPort      = 33331 // advertisement port
+	clientPortStart = 33332 // client port range start.
+	clientPortEnd   = 33339 // client port range end.
 )
 
 // Commands supported by the netboot protocol.
@@ -122,10 +124,23 @@ type netbootQuery struct {
 	isOpen bool
 }
 
+func bindNetbootPort() (*net.UDPConn, error) {
+	var err error
+	var conn *net.UDPConn
+	// https://fuchsia.googlesource.com/fuchsia/+/0e30059/zircon/tools/netprotocol/netprotocol.c#59
+	for i := clientPortStart; i <= clientPortEnd; i++ {
+		conn, err = net.ListenUDP("udp6", &net.UDPAddr{IP: net.IPv6zero, Port: i})
+		if err == nil {
+			break
+		}
+	}
+	return conn, err
+}
+
 func newNetbootQuery(nodename string, cookie uint32, port int, fuchsia bool) (*netbootQuery, error) {
-	conn, err := net.ListenUDP("udp6", &net.UDPAddr{IP: net.IPv6zero})
+	conn, err := bindNetbootPort()
 	if err != nil {
-		return nil, fmt.Errorf("bind to udp6 port: %v", err)
+		return nil, err
 	}
 	req := netbootMessage{
 		Header: netbootHeader{
