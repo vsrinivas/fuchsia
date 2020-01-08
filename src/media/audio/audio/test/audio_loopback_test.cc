@@ -30,7 +30,7 @@ class AudioLoopbackTest : public media::audio::test::HermeticAudioTest {
                                               0x1357, 0x1324,  0x0135,  0x0132};
 
   static constexpr int16_t kInitialCaptureData = 0x7fff;
-  static constexpr zx_duration_t kWaitForRenderersDuration = ZX_MSEC(200);
+  static constexpr zx_duration_t kWaitForRenderersDuration = ZX_MSEC(10);
   static constexpr uint kNumSamplesToCapture = 1000;
 
   static void SetUpTestSuite();
@@ -386,8 +386,7 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
     expected_val += kPlaybackData[renderer_num];
 
     // Get our expected duration, from a packet submittal to when we can start capturing what we
-    // sent on the loopback interface. After our Use the largest 'min_lead_time' across all of our
-    // renderers.
+    // sent on the loopback interface. Use the largest 'min_lead_time' across all our renderers.
     audio_renderer_[renderer_num]->GetMinLeadTime(
         CompletionCallback([&sleep_duration](zx_duration_t min_lead_time) {
           sleep_duration = std::max(sleep_duration, min_lead_time);
@@ -405,9 +404,9 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
-  // Start playing now, so that after at least 1 leadtime, mixed audio is available to capture.
-  // Playback is sized much much larger than our capture to prevent test flakes.
-  auto play_at = zx::clock::get_monotonic().get() + sleep_duration + ZX_MSEC(1);
+  // Start playing at specified time. After at least 1 leadtime, mixed audio will be available to
+  // capture. Playback is sized much much larger than our capture to prevent test flakes.
+  auto play_at = zx_deadline_after(sleep_duration);
 
   // Only get the callback for one renderer -- arbitrarily, renderer 0.
   audio_renderer_[0]->Play(play_at, 0,
@@ -421,11 +420,10 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
   EXPECT_GT(ref_time_received, 0);
 
   // Start the other renderers at exactly the same [ref_time, media_time] correspondence.
+  // We expect that media_time 0 played back at some point after the 'zero' time on the system.
   for (auto renderer_num = 1u; renderer_num < num_renderers; ++renderer_num) {
     audio_renderer_[renderer_num]->PlayNoReply(ref_time_received, media_time_received);
   }
-
-  // We expect that media_time 0 played back at some point after the 'zero' time on the system.
 
   // Give the playback some time to get mixed.
   zx_nanosleep(zx_deadline_after(sleep_duration));
@@ -446,7 +444,7 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
     if (capture[capture_packet.payload_offset + i] != previous_val) {
       previous_val = capture[capture_packet.payload_offset + i];
       std::cout << "At [" << capture_packet.payload_offset + i << "], wanted " << expected_val
-                << ", got " << capture[capture_packet.payload_offset + i];
+                << ", got " << capture[capture_packet.payload_offset + i] << "\n";
 
       EXPECT_EQ(capture[capture_packet.payload_offset + i], expected_val)
           << capture_packet.payload_offset + i;
@@ -471,6 +469,6 @@ TEST_F(AudioLoopbackTest, SingleStream) { TestLoopback(1); }
 // Verify loopback capture of the output mix of 16 renderer streams.
 // TODO(fxb/42050): Re-enable this test after the FIDL v1 wire-format transition is complete.
 // This test case sometimes times out on CQ/CI bots because of the FIDL v1 transition.
-TEST_F(AudioLoopbackTest, DISABLED_ManyStreams) { TestLoopback(16); }
+TEST_F(AudioLoopbackTest, ManyStreams) { TestLoopback(16); }
 
 }  // namespace media::audio::test
