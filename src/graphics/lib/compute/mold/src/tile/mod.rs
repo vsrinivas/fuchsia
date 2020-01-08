@@ -58,19 +58,11 @@ impl Tile {
     }
 
     pub fn new_layer(&mut self, id: u32, translation: Point<i32>) {
-        if !self.is_enabled {
-            return;
-        }
-
         self.layers.push(LayerNode::Layer(id, translation));
         self.needs_render = true;
     }
 
     pub fn push_segment(&mut self, start_point: Point<i32>, segment_range: Range<usize>) {
-        if !self.is_enabled {
-            return;
-        }
-
         if let Some(LayerNode::Layer(..)) = self.layers.last() {
             self.layers.push(LayerNode::Segments(start_point, segment_range));
             return;

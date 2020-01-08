@@ -146,7 +146,7 @@ impl Tiles {
     ) {
         self.tiles
             .par_iter()
-            .filter(|tile| tile.needs_render && tile.is_enabled)
+            .filter(|tile| tile.is_enabled && tile.needs_render)
             .map(|tile| Context {
                 tile,
                 index: tile.i + tile.j * tile_width,
@@ -214,6 +214,7 @@ pub struct Map {
     layers: BTreeMap<u32, Layer>,
     width: usize,
     height: usize,
+    has_partials: bool,
 }
 
 impl Map {
@@ -225,7 +226,31 @@ impl Map {
     /// let map = Map::new(800, 600);
     /// ```
     pub fn new(width: usize, height: usize) -> Self {
-        Self { tiles: Tiles::new(width, height), layers: BTreeMap::new(), width, height }
+        Self {
+            tiles: Tiles::new(width, height),
+            layers: BTreeMap::new(),
+            width,
+            height,
+            has_partials: true,
+        }
+    }
+
+    /// Creates a new map `width` pixels wide and `height` pixels high that does not try to apply
+    /// partial updates.
+    ///
+    /// # Examples
+    /// ```
+    /// # use crate::mold::tile::Map;
+    /// let map = Map::without_partial_updates(800, 600);
+    /// ```
+    pub fn without_partial_updates(width: usize, height: usize) -> Self {
+        Self {
+            tiles: Tiles::new(width, height),
+            layers: BTreeMap::new(),
+            width,
+            height,
+            has_partials: false,
+        }
     }
 
     #[cfg(test)]
@@ -352,12 +377,12 @@ impl Map {
         }
     }
 
-    fn print_changes(tiles: &mut Tiles, height: usize, id: u32, layer: &Layer) {
+    fn print_changes(tiles: &mut Tiles, height: usize, has_partials: bool, id: u32, layer: &Layer) {
         #[cfg(feature = "tracing")]
         duration!("gfx", "Map::print_changes");
         let content = layer.content.clone();
         content.contour().for_each_tile(tiles, |tile| {
-            if !layer.is_partial.get() || tile.needs_render {
+            if !has_partials || !layer.is_partial.get() || tile.needs_render {
                 tile.new_layer(id, content.translation());
             }
         });
@@ -380,36 +405,53 @@ impl Map {
     fn reprint_all(&mut self) {
         #[cfg(feature = "tracing")]
         duration!("gfx", "Map::reprint_all");
-        for layer in self.layers.values() {
-            if layer.needs_render.get() {
-                let content = layer.content.clone();
-                content.contour().for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
+        if self.has_partials {
+            for layer in self.layers.values() {
+                if layer.needs_render.get() {
+                    let content = layer.content.clone();
+                    content
+                        .contour()
+                        .for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
+                }
             }
-        }
 
-        for tile in &mut self.tiles.tiles {
-            if tile.needs_render {
-                for node in &tile.layers {
-                    if let LayerNode::Layer(id, _) = node {
-                        if let Some(layer) = self.layers.get(id) {
-                            if !layer.needs_render.get() {
-                                layer.is_partial.set(true);
+            for tile in &mut self.tiles.tiles {
+                if tile.needs_render {
+                    for node in &tile.layers {
+                        if let LayerNode::Layer(id, _) = node {
+                            if let Some(layer) = self.layers.get(id) {
+                                if !layer.needs_render.get() {
+                                    layer.is_partial.set(true);
+                                }
                             }
                         }
                     }
-                }
 
-                tile.needs_render = true;
+                    tile.reset();
+                }
+            }
+
+            for (id, layer) in &self.layers {
+                if layer.needs_render.get() || layer.is_partial.get() {
+                    Self::print_changes(
+                        &mut self.tiles,
+                        self.height,
+                        self.has_partials,
+                        *id,
+                        layer,
+                    );
+
+                    layer.needs_render.set(false);
+                    layer.is_partial.set(false);
+                }
+            }
+        } else {
+            for tile in &mut self.tiles.tiles {
                 tile.reset();
             }
-        }
 
-        for (id, layer) in &self.layers {
-            if layer.needs_render.get() || layer.is_partial.get() {
-                Self::print_changes(&mut self.tiles, self.height, *id, layer);
-
-                layer.needs_render.set(false);
-                layer.is_partial.set(false);
+            for (id, layer) in &self.layers {
+                Self::print_changes(&mut self.tiles, self.height, self.has_partials, *id, layer);
             }
         }
     }
@@ -749,6 +791,49 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn without_partial_updates() {
+        fn need_render(map: &Map) -> Vec<bool> {
+            map.tiles.tiles.iter().map(|tile| tile.needs_render).collect()
+        }
+
+        let mut map = Map::without_partial_updates(TILE_SIZE * 4, TILE_SIZE * 4);
+
+        let mut path = Path::new();
+        polygon(&mut path, &[(0.5, 0.5), (0.5, 1.5), (1.5, 1.5), (1.5, 0.5)]);
+
+        let mut raster = Raster::new(&path);
+
+        map.global(0, vec![Op::ColorAccZero]);
+
+        print(&mut map, 1, raster.clone());
+
+        assert_eq!(need_render(&map), vec![true; 16]);
+
+        map.render_to_bitmap();
+
+        assert_eq!(need_render(&map), vec![false; 16]);
+
+        raster.set_translation(Point::new(TILE_SIZE as i32, TILE_SIZE as i32));
+
+        print(&mut map, 1, raster.clone());
+
+        map.reprint_all();
+
+        assert_eq!(need_render(&map), vec![true; 16]);
+
+        assert_eq!(map.tiles[0].layers, vec![LayerNode::Layer(0, Point::new(0, 0))]);
+
+        assert_eq!(
+            map.tiles[5].layers,
+            vec![
+                LayerNode::Layer(0, Point::new(0, 0)),
+                LayerNode::Layer(1, Point::new(TILE_SIZE as i32, TILE_SIZE as i32)),
+                segments(&raster, 0..HALF),
+            ],
+        );
+    }
+
+    #[test]
     fn stride() {
         const WIDTH: usize = TILE_SIZE * 4;
         const HEIGHT: usize = TILE_SIZE * 4;
@@ -839,21 +924,9 @@ pub(crate) mod tests {
         assert_eq!(map.tiles[1].layers, vec![LayerNode::Layer(0, Point::new(0, 0))]);
     }
 
-    fn tiles_empty(map: &Map) -> Vec<bool> {
-        map.tiles.tiles.iter().map(|tile| tile.layers.is_empty()).collect()
-    }
-
     #[test]
-    fn clips() {
-        let mut map = Map::new(TILE_SIZE * 3, TILE_SIZE * 2);
-
-        assert_eq!(tiles_empty(&map), vec![true, true, true, true, true, true]);
-
-        map.global(0, vec![Op::ColorAccZero]);
-        map.reprint_all();
-        assert_eq!(tiles_empty(&map), vec![false, false, false, false, false, false]);
-
-        map.remove(0);
+    fn clipping() {
+        let mut map = Map::new(TILE_SIZE * 3, TILE_SIZE * 3);
 
         map.set_clip(Some(Clip {
             x: TILE_SIZE / 2,
@@ -861,23 +934,10 @@ pub(crate) mod tests {
             width: TILE_SIZE,
             height: TILE_SIZE,
         }));
-        map.global(0, vec![Op::ColorAccZero]);
-        map.reprint_all();
-        assert_eq!(tiles_empty(&map), vec![false, false, true, false, false, true]);
 
-        map.set_clip(Some(Clip { x: TILE_SIZE / 2, y: TILE_SIZE / 2, width: 1, height: 1 }));
-        map.global(0, vec![Op::ColorAccZero]);
-        map.reprint_all();
-        assert_eq!(tiles_empty(&map), vec![false, true, true, true, true, true]);
-
-        map.set_clip(Some(Clip {
-            x: TILE_SIZE * 3 / 2,
-            y: TILE_SIZE * 3 / 2,
-            width: 1,
-            height: 1,
-        }));
-        map.global(0, vec![Op::ColorAccZero]);
-        map.reprint_all();
-        assert_eq!(tiles_empty(&map), vec![true, true, true, true, false, true]);
+        assert_eq!(
+            map.tiles.tiles.iter().map(|tile| tile.is_enabled).collect::<Vec<_>>(),
+            vec![true, true, false, true, true, false, false, false, false],
+        );
     }
 }
