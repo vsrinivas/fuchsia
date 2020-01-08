@@ -3,7 +3,10 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.media.AudioCore": "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx"
-            }
+            },
+            "system-services": [
+                "fuchsia.scheduler.ProfileProvider"
+            ]
         }
     },
     "program": {
@@ -13,6 +16,7 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",
+            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]
