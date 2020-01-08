@@ -450,6 +450,10 @@ config("default_warnings") {
       # TODO(37215): Temporarily disable this warning until we roll toolchain.
       # Then we can re-enable it and cleanup instances it appears.
       "-Wno-int-in-bool-context",
+
+      # TODO(43681): Temporarily disable this warning until we roll toolchain,
+      # then come back and fix the instances this appears after rolling.
+      "-Wno-range-loop-analysis",
     ]
   }
 }

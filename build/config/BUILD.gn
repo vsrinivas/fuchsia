@@ -297,6 +297,10 @@ config("default_warnings") {
     # TODO(37765): Keep this flag here while it is enabled in ZN to keep the
     # flags unified.
     "-Wno-address-of-packed-member",
+
+    # TODO(43681): Temporarily disable this warning until we roll toolchain,
+    # then come back and fix the instances this appears after rolling.
+    "-Wno-range-loop-analysis",
   ]
   cflags_cc = [
     # TODO(38640): Keep this flag here while it is enabled in ZN to keep the
