@@ -1,9 +1,5 @@
 # Fuchsia Rust Crates
 
-* [carnelian/](/src/lib/ui/carnelian)
-
-    A user-interface framework in Rust.
-
 * [fdio/](/src/lib/fdio/rust/)
 
     Wrapper over zircon-fdio library
@@ -16,7 +12,7 @@
 
     Fuchsia-specific Futures executor and asynchronous primitives (Channel, Socket, Fifo, etc.)
 
-* [fuchsia-framebuffer/](/src/lib/ui/fuchsia-framebuffer/)
+* [fuchsia-framebuffer/](/garnet/public/rust/fuchsia-framebuffer/)
 
     Configure, create and use FrameBuffers in Fuchsia
 
@@ -24,7 +20,7 @@
 
     Protect and verify data blobs using [Merkle Trees](/docs/concepts/storage/merkleroot.md)
 
-* [fuchsia-scenic/](/src/lib/ui/fuchsia-scenic/)
+* [fuchsia-scenic/](/garnet/public/rust/fuchsia-scenic/)
 
     Rust interface to Scenic, the Fuchsia compositor
 

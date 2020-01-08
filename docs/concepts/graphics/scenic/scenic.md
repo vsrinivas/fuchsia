@@ -259,7 +259,7 @@ examples of how to use it.
 Scenic has convenience wrapper libraries for some languages. These can be used instead of using the FIDL API directly.
 
 * [C++ client library](/sdk/lib/ui/scenic/cpp) (see also examples: [simplest_app](/src/ui/examples/simplest_app/README.md), [spinning_square](/src/ui/examples/spinning_square/README.md), [simplest_embedder](/src/ui/examples/simplest_embedder/README.md), [tile](/src/ui/examples/tile/README.md))
-* [Rust client library](/src/lib/ui/fuchsia-scenic)
+* [Rust client library](/garnet/public/rust/fuchsia-scenic)
 
 ## FIDL protocols {#fidl-protocols}
 
