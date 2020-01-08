@@ -26,30 +26,26 @@ use {
     tempfile::TempDir,
 };
 
-struct TestEnv {
-    env: NestedEnvironment,
-    resolver: Arc<MockResolverService>,
-    paver_service: Arc<MockPaverService>,
-    reboot_service: Arc<MockRebootService>,
-    logger_factory: Arc<MockLoggerFactory>,
-    _test_dir: TempDir,
-    packages_path: PathBuf,
-    blobfs_path: PathBuf,
-    fake_path: PathBuf,
+struct TestEnvBuilder {
+    paver_service_builder: MockPaverServiceBuilder,
 }
 
-impl TestEnv {
-    fn launcher(&self) -> &LauncherProxy {
-        self.env.launcher()
-    }
-
+impl TestEnvBuilder {
     fn new() -> Self {
-        Self::new_with_paver_service_call_hook(MockPaverService::hook_always_ok)
+        TestEnvBuilder { paver_service_builder: MockPaverServiceBuilder::new() }
     }
 
-    fn new_with_paver_service_call_hook(
-        call_hook: impl Fn(&PaverEvent) -> Status + Send + Sync + 'static,
-    ) -> Self {
+    fn paver_service<F>(mut self, f: F) -> Self
+    where
+        F: FnOnce(MockPaverServiceBuilder) -> MockPaverServiceBuilder,
+    {
+        self.paver_service_builder = f(self.paver_service_builder);
+        self
+    }
+
+    fn build(self) -> TestEnv {
+        let paver_service = Arc::new(self.paver_service_builder.build());
+
         let mut fs = ServiceFs::new();
         let resolver = Arc::new(MockResolverService::new());
         let resolver_clone = resolver.clone();
@@ -61,7 +57,6 @@ impl TestEnv {
                     .unwrap_or_else(|e| panic!("error running resolver service: {:?}", e)),
             )
         });
-        let paver_service = Arc::new(MockPaverService::new_with_call_hook(call_hook));
         let paver_service_clone = paver_service.clone();
         fs.add_fidl_service(move |stream| {
             let paver_service_clone = paver_service_clone.clone();
@@ -107,7 +102,7 @@ impl TestEnv {
         let fake_path = test_dir.path().join("fake");
         create_dir(&fake_path).expect("create fake stimulus dir");
 
-        Self {
+        TestEnv {
             env,
             resolver,
             paver_service,
@@ -118,6 +113,32 @@ impl TestEnv {
             blobfs_path,
             fake_path,
         }
+    }
+}
+
+struct TestEnv {
+    env: NestedEnvironment,
+    resolver: Arc<MockResolverService>,
+    paver_service: Arc<MockPaverService>,
+    reboot_service: Arc<MockRebootService>,
+    logger_factory: Arc<MockLoggerFactory>,
+    _test_dir: TempDir,
+    packages_path: PathBuf,
+    blobfs_path: PathBuf,
+    fake_path: PathBuf,
+}
+
+impl TestEnv {
+    fn new() -> Self {
+        Self::builder().build()
+    }
+
+    fn builder() -> TestEnvBuilder {
+        TestEnvBuilder::new()
+    }
+
+    fn launcher(&self) -> &LauncherProxy {
+        self.env.launcher()
     }
 
     fn register_package(&mut self, name: impl AsRef<str>, merkle: impl AsRef<str>) -> TestPackage {
@@ -252,22 +273,36 @@ enum PaverEvent {
     WriteBootloader(Vec<u8>),
 }
 
+struct MockPaverServiceBuilder {
+    call_hook: Option<Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>>,
+}
+
+impl MockPaverServiceBuilder {
+    fn new() -> Self {
+        Self { call_hook: None }
+    }
+
+    fn call_hook<F>(mut self, call_hook: F) -> Self
+    where
+        F: Fn(&PaverEvent) -> Status + Send + Sync + 'static,
+    {
+        self.call_hook = Some(Box::new(call_hook));
+        self
+    }
+
+    fn build(self) -> MockPaverService {
+        let call_hook = self.call_hook.unwrap_or_else(|| Box::new(|_| Status::OK));
+
+        MockPaverService { events: Mutex::new(vec![]), call_hook: Box::new(call_hook) }
+    }
+}
+
 struct MockPaverService {
     events: Mutex<Vec<PaverEvent>>,
     call_hook: Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>,
 }
 
 impl MockPaverService {
-    fn new_with_call_hook(
-        call_hook: impl Fn(&PaverEvent) -> Status + Send + Sync + 'static,
-    ) -> Self {
-        Self { events: Mutex::new(vec![]), call_hook: Box::new(call_hook) }
-    }
-
-    fn hook_always_ok(_: &PaverEvent) -> Status {
-        Status::OK
-    }
-
     fn take_events(&self) -> Vec<PaverEvent> {
         std::mem::replace(&mut *self.events.lock(), vec![])
     }
@@ -315,7 +350,7 @@ impl MockPaverService {
                     fasync::spawn(
                         paver_service_clone
                             .run_data_sink_service(data_sink.into_stream()?)
-                            .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
+                            .unwrap_or_else(|e| panic!("error running data sink service: {:?}", e)),
                     );
                 }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),
@@ -957,15 +992,19 @@ async fn test_working_image_write() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_unsupported_b_image_write() {
-    let mut env = TestEnv::new_with_paver_service_call_hook(|event| match event {
-        PaverEvent::WriteAsset { configuration, asset, .. }
-            if *configuration == paver::Configuration::B
-                && *asset == fidl_fuchsia_paver::Asset::Kernel =>
-        {
-            Status::NOT_SUPPORTED
-        }
-        _ => Status::OK,
-    });
+    let mut env = TestEnv::builder()
+        .paver_service(|builder| {
+            builder.call_hook(|event| match event {
+                PaverEvent::WriteAsset { configuration, asset, .. }
+                    if *configuration == paver::Configuration::B
+                        && *asset == fidl_fuchsia_paver::Asset::Kernel =>
+                {
+                    Status::NOT_SUPPORTED
+                }
+                _ => Status::OK,
+            })
+        })
+        .build();
 
     env.register_package("update", "upd4t3")
         .add_file(
@@ -1018,7 +1057,8 @@ async fn test_unsupported_b_image_write() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_failing_image_write() {
-    let mut env = TestEnv::new_with_paver_service_call_hook(|_| Status::INTERNAL);
+    let mut env =
+        TestEnv::builder().paver_service(|builder| builder.call_hook(|_| Status::INTERNAL)).build();
 
     env.register_package("update", "upd4t3")
         .add_file(
