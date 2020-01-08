@@ -96,7 +96,7 @@ TEST(NetStreamTest, RaceClose) {
 
   sync_completion_t completion;
 
-  ::llcpp::fuchsia::posix::socket::Control::SyncClient client((zx::channel(handle)));
+  ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client((zx::channel(handle)));
 
   std::vector<std::thread> workers;
   for (int i = 0; i < 10; i++) {
@@ -127,14 +127,14 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
   ASSERT_EQ(status = fdio_fd_transfer(fd.get(), channel.reset_and_get_address()), ZX_OK)
       << zx_status_get_string(status);
 
-  ::llcpp::fuchsia::posix::socket::Control::SyncClient client(std::move(channel));
+  ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client(std::move(channel));
 
   auto response = client.Describe();
   ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
   const ::llcpp::fuchsia::io::NodeInfo& node_info = response.Unwrap()->info;
-  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::NodeInfo::Tag::kSocket);
+  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::NodeInfo::Tag::kStreamSocket);
 
-  const zx::socket& socket = node_info.socket().socket;
+  const zx::socket& socket = node_info.stream_socket().socket;
 
   EXPECT_EQ(status = socket.signal(ZX_USER_SIGNAL_0, 0), ZX_ERR_ACCESS_DENIED)
       << zx_status_get_string(status);
@@ -154,16 +154,16 @@ TEST(SocketTest, CloseZXSocketOnClose) {
   zx_status_t status;
   ASSERT_EQ(status = fdio_fd_transfer(fd, &handle), ZX_OK) << zx_status_get_string(status);
 
-  ::llcpp::fuchsia::posix::socket::Control::SyncClient client((zx::channel(handle)));
+  ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client((zx::channel(handle)));
 
   auto describe_response = client.Describe();
   ASSERT_EQ(status = describe_response.status(), ZX_OK) << zx_status_get_string(status);
   const ::llcpp::fuchsia::io::NodeInfo& node_info = describe_response.Unwrap()->info;
-  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::NodeInfo::Tag::kSocket);
+  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::NodeInfo::Tag::kStreamSocket);
 
   zx_signals_t observed;
-  ASSERT_EQ(status = node_info.socket().socket.wait_one(ZX_SOCKET_WRITABLE,
-                                                        zx::time::infinite_past(), &observed),
+  ASSERT_EQ(status = node_info.stream_socket().socket.wait_one(
+                ZX_SOCKET_WRITABLE, zx::time::infinite_past(), &observed),
             ZX_OK)
       << zx_status_get_string(status);
   ASSERT_EQ(status = zx::unowned_channel(handle)->wait_one(ZX_CHANNEL_WRITABLE,
@@ -175,8 +175,8 @@ TEST(SocketTest, CloseZXSocketOnClose) {
   EXPECT_EQ(status = close_response.status(), ZX_OK) << zx_status_get_string(status);
   EXPECT_EQ(status = close_response.Unwrap()->s, ZX_OK) << zx_status_get_string(status);
 
-  ASSERT_EQ(status = node_info.socket().socket.wait_one(ZX_SOCKET_PEER_CLOSED,
-                                                        zx::time::infinite_past(), &observed),
+  ASSERT_EQ(status = node_info.stream_socket().socket.wait_one(
+                ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), &observed),
             ZX_OK)
       << zx_status_get_string(status);
   // Give a generous timeout for the channel to close; the channel closing is inherently
@@ -223,14 +223,14 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
   ASSERT_EQ(status = fdio_fd_transfer(connfd.get(), channel.reset_and_get_address()), ZX_OK)
       << zx_status_get_string(status);
 
-  ::llcpp::fuchsia::posix::socket::Control::SyncClient client(std::move(channel));
+  ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client(std::move(channel));
 
   auto response = client.Describe();
   ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
   const ::llcpp::fuchsia::io::NodeInfo& node_info = response.Unwrap()->info;
-  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::NodeInfo::Tag::kSocket);
+  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::NodeInfo::Tag::kStreamSocket);
 
-  const zx::socket& socket = node_info.socket().socket;
+  const zx::socket& socket = node_info.stream_socket().socket;
 
   zx_signals_t pending;
   ASSERT_EQ(status = socket.wait_one(ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_3, zx::time::infinite_past(),
@@ -301,7 +301,7 @@ TEST(SocketTest, DISABLED_CloseClonedSocketAfterTcpRst) {
       << zx_status_get_string(status);
 
   for (auto channel : {&channel1, &channel2}) {
-    ::llcpp::fuchsia::posix::socket::Control::SyncClient client(std::move(*channel));
+    ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client(std::move(*channel));
     auto response = client.Close();
     EXPECT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
     EXPECT_EQ(status = response.Unwrap()->s, ZX_OK) << zx_status_get_string(status);

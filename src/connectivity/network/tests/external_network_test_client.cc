@@ -119,33 +119,37 @@ TEST(ExternalNetworkTest, UDPErrSend) {
 
   struct sockaddr_in addr = {};
   addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   addr.sin_port = htons(1337);
   char bytes[64];
   // Assign to a ssize_t variable to avoid compiler warnings for signedness in the EXPECTs below.
   ssize_t len = sizeof(bytes);
+
   // Precondition sanity check: write completes without error.
-  EXPECT_EQ(sendto(sendfd, bytes, len, 0, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)),
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  EXPECT_EQ(sendto(sendfd, bytes, sizeof(bytes), 0, reinterpret_cast<struct sockaddr*>(&addr),
+                   sizeof(addr)),
             len)
       << strerror(errno);
 
   // Send to a routable address to a non-existing remote. This triggers ARP resolution which is
   // expected to fail, but that failure is expected to leave the socket alive. Before the change
   // that added this test, the socket would be incorrectly shut down.
-  //
-  // TODO(fxb.dev/20716): explicitly validate that ARP resolution failed.
   addr.sin_addr.s_addr = htonl(0xd0e0a0d);
-  EXPECT_EQ(sendto(sendfd, bytes, len, 0, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)),
-            len)
-      << strerror(errno);
+  ssize_t ret = sendto(sendfd, bytes, sizeof(bytes), 0, reinterpret_cast<struct sockaddr*>(&addr),
+                       sizeof(addr));
 
-  // Wait for more than the ARP timeout (our current ARP reattempt count is 3 for every other
-  // second)
-  // TODO(fxb.dev/20716): Read from the ARP config to get the actual configured reattempt count.
-  sleep(5);
+  // TODO(tamird): Why does linux not signal an error? Should we do the same?
+#if defined(__linux__)
+  EXPECT_EQ(ret, len) << strerror(errno);
+#else
+  EXPECT_EQ(ret, -1);
+  EXPECT_EQ(errno, EHOSTDOWN) << strerror(errno);
+#endif
 
-  // Validate that the socket is still writable from the application side.
-  EXPECT_EQ(sendto(sendfd, bytes, len, 0, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)),
+  // Postcondition sanity check: write completes without error.
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  EXPECT_EQ(sendto(sendfd, bytes, sizeof(bytes), 0, reinterpret_cast<struct sockaddr*>(&addr),
+                   sizeof(addr)),
             len)
       << strerror(errno);
 

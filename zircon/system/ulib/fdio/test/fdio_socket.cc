@@ -8,7 +8,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/zxs/protocol.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -27,7 +26,7 @@
 
 namespace {
 
-class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
+class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interface {
  public:
   Server(zx::socket peer) : peer_(std::move(peer)) {
     // We need the FDIO to act like it's connected.
@@ -51,14 +50,14 @@ class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
   }
 
   void Describe(DescribeCompleter::Sync completer) override {
-    llcpp::fuchsia::io::Socket socket;
+    llcpp::fuchsia::io::StreamSocket stream_socket;
     zx_status_t status =
-        peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &socket.socket);
+        peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &stream_socket.socket);
     if (status != ZX_OK) {
       return completer.Close(status);
     }
     llcpp::fuchsia::io::NodeInfo info;
-    info.set_socket(&socket);
+    info.set_stream_socket(&stream_socket);
     return completer.Reply(std::move(info));
   }
 
@@ -266,8 +265,9 @@ TEST_F(UdpSocketTest, DatagramSendMsg) {
   size_t actual = 0;
   // sendmsg should accept 0 length payload.
   EXPECT_EQ(sendmsg(client_fd.get(), &msg, 0), 0, "%s", strerror(errno));
-  EXPECT_OK(server_socket.read(0, rcv_buf, sizeof(rcv_buf), &actual));
-  EXPECT_EQ(actual - sizeof(fdio_socket_msg_t), 0);
+  // no data will have arrived on the other end.
+  EXPECT_EQ(server_socket.read(0, rcv_buf, sizeof(rcv_buf), &actual), ZX_ERR_SHOULD_WAIT);
+  EXPECT_EQ(actual, 0);
 
   msg.msg_name = &addr;
   msg.msg_namelen = addrlen;
@@ -276,13 +276,18 @@ TEST_F(UdpSocketTest, DatagramSendMsg) {
 
   EXPECT_EQ(sendmsg(client_fd.get(), &msg, 0), sizeof(buf), "%s", strerror(errno));
 
-  // Expect sendmsg() to fail when msg_namelen is greater than sizeof(struct sockaddr_storage).
+  // sendmsg doesn't fail when msg_namelen is greater than sizeof(struct sockaddr_storage) because
+  // what's being tested here is a fuchsia.posix.socket.StreamSocket backed by a
+  // zx::socket(ZX_SOCKET_DATAGRAM), a Frankenstein's monster which implements stream semantics on
+  // the network and datagram semantics on the transport to the netstack.
   msg.msg_namelen = sizeof(sockaddr_storage) + 1;
-  EXPECT_EQ(sendmsg(client_fd.get(), &msg, 0), -1, "%s", strerror(errno));
-  EXPECT_EQ(errno, EINVAL, "%s", strerror(errno));
+  EXPECT_EQ(sendmsg(client_fd.get(), &msg, 0), sizeof(buf), "%s", strerror(errno));
 
-  EXPECT_OK(server_socket.read(0, rcv_buf, sizeof(rcv_buf), &actual));
-  EXPECT_EQ(actual - sizeof(fdio_socket_msg_t), sizeof(buf));
+  for (int i = 0; i < 2; i++) {
+    EXPECT_OK(server_socket.read(0, rcv_buf, sizeof(rcv_buf), &actual));
+    EXPECT_EQ(actual, sizeof(buf));
+  }
+
   EXPECT_EQ(close(client_fd.release()), 0, "%s", strerror(errno));
 }
 

@@ -43,6 +43,23 @@ TEST(LocalhostTest, DatagramSocketIgnoresMsgWaitAll) {
   ASSERT_EQ(close(recvfd.release()), 0) << strerror(errno);
 }
 
+TEST(LocalhostTest, DatagramSocketSendMsgNameLenTooBig) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+
+  struct msghdr msg = {};
+  msg.msg_name = &addr;
+  msg.msg_namelen = sizeof(sockaddr_storage) + 1;
+
+  ASSERT_EQ(sendmsg(fd.get(), &msg, 0), -1);
+  ASSERT_EQ(errno, EINVAL) << strerror(errno);
+
+  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+}
+
 #if !defined(__Fuchsia__)
 bool IsRoot() {
   uid_t ruid, euid, suid;

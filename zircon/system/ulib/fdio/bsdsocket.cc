@@ -60,18 +60,18 @@ int socket(int domain, int type, int protocol) {
   // We're going to manage blocking on the client side, so always ask the
   // provider for a non-blocking socket.
   auto socket_result =
-      provider->Socket(static_cast<int16_t>(domain), static_cast<int16_t>(type) | SOCK_NONBLOCK,
-                       static_cast<int16_t>(protocol));
+      provider->Socket2(static_cast<int16_t>(domain), static_cast<int16_t>(type) | SOCK_NONBLOCK,
+                        static_cast<int16_t>(protocol));
   status = socket_result.status();
   if (status != ZX_OK) {
     return ERROR(status);
   }
-  fsocket::Provider::SocketResponse* socket_response = socket_result.Unwrap();
-  if (int16_t out_code = socket_response->code) {
-    return ERRNO(out_code);
+  auto& socket_response = socket_result.Unwrap()->result;
+  if (socket_response.is_err()) {
+    return ERRNO(socket_response.err());
   }
   fdio_t* io;
-  status = fdio_from_channel(std::move(socket_response->s), &io);
+  status = fdio_from_channel(std::move(socket_response.mutable_response().s), &io);
   if (status != ZX_OK) {
     return ERROR(status);
   }
