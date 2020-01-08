@@ -42,12 +42,12 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 	{"_zx_selection_clock_get", 0xa3c1ed25, &vdso_zx_selection_clock_get},
 }
 
-//go:cgo_import_dynamic vdso_zx_selection_futex_requeue _zx_selection_futex_requeue
-//go:cgo_import_dynamic vdso_zx_selection_object_wait_one _zx_selection_object_wait_one
-//go:cgo_import_dynamic vdso_zx_selection_ktrace_read _zx_selection_ktrace_read
-//go:cgo_import_dynamic vdso_zx_selection_pci_cfg_pio_rw _zx_selection_pci_cfg_pio_rw
-//go:cgo_import_dynamic vdso_zx_selection_job_set_policy _zx_selection_job_set_policy
-//go:cgo_import_dynamic vdso_zx_selection_clock_get _zx_selection_clock_get
+//go:cgo_import_dynamic vdso_zx_selection_futex_requeue zx_selection_futex_requeue
+//go:cgo_import_dynamic vdso_zx_selection_object_wait_one zx_selection_object_wait_one
+//go:cgo_import_dynamic vdso_zx_selection_ktrace_read zx_selection_ktrace_read
+//go:cgo_import_dynamic vdso_zx_selection_pci_cfg_pio_rw zx_selection_pci_cfg_pio_rw
+//go:cgo_import_dynamic vdso_zx_selection_job_set_policy zx_selection_job_set_policy
+//go:cgo_import_dynamic vdso_zx_selection_clock_get zx_selection_clock_get
 
 //go:linkname vdso_zx_selection_futex_requeue vdso_zx_selection_futex_requeue
 //go:linkname vdso_zx_selection_object_wait_one vdso_zx_selection_object_wait_one

@@ -255,7 +255,7 @@ bool GoVdsoKeys(const SyscallLibrary& library, Writer* writer) {
 
   writer->Puts("\n");
   for (const auto& syscall : library.syscalls()) {
-    writer->Printf("//go:cgo_import_dynamic vdso_zx_%s _zx_%s\n", syscall->name().c_str(),
+    writer->Printf("//go:cgo_import_dynamic vdso_zx_%s zx_%s\n", syscall->name().c_str(),
                    syscall->name().c_str());
   }
 
