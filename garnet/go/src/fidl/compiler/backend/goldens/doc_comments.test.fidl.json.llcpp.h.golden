@@ -143,14 +143,10 @@ struct Union {
   }
 
   static constexpr const fidl_type_t* Type = &v1_test_name_UnionTable;
-  static constexpr const fidl_type_t* AltType = &test_name_UnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -204,14 +200,10 @@ struct Table final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &test_name_TableTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_TableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 24;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 24;
 
  private:
   Table(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -245,14 +237,10 @@ extern "C" const fidl_type_t v1_test_name_StructTable;
 // struct comment #3
 struct Struct {
   static constexpr const fidl_type_t* Type = &v1_test_name_StructTable;
-  static constexpr const fidl_type_t* AltType = &test_name_StructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // struct member comment #1
   //

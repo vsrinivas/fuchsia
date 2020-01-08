@@ -98,14 +98,10 @@ struct Device_GetStateNormalized_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -186,14 +182,10 @@ struct Device_GetStateAbsolute_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -274,14 +266,10 @@ struct Device_SetStateNormalized_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_SetStateNormalized_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_SetStateNormalized_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -362,14 +350,10 @@ struct Device_SetStateAbsolute_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_SetStateAbsolute_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_SetStateAbsolute_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -450,14 +434,10 @@ struct Device_GetMaxAbsoluteBrightness_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -481,14 +461,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_StateTable;
 
 struct State {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_StateTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_StateTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   bool backlight_on = {};
 
@@ -507,14 +483,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_GetStateNormal
 
 struct Device_GetStateNormalized_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_GetStateNormalized_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_GetStateNormalized_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::hardware::backlight::State state = {};
 };
@@ -524,14 +496,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_GetStateAbsolu
 
 struct Device_GetStateAbsolute_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_GetStateAbsolute_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_GetStateAbsolute_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::hardware::backlight::State state = {};
 };
@@ -541,14 +509,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_SetStateNormal
 
 struct Device_SetStateNormalized_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_SetStateNormalized_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_SetStateNormalized_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -558,14 +522,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_SetStateAbsolu
 
 struct Device_SetStateAbsolute_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_SetStateAbsolute_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_SetStateAbsolute_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -575,14 +535,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_GetMaxAbsolute
 
 struct Device_GetMaxAbsoluteBrightness_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   double max_brightness = {};
 };

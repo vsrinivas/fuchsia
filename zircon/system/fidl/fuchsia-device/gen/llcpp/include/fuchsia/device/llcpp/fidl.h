@@ -120,14 +120,10 @@ struct NameProvider_GetDeviceName_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_NameProvider_GetDeviceName_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_NameProvider_GetDeviceName_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 272;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 272;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -208,14 +204,10 @@ struct Controller_GetPowerStateMapping_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 56;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 56;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -296,14 +288,10 @@ struct Controller_GetDevicePowerCaps_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 120;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 120;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -384,14 +372,10 @@ struct Controller_Resume_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Resume_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_Resume_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -472,14 +456,10 @@ struct Controller_UpdatePowerStateMapping_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -560,14 +540,10 @@ struct Controller_ScheduleUnbind_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_ScheduleUnbind_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_ScheduleUnbind_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -648,14 +624,10 @@ struct Controller_Rebind_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Rebind_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_Rebind_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -736,14 +708,10 @@ struct Controller_GetTopologicalPath_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetTopologicalPath_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_GetTopologicalPath_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 1040;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 1040;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -824,14 +792,10 @@ struct Controller_Bind_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Bind_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_Bind_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -855,14 +819,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_NameProvider_GetDeviceName_Respon
 
 struct NameProvider_GetDeviceName_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 256;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 256;
 
   ::fidl::StringView name = {};
 };
@@ -1080,14 +1040,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_SystemPowerStateInfoTable;
 
 struct SystemPowerStateInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_SystemPowerStateInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_SystemPowerStateInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t suspend_flag = {};
 
@@ -1103,14 +1059,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetPowerStateMapping_R
 
 struct Controller_GetPowerStateMapping_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetPowerStateMapping_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_GetPowerStateMapping_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 56;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping = {};
 };
@@ -1120,14 +1072,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_DevicePowerStateInfoTable;
 
 struct DevicePowerStateInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_DevicePowerStateInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_DevicePowerStateInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::device::DevicePowerState state_id = {};
 
@@ -1149,14 +1097,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetDevicePowerCaps_Res
 
 struct Controller_GetDevicePowerCaps_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetDevicePowerCaps_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_GetDevicePowerCaps_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 120;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 120;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::fidl::Array<::llcpp::fuchsia::device::DevicePowerStateInfo, 5> dpstates = {};
 };
@@ -1166,14 +1110,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_Controller_Resume_ResponseTable;
 
 struct Controller_Resume_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Resume_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_Resume_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::device::DevicePowerState out_state = {};
 };
@@ -1185,14 +1125,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_DevicePerformanceStateInfoTable;
 // when the device is in non-sleeping working device power state.
 struct DevicePerformanceStateInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_DevicePerformanceStateInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_DevicePerformanceStateInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   int32_t state_id = {};
 
@@ -1238,14 +1174,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_Controller_UpdatePowerStateMappin
 
 struct Controller_UpdatePowerStateMapping_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_UpdatePowerStateMapping_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_UpdatePowerStateMapping_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -1255,14 +1187,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_Controller_ScheduleUnbind_Respons
 
 struct Controller_ScheduleUnbind_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_ScheduleUnbind_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_ScheduleUnbind_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -1272,14 +1200,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_Controller_Rebind_ResponseTable;
 
 struct Controller_Rebind_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Rebind_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_Rebind_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -1289,14 +1213,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetTopologicalPath_Res
 
 struct Controller_GetTopologicalPath_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetTopologicalPath_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_GetTopologicalPath_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 1024;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 1024;
 
   ::fidl::StringView path = {};
 };
@@ -1306,14 +1226,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_Controller_Bind_ResponseTable;
 
 struct Controller_Bind_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Bind_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_Bind_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };

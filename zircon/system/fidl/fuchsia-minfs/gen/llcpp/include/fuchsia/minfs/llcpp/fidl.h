@@ -34,14 +34,10 @@ extern "C" const fidl_type_t v1_fuchsia_minfs_MetricsTable;
 
 struct Metrics {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_minfs_MetricsTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_minfs_MetricsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 688;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 688;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::storage::metrics::FsMetrics fs_metrics = {};
 
@@ -435,14 +431,10 @@ extern "C" const fidl_type_t v1_fuchsia_minfs_BlockRegionTable;
 
 struct BlockRegion {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_minfs_BlockRegionTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_minfs_BlockRegionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t offset = {};
 

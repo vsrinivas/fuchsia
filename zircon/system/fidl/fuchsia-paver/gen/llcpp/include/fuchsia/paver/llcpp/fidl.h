@@ -155,14 +155,10 @@ struct ReadResult {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_ReadResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_paver_ReadResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -244,14 +240,10 @@ struct DataSink_WipeVolume_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSink_WipeVolume_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSink_WipeVolume_ResultTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -332,14 +324,10 @@ struct BootManager_QueryConfigurationStatus_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -420,14 +408,10 @@ struct BootManager_QueryActiveConfiguration_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -508,14 +492,10 @@ struct DataSink_ReadAsset_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSink_ReadAsset_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSink_ReadAsset_ResultTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -539,14 +519,10 @@ extern "C" const fidl_type_t v1_fuchsia_paver_ReadInfoTable;
 
 struct ReadInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_ReadInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_paver_ReadInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Offset into VMO where read data starts.
   uint64_t offset = {};
@@ -1228,14 +1204,10 @@ extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_WipeVolume_ResponseTable;
 
 struct DataSink_WipeVolume_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSink_WipeVolume_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSink_WipeVolume_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::channel volume = {};
 };
@@ -1245,14 +1217,10 @@ extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryConfigurationStat
 
 struct BootManager_QueryConfigurationStatus_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::paver::ConfigurationStatus status = {};
 };
@@ -1262,14 +1230,10 @@ extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryActiveConfigurati
 
 struct BootManager_QueryActiveConfiguration_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::paver::Configuration configuration = {};
 };
@@ -1996,14 +1960,10 @@ extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_ReadAsset_ResponseTable;
 
 struct DataSink_ReadAsset_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSink_ReadAsset_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSink_ReadAsset_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::mem::Buffer asset = {};
 };

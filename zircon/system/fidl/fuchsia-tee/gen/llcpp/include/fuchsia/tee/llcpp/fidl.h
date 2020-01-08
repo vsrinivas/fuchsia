@@ -89,14 +89,10 @@ struct OsRevision final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_tee_OsRevisionTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_OsRevisionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 48;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 48;
 
  private:
   OsRevision(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -175,14 +171,10 @@ struct OsInfo final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_tee_OsInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_OsInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 136;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 136;
 
  private:
   OsInfo(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -282,14 +274,10 @@ struct Value final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_tee_ValueTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_ValueTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 96;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 96;
 
  private:
   Value(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -398,14 +386,10 @@ struct Buffer final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_tee_BufferTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_BufferTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 96;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 96;
 
  private:
   Buffer(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -528,14 +512,10 @@ struct Parameter {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_ParameterTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_tee_ParameterTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 112;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 112;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -624,14 +604,10 @@ struct OpResult final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_tee_OpResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_OpResultTable;
   static constexpr uint32_t MaxNumHandles = 4;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 624;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 624;
 
  private:
   OpResult(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -665,14 +641,10 @@ extern "C" const fidl_type_t v1_fuchsia_tee_UuidTable;
 // Applications. This structure matches the UUID type as defined by RFC4122.
 struct Uuid {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_UuidTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_tee_UuidTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t time_low = {};
 
@@ -690,14 +662,10 @@ extern "C" const fidl_type_t v1_fuchsia_tee_NoneTable;
 // used.
 struct None {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_NoneTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_tee_NoneTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };

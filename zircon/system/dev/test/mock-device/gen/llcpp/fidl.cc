@@ -218,26 +218,6 @@ bool MockDeviceThread::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
     case kMockDeviceThread_PerformActions_Ordinal:
     case kMockDeviceThread_PerformActions_GenOrdinal:
     {
-      constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<PerformActionsRequest, ::fidl::MessageDirection::kReceiving>();
-      ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (!fidl_should_decode_union_from_xunion(hdr)) {
-        transformer_dest_storage.Allocate();
-        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                                      PerformActionsRequest::AltType,
-                                                      reinterpret_cast<uint8_t*>(msg->bytes),
-                                                      msg->num_bytes,
-                                                      transformer_dest,
-                                                      kTransformerDestSize,
-                                                      &msg->num_bytes,
-                                                      nullptr);
-        if (transform_status != ZX_OK) {
-          txn->Close(ZX_ERR_INVALID_ARGS);
-          zx_handle_close_many(msg->handles, msg->num_handles);
-          return true;
-        }
-        msg->bytes = transformer_dest;
-      }
       auto result = ::fidl::DecodeAs<PerformActionsRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);

@@ -197,14 +197,10 @@ struct Action {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_ActionTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_ActionTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16400;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16400;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -233,14 +229,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_mock_AddDeviceActionTable;
 // Request to add a new child device
 struct AddDeviceAction {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_AddDeviceActionTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_AddDeviceActionTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 288;
-  static constexpr uint32_t AltPrimarySize = 56;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 288;
 
   // Value that will be echoed back in the completion message
   uint64_t action_id = {};
@@ -269,14 +261,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_mock_HookInvocationTable;
 // A record of the invocation of a hook
 struct HookInvocation {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_HookInvocationTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_HookInvocationTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Process that the hook was invoked in
   uint64_t process_koid = {};
@@ -294,14 +282,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_mock_UnbindReplyActionTable;
 // Marker struct for unbind reply action
 struct UnbindReplyAction {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_UnbindReplyActionTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_UnbindReplyActionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Value that will be echoed back in the completion message
   uint64_t action_id = {};

@@ -169,14 +169,10 @@ struct NameLookup_LookupHostname_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookup_LookupHostname_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookup_LookupHostname_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 272;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 272;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -257,14 +253,10 @@ struct NameLookup_LookupIp_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookup_LookupIp_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookup_LookupIp_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 5424;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 5424;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -346,14 +338,10 @@ struct IpAddress {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_IpAddressTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_net_IpAddressTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -527,14 +515,10 @@ extern "C" const fidl_type_t v1_fuchsia_net_NameLookup_LookupHostname_ResponseTa
 
 struct NameLookup_LookupHostname_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookup_LookupHostname_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookup_LookupHostname_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 256;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 256;
 
   ::fidl::StringView hostname = {};
 };
@@ -545,14 +529,10 @@ extern "C" const fidl_type_t v1_fuchsia_net_MacAddressTable;
 // A MAC address used to identify a network interface on the data link layer within the network.
 struct MacAddress {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_MacAddressTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_net_MacAddressTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 6;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 6;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::fidl::Array<uint8_t, 6> octets = {};
 };
@@ -566,14 +546,10 @@ extern "C" const fidl_type_t v1_fuchsia_net_Ipv6AddressTable;
 // ("ff" in the address "ff02::1") will be at index 0.
 struct Ipv6Address {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_Ipv6AddressTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_net_Ipv6AddressTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::fidl::Array<uint8_t, 16> addr = {};
 };
@@ -585,14 +561,10 @@ extern "C" const fidl_type_t v1_fuchsia_net_Ipv4AddressTable;
 // ("127" in the address "127.0.0.1") will be at index 0.
 struct Ipv4Address {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_Ipv4AddressTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_net_Ipv4AddressTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::fidl::Array<uint8_t, 4> addr = {};
 };
@@ -602,14 +574,10 @@ extern "C" const fidl_type_t v1_fuchsia_net_IpAddressInfoTable;
 
 struct IpAddressInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_IpAddressInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_net_IpAddressInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 48;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 5376;
-  static constexpr uint32_t AltPrimarySize = 48;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 5376;
 
   // All of the IPv4 addresses for the requested hostname.
   ::fidl::VectorView<::llcpp::fuchsia::net::Ipv4Address> ipv4_addrs = {};
@@ -626,14 +594,10 @@ extern "C" const fidl_type_t v1_fuchsia_net_NameLookup_LookupIp_ResponseTable;
 
 struct NameLookup_LookupIp_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookup_LookupIp_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookup_LookupIp_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 48;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 5376;
-  static constexpr uint32_t AltPrimarySize = 48;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 5376;
 
   ::llcpp::fuchsia::net::IpAddressInfo addr = {};
 };
@@ -645,14 +609,10 @@ extern "C" const fidl_type_t v1_fuchsia_net_SubnetTable;
 // bits.
 struct Subnet {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_SubnetTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_net_SubnetTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The Ipv4 or Ipv6 address. Only the `prefix_len` most significant bits may be set in `addr`;
   // all bits in the host portion of the address must be zero.
@@ -998,14 +958,10 @@ extern "C" const fidl_type_t v1_fuchsia_net_EndpointTable;
 // additional structures.
 struct Endpoint {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_net_EndpointTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_net_EndpointTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The IP address of the endpoint.
   ::llcpp::fuchsia::net::IpAddress addr = {};

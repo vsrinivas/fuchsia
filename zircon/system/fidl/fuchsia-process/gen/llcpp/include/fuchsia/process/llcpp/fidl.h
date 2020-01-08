@@ -46,14 +46,10 @@ extern "C" const fidl_type_t v1_fuchsia_process_ProcessStartDataTable;
 // To start the process, call `zx_process_start` with the arguments provided.
 struct ProcessStartData {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_process_ProcessStartDataTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_process_ProcessStartDataTable;
   static constexpr uint32_t MaxNumHandles = 4;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 56;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The process that was created.
   ::zx::process process = {};
@@ -107,14 +103,10 @@ extern "C" const fidl_type_t v1_fuchsia_process_HandleInfoTable;
 // identifier.
 struct HandleInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_process_HandleInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_process_HandleInfoTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The handle to use for this process argument.
   ::zx::handle handle = {};
@@ -399,14 +391,10 @@ extern "C" const fidl_type_t v1_fuchsia_process_NameInfoTable;
 // This structure represents one such handle and its associated namespace path.
 struct NameInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_process_NameInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_process_NameInfoTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4096;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 4096;
 
   // Path at which to install the associated directory.
   //
@@ -428,14 +416,10 @@ extern "C" const fidl_type_t v1_fuchsia_process_LaunchInfoTable;
 // The information needed to launch a process.
 struct LaunchInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_process_LaunchInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_process_LaunchInfoTable;
   static constexpr uint32_t MaxNumHandles = 2;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 32;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 32;
 
   // The executable to run in the process.
   ::zx::vmo executable = {};

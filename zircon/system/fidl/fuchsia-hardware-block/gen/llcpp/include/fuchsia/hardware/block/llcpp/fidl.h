@@ -38,14 +38,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_block_BlockStatsTable;
 
 struct BlockStats {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockStatsTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_BlockStatsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 480;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 480;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::storage::metrics::CallStat read = {};
 
@@ -65,14 +61,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_block_VmoIDTable;
 
 struct VmoID {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_VmoIDTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_VmoIDTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 2;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint16_t id = {};
 };
@@ -919,14 +911,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_block_BlockInfoTable;
 
 struct BlockInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_BlockInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t block_count = {};
 

@@ -117,14 +117,10 @@ struct BaseSocket_GetSockOpt_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_BaseSocket_GetSockOpt_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_BaseSocket_GetSockOpt_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 920;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 920;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -205,14 +201,10 @@ struct DatagramSocket_RecvMsg_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_DatagramSocket_RecvMsg_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_DatagramSocket_RecvMsg_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -293,14 +285,10 @@ struct BaseSocket_GetSockName_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_BaseSocket_GetSockName_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_BaseSocket_GetSockName_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 144;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 144;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -381,14 +369,10 @@ struct BaseSocket_GetPeerName_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_BaseSocket_GetPeerName_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_BaseSocket_GetPeerName_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 144;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 144;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -469,14 +453,10 @@ struct StreamSocket_Listen_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_StreamSocket_Listen_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_StreamSocket_Listen_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -557,14 +537,10 @@ struct StreamSocket_Accept_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_StreamSocket_Accept_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_StreamSocket_Accept_ResultTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -645,14 +621,10 @@ struct Provider_Socket2_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_Provider_Socket2_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_Provider_Socket2_ResultTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -733,14 +705,10 @@ struct DatagramSocket_Shutdown_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_DatagramSocket_Shutdown_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_DatagramSocket_Shutdown_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -821,14 +789,10 @@ struct DatagramSocket_SendMsg_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_DatagramSocket_SendMsg_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_DatagramSocket_SendMsg_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -909,14 +873,10 @@ struct BaseSocket_SetSockOpt_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_BaseSocket_SetSockOpt_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_BaseSocket_SetSockOpt_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -997,14 +957,10 @@ struct BaseSocket_Connect_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_BaseSocket_Connect_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_BaseSocket_Connect_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1085,14 +1041,10 @@ struct BaseSocket_Bind_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_BaseSocket_Bind_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_BaseSocket_Bind_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1116,14 +1068,10 @@ extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocket_GetSockOpt_Respo
 
 struct BaseSocket_GetSockOpt_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_BaseSocket_GetSockOpt_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_BaseSocket_GetSockOpt_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 904;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 904;
 
   ::fidl::VectorView<uint8_t> optval = {};
 };
@@ -1133,14 +1081,10 @@ extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocket_RecvMsg_Resp
 
 struct DatagramSocket_RecvMsg_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_DatagramSocket_RecvMsg_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_DatagramSocket_RecvMsg_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 56;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
   ::fidl::VectorView<uint8_t> addr = {};
 
@@ -1156,14 +1100,10 @@ extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocket_GetSockName_Resp
 
 struct BaseSocket_GetSockName_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_BaseSocket_GetSockName_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_BaseSocket_GetSockName_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 128;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 128;
 
   ::fidl::VectorView<uint8_t> addr = {};
 };
@@ -1173,14 +1113,10 @@ extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocket_GetPeerName_Resp
 
 struct BaseSocket_GetPeerName_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_BaseSocket_GetPeerName_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_BaseSocket_GetPeerName_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 128;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 128;
 
   ::fidl::VectorView<uint8_t> addr = {};
 };
@@ -1190,14 +1126,10 @@ extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocket_Listen_Respons
 
 struct StreamSocket_Listen_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_StreamSocket_Listen_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_StreamSocket_Listen_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -1207,14 +1139,10 @@ extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocket_Accept_Respons
 
 struct StreamSocket_Accept_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_StreamSocket_Accept_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_StreamSocket_Accept_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::channel s = {};
 };
@@ -1224,14 +1152,10 @@ extern "C" const fidl_type_t v1_fuchsia_posix_socket_Provider_Socket2_ResponseTa
 
 struct Provider_Socket2_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_Provider_Socket2_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_Provider_Socket2_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::channel s = {};
 };
@@ -1558,14 +1482,10 @@ extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocket_Shutdown_Res
 
 struct DatagramSocket_Shutdown_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_DatagramSocket_Shutdown_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_DatagramSocket_Shutdown_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -1575,14 +1495,10 @@ extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocket_SendMsg_Resp
 
 struct DatagramSocket_SendMsg_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_DatagramSocket_SendMsg_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_DatagramSocket_SendMsg_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   int64_t len = {};
 };
@@ -1592,14 +1508,10 @@ extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocket_SetSockOpt_Respo
 
 struct BaseSocket_SetSockOpt_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_BaseSocket_SetSockOpt_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_BaseSocket_SetSockOpt_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -1609,14 +1521,10 @@ extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocket_Connect_Response
 
 struct BaseSocket_Connect_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_BaseSocket_Connect_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_BaseSocket_Connect_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -1626,14 +1534,10 @@ extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocket_Bind_ResponseTab
 
 struct BaseSocket_Bind_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_BaseSocket_Bind_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_BaseSocket_Bind_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };

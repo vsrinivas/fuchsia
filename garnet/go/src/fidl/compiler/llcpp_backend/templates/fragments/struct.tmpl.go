@@ -18,14 +18,10 @@ extern "C" const fidl_type_t {{ .V1TableType }};
 {{- end}}
 struct {{ .Name }} {
   static constexpr const fidl_type_t* Type = &{{ .V1TableType }};
-  static constexpr const fidl_type_t* AltType = &{{ .TableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
   static constexpr uint32_t PrimarySize = {{ .InlineSizeV1NoEE }};
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLineV1NoEE }};
-  static constexpr uint32_t AltPrimarySize = {{ .Size }};
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = {{ .MaxOutOfLine }};
 
   {{- range .Members }}
 {{ "" }}

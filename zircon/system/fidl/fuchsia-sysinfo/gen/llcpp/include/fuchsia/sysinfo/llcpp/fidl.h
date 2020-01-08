@@ -482,14 +482,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysinfo_InterruptControllerInfoTable;
 
 struct InterruptControllerInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysinfo_InterruptControllerInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysinfo_InterruptControllerInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::sysinfo::InterruptControllerType type = {};
 };

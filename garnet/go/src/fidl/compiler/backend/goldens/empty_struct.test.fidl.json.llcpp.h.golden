@@ -28,14 +28,10 @@ extern "C" const fidl_type_t v1_test_name_EmptyTable;
 
 struct Empty {
   static constexpr const fidl_type_t* Type = &v1_test_name_EmptyTable;
-  static constexpr const fidl_type_t* AltType = &test_name_EmptyTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };

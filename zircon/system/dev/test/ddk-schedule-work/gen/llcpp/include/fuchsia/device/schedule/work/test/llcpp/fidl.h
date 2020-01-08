@@ -102,14 +102,10 @@ struct TestDevice_ScheduleWork_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -190,14 +186,10 @@ struct TestDevice_ScheduleWorkDifferentThread_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -278,14 +270,10 @@ struct TestDevice_GetDoneEvent_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResultTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -366,14 +354,10 @@ struct TestDevice_GetChannel_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -454,14 +438,10 @@ struct OwnedChannelDevice_ScheduleWork_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 80;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 80;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -485,14 +465,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_Sch
 
 struct TestDevice_ScheduleWork_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -502,14 +478,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_Sch
 
 struct TestDevice_ScheduleWorkDifferentThread_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -519,14 +491,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_Get
 
 struct TestDevice_GetDoneEvent_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::event event = {};
 };
@@ -536,14 +504,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_Get
 
 struct TestDevice_GetChannel_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -564,14 +528,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_LatencyHistogr
 // [9] => [30us, infinity]
 struct LatencyHistogram {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_LatencyHistogramTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_LatencyHistogramTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 80;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::fidl::Array<uint64_t, 10> buckets = {};
 };
@@ -1188,14 +1148,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_OwnedChannelDe
 
 struct OwnedChannelDevice_ScheduleWork_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 80;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram = {};
 };

@@ -1554,9 +1554,6 @@ zx_status_t Control::Call::HandleEvents(::zx::unowned_channel client_end, Contro
     if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
     }
-    if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>();
-    }
     return x;
   })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -1608,23 +1605,6 @@ zx_status_t Control::Call::HandleEvents(::zx::unowned_channel client_end, Contro
     {
       constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
       ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (!fidl_should_decode_union_from_xunion(hdr)) {
-        transformer_dest_storage.Allocate();
-        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                                      OnOpenResponse::AltType,
-                                                      reinterpret_cast<uint8_t*>(msg.bytes),
-                                                      msg.num_bytes,
-                                                      transformer_dest,
-                                                      kTransformerDestSize,
-                                                      &msg.num_bytes,
-                                                      nullptr);
-        if (transform_status != ZX_OK) {
-          zx_handle_close_many(msg.handles, msg.num_handles);
-          return ZX_ERR_INVALID_ARGS;
-        }
-        msg.bytes = transformer_dest;
-      }
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -3659,9 +3639,6 @@ zx_status_t BaseSocket::Call::HandleEvents(::zx::unowned_channel client_end, Bas
     if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
     }
-    if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>();
-    }
     return x;
   })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -3713,23 +3690,6 @@ zx_status_t BaseSocket::Call::HandleEvents(::zx::unowned_channel client_end, Bas
     {
       constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
       ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (!fidl_should_decode_union_from_xunion(hdr)) {
-        transformer_dest_storage.Allocate();
-        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                                      OnOpenResponse::AltType,
-                                                      reinterpret_cast<uint8_t*>(msg.bytes),
-                                                      msg.num_bytes,
-                                                      transformer_dest,
-                                                      kTransformerDestSize,
-                                                      &msg.num_bytes,
-                                                      nullptr);
-        if (transform_status != ZX_OK) {
-          zx_handle_close_many(msg.handles, msg.num_handles);
-          return ZX_ERR_INVALID_ARGS;
-        }
-        msg.bytes = transformer_dest;
-      }
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -5889,9 +5849,6 @@ zx_status_t StreamSocket::Call::HandleEvents(::zx::unowned_channel client_end, S
     if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
     }
-    if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>();
-    }
     return x;
   })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -5943,23 +5900,6 @@ zx_status_t StreamSocket::Call::HandleEvents(::zx::unowned_channel client_end, S
     {
       constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
       ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (!fidl_should_decode_union_from_xunion(hdr)) {
-        transformer_dest_storage.Allocate();
-        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                                      OnOpenResponse::AltType,
-                                                      reinterpret_cast<uint8_t*>(msg.bytes),
-                                                      msg.num_bytes,
-                                                      transformer_dest,
-                                                      kTransformerDestSize,
-                                                      &msg.num_bytes,
-                                                      nullptr);
-        if (transform_status != ZX_OK) {
-          zx_handle_close_many(msg.handles, msg.num_handles);
-          return ZX_ERR_INVALID_ARGS;
-        }
-        msg.bytes = transformer_dest;
-      }
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -8367,9 +8307,6 @@ zx_status_t DatagramSocket::Call::HandleEvents(::zx::unowned_channel client_end,
     if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
     }
-    if (::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>() >= x) {
-      x = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving, ::fidl::internal::WireFormatGuide::kAlternate>();
-    }
     return x;
   })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -8421,23 +8358,6 @@ zx_status_t DatagramSocket::Call::HandleEvents(::zx::unowned_channel client_end,
     {
       constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
       ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (!fidl_should_decode_union_from_xunion(hdr)) {
-        transformer_dest_storage.Allocate();
-        uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                                      OnOpenResponse::AltType,
-                                                      reinterpret_cast<uint8_t*>(msg.bytes),
-                                                      msg.num_bytes,
-                                                      transformer_dest,
-                                                      kTransformerDestSize,
-                                                      &msg.num_bytes,
-                                                      nullptr);
-        if (transform_status != ZX_OK) {
-          zx_handle_close_many(msg.handles, msg.num_handles);
-          return ZX_ERR_INVALID_ARGS;
-        }
-        msg.bytes = transformer_dest;
-      }
       auto result = ::fidl::DecodeAs<OnOpenResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;

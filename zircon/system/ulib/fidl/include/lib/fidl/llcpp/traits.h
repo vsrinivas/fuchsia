@@ -155,10 +155,6 @@ enum class WireFormatGuide {
   kCurrent,
 
   // An alternate wire-format when a wire-format migration is ongoing.
-  //
-  // NOTE(fxb/39159): there is a current migration from static unions to extensible unions. When
-  // LLCPP starts to use xunions in-memory, the |kCurrent| wire-format will correspond to xunions,
-  // while the |kAlternate| wire-format will switch over to represent old static unions.
   kAlternate
 };
 
@@ -174,12 +170,14 @@ constexpr uint32_t ClampedMessageSize() {
       return ZX_CHANNEL_MAX_MSG_BYTES;
     }
   }
+  // These can be modified to return the ::Alt variant when a migration
+  // is ongoing
   uint64_t primary = [] {
     switch (WireFormat) {
       case WireFormatGuide::kCurrent:
         return FidlAlign(FidlType::PrimarySize);
       case WireFormatGuide::kAlternate:
-        return FidlAlign(FidlType::AltPrimarySize);
+        return FidlAlign(FidlType::PrimarySize);
     }
   }();
   uint64_t out_of_line = [] {
@@ -187,7 +185,7 @@ constexpr uint32_t ClampedMessageSize() {
       case WireFormatGuide::kCurrent:
         return FidlAlign(FidlType::MaxOutOfLine);
       case WireFormatGuide::kAlternate:
-        return FidlAlign(FidlType::AltMaxOutOfLine);
+        return FidlAlign(FidlType::MaxOutOfLine);
     }
   }();
   uint64_t sum = primary + out_of_line;

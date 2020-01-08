@@ -153,14 +153,10 @@ struct Controller_StartCapture_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_Controller_StartCapture_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_Controller_StartCapture_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -241,14 +237,10 @@ struct Controller_ReleaseCapture_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_Controller_ReleaseCapture_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_Controller_ReleaseCapture_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -329,14 +321,10 @@ struct Controller_IsCaptureSupported_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_Controller_IsCaptureSupported_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_Controller_IsCaptureSupported_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -417,14 +405,10 @@ struct Controller_ImportImageForCapture_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -450,14 +434,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_display_ImageConfigTable;
 
 struct ImageConfig {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_ImageConfigTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_ImageConfigTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t width = {};
 
@@ -854,14 +834,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_display_ModeTable;
 
 struct Mode {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_ModeTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_ModeTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t horizontal_resolution = {};
 
@@ -877,14 +853,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_display_FrameTable;
 
 struct Frame {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_FrameTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_FrameTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t x_pos = {};
 
@@ -900,14 +872,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_display_CursorInfoTable;
 
 struct CursorInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_CursorInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_CursorInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 12;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t width = {};
 
@@ -921,14 +889,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_display_InfoTable;
 
 struct Info {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_InfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_InfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 104;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 104;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
   uint64_t id = {};
 
@@ -950,14 +914,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_StartCapture
 
 struct Controller_StartCapture_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_Controller_StartCapture_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_Controller_StartCapture_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -967,14 +927,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_ReleaseCaptu
 
 struct Controller_ReleaseCapture_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_Controller_ReleaseCapture_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_Controller_ReleaseCapture_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -984,14 +940,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_IsCaptureSup
 
 struct Controller_IsCaptureSupported_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_Controller_IsCaptureSupported_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_Controller_IsCaptureSupported_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   bool supported = {};
 };
@@ -1001,14 +953,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_ImportImageF
 
 struct Controller_ImportImageForCapture_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_Controller_ImportImageForCapture_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_Controller_ImportImageForCapture_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t image_id = {};
 };
@@ -1018,14 +966,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_display_ClientCompositionOpTabl
 
 struct ClientCompositionOp {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_display_ClientCompositionOpTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_display_ClientCompositionOpTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t display_id = {};
 

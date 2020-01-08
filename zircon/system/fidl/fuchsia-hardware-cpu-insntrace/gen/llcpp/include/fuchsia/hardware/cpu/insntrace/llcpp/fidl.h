@@ -110,14 +110,10 @@ struct Controller_Terminate_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_Terminate_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_Controller_Terminate_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -198,14 +194,10 @@ struct Controller_ReleaseThreadBuffer_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_ReleaseThreadBuffer_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_Controller_ReleaseThreadBuffer_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -286,14 +278,10 @@ struct Controller_Initialize_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_Initialize_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_Controller_Initialize_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -374,14 +362,10 @@ struct Controller_AssignThreadBuffer_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_AssignThreadBuffer_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_Controller_AssignThreadBuffer_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -462,14 +446,10 @@ struct Controller_AllocateBuffer_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_AllocateBuffer_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_Controller_AllocateBuffer_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -494,14 +474,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_AllocationTable;
 // The allocation configuration of a trace.
 struct Allocation {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_AllocationTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_AllocationTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::hardware::cpu::insntrace::Mode mode = {};
 
@@ -520,14 +496,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_Controller_Termin
 
 struct Controller_Terminate_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_Terminate_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_Controller_Terminate_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -537,14 +509,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_Controller_Releas
 
 struct Controller_ReleaseThreadBuffer_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_ReleaseThreadBuffer_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_Controller_ReleaseThreadBuffer_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -554,14 +522,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_Controller_Initia
 
 struct Controller_Initialize_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_Initialize_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_Controller_Initialize_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -571,14 +535,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_Controller_Assign
 
 struct Controller_AssignThreadBuffer_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_AssignThreadBuffer_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_Controller_AssignThreadBuffer_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -589,14 +549,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_BufferStateTable;
 // A buffer's runtime state.
 struct BufferState {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_BufferStateTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_BufferStateTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // This is the offset in the buffer where tracing stopped (treating all
   // buffers as one large one). If using a circular buffer then all of the
@@ -610,14 +566,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_Controller_Alloca
 
 struct Controller_AllocateBuffer_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_Controller_AllocateBuffer_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_Controller_AllocateBuffer_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t descriptor = {};
 };
@@ -628,14 +580,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_AddressRangeTable
 // An address range, as [start,end].
 struct AddressRange {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_AddressRangeTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_AddressRangeTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t start = {};
 
@@ -648,14 +596,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_insntrace_BufferConfigTable
 // A buffer's configuration.
 struct BufferConfig {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_insntrace_BufferConfigTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_insntrace_BufferConfigTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 64;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 64;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // A "buffer" is made up of |num_chunks| chunks with each chunk having
   // size |1<<chunk_order| pages.

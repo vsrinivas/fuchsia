@@ -604,14 +604,10 @@ extern "C" const fidl_type_t v1_fuchsia_blobfs_BlockRegionTable;
 
 struct BlockRegion {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_blobfs_BlockRegionTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_blobfs_BlockRegionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t offset = {};
 

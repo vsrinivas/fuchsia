@@ -34,14 +34,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_WriteBytesOperationTa
 
 struct WriteBytesOperation {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_WriteBytesOperationTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_WriteBytesOperationTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 32;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Memory object describing buffer to write from.
   ::zx::vmo vmo = {};
@@ -63,14 +59,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_ReadWriteOperationTab
 
 struct ReadWriteOperation {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_ReadWriteOperationTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_ReadWriteOperationTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Memory object describing buffer to read into or write from.
   ::zx::vmo vmo = {};
@@ -90,14 +82,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_PartitionInfoTable;
 
 struct PartitionInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_PartitionInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_PartitionInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 32;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Partition type GUID.
   ::fidl::Array<uint8_t, 16> partition_guid = {};

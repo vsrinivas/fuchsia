@@ -40,14 +40,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VsliceRangeTable;
 
 struct VsliceRange {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VsliceRangeTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VsliceRangeTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   bool allocated = {};
 
@@ -59,14 +55,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeManagerInfoT
 
 struct VolumeManagerInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeManagerInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeManagerInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t slice_size = {};
 
@@ -80,14 +72,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeInfoTable;
 
 struct VolumeInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 32;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t slice_size = {};
 

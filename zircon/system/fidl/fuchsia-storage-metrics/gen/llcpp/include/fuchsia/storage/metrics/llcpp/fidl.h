@@ -31,14 +31,10 @@ extern "C" const fidl_type_t v1_fuchsia_storage_metrics_CallStatRawTable;
 
 struct CallStatRaw {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_storage_metrics_CallStatRawTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_storage_metrics_CallStatRawTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 40;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t minimum_latency = {};
 
@@ -56,14 +52,10 @@ extern "C" const fidl_type_t v1_fuchsia_storage_metrics_CallStatTable;
 
 struct CallStat {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_storage_metrics_CallStatTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_storage_metrics_CallStatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 80;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::storage::metrics::CallStatRaw success = {};
 
@@ -75,14 +67,10 @@ extern "C" const fidl_type_t v1_fuchsia_storage_metrics_FsMetricsTable;
 
 struct FsMetrics {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_storage_metrics_FsMetricsTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_storage_metrics_FsMetricsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 640;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 640;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::storage::metrics::CallStat create = {};
 

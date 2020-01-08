@@ -953,14 +953,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_GUIDTable;
 
 struct GUID {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_GUIDTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_GUIDTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::fidl::Array<uint8_t, 16> value = {};
 };

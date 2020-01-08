@@ -117,14 +117,10 @@ struct StrictSimpleXUnion {
   }
 
   static constexpr const fidl_type_t* Type = &v1_test_name_StrictSimpleXUnionTable;
-  static constexpr const fidl_type_t* AltType = &test_name_StrictSimpleXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -194,14 +190,10 @@ struct StrictBoundedXUnion {
   }
 
   static constexpr const fidl_type_t* Type = &v1_test_name_StrictBoundedXUnionTable;
-  static constexpr const fidl_type_t* AltType = &test_name_StrictBoundedXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 32;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 32;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -288,14 +280,10 @@ struct OlderSimpleUnion {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type = &v1_test_name_OlderSimpleUnionTable;
-  static constexpr const fidl_type_t* AltType = &test_name_OlderSimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -409,14 +397,10 @@ struct NewerSimpleUnion {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type = &v1_test_name_NewerSimpleUnionTable;
-  static constexpr const fidl_type_t* AltType = &test_name_NewerSimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -511,14 +495,10 @@ struct ExplicitXUnion {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type = &v1_test_name_ExplicitXUnionTable;
-  static constexpr const fidl_type_t* AltType = &test_name_ExplicitXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -586,14 +566,10 @@ struct XUnionContainingEmptyStruct {
   Tag which() const;
 
   static constexpr const fidl_type_t* Type = &v1_test_name_XUnionContainingEmptyStructTable;
-  static constexpr const fidl_type_t* AltType = &test_name_XUnionContainingEmptyStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -621,14 +597,10 @@ extern "C" const fidl_type_t v1_test_name_StructWithNullableXUnionTable;
 
 struct StructWithNullableXUnion {
   static constexpr const fidl_type_t* Type = &v1_test_name_StructWithNullableXUnionTable;
-  static constexpr const fidl_type_t* AltType = &test_name_StructWithNullableXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
   ::llcpp::test::name::OlderSimpleUnion x1 = {};
 };
@@ -901,14 +873,10 @@ extern "C" const fidl_type_t v1_test_name_EmptyTable;
 
 struct Empty {
   static constexpr const fidl_type_t* Type = &v1_test_name_EmptyTable;
-  static constexpr const fidl_type_t* AltType = &test_name_EmptyTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };

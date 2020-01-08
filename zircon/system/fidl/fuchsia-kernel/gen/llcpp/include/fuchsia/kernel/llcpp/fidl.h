@@ -231,14 +231,10 @@ struct PerCpuStats final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_kernel_PerCpuStatsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_kernel_PerCpuStatsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 360;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 360;
 
  private:
   PerCpuStats(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -415,14 +411,10 @@ struct MemoryStats final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_kernel_MemoryStatsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_kernel_MemoryStatsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 216;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 216;
 
  private:
   MemoryStats(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -466,14 +458,10 @@ extern "C" const fidl_type_t v1_fuchsia_kernel_CpuStatsTable;
 
 struct CpuStats {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_CpuStatsTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_kernel_CpuStatsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 192512;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 192512;
 
   uint64_t actual_num_cpus = {};
 

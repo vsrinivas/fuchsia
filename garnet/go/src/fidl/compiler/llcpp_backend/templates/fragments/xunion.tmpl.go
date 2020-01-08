@@ -77,14 +77,10 @@ struct {{ .Name }} {
   {{- end }}
 
   static constexpr const fidl_type_t* Type = &{{ .V1TableType }};
-  static constexpr const fidl_type_t* AltType = &{{ .TableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
   static constexpr uint32_t PrimarySize = {{ .InlineSizeV1NoEE }};
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLineV1NoEE }};
-  static constexpr uint32_t AltPrimarySize = {{ .Size }};
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = {{ .MaxOutOfLine }};
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {

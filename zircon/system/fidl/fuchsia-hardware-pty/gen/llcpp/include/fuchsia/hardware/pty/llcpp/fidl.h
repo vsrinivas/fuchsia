@@ -34,14 +34,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_pty_WindowSizeTable;
 
 struct WindowSize {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_WindowSizeTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_WindowSizeTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t width = {};
 

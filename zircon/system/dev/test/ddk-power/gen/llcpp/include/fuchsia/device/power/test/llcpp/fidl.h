@@ -100,14 +100,10 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -188,14 +184,10 @@ struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -276,14 +268,10 @@ struct TestDevice_GetCurrentSuspendReason_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -364,14 +352,10 @@ struct TestDevice_GetCurrentDevicePerformanceState_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -452,14 +436,10 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -483,14 +463,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentD
 
 struct TestDevice_GetCurrentDevicePowerState_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::device::DevicePowerState cur_state = {};
 };
@@ -500,14 +476,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentD
 
 struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 2;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   bool enabled = {};
 
@@ -519,14 +491,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentS
 
 struct TestDevice_GetCurrentSuspendReason_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t cur_suspend_reason = {};
 };
@@ -536,14 +504,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentD
 
 struct TestDevice_GetCurrentDevicePerformanceState_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   int32_t cur_state = {};
 };
@@ -553,14 +517,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_AddDeviceWi
 
 struct TestDevice_AddDeviceWithPowerArgs_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };

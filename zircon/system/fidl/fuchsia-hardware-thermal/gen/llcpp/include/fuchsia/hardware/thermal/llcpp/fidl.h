@@ -44,14 +44,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_ThermalTemperatureInfoT
 // Temperature units are degrees Celsius.
 struct ThermalTemperatureInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_ThermalTemperatureInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_ThermalTemperatureInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 20;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 20;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The temperature must rise to up_temp to get to this trip point.
   float up_temp_celsius = {};
@@ -78,14 +74,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_ThermalInfoTable;
 // Temperature units are degrees Celsius.
 struct ThermalInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_ThermalInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_ThermalInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 80;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // State is a bitmask of `THERMAL_STATE_`* values.
   uint32_t state = {};
@@ -1325,14 +1317,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_OperatingPointEntryTabl
 // scpi_opp_entry_t is typedef'd to this.
 struct OperatingPointEntry {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_OperatingPointEntryTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_OperatingPointEntryTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The operating point frequency in Hz.
   uint32_t freq_hz = {};
@@ -1347,14 +1335,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_OperatingPointTable;
 // scpi_opp_t is typedef'd to this.
 struct OperatingPoint {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_OperatingPointTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_OperatingPointTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 136;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 136;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The device's operating points.
   ::fidl::Array<::llcpp::fuchsia::hardware::thermal::OperatingPointEntry, 16> opp = {};
@@ -1371,14 +1355,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_ThermalDeviceInfoTable;
 
 struct ThermalDeviceInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_ThermalDeviceInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_ThermalDeviceInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 608;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 608;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Active cooling support.
   bool active_cooling = {};

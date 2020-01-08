@@ -101,14 +101,10 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
-  static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 24;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 24;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -189,14 +185,10 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
-  static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -277,14 +269,10 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
-  static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -308,14 +296,10 @@ extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_Respo
 
 struct WithErrorSyntax_ResponseAsStruct_Response {
   static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   int64_t a = {};
 
@@ -329,14 +313,10 @@ extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Respo
 
 struct WithErrorSyntax_ErrorAsPrimitive_Response {
   static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -346,14 +326,10 @@ extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTa
 
 struct WithErrorSyntax_ErrorAsEnum_Response {
   static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };

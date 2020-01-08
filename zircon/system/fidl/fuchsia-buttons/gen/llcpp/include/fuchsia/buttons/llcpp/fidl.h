@@ -97,14 +97,10 @@ struct Buttons_RegisterNotify_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -128,14 +124,10 @@ extern "C" const fidl_type_t v1_fuchsia_buttons_Buttons_RegisterNotify_ResponseT
 
 struct Buttons_RegisterNotify_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };

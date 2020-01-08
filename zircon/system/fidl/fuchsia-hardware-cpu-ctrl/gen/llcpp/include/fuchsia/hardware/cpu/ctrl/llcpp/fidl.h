@@ -91,14 +91,10 @@ struct Device_GetPerformanceStateInfo_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -130,14 +126,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_CpuPerformanceStateInf
 // A collection of some basic information for a given performance state.
 struct CpuPerformanceStateInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_CpuPerformanceStateInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_CpuPerformanceStateInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Frequency the core is operating at in hertz.
   int64_t frequency_hz = {};
@@ -150,14 +142,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_Device_GetPerformanceS
 
 struct Device_GetPerformanceStateInfo_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::hardware::cpu::ctrl::CpuPerformanceStateInfo info = {};
 };

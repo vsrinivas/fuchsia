@@ -32,14 +32,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_midi_InfoTable;
 // Describes what type of MIDI device an implementation of Device represents
 struct Info {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_midi_InfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_midi_InfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 2;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Whether or not this device is a MIDI sink
   bool is_sink = {};

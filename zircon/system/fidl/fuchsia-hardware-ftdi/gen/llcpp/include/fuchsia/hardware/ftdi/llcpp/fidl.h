@@ -35,14 +35,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_ftdi_I2cDeviceTable;
 // a driver on the bus with the given VID, PID, DID.
 struct I2cDevice {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ftdi_I2cDeviceTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ftdi_I2cDeviceTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t address = {};
 
@@ -60,14 +56,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_ftdi_I2cBusLayoutTable;
 // to create an I2C bus.
 struct I2cBusLayout {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ftdi_I2cBusLayoutTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ftdi_I2cBusLayoutTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 12;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t scl = {};
 

@@ -46,12 +46,9 @@ struct AnyZeroArgMessage final {
   fidl_message_header_t _hdr;
 
   static constexpr const fidl_type_t* Type = nullptr;
-  static constexpr const fidl_type_t* AltType = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = sizeof(fidl_message_header_t);
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = sizeof(fidl_message_header_t);
-  static constexpr uint32_t AltMaxOutOfLine = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool ContainsUnion = false;
 };
@@ -300,73 +297,21 @@ EncodeResult<ResponseType> Call(zx::unowned_channel chan, EncodedMessage<Request
     uint32_t actual_num_bytes = 0u;
     uint32_t actual_num_handles = 0u;
 
-    if constexpr (ResponseType::ContainsUnion) {
-      // Allocate transformer buffer, in anticipation that the message received might be in an
-      // alternate wire-format.
-      auto max = [](uint32_t a, uint32_t b) { return a > b ? a : b; };
-      constexpr uint32_t kMaxSizeForAllFormats =
-          max(fidl::internal::ClampedMessageSize<ResponseType, MessageDirection::kReceiving,
-                                                 internal::WireFormatGuide::kCurrent>(),
-              fidl::internal::ClampedMessageSize<ResponseType, MessageDirection::kReceiving,
-                                                 internal::WireFormatGuide::kAlternate>());
-      fidl::internal::ByteStorage<kMaxSizeForAllFormats> transformer_src_storage;
-      uint8_t* transformer_src = transformer_src_storage.buffer().data();
+    zx_channel_call_args_t args = {.wr_bytes = request.bytes().data(),
+                                   .wr_handles = request.handles().data(),
+                                   .rd_bytes = out_bytes->data(),
+                                   .rd_handles = handles->data(),
+                                   .wr_num_bytes = request.bytes().actual(),
+                                   .wr_num_handles = request.handles().actual(),
+                                   .rd_num_bytes = out_bytes->capacity(),
+                                   .rd_num_handles = handles->capacity()};
 
-      // Perform the call, receiving into transformer buffer
-      zx_channel_call_args_t args = {.wr_bytes = request.bytes().data(),
-                                     .wr_handles = request.handles().data(),
-                                     .rd_bytes = transformer_src,
-                                     .rd_handles = handles->data(),
-                                     .wr_num_bytes = request.bytes().actual(),
-                                     .wr_num_handles = request.handles().actual(),
-                                     .rd_num_bytes = kMaxSizeForAllFormats,
-                                     .rd_num_handles = handles->capacity()};
-
-      result.status = chan->call(0u, deadline, &args, &actual_num_bytes, &actual_num_handles);
-      request.ReleaseBytesAndHandles();
-      if (result.status != ZX_OK) {
-        return;
-      }
-      handles->set_actual(actual_num_handles);
-
-      // Determine if we need to perform transformation
-      if (actual_num_bytes < sizeof(fidl_message_header_t)) {
-        result.status = ZX_ERR_INVALID_ARGS;
-        return;
-      }
-      fidl_transformation_t transformation;
-      if (!fidl_should_decode_union_from_xunion(
-              reinterpret_cast<fidl_message_header_t*>(transformer_src))) {
-        transformation = FIDL_TRANSFORMATION_OLD_TO_V1;
-      } else {
-        transformation = FIDL_TRANSFORMATION_NONE;
-      }
-
-      // Transform into user buffer
-      result.status = fidl_transform(transformation, ResponseType::AltType, transformer_src,
-                                     actual_num_bytes, out_bytes->data(), out_bytes->capacity(),
-                                     &actual_num_bytes, &result.error);
-      if (result.status != ZX_OK) {
-        return;
-      }
-    } else {
-      zx_channel_call_args_t args = {.wr_bytes = request.bytes().data(),
-                                     .wr_handles = request.handles().data(),
-                                     .rd_bytes = out_bytes->data(),
-                                     .rd_handles = handles->data(),
-                                     .wr_num_bytes = request.bytes().actual(),
-                                     .wr_num_handles = request.handles().actual(),
-                                     .rd_num_bytes = out_bytes->capacity(),
-                                     .rd_num_handles = handles->capacity()};
-
-      result.status = chan->call(0u, deadline, &args, &actual_num_bytes, &actual_num_handles);
-      request.ReleaseBytesAndHandles();
-      if (result.status != ZX_OK) {
-        return;
-      }
-      handles->set_actual(actual_num_handles);
+    result.status = chan->call(0u, deadline, &args, &actual_num_bytes, &actual_num_handles);
+    request.ReleaseBytesAndHandles();
+    if (result.status != ZX_OK) {
+      return;
     }
-
+    handles->set_actual(actual_num_handles);
     out_bytes->set_actual(actual_num_bytes);
   });
   return result;

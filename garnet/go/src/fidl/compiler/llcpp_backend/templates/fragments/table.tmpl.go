@@ -48,14 +48,10 @@ struct {{ .Name }} final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &{{ .TableType }};
-  static constexpr const fidl_type_t* AltType = &{{ .V1TableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
   static constexpr uint32_t PrimarySize = {{ .InlineSizeV1NoEE }};
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLineV1NoEE }};
-  static constexpr uint32_t AltPrimarySize = {{ .Size }};
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = {{ .MaxOutOfLine }};
 
  private:
   {{ .Name }}(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}

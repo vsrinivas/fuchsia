@@ -104,14 +104,10 @@ struct PlugState final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_audio_PlugStateTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_audio_PlugStateTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 48;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 48;
 
  private:
   PlugState(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -252,14 +248,10 @@ struct RingBufferProperties final : private ::fidl::VectorView<fidl_envelope_t> 
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_audio_RingBufferPropertiesTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_audio_RingBufferPropertiesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 96;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 96;
 
  private:
   RingBufferProperties(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -366,14 +358,10 @@ struct SupportedFormats final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_audio_SupportedFormatsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_audio_SupportedFormatsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 440;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 440;
 
  private:
   SupportedFormats(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -428,14 +416,10 @@ struct Format final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_audio_FormatTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_audio_FormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 40;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 40;
 
  private:
   Format(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -608,14 +592,10 @@ struct StreamProperties final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_audio_StreamPropertiesTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_audio_StreamPropertiesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 776;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 776;
 
  private:
   StreamProperties(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -729,14 +709,10 @@ struct RingBuffer_GetVmo_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_RingBuffer_GetVmo_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_RingBuffer_GetVmo_ResultTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -813,14 +789,10 @@ struct GainState final : private ::fidl::VectorView<fidl_envelope_t> {
   friend class Builder;
   static Builder Build();
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_audio_GainStateTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_audio_GainStateTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 72;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 72;
 
  private:
   GainState(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -855,14 +827,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferPositionInfoTab
 
 struct RingBufferPositionInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_RingBufferPositionInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_RingBufferPositionInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The driver's best estimate of the time at which the playback/capture pointer reached the
   // position indicated by |position|.
@@ -1071,14 +1039,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_audio_PcmSupportedFormatsTable;
 // For more detailed information see //zircon/driver_interfaces/audio_streaming.md.
 struct PcmSupportedFormats {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_PcmSupportedFormatsTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_PcmSupportedFormatsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 344;
-  static constexpr uint32_t AltPrimarySize = 80;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 344;
 
   // Vector of possible number of channels supported in ascending order.
   ::fidl::VectorView<uint8_t> number_of_channels = {};
@@ -1107,14 +1071,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_audio_PcmFormatTable;
 // bytes. For more detailed information see //zircon/driver_interfaces/audio_streaming.md.
 struct PcmFormat {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_PcmFormatTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_PcmFormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Number of channels.
   uint8_t number_of_channels = {};
@@ -1144,14 +1104,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBuffer_GetVmo_Respons
 
 struct RingBuffer_GetVmo_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_RingBuffer_GetVmo_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_RingBuffer_GetVmo_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t num_frames = {};
 

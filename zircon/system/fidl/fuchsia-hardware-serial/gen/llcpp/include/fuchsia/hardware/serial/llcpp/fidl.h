@@ -128,14 +128,10 @@ struct NewDevice_Write_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_NewDevice_Write_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_NewDevice_Write_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -216,14 +212,10 @@ struct NewDevice_Read_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_NewDevice_Read_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_NewDevice_Read_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -401,14 +393,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDevice_Write_Response
 
 struct NewDevice_Write_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_NewDevice_Write_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_NewDevice_Write_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -418,14 +406,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDevice_Read_ResponseT
 
 struct NewDevice_Read_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_NewDevice_Read_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_NewDevice_Read_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
   ::fidl::VectorView<uint8_t> data = {};
 };
@@ -435,14 +419,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_serial_ConfigTable;
 
 struct Config {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_ConfigTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_ConfigTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::hardware::serial::CharacterWidth character_width = {};
 

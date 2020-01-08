@@ -306,14 +306,10 @@ struct NodeInfo {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeInfoTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 24;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 24;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -346,14 +342,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_WatchedEventTable;
 // WatchedEvent describes events returned from a DirectoryWatcher.
 struct WatchedEvent {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_WatchedEventTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_WatchedEventTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 256;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 256;
 
   uint8_t event = {};
 
@@ -404,14 +396,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_VmofileTable;
 // that represents the single file, an offset and length parameter are also supplied.
 struct Vmofile {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_VmofileTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_VmofileTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The VMO which backs this file.
   ::zx::vmo vmo = {};
@@ -448,14 +436,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_TtyTable;
 // The object may be cast to interface 'Tty'
 struct Tty {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_TtyTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_TtyTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::eventpair event = {};
 };
@@ -466,14 +450,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_StreamSocketTable;
 // The object may be cast to interface [`fuchsia.posix.socket.StreamSocket`].
 struct StreamSocket {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_StreamSocketTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_StreamSocketTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::socket socket = {};
 };
@@ -642,14 +622,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_SocketTable;
 // The object may be cast to interface [`fuchsia.posix.socket.Control`].
 struct Socket {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_SocketTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_SocketTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::socket socket = {};
 };
@@ -661,14 +637,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_ServiceTable;
 // other way.
 struct Service {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_ServiceTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_ServiceTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -679,14 +651,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_PipeTable;
 // The object is accompanied by a pipe.
 struct Pipe {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_PipeTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_PipeTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::zx::socket socket = {};
 };
@@ -771,14 +739,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_NodeAttributesTable;
 // NodeAttributes defines generic information about a filesystem node.
 struct NodeAttributes {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeAttributesTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeAttributesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 56;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Protection bits and node type information describe in 'mode'.
   uint32_t mode = {};
@@ -852,14 +816,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_FilesystemInfoTable;
 
 struct FilesystemInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FilesystemInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_FilesystemInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 96;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 96;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The number of data bytes which may be stored in a filesystem.
   uint64_t total_bytes = {};
@@ -901,14 +861,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_FileObjectTable;
 // The object may be cast to interface 'File'.
 struct FileObject {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileObjectTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_FileObjectTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // An optional event which transmits information about an object's readability
   // or writability. This event relays information about the underlying object, not
@@ -931,14 +887,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_DirectoryObjectTable;
 // The object may be cast to interface 'Directory'.
 struct DirectoryObject {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryObjectTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryObjectTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -949,14 +901,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_DeviceTable;
 // The object may be cast to interface 'Device'.
 struct Device {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DeviceTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_DeviceTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // An optional event which transmits information about a device's state.
   //
@@ -970,14 +918,10 @@ extern "C" const fidl_type_t v1_fuchsia_io_DatagramSocketTable;
 // The object may be cast to interface [`fuchsia.posix.socket.DatagramSocket`].
 struct DatagramSocket {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DatagramSocketTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_io_DatagramSocketTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // See [`fuchsia.posix.socket.DatagramSocket`] for details.
   ::zx::eventpair event = {};

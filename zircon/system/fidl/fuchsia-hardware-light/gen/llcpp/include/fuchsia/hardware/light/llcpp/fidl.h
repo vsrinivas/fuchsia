@@ -37,14 +37,10 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_light_RgbTable;
 
 struct Rgb {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_RgbTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_RgbTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 3;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 3;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t red = {};
 

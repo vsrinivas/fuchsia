@@ -163,14 +163,10 @@ struct SecureMem_SetPhysicalSecureHeaps_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -251,14 +247,10 @@ struct SecureMem_GetPhysicalSecureHeaps_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 776;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 776;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -324,14 +316,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_VmoBufferTable;
 
 struct VmoBuffer {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_VmoBufferTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_VmoBufferTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The same VMO can be used by more than one CodecBuffer (only of the same
   // buffer_lifetime_ordinal), but each vmo_handle must be a separate handle.
@@ -2250,14 +2238,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_
 
 struct SecureMem_SetPhysicalSecureHeaps_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -2269,14 +2253,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_ImagePlaneTable;
 
 struct ImagePlane {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_ImagePlaneTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_ImagePlaneTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Byte offset of the start of the plane from the beginning of the image.
   uint32_t byte_offset = {};
@@ -2291,14 +2271,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_PhysicalSecureHeapTable;
 
 struct PhysicalSecureHeap {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_PhysicalSecureHeapTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_PhysicalSecureHeapTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // This must be a HeapType that is secure/protected.
   ::llcpp::fuchsia::sysmem::HeapType heap = {};
@@ -2315,14 +2291,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_PhysicalSecureHeapsTable;
 
 struct PhysicalSecureHeaps {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_PhysicalSecureHeapsTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_PhysicalSecureHeapsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 776;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 776;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Must be <= MAX_HEAPS_COUNT.
   uint32_t heaps_count = {};
@@ -2336,14 +2308,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_
 
 struct SecureMem_GetPhysicalSecureHeaps_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 776;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 776;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps = {};
 };
@@ -2932,14 +2900,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferMemoryConstraintsTable;
 
 struct BufferMemoryConstraints {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferMemoryConstraintsTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferMemoryConstraintsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 280;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 280;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t min_size_bytes = {};
 
@@ -2978,14 +2942,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_FormatModifierTable;
 
 struct FormatModifier {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_FormatModifierTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_FormatModifierTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The upper 8 bits are a vendor code as allocated in FormatModifierVendor
   // enum.  The lower 56 bits are vendor-defined.
@@ -3003,14 +2963,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_PixelFormatTable;
 // Parametric pixel formats may require additional properties.
 struct PixelFormat {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_PixelFormatTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_PixelFormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::sysmem::PixelFormatType type = {};
 
@@ -3065,14 +3021,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_ColorSpaceTable;
 // Parametric color spaces may require additional properties.
 struct ColorSpace {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_ColorSpaceTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_ColorSpaceTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 4;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::sysmem::ColorSpaceType type = {};
 };
@@ -3083,14 +3035,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_ImageSpecTable;
 // Describes constraints for allocating images of some desired form.
 struct ImageSpec {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_ImageSpecTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_ImageSpecTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 40;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Minimum width in pixels.
   uint32_t min_width = {};
@@ -3115,14 +3063,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_ImageFormat_2Table;
 // Describes how an image is represented.
 struct ImageFormat_2 {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_ImageFormat_2Table;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_ImageFormat_2Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 56;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Pixel format.
   ::llcpp::fuchsia::sysmem::PixelFormat pixel_format = {};
@@ -3178,14 +3122,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_ImageFormatConstraintsTable;
 // Describes constraints on layout of image data in buffers.
 struct ImageFormatConstraints {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_ImageFormatConstraintsTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_ImageFormatConstraintsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 232;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 232;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The PixelFormat for which the following constraints apply.  A
   // participant may have more than one PixelFormat that's supported, in
@@ -3326,14 +3266,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_ImageFormatTable;
 // Describes how an image is represented.
 struct ImageFormat {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_ImageFormatTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_ImageFormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 72;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 72;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Row width in pixels.
   uint32_t width = {};
@@ -3361,14 +3297,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferFormatTable;
 // Buffers of each type are described by their own tables.
 struct BufferFormat {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferFormatTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferFormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 80;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // Since this struct used to be a single member union, we kept the tag
   // to avoid any wire format changes. The tag must be set to `0`,
@@ -3384,14 +3316,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionInfoTable;
 // Information about a buffer collection and its buffers.
 struct BufferCollectionInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionInfoTable;
   static constexpr uint32_t MaxNumHandles = 64;
   static constexpr uint32_t PrimarySize = 352;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 352;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The number of buffers in the collection.
   uint32_t buffer_count = {};
@@ -3421,14 +3349,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferMemorySettingsTable;
 
 struct BufferMemorySettings {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferMemorySettingsTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferMemorySettingsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t size_bytes = {};
 
@@ -3452,14 +3376,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_SingleBufferSettingsTable;
 // settings are delivered via OnSingleBufferAllocated() using this struct:
 struct SingleBufferSettings {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SingleBufferSettingsTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SingleBufferSettingsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 264;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 264;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::sysmem::BufferMemorySettings buffer_settings = {};
 
@@ -3479,14 +3399,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_SingleBufferInfoTable;
 
 struct SingleBufferInfo {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SingleBufferInfoTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SingleBufferInfoTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 280;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 280;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::sysmem::SingleBufferSettings settings = {};
 
@@ -3499,14 +3415,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionInfo_2Table;
 // Information about a buffer collection and its buffers.
 struct BufferCollectionInfo_2 {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionInfo_2Table;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionInfo_2Table;
   static constexpr uint32_t MaxNumHandles = 64;
   static constexpr uint32_t PrimarySize = 1296;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1296;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // If this is the initial buffer collection allocation, this is the total
   // number of buffers.  If this is a single buffer allocation, this is zero,
@@ -4039,14 +3951,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferUsageTable;
 
 struct BufferUsage {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferUsageTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferUsageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 20;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 20;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t none = {};
 
@@ -4067,14 +3975,10 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionConstraintsTable;
 // constraints from multiple participants.
 struct BufferCollectionConstraints {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionConstraintsTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionConstraintsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 7760;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 7760;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The usage is only meant as a hint to help sysmem choose a more optimal
   // PixelFormat or similar when multiple compatible options exist.

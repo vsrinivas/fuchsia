@@ -97,14 +97,10 @@ struct TestDevice_SubscribeToLifecycle_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -185,14 +181,10 @@ struct TestDevice_RemoveChild_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -273,14 +265,10 @@ struct TestDevice_CompleteChildInit_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -361,14 +349,10 @@ struct TestDevice_AddChild_Result {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_AddChild_ResultTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_AddChild_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -392,14 +376,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_Subscri
 
 struct TestDevice_SubscribeToLifecycle_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -409,14 +389,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_RemoveC
 
 struct TestDevice_RemoveChild_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -426,14 +402,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_Complet
 
 struct TestDevice_CompleteChildInit_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -443,14 +415,10 @@ extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_AddChil
 
 struct TestDevice_AddChild_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_AddChild_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_AddChild_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t child_id = {};
 };

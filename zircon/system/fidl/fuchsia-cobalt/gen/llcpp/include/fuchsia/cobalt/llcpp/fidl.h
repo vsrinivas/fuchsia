@@ -165,14 +165,10 @@ struct Value {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_ValueTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_ValueTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -347,14 +343,10 @@ struct EventPayload {
   }
 
   static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_EventPayloadTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_EventPayloadTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8016;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8016;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -383,14 +375,10 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_CustomEventValueTable;
 // Logger Interface
 struct CustomEventValue {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_CustomEventValueTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_CustomEventValueTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 40;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
   ::fidl::StringView dimension_name = {};
 
@@ -2816,14 +2804,10 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_ProjectProfileTable;
 
 struct ProjectProfile {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_ProjectProfileTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_ProjectProfileTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::mem::Buffer config = {};
 
@@ -3359,14 +3343,10 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_HistogramBucketTable;
 
 struct HistogramBucket {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_HistogramBucketTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_HistogramBucketTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint32_t index = {};
 
@@ -3379,14 +3359,10 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_ExperimentTable;
 // SystemProfileUpdater Interface
 struct Experiment {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_ExperimentTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_ExperimentTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint64_t experiment_id = {};
 
@@ -3696,14 +3672,10 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_EventTable;
 
 struct Event {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_EventTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_EventTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
 };
@@ -3713,14 +3685,10 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_CountEventTable;
 
 struct CountEvent {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_CountEventTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_CountEventTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   int64_t period_duration_micros = {};
 
@@ -3732,14 +3700,10 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_CobaltEventTable;
 
 struct CobaltEvent {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_CobaltEventTable;
-  static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_CobaltEventTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 64;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8104;
-  static constexpr uint32_t AltPrimarySize = 64;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8088;
 
   uint32_t metric_id = {};
 
