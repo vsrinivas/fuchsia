@@ -14,6 +14,7 @@ use {
         channel::mpsc::{Receiver, Sender},
         SinkExt, StreamExt,
     },
+    input_synthesis::usages::is_modifier,
     maplit::hashmap,
     std::collections::HashMap,
 };
@@ -37,6 +38,9 @@ pub struct KeyboardEvent {
     /// The keys associated with this input event, sorted by their `KeyEventPhase`
     /// (e.g., whether they are pressed or released).
     pub keys: HashMap<KeyEventPhase, Vec<Key>>,
+
+    /// The modifiers associated with the pressed keys.
+    pub modifiers: Option<Modifiers>,
 }
 
 /// A [`KeyboardDeviceDescriptor`] contains information about a specific keyboard device.
@@ -270,11 +274,17 @@ impl KeyboardBinding {
             KeyEventPhase::Released => released_keys,
         };
 
+        // Track any pressed modifiers.
+        let modifiers: Option<Modifiers> = KeyboardBinding::to_modifiers(
+            &new_keys.iter().filter(|key| is_modifier(**key)).collect(),
+        );
+
         fasync::spawn(async move {
             match input_event_sender
                 .send(input_device::InputEvent {
                     device_event: input_device::InputDeviceEvent::Keyboard(KeyboardEvent {
                         keys: keys_to_send,
+                        modifiers: modifiers,
                     }),
                     device_descriptor,
                 })
@@ -304,7 +314,7 @@ mod tests {
 
         let reports = vec![testing_utilities::create_keyboard_input_report(vec![Key::A])];
         let expected_events =
-            vec![testing_utilities::create_keyboard_event(vec![Key::A], vec![], &descriptor)];
+            vec![testing_utilities::create_keyboard_event(vec![Key::A], vec![], None, &descriptor)];
 
         assert_input_report_sequence_generates_events!(
             input_reports: reports,
@@ -328,8 +338,8 @@ mod tests {
         ];
 
         let expected_events = vec![
-            testing_utilities::create_keyboard_event(vec![Key::A], vec![], &descriptor),
-            testing_utilities::create_keyboard_event(vec![], vec![Key::A], &descriptor),
+            testing_utilities::create_keyboard_event(vec![Key::A], vec![], None, &descriptor),
+            testing_utilities::create_keyboard_event(vec![], vec![Key::A], None, &descriptor),
         ];
 
         assert_input_report_sequence_generates_events!(
@@ -354,8 +364,8 @@ mod tests {
         ];
 
         let expected_events = vec![
-            testing_utilities::create_keyboard_event(vec![Key::A], vec![], &descriptor),
-            testing_utilities::create_keyboard_event(vec![], vec![], &descriptor),
+            testing_utilities::create_keyboard_event(vec![Key::A], vec![], None, &descriptor),
+            testing_utilities::create_keyboard_event(vec![], vec![], None, &descriptor),
         ];
 
         assert_input_report_sequence_generates_events!(
@@ -379,8 +389,8 @@ mod tests {
         ];
 
         let expected_events = vec![
-            testing_utilities::create_keyboard_event(vec![Key::A], vec![], &descriptor),
-            testing_utilities::create_keyboard_event(vec![Key::B], vec![Key::A], &descriptor),
+            testing_utilities::create_keyboard_event(vec![Key::A], vec![], None, &descriptor),
+            testing_utilities::create_keyboard_event(vec![Key::B], vec![Key::A], None, &descriptor),
         ];
 
         assert_input_report_sequence_generates_events!(
@@ -403,8 +413,52 @@ mod tests {
         let expected_events = vec![testing_utilities::create_keyboard_event(
             vec![Key::LeftShift],
             vec![],
+            Some(Modifiers::Shift | Modifiers::LeftShift),
             &descriptor,
         )];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: KeyboardBinding,
+        );
+    }
+
+    /// Tests that a modifier key applies to all subsequent events until the modifier key is
+    /// released.
+    #[fasync::run_singlethreaded(test)]
+    async fn repeated_modifier_key() {
+        let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
+            keys: vec![Key::A, Key::LeftShift],
+        });
+
+        let reports = vec![
+            testing_utilities::create_keyboard_input_report(vec![Key::LeftShift]),
+            testing_utilities::create_keyboard_input_report(vec![Key::LeftShift, Key::A]),
+            testing_utilities::create_keyboard_input_report(vec![Key::A]),
+        ];
+
+        let expected_events = vec![
+            testing_utilities::create_keyboard_event(
+                vec![Key::LeftShift],
+                vec![],
+                Some(Modifiers::Shift | Modifiers::LeftShift),
+                &descriptor,
+            ),
+            testing_utilities::create_keyboard_event(
+                vec![Key::A],
+                vec![],
+                Some(Modifiers::Shift | Modifiers::LeftShift),
+                &descriptor,
+            ),
+            testing_utilities::create_keyboard_event(
+                vec![],
+                vec![Key::LeftShift],
+                None,
+                &descriptor,
+            ),
+        ];
 
         assert_input_report_sequence_generates_events!(
             input_reports: reports,

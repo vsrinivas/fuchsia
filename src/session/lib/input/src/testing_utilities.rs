@@ -34,16 +34,22 @@ pub fn create_keyboard_input_report(
 /// # Parameters
 /// - `pressed_keys`: The keys which are to be included as pressed.
 /// - `released_keys`: The keys which are to be included as released.
+/// - `modifiers`: The modifiers that are to be included as pressed.
 /// - `device_descriptor`: The device descriptor to add to the event.
 #[cfg(test)]
 pub fn create_keyboard_event(
     pressed_keys: Vec<fidl_ui_input2::Key>,
     released_keys: Vec<fidl_ui_input2::Key>,
+    modifiers: Option<fidl_ui_input2::Modifiers>,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::Keyboard(keyboard::KeyboardEvent {
-            keys: hashmap! {fidl_ui_input2::KeyEventPhase::Pressed => pressed_keys, fidl_ui_input2::KeyEventPhase::Released => released_keys },
+            keys: hashmap! {
+                fidl_ui_input2::KeyEventPhase::Pressed => pressed_keys,
+                fidl_ui_input2::KeyEventPhase::Released => released_keys
+            },
+            modifiers: modifiers,
         }),
         device_descriptor: device_descriptor.clone(),
     }
