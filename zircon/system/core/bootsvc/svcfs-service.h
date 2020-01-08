@@ -71,12 +71,6 @@ fbl::RefPtr<fs::Service> CreateReadOnlyLogService(async_dispatcher_t* dispatcher
 fbl::RefPtr<fs::Service> CreateWriteOnlyLogService(async_dispatcher_t* dispatcher,
                                                    const zx::debuglog& log);
 
-// Create a service to provide the root job.
-fbl::RefPtr<fs::Service> CreateRootJobService(async_dispatcher_t* dispatcher);
-
-// Create a service to provide the root job with restricted rights.
-fbl::RefPtr<fs::Service> CreateRootJobForInspectService(async_dispatcher_t* dispatcher);
-
 // Create a service to provide the root resource.
 fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher,
                                                    zx::resource root_resource);

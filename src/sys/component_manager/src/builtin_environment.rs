@@ -14,6 +14,7 @@ use {
             model::{ComponentManagerConfig, Model},
         },
         process_launcher::ProcessLauncher,
+        root_job::RootJob,
         root_realm_stop_notifier::RootRealmStopNotifier,
         runner::BuiltinRunner,
         startup::Arguments,
@@ -31,8 +32,11 @@ use {
     fuchsia_component::server::*,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, stream::StreamExt},
-    std::collections::HashMap,
-    std::sync::{Arc, Weak},
+    std::{
+        collections::HashMap,
+        convert::TryInto,
+        sync::{Arc, Weak},
+    },
 };
 
 /// The built-in environment consists of the set of the root services and framework services.
@@ -42,10 +46,13 @@ use {
 /// * If [Arguments::use_builtin_vmex] is true, a fuchsia.security.resource.Vmex service is
 ///   available.
 pub struct BuiltinEnvironment {
-    pub work_scheduler: Arc<WorkScheduler>,
     pub process_launcher: Option<Arc<ProcessLauncher>>,
-    pub vmex_service: Option<Arc<VmexService>>,
+    pub root_job: Arc<RootJob>,
+    pub root_job_for_inspect: Arc<RootJob>,
     pub system_controller: Arc<SystemController>,
+    pub vmex_service: Option<Arc<VmexService>>,
+
+    pub work_scheduler: Arc<WorkScheduler>,
     pub realm_capability_host: RealmCapabilityHost,
     pub hub: Hub,
     pub builtin_runners: HashMap<CapabilityName, BuiltinRunner>,
@@ -69,7 +76,29 @@ impl BuiltinEnvironment {
             None
         };
 
-        // Set up the vmex service if available.
+        // Set up RootJob service.
+        let root_job = Arc::new(RootJob::new(
+            "/svc/fuchsia.boot.RootJob".try_into().unwrap(),
+            zx::Rights::SAME_RIGHTS,
+        ));
+        model.root_realm.hooks.install(root_job.hooks()).await;
+
+        // Set up RootJobForInspect service.
+        let root_job_for_inspect = Arc::new(RootJob::new(
+            "/svc/fuchsia.boot.RootJobForInspect".try_into().unwrap(),
+            zx::Rights::INSPECT
+                | zx::Rights::ENUMERATE
+                | zx::Rights::DUPLICATE
+                | zx::Rights::TRANSFER
+                | zx::Rights::GET_PROPERTY,
+        ));
+        model.root_realm.hooks.install(root_job_for_inspect.hooks()).await;
+
+        // Set up System Controller service.
+        let system_controller = Arc::new(SystemController::new(model.clone()));
+        model.root_realm.hooks.install(system_controller.hooks()).await;
+
+        // Set up the Vmex service if available.
         let vmex_service = if args.use_builtin_vmex {
             let vmex_service = Arc::new(VmexService::new());
             model.root_realm.hooks.install(vmex_service.hooks()).await;
@@ -81,10 +110,6 @@ impl BuiltinEnvironment {
         // Set up work scheduler.
         let work_scheduler = WorkScheduler::new(Arc::downgrade(model) as Weak<dyn Binder>).await;
         model.root_realm.hooks.install(WorkScheduler::hooks(&work_scheduler)).await;
-
-        // Set up system controller.
-        let system_controller = Arc::new(SystemController::new(model.clone()));
-        model.root_realm.hooks.install(system_controller.hooks()).await;
 
         // Set up the realm service.
         let realm_capability_host = RealmCapabilityHost::new(model.clone(), config);
@@ -111,11 +136,15 @@ impl BuiltinEnvironment {
                 None
             }
         };
+
         Ok(BuiltinEnvironment {
-            work_scheduler,
             process_launcher,
-            vmex_service,
+            root_job,
+            root_job_for_inspect,
             system_controller,
+            vmex_service,
+
+            work_scheduler,
             realm_capability_host,
             hub,
             builtin_runners,

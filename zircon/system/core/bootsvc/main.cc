@@ -341,10 +341,6 @@ int main(int argc, char** argv) {
   svcfs_svc->AddService(fuchsia_boot_WriteOnlyLog_Name,
                         bootsvc::CreateWriteOnlyLogService(loop.dispatcher(), log));
   zx::job::default_job()->set_property(ZX_PROP_NAME, "root", 4);
-  svcfs_svc->AddService(fuchsia_boot_RootJob_Name,
-                        bootsvc::CreateRootJobService(loop.dispatcher()));
-  svcfs_svc->AddService(fuchsia_boot_RootJobForInspect_Name,
-                        bootsvc::CreateRootJobForInspectService(loop.dispatcher()));
 
   zx::resource kernel_stats_resource;
   root_resource_handle.duplicate(ZX_RIGHT_NONE, &kernel_stats_resource);

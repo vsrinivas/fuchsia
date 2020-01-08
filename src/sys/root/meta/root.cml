@@ -24,15 +24,15 @@
       "service_protocol": [
         // These services and directories routed from "realm" at the root are provided by bootsvc
         // through component_manager's namespace.
-        "/svc/fuchsia.boot.RootJob",
-        "/svc/fuchsia.boot.RootJobForInspect",
         "/svc/fuchsia.boot.Arguments",
         "/svc/fuchsia.boot.FactoryItems",
         "/svc/fuchsia.boot.Items",
         "/svc/fuchsia.boot.ReadOnlyLog",
         "/svc/fuchsia.boot.WriteOnlyLog",
         "/svc/fuchsia.kernel.Stats",
-        // ...except for this one, which is provided by component_manager itself as a builtin service.
+        // ...except for these, which are provided by component_manager itself as a builtin service.
+        "/svc/fuchsia.boot.RootJob",
+        "/svc/fuchsia.boot.RootJobForInspect",
         "/svc/fuchsia.process.Launcher",
       ],
       "from": "realm",

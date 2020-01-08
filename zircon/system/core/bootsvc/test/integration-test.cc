@@ -40,8 +40,6 @@ constexpr char kArgumentsPath[] = "/svc/" fuchsia_boot_Arguments_Name;
 constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 constexpr char kReadOnlyLogPath[] = "/svc/" fuchsia_boot_ReadOnlyLog_Name;
-constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
-constexpr char kRootJobForInspectPath[] = "/svc/" fuchsia_boot_RootJobForInspect_Name;
 constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
 constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
 
@@ -366,55 +364,6 @@ bool TestBootReadOnlyLog() {
   END_TEST;
 }
 
-// Make sure the fuchsia.boot.RootJob service works
-bool TestBootRootJob() {
-  BEGIN_TEST;
-
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we can open the fuchsia.boot.RootJob service.
-  status = fdio_service_connect(kRootJobPath, remote.release());
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we received a job from the service.
-  zx::job root_job;
-  status = fuchsia_boot_RootJobGet(local.get(), root_job.reset_and_get_address());
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_TRUE(root_job.is_valid());
-
-  END_TEST;
-}
-
-// Make sure the fuchsia.boot.RootJobForInspect service works
-bool TestBootRootJobForInspect() {
-  BEGIN_TEST;
-
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we can open the fuchsia.boot.RootJobForInspect service.
-  status = fdio_service_connect(kRootJobForInspectPath, remote.release());
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we received a job from the service.
-  zx::job root_job;
-  status = fuchsia_boot_RootJobForInspectGet(local.get(), root_job.reset_and_get_address());
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_TRUE(root_job.is_valid());
-  zx_info_handle_basic_t info;
-  status = root_job.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(zx_info_handle_basic_t), nullptr,
-                             nullptr);
-  ASSERT_EQ(ZX_OK, status, "zx_object_get_info failed");
-  ASSERT_EQ(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_INSPECT | ZX_RIGHT_ENUMERATE |
-                ZX_RIGHT_GET_PROPERTY,
-            info.rights);
-
-  END_TEST;
-}
-
 // Make sure the fuchsia.boot.RootResource service works
 bool TestBootRootResource() {
   BEGIN_TEST;
@@ -476,8 +425,6 @@ RUN_TEST(TestBootArguments)
 RUN_TEST(TestBootArgsFromImage)
 RUN_TEST(TestBootItems)
 RUN_TEST(TestBootReadOnlyLog)
-RUN_TEST(TestBootRootJob)
-RUN_TEST(TestBootRootJobForInspect)
 RUN_TEST(TestBootRootResource)
 RUN_TEST(TestBootWriteOnlyLog)
 RUN_TEST(TestFactoryItems)
