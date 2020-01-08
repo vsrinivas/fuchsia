@@ -20,10 +20,12 @@ class OutputBuffer;
 OutputBuffer FormatSettingStore(ConsoleContext* context, const SettingStore& store);
 
 // Outputs the detailed information about a particular setting.
-OutputBuffer FormatSetting(ConsoleContext* context, const Setting&);
+OutputBuffer FormatSetting(ConsoleContext* context, const std::string& name,
+                           const std::string& description, const SettingValue& value);
 
 // Formats the setting to just show <name>:<value>.
-OutputBuffer FormatSettingShort(ConsoleContext* context, const Setting&);
+OutputBuffer FormatSettingShort(ConsoleContext* context, const std::string& name,
+                                const SettingValue& value);
 
 }  // namespace zxdb
 

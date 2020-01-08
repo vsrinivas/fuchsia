@@ -70,25 +70,25 @@ std::vector<std::string> ListToBullet(const std::vector<std::string>& list) {
 }
 
 // |add_heading| refers whether it should show the setting name or just list the values.
-void AddSettingToTable(ConsoleContext* context, const Setting& setting,
+void AddSettingToTable(ConsoleContext* context, const std::string& name, const SettingValue& value,
                        std::vector<std::vector<OutputBuffer>>* rows, bool add_heading) {
   // TODO(donosoc): We need to check what level the setting comes from so we can highlight it in the
   //                listing.
-  if (!setting.value.is_list()) {
+  if (!value.is_list()) {
     // Normal values as just entered as key-value pairs.
     auto& row = rows->emplace_back();
     if (add_heading)
-      row.emplace_back(Syntax::kVariable, setting.info.name);
-    row.emplace_back(SettingValueToString(context, setting.value));
+      row.emplace_back(Syntax::kVariable, name);
+    row.emplace_back(SettingValueToString(context, value));
   } else {
     // List get special treatment so that we can show them as bullet lists. This make reading them
     // much easier when the elements of the lists are long (eg. paths).
-    auto bullet_list = ListToBullet(setting.value.get_list());
+    auto bullet_list = ListToBullet(value.get_list());
     // Special case for empty list.
     if (bullet_list.empty()) {
       auto& row = rows->emplace_back();
       if (add_heading)
-        row.emplace_back(Syntax::kVariable, setting.info.name);
+        row.emplace_back(Syntax::kVariable, name);
       row.emplace_back(Syntax::kComment, "<empty>");
     } else {
       for (size_t i = 0; i < bullet_list.size(); i++) {
@@ -96,7 +96,7 @@ void AddSettingToTable(ConsoleContext* context, const Setting& setting,
 
         if (add_heading) {
           // The first entry has the setting name.
-          auto title = i == 0 ? OutputBuffer(Syntax::kVariable, setting.info.name) : OutputBuffer();
+          auto title = i == 0 ? OutputBuffer(Syntax::kVariable, name) : OutputBuffer();
           auto it = row.emplace_back(std::move(title));
         }
         row.emplace_back(std::move(bullet_list[i]));
@@ -110,9 +110,9 @@ void AddSettingToTable(ConsoleContext* context, const Setting& setting,
 OutputBuffer FormatSettingStore(ConsoleContext* context, const SettingStore& store) {
   std::vector<std::vector<OutputBuffer>> rows;
   for (auto [key, _] : store.schema()->settings()) {
-    auto setting = store.GetSetting(key);
-    FXL_DCHECK(!setting.value.is_null());
-    AddSettingToTable(context, setting, &rows, true);
+    auto value = store.GetValue(key);
+    FXL_DCHECK(!value.is_null());
+    AddSettingToTable(context, key, value, &rows, true);
   }
 
   OutputBuffer table;
@@ -120,40 +120,41 @@ OutputBuffer FormatSettingStore(ConsoleContext* context, const SettingStore& sto
   return table;
 }
 
-OutputBuffer FormatSetting(ConsoleContext* context, const Setting& setting) {
+OutputBuffer FormatSetting(ConsoleContext* context, const std::string& name,
+                           const std::string& description, const SettingValue& value) {
   OutputBuffer out;
-  out.Append(Syntax::kVariable, setting.info.name);
-  out.Append(OutputBuffer("\n"));
+  out.Append(Syntax::kVariable, name);
+  out.Append(OutputBuffer("\n\n"));
 
-  out.Append(setting.info.description);
+  out.Append(description);
   out.Append(OutputBuffer("\n\n"));
 
   out.Append(Syntax::kHeading, "Type: ");
-  out.Append(SettingTypeToString(setting.value.type()));
+  out.Append(SettingTypeToString(value.type()));
   out.Append("\n\n");
 
   out.Append(Syntax::kHeading, "Value(s):\n");
-  out.Append(FormatSettingShort(context, setting));
+  out.Append(FormatSettingShort(context, name, value));
 
   // List have a copy-paste value for setting the value.
-  if (setting.value.is_list()) {
+  if (value.is_list()) {
     out.Append("\n");
     out.Append(Syntax::kComment, "See \"help set\" about using the set value for lists.\n");
-    out.Append(Syntax::kComment,
-               fxl::StringPrintf("To set, type: set %s ", setting.info.name.c_str()));
-    out.Append(SettingValueToString(context, setting.value));
+    out.Append(Syntax::kComment, fxl::StringPrintf("To set, type: set %s ", name.c_str()));
+    out.Append(SettingValueToString(context, value));
     out.Append("\n");
   }
 
   return out;
 }
 
-OutputBuffer FormatSettingShort(ConsoleContext* context, const Setting& setting) {
-  FXL_DCHECK(!setting.value.is_null());
+OutputBuffer FormatSettingShort(ConsoleContext* context, const std::string& name,
+                                const SettingValue& value) {
+  FXL_DCHECK(!value.is_null());
 
   OutputBuffer out;
   std::vector<std::vector<OutputBuffer>> rows;
-  AddSettingToTable(context, setting, &rows, false);
+  AddSettingToTable(context, name, value, &rows, false);
   FormatTable(std::vector<ColSpec>{1}, std::move(rows), &out);
   return out;
 }

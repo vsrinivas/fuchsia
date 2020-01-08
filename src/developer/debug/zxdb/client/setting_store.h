@@ -49,7 +49,6 @@ class SettingStore {
 
   // Returns null setting/value if key is not found.
   SettingValue GetValue(const std::string& key) const;
-  Setting GetSetting(const std::string& key) const;
 
   bool HasSetting(const std::string& key) const;
 

@@ -69,32 +69,25 @@ std::vector<std::string> SettingStore::GetList(const std::string& key) const {
   return value.get_list();
 }
 
-SettingValue SettingStore::GetValue(const std::string& key) const { return GetSetting(key).value; }
-
-Setting SettingStore::GetSetting(const std::string& key) const {
+SettingValue SettingStore::GetValue(const std::string& key) const {
   // First check if it's in the schema.
-  auto default_setting = schema_->GetSetting(key);
-  if (default_setting.setting.value.is_null()) {
-    DEBUG_LOG(Setting) << "Store: " << name_ << ": Key not found: " << key;
-    return Setting();
-  }
+  const SettingSchema::Record* optional_record = schema_->GetSetting(key);
+  if (!optional_record)
+    return SettingValue();
 
   // Check if it already exists. If so, return it.
-  auto it = values_.find(key);
-  if (it != values_.end()) {
-    return {std::move(default_setting.setting.info), it->second};
-  }
+  if (auto it = values_.find(key); it != values_.end())
+    return it->second;
 
-  // We check the fallback SettingStore to see if it has the setting.
+  // Check the fallback SettingStore to see if it has the setting.
   if (fallback_) {
-    DEBUG_LOG(Setting) << "Store: " << name_ << ": Going to fallback.";
-    auto setting = fallback_->GetSetting(key);
-    if (!setting.value.is_null())
-      return setting;
+    auto value = fallback_->GetValue(key);
+    if (!value.is_null())
+      return value;
   }
 
-  // No fallback has the schema, we return the default.
-  return default_setting.setting;
+  // No fallback has the schema, return the default.
+  return optional_record->default_value;
 }
 
 bool SettingStore::HasSetting(const std::string& key) const { return schema_->HasSetting(key); }

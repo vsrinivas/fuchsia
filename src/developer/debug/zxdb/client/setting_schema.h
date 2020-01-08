@@ -20,8 +20,11 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
   // The SchemaSetting holds the actual setting (the value that is stored and overridden by
   // SettingStore) + some metadata useful for implementing more complex settings such as enums, by
   // using the |options| field.
-  struct SchemaSetting {
-    Setting setting;
+  struct Record {
+    std::string name;
+    std::string description;
+
+    SettingValue default_value;
     std::vector<std::string> options;  // Used only for string lists.
   };
 
@@ -29,9 +32,9 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
 
   bool empty() const { return settings_.empty(); }
 
-  // Returns a null setting if |key| is not within the schema.
-  const SchemaSetting& GetSetting(const std::string& name) const;
-  const std::map<std::string, SchemaSetting>& settings() const { return settings_; }
+  // Returns a null record pointer if the schema does not support a setting with that name.
+  const Record* GetSetting(const std::string& name) const;
+  const std::map<std::string, Record>& settings() const { return settings_; }
 
   // Create new items for simple settings that only belong to this schema. For inter-schema options
   // or for the more complex schema types, create the Setting separately and then insert it to each
@@ -60,13 +63,13 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
   //
   // In the future if we need enums that aren't strings, the valid_options vector should be changed
   // to a vector<SettingValue>.
-  void AddSetting(const std::string& key, Setting setting,
+  void AddSetting(std::string name, std::string description, SettingValue default_value,
                   std::vector<std::string> valid_options = {});
 
   Err ValidateSetting(const std::string& key, const SettingValue&) const;
 
  private:
-  std::map<std::string, SchemaSetting> settings_;
+  std::map<std::string, Record> settings_;
 };
 
 }  // namespace zxdb

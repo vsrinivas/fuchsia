@@ -25,11 +25,6 @@ enum class SettingType : uint32_t {
 };
 const char* SettingTypeToString(SettingType);
 
-struct SettingInfo {
-  std::string name;
-  std::string description;
-};
-
 class SettingValue {
  public:
   SettingValue();  // Creates a kNull type.
@@ -73,11 +68,6 @@ class SettingValue {
  private:
   SettingType type_ = SettingType::kNull;
   VariantValue value_;
-};
-
-struct Setting {
-  SettingInfo info;
-  SettingValue value;
 };
 
 }  // namespace zxdb

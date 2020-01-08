@@ -19,45 +19,19 @@ namespace zxdb {
 
 namespace {
 
+// Necessary for the ExecutionScope tests which create a thread.
 class FormatSettingTest : public RemoteAPITest {};
 
 }  // namespace
-
-fxl::RefPtr<SettingSchema> GetSchema() {
-  auto schema = fxl::MakeRefCounted<SettingSchema>();
-
-  schema->AddBool("setting-bool", "Setting bool description");
-  schema->AddBool("setting-bool2", "Setting bool description", true);
-
-  schema->AddInt("setting-int", "Setting int description");
-  schema->AddInt("setting-int2", "Setting int description", 12334);
-
-  schema->AddString("setting-string", "Setting string description");
-  schema->AddString("setting-string2", R"(
-  Setting string description,
-  with many lines.)",
-                    "Test string");
-
-  schema->AddExecutionScope("setting-scope", "Scope description");
-  schema->AddInputLocations("setting-inputloc", "Input location description");
-
-  schema->AddList("setting-list", "Setting list description");
-  schema->AddList("setting-list2", R"(
-  Some very long description about how this setting is very important to the
-  company and all its customers.)",
-                  {"first", "second", "third"});
-
-  return schema;
-}
 
 TEST_F(FormatSettingTest, Setting) {
   Session session;
   ConsoleContext context(&session);
 
-  SettingStore store(GetSchema(), nullptr);
-
-  Setting setting = store.GetSetting("setting-string2");
-  OutputBuffer out = FormatSetting(&context, setting);
+  OutputBuffer out = FormatSetting(&context, "setting-string2",
+                                   "  Setting string description,\n"
+                                   "  with many lines.",
+                                   SettingValue("Test string"));
   EXPECT_EQ(
       "setting-string2\n"
       "\n"
@@ -79,16 +53,14 @@ TEST_F(FormatSettingTest, ExecutionScope) {
   Process* process = InjectProcess(kProcessKoid);
   Thread* thread = InjectThread(kProcessKoid, 5678);
 
-  SettingStore store(GetSchema(), nullptr);
+  std::string name = "setting-scope";
+  std::string description = "Scope description";
 
   // Global scope.
-  Err err = store.SetExecutionScope("setting-scope", ExecutionScope());
-  EXPECT_FALSE(err.has_error()) << err.msg();
-
-  Setting setting = store.GetSetting("setting-scope");
-  OutputBuffer out = FormatSetting(&context, setting);
+  OutputBuffer out = FormatSetting(&context, name, description, SettingValue(ExecutionScope()));
   EXPECT_EQ(
       "setting-scope\n"
+      "\n"
       "Scope description\n"
       "\n"
       "Type: scope\n"
@@ -98,10 +70,11 @@ TEST_F(FormatSettingTest, ExecutionScope) {
       out.AsString());
 
   // Target scope.
-  setting.value = SettingValue(ExecutionScope(process->GetTarget()));
-  out = FormatSetting(&context, setting);
+  out = FormatSetting(&context, name, description,
+                      SettingValue(ExecutionScope(process->GetTarget())));
   EXPECT_EQ(
       "setting-scope\n"
+      "\n"
       "Scope description\n"
       "\n"
       "Type: scope\n"
@@ -111,10 +84,10 @@ TEST_F(FormatSettingTest, ExecutionScope) {
       out.AsString());
 
   // Thread scope.
-  setting.value = SettingValue(ExecutionScope(thread));
-  out = FormatSetting(&context, setting);
+  out = FormatSetting(&context, name, description, SettingValue(ExecutionScope(thread)));
   EXPECT_EQ(
       "setting-scope\n"
+      "\n"
       "Scope description\n"
       "\n"
       "Type: scope\n"
@@ -128,16 +101,15 @@ TEST_F(FormatSettingTest, InputLocations) {
   MockConsole console(&session());
   ConsoleContext context(&session());
 
-  SettingStore store(GetSchema(), nullptr);
+  std::string name = "setting-inputloc";
+  std::string description = "Input location description";
 
-  // Empty.
-  Err err = store.SetInputLocations("setting-inputloc", {});
-  EXPECT_FALSE(err.has_error()) << err.msg();
+  std::vector<InputLocation> inputlocs;
 
-  Setting setting = store.GetSetting("setting-inputloc");
-  OutputBuffer out = FormatSetting(&context, setting);
+  OutputBuffer out = FormatSetting(&context, name, description, SettingValue(inputlocs));
   EXPECT_EQ(
       "setting-inputloc\n"
+      "\n"
       "Input location description\n"
       "\n"
       "Type: locations\n"
@@ -147,11 +119,12 @@ TEST_F(FormatSettingTest, InputLocations) {
       out.AsString());
 
   // Test with some values. The InputLocation formatter has its own tests for the edge cases.
-  setting.value = SettingValue(
-      {InputLocation(Identifier("SomeFunction")), InputLocation(FileLine("file.cc", 23))});
-  out = FormatSetting(&context, setting);
+  inputlocs.emplace_back(Identifier("SomeFunction"));
+  inputlocs.emplace_back(FileLine("file.cc", 23));
+  out = FormatSetting(&context, name, description, SettingValue(inputlocs));
   EXPECT_EQ(
       "setting-inputloc\n"
+      "\n"
       "Input location description\n"
       "\n"
       "Type: locations\n"
@@ -170,15 +143,12 @@ TEST_F(FormatSettingTest, List) {
       "/another/some/very/long/and/annoying/path/that/actually/leads/nowhere",
       "this path/needs\tquoting"};
 
-  SettingStore store(GetSchema(), nullptr);
-  Err err = store.SetList("setting-list2", std::move(options));
-  EXPECT_FALSE(err.has_error()) << err.msg();
+  std::string name = "setting-list2";
+  std::string description =
+      "  Some very long description about how this setting is very important to the\n"
+      "  company and all its customers.";
 
-  Setting setting = store.GetSetting("setting-list2");
-
-  // clang-format makes this one very hard to read.
-  // Leave this text easier.
-  OutputBuffer out = FormatSetting(&context, setting);
+  OutputBuffer out = FormatSetting(&context, name, description, SettingValue(options));
   EXPECT_EQ(
       "setting-list2\n"
       "\n"

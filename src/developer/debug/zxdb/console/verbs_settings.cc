@@ -40,8 +40,8 @@ struct SettingContext {
 
   SettingStore* store = nullptr;
 
-  // What kind of setting this is.
-  Setting setting;
+  std::string name;
+  SettingValue value;
 
   // At what level the setting was applied.
   Level level = Level::kGlobal;
@@ -93,6 +93,8 @@ Err GetSettingContext(ConsoleContext* context, const Command& cmd, const std::st
   if (!cmd.target())
     return Err("No process found. Please file a bug with a repro.");
 
+  out->name = setting_name;
+
   // Handle noun overrides for getting/setting on specific objects.
   if (cmd.HasNoun(Noun::kThread)) {
     out->store = cmd.thread() ? &cmd.thread()->settings() : nullptr;
@@ -111,9 +113,9 @@ Err GetSettingContext(ConsoleContext* context, const Command& cmd, const std::st
   if (out->store) {
     // Found an explicitly requested setting store.
     if (cmd.verb() == Verb::kSet)  // Use the generic definition from the schama.
-      out->setting = out->store->schema()->GetSetting(setting_name).setting;
+      out->value = out->store->schema()->GetSetting(setting_name)->default_value;
     else if (cmd.verb() == Verb::kGet)  // Use the specific value from the store.
-      out->setting = out->store->GetSetting(setting_name);
+      out->value = out->store->GetValue(setting_name);
     return Err();
   }
 
@@ -138,7 +140,8 @@ Err GetSettingContext(ConsoleContext* context, const Command& cmd, const std::st
     // When setting, choose the most global context the setting can apply to.
     for (const auto cur : kGlobalToSpecific) {
       if (cur(context, cmd, setting_name, out)) {
-        out->setting = out->store->schema()->GetSetting(setting_name).setting;
+        // Just get the default value so the type is set properly.
+        out->value = out->store->schema()->GetSetting(setting_name)->default_value;
         return Err();
       }
     }
@@ -148,8 +151,8 @@ Err GetSettingContext(ConsoleContext* context, const Command& cmd, const std::st
       if (cur(context, cmd, setting_name, out)) {
         // Getting additionally requires that the setting be non-null. We want to find the first
         // one that might apply.
-        out->setting = out->store->GetSetting(setting_name);
-        if (!out->setting.value.is_null())
+        out->value = out->store->GetValue(setting_name);
+        if (!out->value.is_null())
           return Err();
       }
     }
@@ -266,8 +269,10 @@ Err SettingToOutput(ConsoleContext* console_context, const Command& cmd, const s
   if (Err err = GetSettingContext(console_context, cmd, key, &setting_context); err.has_error())
     return err;
 
-  if (!setting_context.setting.value.is_null()) {
-    *out = FormatSetting(console_context, setting_context.setting);
+  if (!setting_context.value.is_null()) {
+    const SettingSchema::Record* record = setting_context.store->schema()->GetSetting(key);
+    FXL_DCHECK(record);  // Should always succeed if GetSettingContext did.
+    *out = FormatSetting(console_context, key, record->description, setting_context.value);
     return Err();
   }
 
@@ -445,17 +450,17 @@ Err SetInt(SettingStore* store, const std::string& setting_name, const std::stri
 Err SetList(const SettingContext& setting_context, const std::vector<std::string>& values,
             SettingStore* store) {
   if (setting_context.op == ParsedSetCommand::kAssign)
-    return store->SetList(setting_context.setting.info.name, values);
+    return store->SetList(setting_context.name, values);
 
   if (setting_context.op == ParsedSetCommand::kAppend) {
-    auto list = store->GetList(setting_context.setting.info.name);
+    auto list = store->GetList(setting_context.name);
     list.insert(list.end(), values.begin(), values.end());
-    return store->SetList(setting_context.setting.info.name, list);
+    return store->SetList(setting_context.name, list);
   }
 
   if (setting_context.op == ParsedSetCommand::kRemove) {
     // Search for the elements to remove.
-    auto list = store->GetList(setting_context.setting.info.name);
+    auto list = store->GetList(setting_context.name);
 
     for (const std::string& value : values) {
       auto first_to_remove = std::remove(list.begin(), list.end(), value);
@@ -465,7 +470,7 @@ Err SetList(const SettingContext& setting_context, const std::vector<std::string
       }
       list.erase(first_to_remove, list.end());
     }
-    return store->SetList(setting_context.setting.info.name, list);
+    return store->SetList(setting_context.name, list);
   }
 
   FXL_NOTREACHED();
@@ -478,7 +483,7 @@ Err SetExecutionScope(ConsoleContext* console_context, const SettingContext& set
   if (scope_or.has_error())
     return scope_or.err();
 
-  return store->SetExecutionScope(setting_context.setting.info.name, scope_or.value());
+  return store->SetExecutionScope(setting_context.name, scope_or.value());
 }
 
 Err SetInputLocations(const Frame* optional_frame, const SettingContext& setting_context,
@@ -487,7 +492,7 @@ Err SetInputLocations(const Frame* optional_frame, const SettingContext& setting
   if (Err err = ParseLocalInputLocation(optional_frame, input, &locs); err.has_error())
     return err;
 
-  return store->SetInputLocations(setting_context.setting.info.name, std::move(locs));
+  return store->SetInputLocations(setting_context.name, std::move(locs));
 }
 
 // Will run the sets against the correct SettingStore:
@@ -496,20 +501,20 @@ Err SetInputLocations(const Frame* optional_frame, const SettingContext& setting
 // |out| is the resultant setting, which is used for user feedback.
 Err SetSetting(ConsoleContext* console_context, const Frame* optional_frame,
                const SettingContext& setting_context, const std::vector<std::string>& values,
-               SettingStore* store, Setting* out) {
+               SettingStore* store, SettingValue* out) {
   Err err;
-  if (setting_context.op != ParsedSetCommand::kAssign && !setting_context.setting.value.is_list())
+  if (setting_context.op != ParsedSetCommand::kAssign && !setting_context.value.is_list())
     return Err("Appending/removing only works for list options.");
 
-  switch (setting_context.setting.value.type()) {
+  switch (setting_context.value.type()) {
     case SettingType::kBoolean:
-      err = SetBool(store, setting_context.setting.info.name, values[0]);
+      err = SetBool(store, setting_context.name, values[0]);
       break;
     case SettingType::kInteger:
-      err = SetInt(store, setting_context.setting.info.name, values[0]);
+      err = SetInt(store, setting_context.name, values[0]);
       break;
     case SettingType::kString:
-      err = store->SetString(setting_context.setting.info.name, values[0]);
+      err = store->SetString(setting_context.name, values[0]);
       break;
     case SettingType::kList:
       err = SetList(setting_context, values, store);
@@ -522,20 +527,20 @@ Err SetSetting(ConsoleContext* console_context, const Frame* optional_frame,
       break;
     case SettingType::kNull:
       return Err("Unknown type for setting %s. Please file a bug with repro.",
-                 setting_context.setting.info.name.data());
+                 setting_context.name.c_str());
   }
 
   if (!err.ok())
     return err;
 
-  *out = store->GetSetting(setting_context.setting.info.name);
+  *out = store->GetValue(setting_context.name);
   return Err();
 }
 
 OutputBuffer FormatSetFeedback(ConsoleContext* console_context,
                                const SettingContext& setting_context,
                                const std::string& setting_name, const Command& cmd,
-                               const Setting& setting) {
+                               const SettingValue& value) {
   OutputBuffer out;
   out.Append("New value ");
   out.Append(Syntax::kVariable, setting_name);
@@ -565,7 +570,7 @@ OutputBuffer FormatSetFeedback(ConsoleContext* console_context,
       FXL_NOTREACHED() << "Should not receive a default setting.";
   }
 
-  out.Append(FormatSettingShort(console_context, setting));
+  out.Append(FormatSettingShort(console_context, setting_name, value));
   return out;
 }
 
@@ -586,22 +591,22 @@ Err DoSet(ConsoleContext* console_context, const Command& cmd) {
   setting_context.op = parsed.value().op;
 
   // Validate that the operations makes sense.
-  if (parsed.value().op != ParsedSetCommand::kAssign && !setting_context.setting.value.is_list())
+  if (parsed.value().op != ParsedSetCommand::kAssign && !setting_context.value.is_list())
     return Err("List modification (+=, -=) used on a non-list option.");
 
-  if (parsed.value().values.size() > 1u && !setting_context.setting.value.is_list()) {
+  if (parsed.value().values.size() > 1u && !setting_context.value.is_list()) {
     return Err(
         "Multiple values on a non-list option. Use \"quotes\" to include literal whitespace.");
   }
 
-  Setting out_setting;  // Used for showing the new value.
+  SettingValue out_value;  // Used for showing the new value.
   err = SetSetting(console_context, cmd.frame(), setting_context, parsed.value().values,
-                   setting_context.store, &out_setting);
+                   setting_context.store, &out_value);
   if (!err.ok())
     return err;
 
   Console::get()->Output(
-      FormatSetFeedback(console_context, setting_context, parsed.value().name, cmd, out_setting));
+      FormatSetFeedback(console_context, setting_context, parsed.value().name, cmd, out_value));
   return Err();
 }
 
