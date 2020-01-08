@@ -17,9 +17,18 @@ use fuchsia_zircon as zx;
 use log::debug;
 use net_types::ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{SpecifiedAddr, Witness};
+use netstack3_core::{
+    LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpSendError,
+};
 use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned, U16, U32};
 
 use crate::eventloop::{Event, EventLoop};
+
+// Socket constants defined in FDIO in
+// `//zircon/system/ulib/fdio/private-socket.h`
+// TODO(brunodalbo) Come back to this, see if we can have those definitions in a
+// public header from FDIO somehow so we don't need to redefine.
+const ZXSIO_SIGNAL_INCOMING: zx::Signals = zx::Signals::USER_0;
 
 #[derive(Debug)]
 enum SocketEventInner {
@@ -82,7 +91,7 @@ fn spawn_worker(
     match transport {
         TransProto::Udp => udp::UdpSocketWorker::new(
             net_proto,
-            psocket::ControlRequestStream::from_channel(channel),
+            psocket::DatagramSocketRequestStream::from_channel(channel),
             properties,
         )
         .and_then(|w| {
@@ -110,12 +119,12 @@ pub(crate) fn handle_fidl_socket_provider_request(
     req: psocket::ProviderRequest,
 ) {
     match req {
-        psocket::ProviderRequest::Socket2 { .. } => {}
-        psocket::ProviderRequest::Socket { domain, type_, protocol: _, responder } => {
+        psocket::ProviderRequest::Socket { .. } => {}
+        psocket::ProviderRequest::Socket2 { domain, type_, protocol: _, responder } => {
             let nonblock = i32::from(type_) & libc::SOCK_NONBLOCK != 0;
             let type_ = i32::from(type_) & !(libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC);
 
-            let result = (|| {
+            let mut result = (|| {
                 let net_proto = get_domain_ip_version(domain).ok_or(libc::EAFNOSUPPORT)?;
                 let trans_proto = match i32::from(type_) {
                     libc::SOCK_DGRAM => TransProto::Udp,
@@ -135,16 +144,12 @@ pub(crate) fn handle_fidl_socket_provider_request(
                         fasync::Channel::from_channel(c0).unwrap(),
                         SocketWorkerProperties { nonblock },
                     )
-                    .map(|_| c1)
+                    .map(|()| ClientEnd::new(c1))
                 } else {
                     Err(libc::ENOBUFS)
                 }
             })();
-
-            match result {
-                Ok(ch) => responder_send!(responder, 0, Some(ClientEnd::new(ch))),
-                Err(e) => responder_send!(responder, e as i16, None),
-            }
+            responder_send!(responder, &mut result);
         }
     }
 }
@@ -168,6 +173,18 @@ pub(crate) trait SockAddr:
     ///
     /// Implementations must set their family field to `Self::FAMILY`.
     fn new(addr: Self::AddrType, port: u16) -> Self;
+
+    /// Creates a new `SockAddr` with the specified `addr` and `port` serialized
+    /// directly into a `Vec`.
+    fn new_vec(addr: Self::AddrType, port: u16) -> Vec<u8> {
+        let mut v = Vec::new();
+        v.resize(std::mem::size_of::<Self>(), 0);
+        let mut b = LayoutVerified::<_, Self>::new(&mut v[..]).unwrap();
+        b.set_family(Self::FAMILY);
+        b.set_addr(addr.bytes());
+        b.set_port(port);
+        v
+    }
 
     /// Gets this `SockAddr`'s address.
     fn addr(&self) -> Self::AddrType;
@@ -328,19 +345,6 @@ impl Default for SockAddrStorage {
     }
 }
 
-/// Header of messages transmitted over POSIX datagram sockets.
-///
-/// Defined in C code in `zxs/protocol.h`.
-// NOTE(brunodalbo) this struct is expected to be short-lived. Upcoming changes
-// to the POSIX FIDL API will render this obsolete.
-#[derive(AsBytes, FromBytes, Unaligned, Default)]
-#[repr(C)]
-struct FdioSocketMsg {
-    addr: SockAddrStorage,
-    addrlen: U32<NativeEndian>,
-    flags: U32<NativeEndian>,
-}
-
 /// Extension trait that associates a [`SockAddr`] implementation to an IP
 /// version. We provide implementations for [`Ipv4`] and [`Ipv6`].
 pub(crate) trait IpSockAddrExt: Ip {
@@ -459,5 +463,64 @@ mod testutil {
         const REMOTE_ADDR_2: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 3]);
         const UNREACHABLE_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 42, 1]);
         const DEFAULT_PREFIX: u8 = 24;
+    }
+}
+
+/// Trait expressing the conversion of error types into `libc::c_int` errno-like errors for the
+/// POSIX-lite wrappers.
+trait IntoErrno {
+    /// Returns the most equivalent POSIX error code for `self`.
+    fn into_errno(self) -> libc::c_int;
+}
+
+impl IntoErrno for LocalAddressError {
+    fn into_errno(self) -> libc::c_int {
+        match self {
+            LocalAddressError::CannotBindToAddress
+            | LocalAddressError::FailedToAllocateLocalPort => libc::EADDRNOTAVAIL,
+            LocalAddressError::AddressMismatch => libc::EINVAL,
+            LocalAddressError::AddressInUse => libc::EADDRINUSE,
+        }
+    }
+}
+
+impl IntoErrno for RemoteAddressError {
+    fn into_errno(self) -> libc::c_int {
+        match self {
+            RemoteAddressError::NoRoute => libc::ENETUNREACH,
+        }
+    }
+}
+
+impl IntoErrno for SocketError {
+    fn into_errno(self) -> libc::c_int {
+        match self {
+            SocketError::Remote(e) => e.into_errno(),
+            SocketError::Local(e) => e.into_errno(),
+        }
+    }
+}
+
+impl IntoErrno for UdpSendError {
+    fn into_errno(self) -> libc::c_int {
+        match self {
+            UdpSendError::Unknown => libc::EIO,
+            UdpSendError::Local(l) => l.into_errno(),
+            UdpSendError::Remote(r) => r.into_errno(),
+        }
+    }
+}
+
+impl IntoErrno for NetstackError {
+    fn into_errno(self) -> libc::c_int {
+        match self {
+            NetstackError::Parse(_) => libc::EINVAL,
+            NetstackError::Exists => libc::EALREADY,
+            NetstackError::NotFound => libc::EFAULT,
+            NetstackError::SendUdp(s) => s.into_errno(),
+            NetstackError::Connect(c) => c.into_errno(),
+            NetstackError::NoRoute => libc::EHOSTUNREACH,
+            NetstackError::Mtu => libc::EMSGSIZE,
+        }
     }
 }

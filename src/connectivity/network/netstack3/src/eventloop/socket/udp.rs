@@ -4,27 +4,24 @@
 
 //! UDP socket bindings.
 
-use std::future::Future;
+use std::convert::TryInto;
 use std::num::NonZeroU16;
-use std::pin::Pin;
 use std::sync::{Arc, Mutex};
-use std::task::{Context, Poll};
 
 use anyhow::{format_err, Error};
-use fidl_fuchsia_posix_socket as psocket;
+use fidl_fuchsia_posix_socket::{self as psocket, DatagramSocketRequest};
 use fuchsia_async as fasync;
-use fuchsia_zircon::{self as zx, prelude::HandleBased};
-use futures::{channel::mpsc, channel::oneshot, future::Either, TryFutureExt, TryStreamExt};
-use log::{debug, error, trace};
-use net_types::ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv6};
+use fuchsia_zircon::{self as zx, prelude::HandleBased, Peered};
+use futures::{channel::mpsc, TryFutureExt, TryStreamExt};
+use log::{debug, error, trace, warn};
+use net_types::ip::{Ip, IpVersion, Ipv4, Ipv6};
 use netstack3_core::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, icmp::IcmpIpExt, listen_udp,
     remove_udp_conn, remove_udp_listener, send_udp, send_udp_conn, send_udp_listener,
-    IdMapCollection, LocalAddressError, RemoteAddressError, SocketError, UdpConnId,
-    UdpEventDispatcher, UdpListenerId,
+    IdMapCollection, UdpConnId, UdpEventDispatcher, UdpListenerId,
 };
-use packet::{serialize::Buf, BufferView};
-use zerocopy::{AsBytes, LayoutVerified};
+use packet::serialize::Buf;
+use std::collections::VecDeque;
 
 use crate::{
     eventloop::{Event, EventLoopInner},
@@ -32,9 +29,14 @@ use crate::{
 };
 
 use super::{
-    get_domain_ip_version, FdioSocketMsg, IpSockAddrExt, SockAddr, SocketEventInner,
-    SocketWorkerProperties,
+    IntoErrno, IpSockAddrExt, SockAddr, SocketEventInner, SocketWorkerProperties,
+    ZXSIO_SIGNAL_INCOMING,
 };
+
+/// Limits the number of messages that can be queued for an application to be
+/// read before we start dropping packets.
+// TODO(brunodalbo) move this to a buffer pool instead.
+const MAX_OUTSTANDING_APPLICATION_MESSAGES: usize = 50;
 
 #[derive(Default)]
 pub(crate) struct UdpSocketCollection {
@@ -84,7 +86,8 @@ impl<I: UdpSocketIpExt> UdpEventDispatcher<I> for EventLoopInner {
         src_port: NonZeroU16,
         body: &[u8],
     ) {
-        let worker = I::get_collection(&self.udp_sockets).conns.get(&conn).unwrap().lock().unwrap();
+        let mut worker =
+            I::get_collection(&self.udp_sockets).conns.get(&conn).unwrap().lock().unwrap();
         if let Err(e) = worker.receive_datagram(src_ip, src_port.get(), body) {
             error!("receive_udp_from_conn failed: {:?}", e);
         }
@@ -98,7 +101,7 @@ impl<I: UdpSocketIpExt> UdpEventDispatcher<I> for EventLoopInner {
         src_port: Option<NonZeroU16>,
         body: &[u8],
     ) {
-        let worker =
+        let mut worker =
             I::get_collection(&self.udp_sockets).listeners.get(&listener).unwrap().lock().unwrap();
         if let Err(e) =
             worker.receive_datagram(src_ip, src_port.map(|p| p.get()).unwrap_or(0), body)
@@ -117,63 +120,31 @@ enum SocketWorkerEither {
 
 /// Worker that serves the fuchsia.posix.socket.Control FIDL.
 pub(super) struct UdpSocketWorker {
-    events: psocket::ControlRequestStream,
+    events: psocket::DatagramSocketRequestStream,
     inner: SocketWorkerEither,
+}
+
+#[derive(Debug)]
+struct AvailableMessage<A> {
+    source_addr: A,
+    source_port: u16,
+    data: Vec<u8>,
 }
 
 /// Internal state of a [`UdpSocketWorker`].
 #[derive(Debug)]
 struct SocketWorkerInner<I: Ip> {
-    local_socket: zx::Socket,
-    peer_socket: zx::Socket,
+    local_event: zx::EventPair,
+    peer_event: zx::EventPair,
     info: SocketControlInfo<I>,
-}
-
-/// A future that represents the data-handling signal of a
-/// [`SocketWorkerInner`].
-///
-/// The two variants represents the two states of handling each datagram; the
-/// `Signals` variant is a future that is waiting for the next datagram on the
-/// `SocketWorkerInner`'s local socket. The `Return` variant is a future that is
-/// waiting for a `SocketWorkerInner` to finish processing a datagram.
-enum DataWorkerFut {
-    /// Wait for the provided [`fasync::OnSignals`] future, obtained from
-    /// [`SocketWorkerInner::create_readable_signal`].
-    Signals(fasync::OnSignals<'static>),
-    /// Wait on the provided [`oneshot::Receiver`], whose sender end is sent to
-    /// a `SocketWorkerInner` as a [`UdpSocketEvent`] until the data in the
-    /// `SocketWorkerInner`'s local socket is handled.
-    Return(oneshot::Receiver<()>),
-}
-
-impl Future for DataWorkerFut {
-    type Output = Option<Result<zx::Signals, zx::Status>>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        match self.get_mut() {
-            DataWorkerFut::Return(rx) => {
-                futures::pin_mut!(rx);
-                rx.poll(cx).map(|_| None)
-            }
-            DataWorkerFut::Signals(s) => {
-                futures::pin_mut!(s);
-                s.poll(cx).map(|s| Some(s))
-            }
-        }
-    }
+    available_data: VecDeque<AvailableMessage<I::Addr>>,
 }
 
 /// The types of events carried by a [`UdpSocketEvent`].
 #[derive(Debug)]
 enum UdpSocketEventInner {
     /// A FIDL request on this socket's control plane.
-    ControlRequest(psocket::ControlRequest),
-    /// A request for the [`SocketWorkerInner`] to read a datagram from its
-    /// local socket.
-    ///
-    /// Once the datagram is processed, the contained [`oneshot::Sender`] must
-    /// be signalled.
-    DataRequest(oneshot::Sender<()>),
+    Request(psocket::DatagramSocketRequest),
     /// A request to destroy a [`UdpSocketWorker`], and dispose of all its
     /// resources.
     Destroy,
@@ -186,16 +157,8 @@ impl UdpSocketEventInner {
         worker: Arc<Mutex<SocketWorkerInner<I>>>,
     ) {
         match self {
-            UdpSocketEventInner::ControlRequest(request) => {
+            UdpSocketEventInner::Request(request) => {
                 worker.lock().unwrap().handle_request(event_loop, request, &worker)
-            }
-            UdpSocketEventInner::DataRequest(sender) => {
-                if let Err(e) = worker.lock().unwrap().handle_socket_data(event_loop) {
-                    // TODO(brunodalbo) are there errors where we should close
-                    // the socket?
-                    error!("UDP: failed to handle socket data: {:?}", e);
-                }
-                sender.send(()).unwrap();
             }
             UdpSocketEventInner::Destroy => {
                 worker.lock().unwrap().teardown(event_loop);
@@ -260,19 +223,18 @@ impl UdpSocketWorker {
     /// [`UdpSocketWorker::spawn`].
     pub fn new(
         ip_version: IpVersion,
-        events: psocket::ControlRequestStream,
+        events: psocket::DatagramSocketRequestStream,
         properties: SocketWorkerProperties,
     ) -> Result<Self, libc::c_int> {
-        let (local_socket, peer_socket) =
-            zx::Socket::create(zx::SocketOpts::DATAGRAM).map_err(|_| libc::ENOBUFS)?;
+        let (local_event, peer_event) = zx::EventPair::create().map_err(|_| libc::ENOBUFS)?;
         Ok(Self {
             events,
             inner: match ip_version {
                 IpVersion::V4 => SocketWorkerEither::V4(Arc::new(Mutex::new(
-                    SocketWorkerInner::new(local_socket, peer_socket, properties),
+                    SocketWorkerInner::new(local_event, peer_event, properties),
                 ))),
                 IpVersion::V6 => SocketWorkerEither::V6(Arc::new(Mutex::new(
-                    SocketWorkerInner::new(local_socket, peer_socket, properties),
+                    SocketWorkerInner::new(local_event, peer_event, properties),
                 ))),
             },
         })
@@ -283,19 +245,24 @@ impl UdpSocketWorker {
     ///
     /// Socket control events will be sent to the receiving end of `sender` as
     /// [`Event::SocketEvent`] variants.
-    pub fn spawn(mut self, sender: mpsc::UnboundedSender<Event>) {
+    pub fn spawn(self, sender: mpsc::UnboundedSender<Event>) {
         fasync::spawn_local(
             async move {
-                let r = self.loop_events(&sender).await;
-                trace!("UDP SocketWorker event loop finished {:?}", r);
+                let Self { events, inner } = self;
+                let result = events
+                    .map_err(Into::into)
+                    .try_for_each(|req| {
+                        futures::future::ready(Self::handle_request(&inner, &sender, req))
+                    })
+                    .await;
+                trace!("UDP SocketWorker event loop finished {:?}", result);
                 // when socket is destroyed, we need to clean things up:
                 if let Err(e) = sender.unbounded_send(
-                    UdpSocketEvent { worker: self.inner, inner: UdpSocketEventInner::Destroy }
-                        .into(),
+                    UdpSocketEvent { worker: inner, inner: UdpSocketEventInner::Destroy }.into(),
                 ) {
                     error!("Error sending destroy event to loop: {:?}", e);
                 }
-                r
+                result
             }
             // When the closure above finishes, that means `self` goes out
             // of scope and is dropped, meaning that the event stream's
@@ -306,100 +273,23 @@ impl UdpSocketWorker {
         );
     }
 
-    /// Services internal event streams until `self.events` finishes or an
-    /// unrecoverable error occurs.
-    ///
-    /// `loop_events` services two event streams: `self.events`, which is a
-    /// stream of requests over the POSIX FIDL channel, and a [`DataWorkerFut`]
-    /// signal, which processes readable data in the [`SocketWorkerInner`]'s
-    /// `local_socket` and waits for processing of such data.
-    async fn loop_events(&mut self, sender: &mpsc::UnboundedSender<Event>) -> Result<(), Error> {
-        let mut dw_fut = DataWorkerFut::Signals(match &self.inner {
-            SocketWorkerEither::V4(sw) => sw.lock().unwrap().create_readable_signal(),
-            SocketWorkerEither::V6(sw) => sw.lock().unwrap().create_readable_signal(),
-        });
-        let mut evt_fut = self.events.try_next();
-        loop {
-            match futures::future::select(evt_fut, dw_fut).await {
-                Either::Left((evt, nxt)) => {
-                    if let Some(request) = evt? {
-                        let () = Self::handle_control_request(&self.inner, &sender, request)?;
-                    } else {
-                        // return Ok, request stream was closed.
-                        return Ok(());
-                    }
-                    evt_fut = self.events.try_next();
-                    dw_fut = nxt;
-                }
-                Either::Right((dw, nxt)) => {
-                    dw_fut = Self::handle_data_request(&self.inner, &sender, dw)?;
-                    evt_fut = nxt;
-                }
-            }
-        }
-    }
-
     /// Handles a single control request, fetched from the POSIX FIDL channel in
     /// `self.events`.
-    fn handle_control_request(
+    fn handle_request(
         inner: &SocketWorkerEither,
         sender: &mpsc::UnboundedSender<Event>,
-        request: psocket::ControlRequest,
+        request: psocket::DatagramSocketRequest,
     ) -> Result<(), Error> {
         let () = sender
             .unbounded_send(
                 UdpSocketEvent {
                     worker: inner.clone(),
-                    inner: UdpSocketEventInner::ControlRequest(request),
+                    inner: UdpSocketEventInner::Request(request),
                 }
                 .into(),
             )
-            .map_err(|e| format_err!("Failed to send socket ControlRequest {:?}", e))?;
+            .map_err(|e| format_err!("Failed to send socket DatagramSocketRequest {:?}", e))?;
         Ok(())
-    }
-
-    /// Handles a single data request signal, obtained from a [`DataWorkerFut`].
-    ///
-    /// If `request` is `None`, the [`SocketWorkerInner`] is ready to process
-    /// the next datagram, so `handle_data_request` returns a
-    /// [`DataWorkerFut::Signals`] variant, to wait for the next data readable
-    /// signal on the local socket.
-    ///
-    /// If `request` is `Some`, a [`UdpSocketEventInner::DataRequest`] is
-    /// created and sent over the `sender` channel for the data to be processed
-    /// by `SocketWorkerInner`, and `handle_data_request` returns a
-    /// [`DataWorkerFut::Return`] future that will be completed once the pending
-    /// datagram is processed.
-    fn handle_data_request(
-        inner: &SocketWorkerEither,
-        sender: &mpsc::UnboundedSender<Event>,
-        request: Option<Result<zx::Signals, zx::Status>>,
-    ) -> Result<DataWorkerFut, Error> {
-        Ok(match request {
-            None => DataWorkerFut::Signals(match inner {
-                SocketWorkerEither::V4(sw) => sw.lock().unwrap().create_readable_signal(),
-                SocketWorkerEither::V6(sw) => sw.lock().unwrap().create_readable_signal(),
-            }),
-            Some(signals) => {
-                // we're just listening for SOCKET_READABLE,
-                // so we don't care much about what signals
-                // triggered it.
-                let _ =
-                    signals.map_err(|e| format_err!("Error waiting on socket signals: {:?}", e))?;
-
-                let (snd, rcv) = oneshot::channel();
-                let () = sender
-                    .unbounded_send(
-                        UdpSocketEvent {
-                            worker: inner.clone(),
-                            inner: UdpSocketEventInner::DataRequest(snd),
-                        }
-                        .into(),
-                    )
-                    .map_err(|e| format_err!("Failed to send socket data request {:?}", e))?;
-                DataWorkerFut::Return(rcv)
-            }
-        })
     }
 }
 
@@ -407,26 +297,21 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
     /// Creates a new `SocketWorkerInner` with the provided socket pair and
     /// `properties`.
     fn new(
-        local_socket: zx::Socket,
-        peer_socket: zx::Socket,
+        local_event: zx::EventPair,
+        peer_event: zx::EventPair,
         properties: SocketWorkerProperties,
     ) -> Self {
         Self {
-            local_socket,
-            peer_socket,
+            local_event,
+            peer_event,
             info: SocketControlInfo { properties, state: SocketState::Unbound },
+            available_data: VecDeque::new(),
         }
-    }
-
-    /// Creates an [`fasync::OnSignals`] future for when the local socket is
-    /// readable.
-    fn create_readable_signal(&self) -> fasync::OnSignals<'static> {
-        fasync::OnSignals::new(&self.local_socket, zx::Signals::SOCKET_READABLE).extend_lifetime()
     }
 
     /// Handles a [POSIX socket connect request].
     ///
-    /// [POSIX socket connect request]: psocket::ControlRequest::Connect
+    /// [POSIX socket connect request]: psocket::DatagramSocketRequest::Connect
     fn connect(
         &mut self,
         event_loop: &mut EventLoop,
@@ -474,7 +359,7 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
 
         let conn_id =
             connect_udp(&mut event_loop.ctx, local_addr, local_port, remote_addr, remote_port)
-                .map_err(SocketError::into_errno)?;
+                .map_err(IntoErrno::into_errno)?;
 
         self.info.state = SocketState::BoundConnect { conn_id };
         I::get_collection_mut(&mut event_loop.ctx.dispatcher_mut().udp_sockets)
@@ -485,7 +370,7 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
 
     /// Handles a [POSIX socket bind request]
     ///
-    /// [POSIX socket bind request]: psocket::ControlRequest::Bind
+    /// [POSIX socket bind request]: psocket::DatagramSocketRequest::Bind
     fn bind(
         &mut self,
         event_loop: &mut EventLoop,
@@ -504,7 +389,7 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
         let local_port = sockaddr.get_specified_port();
 
         let listener_id = listen_udp(&mut event_loop.ctx, local_addr, local_port)
-            .map_err(SocketError::into_errno)?;
+            .map_err(IntoErrno::into_errno)?;
         self.info.state = SocketState::BoundListen { listener_id };
         I::get_collection_mut(&mut event_loop.ctx.dispatcher_mut().udp_sockets)
             .listeners
@@ -514,18 +399,15 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
 
     /// Handles a [POSIX socket get_sock_name request].
     ///
-    /// [POSIX socket get_sock_name request]: psocket::ControlRequest::GetSockName
-    fn get_sock_name(
-        &mut self,
-        event_loop: &mut EventLoop,
-    ) -> Result<I::SocketAddress, libc::c_int> {
+    /// [POSIX socket get_sock_name request]: psocket::DatagramSocketRequest::GetSockName
+    fn get_sock_name(&mut self, event_loop: &mut EventLoop) -> Result<Vec<u8>, libc::c_int> {
         match self.info.state {
             SocketState::Unbound { .. } => {
                 return Err(libc::ENOTSOCK);
             }
             SocketState::BoundConnect { conn_id } => {
                 let info = get_udp_conn_info(&event_loop.ctx, conn_id);
-                Ok(I::SocketAddress::new(*info.local_ip, info.local_port.get()))
+                Ok(I::SocketAddress::new_vec(*info.local_ip, info.local_port.get()))
             }
             SocketState::BoundListen { listener_id } => {
                 let info = get_udp_listener_info(&event_loop.ctx, listener_id);
@@ -533,18 +415,15 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
                     Some(addr) => *addr,
                     None => I::UNSPECIFIED_ADDRESS,
                 };
-                Ok(I::SocketAddress::new(local_ip, info.local_port.get()))
+                Ok(I::SocketAddress::new_vec(local_ip, info.local_port.get()))
             }
         }
     }
 
     /// Handles a [POSIX socket get_peer_name request].
     ///
-    /// [POSIX socket get_peer_name request]: psocket::ControlRequest::GetPeerName
-    fn get_peer_name(
-        &mut self,
-        event_loop: &mut EventLoop,
-    ) -> Result<I::SocketAddress, libc::c_int> {
+    /// [POSIX socket get_peer_name request]: psocket::DatagramSocketRequest::GetPeerName
+    fn get_peer_name(&mut self, event_loop: &mut EventLoop) -> Result<Vec<u8>, libc::c_int> {
         match self.info.state {
             SocketState::Unbound { .. } => {
                 return Err(libc::ENOTSOCK);
@@ -554,116 +433,194 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
             }
             SocketState::BoundConnect { conn_id } => {
                 let info = get_udp_conn_info(&event_loop.ctx, conn_id);
-                Ok(I::SocketAddress::new(*info.remote_ip, info.remote_port.get()))
+                Ok(I::SocketAddress::new_vec(*info.remote_ip, info.remote_port.get()))
             }
         }
     }
 
     /// Handles a [POSIX socket request].
     ///
-    /// [POSIX socket request]: psocket::ControlRequest
+    /// [POSIX socket request]: psocket::DatagramSocketRequest
     // TODO(fxb/37419): Remove default handling after methods landed.
     #[allow(unreachable_patterns)]
     fn handle_request(
         &mut self,
         event_loop: &mut EventLoop,
-        req: psocket::ControlRequest,
+        req: psocket::DatagramSocketRequest,
         arc_self: &Arc<Mutex<Self>>,
     ) {
         match req {
-            psocket::ControlRequest::Describe { responder } => {
-                let peer = self.peer_socket.duplicate_handle(zx::Rights::SAME_RIGHTS);
-                if let Ok(peer) = peer {
-                    let mut info =
-                        fidl_fuchsia_io::NodeInfo::Socket(fidl_fuchsia_io::Socket { socket: peer });
+            psocket::DatagramSocketRequest::Describe { responder } => {
+                if let Ok(peer) = self.peer_event.duplicate_handle(zx::Rights::BASIC) {
+                    let mut info = fidl_fuchsia_io::NodeInfo::DatagramSocket(
+                        fidl_fuchsia_io::DatagramSocket { event: peer },
+                    );
                     responder_send!(responder, &mut info);
                 }
                 // If the call to duplicate_handle fails, we have no choice but to drop the
                 // responder and close the channel, since Describe must be infallible.
             }
-            psocket::ControlRequest::Connect { addr, responder } => {
+            psocket::DatagramSocketRequest::Connect { addr, responder } => {
+                responder_send!(responder, &mut self.connect(event_loop, addr, arc_self));
+            }
+            psocket::DatagramSocketRequest::Clone { .. } => {
+                warn!("UDP socket Clone not implemented!");
+            }
+            psocket::DatagramSocketRequest::Close { responder } => {
+                self.teardown(event_loop);
+                responder_send!(responder, 0);
+            }
+            psocket::DatagramSocketRequest::Sync { responder } => {
+                responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
+            }
+            psocket::DatagramSocketRequest::GetAttr { responder } => {
                 responder_send!(
                     responder,
-                    self.connect(event_loop, addr, arc_self).err().unwrap_or(0) as i16
+                    zx::Status::NOT_SUPPORTED.into_raw(),
+                    &mut fidl_fuchsia_io::NodeAttributes {
+                        mode: 0,
+                        id: 0,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 0,
+                        creation_time: 0,
+                        modification_time: 0
+                    }
                 );
             }
-            psocket::ControlRequest::Clone { .. } => {}
-            psocket::ControlRequest::Close { .. } => {}
-            psocket::ControlRequest::Sync { .. } => {}
-            psocket::ControlRequest::GetAttr { .. } => {}
-            psocket::ControlRequest::SetAttr { .. } => {}
-            psocket::ControlRequest::Bind { addr, responder } => responder_send!(
-                responder,
-                self.bind(event_loop, addr, arc_self).err().unwrap_or(0) as i16
-            ),
-            psocket::ControlRequest::Listen { .. } => {}
-            psocket::ControlRequest::Accept { .. } => {}
-            psocket::ControlRequest::GetSockName { responder } => {
+            psocket::DatagramSocketRequest::SetAttr { flags: _, attributes: _, responder } => {
+                responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
+            }
+            psocket::DatagramSocketRequest::Bind { addr, responder } => {
+                responder_send!(responder, &mut self.bind(event_loop, addr, arc_self));
+            }
+            psocket::DatagramSocketRequest::GetSockName { responder } => {
                 match self.get_sock_name(event_loop) {
                     Ok(sock_name) => {
-                        responder_send!(responder, 0i16, &mut sock_name.as_bytes().iter().copied());
+                        responder_send!(responder, &mut Ok(sock_name));
                     }
                     Err(err) => {
-                        responder_send!(responder, err as i16, &mut None.into_iter());
+                        responder_send!(responder, &mut Err(err));
                     }
                 }
             }
-            psocket::ControlRequest::GetPeerName { responder } => {
+            psocket::DatagramSocketRequest::GetPeerName { responder } => {
                 match self.get_peer_name(event_loop) {
                     Ok(sock_name) => {
-                        responder_send!(responder, 0i16, &mut sock_name.as_bytes().iter().copied());
+                        responder_send!(responder, &mut Ok(sock_name));
                     }
                     Err(err) => {
-                        responder_send!(responder, err as i16, &mut None.into_iter());
+                        responder_send!(responder, &mut Err(err));
                     }
                 }
             }
-            psocket::ControlRequest::SetSockOpt { .. } => {}
-            psocket::ControlRequest::GetSockOpt { .. } => {}
-            _ => {}
+            psocket::DatagramSocketRequest::SetSockOpt { level, optname, optval: _, responder } => {
+                warn!("UDP setsockopt {} {} not implemented", level, optname);
+                responder_send!(responder, &mut Err(libc::ENOPROTOOPT))
+            }
+            psocket::DatagramSocketRequest::GetSockOpt { level, optname, responder } => {
+                warn!("UDP getsockopt {} {} not implemented", level, optname);
+                responder_send!(responder, &mut Err(libc::ENOPROTOOPT))
+            }
+
+            DatagramSocketRequest::Shutdown { how: _, responder: _ } => {
+                warn!("UDP Shutdown not implemented");
+            }
+            DatagramSocketRequest::RecvMsg {
+                addr_len,
+                data_len,
+                control_len: _,
+                flags: _,
+                responder,
+            } => {
+                // TODO(brunodalbo) handle control and flags
+                responder_send!(
+                    responder,
+                    &mut self.recv_msg(addr_len as usize, data_len as usize)
+                );
+            }
+            DatagramSocketRequest::SendMsg { addr, data, control: _, flags: _, responder } => {
+                // TODO(brunodalbo) handle control and flags
+                responder_send!(
+                    responder,
+                    &mut self.send_msg(
+                        event_loop,
+                        addr,
+                        // TODO(brunodalbo) we're flattenting the parts of the
+                        // message in `data` into a single Vec. There may be a
+                        // way to avoid this by using the FragmentedBuffer
+                        // utilities in the packet crate.
+                        data.into_iter().map(|v| v.into_iter()).flatten().collect()
+                    )
+                );
+            }
+            DatagramSocketRequest::NodeGetFlags { responder } => {
+                responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), 0);
+            }
+            DatagramSocketRequest::NodeSetFlags { flags: _, responder } => {
+                responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
+            }
         }
     }
 
-    /// Handles a pending datagram in `local_socket`.
-    // NOTE(brunodalbo): upcoming changes to how we operate UDP sockets with
-    // FDIO will render this function obsolete, UDP datagrams will reach
-    // netstack through FIDL.
-    fn handle_socket_data(&mut self, event_loop: &mut EventLoop) -> Result<(), Error> {
-        // reserve a read buffer with 64k + message header.
-        let mut buff = [0; (1 << 16) + std::mem::size_of::<FdioSocketMsg>()];
-        let len = self
-            .local_socket
-            .read(&mut buff[..])
-            .map_err(|e| format_err!("UDP failed to read from socket: {:?}", e))?;
-        let mut buff = &mut buff[..len];
-        let mut bv = &mut buff;
-        let hdr: LayoutVerified<&mut [u8], FdioSocketMsg> =
-            bv.take_obj_front().ok_or_else(|| format_err!("Failed to parse UDP FDIO header"))?;
-        let data: &mut [u8] = bv.into_rest();
-        let _ = get_domain_ip_version(hdr.addr.family.get())
-            .ok_or_else(|| format_err!("Invalid family in FDIO header"))
-            .and_then(|ip_version| {
-                if ip_version == I::VERSION {
-                    Ok(())
-                } else {
-                    Err(format_err!("Incompatible family in FDIO header"))
-                }
-            })?;
-        let len = hdr.addrlen.get() as usize;
-        // TODO(brunodalbo) use flags
-        let _flags = hdr.flags.get();
-        let addr_data = &hdr.bytes()[..len];
+    fn recv_msg(
+        &mut self,
+        addr_len: usize,
+        data_len: usize,
+    ) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, u32), libc::c_int> {
+        let available = if let Some(front) = self.available_data.pop_front() {
+            front
+        } else {
+            return Err(libc::EWOULDBLOCK);
+        };
+        let addr = if addr_len != 0 {
+            let mut v = I::SocketAddress::new_vec(available.source_addr, available.source_port);
+            v.truncate(addr_len);
+            v
+        } else {
+            Vec::new()
+        };
+        let mut data = available.data;
+        let truncated = data.len().saturating_sub(data_len);
+        data.truncate(data_len);
 
-        let sock_addr = I::SocketAddress::parse(addr_data)
-            .ok_or_else(|| format_err!("Failed to parse sockaddr {:?}", addr_data))?;
+        if self.available_data.is_empty() {
+            if let Err(e) = self.local_event.signal_peer(ZXSIO_SIGNAL_INCOMING, zx::Signals::NONE) {
+                error!("UDP socket failed to signal peer: {:?}", e);
+            }
+        }
+        Ok((addr, data, Vec::new(), truncated.try_into().unwrap_or(std::u32::MAX)))
+    }
+
+    fn send_msg(
+        &mut self,
+        event_loop: &mut EventLoop,
+        addr: Vec<u8>,
+        data: Vec<u8>,
+    ) -> Result<i64, libc::c_int> {
+        let remote = if addr.is_empty() {
+            None
+        } else {
+            let addr = I::SocketAddress::parse(&addr[..]).ok_or(libc::EINVAL)?;
+            Some(
+                addr.get_specified_addr()
+                    .and_then(|a| addr.get_specified_port().map(|p| (a, p)))
+                    .ok_or(libc::EINVAL)?,
+            )
+        };
+        let len = data.len() as i64;
         let body = Buf::new(data, ..);
-        let remote_addr = sock_addr.get_specified_addr();
-        let remote_port = sock_addr.get_specified_port();
         match self.info.state {
-            SocketState::BoundConnect { conn_id } => match (remote_addr, remote_port) {
-                (Some(addr), Some(port)) => {
-                    // this is a "sendto" call, use stateless UDP send using the
-                    // local address and port in `conn_id`.
+            SocketState::Unbound => {
+                // TODO(brunodalbo) if destination address is set, we should
+                // auto-bind here (check POSIX compliance).
+                Err(libc::EDESTADDRREQ)
+            }
+            SocketState::BoundConnect { conn_id } => match remote {
+                Some((addr, port)) => {
+                    // caller specified a remote socket address, use
+                    // stateless UDP send using the local address and port
+                    // in `conn_id`.
                     let conn_info = get_udp_conn_info(&event_loop.ctx, conn_id);
                     send_udp::<I, _, _>(
                         &mut event_loop.ctx,
@@ -672,48 +629,24 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
                         addr,
                         port,
                         body,
-                    )?;
+                    )
+                    .map_err(IntoErrno::into_errno)
                 }
-                (None, None) => {
-                    // this is not a "sendto" call, just use the existing conn:
-                    send_udp_conn(&mut event_loop.ctx, conn_id, body)?;
-                }
-                _ => {
-                    return Err(format_err!("Unspecified address or port in UDP connection socket"))
+                None => {
+                    // caller did not specify a remote socket address, just use
+                    // the existing conn.
+                    send_udp_conn(&mut event_loop.ctx, conn_id, body).map_err(IntoErrno::into_errno)
                 }
             },
-            SocketState::BoundListen { listener_id } => {
-                // remote addr and remote port need both to be specified,
-                // otherwise we can't send from listener
-                let (remote_addr, remote_port) = match (remote_addr, remote_port) {
-                    (Some(a), Some(p)) => (a, p),
-                    _ => {
-                        return Err(format_err!(
-                            "Unspecified address or port in UDP listening socket"
-                        ));
-                    }
-                };
-                let _ = send_udp_listener(
-                    &mut event_loop.ctx,
-                    listener_id,
-                    None,
-                    remote_addr,
-                    remote_port,
-                    body,
-                )?;
-            }
-            // we shouldn't be handling socket data before a bound state:
-            SocketState::Unbound => {
-                // TODO(brunodalbo): Sending data in Unbound state can result in
-                // one of two things: if it's a sendto, the socket will
-                // auto-bind and then send the data, if it's a regular send, we
-                // should fail with an error. The API does not allow us to
-                // return errors yet, so we're just going to panic for now.
-                panic!("Sending data on unbound socket is not supported");
-            }
+            SocketState::BoundListen { listener_id } => match remote {
+                Some((addr, port)) => {
+                    send_udp_listener(&mut event_loop.ctx, listener_id, None, addr, port, body)
+                        .map_err(IntoErrno::into_errno)
+                }
+                None => Err(libc::EDESTADDRREQ),
+            },
         }
-
-        Ok(())
+        .map(|()| len)
     }
 
     fn teardown(&mut self, event_loop: &mut EventLoop) {
@@ -738,64 +671,20 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
         }
     }
 
-    fn receive_datagram(&self, addr: I::Addr, port: u16, body: &[u8]) -> Result<(), Error> {
-        let data = make_datagram::<I::SocketAddress>(addr, port, body);
-        self.local_socket
-            .write(&data[..])
-            // local_socket is a datagram socket, so we don't really care about
-            // the return of write, it either succeeds or it fails.
-            .map(|_| ())
-            .map_err(|status| format_err!("UDP failed writing to user socket: {:?}", status))
-    }
-}
-
-/// Makes an FDIO datagram message (for compatibility with recvfrom) with the
-/// provided arguments.
-///
-/// The datagram consists of a serialized [`FdioSocketMsg`] created from `addr`
-/// and `port` followed by `body`.
-// NOTE(brunodalbo): upcoming changes to how we operate UDP sockets with FDIO
-// will render this function obsolete. Right now its performance is really
-// lacking, requiring a heap allocation to be able to inline the address and
-// port information in an `FdioSocketMsg`. We're not too worried about the
-// performance, given this is going away soon.
-fn make_datagram<A: SockAddr>(addr: A::AddrType, port: u16, body: &[u8]) -> Vec<u8> {
-    let mut data = Vec::with_capacity(body.len() + std::mem::size_of::<FdioSocketMsg>());
-    let mut sock_msg = FdioSocketMsg::default();
-    let addrlen = std::mem::size_of::<A>();
-    sock_msg.addrlen.set(addrlen as u32);
-    let mut sockaddr = LayoutVerified::<_, A>::new(&mut sock_msg.as_bytes_mut()[..addrlen])
-        .expect("Addrlen must match");
-    sockaddr.set_family(A::FAMILY);
-    sockaddr.set_port(port);
-    sockaddr.set_addr(addr.bytes());
-
-    data.extend_from_slice(sock_msg.as_bytes());
-    data.extend_from_slice(body);
-    data
-}
-
-/// Trait expressing the conversion of error types into `libc::c_int` errno-like errors for the
-/// POSIX-lite wrappers.
-trait IntoErrno {
-    /// Returns the most equivalent POSIX error code for `self`.
-    fn into_errno(self) -> libc::c_int;
-}
-
-impl IntoErrno for SocketError {
-    /// Converts Fuchsia `SocketError` errors into the most equivalent POSIX error.
-    fn into_errno(self) -> libc::c_int {
-        match self {
-            SocketError::Remote(e) => match e {
-                RemoteAddressError::NoRoute => libc::ENETUNREACH,
-            },
-            SocketError::Local(e) => match e {
-                LocalAddressError::CannotBindToAddress
-                | LocalAddressError::FailedToAllocateLocalPort => libc::EADDRNOTAVAIL,
-                LocalAddressError::AddressMismatch => libc::EINVAL,
-                LocalAddressError::AddressInUse => libc::EADDRINUSE,
-            },
+    fn receive_datagram(&mut self, addr: I::Addr, port: u16, body: &[u8]) -> Result<(), Error> {
+        if self.available_data.len() >= MAX_OUTSTANDING_APPLICATION_MESSAGES {
+            return Err(format_err!("UDP application buffers are full"));
         }
+
+        self.local_event.signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_INCOMING)?;
+
+        self.available_data.push_back(AvailableMessage {
+            source_addr: addr,
+            source_port: port,
+            data: body.to_owned(),
+        });
+
+        Ok(())
     }
 }
 
@@ -804,6 +693,7 @@ mod tests {
     use super::*;
 
     use fuchsia_async as fasync;
+    use fuchsia_zircon::{self as zx, AsHandleRef};
 
     use crate::eventloop::integration_tests::{
         test_ep_name, StackSetupBuilder, TestSetup, TestSetupBuilder, TestStack,
@@ -814,11 +704,7 @@ mod tests {
     };
     use net_types::ip::{Ip, IpAddress};
 
-    fn make_unspecified_remote_datagram<A: SockAddr>(body: &[u8]) -> Vec<u8> {
-        make_datagram::<A>(<A::AddrType as IpAddress>::Version::UNSPECIFIED_ADDRESS, 0, body)
-    }
-
-    async fn udp_prepare_test<A: TestSockAddr>() -> (TestSetup, psocket::ControlProxy) {
+    async fn udp_prepare_test<A: TestSockAddr>() -> (TestSetup, psocket::DatagramSocketProxy) {
         let mut t = TestSetupBuilder::new()
             .add_endpoint()
             .add_stack(
@@ -832,27 +718,31 @@ mod tests {
         (t, proxy)
     }
 
-    async fn get_socket<A: TestSockAddr>(test_stack: &mut TestStack) -> psocket::ControlProxy {
+    async fn get_socket<A: TestSockAddr>(
+        test_stack: &mut TestStack,
+    ) -> psocket::DatagramSocketProxy {
         let socket_provider = test_stack.connect_socket_provider().unwrap();
-        let socket_response = test_stack
-            .run_future(socket_provider.socket(A::FAMILY as i16, libc::SOCK_DGRAM as i16, 0))
+        let socket = test_stack
+            .run_future(socket_provider.socket2(A::FAMILY as i16, libc::SOCK_DGRAM as i16, 0))
             .await
-            .expect("Socket call succeeds");
-        assert_eq!(socket_response.0, 0);
-        socket_response.1.expect("Socket returns a channel").into_proxy().unwrap()
+            .unwrap()
+            .expect("Socket succeeds");
+        psocket::DatagramSocketProxy::new(
+            fasync::Channel::from_channel(socket.into_channel()).unwrap(),
+        )
     }
 
-    async fn get_socket_data_plane<A: TestSockAddr>(
+    async fn get_socket_and_event<A: TestSockAddr>(
         test_stack: &mut TestStack,
-    ) -> (psocket::ControlProxy, zx::Socket) {
+    ) -> (psocket::DatagramSocketProxy, zx::EventPair) {
         let ctlr = get_socket::<A>(test_stack).await;
         let node_info =
             test_stack.run_future(ctlr.describe()).await.expect("Socked describe succeeds");
-        let sock = match node_info {
-            fidl_fuchsia_io::NodeInfo::Socket(s) => s.socket,
+        let event = match node_info {
+            fidl_fuchsia_io::NodeInfo::DatagramSocket(e) => e.event,
             _ => panic!("Got wrong describe response for UDP socket"),
         };
-        (ctlr, sock)
+        (ctlr, event)
     }
 
     async fn test_udp_connect_failure<A: TestSockAddr>() {
@@ -860,7 +750,11 @@ mod tests {
         let stack = t.get(0);
         // pass bad SockAddr struct (too small to be parsed):
         let addr = vec![1_u8, 2, 3, 4];
-        let res = stack.run_future(proxy.connect(&mut addr.into_iter())).await.unwrap() as i32;
+        let res = stack
+            .run_future(proxy.connect(&mut addr.into_iter()))
+            .await
+            .unwrap()
+            .expect_err("connect fails");
         assert_eq!(res, libc::EFAULT);
 
         // pass a bad family:
@@ -869,7 +763,11 @@ mod tests {
             bad_family: true,
             bad_address: false,
         });
-        let res = stack.run_future(proxy.connect(&mut addr.into_iter())).await.unwrap() as i32;
+        let res = stack
+            .run_future(proxy.connect(&mut addr.into_iter()))
+            .await
+            .unwrap()
+            .expect_err("connect fails");
         assert_eq!(res, libc::EAFNOSUPPORT);
 
         // pass an unspecified remote address:
@@ -878,7 +776,11 @@ mod tests {
             bad_family: false,
             bad_address: true,
         });
-        let res = stack.run_future(proxy.connect(&mut addr.into_iter())).await.unwrap() as i32;
+        let res = stack
+            .run_future(proxy.connect(&mut addr.into_iter()))
+            .await
+            .unwrap()
+            .expect_err("connect fails");
         assert_eq!(res, libc::EINVAL);
 
         // pass a bad port:
@@ -887,12 +789,20 @@ mod tests {
             bad_family: false,
             bad_address: false,
         });
-        let res = stack.run_future(proxy.connect(&mut addr.into_iter())).await.unwrap() as i32;
+        let res = stack
+            .run_future(proxy.connect(&mut addr.into_iter()))
+            .await
+            .unwrap()
+            .expect_err("connect fails");
         assert_eq!(res, libc::ECONNREFUSED);
 
         // pass an unreachable address (tests error forwarding from `udp_connect`):
         let addr = A::create(A::UNREACHABLE_ADDR, 1010);
-        let res = stack.run_future(proxy.connect(&mut addr.into_iter())).await.unwrap() as i32;
+        let res = stack
+            .run_future(proxy.connect(&mut addr.into_iter()))
+            .await
+            .unwrap()
+            .expect_err("connect fails");
         assert_eq!(res, libc::ENETUNREACH);
     }
 
@@ -910,13 +820,19 @@ mod tests {
         let (mut t, proxy) = udp_prepare_test::<A>().await;
         let stack = t.get(0);
         let remote = A::create(A::REMOTE_ADDR, 200);
-        let res = stack.run_future(proxy.connect(&mut remote.into_iter())).await.unwrap() as i32;
-        assert_eq!(res, 0);
+        let () = stack
+            .run_future(proxy.connect(&mut remote.into_iter()))
+            .await
+            .unwrap()
+            .expect("connect succeeds");
 
         // can connect again to a different remote should succeed.
         let remote = A::create(A::REMOTE_ADDR_2, 200);
-        let res = stack.run_future(proxy.connect(&mut remote.into_iter())).await.unwrap() as i32;
-        assert_eq!(res, 0);
+        let () = stack
+            .run_future(proxy.connect(&mut remote.into_iter()))
+            .await
+            .unwrap()
+            .expect("connect suceeds");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -934,25 +850,38 @@ mod tests {
         let stack = t.get(0);
         // can bind to local address
         let addr = A::create(A::LOCAL_ADDR, 200);
-        let res = stack.run_future(socket.bind(&mut addr.into_iter())).await.unwrap() as i32;
-        assert_eq!(res, 0);
+        let () = stack
+            .run_future(socket.bind(&mut addr.into_iter()))
+            .await
+            .unwrap()
+            .expect("bind succeeds");
 
         // can't bind again (to another port)
         let addr = A::create(A::LOCAL_ADDR, 201);
-        let res = stack.run_future(socket.bind(&mut addr.into_iter())).await.unwrap() as i32;
+        let res = stack
+            .run_future(socket.bind(&mut addr.into_iter()))
+            .await
+            .unwrap()
+            .expect_err("bind fails");
         assert_eq!(res, libc::EALREADY);
 
         // can bind another socket to a different port:
         let socket = get_socket::<A>(stack).await;
         let addr = A::create(A::LOCAL_ADDR, 201);
-        let res = stack.run_future(socket.bind(&mut addr.into_iter())).await.unwrap() as i32;
-        assert_eq!(res, 0);
+        let () = stack
+            .run_future(socket.bind(&mut addr.into_iter()))
+            .await
+            .unwrap()
+            .expect("bind succeeds");
 
         // can bind to unspecified address in a different port:
         let socket = get_socket::<A>(stack).await;
         let addr = A::create(<A::AddrType as IpAddress>::Version::UNSPECIFIED_ADDRESS, 202);
-        let res = stack.run_future(socket.bind(&mut addr.into_iter())).await.unwrap() as i32;
-        assert_eq!(res, 0);
+        let () = stack
+            .run_future(socket.bind(&mut addr.into_iter()))
+            .await
+            .unwrap()
+            .expect("bind succeeds");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -970,12 +899,18 @@ mod tests {
         let stack = t.get(0);
         // can bind to local address
         let bind_addr = A::create(A::LOCAL_ADDR, 200);
-        let res = stack.run_future(socket.bind(&mut bind_addr.into_iter())).await.unwrap() as i32;
-        assert_eq!(res, 0);
+        let () = stack
+            .run_future(socket.bind(&mut bind_addr.into_iter()))
+            .await
+            .unwrap()
+            .expect("bind suceeds");
+
         let remote_addr = A::create(A::REMOTE_ADDR, 1010);
-        let res =
-            stack.run_future(socket.connect(&mut remote_addr.into_iter())).await.unwrap() as i32;
-        assert_eq!(res, 0);
+        let () = stack
+            .run_future(socket.connect(&mut remote_addr.into_iter()))
+            .await
+            .unwrap()
+            .expect("connect succeeds");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1010,87 +945,153 @@ mod tests {
             .await
             .unwrap();
         let alice = t.get(0);
-        let (alice_ctl, alice_sock) = get_socket_data_plane::<A>(alice).await;
+        let (alice_socket, alice_events) = get_socket_and_event::<A>(alice).await;
 
         // Verify that Alice has no local or peer addresses bound
         assert_eq!(
-            alice.run_future(alice_ctl.get_sock_name()).await.unwrap(),
-            (libc::ENOTSOCK as i16, None.into_iter().collect::<Vec<u8>>())
+            alice
+                .run_future(alice_socket.get_sock_name())
+                .await
+                .unwrap()
+                .expect_err("alice getsockname fails"),
+            libc::ENOTSOCK
         );
         assert_eq!(
-            alice.run_future(alice_ctl.get_peer_name()).await.unwrap(),
-            (libc::ENOTSOCK as i16, None.into_iter().collect::<Vec<u8>>())
+            alice
+                .run_future(alice_socket.get_peer_name())
+                .await
+                .unwrap()
+                .expect_err("alice getpeername fails"),
+            libc::ENOTSOCK
         );
 
         // Setup Alice as a server, bound to LOCAL_ADDR:200
         println!("Configuring alice...");
         let sockaddr = A::create(A::LOCAL_ADDR, 200);
-        assert_eq!(
-            alice.run_future(alice_ctl.bind(&mut sockaddr.into_iter())).await.unwrap() as i32,
-            0
-        );
+        let () = alice
+            .run_future(alice_socket.bind(&mut sockaddr.into_iter()))
+            .await
+            .unwrap()
+            .expect("alice bind suceeds");
 
         // Verify that Alice is listening on the local socket, but still has no peer socket
         let want_addr = A::new(A::LOCAL_ADDR, 200);
         assert_eq!(
-            alice.run_future(alice_ctl.get_sock_name()).await.unwrap(),
-            (0, want_addr.as_bytes().to_vec())
+            alice
+                .run_future(alice_socket.get_sock_name())
+                .await
+                .unwrap()
+                .expect("alice getsockname succeeds"),
+            want_addr.as_bytes().to_vec()
         );
         assert_eq!(
-            alice.run_future(alice_ctl.get_peer_name()).await.unwrap(),
-            (libc::ENOTCONN as i16, None.into_iter().collect::<Vec<u8>>())
+            alice
+                .run_future(alice_socket.get_peer_name())
+                .await
+                .unwrap()
+                .expect_err("alice getpeername should fail"),
+            libc::ENOTCONN
+        );
+
+        // check that alice has no data to read, and it'd block waiting for
+        // events:
+        assert_eq!(
+            alice
+                .run_future(alice_socket.recv_msg(std::mem::size_of::<A>() as u32, 2048, 0, 0))
+                .await
+                .unwrap()
+                .expect_err("Reading from alice should fail"),
+            libc::EWOULDBLOCK
+        );
+        assert_eq!(
+            alice_events
+                .wait_handle(zx::Signals::EVENTPAIR_SIGNALED, zx::Time::from_nanos(0))
+                .expect_err("Alice events should not be signaled"),
+            zx::Status::TIMED_OUT
         );
 
         // Setup Bob as a client, bound to REMOTE_ADDR:300
         println!("Configuring bob...");
         let bob = t.get(1);
-        let (bob_ctl, bob_sock) = get_socket_data_plane::<A>(bob).await;
+        let (bob_socket, _bob_events) = get_socket_and_event::<A>(bob).await;
         let sockaddr = A::create(A::REMOTE_ADDR, 300);
-        assert_eq!(
-            bob.run_future(bob_ctl.bind(&mut sockaddr.into_iter())).await.unwrap() as i32,
-            0
-        );
+        let () = bob
+            .run_future(bob_socket.bind(&mut sockaddr.into_iter()))
+            .await
+            .unwrap()
+            .expect("bob bind suceeds");
 
         // Verify that Bob is listening on the local socket, but has no peer socket
         let want_addr = A::new(A::REMOTE_ADDR, 300);
         assert_eq!(
-            bob.run_future(bob_ctl.get_sock_name()).await.unwrap(),
-            (0, want_addr.as_bytes().to_vec())
+            bob.run_future(bob_socket.get_sock_name())
+                .await
+                .unwrap()
+                .expect("bob getsockname suceeds"),
+            want_addr.as_bytes().to_vec()
         );
         assert_eq!(
-            bob.run_future(bob_ctl.get_peer_name()).await.unwrap(),
-            (libc::ENOTCONN as i16, None.into_iter().collect::<Vec<u8>>())
+            bob.run_future(bob_socket.get_peer_name())
+                .await
+                .unwrap()
+                .expect_err("get peer name should fail before connected"),
+            libc::ENOTCONN
         );
 
         // Connect Bob to Alice on LOCAL_ADDR:200
         println!("Connecting bob to alice...");
         let sockaddr = A::create(A::LOCAL_ADDR, 200);
-        assert_eq!(
-            bob.run_future(bob_ctl.connect(&mut sockaddr.into_iter())).await.unwrap() as i32,
-            0
-        );
+        let () = bob
+            .run_future(bob_socket.connect(&mut sockaddr.into_iter()))
+            .await
+            .unwrap()
+            .expect("Connect succeeds");
 
         // Verify that Bob has the peer socket set correctly
         let want_addr = A::new(A::LOCAL_ADDR, 200);
         assert_eq!(
-            bob.run_future(bob_ctl.get_peer_name()).await.unwrap(),
-            (0, want_addr.as_bytes().to_vec())
+            bob.run_future(bob_socket.get_peer_name())
+                .await
+                .unwrap()
+                .expect("bob getpeername suceeds"),
+            want_addr.as_bytes().to_vec()
         );
 
         // Send datagram from Bob's socket.
         println!("Writing datagram to bob");
-        let body = "Hello".as_ref();
-        let hello = make_unspecified_remote_datagram::<A>(body);
-        bob_sock.write(&hello[..]).expect("write to bob succeeds");
+        let body = "Hello".as_bytes();
+        let mut body_iter = body.iter().copied();
+        let body_iter: Option<&mut dyn ExactSizeIterator<Item = u8>> = Some(&mut body_iter);
+        assert_eq!(
+            t.run_until(bob_socket.send_msg(
+                &mut None.into_iter(),
+                &mut body_iter.into_iter(),
+                &mut None.into_iter(),
+                0
+            ))
+            .await
+            .expect("can run stacks")
+            .unwrap()
+            .expect("sendmsg suceeds"),
+            body.len() as i64
+        );
+
         // Wait for datagram to arrive on Alice's socket:
-        let fut = fasync::OnSignals::new(&alice_sock, zx::Signals::SOCKET_READABLE);
+        let fut = fasync::OnSignals::new(&alice_events, ZXSIO_SIGNAL_INCOMING);
         println!("Waiting for signals");
         t.run_until(fut).await.expect("can run stacks").expect("waiting for readable succeeds");
-        let mut data = [0; 2048];
-        let rd = alice_sock.read(&mut data[..]).expect("can read from alice");
-        let data = &data[..rd];
-        let expected = make_datagram::<A>(A::REMOTE_ADDR, 300, body);
-        assert_eq!(data, &expected[..]);
+
+        let (from, data, _, truncated) = t
+            .run_until(alice_socket.recv_msg(std::mem::size_of::<A>() as u32, 2048, 0, 0))
+            .await
+            .expect("can run stacks")
+            .unwrap()
+            .expect("recvmsg suceeeds");
+        let source = A::parse(&from[..]).expect("can parse sockaddr");
+        assert_eq!(source.addr(), A::REMOTE_ADDR);
+        assert_eq!(source.port(), 300);
+        assert_eq!(truncated, 0);
+        assert_eq!(&data[..], body);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1101,5 +1102,27 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_udp_hello_v6() {
         test_udp_hello::<SockAddr6>().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_socket_describe() {
+        let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
+        let test_stack = t.get(0);
+        let socket_provider = test_stack.connect_socket_provider().unwrap();
+        let socket = test_stack
+            .run_future(socket_provider.socket2(libc::AF_INET as i16, libc::SOCK_DGRAM as i16, 0))
+            .await
+            .unwrap()
+            .expect("Socket call succeeds")
+            .into_proxy()
+            .unwrap();
+        let info = test_stack.run_future(socket.describe()).await.expect("Describe call succeeds");
+        match info {
+            fidl_fuchsia_io::NodeInfo::DatagramSocket(_) => (),
+            info => panic!(
+                "Socket Describe call did not return Node of type Socket, got {:?} instead",
+                info
+            ),
+        }
     }
 }

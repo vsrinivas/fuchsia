@@ -4,7 +4,6 @@
 
 use anyhow::{format_err, Context as _, Error};
 use fidl::encoding::Decodable;
-use fidl_fuchsia_io as fidl_io;
 use fidl_fuchsia_net_stack_ext::FidlReturn;
 use fidl_fuchsia_netemul_network as net;
 use fidl_fuchsia_netemul_sandbox as sandbox;
@@ -1378,40 +1377,6 @@ async fn test_add_remote_routes() {
             .unwrap_err(),
         fidl_net_stack::Error::AlreadyExists
     );
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_get_socket() {
-    let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
-    let test_stack = t.get(0);
-    let socket_provider = test_stack.connect_socket_provider().unwrap();
-    let socket_response = test_stack
-        .run_future(socket_provider.socket(libc::AF_INET as i16, libc::SOCK_DGRAM as i16, 0))
-        .await
-        .expect("Socket call succeeds");
-    assert_eq!(socket_response.0, 0);
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_socket_describe() {
-    let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
-    let test_stack = t.get(0);
-    let socket_provider = test_stack.connect_socket_provider().unwrap();
-    let socket_response = test_stack
-        .run_future(socket_provider.socket(libc::AF_INET as i16, libc::SOCK_DGRAM as i16, 0))
-        .await
-        .expect("Socket call succeeds");
-    assert_eq!(socket_response.0, 0);
-    let info = test_stack
-        .run_future(
-            socket_response.1.expect("Socket returns a channel").into_proxy().unwrap().describe(),
-        )
-        .await
-        .expect("Describe call succeeds");
-    match info {
-        fidl_io::NodeInfo::Socket(_) => (),
-        _ => panic!("Socket Describe call did not return Node of type Socket"),
-    }
 }
 
 #[fasync::run_singlethreaded(test)]
