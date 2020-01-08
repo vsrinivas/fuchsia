@@ -31,6 +31,12 @@ class ComponentInspector final {
   // This method is NOT thread safe.
   ::inspect::NodeHealth& Health();
 
+  // Emplace a value in the wrapped Inspector.
+  template <typename T>
+  void emplace(T value) {
+    inspector_.emplace(std::move(value));
+  }
+
  private:
   ComponentInspector();
 

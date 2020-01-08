@@ -10,13 +10,12 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::vector<inspect::IntProperty> properties;
   auto context = sys::ComponentContext::Create();
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
 
-  properties.emplace_back(inspector->root().CreateInt("val1", 1));
-  properties.emplace_back(inspector->root().CreateInt("val2", 2));
-  properties.emplace_back(inspector->root().CreateInt("val3", 3));
+  inspector->root().CreateInt("val1", 1, inspector.get());
+  inspector->root().CreateInt("val2", 2, inspector.get());
+  inspector->root().CreateInt("val3", 3, inspector.get());
 
   inspector->Health().Ok();
 
