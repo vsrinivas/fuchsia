@@ -18,7 +18,7 @@ void ConsoleTest::SetUp() {
 
   // Eat the output from process attaching (this is asynchronously appended).
   loop().RunUntilNoTasks();
-  console_->Clear();
+  console_->FlushOutputEvents();
 }
 
 void ConsoleTest::TearDown() {

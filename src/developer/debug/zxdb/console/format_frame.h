@@ -7,6 +7,8 @@
 
 #include "src/developer/debug/zxdb/console/async_output_buffer.h"
 #include "src/developer/debug/zxdb/console/console.h"
+#include "src/developer/debug/zxdb/console/format_location.h"
+#include "src/developer/debug/zxdb/console/format_node_console.h"
 
 namespace zxdb {
 
@@ -14,41 +16,45 @@ struct ConsoleFormatOptions;
 struct FormatLocationOptions;
 class Frame;
 class OutputBuffer;
+class PrettyStackManager;
 class Thread;
 
-enum class FormatFrameDetail {
-  kSimple,      // Show only function names and file/line information.
-  kParameters,  // Additionally show function parameters.
-  kVerbose,     // Additionally show IP/SP/BP.
+struct FormatFrameOptions {
+  enum Detail {
+    kSimple,      // Show only function names and file/line information.
+    kParameters,  // Additionally show function parameters.
+    kVerbose,     // Additionally show IP/SP/BP.
+  };
+
+  Detail detail = kSimple;
+
+  // Formatting for the function/file name.
+  FormatLocationOptions loc;
+
+  // Formatting options for function parameters if requested in the Detail.
+  ConsoleFormatOptions variable;
 };
 
-// Generates the list of frames to the console. This will complete asynchronously. Printing of
-// function parameter types is controlled by include_params.
+struct FormatStackOptions {
+  FormatFrameOptions frame;
+
+  // TODO(brettw) the pretty stack printing pointer will go here.
+};
+
+// Generates the list of frames from the given Thread to the console. This will complete
+// asynchronously. The current frame will automatically be queried and will be indicated.
 //
 // This will request the full frame list from the agent if it has not been synced locally or if
 // force_update is set.
-fxl::RefPtr<AsyncOutputBuffer> FormatFrameList(Thread* thread, bool force_update,
-                                               FormatFrameDetail detail,
-                                               const FormatLocationOptions& loc_opts,
-                                               const ConsoleFormatOptions& console_opts);
-
-// Formats one frame using the short format to the output buffer. The frame ID will be printed if
-// supplied. If the ID is -1, it will be omitted.
-//
-// Printing of function parameter *types* is controlled by include_params. This function never
-// prints parameter values.
-//
-// This does not append a newline at the end of the output.
-OutputBuffer FormatFrame(const Frame* frame, const FormatLocationOptions& opts, int id = -1);
+fxl::RefPtr<AsyncOutputBuffer> FormatStack(Thread* thread, bool force_update,
+                                           const FormatStackOptions& opts);
 
 // Formats one frame using the long format. Since the long format includes function parameters which
-// are computed asynchronously, this returns an AsyncOutputBuffer. The buffer will be appended to
-// and NOT marked complete by this function.
+// are computed asynchronously, this returns an AsyncOutputBuffer.
 //
 // This does not append a newline at the end of the output.
-fxl::RefPtr<AsyncOutputBuffer> FormatFrame(const Frame* frame, FormatFrameDetail detail,
-                                           const FormatLocationOptions& loc_opts,
-                                           const ConsoleFormatOptions& console_opts, int id = -1);
+fxl::RefPtr<AsyncOutputBuffer> FormatFrame(const Frame* frame, const FormatFrameOptions& opts,
+                                           int id = -1);
 
 }  // namespace zxdb
 

@@ -40,8 +40,10 @@ class VerbsMemoryTest : public RemoteAPITest {
 
 }  // namespace
 
-// This tests that the stack command is hooked up. The register and memory
-// decoding are tested by the analyze memory tests.
+// This tests that the stack command is hooked up. The register and memory decoding are tested by
+// the analyze memory tests.
+//
+// TODO(brettw) convert to a ConsoleTest to remove some boilerplate.
 TEST_F(VerbsMemoryTest, Stack) {
   MockConsole console(&session());
 
@@ -59,7 +61,7 @@ TEST_F(VerbsMemoryTest, Stack) {
 
   // Eat the output from process attaching (this is asynchronously appended).
   loop().RunUntilNoTasks();
-  console.Clear();
+  console.FlushOutputEvents();
 
   // Error case with no stopped thread.
   console.ProcessInputLine("stack");
@@ -87,7 +89,10 @@ TEST_F(VerbsMemoryTest, Stack) {
           debug_ipc::Register(debug_ipc::RegisterID::kX64_rax, kSP0 + 0x20)}));
   InjectExceptionWithStack(kProcessKoid, kThreadKoid, debug_ipc::ExceptionType::kSingleStep,
                            std::move(frames), true);
-  console.GetOutputEvent();  // Eat output from the exception.
+
+  // Eat output from the exception.
+  loop().RunUntilNoTasks();
+  console.FlushOutputEvents();
 
   // Supply some memory.
   std::vector<uint8_t> mem_data;

@@ -198,30 +198,32 @@ Err DoBacktrace(ConsoleContext* context, const Command& cmd) {
   if (!cmd.thread())
     return Err("There is no thread to have frames.");
 
-  FormatLocationOptions loc_opts(cmd.target());
-  loc_opts.show_params = cmd.HasSwitch(kForceAllTypes);
-  loc_opts.func.name.elide_templates = true;
-  loc_opts.func.name.bold_last = true;
-  loc_opts.func.params = FormatFunctionNameOptions::kElideParams;
+  FormatStackOptions opts;
 
-  auto detail = FormatFrameDetail::kParameters;
+  opts.frame.loc = FormatLocationOptions(cmd.target());
+  opts.frame.loc.show_params = cmd.HasSwitch(kForceAllTypes);
+  opts.frame.loc.func.name.elide_templates = true;
+  opts.frame.loc.func.name.bold_last = true;
+  opts.frame.loc.func.params = FormatFunctionNameOptions::kElideParams;
+
+  opts.frame.detail = FormatFrameOptions::kParameters;
   if (cmd.HasSwitch(kVerboseBacktrace)) {
-    detail = FormatFrameDetail::kVerbose;
-    loc_opts.func.name.elide_templates = false;
-    loc_opts.func.params = FormatFunctionNameOptions::kParamTypes;
+    opts.frame.detail = FormatFrameOptions::kVerbose;
+    opts.frame.loc.func.name.elide_templates = false;
+    opts.frame.loc.func.params = FormatFunctionNameOptions::kParamTypes;
   }
 
   // These are minimal since there is often a lot of data.
-  ConsoleFormatOptions format_opts;
-  format_opts.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
-  format_opts.verbosity = cmd.HasSwitch(kForceAllTypes) ? ConsoleFormatOptions::Verbosity::kAllTypes
-                                                        : ConsoleFormatOptions::Verbosity::kMinimal;
-  format_opts.pointer_expand_depth = 1;
-  format_opts.max_depth = 3;
+  opts.frame.variable.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  opts.frame.variable.verbosity = cmd.HasSwitch(kForceAllTypes)
+                                      ? ConsoleFormatOptions::Verbosity::kAllTypes
+                                      : ConsoleFormatOptions::Verbosity::kMinimal;
+  opts.frame.variable.pointer_expand_depth = 1;
+  opts.frame.variable.max_depth = 3;
 
   // Always force update the stack. Various things can have changed and when the user requests
   // a stack we want to be sure things are correct.
-  Console::get()->Output(FormatFrameList(cmd.thread(), true, detail, loc_opts, format_opts));
+  Console::get()->Output(FormatStack(cmd.thread(), true, opts));
   return Err();
 }
 
@@ -311,30 +313,39 @@ Examples
   t 1 down
       Move down the stack on thread 1
 )";
+
+// Shows the given frame for when it changes. This encapsulates the formatting options.
+void OutputFrameInfoForChange(const Frame* frame, int id) {
+  FormatFrameOptions opts;
+  opts.loc.func.name.elide_templates = true;
+  opts.loc.func.name.bold_last = true;
+  opts.loc.func.params = FormatFunctionNameOptions::kElideParams;
+
+  opts.variable.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  opts.variable.pointer_expand_depth = 1;
+  opts.variable.max_depth = 4;
+
+  Console::get()->Output(FormatFrame(frame, opts, id));
+}
+
 Err DoDown(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadCommand(context, cmd, true, "down");
-  if (err.has_error())
+  if (Err err = AssertStoppedThreadCommand(context, cmd, true, "down"); err.has_error())
     return err;
 
   auto id = context->GetActiveFrameIdForThread(cmd.thread());
-
-  if (id < 0) {
+  if (id < 0)
     return Err("Cannot find current frame.");
-  }
 
-  if (id == 0) {
+  if (id == 0)
     return Err("At bottom of stack.");
-  }
 
-  if (cmd.thread()->GetStack().size() == 0) {
+  if (cmd.thread()->GetStack().size() == 0)
     return Err("No stack frames.");
-  }
 
   id -= 1;
 
   context->SetActiveFrameIdForThread(cmd.thread(), id);
-  Console::get()->Output(FormatFrame(cmd.thread()->GetStack()[id], FormatFrameDetail::kParameters,
-                                     FormatLocationOptions(cmd.target()), ConsoleFormatOptions()));
+  OutputFrameInfoForChange(cmd.thread()->GetStack()[id], id);
   return Err();
 }
 
@@ -358,40 +369,38 @@ Err DoUp(ConsoleContext* context, const Command& cmd) {
   if (Err err = AssertStoppedThreadCommand(context, cmd, true, "up"); err.has_error())
     return err;
 
-  auto id = context->GetActiveFrameIdForThread(cmd.thread());
-  if (id < 0) {
-    return Err("Cannot find current frame.");
-  }
+  // This computes the frame index from the callback in case the user does "up" faster than an
+  // async stack request can complete. Doing the new index computation from the callback ensures
+  // that all commands are executed.
+  auto on_has_frames = [weak_thread = cmd.thread()->GetWeakPtr()](const Err& err) {
+    if (!weak_thread) {
+      Console::get()->Output(Err("Thread destroyed."));
+      return;
+    }
+    const Thread* thread = weak_thread.get();
 
-  if (cmd.thread()->GetStack().size() == 0) {
-    return Err("No stack frames.");
-  }
-
-  id += 1;
-
-  auto cb = [context, cmd, id](const Err& err) {
-    Err got;
-
-    if (!err.has_error() && static_cast<size_t>(id) >= cmd.thread()->GetStack().size()) {
-      got = Err("At top of stack.");
-    } else {
-      got = err;
+    ConsoleContext* context = &Console::get()->context();
+    auto id = context->GetActiveFrameIdForThread(thread);
+    if (id < 0 || thread->GetStack().size() == 0) {
+      Console::get()->Output(Err("No current frame."));
+      return;
     }
 
-    if (got.has_error()) {
-      Console::get()->Output(got);
-    } else {
-      context->SetActiveFrameIdForThread(cmd.thread(), id);
-      Console::get()->Output(
-          FormatFrame(cmd.thread()->GetStack()[id], FormatFrameDetail::kParameters,
-                      FormatLocationOptions(cmd.target()), ConsoleFormatOptions()));
+    id += 1;
+
+    if (static_cast<size_t>(id) >= thread->GetStack().size()) {
+      Console::get()->Output(Err("At top of stack."));
+      return;
     }
+
+    context->SetActiveFrameIdForThread(thread, id);
+    OutputFrameInfoForChange(thread->GetStack()[id], id);
   };
 
   if (cmd.thread()->GetStack().has_all_frames()) {
-    cb(Err());
+    on_has_frames(Err());
   } else {
-    cmd.thread()->GetStack().SyncFrames(std::move(cb));
+    cmd.thread()->GetStack().SyncFrames(std::move(on_has_frames));
   }
 
   return Err();

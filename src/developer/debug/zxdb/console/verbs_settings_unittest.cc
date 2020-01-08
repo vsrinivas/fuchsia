@@ -19,6 +19,7 @@ namespace zxdb {
 
 namespace {
 
+// TODO(brettw) Convert to a ConsoleTest to remove some boilerplate.
 class VerbsSettingsTest : public RemoteAPITest {
  public:
   VerbsSettingsTest() : RemoteAPITest() {}
@@ -149,7 +150,7 @@ TEST(VerbsSettings, ParseSetCommand) {
 }
 
 TEST_F(VerbsSettingsTest, GetSet) {
-  console().Clear();
+  console().FlushOutputEvents();
 
   // "get" with no input.
   EXPECT_EQ("<empty>", ExtractValuesFromGet(DoInput("get build-dirs")));

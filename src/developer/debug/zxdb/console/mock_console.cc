@@ -45,8 +45,8 @@ MockConsole::OutputEvent MockConsole::GetOutputEvent() {
     return {MockConsole::OutputEvent::Type::kQuitEarly, OutputBuffer()};
   }
 
-  auto ret = std::move(output_queue_.back());
-  output_queue_.pop_back();
+  auto ret = std::move(output_queue_.front());
+  output_queue_.erase(output_queue_.begin());
   return ret;
 }
 

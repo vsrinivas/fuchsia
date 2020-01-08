@@ -27,6 +27,10 @@ TEST_F(VerbSteps, Test) {
   InjectExceptionWithStack(ConsoleTest::kProcessKoid, ConsoleTest::kThreadKoid,
                            debug_ipc::ExceptionType::kSingleStep, std::move(frames), true);
 
+  // Don't care about the stop notification.
+  loop().RunUntilNoTasks();
+  console().FlushOutputEvents();
+
   std::vector<SubstatementCall> substatements;
   constexpr TargetPointer kCall1At = kLineBegin + 4;
   constexpr TargetPointer kCall1To = 0x20000;

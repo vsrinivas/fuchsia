@@ -100,29 +100,30 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     return true;
   }
 
-  FormatLocationOptions loc_opts(cmd.target());
-  loc_opts.show_params = cmd.HasSwitch(kForceTypes);
-  loc_opts.func.name.elide_templates = true;
-  loc_opts.func.name.bold_last = true;
-  loc_opts.func.params = FormatFunctionNameOptions::kElideParams;
+  FormatStackOptions opts;
+  opts.frame.loc = FormatLocationOptions(cmd.target());
+  opts.frame.loc.show_params = cmd.HasSwitch(kForceTypes);
+  opts.frame.loc.func.name.elide_templates = true;
+  opts.frame.loc.func.name.bold_last = true;
+  opts.frame.loc.func.params = FormatFunctionNameOptions::kElideParams;
 
-  ConsoleFormatOptions console_opts;
-  console_opts.verbosity = cmd.HasSwitch(kForceTypes) ? ConsoleFormatOptions::Verbosity::kAllTypes
-                                                      : ConsoleFormatOptions::Verbosity::kMinimal;
-  console_opts.pointer_expand_depth = 1;
-  console_opts.max_depth = 4;
+  opts.frame.variable.verbosity = cmd.HasSwitch(kForceTypes)
+                                      ? ConsoleFormatOptions::Verbosity::kAllTypes
+                                      : ConsoleFormatOptions::Verbosity::kMinimal;
+  opts.frame.variable.pointer_expand_depth = 1;
+  opts.frame.variable.max_depth = 4;
 
   if (cmd.GetNounIndex(Noun::kFrame) == Command::kNoIndex) {
     // Just "frame", this lists available frames.
-    auto detail = FormatFrameDetail::kSimple;
+    opts.frame.detail = FormatFrameOptions::kSimple;
     if (cmd.HasSwitch(kVerboseSwitch)) {
-      loc_opts.func.name.elide_templates = false;
-      loc_opts.func.params = FormatFunctionNameOptions::kParamTypes;
+      opts.frame.loc.func.name.elide_templates = false;
+      opts.frame.loc.func.params = FormatFunctionNameOptions::kParamTypes;
     }
 
     // Always force update the stack. Various things can have changed and when the user requests
     // a stack we want to be sure things are correct.
-    Console::get()->Output(FormatFrameList(cmd.thread(), true, detail, loc_opts, console_opts));
+    Console::get()->Output(FormatStack(cmd.thread(), true, opts));
     return true;
   }
 
@@ -135,8 +136,7 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   context->SetActiveThreadForTarget(cmd.thread());
   context->SetActiveTarget(cmd.target());
 
-  Console::get()->Output(
-      FormatFrame(cmd.frame(), FormatFrameDetail::kParameters, loc_opts, console_opts));
+  Console::get()->Output(FormatFrame(cmd.frame(), opts.frame));
   return true;
 }
 

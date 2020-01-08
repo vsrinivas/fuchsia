@@ -32,8 +32,10 @@ class MockConsole : public Console {
   const OutputBuffer& output_buffer() { return output_buffer_; }
   Session* session() { return session_; }
 
-  // Gets an output event that was the result of one call to Output() or Clear() on this console. If
-  // the event's type field is Type::kOutput, there was an Output() call, and the output field
+  // Gets an output event that was the result of one call to Output() or Clear() on this console.
+  // Output events will be returned in first-in, first-out order.
+  //
+  // If the event's type field is Type::kOutput, there was an Output() call, and the output field
   // contains the value it was given. If the event's type field is Type::kClear, there was a call to
   // Clear() and the output field is invalid. If the event's type field is Type::kQuitEarly,
   // something interrupted the loop while we were waiting for a call.

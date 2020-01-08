@@ -25,7 +25,11 @@ TEST_F(VerbsSymbolTest, SymStat) {
 
   console.ProcessInputLine("attach 1234");
 
+  // TODO(bug 43528) The messages should not be duplicated.
   auto event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  ASSERT_EQ("Process 1 [Running] koid=1234 <mock>", event.output.AsString());
+  event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ("Attached Process 1 [Running] koid=1234 <mock>", event.output.AsString());
 
@@ -36,7 +40,12 @@ TEST_F(VerbsSymbolTest, SymStat) {
   target->GetProcess()->GetSymbols()->InjectModuleForTesting(
       "fakelib", "abc123", std::make_unique<LoadedModuleSymbols>(nullptr, "abc123", 0));
 
+  loop().RunUntilNoTasks();
+  console.FlushOutputEvents();
+
   auto download = session().system().InjectDownloadForTesting("abc123");
+  event = console.GetOutputEvent();
+  EXPECT_EQ("Downloading symbols...", event.output.AsString());
 
   console.ProcessInputLine("sym-stat");
 
@@ -47,14 +56,8 @@ TEST_F(VerbsSymbolTest, SymStat) {
   EXPECT_NE(text.find("Process 1 symbol status"), std::string::npos);
   EXPECT_NE(text.find("Build ID: abc123 (Downloading...)"), std::string::npos);
 
-  event = console.GetOutputEvent();
-  EXPECT_EQ("Downloading symbols...", event.output.AsString());
-
   // Releasing the download will cause it to register a failure.
   download = nullptr;
-
-  event = console.GetOutputEvent();
-  EXPECT_EQ("Process 1 [Running] koid=1234 <mock>", event.output.AsString());
 
   event = console.GetOutputEvent();
   EXPECT_EQ("Symbol downloading complete. 0 succeeded, 1 failed.", event.output.AsString());
@@ -84,9 +87,7 @@ TEST_F(VerbsSymbolTest, SymInfo_Demangle) {
   console.ProcessInputLine("sym-info i");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("No symbol \"i\" found in the current context.\n",
-            event.output.AsString());
-
+  ASSERT_EQ("No symbol \"i\" found in the current context.\n", event.output.AsString());
 }
 
 }  // namespace zxdb
