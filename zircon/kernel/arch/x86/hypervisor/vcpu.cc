@@ -12,6 +12,7 @@
 
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/platform_access.h>
 #include <arch/x86/pvclock.h>
 #include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
@@ -838,6 +839,19 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     running_.store(false);
 
     SaveGuestExtendedRegisters(vmcs.Read(VmcsFieldXX::GUEST_CR4));
+
+    if (!x86_get_disable_spec_mitigations()) {
+      // Spectre V2: Ensure that code executed in the VM guest cannot influence either
+      // return address predictions or indirect branch prediction in the host.
+      //
+      // TODO(fxb/33667): We may be able to avoid the IBPB here; the kernel is either
+      // built with a retpoline or has Enhanced IBRS enabled. We currently execute an
+      // IBPB on context-switch to a new aspace. The IBPB is currently only here to
+      // protect hypervisor user threads.
+      MsrAccess msr;
+      x86_ras_fill();
+      x86_cpu_ibpb(&msr);
+    }
 
     if (status != ZX_OK) {
       ktrace_vcpu_exit(VCPU_FAILURE, vmcs.Read(VmcsFieldXX::GUEST_RIP));
