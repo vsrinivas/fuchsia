@@ -17,16 +17,16 @@ use {
 
 pub type MouseButton = u8;
 
-/// A [`MouseEventDescriptor`] represents a pointer event with a specified phase, and the buttons
+/// A [`MouseEvent`] represents a pointer event with a specified phase, and the buttons
 /// involved in said phase. The supported phases for mice include Up, Down, and Move.
 ///
 /// # Example
-/// The following MouseEventDescriptor represents a movement of 40 units in the x axis and 20 units
+/// The following MouseEvent represents a movement of 40 units in the x axis and 20 units
 /// in the y axis while hold the primary button down.
 ///
 /// ```
-/// let mouse_event_descriptor = input_device::InputEventDescriptor::Mouse({
-///     MouseEventDescriptor {
+/// let mouse_device_event = input_device::InputDeviceEvent::Mouse({
+///     MouseEvent {
 ///         movement_x: 40,
 ///         movement_y: 20,
 ///         phase: fidl_fuchsia_ui_input::PointerEventPhase::Move,
@@ -34,7 +34,7 @@ pub type MouseButton = u8;
 ///     }});
 /// ```
 #[derive(Clone, Debug, PartialEq)]
-pub struct MouseEventDescriptor {
+pub struct MouseEvent {
     /// The movement in the x axis.
     pub movement_x: i64,
 
@@ -188,7 +188,7 @@ impl input_device::InputDeviceBinding for MouseBinding {
 /// - `movement_y`: The movement in the y axis.
 /// - `phase`: The phase of the [`buttons`] associated with the input event.
 /// - `buttons`: The buttons relevant to the event.
-/// - `sender`: The stream to send the MouseEventDescriptor to.
+/// - `sender`: The stream to send the MouseEvent to.
 fn send_mouse_event(
     movement_x: i64,
     movement_y: i64,
@@ -209,7 +209,7 @@ fn send_mouse_event(
     }
 
     match sender.try_send(input_device::InputEvent {
-        event_descriptor: input_device::InputEventDescriptor::Mouse(MouseEventDescriptor {
+        device_event: input_device::InputDeviceEvent::Mouse(MouseEvent {
             movement_x,
             movement_y,
             phase,
@@ -217,7 +217,7 @@ fn send_mouse_event(
         }),
         device_descriptor: device_descriptor.clone(),
     }) {
-        Err(e) => fx_log_info!("Failed to send MouseEventDescriptor with error: {:?}", e),
+        Err(e) => fx_log_info!("Failed to send MouseEvent with error: {:?}", e),
         _ => {}
     }
 }

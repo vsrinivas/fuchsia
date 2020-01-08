@@ -29,7 +29,7 @@ pub fn create_keyboard_input_report(
     }
 }
 
-/// Creates a [`keyboard::KeyboardEventDescriptor`] with the provided keys.
+/// Creates a [`keyboard::KeyboardEvent`] with the provided keys.
 ///
 /// # Parameters
 /// - `pressed_keys`: The keys which are to be included as pressed.
@@ -42,11 +42,9 @@ pub fn create_keyboard_event(
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
-        event_descriptor: input_device::InputEventDescriptor::Keyboard(
-            keyboard::KeyboardEventDescriptor {
-                keys: hashmap! {fidl_ui_input2::KeyEventPhase::Pressed => pressed_keys, fidl_ui_input2::KeyEventPhase::Released => released_keys },
-            },
-        ),
+        device_event: input_device::InputDeviceEvent::Keyboard(keyboard::KeyboardEvent {
+            keys: hashmap! {fidl_ui_input2::KeyEventPhase::Pressed => pressed_keys, fidl_ui_input2::KeyEventPhase::Released => released_keys },
+        }),
         device_descriptor: device_descriptor.clone(),
     }
 }
@@ -79,7 +77,7 @@ pub fn create_mouse_input_report(
     }
 }
 
-/// Creates a [`mouse::MouseEventDescriptor`] with the provided parameters.
+/// Creates a [`mouse::MouseEvent`] with the provided parameters.
 ///
 /// # Parameters
 /// - `movement_x`: The x-movement to report in the event.
@@ -96,7 +94,7 @@ pub fn create_mouse_event(
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
-        event_descriptor: input_device::InputEventDescriptor::Mouse(mouse::MouseEventDescriptor {
+        device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent {
             movement_x,
             movement_y,
             phase,

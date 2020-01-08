@@ -19,7 +19,7 @@ async fn main() -> Result<(), Error> {
     while let Some(input_event) = mouse_receiver.next().await {
         match input_event {
             input_device::InputEvent {
-                event_descriptor: input_device::InputEventDescriptor::Mouse(mouse_event_descriptor),
+                device_event: input_device::InputDeviceEvent::Mouse(mouse_event_descriptor),
                 device_descriptor: _,
             } => {
                 fx_log_info!("movement_x: {}", mouse_event_descriptor.movement_x);

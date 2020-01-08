@@ -22,23 +22,26 @@ pub const INPUT_EVENT_BUFFER_SIZE: usize = 15;
 /// An [`InputEvent`] holds information about an input event and the device that produced the event.
 #[derive(Debug, PartialEq)]
 pub struct InputEvent {
-    pub event_descriptor: InputEventDescriptor,
+    /// The `device_event` contains the device-specific input event information.
+    pub device_event: InputDeviceEvent,
+
+    /// The `device_descriptor` contains static information about the device that generated the input event.
     pub device_descriptor: InputDeviceDescriptor,
 }
 
-/// An [`InputEventDescriptor`] represents an input event from an input device.
+/// An [`InputDeviceEvent`] represents an input event from an input device.
 ///
-/// [`InputEventDescriptor`]s contain more context than the raw [`InputReport`] they are parsed from.
-/// For example, [`KeyboardEventDescriptor`] contains all the pressed keys, as well as the key's
+/// [`InputDeviceEvent`]s contain more context than the raw [`InputReport`] they are parsed from.
+/// For example, [`KeyboardEvent`] contains all the pressed keys, as well as the key's
 /// phase (pressed, released, etc.).
 ///
-/// Each [`InputDeviceBinding`] generates the type of [`InputEventDescriptor`]s that are appropriate
+/// Each [`InputDeviceBinding`] generates the type of [`InputDeviceEvent`]s that are appropriate
 /// for their device.
 #[derive(Debug, PartialEq)]
-pub enum InputEventDescriptor {
-    Keyboard(keyboard::KeyboardEventDescriptor),
-    Mouse(mouse::MouseEventDescriptor),
-    Touch(touch::TouchEventDescriptor),
+pub enum InputDeviceEvent {
+    Keyboard(keyboard::KeyboardEvent),
+    Mouse(mouse::MouseEvent),
+    Touch(touch::TouchEvent),
 }
 
 /// An [`InputDescriptor`] describes the ranges of values a particular input device can generate.
@@ -47,7 +50,7 @@ pub enum InputEventDescriptor {
 /// and a [`InputDescriptor::Touch`] contains the maximum number of touch contacts and the
 /// range of x- and y-values each contact can take on.
 ///
-/// The descriptor is sent alongside [`InputEventDescriptor`]s so clients can, for example, convert a
+/// The descriptor is sent alongside [`InputDeviceEvent`]s so clients can, for example, convert a
 /// touch coordinate to a display coordinate. The descriptor is not expected to change for the
 /// lifetime of a device binding.
 #[derive(Clone, Debug, PartialEq)]

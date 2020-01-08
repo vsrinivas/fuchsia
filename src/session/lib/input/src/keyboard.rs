@@ -18,7 +18,7 @@ use {
     std::collections::HashMap,
 };
 
-/// A [`KeyboardEventDescriptor`] represents an input event from a keyboard device.
+/// A [`KeyboardEvent`] represents an input event from a keyboard device.
 ///
 /// The input event descriptor contains information about which keys are pressed, and which
 /// keys were released.
@@ -33,7 +33,7 @@ use {
 /// a key is pressed for all received input events until the key is present in
 /// the [`KeyEventPhase::Released`] entry of [`keys`].
 #[derive(Debug, PartialEq)]
-pub struct KeyboardEventDescriptor {
+pub struct KeyboardEvent {
     /// The keys associated with this input event, sorted by their `KeyEventPhase`
     /// (e.g., whether they are pressed or released).
     pub keys: HashMap<KeyEventPhase, Vec<Key>>,
@@ -273,9 +273,9 @@ impl KeyboardBinding {
         fasync::spawn(async move {
             match input_event_sender
                 .send(input_device::InputEvent {
-                    event_descriptor: input_device::InputEventDescriptor::Keyboard(
-                        KeyboardEventDescriptor { keys: keys_to_send },
-                    ),
+                    device_event: input_device::InputDeviceEvent::Keyboard(KeyboardEvent {
+                        keys: keys_to_send,
+                    }),
                     device_descriptor,
                 })
                 .await

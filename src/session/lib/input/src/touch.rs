@@ -14,7 +14,7 @@ use {
 };
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct TouchEventDescriptor {}
+pub struct TouchEvent {}
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TouchDeviceDescriptor {}
