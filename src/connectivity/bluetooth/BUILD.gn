@@ -5,6 +5,7 @@
 group("bluetooth") {
   testonly = true
   deps = [
+    ":tests",
     "core",
     "examples",
     "hci",
@@ -41,11 +42,13 @@ group("tests") {
     "core/bt-host:bluetooth_fuzzers_test",
     "lib/bt-avctp:tests",
     "lib/bt-avdtp:tests",
+    "lib/bt-fidl-mocks:tests",
     "lib/fuchsia-bluetooth:tests",
     "profiles/bt-a2dp-sink:tests",
+    "profiles/bt-a2dp-source:bt-a2dp-source-tests",
+    "profiles/bt-avrcp:tests",
+    "profiles/bt-avrcp-target:tests",
     "tests",
-    "tools/bt-avrcp-controller:tests",
-    "tools/bt-cli:tests",
-    "tools/tests",
+    "tools:tests",
   ]
 }

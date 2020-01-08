@@ -272,7 +272,6 @@ group("all") {
     ":asio",
     ":ath10k",
     ":battery_manager",
-    ":bluetooth",
     ":boringssl",
     ":carnelian",
     ":catapult_converter",
@@ -377,6 +376,7 @@ group("all") {
     "//garnet/bin/sl4f:tests",
     "//garnet/bin/sshd-host:sshd-host-tests",
     "//garnet/examples/fidl/echo_server_cpp/fuzzer:echo_fuzzers",
+    "//src/connectivity/bluetooth:tests",
     "//src/connectivity/network/dhcp:dhcp_tests",
     "//src/connectivity/network/dhcp:dhcpd_tests",
     "//src/connectivity/network/mdns/bundles:tests",
@@ -920,27 +920,6 @@ group("run_test_component") {
     "//garnet/bin/run_test_component:run_test_component_unittests",
     "//garnet/bin/run_test_component/test:run_test_component_test",
     "//garnet/packages/testing:run_test_component",
-  ]
-}
-
-group("bluetooth") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:bluetooth_core",
-    "//src/connectivity/bluetooth/core/bt-gap:tests",
-    "//src/connectivity/bluetooth/core/bt-host:bluetooth_fuzzers",
-    "//src/connectivity/bluetooth/hci/emulator",
-    "//src/connectivity/bluetooth/lib/bt-avctp:tests",
-    "//src/connectivity/bluetooth/lib/bt-avdtp:tests",
-    "//src/connectivity/bluetooth/lib/bt-fidl-mocks:tests",
-    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth:tests",
-    "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
-    "//src/connectivity/bluetooth/tests",
-    "//src/connectivity/bluetooth/tools/bt-avrcp-controller:tests",
-    "//src/connectivity/bluetooth/tools/bt-cli:tests",
-    "//src/connectivity/bluetooth/tools/bt-le-peripheral:tests",
-    "//src/connectivity/bluetooth/tools/bt-snoop:tests",
-    "//src/connectivity/bluetooth/tools/tests/bt-tool-cli-tests",
   ]
 }
 
