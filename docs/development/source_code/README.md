@@ -4,11 +4,15 @@ Fuchsia uses the `jiri` tool to manage git repositories. This tool manages
 a set of repositories specified by a manifest. Jiri is located at
 [https://fuchsia.googlesource.com/jiri](https://fuchsia.googlesource.com/jiri).
 
-See [Source code layout](layout.md) for an overview of how the Fuchsia repository
-is organized.
+To understand how the Fuchsia repository is organized,
+see [Source code layout](/docs/development/source_code/layout.md).
 
-For how to prepare your developer environment and build Fuchsia,
-see Fuchsia's [Getting Started](/docs/getting_started.md) doc.
+To prepare your development environment and build Fuchsia,
+see [Getting started](/docs/getting_started.md).
+
+To submit your contribution to the Fuchsia project using `git` and
+`jiri` commands,
+see [Contribute changes](/docs/development/source_code/contribute_changes.md).
 
 ## Creating a new Fuchsia checkout
 
