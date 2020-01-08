@@ -63,30 +63,7 @@ template("go_build") {
       "gopackages currently only supports one package because of http://crbug.com/fuchsia/8088")
 
   main_target_name = target_name
-
   is_test = defined(invoker.test) && invoker.test
-  carchive = defined(invoker.carchive) && invoker.carchive
-  assert(!(is_test && carchive),
-         "cannot specify both test=true and carchive=true")
-  define_sdk_target = defined(invoker.sdk_category) &&
-                      invoker.sdk_category != "excluded" && !is_test
-
-  # Strip target binaries and binaries that are included in the SDK.
-  use_strip = (is_fuchsia || define_sdk_target) && !carchive
-
-  output_name = target_name
-  if (defined(invoker.output_name)) {
-    output_name = invoker.output_name
-  }
-  if (carchive) {
-    output_name = "${output_name}.a"
-  }
-
-  output_path = "${root_out_dir}/${output_name}"
-  if (use_strip) {
-    output_path = "${root_out_dir}/exe.unstripped/${output_name}"
-    stripped_output_path = "${root_out_dir}/${output_name}"
-  }
 
   # Detect whether we're building with a fuzzer toolchain config. For
   # example, when go_fuzzer() compiles the Go fuzz target to be linked
@@ -98,250 +75,363 @@ template("go_build") {
     }
   }
 
-  action(main_target_name) {
-    deps = []
-    if (defined(invoker.non_go_deps)) {
-      deps += invoker.non_go_deps
-    }
-
-    pool = "//build/go:pool($default_toolchain)"
-
-    if (use_strip) {
-      # Ensure that the 'canonical' output path of $root_out_dir/$output_name
-      # always first among outputs, as this path has to be reconstructed within
-      # go_test.gni and it can canonically compare that with outputs[0].
-      outputs = [
-        stripped_output_path,
-        output_path,
-      ]
+  # Aside from the fuzzer case, variants don't have any effect for Go
+  # builds.  But dependencies from other targets in variant toolchains
+  # could lead to building the same Go target identically in multiple
+  # toolchains.  The expectation with executable-like targets is that they
+  # do their own variant selection and thus always only build one way.
+  # Since Go isn't doing variant selection, instead redirect from variants
+  # to the base toolchain so the target is only built one way.
+  if (!is_fuzzer && toolchain_variant.name != "") {
+    if (is_host && !is_test) {
+      # This target might be referenced by compiled_action(), which expects to
+      # find the binary in $host_toolchain's root_out_dir and host_toolchain
+      # always matches the current variant when in a variant host_toolchain.
+      # So copy the binary to this toolchain's root_out_dir.
+      copy(main_target_name) {
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
+        if (is_test) {
+          testonly = true
+        }
+        public_deps = [
+          ":$main_target_name(${toolchain_variant.base})",
+        ]
+        output_name = target_name
+        if (defined(invoker.output_name)) {
+          output_name = invoker.output_name
+        }
+        base_root_out_dir = get_label_info(public_deps[0], "root_out_dir")
+        sources = [
+          "$base_root_out_dir/$output_name",
+        ]
+        outputs = [
+          "$root_out_dir/$output_name",
+        ]
+      }
     } else {
-      outputs = [
-        output_path,
-      ]
+      group(main_target_name) {
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
+        if (is_test) {
+          testonly = true
+        }
+        public_deps = [
+          ":$main_target_name(${toolchain_variant.base})",
+        ]
+      }
     }
+    not_needed(invoker, "*")
+  } else {
+    carchive = defined(invoker.carchive) && invoker.carchive
+    assert(!(is_test && carchive),
+           "cannot specify both test=true and carchive=true")
+    define_sdk_target = defined(invoker.sdk_category) &&
+                        invoker.sdk_category != "excluded" && !is_test
 
-    script = "//build/go/build.py"
-    depfile = "${output_path}.d"
+    # Strip target binaries and binaries that are included in the SDK.
+    use_strip = (is_fuchsia || define_sdk_target) && !carchive
 
-    sources = [
-      "//build/go/gen_library_metadata.py",
-    ]
-
-    godepfile = "//prebuilt/tools/godepfile/${host_platform}/godepfile"
-    inputs = [
-      godepfile,
-    ]
-
-    args = [
-      "--godepfile",
-      rebase_path(godepfile, "", root_build_dir),
-      "--root-out-dir",
-      rebase_path(root_out_dir, root_build_dir),
-      "--depfile",
-      rebase_path(depfile),
-      "--current-cpu",
-      current_cpu,
-      "--current-os",
-      current_os,
-      "--binname",
-      output_name,
-      "--output-path",
-      rebase_path(output_path, root_build_dir),
-      "--lib-dir",
-      rebase_path(get_label_info(":any($shlib_toolchain)", "root_out_dir")),
-      "--go-cache",
-      gocache_dir,
-      "--cc",
-      rebase_path("$clang_prefix/clang", "", root_build_dir),
-      "--cxx",
-      rebase_path("$clang_prefix/clang++", "", root_build_dir),
-      "--objcopy",
-      rebase_path("$clang_prefix/llvm-objcopy", "", root_build_dir),
-      "--sysroot",
-      sysroot,
-      "--target",
-      clang_target,
-    ]
-
-    if (use_strip) {
-      args += [
-        "--stripped-output-path",
-        rebase_path(stripped_output_path, root_build_dir),
-      ]
-    }
-
-    if (defined(invoker.skip_vet) && !invoker.skip_vet && go_vet_enabled) {
-      args += [ "--vet" ]
-    }
-
-    # Go build tags
-    tags = []
-
-    # Temporarily add a go tag if this GN arg is true.
-    # This is for the FIDL union/xunion migration.
-    if (fidl_write_v1_wireformat) {
-      tags += [ "write_xunion_bytes_for_union" ]
-    }
-
-    if (defined(invoker.tags)) {
-      tags += invoker.tags
-    }
-
-    foreach(tag, tags) {
-      args += [
-        "--tag",
-        tag,
-      ]
-    }
-    if (is_fuzzer) {
-      args += [
-        "--tag=libfuzzer",
-        "--gcflags=all=-d=libfuzzer",
-      ]
+    output_name = target_name
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
     }
     if (carchive) {
-      args += [ "--buildmode=c-archive" ]
+      output_name = "${output_name}.a"
     }
 
-    if (is_fuchsia) {
-      deps += [
-        "//third_party/go:go_runtime",
-        "//zircon/public/lib/fdio",
-      ]
+    output_path = "${root_out_dir}/${output_name}"
+    if (use_strip) {
+      output_path = "${root_out_dir}/exe.unstripped/${output_name}"
+      stripped_output_path = "${root_out_dir}/${output_name}"
+    }
 
-      args += [
-        # GN provides no way to propagate include paths like this, so, this
-        # is brittle.
-        "--include-dir",
-        rebase_path("//zircon/system/ulib/fdio/include"),
-        "--include-dir",
-        rebase_path("//zircon/third_party/ulib/musl/include"),
-        "--include-dir",
-        rebase_path("//zircon/system/public"),
-        "--go-root",
-        rebase_path("$host_tools_dir/goroot"),
-      ]
-      args += [
-        # For src/sys/pkg/bin/pkgfs/ramdisk
-        "--include-dir",
-        rebase_path("//zircon/system/ulib/ramdevice-client/include"),
-        "--lib-dir",
-        rebase_path("gen/zircon/public/lib/ramdevice-client",
-                    "",
-                    root_build_dir),
-      ]
-
-      foreach(target, zircon_legacy_targets) {
-        if (target.target_name == "zircon") {
-          _libs = target.libs
-          lib = _libs[0]
-          assert(_libs == [ lib ])
-          _libs = []
-          args += [
-            "--lib-dir",
-            rebase_path(get_path_info("$zircon_root_build_dir/$lib", "dir")),
-          ]
-        }
+    action(main_target_name) {
+      deps = []
+      if (defined(invoker.non_go_deps)) {
+        deps += invoker.non_go_deps
       }
 
-      # See //build/config/fuchsia:fdio_config.
-      args += [
-        "--lib-dir",
-        rebase_path(get_label_info("//build/config/fuchsia:fdio_config",
-                                   "target_gen_dir")),
-      ]
-    } else {
-      args += [
-        "--go-root",
-        rebase_path("//prebuilt/third_party/go/${host_platform}"),
-      ]
-    }
+      pool = "//build/go:pool($default_toolchain)"
 
-    # Add needed arguments for the buildidtool. We should add the stamp file
-    # output by buildidtool to the list of outputs for this action but because
-    # Ninja (and by consequence GN) limits us to one depfile where that depfile
-    # has only one output and we need the depfile for other things we don't
-    # list it as an output.
-    args += [
-      "--buildidtool",
-      rebase_path("//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
-                  root_build_dir),
-      "--build-id-dir",
-      ".build-id",
-    ]
-
-    if (is_test) {
-      testonly = true
-      args += [ "--is-test=true" ]
-    }
-
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
-      args += [ "--go-dep-files" ]
-      foreach(dep, invoker.deps) {
-        gen_dir = get_label_info(dep, "target_gen_dir")
-        name = get_label_info(dep, "name")
-        args += [ rebase_path("$gen_dir/$name.go_deps") ]
-      }
-    }
-
-    foreach(gopackage, invoker.gopackages) {
-      args += [
-        "--package",
-        gopackage,
-      ]
-    }
-
-    metadata = {
-      tool_paths = []
-
-      # Record metadata for the //:tool_paths build API for all non-test,
-      # host binaries.
-      if (is_host && !is_test) {
-        tool_paths = [
-          {
-            cpu = current_cpu
-            label = get_label_info(":$main_target_name", "label_with_toolchain")
-            name = output_name
-            os = current_os
-            path = rebase_path(output_path, root_build_dir)
-          },
+      if (use_strip) {
+        # Ensure that the 'canonical' output path of $root_out_dir/$output_name
+        # always first among outputs, as this path has to be reconstructed within
+        # go_test.gni and it can canonically compare that with outputs[0].
+        outputs = [
+          stripped_output_path,
+          output_path,
+        ]
+      } else {
+        outputs = [
+          output_path,
         ]
       }
 
-      binaries = [
-        {
-          type = "executable"
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          cpu = current_cpu
-          os = current_os
-          debug = rebase_path(output_path, root_build_dir)
-          if (use_strip) {
-            dist = rebase_path(stripped_output_path, root_build_dir)
-          } else {
-            dist = debug
-          }
+      script = "//build/go/build.py"
+      depfile = "${output_path}.d"
 
-          # TODO(fxbug.dev/27215): Update when we add linux go binaries
-          # to .build-id.
-          if (is_fuchsia) {
-            elf_build_id = "$debug.build-id.stamp"
-          }
-          if (output_breakpad_syms && is_fuchsia) {
-            breakpad = "$debug.sym"
-          }
-        },
+      sources = [
+        "//build/go/gen_library_metadata.py",
       ]
+
+      godepfile = "//prebuilt/tools/godepfile/${host_platform}/godepfile"
+      inputs = [
+        godepfile,
+      ]
+
+      args = [
+        "--godepfile",
+        rebase_path(godepfile, "", root_build_dir),
+        "--root-out-dir",
+        rebase_path(root_out_dir, root_build_dir),
+        "--depfile",
+        rebase_path(depfile),
+        "--current-cpu",
+        current_cpu,
+        "--current-os",
+        current_os,
+        "--binname",
+        output_name,
+        "--output-path",
+        rebase_path(output_path, root_build_dir),
+        "--lib-dir",
+        rebase_path(get_label_info(":any($shlib_toolchain)", "root_out_dir")),
+        "--go-cache",
+        gocache_dir,
+        "--cc",
+        rebase_path("$clang_prefix/clang", "", root_build_dir),
+        "--cxx",
+        rebase_path("$clang_prefix/clang++", "", root_build_dir),
+        "--objcopy",
+        rebase_path("$clang_prefix/llvm-objcopy", "", root_build_dir),
+        "--sysroot",
+        sysroot,
+        "--target",
+        clang_target,
+      ]
+
+      if (use_strip) {
+        args += [
+          "--stripped-output-path",
+          rebase_path(stripped_output_path, root_build_dir),
+        ]
+      }
+
+      if (defined(invoker.skip_vet) && !invoker.skip_vet && go_vet_enabled) {
+        args += [ "--vet" ]
+      }
+
+      # Go build tags
+      tags = []
+
+      # Temporarily add a go tag if this GN arg is true.
+      # This is for the FIDL union/xunion migration.
+      if (fidl_write_v1_wireformat) {
+        tags += [ "write_xunion_bytes_for_union" ]
+      }
+
+      if (defined(invoker.tags)) {
+        tags += invoker.tags
+      }
+
+      foreach(tag, tags) {
+        args += [
+          "--tag",
+          tag,
+        ]
+      }
+      if (is_fuzzer) {
+        args += [
+          "--tag=libfuzzer",
+          "--gcflags=all=-d=libfuzzer",
+        ]
+      }
+      if (carchive) {
+        args += [ "--buildmode=c-archive" ]
+      }
+
+      if (is_fuchsia) {
+        deps += [
+          "//third_party/go:go_runtime",
+          "//zircon/public/lib/fdio",
+        ]
+
+        args += [
+          # GN provides no way to propagate include paths like this, so, this
+          # is brittle.
+          "--include-dir",
+          rebase_path("//zircon/system/ulib/fdio/include"),
+          "--include-dir",
+          rebase_path("//zircon/third_party/ulib/musl/include"),
+          "--include-dir",
+          rebase_path("//zircon/system/public"),
+          "--go-root",
+          rebase_path("$host_tools_dir/goroot"),
+        ]
+        args += [
+          # For src/sys/pkg/bin/pkgfs/ramdisk
+          "--include-dir",
+          rebase_path("//zircon/system/ulib/ramdevice-client/include"),
+          "--lib-dir",
+          rebase_path("gen/zircon/public/lib/ramdevice-client",
+                      "",
+                      root_build_dir),
+        ]
+
+        foreach(target, zircon_legacy_targets) {
+          if (target.target_name == "zircon") {
+            _libs = target.libs
+            lib = _libs[0]
+            assert(_libs == [ lib ])
+            _libs = []
+            args += [
+              "--lib-dir",
+              rebase_path(get_path_info("$zircon_root_build_dir/$lib", "dir")),
+            ]
+          }
+        }
+
+        # See //build/config/fuchsia:fdio_config.
+        args += [
+          "--lib-dir",
+          rebase_path(get_label_info("//build/config/fuchsia:fdio_config",
+                                     "target_gen_dir")),
+        ]
+      } else {
+        args += [
+          "--go-root",
+          rebase_path("//prebuilt/third_party/go/${host_platform}"),
+        ]
+      }
+
+      # Add needed arguments for the buildidtool. We should add the stamp file
+      # output by buildidtool to the list of outputs for this action but because
+      # Ninja (and by consequence GN) limits us to one depfile where that depfile
+      # has only one output and we need the depfile for other things we don't
+      # list it as an output.
+      args += [
+        "--buildidtool",
+        rebase_path("//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
+                    root_build_dir),
+        "--build-id-dir",
+        ".build-id",
+      ]
+
+      if (is_test) {
+        testonly = true
+        args += [ "--is-test=true" ]
+      }
+
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+        args += [ "--go-dep-files" ]
+        foreach(dep, invoker.deps) {
+          gen_dir = get_label_info(dep, "target_gen_dir")
+          name = get_label_info(dep, "name")
+          args += [ rebase_path("$gen_dir/$name.go_deps") ]
+        }
+      }
+
+      foreach(gopackage, invoker.gopackages) {
+        args += [
+          "--package",
+          gopackage,
+        ]
+      }
+
+      metadata = {
+        tool_paths = []
+
+        # Record metadata for the //:tool_paths build API for all non-test,
+        # host binaries.
+        if (is_host && !is_test) {
+          tool_paths = [
+            {
+              cpu = current_cpu
+              label =
+                  get_label_info(":$main_target_name", "label_with_toolchain")
+              name = output_name
+              os = current_os
+              path = rebase_path(output_path, root_build_dir)
+            },
+          ]
+        }
+
+        binaries = [
+          {
+            type = "executable"
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            cpu = current_cpu
+            os = current_os
+            debug = rebase_path(output_path, root_build_dir)
+            if (use_strip) {
+              dist = rebase_path(stripped_output_path, root_build_dir)
+            } else {
+              dist = debug
+            }
+
+            # TODO(fxbug.dev/27215): Update when we add linux go binaries
+            # to .build-id.
+            if (is_fuchsia) {
+              elf_build_id = "$debug.build-id.stamp"
+            }
+            if (output_breakpad_syms && is_fuchsia) {
+              breakpad = "$debug.sym"
+            }
+          },
+        ]
+      }
     }
-  }
 
-  # Allow host binaries to be published in SDKs.
-  if (define_sdk_target) {
-    file_base = "tools/$output_name"
+    # Allow host binaries to be published in SDKs.
+    if (define_sdk_target) {
+      file_base = "tools/$output_name"
 
-    # TODO(fxb/42999): remove extra atom
-    if (current_cpu == host_cpu) {
-      sdk_atom("${target_name}_sdk_legacy") {
+      # TODO(fxb/42999): remove extra atom
+      if (current_cpu == host_cpu) {
+        sdk_atom("${target_name}_sdk_legacy") {
+          id = "sdk://$file_base"
+
+          category = invoker.sdk_category
+
+          meta = {
+            dest = "$file_base-meta.json"
+            schema = "host_tool"
+            value = {
+              type = "host_tool"
+              name = output_name
+              root = "tools"
+              files = [ file_base ]
+            }
+          }
+
+          files = [
+            {
+              source = "$root_out_dir/$output_name"
+              dest = file_base
+            },
+          ]
+
+          if (defined(invoker.sdk_deps)) {
+            deps = invoker.sdk_deps
+          }
+
+          non_sdk_deps = [ ":$main_target_name" ]
+        }
+      }
+
+      if (host_os == "linux" || host_os == "mac") {
+        file_base = "tools/$current_cpu/$output_name"
+      }
+
+      sdk_atom("${target_name}_sdk") {
         id = "sdk://$file_base"
 
         category = invoker.sdk_category
@@ -370,40 +460,6 @@ template("go_build") {
 
         non_sdk_deps = [ ":$main_target_name" ]
       }
-    }
-
-    if (host_os == "linux" || host_os == "mac") {
-      file_base = "tools/$current_cpu/$output_name"
-    }
-
-    sdk_atom("${target_name}_sdk") {
-      id = "sdk://$file_base"
-
-      category = invoker.sdk_category
-
-      meta = {
-        dest = "$file_base-meta.json"
-        schema = "host_tool"
-        value = {
-          type = "host_tool"
-          name = output_name
-          root = "tools"
-          files = [ file_base ]
-        }
-      }
-
-      files = [
-        {
-          source = "$root_out_dir/$output_name"
-          dest = file_base
-        },
-      ]
-
-      if (defined(invoker.sdk_deps)) {
-        deps = invoker.sdk_deps
-      }
-
-      non_sdk_deps = [ ":$main_target_name" ]
     }
   }
 }

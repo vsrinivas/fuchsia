@@ -34,69 +34,84 @@ import("//build/testing/test_spec.gni")
 #     See https://golang.org/cmd/go/#hdr-Testing_flags for details on timeout.
 #     See https://golang.org/pkg/time/#ParseDuration for duration format.
 template("go_test") {
-  _main_target_name = target_name
-  _test_spec_target_name = "${target_name}_spec"
-
-  _output_name = target_name
-  if (defined(invoker.output_name)) {
-    _output_name = invoker.output_name
-  }
-  _output_path = "${root_out_dir}/${_output_name}"
-
-  _is_disabled = defined(invoker.disabled) && invoker.disabled
-
-  # We only include test metadata for non-disabled, linux/mac tests; metadata
-  # for fuchsia tests is aggregated in the package template.
-  _include_test_metadata = !_is_disabled && (is_linux || is_mac)
-  if (_include_test_metadata) {
-    test_spec(_test_spec_target_name) {
-      # TODO(BLD-493): testonly should be automatic here
+  # go_build() redirects out of the variant, so root_out_dir et al are not
+  # what it actually uses.  Just redirect this target itself first, so the
+  # actual go_build instantiation below will not also redirect and the code
+  # below matches its output.
+  if (toolchain_variant.name != "") {
+    group(target_name) {
+      forward_variables_from(invoker, [ "visibility" ])
       testonly = true
-      name = _output_name
-      target = _main_target_name
-      path = _output_path
-      command = [ rebase_path(_output_path, root_build_dir) ]
-      timeout = "5m"
-      if (defined(invoker.timeout)) {
-        timeout = invoker.timeout
-      }
-      command += [
-        "--test.timeout",
-        timeout,
+      public_deps = [
+        ":$target_name(${toolchain_variant.base})",
       ]
-      if (defined(invoker.args)) {
-        command += invoker.args
-      }
-      deps = []
-      if (defined(invoker.deps)) {
-        deps += invoker.deps
-      }
-      if (defined(invoker.non_go_deps)) {
-        deps += invoker.non_go_deps
-      }
-      forward_variables_from(invoker, [ "environments" ])
     }
-  }
+    not_needed(invoker, "*")
+  } else {
+    _main_target_name = target_name
+    _test_spec_target_name = "${target_name}_spec"
 
-  go_build(_main_target_name) {
-    test = true
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "disabled",
-                             "environments",
-                           ])
+    _output_name = target_name
+    if (defined(invoker.output_name)) {
+      _output_name = invoker.output_name
+    }
+    _output_path = "${root_out_dir}/${_output_name}"
 
+    _is_disabled = defined(invoker.disabled) && invoker.disabled
+
+    # We only include test metadata for non-disabled, linux/mac tests; metadata
+    # for fuchsia tests is aggregated in the package template.
+    _include_test_metadata = !_is_disabled && (is_linux || is_mac)
     if (_include_test_metadata) {
-      if (!defined(invoker.non_go_deps)) {
-        non_go_deps = []
+      test_spec(_test_spec_target_name) {
+        # TODO(BLD-493): testonly should be automatic here
+        testonly = true
+        name = _output_name
+        target = _main_target_name
+        path = _output_path
+        command = [ rebase_path(_output_path, root_build_dir) ]
+        timeout = "5m"
+        if (defined(invoker.timeout)) {
+          timeout = invoker.timeout
+        }
+        command += [
+          "--test.timeout",
+          timeout,
+        ]
+        if (defined(invoker.args)) {
+          command += invoker.args
+        }
+        deps = []
+        if (defined(invoker.deps)) {
+          deps += invoker.deps
+        }
+        if (defined(invoker.non_go_deps)) {
+          deps += invoker.non_go_deps
+        }
+        forward_variables_from(invoker, [ "environments" ])
       }
-      non_go_deps += [ ":$_test_spec_target_name" ]
-    } else {
-      not_needed([ "_test_spec_target_name" ])
     }
-  }
 
-  _outputs = get_target_outputs(":$_main_target_name")
-  assert(_outputs[0] == _output_path)
+    go_build(_main_target_name) {
+      test = true
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "disabled",
+                               "environments",
+                             ])
+
+      if (_include_test_metadata) {
+        if (!defined(invoker.non_go_deps)) {
+          non_go_deps = []
+        }
+        non_go_deps += [ ":$_test_spec_target_name" ]
+      } else {
+        not_needed([ "_test_spec_target_name" ])
+      }
+    }
+
+    _outputs = get_target_outputs(":$_main_target_name")
+    assert(_outputs[0] == _output_path)
+  }
 }
