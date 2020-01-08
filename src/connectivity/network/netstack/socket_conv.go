@@ -290,12 +290,15 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 func getSockOptIPv6(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 	switch name {
 	case C.IPV6_V6ONLY:
-		var v tcpip.V6OnlyOption
-		if err := ep.GetSockOpt(&v); err != nil {
+		v, err := ep.GetSockOptBool(tcpip.V6OnlyOption)
+		if err != nil {
 			return nil, err
 		}
-
-		return int32(v), nil
+		var o int32
+		if v {
+			o = 1
+		}
+		return o, nil
 
 	case C.IPV6_PATHMTU:
 
@@ -578,7 +581,7 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOpt(tcpip.V6OnlyOption(v))
+		return ep.SetSockOptBool(tcpip.V6OnlyOption, v != 0)
 
 	case C.IPV6_ADD_MEMBERSHIP, C.IPV6_DROP_MEMBERSHIP:
 		var ipv6_mreq C.struct_ipv6_mreq

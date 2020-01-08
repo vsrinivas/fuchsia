@@ -936,10 +936,6 @@ func (ns *Netstack) addEndpoint(
 		filepath: filepath,
 		features: features,
 	}
-	createFn := ns.mu.stack.CreateNamedNIC
-	if features&ethernet.InfoFeatureLoopback != 0 {
-		createFn = ns.mu.stack.CreateNamedLoopbackNIC
-	}
 
 	ifs.mu.state = link.StateUnknown
 	ifs.mu.metric = metric
@@ -970,11 +966,12 @@ func (ns *Netstack) addEndpoint(
 	ns.mu.ifStates[ifs.nicid] = ifs
 	ns.mu.countNIC++
 
-	syslog.Infof("NIC %s added", name)
-
-	if err := createFn(ifs.nicid, name, ep); err != nil {
+	if err := ns.mu.stack.CreateNICWithOptions(ifs.nicid, ep, stack.NICOptions{Name: name}); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %s", name, err)
 	}
+
+	syslog.Infof("NIC %s added", name)
+
 	if ep.Capabilities()&stack.CapabilityResolutionRequired > 0 {
 		if err := ns.mu.stack.AddAddress(ifs.nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
 			return nil, fmt.Errorf("NIC %s: adding arp address failed: %s", name, err)
