@@ -49,9 +49,10 @@ rustc_binary("bin") {
     "//src/connectivity/overnet/lib/hoist",
     "//src/lib/argh",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tempfile",
   ]
   non_rust_deps = [ ":copy_test_commands" ]
   test_environments = [

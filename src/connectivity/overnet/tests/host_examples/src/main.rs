@@ -6,10 +6,12 @@ use anyhow::{Context as _, Error};
 use argh::FromArgs;
 use parking_lot::{Condvar, Mutex};
 use rand::Rng;
+use std::cell::RefCell;
 use std::env::current_exe;
 use std::io::{Read, Write};
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
+use tempfile::{NamedTempFile, TempPath};
 
 struct Semaphore {
     inner: Arc<(Mutex<usize>, Condvar)>,
@@ -54,41 +56,142 @@ fn cmd(name: &str) -> Command {
     cmd
 }
 
+fn copy_output(mut out: impl std::io::Read + Send + 'static) -> TempPath {
+    let (mut file, path) = NamedTempFile::new().unwrap().into_parts();
+    std::thread::spawn(move || {
+        std::io::copy(&mut out, &mut file).unwrap();
+    });
+    path
+}
+
+struct ChildInfo {
+    name: String,
+    stdout: Option<TempPath>,
+    stderr: Option<TempPath>,
+}
+
+impl ChildInfo {
+    fn new(name: String, child: &mut Child) -> Self {
+        Self {
+            name,
+            stdout: child.stdout.take().map(copy_output),
+            stderr: child.stderr.take().map(copy_output),
+        }
+    }
+
+    fn show(&self) {
+        println!("*******************************************************************************");
+        println!("** {}", self.name);
+        if let Some(f) = self.stdout.as_ref() {
+            println!("** STDOUT:");
+            println!("{}", std::fs::read_to_string(f).unwrap());
+        }
+        if let Some(f) = self.stderr.as_ref() {
+            println!("** STDERR:");
+            println!("{}", std::fs::read_to_string(f).unwrap());
+        }
+    }
+}
+
 struct Daemon {
     child: Child,
-    name: String,
+    details: ChildInfo,
 }
 
 impl Daemon {
-    fn new_from_child(name: String, child: Child) -> Daemon {
-        Daemon { name, child }
+    fn new_from_child(name: String, mut child: Child) -> Daemon {
+        Daemon { details: ChildInfo::new(name, &mut child), child }
     }
 
     fn new(mut command: Command) -> Result<Daemon, Error> {
         let name = format!("{:?}", command);
-        let child = command.spawn().context(format!("spawning command {}", name))?;
-        Ok(Daemon { name, child })
+        let child = command
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .context(format!("spawning command {}", name))?;
+        Ok(Self::new_from_child(name, child))
     }
 }
 
 impl Drop for Daemon {
     fn drop(&mut self) {
-        self.child.kill().expect(&format!("'{}' wasn't running", self.name));
+        self.child.kill().expect(&format!("'{}' wasn't running", self.details.name));
         let _ = self.child.wait();
     }
 }
 
-struct Ascendd {
+struct TestContextInner {
     daemons: Vec<Daemon>,
-    socket: String,
+    run_things: Vec<ChildInfo>,
 }
 
-impl Ascendd {
-    fn new() -> Result<Ascendd, Error> {
+struct TestContext(RefCell<TestContextInner>);
+
+lazy_static::lazy_static! {
+    static ref REPORT_MUTEX: Mutex<()> = Mutex::new(());
+}
+
+impl TestContext {
+    fn new() -> Self {
+        Self(RefCell::new(TestContextInner { daemons: vec![], run_things: vec![] }))
+    }
+
+    fn run_client(&self, mut cmd: Command) -> Result<(), Error> {
+        let name = format!("{:?}", cmd);
+        let mut child =
+            cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().context("spawning client")?;
+        self.0.borrow_mut().run_things.push(ChildInfo::new(name, &mut child));
+        assert!(child.wait().expect("client should succeed").success());
+        Ok(())
+    }
+
+    fn new_daemon(&self, command: Command) -> Result<(), Error> {
+        self.0.borrow_mut().daemons.push(Daemon::new(command)?);
+        Ok(())
+    }
+
+    fn new_daemon_from_child(&self, name: String, child: Child) {
+        self.0.borrow_mut().daemons.push(Daemon::new_from_child(name, child));
+    }
+
+    fn show_reports_if_failed(&self, f: impl FnOnce() -> Result<(), Error>) -> Result<(), Error> {
+        let r = f();
+
+        if let Err(ref e) = &r {
+            let _ = REPORT_MUTEX.lock();
+            let this = &*self.0.borrow();
+
+            println!(
+                "*******************************************************************************"
+            );
+            println!("** ERROR: {}", e);
+
+            for thing in this.run_things.iter() {
+                thing.show();
+            }
+
+            for thing in this.daemons.iter() {
+                thing.details.show();
+            }
+        }
+
+        r
+    }
+}
+
+struct Ascendd<'a> {
+    socket: String,
+    ctx: &'a TestContext,
+}
+
+impl<'a> Ascendd<'a> {
+    fn new(ctx: &'a TestContext) -> Result<Ascendd, Error> {
         let socket = format!("/tmp/ascendd.{}.sock", rand::thread_rng().gen::<u128>());
         let mut cmd = cmd("ascendd");
         cmd.arg("--sockpath").arg(&socket);
-        Ok(Ascendd { daemons: vec![Daemon::new(cmd)?], socket })
+        ctx.new_daemon(cmd)?;
+        Ok(Ascendd { ctx, socket })
     }
 
     fn cmd(&self, name: &str) -> Command {
@@ -116,7 +219,7 @@ impl Ascendd {
     }
 
     fn add_echo_server(&mut self) -> Result<(), Error> {
-        self.daemons.push(Daemon::new(self.echo_cmd("server"))?);
+        self.ctx.new_daemon(self.echo_cmd("server"))?;
         Ok(())
     }
 
@@ -133,7 +236,7 @@ impl Ascendd {
     }
 
     fn add_interface_passing_server(&mut self) -> Result<(), Error> {
-        self.daemons.push(Daemon::new(self.interface_passing_cmd("server"))?);
+        self.ctx.new_daemon(self.interface_passing_cmd("server"))?;
         Ok(())
     }
 
@@ -142,12 +245,12 @@ impl Ascendd {
         label: &str,
     ) -> Result<(Box<dyn Read + Send>, Box<dyn Write + Send>), Error> {
         let mut cmd = self.labelled_cmd("onet", label);
-        cmd.arg("host-pipe").stdin(Stdio::piped()).stdout(Stdio::piped());
+        cmd.arg("host-pipe").stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
         let name = format!("{:?}", cmd);
         let mut child = cmd.spawn().context(format!("spawning command {}", name))?;
         let input = Box::new(child.stdout.take().ok_or(anyhow::format_err!("no stdout"))?);
         let output = Box::new(child.stdin.take().ok_or(anyhow::format_err!("no stdin"))?);
-        self.daemons.push(Daemon::new_from_child(name, child));
+        self.ctx.new_daemon_from_child(name, child);
         Ok((input, output))
     }
 
@@ -177,12 +280,6 @@ fn bridge(a: &mut Ascendd, b: &mut Ascendd) -> Result<(), Error> {
     Ok(())
 }
 
-fn run_client(mut cmd: Command) -> Result<(), Error> {
-    let mut child = cmd.spawn().context("spawning client")?;
-    assert!(child.wait().expect("client should succeed").success());
-    Ok(())
-}
-
 mod tests {
     use super::*;
 
@@ -192,11 +289,14 @@ mod tests {
     }
 
     pub fn echo_test() -> Result<(), Error> {
-        let mut ascendd = Ascendd::new().context("creating ascendd")?;
-        ascendd.add_echo_server().context("starting server")?;
-        run_client(ascendd.echo_client()).context("running client")?;
-        run_client(ascendd.onet_client("full-map")).context("running onet full-map")?;
-        Ok(())
+        let ctx = TestContext::new();
+        let mut ascendd = Ascendd::new(&ctx).context("creating ascendd")?;
+        ctx.show_reports_if_failed(|| {
+            ascendd.add_echo_server().context("starting server")?;
+            ctx.run_client(ascendd.echo_client()).context("running client")?;
+            ctx.run_client(ascendd.onet_client("full-map")).context("running onet full-map")?;
+            Ok(())
+        })
     }
 
     #[test]
@@ -205,13 +305,16 @@ mod tests {
     }
 
     pub fn multiple_ascendd_echo_test() -> Result<(), Error> {
-        let mut ascendd1 = Ascendd::new().context("creating ascendd 1")?;
-        let mut ascendd2 = Ascendd::new().context("creating ascendd 2")?;
-        bridge(&mut ascendd1, &mut ascendd2).context("bridging ascendds")?;
-        ascendd1.add_echo_server().context("starting server")?;
-        run_client(ascendd1.echo_client()).context("running client")?;
-        //run_client(ascendd1.onet_client("full-map")).context("running onet full-map")?;
-        Ok(())
+        let ctx = TestContext::new();
+        let mut ascendd1 = Ascendd::new(&ctx).context("creating ascendd 1")?;
+        let mut ascendd2 = Ascendd::new(&ctx).context("creating ascendd 2")?;
+        ctx.show_reports_if_failed(|| {
+            bridge(&mut ascendd1, &mut ascendd2).context("bridging ascendds")?;
+            ascendd1.add_echo_server().context("starting server")?;
+            ctx.run_client(ascendd1.echo_client()).context("running client")?;
+            ctx.run_client(ascendd1.onet_client("full-map")).context("running onet full-map")?;
+            Ok(())
+        })
     }
 
     #[test]
@@ -220,11 +323,14 @@ mod tests {
     }
 
     pub fn interface_passing_test() -> Result<(), Error> {
-        let mut ascendd = Ascendd::new().context("creating ascendd")?;
-        ascendd.add_interface_passing_server().context("starting server")?;
-        run_client(ascendd.interface_passing_client()).context("running client")?;
-        run_client(ascendd.onet_client("full-map")).context("running onet full-map")?;
-        Ok(())
+        let ctx = TestContext::new();
+        let mut ascendd = Ascendd::new(&ctx).context("creating ascendd")?;
+        ctx.show_reports_if_failed(|| {
+            ascendd.add_interface_passing_server().context("starting server")?;
+            ctx.run_client(ascendd.interface_passing_client()).context("running client")?;
+            ctx.run_client(ascendd.onet_client("full-map")).context("running onet full-map")?;
+            Ok(())
+        })
     }
 }
 
