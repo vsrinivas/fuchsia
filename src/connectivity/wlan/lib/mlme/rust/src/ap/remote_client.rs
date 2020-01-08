@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        ap::{Context, TimedEvent},
+        ap::{frame_writer, Context, TimedEvent},
         buffer::{InBuf, OutBuf},
         device::TxFlags,
         error::Error,
@@ -13,6 +13,7 @@ use {
     banjo_ddk_hw_wlan_ieee80211::*,
     banjo_ddk_protocol_wlan_info::*,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    std::collections::VecDeque,
     wlan_common::{
         appendable::Appendable,
         buffer_writer::BufferWriter,
@@ -30,6 +31,25 @@ use {
 /// Association Response and Reassociation Response frames, which contains a 16-bit integer.
 // TODO(37891): Move this setting into the SME.
 const BSS_MAX_IDLE_PERIOD: u16 = 90;
+
+#[derive(Debug)]
+struct Buffered {
+    in_buf: InBuf,
+    bytes_written: usize,
+    tx_flags: TxFlags,
+}
+
+#[derive(Debug)]
+enum PowerSaveState {
+    /// The device is awake.
+    Awake,
+
+    /// The device is dozing.
+    Dozing {
+        /// Buffered frames that will be sent once the device wakes up.
+        buffered: VecDeque<Buffered>,
+    },
+}
 
 /// The MLME state machine. The actual state machine transitions are managed and validated in the
 /// SME: we only use these states to determine when packets can be sent and received.
@@ -76,6 +96,8 @@ impl State {
 pub struct RemoteClient {
     pub addr: MacAddr,
     state: StateMachine<State>,
+    /// Power-saving state of the client.
+    ps_state: PowerSaveState,
 }
 
 #[derive(Debug)]
@@ -133,7 +155,11 @@ pub enum ClientEvent {
 // TODO(37891): Implement action frame handling.
 impl RemoteClient {
     pub fn new(addr: MacAddr) -> Self {
-        Self { addr, state: StateMachine::new(State::Authenticating) }
+        Self {
+            addr,
+            state: StateMachine::new(State::Authenticating),
+            ps_state: PowerSaveState::Awake,
+        }
     }
 
     /// Returns if the client is deauthenticated. The caller should use this to check if the client
@@ -610,8 +636,114 @@ impl RemoteClient {
 
     /// Handles PS-Poll (IEEE Std 802.11-2016, 9.3.1.5) from the PHY.
     #[allow(dead_code)]
-    fn handle_ps_poll(&mut self, _ctx: &mut Context) -> Result<(), ClientRejection> {
-        // TODO(37891): Implement me!
+    fn handle_ps_poll(&mut self, ctx: &mut Context) -> Result<(), ClientRejection> {
+        match &mut self.ps_state {
+            PowerSaveState::Dozing { buffered } => {
+                let Buffered { mut in_buf, bytes_written, tx_flags } = match buffered.pop_front() {
+                    Some(buffered) => buffered,
+                    None => {
+                        // No frames available for the client to PS-Poll, just return OK.
+                        return Ok(());
+                    }
+                };
+
+                if !buffered.is_empty() {
+                    frame_writer::set_more_data(&mut in_buf.as_mut_slice()[..bytes_written])
+                        .map_err(ClientRejection::WlanSendError)?;
+                }
+
+                ctx.device.send_wlan_frame(OutBuf::from(in_buf, bytes_written), tx_flags).map_err(
+                    |s| {
+                        ClientRejection::WlanSendError(Error::Status(
+                            format!("error sending buffered frame on PS-Poll"),
+                            s,
+                        ))
+                    },
+                )?;
+            }
+            _ => {
+                return Err(ClientRejection::NotPermitted);
+            }
+        }
+        Ok(())
+    }
+
+    /// Moves an associated remote client's power saving state into Dozing.
+    #[allow(dead_code)]
+    fn doze(&mut self) -> Result<(), ClientRejection> {
+        match self.ps_state {
+            PowerSaveState::Awake => {
+                self.ps_state = PowerSaveState::Dozing {
+                    // TODO(41759): Impose some kind of limit on this.
+                    buffered: VecDeque::new(),
+                }
+            }
+            PowerSaveState::Dozing { .. } => {
+                // It is not an error to go from dozing to dozing.
+                return Ok(());
+            }
+        }
+        Ok(())
+    }
+
+    /// Moves an associated remote client's power saving state into Awake.
+    ///
+    /// This will also send all buffered frames.
+    #[allow(dead_code)]
+    fn wake(&mut self, ctx: &mut Context) -> Result<(), ClientRejection> {
+        let mut old_ps_state = PowerSaveState::Awake;
+        std::mem::swap(&mut self.ps_state, &mut old_ps_state);
+
+        let mut buffered = match old_ps_state {
+            PowerSaveState::Awake => {
+                // It is not an error to go from awake to awake.
+                return Ok(());
+            }
+            PowerSaveState::Dozing { buffered } => buffered,
+        };
+
+        // Take the last item from the queue first, since it will be the only one not marked needing
+        // to be marked as more_data.
+        let last = match buffered.pop_back() {
+            Some(last) => last,
+            None => {
+                // No frames available for the client to send, just return OK.
+                return Ok(());
+            }
+        };
+
+        // We need to mark all of these frames' frame control fields with More Data, as per
+        // IEEE Std 802.11-2016, 11.2.3.2: The Power Management subfield(s) in the Frame Control
+        // field of the frame(s) sent by the STA in this exchange indicates the power management
+        // mode that the STA shall adopt upon successful completion of the entire frame exchange.
+        //
+        // As the client does not complete the entire frame exchange until all buffered frames are
+        // sent, we consider the client to be dozing until we finish sending it all its frames. As
+        // per IEEE Std 802.11-2016, 9.2.4.1.8, we need to mark all frames except the last frame
+        // with More Data.
+        for Buffered { mut in_buf, bytes_written, tx_flags } in buffered.into_iter() {
+            frame_writer::set_more_data(&mut in_buf.as_mut_slice()[..bytes_written])
+                .map_err(ClientRejection::WlanSendError)?;
+            ctx.device.send_wlan_frame(OutBuf::from(in_buf, bytes_written), tx_flags).map_err(
+                |s| {
+                    ClientRejection::WlanSendError(Error::Status(
+                        format!("error sending buffered frame on wake"),
+                        s,
+                    ))
+                },
+            )?;
+        }
+
+        // The last frame can be sent as-is.
+        ctx.device
+            .send_wlan_frame(OutBuf::from(last.in_buf, last.bytes_written), last.tx_flags)
+            .map_err(|s| {
+                ClientRejection::WlanSendError(Error::Status(
+                    format!("error sending buffered frame on wake"),
+                    s,
+                ))
+            })?;
+
         Ok(())
     }
 
@@ -871,8 +1003,15 @@ impl RemoteClient {
         bytes_written: usize,
         tx_flags: TxFlags,
     ) -> Result<(), zx::Status> {
-        // TODO(41759): Add queuing for PS-Poll.
-        ctx.device.send_wlan_frame(OutBuf::from(in_buf, bytes_written), tx_flags)
+        match &mut self.ps_state {
+            PowerSaveState::Awake => {
+                ctx.device.send_wlan_frame(OutBuf::from(in_buf, bytes_written), tx_flags)
+            }
+            PowerSaveState::Dozing { buffered } => {
+                buffered.push_back(Buffered { in_buf, bytes_written, tx_flags });
+                Ok(())
+            }
+        }
     }
 }
 
@@ -1422,7 +1561,89 @@ mod tests {
 
     #[test]
     fn handle_ps_poll() {
-        // TODO(37891): Implement me!
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
+
+        r_sta.doze().expect("expected doze OK");
+
+        // Send a bunch of Ethernet frames.
+        r_sta
+            .handle_eth_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
+            .expect("expected OK");
+        r_sta
+            .handle_eth_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[6, 7, 8, 9, 0][..])
+            .expect("expected OK");
+
+        // Make sure nothing has been actually sent to the WLAN queue.
+        assert_eq!(fake_device.wlan_queue.len(), 0);
+
+        r_sta.handle_ps_poll(&mut ctx).expect("expected handle_ps_poll OK");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b00001000, 0b00100010, // Frame Control
+                0, 0, // Duration
+                3, 3, 3, 3, 3, 3, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                0x10, 0, // Sequence Control
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x12, 0x34, // Protocol ID
+                // Data
+                1, 2, 3, 4, 5,
+            ][..]
+        );
+
+        r_sta.handle_ps_poll(&mut ctx).expect("expected handle_ps_poll OK");
+        assert_eq!(fake_device.wlan_queue.len(), 2);
+        assert_eq!(
+            &fake_device.wlan_queue[1].0[..],
+            &[
+                // Mgmt header
+                0b00001000, 0b00000010, // Frame Control
+                0, 0, // Duration
+                3, 3, 3, 3, 3, 3, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                0x20, 0, // Sequence Control
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x12, 0x34, // Protocol ID
+                // Data
+                6, 7, 8, 9, 0,
+            ][..]
+        );
+
+        r_sta.handle_ps_poll(&mut ctx).expect("expected handle_ps_poll OK");
+        assert_eq!(fake_device.wlan_queue.len(), 2);
+    }
+
+    #[test]
+    fn handle_ps_poll_not_dozing() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
+
+        assert_variant!(
+            r_sta.handle_ps_poll(&mut ctx).expect_err("expected handle_ps_poll error"),
+            ClientRejection::NotPermitted
+        );
     }
 
     #[test]
@@ -2051,5 +2272,97 @@ mod tests {
                 reason_code: fidl_mlme::ReasonCode::ReasonInactivity as u16,
             },
         );
+    }
+
+    #[test]
+    fn doze_then_wake() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
+
+        r_sta.doze().expect("expected doze OK");
+
+        // Send a bunch of Ethernet frames.
+        r_sta
+            .handle_eth_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..])
+            .expect("expected OK");
+        r_sta
+            .handle_eth_frame(&mut ctx, CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[6, 7, 8, 9, 0][..])
+            .expect("expected OK");
+
+        // Make sure nothing has been actually sent to the WLAN queue.
+        assert_eq!(fake_device.wlan_queue.len(), 0);
+
+        r_sta.wake(&mut ctx).expect("expected wake OK");
+        assert_eq!(fake_device.wlan_queue.len(), 2);
+
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b00001000, 0b00100010, // Frame Control
+                0, 0, // Duration
+                3, 3, 3, 3, 3, 3, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                0x10, 0, // Sequence Control
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x12, 0x34, // Protocol ID
+                // Data
+                1, 2, 3, 4, 5,
+            ][..]
+        );
+        assert_eq!(
+            &fake_device.wlan_queue[1].0[..],
+            &[
+                // Mgmt header
+                0b00001000, 0b00000010, // Frame Control
+                0, 0, // Duration
+                3, 3, 3, 3, 3, 3, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                0x20, 0, // Sequence Control
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x12, 0x34, // Protocol ID
+                // Data
+                6, 7, 8, 9, 0,
+            ][..]
+        );
+    }
+
+    #[test]
+    fn doze_then_doze() {
+        let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
+
+        r_sta.doze().expect("expected doze OK");
+        r_sta.doze().expect("expected doze OK");
+    }
+
+    #[test]
+    fn wake_then_wake() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(State::Associated {
+            eapol_controlled_port: None,
+            active_timeout_event_id: None,
+        });
+
+        r_sta.wake(&mut ctx).expect("expected wake OK");
+        r_sta.wake(&mut ctx).expect("expected wake OK");
     }
 }
