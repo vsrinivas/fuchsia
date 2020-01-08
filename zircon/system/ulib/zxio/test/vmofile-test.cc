@@ -37,7 +37,7 @@ TEST(VmoFileTest, Basic) {
   zxio_node_attr_t attr = {};
   ASSERT_OK(zxio_attr_get(io, &attr));
   EXPECT_EQ(len, attr.content_size);
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_attr_set(io, 0u, &attr));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_attr_set(io, &attr));
   char buffer[1024];
   memset(buffer, 0, sizeof(buffer));
   size_t actual = 0u;

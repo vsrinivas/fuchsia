@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/io.h>
+#include <lib/zxio/inception.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -14,8 +15,14 @@ zx_status_t fdio_default_get_attr(fdio_t* io, zxio_node_attr_t* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags, const zxio_node_attr_t* attr) {
+zx_status_t fdio_default_set_attr(fdio_t* io, const zxio_node_attr_t* attr) {
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+uint32_t fdio_default_convert_to_posix_mode(fdio_t* io, zxio_node_protocols_t protocols,
+                                            zxio_abilities_t abilities) {
+  return zxio_node_protocols_to_posix_type(protocols) |
+         zxio_abilities_to_posix_permissions_for_file(abilities);
 }
 
 zx_status_t fdio_default_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
@@ -70,6 +77,10 @@ zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags, uint
 zx_status_t fdio_default_clone(fdio_t* io, zx_handle_t* out_handle) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* out_handle) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_borrow_channel(fdio_t* io, zx_handle_t* out_handle) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

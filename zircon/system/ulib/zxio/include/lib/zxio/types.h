@@ -5,6 +5,7 @@
 #ifndef LIB_ZXIO_TYPES_H_
 #define LIB_ZXIO_TYPES_H_
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 
@@ -70,13 +71,69 @@ typedef uint32_t zxio_signals_t;
 
 // File and directory access ---------------------------------------------------
 
+// The set of supported representations of a node.
+// Refer to |fuchsia.io2/NodeProtocolSet| for the documentation of each item.
+typedef uint64_t zxio_node_protocols_t;
+
+#define ZXIO_NODE_PROTOCOL_NONE ((zxio_node_protocols_t)0ul)
+
+#define ZXIO_NODE_PROTOCOL_CONNECTOR ((zxio_node_protocols_t)1ul << 0)
+#define ZXIO_NODE_PROTOCOL_DIRECTORY ((zxio_node_protocols_t)1ul << 1)
+#define ZXIO_NODE_PROTOCOL_FILE ((zxio_node_protocols_t)1ul << 2)
+#define ZXIO_NODE_PROTOCOL_MEMORY ((zxio_node_protocols_t)1ul << 3)
+#define ZXIO_NODE_PROTOCOL_POSIX_SOCKET ((zxio_node_protocols_t)1ul << 4)
+#define ZXIO_NODE_PROTOCOL_PIPE ((zxio_node_protocols_t)1ul << 5)
+#define ZXIO_NODE_PROTOCOL_DEBUGLOG ((zxio_node_protocols_t)1ul << 6)
+#define ZXIO_NODE_PROTOCOL_DEVICE ((zxio_node_protocols_t)0x10000000ul)
+#define ZXIO_NODE_PROTOCOL_TTY ((zxio_node_protocols_t)0x20000000ul)
+
+#define ZXIO_NODE_PROTOCOL_ALL                                                             \
+  (ZXIO_NODE_PROTOCOL_CONNECTOR | ZXIO_NODE_PROTOCOL_DIRECTORY | ZXIO_NODE_PROTOCOL_FILE | \
+   ZXIO_NODE_PROTOCOL_MEMORY | ZXIO_NODE_PROTOCOL_POSIX_SOCKET | ZXIO_NODE_PROTOCOL_PIPE | \
+   ZXIO_NODE_PROTOCOL_DEBUGLOG | ZXIO_NODE_PROTOCOL_DEVICE | ZXIO_NODE_PROTOCOL_TTY)
+
+typedef uint64_t zxio_node_id_t;
+
+// The kinds of operations behind |zxio_rights_t| and |zxio_abilities_t|.
+// Refer to |fuchsia.io2/Operations| for the documentation of each item.
+typedef uint64_t zxio_operations_t;
+
+#define ZXIO_OPERATION_NONE ((zxio_operations_t)0ul)
+
+#define ZXIO_OPERATION_CONNECT ((zxio_operations_t)1ul << 0)
+#define ZXIO_OPERATION_READ_BYTES ((zxio_operations_t)1ul << 1)
+#define ZXIO_OPERATION_WRITE_BYTES ((zxio_operations_t)1ul << 2)
+#define ZXIO_OPERATION_EXECUTE ((zxio_operations_t)1ul << 3)
+#define ZXIO_OPERATION_GET_ATTRIBUTES ((zxio_operations_t)1ul << 4)
+#define ZXIO_OPERATION_UPDATE_ATTRIBUTES ((zxio_operations_t)1ul << 5)
+#define ZXIO_OPERATION_ENUMERATE ((zxio_operations_t)1ul << 6)
+#define ZXIO_OPERATION_TRAVERSE ((zxio_operations_t)1ul << 7)
+#define ZXIO_OPERATION_MODIFY_DIRECTORY ((zxio_operations_t)1ul << 8)
+#define ZXIO_OPERATION_ADMIN ((zxio_operations_t)0x100000000000000ul)
+
+#define ZXIO_OPERATION_ALL                                                                     \
+  (ZXIO_OPERATION_CONNECT | ZXIO_OPERATION_READ_BYTES | ZXIO_OPERATION_WRITE_BYTES |           \
+   ZXIO_OPERATION_EXECUTE | ZXIO_OPERATION_GET_ATTRIBUTES | ZXIO_OPERATION_UPDATE_ATTRIBUTES | \
+   ZXIO_OPERATION_ENUMERATE | ZXIO_OPERATION_TRAVERSE | ZXIO_OPERATION_MODIFY_DIRECTORY |      \
+   ZXIO_OPERATION_ADMIN)
+
+typedef zxio_operations_t zxio_rights_t;
+typedef zxio_operations_t zxio_abilities_t;
+
 // Objective information about a node.
+//
+// Each field has a corresponding presence indicator. When creating
+// a new object, it is desirable to use the ZXIO_NODE_ATTR_SET helper macro
+// to set the fields, to avoid forgetting to change the presence indicator.
 typedef struct zxio_node_attr {
-  // Protection bits and node type information.
-  uint32_t mode;
+  // The kinds of representations supported by the node.
+  zxio_node_protocols_t protocols;
+
+  // The kinds of operations supported by the node.
+  zxio_abilities_t abilities;
 
   // A filesystem-unique ID.
-  uint64_t id;
+  zxio_node_id_t id;
 
   // Node size, in bytes.
   uint64_t content_size;
@@ -92,7 +149,79 @@ typedef struct zxio_node_attr {
 
   // Time of last modification in ns since Unix epoch, UTC.
   uint64_t modification_time;
+
+  // Presence indicator for these fields.
+  //
+  // If a particular field is absent, it should be set to zero/none,
+  // and the corresponding presence indicator will be false.
+  // Therefore, a completely empty |zxio_node_attr_t| may be conveniently
+  // obtained via value-initialization e.g. `zxio_node_attr_t a = {};`.
+  struct has_t {
+    bool protocols;
+    bool abilities;
+    bool id;
+    bool content_size;
+    bool storage_size;
+    bool link_count;
+    bool creation_time;
+    bool modification_time;
+
+#ifdef __cplusplus
+    constexpr bool operator==(const has_t& other) const {
+      return protocols == other.protocols && abilities == other.abilities && id == other.id &&
+             content_size == other.content_size && storage_size == other.storage_size &&
+             link_count == other.link_count && creation_time == other.creation_time &&
+             modification_time == other.modification_time;
+    }
+    constexpr bool operator!=(const has_t& other) const {
+      return !(*this == other);
+    }
+#endif  // _cplusplus
+  } has;
+
+#ifdef __cplusplus
+  constexpr bool operator==(const zxio_node_attr& other) const {
+    if (has != other.has) {
+      return false;
+    }
+    if (has.protocols && (protocols != other.protocols)) {
+      return false;
+    }
+    if (has.abilities && (abilities != other.abilities)) {
+      return false;
+    }
+    if (has.id && (id != other.id)) {
+      return false;
+    }
+    if (has.content_size && (content_size != other.content_size)) {
+      return false;
+    }
+    if (has.storage_size && (storage_size != other.storage_size)) {
+      return false;
+    }
+    if (has.link_count && (link_count != other.link_count)) {
+      return false;
+    }
+    if (has.creation_time && (creation_time != other.creation_time)) {
+      return false;
+    }
+    if (has.modification_time && (modification_time != other.modification_time)) {
+      return false;
+    }
+    return true;
+  }
+  constexpr bool operator!=(const zxio_node_attr& other) const {
+    return !(*this == other);
+  }
+#endif  // _cplusplus
 } zxio_node_attr_t;
+
+#define ZXIO_NODE_ATTR_SET(attr, field_name, value) \
+  do {                                              \
+    zxio_node_attr_t* _tmp_attr = &(attr);          \
+    _tmp_attr->field_name = value;                  \
+    _tmp_attr->has.field_name = true;               \
+  } while (0)
 
 typedef uint32_t zxio_seek_origin_t;
 

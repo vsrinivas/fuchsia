@@ -30,7 +30,7 @@ void zxio_default_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_
 void zxio_default_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals);
 zx_status_t zxio_default_sync(zxio_t* io);
 zx_status_t zxio_default_attr_get(zxio_t* io, zxio_node_attr_t* out_attr);
-zx_status_t zxio_default_attr_set(zxio_t* io, uint32_t flags, const zxio_node_attr_t* attr);
+zx_status_t zxio_default_attr_set(zxio_t* io, const zxio_node_attr_t* attr);
 zx_status_t zxio_default_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
                                      zxio_flags_t flags, size_t* out_actual);
 zx_status_t zxio_default_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,

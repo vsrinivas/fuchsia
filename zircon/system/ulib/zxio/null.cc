@@ -31,7 +31,7 @@ zx_status_t zxio_default_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_attr_set(zxio_t* io, uint32_t flags, const zxio_node_attr_t* attr) {
+zx_status_t zxio_default_attr_set(zxio_t* io, const zxio_node_attr_t* attr) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

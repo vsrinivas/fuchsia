@@ -47,14 +47,19 @@ typedef struct fdio_ops {
   zx_status_t (*close)(fdio_t* io);
   zx_status_t (*open)(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out);
   zx_status_t (*clone)(fdio_t* io, zx_handle_t* out_handle);
+  // |unwrap| releases the underlying handle if applicable.
   zx_status_t (*unwrap)(fdio_t* io, zx_handle_t* out_handle);
+  // |borrow_channel| borrows the underlying handle if applicable.
+  zx_status_t (*borrow_channel)(fdio_t* io, zx_handle_t* out_handle);
   void (*wait_begin)(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* signals);
   void (*wait_end)(fdio_t* io, zx_signals_t signals, uint32_t* events);
   zx_status_t (*posix_ioctl)(fdio_t* io, int req, va_list va);
   zx_status_t (*get_vmo)(fdio_t* io, int flags, zx::vmo* out);
   zx_status_t (*get_token)(fdio_t* io, zx_handle_t* out);
   zx_status_t (*get_attr)(fdio_t* io, zxio_node_attr_t* out);
-  zx_status_t (*set_attr)(fdio_t* io, uint32_t flags, const zxio_node_attr_t* attr);
+  zx_status_t (*set_attr)(fdio_t* io, const zxio_node_attr_t* attr);
+  uint32_t (*convert_to_posix_mode)(fdio_t* io, zxio_node_protocols_t protocols,
+                                    zxio_abilities_t abilities);
   zx_status_t (*dirent_iterator_init)(fdio_t* io, zxio_dirent_iterator_t* iterator,
                                       zxio_t* directory, void* buffer, size_t capacity);
   zx_status_t (*dirent_iterator_next)(fdio_t* io, zxio_dirent_iterator_t* iterator,
@@ -303,7 +308,10 @@ fdio_t* fdio_waitable_create(zx_handle_t h, zx_signals_t signals_in, zx_signals_
 
 // unsupported / do-nothing hooks shared by implementations
 zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out);
-zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags, const zxio_node_attr_t* attr);
+zx_status_t fdio_default_set_attr(fdio_t* io, const zxio_node_attr_t* attr);
+// Defaults to running conversion assuming the object is a file.
+uint32_t fdio_default_convert_to_posix_mode(fdio_t* io, zxio_node_protocols_t protocols,
+                                            zxio_abilities_t abilities);
 zx_status_t fdio_default_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
                                               zxio_t* directory, void* buffer, size_t capacity);
 zx_status_t fdio_default_dirent_iterator_next(fdio_t* io, zxio_dirent_iterator_t* iterator,
@@ -329,6 +337,7 @@ void fdio_default_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
                              zx_signals_t* _signals);
 void fdio_default_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events);
 zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* out_handle);
+zx_status_t fdio_default_borrow_channel(fdio_t* io, zx_handle_t* out_handle);
 zx_status_t fdio_default_bind(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
                               int16_t* out_code);
 zx_status_t fdio_default_connect(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,

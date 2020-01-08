@@ -104,9 +104,9 @@ zx_status_t zxio_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
   return zio->ops->attr_get(io, out_attr);
 }
 
-zx_status_t zxio_attr_set(zxio_t* io, uint32_t flags, const zxio_node_attr_t* attr) {
+zx_status_t zxio_attr_set(zxio_t* io, const zxio_node_attr_t* attr) {
   zxio_internal_t* zio = to_internal(io);
-  return zio->ops->attr_set(io, flags, attr);
+  return zio->ops->attr_set(io, attr);
 }
 
 zx_status_t zxio_read(zxio_t* io, void* buffer, size_t capacity, zxio_flags_t flags,

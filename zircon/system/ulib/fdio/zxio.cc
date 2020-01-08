@@ -112,9 +112,9 @@ static zx_status_t fdio_zxio_get_attr(fdio_t* io, zxio_node_attr_t* out) {
   return zxio_attr_get(z, out);
 }
 
-static zx_status_t fdio_zxio_set_attr(fdio_t* io, uint32_t flags, const zxio_node_attr_t* attr) {
+static zx_status_t fdio_zxio_set_attr(fdio_t* io, const zxio_node_attr_t* attr) {
   zxio_t* z = fdio_get_zxio(io);
-  return zxio_attr_set(z, flags, attr);
+  return zxio_attr_set(z, attr);
 }
 
 static zx_status_t fdio_zxio_truncate(fdio_t* io, off_t off) {
@@ -183,11 +183,12 @@ static void fdio_zxio_dirent_iterator_destroy(fdio_t* io, zxio_dirent_iterator_t
 
 // Generic ---------------------------------------------------------------------
 
-static fdio_ops_t fdio_zxio_ops = {
+static constexpr fdio_ops_t fdio_zxio_ops = {
     .close = fdio_zxio_close,
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
     .unwrap = fdio_zxio_unwrap,
+    .borrow_channel = fdio_default_borrow_channel,
     .wait_begin = fdio_zxio_wait_begin,
     .wait_end = fdio_zxio_wait_end,
     .posix_ioctl = fdio_default_posix_ioctl,
@@ -195,6 +196,7 @@ static fdio_ops_t fdio_zxio_ops = {
     .get_token = fdio_default_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
+    .convert_to_posix_mode = fdio_default_convert_to_posix_mode,
     .dirent_iterator_init = fdio_zxio_dirent_iterator_init,
     .dirent_iterator_next = fdio_zxio_dirent_iterator_next,
     .dirent_iterator_destroy = fdio_zxio_dirent_iterator_destroy,
@@ -286,6 +288,12 @@ static zxio_signals_t zxio_signals_to_poll_events(zxio_signals_t signals) {
 
 static zxio_remote_t* fdio_get_zxio_remote(fdio_t* io) { return (zxio_remote_t*)fdio_get_zxio(io); }
 
+static zx_status_t fdio_zxio_remote_borrow_channel(fdio_t* io, zx_handle_t* out_borrowed) {
+  zxio_remote_t* remote = fdio_get_zxio_remote(io);
+  *out_borrowed = remote->control;
+  return ZX_OK;
+}
+
 static void fdio_zxio_remote_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
                                         zx_signals_t* signals) {
   // POLLERR is always detected
@@ -300,11 +308,12 @@ static void fdio_zxio_remote_wait_end(fdio_t* io, zx_signals_t signals, uint32_t
   *events = zxio_signals_to_poll_events(zxio_signals);
 }
 
-static fdio_ops_t fdio_zxio_remote_ops = {
+static constexpr fdio_ops_t fdio_zxio_remote_ops = {
     .close = fdio_zxio_close,
     .open = fdio_zxio_open,
     .clone = fdio_zxio_clone,
     .unwrap = fdio_zxio_unwrap,
+    .borrow_channel = fdio_zxio_remote_borrow_channel,
     .wait_begin = fdio_zxio_remote_wait_begin,
     .wait_end = fdio_zxio_remote_wait_end,
     .posix_ioctl = fdio_default_posix_ioctl,
@@ -312,6 +321,7 @@ static fdio_ops_t fdio_zxio_remote_ops = {
     .get_token = fdio_zxio_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
+    .convert_to_posix_mode = fdio_default_convert_to_posix_mode,
     .dirent_iterator_init = fdio_zxio_dirent_iterator_init,
     .dirent_iterator_next = fdio_zxio_dirent_iterator_next,
     .dirent_iterator_destroy = fdio_zxio_dirent_iterator_destroy,
@@ -348,8 +358,22 @@ fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
   return io;
 }
 
+uint32_t fdio_dir_convert_to_posix_mode(fdio_t* io, zxio_node_protocols_t protocols,
+                                        zxio_abilities_t abilities) {
+  return zxio_node_protocols_to_posix_type(protocols) |
+         zxio_abilities_to_posix_permissions_for_directory(abilities);
+}
+
+static constexpr fdio_ops_t fdio_zxio_dir_ops = ([] {
+  fdio_ops_t remote_ops = fdio_zxio_remote_ops;
+  // Override |convert_to_posix_mode| for directories, since directories
+  // have different semantics for the "rwx" bits.
+  remote_ops.convert_to_posix_mode = fdio_dir_convert_to_posix_mode;
+  return remote_ops;
+})();
+
 fdio_t* fdio_dir_create(zx_handle_t control) {
-  fdio_t* io = fdio_alloc(&fdio_zxio_remote_ops);
+  fdio_t* io = fdio_alloc(&fdio_zxio_dir_ops);
   if (io == NULL) {
     zx_handle_close(control);
     return NULL;
@@ -392,12 +416,8 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
     return ZX_ERR_UNAVAILABLE;
   } else {
     mtx_unlock(&fdio_lock);
-    zx_status_t r;
-    if (fdio_get_ops(io) == &fdio_zxio_remote_ops) {
-      zxio_remote_t* file = fdio_get_zxio_remote(io);
-      r = zxio_release(&file->io, out);
-    } else {
-      r = ZX_ERR_NOT_SUPPORTED;
+    zx_status_t r = fdio_get_ops(io)->unwrap(io, out);
+    if (r != ZX_OK) {
       fdio_get_ops(io)->close(io);
     }
     fdio_release(io);
@@ -411,11 +431,11 @@ zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) {
     return ZX_HANDLE_INVALID;
   }
 
-  if (fdio_get_ops(io) == &fdio_zxio_remote_ops) {
-    zxio_remote_t* file = fdio_get_zxio_remote(io);
-    return file->control;
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  if (fdio_get_ops(io)->borrow_channel(io, &handle) != ZX_OK) {
+    return ZX_HANDLE_INVALID;
   }
-  return ZX_HANDLE_INVALID;
+  return handle;
 }
 
 // Vmo -------------------------------------------------------------------------
@@ -497,11 +517,12 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags, zx::vmo* out
   return file->vmo.vmo.duplicate(rights, out_vmo);
 }
 
-static fdio_ops_t fdio_zxio_vmofile_ops = {
+static constexpr fdio_ops_t fdio_zxio_vmofile_ops = {
     .close = fdio_zxio_close,
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
     .unwrap = fdio_zxio_unwrap,
+    .borrow_channel = fdio_default_borrow_channel,
     .wait_begin = fdio_default_wait_begin,
     .wait_end = fdio_default_wait_end,
     .posix_ioctl = fdio_default_posix_ioctl,
@@ -509,6 +530,7 @@ static fdio_ops_t fdio_zxio_vmofile_ops = {
     .get_token = fdio_default_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
+    .convert_to_posix_mode = fdio_default_convert_to_posix_mode,
     .dirent_iterator_init = fdio_default_dirent_iterator_init,
     .dirent_iterator_next = fdio_default_dirent_iterator_next,
     .dirent_iterator_destroy = fdio_default_dirent_iterator_destroy,
@@ -643,11 +665,12 @@ static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how, int16_t* out_cod
   return fdio_zx_socket_shutdown(fdio_get_zxio_pipe(io)->socket, how);
 }
 
-static fdio_ops_t fdio_zxio_pipe_ops = {
+static constexpr fdio_ops_t fdio_zxio_pipe_ops = {
     .close = fdio_zxio_close,
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
     .unwrap = fdio_zxio_unwrap,
+    .borrow_channel = fdio_default_borrow_channel,
     .wait_begin = fdio_zxio_wait_begin,
     .wait_end = fdio_zxio_wait_end,
     .posix_ioctl = fdio_zxio_pipe_posix_ioctl,
@@ -655,6 +678,7 @@ static fdio_ops_t fdio_zxio_pipe_ops = {
     .get_token = fdio_default_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
+    .convert_to_posix_mode = fdio_default_convert_to_posix_mode,
     .dirent_iterator_init = fdio_default_dirent_iterator_init,
     .dirent_iterator_next = fdio_default_dirent_iterator_next,
     .dirent_iterator_destroy = fdio_default_dirent_iterator_destroy,

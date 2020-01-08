@@ -89,8 +89,8 @@ zx_status_t zxio_attr_get(zxio_t* io, zxio_node_attr_t* out_attr);
 
 // Update information about the file.
 //
-// See io.fidl for the available |flags|.
-zx_status_t zxio_attr_set(zxio_t* io, uint32_t flags, const zxio_node_attr_t* attr);
+// The presence of a particular field in |attr| indicates it is to be updated.
+zx_status_t zxio_attr_set(zxio_t* io, const zxio_node_attr_t* attr);
 
 // File
 

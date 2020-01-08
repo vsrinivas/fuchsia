@@ -25,7 +25,7 @@ TEST(NullTest, Basic) {
 
   zxio_node_attr_t attr = {};
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_attr_get(&io, &attr));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_attr_set(&io, 0u, &attr));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_attr_set(&io, &attr));
   char buffer[1024];
   memset(buffer, 0, sizeof(buffer));
   size_t actual = 5u;

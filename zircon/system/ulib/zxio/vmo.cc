@@ -40,8 +40,10 @@ static zx_status_t zxio_vmo_clone(zxio_t* io, zx_handle_t* out_handle) {
 static zx_status_t zxio_vmo_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
   *out_attr = {};
-  out_attr->mode = S_IFREG | S_IRUSR;
-  out_attr->content_size = file->size;
+  ZXIO_NODE_ATTR_SET(*out_attr, protocols, ZXIO_NODE_PROTOCOL_FILE | ZXIO_NODE_PROTOCOL_MEMORY);
+  ZXIO_NODE_ATTR_SET(*out_attr, abilities,
+                     ZXIO_OPERATION_READ_BYTES | ZXIO_OPERATION_GET_ATTRIBUTES);
+  ZXIO_NODE_ATTR_SET(*out_attr, content_size, file->size);
   return ZX_OK;
 }
 

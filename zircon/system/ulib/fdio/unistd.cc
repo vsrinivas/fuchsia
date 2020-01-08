@@ -777,8 +777,8 @@ static zx_status_t fdio_stat(fdio_t* io, struct stat* s) {
   }
 
   memset(s, 0, sizeof(struct stat));
-  s->st_mode = attr.mode;
-  s->st_ino = attr.id;
+  s->st_mode = fdio_get_ops(io)->convert_to_posix_mode(io, attr.protocols, attr.abilities);
+  s->st_ino = attr.has.id ? attr.id : fio::INO_UNKNOWN;
   s->st_size = attr.content_size;
   s->st_blksize = VNATTR_BLKSIZE;
   s->st_blocks = attr.storage_size / VNATTR_BLKSIZE;
@@ -1494,28 +1494,28 @@ char* realpath(const char* __restrict filename, char* __restrict resolved) {
 }
 
 static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2], int flags) {
-  zxio_node_attr_t attr;
-  uint32_t mask = 0;
+  zxio_node_attr_t attr = {};
 
+  uint64_t modification_time;
   // Extract modify time.
   if (times == NULL || times[1].tv_nsec == UTIME_NOW) {
-    zx_time_t now = 0;
+    zx_time_t now;
     zx_status_t status = zx_clock_get(ZX_CLOCK_UTC, &now);
     if (status != ZX_OK) {
       return status;
     }
-    attr.modification_time = now;
+    modification_time = now;
   } else {
-    attr.modification_time = zx_time_add_duration(ZX_SEC(times[1].tv_sec), times[1].tv_nsec);
+    modification_time = zx_time_add_duration(ZX_SEC(times[1].tv_sec), times[1].tv_nsec);
   }
 
   if (times == NULL || times[1].tv_nsec != UTIME_OMIT) {
     // For setattr, tell which fields are valid.
-    mask = fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME;
+    ZXIO_NODE_ATTR_SET(attr, modification_time, modification_time);
   }
 
   // set time(s) on underlying object
-  return fdio_get_ops(io)->set_attr(io, mask, &attr);
+  return fdio_get_ops(io)->set_attr(io, &attr);
 }
 
 __EXPORT

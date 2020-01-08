@@ -291,6 +291,12 @@ static zx_status_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, in
   return fdio_zxio_sendmsg(io, msg, flags, out_actual, out_code);
 }
 
+static zx_status_t zxsio_borrow_channel(fdio_t* io, zx_handle_t* out_handle) {
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
+  *out_handle = sio->control.channel().get();
+  return ZX_OK;
+}
+
 static void fdio_wait_begin_socket(const zx::socket& socket, uint32_t* ioflag, uint32_t events,
                                    zx_handle_t* handle, zx_signals_t* out_signals) {
   *handle = socket.get();
@@ -542,6 +548,7 @@ static fdio_ops_t fdio_socket_stream_ops = {
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
     .unwrap = fdio_zxio_unwrap,
+    .borrow_channel = zxsio_borrow_channel,
     .wait_begin =
         [](fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) {
           auto const sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
@@ -554,6 +561,7 @@ static fdio_ops_t fdio_socket_stream_ops = {
     .get_token = fdio_default_get_token,
     .get_attr = fdio_default_get_attr,
     .set_attr = fdio_default_set_attr,
+    .convert_to_posix_mode = fdio_default_convert_to_posix_mode,
     .dirent_iterator_init = fdio_default_dirent_iterator_init,
     .dirent_iterator_next = fdio_default_dirent_iterator_next,
     .dirent_iterator_destroy = fdio_default_dirent_iterator_destroy,
@@ -581,6 +589,7 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
     .unwrap = fdio_zxio_unwrap,
+    .borrow_channel = zxsio_borrow_channel,
     .wait_begin = zxsio_wait_begin_dgram,
     .wait_end = zxsio_wait_end_dgram,
     .posix_ioctl = fdio_default_posix_ioctl,  // not supported
@@ -588,6 +597,7 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .get_token = fdio_default_get_token,
     .get_attr = fdio_default_get_attr,
     .set_attr = fdio_default_set_attr,
+    .convert_to_posix_mode = fdio_default_convert_to_posix_mode,
     .dirent_iterator_init = fdio_default_dirent_iterator_init,
     .dirent_iterator_next = fdio_default_dirent_iterator_next,
     .dirent_iterator_destroy = fdio_default_dirent_iterator_destroy,
@@ -650,6 +660,11 @@ static fdio_ops_t fdio_datagram_socket_ops = {
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
     .unwrap = fdio_zxio_unwrap,
+    .borrow_channel =
+        [](fdio_t* io, zx_handle_t* h) {
+          *h = fdio_datagram_socket_get_channel(io)->get();
+          return ZX_OK;
+        },
     .wait_begin =
         [](fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) {
           auto const sio = reinterpret_cast<zxio_datagram_socket_t*>(fdio_get_zxio(io));
@@ -690,6 +705,7 @@ static fdio_ops_t fdio_datagram_socket_ops = {
     .get_token = fdio_default_get_token,
     .get_attr = fdio_default_get_attr,
     .set_attr = fdio_default_set_attr,
+    .convert_to_posix_mode = fdio_default_convert_to_posix_mode,
     .dirent_iterator_init = fdio_default_dirent_iterator_init,
     .dirent_iterator_next = fdio_default_dirent_iterator_next,
     .dirent_iterator_destroy = fdio_default_dirent_iterator_destroy,
@@ -913,6 +929,11 @@ static fdio_ops_t fdio_stream_socket_ops = {
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
     .unwrap = fdio_zxio_unwrap,
+    .borrow_channel =
+        [](fdio_t* io, zx_handle_t* h) {
+          *h = fdio_stream_socket_get_channel(io)->get();
+          return ZX_OK;
+        },
     .wait_begin =
         [](fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) {
           auto const sio = reinterpret_cast<zxio_stream_socket_t*>(fdio_get_zxio(io));
@@ -929,6 +950,7 @@ static fdio_ops_t fdio_stream_socket_ops = {
     .get_token = fdio_default_get_token,
     .get_attr = fdio_default_get_attr,
     .set_attr = fdio_default_set_attr,
+    .convert_to_posix_mode = fdio_default_convert_to_posix_mode,
     .dirent_iterator_init = fdio_default_dirent_iterator_init,
     .dirent_iterator_next = fdio_default_dirent_iterator_next,
     .dirent_iterator_destroy = fdio_default_dirent_iterator_destroy,

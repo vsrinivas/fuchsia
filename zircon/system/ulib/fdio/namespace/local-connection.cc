@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <lib/fdio/namespace.h>
+#include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <zircon/device/vfs.h>
 #include <zircon/types.h>
@@ -80,10 +81,18 @@ zx_status_t local_dir_open(fdio_t* io, const char* path, uint32_t flags, uint32_
 
 zx_status_t local_dir_get_attr(fdio_t* io, zxio_node_attr_t* attr) {
   *attr = {};
-  attr->mode = V_TYPE_DIR | V_IRUSR;
-  attr->id = fio::INO_UNKNOWN;
-  attr->link_count = 1;
+  ZXIO_NODE_ATTR_SET(*attr, protocols, ZXIO_NODE_PROTOCOL_DIRECTORY);
+  ZXIO_NODE_ATTR_SET(*attr, abilities,
+                     ZXIO_OPERATION_ENUMERATE | ZXIO_OPERATION_TRAVERSE |
+                         ZXIO_OPERATION_GET_ATTRIBUTES);
+  ZXIO_NODE_ATTR_SET(*attr, link_count, 1);
   return ZX_OK;
+}
+
+uint32_t local_dir_convert_to_posix_mode(fdio_t* io, zxio_node_protocols_t protocols,
+                                         zxio_abilities_t abilities) {
+  return zxio_node_protocols_to_posix_type(protocols) |
+         zxio_abilities_to_posix_permissions_for_directory(abilities);
 }
 
 zx_status_t local_dir_unlink(fdio_t* io, const char* path, size_t len) {
@@ -135,10 +144,12 @@ constexpr fdio_ops_t kLocalConnectionOps = []() {
   ops.wait_begin = fdio_default_wait_begin;
   ops.wait_end = fdio_default_wait_end;
   ops.unwrap = fdio_default_unwrap;
+  ops.borrow_channel = fdio_default_borrow_channel;
   ops.posix_ioctl = fdio_default_posix_ioctl;
   ops.get_vmo = fdio_default_get_vmo;
   ops.get_token = fdio_default_get_token;
   ops.set_attr = fdio_default_set_attr;
+  ops.convert_to_posix_mode = local_dir_convert_to_posix_mode;
   ops.dirent_iterator_init = local_dir_dirent_iterator_init;
   ops.dirent_iterator_next = local_dir_dirent_iterator_next;
   ops.dirent_iterator_destroy = local_dir_dirent_iterator_destroy;
