@@ -4,6 +4,13 @@
 
 #pragma once
 
+#include <fuchsia/hardware/usb/device/llcpp/fidl.h>
+#include <lib/sync/completion.h>
+#include <threads.h>
+#include <zircon/hw/usb.h>
+
+#include <optional>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb.h>
 #include <ddktl/protocol/usb/bus.h>
@@ -13,15 +20,19 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <usb/usb-request.h>
-#include <lib/sync/completion.h>
 #include <usb/request-cpp.h>
-#include <zircon/hw/usb.h>
-
-#include <optional>
-#include <threads.h>
+#include <usb/usb-request.h>
 
 namespace usb_bus {
+
+// Abstract waiter class for waiting on a sync_completion_t.
+// This is necessary to allow injection of a timer by a test
+// into the UsbDevice class, allowing for a simulated clock.
+class UsbWaiterInterface : public fbl::RefCounted<UsbWaiterInterface> {
+ public:
+  virtual zx_status_t Wait(sync_completion_t* completion, zx_duration_t duration) = 0;
+  virtual ~UsbWaiterInterface() = default;
+};
 
 class UsbDevice;
 using UsbDeviceType =
@@ -29,16 +40,18 @@ using UsbDeviceType =
 
 class UsbDevice : public UsbDeviceType,
                   public ddk::UsbProtocol<UsbDevice, ddk::base_protocol>,
-                  public fbl::RefCounted<UsbDevice> {
+                  public fbl::RefCounted<UsbDevice>,
+                  public llcpp::fuchsia::hardware::usb::device::Device::Interface {
  public:
   UsbDevice(zx_device_t* parent, const ddk::UsbHciProtocolClient& hci, uint32_t device_id,
-            uint32_t hub_id, usb_speed_t speed)
+            uint32_t hub_id, usb_speed_t speed, fbl::RefPtr<UsbWaiterInterface> waiter)
       : UsbDeviceType(parent),
         device_id_(device_id),
         hub_id_(hub_id),
         speed_(speed),
         hci_(hci),
-        bus_(parent) {}
+        bus_(parent),
+        waiter_(waiter) {}
 
   static zx_status_t Create(zx_device_t* parent, const ddk::UsbHciProtocolClient& hci,
                             uint32_t device_id, uint32_t hub_id, usb_speed_t speed,
@@ -81,16 +94,20 @@ class UsbDevice : public UsbDeviceType,
   size_t UsbGetRequestSize();
 
   // FIDL messages.
-  zx_status_t MsgGetDeviceSpeed(fidl_txn_t* txn);
-  zx_status_t MsgGetDeviceDescriptor(fidl_txn_t* txn);
-  zx_status_t MsgGetConfigurationDescriptorSize(uint8_t config, fidl_txn_t* txn);
-  zx_status_t MsgGetConfigurationDescriptor(uint8_t config, fidl_txn_t* txn);
-  zx_status_t MsgGetStringDescriptor(uint8_t desc_id, uint16_t lang_id, fidl_txn_t* txn);
-  zx_status_t MsgSetInterface(uint8_t interface_number, uint8_t alt_setting, fidl_txn_t* txn);
-  zx_status_t MsgGetDeviceId(fidl_txn_t* txn);
-  zx_status_t MsgGetHubDeviceId(fidl_txn_t* txn);
-  zx_status_t MsgGetConfiguration(fidl_txn_t* txn);
-  zx_status_t MsgSetConfiguration(uint8_t configuration, fidl_txn_t* txn);
+  void GetDeviceSpeed(GetDeviceSpeedCompleter::Sync completer);
+  void GetDeviceDescriptor(GetDeviceDescriptorCompleter::Sync completer);
+  void GetConfigurationDescriptorSize(uint8_t config,
+                                      GetConfigurationDescriptorSizeCompleter::Sync completer);
+  void GetConfigurationDescriptor(uint8_t config,
+                                  GetConfigurationDescriptorCompleter::Sync completer);
+  void GetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
+                           GetStringDescriptorCompleter::Sync completer);
+  void SetInterface(uint8_t interface_number, uint8_t alt_setting,
+                    SetInterfaceCompleter::Sync completer);
+  void GetDeviceId(GetDeviceIdCompleter::Sync completer);
+  void GetHubDeviceId(GetHubDeviceIdCompleter::Sync completer);
+  void GetConfiguration(GetConfigurationCompleter::Sync completer);
+  void SetConfiguration(uint8_t configuration, SetConfigurationCompleter::Sync completer);
 
   // Hub support.
   void SetHubInterface(const usb_hub_interface_protocol_t* hub_intf);
@@ -102,6 +119,7 @@ class UsbDevice : public UsbDeviceType,
 
   inline uint32_t GetHubId() const { return hub_id_; }
   inline usb_speed_t GetSpeed() const { return speed_; }
+  zx_status_t Init();
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(UsbDevice);
@@ -123,8 +141,6 @@ class UsbDevice : public UsbDeviceType,
     UnownedRequestList pending_reqs __TA_GUARDED(lock);
     fbl::Mutex lock;
   };
-
-  zx_status_t Init();
 
   int CallbackThread();
   void StartCallbackThread();
@@ -189,6 +205,8 @@ class UsbDevice : public UsbDeviceType,
   usb::RequestPool<void> free_reqs_;
 
   size_t parent_req_size_;
+
+  fbl::RefPtr<UsbWaiterInterface> waiter_;
 };
 
 }  // namespace usb_bus

@@ -13,6 +13,7 @@ group("usb") {
     "mt-musb-host",
     "mt-musb-peripheral",
     "usb-bus",
+    "usb-bus:tests",
     "usb-composite",
     "usb-dfu",
     "usb-hub",

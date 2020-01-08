@@ -3,24 +3,44 @@
 # found in the LICENSE file.
 
 zx_driver("usb-bus") {
-  sources = [
-    "usb-bus.cc",
-    "usb-device.cc",
-  ]
+  sources = [ "usb-bus.cc" ]
+  deps = [ ":common" ]
+}
+
+source_set("common") {
+  sources = [ "usb-device.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.usb",
-    "$zx/system/banjo/ddk.protocol.usb.bus",
     "$zx/system/banjo/ddk.protocol.usb.composite",
-    "$zx/system/banjo/ddk.protocol.usb.hci",
     "$zx/system/banjo/ddk.protocol.usb.hub",
-    "$zx/system/banjo/ddk.protocol.usb.request",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/fidl/fuchsia-hardware-usb-device:c",
     "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/sync",
     "$zx/system/ulib/utf_conversion",
     "$zx/system/ulib/zircon",
+  ]
+  public_deps = [
+    "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.bus",
+    "$zx/system/banjo/ddk.protocol.usb.hci",
+    "$zx/system/banjo/ddk.protocol.usb.request",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/fidl/fuchsia-hardware-usb-device:llcpp",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/sync",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":usb-device" ]
+}
+
+zx_test("usb-device") {
+  sources = [ "tests/usb-device.cc" ]
+  deps = [
+    ":common",
+    "$zx/system/dev/lib/fake-bti",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/utf_conversion",
+    "$zx/system/ulib/zxtest",
   ]
 }

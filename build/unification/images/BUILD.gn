@@ -342,6 +342,7 @@ aggregate_manifest("legacy-image") {
     ":driver.virtio",
     ":driver.xhci",
     ":driver.zxcrypt",
+    ":test.sys.usb-device-test",
   ]
 
   # CPU-specific targets.
@@ -1565,13 +1566,9 @@ aggregate_manifest("migrated-image") {
 }
 
 aggregate_manifest("migrated-aux") {
-  deps = [
-    "//zircon/system/uapp/audio:test-manifest",
-  ]
+  deps = [ "//zircon/system/uapp/audio:test-manifest" ]
 }
 
 aggregate_manifest("migrated-tests") {
-  deps = [
-    "//zircon/system/uapp/audio:test-manifest",
-  ]
+  deps = [ "//zircon/system/uapp/audio:test-manifest" ]
 }

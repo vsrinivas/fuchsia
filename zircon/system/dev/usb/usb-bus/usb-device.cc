@@ -4,7 +4,7 @@
 
 #include "usb-device.h"
 
-#include <fuchsia/hardware/usb/device/c/fidl.h>
+#include <fuchsia/hardware/usb/device/llcpp/fidl.h>
 #include <zircon/hw/usb.h>
 
 #include <ddk/binding.h>
@@ -12,12 +12,20 @@
 #include <ddk/metadata.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb/bus.h>
+#include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 #include <utf_conversion/utf_conversion.h>
 
 #include "usb-bus.h"
 
 namespace usb_bus {
+
+class UsbWaiterImpl : public UsbWaiterInterface {
+ public:
+  zx_status_t Wait(sync_completion_t* completion, zx_duration_t duration) {
+    return sync_completion_wait(completion, duration);
+  }
+};
 
 // By default we create devices for the interfaces on the first configuration.
 // This table allows us to specify a different configuration for certain devices
@@ -318,7 +326,7 @@ zx_status_t UsbDevice::Control(uint8_t request_type, uint8_t request, uint16_t v
   };
   // Use request() instead of take() since we keep referring to the request below.
   hci_.RequestQueue(req->request(), &complete);
-  auto status = sync_completion_wait(&completion, timeout);
+  auto status = waiter_->Wait(&completion, timeout);
 
   if (status == ZX_OK) {
     status = req->request()->response.status;
@@ -327,7 +335,7 @@ zx_status_t UsbDevice::Control(uint8_t request_type, uint8_t request, uint16_t v
     sync_completion_reset(&completion);
     status = hci_.CancelAll(device_id_, 0);
     if (status == ZX_OK) {
-      sync_completion_wait(&completion, ZX_TIME_INFINITE);
+      waiter_->Wait(&completion, ZX_TIME_INFINITE);
       status = ZX_ERR_TIMED_OUT;
     }
   }
@@ -538,11 +546,9 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
                                               uint16_t* out_actual_lang_id, void* buf,
                                               size_t buflen, size_t* out_actual) {
   fbl::AutoLock lock(&state_lock_);
-
   //  If we have never attempted to load our language ID table, do so now.
   if (!lang_ids_.has_value()) {
     usb_langid_desc_t id_desc;
-
     size_t actual;
     auto result = GetDescriptor(USB_DT_STRING, 0, 0, &id_desc, sizeof(id_desc), &actual);
     if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
@@ -582,7 +588,6 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
     *out_actual = actual;
     return ZX_OK;
   }
-
   // Search for the requested language ID.
   uint32_t lang_ndx;
   for (lang_ndx = 0; lang_ndx < lang_ids_->bLength; ++lang_ndx) {
@@ -641,130 +646,119 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
 }
 
 zx_status_t UsbDevice::UsbCancelAll(uint8_t ep_address) {
-  return hci_.CancelAll(device_id_, ep_address);
+  zx_status_t status = hci_.CancelAll(device_id_, ep_address);
+  if (status != ZX_OK) {
+    return status;
+  }
+  // Stop the callback thread to prevent races.
+  StopCallbackThread();
+  // Complete all outstanding requests (host controller should have invoked all of the callbacks
+  // at this layer in the stack.
+  UnownedRequestQueue temp_queue;
+  {
+    fbl::AutoLock lock(&callback_lock_);
+    // Copy completed requests to a temp list so we can process them outside of our lock.
+    temp_queue = std::move(completed_reqs_);
+  }
+  // Call completion callbacks outside of the lock.
+  for (auto req = temp_queue.pop(); req; req = temp_queue.pop()) {
+    if (req->operation()->reset) {
+      req->Complete(hci_.ResetEndpoint(device_id_, req->operation()->reset_address), 0,
+                    req->private_storage()->silent_completions_count);
+      continue;
+    }
+    const auto& response = req->request()->response;
+    req->Complete(response.status, response.actual,
+                  req->private_storage()->silent_completions_count);
+  }
+
   // TODO(jocelyndang): after cancelling, we should check if the ep pending_reqs has any items.
   // We may have to do callbacks now if the requests already completed before the cancel
   // occurred, but the client did not request any callbacks.
+
+  {
+    fbl::AutoLock lock(&callback_lock_);
+    callback_thread_stop_ = false;
+    StartCallbackThread();
+  }
+  return ZX_OK;
 }
 
 uint64_t UsbDevice::UsbGetCurrentFrame() { return hci_.GetCurrentFrame(); }
 
 size_t UsbDevice::UsbGetRequestSize() { return UnownedRequest::RequestSize(parent_req_size_); }
 
-zx_status_t UsbDevice::MsgGetDeviceSpeed(fidl_txn_t* txn) {
-  return fuchsia_hardware_usb_device_DeviceGetDeviceSpeed_reply(txn, speed_);
+void UsbDevice::GetDeviceSpeed(GetDeviceSpeedCompleter::Sync completer) { completer.Reply(speed_); }
+
+void UsbDevice::GetDeviceDescriptor(GetDeviceDescriptorCompleter::Sync completer) {
+  fidl::Array<uint8_t, sizeof(device_desc_)> data;
+  memcpy(data.data(), &device_desc_, sizeof(device_desc_));
+  completer.Reply(std::move(data));
 }
 
-zx_status_t UsbDevice::MsgGetDeviceDescriptor(fidl_txn_t* txn) {
-  return fuchsia_hardware_usb_device_DeviceGetDeviceDescriptor_reply(
-      txn, reinterpret_cast<uint8_t*>(&device_desc_));
-}
-
-zx_status_t UsbDevice::MsgGetConfigurationDescriptorSize(uint8_t config, fidl_txn_t* txn) {
+void UsbDevice::GetConfigurationDescriptorSize(
+    uint8_t config, GetConfigurationDescriptorSizeCompleter::Sync completer) {
   auto* descriptor = GetConfigDesc(config);
   if (!descriptor) {
-    return fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSize_reply(
-        txn, ZX_ERR_INVALID_ARGS, 0);
+    completer.Reply(ZX_ERR_INVALID_ARGS, 0);
   }
 
   auto length = le16toh(descriptor->wTotalLength);
-  return fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSize_reply(txn, ZX_OK, length);
+  return completer.Reply(ZX_OK, length);
 }
 
-zx_status_t UsbDevice::MsgGetConfigurationDescriptor(uint8_t config, fidl_txn_t* txn) {
+void UsbDevice::GetConfigurationDescriptor(uint8_t config,
+                                           GetConfigurationDescriptorCompleter::Sync completer) {
   auto* descriptor = GetConfigDesc(config);
   if (!descriptor) {
-    return fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptor_reply(
-        txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
+    return completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
   }
 
   size_t length = le16toh(descriptor->wTotalLength);
-  return fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptor_reply(
-      txn, ZX_OK, reinterpret_cast<const uint8_t*>(descriptor), length);
+  return completer.Reply(
+      ZX_OK, fidl::VectorView<uint8_t>(
+                 const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(descriptor)), length));
 }
 
-zx_status_t UsbDevice::MsgGetStringDescriptor(uint8_t desc_id, uint16_t lang_id, fidl_txn_t* txn) {
-  char buffer[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
+void UsbDevice::GetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
+                                    GetStringDescriptorCompleter::Sync completer) {
+  char buffer[llcpp::fuchsia::hardware::usb::device::MAX_STRING_DESC_SIZE];
   size_t actual;
   auto status = UsbGetStringDescriptor(desc_id, lang_id, &lang_id, buffer, sizeof(buffer), &actual);
-  return fuchsia_hardware_usb_device_DeviceGetStringDescriptor_reply(txn, status, buffer, actual,
-                                                                     lang_id);
+  return completer.Reply(status, fidl::StringView(buffer, actual), lang_id);
 }
 
-zx_status_t UsbDevice::MsgSetInterface(uint8_t interface_number, uint8_t alt_setting,
-                                       fidl_txn_t* txn) {
+void UsbDevice::SetInterface(uint8_t interface_number, uint8_t alt_setting,
+                             SetInterfaceCompleter::Sync completer) {
   auto status = UsbSetInterface(interface_number, alt_setting);
-  return fuchsia_hardware_usb_device_DeviceSetInterface_reply(txn, status);
+  completer.Reply(status);
 }
 
-zx_status_t UsbDevice::MsgGetDeviceId(fidl_txn_t* txn) {
-  return fuchsia_hardware_usb_device_DeviceGetDeviceId_reply(txn, device_id_);
+void UsbDevice::GetDeviceId(GetDeviceIdCompleter::Sync completer) {
+  return completer.Reply(device_id_);
 }
 
-zx_status_t UsbDevice::MsgGetHubDeviceId(fidl_txn_t* txn) {
-  return fuchsia_hardware_usb_device_DeviceGetHubDeviceId_reply(txn, hub_id_);
+void UsbDevice::GetHubDeviceId(GetHubDeviceIdCompleter::Sync completer) {
+  completer.Reply(hub_id_);
 }
 
-zx_status_t UsbDevice::MsgGetConfiguration(fidl_txn_t* txn) {
+void UsbDevice::GetConfiguration(GetConfigurationCompleter::Sync completer) {
   fbl::AutoLock lock(&state_lock_);
 
   auto* descriptor = reinterpret_cast<usb_configuration_descriptor_t*>(
       config_descs_[current_config_index_].data());
-  return fuchsia_hardware_usb_device_DeviceGetConfiguration_reply(txn,
-                                                                  descriptor->bConfigurationValue);
+  completer.Reply(descriptor->bConfigurationValue);
 }
 
-zx_status_t UsbDevice::MsgSetConfiguration(uint8_t configuration, fidl_txn_t* txn) {
+void UsbDevice::SetConfiguration(uint8_t configuration, SetConfigurationCompleter::Sync completer) {
   auto status = UsbSetConfiguration(configuration);
-  return fuchsia_hardware_usb_device_DeviceSetConfiguration_reply(txn, status);
+  completer.Reply(status);
 }
-
-static fuchsia_hardware_usb_device_Device_ops_t fidl_ops = {
-    .GetDeviceSpeed =
-        [](void* ctx, fidl_txn_t* txn) {
-          return reinterpret_cast<UsbDevice*>(ctx)->MsgGetDeviceSpeed(txn);
-        },
-    .GetDeviceDescriptor =
-        [](void* ctx, fidl_txn_t* txn) {
-          return reinterpret_cast<UsbDevice*>(ctx)->MsgGetDeviceDescriptor(txn);
-        },
-    .GetConfigurationDescriptorSize =
-        [](void* ctx, uint8_t config, fidl_txn_t* txn) {
-          return reinterpret_cast<UsbDevice*>(ctx)->MsgGetConfigurationDescriptorSize(config, txn);
-        },
-    .GetConfigurationDescriptor =
-        [](void* ctx, uint8_t config, fidl_txn_t* txn) {
-          return reinterpret_cast<UsbDevice*>(ctx)->MsgGetConfigurationDescriptor(config, txn);
-        },
-    .GetStringDescriptor =
-        [](void* ctx, uint8_t desc_id, uint16_t lang_id, fidl_txn_t* txn) {
-          return reinterpret_cast<UsbDevice*>(ctx)->MsgGetStringDescriptor(desc_id, lang_id, txn);
-        },
-    .SetInterface =
-        [](void* ctx, uint8_t interface_number, uint8_t alt_setting, fidl_txn_t* txn) {
-          return reinterpret_cast<UsbDevice*>(ctx)->MsgSetInterface(interface_number, alt_setting,
-                                                                    txn);
-        },
-    .GetDeviceId =
-        [](void* ctx, fidl_txn_t* txn) {
-          return reinterpret_cast<UsbDevice*>(ctx)->MsgGetDeviceId(txn);
-        },
-    .GetHubDeviceId =
-        [](void* ctx, fidl_txn_t* txn) {
-          return reinterpret_cast<UsbDevice*>(ctx)->MsgGetHubDeviceId(txn);
-        },
-    .GetConfiguration =
-        [](void* ctx, fidl_txn_t* txn) {
-          return reinterpret_cast<UsbDevice*>(ctx)->MsgGetConfiguration(txn);
-        },
-    .SetConfiguration =
-        [](void* ctx, uint8_t configuration, fidl_txn_t* txn) {
-          return reinterpret_cast<UsbDevice*>(ctx)->MsgSetConfiguration(configuration, txn);
-        },
-};
 
 zx_status_t UsbDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_usb_device_Device_dispatch(this, txn, msg, &fidl_ops);
+  DdkTransaction transaction(txn);
+  llcpp::fuchsia::hardware::usb::device::Device::Dispatch(this, msg, &transaction);
+  return transaction.Status();
 }
 
 zx_status_t UsbDevice::HubResetPort(uint32_t port) {
@@ -779,7 +773,8 @@ zx_status_t UsbDevice::Create(zx_device_t* parent, const ddk::UsbHciProtocolClie
                               uint32_t device_id, uint32_t hub_id, usb_speed_t speed,
                               fbl::RefPtr<UsbDevice>* out_device) {
   fbl::AllocChecker ac;
-  auto device = fbl::MakeRefCountedChecked<UsbDevice>(&ac, parent, hci, device_id, hub_id, speed);
+  auto device = fbl::MakeRefCountedChecked<UsbDevice>(&ac, parent, hci, device_id, hub_id, speed,
+                                                      fbl::MakeRefCounted<UsbWaiterImpl>());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -798,7 +793,6 @@ zx_status_t UsbDevice::Init() {
   // We implement ZX_PROTOCOL_USB, but drivers bind to us as ZX_PROTOCOL_USB_DEVICE.
   // We also need this for the device to appear in /dev/class/usb-device/.
   ddk_proto_id_ = ZX_PROTOCOL_USB_DEVICE;
-
   parent_req_size_ = hci_.GetRequestSize();
 
   // read device descriptor
@@ -851,7 +845,6 @@ zx_status_t UsbDevice::Init() {
       return status;
     }
   }
-
   // we will create devices for interfaces on the first configuration by default
   uint8_t configuration = 1;
   const UsbConfigOverride* override = config_overrides;
@@ -879,7 +872,6 @@ zx_status_t UsbDevice::Init() {
     zxlogf(ERROR, "%s: USB_REQ_SET_CONFIGURATION failed\n", __func__);
     return status;
   }
-
   zxlogf(INFO, "* found USB device (0x%04x:0x%04x, USB %x.%x) config %u\n", device_desc_.idVendor,
          device_desc_.idProduct, device_desc_.bcdUSB >> 8, device_desc_.bcdUSB & 0xff,
          configuration);
@@ -898,12 +890,10 @@ zx_status_t UsbDevice::Init() {
       {BIND_USB_SUBCLASS, 0, device_desc_.bDeviceSubClass},
       {BIND_USB_PROTOCOL, 0, device_desc_.bDeviceProtocol},
   };
-
   status = DdkAdd(name, 0, props, countof(props), ZX_PROTOCOL_USB_DEVICE);
   if (status != ZX_OK) {
     return status;
   }
-
   // Hold a reference while devmgr has a pointer to this object.
   AddRef();
 
