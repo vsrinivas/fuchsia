@@ -62,9 +62,9 @@ class SemanticsManagerTest : public gtest::TestLoopFixture {
 
   vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
 
+  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<MockSemanticTreeServiceFactory> factory_;
   MockSemanticTreeServiceFactory* factory_ptr_;
-  sys::testing::ComponentContextProvider context_provider_;
   a11y::SemanticsManager semantics_manager_;
 };
 
@@ -110,6 +110,31 @@ TEST_F(SemanticsManagerTest, ClosesChannel) {
   const auto invalid_tree_weak_ptr =
       semantics_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
   EXPECT_FALSE(invalid_tree_weak_ptr);
+}
+
+// Tests that log file is removed when semantic tree service entry is removed from semantics
+// manager.
+TEST_F(SemanticsManagerTest, LogFileRemoved) {
+  semantics_manager_.SetSemanticsManagerEnabled(true);
+  MockSemanticProvider semantic_provider(&semantics_manager_);
+  RunLoopUntilIdle();
+  const auto tree_weak_ptr =
+      semantics_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
+  std::string debug_file = std::to_string(a11y::GetKoid(semantic_provider.view_ref()));
+  {
+    vfs::internal::Node* node;
+    EXPECT_EQ(ZX_OK, debug_dir()->Lookup(debug_file, &node));
+  }
+
+  // Forces the client to disconnect.
+  semantic_provider.SendEventPairSignal();
+  RunLoopUntilIdle();
+
+  // Check Log File is removed.
+  {
+    vfs::internal::Node* node;
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, debug_dir()->Lookup(debug_file, &node));
+  }
 }
 
 }  // namespace accessibility_test

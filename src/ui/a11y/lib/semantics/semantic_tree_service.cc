@@ -53,10 +53,14 @@ SemanticTreeService::SemanticTreeService(
         this->PerformHitTesting(local_point, std::move(callback));
       });
   wait_.Begin(async_get_default_dispatcher());
+  debug_file_name_ = std::to_string(view_ref_koid());
   InitializeDebugEntry();
 }
 
-SemanticTreeService::~SemanticTreeService() { semantic_tree_factory_->InvalidateWeakPtrs(); }
+SemanticTreeService::~SemanticTreeService() {
+  RemoveDebugEntry();
+  semantic_tree_factory_->InvalidateWeakPtrs();
+}
 
 void SemanticTreeService::PerformAccessibilityAction(
     uint32_t node_id, fuchsia::accessibility::semantics::Action action,
@@ -137,7 +141,7 @@ void SemanticTreeService::InitializeDebugEntry() {
   if (debug_dir_) {
     // Add Semantic Tree log file in Hub-Debug directory.
     debug_dir_->AddEntry(
-        std::to_string(GetKoid(view_ref_)),
+        debug_file_name_,
         std::make_unique<vfs::PseudoFile>(
             kMaxDebugFileSize, [this](std::vector<uint8_t>* output, size_t max_file_size) {
               std::string buffer = LogSemanticTree();
@@ -154,6 +158,15 @@ void SemanticTreeService::InitializeDebugEntry() {
             }));
   }
 }
+
+void SemanticTreeService::RemoveDebugEntry() {
+  FX_DCHECK(debug_dir_);
+  if (debug_dir_) {
+    // Remove Semantic Tree log file in the Hub-Debug directory.
+    debug_dir_->RemoveEntry(debug_file_name_);
+  }
+
+}  // namespace a11y
 
 void SemanticTreeService::PerformHitTesting(
     ::fuchsia::math::PointF local_point,

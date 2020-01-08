@@ -82,9 +82,12 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
   void LogSemanticTreeHelper(const fuchsia::accessibility::semantics::Node* root_node,
                              int current_level, std::string* tree_log);
 
-  // Function to create per view Log files under debug directory for
+  // Function to create per view log files under debug directory for
   // debugging semantic tree.
   void InitializeDebugEntry();
+
+  // Function to remove per view Log files under debug directory.
+  void RemoveDebugEntry();
 
   // SignalHandler is called when ViewRef peer is destroyed. It is
   // responsible for closing the channel.
@@ -117,6 +120,9 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
 
   vfs::PseudoDir* const debug_dir_;
   bool semantics_manager_enabled_ = false;
+
+  // File name of the log file under debug directory.
+  std::string debug_file_name_;
 
   // Note: must be the last element on this class to ensure that it is the last to be destructed.
   std::unique_ptr<fxl::WeakPtrFactory<::a11y::SemanticTree>> semantic_tree_factory_;

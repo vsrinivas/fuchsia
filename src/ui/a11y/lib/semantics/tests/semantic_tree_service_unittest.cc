@@ -168,11 +168,11 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
     return buffer;
   }
 
+  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<a11y::SemanticTreeService> semantic_tree_;
   MockSemanticTree* tree_ptr_ = nullptr;
   bool close_channel_called_ = false;
   fuchsia::ui::views::ViewRef view_ref_;
-  sys::testing::ComponentContextProvider context_provider_;
   SemanticTreeParser semantic_tree_parser_;
 
   // The event signaling pair member, used to invalidate the View Ref.
