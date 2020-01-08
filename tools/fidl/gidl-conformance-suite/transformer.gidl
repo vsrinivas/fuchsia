@@ -1783,6 +1783,8 @@ success("Size5Alignment4Vector") {
 }
 
 success("Table_NoFields") {
+    // TODO(fxb/40782): Fix encoding bug in LLCPP.
+    bindings_denylist = [llcpp],
     value = Struct_Table_NoFields {
         t: Table_NoFields {},
     },
@@ -1805,11 +1807,11 @@ success("Table_NoFields") {
             ),
         ],
     },
-    // TODO(fxb/40782): Fix encoding bug in LLCPP.
-    bindings_denylist = [llcpp],
 }
 
 success("Table_TwoReservedFields") {
+    // TODO(fxb/40782): Fix encoding bug in LLCPP.
+    bindings_denylist = [llcpp],
     value = Struct_Table_TwoReservedFields {
         t: Table_TwoReservedFields {},
     },
@@ -1832,8 +1834,6 @@ success("Table_TwoReservedFields") {
             ),
         ],
     },
-    // TODO(fxb/40782): Fix encoding bug in LLCPP.
-    bindings_denylist = [llcpp],
 }
 
 success("Table_StructWithReservedSandwich") {
@@ -2188,6 +2188,8 @@ success("XUnionWithStruct") {
 }
 
 success("XUnionWithUnknownOrdinal") {
+    // TODO(fxb/8047): Enable this after more bindings support arbitrary ordinals in xunions.
+    bindings_allowlist = [transformer],
     value = XUnionWithStructStruct {
         xu: XUnionWithStruct {
             0x11BA5EBA: StructSize16Align8 {
@@ -2227,8 +2229,6 @@ success("XUnionWithUnknownOrdinal") {
             )
         ],
     },
-    // TODO(fxb/8047): Enable this after more bindings support arbitrary ordinals in xunions.
-    bindings_allowlist = [transformer],
 }
 
 success("ArrayStruct") {
@@ -3689,6 +3689,7 @@ success("Regression9Response") {
 
 success("Regression10V1") {
     // Transformer-only test. The value just provides the type.
+    bindings_allowlist = [transformer],
     value = Regression10V1 {},
     bytes = {
         // old & v1 bytes are the same.
@@ -3753,11 +3754,11 @@ success("Regression10V1") {
             ),
         ],
     },
-    bindings_allowlist = [transformer],
 }
 
 success("Regression10V2") {
     // Transformer-only test. The value just provides the type.
+    bindings_allowlist = [transformer],
     value = Regression10V2 {},
     bytes = {
         // old & v1 bytes are the same.
@@ -3822,11 +3823,11 @@ success("Regression10V2") {
             ),
         ],
     },
-    bindings_allowlist = [transformer],
 }
 
 success("Regression10V3") {
     // Transformer-only test. The value just provides the type.
+    bindings_allowlist = [transformer],
     value = Regression10V3 {},
     bytes = {
         // old & v1 bytes are the same.
@@ -3891,11 +3892,11 @@ success("Regression10V3") {
             ),
         ],
     },
-    bindings_allowlist = [transformer],
 }
 
 success("Regression11UnknownContent") {
     // Transformer-only test. The value just provides the type.
+    bindings_allowlist = [transformer],
     value = Regression11 {},
     bytes = {
         old = [
@@ -3961,7 +3962,6 @@ success("Regression11UnknownContent") {
             ),
         ],
     },
-    bindings_allowlist = [transformer],
 }
 
 success("Sandwich4Align8") {
@@ -4807,6 +4807,8 @@ success("CompatTable") {
 }
 
 success("CompatTableWrongXUnionOrdinal") {
+    // TODO(fxb/8047): Enable this after more bindings support arbitrary ordinals in xunions.
+    bindings_allowlist = [transformer],
     value = CompatTable {
         value: CompatTableValue {
             union_member: CompatUnion { b: true },
@@ -5008,8 +5010,6 @@ success("CompatTableWrongXUnionOrdinal") {
             ),
         ],
     },
-    // TODO(fxb/8047): Enable this after more bindings support arbitrary ordinals in xunions.
-    bindings_allowlist = [transformer],
 }
 
 success("MixedFields") {
@@ -5175,6 +5175,8 @@ success("TableWithXUnion") {
 }
 
 success("TableWithXUnionWrongXUnionOrdinal") {
+    // TODO(fxb/8047): Enable this after more bindings support arbitrary ordinals in xunions.
+    bindings_allowlist = [transformer],
     value = StructOfTableWithXUnion {
         value: TableWithXUnion {
             member: CompatXUnion {
@@ -5247,6 +5249,4 @@ success("TableWithXUnionWrongXUnionOrdinal") {
             ),
         ],
     },
-    // TODO(fxb/8047): Enable this after more bindings support arbitrary ordinals in xunions.
-    bindings_allowlist = [transformer],
 }

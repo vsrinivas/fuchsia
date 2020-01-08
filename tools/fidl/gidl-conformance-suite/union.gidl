@@ -26,14 +26,14 @@ success("UnionWithBoundString") {
 }
 
 encode_failure("UnionWithBoundString_ExceedsBounds") {
+    // TODO(fxb/37304) Enforce size bounds in rust
+    bindings_denylist = [rust],
     value = UnionWithBoundStringStruct {
         v: UnionWithBoundString {
             boundFiveStr: "abcdef",
         },
     },
     err = STRING_TOO_LONG,
-    // TODO(fxb/37304) Enforce size bounds in rust
-    bindings_denylist = [rust],
 }
 
 success("UnionMigration_SingleVariant") {
