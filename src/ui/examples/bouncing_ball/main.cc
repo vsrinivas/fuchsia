@@ -3,19 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/app/cpp/fidl.h>
-#include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <math.h>
-
-#include "src/lib/fxl/logging.h"
 
 class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
  public:
