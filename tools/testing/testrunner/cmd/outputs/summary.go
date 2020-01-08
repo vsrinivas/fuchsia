@@ -28,6 +28,7 @@ func (o *SummaryOutput) Record(result testrunner.TestResult) {
 		GNLabel:        result.GNLabel,
 		OutputFile:     pathInArchive,
 		Result:         result.Result,
+		StartTime:      result.StartTime,
 		DurationMillis: result.EndTime.Sub(result.StartTime).Nanoseconds() / 1000 / 1000,
 		DataSinks:      result.DataSinks,
 	})

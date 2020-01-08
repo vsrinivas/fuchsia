@@ -5,9 +5,10 @@
 package outputs_test
 
 import (
-	"reflect"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/outputs"
@@ -39,6 +40,7 @@ func TestSummaryOutput(t *testing.T) {
 			GNLabel:        "//a/b/c:test_a(//toolchain)",
 			OutputFile:     "test_a/stdout-and-stderr.txt",
 			Result:         runtests.TestFailure,
+			StartTime:      start,
 			DurationMillis: 10,
 		}, {
 			Name:       "test_b",
@@ -52,7 +54,7 @@ func TestSummaryOutput(t *testing.T) {
 
 	actualSummary := output.Summary
 
-	if !reflect.DeepEqual(actualSummary, expectedSummary) {
-		t.Errorf("got\n%q\nbut wanted\n%q\n", actualSummary, expectedSummary)
+	if d := cmp.Diff(expectedSummary, actualSummary); d != "" {
+		t.Errorf("output.Summary not as expected: (-want +got):\n%s", d)
 	}
 }

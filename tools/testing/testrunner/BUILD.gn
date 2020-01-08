@@ -53,5 +53,6 @@ go_test("testrunner_outputs_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/outputs" ]
   deps = [
     ":outputs",
+    "//third_party/golibs:github.com/google/go-cmp",
   ]
 }

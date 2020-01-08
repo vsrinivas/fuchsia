@@ -5,6 +5,10 @@
 // Package runtests contains specifics related to the runtests command.
 package runtests
 
+import (
+	"time"
+)
+
 // TestResult is the exit result of a test.
 type TestResult string
 
@@ -63,6 +67,9 @@ type TestDetails struct {
 
 	// DataSinks gives the data sinks attached to a test.
 	DataSinks DataSinkMap `json:"data_sinks,omitempty"`
+
+	// StartTime is the UTC time when the test was started.
+	StartTime time.Time `json:"start_time"`
 
 	// Duration is how long the test execution took.
 	DurationMillis int64 `json:"duration_milliseconds"`
