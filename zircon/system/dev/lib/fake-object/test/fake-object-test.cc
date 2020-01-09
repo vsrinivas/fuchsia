@@ -21,7 +21,12 @@
 
 namespace {
 
-TEST(FakeObject, DuplicateHandle) {
+class FakeObject : public zxtest::Test {
+ protected:
+  void TearDown() final { FakeHandleTable().Clear(); }
+};
+
+TEST_F(FakeObject, DuplicateHandle) {
   // Setup, create a fake bti, make sure it is valid:
   zx_handle_t obj = ZX_HANDLE_INVALID;
   zx_handle_t obj_dup = ZX_HANDLE_INVALID;
@@ -39,10 +44,9 @@ TEST(FakeObject, DuplicateHandle) {
   EXPECT_EQ(0u, FakeHandleTable().size());
 }
 
-TEST(FakeObject, DuplicateRealHandle) {
+TEST_F(FakeObject, DuplicateRealHandle) {
   // Setup, create an event and duplicate it, to make sure that still works:
   zx::event event, event_dup;
-
   ASSERT_OK(zx::event::create(0u, &event), "Error during event create");
   EXPECT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_dup));
 
@@ -55,7 +59,7 @@ TEST(FakeObject, DuplicateRealHandle) {
   EXPECT_EQ(pending & ZX_EVENT_SIGNALED, ZX_EVENT_SIGNALED, "Error during wait call");
 }
 
-TEST(FakeObject, ReplaceHandle) {
+TEST_F(FakeObject, ReplaceHandle) {
   zx_handle_t obj_hnd = ZX_HANDLE_INVALID;
   zx_handle_t obj_hnd_repl = ZX_HANDLE_INVALID;
   fbl::RefPtr<Object> obj;
@@ -70,9 +74,8 @@ TEST(FakeObject, ReplaceHandle) {
   EXPECT_EQ(0u, FakeHandleTable().size());
 }
 
-TEST(FakeObject, ReplaceRealHandle) {
+TEST_F(FakeObject, ReplaceRealHandle) {
   zx::event event, event_repl;
-
   ASSERT_OK(zx::event::create(0u, &event), "Error during event create");
 
   zx_handle_t old_hnd = event.get();
@@ -81,9 +84,8 @@ TEST(FakeObject, ReplaceRealHandle) {
   ASSERT_NE(old_hnd, event_repl.get());
 }
 
-TEST(FakeObject, HandleClose) {
+TEST_F(FakeObject, HandleClose) {
   zx_handle_t obj = ZX_HANDLE_INVALID;
-
   EXPECT_OK(fake_object_create(&obj));
   EXPECT_NE(obj, ZX_HANDLE_INVALID);
   EXPECT_EQ(1u, FakeHandleTable().size());
@@ -93,6 +95,8 @@ TEST(FakeObject, HandleClose) {
 }
 
 TEST(FakeObject, HandleCloseMany) {
+  // Ensure other test state was cleaned up.
+  ASSERT_EQ(0, FakeHandleTable().size());
   std::array<zx_handle_t, 4> handles = {ZX_HANDLE_INVALID};
 
   EXPECT_OK(fake_object_create(&handles[0]));
@@ -103,7 +107,7 @@ TEST(FakeObject, HandleCloseMany) {
   ASSERT_NO_DEATH([handles]() { EXPECT_OK(zx_handle_close_many(handles.data(), handles.size())); });
 }
 
-TEST(FakeObject, WaitMany) {
+TEST_F(FakeObject, WaitMany) {
   std::array<zx_wait_item_t, 3> items;
   EXPECT_OK(zx_event_create(0, &items[0].handle));
   EXPECT_OK(zx_event_create(0, &items[1].handle));
@@ -124,8 +128,7 @@ TEST(FakeObject, WaitMany) {
 }
 
 constexpr zx_handle_t kPotentialHandle = 1;
-
-TEST(FakeObject, DuplicateInvalidHandle) {
+TEST_F(FakeObject, DuplicateInvalidHandle) {
   zx_handle_t obj = ZX_HANDLE_INVALID;
   zx_handle_t obj_dup = ZX_HANDLE_INVALID;
   // Duplicating an invalid handle should return an error but not die.
@@ -135,5 +138,36 @@ TEST(FakeObject, DuplicateInvalidHandle) {
   obj = kPotentialHandle;
   ASSERT_NO_DEATH(([obj, &obj_dup]() { EXPECT_NOT_OK(_zx_handle_duplicate(obj, 0, &obj_dup)); }));
 }
+
+struct fake_object_data_t {
+  zx_koid_t koid;
+  bool seen;
+};
+
+// Ensure objects are walked in-order when ForEach is called.
+TEST_F(FakeObject, ForEach) {
+  std::array<fake_object_data_t, 16> fake_objects = {};
+  for (auto& fake_obj : fake_objects) {
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    ASSERT_OK(fake_object_create(&handle));
+    fake_obj.koid = fake_object_get_koid(handle);
+  }
+
+  // Walk the objects ensuring the koids match the objects created earlier.
+  size_t idx = 0;
+  FakeHandleTable().ForEach(HandleType::BASE, [&idx, &fake_objects](Object* obj) -> bool {
+    auto& fake_object = fake_objects[idx];
+    if (fake_object.koid == obj->get_koid()) {
+      fake_object.seen = true;
+    }
+    idx++;
+    return true;
+  });
+
+  // Ensure every object was seen in the ForEach.
+  for (auto& fake_object : fake_objects) {
+    ASSERT_TRUE(fake_object.seen);
+  }
+}  // namespace
 
 }  // namespace

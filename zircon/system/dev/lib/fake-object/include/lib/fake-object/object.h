@@ -114,6 +114,25 @@ class HandleTable {
   zx_status_t Get(zx_handle_t handle, fbl::RefPtr<Object>* out);
   zx_status_t Remove(zx_handle_t handle);
   zx_status_t Add(fbl::RefPtr<Object>&& obj, zx_handle_t* out);
+  void Clear();
+
+  // Walks the handle table and calls |cb| on each handle that matches the
+  // provided |type|. Stops walking the table when |cb| returns false.
+  //
+  // |cb| must NOT attempt to acquire the lock, so this method is not suitable
+  // for internal methods.
+  template <typename ObjectCallback>
+  void ForEach(HandleType type, const ObjectCallback&& cb) __TA_EXCLUDES(lock_) {
+    fbl::AutoLock lock(&lock_);
+    for (const auto& obj : handles_) {
+      if (obj && obj->type() == type) {
+        if (!std::forward<const ObjectCallback>(cb)(obj.get())) {
+          break;
+        }
+      }
+    }
+  }
+
   void Dump();
   // We use the overall size of the vector to calculate new indices
   // so to determine the occupied size we have to verify each element.

@@ -63,6 +63,16 @@ zx_status_t HandleTable::Remove(zx_handle_t handle) {
 }
 
 __EXPORT
+void HandleTable::Clear() {
+  fbl::AutoLock lock(&lock_);
+  for (auto& e : handles_) {
+    if (e) {
+      e.reset();
+    }
+  }
+}
+
+__EXPORT
 void HandleTable::Dump() {
   fbl::AutoLock lock(&lock_);
   int pos = 0;
