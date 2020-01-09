@@ -107,6 +107,8 @@ zx_status_t Sherlock::PwmInit() {
 
   // Add a composite device for pwm init driver.
   const zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMLOGIC_T931},
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_PWM_INIT},
   };
 

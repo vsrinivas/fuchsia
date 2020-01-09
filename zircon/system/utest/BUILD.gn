@@ -102,6 +102,7 @@ if (current_cpu != "") {
       "$zx/system/dev/power/msm8x53-power:msm8x53-power-test",
       "$zx/system/dev/power/mtk-power:mtk-power-test",
       "$zx/system/dev/pwm/aml-pwm:aml-pwm-test",
+      "$zx/system/dev/pwm/aml-pwm-init:aml-pwm-init-test",
       "$zx/system/dev/pwm/pwm:pwm-test",
       "$zx/system/dev/securemem/aml-securemem:aml-securemem-test",
       "$zx/system/dev/serial/aml-uart:aml-uart-test",
@@ -340,9 +341,7 @@ if (current_cpu != "") {
       "--entry=userboot=bin/core-tests",
       "--entry=userboot.shutdown",
     ]
-    deps = [
-      "$zx/system/utest/core:core-tests",
-    ]
+    deps = [ "$zx/system/utest/core:core-tests" ]
   }
 
   group("host-tests") {
@@ -385,9 +384,7 @@ foreach(host, standard_build_hosts) {
     cpu = host.cpu
     os = host.os
     direct = true
-    deps = [
-      ":host-tests",
-    ]
+    deps = [ ":host-tests" ]
   }
 }
 
@@ -401,7 +398,5 @@ group("host-tests-all-platforms") {
 
 group("host") {
   testonly = true
-  deps = [
-    ":host-tests-${host_os}-${host_cpu}",
-  ]
+  deps = [ ":host-tests-${host_os}-${host_cpu}" ]
 }
