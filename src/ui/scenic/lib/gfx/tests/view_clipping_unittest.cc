@@ -291,6 +291,12 @@ VK_TEST_F(ViewClippingTest, SceneTraversal) {
   auto gpu_uploader = std::make_shared<BatchGpuUploader>(escher, frame->frame_number());
   auto layout_updater = std::make_unique<ImageLayoutUpdater>(escher);
 
+  // Set up output image layout.
+  frame->cmds()->ImageBarrier(
+      output_image, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
+      vk::PipelineStageFlagBits::eAllCommands, vk::AccessFlagBits::eColorAttachmentWrite,
+      vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+
   paper_renderer->BeginFrame(frame, gpu_uploader, paper_scene, {camera}, output_image);
 
   EngineRendererVisitor visitor(paper_renderer.get(), gpu_uploader.get(), layout_updater.get(),
@@ -357,14 +363,6 @@ VK_TEST_F(ViewClippingTest, SceneTraversal) {
 
   escher->vk_device().waitIdle();
   escher->Cleanup();
-
-  // TODO(36855): Now Vulkan validation layer has errors:
-  //   [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ] Object: 0x4e03b6e20810
-  //   (Type = 6) | Submitted command buffer expects VkImage 0x49[]  (subresource:
-  //   aspectMask 0x1 array layer 0, mip level 0) to be in layout
-  //   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL--instead, current layout is
-  //   VK_IMAGE_LAYOUT_UNDEFINED..
-  SUPPRESS_VK_VALIDATION_ERRORS();
 }
 
 }  // namespace test
