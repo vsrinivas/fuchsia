@@ -2,23 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/platform-defs.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/devmgr-launcher/launch.h>
+#include <lib/fdio/fdio.h>
 #include <lib/zx/vmo.h>
-#include <libzbi/zbi-cpp.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <libzbi/zbi-cpp.h>
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
+
+#include <ddk/platform-defs.h>
+#include <libzbi/zbi-cpp.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -103,6 +105,41 @@ TEST(PbusTest, Enumeration) {
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:7/test-clock/clock-1/component", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5/component", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "composite-dev/composite", &st, 0), 0);
+}
+
+TEST(PbusTest, BoardInfo) {
+  devmgr_launcher::Args args;
+  args.sys_device_driver = "/boot/driver/platform-bus.so";
+  args.driver_search_paths.push_back("/boot/driver");
+  args.get_boot_item = GetBootItem;
+
+  IsolatedDevmgr devmgr;
+  ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
+
+  fbl::unique_fd platform_bus;
+  ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &platform_bus));
+
+  zx::channel channel;
+  ASSERT_OK(fdio_get_service_handle(platform_bus.release(), channel.reset_and_get_address()));
+
+  ::llcpp::fuchsia::sysinfo::SysInfo::SyncClient client(std::move(channel));
+  // Get board name.
+  auto board_info = client.GetBoardName();
+  EXPECT_OK(board_info.status());
+  EXPECT_TRUE(board_info.ok());
+  EXPECT_BYTES_EQ(board_info->name.cbegin(), "pbus-test", board_info->name.size());
+  EXPECT_EQ(board_info->name.size(), strlen("pbus-test"));
+
+  // Get interrupt controller information.
+  auto irq_ctrl_info = client.GetInterruptControllerInfo();
+  EXPECT_OK(irq_ctrl_info.status());
+  EXPECT_TRUE(irq_ctrl_info.ok());
+  EXPECT_NE(irq_ctrl_info->info, nullptr);
+
+  // Get interrupt controller information.
+  auto board_revision = client.GetBoardRevision();
+  EXPECT_OK(board_revision.status());
+  EXPECT_TRUE(board_revision.ok());
 }
 
 }  // namespace

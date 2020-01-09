@@ -7,6 +7,7 @@ zx_test("platform-bus") {
     "main.cc",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/devmgr-launcher",

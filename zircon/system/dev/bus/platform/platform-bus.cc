@@ -21,6 +21,7 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 
@@ -143,6 +144,34 @@ zx_status_t PlatformBus::PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev
   return ZX_OK;
 }
 
+zx_status_t PlatformBus::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  DdkTransaction transaction(txn);
+  llcpp::fuchsia::sysinfo::SysInfo::Dispatch(this, msg, &transaction);
+  return transaction.Status();
+}
+
+void PlatformBus::GetBoardName(GetBoardNameCompleter::Sync completer) {
+  fbl::AutoLock lock(&board_name_completer_mutex_);
+  // Reply immediately if board name is valid
+  if (strlen(board_info_.board_name) != 0) {
+    return completer.Reply(
+        ZX_OK, fidl::StringView(board_info_.board_name, strlen(board_info_.board_name)));
+  }
+  // Cache the requests until the board name becomes valid
+  board_name_completer_.push_back(completer.ToAsync());
+}
+
+void PlatformBus::GetBoardRevision(GetBoardRevisionCompleter::Sync completer) {
+  return completer.Reply(ZX_OK, board_info_.board_revision);
+}
+
+void PlatformBus::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer) {
+  ::llcpp::fuchsia::sysinfo::InterruptControllerInfo info = {
+      .type = interrupt_controller_type_,
+  };
+  return completer.Reply(ZX_OK, &info);
+}
+
 zx_status_t PlatformBus::PBusGetBoardInfo(pdev_board_info_t* out_info) {
   memcpy(out_info, &board_info_, sizeof(board_info_));
   return ZX_OK;
@@ -152,6 +181,17 @@ zx_status_t PlatformBus::PBusSetBoardInfo(const pbus_board_info_t* info) {
   if (info->board_name[0]) {
     zxlogf(INFO, "PlatformBus: setting board name to \"%s\"\n", info->board_name);
     strlcpy(board_info_.board_name, info->board_name, sizeof(board_info_.board_name));
+    // Respond to pending boardname requests, if any.
+    std::vector<GetBoardNameCompleter::Async> completer_tmp_;
+    {
+      fbl::AutoLock lock(&board_name_completer_mutex_);
+      board_name_completer_.swap(completer_tmp_);
+    }
+    while (!completer_tmp_.empty()) {
+      completer_tmp_.back().Reply(
+          ZX_OK, fidl::StringView(board_info_.board_name, strlen(board_info_.board_name)));
+      completer_tmp_.pop_back();
+    }
   }
   board_info_.board_revision = info->board_revision;
   return ZX_OK;
@@ -445,6 +485,7 @@ zx_status_t PlatformBus::Init() {
   uint32_t length;
   uint8_t interrupt_controller_type = fuchsia_sysinfo_InterruptControllerType_UNKNOWN;
 #if __x86_64__
+  interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::InterruptControllerType::APIC;
   interrupt_controller_type = fuchsia_sysinfo_InterruptControllerType_APIC;
 #else
   status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &vmo, &length);
@@ -452,6 +493,7 @@ zx_status_t PlatformBus::Init() {
     return status;
   }
   if (vmo.is_valid()) {
+    interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::InterruptControllerType::GIC_V2;
     interrupt_controller_type = fuchsia_sysinfo_InterruptControllerType_GIC_V2;
   }
   status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &vmo, &length);
@@ -459,6 +501,7 @@ zx_status_t PlatformBus::Init() {
     return status;
   }
   if (vmo.is_valid()) {
+    interrupt_controller_type_ = ::llcpp::fuchsia::sysinfo::InterruptControllerType::GIC_V3;
     interrupt_controller_type = fuchsia_sysinfo_InterruptControllerType_GIC_V3;
   }
 #endif

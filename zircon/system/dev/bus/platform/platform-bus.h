@@ -4,17 +4,7 @@
 
 #pragma once
 
-#include <ddk/device.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/clockimpl.h>
-#include <ddktl/protocol/gpioimpl.h>
-#include <ddktl/protocol/iommu.h>
-#include <ddktl/protocol/platform/bus.h>
-#include <ddktl/protocol/powerimpl.h>
-#include <ddktl/protocol/sysmem.h>
-#include <fbl/array.h>
-#include <fbl/mutex.h>
-#include <fbl/vector.h>
+#include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/iommu.h>
@@ -26,24 +16,38 @@
 
 #include <optional>
 
+#include <ddk/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/clockimpl.h>
+#include <ddktl/protocol/gpioimpl.h>
+#include <ddktl/protocol/iommu.h>
+#include <ddktl/protocol/platform/bus.h>
+#include <ddktl/protocol/powerimpl.h>
+#include <ddktl/protocol/sysmem.h>
+#include <fbl/array.h>
+#include <fbl/mutex.h>
+#include <fbl/vector.h>
+
 #include "platform-device.h"
 #include "proxy-protocol.h"
 
 namespace platform_bus {
 
 class PlatformBus;
-using PlatformBusType = ddk::Device<PlatformBus, ddk::GetProtocolable>;
+using PlatformBusType = ddk::Device<PlatformBus, ddk::GetProtocolable, ddk::Messageable>;
 
 // This is the main class for the platform bus driver.
 class PlatformBus : public PlatformBusType,
                     public ddk::PBusProtocol<PlatformBus, ddk::base_protocol>,
-                    public ddk::IommuProtocol<PlatformBus> {
+                    public ddk::IommuProtocol<PlatformBus>,
+                    public ::llcpp::fuchsia::sysinfo::SysInfo::Interface {
  public:
   static zx_status_t Create(zx_device_t* parent, const char* name, zx::channel items_svc);
 
   // Device protocol implementation.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   void DdkRelease();
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
   // Platform bus protocol implementation.
   zx_status_t PBusDeviceAdd(const pbus_dev_t* dev);
@@ -56,6 +60,14 @@ class PlatformBus : public PlatformBusType,
                                      size_t components_count, uint32_t coresident_device_index);
 
   zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin);
+
+  // SysInfo protocol implementation.
+  void GetBoardName(GetBoardNameCompleter::Sync completer);
+  void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer);
+  void GetBoardRevision(GetBoardRevisionCompleter::Sync completer);
+  void GetHypervisorResource(GetHypervisorResourceCompleter::Sync completer) {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::resource());
+  }
 
   // IOMMU protocol implementation.
   zx_status_t IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx::bti* out_bti);
@@ -83,7 +95,14 @@ class PlatformBus : public PlatformBusType,
   zx_status_t Init();
 
   zx::channel items_svc_;
-  pdev_board_info_t board_info_;
+  pdev_board_info_t board_info_ = {};
+  ::llcpp::fuchsia::sysinfo::InterruptControllerType interrupt_controller_type_ =
+      ::llcpp::fuchsia::sysinfo::InterruptControllerType::UNKNOWN;
+  // List to cache requests when boardname is not yet set.
+  std::vector<GetBoardNameCompleter::Async> board_name_completer_
+      __TA_GUARDED(board_name_completer_mutex_);
+  // Protects board_name_completer_.
+  fbl::Mutex board_name_completer_mutex_;
 
   // Protocols that are optionally provided by the board driver.
   std::optional<ddk::ClockImplProtocolClient> clock_;
