@@ -70,15 +70,17 @@ class EnumOrBitsMember {
   friend class Bits;
 
  public:
-  EnumOrBitsMember(const std::string_view& name, const std::string& value_str)
-      : name_(name), value_str_(value_str) {}
+  EnumOrBitsMember(const std::string_view& name, uint64_t absolute_value, bool negative)
+      : name_(name), absolute_value_(absolute_value), negative_(negative) {}
 
   const std::string& name() const { return name_; }
-  const std::string& value_str() const { return value_str_; }
+  uint64_t absolute_value() const { return absolute_value_; }
+  bool negative() const { return negative_; }
 
  private:
-  std::string name_;
-  std::string value_str_;
+  const std::string name_;
+  const uint64_t absolute_value_;
+  const bool negative_;
 };
 
 class EnumOrBits {
@@ -124,7 +126,7 @@ class Enum : public EnumOrBits {
   // and you pass |bytes| a 2-byte representation of -23, and |length| 2, this
   // function will return "x".  Returns "(Unknown enum member)" if it can't find
   // the member.
-  std::string GetNameFromBytes(const uint8_t* bytes) const;
+  std::string GetName(uint64_t absolute_value, bool negative) const;
 
  private:
   Enum(const rapidjson::Value& value) : EnumOrBits(value) {}
@@ -140,7 +142,7 @@ class Bits : public EnumOrBits {
 
   ~Bits();
 
-  std::string GetNameFromBytes(const uint8_t* bytes) const;
+  std::string GetName(uint64_t absolute_value, bool negative) const;
 
  private:
   Bits(const rapidjson::Value& value) : EnumOrBits(value) {}

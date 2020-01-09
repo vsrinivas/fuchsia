@@ -85,24 +85,6 @@ class JsonVisitor : public Visitor {
     }
   }
 
-  void VisitEnumValue(const EnumValue* node, const Type* for_type) override {
-    if (auto data = node->data()) {
-      std::string name = node->enum_definition().GetNameFromBytes(data->data());
-      result_->SetString(name.c_str(), *allocator_);
-    } else {
-      result_->SetString("(invalid)", *allocator_);
-    }
-  }
-
-  void VisitBitsValue(const BitsValue* node, const Type* for_type) override {
-    if (auto data = node->data()) {
-      std::string name = node->bits_definition().GetNameFromBytes(data->data());
-      result_->SetString(name.c_str(), *allocator_);
-    } else {
-      result_->SetString("(invalid)", *allocator_);
-    }
-  }
-
  private:
   rapidjson::Value* result_;
   rapidjson::Document::AllocatorType* allocator_;

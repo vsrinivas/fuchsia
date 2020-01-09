@@ -48,16 +48,6 @@ class Type {
   // String representation of the type in detail.
   std::string ToString(bool expand = false) const;
 
-  // Takes a pointer |bytes| and length of the data part |length|, and
-  // returns whether that is equal to the Value represented by |value| according
-  // to this type.
-  virtual bool ValueEquals(const uint8_t* bytes, size_t length, const std::string& value) const;
-
-  // Takes a pointer |bytes| and length of the data part |length|, and
-  // returns whether that contains the Value represented by |value| according
-  // to this type.
-  virtual bool ValueHas(const uint8_t* bytes, const std::string& value) const;
-
   // Returns the size of this type when embedded in another object.
   virtual size_t InlineSize(bool unions_are_xunions) const;
 
@@ -150,21 +140,6 @@ class NumericType : public Type {
                 "NumericType can only be used for numerics");
 
  public:
-  virtual bool ValueEquals(const uint8_t* bytes, size_t length,
-                           const std::string& value) const override {
-    T lhs = internal::MemoryFrom<T, const uint8_t*>(bytes);
-    std::istringstream input(value);
-    if (sizeof(T) == 1) {
-      // Because int8_t and uint8_t are really char, and we don't want to read that.
-      int rhs;
-      input >> rhs;
-      return static_cast<int>(lhs) == rhs;
-    }
-    T rhs;
-    input >> rhs;
-    return lhs == rhs;
-  }
-
   size_t InlineSize(bool unions_are_xunions) const override { return sizeof(T); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
@@ -195,23 +170,6 @@ class IntegralType : public NumericType<T> {
                 "IntegralType can only be used for integers");
 
  public:
-  bool ValueHas(const uint8_t* bytes, const std::string& value) const override {
-    if (!std::is_integral<T>::value) {
-      return false;
-    }
-    T lhs = internal::MemoryFrom<T, const uint8_t*>(bytes);
-    std::istringstream input(value);
-    if (sizeof(T) == 1) {
-      // Because int8_t and uint8_t are really char, and we don't want to read that.
-      int rhs;
-      input >> rhs;
-      return (static_cast<int>(lhs) & rhs) == rhs;
-    }
-    T rhs;
-    input >> rhs;
-    return (lhs & rhs) == rhs;
-  }
-
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
     auto got = decoder->GetAddress(offset, sizeof(T));
     if (got == nullptr) {
@@ -454,6 +412,10 @@ class EnumType : public Type {
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
+  void PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
+
   void Visit(TypeVisitor* visitor) const override;
 
  private:
@@ -471,6 +433,10 @@ class BitsType : public Type {
   size_t InlineSize(bool unions_are_xunions) const override { return bits_.size(); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
+
+  void PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
 
   void Visit(TypeVisitor* visitor) const override;
 

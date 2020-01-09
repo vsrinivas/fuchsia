@@ -67,8 +67,6 @@ class Encoder : public Visitor {
   void VisitTableValue(const TableValue* node, const Type* for_type) override;
   void VisitUnionValue(const UnionValue* node, const Type* for_type) override;
   void VisitVectorValue(const VectorValue* node, const Type* for_type) override;
-  void VisitEnumValue(const EnumValue* node, const Type* for_type) override;
-  void VisitBitsValue(const BitsValue* node, const Type* for_type) override;
   void VisitHandleValue(const HandleValue* node, const Type* for_type) override;
 
   const bool unions_are_xunions_;

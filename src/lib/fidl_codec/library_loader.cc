@@ -33,8 +33,6 @@ void EnumOrBits::DecodeTypes(bool is_scalar, const std::string& supertype_name,
   if (!value_.HasMember("members")) {
     enclosing_library->FieldNotFound(supertype_name, name_, "members");
   } else {
-    std::vector<EnumOrBitsMember> ret;
-
     if (value_.HasMember("members")) {
       for (auto& member : value_["members"].GetArray()) {
         if (member.HasMember("value") && member["value"].HasMember("literal")) {
@@ -42,14 +40,20 @@ void EnumOrBits::DecodeTypes(bool is_scalar, const std::string& supertype_name,
             continue;
           }
 
-          EnumOrBitsMember e_member(member["name"].GetString(),
-                                    member["value"]["literal"]["value"].GetString());
-          ret.emplace_back(std::move(e_member));
+          const char* data = member["value"]["literal"]["value"].GetString();
+          bool negative = false;
+          if (*data == '-') {
+            ++data;
+            negative = true;
+          }
+          std::stringstream stream;
+          stream.str(std::string(data));
+          uint64_t absolute_value;
+          stream >> absolute_value;
+          members_.emplace_back(member["name"].GetString(), absolute_value, negative);
         }
       }
     }
-
-    members_ = ret;
   }
 
   size_ = type_->InlineSize(false);
@@ -57,9 +61,9 @@ void EnumOrBits::DecodeTypes(bool is_scalar, const std::string& supertype_name,
 
 Enum::~Enum() = default;
 
-std::string Enum::GetNameFromBytes(const uint8_t* bytes) const {
+std::string Enum::GetName(uint64_t absolute_value, bool negative) const {
   for (auto& member : members()) {
-    if (type()->ValueEquals(bytes, size(), member.value_str())) {
+    if ((member.absolute_value() == absolute_value) && (member.negative() == negative)) {
       return member.name();
     }
   }
@@ -68,15 +72,16 @@ std::string Enum::GetNameFromBytes(const uint8_t* bytes) const {
 
 Bits::~Bits() = default;
 
-std::string Bits::GetNameFromBytes(const uint8_t* bytes) const {
+std::string Bits::GetName(uint64_t absolute_value, bool negative) const {
   std::string returned_value;
-  for (auto& member : members()) {
-    if (type()->ValueHas(bytes, member.value_str())) {
-      if (!returned_value.empty()) {
-        returned_value += "|";
+  if (!negative) {
+    for (auto& member : members()) {
+      if (((absolute_value & member.absolute_value()) != 0) && !member.negative()) {
+        if (!returned_value.empty()) {
+          returned_value += "|";
+        }
+        returned_value += member.name();
       }
-
-      returned_value += member.name();
     }
   }
 

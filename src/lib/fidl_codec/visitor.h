@@ -47,12 +47,6 @@ class Visitor {
   virtual void VisitVectorValue(const VectorValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
-  virtual void VisitEnumValue(const EnumValue* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-  virtual void VisitBitsValue(const BitsValue* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
   virtual void VisitHandleValue(const HandleValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
@@ -69,8 +63,6 @@ class Visitor {
   friend class TableValue;
   friend class UnionValue;
   friend class VectorValue;
-  friend class EnumValue;
-  friend class BitsValue;
   friend class HandleValue;
 };
 

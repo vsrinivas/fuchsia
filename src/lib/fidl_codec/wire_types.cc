@@ -149,17 +149,22 @@ class ToStringVisitor : public TypeVisitor {
   }
 
   void VisitEnumType(const EnumType* type) override {
-    VisitTypeWithMembers<EnumOrBitsMember>(
-        type, "enum", type->enum_definition().members(), [this](const EnumOrBitsMember& member) {
-          *result_ += indent_ + "  " + member.name() + " = " + member.value_str();
-          return true;
-        });
+    VisitTypeWithMembers<EnumOrBitsMember>(type, "enum", type->enum_definition().members(),
+                                           [this](const EnumOrBitsMember& member) {
+                                             *result_ += indent_ + "  " + member.name() + " = ";
+                                             if (member.negative()) {
+                                               *result_ += "-";
+                                             }
+                                             *result_ += std::to_string(member.absolute_value());
+                                             return true;
+                                           });
   }
 
   void VisitBitsType(const BitsType* type) override {
     VisitTypeWithMembers<EnumOrBitsMember>(
         type, "bits", type->bits_definition().members(), [this](const EnumOrBitsMember& member) {
-          *result_ += indent_ + "  " + member.name() + " = " + member.value_str();
+          *result_ +=
+              indent_ + "  " + member.name() + " = " + std::to_string(member.absolute_value());
           return true;
         });
   }
@@ -177,17 +182,6 @@ std::string Type::ToString(bool expand) const {
       "", expand ? ToStringVisitor::ExpandLevels::kAll : ToStringVisitor::ExpandLevels::kOne, &ret);
   Visit(&visitor);
   return ret;
-}
-
-bool Type::ValueEquals(const uint8_t* /*bytes*/, size_t /*length*/,
-                       const std::string& /*value*/) const {
-  FXL_LOG(FATAL) << "Equality operator for type not implemented";
-  return false;
-}
-
-bool Type::ValueHas(const uint8_t* /*bytes*/, const std::string& /*value*/) const {
-  FXL_LOG(FATAL) << "ValueHas not implemented";
-  return false;
 }
 
 size_t Type::InlineSize(bool unions_are_xunions) const {
@@ -430,7 +424,19 @@ void VectorType::Visit(TypeVisitor* visitor) const { visitor->VisitVectorType(th
 EnumType::EnumType(const Enum& e) : enum_(e) {}
 
 std::unique_ptr<Value> EnumType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return std::make_unique<EnumValue>(decoder->CopyAddress(offset, enum_.size()), enum_);
+  return enum_.type()->Decode(decoder, offset);
+}
+
+void EnumType::PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                           const fidl_message_header_t* header, std::string_view line_header,
+                           int tabs, int remaining_size, int max_line_size) const {
+  uint64_t absolute;
+  bool negative;
+  if (!value->GetIntegerValue(&absolute, &negative)) {
+    os << colors.red << "invalid" << colors.reset;
+  } else {
+    os << colors.blue << enum_.GetName(absolute, negative) << colors.reset;
+  }
 }
 
 void EnumType::Visit(TypeVisitor* visitor) const { visitor->VisitEnumType(this); }
@@ -438,7 +444,19 @@ void EnumType::Visit(TypeVisitor* visitor) const { visitor->VisitEnumType(this);
 BitsType::BitsType(const Bits& b) : bits_(b) {}
 
 std::unique_ptr<Value> BitsType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return std::make_unique<BitsValue>(decoder->CopyAddress(offset, bits_.size()), bits_);
+  return bits_.type()->Decode(decoder, offset);
+}
+
+void BitsType::PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                           const fidl_message_header_t* header, std::string_view line_header,
+                           int tabs, int remaining_size, int max_line_size) const {
+  uint64_t absolute;
+  bool negative;
+  if (!value->GetIntegerValue(&absolute, &negative)) {
+    os << colors.red << "invalid" << colors.reset;
+  } else {
+    os << colors.blue << bits_.GetName(absolute, negative) << colors.reset;
+  }
 }
 
 void BitsType::Visit(TypeVisitor* visitor) const { visitor->VisitBitsType(this); }

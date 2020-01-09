@@ -19,8 +19,6 @@
 
 namespace fidl_codec {
 
-constexpr char kInvalid[] = "invalid";
-
 const Colors WithoutColors("", "", "", "", "", "");
 const Colors WithColors(/*new_reset=*/"\u001b[0m", /*new_red=*/"\u001b[31m",
                         /*new_green=*/"\u001b[32m", /*new_blue=*/"\u001b[34m",
@@ -425,50 +423,6 @@ void VectorValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colo
 
 void VectorValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitVectorValue(this, for_type);
-}
-
-int EnumValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
-  if (!data_) {
-    return strlen(kInvalid);
-  }
-  return enum_definition_.GetNameFromBytes(data_->data()).size();
-}
-
-void EnumValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                            const fidl_message_header_t* /*header*/,
-                            std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
-                            int /*max_line_size*/) const {
-  if (!data_) {
-    os << colors.red << kInvalid << colors.reset;
-  } else {
-    os << colors.blue << enum_definition_.GetNameFromBytes(data_->data()) << colors.reset;
-  }
-}
-
-void EnumValue::Visit(Visitor* visitor, const Type* for_type) const {
-  visitor->VisitEnumValue(this, for_type);
-}
-
-int BitsValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
-  if (!data_) {
-    return strlen(kInvalid);
-  }
-  return bits_definition_.GetNameFromBytes(data_->data()).size();
-}
-
-void BitsValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                            const fidl_message_header_t* /*header*/,
-                            std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
-                            int /*max_line_size*/) const {
-  if (!data_) {
-    os << colors.red << kInvalid << colors.reset;
-  } else {
-    os << colors.blue << bits_definition_.GetNameFromBytes(data_->data()) << colors.reset;
-  }
-}
-
-void BitsValue::Visit(Visitor* visitor, const Type* for_type) const {
-  visitor->VisitBitsValue(this, for_type);
 }
 
 int HandleValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {

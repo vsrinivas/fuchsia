@@ -232,18 +232,6 @@ void Encoder::VisitVectorValue(const VectorValue* node, const Type* for_type) {
   }
 }
 
-void Encoder::VisitEnumValue(const EnumValue* node, const Type* for_type) {
-  if (node->data()) {
-    WriteData(node->data()->data(), node->enum_definition().size());
-  }
-}
-
-void Encoder::VisitBitsValue(const BitsValue* node, const Type* for_type) {
-  if (node->data()) {
-    WriteData(node->data()->data(), node->bits_definition().size());
-  }
-}
-
 void Encoder::VisitHandleValue(const HandleValue* node, const Type* for_type) {
   if (node->handle().handle == FIDL_HANDLE_ABSENT) {
     WriteValue<uint32_t>(FIDL_HANDLE_ABSENT);

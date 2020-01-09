@@ -346,52 +346,6 @@ class VectorValue : public Value {
   bool has_new_line_ = false;
 };
 
-// An enum.
-class EnumValue : public Value {
- public:
-  EnumValue(std::optional<std::vector<uint8_t>> data, const Enum& enum_definition)
-      : enum_definition_(enum_definition), data_(std::move(data)) {}
-
-  const std::optional<std::vector<uint8_t>>& data() const { return data_; }
-
-  const Enum& enum_definition() const { return enum_definition_; };
-
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
-
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
-
-  void Visit(Visitor* visitor, const Type* for_type) const override;
-
- private:
-  const Enum& enum_definition_;
-  std::optional<std::vector<uint8_t>> data_;
-};
-
-// Bits.
-class BitsValue : public Value {
- public:
-  BitsValue(std::optional<std::vector<uint8_t>> data, const Bits& bits_definition)
-      : bits_definition_(bits_definition), data_(std::move(data)) {}
-
-  const std::optional<std::vector<uint8_t>>& data() const { return data_; }
-
-  const Bits& bits_definition() const { return bits_definition_; };
-
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
-
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
-
-  void Visit(Visitor* visitor, const Type* for_type) const override;
-
- private:
-  const Bits& bits_definition_;
-  std::optional<std::vector<uint8_t>> data_;
-};
-
 // A handle.
 class HandleValue : public Value {
  public:
