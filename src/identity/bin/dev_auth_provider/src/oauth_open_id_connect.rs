@@ -15,7 +15,6 @@ use fidl_fuchsia_identity_tokens::{OpenIdToken, OpenIdUserInfo};
 use futures::future;
 use futures::prelude::*;
 use log::warn;
-use std::str::FromStr;
 
 /// An implementation of the `OauthOpenIdConnect` protocol for testing.
 pub struct OauthOpenIdConnect {}
@@ -63,7 +62,9 @@ impl OauthOpenIdConnect {
             .content
             .ok_or(ApiError::InvalidRequest)?;
 
-        let subject = AccessTokenContent::from_str(&access_token_content)?.account_id;
+        let subject = serde_json::from_str::<AccessTokenContent>(&access_token_content)
+            .map_err(|_| ApiError::InvalidRequest)?
+            .account_id;
 
         Ok(OpenIdUserInfo {
             subject: Some(subject),
@@ -117,12 +118,12 @@ mod test {
     #[fasync::run_until_stalled(test)]
     async fn get_user_info_from_access_token_test() {
         run_proxy_test(|proxy| async move {
-            let access_token_content = AccessTokenContent::new(
+            let access_token_content = serde_json::to_string(&AccessTokenContent::new(
                 "rt_token".to_string(),
                 "test-account@example.com".to_string(),
                 None,
-            )
-            .to_string();
+            ))
+            .unwrap();
 
             let user_info = proxy
                 .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {

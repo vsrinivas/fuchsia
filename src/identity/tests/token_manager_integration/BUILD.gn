@@ -18,13 +18,9 @@ executable("bin") {
   output_name = "token_manager_integration_test"
   testonly = true
 
-  sources = [
-    "dev_token_mgr_test.cc",
-  ]
+  sources = [ "dev_token_mgr_test.cc" ]
 
-  public_deps = [
-    "//sdk/lib/sys/cpp",
-  ]
+  public_deps = [ "//sdk/lib/sys/cpp" ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -34,13 +30,12 @@ executable("bin") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/rapidjson",
   ]
 }
 
 test_package("token_manager_integration_test_pkg") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   tests = [
     {

@@ -12,17 +12,15 @@ use fidl_fuchsia_identity_tokens::{OauthAccessToken, OauthRefreshToken};
 use futures::future;
 use futures::prelude::*;
 use log::warn;
-use regex::Regex;
-use std::str::FromStr;
-use std::string::ToString;
+use serde_derive::{Deserialize, Serialize};
 
 /// Data format for an access token.  In general, an access token is in an
-/// opaque format that is unreadable to a client.  Here, we serialize the data as a plain
-/// string, this enables:
+/// opaque format that is unreadable to a client.  Here, we serialize the data as json,
+/// which enables enables:
 ///     1. Integration tests to track what refresh tokens were used to generate a token
 ///     2. dev_auth_provider to return consistent information such client ids across
 ///     different calls when appropriate.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct AccessTokenContent {
     /// The client to which the access token is issued.
     pub client_id: String,
@@ -44,37 +42,6 @@ impl AccessTokenContent {
             account_id: account_id,
             id: format!("at_{}", generate_random_string()),
         }
-    }
-}
-
-impl ToString for AccessTokenContent {
-    fn to_string(&self) -> String {
-        // TODO(satsukiu): update format to use something nicer like json that can just be derived,
-        // at the moment token manager integration tests rely on a specific format.
-        format!(
-            "{}:client_id_{}:{}:account_id_{}",
-            self.refresh_token, self.client_id, self.id, self.account_id
-        )
-    }
-}
-
-impl FromStr for AccessTokenContent {
-    type Err = ApiError;
-
-    fn from_str(serialized: &str) -> Result<Self, Self::Err> {
-        let r = Regex::new(
-            "^([A-Za-z0-9_\\-]+):client_id_([A-Za-z0-9_\\-]+)\
-                :(at_[A-Za-z0-9_\\-]+):account_id_([A-Za-z0-9_@\\.\\-]+)$",
-        )
-        .unwrap();
-
-        let captures = r.captures(serialized).ok_or(ApiError::InvalidRequest)?;
-        let refresh_token = captures.get(1).ok_or(ApiError::InvalidRequest)?.as_str().to_string();
-        let client_id = captures.get(2).ok_or(ApiError::InvalidRequest)?.as_str().to_string();
-        let id = captures.get(3).ok_or(ApiError::InvalidRequest)?.as_str().to_string();
-        let account_id = captures.get(4).ok_or(ApiError::InvalidRequest)?.as_str().to_string();
-
-        Ok(AccessTokenContent { client_id, refresh_token, account_id, id })
     }
 }
 
@@ -118,9 +85,12 @@ impl Oauth {
             USER_PROFILE_INFO_ID_DOMAIN
         ));
 
-        let access_token_content =
-            AccessTokenContent::new(refresh_token_content.clone(), account_id.clone(), None)
-                .to_string();
+        let access_token_content = serde_json::to_string(&AccessTokenContent::new(
+            refresh_token_content.clone(),
+            account_id.clone(),
+            None,
+        ))
+        .map_err(|_| ApiError::Internal)?;
 
         Ok((
             OauthRefreshToken {
@@ -144,8 +114,12 @@ impl Oauth {
 
         let client_id = request.client_id;
 
-        let access_token_content =
-            AccessTokenContent::new(refresh_token_content, account_id, client_id).to_string();
+        let access_token_content = serde_json::to_string(&AccessTokenContent::new(
+            refresh_token_content,
+            account_id,
+            client_id,
+        ))
+        .map_err(|_| ApiError::Internal)?;
 
         Ok(OauthAccessToken {
             content: Some(access_token_content),
@@ -190,8 +164,8 @@ mod test {
             Some("test-client-id".to_string()),
         );
 
-        let serialized = content.to_string();
-        let result_content = AccessTokenContent::from_str(&serialized).unwrap();
+        let serialized = serde_json::to_string(&content).unwrap();
+        let result_content = serde_json::from_str::<AccessTokenContent>(&serialized).unwrap();
         assert_eq!(content, result_content);
 
         // Unspecified client id case
@@ -201,15 +175,9 @@ mod test {
             None,
         );
 
-        let serialized = content.to_string();
-        let result_content = AccessTokenContent::from_str(&serialized).unwrap();
+        let serialized = serde_json::to_string(&content).unwrap();
+        let result_content = serde_json::from_str::<AccessTokenContent>(&serialized).unwrap();
         assert_eq!(content, result_content);
-    }
-
-    #[test]
-    fn test_access_token_content_malformed() {
-        let content = "malformed".to_string();
-        assert_eq!(AccessTokenContent::from_str(&content), Err(ApiError::InvalidRequest));
     }
 
     #[fasync::run_until_stalled(test)]
@@ -266,7 +234,7 @@ mod test {
                     proxy.get_access_token_from_refresh_token(request).await?.unwrap();
                 let access_token_serialized = access_token.content.unwrap();
                 let access_token_content =
-                    AccessTokenContent::from_str(&access_token_serialized).unwrap();
+                    serde_json::from_str::<AccessTokenContent>(&access_token_serialized).unwrap();
                 assert_eq!(access_token_content.client_id, client_id);
                 assert_eq!(access_token_content.refresh_token, refresh_token_content.clone());
                 assert_eq!(access_token_content.account_id, "account-id".to_string());
@@ -287,7 +255,7 @@ mod test {
                     proxy.get_access_token_from_refresh_token(request).await?.unwrap();
                 let access_token_serialized = access_token.content.unwrap();
                 let access_token_content =
-                    AccessTokenContent::from_str(&access_token_serialized).unwrap();
+                    serde_json::from_str::<AccessTokenContent>(&access_token_serialized).unwrap();
                 assert_eq!(access_token_content.client_id, "none".to_string());
                 assert_eq!(access_token_content.refresh_token, refresh_token_content.clone());
                 assert_eq!(access_token_content.account_id, "account-id".to_string());
