@@ -43,7 +43,7 @@ reboot as part of the test, find the path to the relay device on the host machin
 Run the test with the following command on the host machine -
 
 ```
-./out/default/host_x64/<test_name_with_underscores>_host "/dev/class/block/<block-id>" "$(fx netaddr --fuchsia)"
+./out/default/host_x64/<test_name_with_underscores>_host "/dev/class/block/<block-id>" "$(fx get-device-addr)"
 ```
 
 If you have a power relay to cut power to real hardware, add `--relay /dev/<relay-device>`.

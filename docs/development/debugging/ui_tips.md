@@ -12,7 +12,7 @@ From the Fuchsia device console, run:
 `screencap /tmp/filename.ppm`
 
 From your host workstation, run:
-`fx scp [$(fx netaddr --fuchsia)]:/tmp/filename.ppm /tmp/filename.ppm`
+`fx scp [$(fx get-device-addr)]:/tmp/filename.ppm /tmp/filename.ppm`
 
 ### Take a Snapshot
 A snapshot takes a 3D representation of what is currently displayed on the screen. It usually takes

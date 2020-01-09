@@ -53,7 +53,7 @@ Boot the target system with networking support:
 (If using x64 with an emulator on a Linux host, we also recommend the "-k" flag
 which will make it run faster).
 
-To manually validate network connectivity run `fx shell` or `fx netaddr`.
+To manually validate network connectivity run `fx shell` or `fx get-device-addr`.
 
 ### Simple method
 
@@ -98,13 +98,13 @@ it means the debug agent can't be loaded. You may need to run `fx serve` or its
 equivalent in your environment to make it available.
 
 You will want to note the target's IP address. Run `ifconfig` _on the target_
-to see this, or run `fx netaddr` on the host.
+to see this, or run `fx get-device-addr` on the host.
 
 #### 2. Run the client and connect
 
 On the host system (where you do the build), run the client. Use the IP
 address of the target and the port you picked above in the `connect` command.
-If running in-tree, `fx netaddr` will tell you this address.
+If running in-tree, `fx get-device-addr` will tell you this address.
 
 For QEMU, we recommend using IPv6 and link local addresses. These addresses
 have to be annotated with the interface they apply to, so make sure the address

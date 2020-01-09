@@ -115,7 +115,7 @@ pub struct CommonOpts {
     /// will!) format this device. Don't use a main system partition!
     pub block_device: String,
     /// The target device to ssh into and execute the test on. A good way to configure this locally
-    /// is by prefixing the binary with `FUCHSIA_IPV4_ADDR=$(fx netaddr --fuchsia)`
+    /// is by prefixing the binary with `FUCHSIA_IPV4_ADDR=$(fx get-device-addr)`
     #[structopt(env = "FUCHSIA_IPV4_ADDR")]
     pub target: String,
     /// [Optional] A seed to use for all random operations. Tests are NOT deterministic relative to

@@ -171,7 +171,7 @@ run fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx --port=8080
 And, when you run fidlcat on the host, make sure you connect to that agent:
 
 ```sh
-tools/fidlcat --connect [$(fx netaddr --fuchsia)]:8080 <other args>
+tools/fidlcat --connect [$(fx get-device-addr)]:8080 <other args>
 ```
 
 ## Read the guide

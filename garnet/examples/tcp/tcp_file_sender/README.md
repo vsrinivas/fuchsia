@@ -18,4 +18,4 @@ run fuchsia-pkg://fuchsia.com/tcp_file_sender#meta/tcp_file_sender.cmx <FILE>
 ```
 
 To retrieve the byte stream:
-* `nc $(fx netaddr --fuchsia) 80 > out`
+* `nc $(fx get-device-addr) 80 > out`
