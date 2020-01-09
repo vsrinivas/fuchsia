@@ -411,6 +411,51 @@
             "package_name": "rust-crypto"
         },
         {
+            "crate_name": "rust_icu_common",
+            "crate_type": "lib",
+            "package_name": "rust_icu_common"
+        },
+        {
+            "crate_name": "rust_icu_sys",
+            "crate_type": "lib",
+            "package_name": "rust_icu_sys"
+        },
+        {
+            "crate_name": "rust_icu_ucal",
+            "crate_type": "lib",
+            "package_name": "rust_icu_ucal"
+        },
+        {
+            "crate_name": "rust_icu_udat",
+            "crate_type": "lib",
+            "package_name": "rust_icu_udat"
+        },
+        {
+            "crate_name": "rust_icu_udata",
+            "crate_type": "lib",
+            "package_name": "rust_icu_udata"
+        },
+        {
+            "crate_name": "rust_icu_uenum",
+            "crate_type": "lib",
+            "package_name": "rust_icu_uenum"
+        },
+        {
+            "crate_name": "rust_icu_uloc",
+            "crate_type": "lib",
+            "package_name": "rust_icu_uloc"
+        },
+        {
+            "crate_name": "rust_icu_ustring",
+            "crate_type": "lib",
+            "package_name": "rust_icu_ustring"
+        },
+        {
+            "crate_name": "rust_icu_utext",
+            "crate_type": "lib",
+            "package_name": "rust_icu_utext"
+        },
+        {
             "crate_name": "rustc_hash",
             "crate_type": "lib",
             "package_name": "rustc-hash"

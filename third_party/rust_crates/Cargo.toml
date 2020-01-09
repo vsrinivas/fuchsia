@@ -135,6 +135,15 @@ rand_xorshift = "0.1.1"
 rental = "0.5.4"
 rouille = "3.0.0"
 rust-crypto = "0.2"
+rust_icu_common = { version = "0.0.4", default-features = false, features = ["renaming"] }
+rust_icu_sys = { version = "0.0.4", default-features = false, features = ["renaming"] }
+rust_icu_ucal = { version = "0.0.4", default-features = false, features = ["renaming"] }
+rust_icu_udat = { version = "0.0.4", default-features = false, features = ["renaming"] }
+rust_icu_udata = { version = "0.0.4", default-features = false, features = ["renaming"] }
+rust_icu_uenum = { version = "0.0.4", default-features = false, features = ["renaming"] }
+rust_icu_uloc = { version = "0.0.4", default-features = false, features = ["renaming"] }
+rust_icu_ustring = { version = "0.0.4", default-features = false, features = ["renaming"] }
+rust_icu_utext = { version = "0.0.4", default-features = false, features = ["renaming"] }
 rustls = { version = "0.16", features = ["dangerous_configuration"] }
 rusttype = "0.7.3"
 serde_repr = "0.1.3"
