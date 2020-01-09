@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
@@ -294,10 +295,19 @@ func transferToDir(dir string, img bootserver.Image) error {
 			return err
 		}
 		defer tmp.Close()
+
+		// Log progress to avoid hitting I/O timeout in case of slow transfers.
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		go func() {
+			for range ticker.C {
+				log.Printf("transferring %s...\n", img.Name)
+			}
+		}()
+
 		if _, err := io.Copy(tmp, iomisc.ReaderAtToReader(img.Reader)); err != nil {
 			return err
 		}
-		log.Printf("transferred %s to %s\n", img.Name, filename)
 	}
 	return nil
 }
