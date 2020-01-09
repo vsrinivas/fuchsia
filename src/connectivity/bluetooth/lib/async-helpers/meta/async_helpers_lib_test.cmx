@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/async_helpers_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

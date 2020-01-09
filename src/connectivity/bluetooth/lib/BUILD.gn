@@ -5,6 +5,8 @@
 group("lib") {
   testonly = true
   deps = [
+    "async-helpers",
+    "async-helpers:async-helpers-tests",
     "bt-a2dp",
     "bt-a2dp:tests",
     "bt-avdtp",

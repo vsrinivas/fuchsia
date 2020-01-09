@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("async-helpers") {
+  name = "async_helpers"
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
+}
+
+test_package("async-helpers-tests") {
+  package_name = "async-helpers-tests"
+
+  deps = [
+    ":async-helpers_test",
+  ]
+
+  tests = [
+    {
+      name = "async_helpers_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
