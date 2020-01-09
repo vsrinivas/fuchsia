@@ -135,6 +135,9 @@ TEST_F(VolumeControlTest, DuplicateSetsGenerateNoEvents) {
     muted = new_muted;
     ++event_count;
   };
+  RunLoopUntilIdle();
+  EXPECT_EQ(event_count, 1u);
+  event_count = 0;
 
   client->SetVolume(0.1);
   client->SetVolume(0.1);
@@ -172,6 +175,25 @@ TEST_F(VolumeControlTest, AllClientsReceiveEvents) {
   RunLoopUntilIdle();
   EXPECT_FLOAT_EQ(volume1, 0.1);
   EXPECT_FALSE(muted1);
+  EXPECT_FLOAT_EQ(volume2, 0.1);
+  EXPECT_FALSE(muted2);
+}
+
+TEST_F(VolumeControlTest, ClientsReceiveStateOnConnection) {
+  auto client1 = BindVolumeControl();
+  client1.events().OnVolumeMuteChanged = [](float new_volume, bool new_muted) {};
+  client1->SetVolume(0.1);
+  RunLoopUntilIdle();
+
+  float volume2;
+  bool muted2;
+  auto client2 = BindVolumeControl();
+  client2.events().OnVolumeMuteChanged = [&volume2, &muted2](float new_volume, bool new_muted) {
+    volume2 = new_volume;
+    muted2 = new_muted;
+  };
+
+  RunLoopUntilIdle();
   EXPECT_FLOAT_EQ(volume2, 0.1);
   EXPECT_FALSE(muted2);
 }

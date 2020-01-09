@@ -33,6 +33,7 @@ VolumeControl::VolumeControl(VolumeSetting* volume_setting, async_dispatcher_t* 
 void VolumeControl::AddBinding(
     fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> request) {
   bindings_.AddBinding(std::make_unique<VolumeControlImpl>(this), std::move(request), dispatcher_);
+  bindings_.bindings().back()->events().OnVolumeMuteChanged(current_volume_, muted_);
 }
 
 void VolumeControl::SetVolume(float volume) {
