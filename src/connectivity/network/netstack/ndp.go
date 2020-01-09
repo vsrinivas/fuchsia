@@ -249,10 +249,18 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 					return
 				}
 
+				// Get the next event from the queue, but do not remove the event from
+				// the queue yet. The event will be removed from the queue once it has
+				// been handled. This is to avoid a race condition in tests where
+				// waiting for the queue to empty can block indefinitely if the queue is
+				// already empty.
+				//
+				// This is safe because the worker goroutine will be the only goroutine
+				// handling events and popping from the queue. Other goroutines will
+				// only push to the queue.
 				n.mu.Lock()
 				if len(n.mu.events) > 0 {
 					event = n.mu.events[0]
-					n.mu.events = n.mu.events[1:]
 				}
 				n.mu.Unlock()
 
@@ -260,8 +268,8 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 					break
 				}
 
-				// No NDP events to handle. Wait for an NDP or
-				// ctx cancellation event to handle.
+				// No NDP events to handle. Wait for an NDP or ctx cancellation event to
+				// handle.
 				select {
 				case <-done:
 					syslog.Infof("ndp: stopping worker goroutine; ctx.Err(): %s", ctx.Err())
@@ -329,21 +337,22 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				panic(fmt.Sprintf("unrecognized event type: %T", event))
 			}
 
-			// Signal tests that are waiting for the event queue to
-			// be empty. We signal after handling the last event so
-			// that when the test wakes up, it knows that all events
-			// in the queue (up to this notification) have been
-			// handled.
-			if c := n.testNotifyCh; c != nil {
-				n.mu.Lock()
-				eventsLeft := len(n.mu.events)
-				n.mu.Unlock()
+			// Remove the event we just handled from the queue. If the queue is empty
+			// after popping, then we know that all events in the queue (before taking
+			// the lock) have been handled.
+			n.mu.Lock()
+			n.mu.events = n.mu.events[1:]
+			eventsLeft := len(n.mu.events)
+			n.mu.Unlock()
 
-				if eventsLeft == 0 {
-					select {
-					case c <- struct{}{}:
-					default:
-					}
+			// Signal tests that are waiting for the event queue to be empty. We
+			// signal after handling the last event so that when the test wakes up,
+			// the test can safely assume that all events in the queue (up to this
+			// notification) have been handled.
+			if eventsLeft == 0 {
+				select {
+				case n.testNotifyCh <- struct{}{}:
+				default:
 				}
 			}
 		}
