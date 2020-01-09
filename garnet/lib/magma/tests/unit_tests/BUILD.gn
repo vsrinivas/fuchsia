@@ -73,6 +73,7 @@ source_set("magma_util_tests") {
     "$magma_build_root/src/magma_util:allocator",
     "$magma_build_root/src/magma_util:inflight_list",
     "$magma_build_root/src/magma_util:registers",
+    "$magma_build_root/src/magma_util:ringbuffer",
     "$magma_build_root/src/magma_util:semaphore_port",
     "$magma_build_root/tests/mock:address_space",
     "$magma_build_root/tests/mock:bus_mapper",
