@@ -41,6 +41,8 @@ if (current_toolchain == host_toolchain) {
     ]
 
     deps = [
+      "//src/lib/fidl_codec",
+      "//src/lib/fxl",
       "//zircon/public/lib/cmdline",
     ]
   }
@@ -62,6 +64,7 @@ if (current_toolchain == host_toolchain) {
     ]
     deps = [
       ":lib",
+      "//src/lib/fxl",
       "//third_party/googletest:gtest",
       "//zircon/public/lib/cmdline",
     ]

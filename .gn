@@ -31,12 +31,14 @@ default_args = {
   skia_use_x11 = false
 }
 
-# Enable checking for the layers.
+# Enable checking for all source code we control.
 check_targets = [
+  "//examples/*",
   "//garnet/*",
   "//peridot/*",
   "//sdk/*",
   "//src/*",
+  "//tools/*",
   "//topaz/*",
   "//vendor/*",
   "//zircon/*",

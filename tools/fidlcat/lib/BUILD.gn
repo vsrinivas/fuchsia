@@ -36,6 +36,7 @@ if (current_toolchain == host_toolchain) {
       "//src/lib/fidl_codec",
       "//src/lib/fxl",
       "//third_party/rapidjson",
+      "//tools/fidlcat:lib",
       "//zircon/public/lib/fidl_base",
       "//zircon/public/lib/fit",
     ]
@@ -44,17 +45,18 @@ if (current_toolchain == host_toolchain) {
       "//zircon/system/public",
     ]
   }
-}
 
-source_set("host_tests") {
-  testonly = true
-  sources = [
-    "comparator_test.cc",
-  ]
+  source_set("host_tests") {
+    testonly = true
+    sources = [
+      "comparator_test.cc",
+    ]
 
-  deps = [
-    "//third_party/googletest:gtest",
-  ]
+    deps = [
+      ":host_lib",
+      "//third_party/googletest:gtest",
+    ]
+  }
 }
 
 action("json_for_test") {
