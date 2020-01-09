@@ -140,13 +140,11 @@ static int pl011_uart_getc(bool wait) {
 }
 
 /* panic-time getc/putc */
-static int pl011_uart_pputc(char c) {
+static void pl011_uart_pputc(char c) {
   /* spin while fifo is full */
   while (UARTREG(uart_base, UART_FR) & (1 << 5))
     ;
   UARTREG(uart_base, UART_DR) = c;
-
-  return 1;
 }
 
 static int pl011_uart_pgetc() {

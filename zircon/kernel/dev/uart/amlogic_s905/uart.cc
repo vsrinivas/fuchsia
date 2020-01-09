@@ -189,17 +189,15 @@ static void s905_uart_init(const void* driver_data, uint32_t length) {
 }
 
 /* panic-time getc/putc */
-static int s905_uart_pputc(char c) {
+static void s905_uart_pputc(char c) {
   if (!s905_uart_base) {
-    return 0;
+    return;
   }
 
   /* spin while fifo is full */
   while (UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL)
     ;
   UARTREG(s905_uart_base, S905_UART_WFIFO) = c;
-
-  return 1;
 }
 
 static int s905_uart_pgetc() {

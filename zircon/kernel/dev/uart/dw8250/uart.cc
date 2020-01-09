@@ -133,17 +133,15 @@ static interrupt_eoi dw8250_uart_irq(void* arg) {
 }
 
 /* panic-time getc/putc */
-static int dw8250_uart_pputc(char c) {
+static void dw8250_uart_pputc(char c) {
   if (!uart_base) {
-    return -1;
+    return;
   }
 
   // spin while fifo is full
   while (!(UARTREG(UART_LSR) & UART_LSR_THRE))
     ;
   UARTREG(UART_THR) = c;
-
-  return 1;
 }
 
 static int dw8250_uart_pgetc() {

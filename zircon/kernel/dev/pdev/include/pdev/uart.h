@@ -18,7 +18,7 @@ struct pdev_uart_ops {
   int (*getc)(bool wait);
 
   /* panic-time uart accessors, intended to be run with interrupts disabled */
-  int (*pputc)(char c);
+  void (*pputc)(char c);
   int (*pgetc)(void);
 
   void (*start_panic)(void);

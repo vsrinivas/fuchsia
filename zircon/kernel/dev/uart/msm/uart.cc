@@ -129,9 +129,9 @@ static inline void uart_write(uint32_t val, int offset) { writel(val, uart_base 
 static inline void yield(void) { __asm__ volatile("yield" ::: "memory"); }
 
 // panic-time getc/putc
-static int msm_pputc(char c) {
+static void msm_pputc(char c) {
   if (!uart_base) {
-    return -1;
+    return;
   }
 
   // spin while fifo is full
@@ -148,8 +148,6 @@ static int msm_pputc(char c) {
   }
 
   uart_write(c, UART_DM_TF);
-
-  return 1;
 }
 
 static int msm_pgetc(void) {

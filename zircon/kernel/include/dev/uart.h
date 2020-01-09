@@ -28,7 +28,7 @@ int uart_getc(bool wait);
 void uart_puts(const char* str, size_t len, bool block, bool map_NL);
 
 /* panic-time uart accessors, intended to be run with interrupts disabled */
-int uart_pputc(char c);
+void uart_pputc(char c);
 int uart_pgetc(void);
 
 __END_CDECLS

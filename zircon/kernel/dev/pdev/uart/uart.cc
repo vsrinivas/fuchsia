@@ -11,7 +11,7 @@
 
 static int default_getc(bool wait) { return ZX_ERR_NOT_SUPPORTED; }
 
-static int default_pputc(char c) { return -1; }
+static void default_pputc(char c) {}
 
 static int default_pgetc() { return ZX_ERR_NOT_SUPPORTED; }
 
@@ -47,7 +47,7 @@ void uart_puts(const char* str, size_t len, bool block, bool map_NL) {
   uart_ops->dputs(str, len, block, map_NL);
 }
 
-int uart_pputc(char c) { return uart_ops->pputc(c); }
+void uart_pputc(char c) { uart_ops->pputc(c); }
 
 int uart_pgetc() { return uart_ops->pgetc(); }
 

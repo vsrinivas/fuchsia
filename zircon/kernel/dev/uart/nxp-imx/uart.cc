@@ -103,17 +103,15 @@ static interrupt_eoi uart_irq_handler(void* arg) {
 }
 
 /* panic-time getc/putc */
-static int imx_uart_pputc(char c) {
+static void imx_uart_pputc(char c) {
   if (!uart_base) {
-    return -1;
+    return;
   }
 
   /* spin while fifo is full */
   while (UARTREG(MX8_UTS) & UTS_TXFULL)
     ;
   UARTREG(MX8_UTXD) = c;
-
-  return 1;
 }
 
 static int imx_uart_pgetc() {
