@@ -295,7 +295,7 @@ impl<'a> SpawnAction<'a> {
     ///
     /// `local_fd`: File descriptor within the current process.
     /// `target_fd`: File descriptor within the new process that will receive the clone.
-    pub fn clone_fd(local_fd: &'a File, target_fd: i32) -> Self {
+    pub fn clone_fd(local_fd: &'a impl AsRawFd, target_fd: i32) -> Self {
         // Safety: `local_fd` is a valid file descriptor so long as we're inside the
         // 'a lifetime.
         Self(
@@ -316,7 +316,7 @@ impl<'a> SpawnAction<'a> {
     ///
     /// `local_fd`: File descriptor within the current process.
     /// `target_fd`: File descriptor within the new process that will receive the transfer.
-    pub fn transfer_fd(local_fd: File, target_fd: i32) -> Self {
+    pub fn transfer_fd(local_fd: impl IntoRawFd, target_fd: i32) -> Self {
         // Safety: ownership of `local_fd` is consumed, so `Self` can live arbitrarily long.
         // When the action is executed, the fd will be transferred.
         Self(

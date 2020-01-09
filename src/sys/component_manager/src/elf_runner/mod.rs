@@ -90,9 +90,9 @@ fn handle_info_from_fd(fd: i32) -> Result<Option<fproc::HandleInfo>, Error> {
     unsafe {
         let mut fd_handle = zx::sys::ZX_HANDLE_INVALID;
         let status = fdio_sys::fdio_fd_clone(fd, &mut fd_handle as *mut zx::sys::zx_handle_t);
-        if status == zx::sys::ZX_ERR_INVALID_ARGS {
-            // This file descriptor is closed. We just skip it rather than
-            // generating an error.
+        if status == zx::sys::ZX_ERR_INVALID_ARGS || status == zx::sys::ZX_ERR_NOT_SUPPORTED {
+            // This file descriptor is closed or not clone-able.
+            // We just skip it rather than generating an error.
             return Ok(None);
         }
         if status != zx::sys::ZX_OK {

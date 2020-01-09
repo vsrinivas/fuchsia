@@ -69,9 +69,13 @@ async fn main() -> Result<(), Error> {
     let svc_str = CString::new("/svc")?;
     let pkg_str = CString::new("/pkg")?;
     let pkg_dir = fs::File::open("/pkg")?;
+    let stdout = std::io::stdout();
+    let stderr = std::io::stderr();
     let mut actions = vec![
         fdio::SpawnAction::add_namespace_entry(&svc_str, serve_proxy_svc_dir()?.into_handle()),
         fdio::SpawnAction::add_namespace_entry(&pkg_str, fdio::transfer_fd(pkg_dir)?),
+        fdio::SpawnAction::clone_fd(&stdout, 1),
+        fdio::SpawnAction::clone_fd(&stderr, 2),
     ];
 
     // Also pass through /tmp if it exists, as it's needed for some component manager tests
@@ -85,7 +89,8 @@ async fn main() -> Result<(), Error> {
     let argv: Vec<CString> =
         args.into_iter().skip(1).map(CString::new).collect::<Result<_, _>>()?;
     let argv_ref: Vec<&CStr> = argv.iter().map(|a| &**a).collect();
-    let options = fdio::SpawnOptions::CLONE_ALL & !fdio::SpawnOptions::CLONE_NAMESPACE;
+    let options = fdio::SpawnOptions::CLONE_ALL & !fdio::SpawnOptions::CLONE_NAMESPACE
+        & !fdio::SpawnOptions::CLONE_STDIO;
     let process =
         fdio::spawn_etc(&root_job, options, argv_ref[0], argv_ref.as_slice(), None, &mut actions)
             .map_err(|(status, errmsg)| {
