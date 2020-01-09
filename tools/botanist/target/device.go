@@ -16,7 +16,6 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
-	"go.fuchsia.dev/fuchsia/tools/botanist/power/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
@@ -35,9 +34,6 @@ const (
 type DeviceConfig struct {
 	// Network is the network properties of the target.
 	Network NetworkProperties `json:"network"`
-
-	// Power is the attached power management configuration.
-	Power *power.Client `json:"power,omitempty"`
 
 	// SSHKeys are the default system keys to be used with the device.
 	SSHKeys []string `json:"keys,omitempty"`
@@ -183,16 +179,9 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 	return bootserver.Boot(ctx, t.Tftp(), images, args, signers)
 }
 
-// Restart restarts the target.
+// Restart restarts the target. This is a no op for now because botanist is no longer
+// responsible for rebooting physical devices.
 func (t *DeviceTarget) Restart(ctx context.Context) error {
-	if t.serial != nil {
-		defer t.serial.Close()
-	}
-	if t.config.Power != nil {
-		if err := t.config.Power.RebootDevice(t.signers, t.Nodename(), t.serial); err != nil {
-			return fmt.Errorf("failed to reboot the device: %v", err)
-		}
-	}
 	return nil
 }
 

@@ -26,10 +26,10 @@ go_library("target") {
   deps = [
     ":botanist_lib",
     "//tools/bootserver:bootserver_lib",
-    "//tools/botanist/power",
     "//tools/lib/iomisc",
     "//tools/lib/osmisc",
     "//tools/net/netutil",
+    "//tools/net/sshutil",
     "//tools/qemu",
     "//tools/serial",
   ]
