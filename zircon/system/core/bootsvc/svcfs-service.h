@@ -73,7 +73,7 @@ fbl::RefPtr<fs::Service> CreateWriteOnlyLogService(async_dispatcher_t* dispatche
 
 // Create a service to provide the root resource.
 fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher,
-                                                   zx::resource root_resource);
+                                                   const zx::resource& root_resource);
 
 // A service that implements a fidl protocol to vend kernel statistics.
 class KernelStatsImpl : public llcpp::fuchsia::kernel::Stats::Interface {
@@ -81,8 +81,8 @@ class KernelStatsImpl : public llcpp::fuchsia::kernel::Stats::Interface {
   // The service requires the root resource as that is necessary today to call
   // the appropriate zx_object_get_info syscalls. It does not require any rights
   // on that handle though.
-  explicit KernelStatsImpl(zx::resource root_resource_handle)
-      : root_resource_handle_(std::move(root_resource_handle)) {}
+  explicit KernelStatsImpl(const zx::resource& root_resource)
+      : root_resource_(root_resource) {}
 
   // Binds the implementation to the passed in dispatcher.
   fbl::RefPtr<fs::Service> CreateService(async_dispatcher_t* dispatcher);
@@ -90,8 +90,9 @@ class KernelStatsImpl : public llcpp::fuchsia::kernel::Stats::Interface {
   void GetMemoryStats(GetMemoryStatsCompleter::Sync completer) override;
 
   void GetCpuStats(GetCpuStatsCompleter::Sync completer) override;
+
  private:
-  zx::resource root_resource_handle_;
+  const zx::resource& root_resource_;
 };
 
 }  // namespace bootsvc

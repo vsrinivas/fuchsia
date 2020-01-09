@@ -164,8 +164,8 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
 // off.
 void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        fbl::RefPtr<bootsvc::SvcfsService> svcfs,
-                       fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc, zx::resource root_rsrc,
-                       bool shutdown, const zx::debuglog& log) {
+                       fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc, bool shutdown,
+                       const zx::resource& root_rsrc, const zx::debuglog& log) {
   const char* bootsvc_next = getenv("bootsvc.next");
   if (bootsvc_next == nullptr) {
     bootsvc_next =
@@ -314,8 +314,8 @@ int main(int argc, char** argv) {
 
   // Take the root resource
   printf("bootsvc: Taking root resource handle...\n");
-  zx::resource root_resource_handle(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
-  ZX_ASSERT_MSG(root_resource_handle.is_valid(), "Invalid root resource handle\n");
+  zx::resource root_resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
+  ZX_ASSERT_MSG(root_resource.is_valid(), "Invalid root resource handle\n");
 
   // Set up the svcfs service
   printf("bootsvc: Creating svcfs service...\n");
@@ -329,28 +329,17 @@ int main(int argc, char** argv) {
   svcfs_svc->AddService(
       fuchsia_boot_FactoryItems_Name,
       bootsvc::CreateFactoryItemsService(loop.dispatcher(), std::move(factory_item_map)));
-
-  zx::resource dup_root;
-  zx::resource restart_dup_root;
-  status = root_resource_handle.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_root);
-  ZX_ASSERT_MSG(status == ZX_OK && dup_root.is_valid(), "Failed to duplicate root resource");
-  status = root_resource_handle.duplicate(ZX_RIGHT_SAME_RIGHTS, &restart_dup_root);
-  ZX_ASSERT_MSG(status == ZX_OK && dup_root.is_valid(), "Failed to duplicate root resource");
   svcfs_svc->AddService(fuchsia_boot_ReadOnlyLog_Name,
-                        bootsvc::CreateReadOnlyLogService(loop.dispatcher(), dup_root));
+                        bootsvc::CreateReadOnlyLogService(loop.dispatcher(), root_resource));
   svcfs_svc->AddService(fuchsia_boot_WriteOnlyLog_Name,
                         bootsvc::CreateWriteOnlyLogService(loop.dispatcher(), log));
-  zx::job::default_job()->set_property(ZX_PROP_NAME, "root", 4);
-
-  zx::resource kernel_stats_resource;
-  root_resource_handle.duplicate(ZX_RIGHT_NONE, &kernel_stats_resource);
-  bootsvc::KernelStatsImpl kernel_stats(std::move(kernel_stats_resource));
+  svcfs_svc->AddService(fuchsia_boot_RootResource_Name,
+                        bootsvc::CreateRootResourceService(loop.dispatcher(), root_resource));
+  bootsvc::KernelStatsImpl kernel_stats(root_resource);
   svcfs_svc->AddService(llcpp::fuchsia::kernel::Stats::Name,
                         kernel_stats.CreateService(loop.dispatcher()));
 
-  svcfs_svc->AddService(
-      fuchsia_boot_RootResource_Name,
-      bootsvc::CreateRootResourceService(loop.dispatcher(), std::move(root_resource_handle)));
+  zx::job::default_job()->set_property(ZX_PROP_NAME, "root", 4);
 
   // Consume certain VMO types from the startup handle table
   printf("bootsvc: Loading kernel VMOs...\n");
@@ -376,8 +365,8 @@ int main(int argc, char** argv) {
   // it may issue requests to the loader, which runs in the async loop that
   // starts running after this.
   printf("bootsvc: Launching next process...\n");
-  std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc, std::move(restart_dup_root),
-              std::move(shutdown), std::cref(log))
+  std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc, shutdown,
+              std::cref(root_resource), std::cref(log))
       .detach();
 
   // Begin serving the bootfs fileystem and loader

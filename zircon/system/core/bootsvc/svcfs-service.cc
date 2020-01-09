@@ -137,9 +137,9 @@ constexpr fuchsia_boot_WriteOnlyLog_ops kWriteOnlyLogOps = {
 };
 
 zx_status_t RootResourceGet(void* ctx, fidl_txn_t* txn) {
-  auto root_resource_handle = static_cast<const zx::resource*>(ctx);
+  auto root_resource = static_cast<const zx::resource*>(ctx);
   zx::resource root_resource_dup;
-  zx_status_t status = root_resource_handle->duplicate(ZX_RIGHT_SAME_RIGHTS, &root_resource_dup);
+  zx_status_t status = root_resource->duplicate(ZX_RIGHT_SAME_RIGHTS, &root_resource_dup);
   if (status != ZX_OK) {
     printf("bootsvc: Failed to duplicate root resource handle: %s\n", zx_status_get_string(status));
     return status;
@@ -218,11 +218,12 @@ fbl::RefPtr<fs::Service> CreateWriteOnlyLogService(async_dispatcher_t* dispatche
 }
 
 fbl::RefPtr<fs::Service> CreateRootResourceService(async_dispatcher_t* dispatcher,
-                                                   zx::resource root_resource) {
+                                                   const zx::resource& root_resource) {
   return fbl::MakeRefCounted<fs::Service>(
-      [dispatcher, resource = std::move(root_resource)](zx::channel channel) mutable {
+      [dispatcher, &root_resource](zx::channel channel) mutable {
         auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootResource_dispatch);
-        return fidl_bind(dispatcher, channel.release(), dispatch, &resource, &kRootResourceOps);
+        return fidl_bind(dispatcher, channel.release(), dispatch,
+                         const_cast<zx::resource*>(&root_resource), &kRootResourceOps);
       });
 }
 
@@ -234,8 +235,8 @@ fbl::RefPtr<fs::Service> KernelStatsImpl::CreateService(async_dispatcher_t* disp
 
 void KernelStatsImpl::GetMemoryStats(GetMemoryStatsCompleter::Sync completer) {
   zx_info_kmem_stats_t mem_stats;
-  zx_status_t status = root_resource_handle_.get_info(
-      ZX_INFO_KMEM_STATS, &mem_stats, sizeof(zx_info_kmem_stats_t), nullptr, nullptr);
+  zx_status_t status = root_resource_.get_info(ZX_INFO_KMEM_STATS, &mem_stats,
+                                               sizeof(zx_info_kmem_stats_t), nullptr, nullptr);
   if (status != ZX_OK) {
     completer.Close(status);
     return;
@@ -256,13 +257,14 @@ void KernelStatsImpl::GetMemoryStats(GetMemoryStatsCompleter::Sync completer) {
 void KernelStatsImpl::GetCpuStats(GetCpuStatsCompleter::Sync completer) {
   zx_info_cpu_stats_t cpu_stats[ZX_CPU_SET_MAX_CPUS];
   size_t actual, available;
-  zx_status_t status = root_resource_handle_.get_info(
-      ZX_INFO_CPU_STATS, &cpu_stats, sizeof(zx_info_cpu_stats_t) * ZX_CPU_SET_MAX_CPUS, &actual,
-      &available);
+  zx_status_t status = root_resource_.get_info(ZX_INFO_CPU_STATS, cpu_stats,
+                                               sizeof(zx_info_cpu_stats_t) * ZX_CPU_SET_MAX_CPUS,
+                                               &actual, &available);
   if (status != ZX_OK) {
     completer.Close(status);
     return;
   }
+
   llcpp::fuchsia::kernel::CpuStats stats;
   stats.actual_num_cpus = actual;
   llcpp::fuchsia::kernel::PerCpuStats per_cpu_stats[available];
