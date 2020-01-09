@@ -30,6 +30,8 @@ zx_status_t sysmem_init(void** out_driver_ctx) {
                async_get_default_dispatcher());
 
   auto driver = std::make_unique<Driver>();
+  driver->dispatcher = async_get_default_dispatcher();
+  driver->dispatcher_thrd = thrd_current();
 
   // For now at least, sysmem doesn't unload, so just release() the pointer
   // into *out_driver_ctx to remain allocated for life of this devhost

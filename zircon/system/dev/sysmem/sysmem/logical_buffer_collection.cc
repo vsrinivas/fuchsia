@@ -189,6 +189,12 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
     // and ZX_OK is never passed to the error handler.
     ZX_DEBUG_ASSERT(status != ZX_OK);
 
+    // The dispatcher shut down before we were able to Bind(...)
+    if (status == ZX_ERR_BAD_STATE) {
+      Fail("sysmem dispatcher shutting down - status: %d", status);
+      return;
+    }
+
     // We know |this| is alive because the token is alive and the token has
     // a fbl::RefPtr<LogicalBufferCollection>.  The token is alive because
     // the token is still in token_views_.
@@ -293,6 +299,11 @@ LogicalBufferCollection::~LogicalBufferCollection() {
   // empty.
   ZX_DEBUG_ASSERT(token_views_.empty());
   ZX_DEBUG_ASSERT(collection_views_.empty());
+
+  // Cancel all TrackedParentVmo waits to avoid a use-after-free of |this|
+  for (auto& tracked : parent_vmos_) {
+    tracked.second->CancelWait();
+  }
 
   if (memory_allocator_) {
     memory_allocator_->RemoveDestroyCallback(reinterpret_cast<intptr_t>(this));
@@ -492,6 +503,12 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
     // status passed to an error handler is never ZX_OK.  Clean close is
     // ZX_ERR_PEER_CLOSED.
     ZX_DEBUG_ASSERT(status != ZX_OK);
+
+    // The dispatcher shut down before we were able to Bind(...)
+    if (status == ZX_ERR_BAD_STATE) {
+      Fail("sysmem dispatcher shutting down - status: %d", status);
+      return;
+    }
 
     // We know collection_ptr is still alive because collection_ptr is
     // still in collection_views_.  We know this is still alive because
@@ -1645,7 +1662,7 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
   // Now that we know at least one child of raw_parent_vmo exists, we can StartWait() and add to
   // map.  From this point, ZX_VMO_ZERO_CHILDREN is the only way that allocator->Delete() gets
   // called.
-  status = tracked_parent_vmo->StartWait();
+  status = tracked_parent_vmo->StartWait(parent_device_->dispatcher());
   if (status != ZX_OK) {
     LogError("tracked_parent->StartWait() failed - status: %d", status);
     // ~tracked_parent_vmo calls allocator->Delete().
@@ -1757,17 +1774,22 @@ LogicalBufferCollection::TrackedParentVmo::~TrackedParentVmo() {
   }
 }
 
-zx_status_t LogicalBufferCollection::TrackedParentVmo::StartWait() {
+zx_status_t LogicalBufferCollection::TrackedParentVmo::StartWait(async_dispatcher_t* dispatcher) {
   LogInfo("LogicalBufferCollection::TrackedParentVmo::StartWait()");
   // The current thread is the dispatcher thread.
   ZX_DEBUG_ASSERT(!waiting_);
-  zx_status_t status = zero_children_wait_.Begin(async_get_default_dispatcher());
+  zx_status_t status = zero_children_wait_.Begin(dispatcher);
   if (status != ZX_OK) {
     LogError("zero_children_wait_.Begin() failed - status: %d", status);
     return status;
   }
   waiting_ = true;
   return ZX_OK;
+}
+
+zx_status_t LogicalBufferCollection::TrackedParentVmo::CancelWait() {
+  waiting_ = false;
+  return zero_children_wait_.Cancel();
 }
 
 zx::vmo LogicalBufferCollection::TrackedParentVmo::TakeVmo() {
@@ -1788,6 +1810,10 @@ void LogicalBufferCollection::TrackedParentVmo::OnZeroChildren(async_dispatcher_
   LogInfo("LogicalBufferCollection::TrackedParentVmo::OnZeroChildren()");
   ZX_DEBUG_ASSERT(waiting_);
   waiting_ = false;
+  if (status == ZX_ERR_CANCELED) {
+    // The collection canceled all of these waits as part of destruction, do nothing.
+    return;
+  }
   ZX_DEBUG_ASSERT(status == ZX_OK);
   ZX_DEBUG_ASSERT(signal->trigger & ZX_VMO_ZERO_CHILDREN);
   ZX_DEBUG_ASSERT(do_delete_);

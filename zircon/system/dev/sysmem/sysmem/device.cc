@@ -23,6 +23,7 @@
 #include "allocator.h"
 #include "buffer_collection_token.h"
 #include "contiguous_pooled_memory_allocator.h"
+#include "driver.h"
 #include "macros.h"
 
 using sysmem_driver::MemoryAllocator;
@@ -232,8 +233,8 @@ Device::Device(zx_device_t* parent_device, Driver* parent_driver)
     : parent_device_(parent_device),
       parent_driver_(parent_driver),
       in_proc_sysmem_protocol_{.ops = &in_proc_sysmem_protocol_ops, .ctx = this},
-      dispatcher_(async_get_default_dispatcher()),
-      closure_queue_(dispatcher_, thrd_current()) {
+      dispatcher_(parent_driver->dispatcher),
+      closure_queue_(dispatcher_, parent_driver->dispatcher_thrd) {
   ZX_DEBUG_ASSERT(parent_device_);
   ZX_DEBUG_ASSERT(parent_driver_);
 }
@@ -397,7 +398,7 @@ zx_status_t Device::RegisterHeap(uint64_t heap, zx_handle_t heap_connection) {
                        const zx_packet_signal_t* signal) { allocators_.erase(heap); }));
   // It is safe to call Begin() here before adding entry to the map as
   // handler will run on current thread.
-  zx_status_t status = wait_for_close->Begin(async_get_default_dispatcher());
+  zx_status_t status = wait_for_close->Begin(dispatcher());
   if (status != ZX_OK) {
     DRIVER_ERROR("Device::RegisterHeap() failed wait_for_close->Begin()");
     return status;
@@ -432,7 +433,7 @@ zx_status_t Device::RegisterSecureMem(zx_handle_t secure_mem_connection) {
 
   // It is safe to call Begin() here before setting up secure_mem_ because handler will run on
   // current thread.
-  zx_status_t status = wait_for_close->Begin(async_get_default_dispatcher());
+  zx_status_t status = wait_for_close->Begin(dispatcher());
   if (status != ZX_OK) {
     DRIVER_ERROR("Device::RegisterSecureMem() failed wait_for_close->Begin()");
     return status;
