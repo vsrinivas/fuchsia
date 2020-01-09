@@ -22,6 +22,7 @@ zx_library("journal") {
       "background_executor.cc",
       "data_streamer.cc",
       "entry_view.cc",
+      "inspector/inspector_parser.cc",
       "inspector_journal.cc",
       "inspector_journal_entries.cc",
       "journal.cc",
@@ -70,6 +71,7 @@ zx_test("journal-unit") {
     "test/data_streamer_test.cc",
     "test/entry_view_test.cc",
     "test/header_view_test.cc",
+    "test/inspector_parser_test.cc",
     "test/inspector_test.cc",
     "test/journal_test.cc",
     "test/operation_tracker_test.cc",
@@ -79,6 +81,7 @@ zx_test("journal-unit") {
   ]
   deps = [
     ":journal",
+    "$zx/system/ulib/storage/buffer/test_support",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",

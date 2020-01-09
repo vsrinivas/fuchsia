@@ -97,6 +97,8 @@ zx_library("minfs") {
       "inspector-inode.cc",
       "inspector-superblock.cc",
       "inspector.cc",
+      "inspector/loader.cc",
+      "inspector/parser.cc",
       "superblock.cc",
       "vnode-allocation.cc",
     ]

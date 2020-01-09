@@ -17,7 +17,9 @@ zx_library("test_support") {
     "$zx/system/ulib/devmgr-integration-test:headers",
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fs-management:headers",
+    "$zx/system/ulib/fs/transaction:headers",
     "$zx/system/ulib/ramdevice-client:headers",
+    "$zx/system/ulib/storage/buffer/test_support:headers",
     "$zx/system/ulib/zxtest:headers",
   ]
 
@@ -28,9 +30,11 @@ zx_library("test_support") {
     "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/fs/transaction",
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/ramdevice-client",
+    "$zx/system/ulib/storage/buffer/test_support",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxtest",
   ]
