@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::{input_device, keyboard, mouse},
+    crate::{input_device, keyboard, mouse, touch},
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_input2 as fidl_ui_input2,
     maplit::hashmap,
@@ -110,6 +110,54 @@ pub fn create_mouse_event(
     }
 }
 
+/// Creates a [`fidl_input_report::InputReport`] with a touch report.
+///
+/// # Parameters
+/// - `contacts`: the contacts in the touch report.
+#[cfg(test)]
+pub fn create_touch_input_report(
+    contacts: Vec<fidl_input_report::ContactInputReport>,
+) -> fidl_input_report::InputReport {
+    fidl_input_report::InputReport {
+        event_time: None,
+        keyboard: None,
+        mouse: None,
+        touch: Some(fidl_input_report::TouchInputReport { contacts: Some(contacts) }),
+        sensor: None,
+        trace_id: None,
+    }
+}
+
+/// Creates a [`touch::TouchEvent`] with the provided parameters.
+///
+/// # Parameters
+/// - `contact_id`: The unique identifier for the contact.
+/// - `position_x`: The x-position to report in the event.
+/// - `position_y`: The y-position to report in the event.
+/// - `phase`: The phase of the contact in the event.
+/// - `device_descriptor`: The device descriptor to add to the event.
+#[cfg(test)]
+pub fn create_touch_event(
+    contact_id: u32,
+    position_x: i64,
+    position_y: i64,
+    phase: fidl_ui_input::PointerEventPhase,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+) -> input_device::InputEvent {
+    input_device::InputEvent {
+        device_event: input_device::InputDeviceEvent::Touch(touch::TouchEvent {
+            contact_id,
+            position_x,
+            position_y,
+            pressure: None,
+            contact_width: None,
+            contact_height: None,
+            phase,
+        }),
+        device_descriptor: device_descriptor.clone(),
+    }
+}
+
 /// Asserts that the given sequence of input reports generates the provided input events
 /// when the reports are processed by the given device type.
 #[cfg(test)]
@@ -126,8 +174,10 @@ macro_rules! assert_input_report_sequence_generates_events {
         device_type: $DeviceType:ty,
     ) => {
         let mut previous_report: Option<fidl_fuchsia_input_report::InputReport> = None;
-        let (event_sender, mut event_receiver) =
-            futures::channel::mpsc::channel($input_reports.len());
+        let (event_sender, mut event_receiver) = futures::channel::mpsc::channel(std::cmp::max(
+            $input_reports.len(),
+            $expected_events.len(),
+        ));
 
         // Send all the reports prior to verifying the received events.
         for report in $input_reports {
