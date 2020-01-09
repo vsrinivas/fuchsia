@@ -13,6 +13,7 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
+#include <lib/zx/timer.h>
 
 #include <list>
 #include <map>
@@ -41,6 +42,10 @@ namespace buttons {
 constexpr uint64_t kPortKeyShutDown = 0x01;
 // Start of up to kNumberOfRequiredGpios port types used for interrupts.
 constexpr uint64_t kPortKeyInterruptStart = 0x10;
+// Timer start
+constexpr uint64_t kPortKeyTimerStart = 0x100;
+// Debounce threshold.
+constexpr uint64_t kDebounceThresholdNs = 50'000'000;
 
 class HidButtonsDevice;
 using DeviceType = ddk::Device<HidButtonsDevice, ddk::UnbindableDeprecated>;
@@ -91,6 +96,7 @@ class HidButtonsDevice : public DeviceType {
 
   zx_status_t Bind(fbl::Array<Gpio> gpios, fbl::Array<buttons_button_config_t> buttons);
   virtual void ClosingChannel(uint64_t id);
+  virtual void Notify(uint32_t type);
 
  protected:
   // Protected for unit testing.
@@ -124,6 +130,13 @@ class HidButtonsDevice : public DeviceType {
   fbl::Array<buttons_button_config_t> buttons_;
   fbl::Array<Gpio> gpios_;
   std::optional<uint8_t> fdr_gpio_;
+
+  struct debounce_state {
+    bool enqueued;
+    zx::timer timer;
+    bool value;
+  };
+  fbl::Array<debounce_state> debounce_states_;
 };
 
 class HidButtonsHidBusFunction
@@ -208,10 +221,10 @@ class ButtonsNotifyInterface : public Buttons::Interface {
     id_ = id;
     chan_ = zx::unowned_channel(chan);
 
-    fidl::OnUnboundFn<ButtonsNotifyInterface> unbound =
-        [this](ButtonsNotifyInterface*, fidl::UnboundReason, zx::channel) {
-          device_->ClosingChannel(id_);
-        };
+    fidl::OnUnboundFn<ButtonsNotifyInterface> unbound = [this](ButtonsNotifyInterface*,
+                                                               fidl::UnboundReason, zx::channel) {
+      device_->ClosingChannel(id_);
+    };
     fidl::AsyncBind(dispatcher, std::move(chan), this, std::move(unbound));
   }
 

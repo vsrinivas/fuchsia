@@ -30,6 +30,16 @@
 
 namespace buttons {
 
+void HidButtonsDevice::Notify(uint32_t type) {
+  fbl::AutoLock lock(&channels_lock_);
+  for (auto const& interface : button2channels_[type]) {
+    Buttons::SendOnNotifyEvent(zx::unowned_channel(interface->chan()),
+                               static_cast<ButtonType>(buttons_[type].id),
+                               debounce_states_[type].value);
+  }
+  debounce_states_[type].enqueued = false;
+}
+
 int HidButtonsDevice::Thread() {
   while (1) {
     zx_port_packet_t packet;
@@ -43,20 +53,23 @@ int HidButtonsDevice::Thread() {
     if (packet.key == kPortKeyShutDown) {
       zxlogf(INFO, "%s shutting down\n", __FUNCTION__);
       return thrd_success;
-    } else if (packet.key >= kPortKeyInterruptStart &&
-               packet.key < (kPortKeyInterruptStart + buttons_.size())) {
+    }
+
+    if (packet.key >= kPortKeyInterruptStart &&
+        packet.key < (kPortKeyInterruptStart + buttons_.size())) {
       uint32_t type = static_cast<uint32_t>(packet.key - kPortKeyInterruptStart);
       if (gpios_[type].config.type == BUTTONS_GPIO_TYPE_INTERRUPT) {
         // We need to reconfigure the GPIO to catch the opposite polarity.
-        uint8_t val = ReconfigurePolarity(type, packet.key);
+        debounce_states_[type].value = ReconfigurePolarity(type, packet.key);
 
         // Notify
-        fbl::AutoLock lock(&channels_lock_);
-        for (auto const& interface : button2channels_[type]) {
-          Buttons::SendOnNotifyEvent(zx::unowned_channel(interface->chan()),
-                                   static_cast<ButtonType>(buttons_[type].id),
-                                   static_cast<bool>(val));
+        debounce_states_[type].timer.set(zx::deadline_after(zx::duration(kDebounceThresholdNs)),
+                                         zx::duration(0));
+        if (!debounce_states_[type].enqueued) {
+          debounce_states_[type].timer.wait_async(port_, kPortKeyTimerStart + type,
+                                                  ZX_TIMER_SIGNALED, 0);
         }
+        debounce_states_[type].enqueued = true;
       }
 
       buttons_input_rpt_t input_rpt;
@@ -77,6 +90,10 @@ int HidButtonsDevice::Thread() {
 
       gpios_[type].irq.ack();
     }
+
+    if (packet.key >= kPortKeyTimerStart && packet.key < (kPortKeyTimerStart + buttons_.size())) {
+      Notify(static_cast<uint32_t>(packet.key - kPortKeyTimerStart));
+    }
   }
   return thrd_success;
 }
@@ -85,9 +102,9 @@ zx_status_t HidButtonsDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
   fbl::AutoLock lock(&client_lock_);
   if (client_.is_valid()) {
     return ZX_ERR_ALREADY_BOUND;
-  } else {
-    client_ = ddk::HidbusIfcProtocolClient(ifc);
   }
+
+  client_ = ddk::HidbusIfcProtocolClient(ifc);
   return ZX_OK;
 }
 
@@ -245,6 +262,16 @@ zx_status_t HidButtonsDevice::Bind(fbl::Array<Gpio> gpios,
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s port_create failed %d\n", __FUNCTION__, status);
     return status;
+  }
+
+  debounce_states_ = fbl::Array(new (&ac) debounce_state[buttons_.size()], buttons_.size());
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  for (auto& i : debounce_states_) {
+    i.enqueued = false;
+    zx::timer::create(0, ZX_CLOCK_MONOTONIC, &(i.timer));
+    i.value = false;
   }
 
   // Check the metadata.
