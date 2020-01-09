@@ -35,19 +35,32 @@ the existing policies and the new policies is controlled by *options* values:
 After this call succeeds any new child process or child job will have the new
 effective policy applied to it.
 
-*topic* indicates the *policy* format. Supported values are **ZX_JOB_POL_BASIC**
-and **ZX_JOB_POL_TIMER_SLACK**.
+*topic* indicates the *policy* format. Supported values are **ZX_JOB_POL_BASIC_V1**,
+**ZX_JOB_POL_BASIC_V2** and **ZX_JOB_POL_TIMER_SLACK**.
 
-### **ZX_JOB_POL_BASIC**
+### **ZX_JOB_POL_BASIC_V2 and V1**
 
-A *topic* of **ZX_JOB_POL_BASIC** indicates that *policy* is an array of *count*
+A *topic* of **ZX_JOB_POL_BASIC_V2** indicates that *policy* is an array of *count*
 entries of:
 
 ```
 typedef struct zx_policy_basic {
     uint32_t condition;
+    uint32_t action;
+    uint32_t flags;
+} zx_policy_basic_v2_t;
+
+```
+
+A *topic* of **ZX_JOB_POL_BASIC_V1** indicates that *policy* is an array of *count*
+entries of:
+
+```
+// Deprecated. Use zx_policy_basic_v2_t.
+typedef struct zx_policy_basic {
+    uint32_t condition;
     uint32_t policy;
-} zx_policy_basic_t;
+} zx_policy_basic_v1_t;
 
 ```
 
@@ -92,7 +105,8 @@ Where *condition* is one of
   and any future **ZX_NEW** policy. This will include any new
   kernel objects which do not require a parent object for creation.
 
-Where *policy* is one of
+Where *policy* for **ZX_JOB_POL_BASIC_V1** or *action* for **ZX_JOB_POL_BASIC_V2**
+is one of
 
 + **ZX_POL_ACTION_ALLOW**  allow *condition*.
 + **ZX_POL_ACTION_DENY**  prevent *condition*.
@@ -102,6 +116,14 @@ Where *policy* is one of
 + **ZX_POL_ACTION_DENY_EXCEPTION**  just like **ZX_POL_ACTION_ALLOW_EXCEPTION**,
   but after resuming *condition* is denied.
 + **ZX_POL_ACTION_KILL**  terminate the process.
+
+Where *flags* is one of
+
++ **ZX_POL_OVERRIDE_ALLOW** Allow to change this policy on child Jobs.
++ **ZX_POL_OVERRIDE_DENY** Don't allow to change this policy on child jobs.
+
+Regardless of the override mode, as long a Job has any children its policy cannot
+be mutated.
 
 ### **ZX_JOB_POL_TIMER_SLACK**
 
@@ -148,9 +170,9 @@ a negative error value is returned.
 
 ## NOTES
 
-The **ZX_POL_BAD_HANDLE** policy does not apply when calling [`zx_object_get_info()`]
+The **ZX_POL_BAD_HANDLE** policy never applies when calling [`zx_object_get_info()`]
 with the topic **ZX_INFO_HANDLE_VALID**.  All other topics and all other syscalls that
-take handles are subject to the policy.
+take handles are subject to the policy if active.
 
 ## ERRORS
 
