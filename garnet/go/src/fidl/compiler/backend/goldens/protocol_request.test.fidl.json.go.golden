@@ -18,6 +18,16 @@ type ChildInterface _bindings.ChannelProxy
 
 
 
+type ChildWithCtx interface {
+}
+
+
+
+type ChildWithCtxTransitionalBase struct {}
+
+
+
+
 type Child interface {
 }
 
@@ -33,6 +43,12 @@ func NewChildInterfaceRequest() (ChildInterfaceRequest, *ChildInterface, error) 
 
 type ChildStub struct {
 	Impl Child
+}
+
+func (s_ *ChildStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 func (s_ *ChildStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
@@ -146,6 +162,20 @@ func (p *ParentInterface) TakeChildRequest(r ChildInterfaceRequest) error {
 }
 
 
+type ParentWithCtx interface {
+	GetChild(ctx_ _bindings.Context) (ChildInterface, error)
+	GetChildRequest(ctx_ _bindings.Context) (ChildInterfaceRequest, error)
+	TakeChild(ctx_ _bindings.Context, c ChildInterface) error
+	TakeChildRequest(ctx_ _bindings.Context, r ChildInterfaceRequest) error
+}
+
+
+
+type ParentWithCtxTransitionalBase struct {}
+
+
+
+
 type Parent interface {
 	GetChild() (ChildInterface, error)
 	GetChildRequest() (ChildInterfaceRequest, error)
@@ -165,6 +195,44 @@ func NewParentInterfaceRequest() (ParentInterfaceRequest, *ParentInterface, erro
 
 type ParentStub struct {
 	Impl Parent
+}
+
+func (s_ *ParentStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case ParentGetChildOrdinal:
+		fallthrough
+	case ParentGetChildGenOrdinal:
+		c, err_ := s_.Impl.GetChild()
+		out_ := parentGetChildResponse{}
+		out_.C = c
+		return &out_, true, err_
+	case ParentGetChildRequestOrdinal:
+		fallthrough
+	case ParentGetChildRequestGenOrdinal:
+		r, err_ := s_.Impl.GetChildRequest()
+		out_ := parentGetChildRequestResponse{}
+		out_.R = r
+		return &out_, true, err_
+	case ParentTakeChildOrdinal:
+		fallthrough
+	case ParentTakeChildGenOrdinal:
+		in_ := parentTakeChildRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.TakeChild(in_.C)
+		return nil, false, err_
+	case ParentTakeChildRequestOrdinal:
+		fallthrough
+	case ParentTakeChildRequestGenOrdinal:
+		in_ := parentTakeChildRequestRequest{}
+		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.TakeChildRequest(in_.R)
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 func (s_ *ParentStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {

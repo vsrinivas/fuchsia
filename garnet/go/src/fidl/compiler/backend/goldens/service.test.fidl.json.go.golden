@@ -26,6 +26,17 @@ func (p *FirstProtocolInterface) MethodOnFirst() error {
 }
 
 
+type FirstProtocolWithCtx interface {
+	MethodOnFirst(ctx_ _bindings.Context) error
+}
+
+
+
+type FirstProtocolWithCtxTransitionalBase struct {}
+
+
+
+
 type FirstProtocol interface {
 	MethodOnFirst() error
 }
@@ -42,6 +53,17 @@ func NewFirstProtocolInterfaceRequest() (FirstProtocolInterfaceRequest, *FirstPr
 
 type FirstProtocolStub struct {
 	Impl FirstProtocol
+}
+
+func (s_ *FirstProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case FirstProtocolMethodOnFirstOrdinal:
+		fallthrough
+	case FirstProtocolMethodOnFirstGenOrdinal:
+		err_ := s_.Impl.MethodOnFirst()
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 func (s_ *FirstProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
@@ -86,6 +108,17 @@ func (p *SecondProtocolInterface) MethodOnSecond() error {
 }
 
 
+type SecondProtocolWithCtx interface {
+	MethodOnSecond(ctx_ _bindings.Context) error
+}
+
+
+
+type SecondProtocolWithCtxTransitionalBase struct {}
+
+
+
+
 type SecondProtocol interface {
 	MethodOnSecond() error
 }
@@ -102,6 +135,17 @@ func NewSecondProtocolInterfaceRequest() (SecondProtocolInterfaceRequest, *Secon
 
 type SecondProtocolStub struct {
 	Impl SecondProtocol
+}
+
+func (s_ *SecondProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case SecondProtocolMethodOnSecondOrdinal:
+		fallthrough
+	case SecondProtocolMethodOnSecondGenOrdinal:
+		err_ := s_.Impl.MethodOnSecond()
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 func (s_ *SecondProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {

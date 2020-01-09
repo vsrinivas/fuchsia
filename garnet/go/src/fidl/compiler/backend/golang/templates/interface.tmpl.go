@@ -104,6 +104,57 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 {{range .DocComments}}
 //{{ . }}
 {{- end}}
+type {{ .WithCtxName }} interface {
+{{- range .Methods }}
+	{{- range .DocComments}}
+	//{{ . }}
+	{{- end}}
+	{{- if .Request }}
+	{{ .Name }}(ctx_ _bindings.Context
+	{{- range .Request.Members -}}
+		, {{ .PrivateName }} {{ .Type }}
+	{{- end -}}
+	)
+	{{- if .Response -}}
+	{{- if len .Response.Members }} (
+	{{- range .Response.Members }}{{ .Type }}, {{ end -}}
+		error)
+	{{- else }} error{{ end -}}
+	{{- else }} error{{ end }}
+	{{- end }}
+{{- end }}
+}
+
+{{ $transitionalBaseWithCtxName := .TransitionalBaseWithCtxName }}
+
+type {{.TransitionalBaseWithCtxName}} struct {}
+
+{{ range .Methods }}
+{{- if and .IsTransitional .Request }}
+func (_ *{{$transitionalBaseWithCtxName}}) {{ .Name }} (ctx_ _bindings.Context
+{{- range .Request.Members -}}
+	, {{ .PrivateName }} {{ .Type }}
+{{- end -}}
+)
+{{- if .Response -}}
+	{{- if len .Response.Members }} (
+		{{- range .Response.Members }}{{ .Type }}, {{ end -}}
+			error)
+	{{- else -}}
+		error
+	{{ end -}}
+{{- else -}}
+	error
+{{- end -}}
+{
+	panic("Not Implemented")
+}
+{{- end }}
+{{- end }}
+
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
 type {{ .Name }} interface {
 {{- range .Methods }}
 	{{- range .DocComments}}
@@ -179,6 +230,54 @@ const {{ .ServiceNameConstant }} = {{ .ServiceNameString }}
 
 type {{ .StubName }} struct {
 	Impl {{ .Name }}
+}
+
+func (s_ *{{ .StubName }}) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	{{- range .Methods }}
+	{{- if not .IsEvent }}
+	{{- range $index, $ordinal := .Ordinals.Reads }}
+		{{- if $index }}
+		fallthrough
+		{{- end }}
+	case {{ $ordinal.Name }}:
+	{{- end }}
+		{{- if .Request }}
+		{{- if len .Request.Members }}
+		in_ := {{ .Request.Name }}{}
+		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		{{- end }}
+		{{- end }}
+		{{ if .Response }}
+		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
+		{{- end -}}
+		err_ := s_.Impl.{{ .Name }}(
+		{{- if .Request -}}
+		{{- range $index, $m := .Request.Members -}}
+		{{- if $index -}}, {{- end -}}
+		in_.{{ $m.Name }}
+		{{- end -}}
+		{{- end -}}
+		)
+		{{- if .Response }}
+		{{- if len .Response.Members }}
+		out_ := {{ .Response.Name }}{}
+		{{- range .Response.Members }}
+		out_.{{ .Name }} = {{ .PrivateName }}
+		{{- end }}
+		return &out_, true, err_
+		{{- else }}
+		return nil, true, err_
+		{{- end }}
+		{{- else }}
+		return nil, false, err_
+		{{- end }}
+	{{- end }}
+	{{- end }}
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 func (s_ *{{ .StubName }}) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {

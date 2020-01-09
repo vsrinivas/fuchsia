@@ -50,6 +50,18 @@ func (p *SwitchingOrdinalsInterface) ExpectEventOnlyGeneratedOrdinal() error {
 }
 
 
+type SwitchingOrdinalsWithCtx interface {
+	OrdinalFive(ctx_ _bindings.Context) error
+	OnlyGeneratedOrdinal(ctx_ _bindings.Context) error
+}
+
+
+
+type SwitchingOrdinalsWithCtxTransitionalBase struct {}
+
+
+
+
 type SwitchingOrdinals interface {
 	OrdinalFive() error
 	OnlyGeneratedOrdinal() error
@@ -67,6 +79,22 @@ func NewSwitchingOrdinalsInterfaceRequest() (SwitchingOrdinalsInterfaceRequest, 
 
 type SwitchingOrdinalsStub struct {
 	Impl SwitchingOrdinals
+}
+
+func (s_ *SwitchingOrdinalsStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case SwitchingOrdinalsOrdinalFiveOrdinal:
+		fallthrough
+	case SwitchingOrdinalsOrdinalFiveGenOrdinal:
+		err_ := s_.Impl.OrdinalFive()
+		return nil, false, err_
+	case SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal:
+		fallthrough
+	case SwitchingOrdinalsOnlyGeneratedOrdinalGenOrdinal:
+		err_ := s_.Impl.OnlyGeneratedOrdinal()
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 func (s_ *SwitchingOrdinalsStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {

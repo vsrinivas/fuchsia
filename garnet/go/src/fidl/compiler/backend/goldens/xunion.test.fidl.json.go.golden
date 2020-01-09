@@ -379,6 +379,18 @@ func (p *TestProtocolInterface) FlexibleXUnionHenceResponseMustBeHeapAllocated()
 }
 
 
+type TestProtocolWithCtx interface {
+	StrictXUnionHenceResponseMayBeStackAllocated(ctx_ _bindings.Context) (StrictBoundedXUnion, error)
+	FlexibleXUnionHenceResponseMustBeHeapAllocated(ctx_ _bindings.Context) (OlderSimpleUnion, error)
+}
+
+
+
+type TestProtocolWithCtxTransitionalBase struct {}
+
+
+
+
 type TestProtocol interface {
 	StrictXUnionHenceResponseMayBeStackAllocated() (StrictBoundedXUnion, error)
 	FlexibleXUnionHenceResponseMustBeHeapAllocated() (OlderSimpleUnion, error)
@@ -396,6 +408,26 @@ func NewTestProtocolInterfaceRequest() (TestProtocolInterfaceRequest, *TestProto
 
 type TestProtocolStub struct {
 	Impl TestProtocol
+}
+
+func (s_ *TestProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal:
+		fallthrough
+	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal:
+		xu, err_ := s_.Impl.StrictXUnionHenceResponseMayBeStackAllocated()
+		out_ := testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{}
+		out_.Xu = xu
+		return &out_, true, err_
+	case TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal:
+		fallthrough
+	case TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal:
+		xu, err_ := s_.Impl.FlexibleXUnionHenceResponseMustBeHeapAllocated()
+		out_ := testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{}
+		out_.Xu = xu
+		return &out_, true, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 func (s_ *TestProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {

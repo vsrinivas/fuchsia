@@ -176,6 +176,26 @@ func (p *InterfaceInterface) ExpectOnEvent() error {
 // interface comment #1
 //
 // interface comment #3
+type InterfaceWithCtx interface {
+	// method comment #1
+	//
+	// method comment #3
+	Method(ctx_ _bindings.Context) error
+	// event comment #1
+	//
+	// event comment #3
+}
+
+
+
+type InterfaceWithCtxTransitionalBase struct {}
+
+
+
+
+// interface comment #1
+//
+// interface comment #3
 type Interface interface {
 	// method comment #1
 	//
@@ -198,6 +218,17 @@ func NewInterfaceInterfaceRequest() (InterfaceInterfaceRequest, *InterfaceInterf
 
 type InterfaceStub struct {
 	Impl Interface
+}
+
+func (s_ *InterfaceStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
+	switch ordinal_ {
+	case InterfaceMethodOrdinal:
+		fallthrough
+	case InterfaceMethodGenOrdinal:
+		err_ := s_.Impl.Method()
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 func (s_ *InterfaceStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {

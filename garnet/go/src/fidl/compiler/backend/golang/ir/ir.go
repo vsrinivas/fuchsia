@@ -25,6 +25,7 @@ const (
 	ServiceNameSuffix      = "Name"
 	RequestSuffix          = "InterfaceRequest"
 	TagSuffix              = "Tag"
+	WithCtxSuffix          = "WithCtx"
 
 	MessageHeaderSize = 16
 
@@ -269,6 +270,10 @@ type Interface struct {
 	// Name is the Golang name of the interface.
 	Name string
 
+	// WithCtxName is the Golang name of the interface where every method takes a Context
+	// as their first parameter.
+	WithCtxName string
+
 	// ProxyName is the name of the proxy type for this FIDL interface.
 	ProxyName string
 
@@ -284,6 +289,10 @@ type Interface struct {
 	// TransitionalBaseName is the name of the base implementation for transitional methods
 	// for this FIDL interface.
 	TransitionalBaseName string
+
+	// TransitionalBaseWithCtxName is the name of the base implementation
+	// for transitional methods for this FIDL interface with a Context parameter.
+	TransitionalBaseWithCtxName string
 
 	// RequestName is the name of the interface request type for this FIDL interface.
 	RequestName string
@@ -869,17 +878,19 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		proxyType = "ChannelProxy"
 	}
 	r := Interface{
-		Attributes:           val.Attributes,
-		Name:                 c.compileCompoundIdentifier(val.Name, true, ""),
-		TransitionalBaseName: c.compileCompoundIdentifier(val.Name, true, TransitionalBaseSuffix),
-		ProxyName:            c.compileCompoundIdentifier(val.Name, true, ProxySuffix),
-		ProxyType:            proxyType,
-		StubName:             c.compileCompoundIdentifier(val.Name, true, StubSuffix),
-		RequestName:          c.compileCompoundIdentifier(val.Name, true, RequestSuffix),
-		EventProxyName:       c.compileCompoundIdentifier(val.Name, true, EventProxySuffix),
-		ServerName:           c.compileCompoundIdentifier(val.Name, true, ServiceSuffix),
-		ServiceNameConstant:  c.compileCompoundIdentifier(val.Name, true, ServiceNameSuffix),
-		ServiceNameString:    val.GetServiceName(),
+		Attributes:                  val.Attributes,
+		Name:                        c.compileCompoundIdentifier(val.Name, true, ""),
+		WithCtxName:                 c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix),
+		TransitionalBaseName:        c.compileCompoundIdentifier(val.Name, true, TransitionalBaseSuffix),
+		TransitionalBaseWithCtxName: c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+TransitionalBaseSuffix),
+		ProxyName:                   c.compileCompoundIdentifier(val.Name, true, ProxySuffix),
+		ProxyType:                   proxyType,
+		StubName:                    c.compileCompoundIdentifier(val.Name, true, StubSuffix),
+		RequestName:                 c.compileCompoundIdentifier(val.Name, true, RequestSuffix),
+		EventProxyName:              c.compileCompoundIdentifier(val.Name, true, EventProxySuffix),
+		ServerName:                  c.compileCompoundIdentifier(val.Name, true, ServiceSuffix),
+		ServiceNameConstant:         c.compileCompoundIdentifier(val.Name, true, ServiceNameSuffix),
+		ServiceNameString:           val.GetServiceName(),
 	}
 	for _, v := range val.Methods {
 		r.Methods = append(r.Methods, c.compileMethod(val.Name, v))
