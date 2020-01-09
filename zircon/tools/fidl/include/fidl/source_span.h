@@ -5,6 +5,7 @@
 #ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_SOURCE_SPAN_H_
 #define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_SOURCE_SPAN_H_
 
+#include <cassert>
 #include <cstdint>
 #include <string_view>
 
@@ -25,7 +26,10 @@ class SourceSpan {
   bool valid() const { return source_file_ != nullptr; }
 
   const std::string_view& data() const { return data_; }
-  const SourceFile& source_file() const { return *source_file_; }
+  const SourceFile& source_file() const {
+    assert(valid());
+    return *source_file_;
+  }
 
   std::string_view SourceLine(SourceFile::Position* position_out) const;
 

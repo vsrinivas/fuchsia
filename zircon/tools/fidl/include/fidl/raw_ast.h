@@ -57,8 +57,17 @@ class SourceElement {
 
   explicit SourceElement(Token start, Token end) : start_(start), end_(end) {}
 
+  bool has_span() const {
+    return start_.span().valid() && end_.span().valid() &&
+           &start_.span().source_file() == &end_.span().source_file();
+  }
+
   SourceSpan span() const {
-    assert(&start_.span().source_file() == &end_.span().source_file());
+    if (!start_.span().valid() || !end_.span().valid()) {
+      return SourceSpan();
+    }
+
+    assert(has_span());
     const char* start_pos = start_.span().data().data();
     const char* end_pos = end_.span().data().data() + end_.span().data().length();
     return SourceSpan(std::string_view(start_pos, end_pos - start_pos),
