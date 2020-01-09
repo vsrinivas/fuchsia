@@ -1,0 +1,38 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.neighbor;
+
+using fuchsia.hardware.ethernet;
+using fuchsia.net;
+using zx;
+
+/// Information on a neighboring device in the local network.
+///
+/// There are two types of entries available in the neighbor table.
+///   1. Dynamic entries are discovered automatically by neighbor discovery
+///      protocols (e.g. ARP, NDP). These protocols will attempt to reconfirm
+///      reachability with the device once its `state` becomes
+///      [`EntryState.stale`].
+///   2. Static entries are explicitly added by a user with
+///      [`Controller.AddStaticEntry`] and have no expiration. Their `state` is
+///      always [`EntryState.static`].
+table Entry {
+    /// Identifier for the interface used for communicating with the neighbor.
+    1: InterfaceID interface;
+
+    /// IP address of the neighbor.
+    2: fuchsia.net.IpAddress neighbor;
+
+    /// State of the entry within the Neighbor Unreachability Detection (NUD)
+    /// state machine defined by RFC 4861 section 7.3.
+    3: EntryState state;
+
+    /// MAC address of the neighboring device's network interface controller.
+    /// Absent for dynamic entries in [`EntryState.incomplete`].
+    4: fuchsia.hardware.ethernet.MacAddress mac;
+
+    /// Timestamp when this entry has changed `state`.
+    5: zx.time updated_at;
+};

@@ -1,0 +1,80 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.neighbor;
+
+using zx;
+
+/// Neighbor table entry state.
+///
+/// Modeled after RFC 4861 section 7.3.2. Descriptions are kept
+/// implementation-independent by using a set of generic terminology.
+///
+/// ,------------------------------------------------------------------.
+/// | Generic Term              | ARP Term    | NDP Term               |
+/// |---------------------------+-------------+------------------------|
+/// | Reachability Probe        | ARP Request | Neighbor Solicitation  |
+/// | Reachability Confirmation | ARP Reply   | Neighbor Advertisement |
+/// `---------------------------+-------------+------------------------'
+xunion EntryState {
+    /// Reachability is in the process of being confirmed for a newly created,
+    /// non-static entry.
+    IncompleteState incomplete;
+
+    /// Positive reachability has been confirmed; the path to the neighbor is
+    /// functioning properly.
+    ReachableState reachable;
+
+    /// Reachability is considered unknown.
+    ///
+    /// Occurs in one of two ways:
+    ///   1. Too much time has elapsed since the last positive reachability
+    ///      confirmation was received.
+    ///   2. Received a reachability confirmation from a neighbor with a
+    ///      different MAC address than the one cached.
+    StaleState stale;
+
+    /// A packet was recently sent while reachability was considered unknown.
+    ///
+    /// This state is an optimization that gives non-Neighbor-Discovery related
+    /// protocols time to confirm reachability after the last confirmation of
+    /// reachability has expired due to lack of recent traffic.
+    DelayState delay;
+
+    /// A reachability confirmation is actively sought by periodically
+    /// retransmitting reachability probes until a reachability confirmation is
+    /// received, or until the max amount of probes has been sent.
+    ProbeState probe;
+
+    /// Static entries are explicitly added with [`Controller.AddEntry`]. They
+    /// do not expire and are not deleted until explicitly removed with
+    /// [`Controller.RemoveEntry`].
+    StaticState static;
+};
+
+table IncompleteState {
+};
+
+table ReachableState {
+    /// When reachability expires and the entry should be considered stale; when
+    /// to transition from `reachable` to `stale` [`EntryState`].
+    ///
+    /// This is not the only way to transition into [`EntryState.stale`]. The
+    /// entry will transition into `stale` before this time when an unsolicited
+    /// reachability confirmation is received with a different MAC address than
+    /// the one cached.
+    1: zx.time expires_at;
+};
+
+table StaleState {
+};
+
+table DelayState {
+};
+
+table ProbeState {
+};
+
+table StaticState {
+};

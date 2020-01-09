@@ -1,0 +1,159 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.neighbor;
+
+using zx;
+
+/// Configuration options related to the operation of Neighbor Unreachability
+/// Detection (NUD), as defined by RFC 4861 section 7.3.
+///
+/// Field names loosely follow RFC 4861 sections 6.3.2 and 10, any deviations
+/// are noted. Descriptions are kept implementation-independent by using a set
+/// of generic terminology.
+///
+/// ,-------------------------------------------------------------------.
+/// | Generic Term              | ARP Protocol | NDP Protocol           |
+/// |---------------------------+--------------+------------------------|
+/// | Reachability Probe        | ARP Request  | Neighbor Solicitation  |
+/// | Reachability Confirmation | ARP Reply    | Neighbor Advertisement |
+/// `---------------------------+--------------+------------------------'
+table UnreachabilityConfig {
+    /// A base duration for computing the random reachable time.
+    ///
+    /// Reachable time is the duration for which a neighbor is considered
+    /// reachable after a positive reachability confirmation is received. It is
+    /// a function of a uniformly distributed random value between
+    /// [`min_random_factor`] and [`max_random_factor`] multiplied by
+    /// [`base_reachable_time`]. Using a random component eliminates the
+    /// possibility that Neighbor Unreachability Detection messages will
+    /// synchronize with each other.
+    ///
+    /// After this time, an entry will transition from REACHABLE to STALE state.
+    ///
+    /// Originally referred to as "BaseReachableTime" by RFC 4861.
+    ///
+    /// Must be greater than 0.
+    1: zx.duration base_reachable_time;
+
+    /// Learn [`base_reachable_time`] during runtime from the neighbor discovery
+    /// protocol, if supported.
+    2: bool learn_base_reachable_time;
+
+    /// The minimum value of the random factor used for computing reachable
+    /// time.
+    ///
+    /// See [`base_reachable_time`] for more information on computing the
+    /// reachable time.
+    ///
+    /// Must be greater than 0.
+    3: float32 min_random_factor;
+
+    /// The maximum value of the random factor used for computing reachable
+    /// time.
+    ///
+    /// See [`base_reachable_time`] for more information on computing the
+    /// reachable time.
+    ///
+    /// Must be greater than or equal to [`min_random_factor`].
+    4: float32 max_random_factor;
+
+    /// Duration between retransmissions of reachability probes in the PROBE
+    /// state.
+    ///
+    /// Originally referred to as "RetransTimer" by RFC 4861.
+    ///
+    /// Must be greater than 0.
+    5: zx.duration retransmit_timer;
+
+    /// Learn [`retransmit_timer`] during runtime from the neighbor discovery
+    /// protocol, if supported.
+    6: bool learn_retransmit_timer;
+
+    /// Duration to wait for a non-Neighbor-Discovery related protocol to
+    /// reconfirm reachability after entering the DELAY state. After this time,
+    /// a reachability probe will be sent and the entry will transition to the
+    /// PROBE state.
+    ///
+    /// Must be greater than 0.
+    7: zx.duration delay_first_probe_time;
+
+    /// The number of reachability probes to send before concluding negative
+    /// reachability and deleting the entry from the INCOMPLETE state.
+    ///
+    /// Must be greater than 0.
+    8: uint32 max_multicast_solicit;
+
+    /// The number of reachability probes to send before concluding
+    /// retransmissions from within the PROBE state should cease and the entry
+    /// SHOULD be deleted.
+    ///
+    /// Must be greater than 0.
+    9: uint32 max_unicast_solicit;
+
+    /// If the target address is an anycast address, the stack SHOULD delay
+    /// sending a response for a random time between 0 and this duration.
+    10: zx.duration max_anycast_delay_time;
+
+    /// A node MAY send up to this amount of unsolicited reachability
+    /// confirmations messages to all-nodes multicast address when a node
+    /// determines its link-layer address has changed.
+    ///
+    /// Originally referred to as "MAX_NEIGHBOR_ADVERTISEMENT" by RFC 4861.
+    11: uint32 max_reachability_confirmations;
+};
+
+/// Default value for [`UnreachabilityConfig.base_reachable_time`] as
+/// recommended by RFC 4861 section 10.
+const zx.duration DEFAULT_BASE_REACHABLE_TIME = 30000000000; // 30 seconds
+
+/// Default value for [`UnreachabilityConfig.retransmit_timer`] as recommended
+/// by RFC 4861 section 10.
+const zx.duration DEFAULT_RETRANSMIT_TIMER = 1000000000; // 1 second
+
+/// Default value for [`UnreachabilityConfig.delay_first_probe_time`] as
+/// recommended by RFC
+/// 4861 section 10.
+const zx.duration DEFAULT_DELAY_FIRST_PROBE_TIME = 5000000000; // 5 seconds
+
+/// Default value for [`UnreachabilityConfig.max_anycast_delay_time`] as
+/// recommended by RFC 4861 section 10.
+const zx.duration DEFAULT_MAX_ANYCAST_DELAY_TIME = 1000000000; // 1 second
+
+/// Default value for [`UnreachabilityConfig.min_random_factor`] as recommended
+/// by RFC 4861 section 10.
+const float32 DEFAULT_MIN_RANDOM_FACTOR = 0.5;
+
+/// Default value for [`UnreachabilityConfig.max_random_factor`] as recommended
+/// by RFC 4861 section 10.
+const float32 DEFAULT_MAX_RANDOM_FACTOR = 1.5;
+
+/// Default value for [`UnreachabilityConfig.max_multicast_solicit`] as
+/// recommended by RFC 4861 section 10.
+const uint32 DEFAULT_MAX_MULITCAST_SOLICIT = 3;
+
+/// Default value for [`UnreachabilityConfig.max_unicast_solicit`] as
+/// recommended by RFC 4861 section 10.
+const uint32 DEFAULT_MAX_UNICAST_SOLICIT = 3;
+
+/// Default value for [`UnreachabilityConfig.max_reachability_confirmations`] as
+/// recommended by RFC 4861 section 10.
+const uint32 DEFAULT_MAX_REACHABILITY_CONFIRMATIONS = 3;
+
+/// The maximum number of [`InterfaceUnreachabilityConfig`] returned in a
+/// [`View.GetUnreachabilityConfigs`] response.
+//
+// This has been calculated with the following function:
+//   MAX_INTERFACE_CONFIG_BATCH_SIZE = floor(
+//     (ZX_CHANNEL_MAX_MSG_BYTES - RESPONSE_BYTES) / MAX_INTERFACE_CONFIG_BYTES
+//   )
+// where,
+//   ZX_CHANNEL_MAX_MSG_BYTES = 65536 bytes
+//   RESPONSE_BYTES = size of [`View.GetUnreachabilityConfigs`] response
+//                  = 32 bytes
+//   MAX_INTERFACE_ITEM_BYTES = max size of [`InterfaceUnreachabilityConfig`]
+//                            = 252 bytes
+//
+// This value will need to be recomputed if any of the above numbers change.
+const uint64 MAX_INTERFACE_CONFIG_BATCH_SIZE = 259;

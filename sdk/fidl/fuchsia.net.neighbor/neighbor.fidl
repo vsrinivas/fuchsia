@@ -1,0 +1,147 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// # Overview of fuchsia.net.neighbor
+///
+/// The neighbor table helps decide where to send IP packets. It allows for the
+/// translation between IP addresses and MAC addresses.
+///
+/// With current implementations, the neighbor table uses the ARP or NDP
+/// protocol to dynamically discover new neighbor entries for IPv4 or IPv6
+/// addresses, respectively.
+///
+/// This library enables inspection and manipulation of the neighbor table.
+///  * See [`fuchsia.net.neighbor/View`] for viewing neighbor table entries and
+///    interface configuration.
+///  * See [`fuchsia.net.neighbor/Controller`] for adding static neighbor table
+///    entries, removing entries, and updating interface configuration.
+///
+/// ## Important Concepts
+///
+/// [`InterfaceID`] is an identifier for a network interface. Identifiers are
+/// assigned and managed by the networking stack. They are the same interface
+/// identifiers used by [`fuchsia.net.stack`].
+///
+/// [`Entry`] represents a neighboring device and is stored in the neighbor
+/// table, which is also managed by the networking stack.
+///
+/// [`UnreachabilityConfig`] holds the various parameters used for tweaking the
+/// behavior of Neighbor Unreachability Detection (NUD). This allows
+/// implementations to operate over links with widely varying performance
+/// characteristics.
+///
+/// ## Privacy Considerations
+///
+/// The Neighbor API deals with MAC addresses, which are device identifiers and
+/// should not be exposed to most applications. There are separate protocols for
+/// inspecting and modifying the neighbor table; this is done to protect
+/// sensitive data.
+///
+/// ## Security Considerations
+///
+/// The Neighbor API enables clients to view and manipulate the neighbor table,
+/// which should both be privileged actions and granted only to trusted
+/// applications. Additionally, not all clients will need both read and write
+/// access. This has been addressed by splitting methods into two protocols:
+/// Viewer for read methods and Controller for write methods.
+///
+/// This API is not concerned with throttling consumption of ARP or NDP
+/// messages. If a DoS of ARP/NDP packets reaches this API, the damage had
+/// already been done. Once the packets reach the control plane, they are
+/// processed by the networking stack where the DoS would first manifest.
+library fuchsia.net.neighbor;
+
+using fuchsia.hardware.ethernet;
+using fuchsia.net;
+using zx;
+
+/// An opaque identifier for an interface, assigned by the networking stack.
+/// This identifier will never be 0, and will not be reused even if the device
+/// is removed and subsequently re-added. It is not stable across netstack
+/// instances.
+///
+/// These identifiers can be retrieved using
+/// [`fuchsia.net.stack/Stack.ListInterfaces`].
+using InterfaceID = uint64;
+
+/// Inspect the neighbor table and related interface configuration.
+[Discoverable]
+protocol View {
+    /// Open a connection to an [`EntryIterator`] for listing existing entries
+    /// and optionally watching for state changes.
+    ///
+    /// - request `it` request the server to bind an implementation of
+    ///     `EntryIterator` to this channel.
+    /// - request `options` modifies the behavior of the [`EntryIterator`].
+    OpenEntryIterator(request<EntryIterator> it, EntryIteratorOptions options);
+
+    /// View the current configurations of all interfaces.
+    GetUnreachabilityConfigs()
+        -> (vector<InterfaceUnreachabilityConfig>:MAX_INTERFACE_CONFIG_BATCH_SIZE configs);
+};
+
+/// Modify the neighbor table and related interface configuration.
+[Discoverable]
+protocol Controller {
+    /// Create a static entry. If a conflict is found, overwrite the existing
+    /// entry. Conflicts occur when two entries have the same interface
+    /// identifier and IP address.
+    ///
+    /// + request `interface` identifier for the interface used for
+    ///     communicating with the neighbor.
+    /// + request `neighbor` IP address of the neighbor.
+    /// + request `mac` MAC address of the neighbor.
+    /// * error `ZX_ERR_NOT_FOUND` if `interface` does not exist.
+    /// * error `ZX_ERR_IO_REFUSED` if `interface` does not keep a neighbor
+    ///     table (e.g. point-to-point links).
+    AddEntry(InterfaceID interface, fuchsia.net.IpAddress neighbor, fuchsia.hardware.ethernet.MacAddress mac)
+        -> () error zx.status;
+
+    /// Delete a dynamic or static entry.
+    ///
+    /// + request `interface` identifier for the interface associated with the
+    ///     entry to be deleted.
+    /// + request `neighbor` IP address of the entry to be deleted.
+    /// * error `ZX_ERR_NOT_FOUND` if no entries match `interface` and
+    ///   `neighbor`.
+    /// * error `ZX_ERR_IO_REFUSED` if `interface` does not keep a neighbor
+    ///     table (e.g. point-to-point links).
+    RemoveEntry(InterfaceID interface, fuchsia.net.IpAddress neighbor)
+        -> () error zx.status;
+
+    /// Delete all dynamic and static entries belonging to an interface.
+    ///
+    /// + request `interface` identifier for the interface associated with the
+    ///     entries to be deleted.
+    /// * error `ZX_ERR_NOT_FOUND` if `interface` does not exist.
+    /// * error `ZX_ERR_IO_REFUSED` if `interface` does not keep a neighbor
+    ///     table (e.g. point-to-point links).
+    ClearEntries(InterfaceID interface) -> () error zx.status;
+
+    /// Change the configuration of the neighbor discovery algorithm for an
+    /// interface.
+    ///
+    /// + request `config` used for updating the configuration for an interface.
+    ///     Only the specified fields will be changed. All other fields will
+    ///     remain the same as the original configuration.
+    /// * error `ZX_ERR_NOT_FOUND` if `config` references an interface that
+    ///     does not exist.
+    /// * error `ZX_ERR_IO_REFUSED` if `config` references an interface that
+    ///     does not keep a neighbor table (e.g. point-to-point links).
+    /// * error `ZX_ERR_INVALID_ARGS` if `config` contains an invalid value,
+    ///     see [`fuchsia.net.neighbor/UnreachabilityConfig`] for the list of
+    ///     constraints.
+    UpdateUnreachabilityConfig(InterfaceUnreachabilityConfig config)
+        -> () error zx.status;
+};
+
+/// Configuration stored on a per-interface basis for the operation of Neighbor
+/// Unreachability Detection (NUD), as defined by RFC 4861 section 7.3.
+struct InterfaceUnreachabilityConfig {
+    /// Identifier for the interface affected by this configuration.
+    InterfaceID interface;
+
+    /// Configuration for the operation of Neighbor Unreachability Detection.
+    UnreachabilityConfig config;
+};

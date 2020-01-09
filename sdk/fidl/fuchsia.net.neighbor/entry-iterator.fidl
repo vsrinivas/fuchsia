@@ -1,0 +1,90 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.neighbor;
+
+/// Options for modifying the behavior of an [`EntryIterator`].
+table EntryIteratorOptions {
+    /// Changes the behavior of the [`EntryIterator`] to watch for state changes
+    /// in the neighbor table after opening the iterator. State change events
+    /// will only be queued after the [`IdleEvent`].
+    ///
+    /// Defaults to false.
+    1: bool watch_for_changes;
+};
+
+/// Returns entries and events from the neighbor table. Clients can open an
+/// iterator using the [`fuchsia.net.neighbor/View.EntryIterator`] method.
+///
+/// An atomic snapshot of the neighbor table is queued for clients upon opening
+/// an EntryIterator. This snapshot consists of `existing` entries followed by
+/// an [`IdleEvent`]. No other types of events will be sent before an
+/// [`IdleEvent`].
+///
+/// If [`EntryIteratorOptions.watch_for_changes`] was set to true, state change
+/// events will be queued after the [`IdleEvent`]; otherwise, the channel is
+/// closed after returning the [`IdleEvent`].
+protocol EntryIterator {
+    /// Take items from the iterator. If no items are available, block until one
+    /// is; otherwise, return immediately with items queued since the last
+    /// invocation.
+    ///
+    /// This does not guarantee that, when blocking, only one item will be
+    /// returned; implementations may debounce or batch events.
+    ///
+    /// Attempt to maintain one in-flight `GetNext` call as much as possible.
+    /// If `GetNext` is not constantly polled, the networking stack might hit an
+    /// upper limit on the number of buffered events, resulting in dropping.
+    /// Should this happen, this connection will be closed with a
+    /// `ZX_ERR_IO_OVERRUN` epitaph.
+    ///
+    /// If there is more than one in-flight `GetNext` call, callers are put into
+    /// a queue and will receive responses in FIFO order.
+    ///
+    /// When the networking stack is terminated, this connection will be closed
+    /// with a `ZX_ERR_PEER_CLOSED` epitaph.
+    ///
+    /// - response `events` a list of events that occurred since the last
+    ///     invocation of this method.
+    GetNext() -> (vector<EntryIteratorItem>:MAX_ITEM_BATCH_SIZE events);
+};
+
+/// Items returned from [`EntryIterator.GetNext`].
+xunion EntryIteratorItem {
+    /// An existing entry in the neighbor table. Does not indicate that an event
+    /// occurred.
+    Entry existing;
+
+    /// Event indicating the iterator will no longer return `existing` items.
+    IdleEvent idle;
+
+    /// Event indicating an entry has been added into the neighbor table.
+    Entry added;
+
+    /// Event indicating an entry has been changed [`EntryState`].
+    Entry changed;
+
+    /// Event indicating an entry has been removed from the neighbor table.
+    Entry removed;
+};
+
+/// Empty event for indicating there are no more [`EntryIteratorItem.existing`]
+/// items to yield.
+struct IdleEvent {
+};
+
+/// The maximum number of [`EntryIteratorItem`] returned in a
+/// [`EntryIterator.GetNext`] response.
+//
+// This has been calculated with the following function:
+//   MAX_EVENT_BATCH_SIZE = floor(
+//     (ZX_CHANNEL_MAX_MSG_BYTES - RESPONSE_BYTES) / MAX_EVENT_BYTES
+//   )
+// where,
+//   ZX_CHANNEL_MAX_MSG_BYTES = 65536 bytes
+//   RESPONSE_BYTES = size of [`EntryIterator.GetNext`] response = 32 bytes
+//   MAX_ITEM_BYTES = max size of [`EntryIteratorItem`] = 208 bytes
+//
+// This value will need to be recomputed if any of the above numbers change.
+const uint64 MAX_ITEM_BATCH_SIZE = 314;
