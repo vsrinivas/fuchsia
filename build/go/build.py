@@ -47,11 +47,10 @@ def main():
         choices=['fuchsia', 'linux', 'mac', 'win'],
         required=True)
     parser.add_argument(
-        '--buildidtool', help='The path to the buildidtool.', required=True)
+        '--buildidtool', help='The path to the buildidtool.')
     parser.add_argument(
         '--build-id-dir',
-        help='The path to the .build-id directory.',
-        required=True)
+        help='The path to the .build-id directory.')
     parser.add_argument(
         '--go-root', help='The go root to use for builds.', required=True)
     parser.add_argument(
@@ -232,12 +231,16 @@ def main():
     # TODO(fxbug.dev/27215): Also invoke the buildidtool in the case of linux
     # once buildidtool knows how to deal in Go's native build ID format.
     supports_build_id = args.current_os == 'fuchsia'
-    if retcode == 0 and supports_build_id:
+    if retcode == 0 and args.buildidtool and supports_build_id:
+        if not args.build_id_dir:
+            raise ValueError('Using --buildidtool requires --build-id-dir')
         retcode = subprocess.call(
             [
-                args.buildidtool, "-build-id-dir", args.build_id_dir, "-stamp",
-                dist + ".build-id.stamp", "-entry",
-                ".debug=" + args.output_path, "-entry", "=" + dist,
+                args.buildidtool,
+                "-build-id-dir", args.build_id_dir,
+                "-stamp", dist + ".build-id.stamp",
+                "-entry", ".debug=" + args.output_path,
+                "-entry", "=" + dist,
             ])
 
     if retcode == 0:

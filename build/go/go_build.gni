@@ -97,20 +97,14 @@ template("go_build") {
         if (is_test) {
           testonly = true
         }
-        public_deps = [
-          ":$main_target_name(${toolchain_variant.base})",
-        ]
+        public_deps = [ ":$main_target_name(${toolchain_variant.base})" ]
         output_name = target_name
         if (defined(invoker.output_name)) {
           output_name = invoker.output_name
         }
         base_root_out_dir = get_label_info(public_deps[0], "root_out_dir")
-        sources = [
-          "$base_root_out_dir/$output_name",
-        ]
-        outputs = [
-          "$root_out_dir/$output_name",
-        ]
+        sources = [ "$base_root_out_dir/$output_name" ]
+        outputs = [ "$root_out_dir/$output_name" ]
       }
     } else {
       group(main_target_name) {
@@ -122,9 +116,7 @@ template("go_build") {
         if (is_test) {
           testonly = true
         }
-        public_deps = [
-          ":$main_target_name(${toolchain_variant.base})",
-        ]
+        public_deps = [ ":$main_target_name(${toolchain_variant.base})" ]
       }
     }
     not_needed(invoker, "*")
@@ -169,22 +161,16 @@ template("go_build") {
           output_path,
         ]
       } else {
-        outputs = [
-          output_path,
-        ]
+        outputs = [ output_path ]
       }
 
       script = "//build/go/build.py"
       depfile = "${output_path}.d"
 
-      sources = [
-        "//build/go/gen_library_metadata.py",
-      ]
+      sources = [ "//build/go/gen_library_metadata.py" ]
 
       godepfile = "//prebuilt/tools/godepfile/${host_platform}/godepfile"
-      inputs = [
-        godepfile,
-      ]
+      inputs = [ godepfile ]
 
       args = [
         "--godepfile",
@@ -311,18 +297,21 @@ template("go_build") {
         ]
       }
 
-      # Add needed arguments for the buildidtool. We should add the stamp file
-      # output by buildidtool to the list of outputs for this action but because
-      # Ninja (and by consequence GN) limits us to one depfile where that depfile
-      # has only one output and we need the depfile for other things we don't
-      # list it as an output.
-      args += [
-        "--buildidtool",
-        rebase_path("//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
-                    root_build_dir),
-        "--build-id-dir",
-        ".build-id",
-      ]
+      if (!carchive) {
+        # Add needed arguments for the buildidtool. We should add the stamp file
+        # output by buildidtool to the list of outputs for this action but because
+        # Ninja (and by consequence GN) limits us to one depfile where that depfile
+        # has only one output and we need the depfile for other things we don't
+        # list it as an output.
+        args += [
+          "--buildidtool",
+          rebase_path(
+              "//prebuilt/tools/buildidtool/${host_platform}/buildidtool",
+              root_build_dir),
+          "--build-id-dir",
+          ".build-id",
+        ]
+      }
 
       if (is_test) {
         testonly = true
