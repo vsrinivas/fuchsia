@@ -23,14 +23,14 @@ void main() {
 
   // Bind |tabsBloc| here so that it can be referenced in the TabsBloc
   // constructor arguments.
-  TabsBloc<WebPageBloc> tabsBloc;
+  TabsBloc tabsBloc;
 
   tabsBloc = TabsBloc(
     tabFactory: () {
       SimpleBrowserWebService webService = SimpleBrowserWebService(
         context: _context,
         popupHandler: (tab) => tabsBloc.request.add(
-          AddTabAction<WebPageBloc>(tab: tab),
+          AddTabAction(tab: tab),
         ),
       );
       return WebPageBloc(

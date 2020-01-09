@@ -17,7 +17,7 @@ void main() {
   setupLogger(name: 'simple_browser_test');
 
   Stream<Locale> lstream;
-  TabsBloc<WebPageBloc> tabsBloc;
+  TabsBloc tabsBloc;
 
   testWidgets('localized text is displayed in the widgets',
       (WidgetTester tester) async {

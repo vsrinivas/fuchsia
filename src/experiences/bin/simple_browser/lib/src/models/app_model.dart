@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
-import 'package:simple_browser/src/blocs/webpage_bloc.dart';
 import '../blocs/tabs_bloc.dart';
 import '../models/tabs_action.dart';
 
@@ -18,7 +17,7 @@ import '../models/tabs_action.dart';
 /// initialLocale: A getter for the initial localization value.
 /// keyboardShortcuts: A getter for the browser's [KeyboardShortcuts].
 class AppModel {
-  final TabsBloc<WebPageBloc> tabsBloc;
+  final TabsBloc tabsBloc;
   Stream<Locale> _localeStream;
   final KeyboardShortcuts _keyboardShortcuts;
 
@@ -30,7 +29,7 @@ class AppModel {
         _keyboardShortcuts = keyboardShortcuts;
 
   factory AppModel.fromStartupContext({
-    @required TabsBloc<WebPageBloc> tabsBloc,
+    @required TabsBloc tabsBloc,
     KeyboardShortcuts keyboardShortcuts,
   }) {
     final _intl = PropertyProviderProxy();
@@ -48,7 +47,7 @@ class AppModel {
 
   KeyboardShortcuts get keyboardShortcuts => _keyboardShortcuts;
 
-  void newTab() => tabsBloc.request.add(NewTabAction<WebPageBloc>());
+  void newTab() => tabsBloc.request.add(NewTabAction());
 
   // TODO: Activate/Deactivate the keyboardShortcuts depending on the browser's
   // focus state when its relevant support is ready (fxb/42185)

@@ -14,7 +14,7 @@ const _kTabPadding = EdgeInsets.symmetric(horizontal: _kTabBarHeight);
 const _kScrollToMargin = _kMinTabWidth * 0.333;
 
 class TabsWidget extends StatefulWidget {
-  final TabsBloc<WebPageBloc> bloc;
+  final TabsBloc bloc;
   const TabsWidget({@required this.bloc});
 
   @override

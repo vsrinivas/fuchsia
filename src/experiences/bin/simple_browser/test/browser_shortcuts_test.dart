@@ -14,12 +14,11 @@ import 'package:test/test.dart';
 
 // ignore_for_file: implementation_imports
 import 'package:simple_browser/src/blocs/tabs_bloc.dart';
-import 'package:simple_browser/src/blocs/webpage_bloc.dart';
 import 'package:simple_browser/src/utils/browser_shortcuts.dart';
 
 void main() {
   MockRegistryProxy mockRegistryProxy;
-  MockTabsBloc<WebPageBloc> mockTabsBloc;
+  MockTabsBloc mockTabsBloc;
   const List<String> defaultKeys = [
     'newTab',
     'closeTab',
@@ -34,7 +33,7 @@ void main() {
 
   setUp(() {
     mockRegistryProxy = MockRegistryProxy();
-    mockTabsBloc = MockTabsBloc<WebPageBloc>();
+    mockTabsBloc = MockTabsBloc();
   });
 
   test('''Should use the default action map
@@ -81,4 +80,4 @@ void main() {
 
 class MockRegistryProxy extends Mock implements ui_shortcut.RegistryProxy {}
 
-class MockTabsBloc<WebPageBloc> extends Mock implements TabsBloc<WebPageBloc> {}
+class MockTabsBloc extends Mock implements TabsBloc {}

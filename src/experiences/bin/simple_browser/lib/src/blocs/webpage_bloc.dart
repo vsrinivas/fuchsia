@@ -63,11 +63,11 @@ class WebPageBloc {
     String homePage,
   }) : assert(webService != null) {
     if (homePage != null) {
-      _onActionChanged(NavigateToAction(url: homePage));
+      _onWebPageActionChanged(NavigateToAction(url: homePage));
     }
 
     /// Begins handling action requests
-    _webPageActionController.stream.listen(_onActionChanged);
+    _webPageActionController.stream.listen(_onWebPageActionChanged);
   }
 
   void dispose() {
@@ -75,7 +75,7 @@ class WebPageBloc {
     _webPageActionController.close();
   }
 
-  Future<void> _onActionChanged(WebPageAction action) async {
+  Future<void> _onWebPageActionChanged(WebPageAction action) async {
     switch (action.op) {
       case WebPageActionType.navigateTo:
         final NavigateToAction navigate = action;

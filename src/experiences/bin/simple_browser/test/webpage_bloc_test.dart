@@ -149,10 +149,25 @@ void main() {
   /// is added to the bloc.
   group('Handling actions', () {
     test('''
-      Should call NavigationControllerProxy.loadUrl()
-      when NavigateToAction is added to the webPageBloc.
+      Should call NavigationControllerProxy.loadUrl() with the given url
+      when NavigateToAction is added to the webPageBloc with a normal url.
       ''', () async {
       String testUrl = 'https://www.google.com';
+
+      webPageBloc.request.add(NavigateToAction(url: testUrl));
+
+      await untilCalled(webPageBloc.webService.loadUrl(any));
+      verify(webPageBloc.webService.loadUrl(testUrl)).called(1);
+      verifyNever(webPageBloc.webService.goBack());
+      verifyNever(webPageBloc.webService.goForward());
+      verifyNever(webPageBloc.webService.refresh());
+    });
+
+    test('''
+      Should call NavigationControllerProxy.loadUrl() with the given url
+      when NavigateToAction is added to the webPageBloc with a search query url.
+      ''', () async {
+      String testUrl = 'https://www.google.com/search?q=cat';
 
       webPageBloc.request.add(NavigateToAction(url: testUrl));
 

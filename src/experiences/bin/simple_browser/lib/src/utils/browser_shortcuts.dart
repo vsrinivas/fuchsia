@@ -9,19 +9,18 @@ import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
 import 'package:simple_browser/src/blocs/tabs_bloc.dart';
-import 'package:simple_browser/src/blocs/webpage_bloc.dart';
 import '../models/tabs_action.dart';
 import '../models/webpage_action.dart';
 
 const path = '/pkg/data/keyboard_shortcuts.json';
 
 class BrowserShortcuts {
-  final TabsBloc<WebPageBloc> tabsBloc;
+  final TabsBloc tabsBloc;
   ui_shortcut.RegistryProxy registryProxy;
   Map<String, VoidCallback> actions;
 
   factory BrowserShortcuts({
-    @required TabsBloc<WebPageBloc> tabsBloc,
+    @required TabsBloc tabsBloc,
     ui_shortcut.RegistryProxy shortcutRegistry,
     Map<String, VoidCallback> actions,
   }) {
@@ -80,14 +79,13 @@ class BrowserShortcuts {
     };
   }
 
-  void _newTab() => tabsBloc.request.add(NewTabAction<WebPageBloc>());
+  void _newTab() => tabsBloc.request.add(NewTabAction());
 
   void _closeTab() {
     if (tabsBloc.isOnlyTab) {
       return;
     }
-    tabsBloc.request
-        .add(RemoveTabAction<WebPageBloc>(tab: tabsBloc.currentTab));
+    tabsBloc.request.add(RemoveTabAction(tab: tabsBloc.currentTab));
   }
 
   void _goBack() {

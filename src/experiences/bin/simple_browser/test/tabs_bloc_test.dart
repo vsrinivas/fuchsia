@@ -7,142 +7,386 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_logger/logger.dart';
+import 'package:mockito/mockito.dart';
 
 // ignore_for_file: implementation_imports
 import 'package:simple_browser/src/blocs/tabs_bloc.dart';
+import 'package:simple_browser/src/blocs/webpage_bloc.dart';
 import 'package:simple_browser/src/models/tabs_action.dart';
 
 void main() {
   setupLogger(name: 'tabs_bloc_test');
 
-  // Add a tab, and see that there is 1 tab
-  test('add 1 tab', () async {
-    final tb = TabsBloc(
-      tabFactory: () => 'a',
-      disposeTab: (tab) => tab.dispose(),
-    );
-    await _newTab(tb);
+  group('newTab', () {
+    test('Add 1 tab.', () async {
+      // Creates one tab.
+      final tb = await _creatNTabs(1);
 
-    expect(tb.tabs.length, 1, reason: "doesn't have 1 tab");
+      // Sees if there is only one tab.
+      int actual = tb.tabs.length;
+      int expected = 1;
+      expect(
+        actual,
+        expected,
+        reason: _expectNTabsReason(
+          actual.toString(),
+          expected.toString(),
+        ),
+      );
+    });
+
+    test('Add 2 tabs.', () async {
+      // Creates two tabs.
+      final tb = await _creatNTabs(2);
+
+      // Sees if there are two tabs.
+      int actual = tb.tabs.length;
+      int expected = 2;
+      expect(
+        actual,
+        expected,
+        reason: _expectNTabsReason(
+          actual.toString(),
+          expected.toString(),
+        ),
+      );
+    });
   });
 
-  // Add 2 tabs, see that there are 2 tabs and that focus is on the second
-  test('add 2 tabs', () async {
-    TabsBloc tb;
-    tb = TabsBloc(
-      tabFactory: () => 'tab ${tb.tabs.length}',
-      disposeTab: (tab) => tab.dispose(),
-    );
-    await _newTab(tb);
-    await _newTab(tb);
+  group('focusTab', () {
+    test('Add 3 tabs, focus on the first tab and then the second tab.',
+        () async {
+      // Test Environment Set Up:
+      // Creates three tabs.
+      final tb = await _creatNTabs(3);
 
-    expect(tb.tabs.length, 2, reason: "doesn't have 2 tabs");
-    expect(
-      tb.currentTab,
-      tb.tabs.last,
-      reason: 'not focused on new tab',
-    );
+      // Makes sure that the last tab is currently focused.
+      int actual = tb.currentTabIdx;
+      int expected = 2;
+      expect(
+        actual,
+        expected,
+        reason: _expectFocusedTabReason(
+          actual.toString(),
+          expected.toString(),
+        ),
+      );
+
+      // Changes the focus to the first tab.
+      await _focusTab(tb, tb.tabs[0]);
+
+      // Sees if the index of the newly focused tab is 0.
+      actual = tb.currentTabIdx;
+      expected = 0;
+      expect(
+        actual,
+        expected,
+        reason: _expectFocusedTabReason(
+          actual.toString(),
+          expected.toString(),
+        ),
+      );
+
+      // Changes the focus to the second tab.
+      await _focusTab(tb, tb.tabs[1]);
+
+      // Sees if the index of the newly focused tab is 1.
+      actual = tb.currentTabIdx;
+      expected = 1;
+      expect(
+        actual,
+        expected,
+        reason: _expectFocusedTabReason(
+          actual.toString(),
+          expected.toString(),
+        ),
+      );
+    });
   });
 
-  // Add 2 tabs, focs on the first, see that the focus is on the first, and its value one is correct
-  test('add 2 tabs and focus on first tab', () async {
-    TabsBloc tb;
-    tb = TabsBloc(
-      tabFactory: () => 'tab ${tb.tabs.length}',
-      disposeTab: (tab) => tab.dispose(),
-    );
-    await _newTab(tb);
-    await _newTab(tb);
-    await _focusTab(tb, tb.tabs.first);
+  group('removeTab', () {
+    test('Add 1 tab and remove it.', () async {
+      // Test Environment Set Up:
+      // Creates one tab.
+      final tb = await _creatNTabs(1);
 
-    expect(
-      tb.currentTab,
-      tb.tabs.first,
-      reason: 'not focused on first tab',
-    );
-    expect(tb.currentTab, 'tab 0', reason: 'unexpected tab content');
+      // Makes sure that there is only one tab.
+      int actual = tb.tabs.length;
+      int expected = 1;
+      expect(
+        actual,
+        expected,
+        reason: _expectNTabsReason(
+          actual.toString(),
+          expected.toString(),
+        ),
+      );
+
+      // Closes the tab.
+      await _closeTab(tb, tb.currentTab);
+
+      // Sees if there is no tabs anyumore.
+      actual = tb.tabs.length;
+      expected = 0;
+      expect(
+        actual,
+        expected,
+        reason: _expectNTabsReason(
+          actual.toString(),
+          expected.toString(),
+        ),
+      );
+
+      // Sees if the currentTab indicates null.
+      expect(
+        tb.currentTab,
+        null,
+        reason: _expectFocusedTabReason(
+          (tb.currentTabIdx).toString(),
+          'null',
+        ),
+      );
+    });
+
+    test(
+        'Add 3 tabs, and remove the currently focused tab, which is the last tab.',
+        () async {
+      // Test Environment Set Up:
+      // Creates three tabs and focus on the first tab.
+      final tb = await _creatNTabs(3);
+
+      // Makes sure that the last tab is currently focused.
+      int actualFocusedTabIdx = tb.currentTabIdx;
+      int expectedFocusedTabIdx = 2;
+      expect(
+        actualFocusedTabIdx,
+        expectedFocusedTabIdx,
+        reason: _expectFocusedTabReason(
+          actualFocusedTabIdx.toString(),
+          expectedFocusedTabIdx.toString(),
+        ),
+      );
+
+      // Saves the tab previous to the currently focused tab. (the second tab)
+      final expectedTab = tb.tabs[1];
+
+      // Closes the currently focused tab. (the last tab)
+      await _closeTab(tb, tb.currentTab);
+
+      // Sees if the number of the remaining tabs is 2.
+      int actualNumTabs = tb.tabs.length;
+      int expectedNumTabs = 2;
+      expect(
+        actualNumTabs,
+        expectedNumTabs,
+        reason: _expectNTabsReason(
+          actualNumTabs.toString(),
+          expectedNumTabs.toString(),
+        ),
+      );
+
+      // Sees if the newly focused tab is the tab previous to the removed tab.
+      expect(tb.currentTab, expectedTab,
+          reason:
+              '''The currently focused tab is expected to be the previous one to the removed one,
+              but is actually not.''');
+
+      // Sees if the index of the newly focused tab is still 1.
+      actualFocusedTabIdx = tb.currentTabIdx;
+      expectedFocusedTabIdx = 1;
+      expect(
+        actualFocusedTabIdx,
+        expectedFocusedTabIdx,
+        reason: _expectFocusedTabReason(
+          actualFocusedTabIdx.toString(),
+          expectedFocusedTabIdx.toString(),
+        ),
+      );
+    });
+
+    test('Add 3 tabs, focus on the first tab, and remove it.', () async {
+      // Test Environment Set Up:
+      // Creates three tabs and focus on the first tab.
+      final tb = await _creatNTabs(3);
+      await _focusTab(tb, tb.tabs[0]);
+
+      // Makes sure that the first tab is currently focused.
+      int actualFocusedTabIdx = tb.currentTabIdx;
+      int expectedFocusedTabIdx = 0;
+      expect(
+        actualFocusedTabIdx,
+        expectedFocusedTabIdx,
+        reason: _expectFocusedTabReason(
+          actualFocusedTabIdx.toString(),
+          expectedFocusedTabIdx.toString(),
+        ),
+      );
+
+      // Saves the tab next to the currently focused tab. (the second tab)
+      final expectedTab = tb.tabs[1];
+
+      // Closes the currently focused tab. (the first tab)
+      await _closeTab(tb, tb.currentTab);
+
+      // Sees if the number of the remaining tabs is 2.
+      int actualNumTabs = tb.tabs.length;
+      int expectedNumTabs = 2;
+      expect(
+        actualNumTabs,
+        expectedNumTabs,
+        reason: _expectNTabsReason(
+          actualNumTabs.toString(),
+          expectedNumTabs.toString(),
+        ),
+      );
+
+      // Sees if the newly focused tab is the tab next to the closed tab.
+      expect(tb.currentTab, expectedTab,
+          reason:
+              '''The currently focused tab is expected to be the next one to the removed one,
+              but is actually not.''');
+
+      // Sees if the index of the newly focused tab has been shifted to 0.
+      actualFocusedTabIdx = tb.currentTabIdx;
+      expectedFocusedTabIdx = 0;
+      expect(
+        actualFocusedTabIdx,
+        expectedFocusedTabIdx,
+        reason: _expectFocusedTabReason(
+          actualFocusedTabIdx.toString(),
+          expectedFocusedTabIdx.toString(),
+        ),
+      );
+    });
+
+    test('Add 3 tabs and remove the first one.', () async {
+      // Test Environment Set Up:
+      // Creates three tabs.
+      final tb = await _creatNTabs(3);
+
+      // Makes sure that the last tab is currently focused.
+      int actualFocusedTabIdx = tb.currentTabIdx;
+      int expectedFocusedTabIdx = 2;
+      expect(
+        actualFocusedTabIdx,
+        expectedFocusedTabIdx,
+        reason: _expectFocusedTabReason(
+          actualFocusedTabIdx.toString(),
+          expectedFocusedTabIdx.toString(),
+        ),
+      );
+
+      // Saves the currently focused tab. (the last tab)
+      final expectedTab = tb.currentTab;
+
+      // Closes the first tab.
+      await _closeTab(tb, tb.tabs[0]);
+
+      // Sees if the number of the remaining tabs is 2.
+      int actualNumTabs = tb.tabs.length;
+      int expectedNumTabs = 2;
+      expect(
+        actualNumTabs,
+        expectedNumTabs,
+        reason: _expectNTabsReason(
+          actualNumTabs.toString(),
+          expectedNumTabs.toString(),
+        ),
+      );
+
+      // Sees if the currently focused tab is still the same one.
+      expect(tb.currentTab, expectedTab,
+          reason:
+              '''The focused tab is expected to be the same before and after closing the second tab,
+              but is actually different.''');
+
+      // Sees if the index of the currently focused tab has been shifted to 1.
+      actualFocusedTabIdx = tb.currentTabIdx;
+      expectedFocusedTabIdx = 1;
+      expect(
+        actualFocusedTabIdx,
+        expectedFocusedTabIdx,
+        reason: _expectFocusedTabReason(
+          actualFocusedTabIdx.toString(),
+          expectedFocusedTabIdx.toString(),
+        ),
+      );
+    });
   });
 
-  test('Check if the current tab index is correctly returned', () async {
-    TabsBloc tb;
-    tb = TabsBloc(
-      tabFactory: () => 'tab ${tb.tabs.length}',
-      disposeTab: (tab) => tab.dispose(),
-    );
-    await _newTab(tb);
-    await _newTab(tb);
-    await _newTab(tb);
-    expect(
-      tb.currentTabIdx,
-      2,
-      reason:
-          'The index of the currently focused tab is expected to be 2, but actually is ${tb.currentTabIdx}',
-    );
-    await _focusTab(tb, tb.tabs[0]);
-    expect(
-      tb.currentTabIdx,
-      0,
-      reason:
-          'The index of the currently focused tab is expected to be 0, but actually is ${tb.currentTabIdx}',
-    );
-    await _focusTab(tb, tb.tabs[1]);
-    expect(
-      tb.currentTabIdx,
-      1,
-      reason:
-          'The index of the currently focused tab is expected to be 1, but actually is ${tb.currentTabIdx}',
-    );
-  });
+  group('isOnlyTab, previousTab, and nextTab getters', () {
+    test(
+        '''isOnlyTab getter should return true when there is only one tab in the TabsBloc,
+      and return false when another tab is added.''', () async {
+      // Creates one tab.
+      final tb = await _creatNTabs(1);
 
-  test(
-      'Check if the isOnlyTab getter returns true only when there is a single tab.',
-      () async {
-    TabsBloc tb;
-    tb = TabsBloc(
-      tabFactory: () => 'tab ${tb.tabs.length}',
-      disposeTab: (tab) => tab.dispose(),
-    );
-    await _newTab(tb);
-    expect(
-      tb.isOnlyTab,
-      true,
-      reason:
-          'Expected to be a single tab, but actually ${tb.tabs.length} tab(s) have been created.',
-    );
-    await _newTab(tb);
-    expect(
-      tb.isOnlyTab,
-      false,
-      reason:
-          'Expected to be more than one tabs, but actually only one tab has been created.',
-    );
-  });
+      // Sees if isOnlyTab getter returns true.
+      expect(
+        tb.isOnlyTab,
+        true,
+        reason:
+            'isOnlyTab is expected to be true, but is actually ${tb.isOnlyTab.toString()}.',
+      );
 
-  test(
-      'Check if previousTab getter returns the previous open tab to the current tab ',
-      () async {
-    TabsBloc tb;
-    tb = TabsBloc(
-      tabFactory: () => 'tab ${tb.tabs.length}',
-      disposeTab: (tab) => tab.dispose(),
-    );
-    await _newTab(tb);
-    await _newTab(tb);
-    expect(
-      tb.previousTab,
-      tb.tabs.first,
-      reason:
-          'Expected to return tab 0, but actually returned ${tb.tabFactory}',
-    );
-    await _focusTab(tb, tb.previousTab);
-    expect(
-      tb.nextTab,
-      tb.tabs.last,
-      reason:
-          'Expected to return tab 1, but actually returned ${tb.tabFactory}',
-    );
+      // Creates one more tab.
+      await _newTab(tb);
+
+      // Sees if isOnlyTab getter returns false.
+      expect(
+        tb.isOnlyTab,
+        false,
+        reason:
+            'isOnlyTab is expected to be false, but is actually ${tb.isOnlyTab.toString()}.',
+      );
+    });
+
+    test(
+        '''previousTab getter should return the previous tab to the currently focused tab,
+    and the nextTab getter should return the next tab to the currently focused tab.''',
+        () async {
+      // Creates two tabs.
+      final tb = await _creatNTabs(2);
+
+      // Sees if the previousTab getter returns the first tab.
+      expect(
+        tb.previousTab,
+        tb.tabs.first,
+        reason: '''previousTab is expected to be the first tab,
+        but is actually ${tb.tabs.indexOf(tb.previousTab)}th tab.''',
+      );
+
+      // Changes the focus to the first tab.
+      await _focusTab(tb, tb.tabs[0]);
+
+      // Sees if the nextTab getter returns the second(last) tab.
+      expect(
+        tb.nextTab,
+        tb.tabs.last,
+        reason: '''nextTab is expected to be the last tab,
+        but is actually ${tb.tabs.indexOf(tb.nextTab)}th tab.''',
+      );
+    });
   });
 }
+
+Future<TabsBloc> _creatNTabs(int n) async {
+  TabsBloc tb = TabsBloc(
+    tabFactory: () => MockWebPageBloc(),
+    disposeTab: (tab) => tab.dispose(),
+  );
+
+  for (int i = 0; i < n; i++) {
+    await _newTab(tb);
+  }
+  return tb;
+}
+
+String _expectNTabsReason(String actual, String expected) =>
+    'TabsBloc is expected to have $expected tabs, but actually has $actual tabs.';
+
+String _expectFocusedTabReason(String actual, String expected) =>
+    'The index of the currently focused tab is expected to be $expected, but is actually $actual.';
 
 /// awaits for a single callback from a [Listenable]
 Future _awaitListenable(Listenable listenable) {
@@ -167,15 +411,23 @@ Future _addActionAndAwait(
 }
 
 /// adds a new tab to a [TabsBloc] and awaits completion with [TabsBloc.tabs]
-Future _newTab<T>(TabsBloc<T> tb) => _addActionAndAwait(
+Future _newTab(TabsBloc tb) => _addActionAndAwait(
       tb,
       tb.tabsNotifier,
-      NewTabAction<T>(),
+      NewTabAction(),
     );
 
 /// sets focus to a tab in [TabsBloc] and awaits completion with [TabsBloc.currentTab]
-Future _focusTab<T>(TabsBloc tb, T tab) => _addActionAndAwait(
+Future _focusTab(TabsBloc tb, WebPageBloc tab) => _addActionAndAwait(
       tb,
       tb.currentTabNotifier,
-      FocusTabAction<T>(tab: tab),
+      FocusTabAction(tab: tab),
     );
+
+Future _closeTab(TabsBloc tb, WebPageBloc tab) => _addActionAndAwait(
+      tb,
+      tb.tabsNotifier,
+      RemoveTabAction(tab: tab),
+    );
+
+class MockWebPageBloc extends Mock implements WebPageBloc {}
