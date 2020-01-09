@@ -59,19 +59,18 @@ template("rustc_third_party_artifact") {
   # is depending on this rule.
   build_target_name = "${target_name}_build"
   config(build_target_name) {
-    rebased_3p_root = rebase_path(third_party_crate_root, root_build_dir)
-    rustflags = [
-      "--extern",
-      "$crate_name=${rebased_3p_root}/lib${crate_name}-${package_name}${ext}",
+    externs = [
+      {
+        crate_name = crate_name
+        path = "$third_party_crate_root/lib${crate_name}-${package_name}${ext}"
+      },
     ]
   }
 
   # Dummy target to write target info
   info_target_name = "${target_name}_info"
   generated_file(info_target_name) {
-    outputs = [
-      "${target_out_dir}/${info_target_name}.json",
-    ]
+    outputs = [ "${target_out_dir}/${info_target_name}.json" ]
     contents = {
       crate_name = crate_name
       crate_type = crate_type
@@ -391,9 +390,7 @@ template("rustc_artifact") {
     # Write out static information about the target to be used by
     # reverse-dependencies to determine the content of their Cargo.toml
     # files and --extern invocations.
-    outputs = [
-      "${target_out_dir}/${target_name}.json",
-    ]
+    outputs = [ "${target_out_dir}/${target_name}.json" ]
     contents = {
       cargo_toml_dir = rebase_path(cargo_toml_dir)
       crate_name = crate_name
@@ -485,9 +482,7 @@ template("rustc_artifact") {
                  ])
       generated_file(build_target_name) {
         forward_variables_from(invoker, [ "testonly" ])
-        outputs = [
-          output_file,
-        ]
+        outputs = [ output_file ]
         deps = build_target_deps
         contents = "dummy rust file for toolchains without rustc"
       }
@@ -569,9 +564,7 @@ template("rustc_artifact") {
                    "non_rust_deps",
                  ])
       generated_file(build_test_target_name) {
-        outputs = [
-          test_output_file,
-        ]
+        outputs = [ test_output_file ]
         deps = build_target_deps
         contents = "dummy rust file for toolchains without rustc"
         testonly = true
@@ -732,9 +725,7 @@ template("rustc_artifact") {
     script = "//build/rust/write_cargo_toml.py"
     forward_variables_from(invoker, [ "testonly" ])
 
-    deps = [
-      third_party_build,
-    ]
+    deps = [ third_party_build ]
     if (defined(invoker.deps)) {
       foreach(dep, invoker.deps) {
         dep_info_name = get_label_info(dep, "label_no_toolchain") + "_info"
@@ -790,9 +781,7 @@ template("rustc_artifact") {
     args += test_dep_info_paths
     sources = dep_info_sources
     sources += test_dep_info_sources
-    outputs = [
-      "${cargo_toml_dir}/Cargo.toml",
-    ]
+    outputs = [ "${cargo_toml_dir}/Cargo.toml" ]
   }
 
   # }}} END generate Cargo.toml
@@ -804,9 +793,7 @@ template("rustc_artifact") {
       testonly = true
       public_deps = test_group_deps
 
-      deps = [
-        "//build/test:rust_test_metadata",
-      ]
+      deps = [ "//build/test:rust_test_metadata" ]
       metadata = {
         test_barrier = [ "//build/test:rust_test_metadata" ]
       }
