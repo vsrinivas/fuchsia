@@ -17,6 +17,7 @@ mod account_handler_connection;
 mod account_handler_context;
 mod account_manager;
 mod account_map;
+mod authenticator_connection;
 mod fake_account_handler_connection;
 pub mod inspect;
 mod prototype;
@@ -47,9 +48,13 @@ const PROTOTYPE_TRANSFER_FLAG: &str = "prototype-account-transfer";
 const DATA_DIR: &str = "/data";
 
 lazy_static! {
+    /// (Temporary) Configuration for a fixed set of authentication mechanisms,
+    /// used until file-based configuration is available.
+    static ref DEFAULT_AUTHENTICATION_MECHANISM_IDS: Vec<String> = vec![];
+
     /// (Temporary) Configuration for a fixed set of auth providers used until file-based
     /// configuration is available.
-    static ref DEFAULT_AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {
+    static ref DEFAULT_AUTH_PROVIDERS_CONFIG: Vec<AuthProviderConfig> = {
         vec![AuthProviderConfig {
             auth_provider_type: "google".to_string(),
             url: fuchsia_single_component_package_url!("google_auth_provider").to_string(),
@@ -58,7 +63,7 @@ lazy_static! {
     };
 
     /// Configuration for a set of fake auth providers used for testing.
-    static ref DEV_AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {
+    static ref DEV_AUTH_PROVIDERS_CONFIG: Vec<AuthProviderConfig> = {
         vec![AuthProviderConfig {
             auth_provider_type: "dev_auth_provider".to_string(),
             url: fuchsia_single_component_package_url!("dev_auth_provider")
@@ -81,9 +86,9 @@ fn main() -> Result<(), Error> {
     let args: Vec<String> = std::env::args().collect();
     let options = opts.parse(args)?;
     let auth_provider_config: &Vec<_> = if options.opt_present(DEV_AUTH_PROVIDERS_FLAG) {
-        &DEV_AUTH_PROVIDER_CONFIG
+        &DEV_AUTH_PROVIDERS_CONFIG
     } else {
-        &DEFAULT_AUTH_PROVIDER_CONFIG
+        &DEFAULT_AUTH_PROVIDERS_CONFIG
     };
 
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
@@ -99,6 +104,7 @@ fn main() -> Result<(), Error> {
         AccountManager::<AccountHandlerConnectionImpl>::new(
             PathBuf::from(DATA_DIR),
             &auth_provider_config,
+            &*DEFAULT_AUTHENTICATION_MECHANISM_IDS,
             &inspector,
         )
         .map_err(|e| {

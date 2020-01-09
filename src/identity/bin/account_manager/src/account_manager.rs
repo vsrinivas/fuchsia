@@ -62,9 +62,11 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
     pub fn new(
         data_dir: PathBuf,
         auth_provider_config: &[AuthProviderConfig],
+        auth_mechanism_ids: &[String],
         inspector: &Inspector,
     ) -> Result<AccountManager<AHC>, Error> {
-        let context = Arc::new(AccountHandlerContext::new(auth_provider_config));
+        let context =
+            Arc::new(AccountHandlerContext::new(auth_provider_config, auth_mechanism_ids));
         let account_map = AccountMap::load(data_dir, Arc::clone(&context), inspector.root())?;
 
         // Initialize the structs used to output state through the inspect system.
@@ -411,6 +413,8 @@ mod tests {
         /// This can be populated later if needed.
         static ref AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {vec![]};
 
+        static ref AUTH_MECHANISM_IDS: Vec<String> = {vec![]};
+
         static ref TEST_SCENARIO: Scenario =
             Scenario { include_test: false, threat_scenario: ThreatScenario::BasicAttacker };
 
@@ -472,7 +476,13 @@ mod tests {
         data_dir: &Path,
         inspector: &Inspector,
     ) -> AccountManager<AccountHandlerConnectionImpl> {
-        AccountManager::new(data_dir.to_path_buf(), &AUTH_PROVIDER_CONFIG, inspector).unwrap()
+        AccountManager::new(
+            data_dir.to_path_buf(),
+            &AUTH_PROVIDER_CONFIG,
+            &AUTH_MECHANISM_IDS,
+            inspector,
+        )
+        .unwrap()
     }
 
     /// Note: Many AccountManager methods launch instances of an AccountHandler. Since its
@@ -485,7 +495,13 @@ mod tests {
         let inspector = Inspector::new();
         let data_dir = TempDir::new().unwrap();
         request_stream_test(
-            AccountManager::new(data_dir.path().into(), &AUTH_PROVIDER_CONFIG, &inspector).unwrap(),
+            AccountManager::new(
+                data_dir.path().into(),
+                &AUTH_PROVIDER_CONFIG,
+                &AUTH_MECHANISM_IDS,
+                &inspector,
+            )
+            .unwrap(),
             |proxy, _| async move {
                 assert_eq!(proxy.get_account_ids().await?.len(), 0);
                 Ok(())

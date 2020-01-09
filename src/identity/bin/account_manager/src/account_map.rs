@@ -237,7 +237,7 @@ mod tests {
         static ref TEST_ACCOUNT_ID_1: LocalAccountId = LocalAccountId::new(123);
         static ref TEST_ACCOUNT_ID_2: LocalAccountId = LocalAccountId::new(456);
         static ref ACCOUNT_HANDLER_CONTEXT: Arc<AccountHandlerContext> =
-            Arc::new(AccountHandlerContext::new(&vec![]));
+            Arc::new(AccountHandlerContext::new(&[], &[]));
     }
 
     // Run some sanity checks on an empty AccountMap
