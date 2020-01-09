@@ -14,11 +14,11 @@ Stream::Stream(uint32_t id, uint32_t pri, Scheduler* sched)
 Stream::~Stream() {
   fbl::AutoLock lock(&lock_);
   ZX_DEBUG_ASSERT(open_ == false);
-  ZX_DEBUG_ASSERT(in_list_.is_empty());
-  ZX_DEBUG_ASSERT(issued_list_.is_empty());
+  ZX_DEBUG_ASSERT(ready_ops_.is_empty());
+  ZX_DEBUG_ASSERT(issued_ops_.is_empty());
 }
 
-bool Stream::IsEmptyLocked() { return in_list_.is_empty() && issued_list_.is_empty(); }
+bool Stream::IsEmptyLocked() { return ready_ops_.is_empty() && issued_ops_.is_empty(); }
 
 zx_status_t Stream::Close() {
   fbl::AutoLock lock(&lock_);
@@ -38,8 +38,8 @@ zx_status_t Stream::Insert(UniqueOp op, UniqueOp* op_err) {
     return ZX_ERR_BAD_STATE;
   }
   op->set_stream(this);
-  bool was_empty = in_list_.is_empty();
-  in_list_.push_back(op.release());
+  bool was_empty = ready_ops_.is_empty();
+  ready_ops_.push_back(op.release());
   if (was_empty && (sched_ != nullptr)) {
     sched_->SetActive(StreamRef(this));
   }
@@ -48,11 +48,11 @@ zx_status_t Stream::Insert(UniqueOp op, UniqueOp* op_err) {
 
 void Stream::GetNext(UniqueOp* op_out) {
   fbl::AutoLock lock(&lock_);
-  UniqueOp op(in_list_.pop_front());
+  UniqueOp op(ready_ops_.pop_front());
   ZX_DEBUG_ASSERT(op != nullptr);
-  issued_list_.push_back(op.get());  // Add to issued list.
+  issued_ops_.push_back(op.get());  // Add to issued list.
   *op_out = std::move(op);
-  if ((!in_list_.is_empty()) && (sched_ != nullptr)) {
+  if ((!ready_ops_.is_empty()) && (sched_ != nullptr)) {
     sched_->SetActive(StreamRef(this));
   }
 }
@@ -63,7 +63,7 @@ void Stream::ReleaseOp(UniqueOp op, SchedulerClient* client) {
   {
     fbl::AutoLock lock(&lock_);
     op->set_stream(nullptr);
-    sop = issued_list_.erase(*op.release());
+    sop = issued_ops_.erase(*op.release());
     if (!open_ && IsEmptyLocked()) {
       // Stream is closed and has no more work to do. Ready for release.
       release = true;

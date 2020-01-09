@@ -95,8 +95,8 @@ class Stream : public fbl::RefCounted<Stream> {
 
   fbl::Mutex lock_;
   bool open_ __TA_GUARDED(lock_) = true;                  // Stream is open, can accept more ops.
-  StreamOp::ActiveList in_list_ __TA_GUARDED(lock_);      // Input list - ops yet to be issued.
-  StreamOp::ActiveList issued_list_ __TA_GUARDED(lock_);  // Issued ops.
+  StreamOp::ReadyList ready_ops_ __TA_GUARDED(lock_);     // Ops ready to be issued.
+  StreamOp::IssuedList issued_ops_ __TA_GUARDED(lock_);   // Issued ops.
 };
 
 }  // namespace ioscheduler

@@ -161,14 +161,32 @@ class StreamOp {
   bool is_deferred() { return flags_ & kOpFlagDeferred; }
 
   // List support.
-  using ActiveListNodeState = fbl::DoublyLinkedListNodeState<StreamOp*>;
-  struct ActiveListTraits {
-    static ActiveListNodeState& node_state(StreamOp& s) { return s.active_node_; }
+  using ListNodeState = fbl::DoublyLinkedListNodeState<StreamOp*>;
+  struct AllListTraits {
+    static ListNodeState& node_state(StreamOp& s) { return s.all_node_; }
   };
-  using ActiveList = fbl::DoublyLinkedList<StreamOp*, ActiveListTraits>;
+  using AllList = fbl::DoublyLinkedList<StreamOp*, AllListTraits>;
+
+  struct ReadyListTraits {
+    static ListNodeState& node_state(StreamOp& s) { return s.ready_node_; }
+  };
+  using ReadyList = fbl::DoublyLinkedList<StreamOp*, ReadyListTraits>;
+
+  struct IssuedListTraits {
+    static ListNodeState& node_state(StreamOp& s) { return s.issued_node_; }
+  };
+  using IssuedList = fbl::DoublyLinkedList<StreamOp*, IssuedListTraits>;
+
+  struct DeferredListTraits {
+    static ListNodeState& node_state(StreamOp& s) { return s.deferred_node_; }
+  };
+  using DeferredList = fbl::DoublyLinkedList<StreamOp*, DeferredListTraits>;
 
  private:
-  ActiveListNodeState active_node_;
+  ListNodeState all_node_;
+  ListNodeState ready_node_;
+  ListNodeState issued_node_;
+  ListNodeState deferred_node_;
 
   OpType type_;             // Type of operation.
   uint32_t stream_id_;      // Stream into which this op is queued.
