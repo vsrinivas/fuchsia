@@ -4,20 +4,20 @@
 
 #include <cstdint>
 
-#include <llvm/ProfileData/InstrProfData.inc>
+#include <profile/InstrProfData.inc>
 
 namespace {
 
 using IntPtrT = intptr_t;
 
 enum ValueKind {
-#define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
-#include <llvm/ProfileData/InstrProfData.inc>
+#define VALUE_PROF_KIND(Enumerator, Value, Descr) Enumerator = Value,
+#include <profile/InstrProfData.inc>
 };
 
 struct __llvm_profile_data {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer) Type Name;
-#include <llvm/ProfileData/InstrProfData.inc>
+#include <profile/InstrProfData.inc>
 };
 
 extern "C" {
@@ -114,7 +114,7 @@ uint64_t __llvm_profile_get_version() { return INSTR_PROF_RAW_VERSION_VAR; }
 [[gnu::section("__llvm_profile_header"), gnu::used]] struct {
 #define INSTR_PROF_RAW_HEADER(Type, Name, Initializer) \
   Type Name##_ = Initializer;
-#include <llvm/ProfileData/InstrProfData.inc>
+#include <profile/InstrProfData.inc>
 } __llvm_profile_header;
 
 }  // namespace
