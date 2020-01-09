@@ -154,8 +154,11 @@ void Session::SetCommandDispatchers(
 }
 
 void Session::SetDebugName(std::string debug_name) {
-  TRACE_DURATION("gfx", "scenic_impl::Session::SetDebugName");
-  GetTempSessionDelegate()->SetDebugName(debug_name);
+  TRACE_DURATION("gfx", "scenic_impl::Session::SetDebugName", "debug name", debug_name);
+  for (auto& dispatcher : dispatchers_) {
+    if (dispatcher)
+      dispatcher->SetDebugName(debug_name);
+  }
 }
 
 Session::EventAndErrorReporter::EventAndErrorReporter(Session* session)
