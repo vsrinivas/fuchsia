@@ -4,7 +4,13 @@
 
 #pragma once
 
+#include <lib/ftl/volume.h>
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
+#include <zircon/boot/image.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
 
 #include <memory>
 
@@ -17,12 +23,6 @@
 #include <ddktl/protocol/block/partition.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <lib/ftl/volume.h>
-#include <lib/sync/completion.h>
-#include <zircon/boot/image.h>
-#include <zircon/listnode.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
 
 namespace ftl {
 
@@ -43,9 +43,8 @@ struct FtlOp {
 };
 
 class BlockDevice;
-using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::UnbindableNew,
-                               ddk::Messageable, ddk::Suspendable, ddk::Resumable,
-                               ddk::GetProtocolable>;
+using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::UnbindableNew, ddk::Messageable,
+                               ddk::SuspendableNew, ddk::Resumable, ddk::GetProtocolable>;
 
 // Provides the bulk of the functionality for a FTL-backed block device.
 class BlockDevice : public DeviceType,
@@ -66,7 +65,8 @@ class BlockDevice : public DeviceType,
   // Device protocol implementation.
   zx_off_t DdkGetSize() { return params_.GetSize(); }
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  zx_status_t DdkSuspend(uint32_t flags);
+  zx_status_t Suspend();
+  void DdkSuspendNew(ddk::SuspendTxn txn);
   zx_status_t DdkResume(uint32_t flags) { return ZX_OK; }
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
 
@@ -117,8 +117,9 @@ class BlockDevice : public DeviceType,
 
   nand_protocol_t parent_ = {};
   bad_block_protocol_t bad_block_ = {};
+
   std::unique_ptr<ftl::Volume> volume_;
   uint8_t guid_[ZBI_PARTITION_GUID_LEN] = {};
 };
 
-}  // namespace ftl.
+}  // namespace ftl

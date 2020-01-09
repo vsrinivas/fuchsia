@@ -4,15 +4,16 @@
 
 #include "block_device.h"
 
+#include <lib/fake_ddk/fake_ddk.h>
+#include <lib/ftl/volume.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+
 #include <atomic>
 #include <memory>
 #include <utility>
 
 #include <ddktl/protocol/nand.h>
 #include <fbl/array.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <lib/ftl/volume.h>
-#include <lib/fzl/owned-vmo-mapper.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -494,8 +495,7 @@ TEST_F(BlockDeviceTest, Format) {
 TEST_F(BlockDeviceTest, Suspend) {
   ftl::BlockDevice* device = GetDevice();
   ASSERT_TRUE(device);
-
-  EXPECT_OK(device->DdkSuspend(0));
+  device->Suspend();
   EXPECT_TRUE(GetVolume()->flushed());
 }
 

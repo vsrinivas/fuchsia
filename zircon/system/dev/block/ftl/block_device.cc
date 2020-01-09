@@ -4,13 +4,14 @@
 
 #include "block_device.h"
 
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <zircon/assert.h>
+
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <lib/fzl/vmo-mapper.h>
-#include <zircon/assert.h>
 
 #include "nand_driver.h"
 
@@ -132,10 +133,15 @@ zx_status_t BlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_block_Ftl_dispatch(this, txn, msg, &fidl_ops);
 }
 
-zx_status_t BlockDevice::DdkSuspend(uint32_t flags) {
-  zxlogf(INFO, "FTL: Suspend\n");
+zx_status_t BlockDevice::Suspend() {
   LocalOperation operation(BLOCK_OP_FLUSH);
   return operation.Execute(this);
+}
+
+void BlockDevice::DdkSuspendNew(ddk::SuspendTxn txn) {
+  zxlogf(INFO, "FTL: Suspend\n");
+  zx_status_t status = Suspend();
+  txn.Reply(status, txn.requested_state());
 }
 
 zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
