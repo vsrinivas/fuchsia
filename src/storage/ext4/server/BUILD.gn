@@ -6,6 +6,7 @@ import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
 rustc_binary("bin") {
@@ -27,6 +28,22 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
+  ]
+}
+
+rustc_test("ext4_server_integration_test") {
+  source_root = "tests/ext4_server_test.rs"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/test_util",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/storage/ext4/server/fidl:ext4_readonly-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -55,9 +72,7 @@ package("ext4_readonly") {
   ]
 }
 
-test_package("tests") {
-  package_name = "ext4-server-tests"
-
+test_package("ext4_server_tests") {
   deps = [
     ":bin_test",
   ]
@@ -68,5 +83,50 @@ test_package("tests") {
       dest = "ext4_readonly_test"
       environments = basic_envs
     },
+  ]
+}
+
+test_package("ext4_server_integration_tests") {
+  deps = [
+    ":bin",
+    ":ext4_server_integration_test",
+  ]
+
+  binaries = [
+    {
+      name = "ext4_readonly"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/ext4_readonly.cmx")
+      dest = "ext4_readonly.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("../read-only/1file.img")
+      dest = "1file.img"
+    },
+    {
+      path = rebase_path("../read-only/nest.img")
+      dest = "nest.img"
+    },
+  ]
+
+  tests = [
+    {
+      name = "ext4_server_integration_test"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":ext4_server_integration_tests",
+    ":ext4_server_tests",
   ]
 }

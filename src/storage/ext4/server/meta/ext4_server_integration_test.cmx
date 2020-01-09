@@ -1,0 +1,18 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.storage.ext4.Server": "fuchsia-pkg://fuchsia.com/ext4_server_integration_tests#meta/ext4_readonly.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/ext4_server_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.storage.ext4.Server",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

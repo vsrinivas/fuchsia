@@ -18,7 +18,7 @@ use {
         ReaderReadError, RequiredFeatureIncompat, Server_Request, Server_RequestStream,
         ServiceRequest, Success,
     },
-    fuchsia_async::{self, EHandle, Executor},
+    fuchsia_async::{self, EHandle},
     fuchsia_component::server::ServiceFs,
     fuchsia_vfs_pseudo_fs_mt::{execution_scope::ExecutionScope, path::Path},
     futures::{
@@ -27,14 +27,14 @@ use {
     },
 };
 
-async fn run_ext4_server(ehandle: EHandle, mut stream: Server_RequestStream) -> Result<(), Error> {
+async fn run_ext4_server(mut stream: Server_RequestStream) -> Result<(), Error> {
     while let Some(req) = stream.try_next().await.context("Error while reading request")? {
         match req {
             Server_Request::MountVmo { source, flags, root, responder } => {
                 // Each mount get's its own scope.  We may provide additional control over this
                 // scope in the future.  For example, one thing we may want to do is also return an
                 // "administrative chanel" that would allow calling "shutdown" on a mount.
-                let scope = ExecutionScope::from_executor(Box::new(ehandle.clone()));
+                let scope = ExecutionScope::from_executor(Box::new(EHandle::local()));
 
                 let mut res = serve_vmo(scope, source, flags, root);
 
@@ -164,16 +164,11 @@ async fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
-    let exec = Executor::new().context("Executor creation failed")?;
-    let ehandle = exec.ehandle();
-
     const MAX_CONCURRENT: usize = 10_000;
     let fut = fs.for_each_concurrent(MAX_CONCURRENT, move |request| {
         match request {
-            IncomingService::Server(stream) => run_ext4_server(ehandle.clone(), stream),
-            IncomingService::Svc(ServiceRequest::Server(stream)) => {
-                run_ext4_server(ehandle.clone(), stream)
-            }
+            IncomingService::Server(stream) => run_ext4_server(stream),
+            IncomingService::Svc(ServiceRequest::Server(stream)) => run_ext4_server(stream),
         }
         .unwrap_or_else(|e| println!("{:?}", e))
     });
