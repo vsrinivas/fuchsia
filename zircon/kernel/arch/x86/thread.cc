@@ -98,49 +98,41 @@ __NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(thre
 
   x86_debug_state_context_switch(oldthread, newthread);
 
-  // printf("cs 0x%llx\n", kstack_top);
-
-  /* set the tss SP0 value to point at the top of our stack */
+  // set the tss SP0 value to point at the top of our stack
   x86_set_tss_sp(newthread->stack.top);
 
-  /* Save the user fs_base register value.  The new rdfsbase instruction
-   * is much faster than reading the MSR, so use the former in
-   * preference. */
+  // Save the user fs_base register value.  The new rdfsbase instruction is much faster than reading
+  // the MSR, so use the former in preference.
   if (likely(g_x86_feature_fsgsbase)) {
     oldthread->arch.fs_base = _readfsbase_u64();
   } else {
     oldthread->arch.fs_base = read_msr(X86_MSR_IA32_FS_BASE);
   }
 
-  /* The segment selector registers can't be preserved across context
-   * switches in all cases, because some values get clobbered when
-   * returning from interrupts.  If an interrupt occurs when a userland
-   * process has set %fs = 1 (for example), the IRET instruction used for
-   * returning from the interrupt will reset %fs to 0.
-   *
-   * To prevent the segment selector register values from leaking between
-   * processes, we reset these registers across context switches. */
+  // The segment selector registers can't be preserved across context switches in all cases, because
+  // some values get clobbered when returning from interrupts.  If an interrupt occurs when a
+  // userland process has set %fs = 1 (for example), the IRET instruction used for returning from
+  // the interrupt will reset %fs to 0.
+  //
+  // To prevent the segment selector register values from leaking between processes, we reset these
+  // registers across context switches.
   set_ds(0);
   set_es(0);
   set_fs(0);
   if (get_gs() != 0) {
-    /* Assigning to %gs clobbers gs_base, so we must restore gs_base
-     * afterwards. */
+    // Assigning to %gs may clobber gs_base, so we must restore gs_base afterwards.
     DEBUG_ASSERT(arch_ints_disabled());
     uintptr_t gs_base = (uintptr_t)x86_get_percpu();
     set_gs(0);
     write_msr(X86_MSR_IA32_GS_BASE, gs_base);
   }
 
-  /* Restore fs_base and save+restore user gs_base.  Note that the user
-   * and kernel gs_base values have been swapped -- the user value is
-   * currently in KERNEL_GS_BASE. */
+  // Restore fs_base and save+restore user gs_base.  Note that the user and kernel gs_base values
+  // have been swapped -- the user value is currently in KERNEL_GS_BASE.
   if (likely(g_x86_feature_fsgsbase)) {
-    /* There is no variant of the {rd,wr}gsbase instructions for
-     * accessing KERNEL_GS_BASE, so we wrap those in two swapgs
-     * instructions to get the same effect.  This is a little
-     * convoluted, but still faster than using the KERNEL_GS_BASE
-     * MSRs. */
+    // There is no variant of the {rd,wr}gsbase instructions for accessing KERNEL_GS_BASE, so we
+    // wrap those in two swapgs instructions to get the same effect.  This is a little convoluted,
+    // but still faster than using the KERNEL_GS_BASE MSRs.
     __asm__ __volatile__(
         "swapgs\n"
         "rdgsbase %[old_value]\n"
