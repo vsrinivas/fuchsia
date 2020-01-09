@@ -9,9 +9,12 @@
 
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/client/job_context.h"
+#include "src/developer/debug/zxdb/client/setting_store.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
+
+class SettingSchema;
 
 class Filter : public ClientObject {
  public:
@@ -25,7 +28,28 @@ class Filter : public ClientObject {
   JobContext* job() { return job_ ? job_->get() : nullptr; }
   bool valid() { return !pattern_.empty() && (!job_ || job_->get()); }
 
+  SettingStore& settings() { return settings_; }
+
+  static fxl::RefPtr<SettingSchema> GetSchema();
+
  private:
+  // Implements the SettingStore interface for the Filter (uses composition instead of inheritance
+  // to keep the Filter API simpler).
+  class Settings : public SettingStore {
+   public:
+    explicit Settings(Filter* filter);
+
+   protected:
+    virtual SettingValue GetStorageValue(const std::string& key) const override;
+    virtual Err SetStorageValue(const std::string& key, SettingValue value) override;
+
+   private:
+    Filter* filter_;  // Object that owns us.
+  };
+  friend Settings;
+
+  Settings settings_;
+
   std::string pattern_;
 
   // This exists in one of 3 states:

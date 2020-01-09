@@ -149,10 +149,10 @@ TEST_F(VerbAttachJob, Good) {
   event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
-      " # Pattern Job\n"
-      " 1 foo       2\n"
-      " 2 bar       2\n"
-      " 3 baz       2\n",
+      "  # Pattern Job\n"
+      "  1 foo       2\n"
+      "  2 bar       2\n"
+      "▶ 3 baz       2\n",
       event.output.AsString());
 }
 

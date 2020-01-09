@@ -155,19 +155,31 @@ const char kFilterHelp[] =
   be global (the default, applying to all jobs the debugger is attached to) or
   apply only to specific jobs.
 
+More info
+
+    • Create a filter with "attach <pattern>". See "help attach" for more.
+
+    • Change a filter's pattern with "filter [X] set pattern = <newvalue>"
+      (where [X] is the index of the filter from the "filter" command).
+
+    • Delete a filter with "filter [X] rm".
+
 Examples
 
   filter
-    Lists all filters on the current job.
+      Lists all filters.
 
   filter 1
-    Selects filter 1 to be the active filter.
+      Selects filter 1 to be the active filter.
 
   job 3 filter
-    List all filters on job 3.
+      List all filters on job 3.
 
-  filter 3 attach foo
-    Update filter 3 to attach to processes named "foo".
+  filter 3 set pattern = foo
+      Update filter 3 to attach to processes named "foo".
+
+  filter 4 rm
+      Removes filter 4.
 )";
 
 void ListFilters(ConsoleContext* context, JobContext* job) {

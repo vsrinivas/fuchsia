@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 
-#include "src/developer/debug/zxdb/client/job_context.h"
+#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/setting_schema.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/target.h"
@@ -20,6 +20,7 @@ void InitializeSchemas() {
   initialized = true;
 
   // Simply getting the schemas will create them, so we need to make sure we get all of them.
+  Filter::GetSchema();
   System::GetSchema();
   Target::GetSchema();
   Thread::GetSchema();

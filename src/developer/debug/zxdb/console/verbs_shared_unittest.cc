@@ -44,7 +44,10 @@ TEST_F(VerbsSharedTest, Rm) {
 
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ(" # Pattern Job\n 1 foobar    *\n", event.output.AsString());
+  ASSERT_EQ(
+      "  # Pattern Job\n"
+      "▶ 1 foobar    *\n",
+      event.output.AsString());
 
   console.ProcessInputLine("filter 1 rm");
   console.ProcessInputLine("filter");

@@ -19,13 +19,17 @@ const char* ClientSettings::Thread::kDebugSteppingDescription =
   This is used by developers working on the debugger's internal thread
   controllers.)";
 
-fxl::RefPtr<SettingSchema> CreateSchema() {
+namespace {
+
+static fxl::RefPtr<SettingSchema> CreateSchema() {
   auto schema = fxl::MakeRefCounted<SettingSchema>();
   schema->AddBool(ClientSettings::Thread::kDebugStepping,
                   ClientSettings::Thread::kDebugSteppingDescription, false);
 
   return schema;
 }
+
+}  // namespace
 
 // Thread Implementation ---------------------------------------------------------------------------
 

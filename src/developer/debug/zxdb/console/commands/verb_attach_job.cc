@@ -193,6 +193,8 @@ Err RunVerbAttachJob(ConsoleContext* context, const Command& cmd, CommandCallbac
     filter->SetJob(job_context);
     filter->SetPattern(cmd.args()[i]);
 
+    context->SetActiveFilter(filter);
+
     // Output a record of the created filter.
     OutputBuffer out("Created filter ");
     out.Append(Syntax::kSpecial, fxl::StringPrintf("%d", context->IdForFilter(filter)));

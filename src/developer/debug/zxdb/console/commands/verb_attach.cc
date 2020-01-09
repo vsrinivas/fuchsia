@@ -41,15 +41,21 @@ Attaching to processes by name
   Filters are applied to processes launched in jobs the debugger is attached to,
   both current processes and future ones.
 
+  More on jobs:
+
     • See the currently attached jobs with the "job" command.
 
     • Attach to a new job with the "attach-job" command.
+
+  More on filters:
 
     • See the current filters with the "filter" command.
 
     • Delete a filter with "filter [X] rm" where X is the filter index from the
       "filter" list. If no filter index is provided, the current filter will be
       deleted.
+
+    • Change a filter's pattern with "filter [X] set pattern = <newvalue>".
 
   If a job prefix is specified, only processes launched in that job matching the
   pattern will be attached to:
@@ -77,54 +83,12 @@ Examples
   job 3 attach foobar
       Attaches to any process that spawns under job 3 with "foobar" in the
       name.
-
-  filter 2 attach foobar
-      Change filter 2's pattern so it now matches any process with "foobar" in
-      the name.
-
-  filter attach 1234
-      Attach to any process that spawns under the current job with "1234" in
-      the name.
 )";
-
-Err DoAttachFilter(ConsoleContext* context, const Command& cmd,
-                   CommandCallback callback = nullptr) {
-  if (cmd.args().size() != 1)
-    return Err("Wrong number of arguments to attach.");
-
-  Filter* filter;
-  if (cmd.HasNoun(Noun::kFilter) && cmd.GetNounIndex(Noun::kFilter) != Command::kNoIndex) {
-    if (cmd.HasNoun(Noun::kJob)) {
-      return Err("Cannot change job for existing filter.");
-    }
-
-    filter = cmd.filter();
-  } else {
-    JobContext* job = cmd.HasNoun(Noun::kJob) ? cmd.job_context() : nullptr;
-    filter = context->session()->system().CreateNewFilter();
-    filter->SetJob(job);
-  }
-
-  filter->SetPattern(cmd.args()[0]);
-
-  Console::get()->Output("Waiting for process matching \"" + cmd.args()[0] + "\"");
-  if (callback) {
-    callback(Err());
-  }
-  return Err();
-}
 
 Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback callback) {
   // Only a process can be attached.
-  if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob, Noun::kFilter}); err.has_error())
+  if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob}); err.has_error())
     return err;
-
-  if (cmd.HasNoun(Noun::kFilter)) {
-    // Repurpose a filter. The "filter" noun can't be combined with anything else.
-    if (Err err = cmd.ValidateNouns({Noun::kFilter}); err.has_error())
-      return err;
-    return DoAttachFilter(context, cmd, std::move(callback));
-  }
 
   uint64_t koid = 0;
   if (ReadUint64Arg(cmd, 0, "process koid", &koid).ok()) {
@@ -142,7 +106,20 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
   // Not a number, make a filter instead. This only supports "job" and "filter nouns.
   if (Err err = cmd.ValidateNouns({Noun::kJob, Noun::kFilter}); err.has_error())
     return err;
-  return DoAttachFilter(context, cmd, std::move(callback));
+  if (cmd.args().size() != 1)
+    return Err("Wrong number of arguments to attach.");
+
+  Filter* filter = context->session()->system().CreateNewFilter();
+  filter->SetJob(cmd.HasNoun(Noun::kJob) && cmd.job_context() ? cmd.job_context() : nullptr);
+  filter->SetPattern(cmd.args()[0]);
+
+  context->SetActiveFilter(filter);
+
+  Console::get()->Output("Waiting for process matching \"" + cmd.args()[0] + "\"");
+  if (callback) {
+    callback(Err());
+  }
+  return Err();
 }
 
 }  // namespace

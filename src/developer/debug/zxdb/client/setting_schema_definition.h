@@ -60,6 +60,14 @@ struct ClientSettings {
     static const char* kDebugStepping;
     static const char* kDebugSteppingDescription;
   };
+
+  struct Filter {
+    static const char* kPattern;
+    static const char* kPatternDescription;
+
+    // TODO(brettw) we should have "job" here to support commands like "filter 2 set job = 4"
+    // But the SettingSchema doesn't have a job type yet.
+  };
 };
 
 // Schemas need to be initialized together because some schemas can add settings to other schemas.

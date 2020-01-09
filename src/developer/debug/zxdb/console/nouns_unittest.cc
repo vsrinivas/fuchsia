@@ -78,6 +78,12 @@ TEST_F(NounsTest, FilterTest) {
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ("No filters.\n", event.output.AsString());
 
+  console.ProcessInputLine("filter attach foo");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  ASSERT_EQ("No active filter. Use \"filter\" to see the list and then \"filter X ...\".",
+            event.output.AsString());
+
   console.ProcessInputLine("attach foobar");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
@@ -88,24 +94,13 @@ TEST_F(NounsTest, FilterTest) {
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ("Waiting for process matching \"boofar\"", event.output.AsString());
 
-  console.ProcessInputLine("filter attach hoodar");
-  event = console.GetOutputEvent();
-  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Waiting for process matching \"hoodar\"", event.output.AsString());
-
-  console.ProcessInputLine("filter 1 attach newcar");
-  event = console.GetOutputEvent();
-  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Waiting for process matching \"newcar\"", event.output.AsString());
-
   console.ProcessInputLine("filter");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
-      " # Pattern Job\n"
-      " 1 newcar    *\n"
-      " 2 boofar    1\n"
-      " 3 hoodar    *\n",
+      "  # Pattern Job\n"
+      "  1 foobar    *\n"
+      "▶ 2 boofar    1\n",
       event.output.AsString());
 
   // Delete the wildcard filters.
@@ -119,8 +114,8 @@ TEST_F(NounsTest, FilterTest) {
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
       "Filters for job 1 only:\n"
-      " # Pattern Job\n"
-      " 2 boofar    1\n",
+      "  # Pattern Job\n"
+      "▶ 2 boofar    1\n",
       event.output.AsString());
 
   // List current job's filters when there aren't any.

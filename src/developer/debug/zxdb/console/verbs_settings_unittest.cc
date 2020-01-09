@@ -197,6 +197,10 @@ TEST_F(VerbsSettingsTest, GetSet) {
       "• \"gldir four\"",
       ExtractValuesFromGet(DoInput("global get build-dirs")));
   EXPECT_EQ("• prdir", ExtractValuesFromGet(DoInput("get build-dirs")));
+
+  // Check invalid values.
+  EXPECT_EQ("Could not find setting \"unknown-setting\".", DoInput("set unknown-setting = blah"));
+  EXPECT_EQ("Could not find setting \"unknown-setting\".", DoInput("get unknown-setting"));
 }
 
 TEST_F(VerbsSettingsTest, ParseExecutionScope) {

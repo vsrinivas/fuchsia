@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "src/developer/debug/zxdb/client/execution_scope.h"
+#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
@@ -35,6 +36,7 @@ struct SettingContext {
     kGlobal,
     kTarget,
     kThread,
+    kFilter,
   };
 
   SettingStore* store = nullptr;
@@ -95,14 +97,21 @@ Err GetSettingContext(ConsoleContext* context, const Command& cmd, const std::st
   } else if (cmd.HasNoun(Noun::kGlobal)) {
     out->store = &context->session()->system().settings();
     out->level = SettingContext::Level::kGlobal;
+  } else if (cmd.HasNoun(Noun::kFilter)) {
+    out->store = &cmd.filter()->settings();
+    out->level = SettingContext::Level::kFilter;
   }
 
   if (out->store) {
     // Found an explicitly requested setting store.
-    if (cmd.verb() == Verb::kSet)  // Use the generic definition from the schama.
-      out->value = out->store->schema()->GetSetting(setting_name)->default_value;
-    else if (cmd.verb() == Verb::kGet)  // Use the specific value from the store.
+    if (cmd.verb() == Verb::kSet) {
+      // Use the generic definition from the schama (if any).
+      if (const SettingSchema::Record* record = out->store->schema()->GetSetting(setting_name))
+        out->value = record->default_value;
+    } else if (cmd.verb() == Verb::kGet) {
+      // Use the specific value from the store.
       out->value = out->store->GetValue(setting_name);
+    }
     return Err();
   }
 
@@ -505,8 +514,7 @@ Err SetSetting(ConsoleContext* console_context, const Frame* optional_frame,
       err = SetInputLocations(optional_frame, setting_context, values[0], store);
       break;
     case SettingType::kNull:
-      return Err("Unknown type for setting %s. Please file a bug with repro.",
-                 setting_context.name.c_str());
+      return Err("Could not find setting %s.", setting_context.name.c_str());
   }
 
   if (!err.ok())
@@ -538,6 +546,11 @@ OutputBuffer FormatSetFeedback(ConsoleContext* console_context,
       int target_id = console_context->IdForTarget(cmd.target());
       int thread_id = console_context->IdForThread(cmd.thread());
       out.Append(fxl::StringPrintf(" for thread %d of process %d:\n", thread_id, target_id));
+      break;
+    }
+    case SettingContext::Level::kFilter: {
+      out.Append(
+          fxl::StringPrintf(" for filter %d:\n", console_context->IdForFilter(cmd.filter())));
       break;
     }
     default:
