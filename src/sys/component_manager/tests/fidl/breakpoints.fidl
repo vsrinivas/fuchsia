@@ -23,24 +23,24 @@ enum EventType {
     /// Depending on its eagerness, this child may/may not be started yet.
     ADD_DYNAMIC_CHILD = 1;
 
+    /// An instance is about to be started.
+    BEFORE_START_INSTANCE = 2;
+
     /// An instance was destroyed successfully. The instance is stopped and no longer
     /// exists in the parent's realm.
-    POST_DESTROY_INSTANCE = 2;
+    POST_DESTROY_INSTANCE = 3;
 
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.
     /// TODO(fxb/39417): Ensure the instance is stopped before this event.
-    PRE_DESTROY_INSTANCE = 3;
+    PRE_DESTROY_INSTANCE = 4;
 
     /// An instance's declaration was resolved successfully for the first time.
-    RESOLVE_INSTANCE = 4;
+    RESOLVE_INSTANCE = 5;
 
     /// A builtin capability is being requested by a component and requires routing.
     /// The event propagation system is used to supply the capability being requested.
-    ROUTE_CAPABILITY = 5;
-
-    /// An instance was bound to. If the instance is executable, it is also started.
-    START_INSTANCE = 6;
+    ROUTE_CAPABILITY = 6;
 
     /// An instance was stopped successfully.
     /// This event must occur before PostDestroyInstance.

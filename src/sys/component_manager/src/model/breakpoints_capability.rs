@@ -364,11 +364,11 @@ fn serve_handler_async(invocation: Invocation) -> ClientEnd<fbreak::HandlerMarke
 fn convert_fidl_event_type_to_std(event_type: fbreak::EventType) -> EventType {
     match event_type {
         fbreak::EventType::AddDynamicChild => EventType::AddDynamicChild,
+        fbreak::EventType::BeforeStartInstance => EventType::BeforeStartInstance,
         fbreak::EventType::PostDestroyInstance => EventType::PostDestroyInstance,
         fbreak::EventType::PreDestroyInstance => EventType::PreDestroyInstance,
         fbreak::EventType::ResolveInstance => EventType::ResolveInstance,
         fbreak::EventType::RouteCapability => EventType::RouteCapability,
-        fbreak::EventType::StartInstance => EventType::StartInstance,
         fbreak::EventType::StopInstance => EventType::StopInstance,
     }
 }
@@ -376,11 +376,11 @@ fn convert_fidl_event_type_to_std(event_type: fbreak::EventType) -> EventType {
 fn convert_std_event_type_to_fidl(event_type: EventType) -> fbreak::EventType {
     match event_type {
         EventType::AddDynamicChild => fbreak::EventType::AddDynamicChild,
+        EventType::BeforeStartInstance => fbreak::EventType::BeforeStartInstance,
         EventType::PostDestroyInstance => fbreak::EventType::PostDestroyInstance,
         EventType::PreDestroyInstance => fbreak::EventType::PreDestroyInstance,
         EventType::ResolveInstance => fbreak::EventType::ResolveInstance,
         EventType::RouteCapability => fbreak::EventType::RouteCapability,
-        EventType::StartInstance => fbreak::EventType::StartInstance,
         EventType::StopInstance => fbreak::EventType::StopInstance,
     }
 }

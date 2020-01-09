@@ -27,12 +27,12 @@ async fn empty_component() -> Result<(), Error> {
     let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/empty.cm").await?;
     let breakpoint_system =
         test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
-    let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
 
     breakpoint_system.start_component_manager().await?;
 
     // Root must be created first
-    let invocation = receiver.expect_exact::<StartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
     invocation.resume().await?;
 
     let actual = launch_cs2(test.get_hub_v2_path());
@@ -58,17 +58,17 @@ async fn tree() -> Result<(), Error> {
     let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/root.cm").await?;
     let breakpoint_system =
         test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
-    let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
 
     breakpoint_system.start_component_manager().await?;
 
     // Root must be created first
-    let invocation = receiver.expect_exact::<StartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
     invocation.resume().await?;
 
-    // 5 children are created eagerly. Order is irrelevant.
-    for _ in 1..=5 {
-        let invocation = receiver.expect_type::<StartInstance>().await?;
+    // 6 descendants are created eagerly. Order is irrelevant.
+    for _ in 1..=6 {
+        let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
         invocation.resume().await?;
     }
 
@@ -151,14 +151,14 @@ async fn echo_realm() -> Result<(), Error> {
     let breakpoint_system =
         test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
 
-    let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
     breakpoint_system.start_component_manager().await?;
 
     // 3 components are started. Order is irrelevant.
     // root and echo_client are started eagerly.
     // echo_server is started after echo_client connects to the Echo service.
     for _ in 1..=3 {
-        let invocation = receiver.expect_type::<StartInstance>().await?;
+        let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
         invocation.resume().await?;
     }
 

@@ -52,13 +52,10 @@ impl ComponentInfo {
         // ComponentController protocol.
         let koid = {
             let realm = realm.lock_execution().await;
-            let controller = realm
-                .runtime
-                .as_ref()
-                .expect("runtime is unexpectedly missing")
-                .controller
-                .as_ref()
-                .expect("controller is unexpectedly missing");
+            let runtime =
+                realm.runtime.as_ref().expect("runtime is unexpectedly missing").lock().await;
+            let controller =
+                runtime.controller.as_ref().expect("controller is unexpectedly missing");
             let basic_info = controller
                 .as_handle_ref()
                 .basic_info()

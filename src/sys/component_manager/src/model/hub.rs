@@ -132,7 +132,7 @@ impl Hub {
                 EventType::PostDestroyInstance,
                 EventType::PreDestroyInstance,
                 EventType::RouteCapability,
-                EventType::StartInstance,
+                EventType::BeforeStartInstance,
                 EventType::StopInstance,
             ],
             callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
@@ -355,9 +355,10 @@ impl HubInner {
         Ok(())
     }
 
-    async fn on_start_instance_async<'a>(
+    async fn on_before_start_instance_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
+        runtime: &Arc<Mutex<Runtime>>,
         component_decl: &'a ComponentDecl,
         live_children: &'a Vec<ComponentDescriptor>,
         routing_facade: RoutingFacade,
@@ -365,6 +366,7 @@ impl HubInner {
         trace::duration!("component_manager", "hub:on_start_instance_async");
         let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
         let realm = model.look_up_realm(target_moniker).await?;
+        let runtime = runtime.lock().await;
         let component_url = realm.component_url.clone();
 
         let mut instances_map = self.instances.lock().await;
@@ -383,56 +385,53 @@ impl HubInner {
         // If we haven't already created an execution directory, create one now.
         if instance.execution.is_none() {
             trace::duration!("component_manager", "hub:create_execution");
-            let execution = realm.lock_execution().await;
-            if let Some(runtime) = execution.runtime.as_ref() {
-                trace::duration!("component_manager", "hub:create_runtime");
-                let execution_directory = pfs::simple();
+            let execution_directory = pfs::simple();
 
-                let used = pfs::simple();
+            let used = pfs::simple();
 
-                let capability_usage_tree =
-                    CapabilityUsageTree::new(used.clone(), routing_facade.clone());
-                let exec = Execution {
-                    resolved_url: runtime.resolved_url.clone(),
-                    directory: execution_directory.clone(),
-                    capability_usage_tree,
-                };
-                instance.execution = Some(exec);
+            let capability_usage_tree =
+                CapabilityUsageTree::new(used.clone(), routing_facade.clone());
+            let exec = Execution {
+                resolved_url: runtime.resolved_url.clone(),
+                directory: execution_directory.clone(),
+                capability_usage_tree,
+            };
+            instance.execution = Some(exec);
 
-                Self::add_resolved_url_file(
-                    execution_directory.clone(),
-                    runtime.resolved_url.clone(),
-                    target_moniker,
-                )?;
+            Self::add_resolved_url_file(
+                execution_directory.clone(),
+                runtime.resolved_url.clone(),
+                target_moniker,
+            )?;
 
-                Self::add_in_directory(
-                    execution_directory.clone(),
-                    component_decl.clone(),
-                    &runtime,
-                    &routing_facade,
-                    target_moniker,
-                )?;
+            Self::add_in_directory(
+                execution_directory.clone(),
+                component_decl.clone(),
+                &runtime,
+                &routing_facade,
+                target_moniker,
+            )?;
 
-                Self::add_expose_directory(
-                    execution_directory.clone(),
-                    component_decl.clone(),
-                    &routing_facade,
-                    &target_moniker,
-                )?;
+            Self::add_expose_directory(
+                execution_directory.clone(),
+                component_decl.clone(),
+                &routing_facade,
+                &target_moniker,
+            )?;
 
-                execution_directory.add_node("used", used, &target_moniker)?;
-                Self::add_out_directory(execution_directory.clone(), runtime, &target_moniker)?;
+            execution_directory.add_node("used", used, &target_moniker)?;
+            Self::add_out_directory(execution_directory.clone(), &runtime, &target_moniker)?;
 
-                Self::add_runtime_directory(execution_directory.clone(), runtime, &target_moniker)?;
+            Self::add_runtime_directory(execution_directory.clone(), &runtime, &target_moniker)?;
 
-                instance.directory.add_node("exec", execution_directory, &target_moniker)?;
-            }
+            instance.directory.add_node("exec", execution_directory, &target_moniker)?;
         }
 
         // TODO: Loop over deleting realms also?
         for child_descriptor in live_children {
             let abs_moniker = child_descriptor.abs_moniker.to_string();
-            trace::duration!("component_manager", "hub:add_live_child", "child_moniker" => abs_moniker.as_ref());
+            trace::duration!("component_manager", "hub:add_live_child",
+                             "child_moniker" => abs_moniker.as_ref());
             Self::add_instance_to_parent_if_necessary(
                 &child_descriptor.abs_moniker,
                 child_descriptor.url.clone(),
@@ -562,15 +561,23 @@ impl HubInner {
         if Self::is_capability_visible_in_namespace(&source) {
             let mut instance_map = self.instances.lock().await;
             let execution = instance_map
-                .get_mut(target_moniker)
+                .get_mut(&target_moniker)
                 .expect(
                     "A component that is requesting a capability must exist in the instance map",
                 )
                 .execution
-                .as_mut()
-                .expect("A component that is requesting a capability must have an execution.");
-
-            execution.capability_usage_tree.mark_capability_used(target_moniker, source).await?;
+                .as_mut();
+            if execution.is_none() {
+                // We won't normally get here, but it's possible if a runner continued to execute a
+                // "zombie" component, and a capability was used, after component manager marked the
+                // component stopped.
+                return Ok(());
+            }
+            execution
+                .unwrap()
+                .capability_usage_tree
+                .mark_capability_used(target_moniker, source)
+                .await?;
         }
         Ok(())
     }
@@ -599,9 +606,15 @@ impl Hook for HubInner {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             match &event.payload {
-                EventPayload::StartInstance { component_decl, live_children, routing_facade } => {
-                    self.on_start_instance_async(
+                EventPayload::BeforeStartInstance {
+                    runtime,
+                    component_decl,
+                    live_children,
+                    routing_facade,
+                } => {
+                    self.on_before_start_instance_async(
                         &event.target_moniker,
+                        runtime,
                         &component_decl,
                         &live_children,
                         routing_facade.clone(),
@@ -938,9 +951,8 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        // There are no out or runtime directories because there is no program running.
         assert_eq!(
-            vec!["expose", "in", "resolved_url", "used"],
+            vec!["expose", "in", "out", "resolved_url", "runtime", "used"],
             list_directory(&old_hub_dir_proxy).await
         );
     }
@@ -1025,9 +1037,8 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        // There are no out or runtime directories because there is no program running.
         assert_eq!(
-            vec!["expose", "in", "resolved_url", "used"],
+            vec!["expose", "in", "out", "resolved_url", "runtime", "used"],
             list_directory(&scoped_hub_dir_proxy).await
         );
     }

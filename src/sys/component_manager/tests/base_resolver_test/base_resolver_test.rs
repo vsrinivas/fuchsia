@@ -28,17 +28,17 @@ async fn base_resolver_test() -> Result<(), Error> {
         &test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
 
     // Register breakpoints and begin execution of component manager
-    let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
 
     // Begin component manager's execution
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
-    let invocation = receiver.expect_exact::<StartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
     invocation.resume().await?;
 
     // Expect the echo_server component to be bound to
-    let invocation = receiver.expect_exact::<StartInstance>("/echo_server:0").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>("/echo_server:0").await?;
     invocation.resume().await?;
 
     // Connect to the echo service

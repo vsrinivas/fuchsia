@@ -7,7 +7,7 @@ use {
         capability::{CapabilityProvider, CapabilitySource},
         model::{
             binding::ComponentDescriptor, error::ModelError, moniker::AbsoluteMoniker,
-            routing_facade::RoutingFacade,
+            realm::Runtime, routing_facade::RoutingFacade,
         },
     },
     cm_rust::ComponentDecl,
@@ -29,6 +29,9 @@ pub enum EventType {
     /// Depending on its eagerness, this child may/may not be started yet.
     AddDynamicChild,
 
+    /// An instance is about to be started.
+    BeforeStartInstance,
+
     /// An instance was destroyed successfully. The instance is stopped and no longer
     /// exists in the parent's realm.
     PostDestroyInstance,
@@ -44,9 +47,6 @@ pub enum EventType {
     /// A capability is being requested by a component and requires routing.
     /// The event propagation system is used to supply the capability being requested.
     RouteCapability,
-
-    /// An instance was bound to. If the instance is executable, it is also started.
-    StartInstance,
 
     /// An instance was stopped successfully.
     /// This event must occur before PostDestroyInstance.
@@ -76,6 +76,12 @@ pub enum EventPayload {
     AddDynamicChild {
         component_url: String,
     },
+    BeforeStartInstance {
+        runtime: Arc<Mutex<Runtime>>,
+        component_decl: ComponentDecl,
+        live_children: Vec<ComponentDescriptor>,
+        routing_facade: RoutingFacade,
+    },
     PostDestroyInstance,
     PreDestroyInstance,
     ResolveInstance {
@@ -88,11 +94,6 @@ pub enum EventPayload {
         // a Mutex.
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     },
-    StartInstance {
-        component_decl: ComponentDecl,
-        live_children: Vec<ComponentDescriptor>,
-        routing_facade: RoutingFacade,
-    },
     StopInstance,
 }
 
@@ -100,11 +101,11 @@ impl EventPayload {
     pub fn type_(&self) -> EventType {
         match self {
             EventPayload::AddDynamicChild { .. } => EventType::AddDynamicChild,
+            EventPayload::BeforeStartInstance { .. } => EventType::BeforeStartInstance,
             EventPayload::PostDestroyInstance => EventType::PostDestroyInstance,
             EventPayload::PreDestroyInstance => EventType::PreDestroyInstance,
             EventPayload::ResolveInstance { .. } => EventType::ResolveInstance,
             EventPayload::RouteCapability { .. } => EventType::RouteCapability,
-            EventPayload::StartInstance { .. } => EventType::StartInstance,
             EventPayload::StopInstance => EventType::StopInstance,
         }
     }
@@ -115,19 +116,19 @@ impl fmt::Debug for EventPayload {
         let mut formatter = fmt.debug_struct("EventPayload");
         formatter.field("type", &self.type_());
         match self {
-            EventPayload::PostDestroyInstance
-            | EventPayload::PreDestroyInstance
-            | EventPayload::StopInstance => formatter.finish(),
             EventPayload::AddDynamicChild { component_url } => {
                 formatter.field("component_url", component_url).finish()
+            }
+            EventPayload::BeforeStartInstance { component_decl, .. } => {
+                formatter.field("component_decl", &component_decl).finish()
             }
             EventPayload::ResolveInstance { decl } => formatter.field("decl", decl).finish(),
             EventPayload::RouteCapability { source: capability, .. } => {
                 formatter.field("capability", &capability).finish()
             }
-            EventPayload::StartInstance { component_decl, .. } => {
-                formatter.field("component_decl", &component_decl).finish()
-            }
+            EventPayload::PostDestroyInstance
+            | EventPayload::PreDestroyInstance
+            | EventPayload::StopInstance => formatter.finish(),
         }
     }
 }

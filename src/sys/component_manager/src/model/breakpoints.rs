@@ -240,11 +240,11 @@ impl BreakpointSystem {
             HooksRegistration {
                 events: vec![
                     EventType::AddDynamicChild,
+                    EventType::BeforeStartInstance,
                     EventType::PostDestroyInstance,
                     EventType::PreDestroyInstance,
                     EventType::ResolveInstance,
                     EventType::RouteCapability,
-                    EventType::StartInstance,
                     EventType::StopInstance,
                 ],
                 callback: Arc::downgrade(&self.hook) as Weak<dyn Hook>,

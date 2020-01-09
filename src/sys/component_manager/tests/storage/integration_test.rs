@@ -41,19 +41,19 @@ async fn storage() -> Result<(), Error> {
 
     let breakpoint_system =
         test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
-    let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
 
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
-    let invocation = receiver.expect_exact::<StartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
     invocation.resume().await?;
 
     // Expect the 2 children to be bound to
-    let invocation = receiver.expect_type::<StartInstance>().await?;
+    let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
     invocation.resume().await?;
 
-    let invocation = receiver.expect_type::<StartInstance>().await?;
+    let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
     invocation.resume().await?;
 
     let component_manager_path = test.get_component_manager_path();
@@ -77,14 +77,14 @@ async fn storage_from_collection() -> Result<(), Error> {
     let breakpoint_system =
         test.connect_to_breakpoint_system().await.expect("breakpoint system did not connect");
     let receiver = breakpoint_system
-        .set_breakpoints(vec![StartInstance::TYPE, PostDestroyInstance::TYPE])
+        .set_breakpoints(vec![BeforeStartInstance::TYPE, PostDestroyInstance::TYPE])
         .await?;
     let bind_receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be started
-    let invocation = receiver.expect_exact::<StartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
     invocation.resume().await?;
 
     // The root component connects to the Realm service to start the dynamic child
@@ -95,10 +95,10 @@ async fn storage_from_collection() -> Result<(), Error> {
 
     // Expect 2 children to be started - one static and one dynamic
     // Order is irrelevant
-    let invocation = receiver.expect_type::<StartInstance>().await?;
+    let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
     invocation.resume().await?;
 
-    let invocation = receiver.expect_type::<StartInstance>().await?;
+    let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
     invocation.resume().await?;
 
     // With all children started, do the test

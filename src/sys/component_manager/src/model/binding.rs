@@ -10,10 +10,9 @@ use {
         model::Model,
         moniker::AbsoluteMoniker,
         namespace::IncomingNamespace,
-        realm::{Realm, RealmState, Runtime},
+        realm::{ExecutionState, Realm, RealmState, Runtime},
         resolver::Resolver,
         routing_facade::RoutingFacade,
-        runner::Runner,
     },
     cm_rust::{data, ComponentDecl},
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
@@ -21,6 +20,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         future::{join_all, BoxFuture},
+        lock::Mutex,
         FutureExt,
     },
     std::{convert::TryInto, sync::Arc},
@@ -41,10 +41,9 @@ impl Model {
         &self,
         realm: Arc<Realm>,
     ) -> Result<Vec<Arc<Realm>>, ModelError> {
+        // Resolve the component and find the runner to use.
         let component = realm.resolver_registry.resolve(&realm.component_url).await?;
-        // The realm's lock needs to be held during `Runner::start` until the `Execution` is set in
-        // case there are concurrent calls to `bind_single_instance`.
-        let decl = {
+        let (decl, live_child_descriptors) = {
             let mut state = realm.lock_state().await;
             if state.is_none() {
                 let decl: ComponentDecl =
@@ -53,33 +52,90 @@ impl Model {
                     })?;
                 *state = Some(RealmState::new(&realm, &decl).await?);
             }
-            state.as_ref().unwrap().decl().clone()
+            let state = state.as_ref().unwrap();
+            let decl = state.decl().clone();
+            let live_child_descriptors: Vec<_> = state
+                .live_child_realms()
+                .map(|(_, r)| ComponentDescriptor {
+                    abs_moniker: r.abs_moniker.clone(),
+                    url: r.component_url.clone(),
+                })
+                .collect();
+            (decl, live_child_descriptors)
         };
-
-        // Fetch the component's runner.
         let runner = Realm::resolve_runner(&realm, self).await?;
+
+        // Pre-flight check: if the component is already started, return now (and don't invoke the
+        // hook).
+        let maybe_return_early =
+            |execution: &ExecutionState| -> Option<Result<Vec<Arc<Realm>>, ModelError>> {
+                if execution.is_shut_down() {
+                    Some(Err(ModelError::instance_shut_down(realm.abs_moniker.clone())))
+                } else if execution.runtime.is_some() {
+                    // TODO: Add binding to the execution once we track bindings.
+                    Some(Ok(vec![]))
+                } else {
+                    None
+                }
+            };
+        {
+            let execution = realm.lock_execution().await;
+            if let Some(res) = maybe_return_early(&execution) {
+                return res;
+            }
+        }
+
+        // Generate the Runtime which will be set in the Execution.
+        let (pending_runtime, start_info, controller_server) = self
+            .make_execution_runtime(
+                &realm.abs_moniker,
+                component.resolved_url.ok_or(ModelError::ComponentInvalid)?,
+                component.package,
+                &decl,
+            )
+            .await?;
+
+        // Invoke the BeforeStart hook outside of lock, passing it a Runtime reference. Note that
+        // this could race with the component being started first in some other task. In that case,
+        // the hook will be invoked with a Runtime; from the client's perspective, this is like
+        // getting an invocation for a component that's started and immediately stopped, except it
+        // won't see a Stop event.
+        {
+            let routing_facade = RoutingFacade::new(self.clone());
+            let event = Event::new(
+                realm.abs_moniker.clone(),
+                EventPayload::BeforeStartInstance {
+                    runtime: pending_runtime.clone(),
+                    component_decl: decl.clone(),
+                    live_children: live_child_descriptors,
+                    routing_facade,
+                },
+            );
+            realm.hooks.dispatch(&event).await?;
+        }
+
+        // Set the Runtime in the Execution. From component manager's perspective, this indicates
+        // that the component has started.
         {
             let mut execution = realm.lock_execution().await;
-            if execution.is_shut_down() {
-                return Err(ModelError::instance_shut_down(realm.abs_moniker.clone()));
+            if let Some(res) = maybe_return_early(&execution) {
+                // This task raced with another task that started the component. Return.
+                return res;
             }
-            if execution.runtime.is_some() {
-                // TODO: Add binding to the execution once we track bindings.
-                return Ok(vec![]);
-            }
-            execution.runtime = Some(
-                self.init_execution_runtime(
-                    &realm.abs_moniker,
-                    component.resolved_url.ok_or(ModelError::ComponentInvalid)?,
-                    component.package,
-                    &decl,
-                    runner.as_ref(),
-                )
-                .await?,
-            );
+            execution.runtime = Some(pending_runtime);
         }
-        let (event, eager_child_realms) = {
-            let routing_facade = RoutingFacade::new(self.clone());
+
+        // We call `Start` outside of lock, after the Runtime is populated. When the runtime was
+        // populated, we checked if it was already set, so if there were two concurrent bind
+        // calls at most one of them will get here.
+        //
+        // It is also possible that the component is stopped before this. If so, that's fine: the
+        // runner will start the component, but its stop or kill signal will be immediately set on
+        // the component controller.
+        runner.start(start_info, controller_server).await?;
+
+        // Return eager children that need to be bound to.
+        {
             let mut state = realm.lock_state().await;
             let state = state.as_mut().expect("bind_single_instance: not resolved");
             let eager_child_realms: Vec<_> = state
@@ -89,25 +145,8 @@ impl Model {
                     fsys::StartupMode::Lazy => None,
                 })
                 .collect();
-            let live_children = state
-                .live_child_realms()
-                .map(|(_, r)| ComponentDescriptor {
-                    abs_moniker: r.abs_moniker.clone(),
-                    url: r.component_url.clone(),
-                })
-                .collect();
-            let event = Event::new(
-                realm.abs_moniker.clone(),
-                EventPayload::StartInstance {
-                    component_decl: state.decl().clone(),
-                    live_children,
-                    routing_facade,
-                },
-            );
-            (event, eager_child_realms)
-        };
-        realm.hooks.dispatch(&event).await?;
-        Ok(eager_child_realms)
+            Ok(eager_child_realms)
+        }
     }
 
     /// Binds to a list of instances, and any eager children they may return.
@@ -134,15 +173,18 @@ impl Model {
         Ok(())
     }
 
-    /// Returns a configured Runtime for a component.
-    async fn init_execution_runtime(
+    /// Returns a configured Runtime for a component and the start info (without actually starting
+    /// the component).
+    async fn make_execution_runtime(
         &self,
         abs_moniker: &AbsoluteMoniker,
         url: String,
         package: Option<fsys::Package>,
         decl: &cm_rust::ComponentDecl,
-        runner: &(dyn Runner + Send + Sync),
-    ) -> Result<Runtime, ModelError> {
+    ) -> Result<
+        (Arc<Mutex<Runtime>>, fsys::ComponentStartInfo, ServerEnd<fsys::ComponentControllerMarker>),
+        ModelError,
+    > {
         // Create incoming/outgoing directories, and populate them.
         let exposed_dir = ExposedDir::new(self, abs_moniker, decl.clone())?;
         let (outgoing_dir_client, outgoing_dir_server) =
@@ -152,14 +194,14 @@ impl Model {
         let mut namespace = IncomingNamespace::new(package)?;
         let ns = namespace.populate(self.clone(), abs_moniker, decl).await?;
 
-        let (client_endpoint, server_endpoint) =
+        let (controller_client, controller_server) =
             create_endpoints::<fsys::ComponentControllerMarker>()
                 .expect("could not create component controller endpoints");
         let controller =
-            client_endpoint.into_proxy().expect("failed to create ComponentControllerProxy");
+            controller_client.into_proxy().expect("failed to create ComponentControllerProxy");
         // Set up channels into/out of the new component.
-        let runtime = Runtime::start_from(
-            url,
+        let runtime = Arc::new(Mutex::new(Runtime::start_from(
+            url.clone(),
             Some(namespace),
             Some(DirectoryProxy::from_channel(
                 fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
@@ -169,19 +211,16 @@ impl Model {
             )),
             exposed_dir,
             Some(controller),
-        )?;
+        )?));
         let start_info = fsys::ComponentStartInfo {
-            resolved_url: Some(runtime.resolved_url.clone()),
+            resolved_url: Some(url),
             program: data::clone_option_dictionary(&decl.program),
             ns: Some(ns),
             outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
             runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
         };
 
-        // Ask the runner to launch the runtime.
-        runner.start(start_info, server_endpoint).await?;
-
-        Ok(runtime)
+        Ok((runtime, start_info, controller_server))
     }
 }
 

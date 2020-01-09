@@ -137,10 +137,10 @@ impl TestHook {
         vec![HooksRegistration {
             events: vec![
                 EventType::AddDynamicChild,
-                EventType::PreDestroyInstance,
-                EventType::StartInstance,
-                EventType::StopInstance,
+                EventType::BeforeStartInstance,
                 EventType::PostDestroyInstance,
+                EventType::PreDestroyInstance,
+                EventType::StopInstance,
             ],
             callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
         }]
@@ -184,7 +184,7 @@ impl TestHookInner {
         block_on(self.lifecycle_events.lock()).clone()
     }
 
-    pub async fn on_start_instance_async<'a>(
+    pub async fn on_before_start_instance_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
         live_children: &'a Vec<ComponentDescriptor>,
@@ -268,12 +268,9 @@ impl Hook for TestHookInner {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
             match &event.payload {
-                EventPayload::StartInstance {
-                    component_decl: _,
-                    live_children,
-                    routing_facade: _,
-                } => {
-                    self.on_start_instance_async(&event.target_moniker, &live_children).await?;
+                EventPayload::BeforeStartInstance { live_children, .. } => {
+                    self.on_before_start_instance_async(&event.target_moniker, &live_children)
+                        .await?;
                 }
                 EventPayload::AddDynamicChild { .. } => {
                     self.create_instance_if_necessary(&event.target_moniker).await?;

@@ -29,13 +29,13 @@ async fn basic_work_scheduler_test() -> Result<(), Error> {
 
     let breakpoint_system =
         test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
-    let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
     let route_receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
-    let invocation = receiver.expect_exact::<StartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
     invocation.resume().await?;
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
@@ -64,12 +64,12 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
 
     let breakpoint_system =
         test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
-    let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
 
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
-    let invocation = receiver.expect_exact::<StartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
     invocation.resume().await?;
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
@@ -77,7 +77,7 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
     let route_receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
     // `/worker_sibling:0` has started.
-    let invocation = receiver.expect_exact::<StartInstance>("/worker_sibling:0").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>("/worker_sibling:0").await?;
     invocation.resume().await?;
 
     // We no longer need to track `StartInstance` events.

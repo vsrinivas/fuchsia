@@ -47,7 +47,7 @@ impl TestRunner {
                 .await
                 .expect("breakpoint system failed to connect");
             let start_receiver =
-                breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+                breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
             let route_receiver =
                 breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
@@ -60,11 +60,11 @@ impl TestRunner {
             breakpoint_system.start_component_manager().await?;
 
             // Wait for the root component to start up
-            start_receiver.expect_exact::<StartInstance>("/").await?.resume().await?;
+            start_receiver.expect_exact::<BeforeStartInstance>("/").await?.resume().await?;
 
             // Wait for all child components to start up
             for _ in 1..=(num_eager_static_components - 1) {
-                start_receiver.expect_type::<StartInstance>().await?.resume().await?;
+                start_receiver.expect_type::<BeforeStartInstance>().await?.resume().await?;
             }
 
             // Inject HubTestHook as a scoped framework capability

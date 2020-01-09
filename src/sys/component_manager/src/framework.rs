@@ -64,7 +64,7 @@ impl CapabilityProvider for RealmCapabilityProvider {
         fasync::spawn(async move {
             if let Err(e) = host.serve(scope_moniker, stream).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
-                warn!("serve_realm failed: {}", e);
+                warn!("serve_realm failed: {:?}", e);
             }
         });
         Ok(())
@@ -161,7 +161,7 @@ impl RealmCapabilityHostInner {
                 ModelError::CollectionNotFound { .. } => fsys::Error::CollectionNotFound,
                 ModelError::Unsupported { .. } => fsys::Error::Unsupported,
                 e => {
-                    error!("add_dynamic_child() failed: {}", e);
+                    error!("add_dynamic_child() failed: {:?}", e);
                     fsys::Error::Internal
                 }
             },
@@ -205,14 +205,14 @@ impl RealmCapabilityHostInner {
                         fsys::Error::InstanceCannotStart
                     }
                     e => {
-                        error!("bind() failed: {}", e);
+                        error!("bind() failed: {:?}", e);
                         fsys::Error::Internal
                     }
                 })?
                 .open_exposed(exposed_dir.into_channel())
                 .await
                 .map_err(|e| {
-                    error!("open_exposed() failed: {}", e);
+                    error!("open_exposed() failed: {:?}", e);
                     fsys::Error::Internal
                 })?;
         } else {
@@ -234,7 +234,7 @@ impl RealmCapabilityHostInner {
                     ModelError::InstanceNotFoundInRealm { .. } => fsys::Error::InstanceNotFound,
                     ModelError::Unsupported { .. } => fsys::Error::Unsupported,
                     e => {
-                        error!("remove_dynamic_child() failed: {}", e);
+                        error!("remove_dynamic_child() failed: {:?}", e);
                         fsys::Error::Internal
                     }
                 },
@@ -249,7 +249,7 @@ impl RealmCapabilityHostInner {
         iter: ServerEnd<fsys::ChildIteratorMarker>,
     ) -> Result<(), fsys::Error> {
         Realm::resolve_decl(&realm).await.map_err(|e| {
-            error!("resolve_decl() failed: {}", e);
+            error!("resolve_decl() failed: {:?}", e);
             fsys::Error::Internal
         })?;
         let state = realm.lock_state().await;
@@ -290,7 +290,7 @@ impl RealmCapabilityHostInner {
         fasync::spawn(async move {
             if let Err(e) = Self::serve_child_iterator(children, stream, batch_size).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
-                warn!("serve_child_iterator failed: {}", e);
+                warn!("serve_child_iterator failed: {:?}", e);
             }
         });
         Ok(())

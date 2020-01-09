@@ -530,10 +530,10 @@ macro_rules! create_event {
 
 // To create a class for an event, use the above macro here.
 create_event!(AddDynamicChild);
+create_event!(BeforeStartInstance);
 create_event!(PostDestroyInstance);
 create_event!(PreDestroyInstance);
 create_event!(ResolveInstance);
-create_event!(StartInstance);
 create_event!(StopInstance);
 create_event!(
     event_type: RouteCapability,

@@ -333,6 +333,7 @@ impl Realm {
                 let mut execution = realm.lock_execution().await;
                 let was_running = execution.runtime.is_some();
                 if let Some(runtime) = &mut execution.runtime {
+                    let mut runtime = runtime.lock().await;
                     if let Some(controller) = &runtime.controller {
                         // Tell the controller to stop the component, but
                         // ignore any FIDL error since we will proceed with
@@ -447,16 +448,16 @@ impl Realm {
                 self.abs_moniker
             )));
         }
-        let out_dir = &execution
+        let runtime = execution
             .runtime
             .as_ref()
             .expect("bind_instance_open_outgoing: no runtime")
-            .outgoing_dir
-            .as_ref()
-            .ok_or(ModelError::capability_discovery_error(format_err!(
-                "component hosting capability is non-executable: {}",
-                self.abs_moniker
-            )))?;
+            .lock()
+            .await;
+        let out_dir =
+            &runtime.outgoing_dir.as_ref().ok_or(ModelError::capability_discovery_error(
+                format_err!("component hosting capability is non-executable: {}", self.abs_moniker),
+            ))?;
         let path = path.to_string();
         let path = io_util::canonicalize_path(&path);
         out_dir.open(flags, open_mode, path, server_end).map_err(|e| {
@@ -482,6 +483,8 @@ impl Realm {
             .runtime
             .as_ref()
             .expect("bind_instance_open_exposed: no runtime")
+            .lock()
+            .await
             .exposed_dir;
 
         // TODO(fxb/36541): Until directory capabilities specify rights, we always open
@@ -516,7 +519,11 @@ pub struct ExecutionState {
     shut_down: bool,
     /// Runtime support for the component. From component manager's point of view, the component
     /// instance is running iff this field is set.
-    pub runtime: Option<Runtime>,
+    // TODO: Making this Arc<Mutex> is a bit unfortunate. It's currently necessary because
+    // `EventPayload` is `Clonable`, which in particular is needed for breakpoints. Instead of
+    // cloning `runtime`, we could pass the BeforeStart hook the information it needs in a separate
+    // struct.
+    pub runtime: Option<Arc<Mutex<Runtime>>>,
 }
 
 impl ExecutionState {
