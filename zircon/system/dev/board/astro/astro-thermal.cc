@@ -14,6 +14,7 @@
 #include <soc/aml-meson/g12a-clk.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
+#include <soc/aml-s905d2/s905d2-pwm.h>
 
 #include "astro.h"
 
@@ -31,14 +32,6 @@ static const pbus_mmio_t thermal_mmios[] = {
     {
         .base = S905D2_HIU_BASE,
         .length = S905D2_HIU_LENGTH,
-    },
-    {
-        .base = S905D2_AO_PWM_CD_BASE,
-        .length = S905D2_AO_PWM_LENGTH,
-    },
-    {
-        .base = S905D2_PWM_AB_BASE,
-        .length = S905D2_PWM_AB_LENGTH,
     },
 };
 
@@ -185,6 +178,10 @@ static pbus_dev_t thermal_dev = []() {
 constexpr zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
+const zx_bind_inst_t pwm_ao_d_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
+    BI_MATCH_IF(EQ, BIND_PWM_ID, S905D2_PWM_AO_D),
+};
 static const zx_bind_inst_t clk1_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12a_clk::CLK_SYS_PLL_DIV16),
@@ -192,6 +189,10 @@ static const zx_bind_inst_t clk1_match[] = {
 static const zx_bind_inst_t clk2_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12a_clk::CLK_SYS_CPU_CLK_DIV16),
+};
+const device_component_part_t pwm_ao_d_component[] = {
+    {countof(root_match), root_match},
+    {countof(pwm_ao_d_match), pwm_ao_d_match},
 };
 static const device_component_part_t clk1_component[] = {
     {countof(root_match), root_match},
@@ -202,6 +203,7 @@ static const device_component_part_t clk2_component[] = {
     {countof(clk2_match), clk2_match},
 };
 static const device_component_t components[] = {
+    {countof(pwm_ao_d_component), pwm_ao_d_component},
     {countof(clk1_component), clk1_component},
     {countof(clk2_component), clk2_component},
 };

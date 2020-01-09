@@ -16,6 +16,7 @@ zx_driver("astro") {
     "astro-i2c.cc",
     "astro-light.cc",
     "astro-mali.cc",
+    "astro-pwm.cc",
     "astro-rawnand.cc",
     "astro-sdio.cc",
     "astro-securemem.cc",
