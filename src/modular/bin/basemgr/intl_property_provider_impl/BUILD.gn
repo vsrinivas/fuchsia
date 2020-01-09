@@ -70,6 +70,7 @@ executable("intl_property_provider_impl_test_bin") {
     "//src/lib/fidl_fuchsia_intl_ext/cpp",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/syslog/cpp",
+    "//src/modular/lib/fidl:clone",
   ]
 }
 
