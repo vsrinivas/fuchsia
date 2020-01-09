@@ -119,8 +119,6 @@
 #define PER_ETH_REG3 (0x400 + (0x57 << 2))
 #define PER_ETH_REG4 (0x400 + (0x58 << 2))
 
-#define HHI_REG_BASE (0xc883c000)
-#define HHI_REG_SIZE (0x2000)
 // Offsets of HHI registers
 #define HHI_SCR (0x0B << 2)
 #define HHI_TIMEOUT_VALUE (0x0F << 2)

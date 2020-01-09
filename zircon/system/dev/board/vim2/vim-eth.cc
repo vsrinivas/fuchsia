@@ -32,8 +32,8 @@ static const pbus_mmio_t eth_board_mmios[] = {
         .length = PERIPHS_REG_SIZE,
     },
     {
-        .base = HHI_REG_BASE,
-        .length = HHI_REG_SIZE,
+        .base = S912_HIU_BASE,
+        .length = S912_HIU_LENGTH,
     },
 };
 
