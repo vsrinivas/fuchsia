@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "title": "Schema for factory store provider factory source configuration",
+  "properties": {
+    "ext4": {
+      "type": "string"
+    }
+  },
+  "type": ["object", "string"],
+  "required": ["ext4"],
+  "pattern": "^factory_items$",
+  "additionalProperties": false
+}

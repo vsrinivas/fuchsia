@@ -1,0 +1,27 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.factory.CastCredentialsFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/factory_store_providers.cmx",
+                "fuchsia.factory.MiscFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/factory_store_providers.cmx",
+                "fuchsia.factory.PlayReadyFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/factory_store_providers.cmx",
+                "fuchsia.factory.WeaveFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/factory_store_providers.cmx",
+                "fuchsia.factory.WidevineFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/factory_store_providers.cmx",
+                "fuchsia.storage.ext4.Server": "fuchsia-pkg://fuchsia.com/factory_store_providers_ext4_tests#meta/ext4_readonly.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/factory_store_providers_ext4_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.factory.CastCredentialsFactoryStoreProvider",
+            "fuchsia.factory.MiscFactoryStoreProvider",
+            "fuchsia.factory.PlayReadyFactoryStoreProvider",
+            "fuchsia.factory.WeaveFactoryStoreProvider",
+            "fuchsia.factory.WidevineFactoryStoreProvider",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

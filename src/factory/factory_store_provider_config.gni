@@ -29,7 +29,7 @@ template("factory_store_provider_config_validate") {
 #
 # Parameters
 #   config (required)
-#     A file containing a configuration for their a factory store provider.
+#     A file containing a configuration for a factory store provider.
 #     It will be schema-validated.
 #   provider (required)
 #     The factory store provider protocol that the given config maps to.
@@ -54,16 +54,60 @@ template("factory_store_provider_config") {
 
   config_data(target_name) {
     for_pkg = "factory_store_providers"
-    sources = [
-      rebase_path(invoker.config),
-    ]
+    sources = [ rebase_path(invoker.config) ]
 
-    outputs = [
-      "${invoker.provider}.config",
-    ]
+    outputs = [ "${invoker.provider}.config" ]
 
-    deps = [
-      ":${validate_target}",
-    ]
+    deps = [ ":${validate_target}" ]
+  }
+}
+
+# Validates a factory store provider factory source configuration file.
+#
+# Parameters
+#   config (required)
+#     This is a factory store provider config file that needs to be validated.
+template("factory_store_provider_factory_config_validate") {
+  validate_json(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    data = invoker.config
+    schema = "//src/factory/factory_store_provider_factory_config_schema.json"
+  }
+}
+
+# Packages a factory store provider factory source configuration.
+#
+# Parameters
+#   config (required)
+#     A file containing a configuration for a factory store provider.
+#     It will be schema-validated.
+template("factory_store_provider_factory_config") {
+  validate_target = target_name + "_factory_validate"
+
+  factory_store_provider_factory_config_validate(validate_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    config = invoker.config
+  }
+
+  config_data(target_name) {
+    for_pkg = "factory_store_providers"
+    sources = [ rebase_path(invoker.config) ]
+
+    outputs = [ "factory.config" ]
+
+    deps = [ ":${validate_target}" ]
   }
 }

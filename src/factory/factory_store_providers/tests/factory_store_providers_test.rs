@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fuchsia_async as fasync,
     std::fs,
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
     std::vec::Vec,
 };
 
@@ -38,6 +38,16 @@ async fn read_file_from_proxy<'a>(
     let file =
         io_util::open_file(&dir_proxy, &PathBuf::from(file_path), io_util::OPEN_RIGHT_READABLE)?;
     io_util::read_file_bytes(&file).await
+}
+
+#[test]
+fn test_set_up_properly() {
+    // Only one set of these files should exist in the test package at a time.
+    assert!(
+        Path::new("/pkg/data/factory_ext4.img").exists()
+            != (Path::new("/pkg/data/items.zbi").exists()
+                && Path::new("/pkg/data/fake_factory_items.json").exists())
+    );
 }
 
 #[fasync::run_singlethreaded(test)]

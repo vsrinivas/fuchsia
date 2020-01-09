@@ -3,12 +3,16 @@
         "binary": "bin/factory_store_providers"
     },
     "sandbox": {
+        "dev": [
+            "sherlock-emmc"
+        ],
         "features": [
             "config-data"
         ],
         "services": [
             "fuchsia.boot.FactoryItems",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.storage.ext4.Server"
         ]
     }
 }

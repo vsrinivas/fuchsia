@@ -7,7 +7,7 @@ mod validators;
 
 use {
     anyhow::{format_err, Error},
-    config::{Config, ConfigContext},
+    config::{Config, ConfigContext, FactoryConfig},
     fidl::endpoints::{create_proxy, Request, RequestStream, ServerEnd, ServiceMarker},
     fidl_fuchsia_boot::FactoryItemsMarker,
     fidl_fuchsia_factory::{
@@ -23,6 +23,8 @@ use {
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
     },
+    fidl_fuchsia_mem::Buffer,
+    fidl_fuchsia_storage_ext4::{MountVmoResult, Server_Marker},
     fuchsia_async::{self as fasync},
     fuchsia_bootfs::BootfsParser,
     fuchsia_component::server::ServiceFs,
@@ -34,7 +36,13 @@ use {
     },
     fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*, TryStreamExt},
-    std::{collections::HashMap, iter, sync::Arc},
+    io_util,
+    std::{
+        io::{self, Read, Seek},
+        iter,
+        path::PathBuf,
+        sync::Arc,
+    },
 };
 
 const CONCURRENT_LIMIT: usize = 10_000;
@@ -48,21 +56,33 @@ enum IncomingServices {
     WeaveFactoryStoreProvider(WeaveFactoryStoreProviderRequestStream),
 }
 
-fn parse_bootfs<'a>(vmo: zx::Vmo) -> HashMap<String, Vec<u8>> {
-    let mut items = HashMap::new();
+fn parse_bootfs<'a>(vmo: zx::Vmo) -> directory::simple::Simple<'static> {
+    let mut tree_builder = TreeBuilder::empty_dir();
 
     match BootfsParser::create_from_vmo(vmo) {
         Ok(parser) => parser.iter().for_each(|result| match result {
             Ok(entry) => {
                 syslog::fx_log_info!("Found {} in factory bootfs", &entry.name);
-                items.insert(entry.name, entry.payload);
+
+                let name = entry.name;
+                let path_parts: Vec<&str> = name.split("/").collect();
+                let payload = entry.payload;
+                tree_builder
+                    .add_entry(&path_parts, read_only(move || Ok(payload.clone())))
+                    .unwrap_or_else(|err| {
+                        syslog::fx_log_err!(
+                            "Failed to add bootfs entry {} to directory: {}",
+                            name,
+                            err
+                        );
+                    });
             }
             Err(err) => syslog::fx_log_err!(tag: "BootfsParser", "{}", err),
         }),
         Err(err) => syslog::fx_log_err!(tag: "BootfsParser", "{}", err),
     };
 
-    items
+    tree_builder.build()
 }
 
 async fn fetch_new_factory_item() -> Result<zx::Vmo, Error> {
@@ -71,16 +91,25 @@ async fn fetch_new_factory_item() -> Result<zx::Vmo, Error> {
     vmo_opt.ok_or(format_err!("Failed to get a valid VMO from service"))
 }
 
-fn create_dir_from_context<'a>(
+async fn read_file_from_proxy<'a>(
+    dir_proxy: &'a DirectoryProxy,
+    file_path: &'a str,
+) -> Result<Vec<u8>, Error> {
+    let file =
+        io_util::open_file(&dir_proxy, &PathBuf::from(file_path), io_util::OPEN_RIGHT_READABLE)?;
+    io_util::read_file_bytes(&file).await
+}
+
+async fn create_dir_from_context<'a>(
     context: &'a ConfigContext,
-    items: &'a HashMap<String, Vec<u8>>,
+    dir: &'a DirectoryProxy,
 ) -> directory::simple::Simple<'static> {
     let mut tree_builder = TreeBuilder::empty_dir();
 
     for (path, dest) in &context.file_path_map {
-        let contents = match items.get(path) {
-            Some(contents) => contents,
-            None => {
+        let contents = match read_file_from_proxy(dir, path).await {
+            Ok(contents) => contents,
+            Err(_) => {
                 syslog::fx_log_err!("Failed to find {}, skipping", &path);
                 continue;
             }
@@ -96,7 +125,7 @@ fn create_dir_from_context<'a>(
                     &path,
                     &validator_context.name
                 );
-                if let Err(err) = validator_context.validator.validate(&path, &contents) {
+                if let Err(err) = validator_context.validator.validate(&path, &contents[..]) {
                     syslog::fx_log_err!("{}", err);
                     failed_validation = true;
                     break;
@@ -121,17 +150,17 @@ fn create_dir_from_context<'a>(
     tree_builder.build()
 }
 
-fn apply_config(config: Config, items: Arc<Mutex<HashMap<String, Vec<u8>>>>) -> DirectoryProxy {
+async fn apply_config(config: Config, dir: Arc<Mutex<DirectoryProxy>>) -> DirectoryProxy {
     let (directory_proxy, directory_server_end) = create_proxy::<DirectoryMarker>().unwrap();
 
     fasync::spawn(async move {
-        let items_mtx = items.clone();
+        let dir_mtx = dir.clone();
 
-        // We only want to hold this lock to create `dir` so limit the scope of `items_ref`.
+        // We only want to hold this lock to create `dir` so limit the scope of `dir_ref`.
         let mut dir = {
-            let items_ref = items_mtx.lock().await;
+            let dir_ref = dir_mtx.lock().await;
             let context = config.into_context().expect("Failed to convert config into context");
-            create_dir_from_context(&context, &*items_ref)
+            create_dir_from_context(&context, &*dir_ref).await
         };
 
         dir.open(
@@ -175,16 +204,75 @@ where
     Ok(())
 }
 
+async fn open_factory_source() -> Result<DirectoryProxy, Error> {
+    let (directory_proxy, directory_server_end) = create_proxy::<DirectoryMarker>()?;
+    let factory_config = FactoryConfig::load().unwrap_or_default();
+    match factory_config {
+        FactoryConfig::FactoryItems => {
+            syslog::fx_log_info!("{}", "Reading from FactoryItems service");
+            fasync::spawn(async move {
+                let mut factory_items_directory = fetch_new_factory_item()
+                    .await
+                    .map(|vmo| parse_bootfs(vmo))
+                    .unwrap_or_else(|err| {
+                        syslog::fx_log_err!(
+                            "Failed to get factory item, returning empty item list: {}",
+                            err
+                        );
+                        directory::simple::empty()
+                    });
+
+                factory_items_directory.open(
+                    OPEN_RIGHT_READABLE,
+                    MODE_TYPE_DIRECTORY,
+                    &mut iter::empty(),
+                    ServerEnd::<NodeMarker>::new(directory_server_end.into_channel()),
+                );
+
+                factory_items_directory.await;
+            });
+            Ok(directory_proxy)
+        }
+        FactoryConfig::Ext4(path) => {
+            syslog::fx_log_info!("Reading from EXT4-formatted source: {}", path);
+            let mut reader = io::BufReader::new(std::fs::File::open(path)?);
+            let size = reader.seek(io::SeekFrom::End(0))?;
+            reader.seek(io::SeekFrom::Start(0))?;
+
+            let mut reader_buf = vec![0u8; size as usize];
+            reader.read(&mut reader_buf)?;
+
+            let vmo = zx::Vmo::create(size)?;
+            vmo.write(&reader_buf, 0)?;
+            let mut buf = Buffer { vmo, size };
+
+            let ext4_server = fuchsia_component::client::connect_to_service::<Server_Marker>()?;
+
+            syslog::fx_log_info!("Mounting EXT4 VMO");
+            match ext4_server.mount_vmo(&mut buf, OPEN_RIGHT_READABLE, directory_server_end).await {
+                Ok(MountVmoResult::Success(_)) => Ok(directory_proxy),
+                Ok(MountVmoResult::VmoReadFailure(status)) => {
+                    Err(format_err!("Failed to read ext4 vmo: {}", status))
+                }
+                Ok(MountVmoResult::ParseError(parse_error)) => {
+                    Err(format_err!("Failed to parse ext4 data: {:?}", parse_error))
+                }
+                Err(err) => Err(Error::from(err)),
+                _ => Err(format_err!("Unknown error while mounting ext4 vmo")),
+            }
+        }
+    }
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["factory_store_providers"]).expect("Can't init logger");
     syslog::fx_log_info!("{}", "Starting factory_store_providers");
 
-    let directory_items =
-        fetch_new_factory_item().await.map(|vmo| parse_bootfs(vmo)).unwrap_or_else(|err| {
-            syslog::fx_log_err!("Failed to get factory item, returning empty item list: {}", err);
-            HashMap::new()
-        });
+    let directory_proxy = open_factory_source().await.map_err(|e| {
+        syslog::fx_log_info!("{:?}", e);
+        e
+    })?;
 
     let mut fs = ServiceFs::new();
     fs.dir("svc")
@@ -195,24 +283,26 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(IncomingServices::WeaveFactoryStoreProvider);
     fs.take_and_serve_directory_handle().expect("Failed to serve factory providers");
 
-    let items_mtx = Arc::new(Mutex::new(directory_items));
+    syslog::fx_log_info!("{}", "Setting up factory directories");
+    let dir_mtx = Arc::new(Mutex::new(directory_proxy));
     let cast_credentials_config = Config::load::<CastCredentialsFactoryStoreProviderMarker>()?;
     let cast_directory =
-        Arc::new(Mutex::new(apply_config(cast_credentials_config, items_mtx.clone())));
+        Arc::new(Mutex::new(apply_config(cast_credentials_config, dir_mtx.clone()).await));
 
     let misc_config = Config::load::<MiscFactoryStoreProviderMarker>()?;
-    let misc_directory = Arc::new(Mutex::new(apply_config(misc_config, items_mtx.clone())));
+    let misc_directory = Arc::new(Mutex::new(apply_config(misc_config, dir_mtx.clone()).await));
 
     let playready_config = Config::load::<PlayReadyFactoryStoreProviderMarker>()?;
     let playready_directory =
-        Arc::new(Mutex::new(apply_config(playready_config, items_mtx.clone())));
+        Arc::new(Mutex::new(apply_config(playready_config, dir_mtx.clone()).await));
 
     let widevine_config = Config::load::<WidevineFactoryStoreProviderMarker>()?;
-    let widevine_directory = Arc::new(Mutex::new(apply_config(widevine_config, items_mtx.clone())));
+    let widevine_directory =
+        Arc::new(Mutex::new(apply_config(widevine_config, dir_mtx.clone()).await));
 
     // The weave config may or may not be present.
     let weave_config = Config::load::<WeaveFactoryStoreProviderMarker>().unwrap_or_default();
-    let weave_directory = Arc::new(Mutex::new(apply_config(weave_config, items_mtx.clone())));
+    let weave_directory = Arc::new(Mutex::new(apply_config(weave_config, dir_mtx.clone()).await));
 
     fs.for_each_concurrent(CONCURRENT_LIMIT, move |incoming_service| {
         let cast_directory_clone = cast_directory.clone();

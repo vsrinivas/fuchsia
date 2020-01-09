@@ -12,6 +12,8 @@ use {
     std::{collections::HashMap, default::Default, io},
 };
 
+const FACTORY_DEVICE_CONFIG: &'static str = "/config/data/factory.config";
+
 /// Type that maps a file to a group of arguments passed to a validator.
 pub type ValidatorFileArgsMap = HashMap<String, Value>;
 
@@ -111,6 +113,26 @@ impl Config {
             validator_contexts.push(new_validator_context_by_name(&name, args_map)?);
         }
         Ok(ConfigContext { file_path_map, validator_contexts })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FactoryConfig {
+    FactoryItems,
+    Ext4(String),
+}
+impl FactoryConfig {
+    pub fn load() -> Result<Self, Error> {
+        Ok(serde_json::from_reader(io::BufReader::new(std::fs::File::open(
+            FACTORY_DEVICE_CONFIG,
+        )?))?)
+    }
+}
+
+impl Default for FactoryConfig {
+    fn default() -> Self {
+        FactoryConfig::FactoryItems
     }
 }
 
