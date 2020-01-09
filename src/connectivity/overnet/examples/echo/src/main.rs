@@ -50,7 +50,7 @@ async fn exec_client(text: Option<String>) -> Result<(), Error> {
     let svc = hoist::connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
-        log::trace!("Got peers: {:?}", peers);
+        log::info!("Got peers: {:?}", peers);
         for mut peer in peers {
             if peer.description.services.is_none() {
                 continue;
@@ -66,24 +66,28 @@ async fn exec_client(text: Option<String>) -> Result<(), Error> {
                 continue;
             }
 
-            log::trace!("Trying peer: {:?}", peer.id);
+            log::info!("Trying peer: {:?}", peer.id);
 
             let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
             if let Err(e) = svc.connect_to_service(&mut peer.id, echo::EchoMarker::NAME, s) {
-                log::trace!("{:?}", e);
+                log::info!("{:?}", e);
                 continue;
             }
             let proxy =
                 fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
             let cli = echo::EchoProxy::new(proxy);
-            log::trace!("Sending {:?} to {:?}", text, peer.id);
+            log::info!("Sending {:?} to {:?}", text, peer.id);
             match cli.echo_string(text.as_ref().map(|s| s.as_str())).await {
                 Ok(r) => {
-                    log::trace!("SUCCESS: received {:?}", r);
+                    let value = match r {
+                        Some(v) => v,
+                        None => "None".to_string(),
+                    };
+                    println!("SUCCESS: received {:?}", value);
                     return Ok(());
                 }
                 Err(e) => {
-                    log::trace!("ERROR: {:?}", e);
+                    println!("ERROR: {:?}", e);
                     continue;
                 }
             };
