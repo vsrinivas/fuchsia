@@ -4,47 +4,27 @@
 
 use {
     anyhow::{Context, Error},
+    ascendd_lib::run_ascendd,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fidl_developer_bridge::{DaemonMarker, DaemonRequest, DaemonRequestStream},
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     futures::prelude::*,
-    std::env::current_exe,
-    std::fs::File,
-    std::path::{Path, PathBuf},
-    std::process::{Command, Stdio},
+    hoist::spawn,
+    std::path::Path,
 };
 mod constants;
-use constants::{ASCENDD, CONFIG_JSON_FILE, SOCKET};
+use constants::{CONFIG_JSON_FILE, SOCKET};
 mod config;
 use config::Config;
 
-async fn cmd(name: &str, config: &Config) -> Result<Command, Error> {
-    let out = File::create("daemon.log")?;
-    let err = out.try_clone()?;
-    let mut path = match config.tools {
-        Some(ref t) => {
-            let mut path = PathBuf::new();
-            path.push(t);
-            path
-        }
-        None => {
-            let mut path = current_exe().unwrap();
-            path.pop();
-            path
-        }
-    };
-    path.push(name);
-    let mut cmd = Command::new(path);
-    cmd.stdout(Stdio::from(out)).stderr(Stdio::from(err));
-    Ok(cmd)
-}
-
-async fn start_ascendd(config: &Config) {
+async fn start_ascendd() {
     if Path::new(SOCKET).exists() {
         log::info!("Ascendd already started.");
     } else {
         log::info!("Starting ascendd");
-        cmd(ASCENDD, config).await.unwrap().spawn().unwrap();
+        spawn(async move {
+            run_ascendd(SOCKET.to_string()).await.unwrap();
+        });
     }
 }
 
@@ -141,7 +121,7 @@ fn main() {
         if let Err(err) = config.load_from_config_data(CONFIG_JSON_FILE) {
             log::error!("Failed to load configuration file: {}", err);
         }
-        start_ascendd(&config).await;
+        start_ascendd().await;
         log::info!("Starting daemon overnet server");
         exec_server(true)
             .await
