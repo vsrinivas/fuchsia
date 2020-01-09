@@ -26,6 +26,13 @@ extern void x86_amd_set_lfence_serializing(const cpu_id::CpuId*, MsrAccess*);
 
 namespace {
 
+static void rdtscp_aux(void* context) {
+  uint32_t* const aux = reinterpret_cast<uint32_t*>(context);
+  uint32_t tsc_lo, tsc_hi, aux_msr;
+  asm volatile("rdtscp" : "=a"(tsc_lo), "=d"(tsc_hi), "=c"(aux_msr));
+  *aux = aux_msr;
+}
+
 static bool test_x64_msrs() {
   BEGIN_TEST;
 
@@ -65,6 +72,23 @@ static bool test_x64_msrs() {
       continue;
     }
     write_msr_on_cpu(/*cpu=*/i, X86_MSR_IA32_FMASK, /*val=*/initial_fmask);
+  }
+
+  // If RDTSCP is supported, check that the TSC_AUX MSR is correctly programmed.
+  if (x86_feature_test(X86_FEATURE_RDTSCP)) {
+    for (uint i = 0; i < arch_max_num_cpus(); i++) {
+      if (!mp_is_cpu_online(i)) {
+        continue;
+      }
+      uint64_t cpuid = read_msr_on_cpu(/*cpu=*/i, X86_MSR_IA32_TSC_AUX);
+      EXPECT_EQ(cpuid, i);
+
+      uint32_t aux;
+      cpu_mask_t mask = {};
+      mask |= cpu_num_to_mask(i);
+      mp_sync_exec(MP_IPI_TARGET_MASK, mask, rdtscp_aux, reinterpret_cast<void*>(&aux));
+      EXPECT_EQ(cpuid, aux);
+    }
   }
 
   END_TEST;

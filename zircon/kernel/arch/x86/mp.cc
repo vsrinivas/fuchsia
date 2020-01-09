@@ -263,6 +263,12 @@ void x86_init_percpu(cpu_num_t cpu_num) {
   }
   x86_set_cr4(cr4);
 
+  // Store the processor number in IA32_TSC_AUX, so RDTSCP/RDP can efficiently get the current CPU
+  // from userspace.
+  if (x86_feature_test(X86_FEATURE_RDTSCP)) {
+    write_msr(X86_MSR_IA32_TSC_AUX, cpu_num);
+  }
+
   switch (x86_vendor) {
     case X86_VENDOR_INTEL:
       x86_intel_init_percpu();
