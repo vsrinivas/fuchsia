@@ -7,9 +7,7 @@ import("$zx/kernel/params.gni")
 assert(current_cpu == "x64")
 
 group("x86") {
-  deps = [
-    ":platform-bus-x86",
-  ]
+  deps = [ ":platform-bus-x86" ]
 }
 
 config("config") {
@@ -30,9 +28,7 @@ config("config") {
 source_set("smbios") {
   visibility = [ ":*" ]
 
-  sources = [
-    "smbios.cc",
-  ]
+  sources = [ "smbios.cc" ]
 
   configs += [ ":config" ]
 
@@ -43,6 +39,23 @@ source_set("smbios") {
     "$zx/system/ulib/smbios:static",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+  ]
+}
+
+source_set("iommu") {
+  visibility = [ ":*" ]
+
+  sources = [ "iommu.cc" ]
+
+  configs += [ ":config" ]
+
+  deps = [
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/third_party/lib/acpica",
   ]
 }
 
@@ -61,7 +74,7 @@ zx_driver("platform-bus-x86") {
     "acpi-nswalk.cc",
     "debug.cc",
     "init.cc",
-    "iommu.cc",
+    "iommu-driver-tests.cc",
     "methods.cc",
     "nhlt.cc",
     "pciroot.cc",
@@ -84,6 +97,7 @@ zx_driver("platform-bus-x86") {
   }
   configs += [ ":config" ]
   deps = [
+    ":iommu",
     ":smbios",
     "$zx/system/banjo/ddk.protocol.acpi",
     "$zx/system/banjo/ddk.protocol.hidbus",
@@ -201,13 +215,17 @@ zx_test("x86-pwrsrc-test") {
 zx_test("x86-board-test") {
   test_group = "ddk"
   sources = [
+    "iommu-test.cc",
     "smbios-test.cc",
   ]
   configs += [ ":config" ]
   deps = [
+    ":iommu",
     ":smbios",
+    "$zx/system/dev/lib/fake_ddk",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zxtest",
+    "$zx/third_party/lib/acpica",
   ]
 }
 

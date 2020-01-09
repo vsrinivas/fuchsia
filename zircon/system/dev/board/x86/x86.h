@@ -14,6 +14,8 @@
 #include <ddktl/protocol/platform/bus.h>
 #include <fbl/macros.h>
 
+#include "iommu.h"
+
 namespace x86 {
 
 // This is the main class for the X86 platform bus driver.
@@ -47,6 +49,8 @@ class X86 : public ddk::Device<X86> {
   zx_status_t Bind();
   zx_status_t Start();
   int Thread();
+
+  IommuManager iommu_manager_;
 
   ddk::PBusProtocolClient pbus_;
 
