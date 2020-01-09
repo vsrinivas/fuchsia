@@ -13,7 +13,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-
+#include <fbl/algorithm.h>
 #include "device.h"
 #include "trace.h"
 
@@ -40,7 +40,11 @@ zx_status_t Ring::Init(uint16_t index) {
 zx_status_t Ring::Init(uint16_t index, uint16_t count) {
   LTRACEF("index %u, count %u\n", index, count);
 
-  // XXX check that count is a power of 2
+  // check that count is a power of 2
+  if (!fbl::is_pow2(count)) {
+    zxlogf(ERROR, "ring count: %u is not a power of 2\n", count);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   index_ = index;
 
