@@ -190,6 +190,9 @@ TEST_F(UsageVolumeControlTest, ConnectToUsageVolume) {
         muted = new_muted;
       });
 
+  ExpectCallback();
+  EXPECT_FLOAT_EQ(volume, 1.0);
+
   client1->SetVolume(0.5);
   ExpectCallback();
   EXPECT_FLOAT_EQ(volume, 0.5);
