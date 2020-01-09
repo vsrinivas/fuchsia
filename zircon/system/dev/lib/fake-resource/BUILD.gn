@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("fake-resource") {
+  sdk = "shared"
+  sdk_headers = [ "lib/fake-resource/resource.h" ]
+  testonly = true
+  shared = true
+  sources = [
+    "fake-resource.cc",
+  ]
+  deps = [
+    "$zx/system/dev/lib/fake-object",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+  ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+}

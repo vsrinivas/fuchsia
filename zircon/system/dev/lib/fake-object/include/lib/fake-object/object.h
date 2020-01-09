@@ -29,6 +29,7 @@ enum class HandleType : uint32_t {
   BASE,  // A non-derived object, used for tests and assertions.
   BTI,
   PMT,
+  RESOURCE,
 };
 
 class Object : public fbl::RefCounted<Object> {
