@@ -16,21 +16,19 @@ async fn input_device_add() -> Result<()> {
 #[fasync::run_singlethreaded]
 #[test]
 async fn input_device_remove() -> Result<()> {
-    with_connected_device(|assets: DeviceTestAssets<InputProxy>| {
-        async move {
-            assets.device.remove()?;
-            assert_matches!(
-                assets
-                    .enumerator
-                    .take_event_stream()
-                    .try_next()
-                    .await?
-                    .map(AudioDeviceEnumeratorEvent::into_on_device_removed),
-                Some(_)
-            );
+    with_connected_device(|assets: DeviceTestAssets<InputProxy>| async move {
+        assets.device.remove()?;
+        assert_matches!(
+            assets
+                .enumerator
+                .take_event_stream()
+                .try_next()
+                .await?
+                .map(AudioDeviceEnumeratorEvent::into_on_device_removed),
+            Some(_)
+        );
 
-            Ok(())
-        }
+        Ok(())
     })
     .await
 }
@@ -71,21 +69,19 @@ async fn output_device_add() -> Result<()> {
 #[fasync::run_singlethreaded]
 #[test]
 async fn output_device_remove() -> Result<()> {
-    with_connected_device(|assets: DeviceTestAssets<OutputProxy>| {
-        async move {
-            assets.device.remove()?;
-            assert_matches!(
-                assets
-                    .enumerator
-                    .take_event_stream()
-                    .try_next()
-                    .await?
-                    .map(AudioDeviceEnumeratorEvent::into_on_device_removed),
-                Some(_)
-            );
+    with_connected_device(|assets: DeviceTestAssets<OutputProxy>| async move {
+        assets.device.remove()?;
+        assert_matches!(
+            assets
+                .enumerator
+                .take_event_stream()
+                .try_next()
+                .await?
+                .map(AudioDeviceEnumeratorEvent::into_on_device_removed),
+            Some(_)
+        );
 
-            Ok(())
-        }
+        Ok(())
     })
     .await
 }

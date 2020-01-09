@@ -20,9 +20,7 @@ group("test") {
 }
 
 test_package("audio_admin_tests") {
-  deps = [
-    ":audio_admin_test_bin",
-  ]
+  deps = [ ":audio_admin_test_bin" ]
 
   tests = [
     {
@@ -38,9 +36,7 @@ executable("audio_admin_test_bin") {
   testonly = true
   output_name = "audio_admin_tests"
 
-  sources = [
-    "audio_admin/audio_admin_test.cc",
-  ]
+  sources = [ "audio_admin/audio_admin_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.media",
@@ -54,9 +50,7 @@ executable("audio_admin_test_bin") {
 }
 
 test_package("audio_device_tests") {
-  deps = [
-    "//src/media/audio/audio_core/test/device:audio_device_tests_bin",
-  ]
+  deps = [ "//src/media/audio/audio_core/test/device:audio_device_tests_bin" ]
 
   tests = [
     {
@@ -67,9 +61,7 @@ test_package("audio_device_tests") {
 }
 
 test_package("audio_core_hardware_tests") {
-  deps = [
-    ":audio_core_hardware_tests_bin",
-  ]
+  deps = [ ":audio_core_hardware_tests_bin" ]
 
   tests = [
     {
@@ -102,9 +94,7 @@ executable("audio_core_hardware_tests_bin") {
 }
 
 test_package("audio_device_service_tests") {
-  deps = [
-    ":audio_device_service_tests_bin",
-  ]
+  deps = [ ":audio_device_service_tests_bin" ]
 
   tests = [
     {
@@ -136,9 +126,7 @@ executable("audio_device_service_tests_bin") {
 }
 
 test_package("audio_fidl_tests") {
-  deps = [
-    ":audio_fidl_tests_bin",
-  ]
+  deps = [ ":audio_fidl_tests_bin" ]
 
   tests = [
     {
@@ -170,9 +158,7 @@ executable("audio_fidl_tests_bin") {
 }
 
 test_package("audio_pipeline_tests") {
-  deps = [
-    ":audio_pipeline_tests_bin",
-  ]
+  deps = [ ":audio_pipeline_tests_bin" ]
 
   tests = [
     {

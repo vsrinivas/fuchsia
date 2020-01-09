@@ -99,30 +99,28 @@ async fn on_device_gain_changed_ignores_invalid_tokens_in_sets() -> Result<()> {
 #[fasync::run_singlethreaded]
 #[test]
 async fn set_input_device_gain() -> Result<()> {
-    with_connected_device(|assets: DeviceTestAssets<InputProxy>| {
-        async move {
-            assets.enumerator.set_device_gain(
-                assets.token,
-                &mut AudioGainInfo { gain_db: -30.0, flags: 0 },
-                SET_AUDIO_GAIN_FLAG_GAIN_VALID | SET_AUDIO_GAIN_FLAG_MUTE_VALID,
-            )?;
+    with_connected_device(|assets: DeviceTestAssets<InputProxy>| async move {
+        assets.enumerator.set_device_gain(
+            assets.token,
+            &mut AudioGainInfo { gain_db: -30.0, flags: 0 },
+            SET_AUDIO_GAIN_FLAG_GAIN_VALID | SET_AUDIO_GAIN_FLAG_MUTE_VALID,
+        )?;
 
-            let (changed_token, gain_info) = assets
-                .enumerator
-                .take_event_stream()
-                .try_filter_map(move |e| {
-                    future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_gain_changed(e)))
-                })
-                .try_next()
-                .await?
-                .expect("Waiting for a gain info event");
+        let (changed_token, gain_info) = assets
+            .enumerator
+            .take_event_stream()
+            .try_filter_map(move |e| {
+                future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_gain_changed(e)))
+            })
+            .try_next()
+            .await?
+            .expect("Waiting for a gain info event");
 
-            assert_eq!(changed_token, assets.token);
-            assert_eq!(gain_info.flags, 0);
-            assert!((gain_info.gain_db - -30.0).abs() < std::f32::EPSILON);
+        assert_eq!(changed_token, assets.token);
+        assert_eq!(gain_info.flags, 0);
+        assert!((gain_info.gain_db - -30.0).abs() < std::f32::EPSILON);
 
-            Ok(())
-        }
+        Ok(())
     })
     .await
 }
@@ -130,30 +128,28 @@ async fn set_input_device_gain() -> Result<()> {
 #[fasync::run_singlethreaded]
 #[test]
 async fn set_output_device_gain() -> Result<()> {
-    with_connected_device(|assets: DeviceTestAssets<OutputProxy>| {
-        async move {
-            assets.enumerator.set_device_gain(
-                assets.token,
-                &mut AudioGainInfo { gain_db: -30.0, flags: 0 },
-                SET_AUDIO_GAIN_FLAG_GAIN_VALID | SET_AUDIO_GAIN_FLAG_MUTE_VALID,
-            )?;
+    with_connected_device(|assets: DeviceTestAssets<OutputProxy>| async move {
+        assets.enumerator.set_device_gain(
+            assets.token,
+            &mut AudioGainInfo { gain_db: -30.0, flags: 0 },
+            SET_AUDIO_GAIN_FLAG_GAIN_VALID | SET_AUDIO_GAIN_FLAG_MUTE_VALID,
+        )?;
 
-            let (changed_token, gain_info) = assets
-                .enumerator
-                .take_event_stream()
-                .try_filter_map(move |e| {
-                    future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_gain_changed(e)))
-                })
-                .try_next()
-                .await?
-                .expect("Waiting for a gain info event");
+        let (changed_token, gain_info) = assets
+            .enumerator
+            .take_event_stream()
+            .try_filter_map(move |e| {
+                future::ready(Ok(AudioDeviceEnumeratorEvent::into_on_device_gain_changed(e)))
+            })
+            .try_next()
+            .await?
+            .expect("Waiting for a gain info event");
 
-            assert_eq!(changed_token, assets.token);
-            assert_eq!(gain_info.flags, 0);
-            assert!((gain_info.gain_db - -30.0).abs() < std::f32::EPSILON);
+        assert_eq!(changed_token, assets.token);
+        assert_eq!(gain_info.flags, 0);
+        assert!((gain_info.gain_db - -30.0).abs() < std::f32::EPSILON);
 
-            Ok(())
-        }
+        Ok(())
     })
     .await
 }
@@ -161,12 +157,10 @@ async fn set_output_device_gain() -> Result<()> {
 #[fasync::run_singlethreaded]
 #[test]
 async fn output_devices_initialize_to_unity_gain() -> Result<()> {
-    with_connected_device(|assets: DeviceTestAssets<OutputProxy>| {
-        async move {
-            let (_, gain_info) = assets.enumerator.get_device_gain(assets.token).await?;
-            assert!((0. - gain_info.gain_db).abs() < std::f32::EPSILON);
-            Ok(())
-        }
+    with_connected_device(|assets: DeviceTestAssets<OutputProxy>| async move {
+        let (_, gain_info) = assets.enumerator.get_device_gain(assets.token).await?;
+        assert!((0. - gain_info.gain_db).abs() < std::f32::EPSILON);
+        Ok(())
     })
     .await
 }
@@ -174,12 +168,10 @@ async fn output_devices_initialize_to_unity_gain() -> Result<()> {
 #[fasync::run_singlethreaded]
 #[test]
 async fn input_devices_initialize_to_unity_gain() -> Result<()> {
-    with_connected_device(|assets: DeviceTestAssets<InputProxy>| {
-        async move {
-            let (_, gain_info) = assets.enumerator.get_device_gain(assets.token).await?;
-            assert!((0. - gain_info.gain_db).abs() < std::f32::EPSILON);
-            Ok(())
-        }
+    with_connected_device(|assets: DeviceTestAssets<InputProxy>| async move {
+        let (_, gain_info) = assets.enumerator.get_device_gain(assets.token).await?;
+        assert!((0. - gain_info.gain_db).abs() < std::f32::EPSILON);
+        Ok(())
     })
     .await
 }

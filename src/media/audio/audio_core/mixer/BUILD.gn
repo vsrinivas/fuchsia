@@ -5,9 +5,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 source_set("constants") {
-  sources = [
-    "constants.h",
-  ]
+  sources = [ "constants.h" ]
 }
 
 source_set("mixer") {
@@ -60,9 +58,7 @@ group("tests") {
 }
 
 test_package("audio_mixer_unittests") {
-  deps = [
-    ":unittest_bin",
-  ]
+  deps = [ ":unittest_bin" ]
 
   tests = [
     {

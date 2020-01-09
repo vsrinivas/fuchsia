@@ -18,9 +18,7 @@ source_set("testing") {
     "threading_model_fixture.h",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/fzl",
-  ]
+  public_deps = [ "//zircon/public/lib/fzl" ]
   deps = [
     "//garnet/public/lib/gtest",
     "//src/media/audio/audio_core:audio_core_lib",

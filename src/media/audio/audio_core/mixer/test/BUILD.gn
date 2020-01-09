@@ -6,9 +6,7 @@ import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":audio_fidelity_tests",
-  ]
+  deps = [ ":audio_fidelity_tests" ]
 }
 
 executable("test_bin") {
@@ -48,9 +46,7 @@ executable("test_bin") {
 }
 
 test_package("audio_fidelity_tests") {
-  deps = [
-    ":test_bin",
-  ]
+  deps = [ ":test_bin" ]
 
   tests = [
     {

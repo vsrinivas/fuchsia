@@ -26,9 +26,7 @@ action_foreach("json_schema_headers") {
 
   script = "//src/media/audio/audio_core/schema/make_schema_header.py"
 
-  outputs = [
-    "$target_gen_dir/schema/{{source_name_part}}.inl",
-  ]
+  outputs = [ "$target_gen_dir/schema/{{source_name_part}}.inl" ]
 
   args = [
     "{{source}}",
@@ -184,9 +182,7 @@ source_set("audio_core_lib") {
 executable("audio_core_bin") {
   output_name = "audio_core"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":audio_core_lib",
@@ -255,9 +251,7 @@ executable("unittest_bin") {
 }
 
 test_package("audio_core_unittests") {
-  deps = [
-    ":unittest_bin",
-  ]
+  deps = [ ":unittest_bin" ]
 
   tests = [
     {
@@ -268,12 +262,8 @@ test_package("audio_core_unittests") {
 }
 
 fuzzer("audio_core_fuzzer") {
-  sources = [
-    "policy_loader_fuzzer.cc",
-  ]
-  deps = [
-    ":audio_core_lib",
-  ]
+  sources = [ "policy_loader_fuzzer.cc" ]
+  deps = [ ":audio_core_lib" ]
 }
 
 group("tests") {
