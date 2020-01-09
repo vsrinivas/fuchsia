@@ -40,6 +40,8 @@ source_set("common") {
     "backends/pci_legacy.cc",
     "backends/pci_modern.cc",
     "device.cc",
+    "driver_utils.cc",
+    "driver_utils.h",
     "gpu.cc",
     "ring.cc",
     "scsi.cc",

@@ -23,6 +23,7 @@
 #include "block.h"
 #include "console.h"
 #include "device.h"
+#include "driver_utils.h"
 #include "ethernet.h"
 #include "gpu.h"
 #include "input.h"
@@ -39,7 +40,7 @@ static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
   zx_status_t status;
   pci_protocol_t pci;
 
-  // grab the pci device and configuration to pass to the backend
+  // Grab the pci device and configuration to pass to the backend.
   if (device_get_protocol(bus_device, ZX_PROTOCOL_PCI, &pci)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -50,84 +51,37 @@ static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
     return status;
   }
 
-  zx::bti bti;
-  status = pci_get_bti(&pci, 0, bti.reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Due to the similarity between Virtio 0.9.5 legacy devices and Virtio 1.0
-  // transitional devices we need to check whether modern capabilities exist.
-  // If no vendor capabilities are found then we will default to the legacy
-  // interface.
-  std::unique_ptr<virtio::Backend> backend = nullptr;
-  uint8_t offset;
-  if (pci_get_first_capability(&pci, PCI_CAP_ID_VENDOR, &offset) == ZX_OK) {
-    zxlogf(SPEW, "virtio %02x:%02x.%1x using modern PCI backend\n", info.bus_id, info.dev_id,
-           info.func_id);
-    backend.reset(new virtio::PciModernBackend(pci, info));
-  } else {
-    zxlogf(SPEW, "virtio %02x:%02x.%1x using legacy PCI backend\n", info.bus_id, info.dev_id,
-           info.func_id);
-    backend.reset(new virtio::PciLegacyBackend(pci, info));
-  }
-
-  status = backend->Bind();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Now that the backend for this device has been initialized we can
-  // compose a device based on the PCI device id
-  std::unique_ptr<virtio::Device> virtio_device = nullptr;
+  // Compose a device based on the PCI device id.
   switch (info.device_id) {
     case VIRTIO_DEV_TYPE_NETWORK:
     case VIRTIO_DEV_TYPE_T_NETWORK:
-      virtio_device.reset(
-          new virtio::EthernetDevice(bus_device, std::move(bti), std::move(backend)));
-      break;
+      return CreateAndBind<virtio::EthernetDevice>(ctx, bus_device);
     case VIRTIO_DEV_TYPE_BLOCK:
     case VIRTIO_DEV_TYPE_T_BLOCK:
-      virtio_device.reset(new virtio::BlockDevice(bus_device, std::move(bti), std::move(backend)));
-      break;
+      return CreateAndBind<virtio::BlockDevice>(ctx, bus_device);
     case VIRTIO_DEV_TYPE_CONSOLE:
     case VIRTIO_DEV_TYPE_T_CONSOLE:
-      virtio_device.reset(
-          new virtio::ConsoleDevice(bus_device, std::move(bti), std::move(backend)));
-      break;
+      return CreateAndBind<virtio::ConsoleDevice>(ctx, bus_device);
     case VIRTIO_DEV_TYPE_GPU:
       if (gpu_disabled()) {
         zxlogf(INFO, "driver.virtio-gpu.disabled=1, not binding to the GPU\n");
         return ZX_ERR_NOT_FOUND;
       }
-      virtio_device.reset(new virtio::GpuDevice(bus_device, std::move(bti), std::move(backend)));
-      break;
+      return CreateAndBind<virtio::GpuDevice>(ctx, bus_device);
     case VIRTIO_DEV_TYPE_ENTROPY:
     case VIRTIO_DEV_TYPE_T_ENTROPY:
-      virtio_device.reset(new virtio::RngDevice(bus_device, std::move(bti), std::move(backend)));
-      break;
+      return CreateAndBind<virtio::RngDevice>(ctx, bus_device);
     case VIRTIO_DEV_TYPE_INPUT:
-      virtio_device.reset(new virtio::InputDevice(bus_device, std::move(bti), std::move(backend)));
-      break;
+      return CreateAndBind<virtio::InputDevice>(ctx, bus_device);
     case VIRTIO_DEV_TYPE_SOCKET:
-      virtio_device.reset(new virtio::SocketDevice(bus_device, std::move(bti), std::move(backend)));
-      break;
+      return CreateAndBind<virtio::SocketDevice>(ctx, bus_device);
     case VIRTIO_DEV_TYPE_SCSI:
     case VIRTIO_DEV_TYPE_T_SCSI_HOST:
-      virtio_device.reset(new virtio::ScsiDevice(bus_device, std::move(bti), std::move(backend)));
-      break;
+      return CreateAndBind<virtio::ScsiDevice>(ctx, bus_device);
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
-
-  status = virtio_device->Init();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // if we're here, we're successful so drop the unique ptr ref to the object and let it live on
-  __UNUSED auto ptr = virtio_device.release();
-  return ZX_OK;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 static const zx_driver_ops_t virtio_driver_ops = []() {
