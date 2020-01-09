@@ -27,18 +27,36 @@ PrettyFrameGlob PrettyFrameGlob::File(std::string file) {
 }
 
 // static
-PrettyFrameGlob PrettyFrameGlob::Func(std::string function) {
+PrettyFrameGlob PrettyFrameGlob::Func(IdentifierGlob glob) {
   PrettyFrameGlob result;
-  result.function_ = std::move(function);
+  result.function_ = std::move(glob);
   return result;
 }
 
 // static
-PrettyFrameGlob PrettyFrameGlob::FuncFile(std::string function, std::string file) {
+PrettyFrameGlob PrettyFrameGlob::FuncFile(IdentifierGlob func_glob, std::string file) {
   PrettyFrameGlob result;
-  result.function_ = std::move(function);
+  result.function_ = std::move(func_glob);
   result.file_ = std::move(file);
   return result;
+}
+
+// static
+PrettyFrameGlob PrettyFrameGlob::Func(const std::string& func_glob) {
+  IdentifierGlob glob;
+  Err err = glob.Init(func_glob);
+  FXL_DCHECK(err.ok());
+
+  return Func(std::move(glob));
+}
+
+// static
+PrettyFrameGlob PrettyFrameGlob::FuncFile(const std::string& func_glob, std::string file) {
+  IdentifierGlob glob;
+  Err err = glob.Init(func_glob);
+  FXL_DCHECK(err.ok());
+
+  return FuncFile(std::move(glob), std::move(file));
 }
 
 bool PrettyFrameGlob::Matches(const Frame* frame) const {
@@ -63,8 +81,7 @@ bool PrettyFrameGlob::Matches(const Location& loc) const {
     if (!symbol)
       return false;  // No function to match.
 
-    // Currently we require an exact function name match.
-    if (symbol->GetFullName() != *function_)
+    if (!function_->Matches(ToParsedIdentifier(symbol->GetIdentifier())))
       return false;
   }
 

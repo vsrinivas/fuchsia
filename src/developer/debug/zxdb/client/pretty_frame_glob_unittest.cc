@@ -26,6 +26,17 @@ TEST(PrettyFrameGlob, Matches) {
 
   EXPECT_TRUE(PrettyFrameGlob::Func("MyFunction").Matches(loc));
   EXPECT_FALSE(PrettyFrameGlob::Func("OtherFunction").Matches(loc));
+
+  // Test a template. This needs to be a new function object because the name will be cached.
+  auto template_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  template_func->set_assigned_name("MyFunction<int>");
+  Location template_loc(0x1234, FileLine("file.cc", 23), 0, symbol_context, template_func);
+
+  // This just tests that the templates and wildcards are hooked up. The globs are covered by the
+  // IdentifierGlob tests.
+  EXPECT_TRUE(PrettyFrameGlob::Func("MyFunction<int>").Matches(template_loc));
+  EXPECT_FALSE(PrettyFrameGlob::Func("MyFunction<char>").Matches(template_loc));
+  EXPECT_TRUE(PrettyFrameGlob::Func("MyFunction<*>").Matches(template_loc));
 }
 
 }  // namespace zxdb

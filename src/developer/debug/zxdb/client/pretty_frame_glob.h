@@ -8,6 +8,8 @@
 #include <optional>
 #include <string>
 
+#include "src/developer/debug/zxdb/expr/identifier_glob.h"
+
 namespace zxdb {
 
 class Frame;
@@ -24,8 +26,13 @@ class PrettyFrameGlob {
   static PrettyFrameGlob Wildcard(size_t min_matches = 1, size_t max_matches = 1);
 
   static PrettyFrameGlob File(std::string file);
-  static PrettyFrameGlob Func(std::string function);
-  static PrettyFrameGlob FuncFile(std::string function, std::string file);
+  static PrettyFrameGlob Func(IdentifierGlob func_glob);
+  static PrettyFrameGlob FuncFile(IdentifierGlob func_glob, std::string file);
+
+  // These function variants will parse the function as an IdentifierGlob and assert that it
+  // parses properly. They are designed for tests and built-in globs.
+  static PrettyFrameGlob Func(const std::string& func_glob);
+  static PrettyFrameGlob FuncFile(const std::string& func_glob, std::string file);
 
   bool is_wildcard() const { return !function_ && !file_; }
 
@@ -39,7 +46,7 @@ class PrettyFrameGlob {
   size_t min_matches_ = 1;
   size_t max_matches_ = 1;
 
-  std::optional<std::string> function_;
+  std::optional<IdentifierGlob> function_;
   std::optional<std::string> file_;
 };
 

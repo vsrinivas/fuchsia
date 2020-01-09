@@ -38,7 +38,18 @@ void PrettyStackManager::LoadDefaultMatchers() {
   matchers.push_back(std::move(cpp_async_loop));
   matchers.push_back(std::move(c_async_loop));
 
-  // TODO(brettw) Add Rust async loop waiting (needs more powerful matching).
+  // Rust async loop waiting.
+  StackGlob rust_async_loop(
+      "Waiting for event in Executor::run_singlethreaded()",
+      {PrettyFrameGlob::Wildcard(1, 1),  // syscalls-<platform>.S
+       PrettyFrameGlob::Func("_zx_port_wait"),
+       PrettyFrameGlob::Func("fuchsia_zircon::port::Port::wait"),
+       PrettyFrameGlob::Wildcard(2, 2),  // Lambdas
+       PrettyFrameGlob::Func("std::thread::local::LocalKey<*>::try_with<*>"),
+       PrettyFrameGlob::Func("std::thread::local::LocalKey<*>::with<*>"),
+       PrettyFrameGlob::Func("fuchsia_async::executor::with_local_timer_heap<*>"),
+       PrettyFrameGlob::Func("fuchsia_async::executor::Executor::run_singlethreaded<*>")});
+  matchers.push_back(std::move(rust_async_loop));
 
   // C startup code (although it is only one frame, it hides several lines of complex useless
   // parameters in the "backtrace" view).
@@ -46,13 +57,13 @@ void PrettyStackManager::LoadDefaultMatchers() {
   matchers.push_back(StackGlob("libc startup", {libc_start_main}));
 
   // Rust startup code.
-  // TODO(brettw) replace some of the wildcards with more precise matching when it's possible to
-  // express the varying template arguments and names in the matchers.
-  matchers.push_back(StackGlob("Rust startup",
-                               {PrettyFrameGlob::Wildcard(2, 2),  // lambda, try
-                                PrettyFrameGlob::Func("__rust_maybe_catch_panic"),
-                                PrettyFrameGlob::Wildcard(2, 2),  // lang_start_internal, lang_start
-                                PrettyFrameGlob::Func("main"), libc_start_main}));
+  matchers.push_back(
+      StackGlob("Rust startup", {PrettyFrameGlob::Wildcard(2, 2),  // lambda, try
+                                 PrettyFrameGlob::Func("__rust_maybe_catch_panic"),
+                                 PrettyFrameGlob::Wildcard(1, 1),  // lang_start_internal
+                                 PrettyFrameGlob::Func("std::rt::lang_start<*>"),
+                                 PrettyFrameGlob::Func("main"),  // C main function
+                                 libc_start_main}));
 
   SetMatchers(std::move(matchers));
 }
