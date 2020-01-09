@@ -27,7 +27,6 @@ executable("unittests") {
 test_package("cobalt_lib_tests") {
   deps = [
     ":unittests",
-    "//src/lib/cobalt/cpp:test_metrics_registry",
     "//src/lib/cobalt/rust:fuchsia-cobalt_test",
   ]
 
@@ -41,21 +40,10 @@ test_package("cobalt_lib_tests") {
       environments = basic_envs
     },
   ]
-
-  resources = [
-    {
-      path = rebase_path(
-              get_label_info("//src/lib/cobalt/cpp:test_metrics_registry",
-                             "target_gen_dir") + "/test_metrics_registry.pb")
-      dest = "test_metrics_registry.pb"
-    },
-  ]
 }
 
 group("tests") {
   testonly = true
 
-  deps = [
-    ":cobalt_lib_tests",
-  ]
+  deps = [ ":cobalt_lib_tests" ]
 }

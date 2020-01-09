@@ -2,14 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//third_party/cobalt/metrics_registry.gni")
-
-metrics_registry("test_metrics_registry") {
-  project_id = 657579885
-  generate_cc = true
-  namespace = "cobalt_test_metrics"
-}
-
 source_set("cobalt_logger") {
   sources = [
     "cobalt_logger.cc",
@@ -38,37 +30,17 @@ source_set("unittests") {
   sources = [
     "cobalt_event_builder_unittest.cc",
     "cobalt_logger_unittest.cc",
-    "project_profile_unittest.cc",
   ]
 
-  public_deps = [
-    "//garnet/public/lib/gtest",
-  ]
+  public_deps = [ "//garnet/public/lib/gtest" ]
 
   deps = [
     ":cobalt_event_builder",
     ":cobalt_logger",
-    ":project_profile",
-    ":test_metrics_registry_cc",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-testing",
-  ]
-}
-
-source_set("project_profile") {
-  sources = [
-    "project_profile.cc",
-    "project_profile.h",
-  ]
-  configs += [ "//third_party/cobalt:cobalt_config" ]
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-cobalt",
-  ]
-  deps = [
-    "//src/cobalt/bin/utils:base64",
-    "//src/lib/fsl",
   ]
 }
 
@@ -78,7 +50,5 @@ source_set("cobalt_event_builder") {
     "cobalt_event_builder.h",
   ]
   configs += [ "//third_party/cobalt:cobalt_config" ]
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-cobalt",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-cobalt" ]
 }
