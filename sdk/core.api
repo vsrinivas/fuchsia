@@ -46,6 +46,7 @@ sdk://fidl/fuchsia.media.playback
 sdk://fidl/fuchsia.media.sessions2
 sdk://fidl/fuchsia.mediacodec
 sdk://fidl/fuchsia.mem
+sdk://fidl/fuchsia.migration
 sdk://fidl/fuchsia.modular
 sdk://fidl/fuchsia.modular.auth
 sdk://fidl/fuchsia.net

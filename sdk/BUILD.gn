@@ -68,9 +68,7 @@ sdk("zircon_sysroot") {
 
   export = true
 
-  deps = [
-    "//zircon/public/sysroot:sysroot_sdk",
-  ]
+  deps = [ "//zircon/public/sysroot:sysroot_sdk" ]
 }
 
 sdk("e2e_testing") {
@@ -81,9 +79,7 @@ sdk("e2e_testing") {
 
   api = "e2e_testing.api"
 
-  deps = [
-    "//sdk/testing/sl4f/client:client_sdk($dart_toolchain)",
-  ]
+  deps = [ "//sdk/testing/sl4f/client:client_sdk($dart_toolchain)" ]
 }
 
 sdk_molecule("fidl") {
@@ -117,6 +113,7 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.migration:fuchsia.migration_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp_sdk($fidl_toolchain)",
