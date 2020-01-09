@@ -61,45 +61,39 @@ void RawValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitRawValue(this, for_type);
 }
 
-template <>
-void NumericValue<uint8_t>::Visit(Visitor* visitor, const Type* for_type) const {
-  visitor->VisitU8Value(this, for_type);
+uint8_t IntegerValue::GetUint8Value() const {
+  return (!negative_ && (absolute_value_ < 0x100)) ? static_cast<uint8_t>(absolute_value_) : 0;
 }
-template <>
-void NumericValue<uint16_t>::Visit(Visitor* visitor, const Type* for_type) const {
-  visitor->VisitU16Value(this, for_type);
+
+int IntegerValue::DisplaySize(const Type* for_type, int /*remaining_size*/) const {
+  bool sign_size = negative_ ? 1 : 0;
+  return std::to_string(absolute_value_).size() + sign_size;
 }
-template <>
-void NumericValue<uint32_t>::Visit(Visitor* visitor, const Type* for_type) const {
-  visitor->VisitU32Value(this, for_type);
+
+void IntegerValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                               const fidl_message_header_t* header, std::string_view line_header,
+                               int tabs, int remaining_size, int max_line_size) const {
+  FXL_DCHECK(for_type != nullptr);
+  for_type->PrettyPrint(this, os, colors, header, line_header, tabs, remaining_size, max_line_size);
 }
-template <>
-void NumericValue<uint64_t>::Visit(Visitor* visitor, const Type* for_type) const {
-  visitor->VisitU64Value(this, for_type);
+
+void IntegerValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitIntegerValue(this, for_type);
 }
-template <>
-void NumericValue<int8_t>::Visit(Visitor* visitor, const Type* for_type) const {
-  visitor->VisitI8Value(this, for_type);
+
+int DoubleValue::DisplaySize(const Type* for_type, int /*remaining_size*/) const {
+  return std::to_string(value_).size();
 }
-template <>
-void NumericValue<int16_t>::Visit(Visitor* visitor, const Type* for_type) const {
-  visitor->VisitI16Value(this, for_type);
+
+void DoubleValue::PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                              const fidl_message_header_t* header, std::string_view line_header,
+                              int tabs, int remaining_size, int max_line_size) const {
+  FXL_DCHECK(for_type != nullptr);
+  for_type->PrettyPrint(this, os, colors, header, line_header, tabs, remaining_size, max_line_size);
 }
-template <>
-void NumericValue<int32_t>::Visit(Visitor* visitor, const Type* for_type) const {
-  visitor->VisitI32Value(this, for_type);
-}
-template <>
-void NumericValue<int64_t>::Visit(Visitor* visitor, const Type* for_type) const {
-  visitor->VisitI64Value(this, for_type);
-}
-template <>
-void NumericValue<float>::Visit(Visitor* visitor, const Type* for_type) const {
-  visitor->VisitF32Value(this, for_type);
-}
-template <>
-void NumericValue<double>::Visit(Visitor* visitor, const Type* for_type) const {
-  visitor->VisitF64Value(this, for_type);
+
+void DoubleValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitDoubleValue(this, for_type);
 }
 
 int StringValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {

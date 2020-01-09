@@ -28,12 +28,6 @@ class Encoder : public Visitor {
   void WriteValue(T value) {
     WriteData(reinterpret_cast<uint8_t*>(&value), sizeof(T));
   }
-  template <typename T>
-  void WriteValue(std::optional<T> value) {
-    if (value) {
-      WriteData(reinterpret_cast<uint8_t*>(&(*value)), sizeof(T));
-    }
-  }
 
  private:
   Encoder(bool unions_are_xunions) : unions_are_xunions_(unions_are_xunions) {}
@@ -65,6 +59,8 @@ class Encoder : public Visitor {
   void VisitInvalidValue(const InvalidValue* node, const Type* for_type) override;
   void VisitNullValue(const NullValue* node, const Type* for_type) override;
   void VisitRawValue(const RawValue* node, const Type* for_type) override;
+  void VisitIntegerValue(const IntegerValue* node, const Type* for_type) override;
+  void VisitDoubleValue(const DoubleValue* node, const Type* for_type) override;
   void VisitStringValue(const StringValue* node, const Type* for_type) override;
   void VisitBoolValue(const BoolValue* node, const Type* for_type) override;
   void VisitStructValue(const StructValue* node, const Type* for_type) override;
@@ -74,16 +70,6 @@ class Encoder : public Visitor {
   void VisitEnumValue(const EnumValue* node, const Type* for_type) override;
   void VisitBitsValue(const BitsValue* node, const Type* for_type) override;
   void VisitHandleValue(const HandleValue* node, const Type* for_type) override;
-  void VisitU8Value(const NumericValue<uint8_t>* node, const Type* for_type) override;
-  void VisitU16Value(const NumericValue<uint16_t>* node, const Type* for_type) override;
-  void VisitU32Value(const NumericValue<uint32_t>* node, const Type* for_type) override;
-  void VisitU64Value(const NumericValue<uint64_t>* node, const Type* for_type) override;
-  void VisitI8Value(const NumericValue<int8_t>* node, const Type* for_type) override;
-  void VisitI16Value(const NumericValue<int16_t>* node, const Type* for_type) override;
-  void VisitI32Value(const NumericValue<int32_t>* node, const Type* for_type) override;
-  void VisitI64Value(const NumericValue<int64_t>* node, const Type* for_type) override;
-  void VisitF32Value(const NumericValue<float>* node, const Type* for_type) override;
-  void VisitF64Value(const NumericValue<double>* node, const Type* for_type) override;
 
   const bool unions_are_xunions_;
   std::vector<uint8_t> bytes_;

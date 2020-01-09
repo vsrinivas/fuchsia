@@ -32,6 +32,15 @@ class Value {
   // This is used to eventually display a vector of uint8_t values as a string.
   virtual uint8_t GetUint8Value() const { return 0; }
 
+  // Gets the integer value of the value. Returns false if the node can't compute an integer value.
+  // For floating point values, the floating point value is converted to the nearest integer
+  // value.
+  virtual bool GetIntegerValue(uint64_t* absolute, bool* negative) const { return false; }
+
+  // Gets the floating point value of the value. Returns false if the node can't compute a floating
+  // point value. For integer values, we can lost precision during the conversion.
+  virtual bool GetDoubleValue(double* result) const { return false; }
+
   // Returns the size needed to display the value. If the needed size is
   // greater than |remaining_size|, the return value can be anything greater
   // than |remaining_size| and the only useful information is that the value
@@ -109,42 +118,75 @@ class RawValue : public Value {
   const std::vector<uint8_t> data_;
 };
 
-// All numeric values (integer and floating point numbers).
-template <typename T>
-class NumericValue : public Value {
+class IntegerValue : public Value {
  public:
-  explicit NumericValue(std::optional<T> value = std::nullopt) : value_(std::move(value)) {}
-  explicit NumericValue(const T* value)
-      : NumericValue(value ? std::optional(*value) : std::nullopt) {}
+  IntegerValue(uint64_t absolute_value, bool negative)
+      : absolute_value_(absolute_value), negative_(negative) {}
 
-  std::optional<T> value() const { return value_; }
+  uint64_t absolute_value() const { return absolute_value_; }
+  bool negative() const { return negative_; }
 
-  uint8_t GetUint8Value() const override {
-    return (sizeof(T) == 1 && value_) ? static_cast<uint8_t>(*value_) : 0;
+  uint8_t GetUint8Value() const override;
+
+  bool GetIntegerValue(uint64_t* absolute, bool* negative) const override {
+    *absolute = absolute_value_;
+    *negative = negative_;
+    return true;
   }
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override {
-    if (value_) {
-      return std::to_string(*value_).size();
-    } else {
-      return 7;  // length of "invalid"
+  bool GetDoubleValue(double* result) const override {
+    *result = absolute_value_;
+    if (negative_) {
+      *result = -(*result);
     }
+    return true;
   }
+
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
                    const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override {
-    if (value_) {
-      os << colors.blue << std::to_string(*value_) << colors.reset;
-    } else {
-      os << colors.red << "invalid" << colors.reset;
-    }
-  }
+                   int remaining_size, int max_line_size) const override;
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
-  std::optional<T> value_;
+  const uint64_t absolute_value_;
+  const bool negative_;
+};
+
+class DoubleValue : public Value {
+ public:
+  explicit DoubleValue(double value) : value_(value) {}
+
+  double value() const { return value_; }
+
+  bool GetIntegerValue(uint64_t* absolute, bool* negative) const override {
+    if (value_ < 0) {
+      *absolute = static_cast<uint64_t>(-value_);
+      *negative = true;
+    } else {
+      *absolute = static_cast<uint64_t>(value_);
+      *negative = false;
+    }
+    return true;
+  }
+
+  bool GetDoubleValue(double* result) const override {
+    *result = value_;
+    return true;
+  }
+
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
+
+  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override;
+
+  void Visit(Visitor* visitor, const Type* for_type) const override;
+
+ private:
+  const double value_;
 };
 
 // A string value.

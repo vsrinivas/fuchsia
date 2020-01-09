@@ -90,6 +90,13 @@ class Type {
   static std::unique_ptr<Type> TypeFromIdentifier(LibraryLoader* loader,
                                                   const rapidjson::Value& type, size_t inline_size);
 
+  // Pretty prints the value for this type. This is used to print numerical values.
+  virtual void PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                           const fidl_message_header_t* header, std::string_view line_header,
+                           int tabs, int remaining_size, int max_line_size) const {
+    os << colors.red << "invalid" << colors.reset;
+  }
+
   // Whether this is a nullable type.
   virtual bool Nullable() const { return false; }
 
@@ -162,7 +169,21 @@ class NumericType : public Type {
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
     auto got = decoder->GetAddress(offset, sizeof(T));
-    return std::make_unique<NumericValue<T>>(reinterpret_cast<const T*>(got));
+    if (got == nullptr) {
+      return std::make_unique<InvalidValue>();
+    }
+    return std::make_unique<DoubleValue>(*reinterpret_cast<const T*>(got));
+  }
+
+  void PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override {
+    double result;
+    if (!value->GetDoubleValue(&result)) {
+      os << colors.red << "invalid" << colors.reset;
+    } else {
+      os << colors.blue << std::to_string(result) << colors.reset;
+    }
   }
 };
 
@@ -189,6 +210,35 @@ class IntegralType : public NumericType<T> {
     T rhs;
     input >> rhs;
     return (lhs & rhs) == rhs;
+  }
+
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
+    auto got = decoder->GetAddress(offset, sizeof(T));
+    if (got == nullptr) {
+      return std::make_unique<InvalidValue>();
+    }
+    T value = *reinterpret_cast<const T*>(got);
+    if (value < 0) {
+      int64_t tmp = value;
+      return std::make_unique<IntegerValue>(-tmp, true);
+    }
+    return std::make_unique<IntegerValue>(value, false);
+  }
+
+  void PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                   int remaining_size, int max_line_size) const override {
+    uint64_t absolute;
+    bool negative;
+    if (!value->GetIntegerValue(&absolute, &negative)) {
+      os << colors.red << "invalid" << colors.reset;
+    } else {
+      os << colors.blue;
+      if (negative) {
+        os << '-';
+      }
+      os << std::to_string(absolute) << colors.reset;
+    }
   }
 };
 

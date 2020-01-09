@@ -23,13 +23,19 @@ class Visitor {
   virtual void VisitRawValue(const RawValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
-  virtual void VisitStructValue(const StructValue* node, const Type* for_type) {
+  virtual void VisitIntegerValue(const IntegerValue* node, const Type* for_type) {
+    VisitValue(node, for_type);
+  }
+  virtual void VisitDoubleValue(const DoubleValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
   virtual void VisitStringValue(const StringValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
   virtual void VisitBoolValue(const BoolValue* node, const Type* for_type) {
+    VisitValue(node, for_type);
+  }
+  virtual void VisitStructValue(const StructValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
   virtual void VisitTableValue(const TableValue* node, const Type* for_type) {
@@ -51,43 +57,12 @@ class Visitor {
     VisitValue(node, for_type);
   }
 
-  virtual void VisitU8Value(const NumericValue<uint8_t>* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-  virtual void VisitU16Value(const NumericValue<uint16_t>* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-  virtual void VisitU32Value(const NumericValue<uint32_t>* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-  virtual void VisitU64Value(const NumericValue<uint64_t>* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-  virtual void VisitI8Value(const NumericValue<int8_t>* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-  virtual void VisitI16Value(const NumericValue<int16_t>* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-  virtual void VisitI32Value(const NumericValue<int32_t>* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-  virtual void VisitI64Value(const NumericValue<int64_t>* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-  virtual void VisitF32Value(const NumericValue<float>* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-  virtual void VisitF64Value(const NumericValue<double>* node, const Type* for_type) {
-    VisitValue(node, for_type);
-  }
-
   friend class Value;
   friend class InvalidValue;
   friend class NullValue;
   friend class RawValue;
-  template <typename T>
-  friend class NumericValue;
+  friend class IntegerValue;
+  friend class DoubleValue;
   friend class StringValue;
   friend class BoolValue;
   friend class StructValue;

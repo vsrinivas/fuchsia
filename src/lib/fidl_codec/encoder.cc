@@ -134,6 +134,28 @@ void Encoder::VisitNullValue(const NullValue* node, const Type* for_type) {
 
 void Encoder::VisitRawValue(const RawValue* node, const Type* for_type) { WriteData(node->data()); }
 
+void Encoder::VisitIntegerValue(const IntegerValue* node, const Type* for_type) {
+  FXL_DCHECK(for_type != nullptr);
+  size_t size = for_type->InlineSize(unions_are_xunions_);
+  uint64_t value = node->absolute_value();
+  if (node->negative()) {
+    value = -value;
+  }
+  WriteData(reinterpret_cast<const uint8_t*>(&value), size);
+}
+
+void Encoder::VisitDoubleValue(const DoubleValue* node, const Type* for_type) {
+  FXL_DCHECK(for_type != nullptr);
+  size_t size = for_type->InlineSize(unions_are_xunions_);
+  if (size == sizeof(float)) {
+    float value = node->value();
+    WriteData(reinterpret_cast<const uint8_t*>(&value), size);
+  } else {
+    double value = node->value();
+    WriteData(reinterpret_cast<const uint8_t*>(&value), size);
+  }
+}
+
 void Encoder::VisitStringValue(const StringValue* node, const Type* for_type) {
   WriteValue<uint64_t>(node->string().size());
   WriteValue<uint64_t>(UINTPTR_MAX);
@@ -229,46 +251,6 @@ void Encoder::VisitHandleValue(const HandleValue* node, const Type* for_type) {
     WriteValue<uint32_t>(FIDL_HANDLE_PRESENT);
     handles_.push_back(node->handle());
   }
-}
-
-void Encoder::VisitU8Value(const NumericValue<uint8_t>* node, const Type* for_type) {
-  WriteValue(node->value());
-}
-
-void Encoder::VisitU16Value(const NumericValue<uint16_t>* node, const Type* for_type) {
-  WriteValue(node->value());
-}
-
-void Encoder::VisitU32Value(const NumericValue<uint32_t>* node, const Type* for_type) {
-  WriteValue(node->value());
-}
-
-void Encoder::VisitU64Value(const NumericValue<uint64_t>* node, const Type* for_type) {
-  WriteValue(node->value());
-}
-
-void Encoder::VisitI8Value(const NumericValue<int8_t>* node, const Type* for_type) {
-  WriteValue(node->value());
-}
-
-void Encoder::VisitI16Value(const NumericValue<int16_t>* node, const Type* for_type) {
-  WriteValue(node->value());
-}
-
-void Encoder::VisitI32Value(const NumericValue<int32_t>* node, const Type* for_type) {
-  WriteValue(node->value());
-}
-
-void Encoder::VisitI64Value(const NumericValue<int64_t>* node, const Type* for_type) {
-  WriteValue(node->value());
-}
-
-void Encoder::VisitF32Value(const NumericValue<float>* node, const Type* for_type) {
-  WriteValue(node->value());
-}
-
-void Encoder::VisitF64Value(const NumericValue<double>* node, const Type* for_type) {
-  WriteValue(node->value());
 }
 
 }  // namespace fidl_codec
