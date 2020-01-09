@@ -25,19 +25,14 @@ FsHostMetrics MakeMetrics() {
 class FilesystemMounterHarness : public zxtest::Test {
  public:
   void SetUp() override {
-    ASSERT_OK(zx::event::create(0, &fshost_event_));
-    zx::event event_clone;
-    ASSERT_OK(fshost_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_clone));
     zx::channel dir_request;
-    ASSERT_OK(FsManager::Create(std::move(event_clone), nullptr, std::move(dir_request),
-                                MakeMetrics(), &manager_));
+    ASSERT_OK(FsManager::Create(nullptr, std::move(dir_request), MakeMetrics(), &manager_));
     manager_->WatchExit();
   }
 
   std::unique_ptr<FsManager> TakeManager() { return std::move(manager_); }
 
  private:
-  zx::event fshost_event_;
   std::unique_ptr<FsManager> manager_;
 };
 

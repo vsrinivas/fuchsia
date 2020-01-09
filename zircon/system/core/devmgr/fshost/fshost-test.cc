@@ -100,16 +100,15 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
 
 // Test that the manager responds to external signals for unmounting.
 TEST(FsManagerTestCase, WatchExit) {
-  zx::event event, controller;
-  ASSERT_OK(zx::event::create(0u, &event));
-  ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
-
   std::unique_ptr<devmgr::FsManager> manager;
   zx::channel dir_request;
-  zx_status_t status = devmgr::FsManager::Create(std::move(event), nullptr, std::move(dir_request),
+  zx_status_t status = devmgr::FsManager::Create(nullptr, std::move(dir_request),
                                                  devmgr::FsHostMetrics(MakeCollector()), &manager);
   ASSERT_OK(status);
   manager->WatchExit();
+
+  zx::event controller;
+  ASSERT_OK(manager->event()->duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
 
   // The manager should not have exited yet: No one has asked for an unmount.
   zx_signals_t pending;

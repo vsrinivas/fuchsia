@@ -4,6 +4,7 @@
 
 source_set("fshost-registry") {
   sources = [
+    "admin-server.cc",
     "fs-manager.cc",
     "registry.cc",
     "registry_vnode.cc",
@@ -80,6 +81,7 @@ source_set("block-watcher") {
     "$zx/system/ulib/boot-args",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fs-management",
@@ -96,9 +98,7 @@ source_set("block-watcher") {
 }
 
 zx_executable("fshost") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     ":block-watcher",
     ":fshost-registry",
@@ -120,6 +120,7 @@ zx_executable("fshost") {
 zx_test("fshost-test") {
   test_group = "ddk"
   sources = [
+    "delayed-outdir-test.cc",
     "fshost-boot-args-test.cc",
     "fshost-test.cc",
   ]
@@ -139,9 +140,7 @@ zx_test("fshost-test") {
 
 zx_test("fshost-metrics-test") {
   test_group = "ddk"
-  sources = [
-    "metrics-test.cc",
-  ]
+  sources = [ "metrics-test.cc" ]
   deps = [
     ":metrics",
     "$zx/system/ulib/async-testing",

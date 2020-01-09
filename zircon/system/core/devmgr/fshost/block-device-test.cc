@@ -39,14 +39,9 @@ FsHostMetrics MakeMetrics(cobalt_client::InMemoryLogger** logger) {
 class BlockDeviceHarness : public zxtest::Test {
  public:
   void SetUp() override {
-    zx::event event;
-    ASSERT_OK(zx::event::create(0, &event));
-    ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_));
-
     // Initialize FilesystemMounter.
     zx::channel dir_request;
-    ASSERT_OK(FsManager::Create(std::move(event), nullptr, std::move(dir_request),
-                                MakeMetrics(&logger_), &manager_));
+    ASSERT_OK(FsManager::Create(nullptr, std::move(dir_request), MakeMetrics(&logger_), &manager_));
 
     // Fshost really likes mounting filesystems at "/fs".
     // Let's make that available in our namespace.
@@ -103,7 +98,6 @@ class BlockDeviceHarness : public zxtest::Test {
   ramdisk_client_t* ramdisk_ = nullptr;
 
  private:
-  zx::event event_;
   std::unique_ptr<FsManager> manager_;
   IsolatedDevmgr devmgr_;
   fbl::unique_fd fd_;

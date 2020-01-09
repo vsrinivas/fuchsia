@@ -22,27 +22,32 @@
 
 // Used for fshost signals.
 #include "../shared/fdio.h"
+#include "admin-server.h"
+#include "delayed-outdir.h"
 #include "fshost-boot-args.h"
 #include "metrics.h"
 #include "registry.h"
 
 namespace devmgr {
 
+class AdminServer;
+
 // FsManager owns multiple sub-filesystems, managing them within a top-level
 // in-memory filesystem.
 class FsManager {
  public:
-  static zx_status_t Create(zx::event fshost_event, loader_service_t* loader_svc,
-                            zx::channel dir_request, FsHostMetrics metrics,
-                            std::unique_ptr<FsManager>* out);
+  static zx_status_t Create(loader_service_t* loader_svc, zx::channel dir_request,
+                            FsHostMetrics metrics, std::unique_ptr<FsManager>* out);
 
   // Set of options for logging FsHost metrics with cobalt service.
   static cobalt_client::CollectorOptions CollectorOptions();
 
   ~FsManager();
 
-  // Signals that "/system" has been mounted.
-  void FuchsiaStart() const { event_.signal(0, FSHOST_SIGNAL_READY); }
+  // TODO(fxb/39588): delete this
+  // Starts servicing the delayed portion of the outgoing directory, called once
+  // "/system" has been mounted.
+  void FuchsiaStart() { delayed_outdir_.Start(); }
 
   // Pins a handle to a remote filesystem on one of the paths specified
   // by |kMountPoints|.
@@ -60,6 +65,10 @@ class FsManager {
   // Sets FSHOST_SIGNAL_EXIT_DONE when unmounting is complete.
   void WatchExit();
 
+  // Signals FSHOST_SIGNAL_EXIT on |event_|, causing filesystems to be shutdown
+  // and unmounted. Calls |callback| when this is complete.
+  void Shutdown(fit::function<void(zx_status_t)> callback);
+
   // Returns a pointer to the |FsHostMetrics| instance.
   FsHostMetrics* mutable_metrics() { return &metrics_; }
 
@@ -68,13 +77,15 @@ class FsManager {
 
   devmgr::FshostBootArgs* boot_args() { return &boot_args_; }
 
+  zx::event* event() { return &event_; }
+
  private:
-  FsManager(zx::event fshost_event, FsHostMetrics metrics);
+  FsManager(FsHostMetrics metrics);
   zx_status_t SetupOutgoingDirectory(zx::channel dir_request, loader_service_t* loader_svc);
   zx_status_t Initialize();
 
   // Event on which "FSHOST_SIGNAL_XXX" signals are set.
-  // Communicates state changes to/from devmgr.
+  // Communicates state changes internal to FsManager.
   zx::event event_;
 
   static constexpr const char* kMountPoints[] = {"/bin",     "/data", "/volume", "/system",
@@ -102,6 +113,13 @@ class FsManager {
 
   // Used to lookup configuration options stored in fuchsia.boot.Arguments
   devmgr::FshostBootArgs boot_args_;
+
+  // TODO(fxb/39588): delete this
+  // A RemoteDir in the outgoing directory that ignores requests until Start is
+  // called on it.
+  DelayedOutdir delayed_outdir_;
+
+  std::unique_ptr<async::Wait> shutdown_waiter_;
 };
 
 }  // namespace devmgr

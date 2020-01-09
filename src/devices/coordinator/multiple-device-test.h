@@ -5,9 +5,57 @@
 #ifndef SRC_DEVICES_COORDINATOR_MULTIPLE_DEVICE_TEST_H_
 #define SRC_DEVICES_COORDINATOR_MULTIPLE_DEVICE_TEST_H_
 
+#include <fuchsia/fshost/llcpp/fidl.h>
+#include <lib/fidl-async/cpp/bind.h>
+
 #include <zxtest/zxtest.h>
 
 #include "coordinator-test-utils.h"
+
+class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interface {
+ public:
+  MockFshostAdminServer() : has_been_shutdown_(false) {}
+
+  std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> CreateClient(
+      async_dispatcher* dispatcher) {
+    zx::channel client, server;
+    zx_status_t status = zx::channel::create(0, &client, &server);
+    if (status != ZX_OK) {
+      printf(
+          "devcoordinator: failed to create client for mock fshost admin, failed to create "
+          "channel: %s\n",
+          zx_status_get_string(status));
+      return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
+    }
+
+    status = fidl::Bind(dispatcher, std::move(server), this);
+    if (status != ZX_OK) {
+      printf("devcoordinator: failed to create client for mock fshost admin, failed to bind: %s\n",
+             zx_status_get_string(status));
+      return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
+    }
+
+    return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(std::move(client));
+  }
+
+  void Shutdown(ShutdownCompleter::Sync completer) override {
+    has_been_shutdown_ = true;
+    completer.Reply();
+  }
+
+  bool has_been_shutdown_;
+};
+
+class CoordinatorForTest : public devmgr::Coordinator {
+ public:
+  CoordinatorForTest(devmgr::CoordinatorConfig config) : devmgr::Coordinator(std::move(config)) {}
+
+  void SetFshostAdminClient(std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> client) {
+    fshost_admin_client_ = std::move(client);
+  }
+
+  MockFshostAdminServer admin_server_;
+};
 
 struct DeviceState {
   // The representation in the coordinator of the device
@@ -25,7 +73,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
   async::Loop* coordinator_loop() { return &coordinator_loop_; }
   bool coordinator_loop_thread_running() { return coordinator_loop_thread_running_; }
   void set_coordinator_loop_thread_running(bool value) { coordinator_loop_thread_running_ = value; }
-  devmgr::Coordinator* coordinator() { return &coordinator_; }
+  CoordinatorForTest* coordinator() { return &coordinator_; }
 
   devmgr::Devhost* devhost() { return &devhost_; }
   const zx::channel& devhost_remote() { return devhost_remote_; }
@@ -105,7 +153,13 @@ class MultipleDeviceTestCase : public zxtest::Test {
   async::Loop coordinator_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   bool coordinator_loop_thread_running_ = false;
   devmgr::BootArgs boot_args_;
-  devmgr::Coordinator coordinator_{DefaultConfig(coordinator_loop_.dispatcher(), &boot_args_)};
+
+  // The admin server needs its own loop/thread, because if we schedule the
+  // admin server on coordinator_loop then coordinator will deadlock waiting
+  // for itself to respond to its shutdown request.
+  async::Loop admin_server_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+
+  CoordinatorForTest coordinator_{DefaultConfig(coordinator_loop_.dispatcher(), &boot_args_)};
 
   // A list of all devices that were added during this test, and their
   // channels.  These exist to keep them alive until the test is over.

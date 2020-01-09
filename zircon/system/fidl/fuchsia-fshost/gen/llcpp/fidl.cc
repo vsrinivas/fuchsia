@@ -2190,6 +2190,125 @@ void Filesystems::SetTransactionHeaderFor::WatchResponse(const ::fidl::DecodedMe
 namespace {
 
 [[maybe_unused]]
+constexpr uint64_t kAdmin_Shutdown_Ordinal = 0x2e0baed000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kAdmin_Shutdown_GenOrdinal = 0x7b8ebed9dd90dfbdlu;
+extern "C" const fidl_type_t fuchsia_fshost_AdminShutdownRequestTable;
+extern "C" const fidl_type_t fuchsia_fshost_AdminShutdownResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_AdminShutdownResponseTable;
+
+}  // namespace
+template <>
+Admin::ResultOf::Shutdown_Impl<Admin::ShutdownResponse>::Shutdown_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ShutdownRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, ShutdownRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ShutdownRequest));
+  ::fidl::DecodedMessage<ShutdownRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Admin::InPlace::Shutdown(std::move(_client_end), Super::response_buffer()));
+}
+
+Admin::ResultOf::Shutdown Admin::SyncClient::Shutdown() {
+    return ResultOf::Shutdown(::zx::unowned_channel(this->channel_));
+}
+
+Admin::ResultOf::Shutdown Admin::Call::Shutdown(::zx::unowned_channel _client_end) {
+  return ResultOf::Shutdown(std::move(_client_end));
+}
+
+::fidl::DecodeResult<Admin::ShutdownResponse> Admin::InPlace::Shutdown(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(ShutdownRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<ShutdownRequest> params(std::move(_request_buffer));
+  Admin::SetTransactionHeaderFor::ShutdownRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Admin::ShutdownResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<ShutdownRequest, ShutdownResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Admin::ShutdownResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+bool Admin::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
+  switch (hdr->ordinal) {
+    case kAdmin_Shutdown_Ordinal:
+    case kAdmin_Shutdown_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<ShutdownRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->Shutdown(
+          Interface::ShutdownCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool Admin::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void Admin::Interface::ShutdownCompleterBase::Reply() {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ShutdownResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<ShutdownResponse*>(_write_bytes);
+  Admin::SetTransactionHeaderFor::ShutdownResponse(
+      ::fidl::DecodedMessage<ShutdownResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ShutdownResponse::PrimarySize,
+              ShutdownResponse::PrimarySize)));
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ShutdownResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ShutdownResponse>(std::move(_response_bytes)));
+}
+
+
+
+void Admin::SetTransactionHeaderFor::ShutdownRequest(const ::fidl::DecodedMessage<Admin::ShutdownRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kAdmin_Shutdown_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void Admin::SetTransactionHeaderFor::ShutdownResponse(const ::fidl::DecodedMessage<Admin::ShutdownResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kAdmin_Shutdown_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+namespace {
+
+[[maybe_unused]]
 constexpr uint64_t kRegistry_RegisterFilesystem_Ordinal = 0x459f2e5100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kRegistry_RegisterFilesystem_GenOrdinal = 0x3dcc95b02284c9a2lu;

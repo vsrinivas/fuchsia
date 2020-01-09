@@ -222,11 +222,6 @@ int main(int argc, char** argv) {
     fprintf(stderr, "devcoordinator: failed to create devhost job: %d\n", status);
     return 1;
   }
-  status = zx::event::create(0, &config.fshost_event);
-  if (status != ZX_OK) {
-    fprintf(stderr, "devcoordinator: failed to create fshost event: %d\n", status);
-    return 1;
-  }
 
   zx_handle_t lowmem_event;
   status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_LOW_MEMORY, &lowmem_event);
@@ -365,7 +360,8 @@ int main(int argc, char** argv) {
     coordinator.set_loader_service_connector([&system_instance](zx::channel* c) {
       zx_status_t status = system_instance.clone_fshost_ldsvc(c);
       if (status != ZX_OK) {
-        fprintf(stderr, "devcoordinator: failed to clone fshost loader for devhost: %d\n", status);
+        fprintf(stderr, "devcoordinator: failed to clone fshost loader for devhost: %s\n",
+                zx_status_get_string(status));
       }
       return status;
     });

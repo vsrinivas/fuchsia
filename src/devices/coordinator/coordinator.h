@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_COORDINATOR_COORDINATOR_H_
 #define SRC_DEVICES_COORDINATOR_COORDINATOR_H_
 
+#include <fuchsia/fshost/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/boot-args/boot-args.h>
 #include <lib/svc/outgoing.h>
@@ -157,8 +158,6 @@ struct CoordinatorConfig {
   zx::resource root_resource;
   // Job for all devhosts.
   zx::job devhost_job;
-  // Event that controls the fshost.
-  zx::event fshost_event;
   // Event that is signaled by the kernel in OOM situation.
   zx::event lowmem_event;
   // Async dispatcher for the coordinator.
@@ -274,7 +273,6 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   void DumpState(VmoWriter* vmo) const;
 
   const zx::resource& root_resource() const { return config_.root_resource; }
-  const zx::event& fshost_event() const { return config_.fshost_event; }
   async_dispatcher_t* dispatcher() const { return config_.dispatcher; }
   const devmgr::BootArgs& boot_args() const { return *config_.boot_args; }
   bool disable_netsvc() const { return config_.disable_netsvc; }
@@ -326,6 +324,9 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
+
+ protected:
+  std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> fshost_admin_client_;
 
  private:
   CoordinatorConfig config_;
@@ -405,6 +406,13 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   zx_status_t GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                                  size_t buflen, size_t* size);
   void InitOutgoingServices();
+
+  // Shut down all filesystems (and fshost itself) by calling
+  // fuchsia.fshost.Admin.Shutdown(). Note that this is called from multiple
+  // different locations; during suspension, and in a low-memory situation.
+  // Currently, both of these calls happen on the same dispatcher thread, but
+  // consider thread safety when refactoring.
+  void ShutdownFilesystems();
 };
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,

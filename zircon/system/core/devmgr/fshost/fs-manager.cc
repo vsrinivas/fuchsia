@@ -5,6 +5,7 @@
 #include "fs-manager.h"
 
 #include <fcntl.h>
+#include <fuchsia/fshost/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -47,13 +48,11 @@ cobalt_client::CollectorOptions FsManager::CollectorOptions() {
   return options;
 }
 
-FsManager::FsManager(zx::event fshost_event, FsHostMetrics metrics)
-    : event_(std::move(fshost_event)),
-      global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
+FsManager::FsManager(FsHostMetrics metrics)
+    : global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
       outgoing_vfs_(fs::ManagedVfs(global_loop_->dispatcher())),
       registry_(global_loop_.get()),
-      metrics_(std::move(metrics)),
-      boot_args_() {
+      metrics_(std::move(metrics)) {
   ZX_ASSERT(global_root_ == nullptr);
 }
 
@@ -67,11 +66,9 @@ FsManager::~FsManager() {
   }
 }
 
-zx_status_t FsManager::Create(zx::event fshost_event, loader_service_t* loader_svc,
-                              zx::channel dir_request, FsHostMetrics metrics,
-                              std::unique_ptr<FsManager>* out) {
-  auto fs_manager =
-      std::unique_ptr<FsManager>(new FsManager(std::move(fshost_event), std::move(metrics)));
+zx_status_t FsManager::Create(loader_service_t* loader_svc, zx::channel dir_request,
+                              FsHostMetrics metrics, std::unique_ptr<FsManager>* out) {
+  auto fs_manager = std::unique_ptr<FsManager>(new FsManager(std::move(metrics)));
   zx_status_t status = fs_manager->Initialize();
   if (status != ZX_OK) {
     return status;
@@ -98,7 +95,7 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
   // into this VFS or by pushing the services in this directory into the
   // registry.
 
-  // Add loader services to the vfs
+  // Add loader and admin services to the vfs
   auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   // This service name is breaking the convention whereby the directory entry
   // name matches the protocol name. This is an implementation of
@@ -113,6 +110,9 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
                       }
                       return status;
                     }));
+  svc_dir->AddEntry(llcpp::fuchsia::fshost::Admin::Name,
+                    AdminServer::Create(this, global_loop_->dispatcher()));
+
   outgoing_dir->AddEntry("svc", std::move(svc_dir));
 
   // Add /fs to the outgoing vfs
@@ -143,6 +143,21 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
   }
   outgoing_dir->AddEntry("fs-manager-svc",
                          fbl::MakeRefCounted<fs::RemoteDir>(std::move(services_client)));
+
+  // TODO(fxb/39588): delete this
+  // Add the delayed directory
+  zx::channel filesystems_client_2, filesystems_server_2;
+  status = zx::channel::create(0, &filesystems_client_2, &filesystems_server_2);
+  if (status != ZX_OK) {
+    printf("fshost: failed to create channel\n");
+    return status;
+  }
+  status = this->ServeRoot(std::move(filesystems_server_2));
+  if (status != ZX_OK) {
+    printf("fshost: cannot serve root filesystem\n");
+    return status;
+  }
+  outgoing_dir->AddEntry("delayed", delayed_outdir_.Initialize(std::move(filesystems_client_2)));
 
   // Run the outgoing directory
   outgoing_vfs_.ServeDirectory(outgoing_dir, std::move(dir_request));
@@ -177,6 +192,12 @@ zx_status_t FsManager::Initialize() {
     mount_nodes[n] = std::move(open_result.ok().vnode);
   }
 
+  status = zx::event::create(0, &event_);
+  if (status != ZX_OK) {
+    fprintf(stderr, "fshost: failed to create fs-manager event: %d\n", status);
+    return status;
+  }
+
   global_loop_->StartThread("root-dispatcher");
   root_vfs_->SetDispatcher(global_loop_->dispatcher());
   return ZX_OK;
@@ -203,8 +224,10 @@ zx_status_t FsManager::ServeRoot(zx::channel server) {
 }
 
 void FsManager::WatchExit() {
+  printf("fshost: watching for exit\n");
   global_shutdown_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
                                       zx_status_t status, const zx_packet_signal_t* signal) {
+    printf("fshost: exit signal detected\n");
     root_vfs_->UninstallAll(zx::time::infinite());
     event_.signal(0, FSHOST_SIGNAL_EXIT_DONE);
   });
@@ -212,6 +235,20 @@ void FsManager::WatchExit() {
   global_shutdown_.set_object(event_.get());
   global_shutdown_.set_trigger(FSHOST_SIGNAL_EXIT);
   global_shutdown_.Begin(global_loop_->dispatcher());
+}
+
+void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
+  zx_status_t status = event_.signal(0, FSHOST_SIGNAL_EXIT);
+  if (status != ZX_OK) {
+    printf("fshost: error signalling event: %s\n", zx_status_get_string(status));
+    return;
+  }
+
+  shutdown_waiter_ = std::make_unique<async::Wait>(event_.get(), FSHOST_SIGNAL_EXIT_DONE);
+  shutdown_waiter_->set_handler(
+      [callback = std::move(callback)](async_dispatcher_t*, async::Wait*, zx_status_t status,
+                                       /*signal*/ const zx_packet_signal_t*) { callback(status); });
+  shutdown_waiter_->Begin(global_loop_->dispatcher());
 }
 
 }  // namespace devmgr

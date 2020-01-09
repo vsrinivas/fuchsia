@@ -64,26 +64,23 @@ namespace {
 constexpr char kBootFirmwarePath[] = "/boot/lib/firmware";
 constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
+constexpr char kFshostAdminPath[] = "/fshost/svc/fuchsia.fshost.Admin";
 
-// Tells VFS to exit by shutting down the fshost. Note that this is called from
-// multiple different locations; during suspension, and in a low-memory
-// situation. Currently, both of these calls happen on the same dispatcher
-// thread, but consider thread safety when refactoring.
-void vfs_exit(const zx::event& fshost_event) {
-  zx_status_t status;
-  if ((status = fshost_event.signal(0, FSHOST_SIGNAL_EXIT)) != ZX_OK) {
-    printf("devcoordinator: Failed to signal VFS exit\n");
-    return;
+std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> ConnectToFshostAdminServer() {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    printf("devcoordinator: Failed connect to fshost admin, failed to create channel: %s\n",
+           zx_status_get_string(status));
+    return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
   }
-  // We used to wait here with a 60 seconds timeout but the storage stack might
-  // need more time to flush all the writeback buffers. See bug 38103 for details.
-  if ((status = fshost_event.wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::time::infinite(), nullptr)) !=
-      ZX_OK) {
-    printf("devcoordinator: Failed to wait for VFS exit completion\n");
-    return;
+  status = fdio_service_connect(kFshostAdminPath, remote.release());
+  if (status != ZX_OK) {
+    printf("devcoordinator: Failed to connect to fuchsia.fshost.Admin: %s\n",
+           zx_status_get_string(status));
+    return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(zx::channel());
   }
-
-  printf("devcoordinator: Successfully waited for VFS exit completion\n");
+  return std::make_unique<llcpp::fuchsia::fshost::Admin::SyncClient>(std::move(local));
 }
 
 void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
@@ -128,6 +125,21 @@ bool Coordinator::InSuspend() const {
 
 bool Coordinator::InResume() const {
   return (resume_context().flags() == ResumeContext::Flags::kResume);
+}
+
+void Coordinator::ShutdownFilesystems() {
+  // TODO(dgonyeo): we should connect to this service eagerly when Coordinator
+  // is created, since we want to do as little work here as possible
+  if (fshost_admin_client_.get() == nullptr) {
+    fshost_admin_client_ = ConnectToFshostAdminServer();
+  }
+  auto result = fshost_admin_client_->Shutdown();
+  if (result.status() != ZX_OK) {
+    printf("devcoordinator: Failed to cause VFS exit: %s\n", zx_status_get_string(result.status()));
+    return;
+  }
+
+  printf("devcoordinator: Successfully waited for VFS exit completion\n");
 }
 
 zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
@@ -557,11 +569,10 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
   // TODO(fxb/43261): remove |has_init| once device_make_visible() is deprecated.
   bool init_wait_make_visible = invisible && !has_init;
   fbl::RefPtr<Device> dev;
-  zx_status_t status = Device::Create(this, parent, std::move(name_str), std::move(driver_path_str),
-                                      std::move(args_str), protocol_id, std::move(props),
-                                      std::move(coordinator), std::move(device_controller),
-                                      init_wait_make_visible, want_init_task,
-                                      std::move(client_remote), &dev);
+  zx_status_t status = Device::Create(
+      this, parent, std::move(name_str), std::move(driver_path_str), std::move(args_str),
+      protocol_id, std::move(props), std::move(coordinator), std::move(device_controller),
+      init_wait_make_visible, want_init_task, std::move(client_remote), &dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -1278,7 +1289,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
   }
 
   if ((ctx.sflags() & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
-    vfs_exit(fshost_event());
+    this->ShutdownFilesystems();
   }
 
   // The sys device should have a proxy. If not, the system hasn't fully initialized yet and
@@ -1820,7 +1831,7 @@ void Coordinator::InitOutgoingServices() {
 
 void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                              zx_status_t status, const zx_packet_signal_t* signal) {
-  vfs_exit(fshost_event());
+  this->ShutdownFilesystems();
 }
 
 zx_status_t Coordinator::BindOutgoingServices(zx::channel listen_on) {

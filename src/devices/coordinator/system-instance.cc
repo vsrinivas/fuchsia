@@ -468,10 +468,30 @@ void bind_fshost_filesystems(zx::channel fshost_out_dir, zx::channel fshost_serv
       return;
     }
     if ((r = fdio_ns_bind(ns, fstab[n], client.release())) != ZX_OK) {
+      // Some of these may already exist if devcoordinator is run in a test
+      // environment
       printf("devcoordinator: cannot bind %s to namespace: %s\n", fstab[n],
              zx_status_get_string(r));
-      return;
+      continue;
     }
+  }
+
+  zx::channel delayed_system_client, delayed_system_server;
+  if ((r = zx::channel::create(0, &delayed_system_server, &delayed_system_client)) != ZX_OK) {
+    printf("devcoordinator: failed to create channel: %s\n", zx_status_get_string(r));
+    return;
+  }
+  printf("devcoordinator: opening /system-delayed\n");
+  if ((r = fdio_open("/fshost/delayed/fs/system", flags, delayed_system_server.release())) !=
+      ZX_OK) {
+    printf("devcoordinator: cannot open %s: %s\n", "/system-delayed", zx_status_get_string(r));
+    return;
+  }
+  printf("devcoordinator: successfully opened /system-delayed\n");
+  if ((r = fdio_ns_bind(ns, "/system-delayed", delayed_system_client.release())) != ZX_OK) {
+    printf("devcoordinator: cannot bind %s to namespace: %s\n", "/system-delayed",
+           zx_status_get_string(r));
+    return;
   }
 
   r = fdio_open("/fshost/fs-manager-svc", FS_READ_WRITE_DIR_FLAGS, fshost_server.release());
@@ -856,79 +876,56 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
 }
 
 int SystemInstance::FuchsiaStarter(devmgr::Coordinator* coordinator) {
-  bool appmgr_started = false;
-  bool autorun_started = false;
-  bool drivers_loaded = false;
+  // Block this thread until /system-delayed is available. Note that this is
+  // only used for coordinating events between fshost and devcoordinator, the
+  // /system path is used for loading drivers and appmgr below.
+  int fd = open("/system-delayed", O_RDONLY);
+  if (!fd) {
+    fprintf(stderr,
+            "devcoordinator: failed to open /system-delayed! System drivers and autorun:system "
+            "won't work!\n");
+    return 1;
+  }
+  close(fd);
 
-  size_t appmgr_timeout = 40;
-  zx::time deadline = zx::deadline_after(zx::sec(appmgr_timeout));
+  // we're starting the appmgr because /system is present
+  // so we also signal the device coordinator that those
+  // drivers are now loadable
+  coordinator->set_system_available(true);
+  coordinator->ScanSystemDrivers();
 
-  do {
-    zx_status_t status =
-        coordinator->fshost_event().wait_one(FSHOST_SIGNAL_READY, deadline, nullptr);
-    if (status == ZX_ERR_TIMED_OUT) {
-      if (appmgr_server_.is_valid()) {
-        if (coordinator->require_system()) {
-          fprintf(stderr, "devcoordinator: appmgr not launched in %zus, closing appmgr handle\n",
-                  appmgr_timeout);
-        }
-        appmgr_server_.reset();
-      }
-      deadline = zx::time::infinite();
-      continue;
-    }
-    if (status != ZX_OK) {
-      fprintf(stderr, "devcoordinator: error waiting on fuchsia start event: %d\n", status);
-      break;
-    }
-    status = coordinator->fshost_event().signal(FSHOST_SIGNAL_READY, 0);
-    if (status != ZX_OK) {
-      fprintf(stderr, "devcoordinator: error signaling fshost: %d\n", status);
-    }
+  const char* argv_appmgr[] = {
+      "/system/bin/appmgr",
+      nullptr,
+  };
 
-    if (!drivers_loaded) {
-      // we're starting the appmgr because /system is present
-      // so we also signal the device coordinator that those
-      // drivers are now loadable
-      coordinator->set_system_available(true);
-      coordinator->ScanSystemDrivers();
-      drivers_loaded = true;
-    }
+  zx::channel ldsvc;
+  zx_status_t status = clone_fshost_ldsvc(&ldsvc);
+  if (status != ZX_OK) {
+    fprintf(stderr, "devcoordinator: failed to clone fshost loader for appmgr: %d\n", status);
+    return 1;
+  }
 
-    const char* argv_appmgr[] = {
-        "/system/bin/appmgr",
-        nullptr,
-    };
-
-    struct stat s;
-    if (!appmgr_started && stat(argv_appmgr[0], &s) == 0) {
-      zx::channel ldsvc;
-      zx_status_t status = clone_fshost_ldsvc(&ldsvc);
-      if (status != ZX_OK) {
-        fprintf(stderr, "devcoordinator: failed to clone fshost loader for appmgr: %d\n", status);
-        continue;
-      }
-
-      unsigned int appmgr_hnd_count = 0;
-      zx_handle_t appmgr_hnds[2] = {};
-      uint32_t appmgr_ids[2] = {};
-      if (appmgr_server_.is_valid()) {
-        ZX_ASSERT(appmgr_hnd_count < fbl::count_of(appmgr_hnds));
-        appmgr_hnds[appmgr_hnd_count] = appmgr_server_.release();
-        appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
-        appmgr_hnd_count++;
-      }
+  unsigned int appmgr_hnd_count = 0;
+  zx_handle_t appmgr_hnds[2] = {};
+  uint32_t appmgr_ids[2] = {};
+  if (appmgr_server_.is_valid()) {
+    ZX_ASSERT(appmgr_hnd_count < fbl::count_of(appmgr_hnds));
+    appmgr_hnds[appmgr_hnd_count] = appmgr_server_.release();
+    appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
+    appmgr_hnd_count++;
+  }
+  status =
       launcher_.LaunchWithLoader(fuchsia_job_, "appmgr", zx::vmo(), std::move(ldsvc), argv_appmgr,
                                  nullptr, -1, coordinator->root_resource(), appmgr_hnds, appmgr_ids,
                                  appmgr_hnd_count, nullptr, FS_FOR_APPMGR);
-      appmgr_started = true;
-    }
-    if (!autorun_started) {
-      do_autorun("autorun:system", coordinator->boot_args().Get("zircon.autorun.system"),
-                 coordinator->root_resource());
-      autorun_started = true;
-    }
-  } while (!appmgr_started);
+  if (status != ZX_OK) {
+    fprintf(stderr, "devcoordinator: failed to launch appmgr: %s\n", zx_status_get_string(status));
+    return 1;
+  }
+
+  do_autorun("autorun:system", coordinator->boot_args().Get("zircon.autorun.system"),
+             coordinator->root_resource());
   return 0;
 }
 
@@ -955,8 +952,13 @@ void SystemInstance::do_autorun(const char* name, const char* cmd,
       return;
     }
 
-    launcher_.LaunchWithLoader(svc_job_, name, zx::vmo(), std::move(ldsvc), args.argv(), nullptr,
-                               -1, root_resource, nullptr, nullptr, 0, nullptr, FS_ALL);
+    status = launcher_.LaunchWithLoader(svc_job_, name, zx::vmo(), std::move(ldsvc), args.argv(),
+                                        nullptr, -1, root_resource, nullptr, nullptr, 0, nullptr,
+                                        FS_ALL);
+    if (status != ZX_OK) {
+      fprintf(stderr, "devcoordinator: autorun \"%s\" failed: %s\n", name,
+              zx_status_get_string(status));
+    }
   }
 }
 
@@ -972,14 +974,6 @@ zx::channel SystemInstance::fshost_start(devmgr::Coordinator* coordinator,
   if (zx::channel::create(0, &dir_request_local, &dir_request_remote) == ZX_OK) {
     handles[n] = dir_request_remote.release();
     types[n++] = PA_HND(PA_DIRECTORY_REQUEST, 0);
-  }
-
-  // pass fuchsia start event to fshost
-  zx::event fshost_event_duplicate;
-  if (coordinator->fshost_event().duplicate(ZX_RIGHT_SAME_RIGHTS, &fshost_event_duplicate) ==
-      ZX_OK) {
-    handles[n] = fshost_event_duplicate.release();
-    types[n++] = PA_HND(PA_USER1, 0);
   }
 
   // pass VDSO VMOS to fshost

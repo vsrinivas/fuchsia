@@ -71,6 +71,7 @@ source_set("lib") {
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-device-manager:llcpp",
     "//zircon/system/fidl/fuchsia-driver-test:c",
+    "//zircon/system/fidl/fuchsia-fshost:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-power-statecontrol",
     "//zircon/system/fidl/fuchsia-hardware-power-statecontrol:c",
     "//zircon/system/fidl/fuchsia-hardware-power-statecontrol:llcpp",
@@ -84,13 +85,9 @@ source_set("lib") {
 }
 
 executable("coordinator") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 
   defines = [ "_ALL_SOURCE=1" ]
 }
@@ -123,9 +120,7 @@ executable("devcoordinator-test") {
 test_package("coordinator_tests") {
   deprecated_shell = "//build"
 
-  deps = [
-    ":devcoordinator-test",
-  ]
+  deps = [ ":devcoordinator-test" ]
 
   binaries = [
     {

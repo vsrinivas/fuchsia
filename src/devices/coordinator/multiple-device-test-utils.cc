@@ -132,15 +132,19 @@ void MultipleDeviceTestCase::SetUp() {
 
     status = coordinator_.AddDevice(
         coordinator_.sys_device()->proxy(), std::move(local), std::move(local2),
-        nullptr /* props_data */, 0 /* props_count */, "platform-bus", 0, nullptr /* driver_path */,
-        nullptr /* args */, false /* invisible */, false /* has_init */, true /* always_init */,
-        zx::channel() /* client_remote */, &platform_bus_.device);
+        /* props_data */ nullptr, /* props_count */ 0, "platform-bus", 0, /* driver_path */ nullptr,
+        /* args */ nullptr, /* invisible */ false, /* has_init */ false, /* always_init */ true,
+        /* client_remote */ zx::channel(), &platform_bus_.device);
     ASSERT_OK(status);
     coordinator_loop_.RunUntilIdle();
 
     ASSERT_NO_FATAL_FAILURES(CheckInitReceivedAndReply(platform_bus_.controller_remote));
     coordinator_loop()->RunUntilIdle();
   }
+
+  coordinator_.SetFshostAdminClient(
+      coordinator_.admin_server_.CreateClient(admin_server_loop_.dispatcher()));
+  ASSERT_OK(admin_server_loop_.StartThread("mock-admin-server"));
 }
 
 void MultipleDeviceTestCase::TearDown() {
@@ -181,9 +185,9 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent
   ASSERT_OK(status);
 
   status = coordinator_.AddDevice(
-      parent, std::move(local), std::move(local2), nullptr /* props_data */, 0 /* props_count */,
-      name, protocol_id, driver.data() /* driver_path */, nullptr /* args */, invisible, has_init,
-      always_init, zx::channel() /* client_remote */, &state.device);
+      parent, std::move(local), std::move(local2), /* props_data */ nullptr, /* props_count */ 0,
+      name, /* driver_path */ protocol_id, driver.data(), /* args */ nullptr, invisible, has_init,
+      always_init, /* client_remote */ zx::channel(), &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_OK(status);
   coordinator_loop_.RunUntilIdle();
@@ -199,8 +203,8 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent
 
 void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name,
                                        uint32_t protocol_id, fbl::String driver, size_t* index) {
-  AddDevice(parent, name, protocol_id, driver, false /* invisible */, false /* has_init */,
-            true /* reply_to_init */, true /* always_init */, index);
+  AddDevice(parent, name, protocol_id, driver, /* invisible */ false, /* has_init */ false,
+            /* reply_to_init */ true, /* always_init */ true, index);
 }
 
 void MultipleDeviceTestCase::RemoveDevice(size_t device_index) {
@@ -222,44 +226,11 @@ bool MultipleDeviceTestCase::DeviceHasPendingMessages(size_t device_index) {
 void MultipleDeviceTestCase::DoSuspend(uint32_t flags,
                                        fit::function<void(uint32_t flags)> suspend_cb) {
   const bool vfs_exit_expected = (flags != DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
-  if (vfs_exit_expected) {
-    zx::unowned_event event(coordinator()->fshost_event());
-    auto thrd_func = [](void* ctx) -> int {
-      zx::unowned_event event(*static_cast<zx::unowned_event*>(ctx));
-      if (event->wait_one(FSHOST_SIGNAL_EXIT, zx::time::infinite(), nullptr) != ZX_OK) {
-        return false;
-      }
-      if (event->signal(0, FSHOST_SIGNAL_EXIT_DONE) != ZX_OK) {
-        return false;
-      }
-      return true;
-    };
-
-    thrd_t fshost_thrd;
-    ASSERT_EQ(thrd_create(&fshost_thrd, thrd_func, &event), thrd_success);
-
-    suspend_cb(flags);
-    if (!coordinator_loop_thread_running()) {
-      coordinator_loop()->RunUntilIdle();
-    }
-    int thread_status;
-    ASSERT_EQ(thrd_join(fshost_thrd, &thread_status), thrd_success);
-    ASSERT_TRUE(thread_status);
-
-    // Make sure that vfs_exit() happened.
-    ASSERT_OK(
-        coordinator()->fshost_event().wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::time(0), nullptr));
-  } else {
-    suspend_cb(flags);
-    if (!coordinator_loop_thread_running()) {
-      coordinator_loop()->RunUntilIdle();
-    }
-
-    // Make sure that vfs_exit() didn't happen.
-    ASSERT_EQ(coordinator()->fshost_event().wait_one(FSHOST_SIGNAL_EXIT | FSHOST_SIGNAL_EXIT_DONE,
-                                                     zx::time(0), nullptr),
-              ZX_ERR_TIMED_OUT);
+  suspend_cb(flags);
+  if (!coordinator_loop_thread_running()) {
+    coordinator_loop()->RunUntilIdle();
   }
+  ASSERT_EQ(vfs_exit_expected, coordinator_.admin_server_.has_been_shutdown_);
 }
 
 void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {

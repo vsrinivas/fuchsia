@@ -11,10 +11,10 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
 #include <lib/hermetic-decompressor/hermetic-decompressor.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/event.h>
 #include <stdio.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/vfs.h>
@@ -202,8 +202,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  zx::event fshost_event(zx_take_startup_handle(PA_HND(PA_USER1, 0)));
-
   // Setup the devmgr loader service.
   loader_service_t* loader_svc = devmgr::setup_loader_service();
   if (loader_svc == nullptr) {
@@ -213,9 +211,8 @@ int main(int argc, char** argv) {
   // Initialize the local filesystem in isolation.
   zx::channel dir_request(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   std::unique_ptr<devmgr::FsManager> fs_manager;
-  zx_status_t status =
-      devmgr::FsManager::Create(std::move(fshost_event), loader_svc, std::move(dir_request),
-                                devmgr::MakeMetrics(), &fs_manager);
+  zx_status_t status = devmgr::FsManager::Create(loader_svc, std::move(dir_request),
+                                                 devmgr::MakeMetrics(), &fs_manager);
   if (status != ZX_OK) {
     printf("fshost: Cannot create FsManager: %s\n", zx_status_get_string(status));
     return status;
@@ -233,12 +230,14 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  // Initialize namespace, and begin monitoring the |fshost_event| for a termination event.
+  // Initialize namespace, and begin monitoring for a termination event.
   status = devmgr::BindNamespace(std::move(fs_root_client));
   if (status != ZX_OK) {
     printf("fshost: cannot bind namespace\n");
     return status;
   }
+  // TODO(dgonyeo): call WatchExit from inside FsManager, instead of doing it
+  // here.
   fs_manager->WatchExit();
 
   // If there is a ramdisk, setup the ramctl filesystems.
@@ -255,6 +254,7 @@ int main(int argc, char** argv) {
     thrd_detach(t);
   }
 
+  // Start the block watcher or sleep forever
   if (!disable_block_watcher) {
     // Check relevant boot arguments
     devmgr::BlockWatcherOptions options = {};
@@ -268,8 +268,9 @@ int main(int argc, char** argv) {
 
     BlockDeviceWatcher(std::move(fs_manager), options);
   } else {
-    // Keep the process alive so that the loader service continues to be supplied
-    // to the devmgr. Otherwise the devmgr will segfault.
+    // Keep the process alive so that this component doesn't appear to have
+    // terminated and so that it keeps serving services started on other async
+    // loops/threads
     zx::nanosleep(zx::time::infinite());
   }
   printf("fshost: terminating (block device filesystems finished?)\n");

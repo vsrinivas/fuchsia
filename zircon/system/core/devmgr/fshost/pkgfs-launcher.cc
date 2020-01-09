@@ -84,7 +84,7 @@ void pkgfs_finish(FilesystemMounter* filesystems, zx::process proc, zx::channel 
   if (filesystems->InstallFs("/bin", std::move(bin_chan)) != ZX_OK) {
     printf("fshost: failed to install /bin\n");
   }
-  // start the appmgr
+  // start the delayed vfs
   filesystems->FuchsiaStart();
 }
 
