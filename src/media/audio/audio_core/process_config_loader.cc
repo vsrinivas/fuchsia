@@ -36,6 +36,7 @@ static constexpr char kJsonKeyDeviceProfiles[] = "device_profiles";
 static constexpr char kJsonKeyDeviceId[] = "device_id";
 static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_stream_types";
 static constexpr char kJsonKeyEligibleForLoopback[] = "eligible_for_loopback";
+static constexpr char kJsonKeyIndependentVolumeControl[] = "independent_volume_control";
 
 rapidjson::SchemaDocument LoadProcessConfigSchema() {
   rapidjson::Document schema_doc;
@@ -192,6 +193,13 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
   FX_CHECK(eligible_for_loopback_it->value.IsBool());
   const auto eligible_for_loopback = eligible_for_loopback_it->value.GetBool();
 
+  auto independent_volume_control_it = value.FindMember(kJsonKeyIndependentVolumeControl);
+  bool independent_volume_control = false;
+  if (independent_volume_control_it != value.MemberEnd()) {
+    FX_CHECK(independent_volume_control_it->value.IsBool());
+    independent_volume_control = independent_volume_control_it->value.GetBool();
+  }
+
   auto supported_output_stream_types_it = value.FindMember(kJsonKeySupportedOutputStreamTypes);
   FX_CHECK(supported_output_stream_types_it != value.MemberEnd());
   auto& supported_output_stream_types_value = supported_output_stream_types_it->value;
@@ -206,7 +214,8 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
   }
 
   return {device_id, RoutingConfig::DeviceProfile(eligible_for_loopback,
-                                                  std::move(supported_output_stream_types))};
+                                                  std::move(supported_output_stream_types),
+                                                  independent_volume_control)};
 }
 
 void ParseRoutingPolicyFromJsonObject(const rapidjson::Value& value,

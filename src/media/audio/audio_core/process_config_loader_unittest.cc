@@ -64,7 +64,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
         {
           "device_id": "*",
           "supported_output_stream_types": ["media", "system_agent"],
-          "eligible_for_loopback": false
+          "eligible_for_loopback": false,
+          "independent_volume_control": true
         }
       ]
     }
@@ -94,6 +95,9 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
 
   EXPECT_TRUE(config.device_profile(expected_id).eligible_for_loopback());
   EXPECT_FALSE(config.device_profile(unknown_id).eligible_for_loopback());
+
+  EXPECT_FALSE(config.device_profile(expected_id).independent_volume_control());
+  EXPECT_TRUE(config.device_profile(unknown_id).independent_volume_control());
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {

@@ -51,7 +51,13 @@
           "type": "array",
           "items" : { "$ref" : "#definitions/output_stream_type" }
         },
-        "eligible_for_loopback": "bool"
+
+        // Whether this device is eligible to be looped back to loopback capturers.
+        "eligible_for_loopback": "bool",
+
+        // Whether this device has independent volume control, and should therefore
+        // receive routed streams at unity gain.
+        "independent_volume_control": "bool"
       },
       "required": [ "device_id", "supported_output_stream_types", "eligible_for_loopback" ],
       "additionalProperties": false

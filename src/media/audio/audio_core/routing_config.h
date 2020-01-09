@@ -22,8 +22,10 @@ class RoutingConfig {
    public:
     DeviceProfile() = default;
 
-    DeviceProfile(bool eligible_for_loopback, UsageSupportSet output_usage_support_set)
+    DeviceProfile(bool eligible_for_loopback, UsageSupportSet output_usage_support_set,
+                  bool independent_volume_control = false)
         : eligible_for_loopback_(eligible_for_loopback),
+          independent_volume_control_(independent_volume_control),
           output_usage_support_set_(std::move(output_usage_support_set)) {}
 
     bool supports_usage(fuchsia::media::AudioRenderUsage usage) const {
@@ -32,11 +34,17 @@ class RoutingConfig {
                  output_usage_support_set_->end();
     }
 
+    // Whether this device is eligible to be looped back to loopback capturers.
     bool eligible_for_loopback() const { return eligible_for_loopback_; }
 
+    // Whether this device has independent volume control, and should therefore
+    // receive routed streams at unity gain.
+    bool independent_volume_control() const { return independent_volume_control_; }
+
    private:
-    // Whether this device is eligible to be looped back to loopback capturers.
     bool eligible_for_loopback_ = true;
+    bool independent_volume_control_ = false;
+
     // The set of output usages supported by the device.
     std::optional<UsageSupportSet> output_usage_support_set_;
   };
