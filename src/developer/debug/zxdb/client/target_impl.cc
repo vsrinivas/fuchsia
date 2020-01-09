@@ -25,7 +25,6 @@ TargetImpl::TargetImpl(SystemImpl* system)
       symbols_(system->GetSymbols()),
       impl_weak_factory_(this) {
   settings_.set_fallback(&system_->settings());
-  settings_.set_name("target");
 }
 
 TargetImpl::~TargetImpl() {

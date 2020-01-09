@@ -25,6 +25,7 @@ static_library("client") {
     "frame_fingerprint.h",
     "job.h",
     "job_context.h",
+    "map_setting_store.h",
     "memory_dump.h",
     "process.h",
     "process_observer.h",
@@ -86,6 +87,7 @@ static_library("client") {
     "job_context_impl.h",
     "job_impl.cc",
     "job_impl.h",
+    "map_setting_store.cc",
     "memory_dump.cc",
     "minidump_remote_api.cc",
     "minidump_remote_api.h",
@@ -192,24 +194,17 @@ copy("copy_test_data") {
     "test_example_minidump_with_aspace.dmp",
   ]
 
-  outputs = [
-    "$root_out_dir/test_data/zxdb/{{source_file_part}}",
-  ]
+  outputs = [ "$root_out_dir/test_data/zxdb/{{source_file_part}}" ]
 }
 
 copy("copy_fake_home") {
-  sources = [
-    "test_dummy_file",
-  ]
+  sources = [ "test_dummy_file" ]
 
   if (is_mac) {
-    outputs = [
-      "$root_out_dir/test_data/zxdb/fake_home/Library/Caches/com.googlesource.fuchsia.zxdb/googleapi_auth",
-    ]
+    outputs = [ "$root_out_dir/test_data/zxdb/fake_home/Library/Caches/com.googlesource.fuchsia.zxdb/googleapi_auth" ]
   } else {
-    outputs = [
-      "$root_out_dir/test_data/zxdb/fake_home/.cache/zxdb/googleapi_auth",
-    ]
+    outputs =
+        [ "$root_out_dir/test_data/zxdb/fake_home/.cache/zxdb/googleapi_auth" ]
   }
 }
 
@@ -226,9 +221,8 @@ copy("copy_sample_core") {
     "//prebuilt/test_data/debug/sample_core/core/f7d86af0ee7ec020.debug",
   ]
 
-  outputs = [
-    "$root_out_dir/test_data/zxdb/sample_core/core/{{source_file_part}}",
-  ]
+  outputs =
+      [ "$root_out_dir/test_data/zxdb/sample_core/core/{{source_file_part}}" ]
 }
 
 source_set("tests") {
@@ -245,12 +239,12 @@ source_set("tests") {
     "inline_thread_controller_test.cc",
     "inline_thread_controller_test.h",
     "job_context_impl_unittest.cc",
+    "map_setting_store_unittest.cc",
     "memory_dump_unittest.cc",
     "minidump_unittest.cc",
     "process_impl_unittest.cc",
     "session_unittest.cc",
     "setting_schema_unittest.cc",
-    "setting_store_unittest.cc",
     "setting_value_unittest.cc",
     "source_file_provider_impl_unittest.cc",
     "stack_unittest.cc",

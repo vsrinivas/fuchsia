@@ -32,7 +32,6 @@ ThreadImpl::ThreadImpl(ProcessImpl* process, const debug_ipc::ThreadRecord& reco
       weak_factory_(this) {
   SetMetadata(record);
   settings_.set_fallback(&process_->target()->settings());
-  settings_.set_name("thread");
 }
 
 ThreadImpl::~ThreadImpl() = default;

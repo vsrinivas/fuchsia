@@ -25,7 +25,6 @@ JobContextImpl::JobContextImpl(SystemImpl* system, bool is_implicit_root)
       system_(system),
       is_implicit_root_(is_implicit_root),
       impl_weak_factory_(this) {
-  settings_.set_name("job");
   session()->AddFilterObserver(this);
   RefreshFilters();
 }
@@ -200,10 +199,6 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters, bool
           }
         }
       });
-}
-
-void JobContextImpl::OnSettingChanged(const SettingStore&, const std::string& setting_name) {
-  FXL_NOTREACHED() << "No settings supported for jobs.";
 }
 
 void JobContextImpl::OnDetachReply(const Err& err, uint32_t status, Callback callback) {

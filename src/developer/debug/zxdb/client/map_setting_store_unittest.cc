@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/client/setting_store.h"
+#include "src/developer/debug/zxdb/client/map_setting_store.h"
 
 #include <gtest/gtest.h>
 
@@ -38,14 +38,12 @@ class SettingObserver : public SettingStoreObserver {
  public:
   // Keep track of who called.
   struct SettingNotificationRecord {
-    const SettingStore* store;
     std::string name;
     SettingValue value;
   };
 
   void OnSettingChanged(const SettingStore& store, const std::string& setting_name) override {
     SettingNotificationRecord record = {};
-    record.store = &store;
     record.name = setting_name;
     record.value = store.GetValue(setting_name);
     notifications_.push_back(std::move(record));
@@ -59,8 +57,8 @@ class SettingObserver : public SettingStoreObserver {
 
 }  // namespace
 
-TEST(SettingStore, Defaults) {
-  SettingStore store(GetSchema(), nullptr);
+TEST(MapSettingStore, Defaults) {
+  MapSettingStore store(GetSchema(), nullptr);
 
   auto value = store.GetValue("bool");
   ASSERT_TRUE(value.is_bool());
@@ -82,8 +80,8 @@ TEST(SettingStore, Defaults) {
   EXPECT_TRUE(store.GetValue("unexistent").is_null());
 }
 
-TEST(SettingStore, Overrides) {
-  SettingStore store(GetSchema(), nullptr);
+TEST(MapSettingStore, Overrides) {
+  MapSettingStore store(GetSchema(), nullptr);
 
   Err err;
 
@@ -101,9 +99,9 @@ TEST(SettingStore, Overrides) {
   EXPECT_EQ(store.GetInt("int"), kNewInt);
 }
 
-TEST(SettingStore, ListOptions) {
+TEST(MapSettingStore, ListOptions) {
   Err err;
-  SettingStore store(GetSchema(), nullptr);
+  MapSettingStore store(GetSchema(), nullptr);
 
   // Attemp to add a valid item to the list with options.
   err = store.SetList("list_with_options", {kDefaultString});
@@ -114,16 +112,16 @@ TEST(SettingStore, ListOptions) {
   EXPECT_TRUE(err.has_error());
 }
 
-TEST(SettingStore, Fallback) {
-  SettingStore fallback2(GetSchema(), nullptr);
+TEST(MapSettingStore, Fallback) {
+  MapSettingStore fallback2(GetSchema(), nullptr);
   std::vector<std::string> new_list = {"new", "list"};
   fallback2.SetList("list", new_list);
 
-  SettingStore fallback(GetSchema(), &fallback2);
+  MapSettingStore fallback(GetSchema(), &fallback2);
   std::string new_string = "new string";
   fallback.SetString("string", new_string);
 
-  SettingStore store(GetSchema(), &fallback);
+  MapSettingStore store(GetSchema(), &fallback);
   store.SetBool("bool", false);
 
   // Should get default for not overridden.
@@ -147,8 +145,8 @@ TEST(SettingStore, Fallback) {
   EXPECT_EQ(value.get_list(), new_list);
 }
 
-TEST(SettingStore, Notifications) {
-  SettingStore store(GetSchema(), nullptr);
+TEST(MapSettingStore, Notifications) {
+  MapSettingStore store(GetSchema(), nullptr);
 
   SettingObserver observer;
   store.AddObserver("int", &observer);
@@ -175,7 +173,6 @@ TEST(SettingStore, Notifications) {
 
   ASSERT_EQ(observer.notifications().size(), 1u);
   auto record = observer.notifications().back();
-  EXPECT_EQ(record.store, &store);
   EXPECT_EQ(record.name, "int");
   ASSERT_TRUE(record.value.is_int());
   EXPECT_EQ(record.value.get_int(), kNewInt);
@@ -187,7 +184,6 @@ TEST(SettingStore, Notifications) {
 
   ASSERT_EQ(observer.notifications().size(), 2u);
   record = observer.notifications().back();
-  EXPECT_EQ(record.store, &store);
   EXPECT_EQ(record.name, "list");
   ASSERT_TRUE(record.value.is_list());
   EXPECT_EQ(record.value.get_list(), new_list);
@@ -205,7 +201,6 @@ TEST(SettingStore, Notifications) {
 
   ASSERT_EQ(observer.notifications().size(), 3u);
   record = observer.notifications().back();
-  EXPECT_EQ(record.store, &store);
   EXPECT_EQ(record.name, "list");
   ASSERT_TRUE(record.value.is_list());
   EXPECT_EQ(record.value.get_list(), new_list);
@@ -219,14 +214,12 @@ TEST(SettingStore, Notifications) {
 
   ASSERT_EQ(observer.notifications().size(), 4u);
   record = observer.notifications().back();
-  EXPECT_EQ(record.store, &store);
   EXPECT_EQ(record.name, "list");
   ASSERT_TRUE(record.value.is_list());
   EXPECT_EQ(record.value.get_list(), new_list);
 
   ASSERT_EQ(observer2.notifications().size(), 1u);
   record = observer2.notifications().back();
-  EXPECT_EQ(record.store, &store);
   EXPECT_EQ(record.name, "list");
   ASSERT_TRUE(record.value.is_list());
   EXPECT_EQ(record.value.get_list(), new_list);
@@ -241,7 +234,6 @@ TEST(SettingStore, Notifications) {
 
   ASSERT_EQ(observer2.notifications().size(), 2u);
   record = observer2.notifications().back();
-  EXPECT_EQ(record.store, &store);
   EXPECT_EQ(record.name, "list");
   ASSERT_TRUE(record.value.is_list());
   EXPECT_EQ(record.value.get_list(), new_list);

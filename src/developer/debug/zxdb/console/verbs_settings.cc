@@ -33,7 +33,6 @@ namespace {
 struct SettingContext {
   enum class Level {
     kGlobal,
-    kJob,
     kTarget,
     kThread,
   };
@@ -52,19 +51,10 @@ struct SettingContext {
 
 bool CheckGlobal(ConsoleContext* context, const Command& cmd, const std::string& setting_name,
                  SettingContext* out) {
-  if (!context->session()->system().settings().HasSetting(setting_name))
+  if (!context->session()->system().settings().schema()->HasSetting(setting_name))
     return false;
   out->store = &context->session()->system().settings();
   out->level = SettingContext::Level::kGlobal;
-  return true;
-}
-
-bool CheckJob(ConsoleContext* context, const Command& cmd, const std::string& setting_name,
-              SettingContext* out) {
-  if (!cmd.job_context() || !cmd.job_context()->settings().schema()->HasSetting(setting_name))
-    return false;
-  out->store = &cmd.job_context()->settings();
-  out->level = SettingContext::Level::kJob;
   return true;
 }
 
@@ -105,9 +95,6 @@ Err GetSettingContext(ConsoleContext* context, const Command& cmd, const std::st
   } else if (cmd.HasNoun(Noun::kGlobal)) {
     out->store = &context->session()->system().settings();
     out->level = SettingContext::Level::kGlobal;
-  } else if (cmd.HasNoun(Noun::kJob)) {
-    out->store = cmd.job_context() ? &cmd.job_context()->settings() : nullptr;
-    out->level = SettingContext::Level::kJob;
   }
 
   if (out->store) {
@@ -131,7 +118,6 @@ Err GetSettingContext(ConsoleContext* context, const Command& cmd, const std::st
       bool (*)(ConsoleContext*, const Command&, const std::string&, SettingContext*);
   const CheckFunction kGlobalToSpecific[] = {
       &CheckGlobal,
-      &CheckJob,
       &CheckTarget,
       &CheckThread,
   };
@@ -280,17 +266,10 @@ Err SettingToOutput(ConsoleContext* console_context, const Command& cmd, const s
 }
 
 Err CompleteSettingsToOutput(const Command& cmd, ConsoleContext* context, OutputBuffer* out) {
-  // Output in the following order: System -> Job -> Target -> Thread
+  // Output in the following order: System -> Target -> Thread
   out->Append(OutputBuffer(Syntax::kHeading, "Global\n"));
   out->Append(FormatSettingStore(context, context->session()->system().settings()));
   out->Append("\n");
-
-  if (JobContext* job = cmd.job_context(); job && !job->settings().schema()->empty()) {
-    auto title = fxl::StringPrintf("Job %d\n", context->IdForJobContext(job));
-    out->Append(OutputBuffer(Syntax::kHeading, std::move(title)));
-    out->Append(FormatSettingStore(context, job->settings()));
-    out->Append("\n");
-  }
 
   if (Target* target = cmd.target(); target && !target->settings().schema()->empty()) {
     auto title = fxl::StringPrintf("Process %d\n", context->IdForTarget(target));
@@ -550,11 +529,6 @@ OutputBuffer FormatSetFeedback(ConsoleContext* console_context,
     case SettingContext::Level::kGlobal:
       out.Append(" system-wide:\n");
       break;
-    case SettingContext::Level::kJob: {
-      int job_id = console_context->IdForJobContext(cmd.job_context());
-      out.Append(fxl::StringPrintf(" for job %d:\n", job_id));
-      break;
-    }
     case SettingContext::Level::kTarget: {
       int target_id = console_context->IdForTarget(cmd.target());
       out.Append(fxl::StringPrintf(" for process %d:\n", target_id));
@@ -657,9 +631,6 @@ void CompleteSet(const Command& cmd, const std::string& prefix,
         completions->push_back(name);
       }
     }
-
-    // Jobs don't store their schema yet since it's empty. We'll have to update this code if they
-    // ever do.
   }
 
   // TODO: We need to refactor parsing a bit if we want to complete options.

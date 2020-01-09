@@ -12,7 +12,7 @@
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
-#include "src/developer/debug/zxdb/client/setting_store.h"
+#include "src/developer/debug/zxdb/client/map_setting_store.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/observer_list.h"
@@ -100,12 +100,12 @@ class Target : public ClientObject {
   // Provides the setting schema for this object.
   static fxl::RefPtr<SettingSchema> GetSchema();
 
-  SettingStore& settings() { return settings_; }
+  MapSettingStore& settings() { return settings_; }
 
  protected:
   explicit Target(Session* session);
 
-  SettingStore settings_;
+  MapSettingStore settings_;
 
  private:
   fxl::WeakPtrFactory<Target> weak_factory_;

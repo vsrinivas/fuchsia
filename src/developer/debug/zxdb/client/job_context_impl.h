@@ -16,7 +16,7 @@ namespace zxdb {
 class JobImpl;
 class SystemImpl;
 
-class JobContextImpl : public JobContext, public SettingStoreObserver, public FilterObserver {
+class JobContextImpl : public JobContext, public FilterObserver {
  public:
   // The system owns this object and will outlive it.
   JobContextImpl(SystemImpl* system, bool is_implicit_root);
@@ -53,9 +53,6 @@ class JobContextImpl : public JobContext, public SettingStoreObserver, public Fi
   void AddJobImplForTesting(uint64_t koid, const std::string& name);
 
   void Detach(Callback callback) override;
-
-  // SettingStoreObserver implementation
-  void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
 
   // FilterObserver implementation
   void DidCreateFilter(Filter* filter) override;

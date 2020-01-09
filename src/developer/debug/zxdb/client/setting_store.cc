@@ -10,28 +10,7 @@
 
 namespace zxdb {
 
-SettingStore::SettingStore(fxl::RefPtr<SettingSchema> schema, SettingStore* fallback)
-    : schema_(std::move(schema)), fallback_(fallback) {}
-
-void SettingStore::AddObserver(const std::string& setting_name, SettingStoreObserver* observer) {
-  observer_map_[setting_name].AddObserver(observer);
-}
-
-void SettingStore::RemoveObserver(const std::string& setting_name, SettingStoreObserver* observer) {
-  observer_map_[setting_name].RemoveObserver(observer);
-}
-
-void SettingStore::NotifySettingChanged(const std::string& setting_name) const {
-  for (const auto& [key, observers] : observer_map_) {
-    if (key != setting_name)
-      continue;
-
-    for (auto& observer : observers)
-      observer.OnSettingChanged(*this, setting_name);
-  }
-}
-
-// Getters -----------------------------------------------------------------------------------------
+SettingStore::SettingStore(fxl::RefPtr<SettingSchema> schema) : schema_(std::move(schema)) {}
 
 bool SettingStore::GetBool(const std::string& key) const {
   auto value = GetValue(key);
@@ -70,63 +49,46 @@ std::vector<std::string> SettingStore::GetList(const std::string& key) const {
 }
 
 SettingValue SettingStore::GetValue(const std::string& key) const {
-  // First check if it's in the schema.
-  const SettingSchema::Record* optional_record = schema_->GetSetting(key);
-  if (!optional_record)
-    return SettingValue();
+  const SettingSchema::Record* record = schema_->GetSetting(key);
+  if (!record)
+    return SettingValue();  // Not in the schema.
 
-  // Check if it already exists. If so, return it.
-  if (auto it = values_.find(key); it != values_.end())
-    return it->second;
+  SettingValue value = GetStorageValue(key);
+  if (value.type() != SettingType::kNull)
+    return value;
 
-  // Check the fallback SettingStore to see if it has the setting.
-  if (fallback_) {
-    auto value = fallback_->GetValue(key);
-    if (!value.is_null())
-      return value;
-  }
-
-  // No fallback has the schema, return the default.
-  return optional_record->default_value;
+  // Not found in the storage, fall back on the default value from the schema.
+  return record->default_value;
 }
 
-bool SettingStore::HasSetting(const std::string& key) const { return schema_->HasSetting(key); }
+Err SettingStore::SetBool(const std::string& key, bool val) {
+  return SetValue(key, SettingValue(val));
+}
 
-// Setters -----------------------------------------------------------------------------------------
-
-Err SettingStore::SetBool(const std::string& key, bool val) { return SetSetting(key, val); }
-
-Err SettingStore::SetInt(const std::string& key, int val) { return SetSetting(key, val); }
+Err SettingStore::SetInt(const std::string& key, int val) {
+  return SetValue(key, SettingValue(val));
+}
 
 Err SettingStore::SetString(const std::string& key, std::string val) {
-  return SetSetting(key, std::move(val));
+  return SetValue(key, SettingValue(std::move(val)));
 }
 
 Err SettingStore::SetExecutionScope(const std::string& key, const ExecutionScope& scope) {
-  return SetSetting(key, scope);
+  return SetValue(key, SettingValue(scope));
 }
 
 Err SettingStore::SetInputLocations(const std::string& key, std::vector<InputLocation> v) {
-  return SetSetting(key, std::move(v));
+  return SetValue(key, SettingValue(std::move(v)));
 }
 
 Err SettingStore::SetList(const std::string& key, std::vector<std::string> list) {
-  return SetSetting(key, std::move(list));
+  return SetValue(key, SettingValue(std::move(list)));
 }
 
-template <typename T>
-Err SettingStore::SetSetting(const std::string& key, T t) {
-  // Check if the setting is valid.
-  SettingValue setting(t);
-  if (Err err = schema_->ValidateSetting(key, setting); err.has_error())
+Err SettingStore::SetValue(const std::string& key, SettingValue value) {
+  if (Err err = schema_->ValidateSetting(key, value); err.has_error())
     return err;
-
-  // We can safely insert or override and notify observers.
-  auto new_setting = SettingValue(std::move(t));
-  values_[key] = std::move(new_setting);
-  NotifySettingChanged(key);
-
-  return Err();
+  return SetStorageValue(key, value);
 }
 
 }  // namespace zxdb

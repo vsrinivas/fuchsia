@@ -14,7 +14,7 @@
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
-#include "src/developer/debug/zxdb/client/setting_store.h"
+#include "src/developer/debug/zxdb/client/map_setting_store.h"
 #include "src/developer/debug/zxdb/client/stack.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/lib/fxl/macros.h"
@@ -100,10 +100,10 @@ class Thread : public ClientObject {
   // Provides the setting schema for this object.
   static fxl::RefPtr<SettingSchema> GetSchema();
 
-  SettingStore& settings() { return settings_; }
+  MapSettingStore& settings() { return settings_; }
 
  protected:
-  SettingStore settings_;
+  MapSettingStore settings_;
 
  private:
   fxl::WeakPtrFactory<Thread> weak_factory_;

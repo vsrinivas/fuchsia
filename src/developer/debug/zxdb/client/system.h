@@ -12,7 +12,7 @@
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/client/job_context.h"
-#include "src/developer/debug/zxdb/client/setting_store.h"
+#include "src/developer/debug/zxdb/client/map_setting_store.h"
 #include "src/developer/debug/zxdb/client/setting_store_observer.h"
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/client/target.h"
@@ -119,12 +119,12 @@ class System : public ClientObject {
   // Provides the setting schema for this object.
   static fxl::RefPtr<SettingSchema> GetSchema();
 
-  SettingStore& settings() { return settings_; }
+  MapSettingStore& settings() { return settings_; }
 
  protected:
   fxl::ObserverList<SystemObserver>& observers() { return observers_; }
 
-  SettingStore settings_;
+  MapSettingStore settings_;
 
  private:
   fxl::ObserverList<SystemObserver> observers_;

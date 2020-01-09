@@ -9,29 +9,28 @@
 #include <memory>
 
 #include "src/developer/debug/zxdb/client/setting_schema.h"
-#include "src/developer/debug/zxdb/client/setting_store_observer.h"
 #include "src/developer/debug/zxdb/client/setting_value.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/observer_list.h"
 
 namespace zxdb {
 
-struct StoredSetting;
-
-// SettingStore is in charge of maintaining a structured group of settings. settings are indexed by
-// a unique key.
+// SettingStore is an interface for setting and querying values by a string-based key. It has a
+// schema that describes the names and types of values it supports.
+//
+// This is an interface that does not store any actual data. Objects with settings can implement
+// it, or use MapSettingStore which is a simple map-based implementation.
+//
+// This class does not implement observers. There are setting observers on the MapSettingStore which
+// most implementations use. The lack of observers here is to make implementing SettingStores easier
+// so they don't have to worry about notifying every time anything changes. And some SettingStore
+// implementations might have different semantics that makes having a per-setting observer list
+// undesirable.
 class SettingStore {
  public:
-  SettingStore(fxl::RefPtr<SettingSchema> schema, SettingStore* fallback);
-
-  SettingStore* fallback() const { return fallback_; }
-  void set_fallback(SettingStore* fallback) { fallback_ = fallback; }
+  explicit SettingStore(fxl::RefPtr<SettingSchema> schema);
 
   fxl::RefPtr<SettingSchema> schema() const { return schema_; }
-
-  void AddObserver(const std::string& setting_name, SettingStoreObserver*);
-  void RemoveObserver(const std::string& setting_name, SettingStoreObserver*);
 
   Err SetBool(const std::string& key, bool);
   Err SetInt(const std::string& key, int);
@@ -47,41 +46,23 @@ class SettingStore {
   const std::vector<InputLocation>& GetInputLocations(const std::string& key) const;
   std::vector<std::string> GetList(const std::string& key) const;
 
-  // Returns null setting/value if key is not found.
+  // General get/set for settings.
   SettingValue GetValue(const std::string& key) const;
-
-  bool HasSetting(const std::string& key) const;
-
-  bool empty() const { return values_.empty(); }
-
-  const char* name() const { return name_; }
-  void set_name(const char* name) { name_ = name; }
+  Err SetValue(const std::string& key, SettingValue value);
 
  protected:
-  std::map<std::string, fxl::ObserverList<SettingStoreObserver>>& observers() {
-    return observer_map_;
-  }
+  // Implemented by the override of the SettingStore to actually get/set values to/from the backend.
+  // The key (and new value for the setter) will have been validated against the schema prior to
+  // these calls.
+  //
+  // The implementation for GetStorageValue() can return a null SettingValue to indicate not found,
+  // in which case GetValue() will return the default value from the schema.
+  virtual SettingValue GetStorageValue(const std::string& key) const = 0;
+  virtual Err SetStorageValue(const std::string& key, SettingValue value) = 0;
 
  private:
-  template <typename T>
-  Err SetSetting(const std::string& key, T t);
-
-  void NotifySettingChanged(const std::string& setting_name) const;
-
   // Should always exist. All settings are validated against this.
   fxl::RefPtr<SettingSchema> schema_;
-
-  // SettingStore this store lookup settings when it cannot find them locally. Can be null. If set,
-  // must outlive |this|.
-  SettingStore* fallback_;
-  std::map<std::string, SettingValue> values_;
-
-  std::map<std::string, fxl::ObserverList<SettingStoreObserver>> observer_map_;
-
-  // Useful for debugging.
-  const char* name_ = "<not-set>";
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SettingStore);
 };
 
 }  // namespace zxdb
