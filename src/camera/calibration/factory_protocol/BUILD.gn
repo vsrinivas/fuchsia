@@ -18,6 +18,7 @@ source_set("factory_protocol") {
     "//sdk/lib/sys/cpp",
     "//src/camera/lib/stream_utils",
     "//src/camera/test/isp_tester:fuchsia.camera.test",
+    "//src/lib/files",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",

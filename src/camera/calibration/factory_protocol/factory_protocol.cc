@@ -9,8 +9,8 @@
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 
-#include <src/lib/files/file.h>
-#include <src/lib/syslog/cpp/logger.h>
+#include "src/lib/files/file.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 

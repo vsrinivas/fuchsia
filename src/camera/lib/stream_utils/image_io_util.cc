@@ -8,10 +8,10 @@
 
 #include <vector>
 
-#include <src/lib/files/directory.h>
-#include <src/lib/files/file.h>
-#include <src/lib/files/path.h>
-#include <src/lib/syslog/cpp/logger.h>
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 
