@@ -193,18 +193,19 @@ impl EventListenerServer {
     ) -> Result<(), Error> {
         if !(component.component_name.is_some()
             && component.instance_id.is_some()
-            && component.moniker.is_some())
+            && component.realm_path.is_some())
         {
             return Ok(());
         }
         let component_hierarchy_path = PathBuf::from(format!(
-            "{}/{}/out/diagnostics/",
-            component.moniker.clone().unwrap().join("/"),
+            "{}/{}/{}",
+            component.realm_path.clone().unwrap().join("/"),
+            component.component_name.clone().unwrap(),
             component.instance_id.clone().unwrap()
         ));
         self.send_event(ComponentEvent::OutDirectoryAppeared(InspectReaderData {
             component_hierarchy_path,
-            absolute_moniker: component.moniker.unwrap(),
+            absolute_moniker: component.realm_path.unwrap(),
             component_name: component.component_name.unwrap(),
             component_id: component.instance_id.unwrap(),
             data_directory_proxy: directory.into_proxy().ok(),
@@ -231,7 +232,7 @@ mod tests {
 
     #[derive(Clone)]
     struct ClonableSourceIdentity {
-        moniker: Vec<String>,
+        realm_path: Vec<String>,
         component_name: String,
         instance_id: String,
     }
@@ -239,7 +240,7 @@ mod tests {
     impl Into<SourceIdentity> for ClonableSourceIdentity {
         fn into(self) -> SourceIdentity {
             SourceIdentity {
-                moniker: Some(self.moniker),
+                realm_path: Some(self.realm_path),
                 component_url: None,
                 component_name: Some(self.component_name),
                 instance_id: Some(self.instance_id),
@@ -327,7 +328,7 @@ mod tests {
             .expect("failed to get listener proxy");
 
         let identity: ClonableSourceIdentity = ClonableSourceIdentity {
-            moniker: vec!["root".to_string(), "a".to_string(), "test.cmx".to_string()],
+            realm_path: vec!["root".to_string(), "a".to_string()],
             component_name: "test.cmx".to_string(),
             instance_id: "12345".to_string(),
         };
@@ -346,9 +347,9 @@ mod tests {
             ComponentEvent::OutDirectoryAppeared(data) => {
                 assert_eq!(
                     data.component_hierarchy_path.to_string_lossy().to_string(),
-                    "root/a/test.cmx/12345/out/diagnostics/"
+                    "root/a/test.cmx/12345"
                 );
-                assert_eq!(data.absolute_moniker, identity.moniker);
+                assert_eq!(data.absolute_moniker, identity.realm_path);
                 assert_eq!(data.component_name, identity.component_name);
                 assert_eq!(data.component_id, identity.instance_id);
                 assert!(data.data_directory_proxy.is_some());

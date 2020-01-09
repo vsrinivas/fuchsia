@@ -72,6 +72,12 @@ class Namespace : public fuchsia::sys::Environment,
       fuchsia::sys::LaunchInfo launch_info,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) override;
 
+  // Notifies a realms ComponentEventListener with the out/diagnostics directory for a component.
+  void NotifyComponentDiagnosticsDirReady(const std::string& component_url,
+                                          const std::string& component_name,
+                                          const std::string& component_id,
+                                          fidl::InterfaceHandle<fuchsia::io::Directory> directory);
+
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);
   Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,

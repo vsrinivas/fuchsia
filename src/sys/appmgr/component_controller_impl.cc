@@ -8,6 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
 #include <zircon/types.h>
 
@@ -90,11 +91,14 @@ ComponentControllerBase::ComponentControllerBase(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> request, std::string url,
     std::string args, std::string label, std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
     zx::channel exported_dir, zx::channel client_request)
-    : binding_(this),
+    : executor_(async_get_default_dispatcher()),
+      binding_(this),
       label_(std::move(label)),
       hub_instance_id_(std::move(hub_instance_id)),
+      url_(std::move(url)),
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
-      ns_(std::move(ns)) {
+      ns_(std::move(ns)),
+      weak_ptr_factory_(this) {
   if (request.is_valid()) {
     binding_.Bind(std::move(request));
     binding_.set_error_handler([this](zx_status_t /*status*/) { Kill(); });
@@ -109,7 +113,7 @@ ComponentControllerBase::ComponentControllerBase(
   }
 
   hub_.SetName(label_);
-  hub_.AddEntry("url", std::move(url));
+  hub_.AddEntry("url", url_);
   hub_.AddEntry("args", std::move(args));
   exported_dir_->Clone(fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_RIGHT_READABLE |
                            fuchsia::io::OPEN_RIGHT_WRITABLE,
@@ -121,8 +125,10 @@ ComponentControllerBase::ComponentControllerBase(
       FXL_LOG(WARNING) << "could not bind out directory for component" << label_ << "): " << status;
       return;
     }
+    out_ready_ = true;
     auto output_dir = fbl::AdoptRef(new fs::RemoteDir(cloned_exported_dir_.Unbind().TakeChannel()));
     hub_.PublishOut(std::move(output_dir));
+    NotifyDiagnosticsDirReady();
     TRACE_DURATION_BEGIN("appmgr", "ComponentController::OnDirectoryReady");
     SendOnDirectoryReadyEvent();
     TRACE_DURATION_END("appmgr", "ComponentController::OnDirectoryReady");
@@ -130,6 +136,58 @@ ComponentControllerBase::ComponentControllerBase(
 
   cloned_exported_dir_.set_error_handler(
       [this](zx_status_t status) { cloned_exported_dir_.Unbind(); });
+}
+
+void ComponentControllerBase::NotifyDiagnosticsDirReady() {
+  auto promise = GetDiagnosticsDir().and_then(
+      [self = weak_ptr_factory_.GetWeakPtr()](fidl::InterfaceHandle<fuchsia::io::Directory>& dir) {
+        if (self) {
+          self->ns_->NotifyComponentDiagnosticsDirReady(self->url_, self->label_,
+                                                        self->hub_instance_id_, std::move(dir));
+        }
+      });
+  executor_.schedule_task(std::move(promise));
+}
+
+fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>
+ComponentControllerBase::GetDiagnosticsDir() {
+  // This error would occur if the method was called when the component out/ directory wasn't ready
+  // yet. This can be triggered when a listener is attached to a realm and notifies about existing
+  // components. It could happen that the component exists, but its out is not ready yet. Under such
+  // scenario, the listener will receive a START event for the existing component, but won't
+  // receive a DIAGNOSTICS_DIR_READY event during the existing flow. The DIAGNOSTICS_READY_EVENT
+  // will be triggered later once the out/ directory is ready if the component exposes a
+  // diagnostics directory.
+  if (!out_ready_) {
+    return fit::make_result_promise<fidl::InterfaceHandle<fuchsia::io::Directory>>(
+        fit::error(ZX_ERR_BAD_STATE));
+  }
+  fuchsia::io::NodePtr diagnostics_dir_node;
+  fit::bridge<void, zx_status_t> bridge;
+  diagnostics_dir_node.events().OnOpen =
+      [completer = std::move(bridge.completer)](
+          zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> node_info) mutable {
+        if (status != ZX_OK) {
+          completer.complete_error(status);
+        } else if (!node_info) {
+          completer.complete_error(ZX_ERR_NOT_FOUND);
+        } else if (!node_info->is_directory()) {
+          completer.complete_error(ZX_ERR_NOT_DIR);
+        } else {
+          completer.complete_ok();
+        }
+      };
+
+  const uint32_t flags = fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_RIGHT_READABLE |
+                         fuchsia::io::OPEN_RIGHT_WRITABLE;
+  exported_dir_->Open(flags, 0u /* mode */, "diagnostics", diagnostics_dir_node.NewRequest());
+  return bridge.consumer.promise().and_then([diagnostics_dir_node =
+                                                 std::move(diagnostics_dir_node)]() mutable {
+    auto diagnostics_dir =
+        fidl::InterfaceHandle<fuchsia::io::Directory>(diagnostics_dir_node.Unbind().TakeChannel());
+    return fit::make_result_promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>(
+        fit::ok(std::move(diagnostics_dir)));
+  });
 }
 
 void ComponentControllerBase::SendOnDirectoryReadyEvent() {

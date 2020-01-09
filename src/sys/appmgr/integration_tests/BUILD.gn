@@ -14,6 +14,7 @@ group("integration_tests") {
     ":appmgr_integration_tests",
     ":hub_tests",
     ":realm_tests",
+    "component_events",
     "components",
     "fidl",
     "inspect",
@@ -64,9 +65,7 @@ executable("hub_tests") {
 
   output_name = "appmgr_hub_integration_tests"
 
-  sources = [
-    "hub_integration_test.cc",
-  ]
+  sources = [ "hub_integration_test.cc" ]
 
   deps = [
     "//garnet/bin/glob",
@@ -85,9 +84,7 @@ executable("hub_tests") {
 
 config_data("sysmgr_config") {
   for_pkg = "appmgr_integration_tests"
-  sources = [
-    rebase_path("//src/sys/sysmgr/config/services.config"),
-  ]
+  sources = [ rebase_path("//src/sys/sysmgr/config/services.config") ]
 }
 
 test_package("appmgr_integration_tests") {

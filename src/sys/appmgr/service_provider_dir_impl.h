@@ -64,11 +64,11 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
 
   void ConnectToService(std::string service_name, zx::channel channel) override;
 
- private:
   bool IsServiceWhitelisted(const std::string& service_name) {
     return (!has_services_whitelist_ || services_whitelist_.count(service_name) > 0);
   }
 
+ private:
   fidl::BindingSet<fuchsia::sys::ServiceProvider> bindings_;
   fs::SynchronousVfs vfs_;
   // |root_| has all services offered by this provider (including those

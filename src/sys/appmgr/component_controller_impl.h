@@ -7,7 +7,9 @@
 
 #include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/promise.h>
 #include <lib/zx/process.h>
 #include <zircon/assert.h>
 
@@ -90,8 +92,17 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
   const std::string& label() const { return label_; }
   const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.dir(); }
 
+  // The instance ID (process koid) of the component in the hub.
+  const std::string& hub_instance_id() const { return hub_instance_id_; }
+
+  // The url of this component.
+  const std::string& url() const { return url_; }
+
   // |fuchsia::sys::ComponentController| implementation:
   void Detach() override;
+
+  // Provides a handle to the component out/diagnostics directory if one exists.
+  fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t> GetDiagnosticsDir();
 
  protected:
   ComponentHub* hub() { return &hub_; }
@@ -107,14 +118,27 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
   void SendOnTerminationEvent(int64_t, fuchsia::sys::TerminationReason);
 
  private:
+  // Notifies a realm's ComponentEventListener with the out/diagnostics directory for a component.
+  void NotifyDiagnosticsDirReady();
+
+  async::Executor executor_;
+
   fidl::Binding<fuchsia::sys::ComponentController> binding_;
 
+  // The name of this component: e.g., my_component.cmx
   std::string label_;
+
+  // The instance id of this component in the hub (process koid)
   std::string hub_instance_id_;
+
+  // The url of this component: e.g., fuchsia-pkg://fuchsia.com/my_package#meta/my_component.cmx
+  std::string url_;
 
   ComponentHub hub_;
 
   fxl::RefPtr<Namespace> ns_;
+
+  fxl::WeakPtrFactory<ComponentControllerBase> weak_ptr_factory_;
 
   fuchsia::io::NodePtr cloned_exported_dir_;
 
@@ -124,6 +148,9 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
 
   // guards against sending this event two times
   bool on_terminated_event_sent_ = false;
+
+  // whether the out directory is ready or not.
+  bool out_ready_ = false;
 };
 
 class ComponentControllerImpl : public ComponentControllerBase {

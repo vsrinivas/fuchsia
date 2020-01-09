@@ -50,6 +50,7 @@
 #include "src/sys/appmgr/util.h"
 
 namespace component {
+
 namespace {
 
 constexpr char kAppPath[] = "bin/app";
@@ -284,6 +285,7 @@ Realm::Realm(RealmArgs args, zx::job job)
   }
 
   koid_ = std::to_string(fsl::GetKoid(job_.get()));
+
   label_ = args.label.substr(0, fuchsia::sys::kLabelMaxLength);
 
   if (args.options.kill_on_oom) {
@@ -637,6 +639,8 @@ std::shared_ptr<ComponentControllerImpl> Realm::ExtractComponent(
   }
   auto application = std::move(it->second);
 
+  NotifyComponentStopped(application->url(), application->label(), application->hub_instance_id());
+
   // update hub
   hub_.RemoveComponent(application->HubInfo());
 
@@ -938,6 +942,8 @@ void Realm::CreateElfBinaryComponentFromPackage(
     if (callback != nullptr) {
       callback(application);
     }
+    NotifyComponentStarted(application->url(), application->label(),
+                           application->hub_instance_id());
     applications_.emplace(key, std::move(application));
   }
 }
@@ -1043,6 +1049,82 @@ bool Realm::IsAllowedToUseDeprecatedAmbientReplaceAsExecutable(std::string ns_id
   }
   // Otherwise, enforce the allowlist.
   return deprecated_exec_allowlist.IsAllowed(ns_id);
+}
+
+void Realm::NotifyComponentStarted(const std::string& component_url,
+                                   const std::string& component_name,
+                                   const std::string& instance_id) {
+  auto notify_data = GetEventNotificationInfo(component_url, component_name, instance_id);
+  if (notify_data.provider) {
+    notify_data.provider->NotifyComponentStarted(std::move(notify_data.component));
+  }
+}
+
+void Realm::NotifyComponentDiagnosticsDirReady(
+    const std::string& component_url, const std::string& component_name,
+    const std::string& instance_id, fidl::InterfaceHandle<fuchsia::io::Directory> directory) {
+  auto notify_data = GetEventNotificationInfo(component_url, component_name, instance_id);
+  if (notify_data.provider) {
+    notify_data.provider->NotifyComponentDirReady(std::move(notify_data.component),
+                                                  std::move(directory));
+  }
+}
+
+void Realm::NotifyComponentStopped(const std::string& component_url,
+                                   const std::string& component_name,
+                                   const std::string& instance_id) {
+  auto notify_data = GetEventNotificationInfo(component_url, component_name, instance_id);
+  if (notify_data.provider) {
+    notify_data.provider->NotifyComponentStopped(std::move(notify_data.component));
+  }
+}
+
+internal::EventNotificationInfo Realm::GetEventNotificationInfo(const std::string& component_url,
+                                                                const std::string& component_name,
+                                                                const std::string& instance_id) {
+  ComponentEventProviderImpl* provider = nullptr;
+  std::vector<std::string> relative_realm_path;
+
+  // If this realm has a ComponentEventProvider, then the relative_realm_path should be empty and
+  // the provider attached to this realm should be used.
+  if (this->component_event_provider_) {
+    provider = this->component_event_provider_.get();
+  } else {
+    relative_realm_path.push_back(label_);
+    Realm* realm = this;
+
+    // Stop traversing the path to the root once a child of the root realm "app" is found.
+    // "root" won't have a ComponentEventProvider.
+    while (realm->parent_ && realm->parent_->label_ != internal::kRootLabel && !provider) {
+      realm = realm->parent_;
+      if (realm->component_event_provider_) {
+        provider = realm->component_event_provider_.get();
+      } else {
+        relative_realm_path.push_back(realm->label_);
+      }
+    }
+    std::reverse(relative_realm_path.begin(), relative_realm_path.end());
+  }
+
+  fuchsia::sys::internal::SourceIdentity identity;
+  identity.set_component_url(component_url);
+  identity.set_component_name(component_name);
+  identity.set_instance_id(instance_id);
+  identity.set_realm_path(relative_realm_path);
+  return {.provider = provider, .component = std::move(identity)};
+}
+
+zx_status_t Realm::BindComponentEventProvider(
+    fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider> request) {
+  if (!component_event_provider_) {
+    component_event_provider_.reset(new ComponentEventProviderImpl(this));
+  }
+  auto status = component_event_provider_->Connect(std::move(request));
+  return status;
+}
+
+bool Realm::HasComponentEventListenerBound() {
+  return component_event_provider_ && component_event_provider_->listener_bound();
 }
 
 }  // namespace component

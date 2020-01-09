@@ -1,0 +1,16 @@
+{
+    "program": {
+        "args": [
+            "--test-threads=1"
+        ],
+        "binary": "test/component_events_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.internal.ComponentEventProvider",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

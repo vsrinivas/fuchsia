@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/sys/internal/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/spawn.h>
 #include <zircon/syscalls/object.h>
@@ -69,6 +70,9 @@ std::vector<std::string> GetDefaultNamespaceServiceEntries() {
       fuchsia::process::Launcher::Name_,
       fuchsia::process::Resolver::Name_,
       fuchsia::sys::Environment::Name_,
+      // This service is currently only used by the archivist even if placed in all namespaces.
+      // TODO(fxb/43158): allow list for archivist.
+      fuchsia::sys::internal::ComponentEventProvider::Name_,
   };
 }
 
@@ -422,6 +426,92 @@ TEST_F(ComponentControllerTest, HubWithIncomingServices) {
   RunLoopUntil([&ready] { return ready; });
 
   AssertHubHasIncomingServices(component.get(), {"service_a", "service_b"});
+}
+
+TEST_F(ComponentControllerTest, GetDiagnosticsDirExists) {
+  auto out_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+
+  zx::channel export_dir, export_dir_req;
+  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
+  vfs_.ServeDirectory(out_dir, std::move(export_dir));
+  fuchsia::sys::ComponentControllerPtr component_ptr;
+  auto component = CreateComponent(component_ptr, std::move(export_dir_req));
+
+  bool ready = false;
+  component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
+  RunLoopUntil([&ready] { return ready; });
+
+  auto diagnostics_dir = new fs::PseudoDir();
+  auto test_file = fbl::AdoptRef<fs::Vnode>(new fs::UnbufferedPseudoFile());
+  ASSERT_EQ(ZX_OK, diagnostics_dir->AddEntry("test_file", test_file));
+  ASSERT_EQ(ZX_OK,
+            out_dir->AddEntry("diagnostics", fbl::AdoptRef<fs::Vnode>(std::move(diagnostics_dir))));
+
+  bool done = false;
+  async::Executor executor(async_get_default_dispatcher());
+  fidl::InterfaceHandle<fuchsia::io::Directory> directory_handle;
+  executor.schedule_task(component->GetDiagnosticsDir().then(
+      [&](fit::result<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>& result) {
+        EXPECT_TRUE(result.is_ok());
+        directory_handle = std::move(result.value());
+        done = true;
+      }));
+
+  RunLoopUntil([&done] { return done; });
+
+  // Test the directory contains only our test file.
+  fuchsia::io::DirectoryPtr directory = directory_handle.Bind();
+  std::vector<std::string> entry_names;
+
+  zx_status_t status;
+  std::vector<uint8_t> buffer;
+  done = false;
+  directory->ReadDirents(
+      fuchsia::io::MAX_BUF,
+      [&status, &buffer, &done](zx_status_t read_status, std::vector<uint8_t> read_buffer) {
+        buffer = std::move(read_buffer);
+        status = std::move(read_status);
+        done = true;
+      });
+
+  RunLoopUntil([&done] { return done; });
+
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_FALSE(buffer.empty());
+
+  size_t offset = 0;
+  auto data_ptr = buffer.data();
+
+  while (sizeof(vdirent_t) < buffer.size() - offset) {
+    vdirent_t* entry = reinterpret_cast<vdirent_t*>(data_ptr + offset);
+    std::string name(entry->name, entry->size);
+    entry_names.push_back(name);
+    offset += sizeof(vdirent_t) + entry->size;
+  }
+
+  EXPECT_THAT(entry_names, testing::UnorderedElementsAre(".", "test_file"));
+}
+
+TEST_F(ComponentControllerTest, GetDiagnosticsDirMissing) {
+  zx::channel export_dir, export_dir_req;
+  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
+  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), std::move(export_dir));
+
+  fuchsia::sys::ComponentControllerPtr component_ptr;
+  auto component = CreateComponent(component_ptr, std::move(export_dir_req));
+
+  bool ready = false;
+  component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
+  RunLoopUntil([&ready] { return ready; });
+
+  bool done = false;
+  async::Executor executor(async_get_default_dispatcher());
+  executor.schedule_task(component->GetDiagnosticsDir().then(
+      [&](fit::result<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>& result) {
+        EXPECT_TRUE(result.is_error());
+        done = true;
+      }));
+  RunLoopUntil([&done] { return done; });
 }
 
 TEST_F(ComponentBridgeTest, CreateAndKill) {

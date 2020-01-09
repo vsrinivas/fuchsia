@@ -4,7 +4,7 @@
 
 library fuchsia.sys.internal;
 
-const uint16 MAXIMUM_MONIKER_SEGMENTS = 25;
+const uint16 MAXIMUM_REALM_PATH_SEGMENTS = 25;
 const uint16 COMPONENT_NAME_MAX_LENGTH = 255;
 const uint16 STRING_MAX_LENGTH = 100;
 const uint16 MAX_URL_LENGTH = 4096;
@@ -17,7 +17,7 @@ const uint16 MAX_URL_LENGTH = 4096;
 ///   instance_id: 19226
 table SourceIdentity {
     /// The path to the component from the observing realm.
-    1: vector<string:STRING_MAX_LENGTH>:MAXIMUM_MONIKER_SEGMENTS moniker;
+    1: vector<string:STRING_MAX_LENGTH>:MAXIMUM_REALM_PATH_SEGMENTS realm_path;
 
     /// The URL from which the component was loaded.
     2: string:MAX_URL_LENGTH component_url;

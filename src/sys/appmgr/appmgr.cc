@@ -12,7 +12,6 @@ using fuchsia::sys::TerminationReason;
 
 namespace component {
 namespace {
-constexpr char kRootLabel[] = "app";
 constexpr zx::duration kMinSmsmgrBackoff = zx::msec(200);
 constexpr zx::duration kMaxSysmgrBackoff = zx::sec(15);
 constexpr zx::duration kSysmgrAliveReset = zx::sec(5);
@@ -32,9 +31,10 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   // 1. Create root realm.
   fxl::UniqueFD appmgr_config_dir(open("/pkgfs/packages/config-data/0/data/appmgr", O_RDONLY));
   RealmArgs realm_args = RealmArgs::MakeWithAdditionalServices(
-      nullptr, kRootLabel, "/data", "/data/cache", "/tmp", std::move(args.environment_services),
-      args.run_virtual_console, std::move(args.root_realm_services),
-      fuchsia::sys::EnvironmentOptions{}, std::move(appmgr_config_dir));
+      nullptr, internal::kRootLabel, "/data", "/data/cache", "/tmp",
+      std::move(args.environment_services), args.run_virtual_console,
+      std::move(args.root_realm_services), fuchsia::sys::EnvironmentOptions{},
+      std::move(appmgr_config_dir));
   root_realm_ = Realm::Create(std::move(realm_args));
   FXL_CHECK(root_realm_) << "Cannot create root realm ";
 

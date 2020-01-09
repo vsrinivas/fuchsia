@@ -15,6 +15,8 @@ source_set("lib") {
     "cache_control.h",
     "component_controller_impl.cc",
     "component_controller_impl.h",
+    "component_event_provider_impl.cc",
+    "component_event_provider_impl.h",
     "debug_info_retriever.cc",
     "debug_info_retriever.h",
     "dynamic_library_loader.cc",
@@ -56,6 +58,7 @@ source_set("lib") {
     "//garnet/lib/loader",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal",
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/lib/sys/cpp",
     "//src/lib/backoff",
@@ -168,9 +171,7 @@ executable("unittest_bin") {
 package("appmgr") {
   deprecated_system_image = true
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   binaries = [
     {
       name = "appmgr"
@@ -180,42 +181,26 @@ package("appmgr") {
 
 config_data("appmgr_scheme_config") {
   for_pkg = "appmgr"
-  sources = [
-    "scheme_map.config",
-  ]
-  outputs = [
-    "scheme_map/default.config",
-  ]
+  sources = [ "scheme_map.config" ]
+  outputs = [ "scheme_map/default.config" ]
 }
 
 config_data("appmgr_global_data_allowlist") {
   for_pkg = "appmgr"
-  sources = [
-    "global_data_allowlist.txt",
-  ]
-  outputs = [
-    "allowlist/global_data.txt",
-  ]
+  sources = [ "global_data_allowlist.txt" ]
+  outputs = [ "allowlist/global_data.txt" ]
 }
 
 config_data("appmgr_deprecated_shell_allowlist") {
   for_pkg = "appmgr"
-  sources = [
-    "deprecated_shell_allowlist.txt",
-  ]
-  outputs = [
-    "allowlist/deprecated_shell.txt",
-  ]
+  sources = [ "deprecated_shell_allowlist.txt" ]
+  outputs = [ "allowlist/deprecated_shell.txt" ]
 }
 
 config_data("appmgr_deprecated_ambient_replace_as_executable_allowlist") {
   for_pkg = "appmgr"
-  sources = [
-    "deprecated_ambient_replace_as_executable_allowlist.txt",
-  ]
-  outputs = [
-    "allowlist/deprecated_ambient_replace_as_executable.txt",
-  ]
+  sources = [ "deprecated_ambient_replace_as_executable_allowlist.txt" ]
+  outputs = [ "allowlist/deprecated_ambient_replace_as_executable.txt" ]
 }
 
 group("unittests") {
@@ -227,9 +212,7 @@ group("unittests") {
 }
 
 test_package("appmgr_unittests") {
-  deps = [
-    ":unittest_bin",
-  ]
+  deps = [ ":unittest_bin" ]
   tests = [
     {
       name = "appmgr_unittests"

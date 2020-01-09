@@ -6,6 +6,7 @@
 #define SRC_SYS_APPMGR_REALM_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/sys/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -29,6 +30,7 @@
 #include "src/sys/appmgr/cache_control.h"
 #include "src/sys/appmgr/component_container.h"
 #include "src/sys/appmgr/component_controller_impl.h"
+#include "src/sys/appmgr/component_event_provider_impl.h"
 #include "src/sys/appmgr/environment_controller_impl.h"
 #include "src/sys/appmgr/hub/hub_info.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
@@ -38,6 +40,20 @@
 #include "src/sys/appmgr/scheme_map.h"
 
 namespace component {
+class ComponentEventProviderImpl;
+
+namespace internal {
+
+constexpr char kRootLabel[] = "app";
+
+// When a component event will be triggered, this struct will contain what provider to notify and
+// with which component identity data.
+struct EventNotificationInfo {
+  ComponentEventProviderImpl* provider;
+  fuchsia::sys::internal::SourceIdentity component;
+};
+
+}  // namespace internal
 
 struct RealmArgs {
   static RealmArgs Make(Realm* parent, std::string label, std::string data_path,
@@ -91,6 +107,14 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   zx::job DuplicateJobForHub() const;
 
   const zx::job& job() const { return job_; }
+  const std::unordered_map<ComponentControllerImpl*, std::shared_ptr<ComponentControllerImpl>>&
+  applications() const {
+    return applications_;
+  }
+
+  const std::unordered_map<Realm*, std::unique_ptr<EnvironmentControllerImpl>>& children() const {
+    return children_;
+  }
 
   void CreateNestedEnvironment(
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
@@ -133,6 +157,23 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   bool IsAllowedToUseDeprecatedShell(std::string ns_id);
   bool IsAllowedToUseDeprecatedAmbientReplaceAsExecutable(std::string ns_id);
 
+  // Notifies the |ComponentEventListener| of this realm or the closest parent realm (if there's
+  // one) with a component out/diagnostics directory when the directory is available.
+  void NotifyComponentDiagnosticsDirReady(const std::string& component_url,
+                                          const std::string& component_name,
+                                          const std::string& instance_id,
+                                          fidl::InterfaceHandle<fuchsia::io::Directory> directory);
+
+  // Fetches the relative realm path up to the provided |realm|
+  std::vector<std::string> RelativeRealmPath(Realm* relative_root_realm);
+
+  // Creates a connection to |fuchsia::sys::internal::ComponentEventProvider|.
+  zx_status_t BindComponentEventProvider(
+      fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider> request);
+
+  // Whether a `ComponentEventListener` has been bound to this realm `ComponentEventProvider`.
+  bool HasComponentEventListenerBound();
+
  private:
   static uint32_t next_numbered_label_;
 
@@ -167,6 +208,21 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
       fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata);
 
+  // Notifies the Realm components event subscriber when a component starts.
+  void NotifyComponentStarted(const std::string& component_url, const std::string& component_name,
+                              const std::string& instance_id);
+
+  // Notifies the Realm components event subscriber when a component stops.
+  void NotifyComponentStopped(const std::string& component_url, const std::string& component_name,
+                              const std::string& instance_id);
+
+  // When a component event will be triggered, this finds what provider to notify and with what
+  // identity data. The provider will be either the one attached to this component or some provider
+  // in an ancestor realm.
+  internal::EventNotificationInfo GetEventNotificationInfo(const std::string& component_url,
+                                                           const std::string& component_name,
+                                                           const std::string& instance_id);
+
   zx::channel OpenInfoDir();
 
   std::string IsolatedPathForPackage(std::string path_prefix, const FuchsiaPkgUrl& fp);
@@ -178,6 +234,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   std::string cache_path_;
   std::string temp_path_;
   std::string koid_;
+  std::vector<std::string> realm_path_;
   const bool run_virtual_console_;
   std::unique_ptr<component::PackageLoader> package_loader_;
   std::unique_ptr<component::CacheControl> cache_control_;
@@ -185,6 +242,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   zx::job job_;
 
   fxl::RefPtr<Namespace> default_namespace_;
+
+  std::unique_ptr<component::ComponentEventProviderImpl> component_event_provider_;
 
   RealmHub hub_;
   fs::SynchronousVfs info_vfs_;
