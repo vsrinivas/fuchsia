@@ -27,6 +27,7 @@
  */
 
 #include "e1000_api.h"
+#include "ddk/driver.h"
 
 typedef enum {
     ETH_RUNNING = 0,
@@ -187,7 +188,7 @@ static size_t eth_tx_queued(struct adapter* adapter) {
     return ((adapter->tx_wr_ptr + ETH_TXBUF_COUNT) - adapter->tx_rd_ptr) & (ETH_TXBUF_COUNT - 1);
 }
 
-static zx_status_t e1000_suspend(void* ctx, uint32_t flags) {
+static void e1000_suspend(void* ctx, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
     DEBUGOUT("entry\n");
     struct adapter* adapter = ctx;
     mtx_lock(&adapter->lock);
@@ -213,8 +214,8 @@ tx_done:
     eth_disable_tx(adapter);
     e1000_power_down_phy(&adapter->hw);
     adapter->state = ETH_SUSPENDED;
+    device_suspend_reply(adapter->zxdev, ZX_OK, requested_state);
     mtx_unlock(&adapter->lock);
-    return ZX_OK;
 }
 
 static zx_status_t e1000_resume(void* ctx, uint32_t flags) {
@@ -246,7 +247,7 @@ static void e1000_release(void* ctx) {
 
 static zx_protocol_device_t e1000_device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .suspend = e1000_suspend,
+    .suspend_new = e1000_suspend,
     .resume = e1000_resume,
     .release = e1000_release};
 

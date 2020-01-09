@@ -575,7 +575,11 @@ static zx_off_t nvme_get_size(void* ctx) {
   return nvme->info.block_count * nvme->info.block_size;
 }
 
-static zx_status_t nvme_suspend(void* ctx, uint32_t flags) { return ZX_OK; }
+static void nvme_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
+                         uint8_t suspend_reason) {
+  nvme_device_t* nvme = ctx;
+  device_suspend_reply(nvme->zxdev, ZX_OK, requested_state);
+}
 
 static zx_status_t nvme_resume(void* ctx, uint32_t flags) { return ZX_OK; }
 
@@ -621,7 +625,7 @@ static zx_protocol_device_t device_ops = {
 
     .get_size = nvme_get_size,
 
-    .suspend = nvme_suspend,
+    .suspend_new = nvme_suspend,
     .resume = nvme_resume,
     .release = nvme_release,
 };
