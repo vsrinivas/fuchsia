@@ -1109,3 +1109,61 @@ TEST_F(CompositeMetadataTestCase, GetMetadataAfterCompositeReassemble) {
       platform_bus()->coordinator->GetMetadata(composite_device, kMetadataKey, buf, 32, &len));
   VerifyMetadata(buf, len);
 }
+
+// Tests that a composite is not created until the component devices finish initializing.
+TEST_F(CompositeTestCase, ComponentDeviceInit) {
+  size_t device_indexes[2];
+  uint32_t protocol_id[] = {
+      ZX_PROTOCOL_GPIO,
+      ZX_PROTOCOL_I2C,
+  };
+  static_assert(fbl::count_of(protocol_id) == fbl::count_of(device_indexes));
+
+  const char* kCompositeDevName = "composite-dev";
+  ASSERT_NO_FATAL_FAILURES(
+      BindCompositeDefineComposite(platform_bus(), protocol_id, fbl::count_of(protocol_id),
+                                   nullptr /* props */, 0, kCompositeDevName));
+
+  // Add the devices to construct the composite out of.
+  zx_txid_t txns[fbl::count_of(device_indexes)] = {};
+  for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
+    char name[32];
+    snprintf(name, sizeof(name), "device-%zu", i);
+    ASSERT_NO_FATAL_FAILURES(
+        AddDevice(platform_bus(), name, protocol_id[i], "", false /* invisible */,
+        true /* has_init */, false /* reply_to_init */, true /* always_init */,
+        &device_indexes[i]));
+    auto index = device_indexes[i];
+    ASSERT_FALSE(device(index)->device->is_visible());
+    ASSERT_NO_FATAL_FAILURES(CheckInitReceived(device(index)->controller_remote, &txns[i]));
+    ASSERT_EQ(devmgr::Device::State::kInitializing, device(index)->device->state());
+    coordinator_loop()->RunUntilIdle();
+  }
+
+  for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
+    auto index = device_indexes[i];
+    // Check that the component isn't being bound yet.
+    ASSERT_FALSE(DeviceHasPendingMessages(device(index)->controller_remote));
+
+    ASSERT_NO_FATAL_FAILURES(SendInitReply(device(index)->controller_remote, txns[i]));
+    coordinator_loop()->RunUntilIdle();
+
+    ASSERT_TRUE(device(index)->device->is_visible());
+    ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+  }
+
+  zx::channel composite_remote_coordinator;
+  zx::channel composite_remote_controller;
+  size_t component_device_indexes[fbl::count_of(device_indexes)];
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
+      kCompositeDevName, device_indexes, fbl::count_of(device_indexes), component_device_indexes,
+      &composite_remote_coordinator, &composite_remote_controller));
+  coordinator_loop()->RunUntilIdle();
+
+  {
+    fbl::RefPtr<devmgr::Device> comp_device =
+        GetCompositeDeviceFromComponent(kCompositeDevName, device_indexes[1]);
+    ASSERT_NOT_NULL(comp_device);
+    ASSERT_EQ(devmgr::Device::State::kActive, comp_device->state());
+  }
+}

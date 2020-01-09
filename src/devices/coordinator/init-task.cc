@@ -26,7 +26,15 @@ void InitTask::Run() {
   // other tasks for a device.
   ZX_ASSERT(device_->state() == Device::State::kInitializing);
 
-  // TODO(jocelyndang): consider proxy and composite devices.
+  // Composite and proxy devices do not implement init hooks or use init tasks.
+  // If the parent is a composite device, we do not need to wait on any init task,
+  // as composite devices are not created until all its component devices have finished
+  // initializing.
+  // If the parent is a proxy device, it is sufficient to wait on the init task of the
+  // stored real parent (parent of the proxy device).
+  ZX_ASSERT(!device_->composite());
+  ZX_ASSERT(!(device_->flags & DEV_CTX_PROXY));
+
   if (device_->parent() && device_->parent()->state() == Device::State::kInitializing) {
     AddDependency(device_->parent()->GetActiveInit());
     return;
