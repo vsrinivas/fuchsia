@@ -115,13 +115,14 @@ zx_status_t AmlogicSecureMemDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn)
 // TODO(36888): Determine if we only ever use mexec to reboot from zedboot into a netboot(ed) image.
 // Iff so, we could avoid some complexity here by not loading aml-securemem in zedboot, and not
 // handling suspend(mexec) here, and not having UnregisterSecureMem().
-zx_status_t AmlogicSecureMemDevice::DdkSuspend(uint32_t flags) {
-  LOG(TRACE, "aml-securemem: begin DdkSuspend() - flags: %08x", flags);
+void AmlogicSecureMemDevice::DdkSuspendNew(ddk::SuspendTxn txn) {
+  LOG(TRACE, "aml-securemem: begin DdkSuspend() - Suspend Reason: %d", txn.suspend_reason());
 
-  if ((flags & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_MEXEC) {
+  if ((txn.suspend_reason() & DEVICE_MASK_SUSPEND_REASON) != DEVICE_SUSPEND_REASON_MEXEC) {
     // When a driver doesn't set a suspend function, the default impl returns
     // ZX_OK.
-    return ZX_OK;
+    txn.Reply(ZX_OK, txn.requested_state());
+    return;
   }
 
   // Sysmem loads first (by design, to maximize chance of getting contiguous
@@ -129,7 +130,8 @@ zx_status_t AmlogicSecureMemDevice::DdkSuspend(uint32_t flags) {
   // will suspend before sysmem, so we have aml-securemem clean up secure memory
   // during its suspend (instead of sysmem trying to call aml-securemem after
   // aml-securemem has already suspended).
-  ZX_DEBUG_ASSERT((flags & DEVICE_SUSPEND_REASON_MASK) == DEVICE_SUSPEND_FLAG_MEXEC);
+  ZX_DEBUG_ASSERT((txn.suspend_reason() & DEVICE_MASK_SUSPEND_REASON) ==
+                  DEVICE_SUSPEND_REASON_MEXEC);
 
   if (sysmem_secure_mem_server_) {
     is_suspend_mexec_ = true;
@@ -147,8 +149,7 @@ zx_status_t AmlogicSecureMemDevice::DdkSuspend(uint32_t flags) {
   }
 
   LOG(TRACE, "aml-securemem: end DdkSuspend()\n");
-
-  return ZX_OK;
+  txn.Reply(ZX_OK, txn.requested_state());
 }
 
 void AmlogicSecureMemDevice::GetSecureMemoryPhysicalAddress(
@@ -309,4 +310,4 @@ ZIRCON_DRIVER_BEGIN(amlogic_secure_mem, amlogic_secure_mem::driver_ops, "zircon"
   BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
   BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
 ZIRCON_DRIVER_END(amlogic_secure_mem)
-// clang-format on
+    // clang-format on

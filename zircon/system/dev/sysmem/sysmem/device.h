@@ -121,8 +121,9 @@ class Device final : public MemoryAllocator::Owner {
 
   // This has the connection to the securemem driver, if any.  Once allocated this is supposed to
   // stay allocated unless mexec is about to happen.  The server end takes care of handling
-  // DdkSuspend() to allow mexec to work.  For example, by calling secmem TA.  This channel will
-  // close from the server end when DdkSuspend(mexec) happens, but only after UnregisterSecureMem().
+  // DdkSuspendNew() to allow mexec to work.  For example, by calling secmem TA.  This channel will
+  // close from the server end when DdkSuspendNew(mexec) happens, but only after
+  // UnregisterSecureMem().
   std::unique_ptr<SecureMemConnection> secure_mem_;
 
   std::unique_ptr<MemoryAllocator> contiguous_system_ram_allocator_;
