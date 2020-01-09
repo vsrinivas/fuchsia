@@ -42,8 +42,8 @@ class FakeBackend : public Backend {
     state_ = State::DEVICE_STATUS_ACK;
   }
   void DeviceReset() override {
-      state_ = State::DEVICE_RESET;
-      kicked_queues_.clear();
+    state_ = State::DEVICE_RESET;
+    kicked_queues_.clear();
   }
   void ReadDeviceConfig(uint16_t offset, uint8_t* value) override {
     auto shifted_offset = static_cast<uint16_t>(offset + kISRStatus + 1);
