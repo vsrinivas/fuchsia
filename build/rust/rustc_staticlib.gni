@@ -100,6 +100,13 @@ template("rustc_staticlib") {
   source_set(header_target) {
     public = public_hdrs
     visibility = [ ":$group_target" ]
+    deps = []
+    if (defined(invoker.non_rust_deps)) {
+      # TODO(43781): This allows propagating non rust dependencies through a
+      # single level of indirection, but does not handle propagating
+      # dependencies through an intermediate Rust target.
+      deps += invoker.non_rust_deps
+    }
   }
 
   group(target_name) {
