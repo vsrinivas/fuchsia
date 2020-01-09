@@ -50,6 +50,11 @@ ConsoleContext::ConsoleContext(Session* session) : session_(session) {
 
   for (SymbolServer* symbol_server : session->system().GetSymbolServers())
     DidCreateSymbolServer(symbol_server);
+
+  pretty_stack_manager_ = fxl::MakeRefCounted<PrettyStackManager>();
+  // TODO(bug 43549) this should be loaded from a configuration file somehow associated with the
+  // user's build instead of being hardcoded. This call can then be deleted.
+  pretty_stack_manager_->LoadDefaultMatchers();
 }
 
 ConsoleContext::~ConsoleContext() {

@@ -42,6 +42,7 @@ namespace {
 
 constexpr int kForceTypes = 1;
 constexpr int kVerboseSwitch = 2;
+constexpr int kRawOutput = 3;
 
 // Frames ------------------------------------------------------------------------------------------
 
@@ -63,6 +64,10 @@ const char kFrameHelp[] =
   regardless of which is the active one.
 
 Options
+
+  -r
+  --raw
+      Expands frames that were collapsed by the "pretty" stack formatter.
 
   -t
   --types
@@ -101,6 +106,10 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   }
 
   FormatStackOptions opts;
+
+  if (!cmd.HasSwitch(kRawOutput))
+    opts.pretty_stack = context->pretty_stack_manager();
+
   opts.frame.loc = FormatLocationOptions(cmd.target());
   opts.frame.loc.show_params = cmd.HasSwitch(kForceTypes);
   opts.frame.loc.func.name.elide_templates = true;
@@ -875,6 +884,7 @@ void AppendNouns(std::map<Noun, NounRecord>* nouns) {
 const std::vector<SwitchRecord>& GetNounSwitches() {
   static std::vector<SwitchRecord> switches;
   if (switches.empty()) {
+    switches.emplace_back(kRawOutput, false, "raw", 'r');
     switches.emplace_back(kForceTypes, false, "types", 't');
     switches.emplace_back(kVerboseSwitch, false, "verbose", 'v');
   }

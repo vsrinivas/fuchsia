@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_FRAME_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_FRAME_H_
 
+#include "src/developer/debug/zxdb/client/pretty_stack_manager.h"
 #include "src/developer/debug/zxdb/console/async_output_buffer.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_location.h"
@@ -38,7 +39,8 @@ struct FormatFrameOptions {
 struct FormatStackOptions {
   FormatFrameOptions frame;
 
-  // TODO(brettw) the pretty stack printing pointer will go here.
+  // If non-null, will be used to shorten the frame list.
+  fxl::RefPtr<PrettyStackManager> pretty_stack;
 };
 
 // Generates the list of frames from the given Thread to the console. This will complete

@@ -6,9 +6,26 @@
 
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 
 namespace zxdb {
+
+namespace {
+
+Location MakeLocation(TargetPointer ip, const std::string& func_name, FileLine file_line) {
+  // The function name currently can't handle "::". Because we pass the string to set_assigned_name,
+  // they will be treated as literals and not scope separators. If support for those is needed,
+  // we need to make the hierarchy of namespaces, etc. to put the function in.
+  FXL_DCHECK(func_name.find("::") == std::string::npos);
+
+  auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  function->set_assigned_name(func_name);
+
+  return Location(ip, std::move(file_line), 0, SymbolContext::ForRelativeAddresses(), function);
+}
+
+}  // namespace
 
 MockFrame::MockFrame(Session* session, Thread* thread, const Location& location, uint64_t sp,
                      uint64_t cfa, std::vector<debug_ipc::Register> regs, uint64_t frame_base,
@@ -22,6 +39,10 @@ MockFrame::MockFrame(Session* session, Thread* thread, const Location& location,
       physical_frame_(physical_frame),
       location_(location),
       is_ambiguous_inline_(is_ambiguous_inline) {}
+
+MockFrame::MockFrame(Session* session, Thread* thread, TargetPointer ip, TargetPointer sp,
+                     const std::string& func_name, FileLine file_line)
+    : MockFrame(session, thread, MakeLocation(ip, func_name, std::move(file_line)), sp) {}
 
 MockFrame::~MockFrame() = default;
 

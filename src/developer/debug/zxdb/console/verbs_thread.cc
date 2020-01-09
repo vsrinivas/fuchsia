@@ -174,6 +174,10 @@ const char kBacktraceHelp[] =
 
 Arguments
 
+  -r
+  --raw
+      Expands frames that were collapsed by the "pretty" stack formatter.
+
   -t
   --types
       Include all type information for function parameters.
@@ -199,6 +203,9 @@ Err DoBacktrace(ConsoleContext* context, const Command& cmd) {
     return Err("There is no thread to have frames.");
 
   FormatStackOptions opts;
+
+  if (!cmd.HasSwitch(kRawOutput))
+    opts.pretty_stack = context->pretty_stack_manager();
 
   opts.frame.loc = FormatLocationOptions(cmd.target());
   opts.frame.loc.show_params = cmd.HasSwitch(kForceAllTypes);
@@ -1406,21 +1413,21 @@ Err DoUntil(ConsoleContext* context, const Command& cmd) {
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   // Shared options for value printing.
   SwitchRecord force_types(kForceAllTypes, false, "types", 't');
+  SwitchRecord raw(kRawOutput, false, "raw", 'r');
   const std::vector<SwitchRecord> format_switches{
       force_types,
+      raw,
       SwitchRecord(kVerboseFormat, false, "verbose", 'v'),
       SwitchRecord(kForceNumberChar, false, "", 'c'),
       SwitchRecord(kForceNumberSigned, false, "", 'd'),
       SwitchRecord(kForceNumberUnsigned, false, "", 'u'),
       SwitchRecord(kForceNumberHex, false, "", 'x'),
-      SwitchRecord(kMaxArraySize, true, "max-array"),
-      SwitchRecord(kRawOutput, false, "raw", 'r')};
+      SwitchRecord(kMaxArraySize, true, "max-array")};
 
   // backtrace
   VerbRecord backtrace(&DoBacktrace, {"backtrace", "bt"}, kBacktraceShortHelp, kBacktraceHelp,
                        CommandGroup::kQuery);
-  backtrace.switches = {force_types, force_types,
-                        SwitchRecord(kVerboseBacktrace, false, "verbose", 'v')};
+  backtrace.switches = {force_types, raw, SwitchRecord(kVerboseBacktrace, false, "verbose", 'v')};
 
   (*verbs)[Verb::kBacktrace] = std::move(backtrace);
 

@@ -9,6 +9,7 @@
 
 #include "gtest/gtest_prod.h"
 #include "src/developer/debug/zxdb/client/pretty_frame_glob.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
 
@@ -27,8 +28,10 @@ class Stack;
 // code won't go search for a possibly different interpretation of the wildcard that does match.
 // This behavior is unnecessary given typical stack matching requirements and affects complexity and
 // performance.
-class PrettyStackManager {
+class PrettyStackManager : public fxl::RefCountedThreadSafe<PrettyStackManager> {
  public:
+  // Construct with fxl::MakeRefCounted().
+
   struct StackGlob {
     StackGlob(std::string d, std::vector<PrettyFrameGlob> f)
         : description(std::move(d)), frames(std::move(f)) {}
@@ -48,18 +51,45 @@ class PrettyStackManager {
     std::string description;
   };
 
+  // The grouped results of prettifying an entire stack.
+  struct FrameEntry {
+    // Index into the stack fo the first frame.
+    size_t begin_index = 0;
+
+    // Match if there was one starting at this location.
+    Match match;
+
+    // The frames corresponding to this item. If there's a match, this will contain the range of
+    // frames identified by the match_count. If there's no match, this will contain one frame.
+    std::vector<const Frame*> frames;
+  };
+
   void SetMatchers(std::vector<StackGlob> matchers);
+
+  // Loads the hardcoded default matchers.
+  //
+  // TODO(bug 43549) this should be loaded from a configuration file somehow associated with the
+  // user's build instead of being hardcoded. This function can then be deleted.
+  void LoadDefaultMatchers();
 
   // Returns the best match at the given index. The result will match no frames if there was no
   // match at the given index.
-  Match GetMatchAt(const Stack* stack, size_t frame_index) const;
+  Match GetMatchAt(const Stack& stack, size_t frame_index) const;
+
+  // Processes an entire stack, returning the grouped results.
+  std::vector<FrameEntry> ProcessStack(const Stack& stack) const;
 
  private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(PrettyStackManager);
+  FRIEND_MAKE_REF_COUNTED(PrettyStackManager);
+
   FRIEND_TEST(PrettyStackManager, StackGlobMatchesAt);
+
+  PrettyStackManager() = default;
 
   // Returns the number of frames matched (may be > stack_glob.size() if there were wildcard
   // matches). Will return 0 if it's not a match.
-  static size_t StackGlobMatchesAt(const StackGlob& stack_glob, const Stack* stack,
+  static size_t StackGlobMatchesAt(const StackGlob& stack_glob, const Stack& stack,
                                    size_t frame_start_index);
 
   // Sorted in order of decreasing size (longest matchers are first).

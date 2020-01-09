@@ -25,6 +25,7 @@ class PrettyFrameGlob {
 
   static PrettyFrameGlob File(std::string file);
   static PrettyFrameGlob Func(std::string function);
+  static PrettyFrameGlob FuncFile(std::string function, std::string file);
 
   bool is_wildcard() const { return !function_ && !file_; }
 

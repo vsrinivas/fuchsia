@@ -25,8 +25,28 @@ namespace zxdb {
 
 namespace {
 
+// Appends the frame heading (indent, active marker, frame number) for a stack entry. The frame
+// numbers are expressed in a range (inclusive) to support pretty-printing. They should be the same
+// for normal stack entries.
+void AppendFrameNumber(size_t begin_range, size_t end_range, size_t active_frame_index,
+                       AsyncOutputBuffer* out) {
+  if (active_frame_index >= begin_range && active_frame_index <= end_range)
+    out->Append(GetCurrentRowMarker() + " ");
+  else
+    out->Append("  ");
+
+  if (begin_range == end_range) {
+    out->Append(OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%zu ", begin_range)));
+  } else {
+    out->Append(OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%zu", begin_range)));
+    out->Append(Syntax::kComment, "…");
+    out->Append(OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%zu ", end_range)));
+  }
+}
+
 fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread, const FormatStackOptions& opts) {
-  int active_frame_id = Console::get()->context().GetActiveFrameIdForThread(thread);
+  size_t active_frame_id =
+      static_cast<size_t>(Console::get()->context().GetActiveFrameIdForThread(thread));
 
   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
 
@@ -48,17 +68,41 @@ fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread, const FormatS
     return out;
   }
 
-  for (int i = 0; i < static_cast<int>(stack.size()); i++) {
-    if (i == active_frame_id)
-      out->Append(GetCurrentRowMarker() + " ");
-    else
-      out->Append("  ");
+  std::vector<PrettyStackManager::FrameEntry> pretty_stack;
+  if (opts.pretty_stack) {
+    pretty_stack = opts.pretty_stack->ProcessStack(stack);
+  } else {
+    pretty_stack.resize(stack.size());
+    for (size_t i = 0; i < stack.size(); i++) {
+      pretty_stack[i].begin_index = i;
+      pretty_stack[i].frames.push_back(stack[i]);
+    }
+  }
 
-    out->Append(OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%d ", i)));
+  for (const auto& entry : pretty_stack) {
+    // Stack item pretty-printing only happens if there's a pretty match and the current entry
+    // isn't within the range of midden frames.
+    //
+    // One case this doesn't handle is if expanding the range of pretty-stacks means a smaller
+    // matcher might apply that doesn't overlap the user's current frame. To support that, we'd
+    // need to move the logic of no prettifying the current frame to the PrettyStackManager,
+    bool use_pretty = entry.match && !(active_frame_id > entry.begin_index &&
+                                       active_frame_id < entry.begin_index + entry.frames.size());
 
-    // Supply "-1" for the frame index to suppress printing (we already did it above).
-    out->Append(FormatFrame(stack[i], opts.frame, -1));
-    out->Append("\n");
+    if (use_pretty) {
+      AppendFrameNumber(entry.begin_index, entry.begin_index + entry.frames.size() - 1,
+                        active_frame_id, out.get());
+      out->Append("«" + entry.match.description + "»");
+      out->Append(Syntax::kComment, " (-r expands)\n");
+    } else {
+      for (size_t i = 0; i < entry.frames.size(); i++) {
+        AppendFrameNumber(entry.begin_index + i, entry.begin_index + i, active_frame_id, out.get());
+
+        // Supply "-1" for the frame index to suppress printing (we already did it).
+        out->Append(FormatFrame(stack[entry.begin_index + i], opts.frame, -1));
+        out->Append("\n");
+      }
+    }
   }
 
   out->Complete();

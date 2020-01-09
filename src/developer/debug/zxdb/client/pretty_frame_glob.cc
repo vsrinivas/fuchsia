@@ -33,6 +33,14 @@ PrettyFrameGlob PrettyFrameGlob::Func(std::string function) {
   return result;
 }
 
+// static
+PrettyFrameGlob PrettyFrameGlob::FuncFile(std::string function, std::string file) {
+  PrettyFrameGlob result;
+  result.function_ = std::move(function);
+  result.file_ = std::move(file);
+  return result;
+}
+
 bool PrettyFrameGlob::Matches(const Frame* frame) const {
   if (is_wildcard())
     return true;  // Matches everything. Avoid symbolizing in GetLocation if unnecessary.
@@ -51,12 +59,12 @@ bool PrettyFrameGlob::Matches(const Location& loc) const {
   }
 
   if (function_) {
-    const Function* function = loc.symbol().Get()->AsFunction();
-    if (!function)
+    const Symbol* symbol = loc.symbol().Get();
+    if (!symbol)
       return false;  // No function to match.
 
     // Currently we require an exact function name match.
-    if (function->GetFullName() != *function_)
+    if (symbol->GetFullName() != *function_)
       return false;
   }
 

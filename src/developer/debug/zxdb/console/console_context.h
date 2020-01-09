@@ -7,6 +7,7 @@
 
 #include "src/developer/debug/zxdb/client/breakpoint_observer.h"
 #include "src/developer/debug/zxdb/client/download_observer.h"
+#include "src/developer/debug/zxdb/client/pretty_stack_manager.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/session_observer.h"
 #include "src/developer/debug/zxdb/client/system_observer.h"
@@ -109,6 +110,13 @@ class ConsoleContext : public ProcessObserver,
   // structure based on what the command specifies and the current context.
   // Returns an error if any of the referenced IDs are invalid.
   Err FillOutCommand(Command* cmd) const;
+
+  // Returns the PrettyStackManager for this session.
+  //
+  // This object is currently sitting on the ConsoleContext as a convenient place to hold the
+  // singleton for the console frontend. Depending on how this evolve, it might be better to have
+  // the client layer manage this object.
+  const fxl::RefPtr<PrettyStackManager>& pretty_stack_manager() { return pretty_stack_manager_; }
 
  private:
   struct ThreadRecord {
@@ -236,6 +244,8 @@ class ConsoleContext : public ProcessObserver,
   int active_breakpoint_id_ = 0;
   int active_filter_id_ = 0;
   int active_symbol_server_id_ = 0;
+
+  fxl::RefPtr<PrettyStackManager> pretty_stack_manager_;
 };
 
 }  // namespace zxdb

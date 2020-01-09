@@ -7,6 +7,7 @@
 
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -27,6 +28,11 @@ class MockFrame : public Frame {
   MockFrame(Session* session, Thread* thread, const Location& location, uint64_t sp,
             uint64_t cfa = 0, std::vector<debug_ipc::Register> regs = {}, uint64_t frame_base = 0,
             const Frame* physical_frame = nullptr, bool is_ambiguous_inline = false);
+
+  // This variant makes a location with a mock function object of the given name and the default
+  // value of everything else. It's usuaully enough for many types of tests.
+  MockFrame(Session* session, Thread* thread, TargetPointer ip, TargetPointer sp,
+            const std::string& func_name, FileLine file_line);
 
   ~MockFrame() override;
 
