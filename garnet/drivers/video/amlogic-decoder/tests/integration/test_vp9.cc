@@ -103,6 +103,21 @@ class TestFrameProvider final : public Vp9Decoder::FrameDataProvider {
   DecoderInstance* instance_ = nullptr;
 };
 
+class Vp9TestClient : public TestFrameAllocator {
+ public:
+  explicit Vp9TestClient(AmlogicVideo* video) : TestFrameAllocator(video) {}
+
+  bool IsOutputReady() override { return true; }
+
+  bool IsCurrentOutputBufferCollectionUsable(uint32_t min_frame_count, uint32_t max_frame_count,
+                                             uint32_t coded_width, uint32_t coded_height,
+                                             uint32_t stride, uint32_t display_width,
+                                             uint32_t display_height) override {
+    // Assume that these tests never resize outputs.
+    return true;
+  }
+};
+
 // Repeatedly try to process video, either it's all processed or until a flag is set.
 static void FeedDataUntilFlag(AmlogicVideo* video, const uint8_t* input, uint32_t input_size,
                               std::atomic<bool>* stop_parsing) {
@@ -130,13 +145,12 @@ class TestVP9 {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
-
-    TestFrameAllocator frame_allocator(video.get());
+    Vp9TestClient client(video.get());
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
-          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream,
+          std::make_unique<Vp9Decoder>(video.get(), &client, Vp9Decoder::InputType::kSingleStream,
                                        use_compressed_output, false),
           true);
     }
@@ -148,7 +162,7 @@ class TestVP9 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      frame_allocator.set_decoder(video->video_decoder_);
+      client.set_decoder(video->video_decoder_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
     }
 
@@ -158,35 +172,35 @@ class TestVP9 {
     std::vector<std::weak_ptr<VideoFrame>> frames_to_return;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_->SetFrameReadyNotifier(
-          [&video, &frames_to_return, &frame_count, &wait_valid, &frames_returned, delayed_return,
-           filename, test_hashes](std::shared_ptr<VideoFrame> frame) {
-            ++frame_count;
-            DLOG("Got frame %d\n", frame_count);
-            EXPECT_EQ(320u, frame->display_width);
-            EXPECT_EQ(240u, frame->display_height);
-            (void)filename;
+      client.SetFrameReadyNotifier([&video, &frames_to_return, &frame_count, &wait_valid,
+                                    &frames_returned, delayed_return, filename,
+                                    test_hashes](std::shared_ptr<VideoFrame> frame) {
+        ++frame_count;
+        DLOG("Got frame %d\n", frame_count);
+        EXPECT_EQ(320u, frame->display_width);
+        EXPECT_EQ(240u, frame->display_height);
+        (void)filename;
 #if DUMP_VIDEO_TO_FILE
-            DumpVideoFrameToFile(frame.get(), filename);
+        DumpVideoFrameToFile(frame.get(), filename);
 #endif
-            if (test_hashes) {
-              uint8_t md[SHA256_DIGEST_LENGTH];
-              HashFrame(frame.get(), md);
-              EXPECT_EQ(0, memcmp(md, test_25fps_hashes[frame_count - 1], sizeof(md)))
-                  << "Incorrect hash for frame " << frame_count << ": " << StringifyHash(md);
-            }
-            if (frames_returned || !delayed_return)
-              ReturnFrame(video.get(), frame);
-            else
-              frames_to_return.push_back(frame);
-            if (frame_count == kTestVideoFrameCount)
-              wait_valid.set_value();
+        if (test_hashes) {
+          uint8_t md[SHA256_DIGEST_LENGTH];
+          HashFrame(frame.get(), md);
+          EXPECT_EQ(0, memcmp(md, test_25fps_hashes[frame_count - 1], sizeof(md)))
+              << "Incorrect hash for frame " << frame_count << ": " << StringifyHash(md);
+        }
+        if (frames_returned || !delayed_return)
+          ReturnFrame(video.get(), frame);
+        else
+          frames_to_return.push_back(frame);
+        if (frame_count == kTestVideoFrameCount)
+          wait_valid.set_value();
 
-            // Testing delayed return doesn't work well with reallocating buffers, since the
-            // decoder will throw out the old buffers and continue decoding anyway.
-            if (!delayed_return && (frame_count % 5 == 0))
-              SetReallocateBuffersNextFrameForTesting(video.get());
-          });
+        // Testing delayed return doesn't work well with reallocating buffers, since the
+        // decoder will throw out the old buffers and continue decoding anyway.
+        if (!delayed_return && (frame_count % 5 == 0))
+          SetReallocateBuffersNextFrameForTesting(video.get());
+      });
     }
     auto test_ivf = TestSupport::LoadFirmwareFile(input_filename);
     ASSERT_NE(nullptr, test_ivf);
@@ -234,7 +248,7 @@ class TestVP9 {
   static void DecodePerFrame() {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
-    TestFrameAllocator frame_allocator(video.get());
+    Vp9TestClient client(video.get());
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
@@ -244,8 +258,8 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
-          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream, false,
-                                       false),
+          std::make_unique<Vp9Decoder>(video.get(), &client, Vp9Decoder::InputType::kSingleStream,
+                                       false, false),
           true);
     }
 
@@ -256,7 +270,7 @@ class TestVP9 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      frame_allocator.set_decoder(video->video_decoder_);
+      client.set_decoder(video->video_decoder_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
     }
 
@@ -266,7 +280,7 @@ class TestVP9 {
     uint64_t next_pts = 0;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_->SetFrameReadyNotifier(
+      client.SetFrameReadyNotifier(
           [&video, &frame_count, &wait_valid, &next_pts](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             DLOG("Got frame %d, pts: %ld\n", frame_count, frame->pts);
@@ -311,16 +325,17 @@ class TestVP9 {
   static void DecodeResetHardware(const char* filename, bool use_parser) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
-    TestFrameAllocator frame_allocator(video.get());
+    Vp9TestClient client(video.get());
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<Vp9Decoder>(
-                                    video.get(), Vp9Decoder::InputType::kMultiStream, false, false),
-                                true);
+      video->SetDefaultInstance(
+          std::make_unique<Vp9Decoder>(video.get(), &client, Vp9Decoder::InputType::kMultiStream,
+                                       false, false),
+          true);
     }
     // Don't use parser, because we need to be able to save and restore the read
     // and write pointers, which can't be done if the parser is using them as
@@ -331,7 +346,7 @@ class TestVP9 {
     TestFrameProvider frame_provider;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      frame_allocator.set_decoder(video->video_decoder_);
+      client.set_decoder(video->video_decoder_);
       static_cast<Vp9Decoder*>(video->video_decoder_)->SetFrameDataProvider(&frame_provider);
       frame_provider.set_instance(video->current_instance());
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
@@ -341,7 +356,7 @@ class TestVP9 {
     std::promise<void> wait_valid;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_->SetFrameReadyNotifier(
+      client.SetFrameReadyNotifier(
           [&video, &frame_count, &wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             DLOG("Got frame %d\n", frame_count);
@@ -404,17 +419,17 @@ class TestVP9 {
     EXPECT_EQ(ZX_OK, video->InitDecoder());
 
     std::vector<std::unique_ptr<TestFrameProvider>> frame_providers;
-    std::vector<std::unique_ptr<TestFrameAllocator>> frame_allocators;
+    std::vector<std::unique_ptr<TestFrameAllocator>> clients;
 
     for (uint32_t i = 0; i < 2; i++) {
+      auto client = std::make_unique<Vp9TestClient>(video.get());
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      auto decoder = std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kMultiStream,
-                                                  false, false);
+      auto decoder = std::make_unique<Vp9Decoder>(
+          video.get(), client.get(), Vp9Decoder::InputType::kMultiStream, false, false);
       frame_providers.push_back(std::make_unique<TestFrameProvider>());
       decoder->SetFrameDataProvider(frame_providers.back().get());
-      auto frame_allocator = std::make_unique<TestFrameAllocator>(video.get());
-      frame_allocator->set_decoder(decoder.get());
-      frame_allocators.push_back(std::move(frame_allocator));
+      client->set_decoder(decoder.get());
+      clients.push_back(std::move(client));
       EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
       video->swapped_out_instances_.push_back(
           std::make_unique<DecoderInstance>(std::move(decoder), video->hevc_core_.get()));
@@ -447,7 +462,7 @@ class TestVP9 {
     std::promise<void> wait_valid;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_->SetFrameReadyNotifier(
+      clients[0]->SetFrameReadyNotifier(
           [&video, &frame_count, &wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             DLOG("Got frame %d\n", frame_count);
@@ -464,9 +479,7 @@ class TestVP9 {
     std::promise<void> wait_valid1;
     bool got_error = false;
     {
-      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      VideoDecoder* second_decoder = video->swapped_out_instances_.back()->decoder();
-      second_decoder->SetFrameReadyNotifier(
+      clients[1]->SetFrameReadyNotifier(
           [&video, &frame_count1, &wait_valid1,
            inject_initialization_fault](std::shared_ptr<VideoFrame> frame) {
             // This is called from the interrupt handler, which already holds the lock.
@@ -491,7 +504,7 @@ class TestVP9 {
                 wait_valid1.set_value();
             }
           });
-      second_decoder->SetErrorHandler([&got_error, &wait_valid1]() {
+      clients[1]->SetErrorHandler([&got_error, &wait_valid1]() {
         got_error = true;
         wait_valid1.set_value();
       });
@@ -576,15 +589,15 @@ class TestVP9 {
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
 
-    TestFrameAllocator frame_allocator(video.get());
+    Vp9TestClient client(video.get());
     std::promise<void> first_wait_valid;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
-          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream,
+          std::make_unique<Vp9Decoder>(video.get(), &client, Vp9Decoder::InputType::kSingleStream,
                                        /*use_compressed_output=*/false, false),
           true);
-      video->video_decoder()->SetErrorHandler([&first_wait_valid]() {
+      client.SetErrorHandler([&first_wait_valid]() {
         DLOG("Got decode error");
         first_wait_valid.set_value();
       });
@@ -596,22 +609,21 @@ class TestVP9 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      frame_allocator.set_decoder(video->video_decoder_);
+      client.set_decoder(video->video_decoder_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
     }
 
     uint32_t frame_count = 0;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->video_decoder_->SetFrameReadyNotifier(
-          [&video, &frame_count](std::shared_ptr<VideoFrame> frame) {
-            ++frame_count;
-            DECODE_ERROR("Got frame %d", frame_count);
-            DLOG("Got frame %d\n", frame_count);
-            EXPECT_EQ(320u, frame->display_width);
-            EXPECT_EQ(240u, frame->display_height);
-            ReturnFrame(video.get(), frame);
-          });
+      client.SetFrameReadyNotifier([&video, &frame_count](std::shared_ptr<VideoFrame> frame) {
+        ++frame_count;
+        DECODE_ERROR("Got frame %d", frame_count);
+        DLOG("Got frame %d\n", frame_count);
+        EXPECT_EQ(320u, frame->display_width);
+        EXPECT_EQ(240u, frame->display_height);
+        ReturnFrame(video.get(), frame);
+      });
     }
     auto test_ivf = TestSupport::LoadFirmwareFile(input_filename);
     ASSERT_NE(nullptr, test_ivf);

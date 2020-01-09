@@ -13,26 +13,22 @@
 #include "amlogic-video.h"
 #include "gtest/gtest.h"
 #include "macros.h"
+#include "tests/test_basic_client.h"
 #include "video_decoder.h"
 
-class TestFrameAllocator {
+class TestFrameAllocator : public TestBasicClient {
  public:
   explicit TestFrameAllocator(AmlogicVideo* video)
       : video_(video), loop_(&kAsyncLoopConfigNoAttachToCurrentThread), prng_(rd_()) {
     loop_.StartThread();
   }
 
-  void set_decoder(VideoDecoder* decoder) {
-    decoder_ = decoder;
-    decoder->SetInitializeFramesHandler(
-        fit::bind_member(this, &TestFrameAllocator::AllocateFrames));
-  }
+  void set_decoder(VideoDecoder* decoder) { decoder_ = decoder; }
 
- private:
-  zx_status_t AllocateFrames(zx::bti bti, uint32_t min_frame_count, uint32_t max_frame_count,
-                             uint32_t coded_width, uint32_t coded_height, uint32_t stride,
-                             uint32_t display_width, uint32_t display_height, bool has_sar,
-                             uint32_t sar_width, uint32_t sar_height) {
+  zx_status_t InitializeFrames(zx::bti bti, uint32_t min_frame_count, uint32_t max_frame_count,
+                               uint32_t coded_width, uint32_t coded_height, uint32_t stride,
+                               uint32_t display_width, uint32_t display_height, bool has_sar,
+                               uint32_t sar_width, uint32_t sar_height) override {
     // Ensure client is allowed to allocate at least 2 frames for itself.
     constexpr uint32_t kMinFramesForClient = 2;
     EXPECT_LE(min_frame_count + kMinFramesForClient, max_frame_count);
@@ -76,6 +72,7 @@ class TestFrameAllocator {
     return ZX_OK;
   }
 
+ private:
   AmlogicVideo* video_ = nullptr;
   VideoDecoder* decoder_ = nullptr;
   async::Loop loop_;

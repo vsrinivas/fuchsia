@@ -13,11 +13,13 @@
 
 #include <fbl/macros.h>
 
+#include "video_decoder.h"
+
 class AmlogicVideo;
 struct CodecFrame;
 class DeviceCtx;
 struct VideoFrame;
-class CodecAdapterH264 : public CodecAdapter {
+class CodecAdapterH264 : public CodecAdapter, public VideoDecoder::Client {
  public:
   explicit CodecAdapterH264(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                             DeviceCtx* device);
@@ -29,7 +31,7 @@ class CodecAdapterH264 : public CodecAdapter {
   zx::unowned_bti CoreCodecBti() override;
   void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;
   void CoreCodecSetSecureMemoryMode(
-    CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) override;
+      CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) override;
   void CoreCodecStartStream() override;
   void CoreCodecQueueInputFormatDetails(
       const fuchsia::media::FormatDetails& per_stream_override_format_details) override;
@@ -56,6 +58,22 @@ class CodecAdapterH264 : public CodecAdapter {
   void CoreCodecMidStreamOutputBufferReConfigPrepare() override;
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
 
+  // VideoDecoder::Client implementation;
+  void OnError() override;
+  void OnEos() override {}
+  bool IsOutputReady() override { return true; }
+  void OnFrameReady(std::shared_ptr<VideoFrame> frame) override;
+  zx_status_t InitializeFrames(zx::bti, uint32_t min_frame_count, uint32_t max_frame_count,
+                               uint32_t width, uint32_t height, uint32_t stride,
+                               uint32_t display_width, uint32_t display_height, bool has_sar,
+                               uint32_t sar_width, uint32_t sar_height) override;
+  bool IsCurrentOutputBufferCollectionUsable(uint32_t min_frame_count, uint32_t max_frame_count,
+                                             uint32_t coded_width, uint32_t coded_height,
+                                             uint32_t stride, uint32_t display_width,
+                                             uint32_t display_height) override {
+    return true;
+  }
+
  private:
   void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
   void PostToInputProcessingThread(fit::closure to_run);
@@ -79,11 +97,6 @@ class CodecAdapterH264 : public CodecAdapter {
   //
   // The buffer pointer can be nullptr unless the VMO is a secure VMO.
   bool ParseVideoAnnexB(const CodecBuffer* buffer, const uint8_t* data, uint32_t length);
-  zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t min_frame_count,
-                                      uint32_t max_frame_count, uint32_t width,
-                                      uint32_t height, uint32_t stride, uint32_t display_width,
-                                      uint32_t display_height, bool has_sar, uint32_t sar_width,
-                                      uint32_t sar_height);
 
   void OnCoreCodecFailStream(fuchsia::media::StreamError error);
   CodecPacket* GetFreePacket();

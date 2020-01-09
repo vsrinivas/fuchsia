@@ -171,6 +171,60 @@ void CodecAdapterH264::CoreCodecSetSecureMemoryMode(
   secure_memory_mode_[port] = secure_memory_mode;
 }
 
+void CodecAdapterH264::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
+  // The Codec interface requires that emitted frames are cache clean
+  // at least for now.  We invalidate without skipping over stride-width
+  // per line, at least partly because stride - width is small (possibly
+  // always 0) for this decoder.  But we do invalidate the UV section
+  // separately in case uv_plane_offset happens to leave significant
+  // space after the Y section (regardless of whether there's actually
+  // ever much padding there).
+  //
+  // TODO(dustingreen): Probably there's not ever any significant
+  // padding between Y and UV for this decoder, so probably can make one
+  // invalidate call here instead of two with no downsides.
+  //
+  // TODO(dustingreen): Skip this when the buffer isn't map-able.
+  io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
+  io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
+                                   frame->stride * frame->coded_height / 2);
+
+  const CodecBuffer* buffer = frame->codec_buffer;
+  ZX_DEBUG_ASSERT(buffer);
+
+  // We intentionally _don't_ use the packet with same index as the buffer (in
+  // general - it's fine that they sometimes match), to avoid clients building
+  // up inappropriate dependency on buffer index being the same as packet
+  // index (as nice as that would be, VP9, and maybe others, don't get along
+  // with that in general, so ... force clients to treat packet index and
+  // buffer index as separate things).
+  CodecPacket* packet = GetFreePacket();
+  // With h.264, we know that an emitted buffer implies an available output
+  // packet, because h.264 doesn't put the same output buffer in flight more
+  // than once concurrently, and we have as many output packets as buffers.
+  // This contrasts with VP9 which has unbounded show_existing_frame.
+  ZX_DEBUG_ASSERT(packet);
+
+  // Associate the packet with the buffer while the packet is in-flight.
+  packet->SetBuffer(buffer);
+
+  packet->SetStartOffset(0);
+  uint64_t total_size_bytes = frame->stride * frame->coded_height * 3 / 2;
+  packet->SetValidLengthBytes(total_size_bytes);
+
+  if (frame->has_pts) {
+    packet->SetTimstampIsh(frame->pts);
+  } else {
+    packet->ClearTimestampIsh();
+  }
+
+  events_->onCoreCodecOutputPacket(packet, false, false);
+}
+
+void CodecAdapterH264::OnError() {
+  OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+}
+
 // TODO(dustingreen): A lot of the stuff created in this method should be able
 // to get re-used from stream to stream. We'll probably want to factor out
 // create/init from stream init further down.
@@ -190,60 +244,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
   // The output port is the one we really care about for is_secure of the
   // decoder, since the HW can read from secure or non-secure even when in
   // secure mode, but can only write to secure memory when in secure mode.
-  auto decoder = std::make_unique<H264Decoder>(video_, IsOutputSecure());
-  decoder->SetFrameReadyNotifier([this](std::shared_ptr<VideoFrame> frame) {
-    // The Codec interface requires that emitted frames are cache clean
-    // at least for now.  We invalidate without skipping over stride-width
-    // per line, at least partly because stride - width is small (possibly
-    // always 0) for this decoder.  But we do invalidate the UV section
-    // separately in case uv_plane_offset happens to leave significant
-    // space after the Y section (regardless of whether there's actually
-    // ever much padding there).
-    //
-    // TODO(dustingreen): Probably there's not ever any significant
-    // padding between Y and UV for this decoder, so probably can make one
-    // invalidate call here instead of two with no downsides.
-    //
-    // TODO(dustingreen): Skip this when the buffer isn't map-able.
-    io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
-    io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
-                                     frame->stride * frame->coded_height / 2);
-
-    const CodecBuffer* buffer = frame->codec_buffer;
-    ZX_DEBUG_ASSERT(buffer);
-
-    // We intentionally _don't_ use the packet with same index as the buffer (in
-    // general - it's fine that they sometimes match), to avoid clients building
-    // up inappropriate dependency on buffer index being the same as packet
-    // index (as nice as that would be, VP9, and maybe others, don't get along
-    // with that in general, so ... force clients to treat packet index and
-    // buffer index as separate things).
-    CodecPacket* packet = GetFreePacket();
-    // With h.264, we know that an emitted buffer implies an available output
-    // packet, because h.264 doesn't put the same output buffer in flight more
-    // than once concurrently, and we have as many output packets as buffers.
-    // This contrasts with VP9 which has unbounded show_existing_frame.
-    ZX_DEBUG_ASSERT(packet);
-
-    // Associate the packet with the buffer while the packet is in-flight.
-    packet->SetBuffer(buffer);
-
-    packet->SetStartOffset(0);
-    uint64_t total_size_bytes = frame->stride * frame->coded_height * 3 / 2;
-    packet->SetValidLengthBytes(total_size_bytes);
-
-    if (frame->has_pts) {
-      packet->SetTimstampIsh(frame->pts);
-    } else {
-      packet->ClearTimestampIsh();
-    }
-
-    events_->onCoreCodecOutputPacket(packet, false, false);
-  });
-  decoder->SetInitializeFramesHandler(
-      fit::bind_member(this, &CodecAdapterH264::InitializeFramesHandler));
-  decoder->SetErrorHandler(
-      [this] { OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN); });
+  auto decoder = std::make_unique<H264Decoder>(video_, this, IsOutputSecure());
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
@@ -1231,12 +1232,12 @@ bool CodecAdapterH264::ParseVideoAnnexB(const CodecBuffer* buffer, const uint8_t
   return true;
 }
 
-zx_status_t CodecAdapterH264::InitializeFramesHandler(::zx::bti bti, uint32_t min_frame_count,
-                                                      uint32_t max_frame_count, uint32_t width,
-                                                      uint32_t height, uint32_t stride,
-                                                      uint32_t display_width,
-                                                      uint32_t display_height, bool has_sar,
-                                                      uint32_t sar_width, uint32_t sar_height) {
+zx_status_t CodecAdapterH264::InitializeFrames(::zx::bti bti, uint32_t min_frame_count,
+                                               uint32_t max_frame_count, uint32_t width,
+                                               uint32_t height, uint32_t stride,
+                                               uint32_t display_width, uint32_t display_height,
+                                               bool has_sar, uint32_t sar_width,
+                                               uint32_t sar_height) {
   // First handle the special case of EndOfStream marker showing up at the output.
   if (display_width == kEndOfStreamWidth && display_height == kEndOfStreamHeight) {
     bool is_output_end_of_stream = false;

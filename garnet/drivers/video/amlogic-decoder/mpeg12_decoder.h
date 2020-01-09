@@ -18,13 +18,13 @@
 
 class Mpeg12Decoder : public VideoDecoder {
  public:
-  explicit Mpeg12Decoder(Owner* owner) : VideoDecoder(owner, /*is_secure=*/false) {}
+  explicit Mpeg12Decoder(Owner* owner, Client* client)
+      : VideoDecoder(owner, client, /*is_secure=*/false) {}
 
   ~Mpeg12Decoder() override;
 
   zx_status_t Initialize() override;
   void HandleInterrupt() override;
-  void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
   void ReturnFrame(std::shared_ptr<VideoFrame> video_frame) override;
   void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
                          uint32_t stride) override;
@@ -40,7 +40,6 @@ class Mpeg12Decoder : public VideoDecoder {
   void ResetHardware();
   void TryReturnFrames();
 
-  FrameReadyNotifier notifier_;
   std::vector<ReferenceFrame> video_frames_;
   std::vector<std::shared_ptr<VideoFrame>> returned_frames_;
   io_buffer_t workspace_buffer_ = {};

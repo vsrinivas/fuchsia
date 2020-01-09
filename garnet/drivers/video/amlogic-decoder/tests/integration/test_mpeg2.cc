@@ -9,6 +9,7 @@
 #include "amlogic-video.h"
 #include "gtest/gtest.h"
 #include "mpeg12_decoder.h"
+#include "tests/test_basic_client.h"
 #include "tests/test_support.h"
 #include "vdec1.h"
 
@@ -20,9 +21,10 @@ class TestMpeg2 {
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
 
+    TestBasicClient client;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<Mpeg12Decoder>(video.get()), false);
+      video->SetDefaultInstance(std::make_unique<Mpeg12Decoder>(video.get(), &client), false);
     }
 
     uint32_t stream_buffer_size = use_parser ? PAGE_SIZE : (PAGE_SIZE * 1024);
@@ -35,7 +37,7 @@ class TestMpeg2 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
 
-      video->video_decoder_->SetFrameReadyNotifier(
+      client.SetFrameReadyNotifier(
           [&video, &frame_count, &wait_valid](std::shared_ptr<VideoFrame> frame) {
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame, "/tmp/bearmpeg2.yuv");

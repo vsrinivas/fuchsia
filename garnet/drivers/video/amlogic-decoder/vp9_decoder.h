@@ -68,7 +68,8 @@ class Vp9Decoder : public VideoDecoder {
     kSwappedOut,
   };
 
-  Vp9Decoder(Owner* owner, InputType input_type, bool use_compressed_output, bool is_secure);
+  Vp9Decoder(Owner* owner, Client* client, InputType input_type, bool use_compressed_output,
+             bool is_secure);
   Vp9Decoder(const Vp9Decoder&) = delete;
 
   ~Vp9Decoder() override;
@@ -76,21 +77,11 @@ class Vp9Decoder : public VideoDecoder {
   __WARN_UNUSED_RESULT zx_status_t Initialize() override;
   __WARN_UNUSED_RESULT zx_status_t InitializeHardware() override;
   void HandleInterrupt() override;
-  void SetIsCurrentOutputBufferCollectionUsable(
-      IsCurrentOutputBufferCollectionUsable is_current_output_buffer_collection_usable) override;
-  void SetInitializeFramesHandler(InitializeFramesHandler handler) override;
-  // In actual operation, the FrameReadyNotifier must not keep a reference on
-  // the frame shared_ptr<>, as that would interfere with muting calls to
-  // ReturnFrame().  See comment on Vp9Decoder::Frame::frame field.
-  void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
-  void SetEosHandler(EosHandler eos_handler) override;
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
-  void SetErrorHandler(fit::closure error_handler) override;
   void CallErrorHandler() override {
     have_fatal_error_ = true;
-    error_handler_();
+    client_->OnError();
   }
-  void SetCheckOutputReady(CheckOutputReady check_output_ready) override;
   void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
                          uint32_t stride) override;
   __WARN_UNUSED_RESULT bool CanBeSwappedIn() override;
@@ -288,12 +279,6 @@ class Vp9Decoder : public VideoDecoder {
   FrameDataProvider* frame_data_provider_ = nullptr;
 
   WorkingBuffers working_buffers_;
-  IsCurrentOutputBufferCollectionUsable is_current_output_buffer_collection_usable_;
-  InitializeFramesHandler initialize_frames_handler_;
-  FrameReadyNotifier notifier_;
-  EosHandler eos_handler_;
-  CheckOutputReady check_output_ready_;
-  fit::closure error_handler_;
   DecoderState state_ = DecoderState::kSwappedOut;
 
   // While frames_ always has size() == kMaxFrames, the actual number of valid

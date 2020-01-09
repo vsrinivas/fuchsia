@@ -41,10 +41,6 @@ Mpeg12Decoder::~Mpeg12Decoder() {
   io_buffer_release(&workspace_buffer_);
 }
 
-void Mpeg12Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
-  notifier_ = std::move(notifier);
-}
-
 void Mpeg12Decoder::ResetHardware() {
   auto old_vld = PowerCtlVld::Get().ReadFrom(owner_->dosbus());
   DosSwReset0::Get().FromValue((1 << 7) | (1 << 6) | (1 << 4)).WriteTo(owner_->dosbus());
@@ -169,8 +165,7 @@ void Mpeg12Decoder::HandleInterrupt() {
   frame->coded_height = coded_height;
   frame->display_height = coded_height;
 
-  if (notifier_)
-    notifier_(frame);
+  client_->OnFrameReady(frame);
 
   MregBufferOut::Get().FromValue(0).WriteTo(owner_->dosbus());
   // Some returned frames may have been buffered up earlier, so try to return
@@ -209,9 +204,8 @@ zx_status_t Mpeg12Decoder::InitializeVideoBuffers() {
     // they have to be big enough to contain every possible video.
     size_t buffer_size = kMaxWidth * kMaxHeight * 3 / 2;
     auto frame = std::make_unique<VideoFrame>();
-    zx_status_t status =
-        io_buffer_init(&frame->buffer, owner_->bti()->get(), buffer_size,
-        IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    zx_status_t status = io_buffer_init(&frame->buffer, owner_->bti()->get(), buffer_size,
+                                        IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to make frame: %d\n", status);
       return status;

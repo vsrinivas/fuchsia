@@ -14,6 +14,7 @@
 
 #include <fbl/macros.h>
 
+#include "video_decoder.h"
 #include "vp9_decoder.h"
 
 class AmlogicVideo;
@@ -21,7 +22,9 @@ struct CodecFrame;
 class DeviceCtx;
 struct VideoFrame;
 
-class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvider {
+class CodecAdapterVp9 : public CodecAdapter,
+                        public Vp9Decoder::FrameDataProvider,
+                        public VideoDecoder::Client {
  public:
   explicit CodecAdapterVp9(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                            DeviceCtx* device);
@@ -65,6 +68,20 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   void ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) override;
   bool HasMoreInputData() override;
 
+  // |VideoDecoder::Client| implementation.
+  void OnError() override;
+  void OnEos() override;
+  bool IsOutputReady() override;
+  void OnFrameReady(std::shared_ptr<VideoFrame> frame) override;
+  zx_status_t InitializeFrames(zx::bti, uint32_t min_frame_count, uint32_t max_frame_count,
+                               uint32_t width, uint32_t height, uint32_t stride,
+                               uint32_t display_width, uint32_t display_height, bool has_sar,
+                               uint32_t sar_width, uint32_t sar_height) override;
+  bool IsCurrentOutputBufferCollectionUsable(uint32_t min_frame_count, uint32_t max_frame_count,
+                                             uint32_t coded_width, uint32_t coded_height,
+                                             uint32_t stride, uint32_t display_width,
+                                             uint32_t display_height) override;
+
  private:
   friend class CodecAdapterVp9Test;
 
@@ -73,15 +90,6 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   void QueueInputItem(CodecInputItem input_item);
   CodecInputItem DequeueInputItem();
   void ProcessInput();
-  bool IsCurrentOutputBufferCollectionUsable(uint32_t min_frame_count, uint32_t max_frame_count,
-                                             uint32_t coded_width, uint32_t coded_height,
-                                             uint32_t stride, uint32_t display_width,
-                                             uint32_t display_height);
-  zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t min_frame_count,
-                                      uint32_t max_frame_count, uint32_t width, uint32_t height,
-                                      uint32_t stride, uint32_t display_width,
-                                      uint32_t display_height, bool has_sar, uint32_t sar_width,
-                                      uint32_t sar_height);
 
   void OnCoreCodecEos();
   void OnCoreCodecFailStream(fuchsia::media::StreamError error);

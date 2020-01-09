@@ -405,18 +405,6 @@ zx_status_t H264Decoder::Initialize() {
   return ZX_OK;
 }
 
-void H264Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
-  notifier_ = std::move(notifier);
-}
-
-void H264Decoder::SetInitializeFramesHandler(InitializeFramesHandler handler) {
-  initialize_frames_handler_ = std::move(handler);
-}
-
-void H264Decoder::SetErrorHandler(fit::closure error_handler) {
-  error_handler_ = std::move(error_handler);
-}
-
 void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t coded_width,
                                     uint32_t coded_height, uint32_t stride) {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForNewFrames);
@@ -511,7 +499,7 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t min_frame_count, uint32_t max
     DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
     return dup_result;
   }
-  zx_status_t initialize_result = initialize_frames_handler_(
+  zx_status_t initialize_result = client_->InitializeFrames(
       std::move(duplicated_bti), min_frame_count, max_frame_count, coded_width, coded_height,
       stride, display_width, display_height, has_sar, sar_width, sar_height);
   if (initialize_result != ZX_OK) {
@@ -749,8 +737,7 @@ void H264Decoder::ReceivedFrames(uint32_t frame_count) {
       break;
     }
 
-    if (notifier_)
-      notifier_(video_frames_[buffer_index].frame);
+    client_->OnFrameReady(video_frames_[buffer_index].frame);
     DLOG("Got buffer %d error %d error_count %d slice_type %d offset %x\n", buffer_index,
          pic_info.error(), error_count, slice_type, pic_info.stream_offset());
   }
@@ -847,8 +834,6 @@ void H264Decoder::HandleInterrupt() {
 void H264Decoder::OnFatalError() {
   if (!fatal_error_) {
     fatal_error_ = true;
-    if (error_handler_) {
-      error_handler_();
-    }
+    client_->OnError();
   }
 }

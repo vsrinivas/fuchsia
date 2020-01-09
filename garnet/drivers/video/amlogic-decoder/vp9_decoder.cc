@@ -157,9 +157,9 @@ Vp9Decoder::WorkingBuffer::~WorkingBuffer() {}
 
 uint32_t Vp9Decoder::WorkingBuffer::addr32() { return truncate_to_32(buffer_->phys_base()); }
 
-Vp9Decoder::Vp9Decoder(Owner* owner, InputType input_type, bool use_compressed_output,
-                       bool is_secure)
-    : VideoDecoder(owner, is_secure),
+Vp9Decoder::Vp9Decoder(Owner* owner, Client* client, InputType input_type,
+                       bool use_compressed_output, bool is_secure)
+    : VideoDecoder(owner, client, is_secure),
       input_type_(input_type),
       use_compressed_output_(use_compressed_output) {
   // Compressed output buffers can't yet be allocated in secure memory.
@@ -450,12 +450,12 @@ void Vp9Decoder::ProcessCompletedFrames() {
   if (!current_frame_)
     return;
 
-  if (current_frame_data_.show_frame && notifier_) {
+  if (current_frame_data_.show_frame) {
     current_frame_->frame->has_pts = current_frame_data_.has_pts;
     current_frame_->frame->pts = current_frame_data_.pts;
     current_frame_->refcount++;
     current_frame_->client_refcount++;
-    notifier_(current_frame_->frame);
+    client_->OnFrameReady(current_frame_->frame);
   }
 
   for (uint32_t i = 0; i < fbl::count_of(reference_frame_map_); i++) {
@@ -949,7 +949,7 @@ bool Vp9Decoder::CanBeSwappedIn() {
     return false;
   }
 
-  if (check_output_ready_ && !check_output_ready_()) {
+  if (!client_->IsOutputReady()) {
     return false;
   }
 
@@ -976,15 +976,13 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   frame->frame->pts = result.pts();
   if (result.is_end_of_stream()) {
     DLOG("##### END OF STREAM DETECTED ##### (ShowExistingFrame)\n");
-    eos_handler_();
+    client_->OnEos();
     return;
   }
 
-  if (notifier_) {
-    frame->refcount++;
-    frame->client_refcount++;
-    notifier_(frame->frame);
-  }
+  frame->refcount++;
+  frame->client_refcount++;
+  client_->OnFrameReady(frame->frame);
   ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
   HevcDecStatusReg::Get().FromValue(kVp9CommandDecodeSlice).WriteTo(owner_->dosbus());
   state_ = DecoderState::kRunning;
@@ -992,7 +990,7 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
 }
 
 void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
-  if (check_output_ready_ && !check_output_ready_()) {
+  if (!client_->IsOutputReady()) {
     // Becomes false when ReturnFrame() gets called, at which point
     // PrepareNewFrame() gets another chance to check again and set back to true
     // as necessary.  This bool needs to exist only so that ReturnFrame() can
@@ -1035,7 +1033,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   current_frame_data_.pts = result.pts();
   if (result.is_end_of_stream()) {
     DLOG("##### END OF STREAM DETECTED ##### (PrepareNewFrame)\n");
-    eos_handler_();
+    client_->OnEos();
     return;
   }
 
@@ -1067,16 +1065,6 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   HevcDecStatusReg::Get().FromValue(kVp9CommandDecodeSlice).WriteTo(owner_->dosbus());
   state_ = DecoderState::kRunning;
   owner_->watchdog()->Start();
-}
-
-void Vp9Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
-  notifier_ = std::move(notifier);
-}
-
-void Vp9Decoder::SetEosHandler(EosHandler eos_handler) { eos_handler_ = std::move(eos_handler); }
-
-void Vp9Decoder::SetCheckOutputReady(CheckOutputReady check_output_ready) {
-  check_output_ready_ = std::move(check_output_ready);
 }
 
 Vp9Decoder::Frame::Frame(Vp9Decoder* parent_param) : parent(parent_param) {}
@@ -1121,10 +1109,9 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   // that the min_frame_count and max_frame_count are both the current frame count.  The current
   // collection is always ok in terms of frame count.
   if (!buffers_allocated || reallocate_buffers_next_frame_for_testing_ ||
-      (is_current_output_buffer_collection_usable_ &&
-       !is_current_output_buffer_collection_usable_(valid_frames_count_, valid_frames_count_,
-                                                    coded_width, coded_height, stride,
-                                                    display_width, display_height))) {
+      (!client_->IsCurrentOutputBufferCollectionUsable(valid_frames_count_, valid_frames_count_,
+                                                       coded_width, coded_height, stride,
+                                                       display_width, display_height))) {
     reallocate_buffers_next_frame_for_testing_ = false;
     if (params_checked_previously) {
       // If we get here, it means we're seeing rejection of
@@ -1137,7 +1124,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
       DECODE_ERROR(
           "params_checked_previously - calling error_handler_, allocated %d width %d height %d",
           buffers_allocated, coded_width, coded_height);
-      error_handler_();
+      client_->OnError();
       return false;
     }
     BarrierBeforeRelease();
@@ -1208,9 +1195,9 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     // sample_aspect_ratio from other sources such as a .webm container. If
     // those potential sources don't provide sample_aspect_ratio, then 1:1 is
     // a reasonable default.
-    zx_status_t initialize_result = initialize_frames_handler_(
-        std::move(duplicated_bti), kMinFrames, kMaxFrames, coded_width, coded_height, stride,
-        display_width, display_height, false, 1, 1);
+    zx_status_t initialize_result =
+        client_->InitializeFrames(std::move(duplicated_bti), kMinFrames, kMaxFrames, coded_width,
+                                  coded_height, stride, display_width, display_height, false, 1, 1);
     if (initialize_result != ZX_OK) {
       if (initialize_result != ZX_ERR_STOP) {
         DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n", initialize_result);
@@ -1430,20 +1417,6 @@ void Vp9Decoder::InitializeHardwarePictureList() {
   for (uint32_t i = 0; i < 32; ++i) {
     HevcdMppAncCanvasDataAddr::Get().FromValue(0).WriteTo(owner_->dosbus());
   }
-}
-
-void Vp9Decoder::SetIsCurrentOutputBufferCollectionUsable(
-    IsCurrentOutputBufferCollectionUsable is_current_output_buffer_collection_usable) {
-  is_current_output_buffer_collection_usable_ =
-      std::move(is_current_output_buffer_collection_usable);
-}
-
-void Vp9Decoder::SetInitializeFramesHandler(InitializeFramesHandler handler) {
-  initialize_frames_handler_ = std::move(handler);
-}
-
-void Vp9Decoder::SetErrorHandler(fit::closure error_handler) {
-  error_handler_ = std::move(error_handler);
 }
 
 void Vp9Decoder::InitializeParser() {

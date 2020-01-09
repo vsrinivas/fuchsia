@@ -62,7 +62,7 @@ class TestH264 {
   static void Decode(bool use_parser) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
-    TestFrameAllocator frame_allocator(video.get());
+    TestFrameAllocator client(video.get());
 
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
@@ -74,9 +74,10 @@ class TestH264 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false),
-                                /*hevc=*/false);
-      frame_allocator.set_decoder(video->video_decoder_);
+      video->SetDefaultInstance(
+          std::make_unique<H264Decoder>(video.get(), &client, /*is_secure=*/false),
+          /*hevc=*/false);
+      client.set_decoder(video->video_decoder_);
     }
     status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024,
                                            /*is_secure=*/false);
@@ -91,21 +92,20 @@ class TestH264 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
-      video->video_decoder_->SetFrameReadyNotifier(
-          [&video, &frame_count, &first_wait_valid,
-           &second_wait_valid](std::shared_ptr<VideoFrame> frame) {
-            ++frame_count;
-            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
-                 frame->coded_height);
+      client.SetFrameReadyNotifier([&video, &frame_count, &first_wait_valid,
+                                    &second_wait_valid](std::shared_ptr<VideoFrame> frame) {
+        ++frame_count;
+        DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
+             frame->coded_height);
 #if DUMP_VIDEO_TO_FILE
-            DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
+        DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
 #endif
-            if (frame_count == kFirstVideoFrameCount)
-              first_wait_valid.set_value();
-            if (frame_count == kFirstVideoFrameCount + kSecondVideoFrameCount)
-              second_wait_valid.set_value();
-            ReturnFrame(video.get(), frame);
-          });
+        if (frame_count == kFirstVideoFrameCount)
+          first_wait_valid.set_value();
+        if (frame_count == kFirstVideoFrameCount + kSecondVideoFrameCount)
+          second_wait_valid.set_value();
+        ReturnFrame(video.get(), frame);
+      });
     }
 
     if (use_parser) {
@@ -142,7 +142,7 @@ class TestH264 {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
-    TestFrameAllocator frame_allocator(video.get());
+    TestFrameAllocator client(video.get());
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
     EXPECT_EQ(ZX_OK, video->InitDecoder());
@@ -151,9 +151,10 @@ class TestH264 {
     ASSERT_NE(nullptr, bear_h264);
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false),
-                                /*hevc=*/false);
-      frame_allocator.set_decoder(video->video_decoder_);
+      video->SetDefaultInstance(
+          std::make_unique<H264Decoder>(video.get(), &client, /*is_secure=*/false),
+          /*hevc=*/false);
+      client.set_decoder(video->video_decoder_);
     }
     status = video->InitializeStreamBuffer(/*use_parser=*/false, PAGE_SIZE, /*is_secure=*/false);
     EXPECT_EQ(ZX_OK, status);
@@ -166,9 +167,9 @@ class TestH264 {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
-      video->video_decoder_->SetFrameReadyNotifier([&frames_to_return, &frame_count, &wait_valid,
-                                                    &return_frames_immediately,
-                                                    &video](std::shared_ptr<VideoFrame> frame) {
+      client.SetFrameReadyNotifier([&frames_to_return, &frame_count, &wait_valid,
+                                    &return_frames_immediately,
+                                    &video](std::shared_ptr<VideoFrame> frame) {
         ++frame_count;
         EXPECT_EQ(320u, frame->display_width);
         EXPECT_EQ(180u, frame->display_height);
@@ -229,7 +230,7 @@ class TestH264 {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
-    TestFrameAllocator frame_allocator(video.get());
+    TestFrameAllocator client(video.get());
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
     EXPECT_EQ(ZX_OK, video->InitDecoder());
@@ -238,9 +239,10 @@ class TestH264 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false),
-                                /*hevc=*/false);
-      frame_allocator.set_decoder(video->video_decoder_);
+      video->SetDefaultInstance(
+          std::make_unique<H264Decoder>(video.get(), &client, /*is_secure=*/false),
+          /*hevc=*/false);
+      client.set_decoder(video->video_decoder_);
     }
     status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024,
                                            /*is_secure=*/false);
@@ -252,28 +254,27 @@ class TestH264 {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
-      video->video_decoder_->SetFrameReadyNotifier(
-          [&video, &frame_count, &first_wait_valid,
-           &received_pts_set](std::shared_ptr<VideoFrame> frame) {
-            ++frame_count;
-            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
-                 frame->coded_height);
+      client.SetFrameReadyNotifier([&video, &frame_count, &first_wait_valid,
+                                    &received_pts_set](std::shared_ptr<VideoFrame> frame) {
+        ++frame_count;
+        DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
+             frame->coded_height);
 #if DUMP_VIDEO_TO_FILE
-            DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
+        DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
 #endif
-            constexpr uint32_t kFirstVideoFrameCount = 26;
-            if (frame_count == kFirstVideoFrameCount)
-              first_wait_valid.set_value();
-            ReturnFrame(video.get(), frame);
-            EXPECT_TRUE(frame->has_pts);
-            // In the test video the decode order isn't exactly the same as the
-            // presentation order, so allow the current PTS to be 2 frames
-            // older then the last received.
-            if (received_pts_set.size() > 0)
-              EXPECT_LE(*std::prev(received_pts_set.end()), frame->pts + 2);
-            EXPECT_EQ(0u, received_pts_set.count(frame->pts));
-            received_pts_set.insert(frame->pts);
-          });
+        constexpr uint32_t kFirstVideoFrameCount = 26;
+        if (frame_count == kFirstVideoFrameCount)
+          first_wait_valid.set_value();
+        ReturnFrame(video.get(), frame);
+        EXPECT_TRUE(frame->has_pts);
+        // In the test video the decode order isn't exactly the same as the
+        // presentation order, so allow the current PTS to be 2 frames
+        // older then the last received.
+        if (received_pts_set.size() > 0)
+          EXPECT_LE(*std::prev(received_pts_set.end()), frame->pts + 2);
+        EXPECT_EQ(0u, received_pts_set.count(frame->pts));
+        received_pts_set.insert(frame->pts);
+      });
     }
 
     auto split_nal = SplitNalUnits(bear_h264->ptr, bear_h264->size);
@@ -318,7 +319,7 @@ class TestH264 {
   static void DecodeMalformed(uint64_t location, uint8_t value) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
-    TestFrameAllocator frame_allocator(video.get());
+    TestFrameAllocator client(video.get());
 
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
@@ -329,10 +330,11 @@ class TestH264 {
     std::promise<void> first_wait_valid;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false),
-                                /*hevc=*/false);
-      frame_allocator.set_decoder(video->video_decoder_);
-      video->video_decoder()->SetErrorHandler([&first_wait_valid]() {
+      video->SetDefaultInstance(
+          std::make_unique<H264Decoder>(video.get(), &client, /*is_secure=*/false),
+          /*hevc=*/false);
+      client.set_decoder(video->video_decoder_);
+      client.SetErrorHandler([&first_wait_valid]() {
         DECODE_ERROR("Got error");
         first_wait_valid.set_value();
       });
@@ -345,13 +347,12 @@ class TestH264 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
-      video->video_decoder_->SetFrameReadyNotifier(
-          [&video, &frame_count](std::shared_ptr<VideoFrame> frame) {
-            ++frame_count;
-            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
-                 frame->coded_height);
-            ReturnFrame(video.get(), frame);
-          });
+      client.SetFrameReadyNotifier([&video, &frame_count](std::shared_ptr<VideoFrame> frame) {
+        ++frame_count;
+        DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
+             frame->coded_height);
+        ReturnFrame(video.get(), frame);
+      });
     }
 
     std::vector<uint8_t> video_data(bear_h264->ptr, bear_h264->ptr + bear_h264->size);

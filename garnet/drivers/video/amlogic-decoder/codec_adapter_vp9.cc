@@ -368,6 +368,71 @@ void CodecAdapterVp9::CoreCodecSetBufferCollectionInfo(
   buffer_settings_[port].emplace(buffer_collection_info.settings);
 }
 
+void CodecAdapterVp9::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
+  // The Codec interface requires that emitted frames are cache clean
+  // at least for now.  We invalidate without skipping over stride-width
+  // per line, at least partly because stride - width is small (possibly
+  // always 0) for this decoder.  But we do invalidate the UV section
+  // separately in case uv_plane_offset happens to leave significant
+  // space after the Y section (regardless of whether there's actually
+  // ever much padding there).
+  //
+  // TODO(dustingreen): Probably there's not ever any significant
+  // padding between Y and UV for this decoder, so probably can make one
+  // invalidate call here instead of two with no downsides.
+  //
+  // TODO(dustingreen): Skip this when the buffer isn't map-able.
+  io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
+  io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
+                                   frame->stride * frame->coded_height / 2);
+
+  uint64_t total_size_bytes = frame->stride * frame->coded_height * 3 / 2;
+  const CodecBuffer* buffer = frame->codec_buffer;
+  ZX_DEBUG_ASSERT(buffer);
+  ZX_DEBUG_ASSERT(total_size_bytes <= buffer->size());
+
+  CodecPacket* packet = GetFreePacket();
+  // We know there will be a free packet thanks to SetCheckOutputReady().
+  ZX_DEBUG_ASSERT(packet);
+
+  packet->SetBuffer(buffer);
+  packet->SetStartOffset(0);
+  packet->SetValidLengthBytes(total_size_bytes);
+
+  if (frame->has_pts) {
+    packet->SetTimstampIsh(frame->pts);
+  } else {
+    packet->ClearTimestampIsh();
+  }
+
+  if (frame->coded_width != coded_width_ || frame->coded_height != coded_height_ ||
+      frame->stride != stride_ || frame->display_width != display_width_ ||
+      frame->display_height != display_height_) {
+    coded_width_ = frame->coded_width;
+    coded_height_ = frame->coded_height;
+    stride_ = frame->stride;
+    display_width_ = frame->display_width;
+    display_height_ = frame->display_height;
+    events_->onCoreCodecOutputFormatChange();
+  }
+
+  events_->onCoreCodecOutputPacket(packet, false, false);
+}
+
+void CodecAdapterVp9::OnError() {
+  OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+}
+
+void CodecAdapterVp9::OnEos() { OnCoreCodecEos(); }
+
+bool CodecAdapterVp9::IsOutputReady() {
+  std::lock_guard<std::mutex> lock(lock_);
+  // We're ready if output hasn't been configured yet, or if we have free
+  // output packets.  This way the decoder can swap in when there's no output
+  // config yet, but will stop trying to run when we're out of output packets.
+  return all_output_packets_.empty() || !free_output_packets_.empty();
+}
+
 // TODO(dustingreen): A lot of the stuff created in this method should be able
 // to get re-used from stream to stream. We'll probably want to factor out
 // create/init from stream init further down.
@@ -381,73 +446,9 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     is_stream_failed_ = false;
   }  // ~lock
 
-  auto decoder = std::make_unique<Vp9Decoder>(video_, Vp9Decoder::InputType::kMultiFrameBased,
+  auto decoder = std::make_unique<Vp9Decoder>(video_, this, Vp9Decoder::InputType::kMultiFrameBased,
                                               false, IsOutputSecure());
   decoder->SetFrameDataProvider(this);
-  decoder->SetIsCurrentOutputBufferCollectionUsable(
-      fit::bind_member(this, &CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable));
-  decoder->SetInitializeFramesHandler(
-      fit::bind_member(this, &CodecAdapterVp9::InitializeFramesHandler));
-  decoder->SetFrameReadyNotifier([this](std::shared_ptr<VideoFrame> frame) {
-    // The Codec interface requires that emitted frames are cache clean
-    // at least for now.  We invalidate without skipping over stride-width
-    // per line, at least partly because stride - width is small (possibly
-    // always 0) for this decoder.  But we do invalidate the UV section
-    // separately in case uv_plane_offset happens to leave significant
-    // space after the Y section (regardless of whether there's actually
-    // ever much padding there).
-    //
-    // TODO(dustingreen): Probably there's not ever any significant
-    // padding between Y and UV for this decoder, so probably can make one
-    // invalidate call here instead of two with no downsides.
-    //
-    // TODO(dustingreen): Skip this when the buffer isn't map-able.
-    io_buffer_cache_flush_invalidate(&frame->buffer, 0, frame->stride * frame->coded_height);
-    io_buffer_cache_flush_invalidate(&frame->buffer, frame->uv_plane_offset,
-                                     frame->stride * frame->coded_height / 2);
-
-    uint64_t total_size_bytes = frame->stride * frame->coded_height * 3 / 2;
-    const CodecBuffer* buffer = frame->codec_buffer;
-    ZX_DEBUG_ASSERT(buffer);
-    ZX_DEBUG_ASSERT(total_size_bytes <= buffer->size());
-
-    CodecPacket* packet = GetFreePacket();
-    // We know there will be a free packet thanks to SetCheckOutputReady().
-    ZX_DEBUG_ASSERT(packet);
-
-    packet->SetBuffer(buffer);
-    packet->SetStartOffset(0);
-    packet->SetValidLengthBytes(total_size_bytes);
-
-    if (frame->has_pts) {
-      packet->SetTimstampIsh(frame->pts);
-    } else {
-      packet->ClearTimestampIsh();
-    }
-
-    if (frame->coded_width != coded_width_ || frame->coded_height != coded_height_ ||
-        frame->stride != stride_ || frame->display_width != display_width_ ||
-        frame->display_height != display_height_) {
-      coded_width_ = frame->coded_width;
-      coded_height_ = frame->coded_height;
-      stride_ = frame->stride;
-      display_width_ = frame->display_width;
-      display_height_ = frame->display_height;
-      events_->onCoreCodecOutputFormatChange();
-    }
-
-    events_->onCoreCodecOutputPacket(packet, false, false);
-  });
-  decoder->SetEosHandler([this] { OnCoreCodecEos(); });
-  decoder->SetErrorHandler(
-      [this] { OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN); });
-  decoder->SetCheckOutputReady([this] {
-    std::lock_guard<std::mutex> lock(lock_);
-    // We're ready if output hasn't been configured yet, or if we have free
-    // output packets.  This way the decoder can swap in when there's no output
-    // config yet, but will stop trying to run when we're out of output packets.
-    return all_output_packets_.empty() || !free_output_packets_.empty();
-  });
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
@@ -1167,12 +1168,12 @@ bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
   return true;
 }
 
-zx_status_t CodecAdapterVp9::InitializeFramesHandler(::zx::bti bti, uint32_t min_frame_count,
-                                                     uint32_t max_frame_count, uint32_t coded_width,
-                                                     uint32_t coded_height, uint32_t stride,
-                                                     uint32_t display_width,
-                                                     uint32_t display_height, bool has_sar,
-                                                     uint32_t sar_width, uint32_t sar_height) {
+zx_status_t CodecAdapterVp9::InitializeFrames(::zx::bti bti, uint32_t min_frame_count,
+                                              uint32_t max_frame_count, uint32_t coded_width,
+                                              uint32_t coded_height, uint32_t stride,
+                                              uint32_t display_width, uint32_t display_height,
+                                              bool has_sar, uint32_t sar_width,
+                                              uint32_t sar_height) {
   // First handle the special case of EndOfStream marker showing up at the
   // output.  We want to notice if up to this point we've been decoding into
   // buffers smaller than this.  By noticing here, we avoid requiring the client

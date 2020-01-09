@@ -24,17 +24,15 @@ class H264Decoder : public VideoDecoder {
     kWaitingForNewFrames,
   };
 
-  explicit H264Decoder(Owner* owner, bool is_secure) : VideoDecoder(owner, is_secure) {}
+  H264Decoder(Owner* owner, Client* client, bool is_secure)
+      : VideoDecoder(owner, client, is_secure) {}
 
   ~H264Decoder() override;
 
   zx_status_t Initialize() override;
   void HandleInterrupt() override;
-  void SetFrameReadyNotifier(FrameReadyNotifier notifier) override;
-  void SetInitializeFramesHandler(InitializeFramesHandler handler) override;
   // All H264Decoder errors require creating a new H264Decoder to recover.
-  void SetErrorHandler(fit::closure error_handler) override;
-  void CallErrorHandler() override { error_handler_(); }
+  void CallErrorHandler() override { client_->OnError(); }
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
   void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
                          uint32_t stride) override;
@@ -73,11 +71,6 @@ class H264Decoder : public VideoDecoder {
   uint32_t next_max_dpb_size_ = 0;
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
-
-  // TODO(dustingreen): Move these up to the VideoDecoder abstract base class.
-  FrameReadyNotifier notifier_;
-  InitializeFramesHandler initialize_frames_handler_;
-  fit::closure error_handler_;
 
   std::vector<ReferenceFrame> video_frames_;
   std::vector<std::shared_ptr<VideoFrame>> returned_frames_;
