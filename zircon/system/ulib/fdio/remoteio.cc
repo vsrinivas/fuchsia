@@ -284,20 +284,6 @@ zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t**
       io = fdio_pipe_create(std::move(info.mutable_pipe().socket));
       break;
     }
-    case fio::NodeInfo::Tag::kSocket: {
-      zx_status_t status;
-
-      status = check_connected(info.socket().socket, &connected);
-      if (status != ZX_OK) {
-        return status;
-      }
-      status = fdio_socket_create(fsocket::Control::SyncClient(std::move(handle)),
-                                  std::move(info.mutable_socket().socket), &io);
-      if (status != ZX_OK) {
-        return status;
-      }
-      break;
-    }
     case fio::NodeInfo::Tag::kDatagramSocket: {
       io = fdio_datagram_socket_create(std::move(info.mutable_datagram_socket().event),
                                        fsocket::DatagramSocket::SyncClient(std::move(handle)));

@@ -5,7 +5,7 @@
 #ifndef LIB_ZXIO_INCEPTION_H_
 #define LIB_ZXIO_INCEPTION_H_
 
-#include <fuchsia/posix/socket/llcpp/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/sync/mutex.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
@@ -116,25 +116,6 @@ static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
               "zxio_pipe_t must fit inside zxio_storage_t.");
 
 zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_socket_t info);
-
-// socket ----------------------------------------------------------------------
-
-// A |zxio_t| backend that uses a fuchsia.posix.socket.Control object.
-//
-// Will eventually be an implementation detail of zxio once fdio completes its
-// transition to the zxio backend.
-typedef struct zxio_socket {
-  zxio_pipe_t pipe;
-
-  ::llcpp::fuchsia::posix::socket::Control::SyncClient control;
-} zxio_socket_t;
-
-static_assert(sizeof(zxio_socket_t) <= sizeof(zxio_storage_t),
-              "zxio_socket_t must fit inside zxio_storage_t.");
-
-zx_status_t zxio_socket_init(zxio_storage_t* pipe,
-                             ::llcpp::fuchsia::posix::socket::Control::SyncClient control,
-                             zx::socket socket, zx_info_socket_t info);
 
 // debuglog --------------------------------------------------------------------
 

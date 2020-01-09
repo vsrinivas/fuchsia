@@ -225,10 +225,6 @@ fdio_t* fdio_vmo_create(zx::vmo vmo, zx_off_t seek);
 fdio_t* fdio_vmofile_create(llcpp::fuchsia::io::File::SyncClient control, zx::vmo vmo,
                             zx_off_t offset, zx_off_t length, zx_off_t seek);
 
-// Wraps a socket with an fdio_t using socket io.
-zx_status_t fdio_socket_create(llcpp::fuchsia::posix::socket::Control::SyncClient control,
-                               zx::socket socket, fdio_t** out_io);
-
 fdio_t* fdio_datagram_socket_create(
     zx::eventpair event, llcpp::fuchsia::posix::socket::DatagramSocket::SyncClient client);
 

@@ -16,7 +16,6 @@ zx_library("zxio") {
     "null.cc",
     "pipe.cc",
     "remote.cc",
-    "socket.cc",
     "vmo.cc",
     "vmofile.cc",
     "zxio.cc",
@@ -24,12 +23,11 @@ zx_library("zxio") {
   public_deps = [
     "$zx/system/ulib/sync:headers",
 
-    # <lib/zxio/inception.h> has #include <fuchsia/posix/socket/llcpp/fidl.h>.
-    "$zx/system/fidl/fuchsia-posix-socket:llcpp.headers",
+    # <lib/zxio/inception.h> has #include <fuchsia/io/llcpp/fidl.h>.
+    "$zx/system/fidl/fuchsia-io:llcpp.headers",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/fidl/fuchsia-posix-socket:llcpp",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

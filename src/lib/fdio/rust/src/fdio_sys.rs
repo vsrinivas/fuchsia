@@ -320,53 +320,6 @@ impl Clone for addrinfo {
     }
 }
 #[repr(C)]
-#[derive(Copy)]
-pub struct fdio_socket_msg {
-    pub addr: sockaddr_storage,
-    pub addrlen: socklen_t,
-    pub flags: i32,
-    pub data: [raw::c_char; 1usize],
-}
-#[test]
-fn bindgen_test_layout_fdio_socket_msg() {
-    assert_eq!(
-        ::std::mem::size_of::<fdio_socket_msg>(),
-        144usize,
-        concat!("Size of: ", stringify!(fdio_socket_msg))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<fdio_socket_msg>(),
-        8usize,
-        concat!("Alignment of ", stringify!(fdio_socket_msg))
-    );
-    assert_eq!(
-        unsafe { &(*(0 as *const fdio_socket_msg)).addr as *const _ as usize },
-        0usize,
-        concat!("Alignment of field: ", stringify!(fdio_socket_msg), "::", stringify!(addr))
-    );
-    assert_eq!(
-        unsafe { &(*(0 as *const fdio_socket_msg)).addrlen as *const _ as usize },
-        128usize,
-        concat!("Alignment of field: ", stringify!(fdio_socket_msg), "::", stringify!(addrlen))
-    );
-    assert_eq!(
-        unsafe { &(*(0 as *const fdio_socket_msg)).flags as *const _ as usize },
-        132usize,
-        concat!("Alignment of field: ", stringify!(fdio_socket_msg), "::", stringify!(flags))
-    );
-    assert_eq!(
-        unsafe { &(*(0 as *const fdio_socket_msg)).data as *const _ as usize },
-        136usize,
-        concat!("Alignment of field: ", stringify!(fdio_socket_msg), "::", stringify!(data))
-    );
-}
-impl Clone for fdio_socket_msg {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type fdio_socket_msg_t = fdio_socket_msg;
-#[repr(C)]
 #[derive(Debug, Copy)]
 pub struct vnattr {
     pub valid: u32,

@@ -6,9 +6,7 @@ import("$zx/public/gn/toolchain/c_utils.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":fdio",
-  ]
+  deps = [ ":fdio" ]
 }
 
 zx_test("fdio") {
@@ -43,7 +41,6 @@ zx_test("fdio") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxs",
     "$zx/system/ulib/zxtest",
   ]
 
@@ -67,9 +64,7 @@ zx_test("fdio") {
 zx_executable("accept-child") {
   visibility = [ ":*" ]
   testonly = true
-  sources = [
-    "fdio_atexit_test_accept_child.cc",
-  ]
+  sources = [ "fdio_atexit_test_accept_child.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
@@ -79,9 +74,7 @@ zx_executable("accept-child") {
 zx_executable("null-namespace-child") {
   visibility = [ ":*" ]
   testonly = true
-  sources = [
-    "fdio_null_namespace_child.c",
-  ]
+  sources = [ "fdio_null_namespace_child.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
@@ -91,28 +84,18 @@ zx_executable("null-namespace-child") {
 fdio_rspfile = "$target_gen_dir/fdio.rsp"
 link_output_rspfile("fdio-rspfile") {
   visibility = [ ":*" ]
-  deps = [
-    "..",
-  ]
-  outputs = [
-    fdio_rspfile,
-  ]
+  deps = [ ".." ]
+  outputs = [ fdio_rspfile ]
 }
 
 toolchain_utils_action("no-static-ctor") {
   testonly = true
   script = "no-static-ctor.sh"
   utils = [ "readelf" ]
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
+  outputs = [ "$target_out_dir/$target_name" ]
   depfile = "${outputs[0]}.d"
-  deps = [
-    ":fdio-rspfile",
-  ]
-  inputs = [
-    fdio_rspfile,
-  ]
+  deps = [ ":fdio-rspfile" ]
+  inputs = [ fdio_rspfile ]
   args = [
     "@" + rebase_path(fdio_rspfile, root_build_dir),
     rebase_path(outputs[0], root_build_dir),

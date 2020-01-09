@@ -36,13 +36,21 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-// #cgo CFLAGS: -D_GNU_SOURCE
-// #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/system/ulib/zxs/include
-// #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/third_party/ulib/musl/include
-// #include <errno.h>
-// #include <fcntl.h>
-// #include <lib/zxs/protocol.h>
-// #include <netinet/in.h>
+/*
+#cgo CFLAGS: -D_GNU_SOURCE
+#cgo CFLAGS: -I${SRCDIR}/../../../../zircon/system/ulib/zxs/include
+#cgo CFLAGS: -I${SRCDIR}/../../../../zircon/third_party/ulib/musl/include
+#include <errno.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+
+// wire format for datagram messages
+typedef struct fdio_socket_msg {
+  struct sockaddr_storage addr;
+  socklen_t addrlen;
+  int32_t flags;
+} fdio_socket_msg_t;
+*/
 import "C"
 
 // Data owned by providerImpl used for statistics and other

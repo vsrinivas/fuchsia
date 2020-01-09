@@ -167,7 +167,6 @@ group("ulib") {
     "zxcrypt:zxcrypt-dev",
     "zxcrypt:zxcrypt-fdio",
     "zxio",
-    "zxs",
     "zxtest",
   ]
 }
