@@ -186,6 +186,7 @@ void Linter::NewFile(const raw::File& element) {
   filename_ = element.span().source_file().filename();
 
   file_is_in_platform_source_tree_ = false;
+
   auto in_fuchsia_dir_regex = std::regex(R"REGEX(\bfuchsia/)REGEX");
   if (std::regex_search(filename_, in_fuchsia_dir_regex)) {
     file_is_in_platform_source_tree_ = true;
@@ -193,7 +194,19 @@ void Linter::NewFile(const raw::File& element) {
     file_is_in_platform_source_tree_ = std::ifstream(filename_.c_str()).good();
   }
 
-  if (!library_is_platform_source_library_) {
+  // TODO(fxb/42717): Remove zz once
+  // https://fuchsia-review.googlesource.com/c/fuchsia/+/343788 has landed.
+  if (library_prefix_ == "zz" || library_prefix_ == "zx") {
+    lint_style_ = LintStyle::CStyle;
+    invalid_case_for_decl_name_ =
+        DefineCheck("invalid-case-for-decl-name", "${TYPE} must be named in lower_snake_case");
+  } else {
+    lint_style_ = LintStyle::IpcStyle;
+    invalid_case_for_decl_name_ =
+        DefineCheck("invalid-case-for-decl-name", "${TYPE} must be named in UpperCamelCase");
+  }
+
+  if (lint_style_ == LintStyle::IpcStyle && !library_is_platform_source_library_) {
     // TODO(fxb/FIDL-547): Implement more specific test,
     // comparing proposed library prefix to actual
     // source path.
@@ -222,10 +235,14 @@ void Linter::NewFile(const raw::File& element) {
   if (libraryNameTooDeep) {
     AddFinding(element.library_name, kLibraryNameDepthCheck);
   }
-  for (const auto& component : element.library_name->components) {
-    if (std::regex_match(to_string(component), kDisallowedLibraryComponentRegex)) {
-      AddFinding(component, kLibraryNameComponentCheck);
-      break;
+
+  // Library name is not checked for CStyle because it must be simply "zx".
+  if (lint_style_ == LintStyle::IpcStyle) {
+    for (const auto& component : element.library_name->components) {
+      if (std::regex_match(to_string(component), kDisallowedLibraryComponentRegex)) {
+        AddFinding(component, kLibraryNameComponentCheck);
+        break;
+      }
     }
   }
   EnterContext("library", NameLibrary(element.library_name->components), kRepeatsLibraryNameCheck);
@@ -639,22 +656,19 @@ Linter::Linter()
         linter.CheckRepeatedName("bitfield member", element.identifier);
       });
 
-  auto invalid_case_for_decl_name =
-      DefineCheck("invalid-case-for-decl-name", "${TYPE} must be named in UpperCamelCase");
-
   auto name_repeats_enclosing_type_name =
       DefineCheck("name-repeats-enclosing-type-name",
                   "${TYPE} names (${REPEATED_NAMES}) must not repeat names from the "
                   "enclosing ${CONTEXT_TYPE} '${CONTEXT_ID}'");
 
   callbacks_.OnProtocolDeclaration(
-      [&linter = *this, case_check = invalid_case_for_decl_name, &case_type = upper_camel_,
-       context_check = name_repeats_enclosing_type_name,
+      [&linter = *this, context_check = name_repeats_enclosing_type_name,
        name_contains_service_check = DefineCheck("protocol-name-includes-service",
                                                  "Protocols must not include the name 'service.'")]
       //
       (const raw::ProtocolDeclaration& element) {
-        linter.CheckCase("protocols", element.identifier, case_check, case_type);
+        linter.CheckCase("protocols", element.identifier, linter.invalid_case_for_decl_name(),
+                         linter.decl_case_type_for_style());
         linter.CheckRepeatedName("protocol", element.identifier);
         for (auto word : utils::id_to_words(to_string(element.identifier))) {
           if (word == "service") {
@@ -670,23 +684,24 @@ Linter::Linter()
       //
       (const raw::ProtocolDeclaration& element) { linter.ExitContext(); });
 
-  callbacks_.OnMethod(
-      [&linter = *this, case_check = invalid_case_for_decl_name, &case_type = upper_camel_]
-      //
-      (const raw::ProtocolMethod& element) {
-        linter.CheckCase("methods", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName("method", element.identifier);
-      });
+  callbacks_.OnMethod([&linter = *this]
+                      //
+                      (const raw::ProtocolMethod& element) {
+                        linter.CheckCase("methods", element.identifier,
+                                         linter.invalid_case_for_decl_name(),
+                                         linter.decl_case_type_for_style());
+                        linter.CheckRepeatedName("method", element.identifier);
+                      });
 
   callbacks_.OnEvent(
-      [&linter = *this, case_check = invalid_case_for_decl_name,
-       event_check =
-           DefineCheck("event-names-must-start-with-on", "Event names must start with 'On'"),
-       &case_type = upper_camel_]
+      [&linter = *this, event_check = DefineCheck("event-names-must-start-with-on",
+                                                  "Event names must start with 'On'")]
       //
       (const raw::ProtocolMethod& element) {
         std::string id = to_string(element.identifier);
-        auto finding = linter.CheckCase("events", element.identifier, case_check, case_type);
+        auto finding =
+            linter.CheckCase("events", element.identifier, linter.invalid_case_for_decl_name(),
+                             linter.decl_case_type_for_style());
         if (finding && finding->suggestion().has_value()) {
           auto& suggestion = finding->suggestion().value();
           if (suggestion.replacement().has_value()) {
@@ -706,11 +721,11 @@ Linter::Linter()
       });
 
   callbacks_.OnEnumDeclaration(
-      [&linter = *this, case_check = invalid_case_for_decl_name, &case_type = upper_camel_,
-       context_check = name_repeats_enclosing_type_name]
+      [&linter = *this, context_check = name_repeats_enclosing_type_name]
       //
       (const raw::EnumDeclaration& element) {
-        linter.CheckCase("enums", element.identifier, case_check, case_type);
+        linter.CheckCase("enums", element.identifier, linter.invalid_case_for_decl_name(),
+                         linter.decl_case_type_for_style());
         linter.CheckRepeatedName("enum", element.identifier);
         linter.EnterContext("enum", to_string(element.identifier), context_check);
       });
@@ -720,11 +735,11 @@ Linter::Linter()
                                    (const raw::EnumDeclaration& element) { linter.ExitContext(); });
 
   callbacks_.OnBitsDeclaration(
-      [&linter = *this, case_check = invalid_case_for_decl_name, &case_type = upper_camel_,
-       context_check = name_repeats_enclosing_type_name]
+      [&linter = *this, context_check = name_repeats_enclosing_type_name]
       //
       (const raw::BitsDeclaration& element) {
-        linter.CheckCase("bitfields", element.identifier, case_check, case_type);
+        linter.CheckCase("bitfields", element.identifier, linter.invalid_case_for_decl_name(),
+                         linter.decl_case_type_for_style());
         linter.CheckRepeatedName("bitfield", element.identifier);
         linter.EnterContext("bitfield", to_string(element.identifier), context_check);
       });
@@ -734,11 +749,11 @@ Linter::Linter()
                                    (const raw::BitsDeclaration& element) { linter.ExitContext(); });
 
   callbacks_.OnStructDeclaration(
-      [&linter = *this, case_check = invalid_case_for_decl_name, &case_type = upper_camel_,
-       context_check = name_repeats_enclosing_type_name]
+      [&linter = *this, context_check = name_repeats_enclosing_type_name]
       //
       (const raw::StructDeclaration& element) {
-        linter.CheckCase("structs", element.identifier, case_check, case_type);
+        linter.CheckCase("structs", element.identifier, linter.invalid_case_for_decl_name(),
+                         linter.decl_case_type_for_style());
         linter.CheckRepeatedName("struct", element.identifier);
         linter.EnterContext("struct", to_string(element.identifier), context_check);
       });
@@ -749,11 +764,11 @@ Linter::Linter()
       (const raw::StructDeclaration& element) { linter.ExitContext(); });
 
   callbacks_.OnTableDeclaration(
-      [&linter = *this, case_check = invalid_case_for_decl_name, &case_type = upper_camel_,
-       context_check = name_repeats_enclosing_type_name]
+      [&linter = *this, context_check = name_repeats_enclosing_type_name]
       //
       (const raw::TableDeclaration& element) {
-        linter.CheckCase("tables", element.identifier, case_check, case_type);
+        linter.CheckCase("tables", element.identifier, linter.invalid_case_for_decl_name(),
+                         linter.decl_case_type_for_style());
         linter.CheckRepeatedName("table", element.identifier);
         linter.EnterContext("table", to_string(element.identifier), context_check);
       });
@@ -764,11 +779,11 @@ Linter::Linter()
       (const raw::TableDeclaration& element) { linter.ExitContext(); });
 
   callbacks_.OnUnionDeclaration(
-      [&linter = *this, case_check = invalid_case_for_decl_name, &case_type = upper_camel_,
-       context_check = name_repeats_enclosing_type_name]
+      [&linter = *this, context_check = name_repeats_enclosing_type_name]
       //
       (const raw::UnionDeclaration& element) {
-        linter.CheckCase("unions", element.identifier, case_check, case_type);
+        linter.CheckCase("unions", element.identifier, linter.invalid_case_for_decl_name(),
+                         linter.decl_case_type_for_style());
         linter.CheckRepeatedName("union", element.identifier);
         linter.EnterContext("union", to_string(element.identifier), context_check);
       });
@@ -779,11 +794,11 @@ Linter::Linter()
       (const raw::UnionDeclaration& element) { linter.ExitContext(); });
 
   callbacks_.OnXUnionDeclaration(
-      [&linter = *this, case_check = invalid_case_for_decl_name, &case_type = upper_camel_,
-       context_check = name_repeats_enclosing_type_name]
+      [&linter = *this, context_check = name_repeats_enclosing_type_name]
       //
       (const raw::XUnionDeclaration& element) {
-        linter.CheckCase("xunions", element.identifier, case_check, case_type);
+        linter.CheckCase("xunions", element.identifier, linter.invalid_case_for_decl_name(),
+                         linter.decl_case_type_for_style());
         linter.CheckRepeatedName("xunion", element.identifier);
         linter.EnterContext("xunion", to_string(element.identifier), context_check);
       });

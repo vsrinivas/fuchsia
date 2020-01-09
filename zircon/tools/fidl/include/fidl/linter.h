@@ -256,12 +256,36 @@ class Linter {
   std::string filename_;
   bool file_is_in_platform_source_tree_;
 
+  enum class LintStyle {
+    IpcStyle,
+    CStyle,
+  };
+  LintStyle lint_style_;
+
   LintingTreeCallbacks callbacks_;
 
   // Case type functions used by CheckCase().
   CaseType lower_snake_{utils::is_lower_snake_case, utils::to_lower_snake_case};
   CaseType upper_snake_{utils::is_upper_snake_case, utils::to_upper_snake_case};
   CaseType upper_camel_{utils::is_upper_camel_case, utils::to_upper_camel_case};
+
+  // In IpcStyle, bits, protocols, protocol methods, structs, tables, unions,
+  // xunions, and enums use UpperCamelCase. In CStyle used for syscalls, they
+  // use lower_camel_case. This member is set in NewFile once the style that's
+  // being used has been determined.
+  CheckDef invalid_case_for_decl_name_{"", TemplateString()};
+  const CheckDef& invalid_case_for_decl_name() const {
+    return invalid_case_for_decl_name_;
+  }
+
+  const CaseType& decl_case_type_for_style() const {
+    switch (lint_style_) {
+      case LintStyle::IpcStyle:
+        return upper_camel_;
+      case LintStyle::CStyle:
+        return lower_snake_;
+    }
+  }
 
   bool exclude_by_default_ = false;
   std::set<std::string> included_check_ids_;

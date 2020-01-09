@@ -1208,7 +1208,90 @@ xunion DeclName {
   END_TEST;
 }
 
-bool invalid_case_for_decl_name() {
+bool invalid_case_for_decl_name_c_style() {
+  BEGIN_TEST;
+
+  std::map<std::string, std::string> named_templates = {
+      {"protocols", R"FIDL(
+library zx;
+
+protocol ${TEST} {};
+)FIDL"},
+      {"methods", R"FIDL(
+library zx;
+
+protocol test_protocol {
+  ${TEST}();
+};
+)FIDL"},
+      {"enums", R"FIDL(
+library zx;
+
+enum ${TEST} : int8 {
+    SOME_CONST = -1;
+};
+)FIDL"},
+      {"bitfields", R"FIDL(
+library zx;
+
+bits ${TEST} : uint32 {
+  SOME_BIT = 0x00000004;
+};
+)FIDL"},
+      {"structs", R"FIDL(
+library zx;
+
+struct ${TEST} {
+    string:64 decl_member;
+};
+)FIDL"},
+      {"tables", R"FIDL(
+library zx;
+
+table ${TEST} {
+    1: string:64 decl_member;
+};
+)FIDL"},
+      {"unions", R"FIDL(
+library zx;
+
+union ${TEST} {
+    1: string:64 decl_member;
+};
+)FIDL"},
+      {"xunions", R"FIDL(
+library zx;
+
+xunion ${TEST} {
+    1: string:64 decl_member;
+};
+)FIDL"},
+  };
+
+  for (auto const& named_template : named_templates) {
+    LintTest test;
+    test.check_id("invalid-case-for-decl-name")
+        .message(named_template.first + " must be named in lower_snake_case")
+        .source_template(named_template.second);
+
+    test.substitute("TEST", "url_loader");
+    ASSERT_NO_FINDINGS(test);
+
+    test.substitute("TEST", "URLLoader")
+        .suggestion("change 'URLLoader' to 'url_loader'")
+        .replacement("url_loader");
+    ASSERT_FINDINGS(test);
+
+    test.substitute("TEST", "UrlLoader")
+        .suggestion("change 'UrlLoader' to 'url_loader'")
+        .replacement("url_loader");
+    ASSERT_FINDINGS(test);
+  }
+
+  END_TEST;
+}
+
+bool invalid_case_for_decl_name_ipc_style() {
   BEGIN_TEST;
 
   std::map<std::string, std::string> named_templates = {
@@ -1279,6 +1362,11 @@ xunion ${TEST} {
 
     test.substitute("TEST", "URLLoader")
         .suggestion("change 'URLLoader' to 'UrlLoader'")
+        .replacement("UrlLoader");
+    ASSERT_FINDINGS(test);
+
+    test.substitute("TEST", "url_loader")
+        .suggestion("change 'url_loader' to 'UrlLoader'")
         .replacement("UrlLoader");
     ASSERT_FINDINGS(test);
   }
@@ -2471,7 +2559,8 @@ RUN_TEST(inconsistent_type_for_recurring_file_concept_please_implement_me)
 RUN_TEST(inconsistent_type_for_recurring_library_concept_please_implement_me)
 RUN_TEST(invalid_case_for_constant)
 RUN_TEST(invalid_case_for_decl_member)
-RUN_TEST(invalid_case_for_decl_name)
+RUN_TEST(invalid_case_for_decl_name_c_style)
+RUN_TEST(invalid_case_for_decl_name_ipc_style)
 RUN_TEST(invalid_case_for_decl_name_for_event)
 RUN_TEST(invalid_case_for_primitive_alias)
 RUN_TEST(invalid_copyright_for_platform_source_library)
