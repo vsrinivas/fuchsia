@@ -3,13 +3,7 @@
 // found in the LICENSE file.
 
 #include "_cgo_export.h"
-
-int dnsBrowse(char *service, DNSServiceRef *browseClient, void *ctx);
-int dnsResolve(char *name, DNSServiceRef *resolveClient, bool ipv4, bool ipv6, void *ctx);
-int dnsProcessResults(DNSServiceRef ref);
-int dnsPollDaemon(DNSServiceRef ref, int timeout_milliseconds);
-int dnsAllocate(DNSServiceRef *ref);
-void dnsDeallocate(DNSServiceRef ref);
+#include "dnssdfinder.h"
 
 #ifdef __APPLE__
 #include <arpa/inet.h>
@@ -17,56 +11,37 @@ void dnsDeallocate(DNSServiceRef ref);
 #include <stdio.h>
 #include <sys/select.h>
 
-static void dnsBrowseCallback(DNSServiceRef sdref,
-                           const DNSServiceFlags flags,
-                           uint32_t ifIndex,
-                           DNSServiceErrorType errorCode,
-                           const char *replyName,
-                           const char *replyType,
-                           const char *replyDomain,
-                           void *context) {
+static void dnsBrowseCallback(DNSServiceRef sdref, const DNSServiceFlags flags, uint32_t ifIndex,
+                              DNSServiceErrorType errorCode, const char *replyName,
+                              const char *replyType, const char *replyDomain, void *context) {
   browseCallbackGoFunc(errorCode, (char *)replyName, context);
 }
 
-static void dnsResolveCallback(DNSServiceRef sdref,
-                            DNSServiceFlags flags,
-                            uint32_t ifIndex,
-                            DNSServiceErrorType errorCode,
-                            const char *fullname,
-                            const struct sockaddr *address,
-                            uint32_t ttl,
-                            void *context) {
+static void dnsResolveCallback(DNSServiceRef sdref, DNSServiceFlags flags, uint32_t ifIndex,
+                               DNSServiceErrorType errorCode, const char *fullname,
+                               const struct sockaddr *address, uint32_t ttl, void *context) {
   char ip[INET6_ADDRSTRLEN];
   uint32_t zoneIdx = 0;
-  switch(address->sa_family) {
-      case AF_INET:
-          inet_ntop(AF_INET,
-              &(((struct sockaddr_in *)(address))->sin_addr),
-              ip,
-              INET6_ADDRSTRLEN);
-          break;
-      case AF_INET6:
-          inet_ntop(AF_INET6,
-              &(((struct sockaddr_in6 *)(address))->sin6_addr),
-              ip,
-              INET6_ADDRSTRLEN);
-          zoneIdx = ((struct sockaddr_in6 *)(address))->sin6_scope_id;
-          break;
-      default:
-          break;
+  switch (address->sa_family) {
+    case AF_INET:
+      inet_ntop(AF_INET, &(((struct sockaddr_in *)(address))->sin_addr), ip, INET6_ADDRSTRLEN);
+      break;
+    case AF_INET6:
+      inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)(address))->sin6_addr), ip, INET6_ADDRSTRLEN);
+      zoneIdx = ((struct sockaddr_in6 *)(address))->sin6_scope_id;
+      break;
+    default:
+      break;
   }
   resolveCallbackGoFunc(errorCode, (char *)fullname, ip, zoneIdx, context);
 }
 
-int dnsBrowse(char *service, DNSServiceRef *browseClient, void *ctx) {
+int dnsBrowse(char *domain, DNSServiceRef *ref, void *ctx) {
   DNSServiceFlags flags = 0;
-  return DNSServiceBrowse(
-      browseClient, flags, 0, service, NULL, dnsBrowseCallback, ctx);
+  return DNSServiceBrowse(ref, flags, 0, domain, NULL, dnsBrowseCallback, ctx);
 }
 
-int dnsProcessResults(DNSServiceRef ref) {
-  return DNSServiceProcessResult(ref);
-}
+int dnsProcessResults(DNSServiceRef ref) { return DNSServiceProcessResult(ref); }
 
 int dnsPollDaemon(DNSServiceRef ref, int timeout_milliseconds) {
   int fd = DNSServiceRefSockFD(ref);
@@ -77,7 +52,7 @@ int dnsPollDaemon(DNSServiceRef ref, int timeout_milliseconds) {
   fd_set readfds;
   FD_ZERO(&readfds);
   FD_SET(fd, &readfds);
-  int result = select(nfds, &readfds, (fd_set*)NULL, (fd_set*)NULL, &tv);
+  int result = select(nfds, &readfds, (fd_set *)NULL, (fd_set *)NULL, &tv);
   if (result > 0) {
     return FD_ISSET(fd, &readfds) > 0;
   } else if (result == 0) {
@@ -87,41 +62,31 @@ int dnsPollDaemon(DNSServiceRef ref, int timeout_milliseconds) {
   }
 }
 
-int dnsResolve(char *name, DNSServiceRef *resolveClient, bool ipv4, bool ipv6, void *ctx) {
+int dnsResolve(char *hostname, DNSServiceRef *ref, bool ipv4, bool ipv6, void *ctx) {
   DNSServiceFlags flags = 0;
-  DNSServiceFlags ipFlags = 0;
+  DNSServiceProtocol protocol = 0;
   if (ipv4) {
-    ipFlags |= kDNSServiceProtocol_IPv4;
+    protocol |= kDNSServiceProtocol_IPv4;
   }
   if (ipv6) {
-    ipFlags |= kDNSServiceProtocol_IPv6;
+    protocol |= kDNSServiceProtocol_IPv6;
   }
-  return DNSServiceGetAddrInfo(resolveClient,
-      flags,
-      0,
-      ipFlags,
-      name,
-      dnsResolveCallback,
-      ctx);
+  return DNSServiceGetAddrInfo(ref, flags, 0, protocol, hostname, dnsResolveCallback, ctx);
 }
 
-int dnsAllocate(DNSServiceRef *ref) {
-  return DNSServiceCreateConnection(ref);
-}
+int dnsAllocate(DNSServiceRef *ref) { return DNSServiceCreateConnection(ref); }
 
-void dnsDeallocate(DNSServiceRef ref) {
-  DNSServiceRefDeallocate(ref);
-}
+void dnsDeallocate(DNSServiceRef ref) { DNSServiceRefDeallocate(ref); }
 
 #else
 #include <stdio.h>
 
-int dnsBrowse(char *service, DNSServiceRef *browseClient, void *ctx) {
+int dnsBrowse(char *domain, DNSServiceRef *ref, void *ctx) {
   fprintf(stderr, "dnsBrowse must be compiled and invoked on darwin\n");
   return -1;
 }
 
-int dnsResolve(char *name, DNSServiceRef *resolveClient, bool ipv4, bool ipv6, void *ctx) {
+int dnsResolve(char *hostname, DNSServiceRef *ref, bool ipv4, bool ipv6, void *ctx) {
   fprintf(stderr, "dnsResolve must be compiled and invoked on darwin\n");
   return -1;
 }

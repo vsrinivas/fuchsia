@@ -3,23 +3,7 @@
 // found in the LICENSE file.
 package main
 
-/*
-#include <stdlib.h>
-#include <stdbool.h>
-#ifdef __APPLE__
-#include <dns_sd.h>
-#else
-typedef struct _DNSServiceRef_t *DNSServiceRef;
-#endif
-
-// defined in dnssdfinder_c.c
-extern int dnsBrowse(char *service, DNSServiceRef *browseClient, void *ctx);
-extern int dnsResolve(char *name, DNSServiceRef *ref, bool ipv4, bool ipv6, void *ctx);
-extern int dnsProcessResults(DNSServiceRef ref);
-extern int dnsPollDaemon(DNSServiceRef ref, int timeout_milliseconds);
-extern int dnsAllocate(DNSServiceRef *ref);
-extern void dnsDeallocate(DNSServiceRef ref);
-*/
+// #include "dnssdfinder.h"
 import "C"
 
 import (
