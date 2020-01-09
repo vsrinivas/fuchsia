@@ -92,7 +92,7 @@ class CameraManagerTest : public gtest::RealLoopFixture {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
-TEST_F(CameraManagerTest, CanConnectToStream) {
+TEST_F(CameraManagerTest, DISABLED_CanConnectToStream) {
   EXPECT_EQ(ZX_OK, camera_manager_->AcknowledgeDeviceEvent());
 
   fuchsia::camera2::StreamProperties stream_properties{};
