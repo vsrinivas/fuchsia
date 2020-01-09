@@ -54,9 +54,7 @@ executable("bugreport_unittest") {
 executable("bugreport_integration_test") {
   testonly = true
 
-  sources = [
-    "bug_reporter_integration_test.cc",
-  ]
+  sources = [ "bug_reporter_integration_test.cc" ]
 
   deps = [
     "//src/developer/feedback/bugreport:src",
@@ -72,9 +70,7 @@ executable("bugreport_integration_test") {
 executable("command_line_options_unittest") {
   testonly = true
 
-  sources = [
-    "command_line_options_unittest.cc",
-  ]
+  sources = [ "command_line_options_unittest.cc" ]
 
   deps = [
     "//src/developer/feedback/bugreport:command_line_options",

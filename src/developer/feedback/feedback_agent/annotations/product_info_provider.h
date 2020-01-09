@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_PRODUCT_INFO_PROVIDER_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_PRODUCT_INFO_PROVIDER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_PRODUCT_INFO_PROVIDER_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_PRODUCT_INFO_PROVIDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
@@ -72,4 +72,4 @@ class ProductInfoPtr {
 }  // namespace internal
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_PRODUCT_INFO_PROVIDER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_PRODUCT_INFO_PROVIDER_H_

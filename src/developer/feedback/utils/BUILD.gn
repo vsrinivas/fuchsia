@@ -70,17 +70,11 @@ source_set("inspect_node_manager") {
 }
 
 source_set("promise") {
-  public = [
-    "promise.h",
-  ]
+  public = [ "promise.h" ]
 
-  sources = [
-    "promise.h",
-  ]
+  sources = [ "promise.h" ]
 
-  public_deps = [
-    "//zircon/public/lib/fit",
-  ]
+  public_deps = [ "//zircon/public/lib/fit" ]
 
   visibility = [ "//src/developer/feedback/*" ]
 }
@@ -96,9 +90,7 @@ source_set("time") {
     "//zircon/public/lib/zx",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 
   visibility = [ "//src/developer/feedback/*" ]
 }

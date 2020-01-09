@@ -38,9 +38,7 @@ package("feedback_agent") {
 executable("main") {
   output_name = "feedback_agent"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":feedback_agent_src",
@@ -75,9 +73,7 @@ source_set("feedback_agent_src") {
 }
 
 executable("data_provider") {
-  sources = [
-    "data_provider_main.cc",
-  ]
+  sources = [ "data_provider_main.cc" ]
 
   deps = [
     ":data_provider_src",
@@ -137,9 +133,7 @@ source_set("data_provider_src") {
 }
 
 source_set("constants") {
-  sources = [
-    "constants.h",
-  ]
+  sources = [ "constants.h" ]
 
   visibility = [ "//src/developer/feedback/feedback_agent/*" ]
 }

@@ -7,9 +7,7 @@ import("//build/test/test_package.gni")
 group("tests") {
   testonly = true
 
-  public_deps = [
-    ":feedback_utils_tests",
-  ]
+  public_deps = [ ":feedback_utils_tests" ]
 }
 
 test_package("feedback_utils_tests") {
@@ -51,9 +49,7 @@ test_package("feedback_utils_tests") {
 executable("archive_unittest") {
   testonly = true
 
-  sources = [
-    "archive_unittest.cc",
-  ]
+  sources = [ "archive_unittest.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
@@ -72,9 +68,7 @@ executable("archive_unittest") {
 executable("cobalt_unittest") {
   testonly = true
 
-  sources = [
-    "cobalt_unittest.cc",
-  ]
+  sources = [ "cobalt_unittest.cc" ]
 
   deps = [
     "//src/developer/feedback/testing:cobalt_test_fixture",
@@ -92,9 +86,7 @@ executable("cobalt_unittest") {
 executable("inspect_node_manager_unittest") {
   testonly = true
 
-  sources = [
-    "inspect_node_manager_unittest.cc",
-  ]
+  sources = [ "inspect_node_manager_unittest.cc" ]
 
   deps = [
     "//sdk/lib/inspect/testing/cpp",
@@ -108,9 +100,7 @@ executable("inspect_node_manager_unittest") {
 executable("promise_unittest") {
   testonly = true
 
-  sources = [
-    "promise_unittest.cc",
-  ]
+  sources = [ "promise_unittest.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -126,9 +116,7 @@ executable("promise_unittest") {
 executable("time_unittest") {
   testonly = true
 
-  sources = [
-    "time_unittest.cc",
-  ]
+  sources = [ "time_unittest.cc" ]
 
   deps = [
     "//src/developer/feedback/utils:time",

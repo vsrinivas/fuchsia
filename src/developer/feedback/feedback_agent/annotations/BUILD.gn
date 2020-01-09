@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("annotation_providers") {
-  public = [
-    "annotation_provider_factory.h",
-  ]
+  public = [ "annotation_provider_factory.h" ]
 
   sources = [
     "annotation_provider.h",
@@ -43,9 +41,7 @@ source_set("annotation_providers") {
 
 # Exposed separately for unit test purposes.
 source_set("channel_provider") {
-  public = [
-    "channel_provider.h",
-  ]
+  public = [ "channel_provider.h" ]
 
   sources = [
     "annotation_provider.h",
@@ -53,9 +49,7 @@ source_set("channel_provider") {
     "channel_provider.h",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.update.channel",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.update.channel" ]
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
@@ -70,9 +64,7 @@ source_set("channel_provider") {
 
 # Exposed separately for unit test purposes.
 source_set("board_info_provider") {
-  public = [
-    "board_info_provider.h",
-  ]
+  public = [ "board_info_provider.h" ]
 
   sources = [
     "annotation_provider.h",
@@ -97,9 +89,7 @@ source_set("board_info_provider") {
 
 # Exposed separately for unit test purposes.
 source_set("product_info_provider") {
-  public = [
-    "product_info_provider.h",
-  ]
+  public = [ "product_info_provider.h" ]
 
   sources = [
     "annotation_provider.h",
@@ -125,9 +115,7 @@ source_set("product_info_provider") {
 
 # Exposed separately for unit test purposes.
 source_set("single_sync_annotation_provider") {
-  public = [
-    "single_sync_annotation_provider.h",
-  ]
+  public = [ "single_sync_annotation_provider.h" ]
 
   sources = [
     "annotation_provider.h",

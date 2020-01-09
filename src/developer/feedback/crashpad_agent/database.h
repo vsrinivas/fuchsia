@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACk_CRASHPAD_AGENT_DATABASE_H_
-#define SRC_DEVELOPER_FEEDBACk_CRASHPAD_AGENT_DATABASE_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_DATABASE_H_
+#define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_DATABASE_H_
 
 #include <fuchsia/mem/cpp/fidl.h>
 
@@ -100,4 +100,4 @@ class Database {
 };
 
 }  // namespace feedback
-#endif  // SRC_DEVELOPER_FEEDBACk_CRASHPAD_AGENT_DATABASE_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_DATABASE_H_

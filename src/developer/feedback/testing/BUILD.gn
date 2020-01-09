@@ -5,9 +5,7 @@
 source_set("cobalt_test_fixture") {
   testonly = true
 
-  sources = [
-    "cobalt_test_fixture.h",
-  ]
+  sources = [ "cobalt_test_fixture.h" ]
 
   public_deps = [
     ":unit_test_fixture",
@@ -20,9 +18,7 @@ source_set("cobalt_test_fixture") {
 source_set("gmatchers") {
   testonly = true
 
-  sources = [
-    "gmatchers.h",
-  ]
+  sources = [ "gmatchers.h" ]
 
   public_deps = [
     "//src/lib/fsl",
@@ -34,9 +30,7 @@ source_set("gmatchers") {
 source_set("gpretty_printers") {
   testonly = true
 
-  sources = [
-    "gpretty_printers.h",
-  ]
+  sources = [ "gpretty_printers.h" ]
 
   public_deps = [
     "//garnet/public/lib/fostr",
@@ -52,9 +46,7 @@ source_set("gpretty_printers") {
 source_set("gtest_with_syslog_main") {
   testonly = true
 
-  sources = [
-    "gtest_with_syslog_main.cc",
-  ]
+  sources = [ "gtest_with_syslog_main.cc" ]
 
   public_deps = [
     "//src/lib/fxl/test:test_settings",
@@ -66,9 +58,7 @@ source_set("gtest_with_syslog_main") {
 source_set("unit_test_fixture") {
   testonly = true
 
-  sources = [
-    "unit_test_fixture.h",
-  ]
+  sources = [ "unit_test_fixture.h" ]
 
   public_deps = [
     "//garnet/public/lib/gtest",

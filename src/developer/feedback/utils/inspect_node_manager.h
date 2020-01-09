@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_INSPECT_NODE_MANAGER_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_INSPECT_NODE_MANAGER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_INSPECT_NODE_MANAGER_H_
+#define SRC_DEVELOPER_FEEDBACK_UTILS_INSPECT_NODE_MANAGER_H_
 
 #include <lib/inspect/cpp/vmo/types.h>
 
@@ -91,4 +91,4 @@ class InspectNodeManager {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_INSPECT_NODE_MANAGER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_INSPECT_NODE_MANAGER_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be // found in the LICENSE
 // file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_BUILD_INFO_PROVIDER_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_BUILD_INFO_PROVIDER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_BUILD_INFO_PROVIDER_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_BUILD_INFO_PROVIDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fit/promise.h>
@@ -30,4 +30,4 @@ class BuildInfoProvider : public AnnotationProvider {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_BUILD_INFO_PROVIDER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_BUILD_INFO_PROVIDER_H_

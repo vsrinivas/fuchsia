@@ -31,18 +31,14 @@ source_set("info") {
     "//src/lib/timekeeper",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 
   visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
 }
 
 # Exposed for testing purposes.
 source_set("inspect_manager") {
-  public = [
-    "inspect_manager.h",
-  ]
+  public = [ "inspect_manager.h" ]
 
   sources = [
     "inspect_manager.cc",

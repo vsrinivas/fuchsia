@@ -29,9 +29,7 @@ template("crashpad_agent_package") {
       },
     ]
 
-    deps = [
-      ":main",
-    ]
+    deps = [ ":main" ]
   }
 
   # Suppress unused variable warnings as the invoker is expected to be empty.
@@ -55,9 +53,7 @@ crashpad_agent_package("fake_crashpad_agent_invalid_override_config") {
 executable("main") {
   output_name = "crashpad_agent"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":src",
@@ -121,9 +117,7 @@ source_set("src") {
 }
 
 source_set("config") {
-  public = [
-    "config.h",
-  ]
+  public = [ "config.h" ]
 
   sources = [
     "config.cc",
@@ -141,17 +135,13 @@ source_set("config") {
 }
 
 source_set("constants") {
-  sources = [
-    "constants.h",
-  ]
+  sources = [ "constants.h" ]
 
   visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
 }
 
 source_set("settings") {
-  public = [
-    "settings.h",
-  ]
+  public = [ "settings.h" ]
 
   sources = [
     "settings.cc",
@@ -164,9 +154,7 @@ source_set("settings") {
     "//zircon/public/lib/fit",
   ]
 
-  deps = [
-    "//src/lib/syslog/cpp",
-  ]
+  deps = [ "//src/lib/syslog/cpp" ]
 
   visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
 }
@@ -183,23 +171,15 @@ metrics_registry("metrics_registry") {
 config_data("production_config") {
   for_pkg = "crashpad_agent"
 
-  sources = [
-    "configs/production.json",
-  ]
+  sources = [ "configs/production.json" ]
 
-  outputs = [
-    "override_config.json",
-  ]
+  outputs = [ "override_config.json" ]
 }
 
 config_data("upload_to_prod_server_config") {
   for_pkg = "crashpad_agent"
 
-  sources = [
-    "configs/upload_to_prod_server.json",
-  ]
+  sources = [ "configs/upload_to_prod_server.json" ]
 
-  outputs = [
-    "override_config.json",
-  ]
+  outputs = [ "override_config.json" ]
 }

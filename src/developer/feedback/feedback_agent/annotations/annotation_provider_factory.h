@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE
 // file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATION_PROVIDER_FACTORY_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATION_PROVIDER_FACTORY_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_ANNOTATION_PROVIDER_FACTORY_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_ANNOTATION_PROVIDER_FACTORY_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -24,4 +24,4 @@ std::vector<std::unique_ptr<AnnotationProvider>> GetProviders(
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATION_PROVIDER_FACTORY_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_ANNOTATION_PROVIDER_FACTORY_H_

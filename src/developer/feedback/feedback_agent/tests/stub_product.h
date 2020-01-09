@@ -40,4 +40,4 @@ class StubProduct : public fuchsia::hwinfo::Product {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_CHANNEL_PROVIDER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_PRODUCT_H_

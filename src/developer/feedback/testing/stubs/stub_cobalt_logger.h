@@ -175,4 +175,4 @@ class StubCobaltLoggerIgnoresFirstEvents : public StubCobaltLoggerBase {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_FACTORY_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_H_

@@ -19,17 +19,13 @@ package("bugreport") {
     },
   ]
 
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }
 
 executable("main") {
   output_name = "bugreport"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":command_line_options",
@@ -44,9 +40,7 @@ source_set("command_line_options") {
     "command_line_options.h",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 }
 
 source_set("src") {
@@ -55,9 +49,7 @@ source_set("src") {
     "bug_reporter.h",
   ]
 
-  public_deps = [
-    "//sdk/lib/sys/cpp",
-  ]
+  public_deps = [ "//sdk/lib/sys/cpp" ]
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",

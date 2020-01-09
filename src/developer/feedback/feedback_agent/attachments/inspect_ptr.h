@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_INSPECT_PTR_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_INSPECT_PTR_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_INSPECT_PTR_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_INSPECT_PTR_H_
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
@@ -47,4 +47,4 @@ class Inspect {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_INSPECT_PTR_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_INSPECT_PTR_H_

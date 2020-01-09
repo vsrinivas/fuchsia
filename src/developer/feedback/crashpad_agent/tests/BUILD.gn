@@ -150,9 +150,7 @@ executable("config_unittest") {
 
   output_name = "crashpad_agent_config_unittest"
 
-  sources = [
-    "config_unittest.cc",
-  ]
+  sources = [ "config_unittest.cc" ]
 
   deps = [
     "//src/developer/feedback/crashpad_agent:src",
@@ -201,9 +199,7 @@ executable("crashpad_agent_unittest") {
 executable("crashpad_agent_integration_test") {
   testonly = true
 
-  sources = [
-    "crashpad_agent_integration_test.cc",
-  ]
+  sources = [ "crashpad_agent_integration_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.cobalt.test",
@@ -225,9 +221,7 @@ executable("database_unittest") {
 
   output_name = "crashpad_agent_database_unittest"
 
-  sources = [
-    "database_unittest.cc",
-  ]
+  sources = [ "database_unittest.cc" ]
 
   deps = [
     "//garnet/public/lib/timekeeper:testing",
@@ -250,9 +244,7 @@ executable("inspect_manager_unittest") {
 
   output_name = "crashpad_agent_inspect_manager_unittest"
 
-  sources = [
-    "inspect_manager_unittest.cc",
-  ]
+  sources = [ "inspect_manager_unittest.cc" ]
 
   deps = [
     "//garnet/public/lib/timekeeper:testing",
@@ -316,23 +308,15 @@ executable("queue_unittest") {
 config_data("valid_override_config") {
   for_pkg = "fake_crashpad_agent_valid_override_config"
 
-  sources = [
-    "configs/valid_override.json",
-  ]
+  sources = [ "configs/valid_override.json" ]
 
-  outputs = [
-    "override_config.json",
-  ]
+  outputs = [ "override_config.json" ]
 }
 
 config_data("invalid_override_config") {
   for_pkg = "fake_crashpad_agent_invalid_override_config"
 
-  sources = [
-    "configs/invalid_override.json",
-  ]
+  sources = [ "configs/invalid_override.json" ]
 
-  outputs = [
-    "override_config.json",
-  ]
+  outputs = [ "override_config.json" ]
 }

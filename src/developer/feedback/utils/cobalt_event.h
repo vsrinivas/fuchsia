@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_COBALT_EVENT_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_COBALT_EVENT_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_EVENT_H_
+#define SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_EVENT_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 
@@ -39,4 +39,4 @@ std::ostream& operator<<(std::ostream& os, const CobaltEvent& event);
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_COBALT_EVENT_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_EVENT_H_

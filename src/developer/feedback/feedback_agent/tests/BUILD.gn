@@ -144,9 +144,7 @@ test_package("feedback_agent_tests") {
 executable("channel_provider_unittest") {
   testonly = true
 
-  sources = [
-    "channel_provider_unittest.cc",
-  ]
+  sources = [ "channel_provider_unittest.cc" ]
 
   deps = [
     ":stub_channel_provider",
@@ -168,9 +166,7 @@ executable("config_unittest") {
 
   output_name = "data_provider_config_unittest"
 
-  sources = [
-    "config_unittest.cc",
-  ]
+  sources = [ "config_unittest.cc" ]
 
   deps = [
     "//src/developer/feedback/feedback_agent:data_provider_src",
@@ -184,9 +180,7 @@ executable("config_unittest") {
 executable("data_provider_unittest") {
   testonly = true
 
-  sources = [
-    "data_provider_unittest.cc",
-  ]
+  sources = [ "data_provider_unittest.cc" ]
 
   deps = [
     ":stub_board",
@@ -220,9 +214,7 @@ executable("data_provider_unittest") {
 executable("feedback_agent_integration_test") {
   testonly = true
 
-  sources = [
-    "feedback_agent_integration_test.cc",
-  ]
+  sources = [ "feedback_agent_integration_test.cc" ]
 
   deps = [
     ":zx_object_util",
@@ -255,9 +247,7 @@ executable("feedback_agent_integration_test") {
 executable("inspect_exe") {
   testonly = true
 
-  sources = [
-    "inspect_exe.cc",
-  ]
+  sources = [ "inspect_exe.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp",
@@ -273,9 +263,7 @@ executable("inspect_exe") {
 executable("inspect_ptr_unittest") {
   testonly = true
 
-  sources = [
-    "inspect_ptr_unittest.cc",
-  ]
+  sources = [ "inspect_ptr_unittest.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration",
@@ -291,9 +279,7 @@ executable("inspect_ptr_unittest") {
 executable("kernel_log_ptr_integration_test") {
   testonly = true
 
-  sources = [
-    "kernel_log_ptr_integration_test.cc",
-  ]
+  sources = [ "kernel_log_ptr_integration_test.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration",
@@ -311,9 +297,7 @@ executable("kernel_log_ptr_integration_test") {
 executable("board_info_provider_unittest") {
   testonly = true
 
-  sources = [
-    "board_info_provider_unittest.cc",
-  ]
+  sources = [ "board_info_provider_unittest.cc" ]
 
   deps = [
     ":stub_board",
@@ -332,9 +316,7 @@ executable("board_info_provider_unittest") {
 executable("product_info_provider_unittest") {
   testonly = true
 
-  sources = [
-    "product_info_provider_unittest.cc",
-  ]
+  sources = [ "product_info_provider_unittest.cc" ]
 
   deps = [
     ":stub_product",
@@ -353,9 +335,7 @@ executable("product_info_provider_unittest") {
 executable("ref_counted_delayed_task_unittest") {
   testonly = true
 
-  sources = [
-    "ref_counted_delayed_task_unittest.cc",
-  ]
+  sources = [ "ref_counted_delayed_task_unittest.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -370,9 +350,7 @@ executable("ref_counted_delayed_task_unittest") {
 executable("screenshot_ptr_unittest") {
   testonly = true
 
-  sources = [
-    "screenshot_ptr_unittest.cc",
-  ]
+  sources = [ "screenshot_ptr_unittest.cc" ]
 
   deps = [
     ":stub_scenic",
@@ -391,9 +369,7 @@ executable("screenshot_ptr_unittest") {
 executable("single_sync_annotation_provider_unittest") {
   testonly = true
 
-  sources = [
-    "single_sync_annotation_provider_unittest.cc",
-  ]
+  sources = [ "single_sync_annotation_provider_unittest.cc" ]
 
   deps = [
     "//src/developer/feedback/feedback_agent/annotations:single_sync_annotation_provider",
@@ -410,9 +386,7 @@ executable("single_sync_annotation_provider_unittest") {
 executable("system_log_ptr_unittest") {
   testonly = true
 
-  sources = [
-    "system_log_ptr_unittest.cc",
-  ]
+  sources = [ "system_log_ptr_unittest.cc" ]
 
   deps = [
     ":stub_logger",
@@ -525,43 +499,27 @@ hwinfo_config_validate("fake_hwinfo_board_config_validate") {
 config_data("fake_hwinfo_product_config") {
   for_pkg = "fake_hwinfo"
 
-  sources = [
-    rebase_path("configs/hwinfo_product_config.json"),
-  ]
+  sources = [ rebase_path("configs/hwinfo_product_config.json") ]
 
-  outputs = [
-    "product_config.json",
-  ]
+  outputs = [ "product_config.json" ]
 
-  deps = [
-    ":fake_hwinfo_product_config_validate",
-  ]
+  deps = [ ":fake_hwinfo_product_config_validate" ]
 }
 
 config_data("fake_hwinfo_board_config") {
   for_pkg = "fake_hwinfo"
 
-  sources = [
-    rebase_path("configs/hwinfo_board_config.json"),
-  ]
+  sources = [ rebase_path("configs/hwinfo_board_config.json") ]
 
-  outputs = [
-    "board_config.json",
-  ]
+  outputs = [ "board_config.json" ]
 
-  deps = [
-    ":fake_hwinfo_board_config_validate",
-  ]
+  deps = [ ":fake_hwinfo_board_config_validate" ]
 }
 
 config_data("fake_hwinfo_factory_config") {
   for_pkg = "fake_factory_store_providers"
 
-  sources = [
-    "configs/hwinfo_factory_config.json",
-  ]
+  sources = [ "configs/hwinfo_factory_config.json" ]
 
-  outputs = [
-    "fuchsia.factory.MiscFactoryStoreProvider.config",
-  ]
+  outputs = [ "fuchsia.factory.MiscFactoryStoreProvider.config" ]
 }

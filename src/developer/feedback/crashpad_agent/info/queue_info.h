@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_INFO_H_
-#define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_INFO_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_INFO_QUEUE_INFO_H_
+#define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_INFO_QUEUE_INFO_H_
 
 #include <memory>
 
@@ -26,4 +26,4 @@ struct QueueInfo {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_INFO_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_INFO_QUEUE_INFO_H_

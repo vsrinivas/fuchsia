@@ -7,9 +7,7 @@ import("//build/package.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 package("boot_log_checker") {
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 
   binaries = [
     {
@@ -28,9 +26,7 @@ package("boot_log_checker") {
 executable("main") {
   output_name = "boot_log_checker"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":src",
@@ -80,11 +76,7 @@ metrics_registry("metrics_registry") {
 config_data("config") {
   for_pkg = "sysmgr"
 
-  sources = [
-    "config/config.json",
-  ]
+  sources = [ "config/config.json" ]
 
-  outputs = [
-    "boot_log_checker.config",
-  ]
+  outputs = [ "boot_log_checker.config" ]
 }

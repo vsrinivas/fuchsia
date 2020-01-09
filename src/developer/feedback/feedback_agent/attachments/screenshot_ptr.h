@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SCREENSHOT_PTR_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SCREENSHOT_PTR_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_SCREENSHOT_PTR_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_SCREENSHOT_PTR_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -53,4 +53,4 @@ class Scenic {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SCREENSHOT_PTR_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_SCREENSHOT_PTR_H_

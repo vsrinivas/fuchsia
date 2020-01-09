@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be // found in the LICENSE
 // file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CHANNEL_PROVIDER_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CHANNEL_PROVIDER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_CHANNEL_PROVIDER_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_CHANNEL_PROVIDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/update/channel/cpp/fidl.h>
@@ -70,4 +70,4 @@ class ChannelProviderPtr {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CHANNEL_PROVIDER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_CHANNEL_PROVIDER_H_

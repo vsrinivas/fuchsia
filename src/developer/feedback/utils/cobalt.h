@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_COBALT_LOGGER_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_COBALT_LOGGER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_H_
+#define SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -68,4 +68,4 @@ class Cobalt {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_COBALT_LOGGER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_H_

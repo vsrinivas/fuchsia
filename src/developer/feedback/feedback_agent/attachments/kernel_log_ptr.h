@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_KERNEL_LOG_PTR_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_KERNEL_LOG_PTR_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_KERNEL_LOG_PTR_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_KERNEL_LOG_PTR_H_
 
 #include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
@@ -54,4 +54,4 @@ class BootLog {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_KERNEL_LOG_PTR_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_KERNEL_LOG_PTR_H_
