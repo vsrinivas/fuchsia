@@ -85,6 +85,19 @@ fn main() -> Result<(), Error> {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
     fx_log_info!("starting package resolver");
 
+    // TODO the initial thread is only given 256Kb of stack space, which is not always enough.
+    // Explicitly run the service in a separate thread with a larger stack until the linker
+    // parameter to customize the main thread stack size is available for Rust binaries.
+    std::thread::Builder::new()
+        .name("executor".to_owned())
+        .stack_size(2 * 1024 * 1024)
+        .spawn(main_inner)
+        .unwrap()
+        .join()
+        .expect("no panics, only packages")
+}
+
+fn main_inner() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
     let config = Config::load_from_config_data_or_default();
