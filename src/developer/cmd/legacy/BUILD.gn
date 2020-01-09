@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# We need to declare this target here because we normally build zircon.c using
+# the ZN build system, whereas this target is in the GN build system. When the
+# two builds are unified, we can have a single source_set that is linked into
+# both dash and cmd (and presumably declared closer to zircon.c).
+source_set("legacy") {
+  sources = [
+    "//zircon/third_party/uapp/dash/src/bltin/zircon.c",
+    "builtins.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/pretty",
+    "//zircon/system/fidl/fuchsia-device-manager:c",
+    "//zircon/system/fidl/fuchsia-hardware-pty:c",
+    "//zircon/system/fidl/fuchsia-kernel:c",
+  ]
+}

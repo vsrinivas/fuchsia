@@ -5,6 +5,8 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-kernel") {
+  sdk = true
+
   sources = [
     "kernel-counter.fidl",
     "kernel-debug.fidl",
@@ -12,7 +14,5 @@ fidl_library("fuchsia-kernel") {
     "kernel-stats.fidl",
   ]
 
-  public_deps = [
-    "$zx/system/fidl/fuchsia-mem",
-  ]
+  public_deps = [ "$zx/system/fidl/fuchsia-mem" ]
 }

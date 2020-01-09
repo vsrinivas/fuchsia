@@ -5,6 +5,7 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-device-manager") {
+  sdk = true
   sources = [
     "administrator.fidl",
     "coordinator.fidl",

@@ -650,7 +650,7 @@ static int send_suspend(uint32_t flags) {
 static bool command_cmp(const char* command, const char* input, int* command_length) {
   *command_length = strlen(command);
   const size_t input_length = strlen(input);
-  if (input_length < *command_length) {
+  if (input_length < (size_t)(*command_length)) {
     return false;
   }
 
@@ -658,7 +658,7 @@ static bool command_cmp(const char* command, const char* input, int* command_len
   // either the whole input or there is a space after the command, we don't want
   // partial command matching.
   return strncmp(command, input, *command_length) == 0 &&
-      ((input_length == *command_length) || input[*command_length] == ' ');
+      ((input_length == (size_t)*command_length) || input[*command_length] == ' ');
 }
 
 int zxc_dm(int argc, char** argv) {

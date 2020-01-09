@@ -35,6 +35,8 @@ source_set("lib") {
     "tasks/quit_task.h",
     "tasks/setenv_task.cc",
     "tasks/setenv_task.h",
+    "tasks/synchronous_task.cc",
+    "tasks/synchronous_task.h",
     "tasks/task.cc",
     "tasks/task.h",
     "tasks/unsetenv_task.cc",
@@ -42,6 +44,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//src/developer/cmd/legacy",
     "//src/lib/fsl",
     "//src/lib/line_input",
     "//zircon/public/lib/async-cpp",
@@ -78,6 +81,7 @@ executable("cmd_unittests") {
     "tasks/process_task_unittest.cc",
     "tasks/quit_task_unittest.cc",
     "tasks/setenv_task_unittest.cc",
+    "tasks/synchronous_task_unittest.cc",
     "tasks/unsetenv_task_unittest.cc",
   ]
 
