@@ -36,20 +36,23 @@ class Type {
   Type() = default;
   virtual ~Type() = default;
 
-  // Return true if the type is a XUnionType.
+  // Returns true if the type is a XUnionType.
   virtual bool IsXUnion() const { return false; }
 
   // Returns true if the type is a ArrayType.
   virtual bool IsArray() const { return false; }
 
-  // Return a readable representation of the type.
-  virtual std::string Name() const = 0;
-
-  // String representation of the type in detail.
+  // Returns a detailed representation of the type.
   std::string ToString(bool expand = false) const;
+
+  // Returns a readable representation of the type.
+  virtual std::string Name() const = 0;
 
   // Returns the size of this type when embedded in another object.
   virtual size_t InlineSize(bool unions_are_xunions) const;
+
+  // Whether this is a nullable type.
+  virtual bool Nullable() const { return false; }
 
   // For vectors and arrays, give the type of the components (members).
   virtual const Type* GetComponentType() const { return nullptr; }
@@ -87,9 +90,6 @@ class Type {
     os << colors.red << "invalid" << colors.reset;
   }
 
-  // Whether this is a nullable type.
-  virtual bool Nullable() const { return false; }
-
   // Use a visitor on this value;
   virtual void Visit(TypeVisitor* visitor) const = 0;
 
@@ -107,9 +107,9 @@ class RawType : public Type {
 
   size_t InlineSize(bool unions_are_xunions) const override { return inline_size_; }
 
-  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
-
   bool Nullable() const override { return true; }
+
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
   void Visit(TypeVisitor* visitor) const override;
 
@@ -125,9 +125,9 @@ class StringType : public Type {
     return sizeof(uint64_t) + sizeof(uint64_t);
   }
 
-  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
-
   bool Nullable() const override { return true; }
+
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
   void Visit(TypeVisitor* visitor) const override;
 };
@@ -277,11 +277,11 @@ class StructType : public Type {
 
   const Struct& struct_definition() const { return struct_; }
 
-  bool Nullable() const override { return nullable_; }
-
   std::string Name() const override { return struct_.name(); }
 
   size_t InlineSize(bool unions_are_xunions) const override;
+
+  bool Nullable() const override { return nullable_; }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -389,11 +389,11 @@ class VectorType : public ElementSequenceType {
     return std::string("vector<") + component_type_->Name() + ">";
   }
 
-  bool Nullable() const override { return true; }
-
   size_t InlineSize(bool unions_are_xunions) const override {
     return sizeof(uint64_t) + sizeof(uint64_t);
   }
+
+  bool Nullable() const override { return true; }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 

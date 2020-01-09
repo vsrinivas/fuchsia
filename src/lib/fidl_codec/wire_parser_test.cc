@@ -233,6 +233,7 @@ TEST_F(WireParserTest, ParseSingleString) {
         EXPECT_EQ(message.handles().data()[i], encode_result.handles[i].handle);                   \
       }                                                                                            \
     }                                                                                              \
+                                                                                                   \
     delete[] handle_infos;                                                                         \
   } while (0)
 

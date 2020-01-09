@@ -412,7 +412,7 @@ std::unique_ptr<Value> VectorType::Decode(MessageDecoder* decoder, uint64_t offs
   size_t component_size = component_type_->InlineSize(decoder->unions_are_xunions());
   auto result = std::make_unique<VectorValue>();
   for (uint64_t i = 0;
-       (i < element_count) && ((nullable_offset + component_size) <= decoder->num_bytes()); ++i) {
+       (i < element_count) && (nullable_offset + component_size <= decoder->num_bytes()); ++i) {
     result->AddValue(component_type_->Decode(decoder, nullable_offset));
     nullable_offset += component_size;
   }

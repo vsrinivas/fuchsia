@@ -112,6 +112,7 @@ class RawValue : public Value {
   void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
                    const fidl_message_header_t* header, std::string_view line_header, int tabs,
                    int remaining_size, int max_line_size) const override;
+
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
