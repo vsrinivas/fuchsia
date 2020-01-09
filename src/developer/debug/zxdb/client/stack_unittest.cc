@@ -11,6 +11,7 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
+#include "src/developer/debug/zxdb/client/mock_stack_delegate.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
@@ -25,45 +26,6 @@ namespace zxdb {
 namespace {
 
 class StackTest : public TestWithLoop {};
-
-// Must call set_stack() after creating the Stack that uses this.
-class MockStackDelegate : public Stack::Delegate {
- public:
-  void set_stack(Stack* s) { stack_ = s; }
-
-  // Adds the given location to the list of things returned by GetSymbolizedLocationForStackFrame().
-  void AddLocation(const Location& loc) { locations_[loc.address()] = loc; }
-
-  // Sets the asynchronous resource to SyncFramesForStack(). Since this transfers ownership, it will
-  // only affect the next call.
-  void SetAsyncFrames(std::vector<std::unique_ptr<Frame>> frames) {
-    async_frames_ = std::move(frames);
-  }
-
-  void SyncFramesForStack(fit::callback<void(const Err&)> cb) override {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb), this]() mutable {
-      stack_->SetFramesForTest(std::move(async_frames_), true);
-      cb(Err());
-    });
-  }
-
-  std::unique_ptr<Frame> MakeFrameForStack(const debug_ipc::StackFrame& input,
-                                           Location location) override {
-    return std::make_unique<MockFrame>(nullptr, nullptr, location, input.sp);
-  }
-
-  Location GetSymbolizedLocationForStackFrame(const debug_ipc::StackFrame& input) override {
-    auto found = locations_.find(input.ip);
-    if (found == locations_.end())
-      return Location(Location::State::kSymbolized, input.ip);
-    return found->second;
-  }
-
- private:
-  Stack* stack_ = nullptr;
-  std::map<uint64_t, Location> locations_;
-  std::vector<std::unique_ptr<Frame>> async_frames_;
-};
 
 // Stack pointers used by MakeInlineStackFrames.
 constexpr uint64_t kTopSP = 0x2000;

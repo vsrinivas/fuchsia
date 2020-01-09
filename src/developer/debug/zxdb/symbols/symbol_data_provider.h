@@ -13,6 +13,7 @@
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
+#include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/lib/containers/cpp/array_view.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 

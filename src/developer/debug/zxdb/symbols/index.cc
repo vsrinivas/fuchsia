@@ -613,11 +613,8 @@ std::vector<std::string> Index::FindFileMatches(std::string_view name) const {
   FileNameIndex::const_iterator iter = file_name_index_.lower_bound(name_last_comp);
   while (iter != file_name_index_.end() && iter->first == name_last_comp) {
     const auto& pair = *iter->second;
-    if (StringEndsWith(pair.first, name) &&
-        (pair.first.size() == name.size() ||
-         pair.first[pair.first.size() - name.size() - 1] == '/')) {
+    if (PathContainsFromRight(pair.first, name))
       result.push_back(pair.first);
-    }
     ++iter;
   }
 

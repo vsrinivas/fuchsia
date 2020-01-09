@@ -20,6 +20,16 @@ std::string_view ExtractLastFileComponent(std::string_view path);
 // have relative components ("/foo/../bar" is still absolute).
 bool IsPathAbsolute(const std::string& path);
 
+// Returns true if the given |path| matches the |right_query| from the right-hand side. This
+// requires both that the |path| end in |right_query| (case-sensitive) AND the start of the match is
+// either the beginning of |path| or immediately following a path separator.
+//
+// Examples:
+//   path = "foo.cc", right_query = "foo.cc" => TRUE
+//   path = "bar/foo.cc", right_query = "foo.cc" => TRUE
+//   path = "foo.cc", right_query = "o.cc" => FALSE
+bool PathContainsFromRight(std::string_view path, std::string_view right_query);
+
 // Concatenates the two path components with a slash in between them. "first" can end with a slash
 // or not. The second component shouldn't begin with a slash.
 std::string CatPathComponents(const std::string& first, const std::string& second);

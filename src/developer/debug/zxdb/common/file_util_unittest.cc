@@ -24,6 +24,17 @@ TEST(FileUtil, IsPathAbsolute) {
   EXPECT_FALSE(IsPathAbsolute("./foo/bar"));
 }
 
+TEST(FileUtil, PathContainsFromRight) {
+  EXPECT_TRUE(PathContainsFromRight("", ""));
+  EXPECT_TRUE(PathContainsFromRight("foo.cc", "foo.cc"));
+  EXPECT_TRUE(PathContainsFromRight("/foo.cc", "foo.cc"));
+  EXPECT_TRUE(PathContainsFromRight("bar/foo.cc", "foo.cc"));
+  EXPECT_TRUE(PathContainsFromRight("bar/foo.cc", "bar/foo.cc"));
+
+  EXPECT_FALSE(PathContainsFromRight("bar/foo.cc", "FOO.CC"));
+  EXPECT_FALSE(PathContainsFromRight("bar/foo.cc", "o.cc"));
+}
+
 TEST(FileUtil, CatPathComponents) {
   EXPECT_EQ("", CatPathComponents("", ""));
   EXPECT_EQ("a", CatPathComponents("", "a"));
