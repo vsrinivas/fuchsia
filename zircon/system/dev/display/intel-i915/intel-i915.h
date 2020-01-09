@@ -61,7 +61,7 @@ typedef struct dpll_state {
 } dpll_state_t;
 
 class Controller;
-using DeviceType = ddk::Device<Controller, ddk::UnbindableDeprecated, ddk::Suspendable,
+using DeviceType = ddk::Device<Controller, ddk::UnbindableDeprecated, ddk::SuspendableNew,
                                ddk::Resumable, ddk::GetProtocolable>;
 
 class Controller : public DeviceType,
@@ -76,7 +76,7 @@ class Controller : public DeviceType,
   void DdkUnbindDeprecated();
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
-  zx_status_t DdkSuspend(uint32_t reason);
+  void DdkSuspendNew(ddk::SuspendTxn txn);
   zx_status_t DdkResume(uint32_t reason);
   zx_status_t Bind(std::unique_ptr<i915::Controller>* controller_ptr);
 

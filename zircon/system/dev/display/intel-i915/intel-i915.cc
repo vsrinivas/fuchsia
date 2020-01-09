@@ -1968,12 +1968,14 @@ zx_status_t Controller::DdkGetProtocol(uint32_t proto_id, void* out) {
   return ZX_OK;
 }
 
-zx_status_t Controller::DdkSuspend(uint32_t hint) {
-  if ((hint & DEVICE_SUSPEND_REASON_MASK) == DEVICE_SUSPEND_FLAG_MEXEC) {
+void Controller::DdkSuspendNew(ddk::SuspendTxn txn) {
+  // TODO(fxb/43204): Implement the suspend hook based on suspendtxn
+  if (txn.suspend_reason() == DEVICE_SUSPEND_REASON_MEXEC) {
     uint32_t format, width, height, stride;
     // Please do not use get_root_resource() in new code. See ZX-1467.
     if (zx_framebuffer_get_info(get_root_resource(), &format, &width, &height, &stride) != ZX_OK) {
-      return ZX_OK;
+      txn.Reply(ZX_OK, txn.requested_state());
+      return;
     }
 
     // The bootloader framebuffer is most likely at the start of the display
@@ -1984,7 +1986,8 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
     zx_status_t status = pci_config_read32(&pci_, bdsm_reg.kAddr, bdsm_reg.reg_value_ptr());
     if (status != ZX_OK) {
       LOG_TRACE("Failed to read dsm base\n");
-      return ZX_OK;
+      txn.Reply(ZX_OK, txn.requested_state());
+      return;
     }
 
     // The Intel docs say that the first page should be reserved for the gfx
@@ -2023,7 +2026,7 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
       }
     }
   }
-  return ZX_OK;
+  txn.Reply(ZX_OK, txn.requested_state());
 }
 
 zx_status_t Controller::DdkResume(uint32_t hint) {
