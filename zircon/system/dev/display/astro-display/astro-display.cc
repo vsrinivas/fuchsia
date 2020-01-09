@@ -134,7 +134,7 @@ void AstroDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
   args->edid_present = false;
   args->panel.params.height = height_;
   args->panel.params.width = width_;
-  args->panel.params.refresh_rate_e2 = 3000;  // Just guess that it's 30fps
+  args->panel.params.refresh_rate_e2 = 6000;  // Just guess that it's 60fps
   args->pixel_format_list = kSupportedPixelFormats;
   args->pixel_format_count = countof(kSupportedPixelFormats);
   args->cursor_info_count = 0;
