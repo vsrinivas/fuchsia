@@ -41,7 +41,6 @@ class ColorTransformHandler : public fuchsia::accessibility::ColorTransformHandl
 
   scenic::Session* session_;  // No ownership.
   const scenic::ResourceId compositor_id_;
-  fuchsia::accessibility::Settings settings_;
   fidl::Binding<fuchsia::accessibility::ColorTransformHandler> color_transform_handler_bindings_;
   fuchsia::accessibility::ColorTransformPtr color_transform_manager_;
 };
