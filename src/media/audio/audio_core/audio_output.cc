@@ -70,10 +70,9 @@ void AudioOutput::Process() {
 }
 
 fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLink(
-    const fbl::RefPtr<AudioLink>& link) {
+    const AudioObject& source, fbl::RefPtr<Stream> stream) {
   TRACE_DURATION("audio", "AudioOutput::InitializeSourceLink");
 
-  auto stream = link->stream();
   if (stream) {
     auto mixer = mix_stage_->AddInput(std::move(stream));
     const auto& settings = device_settings();
@@ -92,8 +91,7 @@ fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLi
   return fit::ok(std::make_unique<audio::mixer::NoOp>());
 }
 
-void AudioOutput::CleanupSourceLink(const fbl::RefPtr<AudioLink>& link) {
-  auto stream = link->stream();
+void AudioOutput::CleanupSourceLink(const AudioObject& source, fbl::RefPtr<Stream> stream) {
   if (stream) {
     mix_stage_->RemoveInput(*stream);
   }

@@ -220,7 +220,7 @@ void AudioCapturerImpl::RecycleObject(AudioObject* self) {
 }
 
 fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioCapturerImpl::InitializeSourceLink(
-    const fbl::RefPtr<AudioLink>& link) {
+    const AudioObject& source, fbl::RefPtr<Stream> stream) {
   TRACE_DURATION("audio", "AudioCapturerImpl::InitializeSourceLink");
 
   // Choose a mixer
@@ -230,7 +230,7 @@ fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioCapturerImpl::InitializeSo
     case State::OperatingAsync:
     case State::AsyncStopping:
     case State::AsyncStoppingCallbackPending:
-      return ChooseMixer(link);
+      return ChooseMixer(source, std::move(stream));
 
     // If we are shut down, then I'm not sure why new links are being added, but
     // just go ahead and reject this one. We will be going away shortly.
@@ -1559,23 +1559,19 @@ void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioSampleFormat sample_fo
 }
 
 fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioCapturerImpl::ChooseMixer(
-    const fbl::RefPtr<AudioLink>& link) {
+    const AudioObject& source, fbl::RefPtr<Stream> stream) {
   TRACE_DURATION("audio", "AudioCapturerImpl::ChooseMixer");
-  FX_DCHECK(link != nullptr);
 
-  const auto& source = link->GetSource();
-  FX_DCHECK(source);
-
-  if (!source->is_input() && !source->is_output()) {
+  if (!source.is_input() && !source.is_output()) {
     FX_LOGS(ERROR) << "Failed to find mixer for source of type "
-                   << static_cast<uint32_t>(source->type());
+                   << static_cast<uint32_t>(source.type());
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
   // Throttle outputs are the only driver-less devices. MTWN-52 is the work to
   // remove this construct and have packet sources maintain pending packet
   // queues, trimmed by a thread from the pool managed by the device manager.
-  auto& device = static_cast<AudioDevice&>(*source);
+  const auto& device = *(static_cast<const AudioDevice*>(&source));
   if (device.driver() == nullptr) {
     return fit::error(ZX_ERR_BAD_STATE);
   }

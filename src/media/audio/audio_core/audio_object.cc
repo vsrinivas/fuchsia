@@ -42,7 +42,7 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& 
   auto stream = dest_init_result.take_value();
   link->set_stream(stream);
 
-  auto source_init_result = dest->InitializeSourceLink(link);
+  auto source_init_result = dest->InitializeSourceLink(*source, stream);
   if (source_init_result.is_error()) {
     return nullptr;
   }
@@ -89,7 +89,7 @@ void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
     std::lock_guard<std::mutex> dlock(dest->links_lock_);
     auto iter = dest->source_links_.find(link.get());
     if (iter != dest->source_links_.end()) {
-      dest->CleanupSourceLink(link);
+      dest->CleanupSourceLink(*source, link->stream());
       dest->source_links_.erase(iter);
     }
   }

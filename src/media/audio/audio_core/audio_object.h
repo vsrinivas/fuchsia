@@ -104,9 +104,12 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
   // override InitializeSourceLink in order to choose and initialize an appropriate resampling
   // filter.
   //
+  // When initializing a source link, an implementor must provide a mixer. The source object
+  // and their stream are provided.
+  //
   // Returns ZX_OK if initialization succeeded, or an appropriate error code otherwise.
   virtual fit::result<std::unique_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const fbl::RefPtr<AudioLink>& link) {
+      const AudioObject& source, fbl::RefPtr<Stream> stream) {
     return fit::ok(std::make_unique<audio::mixer::NoOp>());
   }
   virtual fit::result<fbl::RefPtr<Stream>, zx_status_t> InitializeDestLink(
@@ -114,7 +117,7 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
     return fit::ok(nullptr);
   }
 
-  virtual void CleanupSourceLink(const fbl::RefPtr<AudioLink>& link) {}
+  virtual void CleanupSourceLink(const AudioObject& source, fbl::RefPtr<Stream> stream) {}
   virtual void CleanupDestLink(const AudioObject& dest) {}
 
   // Called immediately after a new link is added to the object.
