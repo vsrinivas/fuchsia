@@ -7,6 +7,7 @@ group("ulib") {
   # listed here.  That is, library() targets with `sdk` set.
   deps = [
     "backtrace",
+    "boringssl",
     "cksum",
     "lz4",
     "ngunwind",

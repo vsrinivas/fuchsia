@@ -38,7 +38,7 @@ zx_library("zxcrypt-dev") {
     "$zx/system/ulib/zircon-crypto:zircon-crypto-static",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/uboringssl",
+    "$zx/third_party/ulib/boringssl",
   ]
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }
@@ -55,7 +55,9 @@ zx_library("zxcrypt-fdio") {
     "volume.cc",
   ]
   public_deps = [
+    # <zxcrypt/fdio-volume.h> has #include <lib/fzl/fdio.h>
     # <zxcrypt/volume.h> has #include <crypto/aead.h> (among others).
+    "$zx/system/ulib/fzl:headers",
     "$zx/system/ulib/zircon-crypto:headers",
   ]
   configs += [ "$zx_build/public/gn/config:integer-paranoia" ]
@@ -75,7 +77,7 @@ zx_library("zxcrypt-fdio") {
     "$zx/system/ulib/zircon-crypto",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
-    "$zx/third_party/ulib/uboringssl",
+    "$zx/third_party/ulib/boringssl",
   ]
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }

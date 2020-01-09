@@ -29,7 +29,7 @@ zx_library("zircon-crypto") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
-    "$zx/third_party/ulib/uboringssl",
+    "$zx/third_party/ulib/boringssl",
   ]
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }
@@ -61,7 +61,7 @@ zx_library("zircon-crypto-static") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
-    "$zx/third_party/ulib/uboringssl",
+    "$zx/third_party/ulib/boringssl",
   ]
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }

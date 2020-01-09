@@ -5,5 +5,8 @@
 # keysafe library provides the necessary constant to use keysafe TA.
 # keysafe.h is the same as the header used by keysafe TA.
 zx_library("keysafe") {
+  shared = true
   sources = []
+  sdk = "source"
+  sdk_headers = [ "keysafe/keysafe.h" ]
 }

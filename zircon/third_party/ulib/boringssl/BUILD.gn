@@ -14,6 +14,35 @@ zx_library("boringssl") {
   kernel = true
   host = true
   static = true
+  sdk = "static"
+  sdk_headers = [
+    "openssl/aead.h",
+    "openssl/aes.h",
+    "openssl/arm_arch.h",
+    "openssl/base64.h",
+    "openssl/base.h",
+    "openssl/chacha.h",
+    "openssl/cipher.h",
+    "openssl/cpu.h",
+    "openssl/crypto.h",
+    "openssl/digest.h",
+    "openssl/err.h",
+    "openssl/evp.h",
+    "openssl/ex_data.h",
+    "openssl/hkdf.h",
+    "openssl/hmac.h",
+    "openssl/is_boringssl.h",
+    "openssl/md4.h",
+    "openssl/md5.h",
+    "openssl/mem.h",
+    "openssl/nid.h",
+    "openssl/opensslconf.h",
+    "openssl/rand.h",
+    "openssl/sha.h",
+    "openssl/stack.h",
+    "openssl/thread.h",
+    "openssl/type_check.h",
+  ]
 
   if (is_kernel) {
     sources = rebase_path(boringssl_zircon_kernel_sources, ".", bssl_dir) +

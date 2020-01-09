@@ -90,6 +90,8 @@ group("ulib") {
     "inspect",
     "inspector",
     "intel-hda",
+    "keysafe",
+    "kms-stateless",
     "launchpad",
     "ldmsg",
     "libzbi",
