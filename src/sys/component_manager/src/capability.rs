@@ -104,6 +104,14 @@ impl FrameworkCapability {
         }
     }
 
+    pub fn builtin_from_storage_decl(decl: &StorageDecl) -> Result<Self, Error> {
+        if decl.source == StorageDirectorySource::Realm {
+            Ok(FrameworkCapability::Directory(decl.source_path.clone()))
+        } else {
+            Err(Error::InvalidFrameworkCapability {})
+        }
+    }
+
     pub fn framework_from_use_decl(decl: &UseDecl) -> Result<Self, Error> {
         match decl {
             UseDecl::Service(s) if s.source == UseSource::Framework => {

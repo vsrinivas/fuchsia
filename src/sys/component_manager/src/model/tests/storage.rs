@@ -10,6 +10,55 @@ use {
     std::convert::TryInto,
 };
 
+///   component manager's namespace
+///    |
+///    a
+///    |
+///    b
+///
+/// a: has storage decl with name "mystorage" with a source of realm at path /data
+/// a: offers cache storage to b from "mystorage"
+/// b: uses cache storage as /storage
+#[fuchsia_async::run_singlethreaded(test)]
+async fn storage_dir_from_cm_namespace() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("b".to_string()),
+                })))
+                .add_lazy_child("b")
+                .storage(StorageDecl {
+                    name: "mystorage".to_string(),
+                    source_path: "/tmp".try_into().unwrap(),
+                    source: StorageDirectorySource::Realm,
+                })
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::Storage {
+            path: "/storage".try_into().unwrap(),
+            type_: fsys::StorageType::Cache,
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
+            from_cm_namespace: true,
+        },
+    )
+    .await;
+}
+
 ///   a
 ///    \
 ///     b
@@ -51,6 +100,7 @@ async fn storage_and_dir_from_parent() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Cache,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -97,6 +147,7 @@ async fn meta_storage_and_dir_from_parent() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Meta,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -160,6 +211,7 @@ async fn storage_from_parent_dir_from_grandparent() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Data,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -220,6 +272,7 @@ async fn storage_and_dir_from_grandparent() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Data,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into(), "c:0".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -280,6 +333,7 @@ async fn meta_storage_and_dir_from_grandparent() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Meta,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into(), "c:0".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -341,6 +395,7 @@ async fn storage_from_parent_dir_from_sibling() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Cache,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -433,6 +488,7 @@ async fn use_in_collection_from_parent() {
             path: "/data".try_into().unwrap(),
             type_: fsys::StorageType::Data,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -442,6 +498,7 @@ async fn use_in_collection_from_parent() {
             path: "/cache".try_into().unwrap(),
             type_: fsys::StorageType::Cache,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -451,6 +508,7 @@ async fn use_in_collection_from_parent() {
             path: "/unused".try_into().unwrap(),
             type_: fsys::StorageType::Meta,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -562,6 +620,7 @@ async fn use_in_collection_from_grandparent() {
                 vec![],
                 vec!["b:0".into(), "coll:c:1".into()],
             )),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -574,6 +633,7 @@ async fn use_in_collection_from_grandparent() {
                 vec![],
                 vec!["b:0".into(), "coll:c:1".into()],
             )),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -586,6 +646,7 @@ async fn use_in_collection_from_grandparent() {
                 vec![],
                 vec!["b:0".into(), "coll:c:1".into()],
             )),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -696,6 +757,7 @@ async fn storage_multiple_types() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Cache,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -705,6 +767,7 @@ async fn storage_multiple_types() {
             path: "/unused".try_into().unwrap(),
             type_: fsys::StorageType::Meta,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -714,6 +777,7 @@ async fn storage_multiple_types() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Data,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into(), "d:0".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -723,6 +787,7 @@ async fn storage_multiple_types() {
             path: "/unused".try_into().unwrap(),
             type_: fsys::StorageType::Meta,
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into(), "d:0".into()])),
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -771,6 +836,7 @@ async fn use_the_wrong_type_of_storage() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Data,
             storage_relation: None,
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -780,6 +846,7 @@ async fn use_the_wrong_type_of_storage() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Meta,
             storage_relation: None,
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -823,6 +890,7 @@ async fn directories_are_not_storage() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Data,
             storage_relation: None,
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -866,6 +934,7 @@ async fn use_storage_when_not_offered() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Cache,
             storage_relation: None,
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -875,6 +944,7 @@ async fn use_storage_when_not_offered() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Meta,
             storage_relation: None,
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -943,6 +1013,7 @@ async fn dir_offered_from_nonexecutable() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Data,
             storage_relation: None,
+            from_cm_namespace: false,
         },
     )
     .await;
@@ -952,6 +1023,7 @@ async fn dir_offered_from_nonexecutable() {
             path: "/storage".try_into().unwrap(),
             type_: fsys::StorageType::Meta,
             storage_relation: None,
+            from_cm_namespace: false,
         },
     )
     .await;

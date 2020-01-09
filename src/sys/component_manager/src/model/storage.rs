@@ -27,28 +27,28 @@ const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
 #[derive(Debug, Error, Clone)]
 pub enum StorageError {
     #[error(
-        "failed to open isolated storage from {}'s directory {} for {}: {} ",
+        "failed to open isolated storage from {:?}'s directory {} for {}: {} ",
         dir_source_moniker,
         dir_source_path,
         relative_moniker,
         err
     )]
     Open {
-        dir_source_moniker: AbsoluteMoniker,
+        dir_source_moniker: Option<AbsoluteMoniker>,
         dir_source_path: CapabilityPath,
         relative_moniker: RelativeMoniker,
         #[source]
         err: ClonableError,
     },
     #[error(
-        "failed to remove isolated storage from {}'s directory {} for {}: {} ",
+        "failed to remove isolated storage from {:?}'s directory {} for {}: {} ",
         dir_source_moniker,
         dir_source_path,
         relative_moniker,
         err
     )]
     Remove {
-        dir_source_moniker: AbsoluteMoniker,
+        dir_source_moniker: Option<AbsoluteMoniker>,
         dir_source_path: CapabilityPath,
         relative_moniker: RelativeMoniker,
         #[source]
@@ -62,7 +62,7 @@ pub enum StorageError {
 
 impl StorageError {
     pub fn open(
-        dir_source_moniker: AbsoluteMoniker,
+        dir_source_moniker: Option<AbsoluteMoniker>,
         dir_source_path: CapabilityPath,
         relative_moniker: RelativeMoniker,
         err: impl Into<Error>,
@@ -71,7 +71,7 @@ impl StorageError {
     }
 
     pub fn remove(
-        dir_source_moniker: AbsoluteMoniker,
+        dir_source_moniker: Option<AbsoluteMoniker>,
         dir_source_path: CapabilityPath,
         relative_moniker: RelativeMoniker,
         err: impl Into<Error>,
@@ -94,7 +94,7 @@ impl StorageError {
 /// path.
 pub async fn open_isolated_storage(
     model: &Model,
-    dir_source_moniker: AbsoluteMoniker,
+    dir_source_moniker: Option<AbsoluteMoniker>,
     dir_source_path: &CapabilityPath,
     storage_type: fsys::StorageType,
     relative_moniker: &RelativeMoniker,
@@ -103,27 +103,39 @@ pub async fn open_isolated_storage(
     const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
     let (dir_proxy, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
-    model
-        .bind(&dir_source_moniker)
-        .await
+    if let Some(dir_source_moniker) = dir_source_moniker.clone() {
+        model
+            .bind(&dir_source_moniker)
+            .await
+            .map_err(|e| {
+                StorageError::open(
+                    Some(dir_source_moniker.clone()),
+                    dir_source_path.clone(),
+                    relative_moniker.clone(),
+                    e,
+                )
+            })?
+            .open_outgoing(FLAGS, open_mode, dir_source_path, local_server_end.into_channel())
+            .await
+            .map_err(|e| {
+                StorageError::open(
+                    Some(dir_source_moniker.clone()),
+                    dir_source_path.clone(),
+                    relative_moniker.clone(),
+                    e,
+                )
+            })?;
+    } else {
+        // If dir_source_moniker is None, the directory comes from component_manager's namespace
+        io_util::connect_in_namespace(
+            &dir_source_path.to_string(),
+            local_server_end.into_channel(),
+            FLAGS,
+        )
         .map_err(|e| {
-            StorageError::open(
-                dir_source_moniker.clone(),
-                dir_source_path.clone(),
-                relative_moniker.clone(),
-                e,
-            )
-        })?
-        .open_outgoing(FLAGS, open_mode, dir_source_path, local_server_end.into_channel())
-        .await
-        .map_err(|e| {
-            StorageError::open(
-                dir_source_moniker.clone(),
-                dir_source_path.clone(),
-                relative_moniker.clone(),
-                e,
-            )
+            StorageError::open(None, dir_source_path.clone(), relative_moniker.clone(), e)
         })?;
+    }
     let storage_proxy = io_util::create_sub_directories(
         &dir_proxy,
         &generate_storage_path(Some(storage_type), &relative_moniker),
@@ -143,33 +155,49 @@ pub async fn open_isolated_storage(
 /// `dir_source_path` are the realm hosting the directory and its capability path.
 pub async fn delete_isolated_storage(
     model: &Model,
-    dir_source_moniker: AbsoluteMoniker,
+    dir_source_moniker: Option<AbsoluteMoniker>,
     dir_source_path: &CapabilityPath,
     relative_moniker: &RelativeMoniker,
 ) -> Result<(), StorageError> {
     let (root_dir, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
-    model
-        .bind(&dir_source_moniker)
-        .await
-        .map_err(|e| {
-            StorageError::open(
-                dir_source_moniker.clone(),
-                dir_source_path.clone(),
-                relative_moniker.clone(),
-                e,
+    if let Some(dir_source_moniker) = dir_source_moniker.clone() {
+        model
+            .bind(&dir_source_moniker)
+            .await
+            .map_err(|e| {
+                StorageError::open(
+                    Some(dir_source_moniker.clone()),
+                    dir_source_path.clone(),
+                    relative_moniker.clone(),
+                    e,
+                )
+            })?
+            .open_outgoing(
+                FLAGS,
+                MODE_TYPE_DIRECTORY,
+                dir_source_path,
+                local_server_end.into_channel(),
             )
-        })?
-        .open_outgoing(FLAGS, MODE_TYPE_DIRECTORY, dir_source_path, local_server_end.into_channel())
-        .await
+            .await
+            .map_err(|e| {
+                StorageError::open(
+                    Some(dir_source_moniker.clone()),
+                    dir_source_path.clone(),
+                    relative_moniker.clone(),
+                    e,
+                )
+            })?;
+    } else {
+        io_util::connect_in_namespace(
+            &dir_source_path.to_string(),
+            local_server_end.into_channel(),
+            FLAGS,
+        )
         .map_err(|e| {
-            StorageError::open(
-                dir_source_moniker.clone(),
-                dir_source_path.clone(),
-                relative_moniker.clone(),
-                e,
-            )
+            StorageError::open(None, dir_source_path.clone(), relative_moniker.clone(), e)
         })?;
+    }
     let storage_path = generate_storage_path(None, &relative_moniker);
     if storage_path.parent().is_none() {
         return Err(StorageError::invalid_storage_path(relative_moniker.clone()));
@@ -310,7 +338,7 @@ mod tests {
         // Open.
         let dir = open_isolated_storage(
             &test.model,
-            b_moniker.clone(),
+            Some(b_moniker.clone()),
             &dir_source_path,
             fsys::StorageType::Data,
             &relative_moniker,
@@ -325,7 +353,7 @@ mod tests {
         // Open again.
         let dir = open_isolated_storage(
             &test.model,
-            b_moniker.clone(),
+            Some(b_moniker.clone()),
             &dir_source_path,
             fsys::StorageType::Data,
             &relative_moniker,
@@ -340,7 +368,7 @@ mod tests {
             RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into(), "e:0".into()]);
         let dir = open_isolated_storage(
             &test.model,
-            b_moniker.clone(),
+            Some(b_moniker.clone()),
             &dir_source_path,
             fsys::StorageType::Data,
             &relative_moniker,
@@ -355,7 +383,7 @@ mod tests {
         // Open a different storage type.
         let dir = open_isolated_storage(
             &test.model,
-            b_moniker.clone(),
+            Some(b_moniker.clone()),
             &dir_source_path,
             fsys::StorageType::Cache,
             &relative_moniker,
@@ -384,7 +412,7 @@ mod tests {
         let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
         let err = open_isolated_storage(
             &test.model,
-            root_moniker,
+            Some(root_moniker),
             &CapabilityPath::try_from("/data").unwrap(),
             fsys::StorageType::Data,
             &relative_moniker,
@@ -437,7 +465,7 @@ mod tests {
         {
             let dir = open_isolated_storage(
                 &test.model,
-                b_moniker.clone(),
+                Some(b_moniker.clone()),
                 &dir_source_path,
                 storage_type,
                 &child_moniker,
@@ -453,7 +481,7 @@ mod tests {
         // Open parent's storage.
         let dir = open_isolated_storage(
             &test.model,
-            b_moniker.clone(),
+            Some(b_moniker.clone()),
             &dir_source_path,
             fsys::StorageType::Data,
             &parent_moniker,
@@ -466,14 +494,19 @@ mod tests {
         assert_eq!(test_helpers::list_directory(&dir).await, vec!["file".to_string()]);
 
         // Delete the child's storage.
-        delete_isolated_storage(&test.model, b_moniker.clone(), &dir_source_path, &child_moniker)
-            .await
-            .expect("failed to delete child's isolated storage");
+        delete_isolated_storage(
+            &test.model,
+            Some(b_moniker.clone()),
+            &dir_source_path,
+            &child_moniker,
+        )
+        .await
+        .expect("failed to delete child's isolated storage");
 
         // Open parent's storage again. Should work.
         let dir = open_isolated_storage(
             &test.model,
-            b_moniker.clone(),
+            Some(b_moniker.clone()),
             &dir_source_path,
             fsys::StorageType::Data,
             &parent_moniker,
@@ -492,7 +525,7 @@ mod tests {
         // Error -- tried to delete nonexistent storage.
         let err = delete_isolated_storage(
             &test.model,
-            b_moniker.clone(),
+            Some(b_moniker.clone()),
             &dir_source_path,
             &child_moniker,
         )

@@ -76,6 +76,9 @@ pub enum CheckUse {
         // The relative moniker from the storage declaration to the use declaration. If None, this
         // storage use is expected to fail.
         storage_relation: Option<RelativeMoniker>,
+        // The backing directory for this storage is in component manager's namsepace, not the
+        // test's isolated test directory.
+        from_cm_namespace: bool,
     },
 }
 
@@ -255,7 +258,7 @@ impl RoutingTest {
 
     /// Installs a new directory at /hippo in our namespace. Does nothing if this directory already
     /// exists.
-    pub fn install_hippo_dir(&self) {
+    pub fn install_hippo_dir(&self, path: &str) {
         let (client_chan, server_chan) = zx::Channel::create().unwrap();
 
         let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
@@ -266,7 +269,7 @@ impl RoutingTest {
                 zx::Status::from_raw(status)
             );
         }
-        let cstr = CString::new("/hippo").unwrap();
+        let cstr = CString::new(path).unwrap();
         let status =
             unsafe { fdio::fdio_sys::fdio_ns_bind(ns_ptr, cstr.as_ptr(), client_chan.into_raw()) };
         if status != zx::sys::ZX_OK && status != zx::sys::ZX_ERR_ALREADY_EXISTS {
@@ -358,20 +361,33 @@ impl RoutingTest {
                     .await;
                 }
             }
-            CheckUse::Storage { path, type_, storage_relation } => {
+            CheckUse::Storage { path, type_, storage_relation, from_cm_namespace } => {
                 capability_util::write_file_to_storage(
                     &namespace,
                     path,
                     storage_relation.is_some(),
                 )
                 .await;
+
                 if let Some(relative_moniker) = storage_relation {
-                    capability_util::check_file_in_storage(
-                        type_,
-                        relative_moniker,
-                        &self.test_dir_proxy,
-                    )
-                    .await;
+                    if from_cm_namespace {
+                        // Check for the file in the /tmp in the test's namespace
+                        let tmp_proxy = io_util::open_directory_in_namespace(
+                            "/tmp",
+                            io_util::OPEN_RIGHT_READABLE,
+                        )
+                        .expect("failed to open /tmp");
+                        capability_util::check_file_in_storage(type_, relative_moniker, &tmp_proxy)
+                            .await;
+                    } else {
+                        // Check for the file in the test's isolated test directory
+                        capability_util::check_file_in_storage(
+                            type_,
+                            relative_moniker,
+                            &self.test_dir_proxy,
+                        )
+                        .await;
+                    }
                 }
             }
         }

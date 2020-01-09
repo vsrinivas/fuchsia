@@ -877,29 +877,70 @@ async fn use_kitchen_sink() {
 ///  component manager's namespace
 ///   |
 ///   a
+///
+/// a: uses directory /use_from_cm_namespace/data/foo as /data/hippo
+/// a: uses service /use_from_cm_namespace/svc/foo as /svc/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_from_component_manager_namespace() {
+    let components = vec![(
+        "a",
+        ComponentDeclBuilder::new()
+            .use_(UseDecl::Directory(UseDirectoryDecl {
+                source: UseSource::Realm,
+                source_path: CapabilityPath::try_from("/use_from_cm_namespace/data/foo").unwrap(),
+                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                rights: fio2::Operations::Connect,
+            }))
+            .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                source: UseSource::Realm,
+                source_path: CapabilityPath::try_from("/use_from_cm_namespace/svc/foo").unwrap(),
+                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+            }))
+            .offer_runner_to_children(TEST_RUNNER_NAME)
+            .build(),
+    )];
+    let test = RoutingTest::new("a", components).await;
+    test.install_hippo_dir("/use_from_cm_namespace");
+    test.check_use(
+        vec![].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
+    )
+    .await;
+    test.check_use(
+        vec![].into(),
+        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+    )
+    .await;
+}
+
+///  component manager's namespace
+///   |
+///   a
 ///    \
 ///     b
 ///
-/// a: offers directory /hippo/data/foo from realm as /foo
-/// a: offers service /hippo/svc/foo from realm as /echo/echo
+/// a: offers directory /offer_from_cm_namespace/data/foo from realm as /foo
+/// a: offers service /offer_from_cm_namespace/svc/foo from realm as /echo/echo
 /// b: uses directory /foo as /data/hippo
 /// b: uses service /echo/echo as /svc/hippo
 #[fuchsia_async::run_singlethreaded(test)]
-async fn use_from_component_manager_namespace() {
+async fn offer_from_component_manager_namespace() {
     let components = vec![
         (
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Realm,
-                    source_path: CapabilityPath::try_from("/hippo/data/foo").unwrap(),
+                    source_path: CapabilityPath::try_from("/offer_from_cm_namespace/data/foo")
+                        .unwrap(),
                     target_path: CapabilityPath::try_from("/foo").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
                 }))
                 .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Realm,
-                    source_path: CapabilityPath::try_from("/hippo/svc/foo").unwrap(),
+                    source_path: CapabilityPath::try_from("/offer_from_cm_namespace/svc/foo")
+                        .unwrap(),
                     target_path: CapabilityPath::try_from("/echo/echo").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                 }))
@@ -926,7 +967,7 @@ async fn use_from_component_manager_namespace() {
         ),
     ];
     let test = RoutingTest::new("a", components).await;
-    test.install_hippo_dir();
+    test.install_hippo_dir("/offer_from_cm_namespace");
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },

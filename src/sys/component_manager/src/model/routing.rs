@@ -294,7 +294,7 @@ async fn route_storage_capability<'a>(
     model: &'a Model,
     use_decl: &'a UseStorageDecl,
     target_realm: &'a Arc<Realm>,
-) -> Result<(AbsoluteMoniker, CapabilityPath, RelativeMoniker), ModelError> {
+) -> Result<(Option<AbsoluteMoniker>, CapabilityPath, RelativeMoniker), ModelError> {
     // Walk the offer chain to find the storage decl
     let parent_realm =
         target_realm.try_get_parent()?.ok_or(ModelError::capability_discovery_error(
@@ -322,19 +322,23 @@ async fn route_storage_capability<'a>(
 
     // Find the path and source of the directory consumed by the storage capability.
     let (dir_source_path, dir_source_moniker) = match storage_decl.source {
-        StorageDirectorySource::Self_ => (storage_decl.source_path, storage_decl_moniker),
+        StorageDirectorySource::Self_ => (storage_decl.source_path, Some(storage_decl_moniker)),
         StorageDirectorySource::Realm => {
             let capability = ComponentCapability::Storage(storage_decl);
             let storage_decl_realm = model.look_up_realm(&storage_decl_moniker).await?;
             let source = find_capability_source(capability, &storage_decl_realm).await?;
             match source {
                 CapabilitySource::Component { capability, source_moniker } => {
-                    (capability.source_path().unwrap().clone(), source_moniker)
+                    (capability.source_path().unwrap().clone(), Some(source_moniker))
                 }
-                _ => {
-                    return Err(ModelError::capability_discovery_error(format_err!(
-                        "storage capability backing directories must be provided by a component"
-                    )))
+                CapabilitySource::Framework { capability, scope_moniker: None } => {
+                    (capability.path().unwrap().clone(), None)
+                }
+                CapabilitySource::Framework { scope_moniker: Some(_), .. } => panic!(
+                    "using scoped framework capabilities for storage declarations is unsupported"
+                ),
+                CapabilitySource::StorageDecl(..) => {
+                    panic!("storage directory sources can't come from storage declarations")
                 }
             }
         }
@@ -357,7 +361,7 @@ async fn route_storage_capability<'a>(
             };
             match walk_expose_chain(&mut pos).await? {
                 CapabilitySource::Component { capability, source_moniker } => {
-                    (capability.source_path().unwrap().clone(), source_moniker)
+                    (capability.source_path().unwrap().clone(), Some(source_moniker))
                 }
                 _ => {
                     return Err(ModelError::capability_discovery_error(format_err!(
@@ -531,6 +535,14 @@ async fn walk_offer_chain<'a>(
                     FrameworkCapability::builtin_from_offer_decl(offer_decl).map_err(|_| {
                         ModelError::capability_discovery_error(format_err!(
                             "no matching offers found for capability {:?}",
+                            pos.capability,
+                        ))
+                    })
+                }
+                ComponentCapability::Storage(storage_decl) => {
+                    FrameworkCapability::builtin_from_storage_decl(storage_decl).map_err(|_| {
+                        ModelError::capability_discovery_error(format_err!(
+                            "no matching directories found for storage capability {:?}",
                             pos.capability,
                         ))
                     })
