@@ -184,15 +184,17 @@ std::string Type::ToString(bool expand) const {
   return ret;
 }
 
-size_t Type::InlineSize(bool unions_are_xunions) const {
-  FXL_LOG(FATAL) << "Size for type not implemented";
-  return 0;
+void Type::PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
+                       const fidl_message_header_t* header, std::string_view line_header, int tabs,
+                       int remaining_size, int max_line_size) const {
+  os << colors.red << "invalid" << colors.reset;
 }
 
-std::unique_ptr<Value> Type::Decode(MessageDecoder* /*decoder*/, uint64_t /*offset*/) const {
-  FXL_LOG(ERROR) << "Decode not implemented for field";
-  return nullptr;
-}
+std::string RawType::Name() const { return "unknown"; }
+
+size_t RawType::InlineSize(bool unions_are_xunions) const { return inline_size_; }
+
+bool RawType::Nullable() const { return true; }
 
 std::unique_ptr<Value> RawType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   const uint8_t* data = decoder->GetAddress(offset, inline_size_);
@@ -204,6 +206,8 @@ std::unique_ptr<Value> RawType::Decode(MessageDecoder* decoder, uint64_t offset)
 
 void RawType::Visit(TypeVisitor* visitor) const { visitor->VisitRawType(this); }
 
+size_t BoolType::InlineSize(bool unions_are_xunions) const { return sizeof(uint8_t); }
+
 std::unique_ptr<Value> BoolType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   auto byte = decoder->GetAddress(offset, sizeof(uint8_t));
   if (byte == nullptr) {
@@ -214,25 +218,53 @@ std::unique_ptr<Value> BoolType::Decode(MessageDecoder* decoder, uint64_t offset
 
 void BoolType::Visit(TypeVisitor* visitor) const { visitor->VisitBoolType(this); };
 
+std::string Int8Type::Name() const { return "int8"; }
+
 void Int8Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt8Type(this); }
+
+std::string Int16Type::Name() const { return "int16"; }
 
 void Int16Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt16Type(this); }
 
+std::string Int32Type::Name() const { return "int32"; }
+
 void Int32Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt32Type(this); }
+
+std::string Int64Type::Name() const { return "int64"; }
 
 void Int64Type::Visit(TypeVisitor* visitor) const { visitor->VisitInt64Type(this); }
 
+std::string Uint8Type::Name() const { return "uint8"; }
+
 void Uint8Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint8Type(this); }
+
+std::string Uint16Type::Name() const { return "uint16"; }
 
 void Uint16Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint16Type(this); }
 
+std::string Uint32Type::Name() const { return "uint32"; }
+
 void Uint32Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint32Type(this); }
+
+std::string Uint64Type::Name() const { return "uint64"; }
 
 void Uint64Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint64Type(this); }
 
+std::string Float32Type::Name() const { return "float32"; }
+
 void Float32Type::Visit(TypeVisitor* visitor) const { visitor->VisitFloat32Type(this); }
 
+std::string Float64Type::Name() const { return "float64"; }
+
 void Float64Type::Visit(TypeVisitor* visitor) const { visitor->VisitFloat64Type(this); }
+
+std::string StringType::Name() const { return "string"; }
+
+size_t StringType::InlineSize(bool unions_are_xunions) const {
+  return sizeof(uint64_t) + sizeof(uint64_t);
+}
+
+bool StringType::Nullable() const { return true; }
 
 std::unique_ptr<Value> StringType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   uint64_t string_length = 0;
@@ -258,6 +290,10 @@ std::unique_ptr<Value> StringType::Decode(MessageDecoder* decoder, uint64_t offs
 
 void StringType::Visit(TypeVisitor* visitor) const { visitor->VisitStringType(this); }
 
+std::string HandleType::Name() const { return "handle"; }
+
+size_t HandleType::InlineSize(bool unions_are_xunions) const { return sizeof(zx_handle_t); }
+
 std::unique_ptr<Value> HandleType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   zx_handle_t handle = FIDL_HANDLE_ABSENT;
   decoder->GetValueAt(offset, &handle);
@@ -280,10 +316,12 @@ std::unique_ptr<Value> HandleType::Decode(MessageDecoder* decoder, uint64_t offs
 
 void HandleType::Visit(TypeVisitor* visitor) const { visitor->VisitHandleType(this); }
 
-EnumType::EnumType(const Enum& e) : enum_(e) {}
+std::string EnumType::Name() const { return enum_definition_.name(); }
+
+size_t EnumType::InlineSize(bool unions_are_xunions) const { return enum_definition_.size(); }
 
 std::unique_ptr<Value> EnumType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return enum_.type()->Decode(decoder, offset);
+  return enum_definition_.type()->Decode(decoder, offset);
 }
 
 void EnumType::PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
@@ -294,16 +332,18 @@ void EnumType::PrettyPrint(const Value* value, std::ostream& os, const Colors& c
   if (!value->GetIntegerValue(&absolute, &negative)) {
     os << colors.red << "invalid" << colors.reset;
   } else {
-    os << colors.blue << enum_.GetName(absolute, negative) << colors.reset;
+    os << colors.blue << enum_definition_.GetName(absolute, negative) << colors.reset;
   }
 }
 
 void EnumType::Visit(TypeVisitor* visitor) const { visitor->VisitEnumType(this); }
 
-BitsType::BitsType(const Bits& b) : bits_(b) {}
+std::string BitsType::Name() const { return bits_definition_.name(); }
+
+size_t BitsType::InlineSize(bool unions_are_xunions) const { return bits_definition_.size(); }
 
 std::unique_ptr<Value> BitsType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return bits_.type()->Decode(decoder, offset);
+  return bits_definition_.type()->Decode(decoder, offset);
 }
 void BitsType::PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
                            const fidl_message_header_t* header, std::string_view line_header,
@@ -313,13 +353,13 @@ void BitsType::PrettyPrint(const Value* value, std::ostream& os, const Colors& c
   if (!value->GetIntegerValue(&absolute, &negative)) {
     os << colors.red << "invalid" << colors.reset;
   } else {
-    os << colors.blue << bits_.GetName(absolute, negative) << colors.reset;
+    os << colors.blue << bits_definition_.GetName(absolute, negative) << colors.reset;
   }
 }
 
 void BitsType::Visit(TypeVisitor* visitor) const { visitor->VisitBitsType(this); }
 
-UnionType::UnionType(const Union& uni, bool nullable) : union_(uni), nullable_(nullable) {}
+std::string UnionType::Name() const { return union_definition_.name(); }
 
 size_t UnionType::InlineSize(bool unions_are_xunions) const {
   if (unions_are_xunions) {
@@ -327,14 +367,17 @@ size_t UnionType::InlineSize(bool unions_are_xunions) const {
     // is always 24 bytes.
     return 24;
   }
-  return nullable_ ? sizeof(uintptr_t) : union_.size();
+  return nullable_ ? sizeof(uintptr_t) : union_definition_.size();
 }
+
+bool UnionType::Nullable() const { return nullable_; }
 
 std::unique_ptr<Value> UnionType::DecodeUnion(MessageDecoder* decoder, uint64_t offset) const {
   if (nullable_) {
     bool is_null;
     uint64_t nullable_offset;
-    if (!decoder->DecodeNullableHeader(offset, union_.size(), &is_null, &nullable_offset)) {
+    if (!decoder->DecodeNullableHeader(offset, union_definition_.size(), &is_null,
+                                       &nullable_offset)) {
       return std::make_unique<InvalidValue>();
     }
     if (is_null) {
@@ -344,7 +387,7 @@ std::unique_ptr<Value> UnionType::DecodeUnion(MessageDecoder* decoder, uint64_t 
   }
   uint32_t tag = 0;
   decoder->GetValueAt(offset, &tag);
-  const UnionMember* member = union_.MemberWithTag(tag);
+  const UnionMember* member = union_definition_.MemberWithTag(tag);
   if (member == nullptr) {
     return std::make_unique<InvalidValue>();
   }
@@ -371,7 +414,7 @@ std::unique_ptr<Value> UnionType::DecodeXUnion(MessageDecoder* decoder, uint64_t
     return std::make_unique<NullValue>();
   }
 
-  const UnionMember* member = union_.MemberWithOrdinal(ordinal);
+  const UnionMember* member = union_definition_.MemberWithOrdinal(ordinal);
   if (member == nullptr) {
     return std::make_unique<InvalidValue>();
   }
@@ -385,19 +428,26 @@ std::unique_ptr<Value> UnionType::Decode(MessageDecoder* decoder, uint64_t offse
 
 void UnionType::Visit(TypeVisitor* visitor) const { visitor->VisitUnionType(this); }
 
+bool XUnionType::IsXUnion() const { return true; }
+
 std::unique_ptr<Value> XUnionType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   return DecodeXUnion(decoder, offset);
 }
 
 void XUnionType::Visit(TypeVisitor* visitor) const { visitor->VisitXUnionType(this); }
 
+std::string StructType::Name() const { return struct_definition_.name(); }
+
 size_t StructType::InlineSize(bool unions_are_xunions) const {
-  return nullable_ ? sizeof(uintptr_t) : struct_.Size(unions_are_xunions);
+  return nullable_ ? sizeof(uintptr_t) : struct_definition_.Size(unions_are_xunions);
 }
+
+bool StructType::Nullable() const { return nullable_; }
 
 std::unique_ptr<Value> StructType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   if (nullable_) {
-    uint32_t size = decoder->unions_are_xunions() ? struct_.v1_size() : struct_.v0_size();
+    uint32_t size =
+        decoder->unions_are_xunions() ? struct_definition_.v1_size() : struct_definition_.v0_size();
     bool is_null;
     uint64_t nullable_offset;
     if (!decoder->DecodeNullableHeader(offset, size, &is_null, &nullable_offset)) {
@@ -408,22 +458,26 @@ std::unique_ptr<Value> StructType::Decode(MessageDecoder* decoder, uint64_t offs
     }
     offset = nullable_offset;
   }
-  return decoder->DecodeStruct(struct_, offset);
+  return decoder->DecodeStruct(struct_definition_, offset);
 }
 
 void StructType::Visit(TypeVisitor* visitor) const { visitor->VisitStructType(this); }
 
-ElementSequenceType::ElementSequenceType(std::unique_ptr<Type>&& component_type)
-    : component_type_(std::move(component_type)) {
-  FXL_DCHECK(component_type_.get() != nullptr);
-}
+const Type* ElementSequenceType::GetComponentType() const { return component_type_.get(); }
 
 void ElementSequenceType::Visit(TypeVisitor* visitor) const {
   visitor->VisitElementSequenceType(this);
 }
 
-ArrayType::ArrayType(std::unique_ptr<Type>&& component_type, uint32_t count)
-    : ElementSequenceType(std::move(component_type)), count_(count) {}
+bool ArrayType::IsArray() const { return true; }
+
+std::string ArrayType::Name() const {
+  return std::string("array<") + component_type_->Name() + ">";
+}
+
+size_t ArrayType::InlineSize(bool unions_are_xunions) const {
+  return component_type_->InlineSize(unions_are_xunions) * count_;
+}
 
 std::unique_ptr<Value> ArrayType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   auto result = std::make_unique<VectorValue>();
@@ -436,8 +490,15 @@ std::unique_ptr<Value> ArrayType::Decode(MessageDecoder* decoder, uint64_t offse
 
 void ArrayType::Visit(TypeVisitor* visitor) const { visitor->VisitArrayType(this); }
 
-VectorType::VectorType(std::unique_ptr<Type>&& component_type)
-    : ElementSequenceType(std::move(component_type)) {}
+std::string VectorType::Name() const {
+  return std::string("vector<") + component_type_->Name() + ">";
+}
+
+size_t VectorType::InlineSize(bool unions_are_xunions) const {
+  return sizeof(uint64_t) + sizeof(uint64_t);
+}
+
+bool VectorType::Nullable() const { return true; }
 
 std::unique_ptr<Value> VectorType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   uint64_t element_count = 0;
@@ -465,6 +526,8 @@ std::unique_ptr<Value> VectorType::Decode(MessageDecoder* decoder, uint64_t offs
 }
 
 void VectorType::Visit(TypeVisitor* visitor) const { visitor->VisitVectorType(this); }
+
+std::string TableType::Name() const { return table_definition_.name(); }
 
 size_t TableType::InlineSize(bool unions_are_xunions) const { return table_definition_.size(); }
 

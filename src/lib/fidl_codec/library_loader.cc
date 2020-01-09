@@ -406,7 +406,7 @@ void Library::DecodeTypes() {
   } else {
     for (auto& xuni : backing_document_["xunion_declarations"].GetArray()) {
       xunions_.emplace(std::piecewise_construct, std::forward_as_tuple(xuni["name"].GetString()),
-                       std::forward_as_tuple(new XUnion(this, xuni)));
+                       std::forward_as_tuple(new Union(this, xuni)));
     }
   }
 }

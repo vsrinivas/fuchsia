@@ -63,7 +63,6 @@ class Table;
 class Type;
 class TypeVisitor;
 class Union;
-class XUnion;
 
 class EnumOrBitsMember {
   friend class Enum;
@@ -179,7 +178,6 @@ class UnionMember {
 class Union {
  public:
   friend class Library;
-  friend class XUnion;
 
   Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
@@ -206,15 +204,6 @@ class Union {
   uint64_t alignment_;
   uint64_t size_;
   std::vector<std::unique_ptr<UnionMember>> members_;
-};
-
-class XUnion : public Union {
- public:
-  friend class Library;
-
- private:
-  XUnion(Library* enclosing_library, const rapidjson::Value& value)
-      : Union(enclosing_library, value) {}
 };
 
 class StructMember {
@@ -511,7 +500,7 @@ class Library {
   std::map<std::string, std::unique_ptr<Enum>> enums_;
   std::map<std::string, std::unique_ptr<Bits>> bits_;
   std::map<std::string, std::unique_ptr<Union>> unions_;
-  std::map<std::string, std::unique_ptr<XUnion>> xunions_;
+  std::map<std::string, std::unique_ptr<Union>> xunions_;
   std::map<std::string, std::unique_ptr<Struct>> structs_;
   std::map<std::string, std::unique_ptr<Table>> tables_;
 };
