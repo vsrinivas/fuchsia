@@ -16,7 +16,6 @@
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_color_transform_handler.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_pointer_event_registry.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_semantic_listener.h"
-#include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_settings_provider.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_setui_accessibility.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnification_handler.h"
@@ -26,8 +25,6 @@
 namespace accessibility_test {
 namespace {
 
-using fuchsia::accessibility::SettingsManagerStatus;
-using fuchsia::accessibility::SettingsPtr;
 using fuchsia::accessibility::semantics::Attributes;
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::NodePtr;

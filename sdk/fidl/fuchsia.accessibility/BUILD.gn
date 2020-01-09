@@ -10,6 +10,5 @@ fidl("fuchsia.accessibility") {
   sources = [
     "color_transform.fidl",
     "magnifier.fidl",
-    "settings.fidl",
   ]
 }
