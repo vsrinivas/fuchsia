@@ -66,6 +66,7 @@ VK_TEST_F(RenderPassCacheTest, DefaultSubpass) {
                                                       vk::Filter::eNearest);
 
   RenderPassInfo info;
+  info.op_flags = RenderPassInfo::kOptimalColorLayoutOp;
   info.num_color_attachments = 1;
   info.color_attachments[0] = color_tex;
   info.depth_stencil_attachment = depth_tex1;
@@ -94,11 +95,6 @@ VK_TEST_F(RenderPassCacheTest, DefaultSubpass) {
   }
 
   EXPECT_TRUE(escher->Cleanup());
-
-  // TODO(36827) Now Vulkan validation layer has a performance warning:
-  //   [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]
-  //   Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.
-  SUPPRESS_VK_VALIDATION_PERFORMANCE_WARNINGS();
 }
 
 // Helper function for RenderPassCache.RespectsSampleCount.

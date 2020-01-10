@@ -65,8 +65,14 @@ class VkDebugReportCollector {
                                     uint64_t object, size_t location, int32_t message_code,
                                     const char* layer_prefix, const char* message, void* user_data);
 
+  // Print all debug reports with given flags. If there is no debug reports with that given flags
+  // it will do nothing and return false; otherwise it returns true.
+  // |file| and |line| are passed by macros using __FILE__ and __LINE__ to print error position.
+  bool PrintDebugReportsWithFlags(const vk::DebugReportFlagsEXT& flags, const char* file,
+                                  size_t line);
+
   // Helper function which prints out the debug reports if
-  //   |predicate|(number of debug reports with |flags|, |num_threshold|) == false.
+  // |predicate|(number of debug reports with |flags|, |num_threshold|) == false.
   // |file| and |line| are passed by macros using __FILE__ and __LINE__ to print error position.
   //
   // Used only by |EXPECT/ASSERT_VULKAN_VALIDATION_LAYER_ERRORS_[PREDICATE]()| macros and should

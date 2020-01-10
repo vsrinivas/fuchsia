@@ -25,7 +25,12 @@ void TestWithVkValidationLayer::SetUp() {
 }
 
 void TestWithVkValidationLayer::TearDown() {
-  EXPECT_VULKAN_VALIDATION_OK();
+  EXPECT_NO_VULKAN_VALIDATION_ERRORS();
+  EXPECT_NO_VULKAN_VALIDATION_WARNINGS();
+  if (vk_debug_report_collector().PrintDebugReportsWithFlags(
+          vk::DebugReportFlagBitsEXT::ePerformanceWarning, __FILE__, __LINE__)) {
+    FXL_LOG(WARNING) << "Performance warning occurred in test, see above for details.";
+  }
   vk_debug_report_callback_registry().DeregisterDebugReportCallbacks();
 }
 

@@ -28,6 +28,16 @@ uint32_t VkDebugReportCollector::HandleDebugReport(VkFlags flags,
   return false;
 }
 
+bool VkDebugReportCollector::PrintDebugReportsWithFlags(const vk::DebugReportFlagsEXT &flags,
+                                                        const char *file, size_t line) {
+  auto debug_reports_with_flags = DebugReportsWithFlag(flags);
+  for (const auto &debug_report : debug_reports_with_flags) {
+    GTEST_MESSAGE_AT_(file, line, debug_report.ErrorMessage().c_str(),
+                      ::testing::TestPartResult::kNonFatalFailure);
+  }
+  return !debug_reports_with_flags.empty();
+}
+
 bool VkDebugReportCollector::PrintDebugReportsOnFalsePredicate(
     const vk::DebugReportFlagsEXT &flags, size_t num_threshold,
     const std::function<bool(size_t, size_t)> &pred, const char *file, size_t line) const {
