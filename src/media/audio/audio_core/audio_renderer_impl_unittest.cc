@@ -205,5 +205,24 @@ TEST_F(AudioRendererImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
   EXPECT_EQ(renderer_->dest_link_count(), 1u);
 }
 
+TEST_F(AudioRendererImplTest, ReportsPlayAndPauseToPolicy) {
+  auto output = testing::FakeAudioOutput::Create(&threading_model(), &device_registry_);
+  route_graph_.AddOutput(output.get());
+  RunLoopUntilIdle();
+
+  route_graph_.AddRenderer(renderer_);
+  fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+  fidl_renderer_->SetPcmStreamType(stream_type_);
+  fidl_renderer_->AddPayloadBuffer(0, std::move(vmo_));
+
+  fidl_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(admin_.IsActive(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT));
+
+  fidl_renderer_->PauseNoReply();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(admin_.IsActive(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT));
+}
+
 }  // namespace
 }  // namespace media::audio

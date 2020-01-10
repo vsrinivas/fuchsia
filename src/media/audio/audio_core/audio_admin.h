@@ -74,6 +74,9 @@ class AudioAdmin {
   void UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bool active,
                            fuchsia::media::AudioCapturer* capturer);
 
+  bool IsActive(fuchsia::media::AudioRenderUsage usage);
+  bool IsActive(fuchsia::media::AudioCaptureUsage usage);
+
  private:
   const BehaviorGain behavior_gain_;
   UsageGainAdjustment& gain_adjustment_ FXL_GUARDED_BY(fidl_thread_checker_);
@@ -95,10 +98,6 @@ class AudioAdmin {
 
   void SetUsageDuck(fuchsia::media::AudioRenderUsage usage);
   void SetUsageDuck(fuchsia::media::AudioCaptureUsage usage);
-
-  // Helpers to make tracking accounting cleaner.
-  bool IsActive(fuchsia::media::AudioRenderUsage usage);
-  bool IsActive(fuchsia::media::AudioCaptureUsage usage);
 
   void ApplyPolicies(fuchsia::media::AudioCaptureUsage category);
   void ApplyPolicies(fuchsia::media::AudioRenderUsage category);

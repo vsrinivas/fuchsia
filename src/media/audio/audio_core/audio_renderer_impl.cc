@@ -706,6 +706,8 @@ void AudioRendererImpl::Pause(PauseCallback callback) {
     callback(ref_clock_now, paused_media_time);
   }
 
+  ReportStop();
+
   // Things went well, cancel the cleanup hook.
   cleanup.cancel();
 }
