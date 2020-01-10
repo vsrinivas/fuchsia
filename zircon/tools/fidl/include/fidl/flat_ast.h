@@ -201,6 +201,12 @@ struct NumericConstantValue final : ConstantValue {
     return l.value >= r.value;
   }
 
+  friend NumericConstantValue<ValueType> operator|(const NumericConstantValue<ValueType>& l,
+                                                   const NumericConstantValue<ValueType>& r) {
+    static_assert(!std::is_same_v<ValueType, float> && !std::is_same_v<ValueType, double>);
+    return NumericConstantValue<ValueType>(l.value | r.value);
+  }
+
   friend std::ostream& operator<<(std::ostream& os, const NumericConstantValue<ValueType>& v) {
     if constexpr (GetKind() == Kind::kInt8)
       os << static_cast<int>(v.value);
@@ -403,11 +409,7 @@ struct StringConstantValue final : ConstantValue {
 struct Constant {
   virtual ~Constant() {}
 
-  enum struct Kind {
-    kIdentifier,
-    kLiteral,
-    kSynthesized,
-  };
+  enum struct Kind { kIdentifier, kLiteral, kSynthesized, kBinaryOperator };
 
   explicit Constant(Kind kind) : kind(kind), value_(nullptr) {}
 
@@ -448,6 +450,21 @@ struct SynthesizedConstant final : Constant {
       : Constant(Kind::kSynthesized) {
     ResolveTo(std::move(value));
   }
+};
+
+struct BinaryOperatorConstant final : Constant {
+  enum struct Operator { kOr };
+
+  explicit BinaryOperatorConstant(std::unique_ptr<Constant> left_operand,
+                                  std::unique_ptr<Constant> right_operand, Operator op)
+      : Constant(Kind::kBinaryOperator),
+        left_operand(std::move(left_operand)),
+        right_operand(std::move(right_operand)),
+        op(op) {}
+
+  const std::unique_ptr<Constant> left_operand;
+  const std::unique_ptr<Constant> right_operand;
+  const Operator op;
 };
 
 struct Decl {
@@ -1454,6 +1471,7 @@ class Library {
   std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(const Decl* decl,
                                                          types::Nullability nullability);
 
+  bool AddConstantDependencies(const Constant* constant, std::set<Decl*>* out_edges);
   bool DeclDependencies(Decl* decl, std::set<Decl*>* out_edges);
 
   bool SortDeclarations();
@@ -1473,7 +1491,11 @@ class Library {
   // refer to things that can in fact be nullable (ie not enums).
   bool CompileTypeConstructor(TypeConstructor* type);
 
+  ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
   bool ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size);
+  bool ResolveOrOperatorConstant(Constant* constant, const Type* type,
+                                 const ConstantValue& left_operand,
+                                 const ConstantValue& right_operand);
   bool ResolveConstant(Constant* constant, const Type* type);
   bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type);
   bool ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type);

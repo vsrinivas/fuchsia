@@ -34,23 +34,29 @@ class TestLibrary final {
  public:
   explicit TestLibrary() : TestLibrary(&owned_shared_) {}
 
-  explicit TestLibrary(SharedAmongstLibraries* shared)
+  explicit TestLibrary(SharedAmongstLibraries* shared,
+                       fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
       : error_reporter_(&shared->error_reporter),
         typespace_(&shared->typespace),
         all_libraries_(&shared->all_libraries),
         all_sources_of_all_libraries_(&shared->all_sources_of_all_libraries),
         library_(
-            std::make_unique<fidl::flat::Library>(all_libraries_, error_reporter_, typespace_)) {}
+            std::make_unique<fidl::flat::Library>(all_libraries_, error_reporter_, typespace_)) {
+    experimental_flags_ = std::move(experimental_flags);
+  }
 
-  explicit TestLibrary(const std::string& raw_source_code)
-      : TestLibrary("example.fidl", raw_source_code) {}
-
-  TestLibrary(const std::string& filename, const std::string& raw_source_code)
-      : TestLibrary(filename, raw_source_code, &owned_shared_) {}
+  explicit TestLibrary(const std::string& raw_source_code,
+                       fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
+      : TestLibrary("example.fidl", raw_source_code, experimental_flags) {}
 
   TestLibrary(const std::string& filename, const std::string& raw_source_code,
-              SharedAmongstLibraries* shared)
-      : TestLibrary(shared) {
+              fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
+      : TestLibrary(filename, raw_source_code, &owned_shared_, experimental_flags) {}
+
+  TestLibrary(const std::string& filename, const std::string& raw_source_code,
+              SharedAmongstLibraries* shared,
+              fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
+      : TestLibrary(shared, experimental_flags) {
     AddSource(filename, raw_source_code);
   }
 
@@ -73,7 +79,7 @@ class TestLibrary final {
     assert(all_sources_.size() == 1 && "parse can only be used with one source");
     auto source_file = all_sources_.at(0);
     fidl::Lexer lexer(*source_file, error_reporter_);
-    fidl::Parser parser(&lexer, error_reporter_);
+    fidl::Parser parser(&lexer, error_reporter_, experimental_flags_);
     out_ast_ptr->reset(parser.Parse().release());
     return parser.Ok();
   }
@@ -81,7 +87,7 @@ class TestLibrary final {
   bool Compile() {
     for (auto source_file : all_sources_) {
       fidl::Lexer lexer(*source_file, error_reporter_);
-      fidl::Parser parser(&lexer, error_reporter_);
+      fidl::Parser parser(&lexer, error_reporter_, experimental_flags_);
       auto ast = parser.Parse();
       if (!parser.Ok())
         return false;
@@ -98,7 +104,7 @@ class TestLibrary final {
     assert(all_sources_.size() == 1 && "lint can only be used with one source");
     auto source_file = all_sources_.at(0);
     fidl::Lexer lexer(*source_file, error_reporter_);
-    fidl::Parser parser(&lexer, error_reporter_);
+    fidl::Parser parser(&lexer, error_reporter_, experimental_flags_);
     auto ast = parser.Parse();
     if (!parser.Ok()) {
       std::string_view beginning(source_file->data().data(), 0);
@@ -248,6 +254,7 @@ class TestLibrary final {
  protected:
   SharedAmongstLibraries owned_shared_;
   fidl::ErrorReporter* error_reporter_;
+  fidl::ExperimentalFlags experimental_flags_;
   fidl::flat::Typespace* typespace_;
   fidl::flat::Libraries* all_libraries_;
   std::vector<std::unique_ptr<fidl::SourceFile>>* all_sources_of_all_libraries_;

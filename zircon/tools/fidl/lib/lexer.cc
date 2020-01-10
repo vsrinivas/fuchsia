@@ -377,6 +377,8 @@ Token Lexer::Lex() {
         return Finish(Token::Kind::kEqual);
       case '&':
         return Finish(Token::Kind::kAmpersand);
+      case '|':
+        return Finish(Token::Kind::kPipe);
 
       default: {
         SourceSpan span(std::string_view(token_start_, token_size_), source_file_);

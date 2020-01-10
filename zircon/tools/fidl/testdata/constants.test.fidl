@@ -19,11 +19,16 @@ enum EnumType : int32 {
 const EnumType enumVal = EnumType.VALUE;
 const int32 enumPrimitiveVal = EnumType.VALUE;
 
-enum BitsType : int32 {
+bits BitsType : uint32 {
     VALUE = 0x00000001;
+    SECOND_VALUE = 0x80;
+    THIRD_VALUE = 0x2;
 };
 const BitsType bitsVal = BitsType.VALUE;
 const int32 bitsPrimitiveVal = BitsType.VALUE;
+
+const BitsType orResult = BitsType.VALUE | BitsType.SECOND_VALUE | BitsType.THIRD_VALUE;
+const int32 orResultPrimitiveVal = BitsType.VALUE | BitsType.SECOND_VALUE;
 
 enum Enum {
     E = 0b10101010;

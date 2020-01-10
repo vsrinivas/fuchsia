@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <fidl/c_generator.h>
+#include <fidl/experimental_flags.h>
 #include <fidl/flat_ast.h>
 #include <fidl/json_generator.h>
 #include <fidl/json_schema.h>
@@ -63,6 +64,9 @@ void Usage() {
          "   that the library being compiled has the given name. This flag is useful to\n"
          "   cross-check between the library's declaration in a build system and the\n"
          "   actual contents of the library.\n"
+         "\n"
+         " * `--experimental FLAG_NAME`. If present, this flag enables an experimental\n"
+         "    feature of fidlc.\n"
          "\n"
          " * `--files [FIDL_FILE...]...`. Each `--file [FIDL_FILE...]` chunk of arguments\n"
          "   describes a library, all of which must share the same top-level library name\n"
@@ -231,9 +235,9 @@ enum struct Behavior {
 };
 
 bool Parse(const fidl::SourceFile& source_file, fidl::ErrorReporter* error_reporter,
-           fidl::flat::Library* library) {
+           fidl::flat::Library* library, const fidl::ExperimentalFlags& experimental_flags) {
   fidl::Lexer lexer(source_file, error_reporter);
-  fidl::Parser parser(&lexer, error_reporter);
+  fidl::Parser parser(&lexer, error_reporter, experimental_flags);
   auto ast = parser.Parse();
   if (!parser.Ok()) {
     return false;
@@ -259,7 +263,8 @@ void Write(std::ostringstream output_stream, const std::string file_path) {
 // reduce diff size while breaking things up.
 int compile(fidl::ErrorReporter* error_reporter, fidl::flat::Typespace* typespace,
             std::string library_name, std::vector<std::pair<Behavior, std::string>> outputs,
-            std::vector<fidl::SourceManager> source_managers);
+            std::vector<fidl::SourceManager> source_managers,
+            fidl::ExperimentalFlags experimental_flags);
 
 int main(int argc, char* argv[]) {
   auto argv_args = std::make_unique<ArgvArguments>(argc, argv);
@@ -292,6 +297,7 @@ int main(int argc, char* argv[]) {
 
   bool warnings_as_errors = false;
   std::vector<std::pair<Behavior, std::string>> outputs;
+  fidl::ExperimentalFlags experimental_flags;
   while (args->Remaining()) {
     // Try to parse an output type.
     std::string behavior_argument = args->Claim();
@@ -320,6 +326,11 @@ int main(int argc, char* argv[]) {
       outputs.emplace_back(std::make_pair(Behavior::kJSON, path));
     } else if (behavior_argument == "--name") {
       library_name = args->Claim();
+    } else if (behavior_argument == "--experimental") {
+      std::string flag = args->Claim();
+      if (!experimental_flags.SetFlagByName(flag)) {
+        FailWithUsage("Unknown experimental flag %s\n", flag.data());
+      }
     } else if (behavior_argument == "--files") {
       // Start parsing filenames.
       break;
@@ -350,14 +361,15 @@ int main(int argc, char* argv[]) {
   fidl::ErrorReporter error_reporter(warnings_as_errors);
   auto typespace = fidl::flat::Typespace::RootTypes(&error_reporter);
   auto status = compile(&error_reporter, &typespace, library_name, std::move(outputs),
-                        std::move(source_managers));
+                        std::move(source_managers), std::move(experimental_flags));
   error_reporter.PrintReports();
   return status;
 }
 
 int compile(fidl::ErrorReporter* error_reporter, fidl::flat::Typespace* typespace,
             std::string library_name, std::vector<std::pair<Behavior, std::string>> outputs,
-            std::vector<fidl::SourceManager> source_managers) {
+            std::vector<fidl::SourceManager> source_managers,
+            fidl::ExperimentalFlags experimental_flags) {
   fidl::flat::Libraries all_libraries;
   const fidl::flat::Library* final_library = nullptr;
   for (const auto& source_manager : source_managers) {
@@ -366,7 +378,7 @@ int compile(fidl::ErrorReporter* error_reporter, fidl::flat::Typespace* typespac
     }
     auto library = std::make_unique<fidl::flat::Library>(&all_libraries, error_reporter, typespace);
     for (const auto& source_file : source_manager.sources()) {
-      if (!Parse(*source_file, error_reporter, library.get())) {
+      if (!Parse(*source_file, error_reporter, library.get(), experimental_flags)) {
         return 1;
       }
     }

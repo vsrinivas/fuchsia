@@ -28,6 +28,7 @@ while read -r src_path; do
     echo "  json ir: ${src_name} > ${json_name}"
     ${FIDLC} \
         --json "../goldens/${json_name}" \
+        --experimental enable_handle_rights \
         --files "${src_name}"
 done < <(find . -maxdepth 1 -name '*.fidl')
 
@@ -41,6 +42,7 @@ while read -r lib_path; do
     cd "${FUCHSIA_DIR}/${lib_path}"
     ${FIDLC} \
         --json "../../goldens/${json_name}" \
+        --experimental enable_handle_rights \
         $( awk '{print "--files " $0}' < order.txt | tr '\n' ' ' )
 done < <(find "${EXAMPLE_DIR}" -maxdepth 1 ! -path "${EXAMPLE_DIR}" -type d)
 cd "${FUCHSIA_DIR}"

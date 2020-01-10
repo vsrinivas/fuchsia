@@ -51,7 +51,8 @@ void Usage(const std::string& argv0) {
 bool Format(const fidl::SourceFile& source_file, fidl::ErrorReporter* error_reporter,
             std::string& output) {
   fidl::Lexer lexer(source_file, error_reporter);
-  fidl::Parser parser(&lexer, error_reporter);
+  fidl::ExperimentalFlags experimental_flags;
+  fidl::Parser parser(&lexer, error_reporter, experimental_flags);
   std::unique_ptr<fidl::raw::File> ast = parser.Parse();
   if (!parser.Ok()) {
     return false;

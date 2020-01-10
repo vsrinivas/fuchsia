@@ -4,10 +4,74 @@
   "library_dependencies": [],
   "bits_declarations": [
     {
+      "name": "values/BitsType",
+      "location": {
+        "filename": "constants.test.fidl",
+        "line": 22,
+        "column": 6
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "mask": "131",
+      "members": [
+        {
+          "name": "VALUE",
+          "location": {
+            "filename": "constants.test.fidl",
+            "line": 23,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "0x00000001"
+            }
+          }
+        },
+        {
+          "name": "SECOND_VALUE",
+          "location": {
+            "filename": "constants.test.fidl",
+            "line": 24,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "128",
+              "expression": "0x80"
+            }
+          }
+        },
+        {
+          "name": "THIRD_VALUE",
+          "location": {
+            "filename": "constants.test.fidl",
+            "line": 25,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "0x2"
+            }
+          }
+        }
+      ],
+      "strict": true
+    },
+    {
       "name": "values/Bits",
       "location": {
         "filename": "constants.test.fidl",
-        "line": 32,
+        "line": 37,
         "column": 6
       },
       "type": {
@@ -20,7 +84,7 @@
           "name": "B",
           "location": {
             "filename": "constants.test.fidl",
-            "line": 33,
+            "line": 38,
             "column": 5
           },
           "value": {
@@ -314,7 +378,7 @@
       "name": "values/bitsVal",
       "location": {
         "filename": "constants.test.fidl",
-        "line": 25,
+        "line": 27,
         "column": 16
       },
       "type": {
@@ -331,7 +395,7 @@
       "name": "values/bitsPrimitiveVal",
       "location": {
         "filename": "constants.test.fidl",
-        "line": 26,
+        "line": 28,
         "column": 13
       },
       "type": {
@@ -341,6 +405,63 @@
       "value": {
         "kind": "identifier",
         "identifier": "values/BitsType.VALUE"
+      }
+    },
+    {
+      "name": "values/orResult",
+      "location": {
+        "filename": "constants.test.fidl",
+        "line": 30,
+        "column": 16
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "values/BitsType",
+        "nullable": false
+      },
+      "value": {
+        "kind": "binary_operator",
+        "left_operand": {
+          "kind": "identifier",
+          "identifier": "values/BitsType.VALUE"
+        },
+        "right_operand": {
+          "kind": "binary_operator",
+          "left_operand": {
+            "kind": "identifier",
+            "identifier": "values/BitsType.SECOND_VALUE"
+          },
+          "right_operand": {
+            "kind": "identifier",
+            "identifier": "values/BitsType.THIRD_VALUE"
+          },
+          "operator": "or"
+        },
+        "operator": "or"
+      }
+    },
+    {
+      "name": "values/orResultPrimitiveVal",
+      "location": {
+        "filename": "constants.test.fidl",
+        "line": 31,
+        "column": 13
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int32"
+      },
+      "value": {
+        "kind": "binary_operator",
+        "left_operand": {
+          "kind": "identifier",
+          "identifier": "values/BitsType.VALUE"
+        },
+        "right_operand": {
+          "kind": "identifier",
+          "identifier": "values/BitsType.SECOND_VALUE"
+        },
+        "operator": "or"
       }
     }
   ],
@@ -374,38 +495,10 @@
       "strict": true
     },
     {
-      "name": "values/BitsType",
-      "location": {
-        "filename": "constants.test.fidl",
-        "line": 22,
-        "column": 6
-      },
-      "type": "int32",
-      "members": [
-        {
-          "name": "VALUE",
-          "location": {
-            "filename": "constants.test.fidl",
-            "line": 23,
-            "column": 5
-          },
-          "value": {
-            "kind": "literal",
-            "literal": {
-              "kind": "numeric",
-              "value": "1",
-              "expression": "0x00000001"
-            }
-          }
-        }
-      ],
-      "strict": true
-    },
-    {
       "name": "values/Enum",
       "location": {
         "filename": "constants.test.fidl",
-        "line": 28,
+        "line": 33,
         "column": 6
       },
       "type": "uint32",
@@ -414,7 +507,7 @@
           "name": "E",
           "location": {
             "filename": "constants.test.fidl",
-            "line": 29,
+            "line": 34,
             "column": 5
           },
           "value": {
@@ -437,7 +530,7 @@
       "name": "values/Struct",
       "location": {
         "filename": "constants.test.fidl",
-        "line": 36,
+        "line": 41,
         "column": 8
       },
       "anonymous": false,
@@ -450,7 +543,7 @@
           "name": "int64_with_default",
           "location": {
             "filename": "constants.test.fidl",
-            "line": 37,
+            "line": 42,
             "column": 11
           },
           "maybe_default_value": {
@@ -487,7 +580,7 @@
           "name": "string_with_default",
           "location": {
             "filename": "constants.test.fidl",
-            "line": 38,
+            "line": 43,
             "column": 12
           },
           "maybe_default_value": {
@@ -524,7 +617,7 @@
           "name": "bool_with_default",
           "location": {
             "filename": "constants.test.fidl",
-            "line": 39,
+            "line": 44,
             "column": 10
           },
           "maybe_default_value": {
@@ -562,7 +655,7 @@
           "name": "enum_with_default",
           "location": {
             "filename": "constants.test.fidl",
-            "line": 40,
+            "line": 45,
             "column": 10
           },
           "maybe_default_value": {
@@ -596,7 +689,7 @@
           "name": "bits_with_default",
           "location": {
             "filename": "constants.test.fidl",
-            "line": 41,
+            "line": 46,
             "column": 10
           },
           "maybe_default_value": {
@@ -680,6 +773,8 @@
     "values/enumPrimitiveVal",
     "values/Enum",
     "values/BitsType",
+    "values/orResultPrimitiveVal",
+    "values/orResult",
     "values/bitsVal",
     "values/bitsPrimitiveVal",
     "values/Bits",
@@ -687,6 +782,7 @@
     "values/BOOL"
   ],
   "declarations": {
+    "values/BitsType": "bits",
     "values/Bits": "bits",
     "values/UINT8": "const",
     "values/UINT16": "const",
@@ -704,8 +800,9 @@
     "values/enumPrimitiveVal": "const",
     "values/bitsVal": "const",
     "values/bitsPrimitiveVal": "const",
+    "values/orResult": "const",
+    "values/orResultPrimitiveVal": "const",
     "values/EnumType": "enum",
-    "values/BitsType": "enum",
     "values/Enum": "enum",
     "values/Struct": "struct"
   }

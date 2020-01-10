@@ -247,6 +247,15 @@ std::string NameFlatConstantKind(flat::Constant::Kind kind) {
       return "literal";
     case flat::Constant::Kind::kSynthesized:
       return "synthesized";
+    case flat::Constant::Kind::kBinaryOperator:
+      return "binary_operator";
+  }
+}
+
+std::string NameFlatBinaryOperator(flat::BinaryOperatorConstant::Operator op) {
+  switch (op) {
+    case flat::BinaryOperatorConstant::Operator::kOr:
+      return "or";
   }
 }
 
@@ -327,6 +336,9 @@ std::string NameFlatConstant(const flat::Constant* constant) {
     }
     case flat::Constant::Kind::kSynthesized: {
       return std::string("synthesized constant");
+    }
+    case flat::Constant::Kind::kBinaryOperator: {
+      return std::string("binary operator");
     }
   }  // switch
 }

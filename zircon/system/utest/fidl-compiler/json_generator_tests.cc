@@ -53,7 +53,9 @@ CheckResult checkJSONGenerator(const std::vector<std::pair<std::string, std::str
   TestLibrary prev_library;
   for (uint32_t i = 0; i < fidl_files.size(); i++) {
     const auto& [filename, file_contents] = fidl_files[i];
-    TestLibrary lib(filename, file_contents, &shared);
+    fidl::ExperimentalFlags experimental_flags;
+    experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+    TestLibrary lib(filename, file_contents, &shared, std::move(experimental_flags));
     // all fidl files (other than the first) depends on the fidl file that
     // comes directly before it
     if (i != 0) {

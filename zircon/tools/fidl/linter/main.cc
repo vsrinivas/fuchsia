@@ -45,7 +45,8 @@ bool Lint(const fidl::SourceFile& source_file, fidl::Findings* findings,
           const std::set<std::string>& excluded_checks, bool exclude_by_default,
           std::set<std::string>* excluded_checks_not_found) {
   fidl::Lexer lexer(source_file, error_reporter);
-  fidl::Parser parser(&lexer, error_reporter);
+  fidl::ExperimentalFlags experimental_flags;
+  fidl::Parser parser(&lexer, error_reporter, experimental_flags);
   std::unique_ptr<fidl::raw::File> ast = parser.Parse();
   if (!parser.Ok()) {
     return false;

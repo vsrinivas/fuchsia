@@ -88,6 +88,10 @@ class TreeVisitor {
         DISPATCH_TO(LiteralConstant, Constant, element);
         break;
       }
+      case Constant::Kind::kBinaryOperator: {
+        DISPATCH_TO(BinaryOperatorConstant, Constant, element);
+        break;
+      }
     }
   }
 
@@ -95,6 +99,9 @@ class TreeVisitor {
     element->Accept(this);
   }
   virtual void OnLiteralConstant(std::unique_ptr<LiteralConstant> const& element) {
+    element->Accept(this);
+  }
+  virtual void OnBinaryOperatorConstant(std::unique_ptr<BinaryOperatorConstant> const& element) {
     element->Accept(this);
   }
 

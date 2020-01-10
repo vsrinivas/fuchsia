@@ -36,6 +36,8 @@ std::string NameFlatTypeKind(flat::Type::Kind kind);
 std::string NameUnionTag(std::string_view union_name, const flat::Union::Member::Used& member);
 std::string NameXUnionTag(std::string_view xunion_name, const flat::XUnion::Member::Used& member);
 std::string NameFlatConstant(const flat::Constant* constant);
+std::string NameFlatBinaryOperator(flat::BinaryOperatorConstant::Operator op);
+std::string NameFlatConstant(const flat::Constant* constant);
 std::string NameFlatTypeConstructor(const flat::TypeConstructor* type_ctor);
 std::string NameFlatType(const flat::Type* type);
 std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind,

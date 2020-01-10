@@ -49,6 +49,13 @@ void LiteralConstant::Accept(TreeVisitor* visitor) const {
   visitor->OnLiteral(literal);
 }
 
+void BinaryOperatorConstant::Accept(TreeVisitor* visitor) const {
+  // TODO(fxb/43758) Visit the operator as well.
+  SourceElementMark sem(visitor, *this);
+  visitor->OnConstant(left_operand);
+  visitor->OnConstant(right_operand);
+}
+
 void Ordinal32::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
 
 void Ordinal64::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }

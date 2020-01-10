@@ -62,8 +62,9 @@ bool IsIdentifierValid(const std::string& identifier) {
 
 }  // namespace
 
-Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
-    : lexer_(lexer), error_reporter_(error_reporter) {
+Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter,
+               const ExperimentalFlags& experimental_flags)
+    : lexer_(lexer), error_reporter_(error_reporter), experimental_flags_(experimental_flags) {
   handle_subtype_table_ = {
       {"bti", types::HandleSubtype::kBti},
       {"channel", types::HandleSubtype::kChannel},
@@ -379,24 +380,36 @@ std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList(bool for_par
 }
 
 std::unique_ptr<raw::Constant> Parser::ParseConstant() {
+  std::unique_ptr<raw::Constant> constant;
   switch (Peek().combined()) {
     case CASE_TOKEN(Token::Kind::kIdentifier): {
       auto identifier = ParseCompoundIdentifier();
       if (!Ok())
         return Fail();
-      return std::make_unique<raw::IdentifierConstant>(std::move(identifier));
+      constant = std::make_unique<raw::IdentifierConstant>(std::move(identifier));
+      break;
     }
 
     TOKEN_LITERAL_CASES : {
       auto literal = ParseLiteral();
       if (!Ok())
         return Fail();
-      return std::make_unique<raw::LiteralConstant>(std::move(literal));
+      constant = std::make_unique<raw::LiteralConstant>(std::move(literal));
+      break;
     }
 
     default:
       return Fail();
   }
+
+  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kEnableHandleRights) &&
+      Peek().combined() == Token::Kind::kPipe) {
+    ConsumeToken(OfKind(Token::Kind::kPipe));
+    std::unique_ptr right_operand = ParseConstant();
+    return std::make_unique<raw::BinaryOperatorConstant>(
+        std::move(constant), std::move(right_operand), raw::BinaryOperatorConstant::Operator::kOr);
+  }
+  return constant;
 }
 
 std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeList> attributes,

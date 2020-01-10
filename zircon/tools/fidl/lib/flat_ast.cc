@@ -1408,6 +1408,28 @@ bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, Sourc
       *out_constant = std::make_unique<LiteralConstant>(std::move(literal->literal));
       break;
     }
+    case raw::Constant::Kind::kBinaryOperator: {
+      auto binary_operator_constant = static_cast<raw::BinaryOperatorConstant*>(raw_constant.get());
+      BinaryOperatorConstant::Operator op;
+      switch (binary_operator_constant->op) {
+        case raw::BinaryOperatorConstant::Operator::kOr:
+          op = BinaryOperatorConstant::Operator::kOr;
+          break;
+      }
+      std::unique_ptr<Constant> left_operand;
+      if (!ConsumeConstant(std::move(binary_operator_constant->left_operand), span,
+                           &left_operand)) {
+        return false;
+      }
+      std::unique_ptr<Constant> right_operand;
+      if (!ConsumeConstant(std::move(binary_operator_constant->right_operand), span,
+                           &right_operand)) {
+        return false;
+      }
+      *out_constant = std::make_unique<BinaryOperatorConstant>(std::move(left_operand),
+                                                               std::move(right_operand), op);
+      break;
+    }
   }
   return true;
 }
@@ -1967,6 +1989,35 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   return true;
 }
 
+bool Library::ResolveOrOperatorConstant(Constant* constant, const Type* type,
+                                        const ConstantValue& left_operand,
+                                        const ConstantValue& right_operand) {
+  if (left_operand.kind != right_operand.kind) {
+    // TODO(b/43742) Add support for values of different size.
+    return Fail("left and right operands of or operator must be of the same kind");
+  }
+  type = TypeResolve(type);
+  if (type == nullptr)
+    return false;
+  if (type->kind != Type::Kind::kPrimitive)
+    return Fail("or operator can only be applied to primitive-kinded values");
+  std::unique_ptr<ConstantValue> left_operand_u64;
+  std::unique_ptr<ConstantValue> right_operand_u64;
+  if (!left_operand.Convert(ConstantValue::Kind::kUint64, &left_operand_u64))
+    return false;
+  if (!right_operand.Convert(ConstantValue::Kind::kUint64, &right_operand_u64))
+    return false;
+  NumericConstantValue<uint64_t> result =
+      *static_cast<NumericConstantValue<uint64_t>*>(left_operand_u64.get()) |
+      *static_cast<NumericConstantValue<uint64_t>*>(right_operand_u64.get());
+  std::unique_ptr<ConstantValue> converted_result;
+  if (!result.Convert(ConstantValuePrimitiveKind(static_cast<const PrimitiveType*>(type)->subtype),
+                      &converted_result))
+    return false;
+  constant->ResolveTo(std::move(converted_result));
+  return true;
+}
+
 bool Library::ResolveConstant(Constant* constant, const Type* type) {
   assert(constant != nullptr);
 
@@ -1984,10 +2035,58 @@ bool Library::ResolveConstant(Constant* constant, const Type* type) {
     }
     case Constant::Kind::kSynthesized: {
       assert(false && "Compiler bug: synthesized constant does not have a resolved value!");
+      break;
+    }
+    case Constant::Kind::kBinaryOperator: {
+      auto binary_operator_constant = static_cast<BinaryOperatorConstant*>(constant);
+      if (!ResolveConstant(binary_operator_constant->left_operand.get(), type)) {
+        return false;
+      }
+      if (!ResolveConstant(binary_operator_constant->right_operand.get(), type)) {
+        return false;
+      }
+      switch (binary_operator_constant->op) {
+        case BinaryOperatorConstant::Operator::kOr: {
+          return ResolveOrOperatorConstant(constant, type,
+                                           binary_operator_constant->left_operand->Value(),
+                                           binary_operator_constant->right_operand->Value());
+        }
+      }
+      assert(false && "Compiler bug: unhandled binary operator");
+      break;
     }
   }
 
   __UNREACHABLE;
+}
+
+ConstantValue::Kind Library::ConstantValuePrimitiveKind(
+    const types::PrimitiveSubtype primitive_subtype) {
+  switch (primitive_subtype) {
+    case types::PrimitiveSubtype::kBool:
+      return ConstantValue::Kind::kBool;
+    case types::PrimitiveSubtype::kInt8:
+      return ConstantValue::Kind::kInt8;
+    case types::PrimitiveSubtype::kInt16:
+      return ConstantValue::Kind::kInt16;
+    case types::PrimitiveSubtype::kInt32:
+      return ConstantValue::Kind::kInt32;
+    case types::PrimitiveSubtype::kInt64:
+      return ConstantValue::Kind::kInt64;
+    case types::PrimitiveSubtype::kUint8:
+      return ConstantValue::Kind::kUint8;
+    case types::PrimitiveSubtype::kUint16:
+      return ConstantValue::Kind::kUint16;
+    case types::PrimitiveSubtype::kUint32:
+      return ConstantValue::Kind::kUint32;
+    case types::PrimitiveSubtype::kUint64:
+      return ConstantValue::Kind::kUint64;
+    case types::PrimitiveSubtype::kFloat32:
+      return ConstantValue::Kind::kFloat32;
+    case types::PrimitiveSubtype::kFloat64:
+      return ConstantValue::Kind::kFloat64;
+  }
+  assert(false && "Compiler bug: unhandled primitive subtype");
 }
 
 bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type) {
@@ -2049,34 +2148,6 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
   assert(const_val && "Compiler bug: did not set const_val");
   assert(const_type_ctor && "Compiler bug: did not set const_type_ctor");
 
-  auto constant_kind = [](const types::PrimitiveSubtype primitive_subtype) {
-    switch (primitive_subtype) {
-      case types::PrimitiveSubtype::kBool:
-        return ConstantValue::Kind::kBool;
-      case types::PrimitiveSubtype::kInt8:
-        return ConstantValue::Kind::kInt8;
-      case types::PrimitiveSubtype::kInt16:
-        return ConstantValue::Kind::kInt16;
-      case types::PrimitiveSubtype::kInt32:
-        return ConstantValue::Kind::kInt32;
-      case types::PrimitiveSubtype::kInt64:
-        return ConstantValue::Kind::kInt64;
-      case types::PrimitiveSubtype::kUint8:
-        return ConstantValue::Kind::kUint8;
-      case types::PrimitiveSubtype::kUint16:
-        return ConstantValue::Kind::kUint16;
-      case types::PrimitiveSubtype::kUint32:
-        return ConstantValue::Kind::kUint32;
-      case types::PrimitiveSubtype::kUint64:
-        return ConstantValue::Kind::kUint64;
-      case types::PrimitiveSubtype::kFloat32:
-        return ConstantValue::Kind::kFloat32;
-      case types::PrimitiveSubtype::kFloat64:
-        return ConstantValue::Kind::kFloat64;
-    }
-    assert(false && "Compiler bug: unhandled primitive subtype");
-  };
-
   std::unique_ptr<ConstantValue> resolved_val;
   switch (type->kind) {
     case Type::Kind::kString: {
@@ -2089,7 +2160,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
     }
     case Type::Kind::kPrimitive: {
       auto primitive_type = static_cast<const PrimitiveType*>(type);
-      if (!const_val->Convert(constant_kind(primitive_type->subtype), &resolved_val))
+      if (!const_val->Convert(ConstantValuePrimitiveKind(primitive_type->subtype), &resolved_val))
         goto fail_cannot_convert;
       break;
     }
@@ -2121,7 +2192,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
             << identifier_type->type_decl->name.name_full();
         return Fail(msg.str());
       }
-      if (!const_val->Convert(constant_kind(primitive_type->subtype), &resolved_val))
+      if (!const_val->Convert(ConstantValuePrimitiveKind(primitive_type->subtype), &resolved_val))
         goto fail_cannot_convert;
       break;
     }
@@ -2283,6 +2354,28 @@ bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Ty
   }
 }
 
+const Type* Library::TypeResolve(const Type* type) {
+  if (type->kind != Type::Kind::kIdentifier) {
+    return type;
+  }
+  auto identifier_type = static_cast<const IdentifierType*>(type);
+  Decl* decl = LookupDeclByName(identifier_type->name);
+  if (!decl) {
+    Fail("could not resolve identifier to a type");
+    return nullptr;
+  }
+  if (!CompileDecl(decl))
+    return nullptr;
+  switch (decl->kind) {
+    case Decl::Kind::kBits:
+      return static_cast<const Bits*>(decl)->subtype_ctor->type;
+    case Decl::Kind::kEnum:
+      return static_cast<const Enum*>(decl)->subtype_ctor->type;
+    default:
+      return type;
+  }
+}
+
 bool Library::TypeCanBeConst(const Type* type) {
   switch (type->kind) {
     case flat::Type::Kind::kString:
@@ -2367,6 +2460,33 @@ bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
   return result == utils::ParseNumericResult::kSuccess;
 }
 
+bool Library::AddConstantDependencies(const Constant* constant, std::set<Decl*>* out_edges) {
+  switch (constant->kind) {
+    case Constant::Kind::kIdentifier: {
+      auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
+      auto decl = LookupDeclByName(identifier->name.memberless_name());
+      if (decl == nullptr) {
+        std::string message("Unable to find the constant named: ");
+        message += identifier->name.name_full();
+        return Fail(identifier->name, message.data());
+      }
+      out_edges->insert(decl);
+      break;
+    }
+    case Constant::Kind::kLiteral:
+    case Constant::Kind::kSynthesized: {
+      // Literal and synthesized constants have no dependencies on other declarations.
+      break;
+    }
+    case Constant::Kind::kBinaryOperator: {
+      auto op = static_cast<const flat::BinaryOperatorConstant*>(constant);
+      return AddConstantDependencies(op->left_operand.get(), out_edges) &&
+             AddConstantDependencies(op->right_operand.get(), out_edges);
+    }
+  }
+  return true;
+}
+
 // Calculating declaration dependencies is largely serving the C/C++ family of languages bindings.
 // For instance, the declaration of a struct member type must be defined before the containing
 // struct if that member is stored inline.
@@ -2403,33 +2523,12 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
       }
     }
   };
-  auto maybe_add_constant = [this, &edges](const Constant* constant) -> bool {
-    switch (constant->kind) {
-      case Constant::Kind::kIdentifier: {
-        auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
-        auto decl = LookupDeclByName(identifier->name.memberless_name());
-        if (decl == nullptr) {
-          std::string message("Unable to find the constant named: ");
-          message += identifier->name.name_full();
-          return Fail(identifier->name, message.data());
-        }
-        edges.insert(decl);
-        break;
-      }
-      case Constant::Kind::kLiteral:
-      case Constant::Kind::kSynthesized: {
-        // Literal and synthesized constants have no dependencies on other declarations.
-        break;
-      }
-    }
-    return true;
-  };
   switch (decl->kind) {
     case Decl::Kind::kBits: {
       auto bits_decl = static_cast<const Bits*>(decl);
       maybe_add_decl(bits_decl->subtype_ctor.get());
       for (const auto& member : bits_decl->members) {
-        if (!maybe_add_constant(member.value.get())) {
+        if (!AddConstantDependencies(member.value.get(), &edges)) {
           return false;
         }
       }
@@ -2438,7 +2537,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     case Decl::Kind::kConst: {
       auto const_decl = static_cast<const Const*>(decl);
       maybe_add_decl(const_decl->type_ctor.get());
-      if (!maybe_add_constant(const_decl->value.get())) {
+      if (!AddConstantDependencies(const_decl->value.get(), &edges)) {
         return false;
       }
       break;
@@ -2447,7 +2546,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
       auto enum_decl = static_cast<const Enum*>(decl);
       maybe_add_decl(enum_decl->subtype_ctor.get());
       for (const auto& member : enum_decl->members) {
-        if (!maybe_add_constant(member.value.get())) {
+        if (!AddConstantDependencies(member.value.get(), &edges)) {
           return false;
         }
       }
@@ -2482,7 +2581,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
       for (const auto& member : struct_decl->members) {
         maybe_add_decl(member.type_ctor.get());
         if (member.maybe_default_value) {
-          if (!maybe_add_constant(member.maybe_default_value.get())) {
+          if (!AddConstantDependencies(member.maybe_default_value.get(), &edges)) {
             return false;
           }
         }
@@ -2496,7 +2595,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
           continue;
         maybe_add_decl(member.maybe_used->type_ctor.get());
         if (member.maybe_used->maybe_default_value) {
-          if (!maybe_add_constant(member.maybe_used->maybe_default_value.get())) {
+          if (!AddConstantDependencies(member.maybe_used->maybe_default_value.get(), &edges)) {
             return false;
           }
         }

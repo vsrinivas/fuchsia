@@ -22,6 +22,7 @@ if (defined(zx)) {
       "lib/c_generator.cc",
       "lib/coded_types_generator.cc",
       "lib/error_reporter.cc",
+      "lib/experimental_flags.cc",
       "lib/findings_json.cc",
       "lib/flat_ast.cc",
       "lib/formatter.cc",

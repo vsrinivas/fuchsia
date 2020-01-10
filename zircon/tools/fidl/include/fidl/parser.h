@@ -9,6 +9,7 @@
 #include <optional>
 
 #include "error_reporter.h"
+#include "experimental_flags.h"
 #include "lexer.h"
 #include "raw_ast.h"
 #include "types.h"
@@ -19,7 +20,7 @@ namespace fidl {
 // for additional context
 class Parser {
  public:
-  Parser(Lexer* lexer, ErrorReporter* error_reporter);
+  Parser(Lexer* lexer, ErrorReporter* error_reporter, const ExperimentalFlags& experimental_flags);
 
   std::unique_ptr<raw::File> Parse() { return ParseFile(); }
 
@@ -286,6 +287,7 @@ class Parser {
 
   Lexer* lexer_;
   ErrorReporter* error_reporter_;
+  const ExperimentalFlags& experimental_flags_;
 
   // The stack of information interesting to the currently active ASTScope
   // objects.

@@ -174,10 +174,7 @@ class FalseLiteral final : public Literal {
 
 class Constant : public SourceElement {
  public:
-  enum class Kind {
-    kIdentifier,
-    kLiteral,
-  };
+  enum class Kind { kIdentifier, kLiteral, kBinaryOperator };
 
   explicit Constant(Token token, Kind kind) : SourceElement(token, token), kind(kind) {}
 
@@ -202,6 +199,23 @@ class LiteralConstant final : public Constant {
       : Constant(literal->start_, Kind::kLiteral), literal(std::move(literal)) {}
 
   std::unique_ptr<Literal> literal;
+
+  void Accept(TreeVisitor* visitor) const;
+};
+
+class BinaryOperatorConstant final : public Constant {
+ public:
+  enum class Operator { kOr };
+  explicit BinaryOperatorConstant(std::unique_ptr<Constant> left_operand,
+                                  std::unique_ptr<Constant> right_operand, Operator op)
+      : Constant(left_operand->start_, Kind::kBinaryOperator),
+        left_operand(std::move(left_operand)),
+        right_operand(std::move(right_operand)),
+        op(op) {}
+
+  std::unique_ptr<Constant> left_operand;
+  std::unique_ptr<Constant> right_operand;
+  Operator op;
 
   void Accept(TreeVisitor* visitor) const;
 };

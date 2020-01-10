@@ -15,16 +15,19 @@
 
 namespace {
 
-bool CheckConstEq(TestLibrary& library, const std::string& name, uint32_t expected_value) {
+template <class PrimitiveType>
+bool CheckConstEq(TestLibrary& library, const std::string& name, PrimitiveType expected_value,
+                  fidl::flat::Constant::Kind expected_constant_kind,
+                  fidl::flat::ConstantValue::Kind expected_constant_value_kind) {
   BEGIN_HELPER;
 
   auto const_decl = library.LookupConstant(name);
   ASSERT_NOT_NULL(const_decl);
-  ASSERT_EQ(fidl::flat::Constant::Kind::kLiteral, const_decl->value->kind);
-  ASSERT_EQ(fidl::flat::ConstantValue::Kind::kUint32, const_decl->value->Value().kind);
-  auto numeric_const_value =
-      static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(const_decl->value->Value());
-  EXPECT_EQ(expected_value, static_cast<uint32_t>(numeric_const_value));
+  ASSERT_EQ(expected_constant_kind, const_decl->value->kind);
+  ASSERT_EQ(expected_constant_value_kind, const_decl->value->Value().kind);
+  auto numeric_const_value = static_cast<const fidl::flat::NumericConstantValue<PrimitiveType>&>(
+      const_decl->value->Value());
+  EXPECT_EQ(expected_value, static_cast<PrimitiveType>(numeric_const_value));
 
   END_HELPER;
 }
@@ -43,11 +46,17 @@ const uint32 C_BINARY_L = 0B101010111100110111101111;
 )FIDL");
   ASSERT_TRUE(library.Compile());
 
-  EXPECT_TRUE(CheckConstEq(library, "C_SIMPLE", 11259375));
-  EXPECT_TRUE(CheckConstEq(library, "C_HEX_S", 11259375));
-  EXPECT_TRUE(CheckConstEq(library, "C_HEX_L", 11259375));
-  EXPECT_TRUE(CheckConstEq(library, "C_BINARY_S", 11259375));
-  EXPECT_TRUE(CheckConstEq(library, "C_BINARY_L", 11259375));
+  auto check_const_eq = [](TestLibrary& library, const std::string& name, uint32_t expected_value) {
+    return CheckConstEq<uint32_t>(library, name, expected_value,
+                                  fidl::flat::Constant::Kind::kLiteral,
+                                  fidl::flat::ConstantValue::Kind::kUint32);
+  };
+
+  EXPECT_TRUE(check_const_eq(library, "C_SIMPLE", 11259375));
+  EXPECT_TRUE(check_const_eq(library, "C_HEX_S", 11259375));
+  EXPECT_TRUE(check_const_eq(library, "C_HEX_L", 11259375));
+  EXPECT_TRUE(check_const_eq(library, "C_BINARY_S", 11259375));
+  EXPECT_TRUE(check_const_eq(library, "C_BINARY_L", 11259375));
 
   END_TEST;
 }
@@ -755,6 +764,34 @@ const uint32 SMALL_SIZE = 4;
   END_TEST;
 }
 
+bool OrOperatorTest() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+bits MyBits : uint8 {
+  A = 0x00000001;
+  B = 0x00000002;
+  C = 0x00000004;
+  D = 0x00000008;
+};
+const MyBits bitsValue = MyBits.A | MyBits.B | MyBits.D;
+const uint16 Result = MyBits.A | MyBits.B | MyBits.D;
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_TRUE(library.Compile());
+
+  EXPECT_TRUE(CheckConstEq<uint16_t>(library, "Result", 11,
+                                     fidl::flat::Constant::Kind::kBinaryOperator,
+                                     fidl::flat::ConstantValue::Kind::kUint16));
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(consts_tests)
@@ -815,5 +852,7 @@ RUN_TEST(BadMaxBoundTestLibraryQualified)
 RUN_TEST(BadConstTestAssignTypeName)
 
 RUN_TEST(GoodMultiFileConstReference)
+
+RUN_TEST(OrOperatorTest)
 
 END_TEST_CASE(consts_tests)

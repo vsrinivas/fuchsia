@@ -153,6 +153,14 @@ void JSONGenerator::Generate(const flat::Constant& value) {
         // For now, do not emit synthesized constants
         break;
       }
+      case flat::Constant::Kind::kBinaryOperator: {
+        GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::kFirst);
+        auto& type = static_cast<const flat::BinaryOperatorConstant&>(value);
+        GenerateObjectMember("left_operand", type.left_operand);
+        GenerateObjectMember("right_operand", type.right_operand);
+        GenerateObjectMember("operator", NameFlatBinaryOperator(type.op));
+        break;
+      }
     }
   });
 }

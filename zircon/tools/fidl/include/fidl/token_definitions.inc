@@ -41,8 +41,8 @@ TOKEN(Colon)
 TOKEN(Question)
 TOKEN(Equal)
 TOKEN(Ampersand)
-
 TOKEN(Arrow)
+TOKEN(Pipe)
 
 // Keywords
 KEYWORD(As, "as")
