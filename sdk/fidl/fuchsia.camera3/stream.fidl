@@ -1,0 +1,107 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.camera3;
+
+using fuchsia.math;
+using fuchsia.sysmem;
+using zx;
+
+/// A Stream represents timing, sequencing, and other camera-specific properties that apply to a set
+/// of buffers.
+protocol Stream {
+    /// Sets the region of interest to the provided region, with the top-left of the image
+    /// represented by (0,0) and the bottom-right of the image represented by (1,1). If the
+    /// implementation does not precisely support the provided value, it will be expanded to the
+    /// minimum region that covers the provided region. If region is set to null, the region of
+    /// interest is unset, which is equivalent to specifying a region covering the entire image.
+    /// Upon initial connection, the region of interest is unset. Frames requested after calling
+    /// this method will return with the new region, however previously sent frames may still be in
+    /// flight using the previous region. If the stream does not support region of interest, the
+    /// connection is closed with the ZX_ERR_NOT_SUPPORTED epitaph.
+    SetRegionOfInterest(fuchsia.math.RectF? region);
+
+    /// Returns the region of interest if it has changed from a previously returned value, or is
+    /// called by a client for the first time. Frame callbacks received after receiving this
+    /// callback reflect the use of the new region. See SetRegionOfInterest for a description of
+    /// the region parameter.
+    WatchRegionOfInterest() -> (fuchsia.math.RectF? region);
+
+    /// Sets the resolution of the stream to the provided index. Frames requested after calling
+    /// this method will return with the new resolution, however previously sent frames may still
+    /// be in flight using the previous resolution. Upon initial connection, the resolution used is
+    /// index 0.
+    SetResolution(uint32 index);
+
+    /// Returns the resolution it has changed from a previously returned value, or is called by a
+    /// client for the first time. Frame callbacks received after receiving this callback reflect
+    /// the new region.
+    WatchResolution() -> (fuchsia.math.RectF? region);
+
+    /// Request the next available frame for this stream. Returns when the stream has completed
+    /// populating the buffer and may be read by the client, provided the number of unreleased
+    /// buffers held by the client is less than the count provided in the buffer collection token
+    /// used to connect to this stream.
+    GetNextFrame() -> (FrameInfo info);
+
+    /// Request another connection to this Stream. This allows a client to delegate different
+    /// operations to different coordinated clients.
+    Rebind(request<Stream> request);
+};
+
+/// Metadata concerning a given frame.
+struct FrameInfo {
+    /// The buffer index of the associated buffer collection.
+    uint32 buffer_index;
+
+    /// A monotonically increasing counter indicating the number of frames written to buffers
+    /// associated with this stream's buffer collection. Clients can use this to detect dropped
+    /// frames, or generate nominal timestamps using the associated stream's framerate.
+    uint64 frame_counter;
+
+    /// The value of the system monotonic clock, measured at the time the hardware completed
+    /// populating the buffer.
+    zx.time timestamp;
+
+    /// The client must close this when it has completed reading from the buffer.
+    handle<eventpair> release_fence;
+};
+
+/// Properties describing image data in a buffer.
+struct Resolution {
+    /// Extents of the image in pixels.
+    fuchsia.math.Size coded_size;
+
+    /// The number of bytes between each row in the image. This may be larger than the value
+    /// implied by the image width.
+    uint32 bytes_per_row;
+};
+
+/// The frequency at which a Stream produces frames. The value is |numerator| / |denominator|, with
+/// units of frames-per-second (Hz). The representation is not necessarily an irreducible fraction.
+struct FrameRate {
+    /// Fraction numerator.
+    uint32 numerator;
+
+    /// Fraction denominator. This value will not be zero.
+    uint32 denominator;
+};
+
+/// Describes the properties of a given stream.
+struct StreamProperties {
+    /// Describes the image format used by a stream. The resolution indicated has the same values
+    /// as the first element of supported_resolutions (below).
+    fuchsia.sysmem.ImageFormat_2 image_format;
+
+    /// Describes the framerate used by a stream.
+    FrameRate frame_rate;
+
+    /// Describes the supported resolutions of a stream. Elements are provided in decreasing order
+    /// of total coded pixels (i.e. width * height). All streams will have at least one supported
+    /// resolution, and that resolution will match that specified by image_format.
+    vector<Resolution>:MAX_RESOLUTIONS_PER_STREAM supported_resolutions;
+
+    /// Indicates whether a stream supports the SetRegionOfInterest method.
+    bool supports_region_of_interest;
+};

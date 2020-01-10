@@ -1,0 +1,41 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.camera3;
+
+const uint32 MAX_WATCH_DEVICES_EVENTS = 256;
+
+using DeviceId = uint64;
+
+/// The DeviceWatcher provides clients a mechanism to discover camera devices present on the
+/// system. This is a temporary mechanism intended to be replaced by go/drivers-as-components,
+/// which will allow multiple instances of the same protocol to exist side-by-side. Clients are
+/// not required to maintain a connection to the Watcher in order to use established Camera
+/// connections.
+[Discoverable]
+protocol DeviceWatcher {
+    /// Returns a list of available camera IDs when it has changed from the previously returned
+    /// list of IDs, or when it is called by a client for the first time. The returned list may be
+    /// empty, indicating no cameras are available. The IDs returned to the client will remain
+    /// consistent with respect to the physical devices they represent for the duration of the
+    /// client's connection. Events will be sorted first by event type - |existing|, |added|,
+    /// |removed|. Within each event type range, IDs will be provided in ascending order. Events
+    /// are coalesced by the server, so a given ID will only appear once in each list of events.
+    WatchDevices() -> (vector<WatchDevicesEvent>:MAX_WATCH_DEVICES_EVENTS events);
+
+    /// Acquires a camera interface for the given ID. If any clients already exist for this camera,
+    /// the request is closed with the ZX_ERR_ALREADY_BOUND epitaph.
+    ConnectToDevice(DeviceId id, request<Device> request);
+};
+
+union WatchDevicesEvent {
+    /// Indicates an existing camera with the provided ID is still available.
+    1: DeviceId existing;
+
+    /// Indicates a new camera with the provided ID is now available.
+    2: DeviceId added;
+
+    /// Indicates an existing camera with the provided ID is no longer available.
+    3: DeviceId removed;
+};

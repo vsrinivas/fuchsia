@@ -1,0 +1,65 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.camera3;
+
+using fuchsia.sysmem;
+
+const uint32 MAX_IDENTIFIER_LENGTH = 256;
+const uint32 MAX_CONFIGURATIONS_PER_CAMERA = 256;
+const uint32 MAX_STREAMS_PER_CONFIGURATION = 256;
+const uint32 MAX_RESOLUTIONS_PER_STREAM = 1024;
+
+/// A Device represents a unique physical camera present in the system. Only one client may connect
+/// to an unbound physical camera, however the "Rebind" method can be used to create multiple
+/// connections to it to be used by a coordinated set of clients.
+protocol Device {
+    /// Returns an identifier for the camera. If present, identical devices on different systems
+    /// will have the same identifier. Clients may use this to determine if additional semantics
+    /// known a priori for a given device apply to the current camera.
+    // TODO(fxb/43247): unify device identification
+    // go/unified-device-discovery will eliminate the need for this protocol
+    GetIdentifier() -> (string:MAX_IDENTIFIER_LENGTH? identifier);
+
+    /// Returns a list of configurations supported by the camera. All cameras will have at least
+    /// one configuration. The values returned are immutable - they will not change for the
+    /// lifetime of the client's connection to the Camera.
+    GetConfigurations() -> (vector<Configuration>:MAX_CONFIGURATIONS_PER_CAMERA configurations);
+
+    /// Returns the index of the current configuration when it has changed from a previously
+    /// returned configuration, or is called by a client for the first time.
+    WatchCurrentConfiguration() -> (uint32 index);
+
+    /// Sets the configuration using the provided index. Calling this method disconnects any
+    /// existing Stream clients associated with this camera.
+    SetCurrentConfiguration(uint32 index);
+
+    /// Returns the camera's current mute state when it has changed from a previously returned
+    /// state, or is called by a client for the first time. A camera may be muted using
+    /// SetSoftwareMuteState or by a physical switch. If either muted mode is active, stream
+    /// clients associated with this physical camera will stop receiving new frames.
+    WatchMuteState() -> (bool software_muted, bool hardware_muted);
+
+    /// Sets the current camera's software mute state. When transitioning to the muted state, this
+    /// method returns when the camera has successfully ceased sending new frames to stream
+    /// clients. When transitioning to the unmuted state, this method returns immediately.
+    SetSoftwareMuteState(bool muted) -> ();
+
+    /// Connects to the Stream at the provided stream, using the provided token to negotiate
+    /// buffers. If any clients already exist for this stream, the request is closed with the
+    /// ZX_ERR_ALREADY_BOUND epitaph.
+    ConnectToStream(uint32 index,
+                    fuchsia.sysmem.BufferCollectionToken token,
+                    request<Stream> request);
+
+    /// Request another connection to this Device. This allows a client to delegate different
+    /// operations to different coordinated clients.
+    Rebind(request<Device> request);
+};
+
+/// Describes a distinct configuration for the camera.
+struct Configuration {
+    /// Descriptions of streams that are concurrently available in the configuration.
+    vector<StreamProperties>:MAX_STREAMS_PER_CONFIGURATION streams;
+};
