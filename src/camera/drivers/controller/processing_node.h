@@ -25,13 +25,6 @@ namespace camera {
 class ProcessNode;
 class StreamImpl;
 
-struct ChildNodeInfo {
-  // Pointer to the child node.
-  std::unique_ptr<ProcessNode> child_node;
-  // The frame rate for this node.
-  fuchsia::camera2::FrameRate output_frame_rate;
-};
-
 class ProcessNode {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ProcessNode);
@@ -39,8 +32,9 @@ class ProcessNode {
               fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
               fuchsia::camera2::CameraStreamType current_stream_type,
               std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
-              async_dispatcher_t* dispatcher)
+              async_dispatcher_t* dispatcher, fuchsia::camera2::FrameRate frame_rate)
       : dispatcher_(dispatcher),
+        output_frame_rate_(frame_rate),
         type_(type),
         parent_node_(nullptr),
         output_buffer_collection_(std::move(output_buffer_collection)),
@@ -55,8 +49,9 @@ class ProcessNode {
   ProcessNode(NodeType type, ProcessNode* parent_node,
               fuchsia::camera2::CameraStreamType current_stream_type,
               std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
-              async_dispatcher_t* dispatcher)
+              async_dispatcher_t* dispatcher, fuchsia::camera2::FrameRate frame_rate)
       : dispatcher_(dispatcher),
+        output_frame_rate_(frame_rate),
         type_(type),
         parent_node_(parent_node),
         enabled_(false),
@@ -71,8 +66,9 @@ class ProcessNode {
               fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
               fuchsia::camera2::CameraStreamType current_stream_type,
               std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
-              async_dispatcher_t* dispatcher)
+              async_dispatcher_t* dispatcher, fuchsia::camera2::FrameRate frame_rate)
       : dispatcher_(dispatcher),
+        output_frame_rate_(frame_rate),
         type_(type),
         parent_node_(parent_node),
         output_buffer_collection_(std::move(output_buffer_collection)),
@@ -87,7 +83,7 @@ class ProcessNode {
   virtual ~ProcessNode() {
     // We need to ensure that the child nodes
     // are destructed before parent node.
-    child_nodes_info_.clear();
+    child_nodes_.clear();
   }
 
   // Notifies that a frame is ready for processing at this node.
@@ -137,11 +133,13 @@ class ProcessNode {
 
   std::vector<fuchsia::camera2::CameraStreamType> supported_streams() { return supported_streams_; }
 
-  std::vector<ChildNodeInfo>& child_nodes_info() { return child_nodes_info_; }
+  std::vector<std::unique_ptr<ProcessNode>>& child_nodes() { return child_nodes_; }
 
-  // Adds a child info in the vector
-  void AddChildNodeInfo(ChildNodeInfo info) { child_nodes_info_.push_back(std::move(info)); }
-  // Curent state of the node
+  // Adds a child node in the vector.
+  void AddChildNodeInfo(std::unique_ptr<ProcessNode> child_node) {
+    child_nodes_.push_back(std::move(child_node));
+  }
+  // Curent state of the node.
   bool enabled() { return enabled_; }
 
  protected:
@@ -152,15 +150,16 @@ class ProcessNode {
   fbl::Mutex in_use_buffer_lock_;
   // Lock to guard |event_queue_|.
   fbl::Mutex event_queue_lock_;
-
+  // The output frame rate for this node.
+  fuchsia::camera2::FrameRate output_frame_rate_;
   // Type of node.
   NodeType type_;
   // List of all the children for this node.
-  std::vector<ChildNodeInfo> child_nodes_info_;
-  // Parent node
+  std::vector<std::unique_ptr<ProcessNode>> child_nodes_;
+  // Parent node.
   ProcessNode* const parent_node_;
   fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection_;
-  // Ouput Image formats
+  // Ouput Image formats.
   // These are needed when we initialize HW accelerators.
   std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats_;
   bool enabled_;

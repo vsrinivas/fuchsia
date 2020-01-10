@@ -43,7 +43,7 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
   // Create Input Node
   auto processing_node = std::make_unique<camera::InputNode>(
       info->node.image_formats, std::move(buffers), info->stream_config->properties.stream_type(),
-      info->node.supported_streams, dispatcher, isp);
+      info->node.supported_streams, dispatcher, isp, info->node.output_frame_rate);
   if (!processing_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create Input node";
     return fit::error(ZX_ERR_NO_MEMORY);

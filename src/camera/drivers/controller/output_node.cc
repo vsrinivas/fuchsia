@@ -24,7 +24,7 @@ fit::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
 
   auto output_node = std::make_unique<camera::OutputNode>(
       dispatcher, parent_node, info->stream_config->properties.stream_type(),
-      internal_output_node.supported_streams);
+      internal_output_node.supported_streams, internal_output_node.output_frame_rate);
   if (!output_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create output ProcessNode";
     return fit::error(ZX_ERR_NO_MEMORY);
@@ -40,11 +40,8 @@ fit::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
   output_node->set_client_stream(std::move(client_stream));
   auto result = fit::ok(output_node.get());
 
-  // Add child node info.
-  ChildNodeInfo child_info;
-  child_info.child_node = std::move(output_node);
-  child_info.output_frame_rate = internal_output_node.output_frame_rate;
-  parent_node->AddChildNodeInfo(std::move(child_info));
+  // Add child node.
+  parent_node->AddChildNodeInfo(std::move(output_node));
   return result;
 }
 

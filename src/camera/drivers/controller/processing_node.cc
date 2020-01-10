@@ -23,9 +23,8 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
       parent_node_->OnReleaseFrame(local_info.metadata.input_buffer_index);
     }
 
-    if (local_info.frame_status == FRAME_STATUS_OK) {
-      for (auto& i : child_nodes_info_) {
-        auto& child_node = i.child_node;
+    if (enabled_ && local_info.frame_status == FRAME_STATUS_OK) {
+      for (auto& child_node : child_nodes_) {
         // TODO(braval): Regulate frame rate here
         if (child_node->enabled()) {
           {
@@ -54,8 +53,7 @@ void ProcessNode::OnStartStreaming() {
 }
 
 bool ProcessNode::AllChildNodesDisabled() {
-  for (auto& i : child_nodes_info_) {
-    auto& child_node = i.child_node;
+  for (auto& child_node : child_nodes_) {
     if (child_node->enabled()) {
       return false;
     }

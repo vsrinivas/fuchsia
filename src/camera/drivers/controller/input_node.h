@@ -27,10 +27,11 @@ class InputNode : public ProcessNode {
             fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
             fuchsia::camera2::CameraStreamType current_stream_type,
             std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
-            async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp)
+            async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp,
+            fuchsia::camera2::FrameRate frame_rate)
       : ProcessNode(NodeType::kInputStream, output_image_formats,
                     std::move(output_buffer_collection), current_stream_type, supported_streams,
-                    dispatcher),
+                    dispatcher, frame_rate),
         isp_frame_callback_{OnIspFrameAvailable, this},
         isp_(isp) {}
 

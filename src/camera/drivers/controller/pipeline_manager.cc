@@ -106,8 +106,8 @@ PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
 
   // Traverse the |node| to find a node which supports this stream
   // but none of its children support this stream.
-  for (auto& child_node_info : node->child_nodes_info()) {
-    if (HasStreamType(child_node_info.child_node->supported_streams(), requested_stream_type)) {
+  for (auto& child_node : node->child_nodes()) {
+    if (HasStreamType(child_node->supported_streams(), requested_stream_type)) {
       // If we find a child node which supports the requested stream type,
       // we move on to that child node.
       auto next_internal_node = GetNextNodeInPipeline(info->stream_config->properties.stream_type(),
@@ -116,7 +116,7 @@ PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
         FX_LOGS(ERROR) << "Failed to get next node for requested stream";
         return fit::error(ZX_ERR_INTERNAL);
       }
-      return FindNodeToAttachNewStream(info, *next_internal_node, child_node_info.child_node.get());
+      return FindNodeToAttachNewStream(info, *next_internal_node, child_node.get());
     }
     // This is the node we need to attach the new stream pipeline to
     return fit::ok(std::make_pair(current_internal_node, node));

@@ -74,9 +74,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
         config_info = internal_config_info_.configs_info.at(2);
         break;
       }
-      default: {
-        return nullptr;
-      }
+      default: { return nullptr; }
     }
 
     for (auto& stream_info : config_info.streams_info) {
@@ -202,8 +200,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type}));
     EXPECT_TRUE(HasAllStreams(fr_head_node->supported_streams(), {stream_type}));
 
-    auto output_node =
-        static_cast<OutputNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
+    auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
     EXPECT_EQ(output_node->type(), NodeType::kOutputStream);
     EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type}));
     EXPECT_TRUE(HasAllStreams(output_node->supported_streams(), {stream_type}));
@@ -225,8 +222,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
-    auto output_node =
-        static_cast<OutputNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
+    auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
 
     // Check if all nodes were created.
     EXPECT_EQ(NodeType::kInputStream, fr_head_node->type());
@@ -257,9 +253,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
-    auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
-    auto output_node =
-        static_cast<OutputNode*>(gdc_node->child_nodes_info().at(0).child_node.get());
+    auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
+    auto output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
 
     // Check if all nodes were created.
     EXPECT_EQ(NodeType::kGdc, gdc_node->type());
@@ -300,11 +295,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
-    auto fr_ml_output_node =
-        static_cast<OutputNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
-    auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes_info().at(1).child_node.get());
-    auto ds_ml_output_node =
-        static_cast<OutputNode*>(gdc_node->child_nodes_info().at(0).child_node.get());
+    auto fr_ml_output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
+    auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(1).get());
+    auto ds_ml_output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
 
     // Validate input node.
     EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type1, stream_type2}));
@@ -378,10 +371,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
-    auto gdc1_node = static_cast<GdcNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
-    auto gdc2_node = static_cast<GdcNode*>(gdc1_node->child_nodes_info().at(0).child_node.get());
-    auto output_node =
-        static_cast<OutputNode*>(gdc2_node->child_nodes_info().at(0).child_node.get());
+    auto gdc1_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
+    auto gdc2_node = static_cast<GdcNode*>(gdc1_node->child_nodes().at(0).get());
+    auto output_node = static_cast<OutputNode*>(gdc2_node->child_nodes().at(0).get());
 
     // Check if all nodes were created appropriately.
     EXPECT_EQ(NodeType::kGdc, gdc1_node->type());
@@ -418,8 +410,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
-    auto output_node =
-        static_cast<OutputNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
+    auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
 
     // Set streaming on.
     output_node->client_stream()->Start();
@@ -493,8 +484,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
-    auto output_node =
-        static_cast<OutputNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
+    auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
 
     // Set streaming on.
     output_node->client_stream()->Start();
@@ -586,9 +576,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
-    auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
-    auto ds_ml_output_node =
-        static_cast<OutputNode*>(gdc_node->child_nodes_info().at(0).child_node.get());
+    auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
+    auto ds_ml_output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
 
     EXPECT_FALSE(fake_isp_.frame_released());
 
