@@ -8,6 +8,7 @@ use {
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_input2 as fidl_ui_input2,
     maplit::hashmap,
+    std::collections::HashMap,
     std::collections::HashSet,
 };
 
@@ -128,6 +129,18 @@ pub fn create_touch_input_report(
     }
 }
 
+#[cfg(test)]
+pub fn create_touch_contact(id: u32, position_x: i64, position_y: i64) -> touch::TouchContact {
+    touch::TouchContact {
+        id,
+        position_x,
+        position_y,
+        pressure: None,
+        contact_width: None,
+        contact_height: None,
+    }
+}
+
 /// Creates a [`touch::TouchEvent`] with the provided parameters.
 ///
 /// # Parameters
@@ -138,22 +151,17 @@ pub fn create_touch_input_report(
 /// - `device_descriptor`: The device descriptor to add to the event.
 #[cfg(test)]
 pub fn create_touch_event(
-    contact_id: u32,
-    position_x: i64,
-    position_y: i64,
-    phase: fidl_ui_input::PointerEventPhase,
+    mut contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<touch::TouchContact>>,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
+    contacts.entry(fidl_ui_input::PointerEventPhase::Add).or_insert(vec![]);
+    contacts.entry(fidl_ui_input::PointerEventPhase::Down).or_insert(vec![]);
+    contacts.entry(fidl_ui_input::PointerEventPhase::Move).or_insert(vec![]);
+    contacts.entry(fidl_ui_input::PointerEventPhase::Up).or_insert(vec![]);
+    contacts.entry(fidl_ui_input::PointerEventPhase::Remove).or_insert(vec![]);
+
     input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Touch(touch::TouchEvent {
-            contact_id,
-            position_x,
-            position_y,
-            pressure: None,
-            contact_width: None,
-            contact_height: None,
-            phase,
-        }),
+        device_event: input_device::InputDeviceEvent::Touch(touch::TouchEvent { contacts }),
         device_descriptor: device_descriptor.clone(),
     }
 }
