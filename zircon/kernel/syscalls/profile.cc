@@ -41,8 +41,7 @@ zx_status_t sys_profile_create(zx_handle_t root_job, uint32_t options,
     return status;
   }
 
-  // Validate that the job is in fact the first usermode job (aka root job).
-  if (GetRootJobDispatcher() != job->parent()) {
+  if (job != GetRootJobDispatcher()) {
     // TODO(cpu): consider a better error code.
     return ZX_ERR_ACCESS_DENIED;
   }

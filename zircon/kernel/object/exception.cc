@@ -92,13 +92,13 @@ class ExceptionHandlerIterator final {
           next_job_ = thread_->process()->job();
           break;
         case ZX_EXCEPTION_CHANNEL_TYPE_JOB:
-          *result = thread_->HandleException(next_job_->exceptionate(Exceptionate::Type::kStandard),
-                                             exception_, &sent);
-          next_job_ = next_job_->parent();
-          if (!next_job_) {
+          if (next_job_ == nullptr) {
             // Reached the root job and there was no handler.
             return false;
           }
+          *result = thread_->HandleException(next_job_->exceptionate(Exceptionate::Type::kStandard),
+                                             exception_, &sent);
+          next_job_ = next_job_->parent();
           break;
         default:
           ASSERT_MSG(0, "unexpected exception type %u", next_type_);

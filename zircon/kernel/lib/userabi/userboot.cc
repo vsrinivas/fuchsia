@@ -136,11 +136,8 @@ zx_status_t get_vmo_handle(fbl::RefPtr<VmObject> vmo, bool readonly,
 }
 
 HandleOwner get_job_handle() {
-  zx_rights_t rights;
-  KernelHandle<JobDispatcher> handle;
-  zx_status_t result = JobDispatcher::Create(0u, GetRootJobDispatcher(), &handle, &rights);
-  ASSERT(result == ZX_OK);
-  return Handle::Make(ktl::move(handle), rights);
+  KernelHandle<JobDispatcher> handle{GetRootJobDispatcher()};
+  return Handle::Make(ktl::move(handle), JobDispatcher::default_rights());
 }
 
 HandleOwner get_resource_handle() {

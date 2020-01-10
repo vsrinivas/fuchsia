@@ -26,7 +26,7 @@ KCOUNTER(dispatcher_job_destroy_count, "dispatcher.job.destroy")
 // The starting max_height value of the root job.
 static constexpr uint32_t kRootJobMaxHeight = 32;
 
-static constexpr char kRootJobName[] = "<superroot>";
+static constexpr char kRootJobName[] = "root";
 
 template <>
 uint32_t JobDispatcher::ChildCountLocked<JobDispatcher>() const {

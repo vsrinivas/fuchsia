@@ -518,7 +518,7 @@ zx_status_t sys_system_get_event(zx_handle_t root_job, uint32_t kind, user_out_h
   }
 
   // Validate that the job is in fact the first usermode job (aka root job).
-  if (GetRootJobDispatcher() != job->parent()) {
+  if (job != GetRootJobDispatcher()) {
     return ZX_ERR_ACCESS_DENIED;
   }
 

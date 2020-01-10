@@ -343,8 +343,6 @@ int main(int argc, char** argv) {
   svcfs_svc->AddService(llcpp::fuchsia::kernel::Stats::Name,
                         kernel_stats.CreateService(loop.dispatcher()));
 
-  zx::job::default_job()->set_property(ZX_PROP_NAME, "root", 4);
-
   // Consume certain VMO types from the startup handle table
   printf("bootsvc: Loading kernel VMOs...\n");
   bootfs_svc->PublishStartupVmos(PA_VMO_VDSO, "PA_VMO_VDSO");
