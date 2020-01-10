@@ -100,7 +100,15 @@ void main() {
       'fx',
       ['gn', 'format', '--dump-tree=json', '--stdin'],
     );
-    pr.stderr.transform(utf8.decoder).map(jsonDecode).listen(callback);
+
+    // removes any text preceeding the actual json string. Since gn outputs
+    // the json string to stderr, any warning output by fx, like the metrics
+    // warning, will get in the way of the json, causing a parsing error.
+    pr.stderr
+        .skipWhile((t) => !t.contains('{'))
+        .transform(utf8.decoder)
+        .map(jsonDecode)
+        .listen(callback);
     return pr;
   }
 
@@ -112,6 +120,20 @@ void main() {
         throwsA(
             'Unexpected error running fx gn: exit code 1\n---- stderr output:\nasdf\n------'),
       );
+    });
+    test('parses a json that is preceded by a warning message', () async {
+      var jsonWithText =
+          '''WARNING: Please opt in or out of fx metrics collection.
+             {"child": [
+                {"type": "IDENTIFIER", "value": "use_goma"},
+                {"type": "LITERAL", "value": "true"}
+              ]}
+      ''';
+      ProcessResult pr = ProcessResult(123, 0, '', jsonWithText);
+      List<Item> items = parser.parseGn(processResult: pr);
+      expect(items.length, 2);
+      expect(items[0].key, 'goma');
+      expect(items[1].key, 'release');
     });
     test('handles variable assignments', () async {
       Process pr = await runFxGnFormat((data) {

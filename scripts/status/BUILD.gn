@@ -20,7 +20,6 @@ dart_tool("status") {
   ]
 
   deps = [
-    "//third_party/dart-pkg/pub/ansicolor",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/async",
     "//third_party/dart-pkg/pub/convert",
