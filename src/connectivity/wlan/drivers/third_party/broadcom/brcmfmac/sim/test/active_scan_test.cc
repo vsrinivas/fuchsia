@@ -46,11 +46,8 @@ class ActiveScanTest : public SimTest {
 
  private:
   // StationIfc methods
-  void Rx(void* pkt) override;
   void ReceiveNotification(void* payload) override;
-  void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override;
-  void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, const wlan_ssid_t& ssid) override;
+  void Rx(const simulation::SimFrame* frame) override;
 
   // This is the interface we will use for our single client interface
   std::unique_ptr<SimInterface> client_ifc_;
@@ -95,9 +92,6 @@ void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t
   aps_.push_back(std::move(ap_info));
 }
 
-// Should never be called
-void ActiveScanTest::Rx(void* pkt) { GTEST_FAIL(); }
-
 // Tell the DUT to run a scan
 void ActiveScanTest::StartScan() {
   wlanif_scan_req_t req = {
@@ -141,19 +135,25 @@ void ActiveScanTest::GetFirwarePfnMac() {
     sim->sim_fw->IovarsGet("pfn_macaddr", sim_fw_pfn_mac_->byte, ETH_ALEN);
 }
 
-// When a probe request is sent out, the src mac address should not be real mac address.
-void ActiveScanTest::RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) {
+void ActiveScanTest::Rx(const simulation::SimFrame* frame) {
   GetFirwarePfnMac();
-  EXPECT_NE(src, sim_fw_mac_);
-  EXPECT_EQ(src, *sim_fw_pfn_mac_);
-}
 
-// When APs sending out probe response, the dst mac should also be different from real one.
-void ActiveScanTest::RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                                 const common::MacAddr& dst, const wlan_ssid_t& ssid) {
-  GetFirwarePfnMac();
-  EXPECT_NE(dst, sim_fw_mac_);
-  EXPECT_EQ(dst, *sim_fw_pfn_mac_);
+  ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
+
+  auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+
+  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_PROBE_REQ) {
+    // When a probe request is sent out, the src mac address should not be real mac address.
+    auto probe_req = static_cast<const simulation::SimProbeReqFrame*>(mgmt_frame);
+    EXPECT_NE(probe_req->src_addr_, sim_fw_mac_);
+    EXPECT_EQ(probe_req->src_addr_, *sim_fw_pfn_mac_);
+  }
+
+  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_PROBE_RESP) {
+    auto probe_resp = static_cast<const simulation::SimProbeRespFrame*>(mgmt_frame);
+    EXPECT_NE(probe_resp->dst_addr_, sim_fw_mac_);
+    EXPECT_EQ(probe_resp->dst_addr_, *sim_fw_pfn_mac_);
+  }
 }
 
 void ActiveScanTest::OnScanResult(const wlanif_scan_result_t* result) {

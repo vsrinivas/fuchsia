@@ -39,17 +39,7 @@ SimFirmware::SimFirmware(brcmf_simdev* simdev, simulation::Environment* env)
 
   // Configure the (simulated) hardware => (simulated) firmware callbacks
   SimHardware::EventHandlers handlers = {
-      .rx_beacon_handler = std::bind(&SimFirmware::RxBeacon, this, std::placeholders::_1,
-                                     std::placeholders::_2, std::placeholders::_3),
-
-      .rx_assoc_resp_handler = std::bind(&SimFirmware::RxAssocResp, this, std::placeholders::_1,
-                                         std::placeholders::_2, std::placeholders::_3),
-
-      .rx_disassoc_req_handler = std::bind(&SimFirmware::RxDisassocReq, this, std::placeholders::_1,
-                                           std::placeholders::_2, std::placeholders::_3),
-
-      .rx_probe_resp_handler = std::bind(&SimFirmware::RxProbeResp, this, std::placeholders::_1,
-                                         std::placeholders::_2, std::placeholders::_3),
+      .rx_handler = std::bind(&SimFirmware::Rx, this, std::placeholders::_1),
   };
   hw_.SetCallbacks(handlers);
   country_code_ = {};
@@ -462,7 +452,8 @@ void SimFirmware::AssocStart(std::unique_ptr<AssocOpts> opts) {
   // We can't use assoc_state_.opts->bssid directly because it may get free'd during TxAssocReq
   // handling if a response is sent.
   common::MacAddr bssid(assoc_state_.opts->bssid);
-  hw_.TxAssocReq(srcAddr, bssid);
+  simulation::SimAssocReqFrame assoc_req_frame(&hw_, assoc_state_.opts->channel, srcAddr, bssid);
+  hw_.Tx(&assoc_req_frame);
 }
 
 void SimFirmware::RxAssocResp(const common::MacAddr& src, const common::MacAddr& dst,
@@ -510,7 +501,9 @@ void SimFirmware::DisassocStart(brcmf_scb_val_le* scb_val) {
 
     // Transmit the disassoc req and since there is no response for
     // it, indicate disassoc done to driver.
-    hw_.TxDisassocReq(srcAddr, *bssid, reason);
+    simulation::SimDisassocReqFrame disassoc_req_frame(&hw_, assoc_state_.opts->channel, srcAddr,
+                                                       *bssid, reason);
+    hw_.Tx(&disassoc_req_frame);
     assoc_state_.state = AssocState::NOT_ASSOCIATED;
     SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS);
   } else {
@@ -776,7 +769,8 @@ zx_status_t SimFirmware::ScanStart(std::unique_ptr<ScanOpts> opts) {
 
   // Do an active scan using random mac
   if (scan_state_.opts->is_active) {
-    hw_.TxProbeRequest(pfn_mac_addr_);
+    simulation::SimProbeReqFrame probe_req_frame(&hw_, channel, pfn_mac_addr_);
+    hw_.Tx(&probe_req_frame);
   }
   hw_.EnableRx();
 
@@ -813,7 +807,8 @@ void SimFirmware::ScanNextChannel() {
         chanspec_to_channel(&d11_inf_, chanspec, &channel);
         hw_.SetChannel(channel);
         if (scan_state_.opts->is_active) {
-          hw_.TxProbeRequest(pfn_mac_addr_);
+          simulation::SimProbeReqFrame probe_req_frame(&hw_, channel, pfn_mac_addr_);
+          hw_.Tx(&probe_req_frame);
         }
         std::function<void()>* callback = new std::function<void()>;
         *callback = std::bind(&SimFirmware::ScanNextChannel, this);
@@ -901,6 +896,44 @@ zx_status_t SimFirmware::EscanStart(uint16_t sync_id, const brcmf_scan_params_le
 
 void SimFirmware::EscanComplete() {
   SendSimpleEventToDriver(BRCMF_E_ESCAN_RESULT, BRCMF_E_STATUS_SUCCESS);
+}
+
+void SimFirmware::Rx(const simulation::SimFrame* frame) {
+  if (frame->FrameType() == simulation::SimFrame::FRAME_TYPE_MGMT) {
+    auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+    RxMgmtFrame(mgmt_frame);
+  }
+}
+
+void SimFirmware::RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame) {
+  switch (mgmt_frame->MgmtFrameType()) {
+    case simulation::SimManagementFrame::FRAME_TYPE_BEACON: {
+      auto beacon = static_cast<const simulation::SimBeaconFrame*>(mgmt_frame);
+      RxBeacon(beacon->channel_, beacon->ssid_, beacon->bssid_);
+      break;
+    }
+
+    case simulation::SimManagementFrame::FRAME_TYPE_PROBE_RESP: {
+      auto probe_resp = static_cast<const simulation::SimProbeRespFrame*>(mgmt_frame);
+      RxProbeResp(probe_resp->channel_, probe_resp->ssid_, probe_resp->src_addr_);
+      break;
+    }
+
+    case simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP: {
+      auto assoc_resp = static_cast<const simulation::SimAssocRespFrame*>(mgmt_frame);
+      RxAssocResp(assoc_resp->src_addr_, assoc_resp->dst_addr_, assoc_resp->status_);
+      break;
+    }
+
+    case simulation::SimManagementFrame::FRAME_TYPE_DISASSOC_REQ: {
+      auto disassoc_req = static_cast<const simulation::SimDisassocReqFrame*>(mgmt_frame);
+      RxDisassocReq(disassoc_req->src_addr_, disassoc_req->dst_addr_, disassoc_req->reason_);
+      break;
+    }
+
+    default:
+      break;
+  }
 }
 
 void SimFirmware::RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,

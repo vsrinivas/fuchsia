@@ -25,18 +25,7 @@ class EventTest : public ::testing::Test, public simulation::StationIfc {
   ~EventTest() { env_.RemoveStation(this); }
 
   // StationIfc methods
-  void Rx(void* pkt) override {}
-  void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                const common::MacAddr& bssid) override {}
-  void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                  const common::MacAddr& bssid) override {}
-  void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& srcMac,
-                   const common::MacAddr& dstMac, uint16_t status) override {}
-  void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                     const common::MacAddr& bssid, const uint16_t reason) override {}
-  void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override{};
-  void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, const wlan_ssid_t& ssid) override {}
+  void Rx(const simulation::SimFrame* frame) override {}
   void ReceiveNotification(void* payload) override {
     auto notification = static_cast<EventNotification*>(payload);
     notification->callback(this, notification->value);

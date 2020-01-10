@@ -25,24 +25,13 @@
 
 namespace wlan::brcmfmac {
 
-using RxBeaconHandler = std::function<void(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                                           const common::MacAddr& bssid)>;
-using RxProbeRespHandler = std::function<void(
-    const wlan_channel_t& channel, const wlan_ssid_t& ssid, const common::MacAddr& bssid)>;
+using RxHandler = std::function<void(const simulation::SimFrame* frame)>;
 
-using RxAssocResponseHandler =
-    std::function<void(const common::MacAddr& src, const common::MacAddr& dst, uint16_t status)>;
-
-using RxDisassocReqHandler =
-    std::function<void(const common::MacAddr& src, const common::MacAddr& dst, uint16_t reason)>;
-
-class SimHardware : simulation::StationIfc {
+class SimHardware : public simulation::StationIfc {
  public:
   struct EventHandlers {
-    RxBeaconHandler rx_beacon_handler;
-    RxAssocResponseHandler rx_assoc_resp_handler;
-    RxDisassocReqHandler rx_disassoc_req_handler;
-    RxProbeRespHandler rx_probe_resp_handler;
+    // Now it only have one member but might add event other than receive in the future.
+    RxHandler rx_handler;
   };
 
   explicit SimHardware(simulation::Environment* env);
@@ -62,24 +51,11 @@ class SimHardware : simulation::StationIfc {
   void CancelCallback(uint64_t id);
 
   // StationIfc methods
-  void Rx(void* pkt) override {}  // no-op
-  void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                const common::MacAddr& bssid) override;
-  void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                  const common::MacAddr& bssid) override {}  // no-op
-  void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t status) override;
-  void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t reason) override;
-  void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override {}  // no-op
-  void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, const wlan_ssid_t& ssid) override;
+  void Rx(const simulation::SimFrame* frame) override;
   void ReceiveNotification(void* payload) override;
 
   // Operations that are forwarded to the environment
-  void TxAssocReq(const common::MacAddr& src, const common::MacAddr& bssid);
-  void TxDisassocReq(const common::MacAddr& src, const common::MacAddr& bssid, uint16_t reason);
-  void TxProbeRequest(common::MacAddr& scan_mac);
+  void Tx(const simulation::SimFrame* frame);
 
  private:
   bool rx_enabled_ = false;

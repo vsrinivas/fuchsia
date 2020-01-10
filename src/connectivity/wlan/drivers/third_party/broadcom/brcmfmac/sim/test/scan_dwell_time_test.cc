@@ -59,8 +59,6 @@ class ScanTest : public SimTest {
   size_t scans_remaining_ = kTotalScanCount;
 
  private:
-  // StationIfc methods
-  void Rx(void* pkt) override;
   // RxBeacon handler not needed because the test doesn't need to observe them
   void ReceiveNotification(void* payload) override;
 
@@ -101,9 +99,6 @@ void ScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid
   ap_info_ = std::make_unique<ApInfo>(env_.get(), bssid, ssid, chan);
   ap_info_->ap_.EnableBeacon(beacon_interval);
 }
-
-// Should never be called
-void ScanTest::Rx(void* pkt) { GTEST_FAIL(); }
 
 // Called when simulation time has run out. Takes down all fake APs and the simulated DUT.
 void ScanTest::EndSimulation() {

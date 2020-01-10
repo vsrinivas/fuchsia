@@ -42,37 +42,25 @@ class ProbeTest : public ::testing::Test, public simulation::StationIfc {
 
  private:
   // StationIfc methods
-  void Rx(void* pkt) override { GTEST_FAIL(); }
-  void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                const common::MacAddr& bssid) override {
-    GTEST_FAIL();
-  };
-  void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                  const common::MacAddr& bssid) override {
-    GTEST_FAIL();
-  }
-  void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t status) override {
-    GTEST_FAIL();
-  }
-  void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                     const common::MacAddr& bssid, uint16_t reason) override {
-    GTEST_FAIL();
-  }
-  void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override {
-    GTEST_FAIL();
-  }
-  void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, const wlan_ssid_t& ssid) override;
+  void Rx(const simulation::SimFrame* frame) override;
+
   void ReceiveNotification(void* payload) override;
 };
 
-void ProbeTest::RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                            const common::MacAddr& dst, const wlan_ssid_t& ssid) {
+void ProbeTest::Rx(const simulation::SimFrame* frame) {
+  ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
+
+  auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+
+  if (mgmt_frame->MgmtFrameType() != simulation::SimManagementFrame::FRAME_TYPE_PROBE_RESP) {
+    GTEST_FAIL();
+  }
+
   probe_resp_count_++;
-  channel_resp_list_.push_back(channel);
-  bssid_resp_list_.push_back(src);
-  ssid_resp_list_.push_back(ssid);
+  auto probe_resp_frame = static_cast<const simulation::SimProbeRespFrame*>(mgmt_frame);
+  channel_resp_list_.push_back(probe_resp_frame->channel_);
+  bssid_resp_list_.push_back(probe_resp_frame->src_addr_);
+  ssid_resp_list_.push_back(probe_resp_frame->ssid_);
 }
 
 void ProbeTest::ReceiveNotification(void* payload) {
@@ -100,8 +88,8 @@ TEST_F(ProbeTest, DifferentChannel) {
       .primary = 11, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
 
   auto handler = new std::function<void()>;
-  *handler =
-      std::bind(&simulation::Environment::TxProbeReq, &env_, this, kWrongChannel, kClientMacAddr);
+  simulation::SimProbeReqFrame probe_req_frame(this, kWrongChannel, kClientMacAddr);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, &probe_req_frame);
   env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
 
   env_.Run();
@@ -120,16 +108,16 @@ TEST_F(ProbeTest, DifferentChannel) {
    */
 TEST_F(ProbeTest, TwoApsBasicUse) {
   auto handler = new std::function<void()>;
-  *handler =
-      std::bind(&simulation::Environment::TxProbeReq, &env_, this, kAp1Channel, kClientMacAddr);
+  simulation::SimProbeReqFrame chan1_frame(this, kAp1Channel, kClientMacAddr);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, &chan1_frame);
   env_.ScheduleNotification(this, zx::usec(100), static_cast<void*>(handler));
 
   env_.Run();
   EXPECT_EQ(probe_resp_count_, 1U);
 
   handler = new std::function<void()>;
-  *handler =
-      std::bind(&simulation::Environment::TxProbeReq, &env_, this, kAp2Channel, kClientMacAddr);
+  simulation::SimProbeReqFrame chan2_frame(this, kAp2Channel, kClientMacAddr);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, &chan2_frame);
   env_.ScheduleNotification(this, zx::usec(200), static_cast<void*>(handler));
 
   env_.Run();

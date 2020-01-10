@@ -36,18 +36,7 @@ class SimMvm : public ::wlan::simulation::StationIfc {
   zx_status_t SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait);
 
   // StationIfc operations
-  void Rx(void* pkt) override {}
-  void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                const common::MacAddr& bssid) override {}
-  void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                  const common::MacAddr& bssid) override {}
-  void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t status) override {}
-  void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                     const common::MacAddr& bssid, uint16_t reason) override {}
-  void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override {}
-  void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, const wlan_ssid_t& ssid) override {}
+  void Rx(const simulation::SimFrame* frame) override {}
   void ReceiveNotification(void* payload) override {}
 
  private:

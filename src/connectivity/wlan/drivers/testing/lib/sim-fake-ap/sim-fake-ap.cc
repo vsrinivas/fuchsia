@@ -32,7 +32,8 @@ void FakeAp::EnableBeacon(zx::duration beacon_period) {
   }
 
   // First beacon is sent out immediately
-  environment_->TxBeacon(this, chan_, ssid_, bssid_);
+  SimBeaconFrame beacon_frame(this, chan_, ssid_, bssid_);
+  environment_->Tx(&beacon_frame);
 
   beacon_state_.is_beaconing = true;
   beacon_state_.beacon_interval = beacon_period;
@@ -57,68 +58,93 @@ void FakeAp::ScheduleProbeResp(const common::MacAddr& dst) {
   environment_->ScheduleNotification(this, probe_resp_interval_, static_cast<void*>(handler));
 }
 
-void FakeAp::RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                        const common::MacAddr& bssid) {
-  // Make sure we heard the message
-  if (!CanReceiveChannel(channel)) {
+void FakeAp::Rx(const SimFrame* frame) {
+  // Make sure we heard it
+  if (!CanReceiveChannel(frame->channel_)) {
     return;
   }
 
-  // Ignore requests that are not for us
-  if (bssid != bssid_) {
-    return;
-  }
-
-  if (assoc_handling_mode_ == ASSOC_IGNORED) {
-    return;
-  }
-
-  if (assoc_handling_mode_ == ASSOC_REJECTED) {
-    ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED, src);
-    return;
-  }
-
-  // Make sure the client is not already associated
-  for (auto client : clients_) {
-    if (client == src) {
-      // Client is already associated
-      ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED_TEMPORARILY, src);
-      return;
+  switch (frame->FrameType()) {
+    case SimFrame::FRAME_TYPE_MGMT: {
+      auto mgmt_frame = static_cast<const SimManagementFrame*>(frame);
+      RxMgmtFrame(mgmt_frame);
+      break;
     }
-  }
 
-  clients_.push_back(src);
-  ScheduleAssocResp(WLAN_STATUS_CODE_SUCCESS, src);
+    default:
+      break;
+  }
 }
 
-void FakeAp::RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                           const common::MacAddr& bssid, const uint16_t reason) {
-  // Make sure we heard the message
-  if (!CanReceiveChannel(channel)) {
-    return;
-  }
-
-  // Ignore requests that are not for us
-  if (bssid != bssid_) {
-    return;
-  }
-
-  // Make sure the client is already associated
-  for (auto client : clients_) {
-    if (client == src) {
-      // Client is already associated
-      clients_.remove(src);
-      return;
+void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
+  switch (mgmt_frame->MgmtFrameType()) {
+    case SimManagementFrame::FRAME_TYPE_PROBE_REQ: {
+      auto probe_req_frame = static_cast<const SimProbeReqFrame*>(mgmt_frame);
+      ScheduleProbeResp(probe_req_frame->src_addr_);
+      break;
     }
+
+    case SimManagementFrame::FRAME_TYPE_ASSOC_REQ: {
+      auto assoc_req_frame = static_cast<const SimAssocReqFrame*>(mgmt_frame);
+
+      // Ignore requests that are not for us
+      if (assoc_req_frame->bssid_ != bssid_) {
+        return;
+      }
+
+      if (assoc_handling_mode_ == ASSOC_IGNORED) {
+        return;
+      }
+
+      if (assoc_handling_mode_ == ASSOC_REJECTED) {
+        ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED, assoc_req_frame->src_addr_);
+        return;
+      }
+
+      // Make sure the client is not already associated
+      for (auto client : clients_) {
+        if (client == assoc_req_frame->src_addr_) {
+          // Client is already associated
+          ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED_TEMPORARILY, assoc_req_frame->src_addr_);
+          return;
+        }
+      }
+
+      clients_.push_back(assoc_req_frame->src_addr_);
+      ScheduleAssocResp(WLAN_STATUS_CODE_SUCCESS, assoc_req_frame->src_addr_);
+      break;
+    }
+
+    case SimManagementFrame::FRAME_TYPE_DISASSOC_REQ: {
+      auto disassoc_req_frame = static_cast<const SimDisassocReqFrame*>(mgmt_frame);
+      // Ignore requests that are not for us
+      if (disassoc_req_frame->dst_addr_ != bssid_) {
+        return;
+      }
+
+      // Make sure the client is already associated
+      for (auto client : clients_) {
+        if (client == disassoc_req_frame->src_addr_) {
+          // Client is already associated
+          clients_.remove(disassoc_req_frame->src_addr_);
+          return;
+        }
+      }
+      break;
+    }
+
+    default:
+      break;
   }
 }
 
 zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason) {
   // Make sure the client is already associated
+  SimDisassocReqFrame disassoc_req_frame(this, chan_, bssid_, sta_mac, reason);
   for (auto client : clients_) {
     if (client == sta_mac) {
       // Client is already associated
-      environment_->TxDisassocReq(this, chan_, bssid_, sta_mac, reason);
+      environment_->Tx(&disassoc_req_frame);
       clients_.remove(sta_mac);
       return ZX_OK;
     }
@@ -127,27 +153,21 @@ zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason)
   return ZX_ERR_INVALID_ARGS;
 }
 
-void FakeAp::RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) {
-  // Make sure we heard the message
-  if (!CanReceiveChannel(channel)) {
-    return;
-  }
-
-  ScheduleProbeResp(src);
-}
-
 void FakeAp::HandleBeaconNotification() {
   ZX_ASSERT(beacon_state_.is_beaconing);
-  environment_->TxBeacon(this, chan_, ssid_, bssid_);
+  SimBeaconFrame beacon_frame(this, chan_, ssid_, bssid_);
+  environment_->Tx(&beacon_frame);
   ScheduleNextBeacon();
 }
 
 void FakeAp::HandleAssocRespNotification(uint16_t status, common::MacAddr dst) {
-  environment_->TxAssocResp(this, chan_, bssid_, dst, status);
+  SimAssocRespFrame assoc_resp_frame(this, chan_, bssid_, dst, status);
+  environment_->Tx(&assoc_resp_frame);
 }
 
 void FakeAp::HandleProbeRespNotification(common::MacAddr dst) {
-  environment_->TxProbeResp(this, chan_, bssid_, dst, ssid_);
+  SimProbeRespFrame probe_resp_frame(this, chan_, bssid_, dst, ssid_);
+  environment_->Tx(&probe_resp_frame);
 }
 
 void FakeAp::ReceiveNotification(void* payload) {

@@ -44,8 +44,6 @@ class PassiveScanTest : public SimTest {
   void OnScanEnd(const wlanif_scan_end_t* end);
 
  private:
-  // StationIfc methods
-  void Rx(void* pkt) override;
   // RxBeacon handler not needed because the test doesn't need to observe them
   void ReceiveNotification(void* payload) override;
 
@@ -87,9 +85,6 @@ void PassiveScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_
   ap_info->ap_.EnableBeacon(beacon_interval);
   aps_.push_back(std::move(ap_info));
 }
-
-// Should never be called
-void PassiveScanTest::Rx(void* pkt) { GTEST_FAIL(); }
 
 // Called when simulation time has run out. Takes down all fake APs and the simulated DUT.
 void PassiveScanTest::EndSimulation() {

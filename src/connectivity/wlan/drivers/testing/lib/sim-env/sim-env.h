@@ -40,6 +40,7 @@
 #include <wlan/common/macaddr.h>
 #include <wlan/protocol/ieee80211.h>
 
+#include "sim-frame.h"
 #include "sim-sta-ifc.h"
 
 namespace wlan::simulation {
@@ -60,32 +61,8 @@ class Environment {
   // Begin simulation. Function will return when there are no more events pending.
   void Run();
 
-  // Send a packet into the simulated environment.
-  void Tx();
-
-  // Send a beacon from sender to the rest of the stations. Note that this will (likely) someday
-  // be deprecated in favor of Tx().
-  void TxBeacon(StationIfc* sender, const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                const common::MacAddr& bssid);
-
-  // Send a request to associate.
-  void TxAssocReq(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src,
-                  const common::MacAddr& bssid);
-
-  // Send an assocation response.
-  void TxAssocResp(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t status);
-
-  // Send a request to disassociate.
-  void TxDisassocReq(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src,
-                     const common::MacAddr& dst, uint16_t reason);
-
-  // Send a probe request.
-  void TxProbeReq(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src);
-
-  // Send a probe response.
-  void TxProbeResp(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, const wlan_ssid_t& ssid);
+  // Send a frame into the simulated environment.
+  void Tx(const SimFrame* frame);
 
   // Ask for a future notification, time is relative to current time. If 'id' is non-null, it will
   // be given a unique identifier for reference in future notification-related operations.

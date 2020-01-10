@@ -49,37 +49,23 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
 
  private:
   // StationIfc methods
-  void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                const common::MacAddr& bssid) override;
   void ReceiveNotification(void* payload) override;
 
   // No-op StationIfc methods
-  void Rx(void* pkt) override { GTEST_FAIL(); }
-  void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                  const common::MacAddr& bssid) override {
-    GTEST_FAIL();
-  }
-  void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t status) override {
-    GTEST_FAIL();
-  }
-  void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t reason) override {
-    GTEST_FAIL();
-  }
-  void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override {
-    GTEST_FAIL();
-  }
-  void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, const wlan_ssid_t& ssid) override {
-    GTEST_FAIL();
-  }
+
+  void Rx(const simulation::SimFrame* frame) override;
 };
 
 // When we receive a beacon, just add it to our list of received beacons for later validation
-void BeaconTest::RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                          const common::MacAddr& bssid) {
-  beacons_received_.emplace_back(env_.GetTime(), channel, ssid, bssid);
+void BeaconTest::Rx(const simulation::SimFrame* frame) {
+  ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
+
+  auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+  ASSERT_EQ(mgmt_frame->MgmtFrameType(), simulation::SimManagementFrame::FRAME_TYPE_BEACON);
+
+  auto beacon_frame = static_cast<const simulation::SimBeaconFrame*>(mgmt_frame);
+  beacons_received_.emplace_back(env_.GetTime(), beacon_frame->channel_, beacon_frame->ssid_,
+                                 beacon_frame->bssid_);
 }
 
 void BeaconTest::ReceiveNotification(void* payload) {

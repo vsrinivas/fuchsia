@@ -24,59 +24,10 @@ void Environment::Run() {
   }
 }
 
-void Environment::TxBeacon(StationIfc* sender, const wlan_channel_t& channel,
-                           const wlan_ssid_t& ssid, const common::MacAddr& bssid) {
+void Environment::Tx(const SimFrame* frame) {
   for (auto sta : stations_) {
-    if (sta != sender) {
-      sta->RxBeacon(channel, ssid, bssid);
-    }
-  }
-}
-
-void Environment::TxAssocReq(StationIfc* sender, const wlan_channel_t& channel,
-                             const common::MacAddr& src, const common::MacAddr& bssid) {
-  for (auto sta : stations_) {
-    if (sta != sender) {
-      sta->RxAssocReq(channel, src, bssid);
-    }
-  }
-}
-
-void Environment::TxAssocResp(StationIfc* sender, const wlan_channel_t& channel,
-                              const common::MacAddr& src, const common::MacAddr& dst,
-                              uint16_t status) {
-  for (auto sta : stations_) {
-    if (sta != sender) {
-      sta->RxAssocResp(channel, src, dst, status);
-    }
-  }
-}
-
-void Environment::TxDisassocReq(StationIfc* sender, const wlan_channel_t& channel,
-                                const common::MacAddr& src, const common::MacAddr& dst,
-                                uint16_t reason) {
-  for (auto sta : stations_) {
-    if (sta != sender) {
-      sta->RxDisassocReq(channel, src, dst, reason);
-    }
-  }
-}
-
-void Environment::TxProbeReq(StationIfc* sender, const wlan_channel_t& channel,
-                             const common::MacAddr& src) {
-  for (auto sta : stations_) {
-    if (sta != sender) {
-      sta->RxProbeReq(channel, src);
-    }
-  }
-}
-
-void Environment::TxProbeResp(StationIfc* sender, const wlan_channel_t& channel,
-                              const common::MacAddr& src, const common::MacAddr& dst,
-                              const wlan_ssid_t& ssid) {
-  for (auto sta : stations_) {
-    if (sta != sender) {
-      sta->RxProbeResp(channel, src, dst, ssid);
+    if (sta != frame->sender_) {
+      sta->Rx(frame);
     }
   }
 }

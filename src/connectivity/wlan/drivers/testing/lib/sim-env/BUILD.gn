@@ -6,6 +6,8 @@ static_library("sim-env") {
   sources = [
     "sim-env.cc",
     "sim-env.h",
+    "sim-frame.cc",
+    "sim-frame.h",
     "sim-sta-ifc.h",
   ]
 

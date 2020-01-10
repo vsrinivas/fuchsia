@@ -202,11 +202,14 @@ class SimFirmware {
   void DisassocStart(brcmf_scb_val_le* scb_val);
 
   // Handlers for events from hardware
+  void Rx(const simulation::SimFrame* frame);
+
+  void RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame);
+
   void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                 const common::MacAddr& bssid);
   void RxAssocResp(const common::MacAddr& src, const common::MacAddr& dst, uint16_t status);
   void RxDisassocReq(const common::MacAddr& src, const common::MacAddr& dst, uint16_t reason);
-  void RxAssocReq(const common::MacAddr& src, const common::MacAddr& dst, uint16_t status);
   void RxProbeResp(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                    const common::MacAddr& bssid);
 

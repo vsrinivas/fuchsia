@@ -10,35 +10,17 @@
 #include <ddk/protocol/wlan/info.h>
 #include <wlan/common/macaddr.h>
 
+#include "sim-frame.h"
+
 namespace wlan::simulation {
+
+class SimFrame;
+class SimManagementFrame;
 
 class StationIfc {
  public:
-  // Placeholder for eventual packet-level packet handler
-  virtual void Rx(void* pkt) = 0;
-
-  // Simplified beacon handler, eventually to be incorporated into Rx() functionality
-  virtual void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                        const common::MacAddr& bssid) = 0;
-
-  // Receive an assocation request
-  virtual void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                          const common::MacAddr& bssid) = 0;
-
-  // Receive an association response
-  virtual void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                           const common::MacAddr& dst, uint16_t status) = 0;
-
-  // Receive an disassocation request
-  virtual void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                             const common::MacAddr& dst, uint16_t reason) = 0;
-
-  // Receive a Probe request
-  virtual void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) = 0;
-
-  // Receive a Probe response
-  virtual void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                           const common::MacAddr& dst, const wlan_ssid_t& ssid) = 0;
+  // Handler for different frames.
+  virtual void Rx(const SimFrame* frame) = 0;
 
   // Receive notification of a simulation event
   virtual void ReceiveNotification(void* payload) = 0;

@@ -31,35 +31,12 @@ static bool ChannelsMatch(const wlan_channel_t& c1, const wlan_channel_t& c2) {
   return (c1.primary == c2.primary) && (c1.cbw == c2.cbw) && (c1.secondary80 == c2.secondary80);
 }
 
-void SimHardware::RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                           const common::MacAddr& bssid) {
-  // Pass beacons to firmware if they are on the channel we are tuned to.
-  if (rx_enabled_ && ChannelsMatch(channel, channel_)) {
-    event_handlers_.rx_beacon_handler(channel, ssid, bssid);
-  }
-}
+void SimHardware::Rx(const simulation::SimFrame* frame) {
+  if (!rx_enabled_ || !ChannelsMatch(frame->channel_, channel_))
+    return;
 
-void SimHardware::RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                              const common::MacAddr& dst, uint16_t status) {
-  if (rx_enabled_ && ChannelsMatch(channel, channel_)) {
-    event_handlers_.rx_assoc_resp_handler(src, dst, status);
-  }
-}
-
-void SimHardware::RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                                const common::MacAddr& dst, uint16_t reason) {
-  if (rx_enabled_ && ChannelsMatch(channel, channel_)) {
-    event_handlers_.rx_disassoc_req_handler(src, dst, reason);
-  }
-}
-
-void SimHardware::RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                              const common::MacAddr& dst, const wlan_ssid_t& ssid) {
-  // Pass information from probe response to firmware if they are on the channel we are tuned to.
-  if (rx_enabled_ && (channel_.primary == channel.primary) && (channel_.cbw == channel.cbw) &&
-      (channel_.secondary80 == channel.secondary80)) {
-    event_handlers_.rx_probe_resp_handler(channel, ssid, src);
-  }
+  // Simply transfer frame to firmware.
+  event_handlers_.rx_handler(frame);
 }
 
 // For now, all sim-env notifications are simple callbacks. If we need something more flexible
@@ -98,17 +75,6 @@ void SimHardware::RequestCallback(std::function<void()>* callback, zx::duration 
 
 void SimHardware::CancelCallback(uint64_t id) { env_->CancelNotification(this, id); }
 
-void SimHardware::TxAssocReq(const common::MacAddr& src, const common::MacAddr& bssid) {
-  env_->TxAssocReq(this, channel_, src, bssid);
-}
-
-void SimHardware::TxDisassocReq(const common::MacAddr& src, const common::MacAddr& bssid,
-                                uint16_t reason) {
-  env_->TxDisassocReq(this, channel_, src, bssid, reason);
-}
-
-void SimHardware::TxProbeRequest(common::MacAddr& scan_mac) {
-  env_->TxProbeReq(this, channel_, scan_mac);
-}
+void SimHardware::Tx(const simulation::SimFrame* frame) { env_->Tx(frame); }
 
 }  // namespace wlan::brcmfmac

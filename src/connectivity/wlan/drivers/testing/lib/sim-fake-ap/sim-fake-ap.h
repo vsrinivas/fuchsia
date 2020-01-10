@@ -78,19 +78,10 @@ class FakeAp : public StationIfc {
 
   // StationIfc operations - these are the functions that allow the simulated AP to be used
   // inside of a sim-env environment.
-  void Rx(void* pkt) override {}
-  void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                const common::MacAddr& bssid) override {}
-  void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                  const common::MacAddr& bssid) override;
-  void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t status) override {}
-  void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                     const common::MacAddr& dst, uint16_t reason) override;
-  void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override;
-  void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, const wlan_ssid_t& ssid) override {}
+  void Rx(const SimFrame* frame) override;
   void ReceiveNotification(void* payload) override;
+
+  void RxMgmtFrame(const SimManagementFrame* mgmt_frame);
 
  private:
   void ScheduleNextBeacon();
