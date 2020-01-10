@@ -33,7 +33,10 @@ class FakeIsp {
 
   zx_status_t Start() { return ZX_OK; }
   zx_status_t Stop() { return ZX_OK; }
-  zx_status_t ReleaseFrame(uint32_t buffer_index) { return ZX_OK; }
+  zx_status_t ReleaseFrame(uint32_t buffer_index) {
+    frame_released_ = true;
+    return ZX_OK;
+  }
 
   // |ZX_PROTOCOL_ISP|
   zx_status_t IspCreateOutputStream(const buffer_collection_info_2_t* buffer_collection,
@@ -48,6 +51,8 @@ class FakeIsp {
     out_s->ops->release_frame = ReleaseFrame;
     return ZX_OK;
   }
+
+  bool frame_released() { return frame_released_; }
 
  private:
   static zx_status_t IspCreateOutputStream(void* ctx,
@@ -69,6 +74,7 @@ class FakeIsp {
   const hw_accel_frame_callback_t* frame_callback_;
   isp_protocol_t isp_protocol_ = {};
   isp_protocol_ops_t isp_protocol_ops_ = {};
+  bool frame_released_ = false;
 };
 
 #endif  // SRC_CAMERA_DRIVERS_CONTROLLER_TEST_FAKE_ISP_H_

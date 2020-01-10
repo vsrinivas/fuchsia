@@ -75,6 +75,9 @@ class GdcNode : public ProcessNode {
 
   const hw_accel_remove_task_callback_t* remove_task_callback() { return &remove_task_callback_; }
 
+  // Notifies that a frame is done processing by this node.
+  virtual void OnFrameAvailable(const frame_available_info_t* info) override;
+
   // Notifies that a frame is ready to be sent to the client.
   void OnReadyToProcess(uint32_t buffer_index) override;
 

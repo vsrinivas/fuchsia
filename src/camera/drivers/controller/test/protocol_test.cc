@@ -564,6 +564,69 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream->Stop();
   }
 
+  void TestReleaseAfterStopStreaming() {
+    auto stream_type = kStreamTypeDS | kStreamTypeML;
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type);
+    ASSERT_NE(nullptr, stream_config_node);
+    StreamCreationData info;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(stream_type);
+    info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    buffer_collection.buffer_count = kNumBuffers;
+    info.output_buffers = std::move(buffer_collection);
+
+    fuchsia::camera2::StreamPtr stream;
+    auto stream_request = stream.NewRequest();
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream_request));
+
+    // Start streaming.
+    stream->Start();
+    RunLoopUntilIdle();
+
+    auto fr_head_node = pipeline_manager_->full_resolution_stream();
+    auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes_info().at(0).child_node.get());
+    auto ds_ml_output_node =
+        static_cast<OutputNode*>(gdc_node->child_nodes_info().at(0).child_node.get());
+
+    EXPECT_FALSE(fake_isp_.frame_released());
+
+    EXPECT_TRUE(fr_head_node->enabled());
+    EXPECT_TRUE(gdc_node->enabled());
+    EXPECT_TRUE(ds_ml_output_node->enabled());
+
+    // Stop streaming.
+    stream->Stop();
+    RunLoopUntilIdle();
+
+    EXPECT_FALSE(fr_head_node->enabled());
+    EXPECT_FALSE(gdc_node->enabled());
+    EXPECT_FALSE(ds_ml_output_node->enabled());
+
+    // Invoke OnFrameAvailable() for the ISP node. Buffer index = 1.
+    frame_available_info_t frame_info = {
+        .frame_status = FRAME_STATUS_OK,
+        .buffer_id = 1,
+        .metadata =
+            {
+                .timestamp = static_cast<uint64_t>(zx_clock_get_monotonic()),
+                .image_format_index = 0,
+                .input_buffer_index = 0,
+            },
+    };
+
+    // Making a frame available to ISP node.
+    // Expecting the frame to be released since node is disabled.
+    EXPECT_NO_FATAL_FAILURE(fr_head_node->OnFrameAvailable(&frame_info));
+    EXPECT_TRUE(fake_isp_.frame_released());
+
+    // Making a frame available to GDC node.
+    // Expecting the frame to be released since node is disabled.
+    EXPECT_NO_FATAL_FAILURE(gdc_node->OnFrameAvailable(&frame_info));
+    EXPECT_TRUE(fake_gdc_.frame_released());
+  }
+
   FakeIsp fake_isp_;
   FakeGdc fake_gdc_;
   async::Loop loop_;
@@ -617,6 +680,8 @@ TEST_F(ControllerProtocolTest, TestInUseBufferCounts) { TestInUseBufferCounts();
 TEST_F(ControllerProtocolTest, TestOutputNode) { TestOutputNode(); }
 
 TEST_F(ControllerProtocolTest, TestGdcNode) { TestGdcNode(); }
+
+TEST_F(ControllerProtocolTest, TestReleaseAfterStopStreaming) { TestReleaseAfterStopStreaming(); }
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {
 #ifdef INTERNAL_ACCESS

@@ -48,7 +48,9 @@ class FakeGdc {
   void GdcRemoveTask(uint32_t task_index) {
     remove_task_callback_->task_removed(remove_task_callback_->ctx, ZX_OK);
   }
-  void GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {}
+  void GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) { frame_released_ = true; }
+
+  bool frame_released() { return frame_released_; }
 
  private:
   static zx_status_t GdcInitTask(void* ctx,
@@ -84,6 +86,7 @@ class FakeGdc {
   gdc_protocol_t gdc_protocol_ = {};
   gdc_protocol_ops_t gdc_protocol_ops_ = {};
   const hw_accel_remove_task_callback_t* remove_task_callback_;
+  bool frame_released_ = false;
 };
 
 #endif  // SRC_CAMERA_DRIVERS_CONTROLLER_TEST_FAKE_GDC_H_

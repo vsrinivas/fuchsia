@@ -63,6 +63,9 @@ class InputNode : public ProcessNode {
   // Releases the frame associated with | buffer_index |.
   void OnReleaseFrame(uint32_t buffer_index) override;
 
+  // Notifies that a frame is done processing by this node.
+  virtual void OnFrameAvailable(const frame_available_info_t* info) override;
+
   // Shuts down the stream with ISP.
   void OnShutdown() override{};
 

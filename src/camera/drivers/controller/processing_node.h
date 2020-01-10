@@ -94,7 +94,7 @@ class ProcessNode {
   virtual void OnReadyToProcess(uint32_t buffer_index) = 0;
 
   // Notifies that a frame is done processing by this node.
-  virtual void OnFrameAvailable(const frame_available_info_t* info) final;
+  virtual void OnFrameAvailable(const frame_available_info_t* info);
 
   // Notifies that a frame is released.
   virtual void OnReleaseFrame(uint32_t buffer_index) = 0;

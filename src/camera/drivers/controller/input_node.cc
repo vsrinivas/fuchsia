@@ -74,6 +74,14 @@ void InputNode::OnReadyToProcess(uint32_t buffer_index) {
   ZX_ASSERT_MSG(false, "Invalid for InputNode");
 }
 
+void InputNode::OnFrameAvailable(const frame_available_info_t* info) {
+  if (enabled_) {
+    ProcessNode::OnFrameAvailable(info);
+  } else {
+    isp_stream_protocol_->ReleaseFrame(info->buffer_id);
+  }
+}
+
 void InputNode::OnReleaseFrame(uint32_t buffer_index) {
   fbl::AutoLock al(&in_use_buffer_lock_);
   ZX_ASSERT(buffer_index < in_use_buffer_count_.size());

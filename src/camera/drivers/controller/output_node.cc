@@ -52,7 +52,11 @@ void OutputNode::OnReadyToProcess(uint32_t buffer_index) {
   if (enabled_) {
     ZX_ASSERT(client_stream_ != nullptr);
     client_stream_->FrameReady(buffer_index);
+    return;
   }
+  // Since streaming is disabled the incoming frame is released
+  // so it gets added back to the pool.
+  OnReleaseFrame(buffer_index);
 }
 
 void OutputNode::OnReleaseFrame(uint32_t buffer_index) {

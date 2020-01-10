@@ -138,6 +138,14 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
   return return_value;
 }
 
+void GdcNode::OnFrameAvailable(const frame_available_info_t* info) {
+  if (enabled_) {
+    ProcessNode::OnFrameAvailable(info);
+  } else {
+    gdc_.ReleaseFrame(task_index_, info->buffer_id);
+  }
+}
+
 void GdcNode::OnReleaseFrame(uint32_t buffer_index) {
   fbl::AutoLock al(&in_use_buffer_lock_);
   ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
