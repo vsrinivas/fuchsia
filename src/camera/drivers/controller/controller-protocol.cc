@@ -126,7 +126,9 @@ void ControllerImpl::DisableStreaming() {}
 void ControllerImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
   fuchsia::camera2::DeviceInfo camera_device_info;
   camera_device_info.set_vendor_name(kCameraVendorName);
+  camera_device_info.set_vendor_id(kCameraVendorId);
   camera_device_info.set_product_name(kCameraProductName);
+  camera_device_info.set_product_id(kCameraProductId);
   camera_device_info.set_type(fuchsia::camera2::DeviceType::BUILTIN);
   callback(std::move(camera_device_info));
 }

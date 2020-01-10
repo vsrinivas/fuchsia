@@ -24,7 +24,9 @@ namespace camera {
 
 namespace {
 const char* kCameraVendorName = "Google Inc.";
+const uint16_t kCameraVendorId = 0x18D1;
 const char* kCameraProductName = "Fuchsia Sherlock Camera";
+const uint16_t kCameraProductId = 0xF00D;
 }  // namespace
 
 class ControllerImpl : public fuchsia::camera2::hal::Controller {
