@@ -38,7 +38,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/BUILD.gn:1143
+From //build/images/BUILD.gn:1033
 
 ### audio_core_trace_enabled
 Set to |true| to enable collecting execution traces of audio_core, or |false| to remove all
@@ -248,7 +248,7 @@ with `sources` and `outputs` in the style of a copy() target:
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:524
+From //build/images/BUILD.gn:476
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
@@ -276,7 +276,7 @@ process.
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:538
+From //build/images/BUILD.gn:490
 
 ### bootloader_prebuilt
 Prebuilt bootloader image to be included into update (OTA) package and
@@ -284,7 +284,7 @@ paving process.
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:534
+From //build/images/BUILD.gn:486
 
 ### build_all_vp9_file_decoder_conformance_tests
 
@@ -326,7 +326,7 @@ This is a list of targets that will be built as goldfish vulkan ICDs.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/goldfish-vulkan/gnbuild/BUILD.gn:15
+From //garnet/lib/goldfish-vulkan/gnbuild/BUILD.gn:14
 
 ### build_libvulkan_img_rgx
 Targets that will be built as IMG vulkan ICDS.
@@ -410,12 +410,10 @@ Selects the Cobalt environment to send data to. Choices:
   "LOCAL" - record log data locally to a file
   "DEVEL" - the non-prod environment for use in testing
   "PROD" - the production environment
-  "DEVEL_AND_PROD" - both the non-prod and production environment
-TODO(camrdale): change the default to PROD once its pipeline is working.
 
-**Current value (from the default):** `"DEVEL_AND_PROD"`
+**Current value (from the default):** `"PROD"`
 
-From //src/cobalt/bin/app/BUILD.gn:17
+From //src/cobalt/bin/app/BUILD.gn:15
 
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
@@ -717,7 +715,7 @@ These come after synthesized arguments to configure blobfs and pkgfs.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:507
+From //build/images/BUILD.gn:459
 
 ### enable_api_diff
 Detect dart API changes
@@ -841,7 +839,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:564
+From //build/config/BUILDCONFIG.gn:562
 
 ### fastboot_product
 
@@ -1127,7 +1125,7 @@ From //products/core.gni:10
 
 **Overridden from the default:** `[]`
 
-From //build/images/BUILD.gn:512
+From //build/images/BUILD.gn:464
 
 **Current value for `target_cpu = "x64"`:** `["kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
@@ -1135,7 +1133,7 @@ From //products/core.gni:10
 
 **Overridden from the default:** `[]`
 
-From //build/images/BUILD.gn:512
+From //build/images/BUILD.gn:464
 
 ### kernel_cmdline_files
 Files containing additional kernel command line arguments to bake into
@@ -1145,7 +1143,7 @@ These can be GN `//` source pathnames or absolute system pathnames.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:518
+From //build/images/BUILD.gn:470
 
 ### known_variants
 List of variants that will form the basis for variant toolchains.
@@ -1267,7 +1265,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:477
+From //build/config/BUILDCONFIG.gn:475
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1583,7 +1581,7 @@ From //garnet/lib/magma/gnbuild/magma.gni:27
 
 **Current value (from the default):** `"//prebuilt/third_party/libvulkan_goldfish/arm64/libvulkan_goldfish.so"`
 
-From //garnet/lib/goldfish-vulkan/gnbuild/BUILD.gn:10
+From //garnet/lib/goldfish-vulkan/gnbuild/BUILD.gn:9
 
 ### prebuilt_libvulkan_img_path
 The path to a prebuilt libvulkan.so for an IMG GPU.
@@ -1670,7 +1668,7 @@ Include the vulkan validation layers in scenic.
 
 **Current value (from the default):** `true`
 
-From //src/ui/scenic/BUILD.gn:104
+From //src/ui/scenic/BUILD.gn:102
 
 ### scenic_ignore_vsync
 
@@ -1775,7 +1773,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:769
+From //build/config/BUILDCONFIG.gn:767
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1784,7 +1782,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:774
+From //build/config/BUILDCONFIG.gn:772
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1808,7 +1806,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:610
+From //build/config/BUILDCONFIG.gn:608
 
 ### signed_image
 
@@ -2023,7 +2021,7 @@ From //build/config/BUILDCONFIG.gn:100
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:584
+From //build/config/BUILDCONFIG.gn:582
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2067,7 +2065,7 @@ package.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:530
+From //build/images/BUILD.gn:482
 
 ### use_ccache
 Set to true to enable compiling with ccache
@@ -2210,7 +2208,7 @@ From //garnet/lib/magma/include/virtio/virtmagma_debug.gni:7
 
 **Current value (from the default):** `""`
 
-From //src/graphics/examples/vkprimer/BUILD.gn:50
+From //src/graphics/examples/vkprimer/BUILD.gn:48
 
 ### warn_on_sdk_changes
 Whether to only warn when an SDK has been modified.
@@ -2309,7 +2307,7 @@ From //BUILD.gn:84
 
 **Current value (from the default):** `true`
 
-From //build/config/fuchsia/BUILD.gn:210
+From //build/config/fuchsia/BUILD.gn:213
 
 ### zircon_b_partition
 
