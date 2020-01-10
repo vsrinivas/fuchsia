@@ -43,8 +43,7 @@ Those definitions are first processed by `fidlc`, and then by `kazoo` which take
 representation from `fidlc` and outputs various formats that are used as glue in the VDSO, kernel,
 etc.
 
-## [Handles](/docs/concepts/objects/handles.md) and
-[Rights](/docs/concepts/kernel/rights.md)
+## [Handles](/docs/concepts/objects/handles.md) and [Rights](/docs/concepts/kernel/rights.md)
 
 Objects may have multiple Handles (in one or more Processes) that refer to them.
 
