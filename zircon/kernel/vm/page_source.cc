@@ -325,6 +325,7 @@ zx_status_t PageRequest::Wait() {
 
 static int cmd_page_source(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {
+  notenoughargs:
     printf("not enough arguments\n");
   usage:
     printf("usage:\n");
@@ -333,6 +334,9 @@ static int cmd_page_source(int argc, const cmd_args* argv, uint32_t flags) {
   }
 
   if (!strcmp(argv[1].str, "dump")) {
+    if (argc < 3) {
+      goto notenoughargs;
+    }
     reinterpret_cast<PageSource*>(argv[2].u)->Dump();
   } else {
     printf("unknown command\n");

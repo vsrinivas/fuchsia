@@ -416,7 +416,7 @@ static int cmd_vm_object(int argc, const cmd_args* argv, uint32_t flags) {
   }
 
   if (!strcmp(argv[1].str, "dump")) {
-    if (argc < 2) {
+    if (argc < 3) {
       goto notenoughargs;
     }
 
@@ -424,7 +424,7 @@ static int cmd_vm_object(int argc, const cmd_args* argv, uint32_t flags) {
 
     o->Dump(0, false);
   } else if (!strcmp(argv[1].str, "dump_pages")) {
-    if (argc < 2) {
+    if (argc < 3) {
       goto notenoughargs;
     }
 

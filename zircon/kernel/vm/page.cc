@@ -96,7 +96,7 @@ static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {
   }
 
   if (!strcmp(argv[1].str, "dump")) {
-    if (argc < 2) {
+    if (argc < 3) {
       goto notenoughargs;
     }
 
@@ -104,7 +104,7 @@ static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {
 
     page->dump();
   } else if (!strcmp(argv[1].str, "hexdump")) {
-    if (argc < 2) {
+    if (argc < 3) {
       goto notenoughargs;
     }
 
@@ -114,7 +114,7 @@ static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {
     void* ptr = paddr_to_physmap(pa);
     if (!ptr) {
       printf("bad page or page not mapped in kernel space\n");
-      return -1;
+      return ZX_ERR_INTERNAL;
     }
     hexdump(ptr, PAGE_SIZE);
   } else {
