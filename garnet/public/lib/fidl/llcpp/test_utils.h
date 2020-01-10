@@ -40,7 +40,7 @@ OwnedLinearizeResult<FidlType> Linearize(FidlType* value) {
   OwnedLinearizeResult<FidlType> owned_result;
   FidlType* aligned_value = new (owned_result.inline_buffer) FidlType(std::move(*value));
 
-  if constexpr (FidlType::HasPointer) {
+  if constexpr (FidlType::Type != nullptr && FidlType::MaxOutOfLine > 0) {
     owned_result.linearized_buffer.resize(ZX_CHANNEL_MAX_MSG_BYTES);
     owned_result.result = fidl::Linearize(
         aligned_value,

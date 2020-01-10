@@ -43,15 +43,14 @@ class Simple final {
     fidl_message_header_t _hdr;
     int32_t reply;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_simple_SimpleEchoResponseTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_simple_SimpleEchoResponseTable;
+    static constexpr const fidl_type_t* Type = &fidl_test_simple_SimpleEchoResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_test_simple_SimpleEchoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -61,15 +60,14 @@ class Simple final {
     fidl_message_header_t _hdr;
     int32_t request;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_simple_SimpleEchoRequestTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_simple_SimpleEchoRequestTable;
+    static constexpr const fidl_type_t* Type = &fidl_test_simple_SimpleEchoRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_test_simple_SimpleEchoRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -81,15 +79,14 @@ class Simple final {
     fidl_message_header_t _hdr;
     int32_t v;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_simple_SimpleCloseResponseTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_simple_SimpleCloseResponseTable;
+    static constexpr const fidl_type_t* Type = &fidl_test_simple_SimpleCloseResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_test_simple_SimpleCloseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;

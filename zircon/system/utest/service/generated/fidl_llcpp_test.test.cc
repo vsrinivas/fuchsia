@@ -179,11 +179,9 @@ void Echo::Interface::EchoStringCompleterBase::Reply(::fidl::DecodedMessage<Echo
 
 void Echo::SetTransactionHeaderFor::EchoStringRequest(const ::fidl::DecodedMessage<Echo::EchoStringRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kEcho_EchoString_GenOrdinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Echo::SetTransactionHeaderFor::EchoStringResponse(const ::fidl::DecodedMessage<Echo::EchoStringResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kEcho_EchoString_GenOrdinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace test

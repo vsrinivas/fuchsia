@@ -173,7 +173,6 @@ struct NameLookup_LookupHostname_Result {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 272;
-  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -258,7 +257,6 @@ struct NameLookup_LookupIp_Result {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 5424;
-  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -344,7 +342,6 @@ struct IpAddress {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -386,7 +383,6 @@ class Connectivity final {
     static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -523,7 +519,6 @@ struct NameLookup_LookupHostname_Response {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 256;
-  static constexpr bool HasPointer = true;
 
   ::fidl::StringView hostname = {};
 };
@@ -538,7 +533,6 @@ struct MacAddress {
   static constexpr uint32_t PrimarySize = 6;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasPointer = false;
 
   ::fidl::Array<uint8_t, 6> octets = {};
 };
@@ -556,7 +550,6 @@ struct Ipv6Address {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasPointer = false;
 
   ::fidl::Array<uint8_t, 16> addr = {};
 };
@@ -572,7 +565,6 @@ struct Ipv4Address {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasPointer = false;
 
   ::fidl::Array<uint8_t, 4> addr = {};
 };
@@ -586,7 +578,6 @@ struct IpAddressInfo {
   static constexpr uint32_t PrimarySize = 48;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 5376;
-  static constexpr bool HasPointer = true;
 
   // All of the IPv4 addresses for the requested hostname.
   ::fidl::VectorView<::llcpp::fuchsia::net::Ipv4Address> ipv4_addrs = {};
@@ -607,7 +598,6 @@ struct NameLookup_LookupIp_Response {
   static constexpr uint32_t PrimarySize = 48;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 5376;
-  static constexpr bool HasPointer = true;
 
   ::llcpp::fuchsia::net::IpAddressInfo addr = {};
 };
@@ -623,7 +613,6 @@ struct Subnet {
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr bool HasPointer = true;
 
   // The Ipv4 or Ipv6 address. Only the `prefix_len` most significant bits may be set in `addr`;
   // all bits in the host portion of the address must be zero.
@@ -663,7 +652,6 @@ class NameLookup final {
     static constexpr uint32_t AltPrimarySize = 72;
     static constexpr uint32_t AltMaxOutOfLine = 5424;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -682,7 +670,6 @@ class NameLookup final {
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 256;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -702,7 +689,6 @@ class NameLookup final {
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 272;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -720,7 +706,6 @@ class NameLookup final {
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -977,7 +962,6 @@ struct Endpoint {
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr bool HasPointer = true;
 
   // The IP address of the endpoint.
   ::llcpp::fuchsia::net::IpAddress addr = {};

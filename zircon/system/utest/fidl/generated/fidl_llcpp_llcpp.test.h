@@ -39,15 +39,14 @@ class Llcpp final {
     fidl_message_header_t _hdr;
     int32_t v;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_coding_LlcppActionResponseTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_coding_LlcppActionResponseTable;
+    static constexpr const fidl_type_t* Type = &fidl_test_coding_LlcppActionResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_test_coding_LlcppActionResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;

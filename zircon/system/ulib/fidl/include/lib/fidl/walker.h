@@ -571,15 +571,8 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           // Process the vector part of the table
           auto envelope_vector_ptr = PtrTo<fidl_vector_t>(frame->position);
           if (envelope_vector_ptr->data == nullptr) {
-            // The vector of envelope headers in a table is always non-nullable.
-            if (!VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
-              visitor.OnError("Table data cannot be absent");
-              FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-            }
-            if (envelope_vector_ptr->count != 0) {
-              visitor.OnError("Table envelope vector data absent but non-zero count");
-              FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-            }
+            visitor.OnError("Table data cannot be absent");
+            FIDL_STATUS_GUARD(Status::kConstraintViolationError);
           }
           uint32_t size;
           if (mul_overflow(envelope_vector_ptr->count, sizeof(fidl_envelope_t), &size)) {

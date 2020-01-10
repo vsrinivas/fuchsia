@@ -40,15 +40,14 @@ class Echo final {
     fidl_message_header_t _hdr;
     ::fidl::StringView response;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_service_test_EchoEchoStringResponseTable;
-    static constexpr const fidl_type_t* AltType = &fidl_service_test_EchoEchoStringResponseTable;
+    static constexpr const fidl_type_t* Type = &fidl_service_test_EchoEchoStringResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_service_test_EchoEchoStringResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -58,15 +57,14 @@ class Echo final {
     fidl_message_header_t _hdr;
     ::fidl::StringView value;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_service_test_EchoEchoStringRequestTable;
-    static constexpr const fidl_type_t* AltType = &fidl_service_test_EchoEchoStringRequestTable;
+    static constexpr const fidl_type_t* Type = &fidl_service_test_EchoEchoStringRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_service_test_EchoEchoStringRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;

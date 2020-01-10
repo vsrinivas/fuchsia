@@ -90,7 +90,6 @@ class {{ .Name }} final {
     static constexpr uint32_t AltPrimarySize = {{ .ResponseSize }};
     static constexpr uint32_t AltMaxOutOfLine = {{ .ResponseMaxOutOfLine }};
     static constexpr bool HasFlexibleEnvelope = {{ .ResponseFlexible }};
-    static constexpr bool HasPointer = {{ .ResponseHasPointer }};
     static constexpr bool ContainsUnion = {{ .ResponseContainsUnion }};
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -118,7 +117,6 @@ class {{ .Name }} final {
     static constexpr uint32_t AltPrimarySize = {{ .RequestSize }};
     static constexpr uint32_t AltMaxOutOfLine = {{ .RequestMaxOutOfLine }};
     static constexpr bool HasFlexibleEnvelope = {{ .RequestFlexible }};
-    static constexpr bool HasPointer = {{ .RequestHasPointer }};
     static constexpr bool ContainsUnion = {{ .RequestContainsUnion }};
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;

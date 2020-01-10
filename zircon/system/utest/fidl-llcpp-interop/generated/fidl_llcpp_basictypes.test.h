@@ -32,12 +32,15 @@ extern "C" const fidl_type_t fidl_test_llcpp_basictypes_SimpleStructTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_basictypes_SimpleStructTable;
 
 struct SimpleStruct {
-  static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_basictypes_SimpleStructTable;
+  static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_SimpleStructTable;
+  static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_basictypes_SimpleStructTable;
   static constexpr uint32_t MaxNumHandles = 21;
   static constexpr uint32_t PrimarySize = 88;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasPointer = false;
+  static constexpr uint32_t AltPrimarySize = 88;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   int32_t field = {};
 
@@ -62,15 +65,14 @@ class TestInterface final {
     int32_t status;
     int32_t field;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
+    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -80,15 +82,14 @@ class TestInterface final {
     fidl_message_header_t _hdr;
     ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg;
 
-    static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
+    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
     static constexpr uint32_t MaxNumHandles = 21;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr uint32_t AltPrimarySize = 104;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -104,7 +105,7 @@ class TestInterface final {
     class ConsumeSimpleStruct_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ConsumeSimpleStruct_Impl(::zx::unowned_channel _client_end, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg);
+      ConsumeSimpleStruct_Impl(zx::unowned_channel _client_end, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg);
       ~ConsumeSimpleStruct_Impl() = default;
       ConsumeSimpleStruct_Impl(ConsumeSimpleStruct_Impl&& other) = default;
       ConsumeSimpleStruct_Impl& operator=(ConsumeSimpleStruct_Impl&& other) = default;
@@ -130,7 +131,7 @@ class TestInterface final {
     class ConsumeSimpleStruct_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ConsumeSimpleStruct_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg, ::fidl::BytePart _response_buffer);
+      ConsumeSimpleStruct_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg, ::fidl::BytePart _response_buffer);
       ~ConsumeSimpleStruct_Impl() = default;
       ConsumeSimpleStruct_Impl(ConsumeSimpleStruct_Impl&& other) = default;
       ConsumeSimpleStruct_Impl& operator=(ConsumeSimpleStruct_Impl&& other) = default;
@@ -180,12 +181,12 @@ class TestInterface final {
     // Verifies that all the handles are valid channels, then returns
     // `ZX_OK` and loops back the field member. Otherwise, returns an error.
     // Allocates 128 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(::zx::unowned_channel _client_end, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg);
+    static ResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(zx::unowned_channel _client_end, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg);
 
     // Verifies that all the handles are valid channels, then returns
     // `ZX_OK` and loops back the field member. Otherwise, returns an error.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ConsumeSimpleStruct ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -197,7 +198,7 @@ class TestInterface final {
 
     // Verifies that all the handles are valid channels, then returns
     // `ZX_OK` and loops back the field member. Otherwise, returns an error.
-    static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
