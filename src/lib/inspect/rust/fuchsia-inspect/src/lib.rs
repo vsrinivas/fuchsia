@@ -33,7 +33,7 @@ use {
     mapped_vmo::Mapping,
     parking_lot::Mutex,
     paste,
-    std::{cmp::max, sync::Arc},
+    std::{cmp::max, default::Default, sync::Arc},
 };
 
 #[cfg(test)]
@@ -71,6 +71,12 @@ struct ValueList {
     #[derivative(PartialEq = "ignore")]
     #[derivative(Debug = "ignore")]
     values: Arc<Mutex<Option<InspectTypeList>>>,
+}
+
+impl Default for ValueList {
+    fn default() -> Self {
+        ValueList::new()
+    }
 }
 
 type InspectTypeList = Vec<Box<dyn InspectType>>;
@@ -267,7 +273,9 @@ macro_rules! inspect_type_impl {
             $(#[$attr])*
             /// NOTE: do not rely on PartialEq implementation for true comparison.
             /// Instead leverage the reader.
-            #[derive(Debug, PartialEq, Eq)]
+            ///
+            /// NOTE: Operations on a Default value are no-ops.
+            #[derive(Debug, PartialEq, Eq, Default)]
             pub struct $name {
                 inner: Option<[<Inner $name>]>,
                 $($field: $field_type,)*
@@ -1084,6 +1092,10 @@ mod tests {
 
     #[test]
     fn node() {
+        // Create and use a default value.
+        let default = Node::default();
+        default.record_int("a", 0);
+
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let root = Node::new_root(state);
@@ -1103,6 +1115,10 @@ mod tests {
 
     #[test]
     fn double_property() {
+        // Create and use a default value.
+        let default = DoubleProperty::default();
+        default.add(1.0);
+
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let root = Node::new_root(state);
@@ -1130,6 +1146,10 @@ mod tests {
 
     #[test]
     fn int_property() {
+        // Create and use a default value.
+        let default = IntProperty::default();
+        default.add(1);
+
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let root = Node::new_root(state);
@@ -1157,6 +1177,10 @@ mod tests {
 
     #[test]
     fn uint_property() {
+        // Create and use a default value.
+        let default = UintProperty::default();
+        default.add(1);
+
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let root = Node::new_root(state);
@@ -1184,6 +1208,10 @@ mod tests {
 
     #[test]
     fn string_property() {
+        // Create and use a default value.
+        let default = StringProperty::default();
+        default.set("test");
+
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let root = Node::new_root(state);
@@ -1205,6 +1233,10 @@ mod tests {
 
     #[test]
     fn bytes_property() {
+        // Create and use a default value.
+        let default = BytesProperty::default();
+        default.set(&[0u8, 3u8]);
+
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let root = Node::new_root(state);
@@ -1226,6 +1258,14 @@ mod tests {
 
     #[test]
     fn test_array() {
+        // Create and use a default value.
+        let default = DoubleArrayProperty::default();
+        default.add(1, 1.0);
+        let default = IntArrayProperty::default();
+        default.add(1, 1);
+        let default = UintArrayProperty::default();
+        default.add(1, 1);
+
         let inspector = Inspector::new();
         let root = inspector.root();
         let node = root.create_child("node");
