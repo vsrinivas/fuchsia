@@ -84,11 +84,6 @@ if (get_path_info(toolchain.environment, "extension") == "fuzzer") {
     ]
     configs += [ "$zx_build/public/gn/config:static-libc++" ]
     public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
-
-    # TODO(43658): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    configs +=
-        [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
   }
 
   # TODO(38226): Binaries built in the fuzzer environment look for libraries

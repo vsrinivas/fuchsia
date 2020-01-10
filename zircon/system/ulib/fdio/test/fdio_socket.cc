@@ -211,6 +211,25 @@ TEST_F(TcpSocketTest, RecvmsgNonblockBoundary) {
   EXPECT_EQ(close(client_fd.release()), 0, "%s", strerror(errno));
 }
 
+// Make sure we can successfully read zero bytes if we pass a zero sized input buffer.
+TEST_F(TcpSocketTest, RecvmsgEmptyBuffer) {
+  set_nonblocking_io(client_fd.get());
+
+  // Write 4 bytes of data to socket.
+  size_t actual;
+  const uint32_t data_out = 0x12345678;
+  EXPECT_OK(server_socket.write(0, &data_out, sizeof(data_out), &actual));
+  EXPECT_EQ(actual, sizeof(data_out));
+
+  // Try to read into an empty set of io vectors.
+  struct msghdr msg = {};
+  msg.msg_iov = nullptr;
+  msg.msg_iovlen = 0;
+
+  // We should "successfully" read zero bytes.
+  EXPECT_EQ(recvmsg(client_fd.get(), &msg, 0), 0, "%s", strerror(errno));
+}
+
 // Verify scenario, where multi-segment sendmsg is requested, but the socket has
 // just enough spare buffer to *completely* read one segment.
 // In this scenario, an attempt to send second segment should immediately fail
