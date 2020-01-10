@@ -1188,6 +1188,10 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 	}
 
 	for _, v := range r.Structs {
+		// TODO(7704) remove once anonymous structs are supported
+		if v.Anonymous {
+			continue
+		}
 		d := c.compileStruct(v, "")
 		decls[v.Name] = &d
 	}

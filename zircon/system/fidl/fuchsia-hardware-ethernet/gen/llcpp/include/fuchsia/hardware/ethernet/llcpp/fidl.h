@@ -34,7 +34,6 @@ constexpr uint32_t SIGNAL_STATUS = 16777216u;
 
 constexpr uint32_t SET_CLIENT_NAME_MAX_LEN = 16u;
 
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_MacAddressTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_MacAddressTable;
 
 struct MacAddress {
@@ -47,7 +46,6 @@ struct MacAddress {
   ::fidl::Array<uint8_t, 6> octets = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_InfoTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_InfoTable;
 
 struct Info {
@@ -64,65 +62,35 @@ struct Info {
   ::llcpp::fuchsia::hardware::ethernet::MacAddress mac = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceGetInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceGetInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceGetInfoResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceGetInfoResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceGetFifosRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceGetFifosRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceGetFifosResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceGetFifosResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceSetIOBufferRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceSetIOBufferRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceSetIOBufferResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceSetIOBufferResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceStartRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceStartRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceStartResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceStartResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceStopRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceStopRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceStopResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceStopResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceListenStartRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceListenStartRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceListenStartResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceListenStartResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceListenStopRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceListenStopRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceListenStopResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceListenStopResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceSetClientNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceSetClientNameRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceSetClientNameResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceSetClientNameResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceGetStatusRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceGetStatusRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceGetStatusResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceGetStatusResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceSetPromiscuousModeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceSetPromiscuousModeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceSetPromiscuousModeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceSetPromiscuousModeResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastAddMacRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastAddMacRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastAddMacResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastAddMacResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMacRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMacRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMacResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMacResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousModeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousModeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousModeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousModeResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilterRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilterRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilterResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilterResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceDumpRegistersRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceDumpRegistersRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceDumpRegistersResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceDumpRegistersResponseTable;
 
 // Operation
@@ -157,12 +125,9 @@ class Device final {
     ::llcpp::fuchsia::hardware::ethernet::Info info;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceGetInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -177,12 +142,9 @@ class Device final {
     ::llcpp::fuchsia::hardware::ethernet::Fifos* info;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceGetFifosResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceGetFifosResponseTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 16;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -196,12 +158,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceSetIOBufferResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceSetIOBufferResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -213,7 +172,6 @@ class Device final {
     ::zx::vmo h;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceSetIOBufferRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceSetIOBufferRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -232,12 +190,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceStartResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceStartResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -254,12 +209,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceListenStartResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceListenStartResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -276,12 +228,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceSetClientNameResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceSetClientNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -293,7 +242,6 @@ class Device final {
     ::fidl::StringView name;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceSetClientNameRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceSetClientNameRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 16;
@@ -312,12 +260,9 @@ class Device final {
     uint32_t device_status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceGetStatusResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceGetStatusResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -331,12 +276,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceSetPromiscuousModeResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceSetPromiscuousModeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -348,7 +290,6 @@ class Device final {
     bool enabled;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceSetPromiscuousModeRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceSetPromiscuousModeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -367,12 +308,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceConfigMulticastAddMacResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceConfigMulticastAddMacResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -384,7 +322,6 @@ class Device final {
     ::llcpp::fuchsia::hardware::ethernet::MacAddress addr;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceConfigMulticastAddMacRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceConfigMulticastAddMacRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -403,12 +340,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMacResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMacResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -420,7 +354,6 @@ class Device final {
     ::llcpp::fuchsia::hardware::ethernet::MacAddress addr;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMacRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMacRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -439,12 +372,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousModeResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousModeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -456,7 +386,6 @@ class Device final {
     bool enabled;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousModeRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousModeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -475,12 +404,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilterResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilterResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -494,12 +420,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ethernet_DeviceDumpRegistersResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ethernet_DeviceDumpRegistersResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1547,7 +1470,6 @@ constexpr uint32_t INFO_FEATURE_SYNTH = 2u;
 
 constexpr uint32_t INFO_FEATURE_LOOPBACK = 4u;
 
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_FifosTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_FifosTable;
 
 struct Fifos {

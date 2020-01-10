@@ -636,6 +636,10 @@ func Compile(fidlData types.Root) Root {
 	}
 
 	for _, v := range fidlData.Structs {
+		// TODO(7704) remove once anonymous structs are supported
+		if v.Anonymous {
+			continue
+		}
 		c.structs[v.Name] = v
 
 		result := c.compileStruct(v)

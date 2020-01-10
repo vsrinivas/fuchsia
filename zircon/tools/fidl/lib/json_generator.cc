@@ -347,7 +347,6 @@ void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struc
   GenerateObjectMember(prefix, value.members);
   auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
   GenerateObjectMember(prefix + "_size", deprecated_type_shape.InlineSize());
-  GenerateObjectMember(prefix + "_alignment", deprecated_type_shape.Alignment());
   GenerateObjectMember(prefix + "_has_padding", deprecated_type_shape.HasPadding());
   GenerateObjectMember("experimental_" + prefix + "_has_flexible_envelope",
                        deprecated_type_shape.HasFlexibleEnvelope());

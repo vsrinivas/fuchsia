@@ -39,7 +39,6 @@
           "has_request": true,
           "maybe_request": [],
           "maybe_request_size": 16,
-          "maybe_request_alignment": 8,
           "maybe_request_has_padding": false,
           "experimental_maybe_request_has_flexible_envelope": false,
           "maybe_request_type_shape_old": {
@@ -106,7 +105,6 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8,
           "maybe_response_has_padding": true,
           "experimental_maybe_response_has_flexible_envelope": false,
           "maybe_response_type_shape_old": {

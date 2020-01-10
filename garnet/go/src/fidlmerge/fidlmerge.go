@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/types"
 	"flag"
@@ -13,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"text/template"
-	"bytes"
 )
 
 var primitiveTypes = map[types.PrimitiveSubtype]string{
@@ -170,6 +170,16 @@ func NewRoot(fidl types.Root, outputBase string, templates *template.Template, o
 		interfacesByName[member.Name] = &fidl.Interfaces[index]
 	}
 
+	// filter out all anonymous structs
+	allStructs := fidl.Structs
+	fidl.Structs = make([]types.Struct, 0)
+	for _, member := range allStructs {
+		if member.Anonymous {
+			continue
+		}
+		fidl.Structs = append(fidl.Structs, member)
+	}
+
 	structsByName := make(map[types.EncodedCompoundIdentifier]*types.Struct)
 	for index, member := range fidl.Structs {
 		structsByName[member.Name] = &fidl.Structs[index]
@@ -280,7 +290,7 @@ func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, opti
 	funcMap := template.FuncMap{
 		// Gets the decltype for an EncodedCompoundIdentifier.
 		"declType": func(eci types.EncodedCompoundIdentifier) types.DeclType {
-			if  root.Name == eci.LibraryName() {
+			if root.Name == eci.LibraryName() {
 				return root.Decls[eci]
 			}
 			library := root.GetLibrary(eci.LibraryName())

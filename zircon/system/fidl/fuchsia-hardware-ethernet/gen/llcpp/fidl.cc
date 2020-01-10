@@ -15,106 +15,91 @@ namespace {
 constexpr uint64_t kDevice_GetInfo_Ordinal = 0x10c7deb400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetInfo_GenOrdinal = 0x7f8e9a8dda706422lu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceGetInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceGetInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceGetInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceGetInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetFifos_Ordinal = 0x21e1e8f800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetFifos_GenOrdinal = 0x57924e13bf602360lu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceGetFifosRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceGetFifosResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceGetFifosRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceGetFifosResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetIOBuffer_Ordinal = 0x201df7f300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetIOBuffer_GenOrdinal = 0x66af0a45e326fda8lu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceSetIOBufferRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceSetIOBufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceSetIOBufferRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceSetIOBufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Start_Ordinal = 0x23db365900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Start_GenOrdinal = 0x6e59b9bb7123be35lu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceStartRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceStartResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceStartRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceStartResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Stop_Ordinal = 0x3dfcfe9500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_Stop_GenOrdinal = 0x4bea699d7725dffblu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceStopRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceStopResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceStopRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceStopResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ListenStart_Ordinal = 0x5b2495bb00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ListenStart_GenOrdinal = 0x2825d26aac1495dlu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceListenStartRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceListenStartResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceListenStartRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceListenStartResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ListenStop_Ordinal = 0x236b1c5700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ListenStop_GenOrdinal = 0x102cbf5639c2403alu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceListenStopRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceListenStopResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceListenStopRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceListenStopResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetClientName_Ordinal = 0x640c922100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetClientName_GenOrdinal = 0x16226cf5bfe3a001lu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceSetClientNameRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceSetClientNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceSetClientNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceSetClientNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStatus_Ordinal = 0x6d63b33e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStatus_GenOrdinal = 0x379a5ed530acd140lu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceGetStatusRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceGetStatusResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceGetStatusRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceGetStatusResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetPromiscuousMode_Ordinal = 0x34c1970400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetPromiscuousMode_GenOrdinal = 0x6ae9e4516810f945lu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceSetPromiscuousModeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceSetPromiscuousModeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceSetPromiscuousModeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceSetPromiscuousModeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ConfigMulticastAddMac_Ordinal = 0x39fce1800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ConfigMulticastAddMac_GenOrdinal = 0x5cdb4b0bd52337b8lu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastAddMacRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastAddMacResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastAddMacRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastAddMacResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ConfigMulticastDeleteMac_Ordinal = 0x51dadb9d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ConfigMulticastDeleteMac_GenOrdinal = 0x540f49129d9bfa07lu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMacRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMacResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMacRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMacResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ConfigMulticastSetPromiscuousMode_Ordinal = 0x2ab48ffa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ConfigMulticastSetPromiscuousMode_GenOrdinal = 0x53d4ba4a14dbe91alu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousModeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousModeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousModeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousModeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ConfigMulticastTestFilter_Ordinal = 0x54b616e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ConfigMulticastTestFilter_GenOrdinal = 0x5a83a0ecc3d952a3lu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilterRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilterResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilterRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilterResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_DumpRegisters_Ordinal = 0x5dd3c8c100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_DumpRegisters_GenOrdinal = 0x43a8fb0535f81274lu;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceDumpRegistersRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ethernet_DeviceDumpRegistersResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceDumpRegistersRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ethernet_DeviceDumpRegistersResponseTable;
 
 }  // namespace

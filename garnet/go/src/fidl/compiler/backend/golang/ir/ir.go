@@ -944,6 +944,10 @@ func Compile(fidlData types.Root) Root {
 		r.Enums = append(r.Enums, c.compileEnum(v))
 	}
 	for _, v := range fidlData.Structs {
+		// TODO(7704) remove once anonymous structs are supported
+		if v.Anonymous {
+			continue
+		}
 		r.Structs = append(r.Structs, c.compileStruct(v))
 	}
 	for _, v := range fidlData.Unions {

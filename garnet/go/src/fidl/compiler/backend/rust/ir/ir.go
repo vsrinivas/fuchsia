@@ -1258,6 +1258,10 @@ func Compile(r types.Root) Root {
 	}
 
 	for _, v := range r.Structs {
+		// TODO(7704) remove once anonymous structs are supported
+		if v.Anonymous {
+			continue
+		}
 		root.Structs = append(root.Structs, c.compileStruct(v))
 	}
 

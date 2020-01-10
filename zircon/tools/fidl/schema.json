@@ -374,10 +374,6 @@
                     "description": "Size of the method's transactional message (header and optional payload), if one is present",
                     "$ref": "#/definitions/count"
                 },
-                "maybe_request_alignment": {
-                    "description": "Alignment of the method's transactional message (header and optional payload), if one is present",
-                    "$ref": "#/definitions/count"
-                },
                 "maybe_request_has_padding": {
                     "description": "Flag indicating if there could be padding bytes in the request",
                     "type": "boolean"
@@ -407,10 +403,6 @@
                 },
                 "maybe_response_size": {
                     "description": "Size of interface method response parameters, if any present",
-                    "$ref": "#/definitions/count"
-                },
-                "maybe_response_alignment": {
-                    "description": "Alignment of interface method response parameters, if any present",
                     "$ref": "#/definitions/count"
                 },
                 "maybe_response_has_padding": {

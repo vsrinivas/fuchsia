@@ -474,6 +474,7 @@ func (t *Table) SortedMembersNoReserved() []TableMember {
 type Struct struct {
 	Attributes
 	Name            EncodedCompoundIdentifier `json:"name"`
+	Anonymous       bool                      `json:"anonymous"`
 	Members         []StructMember            `json:"members"`
 	Size            int                       `json:"size"`
 	Alignment       int                       `json:"alignment"`
