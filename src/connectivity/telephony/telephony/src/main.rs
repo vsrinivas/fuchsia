@@ -115,6 +115,7 @@ pub struct Radio {
     #[allow(dead_code)]
     // TODO(bwb) remove dead_code, needed to retain ownership for now.
     ril: RadioInterfaceLayerProxy,
+    path: PathBuf,
 
     _node: inspect::Node,
     _uri_str_property: inspect::StringProperty,
@@ -128,7 +129,7 @@ impl Radio {
         path: PathBuf,
     ) -> Self {
         let uri_str_property = node.create_string("URI", path.to_string_lossy().as_ref());
-        Radio { app, ril, _node: node, _uri_str_property: uri_str_property }
+        Radio { app, ril, path, _node: node, _uri_str_property: uri_str_property }
     }
 }
 
@@ -145,37 +146,62 @@ impl Manager {
         Manager { radios: RwLock::new(vec![]), _node: node, radios_node }
     }
 
-    async fn watch_new_devices(&self) -> Result<(), Error> {
+    async fn add_new_devices(
+        &self,
+        file_name: PathBuf,
+        path: PathBuf,
+        fn_open_file: fn(&PathBuf) -> File,
+    ) -> Result<(), Error> {
+        let qmi_path = path.join(file_name.clone());
+        fx_log_info!("Connecting to {}", qmi_path.display());
+        let file = fn_open_file(&qmi_path);
+        let channel = qmi::connect_transport_device(&file).await?;
+        let svc = start_modem(
+            ModemType::Qmi,
+            channel,
+            self.radios_node.create_child(format!("radio-qmi-{}", file_name.display())),
+            qmi_path,
+        )
+        .await?;
+        self.radios.write().push(svc);
+        Ok(())
+    }
+
+    fn remove_devices(&self, file_name: PathBuf, path: PathBuf) {
+        let qmi_path = path.join(file_name);
+        fx_log_info!("Disconnected from {}", qmi_path.display());
+
+        let mut radios = self.radios.write();
+        radios.retain(|radio| radio.path != qmi_path);
+    }
+
+    async fn watch_new_devices(
+        &self,
+        dir_path: &str,
+        fn_open_dir: fn(&PathBuf) -> fidl_fuchsia_io::DirectoryProxy,
+        fn_open_file: fn(&PathBuf) -> File,
+    ) -> Result<(), Error> {
         // TODO(bwb): make more generic to support non-qmi devices
-        let path: &Path = Path::new(QMI_TRANSPORT);
-        let dir_proxy = open_directory_in_namespace(QMI_TRANSPORT, OPEN_RIGHT_READABLE)?;
-        let mut watcher = Watcher::new(dir_proxy).await.unwrap();
+        let path: &Path = Path::new(dir_path);
+        let dir = fn_open_dir(&path.to_path_buf());
+        let mut watcher = Watcher::new(dir).await.unwrap();
         while let Some(msg) = watcher.try_next().await? {
             match msg.event {
                 WatchEvent::EXISTING | WatchEvent::ADD_FILE => {
-                    let qmi_path = path.join(msg.filename);
-                    fx_log_info!("Connecting to {}", qmi_path.display());
-                    let file = File::open(&qmi_path)?;
-                    let channel = qmi::connect_transport_device(&file).await?;
-                    let svc = start_modem(
-                        ModemType::Qmi,
-                        channel,
-                        self.radios_node
-                            .create_child(format!("radio-{}", self.radios.read().len())),
-                        qmi_path,
-                    )
-                    .await?;
-                    self.radios.write().push(svc);
+                    self.add_new_devices(msg.filename, path.to_path_buf(), fn_open_file).await?;
                 }
-                WatchEvent::REMOVE_FILE => {
-                    let qmi_path = path.join(msg.filename);
-                    fx_log_info!("Disconnected from {}", qmi_path.display());
-                    // TODO: (nj)remove the radios on disconnect will need a path to radio mapping.
-                }
+                WatchEvent::REMOVE_FILE => self.remove_devices(msg.filename, path.to_path_buf()),
                 _ => (),
             }
         }
         Ok(())
+    }
+
+    fn open_dir(path: &PathBuf) -> fidl_fuchsia_io::DirectoryProxy {
+        open_directory_in_namespace(path.to_str().unwrap(), OPEN_RIGHT_READABLE).unwrap()
+    }
+    fn open_file(path: &PathBuf) -> File {
+        File::open(path).unwrap()
     }
 }
 
@@ -191,7 +217,7 @@ fn main() -> Result<(), Error> {
     let manager = Arc::new(Manager::new(inspector.root().create_child("manager")));
     let mgr = manager.clone();
     let device_watcher = manager
-        .watch_new_devices()
+        .watch_new_devices(QMI_TRANSPORT, Manager::open_dir, Manager::open_file)
         .unwrap_or_else(|e| fx_log_err!("Failed to watch new devices: {:?}", e));
 
     let mut fs = ServiceFs::new();
@@ -216,7 +242,14 @@ fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod test {
 
-    use {super::*, fuchsia_inspect::assert_inspect_tree};
+    use {super::*, fuchsia_inspect::assert_inspect_tree, tel_dev::isolated_devmgr};
+
+    impl Manager {
+        fn open_isolated_devmgr_file(path: &PathBuf) -> File {
+            isolated_devmgr::open_file_in_isolated_devmgr(path)
+                .expect("Opening file in IsolatedDevmgr failed")
+        }
+    }
 
     #[test]
     fn pass() -> () {
@@ -227,6 +260,14 @@ mod test {
     async fn test_manager_inspect_tree() -> Result<(), Error> {
         let inspector = inspect::Inspector::new();
         let manager = Arc::new(Manager::new(inspector.root().create_child("manager")));
+        let launcher = launcher().context("Failed to open launcher service")?;
+
+        let create_app_and_ril_for_test = || -> Result<(App, RadioInterfaceLayerProxy), Error> {
+            let app = launch(&launcher, RIL_URI.to_string(), None)
+                .context("Failed to launch ril-qmi service")?;
+            let ril = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
+            Ok((app, ril))
+        };
 
         assert_inspect_tree!(inspector, root: {
             manager: {
@@ -235,10 +276,7 @@ mod test {
         });
 
         {
-            let launcher = launcher().context("Failed to open launcher service")?;
-            let app = launch(&launcher, RIL_URI.to_string(), None)
-                .context("Failed to launch ril-qmi service")?;
-            let ril = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
+            let (app, ril) = create_app_and_ril_for_test().unwrap();
             let path = PathBuf::from(r"class/qmi-transport/000");
             let _radio1 = Radio::new(app, ril, manager.radios_node.create_child("radio-1"), path);
             assert_inspect_tree!(inspector, root: {
@@ -251,7 +289,7 @@ mod test {
                }
             });
 
-            // Radio will be radio will be removed from inspect tree as it is out of scope/dropped
+            // Radio will be removed from inspect tree as it is out of scope/dropped
         }
 
         assert_inspect_tree!(inspector, root: {
@@ -260,11 +298,7 @@ mod test {
             }
         });
 
-        let launcher = launcher().context("Failed to open launcher service")?;
-
-        let app = launch(&launcher, RIL_URI.to_string(), None)
-            .context("Failed to launch ril-qmi service")?;
-        let ril = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
+        let (app, ril) = create_app_and_ril_for_test().unwrap();
         let path = PathBuf::from(r"class/qmi-transport/001");
         let node = manager.radios_node.create_child("radio-1");
         let _radio1 = Radio::new(app, ril, node, path);
@@ -278,9 +312,7 @@ mod test {
             }
         });
 
-        let app2 = launch(&launcher, RIL_URI.to_string(), None)
-            .context("Failed to launch ril-qmi service")?;
-        let ril2 = app2.connect_to_service::<RadioInterfaceLayerMarker>()?;
+        let (app2, ril2) = create_app_and_ril_for_test().unwrap();
         let path2 = PathBuf::from(r"class/qmi-transport/002");
         let node2 = manager.radios_node.create_child("radio-2");
         let _radio2 = Radio::new(app2, ril2, node2, path2);
@@ -296,6 +328,43 @@ mod test {
                     }
                 }
             }
+        });
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_tel_mgr_add_remove_device_inspect_tree() -> Result<(), Error> {
+        syslog::init_with_tags(&["test_tel_mgr"]).expect("Can't init logger");
+
+        let inspector = inspect::Inspector::new();
+        let manager = Arc::new(Manager::new(inspector.root().create_child("manager")));
+
+        manager
+            .add_new_devices(
+                PathBuf::from("000"),
+                PathBuf::from(r"class/qmi-transport"),
+                Manager::open_isolated_devmgr_file,
+            )
+            .await?;
+
+        assert_inspect_tree!(inspector, root: {
+           manager: {
+               radios: {
+                   "radio-qmi-000": {
+                       URI: "class/qmi-transport/000"
+                   }
+               }
+           }
+        });
+
+        manager.remove_devices(PathBuf::from("000"), PathBuf::from(r"class/qmi-transport"));
+
+        assert_inspect_tree!(inspector, root: {
+           manager: {
+               radios: {
+               }
+           }
         });
 
         Ok(())
