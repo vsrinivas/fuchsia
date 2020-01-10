@@ -7,11 +7,11 @@ use {
         framework::RealmCapabilityHost,
         model::{
             binding::Binder,
-            breakpoints::BreakpointSystem,
+            breakpoints::core::BreakpointSystem,
             error::ModelError,
-            hooks::EventType,
             hub::Hub,
             model::{ComponentManagerConfig, Model},
+            moniker::AbsoluteMoniker,
         },
         process_launcher::ProcessLauncher,
         root_job::RootJob,
@@ -163,40 +163,37 @@ impl BuiltinEnvironment {
 
     /// Setup a ServiceFs that contains the Hub and (optionally) the breakpoints service
     async fn create_service_fs<'a>(
+        &self,
         model: &Model,
-        hub: &Hub,
-        breakpoint_system: &Option<BreakpointSystem>,
     ) -> Result<ServiceFs<ServiceObj<'a, ()>>, ModelError> {
         // Create the ServiceFs
         let mut service_fs = ServiceFs::new();
 
         // Setup the hub
         let (hub_proxy, hub_server_end) = create_proxy::<DirectoryMarker>().unwrap();
-        hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, hub_server_end.into_channel())
+        self.hub
+            .open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, hub_server_end.into_channel())
             .await?;
-        model.root_realm.hooks.install(hub.hooks()).await;
+        model.root_realm.hooks.install(self.hub.hooks()).await;
         service_fs.add_remote("hub", hub_proxy);
 
-        // Setup the debug breakpoint system (optionally)
-        if let Some(breakpoint_system) = breakpoint_system {
-            // Install the breakpoint hooks at the root component.
-            // This ensures that all events will reach this breakpoint system.
+        // If component manager is in debug mode, create a breakpoint system scoped at the
+        // root and offer it via ServiceFs to the outside world.
+        if let Some(breakpoint_system) = &self.breakpoint_system {
             model.root_realm.hooks.install(breakpoint_system.hooks()).await;
 
-            // Register for ResolveInstance event to halt the ComponentManager when the
-            // root realm is first resolved.
-            let receiver = breakpoint_system.register(vec![EventType::ResolveInstance]).await;
-            let mut receiver = Some(receiver);
+            // Indicates whether the ScopedBreakpointSystem should set a `ResolveInstance`
+            // breakpoint on the root component. This allows integration tests to set up
+            // other breakpoints before starting the root component. However, this is only
+            // relevant to the first requester of the breakpoint system and so this flag
+            // is reset after the first request.
+            let mut wait_for_root = true;
+            let system = breakpoint_system.create_scope(AbsoluteMoniker::root());
 
-            // Setup a capability provider for external use. This provider is not used
-            // by components within component manager, hence there is no associated hook for it.
-            // Instead, it is used by external components that wish to debug component manager.
-            let breakpoint_capability_provider = breakpoint_system.create_capability_provider();
             service_fs.dir("svc").add_fidl_service(move |stream| {
-                // The receiver is held inside this closure as a `mut Option`. Since we only
-                // want to use this receiver once and drop it after, take the receiver.
-                let receiver = receiver.take();
-                breakpoint_capability_provider.serve_async(stream, receiver);
+                let system = system.clone();
+                system.serve_async(stream, wait_for_root);
+                wait_for_root = false;
             });
         }
 
@@ -205,8 +202,7 @@ impl BuiltinEnvironment {
 
     /// Bind ServiceFs to a provided channel
     async fn bind_service_fs(&self, model: &Model, channel: zx::Channel) -> Result<(), ModelError> {
-        let mut service_fs =
-            Self::create_service_fs(model, &self.hub, &self.breakpoint_system).await?;
+        let mut service_fs = self.create_service_fs(model).await?;
 
         // Bind to the channel
         service_fs

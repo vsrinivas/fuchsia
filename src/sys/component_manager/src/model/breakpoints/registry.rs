@@ -4,19 +4,15 @@
 
 use {
     crate::model::{
-        breakpoints_capability::{BreakpointCapabilityHook, BreakpointCapabilityProvider},
         error::ModelError,
-        hooks::{Event, EventType, Hook, HooksRegistration},
+        hooks::{Event, EventType, Hook},
         moniker::AbsoluteMoniker,
     },
     anyhow::Error,
     fuchsia_trace as trace,
     futures::{channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt, StreamExt},
     log::*,
-    std::{
-        collections::HashMap,
-        sync::{Arc, Weak},
-    },
+    std::{collections::HashMap, sync::Arc},
 };
 
 /// Created for a particular invocation of a breakpoint in component manager.
@@ -37,27 +33,37 @@ impl Invocation {
     }
 }
 
-/// BreakpointInvocationSender and BreakpointInvocationReceiver are two ends of a channel
+/// InvocationSender and InvocationReceiver are two ends of a channel
 /// used in the implementation of a breakpoint.
 ///
-/// A BreakpointInvocationSender is owned by the BreakpointRegistry. It sends a
-/// BreakpointInvocation to the BreakpointInvocationReceiver.
+/// A InvocationSender is owned by the BreakpointRegistry. It sends a
+/// BreakpointInvocation to the InvocationReceiver.
 ///
-/// A BreakpointInvocationReceiver is owned by the client - usually a test harness or a
-/// BreakpointCapability. It receives a BreakpointInvocation from a BreakpointInvocationSender
+/// A InvocationReceiver is owned by the client - usually a test harness or a
+/// ScopedBreakpointSystem. It receives a BreakpointInvocation from a InvocationSender
 /// and propagates it to the client.
 #[derive(Clone)]
-struct InvocationSender {
+pub struct InvocationSender {
+    /// Specifies a realm that this InvocationSender can dispatch breakpoints from.
+    scope_moniker: AbsoluteMoniker,
+    /// An `mpsc::Sender` used to dispatch a breakpoint invocation. Note that this
+    /// `mpsc::Sender` is wrapped in an Arc<Mutex<..>> to allow it to be cloneable
+    /// and passed along to other tasks for dispatch.
     tx: Arc<Mutex<mpsc::Sender<Invocation>>>,
 }
 
 impl InvocationSender {
-    fn new(tx: mpsc::Sender<Invocation>) -> Self {
-        Self { tx: Arc::new(Mutex::new(tx)) }
+    fn new(scope_moniker: AbsoluteMoniker, tx: mpsc::Sender<Invocation>) -> Self {
+        Self { scope_moniker, tx: Arc::new(Mutex::new(tx)) }
     }
 
-    /// Sends the event to a receiver. Returns a responder which can be blocked on.
-    async fn send(&self, event: Event) -> Result<oneshot::Receiver<()>, Error> {
+    /// Sends the event to a receiver, if fired in the scope of `scope_moniker`. Returns
+    /// a responder which can be blocked on.
+    async fn send(&self, event: Event) -> Result<Option<oneshot::Receiver<()>>, Error> {
+        if !self.scope_moniker.contains_in_realm(&event.target_moniker) {
+            return Ok(None);
+        }
+
         trace::duration!("component_manager", "breakpoints:send");
         let event_type = format!("{:?}", event.payload.type_());
         let target_moniker = event.target_moniker.to_string();
@@ -73,25 +79,23 @@ impl InvocationSender {
             let mut tx = self.tx.lock().await;
             tx.send(Invocation { event, responder: responder_tx }).await?;
         }
-        Ok(responder_rx)
+        Ok(Some(responder_rx))
     }
 }
 
-#[derive(Clone)]
 pub struct InvocationReceiver {
-    rx: Arc<Mutex<mpsc::Receiver<Invocation>>>,
+    rx: mpsc::Receiver<Invocation>,
 }
 
 impl InvocationReceiver {
     fn new(rx: mpsc::Receiver<Invocation>) -> Self {
-        Self { rx: Arc::new(Mutex::new(rx)) }
+        Self { rx }
     }
 
-    /// Receives an invocation from the sender.
-    pub async fn receive(&self) -> Invocation {
-        trace::duration!("component_manager", "breakpoints:receive");
-        let mut rx = self.rx.lock().await;
-        let invocation = rx.next().await.expect("Breakpoint did not occur");
+    /// Receives the next invocation from the sender.
+    pub async fn next(&mut self) -> Invocation {
+        trace::duration!("component_manager", "breakpoints:next");
+        let invocation = self.rx.next().await.expect("InvocationSender has closed the channel");
         trace::flow_step!("component_manager", "event", invocation.event.id);
         invocation
     }
@@ -99,12 +103,12 @@ impl InvocationReceiver {
     /// Waits for an invocation with a particular EventType against a component with a
     /// particular moniker. Ignores all other invocations.
     pub async fn wait_until(
-        &self,
+        &mut self,
         expected_event_type: EventType,
         expected_moniker: AbsoluteMoniker,
     ) -> Invocation {
         loop {
-            let invocation = self.receive().await;
+            let invocation = self.next().await;
             let actual_event_type = invocation.event.payload.type_();
             if expected_moniker == invocation.event.target_moniker
                 && expected_event_type == actual_event_type
@@ -122,14 +126,18 @@ pub struct BreakpointRegistry {
 }
 
 impl BreakpointRegistry {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { sender_map: Arc::new(Mutex::new(HashMap::new())) }
     }
 
     /// Registers breakpoints against a set of EventTypes.
-    pub async fn register(&self, event_types: Vec<EventType>) -> InvocationReceiver {
+    pub async fn set_breakpoints(
+        &self,
+        scope_moniker: AbsoluteMoniker,
+        event_types: Vec<EventType>,
+    ) -> InvocationReceiver {
         let (tx, rx) = mpsc::channel(0);
-        let sender = InvocationSender::new(tx);
+        let sender = InvocationSender::new(scope_moniker, tx);
         let receiver = InvocationReceiver::new(rx);
 
         let mut sender_map = self.sender_map.lock().await;
@@ -164,7 +172,7 @@ impl BreakpointRegistry {
         for sender in senders {
             let result = sender.send(event.clone()).await;
             match result {
-                Ok(responder_channel) => {
+                Ok(Some(responder_channel)) => {
                     // A future can be canceled if the receiver was dropped after
                     // a send. We don't crash the system when this happens. It is
                     // perfectly valid for a receiver to be dropped. That simply
@@ -186,6 +194,9 @@ impl BreakpointRegistry {
                     };
                     responder_channels.push(responder_channel);
                 }
+                // There's nothing to do if event is outside the scope of the given
+                // `InvocationSender`.
+                Ok(None) => (),
                 Err(error) => {
                     // A send can fail if the receiver was dropped. We don't
                     // crash the system when this happens. It is perfectly
@@ -212,76 +223,10 @@ impl BreakpointRegistry {
     }
 }
 
-/// A self-contained system for breakpoints. Contains the registry and the hook
-/// responsible for implmenting basic breakpoint functionality. If this object is dropped,
-/// there are no guarantees about breakpoint functionality.
-pub struct BreakpointSystem {
-    registry: Arc<BreakpointRegistry>,
-    hook: Arc<BreakpointHook>,
-    capability_hook: Arc<BreakpointCapabilityHook>,
-}
-
-impl BreakpointSystem {
-    pub fn new() -> Self {
-        let registry = Arc::new(BreakpointRegistry::new());
-        let hook = Arc::new(BreakpointHook::new(registry.clone()));
-        let capability_hook = Arc::new(BreakpointCapabilityHook::new(registry.clone()));
-        Self { registry, hook, capability_hook }
-    }
-
-    pub async fn register(&self, event_types: Vec<EventType>) -> InvocationReceiver {
-        self.registry.register(event_types).await
-    }
-
-    pub fn hooks(&self) -> Vec<HooksRegistration> {
-        vec![
-            // This hook must be registered with all events.
-            // However, a task will only receive events that it registered breakpoints for.
-            HooksRegistration {
-                events: vec![
-                    EventType::AddDynamicChild,
-                    EventType::BeforeStartInstance,
-                    EventType::PostDestroyInstance,
-                    EventType::PreDestroyInstance,
-                    EventType::ResolveInstance,
-                    EventType::RouteCapability,
-                    EventType::StopInstance,
-                ],
-                callback: Arc::downgrade(&self.hook) as Weak<dyn Hook>,
-            },
-            // This hook provides the Breakpoint capability to components in the tree
-            HooksRegistration {
-                events: vec![EventType::RouteCapability],
-                callback: Arc::downgrade(&self.capability_hook) as Weak<dyn Hook>,
-            },
-        ]
-    }
-
-    /// Creates a capability provider used for debugging purposes.
-    /// You probably want a BreakpointCapabilityProvider routed to you via
-    /// BreakpointCapabilityHook instead of using this method.
-    pub fn create_capability_provider(&self) -> BreakpointCapabilityProvider {
-        BreakpointCapabilityProvider::new(self.registry.clone())
-    }
-}
-
-/// A hook registered with all lifecycle events. When any event is received from
-/// component manager, a list of BreakpointInvocationSenders are obtained from the
-/// BreakpointRegistry and a BreakpointInvocation is sent via each.
-struct BreakpointHook {
-    registry: Arc<BreakpointRegistry>,
-}
-
-impl BreakpointHook {
-    fn new(registry: Arc<BreakpointRegistry>) -> Self {
-        Self { registry }
-    }
-}
-
-impl Hook for BreakpointHook {
+impl Hook for BreakpointRegistry {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
-            self.registry.send(event).await?;
+            self.send(event).await?;
             Ok(())
         })
     }

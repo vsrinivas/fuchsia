@@ -15,10 +15,10 @@ group("tests") {
     ":elf_runner_test",
     ":shutdown_integration_test",
     "base_resolver_test",
+    "breakpoints_system:breakpoints_system_integration_test",
     "collections:collections_integration_test",
     "destruction:destruction_integration_test",
     "hub:hub_integration_test",
-    "interpose:interpose_integration_test",
     "routing:tests",
     "storage:storage_integration_test",
     "work_scheduler:work_scheduler_integration_test",
@@ -34,6 +34,36 @@ rustc_library("breakpoint_system_client") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+rustc_library("trigger_capability") {
+  name = "trigger_capability"
+  edition = "2018"
+  source_root = "trigger_capability.rs"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+rustc_library("echo_capability") {
+  name = "echo_capability"
+  edition = "2018"
+  source_root = "echo_capability.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",

@@ -13,11 +13,11 @@
     "children": [
         {
             "name": "echo_server",
-            "url": "fuchsia-pkg://fuchsia.com/interpose_integration_test#meta/echo_server.cm",
+            "url": "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/echo_server.cm",
         },
         {
             "name": "echo_looper",
-            "url": "fuchsia-pkg://fuchsia.com/interpose_integration_test#meta/echo_looper.cm",
+            "url": "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/interpose_echo_looper.cm",
             "startup": "eager",
         },
     ],

@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/scoped_echo_client",
+    },
+    "use": [
+        {
+            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+        },
+        {
+            "service_protocol": "/svc/fidl.test.components.Trigger",
+        }
+    ],
+}

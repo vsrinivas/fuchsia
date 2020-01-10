@@ -1,0 +1,29 @@
+{
+    // Route Echo service from server to client.
+    "offer": [
+        {
+            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+            "from": "#echo_reporter",
+            "to": [ "#echo_client" ]
+        },
+        {
+            "service_protocol": "/svc/fidl.test.components.Trigger",
+            "from": "#echo_reporter",
+            "to": [ "#echo_client" ]
+        }
+    ],
+    // Two children: a server and client. "hub_client" has "eager" startup so it
+    // will be started along with the realm.
+    "children": [
+        {
+            "name": "echo_reporter",
+            "url": "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/echo_reporter.cm",
+            "startup": "eager",
+        },
+        {
+            "name": "echo_client",
+            "url": "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/echo_client.cm",
+            "startup": "eager",
+        },
+    ],
+}

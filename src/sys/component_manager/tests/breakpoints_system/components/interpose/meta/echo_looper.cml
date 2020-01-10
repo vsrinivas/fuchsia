@@ -2,7 +2,7 @@
 // service.
 {
     "program": {
-        "binary": "bin/echo_looper",
+        "binary": "bin/interpose_echo_looper",
     },
     "use": [
         {

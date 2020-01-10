@@ -361,11 +361,11 @@ impl Hook for RealmCapabilityHostInner {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::breakpoints::registry::BreakpointRegistry;
     use {
         crate::{
             builtin_environment::BuiltinEnvironment,
             model::{
-                breakpoints,
                 model::ModelParams,
                 moniker::AbsoluteMoniker,
                 resolver::ResolverRegistry,
@@ -617,14 +617,18 @@ mod tests {
 
         let hook = Arc::new(TestHook::new());
 
-        let breakpoint_system = breakpoints::BreakpointSystem::new();
-        let breakpoint_receiver = breakpoint_system
-            .register(vec![EventType::PreDestroyInstance, EventType::PostDestroyInstance])
+        let breakpoint_events = vec![EventType::PreDestroyInstance, EventType::PostDestroyInstance];
+        let breakpoint_registry = Arc::new(BreakpointRegistry::new());
+        let mut breakpoint_receiver = breakpoint_registry
+            .set_breakpoints(AbsoluteMoniker::root(), breakpoint_events.clone())
             .await;
 
         let mut hooks = vec![];
         hooks.append(&mut hook.hooks());
-        hooks.append(&mut breakpoint_system.hooks());
+        hooks.append(&mut vec![HooksRegistration {
+            events: breakpoint_events,
+            callback: Arc::downgrade(&breakpoint_registry) as Weak<dyn Hook>,
+        }]);
         let test = RealmCapabilityTest::new(
             mock_resolver,
             Arc::new(MockRunner::new()),

@@ -21,7 +21,7 @@ use {
     },
 };
 
-#[derive(Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum EventType {
     /// Keep the event types listed below in alphabetical order!
 

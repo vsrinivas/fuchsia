@@ -43,6 +43,7 @@ rustc_binary("trigger_bin") {
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests:trigger_capability",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

@@ -1,0 +1,32 @@
+{
+    "program": {
+        "binary": "bin/scoped_echo_reporter",
+    },
+    "use": [
+      {
+        "service_protocol": [ "/svc/fuchsia.test.breakpoints.BreakpointSystem" ],
+        "from": "framework"
+      },
+      {
+          "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+          "from": "framework",
+      },
+    ],
+    "expose": [
+        {
+            "service_protocol": "/svc/fidl.test.components.Trigger",
+            "from": "self",
+        },
+        {
+            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+            "from": "#echo_server",
+        },
+    ],
+    "children": [
+      {
+        "name": "echo_server",
+        "url": "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/echo_server.cm",
+        "startup": "lazy",
+      }
+    ]
+}

@@ -22,7 +22,6 @@ pub(crate) mod runner;
 pub(crate) mod shutdown;
 
 mod addable_directory;
-mod breakpoints_capability;
 mod dir_tree;
 mod exposed_dir;
 mod namespace;

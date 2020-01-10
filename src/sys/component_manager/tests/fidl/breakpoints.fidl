@@ -113,10 +113,10 @@ protocol BreakpointSystem {
     /// to expect the registered types.
     SetBreakpoints(vector<EventType>:MAX_NUM_EVENT_TYPES_RECEIVED event_types, request<InvocationReceiver> server_end) -> ();
 
-    /// Begins component manager's execution.
+    /// Resume the execution of component manager and start the component tree.
     /// This method is a no-op when invoked more than once or by
     /// a component inside component manager.
-    StartComponentManager() -> ();
+    StartComponentTree() -> ();
 };
 
 /// Receives invocations for registered events in component manager.

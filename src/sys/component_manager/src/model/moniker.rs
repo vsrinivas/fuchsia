@@ -238,6 +238,16 @@ impl AbsoluteMoniker {
         &self.path
     }
 
+    /// Indicates whether `other` is contained within the realm specified by
+    /// this AbsoluteMoniker.
+    pub fn contains_in_realm(&self, other: &AbsoluteMoniker) -> bool {
+        if other.path.len() < self.path.len() {
+            return false;
+        }
+
+        self.path.iter().enumerate().all(|item| *item.1 == other.path[item.0])
+    }
+
     pub fn root() -> AbsoluteMoniker {
         AbsoluteMoniker { path: vec![] }
     }
@@ -621,6 +631,56 @@ mod tests {
         assert_eq!(Ordering::Greater, d.cmp(&b));
         assert_eq!(Ordering::Greater, c.cmp(&d));
         assert_eq!(Ordering::Less, d.cmp(&c));
+    }
+
+    #[test]
+    fn absolute_monikers_contains_in_realm() {
+        let root = AbsoluteMoniker::root();
+        let a = AbsoluteMoniker::new(vec![ChildMoniker::new("a".to_string(), None, 1)]);
+        let ab = AbsoluteMoniker::new(vec![
+            ChildMoniker::new("a".to_string(), None, 1),
+            ChildMoniker::new("b".to_string(), None, 2),
+        ]);
+        let abc = AbsoluteMoniker::new(vec![
+            ChildMoniker::new("a".to_string(), None, 1),
+            ChildMoniker::new("b".to_string(), None, 2),
+            ChildMoniker::new("c".to_string(), None, 3),
+        ]);
+        let abd = AbsoluteMoniker::new(vec![
+            ChildMoniker::new("a".to_string(), None, 1),
+            ChildMoniker::new("b".to_string(), None, 2),
+            ChildMoniker::new("d".to_string(), None, 3),
+        ]);
+
+        assert!(root.contains_in_realm(&root));
+        assert!(root.contains_in_realm(&a));
+        assert!(root.contains_in_realm(&ab));
+        assert!(root.contains_in_realm(&abc));
+        assert!(root.contains_in_realm(&abd));
+
+        assert!(!a.contains_in_realm(&root));
+        assert!(a.contains_in_realm(&a));
+        assert!(a.contains_in_realm(&ab));
+        assert!(a.contains_in_realm(&abc));
+        assert!(a.contains_in_realm(&abd));
+
+        assert!(!ab.contains_in_realm(&root));
+        assert!(!ab.contains_in_realm(&a));
+        assert!(ab.contains_in_realm(&ab));
+        assert!(ab.contains_in_realm(&abc));
+        assert!(ab.contains_in_realm(&abd));
+
+        assert!(!abc.contains_in_realm(&root));
+        assert!(abc.contains_in_realm(&abc));
+        assert!(!abc.contains_in_realm(&a));
+        assert!(!abc.contains_in_realm(&ab));
+        assert!(!abc.contains_in_realm(&abd));
+
+        assert!(!abc.contains_in_realm(&abd));
+        assert!(abd.contains_in_realm(&abd));
+        assert!(!abd.contains_in_realm(&a));
+        assert!(!abd.contains_in_realm(&ab));
+        assert!(!abd.contains_in_realm(&abc));
     }
 
     #[test]

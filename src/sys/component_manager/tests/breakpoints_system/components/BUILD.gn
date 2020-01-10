@@ -1,0 +1,50 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+rustc_binary("interpose_echo_looper_bin") {
+  name = "interpose_echo_looper"
+  edition = "2018"
+  source_root = "interpose/echo_looper.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+  ]
+}
+
+import("//build/rust/rustc_binary.gni")
+rustc_binary("echo_reporter_bin") {
+  name = "scoped_echo_reporter"
+  edition = "2018"
+  source_root = "scoped/echo_reporter.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests:breakpoint_system_client",
+    "//src/sys/component_manager/tests:trigger_capability",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+import("//build/rust/rustc_binary.gni")
+rustc_binary("echo_client_for_breakpoints_bin") {
+  name = "scoped_echo_client"
+  edition = "2018"
+  source_root = "scoped/echo_client.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}

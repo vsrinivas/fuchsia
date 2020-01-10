@@ -19,6 +19,7 @@ pub struct TestRunner {
     pub test: BlackBoxTest,
     external_hub_v2_path: PathBuf,
     hub_report_capability: HubReportCapability,
+    _breakpoint_system: BreakpointSystemClient,
 }
 
 impl TestRunner {
@@ -37,7 +38,7 @@ impl TestRunner {
 
         let hub_report_capability = HubReportCapability::new();
 
-        let receiver = {
+        let (breakpoint_system, receiver) = {
             // Register temporary receivers for StartInstance and RouteFrameworkCapability.
             // These receivers are registered separately because the events do not happen
             // in predictable orders. There is a possibility for the RouteFrameworkCapability event
@@ -80,12 +81,17 @@ impl TestRunner {
             invocation.resume().await?;
 
             // Return the receiver to be used later
-            receiver
+            (breakpoint_system, receiver)
         };
 
         let external_hub_v2_path = test.get_component_manager_path().join("out/hub");
 
-        let runner = Self { test, external_hub_v2_path, hub_report_capability };
+        let runner = Self {
+            test,
+            external_hub_v2_path,
+            hub_report_capability,
+            _breakpoint_system: breakpoint_system,
+        };
 
         Ok((runner, receiver))
     }

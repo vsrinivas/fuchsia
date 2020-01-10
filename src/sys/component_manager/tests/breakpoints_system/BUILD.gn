@@ -1,0 +1,83 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_test("breakpoints_system_integration_test_bin") {
+  name = "breakpoints_system_integration_test"
+  edition = "2018"
+  source_root = "integration_test.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/sys/component_manager/tests:breakpoint_system_client",
+    "//src/sys/component_manager/tests:echo_capability",
+    "//src/sys/component_manager/tests:test_utils",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+test_package("breakpoints_system_integration_test") {
+  deps = [
+    ":breakpoints_system_integration_test_bin",
+    "components:echo_client_for_breakpoints_bin",
+    "components:echo_reporter_bin",
+    "components:interpose_echo_looper_bin",
+    "//examples/components/routing/echo_server",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
+      dest = "echo_server.cm"
+    },
+    {
+      path = rebase_path("components/interpose/meta/echo_looper.cml")
+      dest = "interpose_echo_looper.cm"
+    },
+    {
+      path = rebase_path("components/interpose/meta/echo_realm.cml")
+      dest = "interpose_echo_realm.cm"
+    },
+    {
+      path = rebase_path("components/scoped/meta/echo_realm.cml")
+      dest = "echo_realm.cm"
+    },
+    {
+      path = rebase_path("components/scoped/meta/echo_client.cml")
+      dest = "echo_client.cm"
+    },
+    {
+      path = rebase_path("components/scoped/meta/echo_reporter.cml")
+      dest = "echo_reporter.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "interpose_echo_looper"
+    },
+    {
+      name = "echo_server"
+    },
+    {
+      name = "scoped_echo_client"
+    },
+    {
+      name = "scoped_echo_reporter"
+    },
+  ]
+
+  tests = [
+    {
+      name = "breakpoints_system_integration_test"
+    },
+  ]
+}

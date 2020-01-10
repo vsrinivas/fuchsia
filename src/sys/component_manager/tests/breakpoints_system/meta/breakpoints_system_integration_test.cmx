@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/interpose_integration_test"
+        "binary": "test/breakpoints_system_integration_test"
     },
     "sandbox": {
         "features": [
