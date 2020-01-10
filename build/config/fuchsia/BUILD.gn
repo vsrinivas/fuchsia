@@ -56,6 +56,9 @@ config("compiler") {
   ldflags = [
     "-Wl,--threads",
     "-Wl,--pack-dyn-relocs=relr",
+
+    # TODO(41982): drop this when it becomes the default in Clang.
+    "-Wl,-z,now",
   ]
   configs = [
     ":compiler_sysroot",
