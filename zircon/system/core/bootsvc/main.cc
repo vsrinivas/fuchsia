@@ -220,6 +220,12 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   launchpad_add_handle(lp, svcfs_conn.release(), PA_HND(PA_NS_DIR, count));
   nametable[count++] = "/svc";
 
+  // Duplicate the root resource to pass to the next process.
+  zx::resource root_rsrc_dup;
+  status = root_rsrc.duplicate(ZX_RIGHT_SAME_RIGHTS, &root_rsrc_dup);
+  ZX_ASSERT_MSG(status == ZX_OK && root_rsrc_dup.is_valid(), "Failed to duplicate root resource");
+  launchpad_add_handle(lp, root_rsrc_dup.release(), PA_HND(PA_RESOURCE, 0));
+
   int argc = static_cast<int>(next_args.size());
   const char* argv[argc];
   for (int i = 0; i < argc; ++i) {
@@ -333,8 +339,6 @@ int main(int argc, char** argv) {
                         bootsvc::CreateReadOnlyLogService(loop.dispatcher(), root_resource));
   svcfs_svc->AddService(fuchsia_boot_WriteOnlyLog_Name,
                         bootsvc::CreateWriteOnlyLogService(loop.dispatcher(), log));
-  svcfs_svc->AddService(fuchsia_boot_RootResource_Name,
-                        bootsvc::CreateRootResourceService(loop.dispatcher(), root_resource));
   bootsvc::KernelStatsImpl kernel_stats(root_resource);
   svcfs_svc->AddService(llcpp::fuchsia::kernel::Stats::Name,
                         kernel_stats.CreateService(loop.dispatcher()));

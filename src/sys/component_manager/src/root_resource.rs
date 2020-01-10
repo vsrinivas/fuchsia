@@ -15,22 +15,29 @@ use {
     cm_rust::CapabilityPath,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_boot as fboot, fuchsia_async as fasync,
-    fuchsia_runtime::job_default,
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, Handle, HandleBased, Resource},
     futures::{future::BoxFuture, prelude::*},
+    lazy_static::lazy_static,
     log::warn,
-    std::sync::{Arc, Weak},
+    std::{
+        convert::TryInto,
+        sync::{Arc, Weak},
+    },
 };
 
-/// An implementation of the `fuchsia.boot.RootJob` protocol.
-pub struct RootJob {
-    capability_path: CapabilityPath,
-    rights: zx::Rights,
+lazy_static! {
+    pub static ref ROOT_RESOURCE_CAPABILITY_PATH: CapabilityPath =
+        "/svc/fuchsia.boot.RootResource".try_into().unwrap();
 }
 
-impl RootJob {
-    pub fn new(capability_path: CapabilityPath, rights: zx::Rights) -> Arc<Self> {
-        Arc::new(Self { capability_path, rights })
+/// An implementation of the `fuchsia.boot.RootResource` protocol.
+pub struct RootResource {
+    resource: Resource,
+}
+
+impl RootResource {
+    pub fn new(handle: Handle) -> Arc<Self> {
+        Arc::new(Self { resource: Resource::from(handle) })
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
@@ -40,16 +47,15 @@ impl RootJob {
         }]
     }
 
-    /// Serves an instance of the `fuchsia.boot.RootJob` protocol given an appropriate
+    /// Serves an instance of the `fuchsia.boot.RootResource` protocol given an appropriate
     /// RequestStream. Returns when the channel backing the RequestStream is closed or an
     /// unrecoverable error occurs.
     pub async fn serve(
         self: Arc<Self>,
-        mut stream: fboot::RootJobRequestStream,
+        mut stream: fboot::RootResourceRequestStream,
     ) -> Result<(), Error> {
-        let job = job_default();
-        while let Some(fboot::RootJobRequest::Get { responder }) = stream.try_next().await? {
-            responder.send(job.duplicate(self.rights)?)?;
+        while let Some(fboot::RootResourceRequest::Get { responder }) = stream.try_next().await? {
+            responder.send(self.resource.duplicate_handle(zx::Rights::SAME_RIGHTS)?)?;
         }
         Ok(())
     }
@@ -61,9 +67,9 @@ impl RootJob {
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
             FrameworkCapability::ServiceProtocol(capability_path)
-                if *capability_path == self.capability_path =>
+                if *capability_path == *ROOT_RESOURCE_CAPABILITY_PATH =>
             {
-                Ok(Some(Box::new(RootJobCapabilityProvider::new(Arc::downgrade(&self)))
+                Ok(Some(Box::new(RootResourceCapabilityProvider::new(Arc::downgrade(&self)))
                     as Box<dyn CapabilityProvider>))
             }
             _ => Ok(capability_provider),
@@ -71,7 +77,7 @@ impl RootJob {
     }
 }
 
-impl Hook for RootJob {
+impl Hook for RootResource {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {
@@ -88,18 +94,18 @@ impl Hook for RootJob {
     }
 }
 
-struct RootJobCapabilityProvider {
-    root_job: Weak<RootJob>,
+struct RootResourceCapabilityProvider {
+    root_resource: Weak<RootResource>,
 }
 
-impl RootJobCapabilityProvider {
-    pub fn new(root_job: Weak<RootJob>) -> Self {
-        Self { root_job }
+impl RootResourceCapabilityProvider {
+    pub fn new(root_resource: Weak<RootResource>) -> Self {
+        Self { root_resource }
     }
 }
 
 #[async_trait]
-impl CapabilityProvider for RootJobCapabilityProvider {
+impl CapabilityProvider for RootResourceCapabilityProvider {
     async fn open(
         self: Box<Self>,
         _flags: u32,
@@ -107,15 +113,15 @@ impl CapabilityProvider for RootJobCapabilityProvider {
         _relative_path: String,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
-        let server_end = ServerEnd::<fboot::RootJobMarker>::new(server_end);
-        let stream: fboot::RootJobRequestStream = server_end.into_stream().unwrap();
+        let server_end = ServerEnd::<fboot::RootResourceMarker>::new(server_end);
+        let stream: fboot::RootResourceRequestStream = server_end.into_stream().unwrap();
         fasync::spawn(async move {
-            if let Some(root_job) = self.root_job.upgrade() {
-                if let Err(err) = root_job.serve(stream).await {
-                    warn!("RootJob::open failed: {}", err);
+            if let Some(root_resource) = self.root_resource.upgrade() {
+                if let Err(err) = root_resource.serve(stream).await {
+                    warn!("RootResource::open failed: {}", err);
                 }
             } else {
-                warn!("RootJob has been dropped");
+                warn!("RootResource has been dropped");
             }
         });
         Ok(())
@@ -129,41 +135,18 @@ mod tests {
         crate::model::{hooks::Hooks, moniker::AbsoluteMoniker},
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
-        fuchsia_zircon::AsHandleRef,
-        fuchsia_zircon_sys as sys,
         futures::lock::Mutex,
-        lazy_static::lazy_static,
-        std::convert::TryInto,
     };
-
-    lazy_static! {
-        pub static ref CAPABILITY_PATH: CapabilityPath =
-            "/svc/fuchsia.boot.RootJob".try_into().unwrap();
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn has_correct_rights() -> Result<(), Error> {
-        let root_job = RootJob::new(CAPABILITY_PATH.clone(), zx::Rights::TRANSFER);
-        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fboot::RootJobMarker>()?;
-        fasync::spawn_local(
-            root_job.serve(stream).unwrap_or_else(|err| panic!("Error serving root job: {}", err)),
-        );
-
-        let root_job = proxy.get().await?;
-        let info = zx::Handle::from(root_job).basic_info()?;
-        assert_eq!(info.rights, zx::Rights::TRANSFER);
-        Ok(())
-    }
 
     #[fasync::run_singlethreaded(test)]
     async fn can_connect() -> Result<(), Error> {
-        let root_job = RootJob::new(CAPABILITY_PATH.clone(), zx::Rights::SAME_RIGHTS);
+        let root_resource = RootResource::new(Handle::invalid());
         let hooks = Hooks::new(None);
-        hooks.install(root_job.hooks()).await;
+        hooks.install(root_resource.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Framework {
-            capability: FrameworkCapability::ServiceProtocol(CAPABILITY_PATH.clone()),
+            capability: FrameworkCapability::ServiceProtocol(ROOT_RESOURCE_CAPABILITY_PATH.clone()),
             scope_moniker: None,
         };
 
@@ -178,11 +161,13 @@ mod tests {
             provider.open(0, 0, String::new(), server).await?;
         }
 
-        let client = ClientEnd::<fboot::RootJobMarker>::new(client)
+        // We do not call get, as we passed an invalid handle to RootResource,
+        // which would cause a PEER_CLOSED failure. We passed an invalid handle
+        // to RootResource because you need a Resource to create another one,
+        // which we do not have.
+        ClientEnd::<fboot::RootJobMarker>::new(client)
             .into_proxy()
             .expect("Failed to create proxy");
-        let handle = client.get().await?;
-        assert_ne!(handle.raw_handle(), sys::ZX_HANDLE_INVALID);
         Ok(())
     }
 }

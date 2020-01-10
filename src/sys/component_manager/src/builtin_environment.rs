@@ -16,6 +16,7 @@ use {
         process_launcher::ProcessLauncher,
         root_job::RootJob,
         root_realm_stop_notifier::RootRealmStopNotifier,
+        root_resource::RootResource,
         runner::BuiltinRunner,
         startup::Arguments,
         system_controller::SystemController,
@@ -30,6 +31,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::server::*,
+    fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon as zx,
     futures::{lock::Mutex, stream::StreamExt},
     std::{
@@ -49,6 +51,7 @@ pub struct BuiltinEnvironment {
     pub process_launcher: Option<Arc<ProcessLauncher>>,
     pub root_job: Arc<RootJob>,
     pub root_job_for_inspect: Arc<RootJob>,
+    pub root_resource: Option<Arc<RootResource>>,
     pub system_controller: Arc<SystemController>,
     pub vmex_service: Option<Arc<VmexService>>,
 
@@ -77,22 +80,26 @@ impl BuiltinEnvironment {
         };
 
         // Set up RootJob service.
-        let root_job = Arc::new(RootJob::new(
-            "/svc/fuchsia.boot.RootJob".try_into().unwrap(),
-            zx::Rights::SAME_RIGHTS,
-        ));
+        let root_job =
+            RootJob::new("/svc/fuchsia.boot.RootJob".try_into().unwrap(), zx::Rights::SAME_RIGHTS);
         model.root_realm.hooks.install(root_job.hooks()).await;
 
         // Set up RootJobForInspect service.
-        let root_job_for_inspect = Arc::new(RootJob::new(
+        let root_job_for_inspect = RootJob::new(
             "/svc/fuchsia.boot.RootJobForInspect".try_into().unwrap(),
             zx::Rights::INSPECT
                 | zx::Rights::ENUMERATE
                 | zx::Rights::DUPLICATE
                 | zx::Rights::TRANSFER
                 | zx::Rights::GET_PROPERTY,
-        ));
+        );
         model.root_realm.hooks.install(root_job_for_inspect.hooks()).await;
+
+        // Set up RootResource service.
+        let root_resource = take_startup_handle(HandleType::Resource.into()).map(RootResource::new);
+        if let Some(root_resource) = root_resource.as_ref() {
+            model.root_realm.hooks.install(root_resource.hooks()).await;
+        }
 
         // Set up System Controller service.
         let system_controller = Arc::new(SystemController::new(model.clone()));
@@ -141,6 +148,7 @@ impl BuiltinEnvironment {
             process_launcher,
             root_job,
             root_job_for_inspect,
+            root_resource,
             system_controller,
             vmex_service,
 

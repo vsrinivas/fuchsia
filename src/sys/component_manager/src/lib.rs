@@ -25,5 +25,6 @@ pub(crate) mod work_scheduler;
 mod constants;
 mod process_launcher;
 mod root_job;
+mod root_resource;
 mod runner;
 mod vmex;

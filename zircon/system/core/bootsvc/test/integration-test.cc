@@ -40,7 +40,6 @@ constexpr char kArgumentsPath[] = "/svc/" fuchsia_boot_Arguments_Name;
 constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 constexpr char kReadOnlyLogPath[] = "/svc/" fuchsia_boot_ReadOnlyLog_Name;
-constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
 constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
 
 void print_test_success_string() {
@@ -364,34 +363,6 @@ bool TestBootReadOnlyLog() {
   END_TEST;
 }
 
-// Make sure the fuchsia.boot.RootResource service works
-bool TestBootRootResource() {
-  BEGIN_TEST;
-
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we can open the fuchsia.boot.RootResource service.
-  status = fdio_service_connect(kRootResourcePath, remote.release());
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we received a resource from the service.
-  zx::resource root_resource;
-  status = fuchsia_boot_RootResourceGet(local.get(), root_resource.reset_and_get_address());
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_TRUE(root_resource.is_valid());
-
-  // Check that a subsequent call also results in a success.  Previous
-  // versions of this service would only provide the root resource to the
-  // first caller, and would close the channel thereafter.
-  status = fuchsia_boot_RootResourceGet(local.get(), root_resource.reset_and_get_address());
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_TRUE(root_resource.is_valid());
-
-  END_TEST;
-}
-
 // Check that the kernel-provided VDSOs were added to /boot/kernel/vdso
 bool TestVdsosPresent() {
   BEGIN_TEST;
@@ -425,7 +396,6 @@ RUN_TEST(TestBootArguments)
 RUN_TEST(TestBootArgsFromImage)
 RUN_TEST(TestBootItems)
 RUN_TEST(TestBootReadOnlyLog)
-RUN_TEST(TestBootRootResource)
 RUN_TEST(TestBootWriteOnlyLog)
 RUN_TEST(TestFactoryItems)
 RUN_TEST(TestVdsosPresent)

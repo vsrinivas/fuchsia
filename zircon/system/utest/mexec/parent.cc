@@ -16,8 +16,6 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 
-#include <fuchsia/boot/c/fidl.h>
-
 #include <libzbi/zbi-cpp.h>
 #include <libzbi/zbi-zx.h>
 
@@ -26,7 +24,6 @@
 namespace {
 
 constexpr char kChildZbiFilePath[] = "/boot/testdata/zbi-bootfs/zbi-child-image.zbi";
-constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
 
 // We reserve 4 pages because this should hopefully be enough buffer for the
 // extra mexec data.
@@ -34,17 +31,8 @@ constexpr size_t kMexecPayloadSize = ZX_PAGE_SIZE * 4;
 static uint8_t extra_buffer[kMexecPayloadSize];
 
 TEST(MexecTest, ChainLoadChild) {
-    zx::channel local, remote;
-
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
-
-    ASSERT_OK(fdio_service_connect(kRootResourcePath, remote.release()));
-
-    zx::resource root_resource;
-    ASSERT_OK(fuchsia_boot_RootResourceGet(local.get(), root_resource.reset_and_get_address()));
+    zx::resource root_resource{zx_take_startup_handle(PA_HND(PA_RESOURCE, 0))};
     ASSERT_TRUE(root_resource.is_valid());
-
-
     ASSERT_OK(zx_system_mexec_payload_get(root_resource.get(), extra_buffer, kMexecPayloadSize));
 
     // Open the file containing the child ZBI.
