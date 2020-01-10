@@ -101,6 +101,13 @@ impl AppAssistant for InfiniteScrollAppAssistant {
         // scrolling. 30 ms should be enough on most hardware but consider
         // using a lower value as input latency is increased by this offset.
         let mut touch_sampling_offset = zx::Duration::from_millis(30);
+        // Number of columns of contents is calculated based on available
+        // space unless limited by |max_columns|. The rendering cost be
+        // reduced by lowering scale and column count.
+        let mut max_columns = std::u32::MAX;
+        // Text is enabled by default but can be disabled for improved
+        // rendering performance.
+        let mut text_disabled = false;
 
         for argument in env::args() {
             if argument == "--mold" {
@@ -131,6 +138,13 @@ impl AppAssistant for InfiniteScrollAppAssistant {
                 if let Ok(number) = values[1].parse::<u32>() {
                     touch_sampling_offset = zx::Duration::from_millis(number as i64);
                 }
+            } else if argument.starts_with("--max-columns=") {
+                let values: Vec<&str> = argument.split("=").collect();
+                if let Ok(number) = values[1].parse::<u32>() {
+                    max_columns = number;
+                }
+            } else if argument.starts_with("--disable-text") {
+                text_disabled = true;
             }
         }
 
@@ -161,6 +175,8 @@ impl AppAssistant for InfiniteScrollAppAssistant {
                 scroll_method,
                 exposure,
                 touch_sampling_offset,
+                max_columns,
+                text_disabled,
             )))
         } else {
             const BLOCK_POOL_SIZE: u64 = 1 << 26; // 64 MB
@@ -182,6 +198,8 @@ impl AppAssistant for InfiniteScrollAppAssistant {
                 scroll_method,
                 exposure,
                 touch_sampling_offset,
+                max_columns,
+                text_disabled,
             )))
         }
     }
@@ -474,6 +492,8 @@ struct Item {
 struct Scene {
     scale: f32,
     exposure: f32,
+    max_columns: u32,
+    text_disabled: bool,
     scroll_offset_y: u32,
     last_scroll_offset_y: u32,
     raster_ty: f32,
@@ -484,13 +504,15 @@ struct Scene {
 }
 
 impl Scene {
-    fn new(scale: f32, exposure: f32) -> Self {
+    fn new(scale: f32, exposure: f32, max_columns: u32, text_disabled: bool) -> Self {
         // Equal amount of coordinate space above and below.
         let scroll_offset_y = (SCROLL_OFFSET_RANGE[0] + SCROLL_OFFSET_RANGE[1]) / 2;
 
         Self {
             scale,
             exposure,
+            max_columns,
+            text_disabled,
             scroll_offset_y: scroll_offset_y,
             last_scroll_offset_y: scroll_offset_y,
             raster_ty: -(scroll_offset_y as f32),
@@ -508,9 +530,12 @@ impl Scene {
         body_glyphs: &mut BTreeMap<GlyphId, Glyph>,
         id: i32,
         column_width: f32,
+        text_disabled: bool,
     ) -> Item {
+        let item_type =
+            if text_disabled { ITEM_TYPE_FLOWER } else { id.rem_euclid(ITEM_TYPE_COUNT) };
         // Alternate between title, body, and flower shape.
-        let (paths, bounding_box, origin, color) = match id.rem_euclid(ITEM_TYPE_COUNT) {
+        let (paths, bounding_box, origin, color) = match item_type {
             ITEM_TYPE_TITLE => {
                 const TITLE_SIZE: f32 = 32.0;
 
@@ -613,7 +638,9 @@ impl Scene {
         let padding = PADDING * self.scale;
         let min_margin = (MIN_MARGIN * self.scale) as usize;
         let width = size.width as usize;
-        let column_count = ((width - min_margin * 2) / (column_size + min_margin)).max(1);
+        let column_count = ((width - min_margin * 2) / (column_size + min_margin))
+            .min(self.max_columns as usize)
+            .max(1);
         let margin = (width - column_count * column_size) / (column_count + 1);
 
         let mut styling_changed = false;
@@ -669,6 +696,7 @@ impl Scene {
                     &mut self.body_glyphs,
                     id,
                     column_size as f32,
+                    self.text_disabled,
                 );
                 let offset =
                     Vector2D::new(margin as f32, y - item.bounding_box.0.min_y() + padding);
@@ -698,6 +726,7 @@ impl Scene {
                     &mut self.body_glyphs,
                     id,
                     column_size as f32,
+                    self.text_disabled,
                 );
                 let offset = Vector2D::new(
                     margin as f32,
@@ -892,6 +921,7 @@ impl Contents {
             ScrollMethod::CopyRedraw => {
                 let scroll_distance = scene.scroll_offset_y as f32 - self.scroll_offset_y as f32;
                 let scroll_amount = scroll_distance.abs() as u32;
+                // |scroll_height| is the area that can be copied and doesn't need to a redraw.
                 let scroll_height = if self.size == *size {
                     // Round down to multiple of 32. This ensures that we can use the render clip
                     // to redraw the exposed region.
@@ -901,27 +931,36 @@ impl Contents {
                 };
                 let mut clip: [u32; 4] = [0, 0, width, height];
                 // Determine area to copy and clip to render depending on scroll direction.
-                if scroll_height > 0 && scroll_height < height {
-                    if scroll_distance > 0.0 {
-                        clip[1] = scroll_height;
-                        self.exts.push(RenderExt::PreCopy((
-                            self.image_id,
-                            CopyRegion {
-                                src_offset: [0, scroll_amount],
-                                dst_offset: [0, 0],
-                                extent: [width, height - scroll_amount],
-                            },
-                        )));
-                    } else {
-                        clip[3] = height - scroll_height;
-                        self.exts.push(RenderExt::PreCopy((
-                            self.image_id,
-                            CopyRegion {
-                                src_offset: [0, 0],
-                                dst_offset: [0, scroll_amount],
-                                extent: [width, height - scroll_amount],
-                            },
-                        )));
+                if scroll_height > 0 {
+                    match scroll_distance {
+                        // Area at top expoosed.
+                        x if x > 0.0 => {
+                            clip[1] = scroll_height;
+                            self.exts.push(RenderExt::PreCopy((
+                                self.image_id,
+                                CopyRegion {
+                                    src_offset: [0, scroll_amount],
+                                    dst_offset: [0, 0],
+                                    extent: [width, height - scroll_amount],
+                                },
+                            )));
+                        }
+                        // Area at bottom expoosed.
+                        x if x < 0.0 => {
+                            clip[3] = height - scroll_height;
+                            self.exts.push(RenderExt::PreCopy((
+                                self.image_id,
+                                CopyRegion {
+                                    src_offset: [0, 0],
+                                    dst_offset: [0, scroll_amount],
+                                    extent: [width, height - scroll_amount],
+                                },
+                            )));
+                        }
+                        // No new contents expoosed.
+                        _ => {
+                            clip[3] = 0;
+                        }
                     }
                 }
                 let viewport = Rect::new(
@@ -1134,18 +1173,23 @@ impl TouchDevice {
                     std::thread::spawn(move || {
                         let mut executor = fasync::Executor::new().unwrap();
                         executor.run_singlethreaded(async {
+                            let mut has_printed_timestamp_warning = false;
                             if let Ok((_, event)) = device.get_reports_event(Time::INFINITE) {
                                 while let Ok(_) =
                                     fasync::OnSignals::new(&event, zx::Signals::USER_0).await
                                 {
                                     duration!("input", "on_report");
                                     if let Ok(reports) = device.get_reports(Time::INFINITE) {
-                                        // TODO: Use input device IRQ time instead of this time stamp.
-                                        let event_time = Time::get(ClockId::Monotonic);
                                         for report in reports {
                                             let mut report_with_time = report;
-                                            report_with_time.event_time =
-                                                Some(event_time.into_nanos());
+                                            if report_with_time.event_time.is_none() {
+                                                if !has_printed_timestamp_warning {
+                                                    println!("warning: touch reports are missing timestamps");
+                                                    has_printed_timestamp_warning = true;
+                                                }
+                                                let event_time = Time::get(ClockId::Monotonic);
+                                                report_with_time.event_time = Some(event_time.into_nanos());
+                                            }
                                             sender
                                                 .unbounded_send(report_with_time)
                                                 .expect("unbounded_send");
@@ -1282,8 +1326,10 @@ impl<T: Context> InfiniteScrollViewAssistant<T> {
         scroll_method: ScrollMethod,
         exposure: f32,
         touch_sampling_offset: zx::Duration,
+        max_columns: u32,
+        text_disabled: bool,
     ) -> Self {
-        let scene = Scene::new(scale, exposure);
+        let scene = Scene::new(scale, exposure, max_columns, text_disabled);
         let touch_device = TouchDevice::create().ok();
         let fake_scroll_start =
             Time::from_nanos(Time::get(ClockId::Monotonic).into_nanos().saturating_add(
