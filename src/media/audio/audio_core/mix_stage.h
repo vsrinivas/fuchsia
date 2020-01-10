@@ -16,22 +16,22 @@
 
 namespace media::audio {
 
-class MixStage {
+class MixStage : public Stream {
  public:
-  MixStage(const Format& output_format, uint32_t block_size);
+  MixStage(const Format& output_format, uint32_t block_size,
+           TimelineFunction reference_clock_to_output_frame);
 
   struct FrameSpan {
     int64_t start;
-    size_t length;
-
-    // A mapping between reference clock to frame number. If the same
-    // |reference_clock_to_destination_frame_generation| is returned between consecutive calls to
-    // |StartMixJob|, then the |reference_clock_to_frame| function is guaranteed to be the same.
-    TimelineFunction reference_clock_to_frame;
-    uint32_t reference_clock_to_destination_frame_generation;
+    uint32_t length;
   };
-  Stream::Buffer Mix(zx::time ref_time, const FrameSpan& frames);
-  void Trim(zx::time trim);
+
+  // |media::audio::Stream|
+  std::optional<Stream::Buffer> LockBuffer(zx::time ref_time, int64_t frame,
+                                           uint32_t frame_count) override;
+  void UnlockBuffer(bool release_buffer) override {}
+  void Trim(zx::time ref_time) override;
+  std::pair<TimelineFunction, uint32_t> ReferenceClockToFractionalFrames() const override;
 
   std::unique_ptr<Mixer> AddInput(fbl::RefPtr<Stream> stream);
   void RemoveInput(const Stream& stream);
@@ -63,8 +63,7 @@ class MixStage {
   void SetupMix(Mixer* mixer);
   bool ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& buffer);
 
-  void SetupTrim(Mixer* mixer, zx::time trim_point);
-  bool ProcessTrim(const Stream::Buffer& buffer);
+  void MixStream(Stream* stream, Mixer* mixer, zx::time ref_time);
 
   struct StreamHolder {
     fbl::RefPtr<Stream> stream;
@@ -80,10 +79,9 @@ class MixStage {
 
   // State used by the mix task.
   MixJob cur_mix_job_;
-  Format mix_format_;
 
-  // State used by the trim task.
-  FractionalFrames<int64_t> trim_threshold_;
+  TimelineFunction reference_clock_to_output_frame_;
+  uint32_t reference_clock_to_output_frame_generation_;
 };
 
 }  // namespace media::audio

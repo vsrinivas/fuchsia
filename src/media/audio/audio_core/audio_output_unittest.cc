@@ -17,9 +17,10 @@ class TestAudioOutput : public AudioOutput {
       : AudioOutput(threading_model, registry) {}
 
   using AudioOutput::SetNextSchedTime;
-  void SetupMixTask(const Format& format, uint32_t max_frames) {
+  void SetupMixTask(const Format& format, uint32_t max_frames,
+                    TimelineFunction clock_mono_to_output_frame) {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
-    AudioOutput::SetupMixTask(format, max_frames);
+    AudioOutput::SetupMixTask(format, max_frames, clock_mono_to_output_frame);
   }
   void Process() {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
@@ -69,7 +70,9 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
 
 TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
   auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher());
-  audio_output_->SetupMixTask(renderer->format()->stream_type(), zx::msec(1).to_msecs());
+  static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
+  audio_output_->SetupMixTask(renderer->format()->stream_type(), zx::msec(1).to_msecs(),
+                              kOneFramePerMs);
   AudioObject::LinkObjects(renderer, audio_output_);
 
   // StartMixJob always returns nullopt (no work) and schedules another mix 1ms in the future.

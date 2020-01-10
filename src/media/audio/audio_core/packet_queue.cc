@@ -91,7 +91,8 @@ void PacketQueue::Flush(const fbl::RefPtr<PendingFlushToken>& flush_token) {
   }
 }
 
-std::optional<Stream::Buffer> PacketQueue::LockBuffer() {
+std::optional<Stream::Buffer> PacketQueue::LockBuffer(zx::time now, int64_t frame,
+                                                      uint32_t frame_count) {
   TRACE_DURATION("audio", "PacketQueue::LockBuffer");
   std::lock_guard<std::mutex> locker(pending_mutex_);
 
@@ -142,6 +143,23 @@ void PacketQueue::UnlockBuffer(bool release_buffer) {
     if (release_buffer) {
       pending_packet_queue_.pop_front();
     }
+  }
+}
+
+void PacketQueue::Trim(zx::time ref_time) {
+  TRACE_DURATION("audio", "PacketQueue::Trim");
+  int64_t local_now_ticks = (ref_time - zx::time(0)).to_nsecs();
+  auto trim_threshold =
+      FractionalFrames<int64_t>::FromRaw(timeline_function_->get().first(local_now_ticks));
+
+  std::lock_guard<std::mutex> locker(pending_mutex_);
+  while (!pending_packet_queue_.empty()) {
+    auto packet = pending_packet_queue_.front();
+
+    if (packet->end() > trim_threshold) {
+      return;
+    }
+    pending_packet_queue_.pop_front();
   }
 }
 

@@ -221,7 +221,7 @@ const fbl::RefPtr<RingBuffer>& AudioDevice::driver_ring_buffer() const {
   return driver_->ring_buffer();
 };
 
-const TimelineFunction& AudioDevice::driver_clock_mono_to_ring_pos_bytes() const {
+const TimelineFunction& AudioDevice::device_reference_clock_to_ring_pos_bytes() const {
   return driver_->clock_mono_to_ring_pos_bytes();
 };
 

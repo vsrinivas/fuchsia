@@ -43,8 +43,10 @@ void AudioOutput::Process() {
 
     auto mix_frames = StartMixJob(now);
     if (mix_frames) {
-      auto buf = mix_stage_->Mix(now, *mix_frames);
-      FinishMixJob(*mix_frames, reinterpret_cast<float*>(buf.payload()));
+      auto buf = mix_stage_->LockBuffer(now, mix_frames->start, mix_frames->length);
+      FX_CHECK(buf);
+      FinishMixJob(*mix_frames, reinterpret_cast<float*>(buf->payload()));
+      mix_stage_->UnlockBuffer(true);
     } else {
       mix_stage_->Trim(now);
     }

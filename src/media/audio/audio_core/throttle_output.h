@@ -43,7 +43,7 @@ class ThrottleOutput : public AudioOutput {
         .channels = 1,
         .frames_per_second = 48000,
     });
-    SetupMixTask(mix_format, 0);
+    SetupMixTask(mix_format, 0, TimelineFunction());
   }
 
   // AudioOutput Implementation

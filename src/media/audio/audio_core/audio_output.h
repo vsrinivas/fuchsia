@@ -43,10 +43,12 @@ class AudioOutput : public AudioDevice {
     next_sched_time_known_ = true;
   }
 
-  void SetupMixTask(const Format& format, size_t max_block_size_frames)
+  void SetupMixTask(const Format& format, size_t max_block_size_frames,
+                    TimelineFunction device_reference_clock_to_output_frame)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {
     FX_CHECK(format.sample_format() == fuchsia::media::AudioSampleFormat::FLOAT);
-    mix_stage_ = std::make_unique<MixStage>(format, max_block_size_frames);
+    mix_stage_ = std::make_unique<MixStage>(format, max_block_size_frames,
+                                            device_reference_clock_to_output_frame);
   }
 
   void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }

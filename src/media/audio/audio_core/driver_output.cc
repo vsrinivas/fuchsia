@@ -211,9 +211,6 @@ std::optional<MixStage::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
   auto frames = MixStage::FrameSpan{
       .start = frames_sent_,
       .length = frames_to_mix,
-      .reference_clock_to_frame = clock_monotonic_to_output_frame,
-      .reference_clock_to_destination_frame_generation =
-          clock_monotonic_to_output_frame_generation_.get(),
   };
   // If we're muted we simply fill the ring buffer with silence.
   if (output_muted) {
@@ -263,9 +260,8 @@ void DriverOutput::FinishMixJob(const MixStage::FrameSpan& span, float* buffer) 
   });
 
   if (VERBOSE_TIMING_DEBUG) {
-    const auto& reference_clock_to_ring_buffer_frame = span.reference_clock_to_frame;
     auto now = async::Now(mix_domain().dispatcher());
-    int64_t output_frames_consumed = reference_clock_to_ring_buffer_frame.Apply(now.get());
+    int64_t output_frames_consumed = clock_monotonic_to_output_frame_.Apply(now.get());
     int64_t playback_lead_start = frames_sent_ - output_frames_consumed;
     int64_t playback_lead_end = playback_lead_start + span.length;
 
@@ -408,27 +404,6 @@ void DriverOutput::OnDriverConfigComplete() {
   FX_DCHECK(rb.virt() != nullptr);
   output_producer_->FillWithSilence(rb.virt(), rb.frames());
 
-  // Set up the mix task in the AudioOutput.
-  //
-  // Configure our mix job output format. Note we want the same format (frame rate, channelization)
-  // as our output, except output audio as FLOAT samples since that's the only output sample format
-  // the Mixer supports. The conversion to the format required by the hardware ring buffer is done
-  // after the mix is done (see FinishMixJob).
-  //
-  // TODO(39886): The intermediate buffer probably does not need to be as large as the entire ring
-  // buffer.  Consider limiting this to be something only slightly larger than a nominal mix job.
-  auto format = driver()->GetFormat();
-  if (!format) {
-    FX_LOGS(ERROR) << "OnDriverConfigComplete without a configured format";
-    return;
-  }
-  Format mix_format = Format(fuchsia::media::AudioStreamType{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = format->channels(),
-      .frames_per_second = format->frames_per_second(),
-  });
-  SetupMixTask(mix_format, rb.frames());
-
   // Start the ring buffer running
   //
   // TODO(13292) : Don't actually start things up here. We should start only when we have clients
@@ -468,10 +443,26 @@ void DriverOutput::OnDriverStartComplete() {
   uint32_t bytes_per_frame = format->bytes_per_frame();
   int64_t offset = static_cast<int64_t>(1) - bytes_per_frame;
   const TimelineFunction bytes_to_frames(0, offset, 1, bytes_per_frame);
-  const TimelineFunction& t_bytes = driver_clock_mono_to_ring_pos_bytes();
+  const TimelineFunction& t_bytes = device_reference_clock_to_ring_pos_bytes();
 
   clock_monotonic_to_output_frame_ = TimelineFunction::Compose(bytes_to_frames, t_bytes);
   clock_monotonic_to_output_frame_generation_.Next();
+
+  // Set up the mix task in the AudioOutput.
+  //
+  // Configure our mix job output format. Note we want the same format (frame rate, channelization)
+  // as our output, except output audio as FLOAT samples since that's the only output sample format
+  // the Mixer supports. The conversion to the format required by the hardware ring buffer is done
+  // after the mix is done (see FinishMixJob).
+  //
+  // TODO(39886): The intermediate buffer probably does not need to be as large as the entire ring
+  // buffer.  Consider limiting this to be something only slightly larger than a nominal mix job.
+  Format mix_format = Format(fuchsia::media::AudioStreamType{
+      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+      .channels = format->channels(),
+      .frames_per_second = format->frames_per_second(),
+  });
+  SetupMixTask(mix_format, driver_ring_buffer()->frames(), clock_monotonic_to_output_frame_);
 
   const TimelineFunction& trans = clock_monotonic_to_output_frame_;
   uint32_t fd_frames = driver()->fifo_depth_frames();

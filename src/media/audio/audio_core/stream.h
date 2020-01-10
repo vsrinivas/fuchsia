@@ -59,8 +59,11 @@ class Stream : public fbl::RefCounted<Stream> {
     FractionalFrames<uint32_t> length_;
     bool is_continuous_;
   };
-  virtual std::optional<Buffer> LockBuffer() = 0;
+  virtual std::optional<Buffer> LockBuffer(zx::time now, int64_t frame, uint32_t frame_count) = 0;
   virtual void UnlockBuffer(bool release_buffer) = 0;
+
+  // Trims the stream by releasing any frames before |trim_threshold|.
+  virtual void Trim(zx::time trim_threshold) = 0;
 
   // Reads the function that converts reference clock to fractional stream frames.
   virtual std::pair<TimelineFunction, uint32_t> ReferenceClockToFractionalFrames() const = 0;

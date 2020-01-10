@@ -18,15 +18,18 @@
 
 namespace media::audio {
 
-MixStage::MixStage(const Format& output_format, uint32_t block_size_frames)
-    : mix_format_(output_format) {
+MixStage::MixStage(const Format& output_format, uint32_t block_size_frames,
+                   TimelineFunction reference_clock_to_output_frame)
+    : Stream(output_format),
+      reference_clock_to_output_frame_(reference_clock_to_output_frame),
+      reference_clock_to_output_frame_generation_(1) {
   SetupMixBuffer(block_size_frames);
 }
 
 std::unique_ptr<Mixer> MixStage::AddInput(fbl::RefPtr<Stream> stream) {
   TRACE_DURATION("audio", "MixStage::AddInput");
   FX_CHECK(stream);
-  auto mixer = Mixer::Select(stream->format().stream_type(), mix_format_.stream_type());
+  auto mixer = Mixer::Select(stream->format().stream_type(), format().stream_type());
   if (!mixer) {
     mixer = std::make_unique<audio::mixer::NoOp>();
   }
@@ -48,16 +51,17 @@ void MixStage::RemoveInput(const Stream& stream) {
   streams_.erase(it);
 }
 
-Stream::Buffer MixStage::Mix(zx::time now, const FrameSpan& mix_frames) {
+std::optional<Stream::Buffer> MixStage::LockBuffer(zx::time now, int64_t frame,
+                                                   uint32_t frame_count) {
   TRACE_DURATION("audio", "MixStage::Mix");
   memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
   cur_mix_job_.buf = mix_buf_.get();
-  cur_mix_job_.buf_frames = mix_frames.length;
-  cur_mix_job_.start_pts_of = mix_frames.start;
-  cur_mix_job_.reference_clock_to_destination_frame = &mix_frames.reference_clock_to_frame;
+  cur_mix_job_.buf_frames = frame_count;
+  cur_mix_job_.start_pts_of = frame;
+  cur_mix_job_.reference_clock_to_destination_frame = &reference_clock_to_output_frame_;
   cur_mix_job_.reference_clock_to_destination_frame_gen =
-      mix_frames.reference_clock_to_destination_frame_generation;
+      reference_clock_to_output_frame_generation_;
 
   // If we have a mix job, then we must have an intermediate buffer allocated, and it must be
   // large enough for the mix job we were given.
@@ -66,11 +70,19 @@ Stream::Buffer MixStage::Mix(zx::time now, const FrameSpan& mix_frames) {
 
   // Fill the intermediate buffer with silence.
   size_t bytes_to_zero =
-      sizeof(cur_mix_job_.buf[0]) * cur_mix_job_.buf_frames * mix_format_.channels();
+      sizeof(cur_mix_job_.buf[0]) * cur_mix_job_.buf_frames * format().channels();
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
   ForEachSource(TaskType::Mix, now);
-  return Stream::Buffer(FractionalFrames<int64_t>(mix_frames.start),
-                        FractionalFrames<uint32_t>(mix_frames.length), cur_mix_job_.buf, true);
+  return {Stream::Buffer(FractionalFrames<int64_t>(frame), FractionalFrames<uint32_t>(frame_count),
+                         cur_mix_job_.buf, true)};
+}
+
+std::pair<TimelineFunction, uint32_t> MixStage::ReferenceClockToFractionalFrames() const {
+  TimelineRate fractional_frames_per_frame =
+      TimelineRate(FractionalFrames<uint32_t>(1).raw_value());
+  return std::make_pair(TimelineFunction::Compose(TimelineFunction(fractional_frames_per_frame),
+                                                  reference_clock_to_output_frame_),
+                        reference_clock_to_output_frame_generation_);
 }
 
 void MixStage::Trim(zx::time time) {
@@ -81,12 +93,12 @@ void MixStage::Trim(zx::time time) {
 // Create our intermediate accumulation buffer.
 void MixStage::SetupMixBuffer(uint32_t max_mix_frames) {
   TRACE_DURATION("audio", "MixStage::SetupMixBuffer");
-  FX_DCHECK(static_cast<uint64_t>(max_mix_frames) * mix_format_.channels() <=
+  FX_DCHECK(static_cast<uint64_t>(max_mix_frames) * format().channels() <=
             std::numeric_limits<uint32_t>::max());
 
   if (max_mix_frames > 0) {
     mix_buf_frames_ = max_mix_frames;
-    mix_buf_ = std::make_unique<float[]>(mix_buf_frames_ * mix_format_.channels());
+    mix_buf_ = std::make_unique<float[]>(mix_buf_frames_ * format().channels());
   }
 }
 
@@ -105,72 +117,90 @@ void MixStage::ForEachSource(TaskType task_type, zx::time ref_time) {
 
   for (const auto& [stream, mixer] : streams) {
     FX_CHECK(stream);
-    auto& info = mixer->bookkeeping();
+    if (task_type == TaskType::Mix) {
+      MixStream(stream.get(), mixer, ref_time);
+    } else {
+      stream->Trim(ref_time);
+    }
+  }
+}
 
-    // Ensure the mapping from source-frame to local-time is up-to-date.
-    UpdateSourceTrans(*stream, &info);
+void MixStage::MixStream(Stream* stream, Mixer* mixer, zx::time ref_time) {
+  // Ensure the mapping from source-frame to local-time is up-to-date.
+  UpdateSourceTrans(*stream, &mixer->bookkeeping());
+  SetupMix(mixer);
 
-    bool setup_done = false;
-    std::optional<Stream::Buffer> stream_buffer;
+  // If the renderer is currently paused, subject_delta (not just step_size) is zero. This packet
+  // may be relevant eventually, but currently it contributes nothing.
+  if (!mixer->bookkeeping().dest_frames_to_frac_source_frames.subject_delta()) {
+    return;
+  }
 
-    bool release_buffer;
-    while (true) {
-      release_buffer = false;
-      // Try to grab the packet queue's front.
-      stream_buffer = stream->LockBuffer();
+  bool release_buffer;
+  std::optional<Stream::Buffer> stream_buffer;
+  while (true) {
+    release_buffer = false;
 
-      // If the queue is empty, then we are done.
-      if (!stream_buffer) {
-        break;
-      }
-
-      // If the packet is discontinuous, reset our mixer's internal filter state.
-      if (!stream_buffer->is_continuous()) {
-        mixer->Reset();
-      }
-
-      // If we have not set up for this renderer yet, do so. If the setup fails for any reason, stop
-      // processing packets for this renderer.
-      if (!setup_done) {
-        if (task_type == TaskType::Mix) {
-          SetupMix(mixer);
-        } else {
-          SetupTrim(mixer, ref_time);
-        }
-        setup_done = true;
-      }
-
-      // Now process the packet at the front of the renderer's queue. If the packet has been
-      // entirely consumed, pop it off the front and proceed to the next. Otherwise, we are done.
-      release_buffer = (task_type == TaskType::Mix)
-                           ? ProcessMix(stream.get(), mixer, *stream_buffer)
-                           : ProcessTrim(*stream_buffer);
-
-      // If we have mixed enough destination frames, we are done with this mix, regardless of what
-      // we should now do with the source packet.
-      if ((task_type == TaskType::Mix) &&
-          (cur_mix_job_.frames_produced == cur_mix_job_.buf_frames)) {
-        break;
-      }
-      // If we still need to produce more destination data, but could not complete this source
-      // packet (we're paused, or the packet is in the future), then we are done.
-      if (!release_buffer) {
-        break;
-      }
-      // We did consume this entire source packet, and we should keep mixing.
-      stream_buffer = std::nullopt;
-      stream->UnlockBuffer(release_buffer);
+    // At this point we know we need to consume some source data, but we don't yet know how much.
+    // Here is how many destination frames we still need to produce, for this mix job.
+    uint32_t dest_frames_left = cur_mix_job_.buf_frames - cur_mix_job_.frames_produced;
+    if (dest_frames_left == 0) {
+      break;
     }
 
-    // Unlock queue (completing packet if needed) and proceed to the next source.
+    // Calculate this job's first and last sampling points, in source sub-frames. Use timestamps
+    // for the first and last dest frames we need, translated into the source (frac_frame)
+    // timeline.
+    auto& info = mixer->bookkeeping();
+    FractionalFrames<int64_t> frac_source_for_first_mix_job_frame =
+        FractionalFrames<int64_t>::FromRaw(info.dest_frames_to_frac_source_frames(
+            cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced));
+    uint32_t source_frames =
+        FractionalFrames<int64_t>::FromRaw(
+            info.dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left))
+            .Ceiling();
+
+    // Try to grab the packet queue's front.
+    stream_buffer =
+        stream->LockBuffer(ref_time, frac_source_for_first_mix_job_frame.Floor(), source_frames);
+
+    // If the queue is empty, then we are done.
+    if (!stream_buffer) {
+      break;
+    }
+
+    // If the packet is discontinuous, reset our mixer's internal filter state.
+    if (!stream_buffer->is_continuous()) {
+      mixer->Reset();
+    }
+
+    // Now process the packet at the front of the renderer's queue. If the packet has been
+    // entirely consumed, pop it off the front and proceed to the next. Otherwise, we are done.
+    release_buffer = ProcessMix(stream, mixer, *stream_buffer);
+
+    // If we have mixed enough destination frames, we are done with this mix, regardless of what
+    // we should now do with the source packet.
+    if (cur_mix_job_.frames_produced == cur_mix_job_.buf_frames) {
+      break;
+    }
+    // If we still need to produce more destination data, but could not complete this source
+    // packet (we're paused, or the packet is in the future), then we are done.
+    if (!release_buffer) {
+      break;
+    }
+    // We did consume this entire source packet, and we should keep mixing.
     stream_buffer = std::nullopt;
     stream->UnlockBuffer(release_buffer);
-
-    // Note: there is no point in doing this for Trim tasks, but it doesn't hurt anything, and it's
-    // easier than adding another function to ForEachSource to run after each renderer is processed,
-    // just to set this flag.
-    cur_mix_job_.accumulate = true;
   }
+
+  // Unlock queue (completing packet if needed) and proceed to the next source.
+  stream_buffer = std::nullopt;
+  stream->UnlockBuffer(release_buffer);
+
+  // Note: there is no point in doing this for Trim tasks, but it doesn't hurt anything, and it's
+  // easier than adding another function to ForEachSource to run after each renderer is processed,
+  // just to set this flag.
+  cur_mix_job_.accumulate = true;
 }
 
 void MixStage::SetupMix(Mixer* mixer) {
@@ -210,7 +240,7 @@ bool MixStage::ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& so
   // At this point we know we need to consume some source data, but we don't yet know how much.
   // Here is how many destination frames we still need to produce, for this mix job.
   uint32_t dest_frames_left = cur_mix_job_.buf_frames - cur_mix_job_.frames_produced;
-  float* buf = mix_buf_.get() + (cur_mix_job_.frames_produced * mix_format_.channels());
+  float* buf = mix_buf_.get() + (cur_mix_job_.frames_produced * format().channels());
 
   // Calculate this job's first and last sampling points, in source sub-frames. Use timestamps for
   // the first and last dest frames we need, translated into the source (frac_frame) timeline.
@@ -374,32 +404,6 @@ bool MixStage::ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& so
 
   FX_DCHECK(cur_mix_job_.frames_produced <= cur_mix_job_.buf_frames);
   return consumed_source;
-}
-
-void MixStage::SetupTrim(Mixer* mixer, zx::time now) {
-  TRACE_DURATION("audio", "MixStage::SetupTrim");
-  // Compute the cutoff time used to decide whether to trim packets. ForEachSource has already
-  // updated our transformation, no need for us to do so here.
-  FX_DCHECK(mixer);
-  int64_t local_now_ticks = (now - zx::time(0)).to_nsecs();
-
-  // RateControlBase guarantees that the transformation into the media timeline is never singular.
-  // If a forward transformation fails it must be because of overflow, which should be impossible
-  // unless user defined a playback rate where the ratio of media-ticks-to-local-ticks is greater
-  // than one.
-  trim_threshold_ = FractionalFrames<int64_t>::FromRaw(
-      mixer->bookkeeping().clock_mono_to_frac_source_frames(local_now_ticks));
-}
-
-bool MixStage::ProcessTrim(const Stream::Buffer& buffer) {
-  TRACE_DURATION("audio", "MixStage::ProcessTrim");
-
-  // If the presentation end of this packet is in the future, stop trimming.
-  if (buffer.end() > trim_threshold_) {
-    return false;
-  }
-
-  return true;
 }
 
 void MixStage::UpdateSourceTrans(const Stream& stream, Mixer::Bookkeeping* bk) {

@@ -25,7 +25,9 @@ const Format kDefaultFormat = Format(fuchsia::media::AudioStreamType{
 class MixStageTest : public testing::ThreadingModelFixture {
  protected:
   zx::time time_until(zx::duration delta) { return zx::time(delta.to_nsecs()); }
-  std::shared_ptr<MixStage> mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, 128);
+  std::shared_ptr<MixStage> mix_stage_ = std::make_shared<MixStage>(
+      kDefaultFormat, 128,
+      TimelineFunction(TimelineRate(kDefaultFormat.frames_per_second(), zx::sec(1).to_nsecs())));
 
   // Views the memory at |ptr| as a std::array of |N| elements of |T|. If |offset| is provided, it
   // is the number of |T| sized elements to skip at the beginning of |ptr|.
@@ -113,48 +115,51 @@ TEST_F(MixStageTest, MixUniformFormats) {
     packet_queue2->PushPacket(packet_factory.CreatePacket(0.3, zx::msec(1)));
   }
 
-  TimelineFunction output_timeline_function(
-      TimelineRate(kDefaultFormat.frames_per_second(), zx::sec(1).to_nsecs()));
-  MixStage::FrameSpan output_frames;
-  output_frames.start = 0;
-  output_frames.length = output_timeline_function.rate().Scale(zx::msec(2).to_nsecs());
-  output_frames.reference_clock_to_frame = output_timeline_function;
-  output_frames.reference_clock_to_destination_frame_generation = 1;
-
+  int64_t output_frame_start = 0;
+  uint32_t output_frame_count = 96;
   {  // Mix frames 0-2ms. Expect the first 1ms to be 0.8 samples and the second ms to be 0.9
      // samples.
-    auto buf = mix_stage_->Mix(time_until(zx::msec(2)), output_frames);
+    auto buf =
+        mix_stage_->LockBuffer(time_until(zx::msec(2)), output_frame_start, output_frame_count);
     // 1ms @ 48000hz == 48 frames. 2ms == 96 (frames).
-    ASSERT_EQ(buf.length().Floor(), 96u);
+    ASSERT_TRUE(buf);
+    ASSERT_EQ(buf->length().Floor(), 96u);
     // Each frame is 2 channels, so 1ms will be 96 samples.
-    auto& arr1 = as_array<float, 96>(buf.payload(), 0);
+    auto& arr1 = as_array<float, 96>(buf->payload(), 0);
     EXPECT_THAT(arr1, Each(FloatEq(0.8f)));
-    auto& arr2 = as_array<float, 96>(buf.payload(), 96);
+    auto& arr2 = as_array<float, 96>(buf->payload(), 96);
     EXPECT_THAT(arr2, Each(FloatEq(0.9f)));
+    mix_stage_->UnlockBuffer(true);
   }
 
-  output_frames.start += output_frames.length;
+  output_frame_start += output_frame_count;
   {  // Mix frames 2-4ms. Expect the first 1ms to be 0.9 samples and the second ms to be 0.8
      // samples.
-    auto buf = mix_stage_->Mix(time_until(zx::msec(4)), output_frames);
-    ASSERT_EQ(buf.length().Floor(), 96u);
+    auto buf =
+        mix_stage_->LockBuffer(time_until(zx::msec(4)), output_frame_start, output_frame_count);
+    ASSERT_TRUE(buf);
+    ASSERT_EQ(buf->length().Floor(), 96u);
 
-    auto& arr1 = as_array<float, 96>(buf.payload(), 0);
+    auto& arr1 = as_array<float, 96>(buf->payload(), 0);
     EXPECT_THAT(arr1, Each(FloatEq(0.9f)));
-    auto& arr2 = as_array<float, 96>(buf.payload(), 96);
+    auto& arr2 = as_array<float, 96>(buf->payload(), 96);
     EXPECT_THAT(arr2, Each(FloatEq(0.8f)));
+    mix_stage_->UnlockBuffer(true);
   }
 
-  output_frames.start += output_frames.length;
+  output_frame_start += output_frame_count;
   {  // Mix frames 4-6ms. Expect the first 1ms to be 0.8 samples and the second ms to be 0.6
      // samples.
-    auto buf = mix_stage_->Mix(time_until(zx::msec(4)), output_frames);
-    ASSERT_EQ(buf.length().Floor(), 96u);
+    auto buf =
+        mix_stage_->LockBuffer(time_until(zx::msec(6)), output_frame_start, output_frame_count);
+    ASSERT_TRUE(buf);
+    ASSERT_EQ(buf->length().Floor(), 96u);
 
-    auto& arr1 = as_array<float, 96>(buf.payload(), 0);
+    auto& arr1 = as_array<float, 96>(buf->payload(), 0);
     EXPECT_THAT(arr1, Each(FloatEq(0.8f)));
-    auto& arr2 = as_array<float, 96>(buf.payload(), 96);
+    auto& arr2 = as_array<float, 96>(buf->payload(), 96);
     EXPECT_THAT(arr2, Each(FloatEq(0.6f)));
+    mix_stage_->UnlockBuffer(true);
   }
 }
 

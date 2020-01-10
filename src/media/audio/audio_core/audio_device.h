@@ -183,7 +183,7 @@ class AudioDevice : public AudioObject {
   const fbl::RefPtr<RingBuffer>& driver_ring_buffer() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  const TimelineFunction& driver_clock_mono_to_ring_pos_bytes() const
+  const TimelineFunction& device_reference_clock_to_ring_pos_bytes() const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   ExecutionDomain& mix_domain() const { return *mix_domain_; }
