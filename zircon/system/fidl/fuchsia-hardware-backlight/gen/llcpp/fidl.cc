@@ -45,36 +45,31 @@ namespace {
 constexpr uint64_t kDevice_GetStateNormalized_Ordinal = 0x44ba72a000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStateNormalized_GenOrdinal = 0x2506201b5999b9b7lu;
-extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateNormalizedRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateNormalizedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_DeviceGetStateNormalizedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_DeviceGetStateNormalizedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetStateNormalized_Ordinal = 0xc19adb00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetStateNormalized_GenOrdinal = 0x554ac5cb4f9f5b62lu;
-extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateNormalizedRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateNormalizedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_DeviceSetStateNormalizedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_DeviceSetStateNormalizedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStateAbsolute_Ordinal = 0x971592f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStateAbsolute_GenOrdinal = 0x1f8ccf01cf526a2blu;
-extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateAbsoluteRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateAbsoluteResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_DeviceGetStateAbsoluteRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_DeviceGetStateAbsoluteResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetStateAbsolute_Ordinal = 0x697f353e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetStateAbsolute_GenOrdinal = 0x19c100c43faaa178lu;
-extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateAbsoluteRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceSetStateAbsoluteResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_DeviceSetStateAbsoluteRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_DeviceSetStateAbsoluteResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetMaxAbsoluteBrightness_Ordinal = 0x65fe16500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetMaxAbsoluteBrightness_GenOrdinal = 0x2aa0699313d4160dlu;
-extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessResponseTable;
 
 }  // namespace

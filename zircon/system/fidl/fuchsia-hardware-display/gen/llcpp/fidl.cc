@@ -15,15 +15,13 @@ namespace {
 constexpr uint64_t kProvider_OpenVirtconController_Ordinal = 0x7522c7b300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kProvider_OpenVirtconController_GenOrdinal = 0x7163a23d838e6fb6lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenVirtconControllerRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenVirtconControllerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ProviderOpenVirtconControllerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ProviderOpenVirtconControllerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kProvider_OpenController_Ordinal = 0x69d407d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kProvider_OpenController_GenOrdinal = 0x54b5aa00a47ab0b3lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenControllerRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ProviderOpenControllerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ProviderOpenControllerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ProviderOpenControllerResponseTable;
 
 }  // namespace
@@ -332,225 +330,193 @@ namespace {
 constexpr uint64_t kController_DisplaysChanged_Ordinal = 0x30f5452200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_DisplaysChanged_GenOrdinal = 0x848efe931ddb1c6lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDisplaysChangedRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerDisplaysChangedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportVmoImage_Ordinal = 0x420a4b7000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportVmoImage_GenOrdinal = 0x7cab4d73f9f1893clu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportVmoImageRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportVmoImageRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportImage_Ordinal = 0x18d6e53b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportImage_GenOrdinal = 0x1be9cd6562de6db5lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportImageRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportImageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseImage_Ordinal = 0x3abc075800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseImage_GenOrdinal = 0x63a7d0a6b107bd11lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseImageRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseImageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseImageRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseImageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportEvent_Ordinal = 0x7d2447aa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportEvent_GenOrdinal = 0x402289f13944e6d7lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportEventRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseEvent_Ordinal = 0x4379630400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseEvent_GenOrdinal = 0x657e4eab9a8e23a1lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseEventRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_CreateLayer_Ordinal = 0x7f56932400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_CreateLayer_GenOrdinal = 0x468d06aadd139295lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCreateLayerRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCreateLayerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerCreateLayerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerCreateLayerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_DestroyLayer_Ordinal = 0x2abc04b100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_DestroyLayer_GenOrdinal = 0x6b42dce004859fe5lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDestroyLayerRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerDestroyLayerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerDestroyLayerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerDestroyLayerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayMode_Ordinal = 0x584c92ab00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayMode_GenOrdinal = 0x55a035e7a881c48dlu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayModeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayModeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayModeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayModeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayColorConversion_Ordinal = 0x71cb370500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayColorConversion_GenOrdinal = 0x3d3548d04caf79b7lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayColorConversionRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayColorConversionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayColorConversionRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayColorConversionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayLayers_Ordinal = 0x9bebf8600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDisplayLayers_GenOrdinal = 0x47e92da1f9702675lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayLayersRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetDisplayLayersResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayLayersRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetDisplayLayersResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryConfig_Ordinal = 0x3673de6000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryConfig_GenOrdinal = 0x10bc9fc5d61f5c94lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryPosition_Ordinal = 0x6bd4fbc600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryPosition_GenOrdinal = 0x735faf29ee889cdclu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryPositionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryPositionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryAlpha_Ordinal = 0x5a79ec9200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerPrimaryAlpha_GenOrdinal = 0x1b81604b1a9b6576lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerCursorConfig_Ordinal = 0x74020b200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerCursorConfig_GenOrdinal = 0x2fddfd240f9e7764lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerCursorConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerCursorConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerCursorPosition_Ordinal = 0x2f36e7b000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerCursorPosition_GenOrdinal = 0x147c1526ac3ad9c5lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorPositionRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerCursorPositionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerCursorPositionRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerCursorPositionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerColorConfig_Ordinal = 0x21cc7c8800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerColorConfig_GenOrdinal = 0x19cb6da071d515calu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerColorConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerColorConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerColorConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerColorConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerImage_Ordinal = 0x1ecab8800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetLayerImage_GenOrdinal = 0x7c71f66253182fb9lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerImageRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetLayerImageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerImageRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetLayerImageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_CheckConfig_Ordinal = 0x160ce58b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_CheckConfig_GenOrdinal = 0x586ca589eaf66e11lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCheckConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerCheckConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerCheckConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerCheckConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ApplyConfig_Ordinal = 0x572081a200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ApplyConfig_GenOrdinal = 0x65b30a10604984f7lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerApplyConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerApplyConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerApplyConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerApplyConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_EnableVsync_Ordinal = 0x2be2db1300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_EnableVsync_GenOrdinal = 0x5d517bdbc05d434elu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerEnableVsyncRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerEnableVsyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerEnableVsyncRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerEnableVsyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Vsync_Ordinal = 0x71fcce9000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Vsync_GenOrdinal = 0x5813c85bf6f9d5f5lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerVsyncRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerVsyncEventTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerVsyncRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerVsyncEventTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetVirtconMode_Ordinal = 0x49c4520700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetVirtconMode_GenOrdinal = 0x7c8d1b102e72182clu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetVirtconModeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetVirtconModeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetVirtconModeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetVirtconModeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ClientOwnershipChange_Ordinal = 0x4360b92e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ClientOwnershipChange_GenOrdinal = 0x41b1af32fb2f7362lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipChangeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerClientOwnershipChangeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportBufferCollection_Ordinal = 0x605b9d0d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportBufferCollection_GenOrdinal = 0x1cdf9cc2e60832d1lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportBufferCollectionRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportBufferCollectionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportBufferCollectionRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportBufferCollectionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseBufferCollection_Ordinal = 0x52f8b58400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseBufferCollection_GenOrdinal = 0x4527c480391b6c83lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseBufferCollectionRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseBufferCollectionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseBufferCollectionRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseBufferCollectionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetBufferCollectionConstraints_Ordinal = 0x78b51dd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetBufferCollectionConstraints_GenOrdinal = 0x3b78d75d2d21b451lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetSingleBufferFramebuffer_Ordinal = 0x2ecce54500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetSingleBufferFramebuffer_GenOrdinal = 0x65cd908c2c03b49dlu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_IsCaptureSupported_Ordinal = 0x6dfc193a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_IsCaptureSupported_GenOrdinal = 0x1cd2541e93a17760lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerIsCaptureSupportedRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerIsCaptureSupportedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerIsCaptureSupportedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerIsCaptureSupportedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportImageForCapture_Ordinal = 0x3150d1a200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportImageForCapture_GenOrdinal = 0x2a595fbc2df7f9eblu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_StartCapture_Ordinal = 0x5436d93300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_StartCapture_GenOrdinal = 0x7d4ccf55f0259266lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerStartCaptureRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerStartCaptureResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerStartCaptureRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerStartCaptureResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseCapture_Ordinal = 0x7f1785f000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ReleaseCapture_GenOrdinal = 0x3c5dbe1d114a5752lu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseCaptureRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerReleaseCaptureResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseCaptureRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerReleaseCaptureResponseTable;
 
 }  // namespace

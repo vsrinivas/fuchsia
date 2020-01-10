@@ -527,9 +527,12 @@ func (c *compiler) compileUnion(p types.Union) ([]StructMember, []StructMember, 
 
 	for _, m := range p.Members {
 		inLine, outOfLine, handles := c.compileStructMember(types.StructMember{
-			Type:   m.Type,
-			Name:   m.Name,
-			Offset: m.Offset,
+			Type: m.Type,
+			Name: m.Name,
+			FieldShapeV1: types.FieldShape{
+				Offset:  m.Offset,
+				Padding: 0,
+			},
 		})
 
 		i = append(i, StructMember{
@@ -553,9 +556,9 @@ func (c *compiler) compileParameters(name string, ordinal uint64, params []types
 	var args types.Struct
 	for _, p := range params {
 		args.Members = append(args.Members, types.StructMember{
-			Type:   p.Type,
-			Name:   p.Name,
-			Offset: p.Offset,
+			Type:         p.Type,
+			Name:         p.Name,
+			FieldShapeV1: p.FieldShapeV1,
 		})
 	}
 	result := c.compileStruct(args)

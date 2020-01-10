@@ -29,7 +29,6 @@ struct Device_GetPerformanceStateInfo_Response;
 struct Device_GetPerformanceStateInfo_Result;
 class Device;
 
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResultTable;
 
 struct Device_GetPerformanceStateInfo_Result {
@@ -120,7 +119,6 @@ constexpr int64_t VOLTAGE_UNKNOWN = -1;
 // are unknown respectively.
 constexpr int64_t FREQUENCY_UNKNOWN = -1;
 
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_CpuPerformanceStateInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_CpuPerformanceStateInfoTable;
 
 // A collection of some basic information for a given performance state.
@@ -137,7 +135,6 @@ struct CpuPerformanceStateInfo {
   int64_t voltage_uv = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResponseTable;
 
 struct Device_GetPerformanceStateInfo_Response {
@@ -150,17 +147,11 @@ struct Device_GetPerformanceStateInfo_Response {
   ::llcpp::fuchsia::hardware::cpu::ctrl::CpuPerformanceStateInfo info = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdResponseTable;
 
 class Device final {
@@ -173,12 +164,9 @@ class Device final {
     ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 16;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -190,7 +178,6 @@ class Device final {
     uint32_t state;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -209,12 +196,9 @@ class Device final {
     uint64_t count;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -228,12 +212,9 @@ class Device final {
     uint64_t id;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -245,7 +226,6 @@ class Device final {
     uint64_t index;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

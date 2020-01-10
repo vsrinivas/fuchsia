@@ -69,18 +69,18 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
 
 {{- define "StructDefinition" }}
-extern "C" const fidl_type_t {{ .V1TableType }};
-const fidl_type_t* {{ .Name }}::FidlType = &{{ .V1TableType }};
+extern "C" const fidl_type_t {{ .TableType }};
+const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
 void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   {{- range .Members }}
-  ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV1NoEE }});
+  ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .Offset }});
   {{- end }}
 }
 
 void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* value, size_t _offset) {
   {{- range .Members }}
-  ::fidl::Decode(_decoder, &value->{{ .Name }}, _offset + {{ .OffsetV1NoEE }});
+  ::fidl::Decode(_decoder, &value->{{ .Name }}, _offset + {{ .Offset }});
   {{- end }}
 }
 
@@ -99,7 +99,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
 {{- define "StructTraits" }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
-    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeV1NoEE }}> {};
+    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSize }}> {};
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {

@@ -28,7 +28,6 @@ struct TestDevice_AddChildDevice_Response;
 struct TestDevice_AddChildDevice_Result;
 class TestDevice;
 
-extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResultTable;
 
 struct TestDevice_AddChildDevice_Result {
@@ -112,7 +111,6 @@ struct TestDevice_AddChildDevice_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_devhost_test_TestDevice_AddChildDevice_ResponseTable;
 
 struct TestDevice_AddChildDevice_Response {
@@ -125,9 +123,7 @@ struct TestDevice_AddChildDevice_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDeviceAddChildDeviceRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_devhost_test_TestDeviceAddChildDeviceRequestTable;
-extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
 
 class TestDevice final {
@@ -140,12 +136,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -217,7 +210,7 @@ class TestDevice final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Add child test device
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AddChildDevice AddChildDevice();
 
     // Add child test device
@@ -234,7 +227,7 @@ class TestDevice final {
    public:
 
     // Add child test device
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AddChildDevice AddChildDevice(::zx::unowned_channel _client_end);
 
     // Add child test device

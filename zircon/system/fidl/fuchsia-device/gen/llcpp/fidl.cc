@@ -20,8 +20,7 @@ namespace {
 constexpr uint64_t kNameProvider_GetDeviceName_Ordinal = 0x980ac2500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNameProvider_GetDeviceName_GenOrdinal = 0x6030de8d2052b2celu;
-extern "C" const fidl_type_t fuchsia_device_NameProviderGetDeviceNameRequestTable;
-extern "C" const fidl_type_t fuchsia_device_NameProviderGetDeviceNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_NameProviderGetDeviceNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_NameProviderGetDeviceNameResponseTable;
 
 }  // namespace
@@ -253,141 +252,121 @@ namespace {
 constexpr uint64_t kController_Bind_Ordinal = 0x30b1cd5d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Bind_GenOrdinal = 0x3388f12801462769lu;
-extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerBindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerBindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Rebind_Ordinal = 0x661b1f200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Rebind_GenOrdinal = 0x384fb80cbc2782e2lu;
-extern "C" const fidl_type_t fuchsia_device_ControllerRebindRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerRebindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerRebindRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerRebindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ScheduleUnbind_Ordinal = 0xd0cd4ba00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ScheduleUnbind_GenOrdinal = 0x6128ba9d76aff9clu;
-extern "C" const fidl_type_t fuchsia_device_ControllerScheduleUnbindRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerScheduleUnbindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerScheduleUnbindRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerScheduleUnbindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDriverName_Ordinal = 0x76995acd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDriverName_GenOrdinal = 0x26f6ecf97738afe8lu;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverNameRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDriverNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDriverNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDeviceName_Ordinal = 0x377a34e000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDeviceName_GenOrdinal = 0x69220024bb341abelu;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetDeviceNameRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetDeviceNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDeviceNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDeviceNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetTopologicalPath_Ordinal = 0x430fc2d600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetTopologicalPath_GenOrdinal = 0x2689b37663e00788lu;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetTopologicalPathRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetTopologicalPathResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetEventHandle_Ordinal = 0x73cacb3600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetEventHandle_GenOrdinal = 0x60b4bf1536cb0ef4lu;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetEventHandleRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetEventHandleResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetEventHandleRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetEventHandleResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDriverLogFlags_Ordinal = 0x5c5b709300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDriverLogFlags_GenOrdinal = 0x7272c2cf685f4b16lu;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverLogFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetDriverLogFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDriverLogFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDriverLogFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDriverLogFlags_Ordinal = 0x7d56732b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetDriverLogFlags_GenOrdinal = 0x45a98c40a24b8cf0lu;
-extern "C" const fidl_type_t fuchsia_device_ControllerSetDriverLogFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerSetDriverLogFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetDriverLogFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetDriverLogFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_DebugSuspend_Ordinal = 0x65f2322400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_DebugSuspend_GenOrdinal = 0x37827c5e2f45e12elu;
-extern "C" const fidl_type_t fuchsia_device_ControllerDebugSuspendRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerDebugSuspendResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerDebugSuspendRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerDebugSuspendResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_DebugResume_Ordinal = 0x5fee29c400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_DebugResume_GenOrdinal = 0xe1555cdd68b40e6lu;
-extern "C" const fidl_type_t fuchsia_device_ControllerDebugResumeRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerDebugResumeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerDebugResumeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerDebugResumeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_RunCompatibilityTests_Ordinal = 0x484cd9af00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_RunCompatibilityTests_GenOrdinal = 0x58268c9ba1dc54d1lu;
-extern "C" const fidl_type_t fuchsia_device_ControllerRunCompatibilityTestsRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerRunCompatibilityTestsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerRunCompatibilityTestsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerRunCompatibilityTestsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDevicePowerCaps_Ordinal = 0x70a9ecf200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDevicePowerCaps_GenOrdinal = 0x19acb37026ae22dlu;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePowerCapsRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDevicePowerCapsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDevicePerformanceStates_Ordinal = 0x388bd0d000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetDevicePerformanceStates_GenOrdinal = 0x24890b74e37f3e62lu;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePerformanceStatesRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePerformanceStatesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDevicePerformanceStatesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetDevicePerformanceStatesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_UpdatePowerStateMapping_Ordinal = 0x5200982600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_UpdatePowerStateMapping_GenOrdinal = 0x185489481614d7a6lu;
-extern "C" const fidl_type_t fuchsia_device_ControllerUpdatePowerStateMappingRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerUpdatePowerStateMappingResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerUpdatePowerStateMappingRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerUpdatePowerStateMappingResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetPowerStateMapping_Ordinal = 0x4ca6662900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetPowerStateMapping_GenOrdinal = 0x1a509f4010ee5cbelu;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetPowerStateMappingRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetPowerStateMappingResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetPowerStateMappingRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetPowerStateMappingResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Suspend_Ordinal = 0x5897568300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Suspend_GenOrdinal = 0x6af131a48f7c8fdalu;
-extern "C" const fidl_type_t fuchsia_device_ControllerSuspendRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerSuspendResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerSuspendRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerSuspendResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Resume_Ordinal = 0x363da84d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Resume_GenOrdinal = 0x22c86261fd50a61elu;
-extern "C" const fidl_type_t fuchsia_device_ControllerResumeRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerResumeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerResumeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerResumeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_SetPerformanceState_Ordinal = 0x37f0cb1600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_SetPerformanceState_GenOrdinal = 0x364c4698975d7f7clu;
-extern "C" const fidl_type_t fuchsia_device_ControllerSetPerformanceStateRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerSetPerformanceStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetPerformanceStateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerSetPerformanceStateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ConfigureAutoSuspend_Ordinal = 0x6277961100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ConfigureAutoSuspend_GenOrdinal = 0x21dd7803b96694celu;
-extern "C" const fidl_type_t fuchsia_device_ControllerConfigureAutoSuspendRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerConfigureAutoSuspendResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_ControllerConfigureAutoSuspendRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerConfigureAutoSuspendResponseTable;
 
 }  // namespace

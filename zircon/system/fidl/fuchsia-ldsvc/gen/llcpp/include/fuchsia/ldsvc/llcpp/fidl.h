@@ -25,21 +25,13 @@ namespace ldsvc {
 
 class Loader;
 
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDoneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderDoneRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDoneResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderDoneResponseTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderLoadObjectRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderLoadObjectResponseTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderConfigResponseTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderCloneRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderCloneResponseTable;
 
 class Loader final {
@@ -55,12 +47,9 @@ class Loader final {
     ::zx::vmo object;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_ldsvc_LoaderLoadObjectResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_ldsvc_LoaderLoadObjectResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -72,7 +61,6 @@ class Loader final {
     ::fidl::StringView object_name;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_ldsvc_LoaderLoadObjectRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_ldsvc_LoaderLoadObjectRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1024;
@@ -91,12 +79,9 @@ class Loader final {
     int32_t rv;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_ldsvc_LoaderConfigResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_ldsvc_LoaderConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -108,7 +93,6 @@ class Loader final {
     ::fidl::StringView config;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_ldsvc_LoaderConfigRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_ldsvc_LoaderConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1024;
@@ -127,12 +111,9 @@ class Loader final {
     int32_t rv;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_ldsvc_LoaderCloneResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_ldsvc_LoaderCloneResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -144,7 +125,6 @@ class Loader final {
     ::zx::channel loader;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_ldsvc_LoaderCloneRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_ldsvc_LoaderCloneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

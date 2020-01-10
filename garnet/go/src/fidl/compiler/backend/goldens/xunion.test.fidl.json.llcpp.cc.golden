@@ -42,15 +42,13 @@ namespace {
 constexpr uint64_t kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal = 0x71a1b4b700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal = 0x2b158c786064d0delu;
-extern "C" const fidl_type_t test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
-extern "C" const fidl_type_t test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+extern "C" const fidl_type_t v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 extern "C" const fidl_type_t v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal = 0x3959ff0900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal = 0x5ecf85aadd137696lu;
-extern "C" const fidl_type_t test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
-extern "C" const fidl_type_t test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+extern "C" const fidl_type_t v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 extern "C" const fidl_type_t v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 }  // namespace

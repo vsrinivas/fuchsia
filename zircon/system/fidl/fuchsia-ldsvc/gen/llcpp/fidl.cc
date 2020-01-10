@@ -14,29 +14,25 @@ namespace {
 constexpr uint64_t kLoader_Done_Ordinal = 0x501635da00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoader_Done_GenOrdinal = 0x63ba6b76d3671001lu;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDoneRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDoneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderDoneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderDoneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoader_LoadObject_Ordinal = 0x18d35e6000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoader_LoadObject_GenOrdinal = 0x48c5a151d6df2853lu;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderLoadObjectRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderLoadObjectResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoader_Config_Ordinal = 0x1adeb78d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoader_Config_GenOrdinal = 0x6a8a1a1464632841lu;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoader_Clone_Ordinal = 0x3862fcb900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoader_Clone_GenOrdinal = 0x57e643a9ab6e4c29lu;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderCloneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderCloneResponseTable;
 
 }  // namespace

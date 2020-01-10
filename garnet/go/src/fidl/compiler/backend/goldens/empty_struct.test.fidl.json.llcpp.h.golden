@@ -23,7 +23,6 @@ namespace name {
 
 struct Empty;
 
-extern "C" const fidl_type_t test_name_EmptyTable;
 extern "C" const fidl_type_t v1_test_name_EmptyTable;
 
 struct Empty {

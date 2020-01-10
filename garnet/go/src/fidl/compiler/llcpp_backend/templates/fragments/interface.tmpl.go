@@ -17,14 +17,6 @@ class {{ .Name }};
 &{{ .ResponseTypeName }}
 {{- end }}
 
-{{- define "V1ResponseCodingTable" -}}
-&{{ .V1ResponseTypeName }}
-{{- end }}
-
-{{- define "V1RequestCodingTable" -}}
-&{{ .V1RequestTypeName }}
-{{- end }}
-
 {{- define "ForwardParams" -}}
   {{- range $index, $param := . -}}
     {{- if $index }}, {{ end -}} std::move({{ $param.Name }})
@@ -49,9 +41,7 @@ class {{ .Name }};
 {{ "" }}
   {{- range .Methods }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
-extern "C" const fidl_type_t {{ .V1RequestTypeName }};
 extern "C" const fidl_type_t {{ .ResponseTypeName }};
-extern "C" const fidl_type_t {{ .V1ResponseTypeName }};
   {{- end }}
 
   {{- /* Trailing line feed after encoding tables. */}}
@@ -82,13 +72,10 @@ class {{ .Name }} final {
     {{ $param.Type.LLDecl }} {{ $param.Name }};
         {{- end }}
 
-    static constexpr const fidl_type_t* Type = {{ template "V1ResponseCodingTable" . }};
-    static constexpr const fidl_type_t* AltType = {{ template "ResponseCodingTable" . }};
+    static constexpr const fidl_type_t* Type = {{ template "ResponseCodingTable" . }};
     static constexpr uint32_t MaxNumHandles = {{ .ResponseMaxHandles }};
-    static constexpr uint32_t PrimarySize = {{ .ResponseSizeV1NoEE }};
-    static constexpr uint32_t MaxOutOfLine = {{ .ResponseMaxOutOfLineV1NoEE }};
-    static constexpr uint32_t AltPrimarySize = {{ .ResponseSize }};
-    static constexpr uint32_t AltMaxOutOfLine = {{ .ResponseMaxOutOfLine }};
+    static constexpr uint32_t PrimarySize = {{ .ResponseSize }};
+    static constexpr uint32_t MaxOutOfLine = {{ .ResponseMaxOutOfLine }};
     static constexpr bool HasFlexibleEnvelope = {{ .ResponseFlexible }};
     static constexpr bool ContainsUnion = {{ .ResponseContainsUnion }};
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -109,11 +96,10 @@ class {{ .Name }} final {
     {{ $param.Type.LLDecl }} {{ $param.Name }};
         {{- end }}
 
-    static constexpr const fidl_type_t* Type = {{ template "V1RequestCodingTable" . }};
-    static constexpr const fidl_type_t* AltType = {{ template "RequestCodingTable" . }};
+    static constexpr const fidl_type_t* Type = {{ template "RequestCodingTable" . }};
     static constexpr uint32_t MaxNumHandles = {{ .RequestMaxHandles }};
-    static constexpr uint32_t PrimarySize = {{ .RequestSizeV1NoEE }};
-    static constexpr uint32_t MaxOutOfLine = {{ .RequestMaxOutOfLineV1NoEE }};
+    static constexpr uint32_t PrimarySize = {{ .RequestSize }};
+    static constexpr uint32_t MaxOutOfLine = {{ .RequestMaxOutOfLine }};
     static constexpr uint32_t AltPrimarySize = {{ .RequestSize }};
     static constexpr uint32_t AltMaxOutOfLine = {{ .RequestMaxOutOfLine }};
     static constexpr bool HasFlexibleEnvelope = {{ .RequestFlexible }};
@@ -443,7 +429,7 @@ struct IsFidlMessage<{{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name
 static_assert(sizeof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Request)
     == {{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Request::PrimarySize);
 {{- range $index, $param := .Request }}
-static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $method.Name }}Request, {{ $param.Name }}) == {{ $param.OffsetV1 }});
+static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $method.Name }}Request, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
 {{- if and .HasResponse .Response }}
@@ -455,7 +441,7 @@ struct IsFidlMessage<{{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name
 static_assert(sizeof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Response)
     == {{ $interface.Namespace }}::{{ $interface.Name }}::{{ .Name }}Response::PrimarySize);
 {{- range $index, $param := .Response }}
-static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.OffsetV1 }});
+static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
 {{- end }}
@@ -491,7 +477,6 @@ constexpr uint64_t {{ .Name }} = {{ .Ordinal }}lu;
   {{- end }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
 extern "C" const fidl_type_t {{ .ResponseTypeName }};
-extern "C" const fidl_type_t {{ .V1ResponseTypeName }};
 {{- end }}
 
 }  // namespace

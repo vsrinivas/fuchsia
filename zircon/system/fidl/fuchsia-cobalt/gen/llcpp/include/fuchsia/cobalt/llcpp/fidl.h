@@ -57,7 +57,6 @@ struct EventPayload;
 struct CobaltEvent;
 class Logger;
 
-extern "C" const fidl_type_t fuchsia_cobalt_ValueTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ValueTable;
 
 struct Value {
@@ -189,7 +188,6 @@ struct Value {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_EventPayloadTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_EventPayloadTable;
 
 struct EventPayload {
@@ -369,7 +367,6 @@ struct EventPayload {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_CustomEventValueTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_CustomEventValueTable;
 
 // Logger Interface
@@ -385,29 +382,17 @@ struct CustomEventValue {
   ::llcpp::fuchsia::cobalt::Value value = {};
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerRequestSendSoonRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerRequestSendSoonRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerRequestSendSoonResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerRequestSendSoonResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerBlockUntilEmptyRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerBlockUntilEmptyRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerBlockUntilEmptyResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerBlockUntilEmptyResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGetNumSendAttemptsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGetNumSendAttemptsRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGetNumSendAttemptsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGetNumSendAttemptsResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGetFailedSendAttemptsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGetFailedSendAttemptsRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGetFailedSendAttemptsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGetFailedSendAttemptsResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGetNumObservationsAddedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGetNumObservationsAddedRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGetNumObservationsAddedResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGetNumObservationsAddedResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGenerateAggregatedObservationsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGenerateAggregatedObservationsRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGenerateAggregatedObservationsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGenerateAggregatedObservationsResponseTable;
 
 class Controller final {
@@ -421,12 +406,9 @@ class Controller final {
     bool success;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_ControllerRequestSendSoonResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_ControllerRequestSendSoonResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -441,7 +423,6 @@ class Controller final {
     uint32_t max_wait_seconds;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_ControllerBlockUntilEmptyRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_ControllerBlockUntilEmptyRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -459,12 +440,9 @@ class Controller final {
     uint32_t num;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_ControllerGetNumSendAttemptsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_ControllerGetNumSendAttemptsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -478,12 +456,9 @@ class Controller final {
     uint32_t num;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_ControllerGetFailedSendAttemptsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_ControllerGetFailedSendAttemptsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -497,12 +472,9 @@ class Controller final {
     uint64_t num_obs;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_ControllerGetNumObservationsAddedResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_ControllerGetNumObservationsAddedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -516,12 +488,9 @@ class Controller final {
     ::fidl::VectorView<uint64_t> num_obs;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_ControllerGenerateAggregatedObservationsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_ControllerGenerateAggregatedObservationsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -534,7 +503,6 @@ class Controller final {
     ::fidl::VectorView<uint32_t> report_ids;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_ControllerGenerateAggregatedObservationsRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_ControllerGenerateAggregatedObservationsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1013,33 +981,19 @@ class Controller final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogEventRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogEventResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogEventResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogEventCountRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogEventCountRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogEventCountResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogEventCountResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogElapsedTimeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogElapsedTimeRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogElapsedTimeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogElapsedTimeResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogFrameRateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogFrameRateRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogFrameRateResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogFrameRateResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogMemoryUsageRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogMemoryUsageRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogMemoryUsageResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogMemoryUsageResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseStartTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseStartTimerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseStartTimerResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseStartTimerResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseEndTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseEndTimerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseEndTimerResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseEndTimerResponseTable;
 
 // LoggerBase Interface
@@ -1053,12 +1007,9 @@ class LoggerBase final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseLogEventResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseLogEventResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1071,7 +1022,6 @@ class LoggerBase final {
     uint32_t event_code;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseLogEventRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseLogEventRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1090,12 +1040,9 @@ class LoggerBase final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseLogEventCountResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseLogEventCountResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1111,7 +1058,6 @@ class LoggerBase final {
     int64_t count;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseLogEventCountRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseLogEventCountRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -1130,12 +1076,9 @@ class LoggerBase final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseLogElapsedTimeResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseLogElapsedTimeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1150,7 +1093,6 @@ class LoggerBase final {
     int64_t elapsed_micros;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseLogElapsedTimeRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseLogElapsedTimeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -1169,12 +1111,9 @@ class LoggerBase final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseLogFrameRateResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseLogFrameRateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1189,7 +1128,6 @@ class LoggerBase final {
     float fps;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseLogFrameRateRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseLogFrameRateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -1208,12 +1146,9 @@ class LoggerBase final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseLogMemoryUsageResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseLogMemoryUsageResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1228,7 +1163,6 @@ class LoggerBase final {
     int64_t bytes;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseLogMemoryUsageRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseLogMemoryUsageRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -1247,12 +1181,9 @@ class LoggerBase final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseStartTimerResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseStartTimerResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1269,7 +1200,6 @@ class LoggerBase final {
     uint32_t timeout_s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseStartTimerRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseStartTimerRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 128;
@@ -1288,12 +1218,9 @@ class LoggerBase final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseEndTimerResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseEndTimerResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1307,7 +1234,6 @@ class LoggerBase final {
     uint32_t timeout_s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerBaseEndTimerRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerBaseEndTimerRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -1852,37 +1778,21 @@ class LoggerBase final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogEventRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogEventResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogEventResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogEventCountRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogEventCountRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogEventCountResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogEventCountResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogElapsedTimeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogElapsedTimeRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogElapsedTimeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogElapsedTimeResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogFrameRateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogFrameRateRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogFrameRateResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogFrameRateResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogMemoryUsageRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogMemoryUsageRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogMemoryUsageResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogMemoryUsageResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleStartTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleStartTimerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleStartTimerResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleStartTimerResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleEndTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleEndTimerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleEndTimerResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleEndTimerResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogIntHistogramRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogIntHistogramRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogIntHistogramResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogIntHistogramResponseTable;
 
 // LoggerSimple Interface
@@ -1896,12 +1806,9 @@ class LoggerSimple final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleLogEventResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleLogEventResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1914,7 +1821,6 @@ class LoggerSimple final {
     uint32_t event_code;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleLogEventRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleLogEventRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1933,12 +1839,9 @@ class LoggerSimple final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleLogEventCountResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleLogEventCountResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1954,7 +1857,6 @@ class LoggerSimple final {
     int64_t count;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleLogEventCountRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleLogEventCountRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -1973,12 +1875,9 @@ class LoggerSimple final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleLogElapsedTimeResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleLogElapsedTimeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1993,7 +1892,6 @@ class LoggerSimple final {
     int64_t elapsed_micros;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleLogElapsedTimeRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleLogElapsedTimeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -2012,12 +1910,9 @@ class LoggerSimple final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleLogFrameRateResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleLogFrameRateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2032,7 +1927,6 @@ class LoggerSimple final {
     float fps;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleLogFrameRateRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleLogFrameRateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -2051,12 +1945,9 @@ class LoggerSimple final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleLogMemoryUsageResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleLogMemoryUsageResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2071,7 +1962,6 @@ class LoggerSimple final {
     int64_t bytes;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleLogMemoryUsageRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleLogMemoryUsageRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -2090,12 +1980,9 @@ class LoggerSimple final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleStartTimerResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleStartTimerResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2112,7 +1999,6 @@ class LoggerSimple final {
     uint32_t timeout_s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleStartTimerRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleStartTimerRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 128;
@@ -2131,12 +2017,9 @@ class LoggerSimple final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleEndTimerResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleEndTimerResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2150,7 +2033,6 @@ class LoggerSimple final {
     uint32_t timeout_s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleEndTimerRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleEndTimerRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -2169,12 +2051,9 @@ class LoggerSimple final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleLogIntHistogramResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleLogIntHistogramResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2190,7 +2069,6 @@ class LoggerSimple final {
     ::fidl::VectorView<uint64_t> bucket_counts;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerSimpleLogIntHistogramRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerSimpleLogIntHistogramRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 6064;
@@ -2799,7 +2677,6 @@ class LoggerSimple final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_ProjectProfileTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ProjectProfileTable;
 
 struct ProjectProfile {
@@ -2814,21 +2691,13 @@ struct ProjectProfile {
   ::llcpp::fuchsia::cobalt::ReleaseStage release_stage = {};
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdResponseTable;
 
 class LoggerFactory final {
@@ -2842,12 +2711,9 @@ class LoggerFactory final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerFactoryCreateLoggerResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerFactoryCreateLoggerResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2860,7 +2726,6 @@ class LoggerFactory final {
     ::zx::channel logger;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerFactoryCreateLoggerRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerFactoryCreateLoggerRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2879,12 +2744,9 @@ class LoggerFactory final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2897,7 +2759,6 @@ class LoggerFactory final {
     ::zx::channel logger;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2916,12 +2777,9 @@ class LoggerFactory final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2934,7 +2792,6 @@ class LoggerFactory final {
     ::zx::channel logger;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2953,12 +2810,9 @@ class LoggerFactory final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2971,7 +2825,6 @@ class LoggerFactory final {
     ::zx::channel logger;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3338,7 +3191,6 @@ constexpr int64_t MAX_BYTES_PER_EVENT = 102400u;
 
 constexpr uint32_t MAX_BATCHED_EVENTS = 64u;
 
-extern "C" const fidl_type_t fuchsia_cobalt_HistogramBucketTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_HistogramBucketTable;
 
 struct HistogramBucket {
@@ -3353,7 +3205,6 @@ struct HistogramBucket {
   uint64_t count = {};
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_ExperimentTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ExperimentTable;
 
 // SystemProfileUpdater Interface
@@ -3369,13 +3220,9 @@ struct Experiment {
   uint32_t arm_id = {};
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_SystemDataUpdaterSetExperimentStateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_SystemDataUpdaterSetExperimentStateRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_SystemDataUpdaterSetExperimentStateResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_SystemDataUpdaterSetExperimentStateResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_SystemDataUpdaterSetChannelRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_SystemDataUpdaterSetChannelRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_SystemDataUpdaterSetChannelResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_SystemDataUpdaterSetChannelResponseTable;
 
 class SystemDataUpdater final {
@@ -3389,12 +3236,9 @@ class SystemDataUpdater final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_SystemDataUpdaterSetExperimentStateResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_SystemDataUpdaterSetExperimentStateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3406,7 +3250,6 @@ class SystemDataUpdater final {
     ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_SystemDataUpdaterSetExperimentStateRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_SystemDataUpdaterSetExperimentStateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -3425,12 +3268,9 @@ class SystemDataUpdater final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_SystemDataUpdaterSetChannelResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_SystemDataUpdaterSetChannelResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3442,7 +3282,6 @@ class SystemDataUpdater final {
     ::fidl::StringView current_channel;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_SystemDataUpdaterSetChannelRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_SystemDataUpdaterSetChannelRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 256;
@@ -3667,7 +3506,6 @@ class SystemDataUpdater final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_EventTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_EventTable;
 
 struct Event {
@@ -3680,7 +3518,6 @@ struct Event {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_CountEventTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_CountEventTable;
 
 struct CountEvent {
@@ -3695,7 +3532,6 @@ struct CountEvent {
   int64_t count = {};
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_CobaltEventTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_CobaltEventTable;
 
 struct CobaltEvent {
@@ -3714,49 +3550,27 @@ struct CobaltEvent {
   ::llcpp::fuchsia::cobalt::EventPayload payload = {};
 };
 
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogEventRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogEventResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogEventResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogEventCountRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogEventCountRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogEventCountResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogEventCountResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogElapsedTimeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogElapsedTimeRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogElapsedTimeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogElapsedTimeResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogFrameRateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogFrameRateRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogFrameRateResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogFrameRateResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogMemoryUsageRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogMemoryUsageRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogMemoryUsageResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogMemoryUsageResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerStartTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerStartTimerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerStartTimerResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerStartTimerResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerEndTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerEndTimerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerEndTimerResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerEndTimerResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogIntHistogramRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogIntHistogramRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogIntHistogramResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogIntHistogramResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogCustomEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCustomEventRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogCustomEventResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCustomEventResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogCobaltEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCobaltEventRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogCobaltEventResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCobaltEventResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogCobaltEventsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCobaltEventsRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogCobaltEventsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCobaltEventsResponseTable;
 
 class Logger final {
@@ -3769,12 +3583,9 @@ class Logger final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogEventResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogEventResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3787,7 +3598,6 @@ class Logger final {
     uint32_t event_code;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogEventRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogEventRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3806,12 +3616,9 @@ class Logger final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogEventCountResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogEventCountResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3827,7 +3634,6 @@ class Logger final {
     int64_t count;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogEventCountRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogEventCountRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -3846,12 +3652,9 @@ class Logger final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogElapsedTimeResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogElapsedTimeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3866,7 +3669,6 @@ class Logger final {
     int64_t elapsed_micros;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogElapsedTimeRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogElapsedTimeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -3885,12 +3687,9 @@ class Logger final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogFrameRateResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogFrameRateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3905,7 +3704,6 @@ class Logger final {
     float fps;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogFrameRateRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogFrameRateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -3924,12 +3722,9 @@ class Logger final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogMemoryUsageResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogMemoryUsageResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3944,7 +3739,6 @@ class Logger final {
     int64_t bytes;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogMemoryUsageRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogMemoryUsageRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -3963,12 +3757,9 @@ class Logger final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerStartTimerResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerStartTimerResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3985,7 +3776,6 @@ class Logger final {
     uint32_t timeout_s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerStartTimerRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerStartTimerRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 128;
@@ -4004,12 +3794,9 @@ class Logger final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerEndTimerResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerEndTimerResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4023,7 +3810,6 @@ class Logger final {
     uint32_t timeout_s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerEndTimerRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerEndTimerRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -4042,12 +3828,9 @@ class Logger final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogIntHistogramResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogIntHistogramResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4062,7 +3845,6 @@ class Logger final {
     ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogIntHistogramRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogIntHistogramRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8064;
@@ -4081,12 +3863,9 @@ class Logger final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogCustomEventResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogCustomEventResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4099,7 +3878,6 @@ class Logger final {
     ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogCustomEventRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogCustomEventRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -4118,12 +3896,9 @@ class Logger final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogCobaltEventResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogCobaltEventResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4135,7 +3910,6 @@ class Logger final {
     ::llcpp::fuchsia::cobalt::CobaltEvent event;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogCobaltEventRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogCobaltEventRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 8104;
@@ -4154,12 +3928,9 @@ class Logger final {
     ::llcpp::fuchsia::cobalt::Status status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogCobaltEventsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogCobaltEventsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4171,7 +3942,6 @@ class Logger final {
     ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_cobalt_LoggerLogCobaltEventsRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_cobalt_LoggerLogCobaltEventsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 522752;

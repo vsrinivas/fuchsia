@@ -22,8 +22,7 @@ namespace {
 constexpr uint64_t kTestDevice_AddChildDevice_Ordinal = 0x1164758100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_AddChildDevice_GenOrdinal = 0x556f822500b898eclu;
-extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDeviceAddChildDeviceRequestTable;
-extern "C" const fidl_type_t fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_devhost_test_TestDeviceAddChildDeviceRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_devhost_test_TestDeviceAddChildDeviceResponseTable;
 
 }  // namespace

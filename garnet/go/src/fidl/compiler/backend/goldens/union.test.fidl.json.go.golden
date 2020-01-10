@@ -12,8 +12,8 @@ import (
 
 
 type NullableUnionStruct struct {
-	_ struct{} `fidl:"s,8,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	TheUnion *Union`fidl:"0" fidl_offset_v1:"0" fidl_offset_v1_no_ee:"0"`
+	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	TheUnion *Union`fidl:"0" fidl_offset_v1:"0"`
 }
 
 var _mNullableUnionStruct = _bindings.CreateLazyMarshaler(NullableUnionStruct{})
@@ -30,7 +30,7 @@ const (
 
 
 type Union struct {
-	I_unionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_unionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	Primitive int32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
 	StringNeedsConstructor string  `fidl:"2," fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
 	VectorStringAlsoNeedsConstructor []string  `fidl:"3,," fidl_hashed_ord:"3" fidl_explicit_ord:"3"`
@@ -85,7 +85,7 @@ const (
 
 
 type FieldCollision struct {
-	I_fieldCollisionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_fieldCollisionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	FieldCollisionTag int32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
 }
 
@@ -117,7 +117,7 @@ const (
 
 
 type ExplicitUnion struct {
-	I_explicitUnionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_explicitUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	Primitive int32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
 	StringNeedsConstructor string  `fidl:"3," fidl_hashed_ord:"3" fidl_explicit_ord:"3"`
 }
@@ -161,7 +161,7 @@ const (
 
 
 type ReverseOrdinalUnion struct {
-	I_reverseOrdinalUnionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_reverseOrdinalUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	First uint32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
 	Second uint32  `fidl:"2" fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
 }

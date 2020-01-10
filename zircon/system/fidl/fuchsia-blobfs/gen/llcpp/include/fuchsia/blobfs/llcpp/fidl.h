@@ -35,9 +35,7 @@ class BlobfsAdmin;
 class Blobfs;
 struct BlockRegion;
 
-extern "C" const fidl_type_t fuchsia_blobfs_CorruptBlobHandlerCorruptBlobRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_blobfs_CorruptBlobHandlerCorruptBlobRequestTable;
-extern "C" const fidl_type_t fuchsia_blobfs_CorruptBlobHandlerCorruptBlobResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_blobfs_CorruptBlobHandlerCorruptBlobResponseTable;
 
 class CorruptBlobHandler final {
@@ -50,12 +48,9 @@ class CorruptBlobHandler final {
     ::llcpp::fuchsia::blobfs::TakeAction action;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_blobfs_CorruptBlobHandlerCorruptBlobResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_blobfs_CorruptBlobHandlerCorruptBlobResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -67,7 +62,6 @@ class CorruptBlobHandler final {
     ::fidl::VectorView<uint8_t> merkleroot;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_blobfs_CorruptBlobHandlerCorruptBlobRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_blobfs_CorruptBlobHandlerCorruptBlobRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -228,9 +222,7 @@ class CorruptBlobHandler final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsRequestTable;
-extern "C" const fidl_type_t fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsResponseTable;
 
 class BlobfsAdmin final {
@@ -243,12 +235,9 @@ class BlobfsAdmin final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -260,7 +249,6 @@ class BlobfsAdmin final {
     ::zx::channel handler;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -421,9 +409,7 @@ class BlobfsAdmin final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_blobfs_BlobfsGetAllocatedRegionsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_blobfs_BlobfsGetAllocatedRegionsRequestTable;
-extern "C" const fidl_type_t fuchsia_blobfs_BlobfsGetAllocatedRegionsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_blobfs_BlobfsGetAllocatedRegionsResponseTable;
 
 class Blobfs final {
@@ -438,12 +424,9 @@ class Blobfs final {
     uint64_t count;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_blobfs_BlobfsGetAllocatedRegionsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_blobfs_BlobfsGetAllocatedRegionsResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -599,7 +582,6 @@ class Blobfs final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_blobfs_BlockRegionTable;
 extern "C" const fidl_type_t v1_fuchsia_blobfs_BlockRegionTable;
 
 struct BlockRegion {

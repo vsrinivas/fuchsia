@@ -38,7 +38,6 @@ struct TestDevice_AddDeviceWithPowerArgs_Response;
 struct TestDevice_AddDeviceWithPowerArgs_Result;
 class TestDevice;
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
 
 struct TestDevice_GetCurrentDevicePowerState_Result {
@@ -122,7 +121,6 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
 
 struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
@@ -206,7 +204,6 @@ struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResultTable;
 
 struct TestDevice_GetCurrentSuspendReason_Result {
@@ -290,7 +287,6 @@ struct TestDevice_GetCurrentSuspendReason_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
 
 struct TestDevice_GetCurrentDevicePerformanceState_Result {
@@ -374,7 +370,6 @@ struct TestDevice_GetCurrentDevicePerformanceState_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
 
 struct TestDevice_AddDeviceWithPowerArgs_Result {
@@ -458,7 +453,6 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
 
 struct TestDevice_GetCurrentDevicePowerState_Response {
@@ -471,7 +465,6 @@ struct TestDevice_GetCurrentDevicePowerState_Response {
   ::llcpp::fuchsia::device::DevicePowerState cur_state = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResponseTable;
 
 struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Response {
@@ -486,7 +479,6 @@ struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Response {
   ::llcpp::fuchsia::device::DevicePowerState deepest_sleep_state = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResponseTable;
 
 struct TestDevice_GetCurrentSuspendReason_Response {
@@ -499,7 +491,6 @@ struct TestDevice_GetCurrentSuspendReason_Response {
   uint8_t cur_suspend_reason = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResponseTable;
 
 struct TestDevice_GetCurrentDevicePerformanceState_Response {
@@ -512,7 +503,6 @@ struct TestDevice_GetCurrentDevicePerformanceState_Response {
   int32_t cur_state = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
 
 struct TestDevice_AddDeviceWithPowerArgs_Response {
@@ -525,25 +515,15 @@ struct TestDevice_AddDeviceWithPowerArgs_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateRequestTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonRequestTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonResponseTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateRequestTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateResponseTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigResponseTable;
 
 class TestDevice final {
@@ -556,12 +536,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -575,7 +552,6 @@ class TestDevice final {
     bool make_visible;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -594,12 +570,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -613,12 +586,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -632,12 +602,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -651,12 +618,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -864,7 +828,7 @@ class TestDevice final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Add Test Device with some powerargs
-    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 48 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible);
 
     // Add Test Device with some powerargs
@@ -872,7 +836,7 @@ class TestDevice final {
     UnownedResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer);
 
     // Get current power state of the device
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState();
 
     // Get current power state of the device
@@ -880,7 +844,7 @@ class TestDevice final {
     UnownedResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(::fidl::BytePart _response_buffer);
 
     // Get the suspend reason of the last suspend call
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetCurrentSuspendReason GetCurrentSuspendReason();
 
     // Get the suspend reason of the last suspend call
@@ -888,7 +852,7 @@ class TestDevice final {
     UnownedResultOf::GetCurrentSuspendReason GetCurrentSuspendReason(::fidl::BytePart _response_buffer);
 
     // Get current performance state of the device
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetCurrentDevicePerformanceState GetCurrentDevicePerformanceState();
 
     // Get current performance state of the device
@@ -896,7 +860,7 @@ class TestDevice final {
     UnownedResultOf::GetCurrentDevicePerformanceState GetCurrentDevicePerformanceState(::fidl::BytePart _response_buffer);
 
     // Get current auto suspend status and deepest_sleep_state
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetCurrentDeviceAutoSuspendConfig GetCurrentDeviceAutoSuspendConfig();
 
     // Get current auto suspend status and deepest_sleep_state
@@ -913,7 +877,7 @@ class TestDevice final {
    public:
 
     // Add Test Device with some powerargs
-    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 48 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible);
 
     // Add Test Device with some powerargs
@@ -921,7 +885,7 @@ class TestDevice final {
     static UnownedResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer);
 
     // Get current power state of the device
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(::zx::unowned_channel _client_end);
 
     // Get current power state of the device
@@ -929,7 +893,7 @@ class TestDevice final {
     static UnownedResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get the suspend reason of the last suspend call
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetCurrentSuspendReason GetCurrentSuspendReason(::zx::unowned_channel _client_end);
 
     // Get the suspend reason of the last suspend call
@@ -937,7 +901,7 @@ class TestDevice final {
     static UnownedResultOf::GetCurrentSuspendReason GetCurrentSuspendReason(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get current performance state of the device
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetCurrentDevicePerformanceState GetCurrentDevicePerformanceState(::zx::unowned_channel _client_end);
 
     // Get current performance state of the device
@@ -945,7 +909,7 @@ class TestDevice final {
     static UnownedResultOf::GetCurrentDevicePerformanceState GetCurrentDevicePerformanceState(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get current auto suspend status and deepest_sleep_state
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetCurrentDeviceAutoSuspendConfig GetCurrentDeviceAutoSuspendConfig(::zx::unowned_channel _client_end);
 
     // Get current auto suspend status and deepest_sleep_state

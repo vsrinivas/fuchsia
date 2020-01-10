@@ -13,33 +13,33 @@ import (
 
 
 type Handles struct {
-	_ struct{} `fidl:"s,104,4" fidl_size_v1:"104" fidl_alignment_v1:"4" fidl_size_v1_no_ee:"104" fidl_alignment_v1_no_ee:"4"`
-	PlainHandle _zx.Handle`fidl:"0,0" fidl_offset_v1:"0" fidl_offset_v1_no_ee:"0"`
-	BtiHandle _zx.Handle`fidl:"4,0" fidl_offset_v1:"4" fidl_offset_v1_no_ee:"4"`
-	ChannelHandle _zx.Channel`fidl:"8,0" fidl_offset_v1:"8" fidl_offset_v1_no_ee:"8"`
-	DebuglogHandle _zx.Log`fidl:"12,0" fidl_offset_v1:"12" fidl_offset_v1_no_ee:"12"`
-	EventHandle _zx.Event`fidl:"16,0" fidl_offset_v1:"16" fidl_offset_v1_no_ee:"16"`
-	EventpairHandle _zx.Handle`fidl:"20,0" fidl_offset_v1:"20" fidl_offset_v1_no_ee:"20"`
-	ExceptionHandle _zx.Handle`fidl:"24,0" fidl_offset_v1:"24" fidl_offset_v1_no_ee:"24"`
-	FifoHandle _zx.Handle`fidl:"28,0" fidl_offset_v1:"28" fidl_offset_v1_no_ee:"28"`
-	GuestHandle _zx.Handle`fidl:"32,0" fidl_offset_v1:"32" fidl_offset_v1_no_ee:"32"`
-	InterruptHandle _zx.Handle`fidl:"36,0" fidl_offset_v1:"36" fidl_offset_v1_no_ee:"36"`
-	IommuHandle _zx.Handle`fidl:"40,0" fidl_offset_v1:"40" fidl_offset_v1_no_ee:"40"`
-	JobHandle _zx.Handle`fidl:"44,0" fidl_offset_v1:"44" fidl_offset_v1_no_ee:"44"`
-	PagerHandle _zx.Handle`fidl:"48,0" fidl_offset_v1:"48" fidl_offset_v1_no_ee:"48"`
-	PcideviceHandle _zx.Handle`fidl:"52,0" fidl_offset_v1:"52" fidl_offset_v1_no_ee:"52"`
-	PmtHandle _zx.Handle`fidl:"56,0" fidl_offset_v1:"56" fidl_offset_v1_no_ee:"56"`
-	PortHandle _zx.Port`fidl:"60,0" fidl_offset_v1:"60" fidl_offset_v1_no_ee:"60"`
-	ProcessHandle _zx.Handle`fidl:"64,0" fidl_offset_v1:"64" fidl_offset_v1_no_ee:"64"`
-	ProfileHandle _zx.Handle`fidl:"68,0" fidl_offset_v1:"68" fidl_offset_v1_no_ee:"68"`
-	ResourceHandle _zx.Handle`fidl:"72,0" fidl_offset_v1:"72" fidl_offset_v1_no_ee:"72"`
-	SocketHandle _zx.Socket`fidl:"76,0" fidl_offset_v1:"76" fidl_offset_v1_no_ee:"76"`
-	SuspendtokenHandle _zx.Handle`fidl:"80,0" fidl_offset_v1:"80" fidl_offset_v1_no_ee:"80"`
-	ThreadHandle _zx.Handle`fidl:"84,0" fidl_offset_v1:"84" fidl_offset_v1_no_ee:"84"`
-	TimerHandle _zx.Handle`fidl:"88,0" fidl_offset_v1:"88" fidl_offset_v1_no_ee:"88"`
-	VcpuHandle _zx.Handle`fidl:"92,0" fidl_offset_v1:"92" fidl_offset_v1_no_ee:"92"`
-	VmarHandle _zx.VMAR`fidl:"96,0" fidl_offset_v1:"96" fidl_offset_v1_no_ee:"96"`
-	VmoHandle _zx.VMO`fidl:"100,0" fidl_offset_v1:"100" fidl_offset_v1_no_ee:"100"`
+	_ struct{} `fidl:"s" fidl_size_v1:"104" fidl_alignment_v1:"4"`
+	PlainHandle _zx.Handle`fidl:"0,0" fidl_offset_v1:"0"`
+	BtiHandle _zx.Handle`fidl:"4,0" fidl_offset_v1:"4"`
+	ChannelHandle _zx.Channel`fidl:"8,0" fidl_offset_v1:"8"`
+	DebuglogHandle _zx.Log`fidl:"12,0" fidl_offset_v1:"12"`
+	EventHandle _zx.Event`fidl:"16,0" fidl_offset_v1:"16"`
+	EventpairHandle _zx.Handle`fidl:"20,0" fidl_offset_v1:"20"`
+	ExceptionHandle _zx.Handle`fidl:"24,0" fidl_offset_v1:"24"`
+	FifoHandle _zx.Handle`fidl:"28,0" fidl_offset_v1:"28"`
+	GuestHandle _zx.Handle`fidl:"32,0" fidl_offset_v1:"32"`
+	InterruptHandle _zx.Handle`fidl:"36,0" fidl_offset_v1:"36"`
+	IommuHandle _zx.Handle`fidl:"40,0" fidl_offset_v1:"40"`
+	JobHandle _zx.Handle`fidl:"44,0" fidl_offset_v1:"44"`
+	PagerHandle _zx.Handle`fidl:"48,0" fidl_offset_v1:"48"`
+	PcideviceHandle _zx.Handle`fidl:"52,0" fidl_offset_v1:"52"`
+	PmtHandle _zx.Handle`fidl:"56,0" fidl_offset_v1:"56"`
+	PortHandle _zx.Port`fidl:"60,0" fidl_offset_v1:"60"`
+	ProcessHandle _zx.Handle`fidl:"64,0" fidl_offset_v1:"64"`
+	ProfileHandle _zx.Handle`fidl:"68,0" fidl_offset_v1:"68"`
+	ResourceHandle _zx.Handle`fidl:"72,0" fidl_offset_v1:"72"`
+	SocketHandle _zx.Socket`fidl:"76,0" fidl_offset_v1:"76"`
+	SuspendtokenHandle _zx.Handle`fidl:"80,0" fidl_offset_v1:"80"`
+	ThreadHandle _zx.Handle`fidl:"84,0" fidl_offset_v1:"84"`
+	TimerHandle _zx.Handle`fidl:"88,0" fidl_offset_v1:"88"`
+	VcpuHandle _zx.Handle`fidl:"92,0" fidl_offset_v1:"92"`
+	VmarHandle _zx.VMAR`fidl:"96,0" fidl_offset_v1:"96"`
+	VmoHandle _zx.VMO`fidl:"100,0" fidl_offset_v1:"100"`
 }
 
 var _mHandles = _bindings.CreateLazyMarshaler(Handles{})

@@ -26,7 +26,6 @@ struct Range;
 struct Buffer;
 struct Data;
 
-extern "C" const fidl_type_t fuchsia_mem_DataTable;
 extern "C" const fidl_type_t v1_fuchsia_mem_DataTable;
 
 // Binary data that might be stored inline or in a VMO.
@@ -130,7 +129,6 @@ struct Data {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_mem_RangeTable;
 extern "C" const fidl_type_t v1_fuchsia_mem_RangeTable;
 
 // A range of bytes within a VMO.
@@ -161,7 +159,6 @@ struct Range {
   uint64_t size = {};
 };
 
-extern "C" const fidl_type_t fuchsia_mem_BufferTable;
 extern "C" const fidl_type_t v1_fuchsia_mem_BufferTable;
 
 // A buffer for data whose size is not necessarily a multiple of the page

@@ -66,7 +66,6 @@ struct Config;
 class Device;
 class NewDevice;
 
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDevice_Write_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDevice_Write_ResultTable;
 
 struct NewDevice_Write_Result {
@@ -150,7 +149,6 @@ struct NewDevice_Write_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDevice_Read_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDevice_Read_ResultTable;
 
 struct NewDevice_Read_Result {
@@ -234,9 +232,7 @@ struct NewDevice_Read_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceProxyGetChannelRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceProxyGetChannelRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceProxyGetChannelResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceProxyGetChannelResponseTable;
 
 class NewDeviceProxy final {
@@ -249,7 +245,6 @@ class NewDeviceProxy final {
     ::zx::channel req;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_NewDeviceProxyGetChannelRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_NewDeviceProxyGetChannelRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -388,7 +383,6 @@ class NewDeviceProxy final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDevice_Write_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDevice_Write_ResponseTable;
 
 struct NewDevice_Write_Response {
@@ -401,7 +395,6 @@ struct NewDevice_Write_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDevice_Read_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDevice_Read_ResponseTable;
 
 struct NewDevice_Read_Response {
@@ -414,7 +407,6 @@ struct NewDevice_Read_Response {
   ::fidl::VectorView<uint8_t> data = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_serial_ConfigTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_ConfigTable;
 
 struct Config {
@@ -435,13 +427,9 @@ struct Config {
   uint32_t baud_rate = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceGetClassRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceGetClassResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceSetConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceSetConfigResponseTable;
 
 // Legacy synchronous device interface.
@@ -456,12 +444,9 @@ class Device final {
     ::llcpp::fuchsia::hardware::serial::Class device_class;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_DeviceGetClassResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_DeviceGetClassResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -475,12 +460,9 @@ class Device final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_DeviceSetConfigResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_DeviceSetConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -492,7 +474,6 @@ class Device final {
     ::llcpp::fuchsia::hardware::serial::Config config;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_DeviceSetConfigRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_DeviceSetConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -727,21 +708,13 @@ class Device final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceGetClassRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceGetClassRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceGetClassResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceGetClassResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceSetConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceSetConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceSetConfigResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceSetConfigResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceReadRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceReadRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceReadResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceReadResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceWriteRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceWriteRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceWriteResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceWriteResponseTable;
 
 // FIDL device utilizing the new asynchronous serial driver
@@ -757,12 +730,9 @@ class NewDevice final {
     ::llcpp::fuchsia::hardware::serial::Class device_class;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_NewDeviceGetClassResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_NewDeviceGetClassResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -776,12 +746,9 @@ class NewDevice final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_NewDeviceSetConfigResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_NewDeviceSetConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -793,7 +760,6 @@ class NewDevice final {
     ::llcpp::fuchsia::hardware::serial::Config config;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_NewDeviceSetConfigRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_NewDeviceSetConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -812,12 +778,9 @@ class NewDevice final {
     ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_NewDeviceReadResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_NewDeviceReadResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -831,12 +794,9 @@ class NewDevice final {
     ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_NewDeviceWriteResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_NewDeviceWriteResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -848,7 +808,6 @@ class NewDevice final {
     ::fidl::VectorView<uint8_t> data;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_serial_NewDeviceWriteRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_serial_NewDeviceWriteRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1051,7 +1010,7 @@ class NewDevice final {
     UnownedResultOf::Read Read(::fidl::BytePart _response_buffer);
 
     // Writes data to the serial port
-    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 48 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Write Write(::fidl::VectorView<uint8_t> data);
 
     // Writes data to the serial port
@@ -1092,7 +1051,7 @@ class NewDevice final {
     static UnownedResultOf::Read Read(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Writes data to the serial port
-    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 48 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Write Write(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
 
     // Writes data to the serial port

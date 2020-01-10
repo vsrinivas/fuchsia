@@ -26,7 +26,6 @@ struct CallStatRaw;
 struct CallStat;
 struct FsMetrics;
 
-extern "C" const fidl_type_t fuchsia_storage_metrics_CallStatRawTable;
 extern "C" const fidl_type_t v1_fuchsia_storage_metrics_CallStatRawTable;
 
 struct CallStatRaw {
@@ -47,7 +46,6 @@ struct CallStatRaw {
   uint64_t bytes_transferred = {};
 };
 
-extern "C" const fidl_type_t fuchsia_storage_metrics_CallStatTable;
 extern "C" const fidl_type_t v1_fuchsia_storage_metrics_CallStatTable;
 
 struct CallStat {
@@ -62,7 +60,6 @@ struct CallStat {
   ::llcpp::fuchsia::storage::metrics::CallStatRaw failure = {};
 };
 
-extern "C" const fidl_type_t fuchsia_storage_metrics_FsMetricsTable;
 extern "C" const fidl_type_t v1_fuchsia_storage_metrics_FsMetricsTable;
 
 struct FsMetrics {

@@ -35,7 +35,6 @@ struct TestDevice_AddChild_Result;
 class Lifecycle;
 class TestDevice;
 
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResultTable;
 
 struct TestDevice_SubscribeToLifecycle_Result {
@@ -119,7 +118,6 @@ struct TestDevice_SubscribeToLifecycle_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResultTable;
 
 struct TestDevice_RemoveChild_Result {
@@ -203,7 +201,6 @@ struct TestDevice_RemoveChild_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResultTable;
 
 struct TestDevice_CompleteChildInit_Result {
@@ -287,7 +284,6 @@ struct TestDevice_CompleteChildInit_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_AddChild_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_AddChild_ResultTable;
 
 struct TestDevice_AddChild_Result {
@@ -371,7 +367,6 @@ struct TestDevice_AddChild_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResponseTable;
 
 struct TestDevice_SubscribeToLifecycle_Response {
@@ -384,7 +379,6 @@ struct TestDevice_SubscribeToLifecycle_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
 
 struct TestDevice_RemoveChild_Response {
@@ -397,7 +391,6 @@ struct TestDevice_RemoveChild_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResponseTable;
 
 struct TestDevice_CompleteChildInit_Response {
@@ -410,7 +403,6 @@ struct TestDevice_CompleteChildInit_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_AddChild_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_AddChild_ResponseTable;
 
 struct TestDevice_AddChild_Response {
@@ -423,9 +415,7 @@ struct TestDevice_AddChild_Response {
   uint64_t child_id = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseRequestTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseEventTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseEventTable;
 
 class Lifecycle final {
@@ -438,12 +428,9 @@ class Lifecycle final {
     uint64_t child_id;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseEventTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -564,21 +551,13 @@ class Lifecycle final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceAddChildRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceAddChildRequestTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceAddChildResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceAddChildResponseTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceRemoveChildRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildRequestTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitRequestTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitResponseTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleRequestTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleResponseTable;
 
 class TestDevice final {
@@ -591,12 +570,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceAddChildResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceAddChildResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -609,7 +585,6 @@ class TestDevice final {
     int32_t init_status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceAddChildRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceAddChildRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -628,12 +603,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -645,7 +617,6 @@ class TestDevice final {
     uint64_t child_id;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceRemoveChildRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -664,12 +635,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -681,7 +649,6 @@ class TestDevice final {
     uint64_t child_id;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -700,12 +667,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -717,7 +681,6 @@ class TestDevice final {
     ::zx::channel client;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -898,7 +861,7 @@ class TestDevice final {
     // Adds a child device and returns a unique |id| for the created device.
     // |complete_init| specifies whether the init hook should be replied to immediately,
     // or completed later by the caller with |CompleteChildInit|.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AddChild AddChild(bool init_complete, int32_t init_status);
 
     // Adds a child device and returns a unique |id| for the created device.
@@ -908,7 +871,7 @@ class TestDevice final {
     UnownedResultOf::AddChild AddChild(::fidl::BytePart _request_buffer, bool init_complete, int32_t init_status, ::fidl::BytePart _response_buffer);
 
     // Removes the child device of the given |id|.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::RemoveChild RemoveChild(uint64_t child_id);
 
     // Removes the child device of the given |id|.
@@ -917,7 +880,7 @@ class TestDevice final {
 
     // Replies to the child init hook.
     // Returns an error if the child has no pending init.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CompleteChildInit CompleteChildInit(uint64_t child_id);
 
     // Replies to the child init hook.
@@ -926,7 +889,7 @@ class TestDevice final {
     UnownedResultOf::CompleteChildInit CompleteChildInit(::fidl::BytePart _request_buffer, uint64_t child_id, ::fidl::BytePart _response_buffer);
 
     // Registers the client for device lifecycle events.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SubscribeToLifecycle SubscribeToLifecycle(::zx::channel client);
 
     // Registers the client for device lifecycle events.
@@ -945,7 +908,7 @@ class TestDevice final {
     // Adds a child device and returns a unique |id| for the created device.
     // |complete_init| specifies whether the init hook should be replied to immediately,
     // or completed later by the caller with |CompleteChildInit|.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AddChild AddChild(::zx::unowned_channel _client_end, bool init_complete, int32_t init_status);
 
     // Adds a child device and returns a unique |id| for the created device.
@@ -955,7 +918,7 @@ class TestDevice final {
     static UnownedResultOf::AddChild AddChild(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool init_complete, int32_t init_status, ::fidl::BytePart _response_buffer);
 
     // Removes the child device of the given |id|.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::RemoveChild RemoveChild(::zx::unowned_channel _client_end, uint64_t child_id);
 
     // Removes the child device of the given |id|.
@@ -964,7 +927,7 @@ class TestDevice final {
 
     // Replies to the child init hook.
     // Returns an error if the child has no pending init.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CompleteChildInit CompleteChildInit(::zx::unowned_channel _client_end, uint64_t child_id);
 
     // Replies to the child init hook.
@@ -973,7 +936,7 @@ class TestDevice final {
     static UnownedResultOf::CompleteChildInit CompleteChildInit(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t child_id, ::fidl::BytePart _response_buffer);
 
     // Registers the client for device lifecycle events.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SubscribeToLifecycle SubscribeToLifecycle(::zx::unowned_channel _client_end, ::zx::channel client);
 
     // Registers the client for device lifecycle events.

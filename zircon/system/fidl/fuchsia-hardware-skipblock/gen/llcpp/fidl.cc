@@ -15,29 +15,25 @@ namespace {
 constexpr uint64_t kSkipBlock_GetPartitionInfo_Ordinal = 0x61812f6e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_GetPartitionInfo_GenOrdinal = 0xf95442de92af21dlu;
-extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_Read_Ordinal = 0x68e3be6200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_Read_GenOrdinal = 0x28fdd003439e980lu;
-extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_SkipBlockReadRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_SkipBlockReadResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_Write_Ordinal = 0x697d770a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_Write_GenOrdinal = 0x36b3b73dc0b576c8lu;
-extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_SkipBlockWriteRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_SkipBlockWriteResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_WriteBytes_Ordinal = 0x4ce2ddf400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSkipBlock_WriteBytes_GenOrdinal = 0x6e1f96cd22fd1c2dlu;
-extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteBytesRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteBytesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_SkipBlockWriteBytesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_SkipBlockWriteBytesResponseTable;
 
 }  // namespace

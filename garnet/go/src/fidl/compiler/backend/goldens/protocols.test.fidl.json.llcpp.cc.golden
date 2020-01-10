@@ -26,29 +26,25 @@ namespace {
 constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x556693d200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_MethodA_GenOrdinal = 0x1b1e059b3f02bffclu;
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodAResponseTable;
+extern "C" const fidl_type_t v1_test_name_ChannelProtocolMethodARequestTable;
 extern "C" const fidl_type_t v1_test_name_ChannelProtocolMethodAResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x1c78c20200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_EventA_GenOrdinal = 0x2558b206a254d8a0lu;
-extern "C" const fidl_type_t test_name_ChannelProtocolEventARequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolEventAEventTable;
+extern "C" const fidl_type_t v1_test_name_ChannelProtocolEventARequestTable;
 extern "C" const fidl_type_t v1_test_name_ChannelProtocolEventAEventTable;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0xac6551b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_MethodB_GenOrdinal = 0x5db17a61464744a3lu;
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
+extern "C" const fidl_type_t v1_test_name_ChannelProtocolMethodBRequestTable;
 extern "C" const fidl_type_t v1_test_name_ChannelProtocolMethodBResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x4b02e28600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kChannelProtocol_MutateSocket_GenOrdinal = 0x36caa6fff7569577lu;
-extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
-extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
+extern "C" const fidl_type_t v1_test_name_ChannelProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t v1_test_name_ChannelProtocolMutateSocketResponseTable;
 
 }  // namespace
@@ -533,57 +529,49 @@ namespace {
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 0x1e03f87500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal = 0x3931f96bc77fba8lu;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
 extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal = 0x4df6dbd500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal = 0x706ec7bd335005f9lu;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal = 0x668d7f800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal = 0x4625ad5934067a48lu;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 0x19c2137100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal = 0x46e5095902913025lu;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal = 0x76f2397300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal = 0x180c481d4a15967lu;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal = 0x1973292000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal = 0x553860267eceec0lu;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal = 0x697fd73200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal = 0x42e90e9a86944b3lu;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
 extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal = 0x7a47120700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal = 0x2a9767b3ae6c2b09lu;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseRequestTable;
-extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 extern "C" const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace
@@ -1377,22 +1365,19 @@ namespace {
 constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal = 0x4f3c32be00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_GenOrdinal = 0x592157d505db2bcflu;
-extern "C" const fidl_type_t test_name_WithErrorSyntaxResponseAsStructRequestTable;
-extern "C" const fidl_type_t test_name_WithErrorSyntaxResponseAsStructResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructRequestTable;
 extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 0x7b58113900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal = 0x20cf80ad7d9b60belu;
-extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
-extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
 extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x4c95de1f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_GenOrdinal = 0x3fcd36560f812e7flu;
-extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable;
-extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumRequestTable;
 extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
 }  // namespace

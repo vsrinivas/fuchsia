@@ -16,15 +16,13 @@ namespace {
 constexpr uint64_t kDeviceManager_Unseal_Ordinal = 0x7a8062aa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDeviceManager_Unseal_GenOrdinal = 0x170f834d39ed94fblu;
-extern "C" const fidl_type_t fuchsia_hardware_block_encrypted_DeviceManagerUnsealRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_block_encrypted_DeviceManagerUnsealResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_encrypted_DeviceManagerUnsealRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_encrypted_DeviceManagerUnsealResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDeviceManager_Seal_Ordinal = 0x86fda0100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDeviceManager_Seal_GenOrdinal = 0xe63c7aa7840fbf4lu;
-extern "C" const fidl_type_t fuchsia_hardware_block_encrypted_DeviceManagerSealRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_block_encrypted_DeviceManagerSealResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_block_encrypted_DeviceManagerSealRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_encrypted_DeviceManagerSealResponseTable;
 
 }  // namespace

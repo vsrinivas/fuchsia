@@ -27,9 +27,7 @@ namespace manager {
 
 class Provider;
 
-extern "C" const fidl_type_t fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
-extern "C" const fidl_type_t fuchsia_tee_manager_ProviderRequestPersistentStorageResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_tee_manager_ProviderRequestPersistentStorageResponseTable;
 
 // Provider provides service access and support to the TEE driver
@@ -45,7 +43,6 @@ class Provider final {
     ::zx::channel dir;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

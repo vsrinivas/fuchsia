@@ -58,7 +58,6 @@ class RingBuffer;
 struct GainState;
 class StreamConfig;
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_PlugStateTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_PlugStateTable;
 
 // Plug state as returned by the driver.
@@ -103,7 +102,7 @@ struct PlugState final : private ::fidl::VectorView<fidl_envelope_t> {
   class Builder;
   friend class Builder;
   static Builder Build();
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_audio_PlugStateTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_PlugStateTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -135,7 +134,6 @@ class PlugState::Builder {
   ::fidl::Array<fidl_envelope_t, 2> envelopes_ = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferPropertiesTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferPropertiesTable;
 
 struct RingBufferProperties final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -247,7 +245,7 @@ struct RingBufferProperties final : private ::fidl::VectorView<fidl_envelope_t> 
   class Builder;
   friend class Builder;
   static Builder Build();
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_audio_RingBufferPropertiesTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_RingBufferPropertiesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -327,7 +325,6 @@ class RingBufferProperties::Builder {
   ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_SupportedFormatsTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_SupportedFormatsTable;
 
 struct SupportedFormats final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -357,7 +354,7 @@ struct SupportedFormats final : private ::fidl::VectorView<fidl_envelope_t> {
   class Builder;
   friend class Builder;
   static Builder Build();
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_audio_SupportedFormatsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_SupportedFormatsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -385,7 +382,6 @@ class SupportedFormats::Builder {
   ::fidl::Array<fidl_envelope_t, 1> envelopes_ = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_FormatTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_FormatTable;
 
 struct Format final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -415,7 +411,7 @@ struct Format final : private ::fidl::VectorView<fidl_envelope_t> {
   class Builder;
   friend class Builder;
   static Builder Build();
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_audio_FormatTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_FormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -443,7 +439,6 @@ class Format::Builder {
   ::fidl::Array<fidl_envelope_t, 1> envelopes_ = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamPropertiesTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamPropertiesTable;
 
 struct StreamProperties final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -591,7 +586,7 @@ struct StreamProperties final : private ::fidl::VectorView<fidl_envelope_t> {
   class Builder;
   friend class Builder;
   static Builder Build();
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_audio_StreamPropertiesTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_StreamPropertiesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -647,7 +642,6 @@ class StreamProperties::Builder {
   ::fidl::Array<fidl_envelope_t, 10> envelopes_ = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBuffer_GetVmo_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBuffer_GetVmo_ResultTable;
 
 struct RingBuffer_GetVmo_Result {
@@ -731,7 +725,6 @@ struct RingBuffer_GetVmo_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_GainStateTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_GainStateTable;
 
 // Gain state requested by the client or returned a current by the driver.
@@ -788,7 +781,7 @@ struct GainState final : private ::fidl::VectorView<fidl_envelope_t> {
   class Builder;
   friend class Builder;
   static Builder Build();
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_audio_GainStateTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_GainStateTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -822,7 +815,6 @@ class GainState::Builder {
   ::fidl::Array<fidl_envelope_t, 3> envelopes_ = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferPositionInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferPositionInfoTable;
 
 struct RingBufferPositionInfo {
@@ -847,9 +839,7 @@ constexpr uint32_t CLOCK_DOMAIN_EXTERNAL = 4294967295u;
 
 constexpr uint32_t UNIQUE_ID_SIZE = 16u;
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_DeviceGetChannelRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_DeviceGetChannelRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_DeviceGetChannelResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_DeviceGetChannelResponseTable;
 
 class Device final {
@@ -862,12 +852,9 @@ class Device final {
     ::zx::channel channel;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_DeviceGetChannelResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_DeviceGetChannelResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1028,7 +1015,6 @@ class Device final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_PcmSupportedFormatsTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_PcmSupportedFormatsTable;
 
 // Format supporting non-compressed PCM audio. Frames are made up of |number_of_channels| samples
@@ -1063,7 +1049,6 @@ struct PcmSupportedFormats {
   ::fidl::VectorView<uint32_t> frame_rates = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_PcmFormatTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_PcmFormatTable;
 
 // Format supporting non-compressed PCM audio. Frames are made up of |number_of_channels| samples
@@ -1099,7 +1084,6 @@ struct PcmFormat {
   uint32_t frame_rate = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBuffer_GetVmo_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBuffer_GetVmo_ResponseTable;
 
 struct RingBuffer_GetVmo_Response {
@@ -1130,25 +1114,15 @@ constexpr uint32_t MAX_COUNT_FORMATS = 64u;
 
 constexpr uint32_t MAX_COUNT_CHANNELS_TO_USE = 64u;
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferGetPropertiesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferGetPropertiesRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferGetPropertiesResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferGetPropertiesResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferGetVmoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferGetVmoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferGetVmoResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferGetVmoResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferStartRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferStartRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferStartResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferStartResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferStopRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferStopRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferStopResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferStopResponseTable;
 
 class RingBuffer final {
@@ -1161,12 +1135,9 @@ class RingBuffer final {
     ::llcpp::fuchsia::hardware::audio::RingBufferProperties properties;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_RingBufferGetPropertiesResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_RingBufferGetPropertiesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 96;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 96;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1180,12 +1151,9 @@ class RingBuffer final {
     ::llcpp::fuchsia::hardware::audio::RingBufferPositionInfo position_info;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1199,12 +1167,9 @@ class RingBuffer final {
     ::llcpp::fuchsia::hardware::audio::RingBuffer_GetVmo_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_RingBufferGetVmoResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_RingBufferGetVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1217,7 +1182,6 @@ class RingBuffer final {
     uint32_t clock_recovery_notifications_per_ring;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_RingBufferGetVmoRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_RingBufferGetVmoRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1236,12 +1200,9 @@ class RingBuffer final {
     int64_t start_time;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_RingBufferStartResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_RingBufferStartResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1488,7 +1449,7 @@ class RingBuffer final {
     // |clock_recovery_notifications_per_ring| frequency. These notifications are meant to be used
     // for clock recovery.
     //
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetVmo GetVmo(uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring);
 
     // Requests a shared buffer to be used for moving bulk audio data. Requests the buffer size to
@@ -1564,7 +1525,7 @@ class RingBuffer final {
     // |clock_recovery_notifications_per_ring| frequency. These notifications are meant to be used
     // for clock recovery.
     //
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetVmo GetVmo(::zx::unowned_channel _client_end, uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring);
 
     // Requests a shared buffer to be used for moving bulk audio data. Requests the buffer size to
@@ -1752,29 +1713,17 @@ class RingBuffer final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigGetPropertiesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigGetPropertiesRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigGetPropertiesResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigGetPropertiesResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigGetSupportedFormatsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigGetSupportedFormatsRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigGetSupportedFormatsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigGetSupportedFormatsResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigCreateRingBufferRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigCreateRingBufferRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigCreateRingBufferResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigCreateRingBufferResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigWatchGainStateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigWatchGainStateRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigWatchGainStateResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigWatchGainStateResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigSetGainRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigSetGainRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigSetGainResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigSetGainResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigWatchPlugStateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigWatchPlugStateRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigWatchPlugStateResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigWatchPlugStateResponseTable;
 
 class StreamConfig final {
@@ -1787,12 +1736,9 @@ class StreamConfig final {
     ::llcpp::fuchsia::hardware::audio::StreamProperties properties;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_StreamConfigGetPropertiesResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_StreamConfigGetPropertiesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 776;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 776;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1806,12 +1752,9 @@ class StreamConfig final {
     ::fidl::VectorView<::llcpp::fuchsia::hardware::audio::SupportedFormats> supported_formats;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_StreamConfigGetSupportedFormatsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_StreamConfigGetSupportedFormatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 29184;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 29184;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1826,7 +1769,6 @@ class StreamConfig final {
     ::zx::channel ring_buffer;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_StreamConfigCreateRingBufferRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_StreamConfigCreateRingBufferRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 40;
@@ -1844,12 +1786,9 @@ class StreamConfig final {
     ::llcpp::fuchsia::hardware::audio::GainState gain_state;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_StreamConfigWatchGainStateResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_StreamConfigWatchGainStateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 72;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 72;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1863,7 +1802,6 @@ class StreamConfig final {
     ::llcpp::fuchsia::hardware::audio::GainState target_state;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_StreamConfigSetGainRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_StreamConfigSetGainRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 72;
@@ -1881,12 +1819,9 @@ class StreamConfig final {
     ::llcpp::fuchsia::hardware::audio::PlugState plug_state;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_audio_StreamConfigWatchPlugStateResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_audio_StreamConfigWatchPlugStateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 48;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 48;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

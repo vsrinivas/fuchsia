@@ -32,7 +32,6 @@ struct ExplicitXUnion;
 struct Empty;
 struct XUnionContainingEmptyStruct;
 
-extern "C" const fidl_type_t test_name_StrictSimpleXUnionTable;
 extern "C" const fidl_type_t v1_test_name_StrictSimpleXUnionTable;
 
 struct StrictSimpleXUnion {
@@ -151,7 +150,6 @@ struct StrictSimpleXUnion {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t test_name_StrictBoundedXUnionTable;
 extern "C" const fidl_type_t v1_test_name_StrictBoundedXUnionTable;
 
 struct StrictBoundedXUnion {
@@ -216,7 +214,6 @@ struct StrictBoundedXUnion {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t test_name_OlderSimpleUnionTable;
 extern "C" const fidl_type_t v1_test_name_OlderSimpleUnionTable;
 
 struct OlderSimpleUnion {
@@ -310,7 +307,6 @@ struct OlderSimpleUnion {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t test_name_NewerSimpleUnionTable;
 extern "C" const fidl_type_t v1_test_name_NewerSimpleUnionTable;
 
 struct NewerSimpleUnion {
@@ -431,7 +427,6 @@ struct NewerSimpleUnion {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t test_name_ExplicitXUnionTable;
 extern "C" const fidl_type_t v1_test_name_ExplicitXUnionTable;
 
 struct ExplicitXUnion {
@@ -525,7 +520,6 @@ struct ExplicitXUnion {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t test_name_XUnionContainingEmptyStructTable;
 extern "C" const fidl_type_t v1_test_name_XUnionContainingEmptyStructTable;
 
 struct XUnionContainingEmptyStruct {
@@ -592,7 +586,6 @@ struct XUnionContainingEmptyStruct {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t test_name_StructWithNullableXUnionTable;
 extern "C" const fidl_type_t v1_test_name_StructWithNullableXUnionTable;
 
 struct StructWithNullableXUnion {
@@ -605,13 +598,9 @@ struct StructWithNullableXUnion {
   ::llcpp::test::name::OlderSimpleUnion x1 = {};
 };
 
-extern "C" const fidl_type_t test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 extern "C" const fidl_type_t v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
-extern "C" const fidl_type_t test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 extern "C" const fidl_type_t v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
-extern "C" const fidl_type_t test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 extern "C" const fidl_type_t v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
-extern "C" const fidl_type_t test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 extern "C" const fidl_type_t v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 class TestProtocol final {
@@ -624,12 +613,9 @@ class TestProtocol final {
     ::llcpp::test::name::StrictBoundedXUnion xu;
 
     static constexpr const fidl_type_t* Type = &v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
-    static constexpr const fidl_type_t* AltType = &test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 32;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -643,12 +629,9 @@ class TestProtocol final {
     ::llcpp::test::name::OlderSimpleUnion xu;
 
     static constexpr const fidl_type_t* Type = &v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
-    static constexpr const fidl_type_t* AltType = &test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -868,7 +851,6 @@ class TestProtocol final {
   };
 };
 
-extern "C" const fidl_type_t test_name_EmptyTable;
 extern "C" const fidl_type_t v1_test_name_EmptyTable;
 
 struct Empty {

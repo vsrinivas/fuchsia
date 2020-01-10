@@ -28,9 +28,7 @@ namespace tee {
 
 class DeviceConnector;
 
-extern "C" const fidl_type_t fuchsia_hardware_tee_DeviceConnectorConnectTeeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_tee_DeviceConnectorConnectTeeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_tee_DeviceConnectorConnectTeeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_tee_DeviceConnectorConnectTeeResponseTable;
 
 // Protocol used by the TEE Manager to proxy requests for TEE access to the driver.
@@ -45,7 +43,6 @@ class DeviceConnector final {
     ::zx::channel tee_request;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_tee_DeviceConnectorConnectTeeRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_tee_DeviceConnectorConnectTeeRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

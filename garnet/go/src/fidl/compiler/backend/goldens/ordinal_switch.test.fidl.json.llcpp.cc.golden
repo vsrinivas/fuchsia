@@ -14,29 +14,25 @@ namespace {
 constexpr uint64_t kSwitchingOrdinals_OrdinalFive_Ordinal = 0x7784636700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_OrdinalFive_GenOrdinal = 0x254f3bdfa9d3dcablu;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsOrdinalFiveResponseTable;
+extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
 extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsOrdinalFiveResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal = 0x27c9581f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_OnlyGeneratedOrdinal_GenOrdinal = 0x163a45fcac049f5blu;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsOnlyGeneratedOrdinalResponseTable;
+extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
 extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_EventOrdinalFifteen_Ordinal = 0x577495a100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_EventOrdinalFifteen_GenOrdinal = 0x15e4293098574a7lu;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOrdinalFifteenRequestTable;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
+extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOrdinalFifteenRequestTable;
 extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal = 0x7fec464e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSwitchingOrdinals_EventOnlyGeneratedOrdinal_GenOrdinal = 0x47107cabe23f6510lu;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalRequestTable;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
+extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalRequestTable;
 extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
 
 }  // namespace

@@ -14,8 +14,7 @@ namespace {
 constexpr uint64_t kResolver_Resolve_Ordinal = 0x20980a8100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kResolver_Resolve_GenOrdinal = 0x3c15951efde89c90lu;
-extern "C" const fidl_type_t fuchsia_process_ResolverResolveRequestTable;
-extern "C" const fidl_type_t fuchsia_process_ResolverResolveResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_process_ResolverResolveRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_ResolverResolveResponseTable;
 
 }  // namespace
@@ -185,43 +184,37 @@ namespace {
 constexpr uint64_t kLauncher_Launch_Ordinal = 0x26884d9d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_Launch_GenOrdinal = 0x11335a9928afbfa4lu;
-extern "C" const fidl_type_t fuchsia_process_LauncherLaunchRequestTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherLaunchResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_process_LauncherLaunchRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherLaunchResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_CreateWithoutStarting_Ordinal = 0x4fcfbc1100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_CreateWithoutStarting_GenOrdinal = 0x755f8263fe51cb61lu;
-extern "C" const fidl_type_t fuchsia_process_LauncherCreateWithoutStartingRequestTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherCreateWithoutStartingResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_process_LauncherCreateWithoutStartingRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherCreateWithoutStartingResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_AddArgs_Ordinal = 0x1480f9a000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_AddArgs_GenOrdinal = 0x3be445d3e4fd6512lu;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddArgsRequestTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddArgsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddArgsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddArgsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_AddEnvirons_Ordinal = 0x48c62c9900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_AddEnvirons_GenOrdinal = 0x73a3c97fa7fe1779lu;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddEnvironsRequestTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddEnvironsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddEnvironsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddEnvironsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_AddNames_Ordinal = 0x53fcef0c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_AddNames_GenOrdinal = 0x2579ee2c7be28662lu;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddNamesRequestTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddNamesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddNamesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddNamesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_AddHandles_Ordinal = 0x5cd6900b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLauncher_AddHandles_GenOrdinal = 0x51025267a537a615lu;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddHandlesRequestTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddHandlesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddHandlesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddHandlesResponseTable;
 
 }  // namespace

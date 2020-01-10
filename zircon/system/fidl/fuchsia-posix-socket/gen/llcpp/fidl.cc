@@ -57,15 +57,13 @@ namespace {
 constexpr uint64_t kProvider_Socket_Ordinal = 0x4d07378200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kProvider_Socket_GenOrdinal = 0x3c53fd7d5afacab8lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocketRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocketResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ProviderSocketRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ProviderSocketResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kProvider_Socket2_Ordinal = 0x4d4cbf6100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kProvider_Socket2_GenOrdinal = 0xafeae763c4a354lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocket2RequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ProviderSocket2ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ProviderSocket2RequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ProviderSocket2ResponseTable;
 
 }  // namespace
@@ -410,120 +408,103 @@ namespace {
 constexpr uint64_t kControl_Clone_Ordinal = 0x17fe6a4c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Clone_GenOrdinal = 0x5a61678f293ce16flu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloneRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlCloneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloseRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlCloseRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Describe_GenOrdinal = 0xffcec215078dea0lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlDescribeRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlDescribeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlOnOpenRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlOnOpenRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Sync_GenOrdinal = 0x189d88326c18b519lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlSyncRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlSyncRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetAttrRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlGetAttrRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_SetAttr_Ordinal = 0xbd5559a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlSetAttrRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlSetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeGetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeSetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlNodeSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Bind_Ordinal = 0x147441ed00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Bind_GenOrdinal = 0x369838aa5347aa8flu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlBindRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlBindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlBindRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlBindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Connect_Ordinal = 0x237ed33800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Connect_GenOrdinal = 0x1138f666cb3655b1lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlConnectRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlConnectResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlConnectRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlConnectResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Listen_Ordinal = 0x2e63628600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Listen_GenOrdinal = 0xa860257383d5651lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlListenRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlListenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlListenRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlListenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_Accept_Ordinal = 0x11ed297300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_Accept_GenOrdinal = 0x17921a9ebebb7ba0lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlAcceptRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlAcceptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlAcceptRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlAcceptResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetSockName_Ordinal = 0x63c1368200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetSockName_GenOrdinal = 0x6f68e0f0d72c2d1dlu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockNameRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlGetSockNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlGetSockNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetPeerName_Ordinal = 0x58787bb600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetPeerName_GenOrdinal = 0x555a019c03d9820dlu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetPeerNameRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetPeerNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlGetPeerNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlGetPeerNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_SetSockOpt_Ordinal = 0x4ba217a700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_SetSockOpt_GenOrdinal = 0x24e784a5e281b466lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetSockOptRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlSetSockOptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlSetSockOptRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlSetSockOptResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetSockOpt_Ordinal = 0x3685367800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kControl_GetSockOpt_GenOrdinal = 0x66298180e94aa6b4lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_ControlGetSockOptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlGetSockOptRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_ControlGetSockOptResponseTable;
 
 }  // namespace
@@ -2633,106 +2614,91 @@ namespace {
 constexpr uint64_t kBaseSocket_Clone_Ordinal = 0x17fe6a4c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_Clone_GenOrdinal = 0x5a61678f293ce16flu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketCloneRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketCloneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketCloseRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketCloseRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_Describe_GenOrdinal = 0xffcec215078dea0lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketDescribeRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketDescribeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketOnOpenRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketOnOpenRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_Sync_GenOrdinal = 0x189d88326c18b519lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketSyncRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketSyncRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketGetAttrRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketGetAttrRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_SetAttr_Ordinal = 0xbd5559a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketSetAttrRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketSetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketSetAttrRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketSetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketNodeGetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketNodeSetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketNodeSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_Bind_Ordinal = 0x11ebbc3c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_Bind_GenOrdinal = 0xf8457e6b05e15bclu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketBindRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketBindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketBindRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketBindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_Connect_Ordinal = 0x62cb94300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_Connect_GenOrdinal = 0x17abeee0b9843bb1lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketConnectRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketConnectResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketConnectRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketConnectResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_GetSockName_Ordinal = 0x7c14255c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_GetSockName_GenOrdinal = 0x41a618ef19a91f9dlu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketGetSockNameRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketGetSockNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketGetSockNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketGetSockNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_GetPeerName_Ordinal = 0x4beee9b000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_GetPeerName_GenOrdinal = 0x4009d08a4beb5e95lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketGetPeerNameRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketGetPeerNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketGetPeerNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketGetPeerNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_SetSockOpt_Ordinal = 0x497c444100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_SetSockOpt_GenOrdinal = 0x93c6f802203e6f1lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketSetSockOptRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketSetSockOptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketSetSockOptRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketSetSockOptResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_GetSockOpt_Ordinal = 0x3b2b8b3d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBaseSocket_GetSockOpt_GenOrdinal = 0x6dfaf70f0ed40544lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketGetSockOptRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_BaseSocketGetSockOptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketGetSockOptRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_BaseSocketGetSockOptResponseTable;
 
 }  // namespace
@@ -4705,120 +4671,103 @@ namespace {
 constexpr uint64_t kStreamSocket_Clone_Ordinal = 0x17fe6a4c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Clone_GenOrdinal = 0x5a61678f293ce16flu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketCloneRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketCloneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketCloseRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketCloseRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Describe_GenOrdinal = 0xffcec215078dea0lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketDescribeRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketDescribeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketOnOpenRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketOnOpenRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Sync_GenOrdinal = 0x189d88326c18b519lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketSyncRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketSyncRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketGetAttrRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketGetAttrRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_SetAttr_Ordinal = 0xbd5559a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketSetAttrRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketSetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketSetAttrRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketSetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketNodeGetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketNodeSetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketNodeSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Bind_Ordinal = 0x11ebbc3c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Bind_GenOrdinal = 0xf8457e6b05e15bclu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketBindRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketBindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketBindRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketBindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Connect_Ordinal = 0x62cb94300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Connect_GenOrdinal = 0x17abeee0b9843bb1lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketConnectRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketConnectResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketConnectRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketConnectResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_GetSockName_Ordinal = 0x7c14255c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_GetSockName_GenOrdinal = 0x41a618ef19a91f9dlu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketGetSockNameRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketGetSockNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketGetSockNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketGetSockNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_GetPeerName_Ordinal = 0x4beee9b000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_GetPeerName_GenOrdinal = 0x4009d08a4beb5e95lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketGetPeerNameRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketGetPeerNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketGetPeerNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketGetPeerNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_SetSockOpt_Ordinal = 0x497c444100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_SetSockOpt_GenOrdinal = 0x93c6f802203e6f1lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketSetSockOptRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketSetSockOptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketSetSockOptRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketSetSockOptResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_GetSockOpt_Ordinal = 0x3b2b8b3d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_GetSockOpt_GenOrdinal = 0x6dfaf70f0ed40544lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketGetSockOptRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketGetSockOptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketGetSockOptRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketGetSockOptResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Listen_Ordinal = 0x29346af600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Listen_GenOrdinal = 0x3d0a65ced3d10108lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketListenRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketListenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketListenRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketListenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Accept_Ordinal = 0x4c59510900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamSocket_Accept_GenOrdinal = 0x5ab7ad620424c163lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketAcceptRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_StreamSocketAcceptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketAcceptRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_StreamSocketAcceptResponseTable;
 
 }  // namespace
@@ -7077,127 +7026,109 @@ namespace {
 constexpr uint64_t kDatagramSocket_Clone_Ordinal = 0x17fe6a4c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Clone_GenOrdinal = 0x5a61678f293ce16flu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketCloneRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketCloneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketCloseRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketCloseRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Describe_GenOrdinal = 0xffcec215078dea0lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketDescribeRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketDescribeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketOnOpenRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketOnOpenRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Sync_GenOrdinal = 0x189d88326c18b519lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketSyncRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketSyncRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketGetAttrRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketGetAttrRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_SetAttr_Ordinal = 0xbd5559a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketSetAttrRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketSetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketSetAttrRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketSetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketNodeGetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketNodeSetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketNodeSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Bind_Ordinal = 0x11ebbc3c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Bind_GenOrdinal = 0xf8457e6b05e15bclu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketBindRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketBindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketBindRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketBindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Connect_Ordinal = 0x62cb94300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Connect_GenOrdinal = 0x17abeee0b9843bb1lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketConnectRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketConnectResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketConnectRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketConnectResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_GetSockName_Ordinal = 0x7c14255c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_GetSockName_GenOrdinal = 0x41a618ef19a91f9dlu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketGetSockNameRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketGetSockNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketGetSockNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketGetSockNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_GetPeerName_Ordinal = 0x4beee9b000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_GetPeerName_GenOrdinal = 0x4009d08a4beb5e95lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketGetPeerNameRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketGetPeerNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketGetPeerNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketGetPeerNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_SetSockOpt_Ordinal = 0x497c444100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_SetSockOpt_GenOrdinal = 0x93c6f802203e6f1lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketSetSockOptRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketSetSockOptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketSetSockOptRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketSetSockOptResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_GetSockOpt_Ordinal = 0x3b2b8b3d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_GetSockOpt_GenOrdinal = 0x6dfaf70f0ed40544lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketGetSockOptRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketGetSockOptResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketGetSockOptRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketGetSockOptResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Shutdown_Ordinal = 0x6d3a731c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_Shutdown_GenOrdinal = 0x3c6058976bced940lu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketShutdownRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketShutdownResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketShutdownRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketShutdownResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_RecvMsg_Ordinal = 0x50d7e5d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_RecvMsg_GenOrdinal = 0x715341bb02f02b7alu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketRecvMsgRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketRecvMsgResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketRecvMsgRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketRecvMsgResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_SendMsg_Ordinal = 0x3e2187f300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDatagramSocket_SendMsg_GenOrdinal = 0x359b626d62a7f17blu;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketSendMsgRequestTable;
-extern "C" const fidl_type_t fuchsia_posix_socket_DatagramSocketSendMsgResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketSendMsgRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_posix_socket_DatagramSocketSendMsgResponseTable;
 
 }  // namespace

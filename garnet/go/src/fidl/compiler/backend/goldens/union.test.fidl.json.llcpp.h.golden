@@ -27,7 +27,6 @@ struct NullableUnionStruct;
 struct FieldCollision;
 struct ExplicitUnion;
 
-extern "C" const fidl_type_t test_name_UnionTable;
 extern "C" const fidl_type_t v1_test_name_UnionTable;
 
 struct Union {
@@ -135,7 +134,6 @@ struct Union {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t test_name_ReverseOrdinalUnionTable;
 extern "C" const fidl_type_t v1_test_name_ReverseOrdinalUnionTable;
 
 struct ReverseOrdinalUnion {
@@ -219,7 +217,6 @@ struct ReverseOrdinalUnion {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t test_name_FieldCollisionTable;
 extern "C" const fidl_type_t v1_test_name_FieldCollisionTable;
 
 struct FieldCollision {
@@ -279,7 +276,6 @@ struct FieldCollision {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t test_name_ExplicitUnionTable;
 extern "C" const fidl_type_t v1_test_name_ExplicitUnionTable;
 
 struct ExplicitUnion {
@@ -363,7 +359,6 @@ struct ExplicitUnion {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t test_name_NullableUnionStructTable;
 extern "C" const fidl_type_t v1_test_name_NullableUnionStructTable;
 
 struct NullableUnionStruct {

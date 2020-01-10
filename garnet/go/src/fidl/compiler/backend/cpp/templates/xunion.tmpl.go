@@ -189,8 +189,8 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
 
 {{- define "XUnionDefinition" }}
-extern "C" const fidl_type_t {{ .V1TableType }};
-const fidl_type_t* {{ .Name }}::FidlType = &{{ .V1TableType }};
+extern "C" const fidl_type_t {{ .TableType }};
+const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
 {{ .Name }}::{{ .Name }}() {}
 
@@ -413,11 +413,11 @@ struct IsFidlXUnion<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
 
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
-    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeV1NoEE }}> {};
+    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSize }}> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<{{ .Namespace }}::{{ .Name }}>> {
-  static constexpr size_t inline_size_v1_no_ee = {{ .InlineSizeV1NoEE }};
+  static constexpr size_t inline_size_v1_no_ee = {{ .InlineSize }};
 
   static void Encode(Encoder* encoder, std::unique_ptr<{{ .Namespace }}::{{ .Name }}>* value, size_t offset) {
     {{/* TODO(FIDL-481): Disallow empty xunions (but permit nullable/optional

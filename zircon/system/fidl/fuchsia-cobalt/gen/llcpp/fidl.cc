@@ -20,43 +20,37 @@ namespace {
 constexpr uint64_t kController_RequestSendSoon_Ordinal = 0x8d7092700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_RequestSendSoon_GenOrdinal = 0x554e66bab8f72e3dlu;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerRequestSendSoonRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerRequestSendSoonResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerRequestSendSoonRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerRequestSendSoonResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_BlockUntilEmpty_Ordinal = 0x2bf57e3200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_BlockUntilEmpty_GenOrdinal = 0x72bcf7dd29d1cd5alu;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerBlockUntilEmptyRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerBlockUntilEmptyResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerBlockUntilEmptyRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerBlockUntilEmptyResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetNumSendAttempts_Ordinal = 0x5805f03f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetNumSendAttempts_GenOrdinal = 0x7ec5409cbc36c796lu;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGetNumSendAttemptsRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGetNumSendAttemptsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGetNumSendAttemptsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGetNumSendAttemptsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetFailedSendAttempts_Ordinal = 0x3a378f4700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetFailedSendAttempts_GenOrdinal = 0x5c5af723b6a5067lu;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGetFailedSendAttemptsRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGetFailedSendAttemptsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGetFailedSendAttemptsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGetFailedSendAttemptsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetNumObservationsAdded_Ordinal = 0x2889cd4500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetNumObservationsAdded_GenOrdinal = 0x2f568da2a6cf0ec5lu;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGetNumObservationsAddedRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGetNumObservationsAddedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGetNumObservationsAddedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGetNumObservationsAddedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GenerateAggregatedObservations_Ordinal = 0x5ad64bce00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GenerateAggregatedObservations_GenOrdinal = 0x79e058c9497f1ab1lu;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGenerateAggregatedObservationsRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_ControllerGenerateAggregatedObservationsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGenerateAggregatedObservationsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGenerateAggregatedObservationsResponseTable;
 
 }  // namespace
@@ -804,50 +798,43 @@ namespace {
 constexpr uint64_t kLoggerBase_LogEvent_Ordinal = 0x135d628d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_LogEvent_GenOrdinal = 0x293433df480dd41elu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogEventRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_LogEventCount_Ordinal = 0x6fce776500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_LogEventCount_GenOrdinal = 0x5f73f8b900d4bbb1lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogEventCountRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogEventCountResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogEventCountRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogEventCountResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_LogElapsedTime_Ordinal = 0x14f4912000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_LogElapsedTime_GenOrdinal = 0x42e58931fd6c785lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogElapsedTimeRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogElapsedTimeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogElapsedTimeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogElapsedTimeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_LogFrameRate_Ordinal = 0x2b8722b800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_LogFrameRate_GenOrdinal = 0x4c701bca4836097lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogFrameRateRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogFrameRateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogFrameRateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogFrameRateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_LogMemoryUsage_Ordinal = 0x66c69d1b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_LogMemoryUsage_GenOrdinal = 0x14189c11cc19d641lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogMemoryUsageRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogMemoryUsageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogMemoryUsageRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogMemoryUsageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_StartTimer_Ordinal = 0x4a5c612000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_StartTimer_GenOrdinal = 0x68cec08d094e4938lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseStartTimerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseStartTimerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseStartTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseStartTimerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_EndTimer_Ordinal = 0x65db6e4200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_EndTimer_GenOrdinal = 0xf0043bc7ed4b561lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseEndTimerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseEndTimerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseEndTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseEndTimerResponseTable;
 
 }  // namespace
@@ -1800,57 +1787,49 @@ namespace {
 constexpr uint64_t kLoggerSimple_LogEvent_Ordinal = 0x135d628d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_LogEvent_GenOrdinal = 0x293433df480dd41elu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogEventRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_LogEventCount_Ordinal = 0x6fce776500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_LogEventCount_GenOrdinal = 0x5f73f8b900d4bbb1lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogEventCountRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogEventCountResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogEventCountRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogEventCountResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_LogElapsedTime_Ordinal = 0x14f4912000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_LogElapsedTime_GenOrdinal = 0x42e58931fd6c785lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogElapsedTimeRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogElapsedTimeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogElapsedTimeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogElapsedTimeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_LogFrameRate_Ordinal = 0x2b8722b800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_LogFrameRate_GenOrdinal = 0x4c701bca4836097lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogFrameRateRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogFrameRateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogFrameRateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogFrameRateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_LogMemoryUsage_Ordinal = 0x66c69d1b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_LogMemoryUsage_GenOrdinal = 0x14189c11cc19d641lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogMemoryUsageRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogMemoryUsageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogMemoryUsageRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogMemoryUsageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_StartTimer_Ordinal = 0x4a5c612000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_StartTimer_GenOrdinal = 0x68cec08d094e4938lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleStartTimerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleStartTimerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleStartTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleStartTimerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_EndTimer_Ordinal = 0x65db6e4200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_EndTimer_GenOrdinal = 0xf0043bc7ed4b561lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleEndTimerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleEndTimerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleEndTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleEndTimerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_LogIntHistogram_Ordinal = 0x2d40524800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_LogIntHistogram_GenOrdinal = 0x7edf09f7389af401lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogIntHistogramRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogIntHistogramResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogIntHistogramRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogIntHistogramResponseTable;
 
 }  // namespace
@@ -2936,29 +2915,25 @@ namespace {
 constexpr uint64_t kLoggerFactory_CreateLogger_Ordinal = 0x5f08858100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerFactory_CreateLogger_GenOrdinal = 0x2a6a220ee3111ab0lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerFactory_CreateLoggerSimple_Ordinal = 0x5f07c39f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerFactory_CreateLoggerSimple_GenOrdinal = 0x5aa6be2e24fa92f8lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerFactory_CreateLoggerFromProjectId_Ordinal = 0x2b04487500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerFactory_CreateLoggerFromProjectId_GenOrdinal = 0x44ee41845029c9celu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerFromProjectIdResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerFactory_CreateLoggerSimpleFromProjectId_Ordinal = 0x118ecf3100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerFactory_CreateLoggerSimpleFromProjectId_GenOrdinal = 0x1f76f43312ce641flu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdResponseTable;
 
 }  // namespace
@@ -3487,15 +3462,13 @@ namespace {
 constexpr uint64_t kSystemDataUpdater_SetExperimentState_Ordinal = 0x7179ca9100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSystemDataUpdater_SetExperimentState_GenOrdinal = 0x64c8f26bffbe2e2elu;
-extern "C" const fidl_type_t fuchsia_cobalt_SystemDataUpdaterSetExperimentStateRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_SystemDataUpdaterSetExperimentStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_SystemDataUpdaterSetExperimentStateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_SystemDataUpdaterSetExperimentStateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSystemDataUpdater_SetChannel_Ordinal = 0x37f1709100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSystemDataUpdater_SetChannel_GenOrdinal = 0x550a753f31ff2ce2lu;
-extern "C" const fidl_type_t fuchsia_cobalt_SystemDataUpdaterSetChannelRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_SystemDataUpdaterSetChannelResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_SystemDataUpdaterSetChannelRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_SystemDataUpdaterSetChannelResponseTable;
 
 }  // namespace
@@ -3792,78 +3765,67 @@ namespace {
 constexpr uint64_t kLogger_LogEvent_Ordinal = 0x135d628d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogEvent_GenOrdinal = 0x293433df480dd41elu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogEventRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogEventCount_Ordinal = 0x6fce776500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogEventCount_GenOrdinal = 0x5f73f8b900d4bbb1lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogEventCountRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogEventCountResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogEventCountRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogEventCountResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogElapsedTime_Ordinal = 0x14f4912000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogElapsedTime_GenOrdinal = 0x42e58931fd6c785lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogElapsedTimeRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogElapsedTimeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogElapsedTimeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogElapsedTimeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogFrameRate_Ordinal = 0x2b8722b800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogFrameRate_GenOrdinal = 0x4c701bca4836097lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogFrameRateRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogFrameRateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogFrameRateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogFrameRateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogMemoryUsage_Ordinal = 0x66c69d1b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogMemoryUsage_GenOrdinal = 0x14189c11cc19d641lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogMemoryUsageRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogMemoryUsageResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogMemoryUsageRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogMemoryUsageResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLogger_StartTimer_Ordinal = 0x4a5c612000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLogger_StartTimer_GenOrdinal = 0x68cec08d094e4938lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerStartTimerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerStartTimerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerStartTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerStartTimerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLogger_EndTimer_Ordinal = 0x65db6e4200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLogger_EndTimer_GenOrdinal = 0xf0043bc7ed4b561lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerEndTimerRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerEndTimerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerEndTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerEndTimerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogIntHistogram_Ordinal = 0x7afcfd3000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogIntHistogram_GenOrdinal = 0x3382c4827c0c0b0elu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogIntHistogramRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogIntHistogramResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogIntHistogramRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogIntHistogramResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogCustomEvent_Ordinal = 0x3cfd7fbc00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogCustomEvent_GenOrdinal = 0x65d92921e13e94b8lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogCustomEventRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogCustomEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCustomEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCustomEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogCobaltEvent_Ordinal = 0x667d288400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogCobaltEvent_GenOrdinal = 0x2da5db50fd49332lu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogCobaltEventRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogCobaltEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCobaltEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCobaltEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogCobaltEvents_Ordinal = 0x2905d69400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLogger_LogCobaltEvents_GenOrdinal = 0x4e51a78396369f7flu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogCobaltEventsRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogCobaltEventsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCobaltEventsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCobaltEventsResponseTable;
 
 }  // namespace

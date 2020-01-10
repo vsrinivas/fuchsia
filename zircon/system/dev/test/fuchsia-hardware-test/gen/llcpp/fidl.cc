@@ -15,8 +15,7 @@ namespace {
 constexpr uint64_t kDevice_GetChannel_Ordinal = 0x3ee7275100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetChannel_GenOrdinal = 0x3427354841fda60alu;
-extern "C" const fidl_type_t fuchsia_hardware_test_DeviceGetChannelRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_test_DeviceGetChannelResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_test_DeviceGetChannelRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_test_DeviceGetChannelResponseTable;
 
 }  // namespace

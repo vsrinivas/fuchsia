@@ -20,22 +20,19 @@ namespace {
 constexpr uint64_t kPaver_FindDataSink_Ordinal = 0x117a856e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_FindDataSink_GenOrdinal = 0x710a34c6f9c8a0e9lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverFindDataSinkRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverFindDataSinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindDataSinkRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindDataSinkResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_UseBlockDevice_Ordinal = 0x17011fd000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_UseBlockDevice_GenOrdinal = 0x7dbe727cfb90bed5lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverUseBlockDeviceRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverUseBlockDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverUseBlockDeviceRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PaverUseBlockDeviceResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPaver_FindBootManager_Ordinal = 0x20b1ab1800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPaver_FindBootManager_GenOrdinal = 0x5d500b0633102443lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverFindBootManagerRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverFindBootManagerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindBootManagerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindBootManagerResponseTable;
 
 }  // namespace
@@ -323,15 +320,13 @@ namespace {
 constexpr uint64_t kPayloadStream_RegisterVmo_Ordinal = 0x1044c8d900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPayloadStream_RegisterVmo_GenOrdinal = 0x388d7fe44bcb4clu;
-extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kPayloadStream_ReadData_Ordinal = 0x2c366e3600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPayloadStream_ReadData_GenOrdinal = 0x2ccde55366318afalu;
-extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PayloadStreamReadDataRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PayloadStreamReadDataResponseTable;
 
 }  // namespace
@@ -637,36 +632,31 @@ namespace {
 constexpr uint64_t kBootManager_QueryActiveConfiguration_Ordinal = 0x6d16a64200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBootManager_QueryActiveConfiguration_GenOrdinal = 0x71d52acdf59947a4lu;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryActiveConfigurationRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryActiveConfigurationRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBootManager_QueryConfigurationStatus_Ordinal = 0x4f9061cd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBootManager_QueryConfigurationStatus_GenOrdinal = 0x40822ca9ca68b19alu;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBootManager_SetConfigurationActive_Ordinal = 0x3580156000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBootManager_SetConfigurationActive_GenOrdinal = 0x14c64074f81f9a7flu;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBootManager_SetConfigurationUnbootable_Ordinal = 0x4af237e000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBootManager_SetConfigurationUnbootable_GenOrdinal = 0x6f8716bf306d197flu;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBootManager_SetActiveConfigurationHealthy_Ordinal = 0x2ebf3e5300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBootManager_SetActiveConfigurationHealthy_GenOrdinal = 0x3dbfbf3e5ed8aa3lu;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerSetActiveConfigurationHealthyRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetActiveConfigurationHealthyRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
 
 }  // namespace
@@ -1357,43 +1347,37 @@ namespace {
 constexpr uint64_t kDataSink_ReadAsset_Ordinal = 0x5726c2ad00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDataSink_ReadAsset_GenOrdinal = 0x125a23e561007898lu;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkReadAssetRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkReadAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkReadAssetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkReadAssetResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDataSink_WriteAsset_Ordinal = 0x60e03b7200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDataSink_WriteAsset_GenOrdinal = 0x516839ce76c4d0a9lu;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteAssetRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteAssetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteAssetResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDataSink_WriteVolumes_Ordinal = 0x5df348af00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDataSink_WriteVolumes_GenOrdinal = 0x5ee32c861d0259dflu;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteVolumesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteVolumesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteVolumesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteVolumesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDataSink_WriteBootloader_Ordinal = 0x7d89106a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDataSink_WriteBootloader_GenOrdinal = 0x647f7011b9521b5lu;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteBootloaderRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteBootloaderResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteBootloaderRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteBootloaderResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDataSink_WriteDataFile_Ordinal = 0x7c0cf22700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDataSink_WriteDataFile_GenOrdinal = 0x6ce95417166b4f56lu;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteDataFileRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteDataFileResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteDataFileRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteDataFileResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDataSink_WipeVolume_Ordinal = 0x6ab81ba00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDataSink_WipeVolume_GenOrdinal = 0x250dfc2575c27f6clu;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWipeVolumeRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWipeVolumeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWipeVolumeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWipeVolumeResponseTable;
 
 }  // namespace
@@ -2213,57 +2197,49 @@ namespace {
 constexpr uint64_t kDynamicDataSink_ReadAsset_Ordinal = 0x5726c2ad00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_ReadAsset_GenOrdinal = 0x125a23e561007898lu;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_WriteAsset_Ordinal = 0x60e03b7200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_WriteAsset_GenOrdinal = 0x516839ce76c4d0a9lu;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_WriteVolumes_Ordinal = 0x5df348af00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_WriteVolumes_GenOrdinal = 0x5ee32c861d0259dflu;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_WriteBootloader_Ordinal = 0x7d89106a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_WriteBootloader_GenOrdinal = 0x647f7011b9521b5lu;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_WriteDataFile_Ordinal = 0x7c0cf22700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_WriteDataFile_GenOrdinal = 0x6ce95417166b4f56lu;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_WipeVolume_Ordinal = 0x6ab81ba00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_WipeVolume_GenOrdinal = 0x250dfc2575c27f6clu;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipeVolumeRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipeVolumeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_InitializePartitionTables_Ordinal = 0x6c2391d400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_InitializePartitionTables_GenOrdinal = 0x4c798b3813ea9f7elu;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkInitializePartitionTablesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkInitializePartitionTablesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_WipePartitionTables_Ordinal = 0x5e89186e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDynamicDataSink_WipePartitionTables_GenOrdinal = 0x797c0ebeedaf2cclu;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipePartitionTablesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipePartitionTablesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
 
 }  // namespace

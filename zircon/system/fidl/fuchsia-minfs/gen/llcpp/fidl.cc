@@ -14,22 +14,19 @@ namespace {
 constexpr uint64_t kMinfs_GetMetrics_Ordinal = 0x4e6b106000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMinfs_GetMetrics_GenOrdinal = 0x410bc6db028528f9lu;
-extern "C" const fidl_type_t fuchsia_minfs_MinfsGetMetricsRequestTable;
-extern "C" const fidl_type_t fuchsia_minfs_MinfsGetMetricsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_minfs_MinfsGetMetricsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_minfs_MinfsGetMetricsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMinfs_ToggleMetrics_Ordinal = 0x51d81eb600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMinfs_ToggleMetrics_GenOrdinal = 0x5c4946fb4ee6e518lu;
-extern "C" const fidl_type_t fuchsia_minfs_MinfsToggleMetricsRequestTable;
-extern "C" const fidl_type_t fuchsia_minfs_MinfsToggleMetricsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_minfs_MinfsToggleMetricsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_minfs_MinfsToggleMetricsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kMinfs_GetAllocatedRegions_Ordinal = 0x2d198b2a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kMinfs_GetAllocatedRegions_GenOrdinal = 0x495daecc5d2be4cblu;
-extern "C" const fidl_type_t fuchsia_minfs_MinfsGetAllocatedRegionsRequestTable;
-extern "C" const fidl_type_t fuchsia_minfs_MinfsGetAllocatedRegionsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_minfs_MinfsGetAllocatedRegionsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_minfs_MinfsGetAllocatedRegionsResponseTable;
 
 }  // namespace

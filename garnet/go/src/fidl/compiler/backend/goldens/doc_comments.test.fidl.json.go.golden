@@ -59,11 +59,11 @@ func (x MyBits) String() string {
 //
 // struct comment #3
 type Struct struct {
-	_ struct{} `fidl:"s,4,4" fidl_size_v1:"4" fidl_alignment_v1:"4" fidl_size_v1_no_ee:"4" fidl_alignment_v1_no_ee:"4"`
+	_ struct{} `fidl:"s" fidl_size_v1:"4" fidl_alignment_v1:"4"`
 	// struct member comment #1
 	//
 	// struct member comment #3
-	Field int32`fidl:"0" fidl_offset_v1:"0" fidl_offset_v1_no_ee:"0"`
+	Field int32`fidl:"0" fidl_offset_v1:"0"`
 }
 
 var _mStruct = _bindings.CreateLazyMarshaler(Struct{})
@@ -81,7 +81,7 @@ const (
 //
 // union comment #3
 type Union struct {
-	I_unionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_unionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	// union member comment #1
 	//
 	// union member comment #3
@@ -113,7 +113,7 @@ func UnionWithField(field int32) Union {
 //
 // table comment #3
 type Table struct {
-	_ struct{} `fidl:"t,16,8" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"16" fidl_alignment_v1_no_ee:"8"`
+	_ struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
 	// table field comment #1
 	//
 	// table field comment #3

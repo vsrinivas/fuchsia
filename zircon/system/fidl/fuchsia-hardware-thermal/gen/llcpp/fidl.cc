@@ -15,78 +15,67 @@ namespace {
 constexpr uint64_t kDevice_GetInfo_Ordinal = 0x337747c500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetInfo_GenOrdinal = 0x350d7a106835fbdalu;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDeviceInfo_Ordinal = 0x80abe5f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDeviceInfo_GenOrdinal = 0x5c35349ec9cd7c79lu;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetDeviceInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetDeviceInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetDeviceInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetDeviceInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDvfsInfo_Ordinal = 0x6b72261200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDvfsInfo_GenOrdinal = 0xb2e9de2423e77eblu;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetDvfsInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetDvfsInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetDvfsInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetDvfsInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetTemperatureCelsius_Ordinal = 0x1c4ce3b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetTemperatureCelsius_GenOrdinal = 0xb549276d89de7elu;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetTemperatureCelsiusRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetTemperatureCelsiusResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetTemperatureCelsiusRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetTemperatureCelsiusResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStateChangeEvent_Ordinal = 0x981447d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStateChangeEvent_GenOrdinal = 0x3f6e614172af0a87lu;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetStateChangeEventRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetStateChangeEventResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetStateChangeEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetStateChangeEventResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStateChangePort_Ordinal = 0x626a7a1100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStateChangePort_GenOrdinal = 0x7eef3857e900208lu;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetStateChangePortRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetStateChangePortResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetStateChangePortRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetStateChangePortResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetTripCelsius_Ordinal = 0x1a338bd400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetTripCelsius_GenOrdinal = 0x25e3eafaa78a203elu;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceSetTripCelsiusRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceSetTripCelsiusResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceSetTripCelsiusRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceSetTripCelsiusResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDvfsOperatingPoint_Ordinal = 0x2725cb4400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDvfsOperatingPoint_GenOrdinal = 0x56d566ab5a9ba330lu;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetDvfsOperatingPoint_Ordinal = 0x553fac4700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetDvfsOperatingPoint_GenOrdinal = 0x9c2508074fe4351lu;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetFanLevel_Ordinal = 0xa3623b300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetFanLevel_GenOrdinal = 0x224636b2f864d8d6lu;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetFanLevelRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceGetFanLevelResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetFanLevelRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceGetFanLevelResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetFanLevel_Ordinal = 0x344c3d2700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetFanLevel_GenOrdinal = 0x2dfba6aa920e901dlu;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceSetFanLevelRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_thermal_DeviceSetFanLevelResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceSetFanLevelRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceSetFanLevelResponseTable;
 
 }  // namespace

@@ -40,7 +40,6 @@ struct OwnedChannelDevice_ScheduleWork_Response;
 struct OwnedChannelDevice_ScheduleWork_Result;
 class OwnedChannelDevice;
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResultTable;
 
 struct TestDevice_ScheduleWork_Result {
@@ -124,7 +123,6 @@ struct TestDevice_ScheduleWork_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResultTable;
 
 struct TestDevice_ScheduleWorkDifferentThread_Result {
@@ -208,7 +206,6 @@ struct TestDevice_ScheduleWorkDifferentThread_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResultTable;
 
 struct TestDevice_GetDoneEvent_Result {
@@ -292,7 +289,6 @@ struct TestDevice_GetDoneEvent_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResultTable;
 
 struct TestDevice_GetChannel_Result {
@@ -376,7 +372,6 @@ struct TestDevice_GetChannel_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResultTable;
 
 struct OwnedChannelDevice_ScheduleWork_Result {
@@ -460,7 +455,6 @@ struct OwnedChannelDevice_ScheduleWork_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResponseTable;
 
 struct TestDevice_ScheduleWork_Response {
@@ -473,7 +467,6 @@ struct TestDevice_ScheduleWork_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResponseTable;
 
 struct TestDevice_ScheduleWorkDifferentThread_Response {
@@ -486,7 +479,6 @@ struct TestDevice_ScheduleWorkDifferentThread_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResponseTable;
 
 struct TestDevice_GetDoneEvent_Response {
@@ -499,7 +491,6 @@ struct TestDevice_GetDoneEvent_Response {
   ::zx::event event = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResponseTable;
 
 struct TestDevice_GetChannel_Response {
@@ -512,7 +503,6 @@ struct TestDevice_GetChannel_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_LatencyHistogramTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_LatencyHistogramTable;
 
 // Buckets are arranged as following:
@@ -536,25 +526,15 @@ struct LatencyHistogram {
   ::fidl::Array<uint64_t, 10> buckets = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkRequestTable;
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkResponseTable;
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadRequestTable;
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadResponseTable;
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetDoneEventRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceGetDoneEventRequestTable;
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanRequestTable;
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetChannelRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceGetChannelRequestTable;
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_TestDeviceGetChannelResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceGetChannelResponseTable;
 
 class TestDevice final {
@@ -567,12 +547,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDeviceScheduleWorkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -585,7 +562,6 @@ class TestDevice final {
     uint32_t num_work_items;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDeviceScheduleWorkRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -604,12 +580,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDeviceScheduleWorkDifferentThreadResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -623,12 +596,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDeviceGetDoneEventResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -643,12 +613,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDeviceScheduledWorkRanResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 104;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -662,12 +629,9 @@ class TestDevice final {
     ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDeviceGetChannelResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDeviceGetChannelResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -679,7 +643,6 @@ class TestDevice final {
     ::zx::channel test;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_TestDeviceGetChannelRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_TestDeviceGetChannelRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -894,7 +857,7 @@ class TestDevice final {
     // Schedules work. |batch_size| refers to how many work_items to keep
     // outstanding at any given time, while |num_work_items| refers to total
     // number of work items.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ScheduleWork ScheduleWork(uint32_t batch_size, uint32_t num_work_items);
 
     // Schedules work. |batch_size| refers to how many work_items to keep
@@ -904,7 +867,7 @@ class TestDevice final {
     UnownedResultOf::ScheduleWork ScheduleWork(::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
 
     // Spawns a thread which schedules work.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ScheduleWorkDifferentThread ScheduleWorkDifferentThread();
 
     // Spawns a thread which schedules work.
@@ -912,7 +875,7 @@ class TestDevice final {
     UnownedResultOf::ScheduleWorkDifferentThread ScheduleWorkDifferentThread(::fidl::BytePart _response_buffer);
 
     // Triggers once all outstanding work is complete.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetDoneEvent GetDoneEvent();
 
     // Triggers once all outstanding work is complete.
@@ -928,7 +891,7 @@ class TestDevice final {
     UnownedResultOf::ScheduledWorkRan ScheduledWorkRan(::fidl::BytePart _response_buffer);
 
     // Spawns an thread with a dedicated async loop.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetChannel GetChannel(::zx::channel test);
 
     // Spawns an thread with a dedicated async loop.
@@ -947,7 +910,7 @@ class TestDevice final {
     // Schedules work. |batch_size| refers to how many work_items to keep
     // outstanding at any given time, while |num_work_items| refers to total
     // number of work items.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ScheduleWork ScheduleWork(::zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
 
     // Schedules work. |batch_size| refers to how many work_items to keep
@@ -957,7 +920,7 @@ class TestDevice final {
     static UnownedResultOf::ScheduleWork ScheduleWork(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
 
     // Spawns a thread which schedules work.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ScheduleWorkDifferentThread ScheduleWorkDifferentThread(::zx::unowned_channel _client_end);
 
     // Spawns a thread which schedules work.
@@ -965,7 +928,7 @@ class TestDevice final {
     static UnownedResultOf::ScheduleWorkDifferentThread ScheduleWorkDifferentThread(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Triggers once all outstanding work is complete.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetDoneEvent GetDoneEvent(::zx::unowned_channel _client_end);
 
     // Triggers once all outstanding work is complete.
@@ -981,7 +944,7 @@ class TestDevice final {
     static UnownedResultOf::ScheduledWorkRan ScheduledWorkRan(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Spawns an thread with a dedicated async loop.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetChannel GetChannel(::zx::unowned_channel _client_end, ::zx::channel test);
 
     // Spawns an thread with a dedicated async loop.
@@ -1143,7 +1106,6 @@ class TestDevice final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResponseTable;
 
 struct OwnedChannelDevice_ScheduleWork_Response {
@@ -1156,9 +1118,7 @@ struct OwnedChannelDevice_ScheduleWork_Response {
   ::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkRequestTable;
-extern "C" const fidl_type_t fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkResponseTable;
 
 class OwnedChannelDevice final {
@@ -1171,12 +1131,9 @@ class OwnedChannelDevice final {
     ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 80;
-    static constexpr uint32_t AltPrimarySize = 104;
-    static constexpr uint32_t AltMaxOutOfLine = 80;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1189,7 +1146,6 @@ class OwnedChannelDevice final {
     uint32_t num_work_items;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_device_schedule_work_test_OwnedChannelDeviceScheduleWorkRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1268,7 +1224,7 @@ class OwnedChannelDevice final {
     // Schedules work and blocks until it completes. |batch_size| refers to how
     // many work_items to keep outstanding at any given time, while
     // |num_work_items| refers to total number of work items.
-    // Allocates 208 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 144 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ScheduleWork ScheduleWork(uint32_t batch_size, uint32_t num_work_items);
 
     // Schedules work and blocks until it completes. |batch_size| refers to how
@@ -1289,7 +1245,7 @@ class OwnedChannelDevice final {
     // Schedules work and blocks until it completes. |batch_size| refers to how
     // many work_items to keep outstanding at any given time, while
     // |num_work_items| refers to total number of work items.
-    // Allocates 208 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 144 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ScheduleWork ScheduleWork(::zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
 
     // Schedules work and blocks until it completes. |batch_size| refers to how

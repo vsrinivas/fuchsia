@@ -22,22 +22,19 @@ namespace {
 constexpr uint64_t kDevice_GetPerformanceStateInfo_Ordinal = 0x71d641d000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetPerformanceStateInfo_GenOrdinal = 0x2b34810b1fd3416elu;
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetNumLogicalCores_Ordinal = 0x1d5aec6800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetNumLogicalCores_GenOrdinal = 0x74e304c90ca165c5lu;
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetLogicalCoreId_Ordinal = 0x458d073700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetLogicalCoreId_GenOrdinal = 0x7168f98ddbd26058lu;
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdResponseTable;
 
 }  // namespace

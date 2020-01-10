@@ -31,7 +31,6 @@ struct Device_SetConfiguration_Result;
 struct DeviceDescriptor;
 class Device;
 
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResultTable;
 
 struct Device_SetConfiguration_Result {
@@ -115,13 +114,9 @@ struct Device_SetConfiguration_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_EventsFunctionRegisteredResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionsClearedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_EventsFunctionsClearedRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_EventsFunctionsClearedResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_EventsFunctionsClearedResponseTable;
 // Events protocol that is used as a callback to inform the client
 // of the completion of various server-side events.
@@ -329,7 +324,6 @@ constexpr uint32_t MAX_STRING_DESCRIPTORS = 255u;
 
 constexpr uint32_t MAX_FUNCTION_DESCRIPTORS = 32u;
 
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_FunctionDescriptorTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_FunctionDescriptorTable;
 
 struct FunctionDescriptor {
@@ -346,7 +340,6 @@ struct FunctionDescriptor {
   uint8_t interface_protocol = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResponseTable;
 
 struct Device_SetConfiguration_Response {
@@ -359,7 +352,6 @@ struct Device_SetConfiguration_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceDescriptorTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceDescriptorTable;
 
 // The fields in DeviceDescriptor match those in usb_descriptor_t in the USB specification,
@@ -396,17 +388,11 @@ struct DeviceDescriptor {
   uint8_t bNumConfigurations = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceClearFunctionsRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerResponseTable;
 
 class Device final {
@@ -419,12 +405,9 @@ class Device final {
     ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -437,7 +420,6 @@ class Device final {
     ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 480;
@@ -459,7 +441,6 @@ class Device final {
     ::zx::channel listener;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -595,7 +576,7 @@ class Device final {
     // Sets the device's descriptors, adds the functions and creates the child devices for the
     // configuration's interfaces.
     // At least one function descriptor must be provided.
-    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 48 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::SetConfiguration SetConfiguration(::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors);
 
     // Sets the device's descriptors, adds the functions and creates the child devices for the
@@ -631,7 +612,7 @@ class Device final {
     // Sets the device's descriptors, adds the functions and creates the child devices for the
     // configuration's interfaces.
     // At least one function descriptor must be provided.
-    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 48 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::SetConfiguration SetConfiguration(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors);
 
     // Sets the device's descriptors, adds the functions and creates the child devices for the

@@ -14,22 +14,19 @@ namespace {
 constexpr uint64_t kBufferCollectionToken_Duplicate_Ordinal = 0x5e37401300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollectionToken_Duplicate_GenOrdinal = 0x2f9f81bdde4b7292lu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionTokenDuplicateRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionTokenDuplicateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionTokenDuplicateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionTokenDuplicateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollectionToken_Sync_Ordinal = 0x3218cf6000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollectionToken_Sync_GenOrdinal = 0x16941ac71d960cd0lu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionTokenSyncRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionTokenSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionTokenSyncRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionTokenSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollectionToken_Close_Ordinal = 0x21ba753500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollectionToken_Close_GenOrdinal = 0x11df1970c2c12176lu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionTokenCloseRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionTokenCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionTokenCloseRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionTokenCloseResponseTable;
 
 }  // namespace
@@ -289,22 +286,19 @@ namespace {
 constexpr uint64_t kHeap_AllocateVmo_Ordinal = 0xbb99f8d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kHeap_AllocateVmo_GenOrdinal = 0x1c885a457f626eeflu;
-extern "C" const fidl_type_t fuchsia_sysmem_HeapAllocateVmoRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_HeapAllocateVmoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_HeapAllocateVmoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_HeapAllocateVmoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kHeap_CreateResource_Ordinal = 0x35a990c200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kHeap_CreateResource_GenOrdinal = 0x20f4e8b60cb76063lu;
-extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_HeapCreateResourceRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_HeapCreateResourceResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kHeap_DestroyResource_Ordinal = 0x27df37a100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kHeap_DestroyResource_GenOrdinal = 0x766bee03db72e8falu;
-extern "C" const fidl_type_t fuchsia_sysmem_HeapDestroyResourceRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_HeapDestroyResourceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_HeapDestroyResourceRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_HeapDestroyResourceResponseTable;
 
 }  // namespace
@@ -687,8 +681,7 @@ namespace {
 constexpr uint64_t kDriverConnector_Connect_Ordinal = 0x3082e03400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDriverConnector_Connect_GenOrdinal = 0x663a49f8408b8184lu;
-extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorConnectRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorConnectResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_DriverConnectorConnectRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_DriverConnectorConnectResponseTable;
 
 }  // namespace
@@ -810,22 +803,19 @@ namespace {
 constexpr uint64_t kAllocator_AllocateNonSharedCollection_Ordinal = 0x21b157d700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kAllocator_AllocateNonSharedCollection_GenOrdinal = 0x20f79299bbb4d2c6lu;
-extern "C" const fidl_type_t fuchsia_sysmem_AllocatorAllocateNonSharedCollectionRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_AllocatorAllocateNonSharedCollectionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_AllocatorAllocateNonSharedCollectionRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_AllocatorAllocateNonSharedCollectionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kAllocator_AllocateSharedCollection_Ordinal = 0x36a4dbc400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kAllocator_AllocateSharedCollection_GenOrdinal = 0x7a757a57bfda0f71lu;
-extern "C" const fidl_type_t fuchsia_sysmem_AllocatorAllocateSharedCollectionRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_AllocatorAllocateSharedCollectionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_AllocatorAllocateSharedCollectionRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_AllocatorAllocateSharedCollectionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kAllocator_BindSharedCollection_Ordinal = 0x1d68697500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kAllocator_BindSharedCollection_GenOrdinal = 0x146eca7ec46ff4eelu;
-extern "C" const fidl_type_t fuchsia_sysmem_AllocatorBindSharedCollectionRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_AllocatorBindSharedCollectionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_AllocatorBindSharedCollectionRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_AllocatorBindSharedCollectionResponseTable;
 
 }  // namespace
@@ -1123,15 +1113,13 @@ namespace {
 constexpr uint64_t kSecureMem_GetPhysicalSecureHeaps_Ordinal = 0x60f3c45a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSecureMem_GetPhysicalSecureHeaps_GenOrdinal = 0x782319d6ce7fa05lu;
-extern "C" const fidl_type_t fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kSecureMem_SetPhysicalSecureHeaps_Ordinal = 0x14b0c0000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kSecureMem_SetPhysicalSecureHeaps_GenOrdinal = 0x75a89c33ee8a5d7elu;
-extern "C" const fidl_type_t fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsResponseTable;
 
 }  // namespace
@@ -1457,22 +1445,19 @@ namespace {
 constexpr uint64_t kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal = 0x1f54cf3600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_GenOrdinal = 0x676c26fb29b9556alu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnDuplicatedTokensKnownByServerRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnDuplicatedTokensKnownByServerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionEventsOnDuplicatedTokensKnownByServerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionEventsOnDuplicatedTokensKnownByServerResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollectionEvents_OnBuffersAllocated_Ordinal = 0x6830ec5f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollectionEvents_OnBuffersAllocated_GenOrdinal = 0x4b74d7c0dc6d8903lu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal = 0x6cb2333900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollectionEvents_OnAllocateSingleBufferDone_GenOrdinal = 0x3acc52158e4ff771lu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnAllocateSingleBufferDoneRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnAllocateSingleBufferDoneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionEventsOnAllocateSingleBufferDoneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionEventsOnAllocateSingleBufferDoneResponseTable;
 
 }  // namespace
@@ -1738,71 +1723,61 @@ namespace {
 constexpr uint64_t kBufferCollection_SetEventSink_Ordinal = 0x154ba43000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_SetEventSink_GenOrdinal = 0x7e48a6aac582e3c6lu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetEventSinkRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetEventSinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionSetEventSinkRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionSetEventSinkResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_Sync_Ordinal = 0x15ba322100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_Sync_GenOrdinal = 0x941fdbb6ec7f85elu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSyncRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionSyncRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_SetConstraints_Ordinal = 0x541b637e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_SetConstraints_GenOrdinal = 0x4d9c3406c213227blu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetConstraintsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionSetConstraintsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_WaitForBuffersAllocated_Ordinal = 0x1b36cfa800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_WaitForBuffersAllocated_GenOrdinal = 0x714667ea2a29a3a2lu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_CheckBuffersAllocated_Ordinal = 0x95520ce00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_CheckBuffersAllocated_GenOrdinal = 0x245bb81f79189e9lu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_CloseSingleBuffer_Ordinal = 0x1802fa4800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_CloseSingleBuffer_GenOrdinal = 0x3becedeb5959121alu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCloseSingleBufferRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCloseSingleBufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionCloseSingleBufferRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionCloseSingleBufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_AllocateSingleBuffer_Ordinal = 0x1ba0786400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_AllocateSingleBuffer_GenOrdinal = 0x19cca74dfad8f2bflu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionAllocateSingleBufferRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionAllocateSingleBufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionAllocateSingleBufferRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionAllocateSingleBufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_WaitForSingleBufferAllocated_Ordinal = 0x36e6672300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal = 0x25ee1433c5fd1dclu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_CheckSingleBufferAllocated_Ordinal = 0x1301391c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_CheckSingleBufferAllocated_GenOrdinal = 0x5905702f25c60301lu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCheckSingleBufferAllocatedRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCheckSingleBufferAllocatedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionCheckSingleBufferAllocatedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionCheckSingleBufferAllocatedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_Close_Ordinal = 0x607c571800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBufferCollection_Close_GenOrdinal = 0x48ac4179438f99felu;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCloseRequestTable;
-extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionCloseRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionCloseResponseTable;
 
 }  // namespace

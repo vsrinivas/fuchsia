@@ -25,17 +25,11 @@ namespace spi {
 
 class Device;
 
-extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceTransmitRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_spi_DeviceTransmitRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceTransmitResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_spi_DeviceTransmitResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceReceiveRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_spi_DeviceReceiveRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceReceiveResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_spi_DeviceReceiveResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceExchangeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_spi_DeviceExchangeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_spi_DeviceExchangeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_spi_DeviceExchangeResponseTable;
 
 class Device final {
@@ -48,12 +42,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_spi_DeviceTransmitResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_spi_DeviceTransmitResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -65,7 +56,6 @@ class Device final {
     ::fidl::VectorView<uint8_t> data;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_spi_DeviceTransmitRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_spi_DeviceTransmitRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8200;
@@ -85,12 +75,9 @@ class Device final {
     ::fidl::VectorView<uint8_t> data;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_spi_DeviceReceiveResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_spi_DeviceReceiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 8200;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -102,7 +89,6 @@ class Device final {
     uint32_t size;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_spi_DeviceReceiveRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_spi_DeviceReceiveRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -122,12 +108,9 @@ class Device final {
     ::fidl::VectorView<uint8_t> rxdata;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_spi_DeviceExchangeResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_spi_DeviceExchangeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8200;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 8200;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -139,7 +122,6 @@ class Device final {
     ::fidl::VectorView<uint8_t> txdata;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_spi_DeviceExchangeRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_spi_DeviceExchangeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8200;

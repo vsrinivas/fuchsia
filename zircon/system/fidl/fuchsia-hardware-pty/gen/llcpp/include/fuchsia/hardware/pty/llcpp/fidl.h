@@ -29,7 +29,6 @@ namespace pty {
 struct WindowSize;
 class Device;
 
-extern "C" const fidl_type_t fuchsia_hardware_pty_WindowSizeTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_WindowSizeTable;
 
 struct WindowSize {
@@ -44,101 +43,53 @@ struct WindowSize {
   uint32_t height = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceCloneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceCloneRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceCloneResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceCloneResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceCloseRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceCloseRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceCloseResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceCloseResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceDescribeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceDescribeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceDescribeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceDescribeResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceOnOpenRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceOnOpenRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceOnOpenEventTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceOnOpenEventTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSyncRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceSyncRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSyncResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceSyncResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetAttrRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceGetAttrRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetAttrResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceGetAttrResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetAttrRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceSetAttrRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetAttrResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceSetAttrResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceNodeGetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceNodeGetFlagsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceNodeGetFlagsResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceNodeSetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceNodeSetFlagsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceNodeSetFlagsResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceReadRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceReadRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceReadResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceReadResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceReadAtRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceReadAtRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceReadAtResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceReadAtResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceWriteRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceWriteRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceWriteResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceWriteResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceWriteAtRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceWriteAtRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceWriteAtResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceWriteAtResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSeekRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceSeekRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSeekResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceSeekResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceTruncateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceTruncateRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceTruncateResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceTruncateResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceGetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetFlagsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceGetFlagsResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceSetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetFlagsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceSetFlagsResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetBufferRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceGetBufferRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetBufferResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceGetBufferResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceOpenClientRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceOpenClientRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceOpenClientResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceOpenClientResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceClrSetFeatureRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceClrSetFeatureRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceClrSetFeatureResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceClrSetFeatureResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetWindowSizeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceGetWindowSizeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceGetWindowSizeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceGetWindowSizeResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceMakeActiveRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceMakeActiveRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceMakeActiveResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceMakeActiveResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceReadEventsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceReadEventsRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceReadEventsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceReadEventsResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetWindowSizeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceSetWindowSizeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_pty_DeviceSetWindowSizeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_pty_DeviceSetWindowSizeResponseTable;
 
 class Device final {
@@ -153,7 +104,6 @@ class Device final {
     ::zx::channel object;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceCloneRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceCloneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -171,12 +121,9 @@ class Device final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceCloseResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceCloseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -190,12 +137,9 @@ class Device final {
     ::llcpp::fuchsia::io::NodeInfo info;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceDescribeResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 24;
-    static constexpr uint32_t AltPrimarySize = 48;
-    static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -210,12 +154,9 @@ class Device final {
     ::llcpp::fuchsia::io::NodeInfo info;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceOnOpenEventTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 24;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -227,12 +168,9 @@ class Device final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceSyncResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceSyncResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -247,12 +185,9 @@ class Device final {
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceGetAttrResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 80;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -266,12 +201,9 @@ class Device final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceSetAttrResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceSetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -284,7 +216,6 @@ class Device final {
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceSetAttrRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceSetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -304,12 +235,9 @@ class Device final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceNodeGetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -323,12 +251,9 @@ class Device final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceNodeSetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceNodeSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -340,7 +265,6 @@ class Device final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceNodeSetFlagsRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceNodeSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -360,12 +284,9 @@ class Device final {
     ::fidl::VectorView<uint8_t> data;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceReadResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceReadResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -377,7 +298,6 @@ class Device final {
     uint64_t count;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceReadRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceReadRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -397,12 +317,9 @@ class Device final {
     ::fidl::VectorView<uint8_t> data;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceReadAtResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceReadAtResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 8192;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -415,7 +332,6 @@ class Device final {
     uint64_t offset;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceReadAtRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceReadAtRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -435,12 +351,9 @@ class Device final {
     uint64_t actual;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceWriteResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceWriteResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -452,7 +365,6 @@ class Device final {
     ::fidl::VectorView<uint8_t> data;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceWriteRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceWriteRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -472,12 +384,9 @@ class Device final {
     uint64_t actual;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceWriteAtResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceWriteAtResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -490,7 +399,6 @@ class Device final {
     uint64_t offset;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceWriteAtRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceWriteAtRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -510,12 +418,9 @@ class Device final {
     uint64_t offset;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceSeekResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceSeekResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -528,7 +433,6 @@ class Device final {
     ::llcpp::fuchsia::io::SeekOrigin start;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceSeekRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceSeekRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -547,12 +451,9 @@ class Device final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceTruncateResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceTruncateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -564,7 +465,6 @@ class Device final {
     uint64_t length;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceTruncateRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceTruncateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -584,12 +484,9 @@ class Device final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceGetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -603,12 +500,9 @@ class Device final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceSetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -620,7 +514,6 @@ class Device final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceSetFlagsRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -640,12 +533,9 @@ class Device final {
     ::llcpp::fuchsia::mem::Buffer* buffer;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceGetBufferResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceGetBufferResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 16;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -657,7 +547,6 @@ class Device final {
     uint32_t flags;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceGetBufferRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceGetBufferRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -676,12 +565,9 @@ class Device final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceOpenClientResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceOpenClientResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -694,7 +580,6 @@ class Device final {
     ::zx::channel client;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceOpenClientRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceOpenClientRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -714,12 +599,9 @@ class Device final {
     uint32_t features;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceClrSetFeatureResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceClrSetFeatureResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -732,7 +614,6 @@ class Device final {
     uint32_t set;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceClrSetFeatureRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceClrSetFeatureRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -752,12 +633,9 @@ class Device final {
     ::llcpp::fuchsia::hardware::pty::WindowSize size;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceGetWindowSizeResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceGetWindowSizeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -771,12 +649,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceMakeActiveResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceMakeActiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -788,7 +663,6 @@ class Device final {
     uint32_t client_pty_id;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceMakeActiveRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceMakeActiveRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -808,12 +682,9 @@ class Device final {
     uint32_t events;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceReadEventsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceReadEventsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -827,12 +698,9 @@ class Device final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceSetWindowSizeResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceSetWindowSizeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -844,7 +712,6 @@ class Device final {
     ::llcpp::fuchsia::hardware::pty::WindowSize size;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_pty_DeviceSetWindowSizeRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_pty_DeviceSetWindowSizeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1729,7 +1596,7 @@ class Device final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Describe Describe();
 
     // Returns extra information about the type of the object.
@@ -2097,7 +1964,7 @@ class Device final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Describe Describe(::zx::unowned_channel _client_end);
 
     // Returns extra information about the type of the object.

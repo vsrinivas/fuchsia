@@ -26,13 +26,9 @@ namespace encrypted {
 
 class DeviceManager;
 
-extern "C" const fidl_type_t fuchsia_hardware_block_encrypted_DeviceManagerUnsealRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_encrypted_DeviceManagerUnsealRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_block_encrypted_DeviceManagerUnsealResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_encrypted_DeviceManagerUnsealResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_block_encrypted_DeviceManagerSealRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_encrypted_DeviceManagerSealRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_block_encrypted_DeviceManagerSealResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_encrypted_DeviceManagerSealResponseTable;
 
 // An interface to the zxcrypt driver, as bound to a single block device with
@@ -51,12 +47,9 @@ class DeviceManager final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_encrypted_DeviceManagerUnsealResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_encrypted_DeviceManagerUnsealResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -69,7 +62,6 @@ class DeviceManager final {
     uint8_t slot;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_encrypted_DeviceManagerUnsealRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_encrypted_DeviceManagerUnsealRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 256;
@@ -88,12 +80,9 @@ class DeviceManager final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_encrypted_DeviceManagerSealResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_encrypted_DeviceManagerSealResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

@@ -12,7 +12,6 @@ struct {{ .Name }};
 {{- define "XUnionDeclaration" }}
 
 extern "C" const fidl_type_t {{ .TableType }};
-extern "C" const fidl_type_t {{ .V1TableType }};
 {{range .DocComments}}
 //{{ . }}
 {{- end}}
@@ -76,11 +75,11 @@ struct {{ .Name }} {
   }
   {{- end }}
 
-  static constexpr const fidl_type_t* Type = &{{ .V1TableType }};
+  static constexpr const fidl_type_t* Type = &{{ .TableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
-  static constexpr uint32_t PrimarySize = {{ .InlineSizeV1NoEE }};
+  static constexpr uint32_t PrimarySize = {{ .InlineSize }};
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLineV1NoEE }};
+  static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {

@@ -17,29 +17,25 @@ namespace {
 constexpr uint64_t kBus_Enable_Ordinal = 0x52804a5800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBus_Enable_GenOrdinal = 0x1849ded5bdcca327lu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusEnableRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusEnableRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBus_Disable_Ordinal = 0x4962c56f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBus_Disable_GenOrdinal = 0x503b1c3fe6290c8lu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisableRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusDisableRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBus_Connect_Ordinal = 0x6252c09800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBus_Connect_GenOrdinal = 0x1ed4d7024d941668lu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusConnectRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusConnectRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kBus_Disconnect_Ordinal = 0x663c1cc700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBus_Disconnect_GenOrdinal = 0x78d72eefd5b46a3blu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisconnectRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusDisconnectRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
 
 }  // namespace

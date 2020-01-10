@@ -40,16 +40,10 @@ func ConvertUnionToXUnion(union Union) XUnion {
 		ContainsUnion:       union.TypeShapeV1.ContainsUnion,
 	}
 	return XUnion{
-		Attributes:      union.Attributes,
-		Name:            union.Name,
-		Members:         members,
-		Size:            typeShape.InlineSize,
-		Alignment:       typeShape.Alignment,
-		MaxHandles:      typeShape.MaxHandles,
-		MaxOutOfLine:    typeShape.MaxOutOfLine,
-		TypeShapeOld:    typeShape,
-		TypeShapeV1:     typeShape,
-		TypeShapeV1NoEE: typeShape,
-		Strictness:      true,
+		Attributes:  union.Attributes,
+		Name:        union.Name,
+		Members:     members,
+		TypeShapeV1: typeShape,
+		Strictness:  true,
 	}
 }

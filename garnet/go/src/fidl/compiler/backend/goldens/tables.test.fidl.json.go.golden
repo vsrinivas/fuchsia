@@ -8,11 +8,11 @@ package name
 
 
 type EmptyTable struct {
-	_ struct{} `fidl:"t,16,8" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"16" fidl_alignment_v1_no_ee:"8"`
+	_ struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
 }
 
 type SimpleTable struct {
-	_ struct{} `fidl:"t,16,8" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"16" fidl_alignment_v1_no_ee:"8"`
+	_ struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
 	X int64 `fidl:"1"`
 	XPresent bool
 	Y int64 `fidl:"5"`
@@ -68,7 +68,7 @@ func (u *SimpleTable) ClearY() {
 }
 
 type OlderSimpleTable struct {
-	_ struct{} `fidl:"t,16,8" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"16" fidl_alignment_v1_no_ee:"8"`
+	_ struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
 	X int64 `fidl:"1"`
 	XPresent bool
 }
@@ -98,7 +98,7 @@ func (u *OlderSimpleTable) ClearX() {
 }
 
 type NewerSimpleTable struct {
-	_ struct{} `fidl:"t,16,8" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"16" fidl_alignment_v1_no_ee:"8"`
+	_ struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
 	X int64 `fidl:"1"`
 	XPresent bool
 	Y int64 `fidl:"5"`
@@ -180,7 +180,7 @@ func (u *NewerSimpleTable) ClearZ() {
 }
 
 type ReverseOrdinalTable struct {
-	_ struct{} `fidl:"t,16,8" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"16" fidl_alignment_v1_no_ee:"8"`
+	_ struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
 	Z int64 `fidl:"1"`
 	ZPresent bool
 	Y int64 `fidl:"2"`

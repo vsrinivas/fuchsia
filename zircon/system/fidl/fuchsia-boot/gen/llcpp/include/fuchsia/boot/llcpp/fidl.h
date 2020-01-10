@@ -35,9 +35,7 @@ class RootJob;
 class RootJobForInspect;
 class Arguments;
 
-extern "C" const fidl_type_t fuchsia_boot_WriteOnlyLogGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_WriteOnlyLogGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_WriteOnlyLogGetResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_WriteOnlyLogGetResponseTable;
 
 // Protocol for providing the kernel log, writable.
@@ -52,12 +50,9 @@ class WriteOnlyLog final {
     ::zx::debuglog log;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_WriteOnlyLogGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_boot_WriteOnlyLogGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -218,9 +213,7 @@ class WriteOnlyLog final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_boot_ReadOnlyLogGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_ReadOnlyLogGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_ReadOnlyLogGetResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_ReadOnlyLogGetResponseTable;
 
 // Protocol for providing the kernel log, readable.
@@ -235,12 +228,9 @@ class ReadOnlyLog final {
     ::zx::debuglog log;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_ReadOnlyLogGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_boot_ReadOnlyLogGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -401,9 +391,7 @@ class ReadOnlyLog final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_boot_ItemsGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_ItemsGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_ItemsGetResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_ItemsGetResponseTable;
 
 // Protocol for retrieving boot item payloads.
@@ -419,12 +407,9 @@ class Items final {
     uint32_t length;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_ItemsGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_boot_ItemsGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -437,7 +422,6 @@ class Items final {
     uint32_t extra;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_ItemsGetRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_boot_ItemsGetRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -623,9 +607,7 @@ class Items final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_boot_FactoryItemsGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_FactoryItemsGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_FactoryItemsGetResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_FactoryItemsGetResponseTable;
 
 // Protocol for retrieving factory boot item payloads.
@@ -641,12 +623,9 @@ class FactoryItems final {
     uint32_t length;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_FactoryItemsGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_boot_FactoryItemsGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -658,7 +637,6 @@ class FactoryItems final {
     uint32_t extra;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_FactoryItemsGetRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_boot_FactoryItemsGetRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -839,9 +817,7 @@ class FactoryItems final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_boot_RootResourceGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_RootResourceGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_RootResourceGetResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_RootResourceGetResponseTable;
 
 // Protocol for providing the root resource.
@@ -856,12 +832,9 @@ class RootResource final {
     ::zx::resource resource;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_RootResourceGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_boot_RootResourceGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1022,9 +995,7 @@ class RootResource final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_boot_RootJobGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_RootJobGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_RootJobGetResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_RootJobGetResponseTable;
 
 // Protocol for providing the root job.
@@ -1041,12 +1012,9 @@ class RootJob final {
     ::zx::job job;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_RootJobGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_boot_RootJobGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1207,9 +1175,7 @@ class RootJob final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_boot_RootJobForInspectGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_RootJobForInspectGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_RootJobForInspectGetResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_RootJobForInspectGetResponseTable;
 
 // Protocol for providing the root job with restricted rights, specifically:
@@ -1225,12 +1191,9 @@ class RootJobForInspect final {
     ::zx::job job;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_RootJobForInspectGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_boot_RootJobForInspectGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1391,9 +1354,7 @@ class RootJobForInspect final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_boot_ArgumentsGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_ArgumentsGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_ArgumentsGetResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_ArgumentsGetResponseTable;
 
 // Protocol for retrieving boot arguments.
@@ -1409,12 +1370,9 @@ class Arguments final {
     uint64_t size;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_ArgumentsGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_boot_ArgumentsGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

@@ -20,7 +20,7 @@ const (
 //{{ . }}
 {{- end}}
 type {{ .Name }} struct {
-	{{ .TagName }} ` + "`" + `fidl:"x{{ if .IsStrict }}!{{end}},{{ .InlineSizeOld }},{{ .AlignmentOld }}" fidl_size_v1:"{{.InlineSizeV1}}" fidl_alignment_v1:"{{.AlignmentV1}}" fidl_size_v1_no_ee:"{{.InlineSizeV1}}" fidl_alignment_v1_no_ee:"{{.AlignmentV1}}"` + "`" + `
+	{{ .TagName }} ` + "`" + `fidl:"x{{ if .IsStrict }}!{{end}}" fidl_size_v1:"{{.InlineSize}}" fidl_alignment_v1:"{{.Alignment}}"` + "`" + `
 	{{- if .IsFlexible }}
 	I_unknownData []byte
 	{{- end }}

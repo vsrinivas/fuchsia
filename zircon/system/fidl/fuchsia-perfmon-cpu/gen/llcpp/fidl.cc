@@ -33,64 +33,55 @@ namespace {
 constexpr uint64_t kController_GetProperties_Ordinal = 0x4a9f6d2100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetProperties_GenOrdinal = 0x81aa89f0ac87173lu;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetPropertiesRequestTable;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetPropertiesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetPropertiesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetPropertiesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Initialize_Ordinal = 0x6fe7b83800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Initialize_GenOrdinal = 0x4a03bc2d8348c317lu;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerInitializeRequestTable;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerInitializeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerInitializeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerInitializeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Terminate_Ordinal = 0x57b56a800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Terminate_GenOrdinal = 0xa591f0cfbb1a6f9lu;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerTerminateRequestTable;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerTerminateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerTerminateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerTerminateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetAllocation_Ordinal = 0x6c4a81f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetAllocation_GenOrdinal = 0x3b4bffd18849f074lu;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetAllocationRequestTable;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetAllocationResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetAllocationRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetAllocationResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_StageConfig_Ordinal = 0x5889caf900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_StageConfig_GenOrdinal = 0x340032f97698973alu;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStageConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStageConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStageConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStageConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetConfig_Ordinal = 0x1ec2af4000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetConfig_GenOrdinal = 0x5da0a02d12fbfdd3lu;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_GetBufferHandle_Ordinal = 0x7fb9183100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_GetBufferHandle_GenOrdinal = 0x1a49fd7f34915efflu;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetBufferHandleRequestTable;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerGetBufferHandleResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetBufferHandleRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerGetBufferHandleResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Start_Ordinal = 0x4efe358200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Start_GenOrdinal = 0x3c166469384c06f8lu;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStartRequestTable;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStartResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStartRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStartResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Stop_Ordinal = 0x21f2d4200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_Stop_GenOrdinal = 0x36a98bbc8ee7e3d2lu;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStopRequestTable;
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_ControllerStopResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStopRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStopResponseTable;
 
 }  // namespace

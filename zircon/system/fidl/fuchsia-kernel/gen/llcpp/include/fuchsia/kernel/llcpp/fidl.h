@@ -33,7 +33,6 @@ class Counter;
 struct MemoryStats;
 class Stats;
 
-extern "C" const fidl_type_t fuchsia_kernel_PerCpuStatsTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_PerCpuStatsTable;
 
 struct PerCpuStats final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -230,7 +229,7 @@ struct PerCpuStats final : private ::fidl::VectorView<fidl_envelope_t> {
   class Builder;
   friend class Builder;
   static Builder Build();
-  static constexpr const fidl_type_t* Type = &fuchsia_kernel_PerCpuStatsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_PerCpuStatsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -285,7 +284,6 @@ class PerCpuStats::Builder {
   ::fidl::Array<fidl_envelope_t, 15> envelopes_ = {};
 };
 
-extern "C" const fidl_type_t fuchsia_kernel_MemoryStatsTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_MemoryStatsTable;
 
 struct MemoryStats final : private ::fidl::VectorView<fidl_envelope_t> {
@@ -410,7 +408,7 @@ struct MemoryStats final : private ::fidl::VectorView<fidl_envelope_t> {
   class Builder;
   friend class Builder;
   static Builder Build();
-  static constexpr const fidl_type_t* Type = &fuchsia_kernel_MemoryStatsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_MemoryStatsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -453,7 +451,6 @@ class MemoryStats::Builder {
   ::fidl::Array<fidl_envelope_t, 9> envelopes_ = {};
 };
 
-extern "C" const fidl_type_t fuchsia_kernel_CpuStatsTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_CpuStatsTable;
 
 struct CpuStats {
@@ -468,9 +465,7 @@ struct CpuStats {
   ::fidl::VectorView<::llcpp::fuchsia::kernel::PerCpuStats> per_cpu_stats = {};
 };
 
-extern "C" const fidl_type_t fuchsia_kernel_MexecBrokerPerformMexecRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_MexecBrokerPerformMexecRequestTable;
-extern "C" const fidl_type_t fuchsia_kernel_MexecBrokerPerformMexecResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_MexecBrokerPerformMexecResponseTable;
 
 // Acts on behalf of the caller to interact with privileged mexec system call.
@@ -486,7 +481,6 @@ class MexecBroker final {
     ::zx::vmo bootdata;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_MexecBrokerPerformMexecRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_MexecBrokerPerformMexecRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -635,13 +629,9 @@ class MexecBroker final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSendDebugCommandRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_DebugBrokerSendDebugCommandRequestTable;
-extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSendDebugCommandResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_DebugBrokerSendDebugCommandResponseTable;
-extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSetTracingEnabledRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_DebugBrokerSetTracingEnabledRequestTable;
-extern "C" const fidl_type_t fuchsia_kernel_DebugBrokerSetTracingEnabledResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_DebugBrokerSetTracingEnabledResponseTable;
 
 // Acts on behalf of the caller to interact with privileged debug system calls.
@@ -656,12 +646,9 @@ class DebugBroker final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_DebugBrokerSendDebugCommandResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_DebugBrokerSendDebugCommandResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -673,7 +660,6 @@ class DebugBroker final {
     ::fidl::StringView command;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_DebugBrokerSendDebugCommandRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_DebugBrokerSendDebugCommandRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1024;
@@ -692,12 +678,9 @@ class DebugBroker final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_DebugBrokerSetTracingEnabledResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_DebugBrokerSetTracingEnabledResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -709,7 +692,6 @@ class DebugBroker final {
     bool enabled;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_DebugBrokerSetTracingEnabledRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_DebugBrokerSetTracingEnabledRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -949,13 +931,9 @@ class DebugBroker final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_kernel_CounterGetInspectVmoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_CounterGetInspectVmoRequestTable;
-extern "C" const fidl_type_t fuchsia_kernel_CounterGetInspectVmoResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_CounterGetInspectVmoResponseTable;
-extern "C" const fidl_type_t fuchsia_kernel_CounterUpdateInspectVmoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_CounterUpdateInspectVmoRequestTable;
-extern "C" const fidl_type_t fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
 
 // Protocol for retrieving kcounter information.
@@ -971,12 +949,9 @@ class Counter final {
     ::llcpp::fuchsia::mem::Buffer buffer;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_CounterGetInspectVmoResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_CounterGetInspectVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -990,12 +965,9 @@ class Counter final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1240,13 +1212,9 @@ class Counter final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_kernel_StatsGetMemoryStatsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_StatsGetMemoryStatsRequestTable;
-extern "C" const fidl_type_t fuchsia_kernel_StatsGetMemoryStatsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_StatsGetMemoryStatsResponseTable;
-extern "C" const fidl_type_t fuchsia_kernel_StatsGetCpuStatsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_StatsGetCpuStatsRequestTable;
-extern "C" const fidl_type_t fuchsia_kernel_StatsGetCpuStatsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_StatsGetCpuStatsResponseTable;
 
 // Protocol for providing kernel stats. This is roughly a wrapper around zx_object_get_info for
@@ -1265,12 +1233,9 @@ class Stats final {
     ::llcpp::fuchsia::kernel::MemoryStats stats;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_StatsGetMemoryStatsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_StatsGetMemoryStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 216;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 216;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1284,12 +1249,9 @@ class Stats final {
     ::llcpp::fuchsia::kernel::CpuStats stats;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_StatsGetCpuStatsResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_StatsGetCpuStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 192512;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 192512;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

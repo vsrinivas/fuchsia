@@ -38,7 +38,6 @@ struct NameInfo;
 struct LaunchInfo;
 class Launcher;
 
-extern "C" const fidl_type_t fuchsia_process_ProcessStartDataTable;
 extern "C" const fidl_type_t v1_fuchsia_process_ProcessStartDataTable;
 
 // The information required to start a process.
@@ -90,7 +89,6 @@ struct ProcessStartData {
   uint64_t base = {};
 };
 
-extern "C" const fidl_type_t fuchsia_process_HandleInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_process_HandleInfoTable;
 
 // Information about a handle provided to a process at startup.
@@ -118,9 +116,7 @@ struct HandleInfo {
   uint32_t id = {};
 };
 
-extern "C" const fidl_type_t fuchsia_process_ResolverResolveRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_ResolverResolveRequestTable;
-extern "C" const fidl_type_t fuchsia_process_ResolverResolveResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_process_ResolverResolveResponseTable;
 
 // An interface for resolving names to executables and library loaders.
@@ -151,12 +147,9 @@ class Resolver final {
     ::zx::channel ldsvc;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_process_ResolverResolveResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_process_ResolverResolveResponseTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -168,7 +161,6 @@ class Resolver final {
     ::fidl::StringView name;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_process_ResolverResolveRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_process_ResolverResolveRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 2048;
@@ -379,7 +371,6 @@ class Resolver final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_process_NameInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_process_NameInfoTable;
 
 // A namespace entry provided to a process at startup.
@@ -410,7 +401,6 @@ constexpr uint32_t MAX_RESOLVE_NAME_SIZE = 2048u;
 
 constexpr uint32_t MAX = 4294967295u;
 
-extern "C" const fidl_type_t fuchsia_process_LaunchInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LaunchInfoTable;
 
 // The information needed to launch a process.
@@ -431,29 +421,17 @@ struct LaunchInfo {
   ::fidl::StringView name = {};
 };
 
-extern "C" const fidl_type_t fuchsia_process_LauncherLaunchRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherLaunchRequestTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherLaunchResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherLaunchResponseTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherCreateWithoutStartingRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherCreateWithoutStartingRequestTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherCreateWithoutStartingResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherCreateWithoutStartingResponseTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddArgsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddArgsRequestTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddArgsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddArgsResponseTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddEnvironsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddEnvironsRequestTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddEnvironsResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddEnvironsResponseTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddNamesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddNamesRequestTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddNamesResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddNamesResponseTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddHandlesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddHandlesRequestTable;
-extern "C" const fidl_type_t fuchsia_process_LauncherAddHandlesResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddHandlesResponseTable;
 
 // A low-level interface for launching processes.
@@ -481,12 +459,9 @@ class Launcher final {
     ::zx::process process;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_process_LauncherLaunchResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_process_LauncherLaunchResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -498,7 +473,6 @@ class Launcher final {
     ::llcpp::fuchsia::process::LaunchInfo info;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_process_LauncherLaunchRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_process_LauncherLaunchRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
@@ -518,12 +492,9 @@ class Launcher final {
     ::llcpp::fuchsia::process::ProcessStartData* data;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_process_LauncherCreateWithoutStartingResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_process_LauncherCreateWithoutStartingResponseTable;
     static constexpr uint32_t MaxNumHandles = 4;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 56;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 56;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -535,7 +506,6 @@ class Launcher final {
     ::llcpp::fuchsia::process::LaunchInfo info;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_process_LauncherCreateWithoutStartingRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_process_LauncherCreateWithoutStartingRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
@@ -554,7 +524,6 @@ class Launcher final {
     ::fidl::VectorView<::fidl::VectorView<uint8_t>> args;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_process_LauncherAddArgsRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_process_LauncherAddArgsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -572,7 +541,6 @@ class Launcher final {
     ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_process_LauncherAddEnvironsRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_process_LauncherAddEnvironsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -590,7 +558,6 @@ class Launcher final {
     ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_process_LauncherAddNamesRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_process_LauncherAddNamesRequestTable;
     static constexpr uint32_t MaxNumHandles = 4294967295;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -608,7 +575,6 @@ class Launcher final {
     ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_process_LauncherAddHandlesRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_process_LauncherAddHandlesRequestTable;
     static constexpr uint32_t MaxNumHandles = 4294967295;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;

@@ -77,8 +77,7 @@ namespace {
 constexpr uint64_t kDevice_GetChannel_Ordinal = 0x6e14495500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetChannel_GenOrdinal = 0x51e1b0efe5849972lu;
-extern "C" const fidl_type_t fuchsia_hardware_audio_DeviceGetChannelRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_DeviceGetChannelResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_DeviceGetChannelRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_DeviceGetChannelResponseTable;
 
 }  // namespace
@@ -363,36 +362,31 @@ namespace {
 constexpr uint64_t kRingBuffer_GetProperties_Ordinal = 0x72b8bf3600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kRingBuffer_GetProperties_GenOrdinal = 0x12947f061a8fe1lu;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferGetPropertiesRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferGetPropertiesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferGetPropertiesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferGetPropertiesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kRingBuffer_WatchClockRecoveryPositionInfo_Ordinal = 0x428b0f8300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kRingBuffer_WatchClockRecoveryPositionInfo_GenOrdinal = 0x694d5b898a4167e5lu;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferWatchClockRecoveryPositionInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kRingBuffer_GetVmo_Ordinal = 0x330599f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kRingBuffer_GetVmo_GenOrdinal = 0x44c8f4f5680e853alu;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferGetVmoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferGetVmoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferGetVmoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferGetVmoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kRingBuffer_Start_Ordinal = 0x6028425000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kRingBuffer_Start_GenOrdinal = 0x5dd780a769a8892dlu;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferStartRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferStartResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferStartRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferStartResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kRingBuffer_Stop_Ordinal = 0x25c2cd8800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kRingBuffer_Stop_GenOrdinal = 0x49a73d9cf1d4e110lu;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferStopRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_RingBufferStopResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferStopRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_RingBufferStopResponseTable;
 
 }  // namespace
@@ -1053,43 +1047,37 @@ namespace {
 constexpr uint64_t kStreamConfig_GetProperties_Ordinal = 0x64e8e22600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamConfig_GetProperties_GenOrdinal = 0x7d89c02f3e2d3c01lu;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigGetPropertiesRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigGetPropertiesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigGetPropertiesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigGetPropertiesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamConfig_GetSupportedFormats_Ordinal = 0x436ffebd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamConfig_GetSupportedFormats_GenOrdinal = 0x448efa7850cafe7elu;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigGetSupportedFormatsRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigGetSupportedFormatsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigGetSupportedFormatsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigGetSupportedFormatsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamConfig_CreateRingBuffer_Ordinal = 0x2f12bd3800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamConfig_CreateRingBuffer_GenOrdinal = 0x2afb19dd13faa1balu;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigCreateRingBufferRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigCreateRingBufferResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigCreateRingBufferRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigCreateRingBufferResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamConfig_WatchGainState_Ordinal = 0x1e82e2b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamConfig_WatchGainState_GenOrdinal = 0x4772506136ab65c1lu;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigWatchGainStateRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigWatchGainStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigWatchGainStateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigWatchGainStateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamConfig_SetGain_Ordinal = 0x7104625900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamConfig_SetGain_GenOrdinal = 0x3943b41498c6a384lu;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigSetGainRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigSetGainResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigSetGainRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigSetGainResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kStreamConfig_WatchPlugState_Ordinal = 0x3174894d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kStreamConfig_WatchPlugState_GenOrdinal = 0x497345a6f048b2a6lu;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigWatchPlugStateRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_audio_StreamConfigWatchPlugStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigWatchPlugStateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_audio_StreamConfigWatchPlugStateResponseTable;
 
 }  // namespace

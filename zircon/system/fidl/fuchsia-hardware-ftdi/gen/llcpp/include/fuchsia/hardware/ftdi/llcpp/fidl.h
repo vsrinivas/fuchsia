@@ -27,7 +27,6 @@ struct I2cDevice;
 struct I2cBusLayout;
 class Device;
 
-extern "C" const fidl_type_t fuchsia_hardware_ftdi_I2cDeviceTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ftdi_I2cDeviceTable;
 
 // Each one of these represents an I2cDevice that will exist
@@ -49,7 +48,6 @@ struct I2cDevice {
   uint32_t did = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_ftdi_I2cBusLayoutTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ftdi_I2cBusLayoutTable;
 
 // This represents the data necessary for the FTDI device
@@ -71,9 +69,7 @@ struct I2cBusLayout {
   uint32_t sda_in = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_ftdi_DeviceCreateI2CRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ftdi_DeviceCreateI2CRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ftdi_DeviceCreateI2CResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ftdi_DeviceCreateI2CResponseTable;
 
 class Device final {
@@ -87,7 +83,6 @@ class Device final {
     ::llcpp::fuchsia::hardware::ftdi::I2cDevice device;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ftdi_DeviceCreateI2CRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ftdi_DeviceCreateI2CRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;

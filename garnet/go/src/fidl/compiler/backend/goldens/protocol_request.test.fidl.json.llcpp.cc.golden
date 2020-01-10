@@ -14,29 +14,25 @@ namespace {
 constexpr uint64_t kParent_GetChild_Ordinal = 0x3692bc6900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kParent_GetChild_GenOrdinal = 0x57e26ed694158086lu;
-extern "C" const fidl_type_t test_name_ParentGetChildRequestTable;
-extern "C" const fidl_type_t test_name_ParentGetChildResponseTable;
+extern "C" const fidl_type_t v1_test_name_ParentGetChildRequestTable;
 extern "C" const fidl_type_t v1_test_name_ParentGetChildResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kParent_GetChildRequest_Ordinal = 0x3faacc7e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kParent_GetChildRequest_GenOrdinal = 0x5ea0990a698a80lu;
-extern "C" const fidl_type_t test_name_ParentGetChildRequestRequestTable;
-extern "C" const fidl_type_t test_name_ParentGetChildRequestResponseTable;
+extern "C" const fidl_type_t v1_test_name_ParentGetChildRequestRequestTable;
 extern "C" const fidl_type_t v1_test_name_ParentGetChildRequestResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kParent_TakeChild_Ordinal = 0x4c0642f900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kParent_TakeChild_GenOrdinal = 0x6a9827d18871f87dlu;
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestTable;
-extern "C" const fidl_type_t test_name_ParentTakeChildResponseTable;
+extern "C" const fidl_type_t v1_test_name_ParentTakeChildRequestTable;
 extern "C" const fidl_type_t v1_test_name_ParentTakeChildResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kParent_TakeChildRequest_Ordinal = 0x5ec3867a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kParent_TakeChildRequest_GenOrdinal = 0x6c4a70e2a2126637lu;
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestResponseTable;
+extern "C" const fidl_type_t v1_test_name_ParentTakeChildRequestRequestTable;
 extern "C" const fidl_type_t v1_test_name_ParentTakeChildRequestResponseTable;
 
 }  // namespace

@@ -33,15 +33,13 @@ namespace {
 constexpr uint64_t kInterface_Method_Ordinal = 0x3f43684c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kInterface_Method_GenOrdinal = 0x60e700e002995ef8lu;
-extern "C" const fidl_type_t test_name_InterfaceMethodRequestTable;
-extern "C" const fidl_type_t test_name_InterfaceMethodResponseTable;
+extern "C" const fidl_type_t v1_test_name_InterfaceMethodRequestTable;
 extern "C" const fidl_type_t v1_test_name_InterfaceMethodResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kInterface_OnEvent_Ordinal = 0x136d200d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kInterface_OnEvent_GenOrdinal = 0x914c226136244edlu;
-extern "C" const fidl_type_t test_name_InterfaceOnEventRequestTable;
-extern "C" const fidl_type_t test_name_InterfaceOnEventEventTable;
+extern "C" const fidl_type_t v1_test_name_InterfaceOnEventRequestTable;
 extern "C" const fidl_type_t v1_test_name_InterfaceOnEventEventTable;
 
 }  // namespace

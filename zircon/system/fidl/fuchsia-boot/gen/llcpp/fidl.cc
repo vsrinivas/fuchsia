@@ -14,8 +14,7 @@ namespace {
 constexpr uint64_t kWriteOnlyLog_Get_Ordinal = 0x6bf285c200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kWriteOnlyLog_Get_GenOrdinal = 0x4579dac289d3007lu;
-extern "C" const fidl_type_t fuchsia_boot_WriteOnlyLogGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_WriteOnlyLogGetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_boot_WriteOnlyLogGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_WriteOnlyLogGetResponseTable;
 
 }  // namespace
@@ -174,8 +173,7 @@ namespace {
 constexpr uint64_t kReadOnlyLog_Get_Ordinal = 0x6ef326c600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kReadOnlyLog_Get_GenOrdinal = 0x6f3ceba5eca871fflu;
-extern "C" const fidl_type_t fuchsia_boot_ReadOnlyLogGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_ReadOnlyLogGetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_boot_ReadOnlyLogGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_ReadOnlyLogGetResponseTable;
 
 }  // namespace
@@ -334,8 +332,7 @@ namespace {
 constexpr uint64_t kItems_Get_Ordinal = 0x6462c85400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kItems_Get_GenOrdinal = 0x542db3f176641edclu;
-extern "C" const fidl_type_t fuchsia_boot_ItemsGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_ItemsGetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_boot_ItemsGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_ItemsGetResponseTable;
 
 }  // namespace
@@ -500,8 +497,7 @@ namespace {
 constexpr uint64_t kFactoryItems_Get_Ordinal = 0x18be2c3500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFactoryItems_Get_GenOrdinal = 0x2f0dcb1aba41b6d9lu;
-extern "C" const fidl_type_t fuchsia_boot_FactoryItemsGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_FactoryItemsGetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_boot_FactoryItemsGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_FactoryItemsGetResponseTable;
 
 }  // namespace
@@ -664,8 +660,7 @@ namespace {
 constexpr uint64_t kRootResource_Get_Ordinal = 0x2e9e3a1400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kRootResource_Get_GenOrdinal = 0x5a1df646e4df6f78lu;
-extern "C" const fidl_type_t fuchsia_boot_RootResourceGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_RootResourceGetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_boot_RootResourceGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_RootResourceGetResponseTable;
 
 }  // namespace
@@ -824,8 +819,7 @@ namespace {
 constexpr uint64_t kRootJob_Get_Ordinal = 0x7e473a2400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kRootJob_Get_GenOrdinal = 0x70e2566b29e1af06lu;
-extern "C" const fidl_type_t fuchsia_boot_RootJobGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_RootJobGetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_boot_RootJobGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_RootJobGetResponseTable;
 
 }  // namespace
@@ -984,8 +978,7 @@ namespace {
 constexpr uint64_t kRootJobForInspect_Get_Ordinal = 0x7e473a2400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kRootJobForInspect_Get_GenOrdinal = 0x70e2566b29e1af06lu;
-extern "C" const fidl_type_t fuchsia_boot_RootJobForInspectGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_RootJobForInspectGetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_boot_RootJobForInspectGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_RootJobForInspectGetResponseTable;
 
 }  // namespace
@@ -1144,8 +1137,7 @@ namespace {
 constexpr uint64_t kArguments_Get_Ordinal = 0x6e7258e600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kArguments_Get_GenOrdinal = 0x2e594d9c82b93ee3lu;
-extern "C" const fidl_type_t fuchsia_boot_ArgumentsGetRequestTable;
-extern "C" const fidl_type_t fuchsia_boot_ArgumentsGetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_boot_ArgumentsGetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_boot_ArgumentsGetResponseTable;
 
 }  // namespace

@@ -14,8 +14,7 @@ namespace {
 constexpr uint64_t kCorruptBlobHandler_CorruptBlob_Ordinal = 0x432ee88e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kCorruptBlobHandler_CorruptBlob_GenOrdinal = 0x264e37ffa416cdf1lu;
-extern "C" const fidl_type_t fuchsia_blobfs_CorruptBlobHandlerCorruptBlobRequestTable;
-extern "C" const fidl_type_t fuchsia_blobfs_CorruptBlobHandlerCorruptBlobResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_blobfs_CorruptBlobHandlerCorruptBlobRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_blobfs_CorruptBlobHandlerCorruptBlobResponseTable;
 
 }  // namespace
@@ -181,8 +180,7 @@ namespace {
 constexpr uint64_t kBlobfsAdmin_HandleCorruptBlobs_Ordinal = 0x22c0c04c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBlobfsAdmin_HandleCorruptBlobs_GenOrdinal = 0x5f405690ad00f87elu;
-extern "C" const fidl_type_t fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsRequestTable;
-extern "C" const fidl_type_t fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsResponseTable;
 
 }  // namespace
@@ -343,8 +341,7 @@ namespace {
 constexpr uint64_t kBlobfs_GetAllocatedRegions_Ordinal = 0xf6a24a800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kBlobfs_GetAllocatedRegions_GenOrdinal = 0x3e4b9606dbb8073dlu;
-extern "C" const fidl_type_t fuchsia_blobfs_BlobfsGetAllocatedRegionsRequestTable;
-extern "C" const fidl_type_t fuchsia_blobfs_BlobfsGetAllocatedRegionsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_blobfs_BlobfsGetAllocatedRegionsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_blobfs_BlobfsGetAllocatedRegionsResponseTable;
 
 }  // namespace

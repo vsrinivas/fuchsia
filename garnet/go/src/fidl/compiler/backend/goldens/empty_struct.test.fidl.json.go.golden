@@ -12,7 +12,7 @@ import (
 
 
 type Empty struct {
-	_ struct{} `fidl:"s,1,1" fidl_size_v1:"1" fidl_alignment_v1:"1" fidl_size_v1_no_ee:"1" fidl_alignment_v1_no_ee:"1"`
+	_ struct{} `fidl:"s" fidl_size_v1:"1" fidl_alignment_v1:"1"`
 }
 
 var _mEmpty = _bindings.CreateLazyMarshaler(Empty{})

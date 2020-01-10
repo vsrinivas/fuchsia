@@ -15,8 +15,7 @@ namespace {
 constexpr uint64_t kNewDeviceProxy_GetChannel_Ordinal = 0x2a01059e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNewDeviceProxy_GetChannel_GenOrdinal = 0x612d461fef5c62e5lu;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceProxyGetChannelRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceProxyGetChannelResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceProxyGetChannelRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceProxyGetChannelResponseTable;
 
 }  // namespace
@@ -150,15 +149,13 @@ namespace {
 constexpr uint64_t kDevice_GetClass_Ordinal = 0x6549990f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetClass_GenOrdinal = 0x3d48bbcee248ab8blu;
-extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceGetClassRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceGetClassResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetConfig_Ordinal = 0x10bcc68c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetConfig_GenOrdinal = 0x771a0946f6f87173lu;
-extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceSetConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceSetConfigResponseTable;
 
 }  // namespace
@@ -437,29 +434,25 @@ namespace {
 constexpr uint64_t kNewDevice_GetClass_Ordinal = 0x6549990f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNewDevice_GetClass_GenOrdinal = 0x3d48bbcee248ab8blu;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceGetClassRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceGetClassResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceGetClassRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceGetClassResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNewDevice_SetConfig_Ordinal = 0x10bcc68c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNewDevice_SetConfig_GenOrdinal = 0x771a0946f6f87173lu;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceSetConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceSetConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceSetConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceSetConfigResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNewDevice_Read_Ordinal = 0x1a6f49f800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNewDevice_Read_GenOrdinal = 0xc2570dbef247548lu;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceReadRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceReadResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceReadRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceReadResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kNewDevice_Write_Ordinal = 0x4a3e8e3f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kNewDevice_Write_GenOrdinal = 0x4238cc1d50b60487lu;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceWriteRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_serial_NewDeviceWriteResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceWriteRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceWriteResponseTable;
 
 }  // namespace

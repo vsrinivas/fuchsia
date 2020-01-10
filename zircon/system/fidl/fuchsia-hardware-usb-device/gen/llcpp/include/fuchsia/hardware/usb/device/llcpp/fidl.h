@@ -26,45 +26,25 @@ namespace device {
 
 class Device;
 
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetDeviceSpeedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetDeviceSpeedRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetDeviceSpeedResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetDeviceSpeedResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetDeviceDescriptorRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetDeviceDescriptorRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetDeviceDescriptorResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetDeviceDescriptorResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSizeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSizeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSizeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSizeResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetStringDescriptorRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetStringDescriptorRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetStringDescriptorResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetStringDescriptorResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceSetInterfaceRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceSetInterfaceRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceSetInterfaceResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceSetInterfaceResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetDeviceIdRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetDeviceIdRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetDeviceIdResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetDeviceIdResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetHubDeviceIdRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetHubDeviceIdRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetHubDeviceIdResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetHubDeviceIdResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetConfigurationRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetConfigurationRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetConfigurationResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetConfigurationResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceSetConfigurationRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceSetConfigurationRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceSetConfigurationResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceSetConfigurationResponseTable;
 
 class Device final {
@@ -77,12 +57,9 @@ class Device final {
     uint32_t speed;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceGetDeviceSpeedResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceGetDeviceSpeedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -96,12 +73,9 @@ class Device final {
     ::fidl::Array<uint8_t, 18> desc;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceGetDeviceDescriptorResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceGetDeviceDescriptorResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -116,12 +90,9 @@ class Device final {
     uint16_t size;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSizeResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSizeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -133,7 +104,6 @@ class Device final {
     uint8_t config;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSizeRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSizeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -153,12 +123,9 @@ class Device final {
     ::fidl::VectorView<uint8_t> desc;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 65536;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 65536;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -170,7 +137,6 @@ class Device final {
     uint8_t config;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -191,12 +157,9 @@ class Device final {
     uint16_t actual_lang_id;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceGetStringDescriptorResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceGetStringDescriptorResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 384;
-    static constexpr uint32_t AltPrimarySize = 48;
-    static constexpr uint32_t AltMaxOutOfLine = 384;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -209,7 +172,6 @@ class Device final {
     uint16_t lang_id;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceGetStringDescriptorRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceGetStringDescriptorRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -228,12 +190,9 @@ class Device final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceSetInterfaceResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceSetInterfaceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -246,7 +205,6 @@ class Device final {
     uint8_t alt_setting;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceSetInterfaceRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceSetInterfaceRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -265,12 +223,9 @@ class Device final {
     uint32_t device_id;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceGetDeviceIdResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceGetDeviceIdResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -284,12 +239,9 @@ class Device final {
     uint32_t hub_device_id;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceGetHubDeviceIdResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceGetHubDeviceIdResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -303,12 +255,9 @@ class Device final {
     uint8_t configuration;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceGetConfigurationResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceGetConfigurationResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -322,12 +271,9 @@ class Device final {
     int32_t s;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceSetConfigurationResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceSetConfigurationResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -339,7 +285,6 @@ class Device final {
     uint8_t configuration;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_device_DeviceSetConfigurationRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_device_DeviceSetConfigurationRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

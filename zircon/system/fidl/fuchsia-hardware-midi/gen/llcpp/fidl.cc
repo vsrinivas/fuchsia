@@ -15,8 +15,7 @@ namespace {
 constexpr uint64_t kDevice_GetInfo_Ordinal = 0x7eddfe3c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetInfo_GenOrdinal = 0x67d496c0a087b7dlu;
-extern "C" const fidl_type_t fuchsia_hardware_midi_DeviceGetInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_midi_DeviceGetInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_midi_DeviceGetInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_midi_DeviceGetInfoResponseTable;
 
 }  // namespace

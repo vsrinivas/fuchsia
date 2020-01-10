@@ -49,7 +49,6 @@ namespace name {
 
 struct Handles;
 
-extern "C" const fidl_type_t test_name_HandlesTable;
 extern "C" const fidl_type_t v1_test_name_HandlesTable;
 
 struct Handles {

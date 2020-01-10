@@ -15,50 +15,43 @@ namespace {
 constexpr uint64_t kLight_GetName_Ordinal = 0x9d4dbd800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLight_GetName_GenOrdinal = 0x14a083e18eeca03dlu;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightGetNameRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightGetNameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetNameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLight_GetCount_Ordinal = 0x4e441b4600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLight_GetCount_GenOrdinal = 0x3f141dbdbcb1f0felu;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightGetCountRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightGetCountResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetCountRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetCountResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLight_HasCapability_Ordinal = 0x703098f200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLight_HasCapability_GenOrdinal = 0x6fb1d40c2effffc9lu;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightHasCapabilityRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightHasCapabilityResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightHasCapabilityRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightHasCapabilityResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLight_GetSimpleValue_Ordinal = 0x634b636200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLight_GetSimpleValue_GenOrdinal = 0x30826e9255b5a9e3lu;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightGetSimpleValueRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightGetSimpleValueResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetSimpleValueRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetSimpleValueResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLight_SetSimpleValue_Ordinal = 0x56deecd500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLight_SetSimpleValue_GenOrdinal = 0x4fb33d84c1aad81dlu;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightSetSimpleValueRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightSetSimpleValueResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightSetSimpleValueRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightSetSimpleValueResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLight_GetRgbValue_Ordinal = 0xf37a4e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLight_GetRgbValue_GenOrdinal = 0x57f15472f735669dlu;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightGetRgbValueRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightGetRgbValueResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetRgbValueRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightGetRgbValueResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLight_SetRgbValue_Ordinal = 0x81b4c9b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLight_SetRgbValue_GenOrdinal = 0x2b354d18be0b70a4lu;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightSetRgbValueRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_light_LightSetRgbValueResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightSetRgbValueRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightSetRgbValueResponseTable;
 
 }  // namespace

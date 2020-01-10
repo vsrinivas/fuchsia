@@ -99,10 +99,8 @@ type Struct struct {
 	// numbers will be different if the struct contains a union within it. Only
 	// structs have this information because fidl::encoding only uses these
 	// precalculated numbers for structs and unions.
-	SizeOld      int
-	AlignmentOld int
-	SizeV1       int
-	AlignmentV1  int
+	Size      int
+	Alignment int
 }
 
 type StructMember struct {
@@ -110,8 +108,7 @@ type StructMember struct {
 	OGType       types.Type
 	Type         string
 	Name         string
-	OffsetOld    int
-	OffsetV1     int
+	Offset       int
 	HasDefault   bool
 	DefaultValue string
 }
@@ -690,7 +687,7 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 			Type:         c.compileType(v.Type, false).Decl,
 			BorrowedType: c.compileType(v.Type, true).Decl,
 			Name:         compileSnakeIdentifier(v.Name),
-			Offset:       v.Offset,
+			Offset:       v.FieldShapeV1.Offset,
 		}
 		r = append(r, p)
 	}
@@ -758,8 +755,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 		Type:         memberType.Decl,
 		OGType:       val.Type,
 		Name:         compileSnakeIdentifier(val.Name),
-		OffsetOld:    val.FieldShapeOld.Offset,
-		OffsetV1:     val.FieldShapeV1.Offset,
+		Offset:       val.FieldShapeV1.Offset,
 		HasDefault:   false,
 		DefaultValue: "", // TODO(cramertj) support defaults
 	}
@@ -768,14 +764,12 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
-		Attributes:   val.Attributes,
-		ECI:          val.Name,
-		Name:         name,
-		Members:      []StructMember{},
-		SizeOld:      val.TypeShapeOld.InlineSize,
-		AlignmentOld: val.TypeShapeOld.Alignment,
-		SizeV1:       val.TypeShapeV1.InlineSize,
-		AlignmentV1:  val.TypeShapeV1.Alignment,
+		Attributes: val.Attributes,
+		ECI:        val.Name,
+		Name:       name,
+		Members:    []StructMember{},
+		Size:       val.TypeShapeV1.InlineSize,
+		Alignment:  val.TypeShapeV1.Alignment,
 	}
 
 	for _, v := range val.Members {
@@ -826,8 +820,8 @@ func (c *compiler) compileResultFromXUnion(val types.XUnion, root Root) Result {
 		Ok:         []string{},
 		ErrOGType:  val.Members[1].Type,
 		ErrType:    c.compileXUnionMember(val.Members[1]).Type,
-		Size:       val.Size,
-		Alignment:  val.Alignment,
+		Size:       val.TypeShapeV1.InlineSize,
+		Alignment:  val.TypeShapeV1.Alignment,
 	}
 
 	OkArm := val.Members[0]

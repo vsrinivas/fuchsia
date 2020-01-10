@@ -14,120 +14,103 @@ namespace {
 constexpr uint64_t kFilesystems_Clone_Ordinal = 0x17fe6a4c00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Clone_GenOrdinal = 0x5a61678f293ce16flu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsCloneRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsCloneResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsCloneRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsCloneResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Close_Ordinal = 0x52b9568700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Close_GenOrdinal = 0x5309c5bd1c33dc44lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsCloseRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsCloseResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsCloseRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsCloseResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Describe_Ordinal = 0x1f62df5e00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Describe_GenOrdinal = 0xffcec215078dea0lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsDescribeRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsDescribeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsDescribeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsDescribeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_OnOpen_Ordinal = 0x4700a7bd00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_OnOpen_GenOrdinal = 0x7fc7bbb1dbfd1972lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsOnOpenRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsOnOpenEventTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsOnOpenRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsOnOpenEventTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Sync_Ordinal = 0x62423faa00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Sync_GenOrdinal = 0x189d88326c18b519lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsSyncRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsSyncResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsSyncRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsSyncResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_GetAttr_Ordinal = 0x4585e7c800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_GetAttr_GenOrdinal = 0x78985e216314dafdlu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsGetAttrRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsGetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsGetAttrRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsGetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_SetAttr_Ordinal = 0xbd5559a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_SetAttr_GenOrdinal = 0x4186c0f40d938f46lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsSetAttrRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsSetAttrResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsSetAttrRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsSetAttrResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_NodeGetFlags_Ordinal = 0x3c24c22300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_NodeGetFlags_GenOrdinal = 0x5b88fffb8eda3aa1lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsNodeGetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsNodeGetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsNodeGetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsNodeGetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_NodeSetFlags_Ordinal = 0x46940c1600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_NodeSetFlags_GenOrdinal = 0x5295b76c71fde733lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsNodeSetFlagsRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsNodeSetFlagsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsNodeSetFlagsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsNodeSetFlagsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Open_Ordinal = 0x77e4cceb00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Open_GenOrdinal = 0x2c5044561d685ec0lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsOpenRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsOpenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsOpenRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsOpenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Unlink_Ordinal = 0x2cbadb1900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Unlink_GenOrdinal = 0x5a0ff90760a8bc23lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsUnlinkRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsUnlinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsUnlinkRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsUnlinkResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_ReadDirents_Ordinal = 0x2ea53c2d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_ReadDirents_GenOrdinal = 0x3582806bf27faa0alu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsReadDirentsRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsReadDirentsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsReadDirentsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsReadDirentsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Rewind_Ordinal = 0x7072fd8700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Rewind_GenOrdinal = 0x16b1202af0f34c71lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsRewindRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsRewindResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsRewindRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsRewindResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_GetToken_Ordinal = 0x3217bced00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_GetToken_GenOrdinal = 0x26ae9d18763c8655lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsGetTokenRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsGetTokenResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsGetTokenRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsGetTokenResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Rename_Ordinal = 0x4a94b0ac00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Rename_GenOrdinal = 0xa8e00a247f3c905lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsRenameRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsRenameResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsRenameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsRenameResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Link_Ordinal = 0x1b8a5e6400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Link_GenOrdinal = 0x740604c0c7c930e7lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsLinkRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsLinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsLinkRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsLinkResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Watch_Ordinal = 0x5ac28f3400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kFilesystems_Watch_GenOrdinal = 0x5717193a59d66d91lu;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsWatchRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_FilesystemsWatchResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsWatchRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsWatchResponseTable;
 
 }  // namespace
@@ -2193,8 +2176,7 @@ namespace {
 constexpr uint64_t kAdmin_Shutdown_Ordinal = 0x2e0baed000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kAdmin_Shutdown_GenOrdinal = 0x7b8ebed9dd90dfbdlu;
-extern "C" const fidl_type_t fuchsia_fshost_AdminShutdownRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_AdminShutdownResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_AdminShutdownRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_AdminShutdownResponseTable;
 
 }  // namespace
@@ -2312,8 +2294,7 @@ namespace {
 constexpr uint64_t kRegistry_RegisterFilesystem_Ordinal = 0x459f2e5100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kRegistry_RegisterFilesystem_GenOrdinal = 0x3dcc95b02284c9a2lu;
-extern "C" const fidl_type_t fuchsia_fshost_RegistryRegisterFilesystemRequestTable;
-extern "C" const fidl_type_t fuchsia_fshost_RegistryRegisterFilesystemResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_fshost_RegistryRegisterFilesystemRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_fshost_RegistryRegisterFilesystemResponseTable;
 
 }  // namespace

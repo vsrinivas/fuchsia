@@ -25,9 +25,7 @@ namespace test {
 
 class Device;
 
-extern "C" const fidl_type_t fuchsia_hardware_test_DeviceGetChannelRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_test_DeviceGetChannelRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_test_DeviceGetChannelResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_test_DeviceGetChannelResponseTable;
 
 class Device final {
@@ -40,12 +38,9 @@ class Device final {
     ::zx::channel ch;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_test_DeviceGetChannelResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_test_DeviceGetChannelResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

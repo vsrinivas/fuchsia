@@ -15,8 +15,7 @@ namespace {
 constexpr uint64_t kDevice_CreateI2C_Ordinal = 0x6e215cdf00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_CreateI2C_GenOrdinal = 0x1d8122e93efc5fdblu;
-extern "C" const fidl_type_t fuchsia_hardware_ftdi_DeviceCreateI2CRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_ftdi_DeviceCreateI2CResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_ftdi_DeviceCreateI2CRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_ftdi_DeviceCreateI2CResponseTable;
 
 }  // namespace

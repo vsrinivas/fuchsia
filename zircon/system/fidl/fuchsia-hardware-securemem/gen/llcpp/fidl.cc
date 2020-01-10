@@ -15,8 +15,7 @@ namespace {
 constexpr uint64_t kDevice_GetSecureMemoryPhysicalAddress_Ordinal = 0x7f32703100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetSecureMemoryPhysicalAddress_GenOrdinal = 0x5f37764a495847f7lu;
-extern "C" const fidl_type_t fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressResponseTable;
 
 }  // namespace

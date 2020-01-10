@@ -195,29 +195,25 @@ namespace {
 constexpr uint64_t kDevice_GetOsInfo_Ordinal = 0x6d1d83f300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetOsInfo_GenOrdinal = 0x9b65a9e69ce2ff0lu;
-extern "C" const fidl_type_t fuchsia_tee_DeviceGetOsInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_tee_DeviceGetOsInfoResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_tee_DeviceGetOsInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_tee_DeviceGetOsInfoResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_OpenSession_Ordinal = 0x3c7d253d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_OpenSession_GenOrdinal = 0x611e642d24d5d425lu;
-extern "C" const fidl_type_t fuchsia_tee_DeviceOpenSessionRequestTable;
-extern "C" const fidl_type_t fuchsia_tee_DeviceOpenSessionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_tee_DeviceOpenSessionRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_tee_DeviceOpenSessionResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_InvokeCommand_Ordinal = 0x202511b100000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_InvokeCommand_GenOrdinal = 0x6cba9f107e725868lu;
-extern "C" const fidl_type_t fuchsia_tee_DeviceInvokeCommandRequestTable;
-extern "C" const fidl_type_t fuchsia_tee_DeviceInvokeCommandResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_tee_DeviceInvokeCommandRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_tee_DeviceInvokeCommandResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_CloseSession_Ordinal = 0x53bbaea700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_CloseSession_GenOrdinal = 0x7c21cc4c0084d8aflu;
-extern "C" const fidl_type_t fuchsia_tee_DeviceCloseSessionRequestTable;
-extern "C" const fidl_type_t fuchsia_tee_DeviceCloseSessionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_tee_DeviceCloseSessionRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_tee_DeviceCloseSessionResponseTable;
 
 }  // namespace

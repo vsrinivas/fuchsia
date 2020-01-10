@@ -26,7 +26,6 @@ namespace midi {
 struct Info;
 class Device;
 
-extern "C" const fidl_type_t fuchsia_hardware_midi_InfoTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_midi_InfoTable;
 
 // Describes what type of MIDI device an implementation of Device represents
@@ -44,9 +43,7 @@ struct Info {
   bool is_source = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_midi_DeviceGetInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_midi_DeviceGetInfoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_midi_DeviceGetInfoResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_midi_DeviceGetInfoResponseTable;
 
 class Device final {
@@ -59,12 +56,9 @@ class Device final {
     ::llcpp::fuchsia::hardware::midi::Info info;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_midi_DeviceGetInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_midi_DeviceGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

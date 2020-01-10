@@ -20,22 +20,19 @@ namespace {
 constexpr uint64_t kButtons_GetState_Ordinal = 0x3f5c2ec300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kButtons_GetState_GenOrdinal = 0x10ee35ec461a178alu;
-extern "C" const fidl_type_t fuchsia_buttons_ButtonsGetStateRequestTable;
-extern "C" const fidl_type_t fuchsia_buttons_ButtonsGetStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsGetStateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsGetStateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kButtons_RegisterNotify_Ordinal = 0x9a78d6400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kButtons_RegisterNotify_GenOrdinal = 0x1166530aab1f618blu;
-extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
-extern "C" const fidl_type_t fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kButtons_OnNotify_Ordinal = 0x5affb3b600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kButtons_OnNotify_GenOrdinal = 0x5cdd3f9d680dc674lu;
-extern "C" const fidl_type_t fuchsia_buttons_ButtonsOnNotifyRequestTable;
-extern "C" const fidl_type_t fuchsia_buttons_ButtonsOnNotifyEventTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsOnNotifyRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsOnNotifyEventTable;
 
 }  // namespace

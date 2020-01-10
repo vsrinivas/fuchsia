@@ -46,36 +46,31 @@ namespace {
 constexpr uint64_t kTestDevice_AddDeviceWithPowerArgs_Ordinal = 0x5d89a15400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_AddDeviceWithPowerArgs_GenOrdinal = 0x6f4b31b6d68abb48lu;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetCurrentDevicePowerState_Ordinal = 0x724b2ef700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetCurrentDevicePowerState_GenOrdinal = 0x15ff1a2b10784103lu;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateRequestTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetCurrentSuspendReason_Ordinal = 0x4a634f300000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetCurrentSuspendReason_GenOrdinal = 0x5a021abc7938e00alu;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonRequestTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetCurrentDevicePerformanceState_Ordinal = 0x3ee16b9700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetCurrentDevicePerformanceState_GenOrdinal = 0x3f88876404832324lu;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateRequestTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetCurrentDeviceAutoSuspendConfig_Ordinal = 0x109bde2f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_GetCurrentDeviceAutoSuspendConfig_GenOrdinal = 0x5a245a86e6eaba4blu;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigResponseTable;
 
 }  // namespace

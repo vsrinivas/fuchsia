@@ -64,7 +64,6 @@ struct DataSink_ReadAsset_Result;
 class DataSink;
 class DynamicDataSink;
 
-extern "C" const fidl_type_t fuchsia_paver_ReadResultTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_ReadResultTable;
 
 struct ReadResult {
@@ -178,7 +177,6 @@ struct ReadResult {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_paver_DataSink_WipeVolume_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_WipeVolume_ResultTable;
 
 struct DataSink_WipeVolume_Result {
@@ -262,7 +260,6 @@ struct DataSink_WipeVolume_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
 
 struct BootManager_QueryConfigurationStatus_Result {
@@ -346,7 +343,6 @@ struct BootManager_QueryConfigurationStatus_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
 
 struct BootManager_QueryActiveConfiguration_Result {
@@ -430,7 +426,6 @@ struct BootManager_QueryActiveConfiguration_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_paver_DataSink_ReadAsset_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_ReadAsset_ResultTable;
 
 struct DataSink_ReadAsset_Result {
@@ -514,7 +509,6 @@ struct DataSink_ReadAsset_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_paver_ReadInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_ReadInfoTable;
 
 struct ReadInfo {
@@ -531,17 +525,11 @@ struct ReadInfo {
   uint64_t size = {};
 };
 
-extern "C" const fidl_type_t fuchsia_paver_PaverFindDataSinkRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindDataSinkRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverFindDataSinkResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindDataSinkResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverUseBlockDeviceRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PaverUseBlockDeviceRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverUseBlockDeviceResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PaverUseBlockDeviceResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverFindBootManagerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindBootManagerRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverFindBootManagerResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindBootManagerResponseTable;
 
 class Paver final {
@@ -555,7 +543,6 @@ class Paver final {
     ::zx::channel data_sink;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_PaverFindDataSinkRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_PaverFindDataSinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -574,7 +561,6 @@ class Paver final {
     ::zx::channel data_sink;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_PaverUseBlockDeviceRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_PaverUseBlockDeviceRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -593,7 +579,6 @@ class Paver final {
     bool initialize;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_PaverFindBootManagerRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_PaverFindBootManagerRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -908,13 +893,9 @@ class Paver final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PayloadStreamReadDataRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PayloadStreamReadDataResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_PayloadStreamReadDataResponseTable;
 
 // Protocol for streaming the FVM payload.
@@ -928,12 +909,9 @@ class PayloadStream final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -945,7 +923,6 @@ class PayloadStream final {
     ::zx::vmo vmo;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -964,12 +941,9 @@ class PayloadStream final {
     ::llcpp::fuchsia::paver::ReadResult result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_PayloadStreamReadDataResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_PayloadStreamReadDataResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 16;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1199,7 +1173,6 @@ class PayloadStream final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_paver_DataSink_WipeVolume_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_WipeVolume_ResponseTable;
 
 struct DataSink_WipeVolume_Response {
@@ -1212,7 +1185,6 @@ struct DataSink_WipeVolume_Response {
   ::zx::channel volume = {};
 };
 
-extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
 
 struct BootManager_QueryConfigurationStatus_Response {
@@ -1225,7 +1197,6 @@ struct BootManager_QueryConfigurationStatus_Response {
   ::llcpp::fuchsia::paver::ConfigurationStatus status = {};
 };
 
-extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
 
 struct BootManager_QueryActiveConfiguration_Response {
@@ -1238,25 +1209,15 @@ struct BootManager_QueryActiveConfiguration_Response {
   ::llcpp::fuchsia::paver::Configuration configuration = {};
 };
 
-extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryActiveConfigurationRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryActiveConfigurationRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerSetActiveConfigurationHealthyRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetActiveConfigurationHealthyRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
 
 // Protocol for managing boot configurations.
@@ -1270,12 +1231,9 @@ class BootManager final {
     ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1289,12 +1247,9 @@ class BootManager final {
     ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1306,7 +1261,6 @@ class BootManager final {
     ::llcpp::fuchsia::paver::Configuration configuration;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1325,12 +1279,9 @@ class BootManager final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1342,7 +1293,6 @@ class BootManager final {
     ::llcpp::fuchsia::paver::Configuration configuration;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1361,12 +1311,9 @@ class BootManager final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1378,7 +1325,6 @@ class BootManager final {
     ::llcpp::fuchsia::paver::Configuration configuration;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1397,12 +1343,9 @@ class BootManager final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1610,7 +1553,7 @@ class BootManager final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Queries active configuration.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::QueryActiveConfiguration QueryActiveConfiguration();
 
     // Queries active configuration.
@@ -1620,7 +1563,7 @@ class BootManager final {
     // Queries status of |configuration|.
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::QueryConfigurationStatus QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration);
 
     // Queries status of |configuration|.
@@ -1703,7 +1646,7 @@ class BootManager final {
    public:
 
     // Queries active configuration.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::QueryActiveConfiguration QueryActiveConfiguration(::zx::unowned_channel _client_end);
 
     // Queries active configuration.
@@ -1713,7 +1656,7 @@ class BootManager final {
     // Queries status of |configuration|.
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::QueryConfigurationStatus QueryConfigurationStatus(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
 
     // Queries status of |configuration|.
@@ -1955,7 +1898,6 @@ class BootManager final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_paver_DataSink_ReadAsset_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_ReadAsset_ResponseTable;
 
 struct DataSink_ReadAsset_Response {
@@ -1968,29 +1910,17 @@ struct DataSink_ReadAsset_Response {
   ::llcpp::fuchsia::mem::Buffer asset = {};
 };
 
-extern "C" const fidl_type_t fuchsia_paver_DataSinkReadAssetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkReadAssetRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkReadAssetResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkReadAssetResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteAssetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteAssetRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteAssetResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteAssetResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteVolumesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteVolumesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteVolumesResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteVolumesResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteBootloaderRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteBootloaderRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteBootloaderResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteBootloaderResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteDataFileRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteDataFileRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteDataFileResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteDataFileResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWipeVolumeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWipeVolumeRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DataSinkWipeVolumeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWipeVolumeResponseTable;
 
 // Protocol for reading and writing boot partitions.
@@ -2004,12 +1934,9 @@ class DataSink final {
     ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkReadAssetResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkReadAssetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 16;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2022,7 +1949,6 @@ class DataSink final {
     ::llcpp::fuchsia::paver::Asset asset;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkReadAssetRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkReadAssetRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2041,12 +1967,9 @@ class DataSink final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteAssetResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteAssetResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2060,7 +1983,6 @@ class DataSink final {
     ::llcpp::fuchsia::mem::Buffer payload;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteAssetRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteAssetRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2079,12 +2001,9 @@ class DataSink final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteVolumesResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteVolumesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2096,7 +2015,6 @@ class DataSink final {
     ::zx::channel payload;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteVolumesRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteVolumesRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2115,12 +2033,9 @@ class DataSink final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteBootloaderResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteBootloaderResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2132,7 +2047,6 @@ class DataSink final {
     ::llcpp::fuchsia::mem::Buffer payload;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteBootloaderRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteBootloaderRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2151,12 +2065,9 @@ class DataSink final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteDataFileResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteDataFileResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2169,7 +2080,6 @@ class DataSink final {
     ::llcpp::fuchsia::mem::Buffer payload;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteDataFileRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteDataFileRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 4096;
@@ -2188,12 +2098,9 @@ class DataSink final {
     ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWipeVolumeResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWipeVolumeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2512,7 +2419,7 @@ class DataSink final {
     // `fuchsia.io.Node` for now.
     //
     // On success, returns a channel to the initialized FVM volume.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WipeVolume WipeVolume();
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
@@ -2617,7 +2524,7 @@ class DataSink final {
     // `fuchsia.io.Node` for now.
     //
     // On success, returns a channel to the initialized FVM volume.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WipeVolume WipeVolume(::zx::unowned_channel _client_end);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
@@ -2825,37 +2732,21 @@ class DataSink final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipeVolumeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipeVolumeRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkInitializePartitionTablesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkInitializePartitionTablesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipePartitionTablesRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipePartitionTablesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
 
 // Specialized DataSink with dynamic partition tables.
@@ -2869,12 +2760,9 @@ class DynamicDataSink final {
     ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 16;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2887,7 +2775,6 @@ class DynamicDataSink final {
     ::llcpp::fuchsia::paver::Asset asset;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2906,12 +2793,9 @@ class DynamicDataSink final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2925,7 +2809,6 @@ class DynamicDataSink final {
     ::llcpp::fuchsia::mem::Buffer payload;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2944,12 +2827,9 @@ class DynamicDataSink final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2961,7 +2841,6 @@ class DynamicDataSink final {
     ::zx::channel payload;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2980,12 +2859,9 @@ class DynamicDataSink final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2997,7 +2873,6 @@ class DynamicDataSink final {
     ::llcpp::fuchsia::mem::Buffer payload;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3016,12 +2891,9 @@ class DynamicDataSink final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3034,7 +2906,6 @@ class DynamicDataSink final {
     ::llcpp::fuchsia::mem::Buffer payload;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 4096;
@@ -3053,12 +2924,9 @@ class DynamicDataSink final {
     ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3072,12 +2940,9 @@ class DynamicDataSink final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3091,12 +2956,9 @@ class DynamicDataSink final {
     int32_t status;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3483,7 +3345,7 @@ class DynamicDataSink final {
     // `fuchsia.io.Node` for now.
     //
     // On success, returns a channel to the initialized FVM volume.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WipeVolume WipeVolume();
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
@@ -3612,7 +3474,7 @@ class DynamicDataSink final {
     // `fuchsia.io.Node` for now.
     //
     // On success, returns a channel to the initialized FVM volume.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WipeVolume WipeVolume(::zx::unowned_channel _client_end);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which

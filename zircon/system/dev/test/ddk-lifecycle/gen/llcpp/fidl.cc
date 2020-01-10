@@ -40,8 +40,7 @@ namespace {
 constexpr uint64_t kLifecycle_OnChildPreRelease_Ordinal = 0x5b8ccdc000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLifecycle_OnChildPreRelease_GenOrdinal = 0x45196940343cd66alu;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseRequestTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseEventTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseEventTable;
 
 }  // namespace
@@ -199,29 +198,25 @@ namespace {
 constexpr uint64_t kTestDevice_AddChild_Ordinal = 0x1ffc4d2900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_AddChild_GenOrdinal = 0x7ffb522521de57belu;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceAddChildRequestTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceAddChildResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceAddChildRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceAddChildResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_RemoveChild_Ordinal = 0x60d5f7ec00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_RemoveChild_GenOrdinal = 0x1cf9401a022c96f1lu;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceRemoveChildRequestTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_CompleteChildInit_Ordinal = 0x2d7bf2ad00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_CompleteChildInit_GenOrdinal = 0x5004816bf608d448lu;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitRequestTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_SubscribeToLifecycle_Ordinal = 0x41ac589900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_SubscribeToLifecycle_GenOrdinal = 0x650868f21ef733bflu;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleRequestTable;
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleResponseTable;
 
 }  // namespace

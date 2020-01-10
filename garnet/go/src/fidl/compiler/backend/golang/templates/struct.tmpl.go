@@ -10,12 +10,12 @@ const Struct = `
 //{{ . }}
 {{- end}}
 type {{ .Name }} struct {
-	_ struct{} ` + "`" + `fidl:"s,{{ .InlineSizeOld }},{{ .AlignmentOld }}" fidl_size_v1:"{{.InlineSizeV1}}" fidl_alignment_v1:"{{.AlignmentV1}}" fidl_size_v1_no_ee:"{{.InlineSizeV1}}" fidl_alignment_v1_no_ee:"{{.AlignmentV1}}"` + "`" + `
+	_ struct{} ` + "`" + `fidl:"s" fidl_size_v1:"{{.InlineSize}}" fidl_alignment_v1:"{{.Alignment}}"` + "`" + `
 	{{- range .Members }}
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
-	{{ .Name }} {{ .Type -}} ` + "`" + `fidl:"{{ .FidlTag }}" fidl_offset_v1:"{{ .OffsetV1 }}" fidl_offset_v1_no_ee:"{{ .OffsetV1 }}"` + "`" + `
+	{{ .Name }} {{ .Type -}} ` + "`" + `fidl:"{{ .FidlTag }}" fidl_offset_v1:"{{ .Offset }}"` + "`" + `
 	{{- end }}
 }
 

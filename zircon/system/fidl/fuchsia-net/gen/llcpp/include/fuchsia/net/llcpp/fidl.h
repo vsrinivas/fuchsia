@@ -107,7 +107,6 @@ struct Subnet;
 class NameLookup;
 struct Endpoint;
 
-extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupHostname_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_net_NameLookup_LookupHostname_ResultTable;
 
 struct NameLookup_LookupHostname_Result {
@@ -191,7 +190,6 @@ struct NameLookup_LookupHostname_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupIp_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_net_NameLookup_LookupIp_ResultTable;
 
 struct NameLookup_LookupIp_Result {
@@ -275,7 +273,6 @@ struct NameLookup_LookupIp_Result {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_net_IpAddressTable;
 extern "C" const fidl_type_t v1_fuchsia_net_IpAddressTable;
 
 // Represents an IP address that may be either v4 or v6.
@@ -360,9 +357,7 @@ struct IpAddress {
   fidl_envelope_t envelope_;
 };
 
-extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_net_ConnectivityOnNetworkReachableRequestTable;
-extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableEventTable;
 extern "C" const fidl_type_t v1_fuchsia_net_ConnectivityOnNetworkReachableEventTable;
 
 class Connectivity final {
@@ -376,12 +371,9 @@ class Connectivity final {
     bool reachable;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_net_ConnectivityOnNetworkReachableEventTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_net_ConnectivityOnNetworkReachableEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -510,7 +502,6 @@ class Connectivity final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupHostname_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_net_NameLookup_LookupHostname_ResponseTable;
 
 struct NameLookup_LookupHostname_Response {
@@ -523,7 +514,6 @@ struct NameLookup_LookupHostname_Response {
   ::fidl::StringView hostname = {};
 };
 
-extern "C" const fidl_type_t fuchsia_net_MacAddressTable;
 extern "C" const fidl_type_t v1_fuchsia_net_MacAddressTable;
 
 // A MAC address used to identify a network interface on the data link layer within the network.
@@ -539,7 +529,6 @@ struct MacAddress {
 
 constexpr uint64_t MAX_HOSTNAME_SIZE = 255u;
 
-extern "C" const fidl_type_t fuchsia_net_Ipv6AddressTable;
 extern "C" const fidl_type_t v1_fuchsia_net_Ipv6AddressTable;
 
 // Ipv6Address is expressed in network byte order, so the most significant byte
@@ -554,7 +543,6 @@ struct Ipv6Address {
   ::fidl::Array<uint8_t, 16> addr = {};
 };
 
-extern "C" const fidl_type_t fuchsia_net_Ipv4AddressTable;
 extern "C" const fidl_type_t v1_fuchsia_net_Ipv4AddressTable;
 
 // Ipv4Address is expressed in network byte order, so the most significant byte
@@ -569,7 +557,6 @@ struct Ipv4Address {
   ::fidl::Array<uint8_t, 4> addr = {};
 };
 
-extern "C" const fidl_type_t fuchsia_net_IpAddressInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_net_IpAddressInfoTable;
 
 struct IpAddressInfo {
@@ -589,7 +576,6 @@ struct IpAddressInfo {
   ::fidl::StringView canonical_name = {};
 };
 
-extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupIp_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_net_NameLookup_LookupIp_ResponseTable;
 
 struct NameLookup_LookupIp_Response {
@@ -602,7 +588,6 @@ struct NameLookup_LookupIp_Response {
   ::llcpp::fuchsia::net::IpAddressInfo addr = {};
 };
 
-extern "C" const fidl_type_t fuchsia_net_SubnetTable;
 extern "C" const fidl_type_t v1_fuchsia_net_SubnetTable;
 
 // Subnet describes an IP subnetwork, where all host IP addresses share the same most significant
@@ -625,13 +610,9 @@ struct Subnet {
   uint8_t prefix_len = {};
 };
 
-extern "C" const fidl_type_t fuchsia_net_NameLookupLookupIpRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_net_NameLookupLookupIpRequestTable;
-extern "C" const fidl_type_t fuchsia_net_NameLookupLookupIpResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_net_NameLookupLookupIpResponseTable;
-extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_net_NameLookupLookupHostnameRequestTable;
-extern "C" const fidl_type_t fuchsia_net_NameLookupLookupHostnameResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_net_NameLookupLookupHostnameResponseTable;
 
 class NameLookup final {
@@ -645,12 +626,9 @@ class NameLookup final {
     ::llcpp::fuchsia::net::NameLookup_LookupIp_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookupLookupIpResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookupLookupIpResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 5424;
-    static constexpr uint32_t AltPrimarySize = 72;
-    static constexpr uint32_t AltMaxOutOfLine = 5424;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -663,7 +641,6 @@ class NameLookup final {
     ::llcpp::fuchsia::net::LookupIpOptions options;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookupLookupIpRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookupLookupIpRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 256;
@@ -682,12 +659,9 @@ class NameLookup final {
     ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result result;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookupLookupHostnameResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookupLookupHostnameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 272;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 272;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -699,7 +673,6 @@ class NameLookup final {
     ::llcpp::fuchsia::net::IpAddress addr;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookupLookupHostnameRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookupLookupHostnameRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 16;
@@ -950,7 +923,6 @@ class NameLookup final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_net_EndpointTable;
 extern "C" const fidl_type_t v1_fuchsia_net_EndpointTable;
 
 // Endpoint describes an IP address and port. The network protocol associated

@@ -16,71 +16,61 @@ namespace {
 constexpr uint64_t kDevice_GetDeviceSpeed_Ordinal = 0x7a0548ed00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDeviceSpeed_GenOrdinal = 0x623cd7927fb449delu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetDeviceSpeedRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetDeviceSpeedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetDeviceSpeedRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetDeviceSpeedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDeviceDescriptor_Ordinal = 0x16be426a00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDeviceDescriptor_GenOrdinal = 0x5f761371f4b9f34alu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetDeviceDescriptorRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetDeviceDescriptorResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetDeviceDescriptorRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetDeviceDescriptorResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetConfigurationDescriptorSize_Ordinal = 0x2ae4152200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetConfigurationDescriptorSize_GenOrdinal = 0x65912d7d5e3a07c8lu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSizeRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSizeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSizeRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorSizeResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetConfigurationDescriptor_Ordinal = 0x67de3f8000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetConfigurationDescriptor_GenOrdinal = 0x1859a4e4421d2036lu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetConfigurationDescriptorResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStringDescriptor_Ordinal = 0x6bb5f7d600000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetStringDescriptor_GenOrdinal = 0x5ff601b3b6891337lu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetStringDescriptorRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetStringDescriptorResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetStringDescriptorRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetStringDescriptorResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetInterface_Ordinal = 0x6fbe7e7700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetInterface_GenOrdinal = 0x45348c50850b641dlu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceSetInterfaceRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceSetInterfaceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceSetInterfaceRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceSetInterfaceResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDeviceId_Ordinal = 0x629986ec00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetDeviceId_GenOrdinal = 0x34a73eef491c2ce0lu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetDeviceIdRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetDeviceIdResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetDeviceIdRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetDeviceIdResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetHubDeviceId_Ordinal = 0x1508505f00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetHubDeviceId_GenOrdinal = 0xce263c86f7bbbcdlu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetHubDeviceIdRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetHubDeviceIdResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetHubDeviceIdRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetHubDeviceIdResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetConfiguration_Ordinal = 0x6115919400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetConfiguration_GenOrdinal = 0x73f644382a2335fdlu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetConfigurationRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceGetConfigurationResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetConfigurationRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceGetConfigurationResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetConfiguration_Ordinal = 0x43137b500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetConfiguration_GenOrdinal = 0x12bf6e43b045ee9dlu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceSetConfigurationRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_device_DeviceSetConfigurationResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceSetConfigurationRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_usb_device_DeviceSetConfigurationResponseTable;
 
 }  // namespace

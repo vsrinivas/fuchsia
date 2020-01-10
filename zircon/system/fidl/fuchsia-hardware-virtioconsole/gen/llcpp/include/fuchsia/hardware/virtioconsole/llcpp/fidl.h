@@ -27,9 +27,7 @@ namespace virtioconsole {
 
 class Device;
 
-extern "C" const fidl_type_t fuchsia_hardware_virtioconsole_DeviceGetChannelRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_virtioconsole_DeviceGetChannelRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_virtioconsole_DeviceGetChannelResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_virtioconsole_DeviceGetChannelResponseTable;
 
 class Device final {
@@ -42,7 +40,6 @@ class Device final {
     ::zx::channel req;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_virtioconsole_DeviceGetChannelRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_virtioconsole_DeviceGetChannelRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

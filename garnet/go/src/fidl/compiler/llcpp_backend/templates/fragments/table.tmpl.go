@@ -12,7 +12,6 @@ struct {{ .Name }};
 {{- define "TableDeclaration" }}
 
 extern "C" const fidl_type_t {{ .TableType }};
-extern "C" const fidl_type_t {{ .V1TableType }};
 {{ range .DocComments }}
 //{{ . }}
 {{- end}}
@@ -49,9 +48,9 @@ struct {{ .Name }} final : private ::fidl::VectorView<fidl_envelope_t> {
   static Builder Build();
   static constexpr const fidl_type_t* Type = &{{ .TableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
-  static constexpr uint32_t PrimarySize = {{ .InlineSizeV1NoEE }};
+  static constexpr uint32_t PrimarySize = {{ .InlineSize }};
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLineV1NoEE }};
+  static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
 
  private:
   {{ .Name }}(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}

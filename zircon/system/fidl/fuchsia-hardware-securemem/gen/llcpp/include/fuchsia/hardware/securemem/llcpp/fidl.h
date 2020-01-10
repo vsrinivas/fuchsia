@@ -26,9 +26,7 @@ namespace securemem {
 
 class Device;
 
-extern "C" const fidl_type_t fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressResponseTable;
 
 // This protocol currently is a temporary measure to allow for services to get the physical address
@@ -44,12 +42,9 @@ class Device final {
     uint64_t paddr;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressResponseTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -61,7 +56,6 @@ class Device final {
     ::zx::vmo secure_mem;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressRequestTable;
-    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

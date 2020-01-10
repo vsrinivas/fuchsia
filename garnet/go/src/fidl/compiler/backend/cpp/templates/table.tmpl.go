@@ -101,8 +101,8 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
 
 {{- define "TableDefinition" }}
-extern "C" const fidl_type_t {{ .V1TableType }};
-const fidl_type_t* {{ .Name }}::FidlType = &{{ .V1TableType }};
+extern "C" const fidl_type_t {{ .TableType }};
+const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
 {{ .Name }}::{{ .Name }}(){{- if len .Members }} : {{- end -}}
 {{- range $index, $element := .Members -}}
@@ -235,7 +235,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 {{- define "TableTraits" }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
-    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeV1NoEE }}> {};
+    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSize }}> {};
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& _value,
                          {{ .Namespace }}::{{ .Name }}* result) {

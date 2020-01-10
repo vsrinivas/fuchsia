@@ -25,21 +25,13 @@ namespace name {
 class Parent;
 class Child;
 
-extern "C" const fidl_type_t test_name_ParentGetChildRequestTable;
 extern "C" const fidl_type_t v1_test_name_ParentGetChildRequestTable;
-extern "C" const fidl_type_t test_name_ParentGetChildResponseTable;
 extern "C" const fidl_type_t v1_test_name_ParentGetChildResponseTable;
-extern "C" const fidl_type_t test_name_ParentGetChildRequestRequestTable;
 extern "C" const fidl_type_t v1_test_name_ParentGetChildRequestRequestTable;
-extern "C" const fidl_type_t test_name_ParentGetChildRequestResponseTable;
 extern "C" const fidl_type_t v1_test_name_ParentGetChildRequestResponseTable;
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestTable;
 extern "C" const fidl_type_t v1_test_name_ParentTakeChildRequestTable;
-extern "C" const fidl_type_t test_name_ParentTakeChildResponseTable;
 extern "C" const fidl_type_t v1_test_name_ParentTakeChildResponseTable;
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
 extern "C" const fidl_type_t v1_test_name_ParentTakeChildRequestRequestTable;
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestResponseTable;
 extern "C" const fidl_type_t v1_test_name_ParentTakeChildRequestResponseTable;
 
 class Parent final {
@@ -52,12 +44,9 @@ class Parent final {
     ::zx::channel c;
 
     static constexpr const fidl_type_t* Type = &v1_test_name_ParentGetChildResponseTable;
-    static constexpr const fidl_type_t* AltType = &test_name_ParentGetChildResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -71,12 +60,9 @@ class Parent final {
     ::zx::channel r;
 
     static constexpr const fidl_type_t* Type = &v1_test_name_ParentGetChildRequestResponseTable;
-    static constexpr const fidl_type_t* AltType = &test_name_ParentGetChildRequestResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -90,7 +76,6 @@ class Parent final {
     ::zx::channel c;
 
     static constexpr const fidl_type_t* Type = &v1_test_name_ParentTakeChildRequestTable;
-    static constexpr const fidl_type_t* AltType = &test_name_ParentTakeChildRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -108,7 +93,6 @@ class Parent final {
     ::zx::channel r;
 
     static constexpr const fidl_type_t* Type = &v1_test_name_ParentTakeChildRequestRequestTable;
-    static constexpr const fidl_type_t* AltType = &test_name_ParentTakeChildRequestRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

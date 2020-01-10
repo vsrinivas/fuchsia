@@ -24,21 +24,13 @@ namespace name {
 
 class SwitchingOrdinals;
 
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
 extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsOrdinalFiveResponseTable;
 extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsOrdinalFiveResponseTable;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
 extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsOnlyGeneratedOrdinalResponseTable;
 extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalResponseTable;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOrdinalFifteenRequestTable;
 extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOrdinalFifteenRequestTable;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
 extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalRequestTable;
 extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalRequestTable;
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
 extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
 class SwitchingOrdinals final {
   SwitchingOrdinals() = delete;
