@@ -23,6 +23,8 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
+#include <string>
+
 #include "constants_priv.h"
 
 static constexpr uint32_t kGuestMapFlags =
@@ -31,7 +33,7 @@ static constexpr uint32_t kHostMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
 // Inject an interrupt with vector 32, the first user defined interrupt vector.
 static constexpr uint32_t kInterruptVector = 32u;
 static constexpr uint64_t kTrapKey = 0x1234;
-static constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+static const std::string kSysInfoPath = "/svc/" + std::string(fuchsia_sysinfo_SysInfo_Name);
 
 #ifdef __x86_64__
 static constexpr uint32_t kNmiVector = 2u;
@@ -93,7 +95,7 @@ typedef struct test {
 
 // TODO(MAC-246): Convert to C++ FIDL interface.
 static zx_status_t get_sysinfo(zx::channel* sysinfo) {
-  fbl::unique_fd fd(open(kSysInfoPath, O_RDWR));
+  fbl::unique_fd fd(open(kSysInfoPath.c_str(), O_RDWR));
   if (!fd) {
     return ZX_ERR_IO;
   }
@@ -109,7 +111,7 @@ static zx_status_t get_hypervisor_resource(zx::resource* resource) {
     return status;
   }
 
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetHypervisorResource(
+  zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetHypervisorResource(
       channel.get(), &status, resource->reset_and_get_address());
   if (fidl_status != ZX_OK) {
     return fidl_status;
@@ -128,7 +130,7 @@ static zx_status_t get_interrupt_controller_info(fuchsia_sysinfo_InterruptContro
   }
 
   zx_status_t fidl_status =
-      fuchsia_sysinfo_DeviceGetInterruptControllerInfo(channel.get(), &status, info);
+      fuchsia_sysinfo_SysInfoGetInterruptControllerInfo(channel.get(), &status, info);
   if (fidl_status != ZX_OK) {
     return fidl_status;
   }

@@ -8,9 +8,8 @@
 //! disallows use of the zx_process_create syscall, which process_builder uses. Processes that use
 //! process_builder normally run in the root job, so we need a similar environment for the test.
 //!
-//! This approach is a temporary hack. It relies on the fact that the sysinfo driver freely hands
-//! out handles to the root job through /dev/misc/sysinfo, which is a security hole that will be
-//! closed soon.
+//! This approach is a temporary hack. It relies on the fact that the root job is available on
+//! certain builds and to v1 test components through the fuchsia.boot.RootJob service.
 //!
 //! TODO: Figure out a better way to run these tests.
 

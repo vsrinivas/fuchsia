@@ -20,7 +20,11 @@
         "/svc/fuchsia.hardware.pty.Device",
         "/svc/fuchsia.kernel.Stats",
         "/svc/fuchsia.process.Launcher",
+        "/svc/fuchsia.sysinfo.SysInfo",
       ]
     }
+  ],
+  "expose": [
+    {"directory": "/dev", "from": "self", "rights": ["rw*"]},
   ],
 }

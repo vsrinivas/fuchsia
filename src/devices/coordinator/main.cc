@@ -31,6 +31,12 @@
 #include <cstring>
 #include <memory>
 
+#include <fs/managed_vfs.h>
+#include <fs/pseudo_dir.h>
+#include <fs/remote_dir.h>
+#include <fs/vfs.h>
+#include <fs/vmo_file.h>
+
 #include "coordinator.h"
 #include "devfs.h"
 #include "devhost-loader-service.h"
@@ -400,6 +406,15 @@ int main(int argc, char** argv) {
   coordinator.PrepareProxy(coordinator.test_device(), nullptr);
   // Initial bind attempt for drivers enumerated at startup.
   coordinator.BindDrivers();
+
+  // Expose /dev directory for use in sysinfo service; specifically to connect to /dev/sys/platform
+  auto outgoing_dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  outgoing_dir->AddEntry(
+      "dev", fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(system_instance.CloneFs("dev"))));
+
+  fs::ManagedVfs outgoing_vfs = fs::ManagedVfs(loop.dispatcher());
+  outgoing_vfs.ServeDirectory(outgoing_dir,
+                              zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)));
 
   coordinator.set_running(true);
   status = loop.Run();

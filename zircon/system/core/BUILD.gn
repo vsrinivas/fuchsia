@@ -12,6 +12,7 @@ group("core") {
     # TODO(teisenbe): Find a better place to hook these into the dependency graph
     "console",
     "ptysvc",
+    "sysinfo",
 
     # TODO(bwb): depend on these from GN when build systems are unified. These are
     # data dependencies of devcoordinator

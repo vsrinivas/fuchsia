@@ -1,0 +1,11 @@
+{
+  "program": { "binary": "bin/sysinfo" },
+  "use": [
+    { "runner": "elf" },
+    { "directory": "/dev" , "rights": ["rw*"]},
+    { "service_protocol": "/svc/fuchsia.boot.RootResource" },
+  ],
+  "expose": [
+    { "service_protocol": "/svc/fuchsia.sysinfo.SysInfo", "from": "self" },
+  ],
+}

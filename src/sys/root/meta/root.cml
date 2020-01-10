@@ -13,6 +13,10 @@
       "name": "ptysvc",
       "url": "fuchsia-boot:///#meta/ptysvc.cm",
     },
+    {
+      "name": "sysinfo",
+      "url": "fuchsia-boot:///#meta/sysinfo.cm",
+    },
   ],
   "offer": [
     {
@@ -41,7 +45,7 @@
     {
       "service_protocol": "/svc/fuchsia.boot.RootResource",
       "from": "realm",
-      "to": [ "#devcoordinator", "#console" ],
+      "to": [ "#devcoordinator", "#console", "#sysinfo"],
     },
     // Offer the kernel serial console to the devcoordinator
     {
@@ -56,11 +60,22 @@
       "from": "#ptysvc",
       "to": [ "#devcoordinator" ],
     },
+     {
+      "service_protocol": "/svc/fuchsia.sysinfo.SysInfo",
+      "from": "#sysinfo",
+      "to": [ "#devcoordinator" ],
+    },
+    // Offer platform bus sysinfo interface to sysinfo service
+    {
+      "directory": "/dev",
+      "from": "#devcoordinator",
+      "to": [ "#sysinfo" ],
+    },
     // Offer the ELF runner to children.
     {
       "runner": "elf",
       "from": "realm",
-      "to": [ "#devcoordinator", "#console", "#ptysvc" ],
+      "to": [ "#devcoordinator", "#console", "#ptysvc", "#sysinfo" ],
     }
   ]
 }

@@ -13,6 +13,7 @@
 #include <fuchsia/paver/c/fidl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <fuchsia/process/c/fidl.h>
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <fuchsia/virtualconsole/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -218,6 +219,7 @@ static constexpr const char* devcoordinator_services[] = {
     fuchsia_kernel_Stats_Name,
     fuchsia_process_Launcher_Name,
     fuchsia_hardware_pty_Device_Name,
+    fuchsia_sysinfo_SysInfo_Name,
     nullptr,
     // clang-format on
 };

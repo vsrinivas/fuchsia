@@ -43,6 +43,7 @@ zx_executable("svchost") {
     "$zx/system/fidl/fuchsia-posix-socket:llcpp",
     "$zx/system/fidl/fuchsia-process:c",
     "$zx/system/fidl/fuchsia-scheduler:c",
+    "$zx/system/fidl/fuchsia-sysinfo:c",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/fidl/fuchsia-virtualconsole:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",

@@ -109,6 +109,7 @@ aggregate_manifest("legacy-image") {
     ":bin.storage-metrics",
     ":bin.svchost",
     ":bin.syscall-check",
+    ":bin.sysinfo",
     ":bin.tee-test",
     ":bin.thermal-cli",
     ":bin.threads",
