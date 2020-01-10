@@ -22,6 +22,7 @@ struct {{ .Name }} {
   static constexpr uint32_t PrimarySize = {{ .InlineSizeV1NoEE }};
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLineV1NoEE }};
+  static constexpr bool HasPointer = {{ .HasPointer }};
 
   {{- range .Members }}
 {{ "" }}

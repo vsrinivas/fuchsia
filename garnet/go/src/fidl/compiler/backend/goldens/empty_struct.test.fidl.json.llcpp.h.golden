@@ -32,6 +32,7 @@ struct Empty {
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   uint8_t __reserved = {};
 };

@@ -58,6 +58,7 @@ struct Handles {
   static constexpr uint32_t PrimarySize = 104;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   ::zx::handle plain_handle = {};
 

@@ -175,28 +175,32 @@ class Server {
     fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
     Server* server = reinterpret_cast<Server*>(ctx);
     switch (hdr->ordinal) {
-      case fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesOrdinal: {
+      case fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesOrdinal:
+      case fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesGenOrdinal: {
         auto result = DecodeAs<gen::DirEntTestInterface::CountNumDirectoriesRequest>(msg);
         if (result.status != ZX_OK) {
           return result.status;
         }
         return server->DoCountNumDirectories(txn, std::move(result.message));
       }
-      case fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirOrdinal: {
+      case fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirOrdinal:
+      case fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirGenOrdinal: {
         auto result = DecodeAs<gen::DirEntTestInterface::ReadDirRequest>(msg);
         if (result.status != ZX_OK) {
           return result.status;
         }
         return server->DoReadDir(txn, std::move(result.message));
       }
-      case fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesOrdinal: {
+      case fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesOrdinal:
+      case fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesGenOrdinal: {
         auto result = DecodeAs<gen::DirEntTestInterface::ConsumeDirectoriesRequest>(msg);
         if (result.status != ZX_OK) {
           return result.status;
         }
         return server->DoConsumeDirectories(txn, std::move(result.message));
       }
-      case fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsOrdinal: {
+      case fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsOrdinal:
+      case fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsGenOrdinal: {
         auto result = DecodeAs<gen::DirEntTestInterface::OneWayDirentsRequest>(msg);
         if (result.status != ZX_OK) {
           return result.status;

@@ -35,6 +35,7 @@ struct CallStatRaw {
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   uint64_t minimum_latency = {};
 
@@ -56,6 +57,7 @@ struct CallStat {
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   ::llcpp::fuchsia::storage::metrics::CallStatRaw success = {};
 
@@ -71,6 +73,7 @@ struct FsMetrics {
   static constexpr uint32_t PrimarySize = 640;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   ::llcpp::fuchsia::storage::metrics::CallStat create = {};
 

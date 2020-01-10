@@ -22,6 +22,8 @@
 // |T::PrimarySize|   is a uint32_t specifying the size in bytes of the inline part of the message.
 // |T::MaxOutOfLine|  is a uint32_t specifying the upper bound on the out-of-line message size.
 //                    It is std::numeric_limits<uint32_t>::max() if |T| is unbounded.
+// |T::HasPointer|    is a boolean specifying if the structure contains pointer indirections, hence
+//                    requires linearization when sending.
 // |T::Type|          is a fidl_type_t* pointing to the corresponding coding table, if any.
 //                    If the encoding/decoding of |T| can be elided, |T::Type| is NULL.
 //

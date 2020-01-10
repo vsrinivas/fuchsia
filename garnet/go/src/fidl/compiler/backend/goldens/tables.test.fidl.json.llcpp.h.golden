@@ -73,6 +73,7 @@ struct SimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 48;
+  static constexpr bool HasPointer = true;
 
  private:
   SimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -155,6 +156,7 @@ struct ReverseOrdinalTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 72;
+  static constexpr bool HasPointer = true;
 
  private:
   ReverseOrdinalTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -215,6 +217,7 @@ struct OlderSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 24;
+  static constexpr bool HasPointer = true;
 
  private:
   OlderSimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -295,6 +298,7 @@ struct NewerSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 72;
+  static constexpr bool HasPointer = true;
 
  private:
   NewerSimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -343,6 +347,7 @@ struct EmptyTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = true;
 
  private:
   EmptyTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
