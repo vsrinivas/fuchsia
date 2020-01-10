@@ -1,21 +1,16 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.ui.activity") {
+fidl("fuchsia.ui.activity.control") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "string-bounds-not-specified" ]
+  excluded_checks = [ "too-many-nested-libraries" ]
 
   sdk_category = "partner"
 
-  sources = [
-    "activity.fidl",
-    "provider.fidl",
-    "state.fidl",
-    "tracker.fidl",
-  ]
+  sources = [ "control.fidl" ]
 
-  public_deps = []
+  public_deps = [ "//sdk/fidl/fuchsia.ui.activity" ]
 }

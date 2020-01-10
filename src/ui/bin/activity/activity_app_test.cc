@@ -5,6 +5,7 @@
 #include "src/ui/bin/activity/activity_app.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
+#include <fuchsia/ui/activity/control/cpp/fidl.h>
 
 #include <memory>
 
@@ -199,7 +200,7 @@ TEST_F(ActivityAppTest, Control_OverrideState) {
   fuchsia::ui::activity::ProviderPtr provider1, provider2;
   app_->AddProviderBinding(provider1.NewRequest(dispatcher()));
   app_->AddProviderBinding(provider2.NewRequest(dispatcher()));
-  fuchsia::ui::activity::ControlPtr control;
+  fuchsia::ui::activity::control::ControlPtr control;
   app_->AddControlBinding(control.NewRequest(dispatcher()));
 
   testing::FakeListener listener1, listener2;
@@ -243,7 +244,7 @@ TEST_F(ActivityAppTest, Control_OverrideState) {
 TEST_F(ActivityAppTest, Control_OverrideState_TrackerInputsNotSentToListeners) {
   fuchsia::ui::activity::ProviderPtr provider;
   app_->AddProviderBinding(provider.NewRequest(dispatcher()));
-  fuchsia::ui::activity::ControlPtr control;
+  fuchsia::ui::activity::control::ControlPtr control;
   app_->AddControlBinding(control.NewRequest(dispatcher()));
   fuchsia::ui::activity::TrackerPtr tracker;
   app_->AddTrackerBinding(tracker.NewRequest(dispatcher()));

@@ -4,7 +4,7 @@
 
 #include "src/ui/bin/activity/activity_control_connection.h"
 
-#include <fuchsia/ui/activity/cpp/fidl.h>
+#include <fuchsia/ui/activity/control/cpp/fidl.h>
 
 #include <memory>
 
@@ -25,7 +25,7 @@ class ActivityControlConnectionTest : public ::gtest::TestLoopFixture {
  protected:
   StateMachineDriver driver_;
   std::unique_ptr<ActivityControlConnection> conn_;
-  fuchsia::ui::activity::ControlPtr client_;
+  fuchsia::ui::activity::control::ControlPtr client_;
 };
 
 TEST_F(ActivityControlConnectionTest, SetState) {

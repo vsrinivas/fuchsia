@@ -5,7 +5,7 @@
 #ifndef SRC_UI_BIN_ACTIVITY_ACTIVITY_CONTROL_CONNECTION_H_
 #define SRC_UI_BIN_ACTIVITY_ACTIVITY_CONTROL_CONNECTION_H_
 
-#include <fuchsia/ui/activity/cpp/fidl.h>
+#include <fuchsia/ui/activity/control/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/zx/time.h>
@@ -26,23 +26,23 @@ namespace activity {
 //
 // One instance of ActivityControlConnection is created to manage the
 // connection with a single client.
-class ActivityControlConnection : public fuchsia::ui::activity::Control {
+class ActivityControlConnection : public fuchsia::ui::activity::control::Control {
  public:
-  ActivityControlConnection(StateMachineDriver* state_machine_driver,
-                            async_dispatcher_t* dispatcher,
-                            fidl::InterfaceRequest<fuchsia::ui::activity::Control> request);
+  ActivityControlConnection(
+      StateMachineDriver* state_machine_driver, async_dispatcher_t* dispatcher,
+      fidl::InterfaceRequest<fuchsia::ui::activity::control::Control> request);
 
   void set_error_handler(fit::function<void(zx_status_t)> callback) {
     binding_.set_error_handler(std::move(callback));
   }
 
-  // fuchsia::ui::activity::Control API
+  // fuchsia::ui::activity::control::Control API
   virtual void SetState(fuchsia::ui::activity::State state);
 
  private:
   StateMachineDriver* const state_machine_driver_;
 
-  fidl::Binding<fuchsia::ui::activity::Control> binding_;
+  fidl::Binding<fuchsia::ui::activity::control::Control> binding_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ActivityControlConnection);
 };

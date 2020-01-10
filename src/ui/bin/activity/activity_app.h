@@ -6,6 +6,7 @@
 #define SRC_UI_BIN_ACTIVITY_ACTIVITY_APP_H_
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
+#include <fuchsia/ui/activity/control/cpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 
@@ -28,7 +29,7 @@ class ActivityApp {
   // Registers a new Control client and stores a binding created from |request|.
   // The binding is automatically cleaned up when the client terminates, or when a channel
   // error occurs.
-  void AddControlBinding(fidl::InterfaceRequest<fuchsia::ui::activity::Control> request);
+  void AddControlBinding(fidl::InterfaceRequest<fuchsia::ui::activity::control::Control> request);
   // Registers a new Tracker client and stores a binding created from |request|.
   // The binding is automatically cleaned up when the client terminates, or when a channel
   // error occurs.

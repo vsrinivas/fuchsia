@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
+#include <fuchsia/ui/activity/control/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
@@ -23,8 +24,8 @@ int main(void) {
   auto driver = std::make_unique<activity::StateMachineDriver>(loop.dispatcher());
   activity::ActivityApp app(std::move(driver), loop.dispatcher());
 
-  startup_context->outgoing()->AddPublicService<fuchsia::ui::activity::Control>(
-      [&app](fidl::InterfaceRequest<fuchsia::ui::activity::Control> request) {
+  startup_context->outgoing()->AddPublicService<fuchsia::ui::activity::control::Control>(
+      [&app](fidl::InterfaceRequest<fuchsia::ui::activity::control::Control> request) {
         app.AddControlBinding(std::move(request));
       });
   startup_context->outgoing()->AddPublicService<fuchsia::ui::activity::Tracker>(

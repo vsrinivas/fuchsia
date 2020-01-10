@@ -2,23 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.ui.activity;
+library fuchsia.ui.activity.control;
+
+using fuchsia.ui.activity;
 
 /// The Control protocol can be used to override the activity state of the
-/// Activity Service.
+/// Activity Service (fuchsia.ui.activity).
 ///
 /// State provided through this interface takes precedence over state which
 /// is determined based on activity sent through the Tracker API.
 ///
 /// Once a state has been assigned through this protocol, the Activity
-/// Service will no longer determine state based on input to the Tracker
-/// protocol, and instead will only report state transitions occuring through
-/// the Control protocol.
+/// Service will no longer determine state based on input to the
+/// fuchsia.ui.activity.Tracker protocol, and instead will only report state
+/// transitions occuring through the Control protocol.
 // TODO(38334): Remove this transitional interface.
 [Discoverable]
 protocol Control {
     /// Sets the Activity Service's state to |state|.
     /// All listeners registered through the Provider protocol will immediately
     /// be notified of the new state.
-    SetState(State state);
+    ///
+    /// Typically, state transitions should occur minutes apart (e.g.
+    /// transition from ACTIVE to IDLE after 15 minutes of inactivity).
+    SetState(fuchsia.ui.activity.State state);
 };

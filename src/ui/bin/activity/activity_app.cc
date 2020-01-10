@@ -39,7 +39,7 @@ std::vector<const ActivityProviderConnection*> ActivityApp::provider_bindings() 
 }
 
 void ActivityApp::AddControlBinding(
-    fidl::InterfaceRequest<fuchsia::ui::activity::Control> request) {
+    fidl::InterfaceRequest<fuchsia::ui::activity::control::Control> request) {
   zx::unowned_channel unowned(request.channel());
   auto conn = std::make_unique<ActivityControlConnection>(state_machine_driver_.get(), dispatcher_,
                                                           std::move(request));

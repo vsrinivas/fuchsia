@@ -24,6 +24,7 @@ source_set("lib") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.ui.activity",
+    "//sdk/fidl/fuchsia.ui.activity.control",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
