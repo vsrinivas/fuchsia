@@ -70,7 +70,7 @@ fuchsia_internal/firmware/optee/astro/526fc4fc-7ee6-4a12-96e3-83da9565bce8/prod 
 
 # Keysafe TA Firmware for Sherlock
 @Subdir firmware/optee/sherlock
-fuchsia_internal/firmware/optee/sherlock/808032e0-fd9e-4e6f-8896-544735c98480/dev 86lWrH710pRXJkZWgA2V9rqZrcLFdD37DonWBHljWRAC
+fuchsia_internal/firmware/optee/sherlock/808032e0-fd9e-4e6f-8896-544735c98480/dev 3mylSlGw3N4P6oDGAdhDtp2IovKpIyLIl_Qv8qjL_kIC
 
 # Secmem TA Firmware for Sherlock
 @Subdir firmware/optee/sherlock
