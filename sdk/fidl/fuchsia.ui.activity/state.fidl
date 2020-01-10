@@ -7,6 +7,16 @@ library fuchsia.ui.activity;
 /// State is an enumeration of the activity states the system may be in.
 enum State {
     UNKNOWN = 0;
+    /// IDLE implies that the system is not currently being used by a user.
+    /// In other words, the system is not ACTIVE.
     IDLE = 1;
+    /// ACTIVE implies that a user has recently or is currently using the
+    /// system.
+    ///
+    /// Activity can be signalled by discrete interactions (cursor, keyboard,
+    /// touchscreen), or by ongoing activities (video playback).
+    ///
+    /// The specific meaning of "recently" is an implementation
+    /// detail of the Activity Service, but a typical value is 15 minutes.
     ACTIVE = 2;
 };
