@@ -17,6 +17,12 @@ class MockIOSink extends Mock implements IOSink {}
 
 class MockSsh extends Mock implements Ssh {}
 
+class MockProcess extends Mock implements Process {}
+
+class MockStream<T> extends Mock implements Stream<T> {}
+
+class MockSubscription<T> extends Mock implements StreamSubscription<T> {}
+
 void main() {
   group('Sl4f diagnostics', () {
     test('are performed if dump is enabled', () async {
@@ -69,19 +75,57 @@ void main() {
         // ignore: close_sinks
         final mockIOSink = MockIOSink();
         final sl4f = Sl4f('', ssh);
+        final verifiers = [];
 
         when(dump.hasDumpDirectory).thenReturn(true);
         when(dump.openForWrite(any, any)).thenAnswer((_) => mockIOSink);
-        when(mockIOSink.addStream(any)).thenAnswer((_) async => null);
-        when(ssh.start(any)).thenAnswer((_) =>
-            // Use sleep 60 (1 minute) to simulate a hanging process. The sleep
-            // occurs in system time whereas our test executes in fake time
-            // (instantaneous), so this sleep is effectively infinite.
-            Process.start('/bin/sleep', ['60']));
+        when(mockIOSink.add(any)).thenReturn(null);
+        when(ssh.start(any)).thenAnswer((_) async {
+          // Using an actual process or streams here causes problems when the
+          // code under test attempts to cancel the stream subscriptions, as
+          // the resulting future does not complete immediately. So we create
+          // a mock process where stdout and stderr are mock streams that give
+          // mock subscriptions that verify that they are cancelled.
+          final mockProcess = MockProcess();
+          when(mockProcess.kill(any)).thenAnswer((_) => null);
+          when(mockProcess.stdin).thenAnswer((_) => MockIOSink());
+          // These mock streams just provide a StreamSubscription that can be
+          // cancelled, but never produce any values.
+          when(mockProcess.stdout).thenAnswer((_) {
+            final mockStream = MockStream<List<int>>();
+            when(mockStream.listen(any, onDone: anyNamed('onDone')))
+                .thenAnswer((_) {
+              final mockSubscription = MockSubscription<List<int>>();
+              when(mockSubscription.cancel())
+                  .thenAnswer((_) => Future.value(null));
+              verifiers.add(() => verify(mockSubscription.cancel()).called(1));
+              return mockSubscription;
+            });
+            return mockStream;
+          });
+          when(mockProcess.stderr).thenAnswer((_) {
+            final mockStream = MockStream<List<int>>();
+            when(mockStream.listen(any, onDone: anyNamed('onDone')))
+                .thenAnswer((_) {
+              final mockSubscription = MockSubscription<List<int>>();
+              when(mockSubscription.cancel())
+                  .thenAnswer((_) => Future.value(null));
+              verifiers.add(() => verify(mockSubscription.cancel()).called(1));
+              return mockSubscription;
+            });
+            return mockStream;
+          });
+
+          return mockProcess;
+        });
 
         expect(sl4f.dumpDiagnostics('dumpName', dump: dump).timeout(eventually),
             completes);
         async.elapse(eventually);
+
+        for (final verifier in verifiers) {
+          verifier();
+        }
       });
     });
   });

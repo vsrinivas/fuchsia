@@ -74,6 +74,15 @@ class Ssh {
       return data;
     });
 
+    // Note: The pipe and drain calls here create StreamSubscription objects
+    // that will only cancel when the corresponding stream closes. Since this
+    // function always waits for process to finish, we can rely on the stdout
+    // and stderr streams closing. If you are adding any code path that tries to
+    // kill the ssh process (like a timeout), these calls should be replaced
+    // with an equivalent that gives access to the underlying StreamSubscription
+    // so that it can be cancelled in the timeout as well, otherwise the dart
+    // process may hang after finishing its work due to the subscriptions being
+    // open.
     final Future<void> stdoutFuture = (stdoutConsumer != null)
         ? localStdoutStream.pipe(stdoutConsumer)
         : localStdoutStream.drain();
@@ -87,14 +96,11 @@ class Ssh {
       await process.stdin.close();
     }
 
-    // This waits for stdin, stdout, stderr to all be done.  It's important that
-    // we concurrently wait for stdin and stdout/stderr, to avoid potential
-    // deadlock (especially if all three have lots of data).
-    await Future.wait([
-      flushAndCloseStdin(),
-      stdoutFuture,
-      stderrFuture,
-    ]);
+    // Dart futures are run regardless of being awaited or not, so despite
+    // waiting sequentially here stdout and stderr are read from concurrently.
+    await flushAndCloseStdin();
+    await stdoutFuture;
+    await stderrFuture;
 
     final result = ProcessResult(
       process.pid,

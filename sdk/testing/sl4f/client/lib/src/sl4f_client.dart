@@ -202,42 +202,62 @@ class Sl4f {
 
   Future _dumpDiagnostic(String cmd, String dumpName, Dump dump) async {
     final proc = await ssh.start(cmd);
-    unawaited(proc.stdin.close());
+    await proc.stdin.close();
 
     // Pipe stdout directly to the file sink (it gets closed when done).
     final sink = dump.openForWrite(dumpName, 'txt');
-    final dumpFuture = proc.stdout.pipe(sink);
+    // Create completers to signal when we are done listening to stdout and
+    // stderr. This is an unfortunate necessity because cancelling a
+    // StreamSubscription does not create a done signal, so (for example)
+    // stdoutSubscription.asFuture would never complete.
+    final stdoutCompleter = Completer();
+    final stderrCompleter = Completer();
+    // We can't use Stream.pipe here because it creates a stream subscription
+    // that does not get cancelled if proc.stdout stops producing events without
+    // closing and we would have no way of cancelling it in our timeout
+    // handling.
+    final stdoutSubscription =
+        proc.stdout.listen(sink.add, onDone: stdoutCompleter.complete);
 
     // Start decoding the stderr stream to ensure something consumes it,
     // otherwise it could cause dart to hang waiting for it to be consumed.
-    // The timeout is important so that the decodeStream future ends even if
-    // proc.stderr never completes, otherwise the test binary can hang.
-    final stderr = systemEncoding.decodeStream(proc.stderr
-        .timeout(_diagnosticTimeout, onTimeout: (sink) => sink.close()));
+    // We can't use systemEncoding.decodeStream here because it creates a stream
+    // subscription that we have no way to cancel in the case that the stream
+    // stops producing values without closing.
+    final stderrController = StreamController<List<int>>();
+    final stderrSubscription = proc.stderr
+        .listen(stderrController.add, onDone: stderrCompleter.complete);
+    final stderr = systemEncoding.decodeStream(stderrController.stream);
 
-    // Print something about the process in case it fails.
-    Future<void> exitCode() async {
+    final finishDiagnostic = () async {
       final code = await proc.exitCode;
+      await stdoutCompleter.future;
+      await stderrCompleter.future;
+      await stderrController.close();
+      // Awaiting is not strictly necessary in the case where the process exits
+      // with code 0, but this makes it clear that our intention is that the
+      // stderr future completes here, and if that stops being true then we'll
+      // observe a hang in the particular test where it fails rather than at the
+      // end of the full run.
+      final stderrData = await stderr;
+      // Print something about the process in case it fails.
       if (code != 0) {
-        _log
-          ..warning('$cmd; exit code: $code')
-          ..warning('stderr: ${await stderr}');
+        _log..warning('$cmd; exit code: $code')..warning('stderr: $stderrData');
       }
-    }
+      await sink.close();
+    }();
 
-    // Await for all three of the above at the same time, this ensures that the
-    // process outputs get consumed.
-    return Future.wait([
-      dumpFuture,
-      stderr,
-      // If the process takes too long we kill it. Note that because futures are
-      // not cancellable, the check in [exitCode] still executes.
-      exitCode(),
-    ]).timeout(_diagnosticTimeout, onTimeout: () {
+    // Set up a future that will kill the ssh process if it takes too long.
+    unawaited(finishDiagnostic.timeout(_diagnosticTimeout, onTimeout: () async {
       _log.warning('$cmd; did not complete after $_diagnosticTimeout');
       proc.kill(ProcessSignal.sigkill);
-      return [];
-    });
+      await stdoutSubscription.cancel();
+      stdoutCompleter.complete();
+      await stderrSubscription.cancel();
+      stderrCompleter.complete();
+    }));
+
+    return finishDiagnostic;
   }
 
   /// Sends an empty http request to the server to verify if it's listening on
