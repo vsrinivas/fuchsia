@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("ddk") {
-  sdk = "static"
+  sdk = "source"
   sdk_publishable = false
   sdk_headers = [
     "ddk/metadata/bad-block.h",

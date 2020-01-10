@@ -12,7 +12,7 @@ declare_args() {
 }
 
 zx_library("fake_ddk") {
-  sdk = "static"
+  sdk = "source"
   sdk_headers = [ "lib/fake_ddk/fake_ddk.h" ]
   testonly = true
   sources = [ "fake_ddk.cc" ]

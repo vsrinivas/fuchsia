@@ -334,6 +334,13 @@ extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {
   va_end(args);
 }
 
+// Enable logging by default.
+// TODO(43879): remove this when the variable can be reliably defined by all builds compiling this
+// code.
+#ifndef LOG_FLAGS
+#define LOG_FLAGS 0x7
+#endif  // LOG_FLAGS
+
 __EXPORT
 __WEAK zx_driver_rec __zircon_driver_rec__ = {
     .ops = {},
