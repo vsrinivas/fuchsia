@@ -55,6 +55,8 @@ the session and user workflow in order to improve the user experience:
    - Time taken to complete
    - Exit status
 
+4. Custom events for the following subcommand(s): [${ALLOWS_CUSTOM_REPORTING}]
+
 When metrics collection is disabled, any existing UUID is deleted, and a
 new UUID will be created if metrics is later re-enabled.
 

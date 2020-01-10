@@ -10,6 +10,7 @@
 declare -r GA_PROPERTY_ID="UA-127897021-6"
 declare -r TRACK_ALL_ARGS="set,fidlcat"
 declare -r TRACK_RESULTS="set,build"
+declare -r ALLOWS_CUSTOM_REPORTING="test"
 declare -r DEBUG_LOG_CONFIG="/tmp/.fx_metrics_debugfile"
 
 # To properly enable unit testing, METRICS_CONFIG is not read-only
@@ -121,6 +122,46 @@ function metrics-maybe-log {
       echo >> "$filename"
     fi
   fi
+}
+
+# Arguments:
+#   - the name of the fx subcommand
+#   - event action
+#   - (optional) event label
+function track-subcommand-custom-event {
+  local subcommand="$1"
+  local event_action="$2"
+  shift 2
+  local event_label="$*"
+
+  # Only allow custom arguments to subcommands defined in # $ALLOWS_CUSTOM_REPORTING
+  if [[ $ALLOWS_CUSTOM_REPORTING != *"${subcommand}"* ]]; then
+    return 1
+  fi
+
+  # Limit to the first 100 characters
+  # The Analytics API supports up to 500 bytes, but it is likely that
+  # anything larger than 100 characters is an invalid execution and/or not
+  # what we want to track.
+  event_label=${event_label:0:100}
+
+  local hide_init_warning=1
+  metrics-read-and-validate $hide_init_warning
+  if [[ $METRICS_ENABLED == 0 ]]; then
+    return 0
+  fi
+
+  analytics_args=(
+    "t=event" \
+    "ec=fx_custom_${subcommand}" \
+    "ea=${event_action}" \
+    "el=${event_label}" \
+    )
+
+  _add-to-analytics-batch "${analytics_args[@]}"
+  # Send any remaining hits.
+  _send-analytics-batch
+  return 0
 }
 
 # Arguments:
