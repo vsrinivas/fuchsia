@@ -26,6 +26,7 @@
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
@@ -194,6 +195,7 @@ class AudioCapturerImpl : public AudioObject,
 
   // AudioObject overrides.
   void OnLinkAdded() override;
+  std::optional<fuchsia::media::Usage> usage() const override { return {UsageFrom(usage_)}; }
 
   // StreamVolume interface.
   bool GetStreamMute() const final;

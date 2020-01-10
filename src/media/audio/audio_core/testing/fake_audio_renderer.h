@@ -15,6 +15,7 @@
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
+#include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio::testing {
@@ -22,12 +23,14 @@ namespace media::audio::testing {
 class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRenderer {
  public:
   static fbl::RefPtr<FakeAudioRenderer> Create(async_dispatcher_t* dispatcher,
-                                               fbl::RefPtr<Format> format) {
-    return fbl::AdoptRef(new FakeAudioRenderer(dispatcher, std::move(format)));
+                                               fbl::RefPtr<Format> format,
+                                               fuchsia::media::AudioRenderUsage usage) {
+    return fbl::AdoptRef(new FakeAudioRenderer(dispatcher, std::move(format), usage));
   }
   static fbl::RefPtr<FakeAudioRenderer> CreateWithDefaultFormatInfo(async_dispatcher_t* dispatcher);
 
-  FakeAudioRenderer(async_dispatcher_t* dispatcher, fbl::RefPtr<Format> format);
+  FakeAudioRenderer(async_dispatcher_t* dispatcher, fbl::RefPtr<Format> format,
+                    fuchsia::media::AudioRenderUsage usage);
 
   // Enqueues a packet that has all samples initialized to |sample| and lasts for |duration|.
   void EnqueueAudioPacket(float sample, zx::duration duration = zx::msec(1),
@@ -38,6 +41,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   fit::result<fbl::RefPtr<Stream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;
+  std::optional<fuchsia::media::Usage> usage() const override { return {UsageFrom(usage_)}; }
 
   // |fuchsia::media::AudioRenderer|
   void AddPayloadBuffer(uint32_t id, ::zx::vmo payload_buffer) override {}
@@ -67,6 +71,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
 
   async_dispatcher_t* dispatcher_;
   fbl::RefPtr<Format> format_ = nullptr;
+  fuchsia::media::AudioRenderUsage usage_;
   PacketFactory packet_factory_;
   std::unordered_map<const AudioObject*, fbl::RefPtr<PacketQueue>> packet_queues_;
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =

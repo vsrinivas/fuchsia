@@ -27,7 +27,7 @@ AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* regist
 
 void AudioOutput::Process() {
   TRACE_DURATION("audio", "AudioOutput::Process");
-  FX_CHECK(mix_stage_);
+  FX_CHECK(pipeline_);
   auto now = async::Now(mix_domain().dispatcher());
 
   // At this point, we should always know when our implementation would like to be called to do some
@@ -43,12 +43,12 @@ void AudioOutput::Process() {
 
     auto mix_frames = StartMixJob(now);
     if (mix_frames) {
-      auto buf = mix_stage_->LockBuffer(now, mix_frames->start, mix_frames->length);
+      auto buf = pipeline_->LockBuffer(now, mix_frames->start, mix_frames->length);
       FX_CHECK(buf);
       FinishMixJob(*mix_frames, reinterpret_cast<float*>(buf->payload()));
-      mix_stage_->UnlockBuffer(true);
+      pipeline_->UnlockBuffer(true);
     } else {
-      mix_stage_->Trim(now);
+      pipeline_->Trim(now);
     }
   }
 
@@ -75,8 +75,14 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLi
     const AudioObject& source, fbl::RefPtr<Stream> stream) {
   TRACE_DURATION("audio", "AudioOutput::InitializeSourceLink");
 
+  auto usage = source.usage();
+  FX_DCHECK(usage) << "Source has no assigned usage";
+  if (!usage) {
+    usage = {UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA)};
+  }
+
   if (stream) {
-    auto mixer = mix_stage_->AddInput(std::move(stream));
+    auto mixer = pipeline_->AddInput(std::move(stream), *usage);
     const auto& settings = device_settings();
     if (settings != nullptr) {
       AudioDeviceSettings::GainState cur_gain_state;
@@ -95,7 +101,7 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLi
 
 void AudioOutput::CleanupSourceLink(const AudioObject& source, fbl::RefPtr<Stream> stream) {
   if (stream) {
-    mix_stage_->RemoveInput(*stream);
+    pipeline_->RemoveInput(*stream);
   }
 }
 

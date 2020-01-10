@@ -59,6 +59,8 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
     return null_info;
   }
 
+  virtual std::optional<fuchsia::media::Usage> usage() const { return std::nullopt; }
+
   bool format_valid() const { return format() != nullptr; }
 
   Type type() const { return type_; }

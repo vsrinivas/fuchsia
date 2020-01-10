@@ -12,7 +12,8 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_link.h"
-#include "src/media/audio/audio_core/mix_stage.h"
+#include "src/media/audio/audio_core/output_pipeline.h"
+#include "src/media/audio/audio_core/process_config.h"
 
 namespace media::audio {
 
@@ -47,8 +48,9 @@ class AudioOutput : public AudioDevice {
                     TimelineFunction device_reference_clock_to_output_frame)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {
     FX_CHECK(format.sample_format() == fuchsia::media::AudioSampleFormat::FLOAT);
-    mix_stage_ = std::make_unique<MixStage>(format, max_block_size_frames,
-                                            device_reference_clock_to_output_frame);
+    auto config = ProcessConfig::instance();
+    pipeline_ = std::make_unique<OutputPipeline>(config.pipeline(), format, max_block_size_frames,
+                                                 device_reference_clock_to_output_frame);
   }
 
   void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }
@@ -73,7 +75,7 @@ class AudioOutput : public AudioDevice {
   zx::time next_sched_time_;
   bool next_sched_time_known_;
 
-  std::unique_ptr<MixStage> mix_stage_;
+  std::unique_ptr<OutputPipeline> pipeline_;
 };
 
 }  // namespace media::audio

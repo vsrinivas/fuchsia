@@ -24,13 +24,16 @@ const fuchsia::media::AudioStreamType kDefaultStreamType{
 // static
 fbl::RefPtr<FakeAudioRenderer> FakeAudioRenderer::CreateWithDefaultFormatInfo(
     async_dispatcher_t* dispatcher) {
-  return FakeAudioRenderer::Create(dispatcher, Format::Create(kDefaultStreamType));
+  return FakeAudioRenderer::Create(dispatcher, Format::Create(kDefaultStreamType),
+                                   fuchsia::media::AudioRenderUsage::MEDIA);
 }
 
-FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher, fbl::RefPtr<Format> format)
+FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher, fbl::RefPtr<Format> format,
+                                     fuchsia::media::AudioRenderUsage usage)
     : AudioObject(AudioObject::Type::AudioRenderer),
       dispatcher_(dispatcher),
       format_(format),
+      usage_(usage),
       packet_factory_(dispatcher, *format, 2 * PAGE_SIZE) {}
 
 void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration,

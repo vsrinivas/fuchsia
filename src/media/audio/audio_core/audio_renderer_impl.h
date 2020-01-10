@@ -21,6 +21,7 @@
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
+#include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
@@ -138,6 +139,7 @@ class AudioRendererImpl : public AudioObject,
   // |media::audio::AudioObject|
   void OnLinkAdded() override;
   const fbl::RefPtr<Format>& format() const final { return format_; }
+  std::optional<fuchsia::media::Usage> usage() const override { return {UsageFrom(usage_)}; }
   fit::result<fbl::RefPtr<Stream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;

@@ -15,6 +15,7 @@
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/stub_device_registry.h"
+#include "src/media/audio/audio_core/testing/test_process_config.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 
 using testing::Each;
@@ -77,6 +78,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     }});
   }
 
+  testing::TestProcessConfig process_config_;
   testing::StubDeviceRegistry device_registry_;
   std::unique_ptr<testing::FakeAudioDriver> driver_;
   fbl::RefPtr<AudioOutput> output_;

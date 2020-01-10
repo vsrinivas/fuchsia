@@ -11,6 +11,7 @@
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/stub_device_registry.h"
+#include "src/media/audio/audio_core/testing/test_process_config.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/audio_core/usage_settings.h"
@@ -24,22 +25,30 @@ namespace {
 
 class FakeAudioObject : public AudioObject {
  public:
-  static fbl::RefPtr<FakeAudioObject> FakeRenderer(bool valid_format = true) {
-    return fbl::AdoptRef(new FakeAudioObject(AudioObject::Type::AudioRenderer, valid_format));
-  }
-
-  static fbl::RefPtr<FakeAudioObject> FakeCapturer() {
+  static fbl::RefPtr<FakeAudioObject> FakeRenderer(
+      bool valid_format = true,
+      fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA) {
     return fbl::AdoptRef(
-        new FakeAudioObject(AudioObject::Type::AudioCapturer, /*valid_format=*/true));
+        new FakeAudioObject(AudioObject::Type::AudioRenderer, valid_format, UsageFrom(usage)));
   }
 
-  FakeAudioObject(AudioObject::Type object_type, bool valid_format) : AudioObject(object_type) {
+  static fbl::RefPtr<FakeAudioObject> FakeCapturer(
+      fuchsia::media::AudioCaptureUsage usage = fuchsia::media::AudioCaptureUsage::FOREGROUND) {
+    return fbl::AdoptRef(new FakeAudioObject(AudioObject::Type::AudioCapturer,
+                                             /*valid_format=*/true, UsageFrom(usage)));
+  }
+
+  FakeAudioObject(AudioObject::Type object_type, bool valid_format, fuchsia::media::Usage usage)
+      : AudioObject(object_type) {
     if (valid_format) {
       format_ = Format::Create({.sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8});
     }
+    usage_ = std::move(usage);
   }
 
   const fbl::RefPtr<Format>& format() const override { return format_; }
+
+  std::optional<fuchsia::media::Usage> usage() const override { return {fidl::Clone(usage_)}; }
 
   std::vector<AudioObject*> SourceLinks() {
     std::vector<AudioObject*> source_links;
@@ -56,6 +65,7 @@ class FakeAudioObject : public AudioObject {
 
  private:
   fbl::RefPtr<Format> format_ = nullptr;
+  fuchsia::media::Usage usage_;
 };
 
 // TODO(39532): Remove; use a real output class with fake hardware.
@@ -113,6 +123,7 @@ class RouteGraphTest : public testing::ThreadingModelFixture {
     return {output, std::move(fake_driver)};
   }
 
+  testing::TestProcessConfig process_config_;
   testing::StubDeviceRegistry device_registry_;
   RouteGraph under_test_;
   fbl::RefPtr<AudioOutput> throttle_output_;

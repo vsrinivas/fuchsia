@@ -15,6 +15,7 @@ source_set("testing") {
     "packet_factory.cc",
     "packet_factory.h",
     "stub_device_registry.h",
+    "test_process_config.h",
     "threading_model_fixture.h",
   ]
 

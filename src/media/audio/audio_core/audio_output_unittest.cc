@@ -6,6 +6,7 @@
 
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/stub_device_registry.h"
+#include "src/media/audio/audio_core/testing/test_process_config.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 
 namespace media::audio {
@@ -63,6 +64,7 @@ class TestAudioOutput : public AudioOutput {
 
 class AudioOutputTest : public testing::ThreadingModelFixture {
  protected:
+  testing::TestProcessConfig process_config_;
   testing::StubDeviceRegistry device_registry_;
   fbl::RefPtr<TestAudioOutput> audio_output_ =
       fbl::MakeRefCounted<TestAudioOutput>(&threading_model(), &device_registry_);
