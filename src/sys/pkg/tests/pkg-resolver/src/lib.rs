@@ -18,7 +18,6 @@ use {
     fidl_fuchsia_pkg_rewrite::{
         EngineMarker as RewriteEngineMarker, EngineProxy as RewriteEngineProxy,
     },
-    fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
@@ -290,10 +289,6 @@ impl<P: PkgFs> TestEnv<P> {
             _mounts: mounts,
             nested_environment_label: environment_label,
         }
-    }
-
-    fn launcher(&self) -> &LauncherProxy {
-        self.env.launcher()
     }
 
     async fn set_experiment_state(&self, experiment: Experiment, state: bool) {

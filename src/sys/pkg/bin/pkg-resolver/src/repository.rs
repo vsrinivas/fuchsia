@@ -215,7 +215,7 @@ mod tests {
                 .await
                 .expect("created repo"),
         );
-        let served_repository = repo.build_server().start().expect("create served repo");
+        let served_repository = repo.server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
         let mut repo = Repository::new_no_inspect(&repo_config).await.expect("created opened repo");
@@ -239,7 +239,7 @@ mod tests {
                 .await
                 .expect("created repo"),
         );
-        let served_repository = repo.build_server().start().expect("create served repo");
+        let served_repository = repo.server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
         let mut repo = Repository::new_no_inspect(&repo_config).await.expect("created opened repo");
@@ -263,7 +263,7 @@ mod tests {
         );
         let should_fail = AtomicToggle::new(false);
         let served_repository = repo
-            .build_server()
+            .server()
             .uri_path_override_handler(handler::Toggleable::new(
                 &should_fail,
                 handler::StaticResponseCode::not_found(),
@@ -302,7 +302,7 @@ mod tests {
         );
         let (notify_on_request_handler, notified) = NotifyWhenRequested::new();
         let served_repository = repo
-            .build_server()
+            .server()
             .uri_path_override_handler(ForPath::new("/timestamp.json", notify_on_request_handler))
             .start()
             .expect("create served repo");
@@ -395,7 +395,7 @@ mod inspect_tests {
                 .await
                 .expect("created repo"),
         );
-        let served_repository = repo.build_server().start().expect("create served repo");
+        let served_repository = repo.server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
 
@@ -437,7 +437,7 @@ mod inspect_tests {
                 .await
                 .expect("created repo"),
         );
-        let served_repository = repo.build_server().start().expect("create served repo");
+        let served_repository = repo.server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
         let mut repo = Repository::new(&repo_config, inspector.root().create_child("repo-node"))
@@ -479,7 +479,7 @@ mod inspect_tests {
         );
         let (notify_on_request_handler, mut notified) = NotifyWhenRequested::new();
         let served_repository = repo
-            .build_server()
+            .server()
             .uri_path_override_handler(ForPath::new("/timestamp.json", notify_on_request_handler))
             .start()
             .expect("create served repo");

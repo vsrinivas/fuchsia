@@ -7,34 +7,22 @@
 use {
     crate::{package::Package, serve::ServedRepositoryBuilder},
     anyhow::{format_err, Context as _, Error},
-    bytes::Buf,
     fidl_fuchsia_pkg_ext::{
         MirrorConfigBuilder, RepositoryBlobKey, RepositoryConfig, RepositoryConfigBuilder,
         RepositoryKey,
     },
-    fidl_fuchsia_sys::LauncherProxy,
-    fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_component::client::{launcher, App, AppBuilder, ExitStatus},
+    fuchsia_component::client::{launcher, AppBuilder},
     fuchsia_merkle::Hash,
     fuchsia_url::pkg_url::RepoUrl,
-    fuchsia_zircon::{self as zx, sys::zx_handle_t, DurationNum, Status},
-    futures::{
-        compat::{Future01CompatExt, Stream01CompatExt},
-        future::BoxFuture,
-        prelude::*,
-    },
-    hyper::{Body, Request, StatusCode},
     maybe_owned::MaybeOwned,
     serde_derive::Deserialize,
     std::{
         collections::{BTreeMap, BTreeSet},
         fmt,
         fs::{self, File},
-        io::{self, Cursor, Read, Write},
-        os::unix::io::AsRawFd,
+        io::{self, Read, Write},
         path::PathBuf,
         sync::Arc,
-        time::Duration,
     },
     tempfile::TempDir,
     walkdir::WalkDir,
@@ -154,7 +142,7 @@ pub struct PackageEntry {
     meta_far_size: usize,
 }
 
-fn iter_packages(
+pub(crate) fn iter_packages(
     reader: impl Read,
 ) -> Result<impl Iterator<Item = Result<PackageEntry, Error>>, Error> {
     // TODO when metadata is compatible, use rust-tuf instead.
@@ -298,160 +286,14 @@ impl Repository {
     }
 
     /// Serves the repository over HTTP using hyper.
-    pub fn build_server(self: Arc<Self>) -> ServedRepositoryBuilder {
+    pub fn server(self: Arc<Self>) -> ServedRepositoryBuilder {
         ServedRepositoryBuilder::new(self)
     }
-
-    /// Serves the repository over HTTP.
-    pub async fn serve<'a>(
-        &'a self,
-        launcher: &'_ LauncherProxy,
-    ) -> Result<ServedRepository<'a>, Error> {
-        let indir = tempfile::tempdir().context("create /in")?;
-        let port_file_dir = tempfile::tempdir().unwrap();
-        let mut pm = AppBuilder::new("fuchsia-pkg://fuchsia.com/pm#meta/pm.cmx")
-            .stdout(stdout_handle())
-            .stderr(stdout_handle())
-            .arg("serve")
-            .arg("-l=127.0.0.1:0")
-            .arg("-f=/port-file-dir/port-file")
-            .add_dir_to_namespace("/port-file-dir".to_owned(), File::open(port_file_dir.path())?)?
-            .arg("-repo=/repo")
-            .add_dir_to_namespace(
-                "/repo".to_owned(),
-                File::open(self.dir.path()).context("open /repo")?,
-            )?;
-
-        if let Some(ref key) = self.encryption_key {
-            fs::write(indir.path().join("encryption.key"), key.as_bytes())?;
-            pm = pm.arg("-e=/in/encryption.key").add_dir_to_namespace(
-                "/in".to_owned(),
-                File::open(indir.path()).context("open /in")?,
-            )?;
-        }
-
-        let pm = pm.spawn(launcher)?;
-
-        // Wait for "pm serve" to either create the port file (giving up after a 20 seconds) or
-        // exit, whichever happens first.
-
-        let wait_pm_down = ExitStatus::from_event_stream(pm.controller().take_event_stream());
-
-        // Under high load, a fast retry timeout can prevent pm from starting up. Start out fast,
-        // but slow down if pm doesn't come up quickly.
-        let backoff = std::iter::repeat(Duration::from_millis(250))
-            .take(4)
-            .chain(std::iter::repeat(Duration::from_millis(500)).take(4))
-            .chain(std::iter::repeat(Duration::from_millis(1000)));
-
-        let port_file_dir_path = port_file_dir.path();
-        let wait_pm_up = fuchsia_backoff::retry_or_last_error(backoff, || async move {
-            match fs::read_to_string(port_file_dir_path.join("port-file")) {
-                Ok(port) => {
-                    return Ok(port
-                        .parse::<u16>()
-                        .unwrap_or_else(|e| panic!("invalid port string {:?}: {:?}", port, e)));
-                }
-                Err(e) => {
-                    return Err(e.into());
-                }
-            }
-        })
-        .on_timeout(20.seconds().after_now(), || {
-            return Err(format_err!("timed out waiting for 'pm serve' to create port file"));
-        })
-        .boxed();
-
-        let (wait_pm_down, port) = match future::select(wait_pm_up, wait_pm_down).await {
-            future::Either::Left((res, wait_pm_down)) => match res {
-                Err(e) => {
-                    panic!("'pm serve' took too long to create the port file {:?}", e,);
-                }
-                Ok(port) => (wait_pm_down.boxed(), port),
-            },
-            future::Either::Right((exit_status, _)) => {
-                panic!("'pm serve' exited too soon: {:?}", exit_status);
-            }
-        };
-
-        Ok(ServedRepository { repo: self, port, _indir: indir, pm, wait_pm_down })
-    }
-}
-
-/// A repository that is being served over HTTP. When dropped, the server will be stopped.
-pub struct ServedRepository<'a> {
-    repo: &'a Repository,
-    port: u16,
-    _indir: TempDir,
-    pm: App,
-    wait_pm_down: BoxFuture<'a, Result<ExitStatus, Error>>,
-}
-
-impl<'a> ServedRepository<'a> {
-    /// Request the given path served by the repository over HTTP.
-    pub async fn get(&self, path: impl AsRef<str>) -> Result<Vec<u8>, Error> {
-        let url = format!("http://127.0.0.1:{}/{}", self.port, path.as_ref());
-        get(url).await
-    }
-
-    /// Returns a sorted vector of all packages contained in this repository.
-    pub async fn list_packages(&self) -> Result<Vec<PackageEntry>, Error> {
-        let targets_json = self.get("targets.json").await?;
-        let mut packages =
-            iter_packages(Cursor::new(targets_json))?.collect::<Result<Vec<_>, _>>()?;
-        packages.sort_unstable();
-        Ok(packages)
-    }
-
-    /// Returns the URL that can be used to connect to this repository from this device.
-    pub fn local_url(&self) -> String {
-        format!("http://127.0.0.1:{}", self.port)
-    }
-
-    /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
-    /// served repository.
-    pub fn make_repo_config(&self, url: RepoUrl) -> RepositoryConfig {
-        self.repo.make_repo_config(url, self.local_url(), false)
-    }
-
-    /// Kill the pm component and wait for it to exit.
-    pub async fn stop(mut self) {
-        self.pm.kill().expect("pm to have been running");
-        self.wait_pm_down.await.expect("pm to exit");
-    }
-}
-
-pub(crate) async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
-    let request = Request::get(url.as_ref()).body(Body::empty()).map_err(|e| Error::from(e))?;
-    let client = fuchsia_hyper::new_client();
-    let response = client.request(request).compat().await?;
-
-    if response.status() != StatusCode::OK {
-        return Err(format_err!("unexpected status code: {:?}", response.status()));
-    }
-
-    let body = response.into_body().compat().try_concat().await?.collect();
-
-    Ok(body)
-}
-
-fn clone_fd(raw_fd: impl AsRawFd) -> Result<zx::Handle, zx::Status> {
-    let raw_fd = raw_fd.as_raw_fd();
-    let mut handle: zx_handle_t = zx::sys::ZX_HANDLE_INVALID;
-    let handle_ptr: *mut zx_handle_t = &mut handle;
-    // `handle_ptr` is the only reference to `handle`.
-    Status::ok(unsafe { fdio::fdio_sys::fdio_fd_clone(raw_fd, handle_ptr) })?;
-    // No other value owns `handle`.
-    Ok(unsafe { zx::Handle::from_raw(handle) })
-}
-
-fn stdout_handle() -> zx::Handle {
-    clone_fd(io::stdout()).unwrap()
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::package::PackageBuilder, fuchsia_merkle::MerkleTree, serde_json::Value};
+    use {super::*, crate::package::PackageBuilder, fuchsia_merkle::MerkleTree};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_repo_builder() -> Result<(), Error> {
@@ -560,71 +402,6 @@ mod tests {
                 fs::read(repo.dir.path().join("keys").join(path))?,
             );
         }
-
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_serve_empty() -> Result<(), Error> {
-        let repo = RepositoryBuilder::new().build().await?;
-        let launcher = launcher().unwrap();
-        let served_repo = repo.serve(&launcher).await?;
-
-        let packages = served_repo.list_packages().await?;
-        assert_eq!(packages, vec![]);
-
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_serve_packages() -> Result<(), Error> {
-        let same_contents = "same contents";
-        let repo = RepositoryBuilder::new()
-            .add_package(
-                PackageBuilder::new("rolldice")
-                    .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())
-                    .add_resource_at(
-                        "meta/rolldice.cmx",
-                        r#"{"program":{"binary":"bin/rolldice"}}"#.as_bytes(),
-                    )
-                    .add_resource_at("data/duplicate_a", "same contents".as_bytes())
-                    .build()
-                    .await?,
-            )
-            .add_package(
-                PackageBuilder::new("fortune")
-                    .add_resource_at(
-                        "bin/fortune",
-                        "#!/boot/bin/sh\necho ask again later\n".as_bytes(),
-                    )
-                    .add_resource_at(
-                        "meta/fortune.cmx",
-                        r#"{"program":{"binary":"bin/fortune"}}"#.as_bytes(),
-                    )
-                    .add_resource_at("data/duplicate_b", same_contents.as_bytes())
-                    .add_resource_at("data/duplicate_c", same_contents.as_bytes())
-                    .build()
-                    .await?,
-            )
-            .build()
-            .await?;
-
-        let launcher = launcher().unwrap();
-        let served_repository = repo.serve(&launcher).await?;
-
-        let local_packages = repo.list_packages()?;
-
-        let served_packages = served_repository.list_packages().await?;
-        assert_eq!(local_packages, served_packages);
-
-        let config_json = String::from_utf8(served_repository.get("config.json").await?)?;
-        let config: Value = serde_json::from_str(config_json.as_str())?;
-
-        let base_url = format!("http://127.0.0.1:{}", served_repository.port);
-        assert_eq!(
-            config.get("id").or_else(|| config.get("ID")),
-            Some(Value::String(base_url)).as_ref()
-        );
 
         Ok(())
     }

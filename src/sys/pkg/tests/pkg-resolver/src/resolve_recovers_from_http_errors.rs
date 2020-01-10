@@ -36,7 +36,7 @@ async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
 
     let should_fail = AtomicToggle::new(true);
     let served_repository = repo
-        .build_server()
+        .server()
         .uri_path_override_handler(handler::Toggleable::new(&should_fail, handler))
         .start()
         .unwrap();

@@ -344,7 +344,7 @@ async fn assert_resolve_package_with_failing_pkgfs_fails(
     let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
     let repo =
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).add_package(&pkg).build().await?;
-    let served_repository = repo.serve(env.launcher()).await?;
+    let served_repository = Arc::new(repo).server().start()?;
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
     env.proxies.repo_manager.add(repo_config.into()).await?;

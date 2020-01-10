@@ -111,12 +111,14 @@ async fn package_resolution() {
         .build()
         .await
         .unwrap();
-    let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-        .add_package(&pkg)
-        .build()
-        .await
-        .unwrap();
-    let served_repository = repo.serve(env.launcher()).await.unwrap();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let served_repository = Arc::clone(&repo).server().start().unwrap();
 
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
@@ -142,12 +144,14 @@ async fn separate_blobs_url() {
     let env = TestEnvBuilder::new().build();
     let pkg_name = "separate_blobs_url";
     let pkg = make_pkg_with_extra_blobs(pkg_name, 3).await;
-    let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-        .add_package(&pkg)
-        .build()
-        .await
-        .unwrap();
-    let served_repository = repo.serve(env.launcher()).await.unwrap();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let served_repository = Arc::clone(&repo).server().start().unwrap();
 
     // Rename the blobs directory so the blobs can't be found in the usual place.
     // Both amber and the package resolver currently require Content-Length headers when
@@ -186,12 +190,14 @@ async fn verify_resolve_with_altered_env(
 ) -> () {
     let env = TestEnvBuilder::new().build();
 
-    let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-        .add_package(&pkg)
-        .build()
-        .await
-        .unwrap();
-    let served_repository = repo.serve(env.launcher()).await.unwrap();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let served_repository = Arc::clone(&repo).server().start().unwrap();
 
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
@@ -276,7 +282,7 @@ async fn pinned_merkle_resolution() {
             .unwrap(),
     );
 
-    let served_repository = repo.build_server().start().unwrap();
+    let served_repository = repo.server().start().unwrap();
     env.register_repo(&served_repository).await;
 
     let pkg1_url_with_pkg2_merkle =
@@ -305,7 +311,7 @@ async fn variant_resolution() {
             .unwrap(),
     );
 
-    let served_repository = repo.build_server().start().unwrap();
+    let served_repository = repo.server().start().unwrap();
     env.register_repo(&served_repository).await;
 
     let pkg_url = &"fuchsia-pkg://test/variant-foo/0";
@@ -333,7 +339,7 @@ async fn error_codes() {
             .unwrap(),
     );
 
-    let served_repository = repo.build_server().start().unwrap();
+    let served_repository = repo.server().start().unwrap();
     env.register_repo(&served_repository).await;
 
     // Invalid URL
@@ -368,29 +374,6 @@ async fn identity() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn identity_hyper() {
-    let env = TestEnvBuilder::new().build();
-
-    let pkg = Package::identity().await.unwrap();
-    let repo = Arc::new(
-        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-            .add_package(&pkg)
-            .build()
-            .await
-            .unwrap(),
-    );
-    let served_repository = repo.build_server().start().unwrap();
-    env.register_repo(&served_repository).await;
-
-    let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
-
-    pkg.verify_contents(&package_dir).await.unwrap();
-
-    env.stop().await;
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn retries() {
     let env = TestEnvBuilder::new().build();
 
@@ -407,7 +390,7 @@ async fn retries() {
             .unwrap(),
     );
     let served_repository = repo
-        .build_server()
+        .server()
         .uri_path_override_handler(handler::ForPathPrefix::new(
             "/blobs",
             handler::OncePerPath::new(handler::StaticResponseCode::server_error()),
@@ -464,7 +447,7 @@ async fn handles_429_responses() {
             .unwrap(),
     );
     let served_repository = repo
-        .build_server()
+        .server()
         .uri_path_override_handler(handler::ForPath::new(
             format!("/blobs/{}", pkg1.meta_far_merkle_root()),
             handler::ForRequestCount::new(2, handler::StaticResponseCode::too_many_requests()),
@@ -531,7 +514,7 @@ async fn use_cached_package() {
     );
     let fail_requests = AtomicToggle::new(true);
     let served_repository = repo
-        .build_server()
+        .server()
         .uri_path_override_handler(handler::Toggleable::new(
             &fail_requests,
             handler::StaticResponseCode::server_error(),
@@ -760,7 +743,7 @@ async fn test_concurrent_blob_writes() {
             .unwrap(),
     );
     let served_repository =
-        repo.build_server().uri_path_override_handler(blocking_uri_path_handler).start().unwrap();
+        repo.server().uri_path_override_handler(blocking_uri_path_handler).start().unwrap();
     env.register_repo(&served_repository).await;
 
     // Construct the resolver proxies (clients)
@@ -918,11 +901,8 @@ async fn dedup_concurrent_content_blob_fetches() {
             .await
             .expect("repo to build"),
     );
-    let served_repository = repo
-        .build_server()
-        .uri_path_override_handler(request_handler)
-        .start()
-        .expect("repo to serve");
+    let served_repository =
+        repo.server().uri_path_override_handler(request_handler).start().expect("repo to serve");
 
     env.register_repo(&served_repository).await;
 
@@ -974,12 +954,14 @@ async fn dedup_concurrent_content_blob_fetches() {
 async fn rust_tuf_experiment_identity() {
     let env = TestEnvBuilder::new().include_amber(false).build();
     let pkg = Package::identity().await.unwrap();
-    let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-        .add_package(&pkg)
-        .build()
-        .await
-        .unwrap();
-    let served_repository = repo.serve(env.launcher()).await.unwrap();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let served_repository = Arc::clone(&repo).server().start().unwrap();
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap();

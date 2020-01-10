@@ -5,15 +5,16 @@
 //! Test tools for serving TUF repositories.
 
 use {
-    crate::repo::{get, Repository},
-    anyhow::Error,
+    crate::repo::Repository,
+    anyhow::{format_err, Error},
+    bytes::Buf,
     chrono::Utc,
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fuchsia_async::{self as fasync, net::TcpListener, EHandle},
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon as zx,
     futures::{
-        compat::Future01CompatExt,
+        compat::{Future01CompatExt, Stream01CompatExt},
         future::{ready, BoxFuture, RemoteHandle},
         prelude::*,
         task::SpawnExt,
@@ -23,6 +24,7 @@ use {
     parking_lot::Mutex,
     std::{
         collections::HashSet,
+        io::Cursor,
         net::{Ipv4Addr, SocketAddr},
         path::{Path, PathBuf},
         sync::{
@@ -140,6 +142,15 @@ impl ServedRepository {
         format!("http://127.0.0.1:{}", self.addr.port())
     }
 
+    /// Returns a sorted vector of all packages contained in this repository.
+    pub async fn list_packages(&self) -> Result<Vec<crate::repo::PackageEntry>, Error> {
+        let targets_json = self.get("targets.json").await?;
+        let mut packages = crate::repo::iter_packages(Cursor::new(targets_json))?
+            .collect::<Result<Vec<_>, _>>()?;
+        packages.sort_unstable();
+        Ok(packages)
+    }
+
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// served repository.
     pub fn make_repo_config(&self, url: RepoUrl) -> RepositoryConfig {
@@ -233,6 +244,20 @@ impl ServedRepository {
 
         return response;
     }
+}
+
+async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
+    let request = Request::get(url.as_ref()).body(Body::empty()).map_err(|e| Error::from(e))?;
+    let client = fuchsia_hyper::new_client();
+    let response = client.request(request).compat().await?;
+
+    if response.status() != StatusCode::OK {
+        return Err(format_err!("unexpected status code: {:?}", response.status()));
+    }
+
+    let body = response.into_body().compat().try_concat().await?.collect();
+
+    Ok(body)
 }
 
 /// An atomic toggle switch.
@@ -467,29 +492,79 @@ pub mod handler {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::repo::RepositoryBuilder, matches::assert_matches};
+    use {
+        super::*,
+        crate::{package::PackageBuilder, repo::RepositoryBuilder},
+        matches::assert_matches,
+    };
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_serve_empty() -> Result<(), Error> {
-        let repo = Arc::new(RepositoryBuilder::new().build().await?);
-        let served_repo = repo.build_server().start()?;
+    async fn test_serve_empty() {
+        let repo = Arc::new(RepositoryBuilder::new().build().await.unwrap());
+        let served_repo = repo.server().start().unwrap();
+
+        // contains no packages.
+        let packages = served_repo.list_packages().await.unwrap();
+        assert_eq!(packages, vec![]);
 
         // no '..' allowed.
         assert_matches!(served_repo.get("blobs/../root.json").await, Err(_));
 
         // getting a known file fetches something.
-        let bytes = served_repo.get("targets.json").await?;
+        let bytes = served_repo.get("targets.json").await.unwrap();
         assert_ne!(bytes, Vec::<u8>::new());
 
         // even if it doesn't go through the helper function.
         let url = format!("{}/targets.json", served_repo.local_url());
-        let also_bytes = get(&url).await?;
+        let also_bytes = get(&url).await.unwrap();
         assert_eq!(bytes, also_bytes);
 
         // requests fail after stopping the server
         served_repo.stop().await;
         assert_matches!(get(url).await, Err(_));
+    }
 
-        Ok(())
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_serve_packages() {
+        let same_contents = "same contents";
+        let repo = RepositoryBuilder::new()
+            .add_package(
+                PackageBuilder::new("rolldice")
+                    .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())
+                    .add_resource_at(
+                        "meta/rolldice.cmx",
+                        r#"{"program":{"binary":"bin/rolldice"}}"#.as_bytes(),
+                    )
+                    .add_resource_at("data/duplicate_a", "same contents".as_bytes())
+                    .build()
+                    .await
+                    .unwrap(),
+            )
+            .add_package(
+                PackageBuilder::new("fortune")
+                    .add_resource_at(
+                        "bin/fortune",
+                        "#!/boot/bin/sh\necho ask again later\n".as_bytes(),
+                    )
+                    .add_resource_at(
+                        "meta/fortune.cmx",
+                        r#"{"program":{"binary":"bin/fortune"}}"#.as_bytes(),
+                    )
+                    .add_resource_at("data/duplicate_b", same_contents.as_bytes())
+                    .add_resource_at("data/duplicate_c", same_contents.as_bytes())
+                    .build()
+                    .await
+                    .unwrap(),
+            )
+            .build()
+            .await
+            .unwrap();
+        let repo = Arc::new(repo);
+
+        let local_packages = repo.list_packages().unwrap();
+
+        let served_repository = repo.server().start().unwrap();
+        let served_packages = served_repository.list_packages().await.unwrap();
+        assert_eq!(local_packages, served_packages);
     }
 }
