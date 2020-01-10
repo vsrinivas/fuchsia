@@ -17,18 +17,8 @@ We'll use the `echo.test.fidl` sample that we discussed in the
 [FIDL Tutorial](README.md) introduction section, by opening
 [//garnet/examples/fidl/services/echo.test.fidl](/garnet/examples/fidl/services/echo.test.fidl).
 
-<!-- NOTE: the code snippets here need to be kept up to date manually by
-     copy-pasting from the actual source code. Please update a snippet
-     if you notice it's out of date. -->
-
-
 ```fidl
-library fidl.examples.echo;
-
-[Discoverable]
-protocol Echo {
-    EchoString(string? value) -> (string? response);
-};
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/examples/fidl/services/echo.test.fidl" region_tag="protocol" adjust_indentation="auto" %}
 ```
 
 ## Build
@@ -39,7 +29,8 @@ The examples are in Topaz at:
 You can build the code via the following:
 
 ```sh
-fx set core.x64 --with //topaz/packages/examples:fidl
+fx set core.x64 --with //topaz/examples/fidl/echo_server_async_dart \
+    --with //topaz/examples/fidl/echo_client_async_dart
 fx build
 ```
 
@@ -62,7 +53,7 @@ not necessary to understand all of this before you move on.
 
 1.  **Startup.** The FIDL Shell loads the Dart runner, which starts the VM,
     loads `main.dart`, and calls `main()`.
-1.  **Registration** `main()` registers `EchoImpl` to bind itself to incoming
+1.  **Registration.** `main()` registers `EchoImpl` to bind itself to incoming
     requests on the `Echo` protocol. `main()` returns, but the program doesn't
     exit, because an [event
     loop](https://dart.dev/tutorials/language/futures) to handle
@@ -83,10 +74,7 @@ Now let's go through the details of how this works.
 Here are the import declarations in the Dart server implementation:
 
 ```dart
-import 'dart:async';
-import 'package:fidl/fidl.dart';
-import 'package:fidl_fidl_examples_echo/fidl_async.dart' as fidl_echo;
-import 'package:fuchsia_services/services.dart';
+{% includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/echo_server_async_dart/lib/main.dart" region_tag="imports" adjust_indentation="auto" %}
 ```
 
 -   `dart:async` Support for asynchronous programming with classes such as Future.
@@ -94,7 +82,7 @@ import 'package:fuchsia_services/services.dart';
     for `InterfaceRequest`.
 -   `fidl_echo` contains bindings for the `Echo` protocol. This file is
     generated from the protocol defined in `echo.fidl`.
--   `services.dart` is required for ApplicationContext, which is where we
+-   `services.dart` is required for StartupContext, which is where we
     register our service.
 
 ### main()
@@ -102,15 +90,7 @@ import 'package:fuchsia_services/services.dart';
 Everything starts with main():
 
 ```dart
-void main(List<String> args) {
-  _quiet = args.contains('-q');
-
-  final context = StartupContext.fromStartupInfo();
-  final echo = _EchoImpl();
-
-  context.outgoing.addPublicService<fidl_echo.Echo>(
-      echo.bind, fidl_echo.Echo.$serviceName);
-}
+{% includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/echo_server_async_dart/lib/main.dart" indented_block="void main" adjust_indentation="auto" %}
 ```
 
 `main()` is called by the Dart VM when your service is loaded, similar to
@@ -124,9 +104,7 @@ Eventually, another FIDL component will attempt to connect to our component.
 Here's what it looks like:
 
 ```dart
-void bind(InterfaceRequest<fidl_echo.Echo> request) {
-  _binding.bind(this, request);
-}
+{% includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/echo_server_async_dart/lib/main.dart" indented_block="void bind" adjust_indentation="auto" %}
 ```
 
 The `bind()` function is called when the first channel is received from another
@@ -152,15 +130,8 @@ Finally we reach the implementation of the server API. Your `EchoImpl` object
 receives a call to the `echoString()` function. It accepts a string value
 argument and it returns a Future of type String.
 
-
 ```dart
-@override
-Future<String> echoString(String value) async {
-  if (!_quiet) {
-    print('EchoString: $value');
-  }
-  return value;
-}
+{% includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/echo_server_async_dart/lib/main.dart" indented_block="Future<String> echoString" adjust_indentation="auto" %}
 ```
 
 ## `Echo` client
@@ -197,52 +168,7 @@ Here is the summary of how the client makes a connection to the echo service.
 The `main()` function in the client contains all the client code.
 
 ```dart
-Future<void> main(List<String> args) async {
-  String serverUrl =
-      'fuchsia-pkg://fuchsia.com/echo_server_async_dart#meta/echo_server_async_dart.cmx';
-  if (args.length >= 2 && args[0] == '--server') {
-    serverUrl = args[1];
-  }
-
-  final context = StartupContext.fromStartupInfo();
-
-  /// A [DirectoryProxy] who's channels will facilitate the connection between
-  /// this client component and the launched server component we're about to
-  /// launch. This client component is looking for service under /in/svc/
-  /// directory to connect to while the server exposes services others can
-  /// connect to under /out/svc directory.
-  final dirProxy = DirectoryProxy();
-
-  // Connect. The destination server is specified, and we request for it to be
-  // started if it wasn't already.
-  final launchInfo = LaunchInfo(
-    url: serverUrl,
-    // The directoryRequest is the handle to the /out directory of the launched
-    // component.
-    directoryRequest: dirProxy.ctrl.request().passChannel(),
-  );
-
-  // Creates a new instance of the component described by launchInfo.
-  final componentController = ComponentControllerProxy();
-
-  await context.launcher
-      .createComponent(launchInfo, componentController.ctrl.request());
-
-  // Bind. We bind EchoProxy, a generated proxy class, to the remote Echo
-  // service.
-  final _echo = fidl_echo.EchoProxy();
-  Incoming(dirProxy).connectToService(_echo);
-
-  // Invoke echoString with a value and print it's response.
-  final response = await _echo.echoString('hello');
-  print('***** Response: $response');
-
-  // close the echo server
-  componentController.ctrl.close();
-
-  // Shutdown, exit this Echo client
-  exit(0);
-}
+{% includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/echo_client_async_dart/lib/main.dart" indented_block="Future<void> main" adjust_indentation="auto" %}
 ```
 
 ### Run the sample
@@ -253,13 +179,20 @@ You can run the Echo example like this:
 $ fx shell run fuchsia-pkg://fuchsia.com/echo_client_async_dart#meta/echo_client_async_dart.cmx
 ```
 
+You should see the output:
+
+```sh
+***** Response: hello
+```
+
 ## `Echo` across languages and runtimes
 As a final exercise, you can now mix & match `Echo` clients and servers as you
 see fit. Let's try having the Dart client call the C++ server (from the
 [C++ version of the example](tutorial-cpp.md)).
 
 ```sh
-$ fx shell run fuchsia-pkg://fuchsia.com/echo_client_async_dart#meta/echo_client_async_dart.cmx--server fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx
+$ fx shell run fuchsia-pkg://fuchsia.com/echo_client_async_dart#meta/echo_client_async_dart.cmx \
+    --server fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx
 ```
 
 The Dart client will start the C++ server and connect to it. `EchoString()`
