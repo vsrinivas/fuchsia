@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <zircon/pixelformat.h>
+#include <zircon/syscalls.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -37,14 +38,21 @@ constexpr uint32_t kImageFormatTableSize = 8;
 constexpr uint32_t kMaxTasks = 10;
 
 static uint8_t GenFakeCanvasId(zx_handle_t vmo) {
-  uint32_t id = static_cast<uint32_t>(vmo);
+  zx_info_handle_basic_t info;
+  zx_object_get_info(vmo, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
 
-  return ((id & 0xff) ^ ((id >> 8) & 0xff) ^ ((id >> 16) & 0xff) ^ ((id >> 24) & 0xff));
+  uint8_t out_id = 0;
+  for (uint32_t i = 0; i < 8; i++) {
+    out_id ^= (info.koid >> (i * 8)) & 0xff;
+  }
+
+  return out_id;
 }
 
 zx_status_t FakeCanvasConfig(void* ctx, zx_handle_t vmo, size_t offset, const canvas_info_t* info,
                              uint8_t* out_canvas_idx) {
   *out_canvas_idx = GenFakeCanvasId(vmo);
+  zx_handle_close(vmo);
   return ZX_OK;
 }
 

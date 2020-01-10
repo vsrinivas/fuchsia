@@ -23,7 +23,7 @@ typedef struct image_canvas_id {
 
 typedef struct input_image_canvas_id {
   image_canvas_id_t canvas_ids;
-  zx_handle_t vmo;
+  zx::vmo vmo;
 } input_image_canvas_id_t;
 
 class Ge2dTask : public generictask::GenericTask {
