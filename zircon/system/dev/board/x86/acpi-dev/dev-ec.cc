@@ -430,13 +430,11 @@ static void acpi_ec_release(void* ctx) {
   free(dev);
 }
 
-static void acpi_ec_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
-                            uint8_t suspend_reason) {
+static zx_status_t acpi_ec_suspend(void* ctx, uint32_t flags) {
   acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(ctx);
 
-  if (suspend_reason != DEVICE_SUSPEND_REASON_MEXEC) {
-    device_suspend_reply(dev->zxdev, ZX_OK, requested_state);
-    return;
+  if (flags != DEVICE_SUSPEND_FLAG_MEXEC) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   AcpiRemoveAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_EC, ec_space_request_handler);
@@ -451,14 +449,14 @@ static void acpi_ec_suspend(void* ctx, uint8_t requested_state, bool enable_wake
   thrd_join(dev->evt_thread, NULL);
   zx_handle_close(dev->interrupt_event);
   dev->interrupt_event = ZX_HANDLE_INVALID;
-  device_suspend_reply(dev->zxdev, ZX_OK, requested_state);
+  return ZX_OK;
 }
 
 static zx_protocol_device_t acpi_ec_device_proto = [] {
   zx_protocol_device_t ops = {};
   ops.version = DEVICE_OPS_VERSION;
   ops.release = acpi_ec_release;
-  ops.suspend_new = acpi_ec_suspend;
+  ops.suspend = acpi_ec_suspend;
   return ops;
 }();
 
