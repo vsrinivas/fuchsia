@@ -1138,6 +1138,18 @@ template("executable") {
         },
       ]
 
+      if (is_host) {
+        tool_paths = [
+          {
+            cpu = current_cpu
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            name = output_name
+            os = current_os
+            path = rebase_path(output_file)
+          },
+        ]
+      }
+
       if (add_migration_metadata) {
         migrated_manifest_lines = [ "bin/$output_name=$rebased_output_file" ]
       }
