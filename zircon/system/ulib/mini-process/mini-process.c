@@ -42,8 +42,10 @@ static zx_status_t write_ctx_message(zx_handle_t channel, uintptr_t vdso_base,
       .pager_create_vmo = get_syscall_addr(&zx_pager_create_vmo, vdso_base),
       .vmo_contiguous_create = get_syscall_addr(&zx_vmo_create_contiguous, vdso_base),
       .vmo_physical_create = get_syscall_addr(&zx_vmo_create_physical, vdso_base),
-      .vmo_replace_as_executable = get_syscall_addr(&zx_vmo_replace_as_executable, vdso_base)};
-  return zx_channel_write(channel, 0u, &ctx, sizeof(ctx), &transferred_handle, 1u);
+      .vmo_replace_as_executable = get_syscall_addr(&zx_vmo_replace_as_executable, vdso_base),
+  };
+  uint32_t actual_handles = (transferred_handle == ZX_HANDLE_INVALID) ? 0u : 1u;
+  return zx_channel_write(channel, 0u, &ctx, sizeof(ctx), &transferred_handle, actual_handles);
 }
 
 // Sets up a VMO on the given VMAR which contains the mini process code and space for a stack.

@@ -29,6 +29,7 @@ controlled as a single entity.
 
  - [`zx_job_create()`] - create a new child job.
  - [`zx_process_create()`] - create a new process within a job.
+ - [`zx_job_set_critical()`] - set a process as critical to a job.
  - [`zx_job_set_policy()`] - set policy for new processes in the job.
  - [`zx_task_create_exception_channel()`] - listen for task exceptions
  - [`zx_task_kill()`] - cause a task to stop running.

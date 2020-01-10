@@ -450,6 +450,15 @@ void ProcessDispatcher::FinishDeadTransition() {
   // sense. We don't need |get_lock()| when calling RemoveChildProcess
   // here. ZX-880
   job_->RemoveChildProcess(this);
+
+  Guard<fbl::Mutex> guard{get_lock()};
+  // If we are critical to a job, take action.
+  if (critical_to_job_ != nullptr) {
+    // Check if we accept any return code, or require it be non-zero.
+    if (!retcode_nonzero_  || retcode_ != 0) {
+      critical_to_job_->Kill(ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
+    }
+  }
 }
 
 // process handle manipulation routines
@@ -645,6 +654,32 @@ zx_status_t ProcessDispatcher::GetThreads(fbl::Array<zx_koid_t>* out_threads) co
   }
   DEBUG_ASSERT(i == n);
   *out_threads = ktl::move(threads);
+  return ZX_OK;
+}
+
+zx_status_t ProcessDispatcher::SetCriticalToJob(fbl::RefPtr<JobDispatcher> critical_to_job,
+                                                bool retcode_nonzero) {
+  Guard<fbl::Mutex> guard{get_lock()};
+
+  if (critical_to_job_) {
+    // The process is already critical to a job.
+    return ZX_ERR_ALREADY_BOUND;
+  }
+
+  auto job_copy = job_;
+  for (auto& job = job_copy; job; job = job->parent()) {
+    if (job == critical_to_job) {
+      critical_to_job_ = critical_to_job;
+      break;
+    }
+  }
+
+  if (!critical_to_job_) {
+    // The provided job is not the parent of this process, or an ancestor.
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  retcode_nonzero_ = retcode_nonzero;
   return ZX_OK;
 }
 

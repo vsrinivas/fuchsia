@@ -122,6 +122,8 @@ toc:
   path: /docs/reference/syscalls/ioports_request.md
 - title: "zx_job_create"
   path: /docs/reference/syscalls/job_create.md
+- title: "zx_job_set_critical"
+  path: /docs/reference/syscalls/job_set_critical.md
 - title: "zx_job_set_policy"
   path: /docs/reference/syscalls/job_set_policy.md
 - title: "zx_ktrace_control"

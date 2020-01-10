@@ -235,8 +235,8 @@ class ProcessDispatcher final
                             size_t* actual, size_t* available) const;
   zx_status_t GetVmos(VmAspace* current_aspace, user_out_ptr<zx_info_vmo_t> vmos, size_t max,
                       size_t* actual, size_t* available);
-
   zx_status_t GetThreads(fbl::Array<zx_koid_t>* threads) const;
+  zx_status_t SetCriticalToJob(fbl::RefPtr<JobDispatcher> critical_to_job, bool retcode_nonzero);
 
   Exceptionate* exceptionate(Exceptionate::Type type);
 
@@ -413,6 +413,12 @@ class ProcessDispatcher final
 
   // the enclosing job
   const fbl::RefPtr<JobDispatcher> job_;
+
+  // Job that this process is critical to.
+  //
+  // We require that the job is the parent of this process, or an ancestor.
+  fbl::RefPtr<JobDispatcher> critical_to_job_ TA_GUARDED(get_lock());
+  bool retcode_nonzero_ TA_GUARDED(get_lock()) = false;
 
   // Policy set by the Job during Create().
   //

@@ -16,4 +16,9 @@ protocol job {
     /// Rights: handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_SET_POLICY.
     job_set_policy(handle<job> handle, uint32 options, uint32 topic, vector_void_u32size policy)
         -> (status status);
+
+    /// Set a process as critical to a job.
+    /// Rights: job must have ZX_RIGHT_DESTROY.
+    /// Rights: process must have ZX_RIGHT_WAIT.
+    job_set_critical(handle<job> job, uint32 options, handle<process> process) -> (status status);
 };

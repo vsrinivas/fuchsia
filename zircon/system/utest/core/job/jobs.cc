@@ -4,12 +4,11 @@
 
 #include <assert.h>
 #include <lib/zx/job.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <zircon/process.h>
-#include <zircon/rights.h>
-#include <zircon/syscalls.h>
 #include <zircon/syscalls/policy.h>
 
 #include <fbl/algorithm.h>
@@ -396,6 +395,154 @@ TEST(JobTest, KillJobChain) {
   }
 
   ASSERT_OK(zx_handle_close_many(jobs, countof(jobs)));
+}
+
+TEST(JobTest, OneCriticalProcessKillsOneJob) {
+  // 1 job, |job|.
+  // 1 process, |process|.
+  // |process| is a child of |job|.
+  zx::job job;
+  zx::process process;
+  zx::thread thread;
+  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job));
+  ASSERT_OK(start_mini_process(job.get(), ZX_HANDLE_INVALID, process.reset_and_get_address(),
+                               thread.reset_and_get_address()));
+  ASSERT_OK(job.set_critical(0u, process));
+
+  ASSERT_OK(process.kill());
+
+  zx_signals_t observed;
+  ASSERT_OK(job.wait_one(ZX_JOB_TERMINATED, zx::time::infinite(), &observed));
+  EXPECT_EQ(observed, ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+
+  zx_info_job_t job_info;
+  ASSERT_OK(job.get_info(ZX_INFO_JOB, &job_info, sizeof(job_info), nullptr, nullptr));
+  EXPECT_EQ(job_info.return_code, ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
+}
+
+TEST(JobTest, ManyCriticalProcessesKillOneJob) {
+  // 1 job, |job|.
+  // 2 processes, |process1| and |process2|.
+  // |process1| and |process2| are children of |job|.
+  zx::job job;
+  zx::process process1, process2;
+  zx::thread thread1, thread2;
+  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job));
+  ASSERT_OK(start_mini_process(job.get(), ZX_HANDLE_INVALID, process1.reset_and_get_address(),
+                               thread1.reset_and_get_address()));
+  ASSERT_OK(start_mini_process(job.get(), ZX_HANDLE_INVALID, process2.reset_and_get_address(),
+                               thread2.reset_and_get_address()));
+  ASSERT_OK(job.set_critical(0u, process1));
+  ASSERT_OK(job.set_critical(0u, process2));
+
+  ASSERT_OK(process1.kill());
+
+  zx_signals_t observed;
+  ASSERT_OK(job.wait_one(ZX_JOB_TERMINATED, zx::time::infinite(), &observed));
+  EXPECT_EQ(observed, ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+
+  zx_info_job_t job_info;
+  ASSERT_OK(job.get_info(ZX_INFO_JOB, &job_info, sizeof(job_info), nullptr, nullptr));
+  EXPECT_EQ(job_info.return_code, ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
+
+  zx_info_process_t process_info;
+  ASSERT_OK(
+      process2.get_info(ZX_INFO_PROCESS, &process_info, sizeof(process_info), nullptr, nullptr));
+  EXPECT_EQ(process_info.return_code, ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
+}
+
+TEST(JobTest, OneCriticalProcessKillsJobTree) {
+  // 2 jobs, |job1| and |job2|.
+  // 2 processes, |process1| and |process2|.
+  // |job2| is a child of |job1|.
+  // |process1| is a child of |job1|, and |process2| is a child of |job2|.
+  zx::job job1, job2;
+  zx::process process1, process2;
+  zx::thread thread1, thread2;
+  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job1));
+  ASSERT_OK(zx::job::create(job1, 0u, &job2));
+  ASSERT_OK(start_mini_process(job1.get(), ZX_HANDLE_INVALID, process1.reset_and_get_address(),
+                               thread1.reset_and_get_address()));
+  ASSERT_OK(start_mini_process(job2.get(), ZX_HANDLE_INVALID, process2.reset_and_get_address(),
+                               thread2.reset_and_get_address()));
+  ASSERT_OK(job1.set_critical(0u, process2));
+  ASSERT_STATUS(job2.set_critical(0u, process1), ZX_ERR_INVALID_ARGS);
+
+  ASSERT_OK(process2.kill());
+
+  zx_signals_t observed1, observed2;
+  ASSERT_OK(job1.wait_one(ZX_JOB_TERMINATED, zx::time::infinite(), &observed1));
+  ASSERT_OK(job2.wait_one(ZX_JOB_TERMINATED, zx::time::infinite(), &observed2));
+  EXPECT_EQ(observed1, ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+  EXPECT_EQ(observed2, ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+
+  zx_info_job_t job_info1, job_info2;
+  ASSERT_OK(job1.get_info(ZX_INFO_JOB, &job_info1, sizeof(job_info1), nullptr, nullptr));
+  ASSERT_OK(job2.get_info(ZX_INFO_JOB, &job_info2, sizeof(job_info2), nullptr, nullptr));
+  EXPECT_EQ(job_info1.return_code, ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
+  EXPECT_EQ(job_info2.return_code, ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
+}
+
+TEST(JobTest, OneCriticalProcessKillsOneJobIfRetcodeNonzero) {
+  // 1 job, |job|.
+  // 1 process, |process|.
+  // |process| is a child of |job|.
+  zx::job job;
+  zx::process process;
+  zx::thread thread;
+  zx::vmar vmar;
+  zx::channel channel;
+  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job));
+  ASSERT_OK(zx::process::create(job, "", 0u, 0u, &process, &vmar));
+  ASSERT_OK(zx::thread::create(process, "", 0u, 0u, &thread));
+  ASSERT_OK(start_mini_process_etc(process.get(), thread.get(), vmar.get(), ZX_HANDLE_INVALID, true,
+                                   channel.reset_and_get_address()));
+  ASSERT_OK(job.set_critical(ZX_JOB_CRITICAL_PROCESS_RETCODE_NONZERO, process));
+
+  ASSERT_OK(mini_process_cmd_send(channel.get(), MINIP_CMD_EXIT_NORMAL));
+
+  zx_signals_t observed;
+  ASSERT_OK(job.wait_one(ZX_JOB_NO_PROCESSES, zx::time::infinite(), &observed));
+  EXPECT_EQ(observed, ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+}
+
+TEST(JobTest, CriticalProcessNotInAncestor) {
+  // 1 job, |job|.
+  // 1 process, |process|.
+  // |process| is not a child of |job|.
+  zx::job job;
+  zx::process process;
+  zx::thread thread;
+  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job));
+  ASSERT_OK(start_mini_process(zx_job_default(), ZX_HANDLE_INVALID, process.reset_and_get_address(),
+                               thread.reset_and_get_address()));
+  ASSERT_STATUS(job.set_critical(0u, process), ZX_ERR_INVALID_ARGS);
+
+  ASSERT_OK(process.kill());
+}
+
+TEST(JobTest, CriticalProcessAlreadySet) {
+  // 1 job, |job|.
+  // 1 process, |process|.
+  // |process| is a child of |job|.
+  zx::job job;
+  zx::process process;
+  zx::thread thread;
+  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job));
+  ASSERT_OK(start_mini_process(job.get(), ZX_HANDLE_INVALID, process.reset_and_get_address(),
+                               thread.reset_and_get_address()));
+  ASSERT_OK(job.set_critical(0u, process));
+  ASSERT_STATUS(job.set_critical(0u, process), ZX_ERR_ALREADY_BOUND);
+
+  ASSERT_OK(process.kill());
+
+  zx_signals_t observed;
+  ASSERT_OK(job.wait_one(ZX_JOB_TERMINATED, zx::time::infinite(), &observed));
+  EXPECT_EQ(observed, ZX_JOB_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS);
+
+  zx_info_job_t job_info;
+  ASSERT_OK(job.get_info(ZX_INFO_JOB, &job_info, sizeof(job_info), nullptr, nullptr));
+  EXPECT_EQ(job_info.return_code, ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
 }
 
 TEST(JobTest, SetJobOomKillBit) {

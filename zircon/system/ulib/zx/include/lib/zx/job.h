@@ -6,7 +6,7 @@
 #define LIB_ZX_JOB_H_
 
 #include <lib/zx/task.h>
-#include <zircon/process.h>
+#include <lib/zx/process.h>
 
 namespace zx {
 
@@ -45,6 +45,10 @@ class job final : public task<job> {
   zx_status_t set_policy(uint32_t options, uint32_t topic, const void* policy,
                          uint32_t count) const {
     return zx_job_set_policy(get(), options, topic, policy, count);
+  }
+
+  zx_status_t set_critical(uint32_t options, const zx::process& process) {
+    return zx_job_set_critical(get(), options, process.get());
   }
 
   // Ideally this would be called zx::job::default(), but default is a

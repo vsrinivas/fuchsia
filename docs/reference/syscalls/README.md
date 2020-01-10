@@ -34,6 +34,7 @@
 
 ## Jobs
 + [job_create](job_create.md) - create a new job within a job
++ [job_set_critical](job_set_critical.md) - set a process as critical to a job
 + [job_set_policy](job_set_policy.md) - modify policies for a job and its descendants
 
 ## Tasks (Thread, Process, or Job)
@@ -120,7 +121,7 @@
 + [ticks_get](ticks_get.md) - read high-precision timer ticks
 + [ticks_per_second](ticks_per_second.md) - read the number of high-precision timer ticks in a second
 + [deadline_after](deadline_after.md) - Convert a time relative to now to an absolute deadline
-+ [clock_adjust](clock_adjust.md) - 
++ [clock_adjust](clock_adjust.md)
 
 ## Timers
 + [timer_create](timer_create.md) - create a timer object

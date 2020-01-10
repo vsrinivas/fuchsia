@@ -581,3 +581,29 @@ zx_status_t sys_job_set_policy(zx_handle_t handle, uint32_t options, uint32_t to
       return ZX_ERR_INVALID_ARGS;
   };
 }
+
+zx_status_t sys_job_set_critical(zx_handle_t job_handle, uint32_t options,
+                                 zx_handle_t process_handle) {
+  bool retcode_nonzero = false;
+  if (options == ZX_JOB_CRITICAL_PROCESS_RETCODE_NONZERO) {
+    retcode_nonzero = true;
+  } else if (options != 0u) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto up = ProcessDispatcher::GetCurrent();
+
+  fbl::RefPtr<JobDispatcher> job;
+  zx_status_t status = up->GetDispatcherWithRights(job_handle, ZX_RIGHT_DESTROY, &job);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fbl::RefPtr<ProcessDispatcher> process;
+  status = up->GetDispatcherWithRights(process_handle, ZX_RIGHT_WAIT, &process);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return process->SetCriticalToJob(std::move(job), retcode_nonzero);
+}

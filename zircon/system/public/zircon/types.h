@@ -329,11 +329,15 @@ typedef struct zx_iovec {
 #define ZX_TIMER_SLACK_LATE         ((uint32_t)2u)
 
 // Bus Transaction Initiator options.
-#define ZX_BTI_PERM_READ          ((uint32_t)1u << 0)
-#define ZX_BTI_PERM_WRITE         ((uint32_t)1u << 1)
-#define ZX_BTI_PERM_EXECUTE       ((uint32_t)1u << 2)
-#define ZX_BTI_COMPRESS           ((uint32_t)1u << 3)
-#define ZX_BTI_CONTIGUOUS         ((uint32_t)1u << 4)
+#define ZX_BTI_PERM_READ            ((uint32_t)1u << 0)
+#define ZX_BTI_PERM_WRITE           ((uint32_t)1u << 1)
+#define ZX_BTI_PERM_EXECUTE         ((uint32_t)1u << 2)
+#define ZX_BTI_COMPRESS             ((uint32_t)1u << 3)
+#define ZX_BTI_CONTIGUOUS           ((uint32_t)1u << 4)
+
+// Job options.
+// These options can be passed to zx_job_set_critical().
+#define ZX_JOB_CRITICAL_PROCESS_RETCODE_NONZERO     ((uint32_t)1u << 0)
 
 typedef uint32_t zx_obj_type_t;
 
