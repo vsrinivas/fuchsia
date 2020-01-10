@@ -10,7 +10,6 @@ import (
 	"io"
 	"io/ioutil"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
@@ -186,7 +185,7 @@ func (t *FuchsiaTester) Test(ctx context.Context, test build.Test, stdout io.Wri
 			}
 		} else {
 			name := path.Base(test.Path)
-			test.Command = []string{runtestsName, "-t", name, "-o", filepath.Join(t.delegate.remoteOutputDir, runtestsName)}
+			test.Command = []string{runtestsName, "-t", name, "-o", t.delegate.remoteOutputDir}
 		}
 	}
 	return t.delegate.Test(ctx, test, stdout, stderr)
