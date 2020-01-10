@@ -75,6 +75,7 @@ class FakeAudioOutput : public FakeAudioDevice {
   zx::duration min_lead_time() const override { return min_lead_time_; }
 
  private:
+  mixer::NoOp mixer_;
   zx::duration min_lead_time_;
 };
 

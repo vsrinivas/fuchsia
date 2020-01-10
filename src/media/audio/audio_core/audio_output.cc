@@ -71,7 +71,7 @@ void AudioOutput::Process() {
   }
 }
 
-fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLink(
+fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLink(
     const AudioObject& source, fbl::RefPtr<Stream> stream) {
   TRACE_DURATION("audio", "AudioOutput::InitializeSourceLink");
 
@@ -90,7 +90,7 @@ fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLi
     return fit::ok(std::move(mixer));
   }
 
-  return fit::ok(std::make_unique<audio::mixer::NoOp>());
+  return fit::ok(std::make_shared<audio::mixer::NoOp>());
 }
 
 void AudioOutput::CleanupSourceLink(const AudioObject& source, fbl::RefPtr<Stream> stream) {

@@ -34,7 +34,7 @@ class AudioOutput : public AudioDevice {
 
   void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  fit::result<std::unique_ptr<Mixer>, zx_status_t> InitializeSourceLink(
+  fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
       const AudioObject& source, fbl::RefPtr<Stream> stream) final;
   void CleanupSourceLink(const AudioObject& source, fbl::RefPtr<Stream> stream) final;
 

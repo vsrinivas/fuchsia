@@ -219,7 +219,7 @@ void AudioCapturerImpl::RecycleObject(AudioObject* self) {
   Shutdown(std::unique_ptr<AudioCapturerImpl>(this));
 }
 
-fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioCapturerImpl::InitializeSourceLink(
+fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioCapturerImpl::InitializeSourceLink(
     const AudioObject& source, fbl::RefPtr<Stream> stream) {
   TRACE_DURATION("audio", "AudioCapturerImpl::InitializeSourceLink");
 
@@ -1558,7 +1558,7 @@ void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioSampleFormat sample_fo
   FX_DCHECK(max_frames_per_capture_ > 0);
 }
 
-fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioCapturerImpl::ChooseMixer(
+fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioCapturerImpl::ChooseMixer(
     const AudioObject& source, fbl::RefPtr<Stream> stream) {
   TRACE_DURATION("audio", "AudioCapturerImpl::ChooseMixer");
 
@@ -1584,7 +1584,8 @@ fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioCapturerImpl::ChooseMixer(
   }
 
   // Select a mixer.
-  auto mixer = Mixer::Select(source_format->stream_type(), format_);
+  auto mixer =
+      std::shared_ptr<Mixer>(Mixer::Select(source_format->stream_type(), format_).release());
   if (!mixer) {
     FX_LOGS(WARNING) << "Failed to find mixer for capturer.";
     FX_LOGS(WARNING) << "Source cfg: rate " << source_format->frames_per_second() << " ch "
@@ -1611,7 +1612,16 @@ fit::result<std::unique_ptr<Mixer>, zx_status_t> AudioCapturerImpl::ChooseMixer(
               : std::clamp(device_info.gain_info.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
   }
 
+  mixers_.emplace_back(&source, mixer);
   return fit::ok(std::move(mixer));
+}
+
+void AudioCapturerImpl::CleanupSourceLink(const AudioObject& source, fbl::RefPtr<Stream> stream) {
+  auto it = std::find_if(mixers_.begin(), mixers_.end(),
+                         [source = &source](auto& holder) { return holder.object == source; });
+  if (it != mixers_.end()) {
+    mixers_.erase(it);
+  }
 }
 
 void AudioCapturerImpl::BindGainControl(

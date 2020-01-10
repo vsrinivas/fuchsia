@@ -108,9 +108,9 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
   // and their stream are provided.
   //
   // Returns ZX_OK if initialization succeeded, or an appropriate error code otherwise.
-  virtual fit::result<std::unique_ptr<Mixer>, zx_status_t> InitializeSourceLink(
+  virtual fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
       const AudioObject& source, fbl::RefPtr<Stream> stream) {
-    return fit::ok(std::make_unique<audio::mixer::NoOp>());
+    return fit::ok(std::make_shared<audio::mixer::NoOp>());
   }
   virtual fit::result<fbl::RefPtr<Stream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) {

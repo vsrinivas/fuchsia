@@ -60,8 +60,10 @@ class AudioCapturerImpl : public AudioObject,
 
  protected:
   friend class fbl::RefPtr<AudioCapturerImpl>;
-  fit::result<std::unique_ptr<Mixer>, zx_status_t> InitializeSourceLink(
+
+  fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
       const AudioObject& source, fbl::RefPtr<Stream> stream) override;
+  void CleanupSourceLink(const AudioObject& source, fbl::RefPtr<Stream> stream) override;
 
  private:
   // Notes about the AudioCapturerImpl state machine.
@@ -221,7 +223,7 @@ class AudioCapturerImpl : public AudioObject,
                     uint32_t frames_per_second) FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   // Select a mixer for the link supplied.
-  fit::result<std::unique_ptr<Mixer>, zx_status_t> ChooseMixer(const AudioObject& source,
+  fit::result<std::shared_ptr<Mixer>, zx_status_t> ChooseMixer(const AudioObject& source,
                                                                fbl::RefPtr<Stream> stream);
 
   fit::promise<> Cleanup() FXL_LOCKS_EXCLUDED(mix_domain_->token());
@@ -301,6 +303,24 @@ class AudioCapturerImpl : public AudioObject,
   // for glitch-debugging purposes
   std::atomic<uint16_t> overflow_count_;
   std::atomic<uint16_t> partial_overflow_count_;
+
+  struct MixerHolder {
+    // We hold a raw pointer to the |AudioObject| here since it is what we use to identify the mixer
+    // between calls to |InitializeSourceLink| and |CleanupSourceLink|, and by freeing the
+    // |MixerHolder| in |CleanupSourceLink|, we ensure we don't retain this pointer past the point
+    // that the |AudioLink| is valid.
+    //
+    // Furthermore, we don't ever dereference this pointer, it's only used to identify the
+    // corresponding |Mixer| in |CleanupSourceLink|.
+    //
+    // TODO(13688): This will be removed once we migrate AudioCapturerImpl to use the |MixStage|
+    //              mix-pump logic.
+    const AudioObject* object;
+    std::shared_ptr<Mixer> mixer;
+    MixerHolder(const AudioObject* _object, std::shared_ptr<Mixer> _mixer)
+        : object(_object), mixer(std::move(_mixer)) {}
+  };
+  std::vector<MixerHolder> mixers_;
 };
 
 }  // namespace media::audio

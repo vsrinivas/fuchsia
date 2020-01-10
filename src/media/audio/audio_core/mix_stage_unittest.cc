@@ -46,7 +46,7 @@ TEST_F(MixStageTest, Trim) {
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
   auto packet_queue = fbl::MakeRefCounted<PacketQueue>(kDefaultFormat, timeline_function);
-  auto mixer = mix_stage_->AddInput(packet_queue);
+  mix_stage_->AddInput(packet_queue);
 
   bool packet1_released = false;
   bool packet2_released = false;
@@ -87,8 +87,8 @@ TEST_F(MixStageTest, MixUniformFormats) {
   // Create 2 packet queues that we will mix together.
   auto packet_queue1 = fbl::MakeRefCounted<PacketQueue>(kDefaultFormat, timeline_function);
   auto packet_queue2 = fbl::MakeRefCounted<PacketQueue>(kDefaultFormat, timeline_function);
-  auto mixer1 = mix_stage_->AddInput(packet_queue1);
-  auto mixer2 = mix_stage_->AddInput(packet_queue2);
+  mix_stage_->AddInput(packet_queue1);
+  mix_stage_->AddInput(packet_queue2);
 
   // Mix 2 packet queues with the following samples and expected outputs. We'll feed this data
   // though the mix stage in 3 passes of 2ms windows:

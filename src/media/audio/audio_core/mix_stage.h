@@ -33,7 +33,7 @@ class MixStage : public Stream {
   void Trim(zx::time ref_time) override;
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
 
-  std::unique_ptr<Mixer> AddInput(fbl::RefPtr<Stream> stream);
+  std::shared_ptr<Mixer> AddInput(fbl::RefPtr<Stream> stream);
   void RemoveInput(const Stream& stream);
 
  private:
@@ -67,7 +67,7 @@ class MixStage : public Stream {
 
   struct StreamHolder {
     fbl::RefPtr<Stream> stream;
-    Mixer* mixer;
+    std::shared_ptr<Mixer> mixer;
   };
 
   std::mutex stream_lock_;

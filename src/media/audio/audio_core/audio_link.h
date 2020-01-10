@@ -63,7 +63,7 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
 
   // Mixer access.
   Mixer* mixer() const { return mixer_.get(); }
-  void set_mixer(std::unique_ptr<Mixer> mixer) { mixer_ = std::move(mixer); }
+  void set_mixer(std::shared_ptr<Mixer> mixer) { mixer_ = std::move(mixer); }
 
  protected:
   friend struct fbl::DefaultKeyedObjectTraits<const AudioLink*, AudioLink>;
@@ -72,7 +72,7 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
  private:
   fbl::RefPtr<AudioObject> source_;
   fbl::RefPtr<AudioObject> dest_;
-  std::unique_ptr<Mixer> mixer_;
+  std::shared_ptr<Mixer> mixer_;
   std::atomic_bool valid_;
   const std::optional<VolumeCurve> volume_curve_;
   fbl::RefPtr<Stream> stream_;
