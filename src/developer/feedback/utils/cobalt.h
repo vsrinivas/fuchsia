@@ -17,6 +17,7 @@
 
 #include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/lib/backoff/exponential_backoff.h"
+#include "src/lib/fxl/functional/cancelable_callback.h"
 
 namespace feedback {
 
@@ -62,6 +63,9 @@ class Cobalt {
   // the recipient.
   std::map<uint64_t, PendingEvent> pending_events_;
   backoff::ExponentialBackoff logger_reconnection_backoff_;
+
+  // We need to be able to cancel a posted reconnection task when |Cobalt| is destroyed.
+  fxl::CancelableClosure reconnect_task_;
 
   uint64_t next_event_id_ = 0;
 };

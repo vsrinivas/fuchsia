@@ -87,11 +87,12 @@ void Cobalt::RetryConnectingToLogger() {
   auto logger_request = logger_.NewRequest();
   SendAllPendingEvents();
 
+  reconnect_task_.Reset([this, request = std::move(logger_request)]() mutable {
+    ConnectToLogger(std::move(request));
+  });
+
   PostDelayedTask(
-      dispatcher_,
-      [this, request = std::move(logger_request)]() mutable {
-        ConnectToLogger(std::move(request));
-      },
+      dispatcher_, [reconnect = reconnect_task_.callback()]() { reconnect(); },
       logger_reconnection_backoff_.GetNext());
 }
 

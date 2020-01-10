@@ -31,6 +31,7 @@ constexpr uint64_t kCount = 2u;
 constexpr zx::duration kLoggerBackoffInitialDelay = zx::msec(100);
 
 using fuchsia::cobalt::Status;
+using testing::IsEmpty;
 using testing::UnorderedElementsAreArray;
 
 class CobaltTest : public UnitTestFixture, public CobaltTestFixture {
@@ -178,6 +179,30 @@ TEST_F(CobaltTest, Check_ExponentialBackoff) {
   RunLoopFor(delay);
 
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray(SentCobaltEvents()));
+}
+
+TEST_F(CobaltTest, Check_LoopOutlivesCobalt) {
+  // We set up a scenario in which |cobalt_| has posted a task on the loop to reconnect to
+  // fuchsia.cobalt/Logger and then is freed. This test should trigger ASAN if the task is not
+  // cancelled.
+  constexpr uint64_t num_attempts = 10u;
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactoryCreatesOnRetry>(num_attempts));
+  CloseLoggerConnection();
+
+  zx::duration delay = kLoggerBackoffInitialDelay;
+  uint32_t retry_factor = 2u;
+
+  LogOccurrence();
+  RunLoopUntilIdle();
+  for (size_t i = 0; i < num_attempts / 2; ++i) {
+    RunLoopFor(delay);
+    EXPECT_FALSE(WasLogEventCalled());
+    delay *= retry_factor;
+  }
+  cobalt_.reset();
+  RunLoopFor(delay);
+
+  EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty());
 }
 
 TEST_F(CobaltTest, SmokeTest_NoLoggerFactoryServer) {
