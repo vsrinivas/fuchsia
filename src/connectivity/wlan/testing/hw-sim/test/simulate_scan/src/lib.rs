@@ -50,7 +50,7 @@ async fn scan(
                                 .rssi(-60),
                         )
                         .on_primary(
-                            6,
+                            3,
                             Beacon::send(&phy)
                                 .bssid(BSS_BAR)
                                 .ssid(SSID_BAR.to_vec())
@@ -58,7 +58,7 @@ async fn scan(
                                 .rssi(-60),
                         )
                         .on_primary(
-                            7,
+                            4,
                             Beacon::send(&phy)
                                 .bssid(BSS_BAR_2)
                                 .ssid(SSID_BAR.to_vec())
@@ -66,7 +66,7 @@ async fn scan(
                                 .rssi(-40),
                         )
                         .on_primary(
-                            10,
+                            5,
                             Beacon::send(&phy)
                                 .bssid(BSS_BAZ)
                                 .ssid(SSID_BAZ.to_vec())
@@ -74,7 +74,7 @@ async fn scan(
                                 .rssi(-60),
                         )
                         .on_primary(
-                            11,
+                            6,
                             Beacon::send(&phy)
                                 .bssid(BSS_BAZ_2)
                                 .ssid(SSID_BAZ.to_vec())
