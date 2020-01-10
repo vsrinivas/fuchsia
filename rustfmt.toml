@@ -13,9 +13,3 @@ use_small_heuristics = "Max"
 
 # Prevent carriage returns
 newline_style = "Unix"
-
-ignore = [
-    "integration",
-    "out",
-    "third_party",
-]
