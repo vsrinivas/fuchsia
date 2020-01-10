@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/expr/type_glob.h"
+#include "src/developer/debug/zxdb/expr/identifier_glob.h"
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
@@ -26,8 +26,8 @@ ParsedIdentifier Parse(const std::string& s) {
 
 }  // namespace
 
-TEST(TypeGlob, Exact) {
-  TypeGlob myclass;
+TEST(IdentifierGlob, Exact) {
+  IdentifierGlob myclass;
   ASSERT_FALSE(myclass.Init("MyClass").has_error());
 
   // Exact match.
@@ -44,14 +44,14 @@ TEST(TypeGlob, Exact) {
   EXPECT_EQ(std::nullopt, myclass.Matches(Parse("MyClass<>")));
 
   // Global qualification in either direction doesn't matter.
-  TypeGlob global_myclass;
+  IdentifierGlob global_myclass;
   ASSERT_FALSE(global_myclass.Init("::MyClass").has_error());
   EXPECT_EQ(Score(0), global_myclass.Matches(Parse("::MyClass")));
   EXPECT_EQ(Score(0), global_myclass.Matches(Parse("MyClass")));
 }
 
-TEST(TypeGlob, EmptyTemplates) {
-  TypeGlob no_star;
+TEST(IdentifierGlob, EmptyTemplates) {
+  IdentifierGlob no_star;
   ASSERT_FALSE(no_star.Init("MyClass<>").has_error());
 
   // Template existance must match.
@@ -59,8 +59,8 @@ TEST(TypeGlob, EmptyTemplates) {
   EXPECT_EQ(std::nullopt, no_star.Matches(Parse("MyClass")));
 }
 
-TEST(TypeGlob, OneTemplate) {
-  TypeGlob one_star;
+TEST(IdentifierGlob, OneTemplate) {
+  IdentifierGlob one_star;
   ASSERT_FALSE(one_star.Init("MyClass<*>").has_error());
 
   // "*" won't match no template params.
@@ -75,8 +75,8 @@ TEST(TypeGlob, OneTemplate) {
   EXPECT_EQ(Score(3), one_star.Matches(Parse("MyClass<int,int,double>")));
 }
 
-TEST(TypeGlob, TwoTemplate) {
-  TypeGlob one_star;
+TEST(IdentifierGlob, TwoTemplate) {
+  IdentifierGlob one_star;
   ASSERT_FALSE(one_star.Init("MyClass<*,*>").has_error());
 
   // Won't match fewer template params.
@@ -88,8 +88,8 @@ TEST(TypeGlob, TwoTemplate) {
   EXPECT_EQ(Score(2), one_star.Matches(Parse("MyClass<int,int,double>")));
 }
 
-TEST(TypeGlob, LiteralTemplate) {
-  TypeGlob one_lit;
+TEST(IdentifierGlob, LiteralTemplate) {
+  IdentifierGlob one_lit;
   ASSERT_FALSE(one_lit.Init("MyClass<int>").has_error());
 
   EXPECT_EQ(std::nullopt, one_lit.Matches(Parse("MyClass<>")));
@@ -100,20 +100,20 @@ TEST(TypeGlob, LiteralTemplate) {
   EXPECT_EQ(Score(0), one_lit.Matches(Parse("MyClass<int>")));
 
   // * not by itself is a literal (in this case, a pointer).
-  TypeGlob lit_ptr;
+  IdentifierGlob lit_ptr;
   ASSERT_FALSE(lit_ptr.Init("MyClass<int*>").has_error());
   EXPECT_EQ(std::nullopt, lit_ptr.Matches(Parse("MyClass<int>")));
   EXPECT_EQ(Score(0), lit_ptr.Matches(Parse("MyClass<int* >")));
 
-  TypeGlob two_lit;
+  IdentifierGlob two_lit;
   ASSERT_FALSE(two_lit.Init("MyClass<int, float>").has_error());
 
   EXPECT_EQ(std::nullopt, two_lit.Matches(Parse("MyClass<int, int>")));
   EXPECT_EQ(Score(0), two_lit.Matches(Parse("MyClass <int,float >")));
 }
 
-TEST(TypeGlob, StarLiteralTemplate) {
-  TypeGlob star_lit;
+TEST(IdentifierGlob, StarLiteralTemplate) {
+  IdentifierGlob star_lit;
   ASSERT_FALSE(star_lit.Init("MyClass<*, int>").has_error());
 
   EXPECT_EQ(std::nullopt, star_lit.Matches(Parse("MyClass<int>")));
@@ -125,8 +125,8 @@ TEST(TypeGlob, StarLiteralTemplate) {
   EXPECT_EQ(std::nullopt, star_lit.Matches(Parse("MyClass<double, int, double>")));
 }
 
-TEST(TypeGlob, LiteralStarTemplate) {
-  TypeGlob lit_star;
+TEST(IdentifierGlob, LiteralStarTemplate) {
+  IdentifierGlob lit_star;
   ASSERT_FALSE(lit_star.Init("MyClass<int,*>").has_error());
 
   EXPECT_EQ(std::nullopt, lit_star.Matches(Parse("MyClass<int>")));

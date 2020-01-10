@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_TYPE_GLOB_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_TYPE_GLOB_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_IDENTIFIER_GLOB_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_IDENTIFIER_GLOB_H_
 
 #include <optional>
 
@@ -81,14 +81,14 @@ namespace zxdb {
 //   - "MyClass<int, int, int>::Something<int>" will score 2.
 //   - "MyClass<int, int>::Something<int, int>" will also score 2 (not clear which is better).
 
-class TypeGlob {
+class IdentifierGlob {
  public:
   // Call Init() to initialize with a parsed identifier.
-  TypeGlob() = default;
+  IdentifierGlob() = default;
 
   // Specify a pre-parsed identifier. This also allows expressing some patterns that won't parse as
   // normal identifiers (they may be expressed in DWARF).
-  explicit TypeGlob(ParsedIdentifier input) : parsed_(std::move(input)) {}
+  explicit IdentifierGlob(ParsedIdentifier input) : parsed_(std::move(input)) {}
 
   // An error is returned if the glob could not be parsed. It must be syntactially valid.
   Err Init(const std::string& glob);
@@ -105,4 +105,4 @@ class TypeGlob {
 
 }  // namespace zxdb
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_TYPE_GLOB_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_IDENTIFIER_GLOB_H_

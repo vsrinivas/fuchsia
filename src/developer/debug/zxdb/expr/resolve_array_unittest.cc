@@ -204,7 +204,7 @@ TEST_F(ResolveArrayTest, PrettyArray) {
   const char kMyTypeName[] = "MyType";
 
   // Set up pretty array mock for "MyType".
-  TypeGlob mytype_glob;
+  IdentifierGlob mytype_glob;
   ASSERT_FALSE(mytype_glob.Init(kMyTypeName).has_error());
   eval_context->pretty_type_manager().Add(ExprLanguage::kC, mytype_glob,
                                           std::make_unique<TestPrettyArray>());

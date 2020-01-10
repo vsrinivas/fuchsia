@@ -11,7 +11,7 @@
 
 #include "lib/fit/defer.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
-#include "src/developer/debug/zxdb/expr/type_glob.h"
+#include "src/developer/debug/zxdb/expr/identifier_glob.h"
 #include "src/lib/fxl/macros.h"
 
 namespace zxdb {
@@ -27,7 +27,7 @@ class PrettyTypeManager {
   ~PrettyTypeManager();
 
   // Adds a PrettyType for the givene language/glob.
-  void Add(ExprLanguage lang, TypeGlob glob, std::unique_ptr<PrettyType> pretty);
+  void Add(ExprLanguage lang, IdentifierGlob glob, std::unique_ptr<PrettyType> pretty);
 
   // Finds a PrettyType associated with the given type object. Returns a non-owning pointer if
   // found. Returns null if there is nothing registered for this type.
@@ -58,7 +58,7 @@ class PrettyTypeManager {
   // These map globs of full type names to a pretty-printer for that prefix. In the future it might
   // be nice to have some kind of trie structure that would allow faster prefix lookup for the
   // non-varying parts of the globs.
-  using PrefixPrettyType = std::pair<TypeGlob, std::unique_ptr<PrettyType>>;
+  using PrefixPrettyType = std::pair<IdentifierGlob, std::unique_ptr<PrettyType>>;
   std::vector<PrefixPrettyType> cpp_;
   std::vector<PrefixPrettyType> rust_;
 

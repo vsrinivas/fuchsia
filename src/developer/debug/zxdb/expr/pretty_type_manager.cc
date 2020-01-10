@@ -24,8 +24,8 @@ using GetterList = std::initializer_list<std::pair<std::string, std::string>>;
 // Used for internal hardcoded type globs, this parses the given identifier string and asserts if it
 // can't be parsed. Since the built-in globs should always be parseable, this helps clean up the
 // syntax.
-TypeGlob InternalGlob(const char* glob) {
-  TypeGlob result;
+IdentifierGlob InternalGlob(const char* glob) {
+  IdentifierGlob result;
   Err err = result.Init(glob);
   FXL_CHECK(!err.has_error()) << "Internal pretty-printer parse failure for\" " << glob
                               << "\": " << err.msg();
@@ -42,7 +42,8 @@ PrettyTypeManager::PrettyTypeManager() {
 
 PrettyTypeManager::~PrettyTypeManager() = default;
 
-void PrettyTypeManager::Add(ExprLanguage lang, TypeGlob glob, std::unique_ptr<PrettyType> pretty) {
+void PrettyTypeManager::Add(ExprLanguage lang, IdentifierGlob glob,
+                            std::unique_ptr<PrettyType> pretty) {
   switch (lang) {
     case ExprLanguage::kC:
       cpp_.emplace_back(std::move(glob), std::move(pretty));
@@ -184,8 +185,8 @@ void PrettyTypeManager::AddDefaultRustPrettyTypes() {
   rust_tuple_type_ = std::make_unique<PrettyRustTuple>();
 
   // Rust's "&str" type won't parse as an identifier, construct an Identifier manually.
-  rust_.emplace_back(TypeGlob(ParsedIdentifier(IdentifierQualification::kRelative,
-                                               ParsedIdentifierComponent("&str"))),
+  rust_.emplace_back(IdentifierGlob(ParsedIdentifier(IdentifierQualification::kRelative,
+                                                     ParsedIdentifierComponent("&str"))),
                      std::make_unique<PrettyHeapString>("data_ptr", "length",
                                                         GetterList{{"as_ptr", "data_ptr"},
                                                                    {"as_mut_ptr", "data_ptr"},

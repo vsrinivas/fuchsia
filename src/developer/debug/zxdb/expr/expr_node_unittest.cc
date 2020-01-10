@@ -401,7 +401,7 @@ TEST_F(ExprNodeTest, PrettyDereference) {
 
   // Register the PrettyType that provides a getter. It always returns struct_value.
   const char kTypeName[] = "MyType";
-  TypeGlob glob;
+  IdentifierGlob glob;
   ASSERT_FALSE(glob.Init(kTypeName).has_error());
   context->pretty_type_manager().Add(ExprLanguage::kC, glob,
                                      std::make_unique<MockDerefPrettyType>(struct_value));
@@ -499,7 +499,7 @@ TEST_F(ExprNodeTest, PrettyTypeMember) {
 
   // Register the PrettyType that provides a getter.
   const char kTypeName[] = "MyType";
-  TypeGlob glob;
+  IdentifierGlob glob;
   ASSERT_FALSE(glob.Init(kTypeName).has_error());
   context->pretty_type_manager().Add(ExprLanguage::kC, glob,
                                      std::make_unique<MockGetterPrettyType>());
@@ -564,7 +564,7 @@ TEST_F(ExprNodeTest, PrettyTypeMember) {
   // Combine a custom dereferencer with a custom getter. So "needs_deref->getter()" where
   // needs_deref's type provides a pretty dereference operator.
   const char kDerefTypeName[] = "NeedsDeref";
-  TypeGlob deref_glob;
+  IdentifierGlob deref_glob;
   ASSERT_FALSE(deref_glob.Init(kDerefTypeName).has_error());
   context->pretty_type_manager().Add(ExprLanguage::kC, deref_glob,
                                      std::make_unique<MockDerefPrettyType>(value));
@@ -596,7 +596,7 @@ TEST_F(ExprNodeTest, PrettyTypeGetter) {
 
   // Register the PrettyType that provides a getter.
   const char kTypeName[] = "MyType";
-  TypeGlob glob;
+  IdentifierGlob glob;
   ASSERT_FALSE(glob.Init(kTypeName).has_error());
   context->pretty_type_manager().Add(ExprLanguage::kC, glob,
                                      std::make_unique<MockGetterPrettyType>());
@@ -664,7 +664,7 @@ TEST_F(ExprNodeTest, PrettyTypeGetter) {
   // Combine a custom dereferencer with a custom getter. So "needs_deref->getter()" where
   // needs_deref's type provides a pretty dereference operator.
   const char kDerefTypeName[] = "NeedsDeref";
-  TypeGlob deref_glob;
+  IdentifierGlob deref_glob;
   ASSERT_FALSE(deref_glob.Init(kDerefTypeName).has_error());
   context->pretty_type_manager().Add(ExprLanguage::kC, deref_glob,
                                      std::make_unique<MockDerefPrettyType>(value));

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/expr/type_glob.h"
+#include "src/developer/debug/zxdb/expr/identifier_glob.h"
 
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 
@@ -10,7 +10,8 @@ namespace zxdb {
 
 namespace {
 
-// Matches the template parameters of one component. Return value is the same as TypeGlob::Matches.
+// Matches the template parameters of one component. Return value is the same as
+// IdentifierGlob::Matches.
 std::optional<int> MatchTemplateParams(const std::vector<std::string>& glob,
                                        const std::vector<std::string>& type) {
   if (type.size() < glob.size())
@@ -42,9 +43,11 @@ std::optional<int> MatchTemplateParams(const std::vector<std::string>& glob,
 
 }  // namespace
 
-Err TypeGlob::Init(const std::string& glob) { return ExprParser::ParseIdentifier(glob, &parsed_); }
+Err IdentifierGlob::Init(const std::string& glob) {
+  return ExprParser::ParseIdentifier(glob, &parsed_);
+}
 
-std::optional<int> TypeGlob::Matches(const ParsedIdentifier& type) const {
+std::optional<int> IdentifierGlob::Matches(const ParsedIdentifier& type) const {
   if (type.components().size() != parsed_.components().size())
     return std::nullopt;
 
