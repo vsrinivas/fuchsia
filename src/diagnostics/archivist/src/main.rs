@@ -86,7 +86,8 @@ fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
-    let running_archivist = archive::run_archivist(archivist_state);
+    let running_archivist =
+        archive::run_archivist(archivist_state, diagnostics::root().create_child("event_stats"));
     let running_service_fs = fs.collect::<()>().map(Ok);
     let both = future::try_join(running_service_fs, running_archivist);
     executor.run(both, num_threads)?;
