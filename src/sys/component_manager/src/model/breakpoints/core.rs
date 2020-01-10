@@ -42,8 +42,9 @@ impl BreakpointSystem {
         vec![
             // This hook must be registered with all events.
             // However, a task will only receive events that it registered breakpoints for.
-            HooksRegistration {
-                events: vec![
+            HooksRegistration::new(
+                "BreakpointRegistry",
+                vec![
                     EventType::AddDynamicChild,
                     EventType::BeforeStartInstance,
                     EventType::PostDestroyInstance,
@@ -52,13 +53,14 @@ impl BreakpointSystem {
                     EventType::RouteCapability,
                     EventType::StopInstance,
                 ],
-                callback: Arc::downgrade(&self.inner.registry) as Weak<dyn Hook>,
-            },
+                Arc::downgrade(&self.inner.registry) as Weak<dyn Hook>,
+            ),
             // This hook provides the Breakpoint capability to components in the tree
-            HooksRegistration {
-                events: vec![EventType::RouteCapability],
-                callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-            },
+            HooksRegistration::new(
+                "BreakpointSystem",
+                vec![EventType::RouteCapability],
+                Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+            ),
         ]
     }
 

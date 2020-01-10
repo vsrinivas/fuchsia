@@ -34,10 +34,11 @@ impl RootJob {
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![EventType::RouteCapability],
-            callback: Arc::downgrade(&self) as Weak<dyn Hook>,
-        }]
+        vec![HooksRegistration::new(
+            "RootJob",
+            vec![EventType::RouteCapability],
+            Arc::downgrade(&self) as Weak<dyn Hook>,
+        )]
     }
 
     /// Serves an instance of the `fuchsia.boot.RootJob` protocol given an appropriate

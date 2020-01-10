@@ -1459,10 +1459,11 @@ pub mod tests {
             }
 
             fn hooks(&self) -> Vec<HooksRegistration> {
-                vec![HooksRegistration {
-                    events: vec![EventType::StopInstance],
-                    callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-                }]
+                vec![HooksRegistration::new(
+                    "StopErrorHook",
+                    vec![EventType::StopInstance],
+                    Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+                )]
             }
         }
 
@@ -2077,10 +2078,11 @@ pub mod tests {
             }
 
             fn hooks(&self) -> Vec<HooksRegistration> {
-                vec![HooksRegistration {
-                    events: vec![EventType::PostDestroyInstance],
-                    callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-                }]
+                vec![HooksRegistration::new(
+                    "DestroyErrorHook",
+                    vec![EventType::PostDestroyInstance],
+                    Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+                )]
             }
         }
 

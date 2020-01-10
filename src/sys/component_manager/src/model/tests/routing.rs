@@ -185,10 +185,11 @@ async fn use_framework_service() {
     test.model
         .root_realm
         .hooks
-        .install(vec![HooksRegistration {
-            events: vec![EventType::RouteCapability],
-            callback: Arc::downgrade(&realm_service_host) as Weak<dyn Hook>,
-        }])
+        .install(vec![HooksRegistration::new(
+            "MockRealmCapabilityHost",
+            vec![EventType::RouteCapability],
+            Arc::downgrade(&realm_service_host) as Weak<dyn Hook>,
+        )])
         .await;
     test.check_use_realm(vec!["b:0"].into(), realm_service_host.bind_calls()).await;
 }

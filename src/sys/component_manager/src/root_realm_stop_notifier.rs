@@ -29,10 +29,11 @@ impl RootRealmStopNotifier {
     }
 
     pub fn hooks(&self) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![EventType::StopInstance],
-            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-        }]
+        vec![HooksRegistration::new(
+            "RootRealmStopNotifier",
+            vec![EventType::StopInstance],
+            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+        )]
     }
 
     pub async fn wait_for_root_realm_stop(self) {

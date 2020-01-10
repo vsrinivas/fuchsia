@@ -41,10 +41,11 @@ impl RootResource {
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![EventType::RouteCapability],
-            callback: Arc::downgrade(&self) as Weak<dyn Hook>,
-        }]
+        vec![HooksRegistration::new(
+            "RootResource",
+            vec![EventType::RouteCapability],
+            Arc::downgrade(&self) as Weak<dyn Hook>,
+        )]
     }
 
     /// Serves an instance of the `fuchsia.boot.RootResource` protocol given an appropriate

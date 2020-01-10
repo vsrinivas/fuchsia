@@ -29,10 +29,11 @@ impl WorkScheduler {
     /// Helper to specify hooks associated with `WorkScheduler`. Accepts `&Arc<WorkScheduler>` to
     /// produce references needed by `HooksRegistration` without consuming `Arc`.
     pub fn hooks(work_scheduler: &Arc<Self>) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![EventType::ResolveInstance, EventType::RouteCapability],
-            callback: Arc::downgrade(work_scheduler) as Weak<dyn Hook>,
-        }]
+        vec![HooksRegistration::new(
+            "WorkScheduler",
+            vec![EventType::ResolveInstance, EventType::RouteCapability],
+            Arc::downgrade(work_scheduler) as Weak<dyn Hook>,
+        )]
     }
 
     /// Route capability to access `fuchsia.sys2.WorkSchedulerControl` protocol as a framework

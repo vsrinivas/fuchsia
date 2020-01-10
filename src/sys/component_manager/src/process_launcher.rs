@@ -90,10 +90,11 @@ impl ProcessLauncher {
     }
 
     pub fn hooks(&self) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![EventType::RouteCapability],
-            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-        }]
+        vec![HooksRegistration::new(
+            "ProcessLauncher",
+            vec![EventType::RouteCapability],
+            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+        )]
     }
 
     /// Serves an instance of the `fuchsia.process.Launcher` protocol given an appropriate

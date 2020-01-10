@@ -37,10 +37,11 @@ impl BuiltinRunner {
 
     /// Construct a `HooksRegistration` that will route our runner as a framework capability.
     pub fn hook(&self) -> HooksRegistration {
-        HooksRegistration {
-            events: vec![EventType::RouteCapability],
-            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-        }
+        HooksRegistration::new(
+            "BuiltinRunner",
+            vec![EventType::RouteCapability],
+            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+        )
     }
 }
 

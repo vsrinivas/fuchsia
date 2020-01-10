@@ -64,10 +64,11 @@ impl EchoService {
     }
 
     pub fn hooks(&self) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![EventType::RouteCapability],
-            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-        }]
+        vec![HooksRegistration::new(
+            "EchoService",
+            vec![EventType::RouteCapability],
+            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+        )]
     }
 }
 

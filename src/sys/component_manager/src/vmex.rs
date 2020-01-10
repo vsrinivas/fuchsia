@@ -42,10 +42,11 @@ impl VmexService {
     }
 
     pub fn hooks(&self) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![EventType::RouteCapability],
-            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-        }]
+        vec![HooksRegistration::new(
+            "VmexService",
+            vec![EventType::RouteCapability],
+            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+        )]
     }
 
     /// Serves an instance of the 'fuchsia.security.resource.Vmex' protocol given an appropriate

@@ -134,16 +134,17 @@ impl TestHook {
 
     /// Returns the set of hooks into the component manager that TestHook is interested in.
     pub fn hooks(&self) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![
+        vec![HooksRegistration::new(
+            "TestHook",
+            vec![
                 EventType::AddDynamicChild,
                 EventType::BeforeStartInstance,
                 EventType::PostDestroyInstance,
                 EventType::PreDestroyInstance,
                 EventType::StopInstance,
             ],
-            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-        }]
+            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+        )]
     }
 
     /// Recursively traverse the Instance tree to generate a string representing the component

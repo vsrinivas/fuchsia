@@ -126,8 +126,9 @@ impl Hub {
     }
 
     pub fn hooks(&self) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![
+        vec![HooksRegistration::new(
+            "Hub",
+            vec![
                 EventType::AddDynamicChild,
                 EventType::PostDestroyInstance,
                 EventType::PreDestroyInstance,
@@ -135,8 +136,8 @@ impl Hub {
                 EventType::BeforeStartInstance,
                 EventType::StopInstance,
             ],
-            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-        }]
+            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+        )]
     }
 }
 
@@ -921,10 +922,11 @@ mod tests {
                 host_fn: None,
                 runtime_host_fn: None,
             }],
-            vec![HooksRegistration {
-                events: vec![EventType::RouteCapability],
-                callback: Arc::downgrade(&hub_injection_test_hook) as Weak<dyn Hook>,
-            }],
+            vec![HooksRegistration::new(
+                "HubInjectionTestHook",
+                vec![EventType::RouteCapability],
+                Arc::downgrade(&hub_injection_test_hook) as Weak<dyn Hook>,
+            )],
         )
         .await;
 

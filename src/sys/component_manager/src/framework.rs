@@ -88,10 +88,11 @@ impl RealmCapabilityHost {
     }
 
     pub fn hooks(&self) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![EventType::RouteCapability],
-            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-        }]
+        vec![HooksRegistration::new(
+            "RealmCapabilityHost",
+            vec![EventType::RouteCapability],
+            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+        )]
     }
 
     pub async fn serve(
@@ -625,10 +626,11 @@ mod tests {
 
         let mut hooks = vec![];
         hooks.append(&mut hook.hooks());
-        hooks.append(&mut vec![HooksRegistration {
-            events: breakpoint_events,
-            callback: Arc::downgrade(&breakpoint_registry) as Weak<dyn Hook>,
-        }]);
+        hooks.append(&mut vec![HooksRegistration::new(
+            "BreakpointRegistry",
+            breakpoint_events,
+            Arc::downgrade(&breakpoint_registry) as Weak<dyn Hook>,
+        )]);
         let test = RealmCapabilityTest::new(
             mock_resolver,
             Arc::new(MockRunner::new()),
