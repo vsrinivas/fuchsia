@@ -104,7 +104,9 @@ constexpr uint64_t __llvm_profile_get_magic() {
 uint64_t __llvm_profile_get_version() { return INSTR_PROF_RAW_VERSION_VAR; }
 
 #define DataSize (&DataEnd - &DataStart)
+#define PaddingBytesBeforeCounters 0
 #define CountersSize (&CountersEnd - &CountersStart)
+#define PaddingBytesAfterCounters 0
 #define NamesSize (&NamesEnd - &NamesStart)
 #define CountersBegin (reinterpret_cast<uint64_t>(&CountersStart))
 #define NamesBegin (reinterpret_cast<uint64_t>(&NamesStart))
