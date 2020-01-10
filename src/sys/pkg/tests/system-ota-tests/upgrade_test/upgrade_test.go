@@ -96,18 +96,18 @@ func doTestOTAs(t *testing.T, device *device.Client, rpcClient **sl4f.Client) {
 	if !isDeviceUpToDate(t, device, *rpcClient, expectedSystemImageMerkle) {
 		log.Printf("\n\n")
 		log.Printf("starting OTA from N-1 -> N test")
-		doSystemOTA(t, device, rpcClient, repo)
+		doSystemOTA(t, device, rpcClient, repo, true)
 		log.Printf("OTA from N-1 -> N successful")
 	}
 
 	log.Printf("\n\n")
 	log.Printf("starting OTA N -> N' test")
-	doSystemPrimeOTA(t, device, rpcClient, repo)
+	doSystemPrimeOTA(t, device, rpcClient, repo, false)
 	log.Printf("OTA from N -> N' successful")
 
 	log.Printf("\n\n")
 	log.Printf("starting OTA N' -> N test")
-	doSystemOTA(t, device, rpcClient, repo)
+	doSystemOTA(t, device, rpcClient, repo, false)
 	log.Printf("OTA from N' -> N successful")
 }
 
@@ -116,6 +116,11 @@ func doTestLongevityOTAs(t *testing.T, device *device.Client, rpcClient **sl4f.C
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// We only check ABR after the first update, since we can't be sure if
+	// the initial version of Fuchsia is recent enough to support ABR, but
+	// it should support ABR after the first OTA.
+	checkABR := false
 
 	lastBuildID := ""
 	attempt := 1
@@ -135,17 +140,18 @@ func doTestLongevityOTAs(t *testing.T, device *device.Client, rpcClient **sl4f.C
 		}
 		log.Printf("Longevity Test Attempt %d  upgrading from build %s to build %s", attempt, lastBuildID, buildID)
 
-		doTestLongevityOTAAttempt(t, device, rpcClient, buildID)
+		doTestLongevityOTAAttempt(t, device, rpcClient, buildID, checkABR)
 
 		log.Printf("Longevity Test Attempt %d successful", attempt)
 		log.Printf("------------------------------------------------------------------------------")
 
+		checkABR = true
 		lastBuildID = buildID
 		attempt += 1
 	}
 }
 
-func doTestLongevityOTAAttempt(t *testing.T, device *device.Client, rpcClient **sl4f.Client, buildID string) {
+func doTestLongevityOTAAttempt(t *testing.T, device *device.Client, rpcClient **sl4f.Client, buildID string, checkABR bool) {
 	// Use the output dir if specified, otherwise download into a temporary directory.
 	outputDir := c.OutputDir
 	if outputDir == "" {
@@ -179,7 +185,7 @@ func doTestLongevityOTAAttempt(t *testing.T, device *device.Client, rpcClient **
 
 	log.Printf("\n\n")
 	log.Printf("OTAing to %s", build)
-	doSystemOTA(t, device, rpcClient, repo)
+	doSystemOTA(t, device, rpcClient, repo, checkABR)
 }
 
 func doPaveDevice(t *testing.T, device *device.Client) *sl4f.Client {
@@ -230,17 +236,25 @@ func doPaveDevice(t *testing.T, device *device.Client) *sl4f.Client {
 		//t.Fatalf("unable to connect to sl4f after pave: %s", err)
 	}
 
-	validateDevice(t, device, rpcClient, downgradeRepo, expectedSystemImageMerkle)
+	// We always boot into the A partition after a pave.
+	expectedConfig := sl4f.ConfigurationA
+
+	validateDevice(t, device, rpcClient, downgradeRepo, expectedSystemImageMerkle, &expectedConfig, true)
 
 	log.Printf("paving successful")
 
 	return rpcClient
 }
 
-func doSystemOTA(t *testing.T, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository) {
+func doSystemOTA(t *testing.T, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) {
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
 		t.Fatalf("error extracting expected system image merkle: %s", err)
+	}
+
+	expectedConfig, err := determineTargetConfig(*rpcClient)
+	if err != nil {
+		t.Fatalf("error determining target config: %s", err)
 	}
 
 	server := setupOTAServer(t, device, *rpcClient, repo, expectedSystemImageMerkle)
@@ -251,13 +265,18 @@ func doSystemOTA(t *testing.T, device *device.Client, rpcClient **sl4f.Client, r
 	}
 
 	log.Printf("OTA complete, validating device")
-	validateDevice(t, device, *rpcClient, repo, expectedSystemImageMerkle)
+	validateDevice(t, device, *rpcClient, repo, expectedSystemImageMerkle, expectedConfig, checkABR)
 }
 
-func doSystemPrimeOTA(t *testing.T, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository) {
+func doSystemPrimeOTA(t *testing.T, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) {
 	expectedSystemImageMerkle, err := repo.LookupUpdatePrimeSystemImageMerkle()
 	if err != nil {
 		t.Fatalf("error extracting expected system image merkle: %s", err)
+	}
+
+	expectedConfig, err := determineTargetConfig(*rpcClient)
+	if err != nil {
+		t.Fatalf("error determining target config: %s", err)
 	}
 
 	server := setupOTAServer(t, device, *rpcClient, repo, expectedSystemImageMerkle)
@@ -310,7 +329,7 @@ func doSystemPrimeOTA(t *testing.T, device *device.Client, rpcClient **sl4f.Clie
 	if err != nil {
 		t.Fatalf("unable to connect to sl4f after OTA: %s", err)
 	}
-	validateDevice(t, device, *rpcClient, repo, expectedSystemImageMerkle)
+	validateDevice(t, device, *rpcClient, repo, expectedSystemImageMerkle, expectedConfig, checkABR)
 }
 
 func setupOTAServer(t *testing.T, device *device.Client, rpcClient *sl4f.Client, repo *packages.Repository, expectedSystemImageMerkle string) *packages.Server {
@@ -362,7 +381,32 @@ func isDeviceUpToDate(t *testing.T, device *device.Client, rpcClient *sl4f.Clien
 	return expectedSystemImageMerkle == remoteSystemImageMerkle
 }
 
-func validateDevice(t *testing.T, device *device.Client, rpcClient *sl4f.Client, repo *packages.Repository, expectedSystemImageMerkle string) {
+func determineTargetConfig(rpcClient *sl4f.Client) (*sl4f.Configuration, error) {
+	if rpcClient == nil {
+		log.Printf("sl4f not running, cannot determine current active partition")
+		return nil, nil
+	}
+	activeConfig, err := rpcClient.PaverQueryActiveConfiguration()
+	if err == sl4f.ErrNotSupported {
+		log.Printf("device does not support ABR")
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	log.Printf("device booted to slot %s", activeConfig)
+
+	var targetConfig sl4f.Configuration
+	if activeConfig == sl4f.ConfigurationA {
+		targetConfig = sl4f.ConfigurationB
+	} else {
+		targetConfig = sl4f.ConfigurationA
+	}
+
+	return &targetConfig, nil
+}
+
+func validateDevice(t *testing.T, device *device.Client, rpcClient *sl4f.Client, repo *packages.Repository, expectedSystemImageMerkle string, expectedConfig *sl4f.Configuration, checkABR bool) {
 	// At the this point the system should have been updated to the target
 	// system version. Confirm the update by fetching the device's current
 	// /system/meta, and making sure it is the correct version.
@@ -382,13 +426,25 @@ func validateDevice(t *testing.T, device *device.Client, rpcClient *sl4f.Client,
 		}
 
 		// Ensure the device is booting from the expected boot slot
-		active_config, err := rpcClient.PaverQueryActiveConfiguration()
+		activeConfig, err := rpcClient.PaverQueryActiveConfiguration()
 		if err == sl4f.ErrNotSupported {
 			log.Printf("device does not support querying the active configuration")
 		} else if err != nil {
 			t.Fatalf("unable to determine active boot configuration: %s", err)
-		} else if active_config != sl4f.ConfigurationA {
-			t.Fatalf("expected device to boot from slot A, got %s", active_config)
+		}
+
+		log.Printf("device booted to slot %s", activeConfig)
+
+		if expectedConfig != nil && activeConfig != *expectedConfig {
+			// FIXME(43336): during the rollout of ABR, the N-1 build might
+			// not be writing to the inactive partition, so don't
+			// err out during that phase. This will be removed once
+			// ABR has rolled through GI.
+			if checkABR {
+				log.Printf("expected device to boot from slot %s, got %s (ignoring during ABR rollout)", *expectedConfig, activeConfig)
+			} else {
+				t.Fatalf("expected device to boot from slot %s, got %s", *expectedConfig, activeConfig)
+			}
 		}
 	}
 }

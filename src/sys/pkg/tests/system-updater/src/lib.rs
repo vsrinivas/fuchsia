@@ -271,15 +271,23 @@ impl MockResolverService {
 enum PaverEvent {
     WriteAsset { configuration: paver::Configuration, asset: paver::Asset, payload: Vec<u8> },
     WriteBootloader(Vec<u8>),
+    QueryActiveConfiguration,
+    SetConfigurationActive { configuration: paver::Configuration },
 }
 
 struct MockPaverServiceBuilder {
     call_hook: Option<Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>>,
+    active_config: paver::Configuration,
+    boot_manager_close_with_epitaph: Option<Status>,
 }
 
 impl MockPaverServiceBuilder {
     fn new() -> Self {
-        Self { call_hook: None }
+        Self {
+            call_hook: None,
+            active_config: paver::Configuration::A,
+            boot_manager_close_with_epitaph: None,
+        }
     }
 
     fn call_hook<F>(mut self, call_hook: F) -> Self
@@ -290,16 +298,33 @@ impl MockPaverServiceBuilder {
         self
     }
 
+    fn active_config(mut self, active_config: paver::Configuration) -> Self {
+        self.active_config = active_config;
+        self
+    }
+
+    fn boot_manager_close_with_epitaph(mut self, status: Status) -> Self {
+        self.boot_manager_close_with_epitaph = Some(status);
+        self
+    }
+
     fn build(self) -> MockPaverService {
         let call_hook = self.call_hook.unwrap_or_else(|| Box::new(|_| Status::OK));
 
-        MockPaverService { events: Mutex::new(vec![]), call_hook: Box::new(call_hook) }
+        MockPaverService {
+            events: Mutex::new(vec![]),
+            call_hook: Box::new(call_hook),
+            active_config: self.active_config,
+            boot_manager_close_with_epitaph: self.boot_manager_close_with_epitaph,
+        }
     }
 }
 
 struct MockPaverService {
     events: Mutex<Vec<PaverEvent>>,
     call_hook: Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>,
+    active_config: paver::Configuration,
+    boot_manager_close_with_epitaph: Option<Status>,
 }
 
 impl MockPaverService {
@@ -339,6 +364,43 @@ impl MockPaverService {
         Ok(())
     }
 
+    async fn run_boot_manager_service(
+        self: Arc<Self>,
+        boot_manager: fidl::endpoints::ServerEnd<paver::BootManagerMarker>,
+    ) -> Result<(), Error> {
+        if let Some(status) = self.boot_manager_close_with_epitaph {
+            boot_manager.close_with_epitaph(status)?;
+            return Ok(());
+        };
+
+        let mut stream = boot_manager.into_stream()?;
+
+        while let Some(request) = stream.try_next().await? {
+            match request {
+                paver::BootManagerRequest::QueryActiveConfiguration { responder } => {
+                    let event = PaverEvent::QueryActiveConfiguration;
+                    let status = (*self.call_hook)(&event);
+                    self.events.lock().push(event);
+                    let mut result = if status == Status::OK {
+                        Ok(self.active_config)
+                    } else {
+                        Err(status.into_raw())
+                    };
+                    responder.send(&mut result).expect("paver response to send");
+                }
+                paver::BootManagerRequest::SetConfigurationActive { configuration, responder } => {
+                    let event = PaverEvent::SetConfigurationActive { configuration };
+                    let status = (*self.call_hook)(&event);
+                    self.events.lock().push(event);
+                    responder.send(status.into_raw()).expect("paver response to send");
+                }
+                request => panic!("Unhandled method Paver::{}", request.method_name()),
+            }
+        }
+
+        Ok(())
+    }
+
     async fn run_paver_service(
         self: Arc<Self>,
         mut stream: paver::PaverRequestStream,
@@ -351,6 +413,14 @@ impl MockPaverService {
                         paver_service_clone
                             .run_data_sink_service(data_sink.into_stream()?)
                             .unwrap_or_else(|e| panic!("error running data sink service: {:?}", e)),
+                    );
+                }
+                paver::PaverRequest::FindBootManager { boot_manager, .. } => {
+                    let paver_service_clone = self.clone();
+                    fasync::spawn(
+                        paver_service_clone.run_boot_manager_service(boot_manager).unwrap_or_else(
+                            |e| panic!("error running boot manager service: {:?}", e),
+                        ),
                     );
                 }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),
@@ -774,17 +844,14 @@ async fn test_writes_bootloader() {
     assert_eq!(
         env.paver_service.take_events(),
         vec![
+            PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteBootloader(b"new bootloader".to_vec(),),
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::Kernel,
-                payload: b"fake zbi".to_vec(),
-            },
             PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
             },
+            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
         ]
     );
 
@@ -815,11 +882,7 @@ async fn test_writes_recovery() {
     assert_eq!(
         env.paver_service.take_events(),
         vec![
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::Kernel,
-                payload: b"fake zbi".to_vec(),
-            },
+            PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
@@ -830,6 +893,7 @@ async fn test_writes_recovery() {
                 asset: paver::Asset::Kernel,
                 payload: b"new recovery".to_vec(),
             },
+            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
         ]
     );
 
@@ -861,11 +925,7 @@ async fn test_writes_recovery_vbmeta() {
     assert_eq!(
         env.paver_service.take_events(),
         vec![
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::Kernel,
-                payload: b"fake zbi".to_vec(),
-            },
+            PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
@@ -881,6 +941,7 @@ async fn test_writes_recovery_vbmeta() {
                 asset: paver::Asset::VerifiedBootMetadata,
                 payload: b"new recovery vbmeta".to_vec(),
             },
+            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
         ]
     );
 
@@ -911,35 +972,30 @@ async fn test_writes_fuchsia_vbmeta() {
     assert_eq!(
         env.paver_service.take_events(),
         vec![
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::Kernel,
-                payload: b"fake zbi".to_vec(),
-            },
+            PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
             },
             PaverEvent::WriteAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::VerifiedBootMetadata,
-                payload: b"fake zbi vbmeta".to_vec(),
-            },
-            PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::VerifiedBootMetadata,
                 payload: b"fake zbi vbmeta".to_vec(),
             },
+            PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B },
         ]
     );
 
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
-#[fasync::run_singlethreaded(test)]
-async fn test_working_image_write() {
-    let mut env = TestEnv::new();
+async fn do_test_working_image_write_with_abr(
+    active_config: paver::Configuration,
+    target_config: paver::Configuration,
+) {
+    let mut env =
+        TestEnv::builder().paver_service(|builder| builder.active_config(active_config)).build();
 
     env.register_package("update", "upd4t3")
         .add_file(
@@ -974,16 +1030,13 @@ async fn test_working_image_write() {
     assert_eq!(
         env.paver_service.take_events(),
         vec![
+            PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteAsset {
-                configuration: paver::Configuration::A,
+                configuration: target_config,
                 asset: paver::Asset::Kernel,
                 payload: b"fake_zbi".to_vec(),
             },
-            PaverEvent::WriteAsset {
-                configuration: paver::Configuration::B,
-                asset: paver::Asset::Kernel,
-                payload: b"fake_zbi".to_vec(),
-            }
+            PaverEvent::SetConfigurationActive { configuration: target_config },
         ]
     );
 
@@ -991,19 +1044,19 @@ async fn test_working_image_write() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_unsupported_b_image_write() {
+async fn test_working_image_write_with_abr_and_active_config_a() {
+    do_test_working_image_write_with_abr(paver::Configuration::A, paver::Configuration::B).await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_working_image_write_with_abr_and_active_config_b() {
+    do_test_working_image_write_with_abr(paver::Configuration::B, paver::Configuration::A).await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_working_image_with_unsupported_abr() {
     let mut env = TestEnv::builder()
-        .paver_service(|builder| {
-            builder.call_hook(|event| match event {
-                PaverEvent::WriteAsset { configuration, asset, .. }
-                    if *configuration == paver::Configuration::B
-                        && *asset == fidl_fuchsia_paver::Asset::Kernel =>
-                {
-                    Status::NOT_SUPPORTED
-                }
-                _ => Status::OK,
-            })
-        })
+        .paver_service(|builder| builder.boot_manager_close_with_epitaph(Status::NOT_SUPPORTED))
         .build();
 
     env.register_package("update", "upd4t3")

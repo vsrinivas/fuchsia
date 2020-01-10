@@ -45,29 +45,43 @@ func ConnectToPackageResolver() (*pkg.PackageResolverInterface, error) {
 	return pxy, nil
 }
 
-func ConnectToPaver() (*paver.DataSinkInterface, error) {
+func ConnectToPaver() (*paver.DataSinkInterface, *paver.BootManagerInterface, error) {
 	context := context.CreateFromStartupInfo()
 	req, pxy, err := paver.NewPaverInterfaceRequest()
 
 	if err != nil {
 		syslog.Errorf("control interface could not be acquired: %s", err)
-		return nil, err
+		return nil, nil, err
 	}
 	defer pxy.Close()
 
 	context.ConnectToEnvService(req)
 
-	req2, pxy2, err := paver.NewDataSinkInterfaceRequest()
+	dataSinkReq, dataSinkPxy, err := paver.NewDataSinkInterfaceRequest()
 	if err != nil {
-		syslog.Errorf("control interface could not be acquired: %s", err)
-		return nil, err
+		syslog.Errorf("data sink interface could not be acquired: %s", err)
+		return nil, nil, err
 	}
 
-	err = pxy.FindDataSink(req2)
+	err = pxy.FindDataSink(dataSinkReq)
 	if err != nil {
-		return nil, err
+		syslog.Errorf("could not find data sink: %s", err)
+		return nil, nil, err
 	}
-	return pxy2, nil
+
+	bootManagerReq, bootManagerPxy, err := paver.NewBootManagerInterfaceRequest()
+	if err != nil {
+		syslog.Errorf("boot manager interface could not be acquired: %s", err)
+		return nil, nil, err
+	}
+
+	err = pxy.FindBootManager(bootManagerReq, false)
+	if err != nil {
+		syslog.Errorf("could not find boot manager: %s", err)
+		return nil, nil, err
+	}
+
+	return dataSinkPxy, bootManagerPxy, nil
 }
 
 // CacheUpdatePackage caches the requested, possibly merkle-pinned, update
@@ -230,14 +244,111 @@ func ValidateImgs(imgs []string, imgsPath string) error {
 	return nil
 }
 
-func WriteImgs(svc *paver.DataSinkInterface, imgs []string, imgsPath string) error {
+func WriteImgs(dataSink *paver.DataSinkInterface, bootManager *paver.BootManagerInterface, imgs []string, imgsPath string) error {
 	syslog.Infof("Writing images %+v from %q", imgs, imgsPath)
 
-	for _, img := range imgs {
-		if err := writeImg(svc, img, imgsPath); err != nil {
+	activeConfig, err := queryActiveConfig(bootManager)
+	if err != nil {
+		return fmt.Errorf("querying target config: %v", err)
+	}
+
+	// If we have an active config (and thus support ABR), compute the
+	// target config. Otherwise set the target config to nil so we fall
+	// back to the legacy behavior where we write to the A partition, and
+	// attempt to write to the B partition.
+	var targetConfig *paver.Configuration
+	if activeConfig == nil {
+		targetConfig = nil
+	} else {
+		targetConfig, err = calculateTargetConfig(*activeConfig)
+		if err != nil {
 			return err
 		}
 	}
+
+	for _, img := range imgs {
+		if err := writeImg(dataSink, img, imgsPath, targetConfig); err != nil {
+			return err
+		}
+	}
+
+	if targetConfig != nil {
+		if err := setConfigurationActive(bootManager, *targetConfig); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// queryActiveConfig asks the boot manager what partition the device booted
+// from. If the device does not support ABR, it returns nil as the
+// configuration.
+func queryActiveConfig(bootManager *paver.BootManagerInterface) (*paver.Configuration, error) {
+	activeConfig, err := bootManager.QueryActiveConfiguration()
+	if err != nil {
+		// FIXME(fxb/43577): If the paver service runs into a problem
+		// creating a boot manager, it will close the channel with an
+		// epitaph. The error we are particularly interested in is
+		// whether or not the current device supports ABR.
+		// Unfortunately the go fidl bindings do not support epitaphs,
+		// so we can't actually check for this error condition. All we
+		// can observe is that the channel has been closed, so treat
+		// this condition as the device does not support ABR.
+		if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrPeerClosed {
+			syslog.Warnf("img_writer: boot manager channel closed, assuming device does not support ABR")
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("querying active config: %v", err)
+	}
+
+	if activeConfig.Which() == paver.BootManagerQueryActiveConfigurationResultResponse {
+		syslog.Infof("img_writer: device supports ABR")
+		return &activeConfig.Response.Configuration, nil
+	}
+
+	statusErr := zx.Status(activeConfig.Err)
+	if statusErr == zx.ErrNotSupported {
+		// this device doesn't support ABR, so fall back to the
+		// legacy workflow.
+		syslog.Infof("img_writer: device does not support ABR")
+		return nil, nil
+	}
+
+	return nil, &zx.Error{Status: statusErr}
+}
+
+func calculateTargetConfig(activeConfig paver.Configuration) (*paver.Configuration, error) {
+	var config paver.Configuration
+
+	switch activeConfig {
+	case paver.ConfigurationA:
+		config = paver.ConfigurationB
+	case paver.ConfigurationB:
+		config = paver.ConfigurationA
+	case paver.ConfigurationRecovery:
+		syslog.Warnf("img_writer: configured for recovery, using partition A instead")
+		config = paver.ConfigurationA
+	default:
+		return nil, fmt.Errorf("img_writer: unknown config: %s", activeConfig)
+	}
+
+	syslog.Infof("img_writer: writing to configuration %s", config)
+	return &config, nil
+}
+
+func setConfigurationActive(bootManager *paver.BootManagerInterface, targetConfig paver.Configuration) error {
+	syslog.Infof("img_writer: setting configuration %s active", targetConfig)
+	status, err := bootManager.SetConfigurationActive(targetConfig)
+	if err != nil {
+		return err
+	}
+	statusErr := zx.Status(status)
+	if statusErr != zx.ErrOk {
+		return &zx.Error{Status: statusErr}
+	}
+
 	return nil
 }
 
@@ -256,7 +367,7 @@ func writeAsset(svc *paver.DataSinkInterface, configuration paver.Configuration,
 	return nil
 }
 
-func writeImg(svc *paver.DataSinkInterface, img string, imgsPath string) error {
+func writeImg(svc *paver.DataSinkInterface, img string, imgsPath string, targetConfig *paver.Configuration) error {
 	imgPath := filepath.Join(imgsPath, img)
 
 	f, err := os.Open(imgPath)
@@ -288,19 +399,33 @@ func writeImg(svc *paver.DataSinkInterface, img string, imgsPath string) error {
 			Size: buffer.Size,
 		}
 		defer buffer2.Vmo.Close()
-		writeImg = func() error {
-			if err := writeAsset(svc, paver.ConfigurationA, paver.AssetKernel, buffer); err != nil {
-				return err
-			}
-			if err := writeAsset(svc, paver.ConfigurationB, paver.AssetKernel, buffer2); err != nil {
-				asZxErr, ok := err.(*zx.Error)
-				if ok && asZxErr.Status == zx.ErrNotSupported {
-					syslog.Warnf("img_writer: skipping writing %q to B: %v", img, err)
-				} else {
+
+		if targetConfig == nil {
+			// device does not support ABR, so write the ZBI to the
+			// A partition. We also try to write to the B partition
+			// in order to be forwards compatible with devices that
+			// will eventually support ABR, but we ignore errors
+			// because some devices won't have a B partition.
+			writeImg = func() error {
+				if err := writeAsset(svc, paver.ConfigurationA, paver.AssetKernel, buffer); err != nil {
 					return err
 				}
+				if err := writeAsset(svc, paver.ConfigurationB, paver.AssetKernel, buffer2); err != nil {
+					asZxErr, ok := err.(*zx.Error)
+					if ok && asZxErr.Status == zx.ErrNotSupported {
+						syslog.Warnf("img_writer: skipping writing %q to B: %v", img, err)
+					} else {
+						return err
+					}
+				}
+				return nil
 			}
-			return nil
+		} else {
+			// device supports ABR, so only write the ZB to the
+			// target partition.
+			writeImg = func() error {
+				return writeAsset(svc, *targetConfig, paver.AssetKernel, buffer)
+			}
 		}
 	case "fuchsia.vbmeta":
 		childVmo, err := buffer.Vmo.CreateChild(zx.VMOChildOptionCopyOnWrite|zx.VMOChildOptionResizable, 0, buffer.Size)
@@ -312,11 +437,22 @@ func writeImg(svc *paver.DataSinkInterface, img string, imgsPath string) error {
 			Size: buffer.Size,
 		}
 		defer buffer2.Vmo.Close()
-		writeImg = func() error {
-			if err := writeAsset(svc, paver.ConfigurationA, paver.AssetVerifiedBootMetadata, buffer); err != nil {
+
+		if targetConfig == nil {
+			// device does not support ABR, so write vbmeta to the
+			// A partition, and try to write to the B partiton. See
+			// the comment in the zbi case for more details.
+			if err := writeAsset(svc, paver.ConfigurationA,
+				paver.AssetVerifiedBootMetadata, buffer); err != nil {
 				return err
 			}
 			return writeAsset(svc, paver.ConfigurationB, paver.AssetVerifiedBootMetadata, buffer2)
+		} else {
+			// device supports ABR, so write the vbmeta to the
+			// target partition.
+			writeImg = func() error {
+				return writeAsset(svc, *targetConfig, paver.AssetVerifiedBootMetadata, buffer2)
+			}
 		}
 	case "zedboot", "zedboot.signed":
 		writeImg = func() error {
