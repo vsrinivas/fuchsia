@@ -219,6 +219,19 @@ func TestWithSize(t *testing.T) {
 		}
 		assertShardsContainTests(t, actual, expectedTests)
 	})
+
+	t.Run("sorts shards by basename of first test", func(t *testing.T) {
+		input := []*Shard{
+			namedShard(env1, "env1", 3, 2, 1, 4, 0),
+		}
+		actual := WithSize(input, 1, defaultDurations)
+		for i, shard := range actual {
+			expectedFirstTest := fmt.Sprintf("test%d", i)
+			if len(shard.Tests) != 1 || shard.Tests[0].Name != expectedFirstTest {
+				t.Fatalf("expected shard %s to contain test %s", shard.Name, expectedFirstTest)
+			}
+		}
+	})
 }
 
 func depsFile(t *testing.T, buildDir string, deps ...string) string {

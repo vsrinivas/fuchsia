@@ -342,7 +342,7 @@ build_api_module("tests") {
 #
 # It contains a list of JSON objects with the following fields:
 #
-#   test_name
+#   name
 #     Required: The name of the test. For Fuchsia tests, this will correspond to
 #     the test package URL; for host-side tests, the installation path.
 #     Type: string

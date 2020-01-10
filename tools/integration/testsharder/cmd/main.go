@@ -112,7 +112,7 @@ func execute() error {
 	encoder := json.NewEncoder(f)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(&shards); err != nil {
-		return fmt.Errorf("failed to encode shards: ", err)
+		return fmt.Errorf("failed to encode shards: %v", err)
 	}
 	return nil
 }

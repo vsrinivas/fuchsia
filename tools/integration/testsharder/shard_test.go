@@ -30,6 +30,7 @@ func assertEqual(t *testing.T, expected, actual []*Shard) {
 func spec(id int, envs ...build.Environment) build.TestSpec {
 	return build.TestSpec{
 		Test: build.Test{
+			Name:       fmt.Sprintf("test%d", id),
 			PackageURL: fmt.Sprintf("test%d", id),
 			Path:       fmt.Sprintf("/path/to/test/%d", id),
 			OS:         "fuchsia",

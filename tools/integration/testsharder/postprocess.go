@@ -167,15 +167,15 @@ func (h *subshardHeap) Pop() interface{} {
 // successively allocates each test to the subshard with the lowest total
 // expected duration so far.
 func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int) []*Shard {
-	// Use a stable sort so that tests with the same duration stay in the same
-	// order.
-	// TODO(olivernewman): a stable sort will no longer be necessary after we
-	// start using real durations since very few tests share the same expected
-	// duration anyway.
-	sort.SliceStable(shard.Tests, func(index1, index2 int) bool {
+	sort.Slice(shard.Tests, func(index1, index2 int) bool {
 		test1, test2 := shard.Tests[index1], shard.Tests[index2]
 		duration1 := testDurations.Get(test1).MedianDuration
 		duration2 := testDurations.Get(test2).MedianDuration
+		if duration1 == duration2 {
+			// Sort by name for tests of equal duration to ensure deterministic
+			// ordering.
+			return test1.Name < test2.Name
+		}
 		// "greater than" instead of "less than" to achieve descending ordering
 		return duration1 > duration2
 	})
@@ -190,6 +190,15 @@ func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int)
 		ss.tests = append(ss.tests, test)
 		heap.Push(&h, ss)
 	}
+
+	// Sort the resulting shards by the basename of the first test. Otherwise,
+	// changes to the input set of tests (adding, removing or renaming a test)
+	// result in confusing reordering of the shard names. This ensures that a
+	// given named shard (e.g. "QEMU-(1)") will generally contain the same set
+	// of tests across multiple builds, even if the input set of tests changes.
+	sort.Slice(h, func(i, j int) bool {
+		return h[i].tests[0].Name < h[j].tests[0].Name
+	})
 
 	newShards := make([]*Shard, 0, numNewShards)
 	for i, subshard := range h {
