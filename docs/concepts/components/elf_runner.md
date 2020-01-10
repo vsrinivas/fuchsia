@@ -41,6 +41,7 @@ component under the name `elf`:
 }
 ```
 
+[use]: /docs/glossary.md#use
 [capability-routing]: component_manifests.md#capability-routing
 [glossary-components]: /docs/glossary.md#component
 [program-loading]: /docs/concepts/booting/program_loading.md
