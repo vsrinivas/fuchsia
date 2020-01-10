@@ -9,7 +9,6 @@
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/runtime_flag.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/errors.h>
 #include <zircon/fidl.h>

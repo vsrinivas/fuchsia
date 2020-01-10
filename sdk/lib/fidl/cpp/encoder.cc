@@ -4,7 +4,6 @@
 
 #include "lib/fidl/cpp/encoder.h"
 
-#include <lib/fidl/runtime_flag.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>

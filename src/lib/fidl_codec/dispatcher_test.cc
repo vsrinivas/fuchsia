@@ -5,7 +5,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/runtime_flag.h>
 
 #include <iostream>
 #include <sstream>

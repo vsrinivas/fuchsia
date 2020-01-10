@@ -7,7 +7,6 @@ import("$zx/public/gn/fidl.gni")
 if (is_fuchsia) {
   zx_test("fidl-simple") {
     sources = [
-      "c_transformer_smoke_tests.c",
       "client_tests.c",
       "ldsvc_tests.c",
       "server_tests.c",
@@ -15,7 +14,6 @@ if (is_fuchsia) {
       "spaceship_tests.cc",
     ]
     deps = [
-      ":fidl.test.ctransformer.c",
       ":fidl.test.echo.c",
       ":fidl.test.spaceship.c",
       "$zx/system/fidl/fuchsia-ldsvc:c",

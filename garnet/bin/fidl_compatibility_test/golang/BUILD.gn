@@ -62,7 +62,3 @@ template("go_fidl_compatibility_test") {
 
 go_fidl_compatibility_test("go") {
 }
-
-go_fidl_compatibility_test("go_write_xunion") {
-  build_tag = "write_xunion_bytes_for_union"
-}

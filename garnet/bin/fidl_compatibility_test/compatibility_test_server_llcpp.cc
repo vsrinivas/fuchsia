@@ -10,7 +10,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fidl/runtime_flag.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
 
@@ -345,14 +344,6 @@ class EchoConnection final : public Echo::Interface {
 }  // namespace llcpp
 
 int main(int argc, const char** argv) {
-  if (argc == 2 && std::string(argv[1]) == "write_xunion") {
-    std::cout << "LLCPP compatibility test server is in xunion (v1 wire-format) mode" << std::endl;
-    fidl_global_set_should_write_union_as_xunion(true);
-  } else {
-    std::cout << "LLCPP compatibility test server is in union (old wire-format) mode" << std::endl;
-    fidl_global_set_should_write_union_as_xunion(false);
-  }
-
   // The FIDL support lib requires async_get_default_dispatcher() to return
   // non-null.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

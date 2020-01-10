@@ -59,7 +59,7 @@ Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, uint8_t
                                        uint8_t magic, const StructValue& object) {
   Encoder encoder(flags[0] & FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG);
 
-  size_t object_size = object.struct_definition().Size(encoder.unions_are_xunions_);
+  size_t object_size = object.struct_definition().size();
   encoder.AllocateObject(object_size);
   encoder.WriteValue(tx_id);
   encoder.WriteValue(flags[0]);
@@ -117,7 +117,7 @@ void Encoder::VisitStructValueBody(size_t offset, const StructValue* node) {
   for (const auto& member : node->struct_definition().members()) {
     auto it = node->fields().find(member.get());
     FXL_DCHECK(it != node->fields().end());
-    current_offset_ = offset + (unions_are_xunions_ ? member->v1_offset() : member->v0_offset());
+    current_offset_ = offset + member->offset();
     it->second->Visit(this, member->type());
   }
 }
@@ -193,7 +193,7 @@ void Encoder::VisitStructValue(const StructValue* node, const Type* for_type) {
   FXL_DCHECK(for_type != nullptr);
   if (for_type->Nullable()) {
     WriteValue<uint64_t>(UINTPTR_MAX);
-    size_t object_size = node->struct_definition().Size(unions_are_xunions_);
+    size_t object_size = node->struct_definition().size();
     VisitStructValueBody(AllocateObject(object_size), node);
   } else {
     VisitStructValueBody(current_offset_, node);

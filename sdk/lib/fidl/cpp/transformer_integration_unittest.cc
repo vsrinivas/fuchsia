@@ -8,7 +8,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/cpp/test/test_util.h>
-#include <lib/fidl/runtime_flag.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/errors.h>
 #include <zircon/fidl.h>
@@ -16,9 +15,9 @@
 #include <zircon/types.h>
 
 #include <atomic>
+#include <memory>
 #include <thread>
 #include <vector>
-#include <memory>
 
 #include <example/cpp/fidl.h>
 #include <transformerintegration/test/cpp/fidl.h>
@@ -62,9 +61,7 @@ class TransformerIntegrationTest : public ::testing::Test {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
   }
 
-  virtual void TearDown() override {
-    loop_->Shutdown();
-  }
+  virtual void TearDown() override { loop_->Shutdown(); }
 
   zx::channel& client_end() { return client_end_; }
   zx::channel& server_end() { return server_end_; }
@@ -129,11 +126,9 @@ TEST_F(TransformerIntegrationTest, ReadPathSendUnion) {
   };
   std::vector<uint8_t> request(sizeof(fidl_message_header_t) + sizeof(sandwich4_case1_v1));
   auto request_hdr = reinterpret_cast<fidl_message_header_t*>(&request[0]);
-  fidl_init_txn_header(request_hdr, 1,
-                       test::internal::kReceiveXunionsForUnions_SendUnion_Ordinal);
+  fidl_init_txn_header(request_hdr, 1, test::internal::kReceiveXunionsForUnions_SendUnion_Ordinal);
   request_hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-  memcpy(&request[sizeof(fidl_message_header_t)], sandwich4_case1_v1,
-         sizeof(sandwich4_case1_v1));
+  memcpy(&request[sizeof(fidl_message_header_t)], sandwich4_case1_v1, sizeof(sandwich4_case1_v1));
   ASSERT_EQ(ZX_OK, client_end().write(0, &request[0], request.size(), nullptr, 0));
 
   TestServer server_impl;
@@ -181,7 +176,7 @@ TEST_F(TransformerIntegrationTest, ReadPathReceiveUnion) {
   });
 
   std::atomic<bool> response_received = false;
-  client->ReceiveUnion([this, &response_received] (::example::Sandwich4 sandwich) {
+  client->ReceiveUnion([this, &response_received](::example::Sandwich4 sandwich) {
     EXPECT_EQ(example::UnionSize36Alignment4::Tag::kVariant, sandwich.the_union.Which());
     EXPECT_EQ(0x04030201u, sandwich.before);
     EXPECT_EQ(0x08070605u, sandwich.after);
@@ -193,24 +188,5 @@ TEST_F(TransformerIntegrationTest, ReadPathReceiveUnion) {
   server_thread.join();
   ASSERT_TRUE(response_received.load());
 }
-
-class ScopedToggleWriteXunion {
- public:
-  explicit ScopedToggleWriteXunion(bool enabled = true) {
-    original_flag_ = fidl_global_get_should_write_union_as_xunion();
-    fidl_global_set_should_write_union_as_xunion(enabled);
-  }
-  ~ScopedToggleWriteXunion() {
-    fidl_global_set_should_write_union_as_xunion(original_flag_);
-  }
-
- private:
-  ScopedToggleWriteXunion(const ScopedToggleWriteXunion&) = delete;
-  ScopedToggleWriteXunion& operator=(const ScopedToggleWriteXunion&) = delete;
-  ScopedToggleWriteXunion(ScopedToggleWriteXunion&&) = delete;
-  ScopedToggleWriteXunion& operator=(ScopedToggleWriteXunion&&) = delete;
-
-  bool original_flag_;
-};
 
 }  // namespace

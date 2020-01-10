@@ -362,12 +362,9 @@ void BitsType::Visit(TypeVisitor* visitor) const { visitor->VisitBitsType(this);
 std::string UnionType::Name() const { return union_definition_.name(); }
 
 size_t UnionType::InlineSize(bool unions_are_xunions) const {
-  if (unions_are_xunions) {
-    // In v1, unions are encoded as xunion. The inline size is the size of an envelope which
-    // is always 24 bytes.
-    return 24;
-  }
-  return nullable_ ? sizeof(uintptr_t) : union_definition_.size();
+  // In v1, unions are encoded as xunion. The inline size is the size of an envelope which
+  // is always 24 bytes.
+  return 24;
 }
 
 bool UnionType::Nullable() const { return nullable_; }
@@ -439,18 +436,17 @@ void XUnionType::Visit(TypeVisitor* visitor) const { visitor->VisitXUnionType(th
 std::string StructType::Name() const { return struct_definition_.name(); }
 
 size_t StructType::InlineSize(bool unions_are_xunions) const {
-  return nullable_ ? sizeof(uintptr_t) : struct_definition_.Size(unions_are_xunions);
+  return nullable_ ? sizeof(uintptr_t) : struct_definition_.size();
 }
 
 bool StructType::Nullable() const { return nullable_; }
 
 std::unique_ptr<Value> StructType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   if (nullable_) {
-    uint32_t size =
-        decoder->unions_are_xunions() ? struct_definition_.v1_size() : struct_definition_.v0_size();
     bool is_null;
     uint64_t nullable_offset;
-    if (!decoder->DecodeNullableHeader(offset, size, &is_null, &nullable_offset)) {
+    if (!decoder->DecodeNullableHeader(offset, struct_definition_.size(), &is_null,
+                                       &nullable_offset)) {
       return std::make_unique<InvalidValue>();
     }
     if (is_null) {

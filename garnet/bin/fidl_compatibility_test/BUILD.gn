@@ -77,10 +77,6 @@ hlcpp_compatibility_test_server("compatibility_test_server_cpp") {
   source_cmx = "meta/fidl_compatibility_test_server_cpp.cmx"
 }
 
-hlcpp_compatibility_test_server("compatibility_test_server_cpp_write_xunion") {
-  source_cmx = "meta/fidl_compatibility_test_server_cpp_write_xunion.cmx"
-}
-
 executable("compatibility_test_server_llcpp_bin") {
   output_name = "compatibility_test_server_llcpp"
 
@@ -136,21 +132,6 @@ package("fidl_compatibility_test_server_llcpp") {
   binary = "compatibility_test_server_llcpp"
 }
 
-package("fidl_compatibility_test_server_llcpp_write_xunion") {
-  deps = [ ":compatibility_test_server_llcpp_bin" ]
-
-  meta = [
-    {
-      path = "meta/fidl_compatibility_test_server_llcpp_write_xunion.cmx"
-      dest = "fidl_compatibility_test_server_llcpp_write_xunion.cmx"
-    },
-  ]
-
-  testonly = true
-
-  binary = "compatibility_test_server_llcpp"
-}
-
 package("fidl_compatibility_test_server_rust") {
   deps = [ ":compatibility_test_server_rust_bin" ]
 
@@ -158,21 +139,6 @@ package("fidl_compatibility_test_server_rust") {
     {
       path = "meta/fidl_compatibility_test_server_rust.cmx"
       dest = "fidl_compatibility_test_server_rust.cmx"
-    },
-  ]
-
-  testonly = true
-
-  binary = "compatibility_test_server_rust"
-}
-
-package("fidl_compatibility_test_server_rust_write_xunion") {
-  deps = [ ":compatibility_test_server_rust_bin" ]
-
-  meta = [
-    {
-      path = "meta/fidl_compatibility_test_server_rust_write_xunion.cmx"
-      dest = "fidl_compatibility_test_server_rust_write_xunion.cmx"
     },
   ]
 

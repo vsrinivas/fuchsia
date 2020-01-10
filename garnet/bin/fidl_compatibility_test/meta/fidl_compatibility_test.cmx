@@ -1,10 +1,10 @@
 {
     "program": {
         "args": [
-            "cpp_write_xunion",
-            "go_write_xunion",
-            "llcpp_write_xunion",
-            "rust_write_xunion"
+            "cpp",
+            "go",
+            "llcpp",
+            "rust"
         ],
         "binary": "test/fidl_compatibility_test"
     },

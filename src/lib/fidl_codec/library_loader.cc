@@ -174,25 +174,15 @@ StructMember::StructMember(Library* enclosing_library, const rapidjson::Value* j
       size_(enclosing_library->ExtractUint64(json_definition, "struct member", name_, "size")),
       type_(
           enclosing_library->ExtractType(json_definition, "struct member", name_, "type", size_)) {
-  if (!json_definition->HasMember("field_shape_old")) {
-    enclosing_library->FieldNotFound("struct member", name_, "field_shape_old");
-  } else {
-    const rapidjson::Value& v0 = (*json_definition)["field_shape_old"];
-    v0_offset_ = enclosing_library->ExtractUint64(&v0, "struct member", name_, "offset");
-  }
   if (!json_definition->HasMember("field_shape_v1")) {
     enclosing_library->FieldNotFound("struct member", name_, "field_shape_v1");
   } else {
     const rapidjson::Value& v1 = (*json_definition)["field_shape_v1"];
-    v1_offset_ = enclosing_library->ExtractUint64(&v1, "struct member", name_, "offset");
+    offset_ = enclosing_library->ExtractUint64(&v1, "struct member", name_, "offset");
   }
 }
 
 StructMember::~StructMember() = default;
-
-uint64_t StructMember::Offset(MessageDecoder* decoder) const {
-  return decoder->unions_are_xunions() ? v1_offset_ : v0_offset_;
-}
 
 Struct::Struct(Library* enclosing_library, const rapidjson::Value* json_definition)
     : enclosing_library_(enclosing_library), json_definition_(json_definition) {}
@@ -201,46 +191,33 @@ void Struct::DecodeStructTypes() {
   if (json_definition_ == nullptr) {
     return;
   }
-  DecodeTypes("struct", "size", "members", "type_shape_old", "type_shape_v1");
+  DecodeTypes("struct", "size", "members", "type_shape_v1");
 }
 
 void Struct::DecodeRequestTypes() {
   if (json_definition_ == nullptr) {
     return;
   }
-  DecodeTypes("request", "maybe_request_size", "maybe_request", "maybe_request_type_shape_old",
-              "maybe_request_type_shape_v1");
+  DecodeTypes("request", "maybe_request_size", "maybe_request", "maybe_request_type_shape_v1");
 }
 
 void Struct::DecodeResponseTypes() {
   if (json_definition_ == nullptr) {
     return;
   }
-  DecodeTypes("response", "maybe_response_size", "maybe_response", "maybe_response_type_shape_old",
-              "maybe_response_type_shape_v1");
-}
-
-uint32_t Struct::Size(bool unions_are_xunions) const {
-  return unions_are_xunions ? v1_size_ : v0_size_;
+  DecodeTypes("response", "maybe_response_size", "maybe_response", "maybe_response_type_shape_v1");
 }
 
 void Struct::DecodeTypes(std::string_view container_name, const char* size_name,
-                         const char* member_name, const char* v0_name, const char* v1_name) {
+                         const char* member_name, const char* v1_name) {
   FXL_DCHECK(json_definition_ != nullptr);
   name_ = enclosing_library_->ExtractString(json_definition_, container_name, "<unknown>", "name");
-
-  if (!json_definition_->HasMember(v0_name)) {
-    enclosing_library_->FieldNotFound(container_name, name_, v0_name);
-  } else {
-    const rapidjson::Value& v0 = (*json_definition_)[v0_name];
-    v0_size_ = enclosing_library_->ExtractUint64(&v0, container_name, name_, "inline_size");
-  }
 
   if (!json_definition_->HasMember(v1_name)) {
     enclosing_library_->FieldNotFound(container_name, name_, v1_name);
   } else {
     const rapidjson::Value& v1 = (*json_definition_)[v1_name];
-    v1_size_ = enclosing_library_->ExtractUint64(&v1, container_name, name_, "inline_size");
+    size_ = enclosing_library_->ExtractUint64(&v1, container_name, name_, "inline_size");
   }
 
   if (!json_definition_->HasMember(member_name)) {

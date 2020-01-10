@@ -8,7 +8,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fidl/runtime_flag.h>
 
 #include <memory>
 
@@ -129,10 +128,8 @@ TEST_F(SerializationSizeTest, GetInline) {
   inlined_value.response().value.value = std::move(value);
   snapshot_impl.get_inline_callback(std::move(inlined_value));
 
-  const size_t expected_bytes = Align(
-      kMessageHeaderSize +
-      (fidl_global_get_should_write_union_as_xunion() ? kFlexibleUnionHdrSize : kPointerSize) +
-      GetByteVectorSize(value_size));
+  const size_t expected_bytes =
+      Align(kMessageHeaderSize + kFlexibleUnionHdrSize + GetByteVectorSize(value_size));
   const size_t expected_handles = 0;
   EXPECT_TRUE(CheckMessageSize(std::move(reader), expected_bytes, expected_handles));
 }
@@ -169,13 +166,11 @@ TEST_F(SerializationSizeTest, Get) {
   result.response().buffer = std::move(value);
   snapshot_impl.get_callback(std::move(result));
 
-  const size_t expected_bytes =
-      Align(kMessageHeaderSize +  // Header.
-            (fidl_global_get_should_write_union_as_xunion() ? kFlexibleUnionHdrSize
-                                                            : kPointerSize) +  // Union tag.
-            Align(kHandleSize) +  // FIDL_HANDLE_PRESENT.
-            kPointerSize          // Size.
-      );
+  const size_t expected_bytes = Align(kMessageHeaderSize +     // Header.
+                                      kFlexibleUnionHdrSize +  // Union tag.
+                                      Align(kHandleSize) +     // FIDL_HANDLE_PRESENT.
+                                      kPointerSize             // Size.
+  );
   const size_t expected_handles = 1;
   EXPECT_TRUE(CheckMessageSize(std::move(reader), expected_bytes, expected_handles));
 }

@@ -258,7 +258,7 @@ MessageDecoder::MessageDecoder(MessageDecoder* container, uint64_t offset, uint6
 
 std::unique_ptr<StructValue> MessageDecoder::DecodeMessage(const Struct& message_format) {
   // Set the offset for the next object (just after this one).
-  SkipObject(message_format.Size(unions_are_xunions_));
+  SkipObject(message_format.size());
   // Decode the message.
   std::unique_ptr<StructValue> message = DecodeStruct(message_format, 0);
   // It's an error if we didn't use all the bytes in the buffer.
@@ -298,7 +298,7 @@ std::unique_ptr<StructValue> MessageDecoder::DecodeStruct(const Struct& struct_d
                                                           uint64_t offset) {
   std::unique_ptr<StructValue> result = std::make_unique<StructValue>(struct_definition);
   for (const auto& member : struct_definition.members()) {
-    std::unique_ptr<Value> value = member->type()->Decode(this, offset + member->Offset(this));
+    std::unique_ptr<Value> value = member->type()->Decode(this, offset + member->offset());
     result->AddField(member.get(), std::move(value));
   }
   return result;

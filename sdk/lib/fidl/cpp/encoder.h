@@ -6,7 +6,6 @@
 #define LIB_FIDL_CPP_ENCODER_H_
 
 #include <lib/fidl/cpp/message.h>
-#include <lib/fidl/runtime_flag.h>
 
 #ifdef __Fuchsia__
 #include <lib/zx/object.h>

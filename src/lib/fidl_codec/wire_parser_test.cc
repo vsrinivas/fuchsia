@@ -7,7 +7,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/runtime_flag.h>
 
 #include <iostream>
 #include <sstream>
@@ -237,23 +236,11 @@ TEST_F(WireParserTest, ParseSingleString) {
     delete[] handle_infos;                                                                         \
   } while (0)
 
-#define TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, ...)                           \
-  TEST_DECODE_WIRE_BODY_COMMON(_iface, -1, 0, _json_value, _pretty_print, -1, __VA_ARGS__);      \
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion()); \
-  TEST_DECODE_WIRE_BODY_COMMON(_iface, -1, 0, _json_value, _pretty_print, -1, __VA_ARGS__);      \
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion())
+#define TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, ...) \
+  TEST_DECODE_WIRE_BODY_COMMON(_iface, -1, 0, _json_value, _pretty_print, -1, __VA_ARGS__)
 
-#define TEST_DECODE_WIRE_BODY_ONE(_iface, _json_value, _pretty_print, ...) \
-  TEST_DECODE_WIRE_BODY_COMMON(_iface, -1, 0, _json_value, _pretty_print, -1, __VA_ARGS__);
-
-#define TEST_DECODE_WIRE_BODY_BAD(_iface, _json_value, _pretty_print, num_bytes_v0, num_bytes_v1, \
-                                  ...)                                                            \
-  TEST_DECODE_WIRE_BODY_COMMON(_iface, -1, 0, _json_value, _pretty_print, num_bytes_v0,           \
-                               __VA_ARGS__);                                                      \
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());  \
-  TEST_DECODE_WIRE_BODY_COMMON(_iface, -1, 0, _json_value, _pretty_print, num_bytes_v1,           \
-                               __VA_ARGS__);                                                      \
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion())
+#define TEST_DECODE_WIRE_BODY_BAD(_iface, _json_value, _pretty_print, num_bytes, ...) \
+  TEST_DECODE_WIRE_BODY_COMMON(_iface, -1, 0, _json_value, _pretty_print, num_bytes, __VA_ARGS__)
 
 // This is a convenience wrapper for calling TEST_DECODE_WIRE_BODY that simply
 // executes the code in a test.
@@ -269,15 +256,11 @@ TEST_F(WireParserTest, ParseSingleString) {
     TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, __VA_ARGS__);  \
   }
 
-#define TEST_DECODE_WIRE_PATCHED(_testname, _iface, patched_offset, patched_value, _json_value,    \
-                                 _pretty_print, ...)                                               \
-  TEST_F(WireParserTest, Parse##_testname) {                                                       \
-    TEST_DECODE_WIRE_BODY_COMMON(_iface, patched_offset, patched_value, _json_value,               \
-                                 _pretty_print, -1, __VA_ARGS__);                                  \
-    fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion()); \
-    TEST_DECODE_WIRE_BODY_COMMON(_iface, patched_offset, patched_value, _json_value,               \
-                                 _pretty_print, -1, __VA_ARGS__);                                  \
-    fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion()); \
+#define TEST_DECODE_WIRE_PATCHED(_testname, _iface, patched_offset, patched_value, _json_value, \
+                                 _pretty_print, ...)                                            \
+  TEST_F(WireParserTest, Parse##_testname) {                                                    \
+    TEST_DECODE_WIRE_BODY_COMMON(_iface, patched_offset, patched_value, _json_value,            \
+                                 _pretty_print, -1, __VA_ARGS__);                               \
   }
 
 // Scalar Tests
@@ -624,7 +607,7 @@ TEST_F(WireParserTest, BadBoolStruct) {
   TEST_DECODE_WIRE_BODY_BAD(BoolStruct, "{\"s\":{\"b\":\"(invalid)\"}}",
                             "{ s: #gre#test.fidlcodec.examples/BoolStructType#rst# = "
                             "{ b: #gre#bool#rst# = #red#invalid#rst# } }",
-                            16, 16, s);
+                            16, s);
 }
 
 TEST_DECODE_WIRE(NullableStruct, NullableStruct, R"({"p":null})",
@@ -1255,36 +1238,17 @@ class HandleSupport {
 }  // namespace
 
 TEST_F(WireParserTest, ParseHandle) {
-  HandleSupport support_v0;
-  TEST_DECODE_WIRE_BODY_ONE(Handle, support_v0.GetJSON(), support_v0.GetPretty(),
-                            support_v0.handle());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
-  HandleSupport support_v1;
-  TEST_DECODE_WIRE_BODY_ONE(Handle, support_v1.GetJSON(), support_v1.GetPretty(),
-                            support_v1.handle());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
+  HandleSupport support;
+  TEST_DECODE_WIRE_BODY(Handle, support.GetJSON(), support.GetPretty(), support.handle());
 }
-
 TEST_F(WireParserTest, ParseNullableHandle) {
-  HandleSupport support_v0;
-  TEST_DECODE_WIRE_BODY_ONE(NullableHandle, support_v0.GetJSON(), support_v0.GetPretty(),
-                            support_v0.handle());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
-  HandleSupport support_v1;
-  TEST_DECODE_WIRE_BODY_ONE(NullableHandle, support_v1.GetJSON(), support_v1.GetPretty(),
-                            support_v1.handle());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
+  HandleSupport support;
+  TEST_DECODE_WIRE_BODY(NullableHandle, support.GetJSON(), support.GetPretty(), support.handle());
 }
-
 TEST_F(WireParserTest, ParseProtocol) {
-  HandleSupport support_v0;
-  TEST_DECODE_WIRE_BODY_ONE(Protocol, support_v0.GetJSON(), support_v0.GetPretty(),
-                            support_v0.interface<test::fidlcodec::examples::ParamProtocol>());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
-  HandleSupport support_v1;
-  TEST_DECODE_WIRE_BODY_ONE(Protocol, support_v1.GetJSON(), support_v1.GetPretty(),
-                            support_v1.interface<test::fidlcodec::examples::ParamProtocol>());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
+  HandleSupport support;
+  TEST_DECODE_WIRE_BODY(Protocol, support.GetJSON(), support.GetPretty(),
+                        support.interface<test::fidlcodec::examples::ParamProtocol>());
 }
 
 namespace {
@@ -1323,14 +1287,9 @@ class HandleStructSupport {
 }  // namespace
 
 TEST_F(WireParserTest, ParseHandleStruct) {
-  HandleStructSupport support_v0;
-  TEST_DECODE_WIRE_BODY_ONE(HandleStructMessage, support_v0.GetJSON(), support_v0.GetPretty(),
-                            support_v0.handle_struct());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
-  HandleStructSupport support_v1;
-  TEST_DECODE_WIRE_BODY_ONE(HandleStructMessage, support_v1.GetJSON(), support_v1.GetPretty(),
-                            support_v1.handle_struct());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
+  HandleStructSupport support;
+  TEST_DECODE_WIRE_BODY(HandleStructMessage, support.GetJSON(), support.GetPretty(),
+                        support.handle_struct());
 }
 
 namespace {
@@ -1378,14 +1337,9 @@ class HandleTableSupport {
 }  // namespace
 
 TEST_F(WireParserTest, ParseHandleTable) {
-  HandleTableSupport support_v0;
-  TEST_DECODE_WIRE_BODY_ONE(HandleTableMessage, support_v0.GetJSON(), support_v0.GetPretty(),
-                            support_v0.handle_table());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
-  HandleTableSupport support_v1;
-  TEST_DECODE_WIRE_BODY_ONE(HandleTableMessage, support_v1.GetJSON(), support_v1.GetPretty(),
-                            support_v1.handle_table());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
+  HandleTableSupport support;
+  TEST_DECODE_WIRE_BODY(HandleTableMessage, support.GetJSON(), support.GetPretty(),
+                        support.handle_table());
 }
 
 namespace {
@@ -1431,14 +1385,9 @@ class TraversalOrderSupport {
 }  // namespace
 
 TEST_F(WireParserTest, ParseTraversalOrder) {
-  TraversalOrderSupport support_v0;
-  TEST_DECODE_WIRE_BODY_ONE(TraversalOrderMessage, support_v0.GetJSON(), support_v0.GetPretty(),
-                            support_v0.TraversalOrder());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
-  TraversalOrderSupport support_v1;
-  TEST_DECODE_WIRE_BODY_ONE(TraversalOrderMessage, support_v1.GetJSON(), support_v1.GetPretty(),
-                            support_v1.TraversalOrder());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
+  TraversalOrderSupport support;
+  TEST_DECODE_WIRE_BODY(TraversalOrderMessage, support.GetJSON(), support.GetPretty(),
+                        support.TraversalOrder());
 }
 
 namespace {
@@ -1516,14 +1465,9 @@ class TraversalMainSupport {
 }  // namespace
 
 TEST_F(WireParserTest, ParseTraversalMain) {
-  TraversalMainSupport support_v0;
-  TEST_DECODE_WIRE_BODY_ONE(TraversalMainMessage, support_v0.GetJSON(), support_v0.GetPretty(),
-                            support_v0.GetV(), support_v0.GetS());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
   TraversalMainSupport support_v1;
-  TEST_DECODE_WIRE_BODY_ONE(TraversalMainMessage, support_v1.GetJSON(), support_v1.GetPretty(),
-                            support_v1.GetV(), support_v1.GetS());
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
+  TEST_DECODE_WIRE_BODY(TraversalMainMessage, support_v1.GetJSON(), support_v1.GetPretty(),
+                        support_v1.GetV(), support_v1.GetS());
 }
 
 // Corrupt data tests
