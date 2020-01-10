@@ -44,12 +44,12 @@ class ScreenReader {
   // for the matched Action.
   // Functions returns false, if no action matches the provided "action_name",
   // returns true if Run() is called.
-  bool ExecuteAction(std::string action_name, ScreenReaderAction::ActionData action_data);
+  bool ExecuteAction(const std::string& action_name, ScreenReaderAction::ActionData action_data);
 
   // Maps action names to screen reader actions.
   std::unordered_map<std::string, std::unique_ptr<ScreenReaderAction>> actions_;
 
-  // Stores Action context which is reaquired to build an Action.
+  // Stores Action context which is required to build an Action.
   std::unique_ptr<ScreenReaderAction::ActionContext> action_context_;
 
   // Pointer to TTS Manager.

@@ -9,6 +9,7 @@
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
@@ -42,7 +43,7 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
     screen_reader_.BindGestures(gesture_manager_.gesture_handler());
   }
 
-  AccessibilityPointerEvent GetDefaultPointerEvent();
+  AccessibilityPointerEvent GetDefaultPointerEvent() const;
   void CreateOnOneFingerTapAction();
 
   sys::testing::ComponentContextProvider context_provider_;
@@ -54,7 +55,7 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
 };
 
 // Returns a default Accessibility Pointer Event.
-AccessibilityPointerEvent ScreenReaderTest::GetDefaultPointerEvent() {
+AccessibilityPointerEvent ScreenReaderTest::GetDefaultPointerEvent() const {
   AccessibilityPointerEvent event;
   event.set_event_time(10);
   event.set_device_id(1);
@@ -104,7 +105,7 @@ Node CreateTestNode(uint32_t node_id, std::string label) {
   return node;
 }
 
-TEST_F(ScreenReaderTest, OnOneFingerTapAction) {
+TEST_F(ScreenReaderTest, OnOneFingerSingleTapAction) {
   // Initialize Mock TTS Engine.
   accessibility_test::MockTtsEngine mock_tts_engine;
   fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle =
@@ -144,13 +145,42 @@ TEST_F(ScreenReaderTest, OnOneFingerTapAction) {
 
   // Create OnOneFingerTap Action.
   CreateOnOneFingerTapAction();
-  RunLoopUntilIdle();
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
 
   // Verify that TTS is called when OneFingerTapAction was performed.
   EXPECT_TRUE(mock_tts_engine.ReceivedSpeak());
   // Check if Utterance and Speak functions are called in Tts.
   ASSERT_EQ(mock_tts_engine.ExamineUtterances().size(), 1u);
   EXPECT_EQ(mock_tts_engine.ExamineUtterances()[0].message(), "Label A");
+}
+
+TEST_F(ScreenReaderTest, OnOneFingerDoubleTapAction) {
+  // Creating test node to update.
+  std::vector<Node> update_nodes;
+  Node node = CreateTestNode(0, "Label A");
+  Node clone_node;
+  node.Clone(&clone_node);
+  update_nodes.push_back(std::move(clone_node));
+
+  // Update the node created above.
+  semantic_provider_.UpdateSemanticNodes(std::move(update_nodes));
+  RunLoopUntilIdle();
+
+  // Commit nodes.
+  semantic_provider_.CommitUpdates();
+  RunLoopUntilIdle();
+
+  semantic_provider_.SetHitTestResult(0);
+
+  semantic_provider_.SetRequestedAction(fuchsia::accessibility::semantics::Action::SET_FOCUS);
+
+  // Create OnOneFingerDoubleTap Action.
+  CreateOnOneFingerTapAction();
+  CreateOnOneFingerTapAction();
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
+
+  EXPECT_EQ(fuchsia::accessibility::semantics::Action::DEFAULT,
+            semantic_provider_.GetRequestedAction());
 }
 
 }  // namespace

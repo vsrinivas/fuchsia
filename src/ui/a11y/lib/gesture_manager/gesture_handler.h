@@ -26,10 +26,9 @@ class GestureHandler {
   using AddRecognizerToArenaCallback = fit::function<void(GestureRecognizer*)>;
 
   // The high-level gestures identified by this class.
-  // TODO(lucasradaelli): Implement time-based gestures (such as double taps).
   // TODO(lucasradaelli): Implement swipe-like gestures.
   // TODO(lucasradaelli): Implement multiple finger taps.
-  enum GestureType { kUnknown, kOneFingerTap };
+  enum GestureType { kUnknown, kOneFingerSingleTap, kOneFingerDoubleTap };
 
   // Some gestures need additional information about what was touched and where it was touched on
   // the screen. Callers of OnGesture() may provide this information.
@@ -48,21 +47,33 @@ class GestureHandler {
   explicit GestureHandler(AddRecognizerToArenaCallback add_recognizer_callback);
   ~GestureHandler() = default;
 
-  // Binds the action defined in |callback| with the gesture |kOneFingerTap|.
-  void BindOneFingerTapAction(OnGestureCallback callback);
+  // Binds the action defined in |callback| with the gesture |kOneFingerSingleTap|.
+  bool BindOneFingerSingleTapAction(OnGestureCallback callback);
+
+  // Binds the action defined in |callback| with the gesture |kOneFingerDoubleTap|.
+  bool BindOneFingerDoubleTapAction(OnGestureCallback callback);
 
   // Binds a recognizer that consumes everything.
   void ConsumeAll();
 
  private:
-  // Calls an action bound to |gesture_type| if it exists and returns true, false otherwise.
-  bool OnGesture(GestureType gesture_type, GestureArguments args);
+  // Calls an action bound to |gesture_type| if it exists.
+  void OnGesture(GestureType gesture_type, GestureArguments args);
+
+  // Helper function to bind the action defined in |callback| with the |gesture_type|, if no action
+  // is currently binded for the given |gesture_type|.
+  // Returns true if the |callback| is binded to the |gesture_type|, else returns false.
+  bool BindOneFingerTapAction(OnGestureCallback callback, GestureType gesture_type,
+                              int number_of_taps);
 
   // Action of kOneFingerTap.
   OnGestureCallback one_finger_tap_callback_;
 
   // Callback to add recognizer to gesture arena.
   AddRecognizerToArenaCallback add_recognizer_callback_;
+
+  // Map to store callback associated with the gesture.
+  std::unordered_map<GestureType, OnGestureCallback> gesture_callback_map_;
 
   // As callbacks are added to the handler to be invoked when a gesture is
   // performed, the recognizers capable of identifying them are instantiated and
