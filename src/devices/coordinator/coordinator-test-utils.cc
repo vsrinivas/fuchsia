@@ -19,6 +19,7 @@ devmgr::CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
   config.boot_args = boot_args;
   config.fs_provider = new DummyFsProvider();
   config.suspend_fallback = true;
+  config.suspend_timeout = zx::sec(2);
   config.resume_timeout = zx::sec(2);
   return config;
 }

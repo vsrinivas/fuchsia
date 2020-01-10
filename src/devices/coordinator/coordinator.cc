@@ -1336,26 +1336,25 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
   auto task = SuspendTask::Create(sys_device(), ctx.sflags(), std::move(completion));
   suspend_context().set_task(std::move(task));
 
-  auto status = async::PostDelayedTask(
-      dispatcher(),
-      [this, callback_info = std::move(callback_info)] {
-        if (!InSuspend()) {
-          return;  // Suspend failed to complete.
-        }
-        auto& ctx = suspend_context();
-        log(ERROR, "devcoordinator: DEVICE SUSPEND TIMED OUT\n");
-        log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
-        dump_suspend_task_dependencies(ctx.task());
-        if (suspend_fallback()) {
-          ::suspend_fallback(root_resource(), ctx.sflags());
-          // Unless in test env, we should not reach here.
-          if (callback_info->callback) {
-            callback_info->callback(ZX_ERR_TIMED_OUT);
-            callback_info->callback = nullptr;
-          }
-        }
-      },
-      zx::sec(30));
+  auto status = async::PostDelayedTask(dispatcher(),
+                                       [this, callback_info = std::move(callback_info)] {
+                                         if (!InSuspend()) {
+                                           return;  // Suspend failed to complete.
+                                         }
+                                         auto& ctx = suspend_context();
+                                         log(ERROR, "devcoordinator: DEVICE SUSPEND TIMED OUT\n");
+                                         log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
+                                         dump_suspend_task_dependencies(ctx.task());
+                                         if (suspend_fallback()) {
+                                           ::suspend_fallback(root_resource(), ctx.sflags());
+                                           // Unless in test env, we should not reach here.
+                                           if (callback_info->callback) {
+                                             callback_info->callback(ZX_ERR_TIMED_OUT);
+                                             callback_info->callback = nullptr;
+                                           }
+                                         }
+                                       },
+                                       config_.suspend_timeout);
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: Failed to create suspend timeout watchdog\n");
   }
@@ -1405,20 +1404,19 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
   }
 
   // Post a delayed task in case drivers do not complete the resume.
-  auto status = async::PostDelayedTask(
-      dispatcher(),
-      [this, callback] {
-        if (!InResume()) {
-          return;
-        }
-        log(ERROR, "devcoordinator: SYSTEM RESUME TIMED OUT\n");
-        callback(ZX_ERR_TIMED_OUT);
-        // TODO(ravoorir): Figure out what is the best strategy
-        // of for recovery here. Should we put back all devices
-        // in suspend? In future, this could be more interactive
-        // with the UI.
-      },
-      config_.resume_timeout);
+  auto status = async::PostDelayedTask(dispatcher(),
+                                       [this, callback] {
+                                         if (!InResume()) {
+                                           return;
+                                         }
+                                         log(ERROR, "devcoordinator: SYSTEM RESUME TIMED OUT\n");
+                                         callback(ZX_ERR_TIMED_OUT);
+                                         // TODO(ravoorir): Figure out what is the best strategy
+                                         // of for recovery here. Should we put back all devices
+                                         // in suspend? In future, this could be more interactive
+                                         // with the UI.
+                                       },
+                                       config_.resume_timeout);
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: Failure to create resume timeout watchdog\n");
   }

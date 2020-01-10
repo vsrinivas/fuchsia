@@ -47,6 +47,7 @@ class DevhostLoaderService;
 class FsProvider;
 
 constexpr zx::duration kDefaultResumeTimeout = zx::sec(30);
+constexpr zx::duration kDefaultSuspendTimeout = zx::sec(30);
 
 class SuspendContext {
  public:
@@ -172,7 +173,9 @@ struct CoordinatorConfig {
   bool asan_drivers;
   // Whether to reboot the device when suspend does not finish on time.
   bool suspend_fallback;
-  // Timeout for resume
+  // Timeout for system wide suspend
+  zx::duration suspend_timeout = kDefaultSuspendTimeout;
+  // Timeout for system wide resume
   zx::duration resume_timeout = kDefaultResumeTimeout;
   // Something to clone a handle from the environment to pass to a Devhost.
   FsProvider* fs_provider;
@@ -305,8 +308,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   const fbl::RefPtr<Device>& test_device() { return test_device_; }
 
   void Suspend(uint32_t flags);
-  void Resume(
-      SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
+  void Resume(SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
 
   SuspendContext& suspend_context() { return suspend_context_; }
   const SuspendContext& suspend_context() const { return suspend_context_; }
