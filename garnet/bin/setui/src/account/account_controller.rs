@@ -4,22 +4,21 @@
 
 use {
     crate::registry::base::Command,
-    crate::service_context::ServiceContext,
+    crate::service_context::ServiceContextHandle,
     crate::switchboard::base::*,
     anyhow::{format_err, Error},
     fuchsia_async as fasync,
     futures::StreamExt,
-    parking_lot::RwLock,
-    std::sync::Arc,
 };
 
 const FACTORY_RESET_FLAG: &str = "FactoryReset";
 
 async fn schedule_clear_accounts(
-    service_context_handle: Arc<RwLock<ServiceContext>>,
+    service_context_handle: ServiceContextHandle,
 ) -> Result<(), Error> {
     let device_settings_manager = service_context_handle
-        .read()
+        .lock()
+        .await
         .connect::<fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker>(
     )?;
 
@@ -31,7 +30,7 @@ async fn schedule_clear_accounts(
 }
 
 pub fn spawn_account_controller(
-    service_context_handle: Arc<RwLock<ServiceContext>>,
+    service_context_handle: ServiceContextHandle,
 ) -> futures::channel::mpsc::UnboundedSender<Command> {
     let (account_handler_tx, mut account_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();

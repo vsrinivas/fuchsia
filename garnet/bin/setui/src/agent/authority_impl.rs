@@ -6,10 +6,9 @@ use crate::agent::base::*;
 
 use anyhow::Error;
 
-use crate::service_context::ServiceContext;
+use crate::service_context::ServiceContextHandle;
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
-use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -50,7 +49,7 @@ impl AuthorityImpl {
     pub fn execute_lifespan(
         &self,
         lifespan: Lifespan,
-        service_context: Arc<RwLock<ServiceContext>>,
+        service_context: ServiceContextHandle,
         sequential: bool,
     ) -> futures::channel::oneshot::Receiver<Result<(), Error>> {
         let (completion_tx, completion_rx) =

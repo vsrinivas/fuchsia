@@ -24,7 +24,7 @@ use {
     crate::registry::base::Registry,
     crate::registry::device_storage::DeviceStorageFactory,
     crate::registry::registry_impl::RegistryImpl,
-    crate::service_context::ServiceContext,
+    crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
     crate::setup::spawn_setup_fidl_handler,
     crate::switchboard::base::{SettingAction, SettingType},
@@ -36,9 +36,7 @@ use {
     fidl_fuchsia_setui::SetUiServiceRequestStream,
     fuchsia_component::server::{ServiceFsDir, ServiceObj},
     fuchsia_syslog::fx_log_err,
-    parking_lot::RwLock,
     std::collections::HashSet,
-    std::sync::Arc,
 };
 
 mod accessibility;
@@ -70,7 +68,7 @@ pub mod switchboard;
 pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     components: HashSet<switchboard::base::SettingType>,
-    service_context_handle: Arc<RwLock<ServiceContext>>,
+    service_context_handle: ServiceContextHandle,
     storage_factory: Box<T>,
 ) {
     let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();

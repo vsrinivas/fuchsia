@@ -9,8 +9,11 @@ use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 
 use fuchsia_zircon as zx;
+use futures::lock::Mutex;
+use std::sync::Arc;
 
 pub type GenerateService = Box<dyn Fn(&str, zx::Channel) -> Result<(), Error> + Send + Sync>;
+pub type ServiceContextHandle = Arc<Mutex<ServiceContext>>;
 
 /// A wrapper around service operations, allowing redirection to a nested
 /// environment.
@@ -19,6 +22,10 @@ pub struct ServiceContext {
 }
 
 impl ServiceContext {
+    pub fn create(generate_service: Option<GenerateService>) -> ServiceContextHandle {
+        return Arc::new(Mutex::new(ServiceContext::new(generate_service)));
+    }
+
     pub fn new(generate_service: Option<GenerateService>) -> Self {
         Self { generate_service: generate_service }
     }

@@ -8,7 +8,7 @@ use {
     crate::registry::device_storage::DeviceStorageFactory, crate::service_context::ServiceContext,
     crate::switchboard::base::PrivacyInfo, crate::switchboard::base::SettingType,
     fidl_fuchsia_settings::*, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
-    futures::prelude::*, parking_lot::RwLock, std::sync::Arc,
+    futures::prelude::*,
 };
 
 const ENV_NAME: &str = "settings_service_privacy_test_environment";
@@ -28,7 +28,7 @@ async fn test_privacy() {
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Privacy].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(None))),
+        ServiceContext::create(None),
         factory,
     );
 

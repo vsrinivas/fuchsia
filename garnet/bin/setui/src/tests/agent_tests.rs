@@ -10,7 +10,6 @@ use fuchsia_async as fasync;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::StreamExt;
-use parking_lot::RwLock;
 use rand::Rng;
 use std::sync::Arc;
 
@@ -95,7 +94,7 @@ impl Agent {
 async fn test_sequential() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<Arc<Mutex<Agent>>>();
     let mut authority = AuthorityImpl::new();
-    let service_context = Arc::new(RwLock::new(ServiceContext::new(None)));
+    let service_context = ServiceContext::create(None);
 
     // Create a number of agents.
     let agent_ids = create_agents(12, Lifespan::Initialization, &mut authority, tx.clone());
@@ -128,7 +127,7 @@ async fn test_sequential() {
 async fn test_simultaneous() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<Arc<Mutex<Agent>>>();
     let mut authority = AuthorityImpl::new();
-    let service_context = Arc::new(RwLock::new(ServiceContext::new(None)));
+    let service_context = ServiceContext::create(None);
     let agent_ids = create_agents(12, Lifespan::Initialization, &mut authority, tx.clone());
 
     // Execute lifespan non-sequentially.
@@ -168,7 +167,7 @@ async fn test_simultaneous() {
 async fn test_err_handling() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<Arc<Mutex<Agent>>>();
     let mut authority = AuthorityImpl::new();
-    let service_context = Arc::new(RwLock::new(ServiceContext::new(None)));
+    let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
 
     let agent_1_id = Agent::create(rng.gen(), Lifespan::Initialization, &mut authority, tx.clone())

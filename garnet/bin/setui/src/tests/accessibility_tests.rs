@@ -16,8 +16,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
-    parking_lot::RwLock,
-    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_accessibility_test_environment";
@@ -30,7 +28,7 @@ async fn create_test_accessibility_env(
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Accessibility].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(None))),
+        ServiceContext::create(None),
         storage_factory,
     );
 

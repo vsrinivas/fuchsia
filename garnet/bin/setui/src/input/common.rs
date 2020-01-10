@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::service_context::ServiceContext,
+    crate::service_context::ServiceContextHandle,
     anyhow::Error,
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
@@ -11,17 +11,16 @@ use {
     },
     fuchsia_async as fasync,
     futures::StreamExt,
-    parking_lot::RwLock,
-    std::sync::Arc,
 };
 
 /// Method for listening to media button changes. Changes will be reported back
 /// on the supplied sender.
-pub fn monitor_mic_mute(
-    service_context_handle: Arc<RwLock<ServiceContext>>,
+pub async fn monitor_mic_mute(
+    service_context_handle: ServiceContextHandle,
     sender: futures::channel::mpsc::UnboundedSender<MediaButtonsEvent>,
 ) -> Result<(), Error> {
-    let service_result = service_context_handle.read().connect::<DeviceListenerRegistryMarker>();
+    let service_result =
+        service_context_handle.lock().await.connect::<DeviceListenerRegistryMarker>();
 
     let presenter_service = match service_result {
         Ok(service) => service,

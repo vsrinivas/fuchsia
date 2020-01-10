@@ -1,12 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::service_context::ServiceContext;
+use crate::service_context::ServiceContextHandle;
 use anyhow::{format_err, Error};
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
 use futures::lock::Mutex;
-use parking_lot::RwLock;
 use std::sync::Arc;
 
 /// An InvocationTuple is sent to an agent for a given lifespan event. The first
@@ -30,7 +29,7 @@ pub enum Lifespan {
 #[derive(Clone)]
 pub struct Invocation {
     pub lifespan: Lifespan,
-    pub service_context: Arc<RwLock<ServiceContext>>,
+    pub service_context: ServiceContextHandle,
     pub ack_sender: Arc<Mutex<Option<Sender<InvocationAck>>>>,
 }
 

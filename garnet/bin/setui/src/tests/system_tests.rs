@@ -51,7 +51,7 @@ async fn test_system() {
     create_fidl_service(
         fs.root_dir(),
         [SettingType::System].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(service_registry)))),
+        ServiceContext::create(ServiceRegistry::serve(service_registry)),
         storage_factory,
     );
 

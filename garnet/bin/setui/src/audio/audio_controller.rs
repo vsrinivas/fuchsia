@@ -6,7 +6,7 @@ use {
     crate::input::monitor_mic_mute,
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::DeviceStorage,
-    crate::service_context::ServiceContext,
+    crate::service_context::ServiceContextHandle,
     crate::switchboard::base::*,
     anyhow::{Context as _, Error},
     fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy},
@@ -38,7 +38,7 @@ const VOLUME_CHANGED_FILE_PATH: &str = "volume-changed.wav";
 /// Controller that handles commands for SettingType::Audio.
 /// TODO(go/fxb/35988): Hook up the presentation service to listen for the mic mute state.
 pub fn spawn_audio_controller(
-    service_context_handle: Arc<RwLock<ServiceContext>>,
+    service_context_handle: ServiceContextHandle,
     storage: Arc<Mutex<DeviceStorage<AudioInfo>>>,
 ) -> futures::channel::mpsc::UnboundedSender<Command> {
     let (audio_handler_tx, mut audio_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
@@ -57,11 +57,14 @@ pub fn spawn_audio_controller(
 
     let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
 
-    {
-        let mut input_service_connected_lock = input_service_connected.write();
-        *input_service_connected_lock =
-            monitor_mic_mute(service_context_handle.clone(), input_tx.clone()).is_ok();
-    }
+    let input_service_connected_clone = input_service_connected.clone();
+    let service_context_handle_clone = service_context_handle.clone();
+    let input_tx_clone = input_tx.clone();
+
+    fasync::spawn(async move {
+        *input_service_connected_clone.write() =
+            monitor_mic_mute(service_context_handle_clone, input_tx_clone).await.is_ok();
+    });
 
     let mic_mute_state_clone = mic_mute_state.clone();
     let notifier_lock_clone = notifier_lock.clone();
@@ -79,12 +82,14 @@ pub fn spawn_audio_controller(
     });
 
     let input_service_connected_clone = input_service_connected.clone();
+    let service_context_handle_clone = service_context_handle.clone();
     fasync::spawn(async move {
         check_and_bind_volume_controls(
             audio_service_connected.clone(),
-            service_context_handle.clone(),
+            service_context_handle_clone,
             &mut stream_volume_controls,
         )
+        .await
         .ok();
 
         // Load data from persistent storage.
@@ -122,6 +127,7 @@ pub fn spawn_audio_controller(
                                 service_context_handle.clone(),
                                 &mut stream_volume_controls,
                             )
+                            .await
                             .is_err()
                             {
                                 continue;
@@ -150,15 +156,15 @@ pub fn spawn_audio_controller(
                         }
                         SettingRequest::Get => {
                             {
-                                let mut input_service_connected_lock =
-                                    input_service_connected_clone.write();
-
-                                if !*input_service_connected_lock {
-                                    *input_service_connected_lock = monitor_mic_mute(
+                                if !*input_service_connected_clone.read() {
+                                    let connected = monitor_mic_mute(
                                         service_context_handle.clone(),
                                         input_tx.clone(),
                                     )
+                                    .await
                                     .is_ok();
+
+                                    *input_service_connected_clone.write() = connected;
                                 }
                             }
 
@@ -167,6 +173,7 @@ pub fn spawn_audio_controller(
                                 service_context_handle.clone(),
                                 &mut stream_volume_controls,
                             )
+                            .await
                             .ok();
 
                             let _ = responder
@@ -271,22 +278,21 @@ async fn persist_audio_info(info: AudioInfo, storage: Arc<Mutex<DeviceStorage<Au
 // connect to the audio core service. If the service connects successfully,
 // set |service_connected| to true and create a StreamVolumeControl for each
 // stream type.
-fn check_and_bind_volume_controls(
+async fn check_and_bind_volume_controls(
     service_connected: Arc<RwLock<bool>>,
-    service_context_handle: Arc<RwLock<ServiceContext>>,
+    service_context_handle: ServiceContextHandle,
     stream_volume_controls: &mut HashMap<AudioStreamType, StreamVolumeControl>,
 ) -> Result<(), Error> {
-    let mut service_connected_lock = service_connected.write();
-    if *service_connected_lock {
+    if *service_connected.read() {
         return Ok(());
     }
 
     let service_result =
-        service_context_handle.read().connect::<fidl_fuchsia_media::AudioCoreMarker>();
+        service_context_handle.lock().await.connect::<fidl_fuchsia_media::AudioCoreMarker>();
 
     let audio_service = match service_result {
         Ok(service) => {
-            *service_connected_lock = true;
+            *service_connected.write() = true;
             service
         }
         Err(err) => {

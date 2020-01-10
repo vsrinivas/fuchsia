@@ -16,8 +16,6 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::prelude::*,
-    parking_lot::RwLock,
-    std::sync::Arc,
 };
 
 use crate::fidl_clone::FIDLClone;
@@ -62,7 +60,7 @@ async fn create_test_intl_env(storage_factory: Box<InMemoryStorageFactory>) -> I
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Intl].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+        ServiceContext::create(Some(Box::new(service_gen))),
         storage_factory,
     );
 

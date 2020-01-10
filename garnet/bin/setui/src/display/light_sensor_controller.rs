@@ -4,7 +4,7 @@
 use {
     crate::display::light_sensor::{open_sensor, read_sensor},
     crate::registry::base::{Command, Notifier, State},
-    crate::service_context::ServiceContext,
+    crate::service_context::ServiceContextHandle,
     crate::switchboard::base::{LightData, SettingRequest, SettingResponse, SettingType},
     fidl_fuchsia_hardware_input::{DeviceMarker as SensorMarker, DeviceProxy as SensorProxy},
     fuchsia_async::{self as fasync, DurationExt},
@@ -23,7 +23,7 @@ const SCAN_DURATION_MS: i64 = 1000;
 /// Launches a new controller for the light sensor which periodically scans the light sensor
 /// for values, and sends out values on change.
 pub fn spawn_light_sensor_controller(
-    service_context_handle: Arc<RwLock<ServiceContext>>,
+    service_context_handle: ServiceContextHandle,
 ) -> UnboundedSender<Command> {
     let (light_sensor_handler_tx, light_sensor_handler_rx) = unbounded::<Command>();
 
@@ -31,8 +31,10 @@ pub fn spawn_light_sensor_controller(
 
     fasync::spawn(async move {
         // First connect to service if it is provided by service context
-        let mut sensor_proxy_result =
-            service_context_handle.read().connect_named::<SensorMarker>(LIGHT_SENSOR_SERVICE_NAME);
+        let mut sensor_proxy_result = service_context_handle
+            .lock()
+            .await
+            .connect_named::<SensorMarker>(LIGHT_SENSOR_SERVICE_NAME);
 
         // If not, enumuerate through HIDs to try to find it
         if let Err(_) = sensor_proxy_result {

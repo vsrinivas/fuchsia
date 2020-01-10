@@ -15,8 +15,6 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::prelude::*,
-    parking_lot::RwLock,
-    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_display_test_environment";
@@ -78,7 +76,7 @@ async fn test_display() {
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Display].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+        ServiceContext::create(Some(Box::new(service_gen))),
         Box::new(InMemoryStorageFactory::create()),
     );
 
@@ -146,7 +144,7 @@ async fn test_display_failure() {
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Display, SettingType::Intl].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+        ServiceContext::create(Some(Box::new(service_gen))),
         Box::new(InMemoryStorageFactory::create()),
     );
 

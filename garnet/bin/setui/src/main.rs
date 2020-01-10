@@ -9,12 +9,10 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, fx_log_info},
     futures::StreamExt,
-    parking_lot::RwLock,
     settings::create_fidl_service,
     settings::registry::device_storage::StashDeviceStorageFactory,
     settings::service_context::ServiceContext,
     settings::switchboard::base::get_all_setting_types,
-    std::sync::Arc,
 };
 
 const STASH_IDENTITY: &str = "settings_service";
@@ -25,7 +23,7 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new()?;
 
-    let service_context = Arc::new(RwLock::new(ServiceContext::new(None)));
+    let service_context = ServiceContext::create(None);
 
     let mut fs = ServiceFs::new();
 

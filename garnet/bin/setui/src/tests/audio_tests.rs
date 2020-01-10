@@ -118,9 +118,7 @@ async fn test_audio() {
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Audio].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
-            service_registry.clone(),
-        )))),
+        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
         storage_factory,
     );
 
@@ -163,9 +161,7 @@ async fn test_audio_input() {
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Audio].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
-            service_registry.clone(),
-        )))),
+        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
         Box::new(InMemoryStorageFactory::create()),
     );
 
@@ -198,9 +194,7 @@ async fn test_bringup_without_input_registry() {
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Audio].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
-            service_registry.clone(),
-        )))),
+        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
         Box::new(InMemoryStorageFactory::create()),
     );
 
@@ -223,9 +217,7 @@ async fn test_bringup_without_audio_core() {
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Audio].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
-            service_registry.clone(),
-        )))),
+        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
         Box::new(InMemoryStorageFactory::create()),
     );
 
@@ -303,9 +295,7 @@ async fn test_persisted_values_applied_at_start() {
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Audio].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
-            service_registry.clone(),
-        )))),
+        ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
         storage_factory,
     );
 

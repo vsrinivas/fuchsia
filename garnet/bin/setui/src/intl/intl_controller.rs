@@ -16,7 +16,7 @@ use rust_icu_uenum as uenum;
 
 use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::service_context::ServiceContext;
+use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{
     Merge, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
 };
@@ -37,7 +37,7 @@ impl DeviceStorageCompatible for IntlInfo {
 }
 
 pub struct IntlController {
-    service_context_handle: Arc<RwLock<ServiceContext>>,
+    service_context_handle: ServiceContextHandle,
     stored_value: IntlInfo,
     listen_notifier: Arc<RwLock<Option<Notifier>>>,
     storage: IntlStorage,
@@ -48,7 +48,7 @@ pub struct IntlController {
 /// protocol, backed by a number of services, including TimeZone.
 impl IntlController {
     pub fn spawn(
-        service_context_handle: Arc<RwLock<ServiceContext>>,
+        service_context_handle: ServiceContextHandle,
         storage: Arc<Mutex<DeviceStorage<IntlInfo>>>,
     ) -> Result<futures::channel::mpsc::UnboundedSender<Command>, Error> {
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
@@ -157,23 +157,25 @@ impl IntlController {
     /// Errors are only logged as this is an intermediate step in a migration.
     /// TODO(fxb/41639): remove this
     fn write_intl_info_to_service(&self, info: IntlInfo) {
-        let service_result = self
-            .service_context_handle
-            .write()
-            .connect::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>();
-
-        if service_result.is_err() {
-            fx_log_err!("Failed to connect to fuchsia.timezone");
-            return;
-        }
-
-        let time_zone_id = match info.time_zone_id {
-            Some(id) => id,
-            None => return,
-        };
-
-        let proxy = service_result.unwrap();
+        let service_context = self.service_context_handle.clone();
         fasync::spawn(async move {
+            let service_result = service_context
+                .lock()
+                .await
+                .connect::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>();
+
+            if service_result.is_err() {
+                fx_log_err!("Failed to connect to fuchsia.timezone");
+                return;
+            }
+
+            let time_zone_id = match info.time_zone_id {
+                Some(id) => id,
+                None => return,
+            };
+
+            let proxy = service_result.unwrap();
+
             if let Err(e) = proxy.set_timezone(time_zone_id.as_str()).await {
                 fx_log_err!("Failed to write timezone to fuchsia.timezone: {:?}", e);
             }

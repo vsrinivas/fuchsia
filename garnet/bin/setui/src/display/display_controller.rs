@@ -4,7 +4,7 @@
 use {
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
-    crate::service_context::ServiceContext,
+    crate::service_context::ServiceContextHandle,
     crate::switchboard::base::{DisplayInfo, SettingRequest, SettingResponse, SettingType},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
@@ -25,7 +25,7 @@ impl DeviceStorageCompatible for DisplayInfo {
 /// Controller that handles commands for SettingType::Display.
 /// TODO(ejia): refactor out common code
 pub fn spawn_display_controller(
-    service_context_handle: Arc<RwLock<ServiceContext>>,
+    service_context_handle: ServiceContextHandle,
     storage: Arc<Mutex<DeviceStorage<DisplayInfo>>>,
 ) -> futures::channel::mpsc::UnboundedSender<Command> {
     let (display_handler_tx, mut display_handler_rx) =
@@ -35,7 +35,8 @@ pub fn spawn_display_controller(
 
     fasync::spawn(async move {
         let brightness_service = service_context_handle
-            .read()
+            .lock()
+            .await
             .connect::<fidl_fuchsia_ui_brightness::ControlMarker>()
             .expect("connected to brightness");
 

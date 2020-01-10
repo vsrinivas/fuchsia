@@ -22,12 +22,10 @@ async fn test_input() {
 
     service_registry.write().register_service(input_device_registry_service.clone());
 
-    let service_context = Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
-        service_registry.clone(),
-    ))));
+    let service_context = ServiceContext::create(ServiceRegistry::serve(service_registry.clone()));
 
     let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
-    assert!(monitor_mic_mute(service_context.clone(), input_tx).is_ok());
+    assert!(monitor_mic_mute(service_context.clone(), input_tx).await.is_ok());
 
     if let Some(event) = input_rx.next().await {
         assert_eq!(initial_event, event);

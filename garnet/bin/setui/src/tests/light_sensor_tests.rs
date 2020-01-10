@@ -8,7 +8,7 @@ use {
     crate::registry::device_storage::testing::*, crate::service_context::ServiceContext,
     crate::switchboard::base::SettingType, anyhow::format_err, fidl::endpoints::ServerEnd,
     fidl_fuchsia_settings::*, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
-    fuchsia_zircon as zx, futures::prelude::*, parking_lot::RwLock, std::sync::Arc,
+    fuchsia_zircon as zx, futures::prelude::*,
 };
 
 const ENV_NAME: &str = "settings_service_light_sensor_test_environment";
@@ -62,7 +62,7 @@ async fn test_light_sensor() {
     create_fidl_service(
         fs.root_dir(),
         [SettingType::LightSensor].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+        ServiceContext::create(Some(Box::new(service_gen))),
         Box::new(InMemoryStorageFactory::create()),
     );
 

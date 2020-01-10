@@ -12,8 +12,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
-    parking_lot::RwLock,
-    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_do_not_disturb_test_environment";
@@ -34,7 +32,7 @@ async fn test_do_not_disturb() {
     create_fidl_service(
         fs.root_dir(),
         [SettingType::DoNotDisturb].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(None))),
+        ServiceContext::create(None),
         storage_factory,
     );
 

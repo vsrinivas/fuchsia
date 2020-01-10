@@ -7,7 +7,7 @@ use {
     crate::create_fidl_service, crate::registry::device_storage::testing::*,
     crate::service_context::ServiceContext, crate::switchboard::base::SettingType,
     fidl_fuchsia_settings::DeviceMarker, fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs, futures::prelude::*, parking_lot::RwLock, std::sync::Arc,
+    fuchsia_component::server::ServiceFs, futures::prelude::*,
 };
 
 const ENV_NAME: &str = "settings_service_device_test_environment";
@@ -21,7 +21,7 @@ async fn test_device() {
     create_fidl_service(
         fs.root_dir(),
         [SettingType::Device].iter().cloned().collect(),
-        Arc::new(RwLock::new(ServiceContext::new(None))),
+        ServiceContext::create(None),
         Box::new(InMemoryStorageFactory::create()),
     );
 
