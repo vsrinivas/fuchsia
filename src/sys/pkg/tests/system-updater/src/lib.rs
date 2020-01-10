@@ -187,6 +187,14 @@ impl TestEnv {
             .await
             .expect("no errors while waiting for exit");
 
+        if !output.stdout.is_empty() {
+            eprintln!("TEST: system updater stdout:\n{}", String::from_utf8_lossy(&output.stdout));
+        }
+
+        if !output.stderr.is_empty() {
+            eprintln!("TEST: system updater stderr:\n{}", String::from_utf8_lossy(&output.stderr));
+        }
+
         assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
         output.ok()
     }
