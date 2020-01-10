@@ -60,6 +60,14 @@ prebuilt_package("web_runner_pkg") {
 # Prebuilt FAR tests
 test_env = [ nuc_env ]
 
+group("chromium_tests_group") {
+  testonly = true
+  deps = [
+    ":chromium_tests",
+    ":tzdata_for_chromium_tests_base_unittests",
+  ]
+}
+
 prebuilt_test_manifest("chromium_tests") {
   archive_dir = "//prebuilt/third_party/chromium_tests/arch/x64"
   package_name_prefix = "chromium_tests"
@@ -76,8 +84,7 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":chromium_tests",
-    ":tzdata_for_chromium_tests_base_unittests",
+    ":chromium_tests_group",
     ":web_engine",
     ":web_runner",
     "web_runner_tests:tests",
