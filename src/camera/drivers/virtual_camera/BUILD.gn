@@ -45,6 +45,7 @@ source_set("virtual_camera_source") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.test",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
   ]
