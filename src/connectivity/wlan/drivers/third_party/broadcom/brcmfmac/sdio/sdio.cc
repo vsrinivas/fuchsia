@@ -2021,6 +2021,10 @@ done:
   return ret;
 }
 
+// TODO(42151): Remove once bug resolved
+static uint32_t brcmf_sdio_txq_full_errors = 0;
+static bool brcmf_sdio_txq_full_debug_log = false;
+
 static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
   struct brcmf_netbuf* pkt;
   struct brcmf_netbuf_list pktq;
@@ -2034,6 +2038,13 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
   TRACE_DURATION("brcmfmac:isr", "sendfromq");
 
   tx_prec_map = ~bus->flowcontrol;
+
+  // TODO(42151): Remove once bug resolved
+  if (unlikely(brcmf_sdio_txq_full_debug_log)) {
+    int available = brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol);
+    BRCMF_INFO("%s called, maxframes = %u, available in queue = %d\n",
+               __func__, maxframes, available);
+  }
 
   /* Send frames until the limit or some other event */
   for (cnt = 0; (cnt < maxframes) && data_ok(bus);) {
@@ -2081,6 +2092,14 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
     bus->txoff = false;
     brcmf_proto_bcdc_txflowblock(bus->sdiodev->drvr, false);
   }
+
+  // TODO(42151): Remove once bug resolved
+  if (unlikely(brcmf_sdio_txq_full_debug_log)) {
+    int available = brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol);
+    BRCMF_INFO("%s finished, maxframes = %u, transmitted = %u, available in queue = %d\n",
+               __func__, maxframes, cnt, available);
+  }
+
 
   return cnt;
 }
@@ -2373,6 +2392,15 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
       brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol) && txlimit && data_ok(bus)) {
     framecnt = bus->rxpending ? std::min(txlimit, bus->txminmax) : txlimit;
     brcmf_sdio_sendfromq(bus, framecnt);
+  } else if (unlikely(brcmf_sdio_txq_full_debug_log)) {
+    // TODO(42151): Remove once bug resolved
+    int len = brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol);
+    if (len > 0) {
+      BRCMF_INFO("Not able to transmit queued frames right now, clkstate = %u, "
+                 "fcstate = %d, queue len = %d, txlimit = %u, data_ok = %s\n",
+                 bus->clkstate, bus->fcstate.load(), len, txlimit,
+                 data_ok(bus) ? "true" : "false");
+    }
   }
 
   if ((bus->sdiodev->state != BRCMF_SDIOD_DATA) || (err != ZX_OK)) {
@@ -2427,6 +2455,9 @@ static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int pr
   } else if (pktq_full(q)) {
     p = brcmu_pktq_peek_tail(q, &eprec);
     if (eprec > prec) {
+      // TODO(42151): Remove once bug resolved
+      BRCMF_ERR("Eviction precedence (%d) greater than enqueue precedence (%d)",
+                eprec, prec);
       return false;
     }
   }
@@ -2435,6 +2466,8 @@ static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int pr
   if (eprec >= 0) {
     /* Detect queueing to unconfigured precedence */
     if (eprec == prec) {
+      // TODO(42151): Remove once bug resolved
+      BRCMF_ERR("Expected to evict from and queue to same queue %d", prec);
       return false; /* refuse newer (incoming) packet */
     }
     /* Evict packet according to discard policy */
@@ -2485,8 +2518,23 @@ static zx_status_t brcmf_sdio_bus_txdata(brcmf_bus* bus_if, brcmf_netbuf* pkt) {
     brcmf_netbuf_shrink_head(pkt, bus->tx_hdrlen);
     BRCMF_ERR("out of bus->txq !!!\n");
     ret = ZX_ERR_NO_RESOURCES;
+
+    // TODO(42151): Remove once bug resolved
+    ++brcmf_sdio_txq_full_errors;
+    if (brcmf_sdio_txq_full_errors >= 30 && !brcmf_sdio_txq_full_debug_log) {
+      // We've seen a large number of these errors in a row, start providing
+      // more debug information.
+      BRCMF_INFO("Excessive out of bus->txq errors, enabling debug logging\n");
+      brcmf_sdio_txq_full_debug_log = true;
+    }
   } else {
     ret = ZX_OK;
+
+    // TODO(42151): Remove once bug resolved
+    // Reset the counter here in case there was just a spurious queue issue.
+    // Also stop the debug logging so we don't spam the logs unnecessarily.
+    brcmf_sdio_txq_full_errors = 0;
+    brcmf_sdio_txq_full_debug_log = false;
   }
 
   if (pktq_len(&bus->txq) >= TXHI) {
