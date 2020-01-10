@@ -25,6 +25,8 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
 }  // namespace
 
+const char Filter::kAllProcessesPattern[] = "*";
+
 Filter::Settings::Settings(Filter* filter) : SettingStore(Filter::GetSchema()), filter_(filter) {}
 
 SettingValue Filter::Settings::GetStorageValue(const std::string& key) const {
@@ -55,9 +57,9 @@ Filter::~Filter() {
 void Filter::SetPattern(const std::string& pattern) {
   pattern_ = pattern;
 
-  if (valid()) {
+  if (is_valid()) {
     for (auto& observer : session()->filter_observers()) {
-      observer.OnChangedFilter(this, job());
+      observer.DidChangeFilter(this, job());
     }
   }
 }
@@ -65,13 +67,13 @@ void Filter::SetPattern(const std::string& pattern) {
 void Filter::SetJob(JobContext* job) {
   std::optional<JobContext*> previous(this->job());
 
-  if (!valid()) {
+  if (!is_valid()) {
     previous = std::nullopt;
   }
 
   job_ = job ? std::optional(job->GetWeakPtr()) : std::nullopt;
   for (auto& observer : session()->filter_observers()) {
-    observer.OnChangedFilter(this, previous);
+    observer.DidChangeFilter(this, previous);
   }
 }
 

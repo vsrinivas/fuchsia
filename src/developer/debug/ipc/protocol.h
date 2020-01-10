@@ -316,6 +316,8 @@ struct ModulesReply {
 // Request to set filter.
 struct JobFilterRequest {
   uint64_t job_koid = 0;
+
+  // Empty strings will match all processes.
   std::vector<std::string> filters;
 };
 

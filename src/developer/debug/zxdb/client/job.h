@@ -20,6 +20,8 @@ class JobContext;
 // Represents a running job the debugger is attached to.
 //
 // This is owned by the JobContext when it is attached.
+//
+// TODO(bug 43794) combine JobContext[Impl] and Job[Impl] objects.
 class Job : public ClientObject {
  public:
   explicit Job(Session* session);

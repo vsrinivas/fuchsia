@@ -18,15 +18,28 @@ class SettingSchema;
 
 class Filter : public ClientObject {
  public:
+  // This string "*" is used to indicate attaching to all processes.
+  static const char kAllProcessesPattern[];
+
   explicit Filter(Session* session);
   virtual ~Filter();
 
-  void SetPattern(const std::string& pattern);
-  void SetJob(JobContext* job);
+  bool is_valid() const { return !pattern_.empty(); }
 
-  const std::string& pattern() { return pattern_; }
-  JobContext* job() { return job_ ? job_->get() : nullptr; }
-  bool valid() { return !pattern_.empty() && (!job_ || job_->get()); }
+  // The pattern is a substring to match against launched processes in attached jobs. It is not a
+  // glob or regular expression.
+  //
+  // When the pattern is empty, this filter is invalid. When it's |kAllProcessesPattern|, the
+  // filter will match all processes.
+  //
+  // Note that the empty string behavior is different than the filter messages sent to the backend.
+  void SetPattern(const std::string& pattern);
+  const std::string& pattern() const { return pattern_; }
+
+  // A null job matches all attached jobs. The System should automatically delete filters explicitly
+  // associated with a job when the job is deleted which should prevent this pointer from dangling.
+  void SetJob(JobContext* job);
+  JobContext* job() const { return job_ ? job_->get() : nullptr; }
 
   SettingStore& settings() { return settings_; }
 

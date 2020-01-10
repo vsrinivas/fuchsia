@@ -53,6 +53,8 @@ Watching processes in a job
     • See the currently filters with the "filter" command.
     • Create a new filter either by adding it as a 2nd argument to "attach-job"
       or later using "attach".
+    • Attach to all processes in a job with "attach-job <koid> *". Note that *
+      is a special string for filters, regular expressions are not supported.
     • See "help attach" for more on creating filters.
 
 Arguments
@@ -196,11 +198,8 @@ Err RunVerbAttachJob(ConsoleContext* context, const Command& cmd, CommandCallbac
     context->SetActiveFilter(filter);
 
     // Output a record of the created filter.
-    OutputBuffer out("Created filter ");
-    out.Append(Syntax::kSpecial, fxl::StringPrintf("%d", context->IdForFilter(filter)));
-    out.Append(" on job ");
-    out.Append(Syntax::kSpecial, fxl::StringPrintf("%d", context->IdForJobContext(job_context)));
-    out.Append(" for processes containing \"" + filter->pattern() + "\".\n");
+    OutputBuffer out("Created ");
+    out.Append(FormatFilter(context, filter));
     Console::get()->Output(out);
   }
 

@@ -417,6 +417,31 @@ JobContext* SystemImpl::CreateNewJobContext() {
   return to_return;
 }
 
+void SystemImpl::DeleteJobContext(JobContext* job_context) {
+  JobContextImpl* impl = static_cast<JobContextImpl*>(job_context);
+  auto found = std::find_if(job_contexts_.begin(), job_contexts_.end(),
+                            [impl](auto& cur) { return impl == cur.get(); });
+  if (found == job_contexts_.end()) {
+    FXL_NOTREACHED();  // Should always be found.
+    return;
+  }
+
+  // Delete all filters that reference this job context. While it might be nice if the filter
+  // registered for a notification or used a weak pointer for the job, this would imply having a
+  // filter enabled/disabled state independent of the other settings which we don't have and don't
+  // currently need. Without a disabled state, clearing the job on the filter will make it apply to
+  // all jobs which the user does not want.
+  std::vector<Filter*> filters_to_remove;
+  for (auto& f : filters_) {
+    if (f->job() == job_context)
+      filters_to_remove.push_back(f.get());
+  }
+  for (auto& f : filters_to_remove)
+    DeleteFilter(f);
+
+  job_contexts_.erase(found);
+}
+
 Breakpoint* SystemImpl::CreateNewBreakpoint() {
   auto owning = std::make_unique<BreakpointImpl>(session(), false);
   uint32_t id = owning->backend_id();

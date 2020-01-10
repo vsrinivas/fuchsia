@@ -16,6 +16,7 @@ namespace zxdb {
 class JobImpl;
 class SystemImpl;
 
+// TODO(bug 43794) combine JobContext[Impl] and Job[Impl] objects.
 class JobContextImpl : public JobContext, public FilterObserver {
  public:
   // The system owns this object and will outlive it.
@@ -56,7 +57,7 @@ class JobContextImpl : public JobContext, public FilterObserver {
 
   // FilterObserver implementation
   void DidCreateFilter(Filter* filter) override;
-  void OnChangedFilter(Filter* filter, std::optional<JobContext*> previous_job) override;
+  void DidChangeFilter(Filter* filter, std::optional<JobContext*> previous_job) override;
   void WillDestroyFilter(Filter* filter) override;
 
  private:

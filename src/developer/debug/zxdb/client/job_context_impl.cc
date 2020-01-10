@@ -223,7 +223,7 @@ void JobContextImpl::OnDetachReply(const Err& err, uint32_t status, Callback cal
 }
 
 void JobContextImpl::DidCreateFilter(Filter* filter) {
-  if (!filter->valid()) {
+  if (!filter->is_valid()) {
     return;
   }
 
@@ -234,8 +234,8 @@ void JobContextImpl::DidCreateFilter(Filter* filter) {
   RefreshFilters();
 }
 
-void JobContextImpl::OnChangedFilter(Filter* filter, std::optional<JobContext*> previous_job) {
-  if (!filter->valid()) {
+void JobContextImpl::DidChangeFilter(Filter* filter, std::optional<JobContext*> previous_job) {
+  if (!filter->is_valid()) {
     // The filter only becomes invalid if the job it applies to dies. We're not dead, so this filter
     // never applied to us.
     return;
@@ -256,12 +256,16 @@ void JobContextImpl::RefreshFilters() {
   std::vector<std::string> items;
 
   for (const auto& filter : session()->system().GetFilters()) {
-    if (!filter->valid()) {
+    if (!filter->is_valid()) {
       continue;
     }
 
     if (filter->job() == this || !filter->job()) {
-      items.push_back(filter->pattern());
+      // The IPC protocol uses the empty string to mean "all processes".
+      if (filter->pattern() == Filter::kAllProcessesPattern)
+        items.emplace_back();
+      else
+        items.push_back(filter->pattern());
     }
   }
 

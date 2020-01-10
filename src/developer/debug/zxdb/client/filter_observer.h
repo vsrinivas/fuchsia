@@ -21,7 +21,7 @@ class FilterObserver {
   // unless it was invalid. It is an optional containing null if the filter used to match all jobs
   // and equal to the current job if the job hasn't changed. It is a std::nullopt if the filter used
   // to be invalid.
-  virtual void OnChangedFilter(Filter* filter, std::optional<JobContext*> previous_job) {}
+  virtual void DidChangeFilter(Filter* filter, std::optional<JobContext*> previous_job) {}
 
   // Called when a filter has been deactivated and is about to be destroyed.
   virtual void WillDestroyFilter(Filter* filter) {}

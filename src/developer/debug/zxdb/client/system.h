@@ -78,8 +78,9 @@ class System : public ClientObject {
   // target will be cloned into the new one. If clone is null, an empty Target will be allocated.
   virtual Target* CreateNewTarget(Target* clone) = 0;
 
-  // Creates a new job context
+  // New job contexts will have no attached job.
   virtual JobContext* CreateNewJobContext() = 0;
+  virtual void DeleteJobContext(JobContext* job_context) = 0;
 
   // Creates a new breakpoint. It will have no associated process or location and will be disabled.
   virtual Breakpoint* CreateNewBreakpoint() = 0;

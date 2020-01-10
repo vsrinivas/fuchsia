@@ -81,18 +81,24 @@ TEST_F(NounsTest, FilterTest) {
   console.ProcessInputLine("filter attach foo");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("No active filter. Use \"filter\" to see the list and then \"filter X ...\".",
+  ASSERT_EQ("\"filter\" may not be specified for this command.",
             event.output.AsString());
 
   console.ProcessInputLine("attach foobar");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Waiting for process matching \"foobar\"", event.output.AsString());
+  ASSERT_EQ(
+      "Waiting for process matching \"foobar\".\n"
+      "Type \"filter\" to see the current filters.",
+      event.output.AsString());
 
   console.ProcessInputLine("job 1 attach boofar");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Waiting for process matching \"boofar\"", event.output.AsString());
+  ASSERT_EQ(
+      "Waiting for process matching \"boofar\".\n"
+      "Type \"filter\" to see the current filters.",
+      event.output.AsString());
 
   console.ProcessInputLine("filter");
   event = console.GetOutputEvent();

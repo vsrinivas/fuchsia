@@ -50,6 +50,7 @@ class SystemImpl final : public System,
   void GetProcessTree(ProcessTreeCallback callback) override;
   Target* CreateNewTarget(Target* clone) override;
   JobContext* CreateNewJobContext() override;
+  void DeleteJobContext(JobContext* job_context) override;
   Breakpoint* CreateNewBreakpoint() override;
   Breakpoint* CreateNewInternalBreakpoint() override;
   void DeleteBreakpoint(Breakpoint* breakpoint) override;

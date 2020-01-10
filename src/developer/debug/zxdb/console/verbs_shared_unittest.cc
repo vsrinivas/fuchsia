@@ -31,17 +31,19 @@ class VerbsSharedTest : public RemoteAPITest {
 
 }  // namespace
 
-TEST_F(VerbsSharedTest, Rm) {
+TEST_F(VerbsSharedTest, NewRm) {
   MockConsole console(&session());
 
   console.ProcessInputLine("attach foobar");
 
   auto event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Waiting for process matching \"foobar\"", event.output.AsString());
+  ASSERT_EQ(
+      "Waiting for process matching \"foobar\".\n"
+      "Type \"filter\" to see the current filters.",
+      event.output.AsString());
 
   console.ProcessInputLine("filter");
-
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
@@ -49,12 +51,57 @@ TEST_F(VerbsSharedTest, Rm) {
       "▶ 1 foobar    *\n",
       event.output.AsString());
 
-  console.ProcessInputLine("filter 1 rm");
-  console.ProcessInputLine("filter");
-
+  // Create a new filter, it should be cloned from the original.
+  console.ProcessInputLine("filter new");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("No filters.\n", event.output.AsString());
+  EXPECT_EQ("Filter 2 \"foobar\" for all jobs.", event.output.AsString());
+
+  // Delete the original filter.
+  console.ProcessInputLine("filter 1 rm");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ("Removed Filter 1 \"foobar\" for all jobs.", event.output.AsString());
+
+  // Create a new job.
+  console.ProcessInputLine("job new");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ("Job 2 [Not attached] ", event.output.AsString());
+
+  // Create a new filter specifically for the new job.
+  console.ProcessInputLine("job 2 attach ninjas");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ(
+      "Waiting for process matching \"ninjas\".\n"
+      "Type \"filter\" to see the current filters.",
+      event.output.AsString());
+
+  // The filter list should be the 2nd filter with the 1st one's settings and the job-specific one.
+  console.ProcessInputLine("filter");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ(
+      "  # Pattern Job\n"
+      "  2 foobar    *\n"
+      "▶ 3 ninjas    2\n",
+      event.output.AsString());
+
+  // Delete the job.
+  console.ProcessInputLine("job rm");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ("Removed Job 2 [Not attached] ", event.output.AsString());
+
+  // The associated filter should have been automatically deleted.
+  console.ProcessInputLine("filter");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ(
+      " # Pattern Job\n"
+      " 2 foobar    *\n",
+      event.output.AsString());
 }
 
 }  // namespace zxdb

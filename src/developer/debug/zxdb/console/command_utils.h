@@ -92,6 +92,8 @@ std::string DescribeThread(const ConsoleContext* context, const Thread* thread);
 OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* breakpoint,
                               bool show_context);
 
+OutputBuffer FormatFilter(const ConsoleContext* context, const Filter* filter);
+
 OutputBuffer FormatInputLocation(const InputLocation& location);
 OutputBuffer FormatInputLocations(const std::vector<InputLocation>& location);
 

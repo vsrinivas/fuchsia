@@ -9,6 +9,7 @@
 #include <limits>
 
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/mock_breakpoint.h"
 #include "src/developer/debug/zxdb/client/mock_breakpoint_location.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -207,6 +208,23 @@ TEST(CommandUtils, FormatBreakpoint) {
             FormatBreakpoint(&context, &breakpoint, false).AsString());
 
   system_observer->WillDestroyBreakpoint(&breakpoint);
+}
+
+TEST(CommandUtils, FormatFilter) {
+  Session session;
+  ConsoleContext context(&session);
+
+  Filter* f = session.system().CreateNewFilter();
+  EXPECT_EQ("Filter 1 \"\" (disabled) for all jobs.", FormatFilter(&context, f).AsString());
+
+  f->SetPattern(Filter::kAllProcessesPattern);
+  EXPECT_EQ("Filter 1 \"*\" (all processes) for all jobs.", FormatFilter(&context, f).AsString());
+
+  // This will be job 2 since the system should have a default job.
+  JobContext* job = session.system().CreateNewJobContext();
+  f->SetJob(job);
+  f->SetPattern("foo");
+  EXPECT_EQ("Filter 1 \"foo\" for job 2.", FormatFilter(&context, f).AsString());
 }
 
 TEST(CommandUtils, FormatConsoleString) {

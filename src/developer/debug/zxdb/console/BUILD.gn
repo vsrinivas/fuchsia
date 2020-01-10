@@ -151,6 +151,7 @@ source_set("tests") {
     "command_parser_unittest.cc",
     "command_utils_unittest.cc",
     "commands/verb_attach_job_unittest.cc",
+    "commands/verb_attach_unittest.cc",
     "commands/verb_detach_unittest.cc",
     "commands/verb_quit_unittest.cc",
     "commands/verb_status_unittest.cc",

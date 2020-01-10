@@ -57,6 +57,9 @@ Attaching to processes by name
 
     • Change a filter's pattern with "filter [X] set pattern = <newvalue>".
 
+    • Attach to all processes in a job with "job attach *". Note that * is a
+      special string for filters, regular expressions are not supported.
+
   If a job prefix is specified, only processes launched in that job matching the
   pattern will be attached to:
 
@@ -103,19 +106,35 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
     return Err();
   }
 
-  // Not a number, make a filter instead. This only supports "job" and "filter nouns.
-  if (Err err = cmd.ValidateNouns({Noun::kJob, Noun::kFilter}); err.has_error())
-    return err;
+  // Not a number, make a filter instead. This only supports only "job" nouns.
+  if (cmd.ValidateNouns({Noun::kJob}).has_error()) {
+    return Err(
+        "Attaching by process name (a non-numeric argument)\nonly supports the \"job\" noun.");
+  }
   if (cmd.args().size() != 1)
     return Err("Wrong number of arguments to attach.");
 
+  JobContext* job = cmd.HasNoun(Noun::kJob) && cmd.job_context() ? cmd.job_context() : nullptr;
+  const std::string& pattern = cmd.args()[0];
+  if (!job && pattern == Filter::kAllProcessesPattern) {
+    // Bad things happen if we try to attach to all processes in the system, try to make this
+    // more difficult by preventing attaching to * with no specific job.
+    return Err("Use a specific job (\"job 3 attach *\") when attaching to all processes.");
+  }
+
   Filter* filter = context->session()->system().CreateNewFilter();
-  filter->SetJob(cmd.HasNoun(Noun::kJob) && cmd.job_context() ? cmd.job_context() : nullptr);
+  filter->SetJob(job);
   filter->SetPattern(cmd.args()[0]);
 
   context->SetActiveFilter(filter);
 
-  Console::get()->Output("Waiting for process matching \"" + cmd.args()[0] + "\"");
+  // This doesn't use the default filter formatting to try to make it friendlier for people
+  // that are less familiar with the debugger and might be unsure what's happening (this is normally
+  // one of the first things people do in the debugger. The filter number is usually not relevant
+  // anyway.
+  Console::get()->Output("Waiting for process matching \"" + cmd.args()[0] +
+                         "\".\n"
+                         "Type \"filter\" to see the current filters.");
   if (callback) {
     callback(Err());
   }

@@ -25,6 +25,8 @@ class Job;
 // job name, koid, and other state from the user. Running this job_context would create the
 // associated Job object. When the job exits, the JobContext can be re-used to launch the Job again
 // with the same configuration.
+//
+// TODO(bug 43794) combine JobContext[Impl] and Job[Impl] objects.
 class JobContext : public ClientObject {
  public:
   // Note that the callback will be issued in all cases which may be after the job_context is

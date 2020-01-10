@@ -978,12 +978,8 @@ Err ConsoleContext::FillOutBreakpoint(Command* cmd) const {
 Err ConsoleContext::FillOutFilter(Command* cmd) const {
   int filter_id = cmd->GetNounIndex(Noun::kFilter);
   if (filter_id == Command::kNoIndex) {
-    Filter* active_filter = GetActiveFilter();
-    if (cmd->verb() != Verb::kNone && cmd->HasNoun(Noun::kFilter) && !active_filter)
-      return Err("No active filter. Use \"filter\" to see the list and then \"filter X ...\".");
-
     // No index: use the active one (which may not exist).
-    cmd->set_filter(active_filter);
+    cmd->set_filter(GetActiveFilter());
     return Err();
   }
 

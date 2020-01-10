@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/breakpoint_location.h"
 #include "src/developer/debug/zxdb/client/client_eval_context_impl.h"
+#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/job_context.h"
@@ -326,6 +327,26 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
     }
   }
   return result;
+}
+
+OutputBuffer FormatFilter(const ConsoleContext* context, const Filter* filter) {
+  OutputBuffer out("Filter ");
+  out.Append(Syntax::kSpecial, fxl::StringPrintf("%d", context->IdForFilter(filter)));
+
+  if (filter->pattern().empty()) {
+    out.Append(" \"\" (disabled) ");
+  } else {
+    out.Append(fxl::StringPrintf(" \"%s\" ", filter->pattern().c_str()));
+    if (filter->pattern() == Filter::kAllProcessesPattern)
+      out.Append("(all processes) ");
+  }
+
+  if (filter->job())
+    out.Append(fxl::StringPrintf("for job %d.", context->IdForJobContext(filter->job())));
+  else
+    out.Append("for all jobs.");
+
+  return out;
 }
 
 OutputBuffer FormatInputLocation(const InputLocation& location) {

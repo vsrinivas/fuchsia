@@ -13,6 +13,7 @@ namespace zxdb {
 
 class JobContextImpl;
 
+// TODO(bug 43794) combine JobContext[Impl] and Job[Impl] objects.
 class JobImpl : public Job {
  public:
   JobImpl(JobContextImpl* job_context, uint64_t koid, const std::string& name);
