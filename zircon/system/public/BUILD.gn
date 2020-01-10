@@ -14,6 +14,7 @@ source_set("public") {
   public = [
     "zircon/compiler.h",
     "zircon/errors.h",
+    "zircon/rights.h",
     "zircon/syscalls/object.h",
     "zircon/types.h",
   ]
