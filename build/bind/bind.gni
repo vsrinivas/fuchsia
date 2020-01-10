@@ -40,18 +40,14 @@ template("bind_rules") {
   generated_file(response_file_target) {
     data_keys = [ "sources" ]
     forward_variables_from(invoker, [ "deps" ])
-    outputs = [
-      response_file,
-    ]
+    outputs = [ response_file ]
   }
 
   compiled_action(target_name) {
     tool = "//tools/bindc:bin"
     tool_output_name = "bindc"
 
-    sources = [
-      invoker.rules,
-    ]
+    sources = [ invoker.rules ]
 
     args = [
       rebase_path(invoker.rules, root_build_dir),
@@ -65,17 +61,14 @@ template("bind_rules") {
       args += [ "--disable-autobind" ]
     }
 
-    inputs = [
-      response_file,
-    ]
+    inputs = [ response_file ]
 
-    outputs = [
-      "$target_gen_dir/$output_file",
-    ]
+    outputs = [ "$target_gen_dir/$output_file" ]
 
-    deps = [
-      ":$response_file_target",
-    ]
+    deps = [ ":$response_file_target" ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
   }
 }
 
@@ -97,9 +90,7 @@ template("bind_library") {
 
   group(target_name) {
     metadata = {
-      sources = [
-        rebase_path(invoker.source, root_build_dir),
-      ]
+      sources = [ rebase_path(invoker.source, root_build_dir) ]
     }
 
     forward_variables_from(invoker, [ "public_deps" ])
