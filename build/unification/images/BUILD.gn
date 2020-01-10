@@ -258,7 +258,6 @@ aggregate_manifest("legacy-image") {
     ":driver.nand",
     ":driver.nand-broker",
     ":driver.nandpart",
-    ":driver.nelson-usb-phy",
     ":driver.nvme",
     ":driver.nxp",
     ":driver.optee",

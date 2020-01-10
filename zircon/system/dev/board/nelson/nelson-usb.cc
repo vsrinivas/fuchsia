@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdlib.h>
-#include <string.h>
-#include <zircon/device/usb-peripheral.h>
-#include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
-
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/usb-peripheral-config.h>
-#include <soc/aml-s905d3/s905d3-hw.h>
+#include <soc/aml-s905d2/s905d2-hw.h>
+#include <stdlib.h>
+#include <string.h>
 #include <usb/dwc2/metadata.h>
+#include <zircon/device/usb-peripheral.h>
+#include <zircon/hw/usb.h>
+#include <zircon/hw/usb/cdc.h>
 
 #include "nelson.h"
 
@@ -23,14 +22,14 @@ namespace nelson {
 
 static const pbus_mmio_t dwc2_mmios[] = {
     {
-        .base = S905D3_USB1_BASE,
-        .length = S905D3_USB1_LENGTH,
+        .base = S905D2_USB1_BASE,
+        .length = S905D2_USB1_LENGTH,
     },
 };
 
 static const pbus_irq_t dwc2_irqs[] = {
     {
-        .irq = S905D3_USB1_IRQ,
+        .irq = S905D2_USB1_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
@@ -105,15 +104,15 @@ static const pbus_dev_t dwc2_dev = []() {
 
 static const pbus_mmio_t xhci_mmios[] = {
     {
-        .base = S905D3_USB0_BASE,
-        .length = S905D3_USB0_LENGTH,
+        .base = S905D2_USB0_BASE,
+        .length = S905D2_USB0_LENGTH,
     },
 };
 
 static const pbus_irq_t xhci_irqs[] = {
     {
-        .irq = S905D3_USB0_IRQ,
-        .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+        .irq = S905D2_USB0_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
 
@@ -141,34 +140,26 @@ static const pbus_dev_t xhci_dev = []() {
 
 static const pbus_mmio_t usb_phy_mmios[] = {
     {
-        .base = S905D3_RESET_BASE,
-        .length = S905D3_RESET_LENGTH,
+        .base = S905D2_RESET_BASE,
+        .length = S905D2_RESET_LENGTH,
     },
     {
-        .base = S905D3_USBCTRL_BASE,
-        .length = S905D3_USBCTRL_LENGTH,
+        .base = S905D2_USBCTRL_BASE,
+        .length = S905D2_USBCTRL_LENGTH,
     },
     {
-        .base = S905D3_USBPHY20_BASE,
-        .length = S905D3_USBPHY20_LENGTH,
+        .base = S905D2_USBPHY20_BASE,
+        .length = S905D2_USBPHY20_LENGTH,
     },
     {
-        .base = S905D3_USBPHY21_BASE,
-        .length = S905D3_USBPHY21_LENGTH,
-    },
-    {
-        .base = S905D3_POWER_BASE,
-        .length = S905D3_POWER_LENGTH,
-    },
-    {
-        .base = S905D3_SLEEP_BASE,
-        .length = S905D3_SLEEP_LENGTH,
+        .base = S905D2_USBPHY21_BASE,
+        .length = S905D2_USBPHY21_LENGTH,
     },
 };
 
 static const pbus_irq_t usb_phy_irqs[] = {
     {
-        .irq = S905D3_USB_IDDIG_IRQ,
+        .irq = S905D2_USB_IDDIG_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
@@ -190,7 +181,7 @@ static const pbus_dev_t usb_phy_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "aml-usb-phy-v2";
   dev.vid = PDEV_VID_AMLOGIC;
-  dev.did = PDEV_DID_NELSON_USB_PHY;
+  dev.did = PDEV_DID_AML_USB_PHY_V2;
   dev.mmio_list = usb_phy_mmios;
   dev.mmio_count = countof(usb_phy_mmios);
   dev.irq_list = usb_phy_irqs;

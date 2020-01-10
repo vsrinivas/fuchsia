@@ -198,7 +198,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "nelson-buttons/hid-buttons",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:03:17/aml-gpu",
-      "sys/platform/05:00:21/nelson-usb-phy",
+      "sys/platform/05:00:18/aml-usb-phy-v2",
       "sys/platform/05:03:1e/cpu",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
@@ -235,6 +235,8 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "tcs3400-light/tcs-3400/hid-device-000",
       "sys/platform/05:03:11/clocks",
       "aml-thermal/thermal",
+      "NelsonAudio/nelson-audio-out",
+      "sys/platform/05:03:13/nelson-audio-in",
       "aml-secure-mem/aml-securemem",
   };
 

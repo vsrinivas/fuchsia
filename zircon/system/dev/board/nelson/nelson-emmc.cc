@@ -52,12 +52,11 @@ static aml_sd_emmc_config_t config = {
     .prefs = SDMMC_HOST_PREFS_DISABLE_HS400,
 };
 
-// TODO(fxb/43729): Choose better partitions later
 static const guid_map_t guid_map[] = {
-    {"system_a", GUID_ZIRCON_R_VALUE},
-    {"system_b", GUID_ZIRCON_B_VALUE},
-    {"boot_a", GUID_ZIRCON_A_VALUE},
-    {"data", GUID_FVM_VALUE},
+    {"boot", GUID_ZIRCON_A_VALUE},
+    {"system", GUID_ZIRCON_B_VALUE},
+    {"recovery", GUID_ZIRCON_R_VALUE},
+    {"cache", GUID_FVM_VALUE},
 };
 
 static_assert(sizeof(guid_map) / sizeof(guid_map[0]) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);

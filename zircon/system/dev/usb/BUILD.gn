@@ -12,7 +12,6 @@ group("usb") {
     "hikey-usb",
     "mt-musb-host",
     "mt-musb-peripheral",
-    "nelson-usb-phy",
     "usb-bus",
     "usb-bus:tests",
     "usb-composite",
