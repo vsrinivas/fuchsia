@@ -374,19 +374,18 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   // Activate the dispatcher primitives we will use to drive the mixing process. Note we must call
   // Activate on the WakeupEvent from the mix domain, but Signal can be called anytime, even before
   // this Activate occurs.
-  async::PostTask(mix_domain_->dispatcher(), [self = fbl::RefPtr(this)] {
-    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
+  async::PostTask(mix_domain_->dispatcher(), [this] {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
     zx_status_t status =
-        self->mix_wakeup_.Activate(self->mix_domain_->dispatcher(),
-                                   [self = std::move(self)](WakeupEvent* event) -> zx_status_t {
-                                     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, self->mix_domain_);
-                                     FX_DCHECK(event == &self->mix_wakeup_);
-                                     return self->Process();
-                                   });
+        mix_wakeup_.Activate(mix_domain_->dispatcher(), [this](WakeupEvent* event) -> zx_status_t {
+          OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
+          FX_DCHECK(event == &mix_wakeup_);
+          return Process();
+        });
 
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed activate mix WakeupEvent";
-      self->ShutdownFromMixDomain();
+      ShutdownFromMixDomain();
       return;
     }
   });
@@ -894,7 +893,7 @@ zx_status_t AudioCapturerImpl::Process() {
     // If we need to poke the service thread, do so.
     if (wakeup_service_thread) {
       async::PostTask(threading_model_.FidlDomain().dispatcher(),
-                      [thiz = fbl::RefPtr(this)]() { thiz->FinishBuffersThunk(); });
+                      [this]() { FinishBuffersThunk(); });
     }
 
     // If in async mode, and we just finished a buffer, queue a new pending buffer (or die trying).
@@ -1395,8 +1394,7 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
   // Transition to the AsyncStoppingCallbackPending state, and signal the
   // service thread so it can complete the stop operation.
   state_.store(State::AsyncStoppingCallbackPending);
-  async::PostTask(threading_model_.FidlDomain().dispatcher(),
-                  [thiz = fbl::RefPtr(this)]() { thiz->FinishAsyncStopThunk(); });
+  async::PostTask(threading_model_.FidlDomain().dispatcher(), [this]() { FinishAsyncStopThunk(); });
 }
 
 bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
@@ -1439,9 +1437,7 @@ bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
 
 void AudioCapturerImpl::ShutdownFromMixDomain() {
   TRACE_DURATION("audio", "AudioCapturerImpl::ShutdownFromMixDomain");
-  async::PostTask(threading_model_.FidlDomain().dispatcher(), [self_ref = fbl::RefPtr(this)]() {
-    self_ref->route_graph_.RemoveCapturer(self_ref.get());
-  });
+  async::PostTask(threading_model_.FidlDomain().dispatcher(), [this]() { BeginShutdown(); });
 }
 
 void AudioCapturerImpl::FinishAsyncStopThunk() {
