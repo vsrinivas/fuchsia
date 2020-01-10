@@ -7,6 +7,7 @@
 use crate::ok;
 use crate::{object_get_info, ObjectQuery, Topic};
 use crate::{AsHandleRef, Duration, Handle, HandleBased, HandleRef, Process, Status, Task, Vmar};
+use bitflags::bitflags;
 use std::convert::Into;
 
 use fuchsia_zircon_sys as sys;
@@ -92,7 +93,7 @@ impl Job {
             .map(|_| info)
     }
 
-    /// Wraps the [zx_job_set_policy](//docs/reference/syscalls/job_set_policy.md) syscall
+    /// Wraps the [zx_job_set_policy](//docs/reference/syscalls/job_set_policy.md) syscall.
     pub fn set_policy(&self, policy: JobPolicy) -> Result<(), Status> {
         match policy {
             JobPolicy::Basic(policy_option, policy_set) => {
@@ -146,6 +147,13 @@ impl Job {
                 })
             }
         }
+    }
+
+    /// Wraps the [zx_job_set_critical](//docs/reference/syscalls/job_set_critical.md) syscall.
+    pub fn set_critical(&self, opts: JobCriticalOptions, process: &Process) -> Result<(), Status> {
+        ok(unsafe {
+            sys::zx_job_set_critical(self.raw_handle(), opts.bits(), process.raw_handle())
+        })
     }
 }
 
@@ -258,14 +266,23 @@ impl Into<u32> for JobDefaultTimerMode {
 
 impl Task for Job {}
 
+bitflags! {
+    /// Options that may be used by `Job::set_critical`.
+    #[repr(transparent)]
+    pub struct JobCriticalOptions: u32 {
+        const RETCODE_NONZERO = sys::ZX_JOB_CRITICAL_PROCESS_RETCODE_NONZERO;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     // The unit tests are built with a different crate name, but fuchsia_runtime returns a "real"
     // fuchsia_zircon::Job that we need to use.
     use fuchsia_zircon::{
-        sys, AsHandleRef, Duration, JobAction, JobCondition, JobDefaultTimerMode, JobInfo,
-        JobPolicy, JobPolicyOption, Signals, Task, Time,
+        sys, AsHandleRef, Duration, JobAction, JobCondition, JobCriticalOptions,
+        JobDefaultTimerMode, JobInfo, JobPolicy, JobPolicyOption, Signals, Task, Time,
     };
+    use std::ffi::CString;
 
     #[test]
     fn info_default() {
@@ -322,5 +339,20 @@ mod tests {
                 JobDefaultTimerMode::Early,
             ))
             .expect("failed to set job timer slack policy");
+    }
+
+    #[test]
+    fn create_and_set_critical() {
+        let default_job = fuchsia_runtime::job_default();
+        let child_job = default_job.create_child_job().expect("failed to create child job");
+
+        let binpath = CString::new("/pkg/bin/sleep_forever_util").unwrap();
+        let process =
+            fdio::spawn(&child_job, fdio::SpawnOptions::DEFAULT_LOADER, &binpath, &[&binpath])
+                .expect("Failed to spawn process");
+
+        child_job
+            .set_critical(JobCriticalOptions::RETCODE_NONZERO, &process)
+            .expect("failed to set critical process for job");
     }
 }

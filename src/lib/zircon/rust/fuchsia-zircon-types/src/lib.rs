@@ -733,6 +733,11 @@ multiconst!(u32, [
     ZX_TIMER_SLACK_LATE   = 2;
 ]);
 
+multiconst!(u32, [
+    // critical options
+    ZX_JOB_CRITICAL_PROCESS_RETCODE_NONZERO = 1 << 0;
+]);
+
 // Don't use struct_decl_macro, wrapper is different.
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]

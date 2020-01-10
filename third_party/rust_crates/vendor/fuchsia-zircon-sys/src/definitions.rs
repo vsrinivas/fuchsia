@@ -302,6 +302,12 @@ extern {
         count: u32
         ) -> zx_status_t;
 
+    pub fn zx_job_set_critical(
+        job: zx_handle_t,
+        options: u32,
+        process: zx_handle_t,
+        ) -> zx_status_t;
+
     pub fn zx_task_bind_exception_port(
         object: zx_handle_t,
         eport: zx_handle_t,
@@ -898,6 +904,4 @@ extern {
         b: isize,
         c: isize
         ) -> zx_status_t;
-
-
 }
