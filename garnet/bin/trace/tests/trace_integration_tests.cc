@@ -118,7 +118,8 @@ class TwoProvidersOneEngine : public ExtraProvider {
   const char* GetProgramPath() override { return "/pkg/bin/two_providers_one_engine"; }
 };
 
-TEST_F(TwoProvidersOneEngine, ErrorHandling) {
+// TODO(42621): Disabled due to flake.
+TEST_F(TwoProvidersOneEngine, DISABLED_ErrorHandling) {
   ASSERT_TRUE(provider_process().is_valid());
 
   RunAndVerify("data/simple.tspec");
