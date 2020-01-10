@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/fidl"
-	"syscall/zx/mxnet"
+	"syscall/zx/zxsocket"
 	"syscall/zx/zxwait"
 	"unsafe"
 
@@ -505,7 +505,7 @@ func (eps *endpointWithSocket) Accept() (int32, *endpointWithSocket, error) {
 		// while we clear the signal.
 		eps.incoming.mu.Lock()
 		if eps.incoming.mu.asserted && eps.endpoint.ep.Readiness(waiter.EventIn) == 0 {
-			err = eps.local.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0)
+			err = eps.local.Handle().SignalPeer(zxsocket.SignalIncoming, 0)
 			eps.incoming.mu.asserted = false
 		}
 		eps.incoming.mu.Unlock()
@@ -728,7 +728,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 					var err error
 					eps.incoming.mu.Lock()
 					if !eps.incoming.mu.asserted {
-						err = eps.local.Handle().SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING)
+						err = eps.local.Handle().SignalPeer(0, zxsocket.SignalIncoming)
 						eps.incoming.mu.asserted = true
 					}
 					eps.incoming.mu.Unlock()
@@ -750,13 +750,13 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 					continue
 				}
 			} else if !connected {
-				var signals zx.Signals = mxnet.MXSIO_SIGNAL_OUTGOING
+				var signals zx.Signals = zxsocket.SignalOutgoing
 				switch err {
 				case nil, tcpip.ErrWouldBlock, tcpip.ErrClosedForReceive:
 					connected = true
 					eps.wq.EventUnregister(&outEntry)
 
-					signals |= mxnet.MXSIO_SIGNAL_CONNECTED
+					signals |= zxsocket.SignalConnected
 				}
 
 				if err := eps.local.Handle().SignalPeer(0, signals); err != nil {
@@ -1148,9 +1148,9 @@ func (s *datagramSocketImpl) RecvMsg(addrLen, dataLen, controlLen uint32, flags 
 		// We lock here to ensure that no incoming connection changes readiness
 		// while we clear the signal.
 		s.incoming.mu.Lock()
-		if s.incoming.mu.asserted && s.endpoint.ep.Readiness(waiter.EventIn) == 0 {
-			err = s.local.SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0)
-			s.incoming.mu.asserted = false
+		if s.endpointWithEvent.incoming.mu.asserted && s.endpoint.ep.Readiness(waiter.EventIn) == 0 {
+			err = s.endpointWithEvent.local.SignalPeer(zxsocket.SignalIncoming, 0)
+			s.endpointWithEvent.incoming.mu.asserted = false
 		}
 		s.incoming.mu.Unlock()
 		if err != nil {
@@ -1449,7 +1449,7 @@ func (sp *providerImpl) Socket2(domain, typ, protocol int16) (socket.ProviderSoc
 			var err error
 			s.endpointWithEvent.incoming.mu.Lock()
 			if !s.endpointWithEvent.incoming.mu.asserted {
-				err = s.endpointWithEvent.local.SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING)
+				err = s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalIncoming)
 				s.endpointWithEvent.incoming.mu.asserted = true
 			}
 			s.endpointWithEvent.incoming.mu.Unlock()
