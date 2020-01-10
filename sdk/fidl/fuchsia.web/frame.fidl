@@ -26,6 +26,33 @@ enum ConsoleLogLevel : int32 {
     ERROR = 2;
 };
 
+/// Identifies the types of input events which may be handled by a View.
+bits InputTypes : uint64 {
+    /// Keyboard events.
+    KEY = 0x1;
+
+    /// Mouse button events, for any button.
+    MOUSE_CLICK = 0x2;
+
+    /// Mouse scroll wheel events.
+    MOUSE_WHEEL = 0x4;
+
+    /// Mouse movement events.
+    MOUSE_MOVE = 0x8;
+
+    /// Single tapping with one finger.
+    GESTURE_TAP = 0x10;
+
+    /// Pinching (for zooming).
+    GESTURE_PINCH = 0x20;
+
+    /// Dragging a finger (for scrolling).
+    GESTURE_DRAG = 0x40;
+
+    /// Matches all input types.
+    ALL = 0x8000000000000000;
+};
+
 /// Represents the return status of a [`fuchsia.web.Frame`] method.
 enum FrameError : int32 {
     /// An internal error occured.
@@ -160,11 +187,15 @@ protocol Frame {
     /// - `error()` logs are logged with [`fuchsia.logger.LogLevelFilter/INFO`] severity level.
     SetJavaScriptLogLevel(ConsoleLogLevel level);
 
-    /// Used at runtime to enable or disable user input processing (e.g. keyboard, mouse, touch) on
+    [Transitional, Deprecated]
+    SetEnableInput(bool enable_input);
+
+    /// Used at runtime to enable or disable user processing for specific types of input on
     /// a [`fuchsia.web.Frame`].
     ///
-    /// Input is enabled by default.
-    SetEnableInput(bool enable_input);
+    /// All input types are enabled by default.
+    [Transitional]
+    ConfigureInputTypes(InputTypes enable, InputTypes disable);
 
     /// Sets the listener for handling popup frame opened by web content. If no listener is
     /// present, then any new popup frame will be blocked.
