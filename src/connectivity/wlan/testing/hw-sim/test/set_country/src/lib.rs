@@ -12,7 +12,6 @@ use {
     fuchsia_zircon_sys::ZX_OK,
     futures::channel::oneshot,
     pin_utils::pin_mut,
-    wlan_common::test_utils::ExpectWithin,
     wlan_hw_sim::*,
 };
 
@@ -38,11 +37,7 @@ async fn set_country() {
     let svc = connect_to_service::<DeviceServiceMarker>()
         .expect("Failed to connect to wlanstack_dev_svc");
 
-    let resp = svc
-        .list_phys()
-        .expect_within(1.seconds(), "list_phys did not complete in time")
-        .await
-        .unwrap();
+    let resp = svc.list_phys().await.unwrap();
 
     assert!(resp.phys.len() > 0, "WLAN PHY device is created but ListPhys returned empty.");
     let phy_id = resp.phys[0].phy_id;
@@ -56,7 +51,7 @@ async fn set_country() {
     let mut sender = Some(sender);
     helper
         .run_until_complete_or_timeout(
-            1.seconds(),
+            std::i64::MAX.nanos(), // Unlimited timeout since set_country must be called.
             "wlanstack_dev_svc set_country",
             |event| {
                 if let WlantapPhyEvent::SetCountry { args } = event {
