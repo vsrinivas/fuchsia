@@ -120,30 +120,35 @@ specific meaning to a class alias name.
 Device drivers are loaded into devhost processes when it is determined they are
 needed.  What determines if they are loaded or not is the Binding Program, which
 is a description of what device a driver can bind to.  The Binding Program is
-defined using macros in [`ddk/binding.h`](/zircon/system/ulib/ddk/include/ddk/binding.h)
+defined using a small domain specific language, which is compiled to bytecode that
+is distributed with the driver.
+
 
 An example Binding Program from the Intel Ethernet driver:
 
-```c
-ZIRCON_DRIVER_BEGIN(intel_ethernet, intel_ethernet_driver_ops, "zircon", "0.1", 9)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x100E), // Qemu
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15A3), // Broadwell
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1570), // Skylake
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1533), // I210 standalone
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15b7), // Skull Canyon NUC
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15b8), // I219
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15d8), // Kaby Lake NUC
-ZIRCON_DRIVER_END(intel_ethernet)
+```
+fuchsia.device.protocol == fuchsia.pci.protocol.PCI_DEVICE;
+fuchsia.pci.vendor == fuchsia.pci.vendor.INTEL;
+accept fuchsia.pci.device {
+    0x100E, // Qemu
+    0x15A3, // Broadwell
+    0x1570, // Skylake
+    0x1533, // I210 standalone
+    0x15b7, // Skull Canyon NUC
+    0x15b8, // I219
+    0x15d8, // Kaby Lake NUC
+}
 ```
 
-The ZIRCON_DRIVER_BEGIN and _END macros include the necessary compiler directives
-to put the binding program into an ELF NOTE section, allowing it to be inspected
-by the Device Coordinator without needing to fully load the driver into its process.
-The second parameter to the _BEGIN macro is a `zx_driver_ops_t` structure pointer (defined
-by [`ddk/driver.h`](/zircon/system/ulib/ddk/include/ddk/driver.h) which defines the
-init, bind, create, and release methods.
+The bind compiler takes a binding program and outputs a C header file that
+defines a macro, `ZIRCON_DRIVER`. The `ZIRCON_DRIVER` macro includes the
+necessary compiler directives to put the binding program into an ELF NOTE
+section, allowing it to be inspected by the Device Coordinator without needing
+to fully load the driver into its process.
+
+The second parameter to `ZIRCON_DRIVER` is a `zx_driver_ops_t` structure pointer
+(defined by [`ddk/driver.h`](/zircon/system/ulib/ddk/include/ddk/driver.h) which
+defines the init, bind, create, and release methods.
 
 `init()` is invoked when a driver is loaded into a Device Host process and allows for
 any global initialization.  Typically none is required.  If the `init()` method is
@@ -161,7 +166,6 @@ vast majority of drivers, this method is not required.
 created in `bind()` and elsewhere have been destroyed.  Currently this method is
 **never** invoked.  Drivers, once loaded, remain loaded for the life of a Device Host
 process.
-
 
 ## Device Lifecycle
 

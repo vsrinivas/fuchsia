@@ -16,12 +16,11 @@ rather than [system/dev/usb](/zircon/system/dev/usb) because it implements an et
 However, drivers that implement the USB stack are in [system/dev/usb](/zircon/system/dev/usb)
 because they implement USB protocols.
 
-In the driver's `rules.mk`, the `MODULE_TYPE` should
-be `driver`. This will install the driver shared lib in `/boot/driver/`.
-
-If your driver is built outside Zircon, install them in `/system/driver/`
-. The Device Coordinator looks in those directories for loadable
-drivers.
+In the driver's `BUILD.gn`, there should be a `zx_driver` target (for drivers in
+the ZN build) or a `driver_module` target (for drivers in the GN build.) The
+former will install the driver shared library in `/boot/driver/` and the latter
+in `/system/driver/`. The device coordinator looks first in `/boot/driver/`,
+then `/system/driver/` for loadable drivers.
 
 ## Declaring a driver
 
@@ -30,22 +29,47 @@ At a minimum, a driver should contain the driver declaration and implement the
 
 Drivers are loaded and bound to a device when the Device Coordinator
 successfully finds a matching driver for a device. A driver declares the
-devices it is compatible with via bindings.
-The following bind program
-declares the [AHCI driver](/zircon/system/dev/block/ahci/ahci.h):
+devices it is compatible with through bind rules, which are should be placed in
+a `.bind` file alongside the driver. The bind compiler compiles those rules
+and creates a driver declaration macro containing those rules in a C header file.
+The following bind program declares the [AHCI driver](/zircon/system/dev/block/ahci/ahci.h):
 
-```c
-ZIRCON_DRIVER_BEGIN(ahci, ahci_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x01),
-    BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x06),
-    BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x01),
-ZIRCON_DRIVER_END(ahci)
+```
+using deprecated.pci;
+
+deprecated.BIND_PROTOCOL == deprecated.pci.BIND_PROTOCOL.DEVICE;
+deprecated.BIND_PCI_CLASS == 0x01;
+deprecated.BIND_PCI_SUBCLASS == 0x06;
+deprecated.BIND_PCI_INTERFACE == 0x01;
 ```
 
-The AHCI driver has 4 directives in the bind program. `"zircon"` is the vendor
-id and `"0.1"` is the driver version. It binds with `ZX_PROTOCOL_PCI` devices
-with PCI class 1, subclass 6, interface 1.
+These bind rules state that the driver binds to devices with a `BIND_PROTOCOL`
+property that matches `DEVICE` from the `pci` namespace and with PCI class 1,
+subclass 6, interface 1. The `pci` namespace is imported from the
+`deprecated.pci` library on the first line. For more details, refer to the
+[binding documentation](driver-binding.md).
+
+To generate a driver declaration macro including these bind rules, there should
+be a corresponding `bind_rules` build target.
+
+```
+bind_rules("bind") {
+    rules = "ahci.bind"
+    output = "ahci-bind.h"
+    deps = [
+        "//src/devices/bind/deprecated.pci",
+    ]
+}
+```
+
+The driver can now include the generated header and declare itself with the
+following macro. `"zircon"` is the vendor id and `"0.1"` is the driver version.
+
+```c
+#include "zircon/system/dev/block/ahci/ahci-bind.h"
+...
+ZIRCON_DRIVER(ahci, ahci_driver_ops, "zircon", "0.1");
+```
 
 The [PCI driver](/zircon/system/dev/bus/pci/kpci/kpci.c) publishes the matching
 device with the following properties:
@@ -64,24 +88,40 @@ zx_device_prop_t device_props[] = {
 };
 ```
 
-Binding variables and macros are defined in
-[zircon/driver/binding.h](/zircon/system/public/zircon/driver/binding.h).
-If you are introducing a new device class, you may need to introduce new
-binding variables in that file.
-Binding variables are 32-bit values. If your
-variable value requires greater than a 32-bit value,
-split them into multiple 32-bit variables. An
-example is ACPI HID values, which are 8 characters (64-bits) long.
-It is split into `BIND_ACPI_HID_0_3` and `BIND_ACPI_HID_4_7`.
+For now, binding variables and macros are defined in
+[zircon/driver/binding.h](/zircon/system/public/zircon/driver/binding.h). In the
+near future, all bind properties will be defined by bind libraries like the
+`deprecated.pci` library imported above. If you are introducing a new device
+class, you may need to introduce new bind properties to the binding header as
+well as the bind libraries.
+
+Bind properties are 32-bit values. If your variable value requires greater than
+a 32-bit value, split them into multiple 32-bit variables. An example is ACPI
+HID values, which are 8 characters (64-bits) long. It is split into
+`BIND_ACPI_HID_0_3` and `BIND_ACPI_HID_4_7`. Once the migration to bind
+libraries is complete you will be able to use other data types such as strings,
+larger numbers, and booleans.
+
+Drivers in the ZN build will need to continue to use the old C macro style of
+bind rules until the migration is complete. The following is the C macro
+equivalent of the bind rules for the AHCI driver.
+
+```c
+ZIRCON_DRIVER_BEGIN(ahci, ahci_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x01),
+    BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x06),
+    BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x01),
+ZIRCON_DRIVER_END(ahci)
+```
 
 Binding directives are evaluated sequentially. The branching directives
 `BI_GOTO()` and `BI_GOTO_IF()` allow you to jump forward to the matching
 label, defined by `BI_LABEL()`.
 
-`BI_ABORT_IF_AUTOBIND` may be used (usually as the first instruction)
-to prevent the default automatic binding behaviour.
-In that case, a driver can be bound to a device using
-`fuchsia.device.Controller/Bind` FIDL call
+`BI_ABORT_IF_AUTOBIND` may be used (usually as the first instruction) to prevent
+the default automatic binding behaviour. In that case, a driver can be bound to
+a device using `fuchsia.device.Controller/Bind` FIDL call.
 
 
 ## Driver binding

@@ -16,6 +16,8 @@ toc:
   path: /docs/concepts/drivers/device-ops.md
 - title: "Platform bus"
   path: /docs/concepts/drivers/platform-bus.md
+- title: "Driver binding"
+  path: /docs/concepts/drivers/driver-binding.md
 - title: "Driver development"
   path: /docs/concepts/drivers/driver-development.md
   section:
