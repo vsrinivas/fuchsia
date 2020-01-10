@@ -65,8 +65,14 @@ class Stream : public fbl::RefCounted<Stream> {
   // Trims the stream by releasing any frames before |trim_threshold|.
   virtual void Trim(zx::time trim_threshold) = 0;
 
-  // Reads the function that converts reference clock to fractional stream frames.
-  virtual std::pair<TimelineFunction, uint32_t> ReferenceClockToFractionalFrames() const = 0;
+  // A snapshot of a |TimelineFunction| with an associated |generation|. If |generation| is equal
+  // between two subsequent calls to |ReferenceClockToFractionalFrames|, then the
+  // |timeline_function| is guaranteed to be unchanged.
+  struct TimelineFunctionSnapshot {
+    TimelineFunction timeline_function;
+    uint32_t generation;
+  };
+  virtual TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const = 0;
 
   // Hooks to add logging or metrics for [Partial] Underflow events.
   //

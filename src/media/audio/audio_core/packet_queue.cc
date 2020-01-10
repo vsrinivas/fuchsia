@@ -163,11 +163,18 @@ void PacketQueue::Trim(zx::time ref_time) {
   }
 }
 
-std::pair<TimelineFunction, uint32_t> PacketQueue::ReferenceClockToFractionalFrames() const {
+Stream::TimelineFunctionSnapshot PacketQueue::ReferenceClockToFractionalFrames() const {
   if (!timeline_function_) {
-    return std::make_pair(TimelineFunction(), kInvalidGenerationId);
+    return {
+        .timeline_function = TimelineFunction(),
+        .generation = kInvalidGenerationId,
+    };
   }
-  return timeline_function_->get();
+  auto [timeline_function, generation] = timeline_function_->get();
+  return {
+      .timeline_function = timeline_function,
+      .generation = generation,
+  };
 }
 
 void PacketQueue::ReportUnderflow(FractionalFrames<int64_t> frac_source_start,

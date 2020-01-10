@@ -77,12 +77,14 @@ std::optional<Stream::Buffer> MixStage::LockBuffer(zx::time now, int64_t frame,
                          cur_mix_job_.buf, true)};
 }
 
-std::pair<TimelineFunction, uint32_t> MixStage::ReferenceClockToFractionalFrames() const {
+Stream::TimelineFunctionSnapshot MixStage::ReferenceClockToFractionalFrames() const {
   TimelineRate fractional_frames_per_frame =
       TimelineRate(FractionalFrames<uint32_t>(1).raw_value());
-  return std::make_pair(TimelineFunction::Compose(TimelineFunction(fractional_frames_per_frame),
-                                                  reference_clock_to_output_frame_),
-                        reference_clock_to_output_frame_generation_);
+  return {
+      .timeline_function = TimelineFunction::Compose(TimelineFunction(fractional_frames_per_frame),
+                                                     reference_clock_to_output_frame_),
+      .generation = reference_clock_to_output_frame_generation_,
+  };
 }
 
 void MixStage::Trim(zx::time time) {
@@ -409,16 +411,16 @@ bool MixStage::ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& so
 void MixStage::UpdateSourceTrans(const Stream& stream, Mixer::Bookkeeping* bk) {
   TRACE_DURATION("audio", "MixStage::UpdateSourceTrans");
 
-  auto func = stream.ReferenceClockToFractionalFrames();
-  bk->clock_mono_to_frac_source_frames = func.first;
+  auto snapshot = stream.ReferenceClockToFractionalFrames();
+  bk->clock_mono_to_frac_source_frames = snapshot.timeline_function;
 
   // If local->media transformation hasn't changed since last time, we're done.
-  if (bk->source_trans_gen_id == func.second) {
+  if (bk->source_trans_gen_id == snapshot.generation) {
     return;
   }
 
   // Transformation has changed. Update gen; invalidate dest-to-src generation.
-  bk->source_trans_gen_id = func.second;
+  bk->source_trans_gen_id = snapshot.generation;
   bk->dest_trans_gen_id = kInvalidGenerationId;
 }
 

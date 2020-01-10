@@ -31,7 +31,7 @@ class MixStage : public Stream {
                                            uint32_t frame_count) override;
   void UnlockBuffer(bool release_buffer) override {}
   void Trim(zx::time ref_time) override;
-  std::pair<TimelineFunction, uint32_t> ReferenceClockToFractionalFrames() const override;
+  TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
 
   std::unique_ptr<Mixer> AddInput(fbl::RefPtr<Stream> stream);
   void RemoveInput(const Stream& stream);

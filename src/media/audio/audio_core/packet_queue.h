@@ -41,7 +41,7 @@ class PacketQueue : public Stream {
                                            uint32_t frame_count) override;
   void UnlockBuffer(bool release_buffer) override;
   void Trim(zx::time ref_time) override;
-  std::pair<TimelineFunction, uint32_t> ReferenceClockToFractionalFrames() const override;
+  TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
   void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
                        FractionalFrames<int64_t> frac_source_mix_point,
                        zx::duration underflow_duration) override;
