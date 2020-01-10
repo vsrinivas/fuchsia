@@ -12,9 +12,7 @@ declare_args() {
   #   "LOCAL" - record log data locally to a file
   #   "DEVEL" - the non-prod environment for use in testing
   #   "PROD" - the production environment
-  #   "DEVEL_AND_PROD" - both the non-prod and production environment
-  # TODO(camrdale): change the default to PROD once its pipeline is working.
-  cobalt_environment = "DEVEL_AND_PROD"
+  cobalt_environment = "PROD"
 }
 
 # Generates the global_metrics_registry.pb file. This may be selectively
@@ -74,9 +72,7 @@ source_set("lib") {
 executable("app") {
   output_name = "cobalt"
 
-  sources = [
-    "cobalt_main.cc",
-  ]
+  sources = [ "cobalt_main.cc" ]
 
   deps = [
     ":lib",
@@ -91,13 +87,9 @@ executable("app") {
 config_data("config") {
   for_pkg = "cobalt"
 
-  sources = [
-    "configs/release_stage_debug",
-  ]
+  sources = [ "configs/release_stage_debug" ]
 
-  outputs = [
-    "release_stage",
-  ]
+  outputs = [ "release_stage" ]
 }
 
 # In the "user" config, Cobalt will behave like it will on an end-user device, meaning it will only
@@ -105,13 +97,9 @@ config_data("config") {
 config_data("user_config") {
   for_pkg = "cobalt"
 
-  sources = [
-    "configs/release_stage_ga",
-  ]
+  sources = [ "configs/release_stage_ga" ]
 
-  outputs = [
-    "release_stage",
-  ]
+  outputs = [ "release_stage" ]
 }
 
 package("cobalt") {
@@ -134,8 +122,6 @@ package("cobalt") {
       # Environment selection for cobalt.
       if (cobalt_environment == "PROD") {
         path = "configs/prod_environment"
-      } else if (cobalt_environment == "DEVEL_AND_PROD") {
-        path = "configs/devel_and_prod_environment"
       } else if (cobalt_environment == "DEVEL") {
         path = "configs/devel_environment"
       } else if (cobalt_environment == "LOCAL") {
