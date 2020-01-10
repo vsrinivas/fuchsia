@@ -5,7 +5,6 @@
 mod channel_listener;
 mod channel_scheduler;
 mod convert_beacon;
-mod frame_writer;
 mod lost_bss;
 mod scanner;
 mod state;
@@ -14,20 +13,18 @@ pub mod temporary_c_binding;
 
 use {
     crate::{
+        auth,
         buffer::{BufferProvider, OutBuf},
         device::{Device, TxFlags},
         error::Error,
         logger,
         timer::*,
-        write_eth_frame,
     },
     anyhow::format_err,
     banjo_ddk_protocol_wlan_info as banjo_wlan_info, banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
     channel_listener::{ChannelListenerSource, ChannelListenerState},
     channel_scheduler::ChannelScheduler,
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
-    frame_writer::*,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, warn},
     lost_bss::LostBssCounter,
     scanner::Scanner,
@@ -35,20 +32,33 @@ use {
     static_assertions::assert_eq_size,
     std::convert::TryInto,
     wlan_common::{
-        buffer_writer::BufferWriter,
-        frame_len,
-        ie::{
-            self, parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, Id, Reader,
-            IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN,
-        },
-        mac::{self, Aid, Bssid, MacAddr, OptionalField, PowerState, Presence},
+        data_writer,
+        ie::{self, parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, Id, Reader},
+        mac::{self, Aid, Bssid, MacAddr, PowerState},
+        mgmt_writer,
         sequence::SequenceManager,
-        TimeUnit,
+        wmm, TimeUnit,
     },
+    wlan_frame_writer::{write_frame, write_frame_with_fixed_buf},
     zerocopy::{AsBytes, ByteSlice},
 };
 
 pub use scanner::ScanError;
+
+// TODO(29887): Determine better value.
+const BLOCK_ACK_BUFFER_SIZE: u16 = 64;
+// TODO(29325): Implement QoS policy engine. See the following parts of the
+//              specification:
+//
+//              - IEEE Std 802.11-2016, 3.1 (Traffic Identifier)
+//              - IEEE Std 802.11-2016, 5.1.1.1 (Data Service - General)
+//              - IEEE Std 802.11-2016, 9.4.2.30 (Access Policy)
+//              - IEEE Std 802.11-2016, 9.2.4.5.2 (TID Subfield)
+//
+//              A TID is from [0, 15] and is assigned to an MSDU in the layers
+//              above the MAC. [0, 7] identify Traffic Categories (TCs) and
+//              [8, 15] identify parameterized TCs.
+const BLOCK_ACK_TID: u16 = 0; // TODO(29325): Implement QoS policy engine.
 
 /// Maximum size of EAPOL frames forwarded to SME.
 /// TODO(34845): Evaluate whether EAPOL size restriction is needed.
@@ -443,28 +453,39 @@ impl<'a> BoundClient<'a> {
     fn deliver_msdu<B: ByteSlice>(&mut self, msdu: mac::Msdu<B>) -> Result<(), Error> {
         let mac::Msdu { dst_addr, src_addr, llc_frame } = msdu;
 
-        let mut buf = [0u8; mac::MAX_ETH_FRAME_LEN];
-        let mut writer = BufferWriter::new(&mut buf[..]);
-        write_eth_frame(
-            &mut writer,
-            dst_addr,
-            src_addr,
-            llc_frame.hdr.protocol_id.to_native(),
-            &llc_frame.body,
-        )?;
+        let (buf, bytes_written) = write_frame_with_fixed_buf!([0u8; mac::MAX_ETH_FRAME_LEN], {
+            headers: {
+                mac::EthernetIIHdr: &mac::EthernetIIHdr {
+                    da: dst_addr,
+                    sa: src_addr,
+                    ether_type: llc_frame.hdr.protocol_id,
+                },
+            },
+            payload: &llc_frame.body,
+        })?;
+        let (written, _remaining) = buf.split_at(bytes_written);
         self.ctx
             .device
-            .deliver_eth_frame(writer.into_written())
+            .deliver_eth_frame(written)
             .map_err(|s| Error::Status(format!("could not deliver Ethernet II frame"), s))
     }
 
     /// Sends an authentication frame using Open System authentication.
     pub fn send_open_auth_frame(&mut self) -> Result<(), Error> {
-        const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::AuthHdr);
-        let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_open_auth_frame(&mut w, self.sta.bssid, self.sta.iface_mac, &mut self.ctx.seq_mgr)?;
-        let bytes_written = w.bytes_written();
+        let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_to_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::AUTH),
+                    self.sta.bssid,
+                    self.sta.iface_mac,
+                    mac::SequenceControl(0)
+                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
+                ),
+                mac::AuthHdr: &auth::make_open_client_req(),
+            }
+        })?;
         let out_buf = OutBuf::from(buf, bytes_written);
         self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending open auth frame"), s))
@@ -481,49 +502,35 @@ impl<'a> BoundClient<'a> {
         ht_cap: &[u8],
         vht_cap: &[u8],
     ) -> Result<(), Error> {
-        let frame_len = frame_len!(mac::MgmtHdr, mac::AssocReqHdr);
-        let ssid_len = IE_PREFIX_LEN + ssid.len();
-        let rates_len = (IE_PREFIX_LEN + rates.len())
-                    // If there are too many rates, they will be split into two IEs.
-                    // In this case, the total length would be the sum of:
-                    // 1) 1st IE: IE_PREFIX_LEN + SUPPORTED_RATES_MAX_LEN
-                    // 2) 2nd IE: IE_PREFIX_LEN + rates().len - SUPPORTED_RATES_MAX_LEN
-                    // The total length is IE_PREFIX_LEN + rates.len() + IE_PREFIX_LEN.
-                    + if rates.len() > SUPPORTED_RATES_MAX_LEN { IE_PREFIX_LEN } else { 0 };
-        let rsne_len = rsne.len(); // RSNE already contains ID/len
-        let ht_cap_len = if ht_cap.is_empty() { 0 } else { IE_PREFIX_LEN + ht_cap.len() };
-        let vht_cap_len = if vht_cap.is_empty() { 0 } else { IE_PREFIX_LEN + vht_cap.len() };
-        let frame_len = frame_len + ssid_len + rates_len + rsne_len + ht_cap_len + vht_cap_len;
-        let mut buf = self.ctx.buf_provider.get_buffer(frame_len)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-
-        let rsne = if rsne.is_empty() {
-            None
-        } else {
-            Some(
-                rsne::from_bytes(rsne)
-                    .map_err(|e| format_err!("error parsing rsne {:?} : {:?}", rsne, e))?
-                    .1,
-            )
-        };
-
-        let ht_cap = if ht_cap.is_empty() { None } else { Some(*parse_ht_capabilities(ht_cap)?) };
-        let vht_cap =
-            if vht_cap.is_empty() { None } else { Some(*parse_vht_capabilities(vht_cap)?) };
-
-        write_assoc_req_frame(
-            &mut w,
-            self.sta.bssid,
-            self.sta.iface_mac,
-            &mut self.ctx.seq_mgr,
-            mac::CapabilityInfo(cap_info),
-            ssid,
-            rates,
-            rsne,
-            ht_cap,
-            vht_cap,
-        )?;
-        let bytes_written = w.bytes_written();
+        let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_to_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_REQ),
+                    self.sta.bssid,
+                    self.sta.iface_mac,
+                    mac::SequenceControl(0)
+                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
+                ),
+                mac::AssocReqHdr: &mac::AssocReqHdr {
+                    capabilities: mac::CapabilityInfo(cap_info),
+                    listen_interval: 0,
+                },
+            },
+            ies: {
+                ssid: ssid,
+                supported_rates: rates,
+                extended_supported_rates: {/* continue rates */},
+                rsne?: if !rsne.is_empty() {
+                    rsne::from_bytes(rsne)
+                        .map_err(|e| format_err!("error parsing rsne {:?} : {:?}", rsne, e))?
+                        .1
+                },
+                ht_cap?: if !ht_cap.is_empty() { *parse_ht_capabilities(ht_cap)? },
+                vht_cap?: if !vht_cap.is_empty() { *parse_vht_capabilities(vht_cap)? },
+            },
+        })?;
         let out_buf = OutBuf::from(buf, bytes_written);
         self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending assoc req frame"), s))
@@ -535,16 +542,19 @@ impl<'a> BoundClient<'a> {
     // be some investigation, whether these "keep alive" frames are the right way of keeping a
     // client associated to legacy APs.
     fn send_keep_alive_resp_frame(&mut self) -> Result<(), Error> {
-        const FRAME_LEN: usize = frame_len!(mac::FixedDataHdrFields);
-        let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_keep_alive_resp_frame(
-            &mut w,
-            self.sta.bssid,
-            self.sta.iface_mac,
-            &mut self.ctx.seq_mgr,
-        )?;
-        let bytes_written = w.bytes_written();
+        let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
+            headers: {
+                mac::FixedDataHdrFields: &data_writer::data_hdr_client_to_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::DATA)
+                        .with_data_subtype(mac::DataSubtype(0).with_null(true)),
+                    self.sta.bssid,
+                    self.sta.iface_mac,
+                    mac::SequenceControl(0)
+                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
+                ),
+            },
+        })?;
         let out_buf = OutBuf::from(buf, bytes_written);
         self.ctx
             .device
@@ -552,19 +562,23 @@ impl<'a> BoundClient<'a> {
             .map_err(|s| Error::Status(format!("error sending keep alive frame"), s))
     }
 
-    /// Sends a deauthentication notification to the joined BSS with the given `reason_code`.
     pub fn send_deauth_frame(&mut self, reason_code: mac::ReasonCode) -> Result<(), Error> {
-        const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::DeauthHdr);
-        let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_deauth_frame(
-            &mut w,
-            self.sta.bssid,
-            self.sta.iface_mac,
-            reason_code,
-            &mut self.ctx.seq_mgr,
-        )?;
-        let bytes_written = w.bytes_written();
+        let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_to_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::DEAUTH),
+                    self.sta.bssid,
+                    self.sta.iface_mac,
+                    mac::SequenceControl(0)
+                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
+                ),
+                mac::DeauthHdr: &mac::DeauthHdr {
+                    reason_code,
+                },
+            },
+        })?;
         let out_buf = OutBuf::from(buf, bytes_written);
         self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending deauthenticate frame"), s))
@@ -576,28 +590,43 @@ impl<'a> BoundClient<'a> {
         src: MacAddr,
         dst: MacAddr,
         is_protected: bool,
-        is_qos: bool,
+        qos_ctrl: bool,
         ether_type: u16,
         payload: &[u8],
     ) -> Result<(), Error> {
-        let qos_presence = Presence::from_bool(is_qos);
-        let data_hdr_len =
-            mac::FixedDataHdrFields::len(mac::Addr4::ABSENT, qos_presence, mac::HtControl::ABSENT);
-        let frame_len = data_hdr_len + std::mem::size_of::<mac::LlcHdr>() + payload.len();
-        let mut buf = self.ctx.buf_provider.get_buffer(frame_len)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_data_frame(
-            &mut w,
-            &mut self.ctx.seq_mgr,
-            self.sta.bssid,
-            src,
-            dst,
-            is_protected,
-            is_qos,
-            ether_type,
-            payload,
-        )?;
-        let bytes_written = w.bytes_written();
+        let qos_ctrl = if qos_ctrl {
+            Some(
+                wmm::derive_tid(ether_type, payload)
+                    .map_or(mac::QosControl(0), |tid| mac::QosControl(0).with_tid(tid as u16)),
+            )
+        } else {
+            None
+        };
+
+        let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
+            headers: {
+                mac::FixedDataHdrFields: &mac::FixedDataHdrFields {
+                    frame_ctrl: mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::DATA)
+                        .with_data_subtype(mac::DataSubtype(0).with_qos(qos_ctrl.is_some()))
+                        .with_protected(is_protected)
+                        .with_to_ds(true),
+                    duration: 0,
+                    addr1: self.sta.bssid.0,
+                    addr2: src,
+                    addr3: dst,
+                    seq_ctrl: mac::SequenceControl(0).with_seq_num(
+                        match qos_ctrl.as_ref() {
+                            None => self.ctx.seq_mgr.next_sns1(&dst),
+                            Some(qos_ctrl) => self.ctx.seq_mgr.next_sns2(&dst, qos_ctrl.tid()),
+                        } as u16
+                    )
+                },
+                mac::QosControl?: qos_ctrl,
+                mac::LlcHdr: &data_writer::make_snap_llc_hdr(ether_type),
+            },
+            payload: payload,
+        })?;
         let out_buf = OutBuf::from(buf, bytes_written);
         let tx_flags = match ether_type {
             mac::ETHER_TYPE_EAPOL => TxFlags::FAVOR_RELIABILITY,
@@ -669,11 +698,22 @@ impl<'a> BoundClient<'a> {
     }
 
     pub fn send_ps_poll_frame(&mut self, aid: Aid) -> Result<(), Error> {
-        const FRAME_LEN: usize = frame_len!(mac::FrameControl, mac::PsPoll);
-        let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_ps_poll_frame(&mut w, aid, self.sta.bssid, self.sta.iface_mac)?;
-        let bytes_written = w.bytes_written();
+        const PS_POLL_ID_MASK: u16 = 0b11000000_00000000;
+
+        let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
+            headers: {
+                mac::FrameControl: &mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::CTRL)
+                    .with_ctrl_subtype(mac::CtrlSubtype::PS_POLL),
+                mac::PsPoll: &mac::PsPoll {
+                    // IEEE 802.11-2016 9.3.1.5 states the ID in the PS-Poll frame is the
+                    // association ID with the 2 MSBs set to 1.
+                    masked_aid: aid | PS_POLL_ID_MASK,
+                    bssid: self.sta.bssid,
+                    ta: self.sta.iface_mac,
+                },
+            },
+        })?;
         let out_buf = OutBuf::from(buf, bytes_written);
         self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending PS-Poll frame"), s))
@@ -687,22 +727,41 @@ impl<'a> BoundClient<'a> {
     ///
     /// Returns an error if the management frame cannot be sent to the AP.
     pub fn send_addba_req_frame(&mut self) -> Result<(), Error> {
-        const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::ActionHdr, mac::AddbaReqHdr);
-        let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
         // TODO(29887): It appears there is no particular rule to choose the
         //              value for `dialog_token`. Persist the dialog token for
         //              the BlockAck session and find a proven way to generate
         //              tokens.  See IEEE Std 802.11-2016, 9.6.5.2.
-        let dialog_token = 1;
-        write_addba_req_frame(
-            &mut w,
-            self.sta.bssid,
-            self.sta.iface_mac,
-            dialog_token,
-            &mut self.ctx.seq_mgr,
-        )?;
-        let bytes_written = w.bytes_written();
+        const DIALOG_TOKEN: u8 = 1;
+        // TODO(29887): No timeout. Determine better value.
+        const NO_TIMEOUT: u16 = 0;
+
+        let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_to_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::ACTION),
+                    self.sta.bssid,
+                    self.sta.iface_mac,
+                    mac::SequenceControl(0)
+                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
+                ),
+                mac::ActionHdr: &mac::ActionHdr { action: mac::ActionCategory::BLOCK_ACK },
+                mac::AddbaReqHdr: &mac::AddbaReqHdr {
+                    action: mac::BlockAckAction::ADDBA_REQUEST,
+                    dialog_token: DIALOG_TOKEN,
+                    parameters: mac::BlockAckParameters(0)
+                        .with_amsdu(true)
+                        .with_policy(mac::BlockAckPolicy::IMMEDIATE)
+                        .with_tid(BLOCK_ACK_TID)
+                        .with_buffer_size(BLOCK_ACK_BUFFER_SIZE),
+                    timeout: NO_TIMEOUT,
+                    starting_sequence_control: mac::BlockAckStartingSequenceControl(0)
+                        .with_fragment_number(0) // IEEE Std 802.11-2016, 9.6.5.2 - Always zero.
+                        .with_starting_sequence_number(1),
+                }
+            },
+        })?;
         let out_buf = OutBuf::from(buf, bytes_written);
         self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending addba request frame"), s))
@@ -716,17 +775,34 @@ impl<'a> BoundClient<'a> {
     ///
     /// Returns an error if the management frame cannot be sent to the AP.
     pub fn send_addba_resp_frame(&mut self, dialog_token: u8) -> Result<(), Error> {
-        const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::ActionHdr, mac::AddbaRespHdr);
-        let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_addba_resp_frame(
-            &mut w,
-            self.sta.bssid,
-            self.sta.iface_mac,
-            dialog_token,
-            &mut self.ctx.seq_mgr,
-        )?;
-        let bytes_written = w.bytes_written();
+        // TODO(29887): No timeout. Determine better value.
+        const NO_TIMEOUT: u16 = 0;
+
+        let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_to_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::ACTION),
+                    self.sta.bssid,
+                    self.sta.iface_mac,
+                    mac::SequenceControl(0)
+                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
+                ),
+                mac::ActionHdr: &mac::ActionHdr { action: mac::ActionCategory::BLOCK_ACK },
+                mac::AddbaRespHdr: &mac::AddbaRespHdr {
+                    action: mac::BlockAckAction::ADDBA_RESPONSE,
+                    dialog_token,
+                    status: mac::StatusCode::SUCCESS,
+                    parameters: mac::BlockAckParameters(0)
+                        .with_amsdu(true)
+                        .with_policy(mac::BlockAckPolicy::IMMEDIATE)
+                        .with_tid(BLOCK_ACK_TID)
+                        .with_buffer_size(BLOCK_ACK_BUFFER_SIZE),
+                    timeout: NO_TIMEOUT,
+                }
+            },
+        })?;
         let out_buf = OutBuf::from(buf, bytes_written);
         self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending addba response frame"), s))
@@ -926,17 +1002,26 @@ pub fn send_power_state_frame(
     ctx: &mut Context,
     state: PowerState,
 ) -> Result<(), Error> {
-    let mut buffer = ctx.buf_provider.get_buffer(mac::FixedDataHdrFields::len(
-        mac::Addr4::ABSENT,
-        mac::QosControl::ABSENT,
-        mac::HtControl::ABSENT,
-    ))?;
-    let mut writer = BufferWriter::new(&mut buffer[..]);
-    write_power_state_frame(&mut writer, sta.bssid, sta.iface_mac, &mut ctx.seq_mgr, state)?;
-    let n = writer.bytes_written();
-    let buffer = OutBuf::from(buffer, n);
+    let (buf, bytes_written) = write_frame!(&mut ctx.buf_provider, {
+        headers: {
+            mac::FixedDataHdrFields: &mac::FixedDataHdrFields {
+                frame_ctrl: mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::DATA)
+                    .with_data_subtype(mac::DataSubtype(0).with_null(true))
+                    .with_power_mgmt(state)
+                    .with_to_ds(true),
+                duration: 0,
+                addr1: sta.bssid.0,
+                addr2: sta.iface_mac,
+                addr3: sta.bssid.0,
+                seq_ctrl: mac::SequenceControl(0)
+                    .with_seq_num(ctx.seq_mgr.next_sns1(&sta.bssid.0) as u16)
+            },
+        },
+    })?;
+    let out_buf = OutBuf::from(buf, bytes_written);
     ctx.device
-        .send_wlan_frame(buffer, TxFlags::NONE)
+        .send_wlan_frame(out_buf, TxFlags::NONE)
         .map_err(|error| Error::Status(format!("error sending power management frame"), error))
 }
 
@@ -1411,6 +1496,88 @@ mod tests {
             0x12, 0x34, // Protocol ID
             // Payload
             5, 5, 5, 5, 5, 5, 5, 5,
+        ][..]);
+
+        // Verify no ensure_on_channel. That is, scheduling scan request would cause channel to be
+        // switched right away.
+        me.on_sme_scan(Some(&mut client), scan_req());
+        assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
+    }
+
+    #[test]
+    fn client_send_data_frame_ipv4_qos() {
+        let mut m = MockObjects::new();
+        let mut me = m.make_mlme();
+        let mut client = make_client_station();
+        client
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_data_frame(
+                [2; 6],
+                [3; 6],
+                false,
+                true,
+                0x0800,              // IPv4
+                &[1, 0xB0, 3, 4, 5], // DSCP = 0b101100 (i.e. VOICE-ADMIT)
+            )
+            .expect("error delivering WLAN frame");
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        #[rustfmt::skip]
+        assert_eq!(&m.fake_device.wlan_queue[0].0[..], &[
+            // Data header:
+            0b1000_10_00, 0b0000000_1, // FC
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            3, 3, 3, 3, 3, 3, // addr3
+            0x10, 0, // Sequence Control
+            0x06, 0, // QoS Control - TID = 6
+            // LLC header:
+            0xAA, 0xAA, 0x03, // DSAP, SSAP, Control
+            0, 0, 0, // OUI
+            0x08, 0x00, // Protocol ID
+            // Payload
+            1, 0xB0, 3, 4, 5,
+        ][..]);
+
+        // Verify no ensure_on_channel. That is, scheduling scan request would cause channel to be
+        // switched right away.
+        me.on_sme_scan(Some(&mut client), scan_req());
+        assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
+    }
+
+    #[test]
+    fn client_send_data_frame_ipv6_qos() {
+        let mut m = MockObjects::new();
+        let mut me = m.make_mlme();
+        let mut client = make_client_station();
+        client
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_data_frame(
+                [2; 6],
+                [3; 6],
+                false,
+                true,
+                0x86DD,                         // IPv6
+                &[0b0101, 0b10000000, 3, 4, 5], // DSCP = 0b010110 (i.e. AF23)
+            )
+            .expect("error delivering WLAN frame");
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        #[rustfmt::skip]
+        assert_eq!(&m.fake_device.wlan_queue[0].0[..], &[
+            // Data header:
+            0b1000_10_00, 0b0000000_1, // FC
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            3, 3, 3, 3, 3, 3, // addr3
+            0x10, 0, // Sequence Control
+            0x03, 0, // QoS Control - TID = 3
+            // LLC header:
+            0xAA, 0xAA, 0x03, // DSAP, SSAP, Control
+            0, 0, 0, // OUI
+            0x86, 0xDD, // Protocol ID
+            // Payload
+            0b0101, 0b10000000, 3, 4, 5,
         ][..]);
 
         // Verify no ensure_on_channel. That is, scheduling scan request would cause channel to be

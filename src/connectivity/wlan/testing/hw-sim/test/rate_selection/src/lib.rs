@@ -114,16 +114,7 @@ async fn eth_and_beacon_sender<'a>(
         // Send a beacon before that to stay connected.
         if (intervals_since_last_beacon * DATA_FRAME_INTERVAL_NANOS).nanos() >= 8765.millis() {
             intervals_since_last_beacon = 0;
-            send_beacon(
-                &mut vec![],
-                &CHANNEL,
-                &BSS_MINSTL,
-                SSID_MINSTREL,
-                &Protection::Open,
-                &phy,
-                0,
-            )
-            .unwrap();
+            send_beacon(&CHANNEL, &BSS_MINSTL, SSID_MINSTREL, &Protection::Open, &phy, 0).unwrap();
         }
         intervals_since_last_beacon += 1;
 

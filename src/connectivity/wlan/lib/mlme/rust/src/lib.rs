@@ -9,11 +9,8 @@ pub mod client;
 mod ddk_converter;
 pub mod device;
 pub mod error;
-mod eth_writer;
-mod frame_writer;
 pub mod key;
 mod logger;
 pub mod timer;
 
-use frame_writer::*;
-pub use {ddk_converter::*, eth_writer::*, wlan_common as common};
+pub use {ddk_converter::*, wlan_common as common};

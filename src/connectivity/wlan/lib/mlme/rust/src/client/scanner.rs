@@ -9,7 +9,6 @@ use {
             channel_listener::{ChannelListener, ChannelListenerSource},
             channel_scheduler::ChannelScheduler,
             convert_beacon::construct_bss_description,
-            frame_writer::write_probe_req_frame,
             Context, TimedEvent,
         },
         device::{Device, TxFlags},
@@ -27,12 +26,11 @@ use {
     },
     thiserror::Error,
     wlan_common::{
-        buffer_writer::BufferWriter,
-        frame_len,
-        ie::{IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN},
         mac::{self, Bssid, CapabilityInfo, MacAddr},
+        mgmt_writer,
         time::TimeUnit,
     },
+    wlan_frame_writer::write_frame,
 };
 
 type BeaconHash = u64;
@@ -367,23 +365,23 @@ impl<'a> BoundScanner<'a> {
             .ok_or(format_err!("no band found for chan {:?}", channel.primary))?;
         let rates: Vec<u8> = band_info.rates.iter().cloned().filter(|r| *r > 0).collect();
 
-        let mgmt_hdr_len = frame_len!(mac::MgmtHdr);
-        let ssid_len = IE_PREFIX_LEN + ssid.len();
-        let rates_len = (IE_PREFIX_LEN + rates.len())
-            + if rates.len() > SUPPORTED_RATES_MAX_LEN { IE_PREFIX_LEN } else { 0 };
-
-        let frame_len = mgmt_hdr_len + ssid_len + rates_len;
-        let mut buf = self.ctx.buf_provider.get_buffer(frame_len)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-
-        write_probe_req_frame(
-            &mut w,
-            self.scanner.iface_mac,
-            &mut self.ctx.seq_mgr,
-            &ssid,
-            &rates[..],
-        )?;
-        let bytes_written = w.bytes_written();
+        let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_to_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::PROBE_REQ),
+                    Bssid(mac::BCAST_ADDR),
+                    self.scanner.iface_mac,
+                    mac::SequenceControl(0)
+                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&mac::BCAST_ADDR) as u16)),
+            },
+            ies: {
+                ssid: ssid,
+                supported_rates: rates,
+                extended_supported_rates: {/* continue rates */},
+            }
+        })?;
         let out_buf = OutBuf::from(buf, bytes_written);
         self.ctx
             .device

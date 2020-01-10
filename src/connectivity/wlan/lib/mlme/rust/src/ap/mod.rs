@@ -332,7 +332,10 @@ mod tests {
         },
         banjo_ddk_protocol_wlan_info::{WlanChannel, WlanChannelBandwidth},
         fidl_fuchsia_wlan_common as fidl_common,
-        wlan_common::{assert_variant, test_utils::fake_frames::fake_wpa2_rsne},
+        wlan_common::{
+            assert_variant, big_endian::BigEndianU16, test_utils::fake_frames::fake_wpa2_rsne,
+        },
+        wlan_frame_writer::write_frame_with_dynamic_buf,
     };
     const CLIENT_ADDR: MacAddr = [4u8; 6];
     const BSSID: Bssid = Bssid([2u8; 6]);
@@ -344,9 +347,18 @@ mod tests {
         protocol_id: u16,
         body: &[u8],
     ) -> Vec<u8> {
-        let mut buf = vec![];
-        crate::write_eth_frame(&mut buf, dst_addr, src_addr, protocol_id, body)
-            .expect("writing to vec always succeeds");
+        let (mut buf, bytes_written) = write_frame_with_dynamic_buf!(vec![], {
+            headers: {
+                mac::EthernetIIHdr: &mac::EthernetIIHdr {
+                    da: dst_addr,
+                    sa: src_addr,
+                    ether_type: BigEndianU16::from_native(protocol_id),
+                },
+            },
+            payload: body,
+        })
+        .expect("writing to vec always succeeds");
+        buf.truncate(bytes_written);
         buf
     }
 

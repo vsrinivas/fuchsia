@@ -147,7 +147,6 @@ impl<'a> Beacon<'a> {
 impl<'a> Action<wlantap::SetChannelArgs> for Beacon<'a> {
     fn run(&mut self, args: &wlantap::SetChannelArgs) {
         send_beacon(
-            &mut vec![],
             &args.chan,
             &self.bssid,
             &self.ssid,

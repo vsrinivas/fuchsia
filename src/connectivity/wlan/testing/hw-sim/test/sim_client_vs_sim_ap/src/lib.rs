@@ -96,16 +96,8 @@ async fn verify_client_connects_to_ap(
             WlantapPhyEvent::SetChannel { args } => {
                 if args.chan.primary == CHANNEL.primary {
                     // TODO(35337): use beacon frame from configure_beacon
-                    send_beacon(
-                        &mut vec![],
-                        &CHANNEL,
-                        &AP_MAC_ADDR,
-                        SSID,
-                        &Wpa2Personal,
-                        &client_proxy,
-                        0,
-                    )
-                    .expect("sending beacon");
+                    send_beacon(&CHANNEL, &AP_MAC_ADDR, SSID, &Wpa2Personal, &client_proxy, 0)
+                        .expect("sending beacon");
                 }
             }
             evt => packet_forwarder(&ap_proxy, "frame client -> ap")(evt),

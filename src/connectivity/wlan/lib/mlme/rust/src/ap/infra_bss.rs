@@ -5,9 +5,9 @@
 use {
     crate::{
         ap::{
-            frame_writer::{self, BeaconOffloadParams},
+            frame_writer,
             remote_client::{ClientRejection, RemoteClient},
-            BufferedFrame, Context, Rejection, TimedEvent,
+            BeaconOffloadParams, BufferedFrame, Context, Rejection, TimedEvent,
         },
         buffer::{InBuf, OutBuf},
         device::TxFlags,

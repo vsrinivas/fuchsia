@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     fidl_fuchsia_wlan_common::{Cbw, WlanChan},
     fidl_fuchsia_wlan_device::MacRole,
     fidl_fuchsia_wlan_service::{ConnectConfig, ErrCode, State, WlanMarker, WlanProxy, WlanStatus},
@@ -10,11 +11,9 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::prelude::*,
     wlan_common::{
-        appendable::Appendable,
         bss::Protection,
         data_writer,
         ie::{
-            self,
             rsn::{akm, cipher, rsne},
             wpa::WpaIe,
         },
@@ -22,6 +21,7 @@ use {
         organization::Oui,
         TimeUnit,
     },
+    wlan_frame_writer::write_frame_with_dynamic_buf,
     wlan_rsn::rsna::SecAssocUpdate,
 };
 
@@ -78,112 +78,112 @@ pub fn create_rx_info(channel: &WlanChan, rssi_dbm: i8) -> WlanRxInfo {
 }
 
 pub fn send_beacon(
-    frame_buf: &mut Vec<u8>,
     channel: &WlanChan,
-    bss_id: &mac::Bssid,
+    bssid: &mac::Bssid,
     ssid: &[u8],
     protection: &Protection,
     proxy: &WlantapPhyProxy,
     rssi_dbm: i8,
 ) -> Result<(), anyhow::Error> {
-    frame_buf.clear();
+    let rsne = default_wpa2_psk_rsne();
+    let wpa1_ie = default_wpa1_vendor_ie();
 
-    let frame_ctrl = mac::FrameControl(0)
-        .with_frame_type(mac::FrameType::MGMT)
-        .with_mgmt_subtype(mac::MgmtSubtype::BEACON);
-    let seq_ctrl = mac::SequenceControl(0).with_seq_num(123);
-    const BROADCAST_ADDR: mac::MacAddr = [0xff; 6];
-    mgmt_writer::write_mgmt_hdr(
-        frame_buf,
-        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, BROADCAST_ADDR, *bss_id, seq_ctrl),
-        None,
-    )?;
-
-    frame_buf.append_value(&mac::BeaconHdr {
-        timestamp: 0,
-        beacon_interval: TimeUnit::DEFAULT_BEACON_INTERVAL,
-        capabilities: mac::CapabilityInfo(0).with_privacy(*protection != Protection::Open),
+    let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
+        headers: {
+            mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::MGMT)
+                    .with_mgmt_subtype(mac::MgmtSubtype::BEACON),
+                mac::BCAST_ADDR,
+                *bssid,
+                mac::SequenceControl(0).with_seq_num(123),
+            ),
+            mac::BeaconHdr: &mac::BeaconHdr {
+                timestamp: 0,
+                beacon_interval: TimeUnit::DEFAULT_BEACON_INTERVAL,
+                capabilities: mac::CapabilityInfo(0).with_privacy(*protection != Protection::Open),
+            },
+        },
+        ies: {
+            ssid: ssid,
+            supported_rates: &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24],
+            dsss_param_set: &ie::DsssParamSet { current_chan: channel.primary },
+            rsne?: match protection {
+                Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
+                Protection::Open | Protection::Wep | Protection::Wpa1 => None,
+                Protection::Wpa1Wpa2Personal | Protection::Wpa2Personal => Some(&rsne),
+                _ => panic!("unsupported fake beacon: {:?}", protection),
+            },
+            wpa1?: match protection {
+                Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
+                Protection::Open | Protection::Wep => None,
+                Protection::Wpa1 | Protection::Wpa1Wpa2Personal => Some(&wpa1_ie),
+                Protection::Wpa2Personal => None,
+                _ => panic!("unsupported fake beacon: {:?}", protection),
+            },
+        },
     })?;
-
-    ie::write_ssid(frame_buf, ssid)?;
-    ie::write_supported_rates(frame_buf, &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?;
-    ie::write_dsss_param_set(frame_buf, &ie::DsssParamSet { current_chan: channel.primary })?;
-    match protection {
-        Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
-        Protection::Open | Protection::Wep => (),
-        Protection::Wpa1 => ie::write_wpa1_ie(frame_buf, &default_wpa1_vendor_ie())?,
-        Protection::Wpa1Wpa2Personal => {
-            default_wpa2_psk_rsne().write_into(frame_buf)?;
-            ie::write_wpa1_ie(frame_buf, &default_wpa1_vendor_ie())?;
-        }
-        Protection::Wpa2Personal => default_wpa2_psk_rsne().write_into(frame_buf)?,
-        _ => panic!("unsupported fake beacon: {:?}", protection),
-    };
-
-    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel, rssi_dbm))?;
+    proxy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(channel, rssi_dbm))?;
     Ok(())
 }
 
 fn send_authentication(
-    frame_buf: &mut Vec<u8>,
     channel: &WlanChan,
-    bss_id: &mac::Bssid,
+    bssid: &mac::Bssid,
     proxy: &WlantapPhyProxy,
 ) -> Result<(), anyhow::Error> {
-    frame_buf.clear();
-
-    let frame_ctrl = mac::FrameControl(0)
-        .with_frame_type(mac::FrameType::MGMT)
-        .with_mgmt_subtype(mac::MgmtSubtype::AUTH);
-    let seq_ctrl = mac::SequenceControl(0).with_seq_num(123);
-    mgmt_writer::write_mgmt_hdr(
-        frame_buf,
-        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, CLIENT_MAC_ADDR, *bss_id, seq_ctrl),
-        None,
-    )?;
-
-    frame_buf.append_value(&mac::AuthHdr {
-        auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
-        auth_txn_seq_num: 2,
-        status_code: mac::StatusCode::SUCCESS,
+    let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
+        headers: {
+            mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::MGMT)
+                    .with_mgmt_subtype(mac::MgmtSubtype::AUTH),
+                CLIENT_MAC_ADDR,
+                *bssid,
+                mac::SequenceControl(0).with_seq_num(123),
+            ),
+            mac::AuthHdr: &mac::AuthHdr {
+                auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
+                auth_txn_seq_num: 2,
+                status_code: mac::StatusCode::SUCCESS,
+            },
+        },
     })?;
-
-    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
+    proxy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 
 fn send_association_response(
-    frame_buf: &mut Vec<u8>,
     channel: &WlanChan,
-    bss_id: &mac::Bssid,
+    bssid: &mac::Bssid,
     proxy: &WlantapPhyProxy,
 ) -> Result<(), anyhow::Error> {
-    frame_buf.clear();
-
-    let frame_ctrl = mac::FrameControl(0)
-        .with_frame_type(mac::FrameType::MGMT)
-        .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_RESP);
-    let seq_ctrl = mac::SequenceControl(0).with_seq_num(123);
-    mgmt_writer::write_mgmt_hdr(
-        frame_buf,
-        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, CLIENT_MAC_ADDR, *bss_id, seq_ctrl),
-        None,
-    )?;
-
-    let cap_info = mac::CapabilityInfo(0).with_ess(true).with_short_preamble(true);
-    frame_buf.append_value(&mac::AssocRespHdr {
-        capabilities: cap_info,
-        status_code: mac::StatusCode::SUCCESS,
-        aid: 2, // does not matter
+    let (buf, _bytes_written) = write_frame_with_dynamic_buf!(vec![], {
+        headers: {
+            mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::MGMT)
+                    .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_RESP),
+                CLIENT_MAC_ADDR,
+                *bssid,
+                mac::SequenceControl(0).with_seq_num(123),
+            ),
+            mac::AssocRespHdr: &mac::AssocRespHdr {
+                capabilities: mac::CapabilityInfo(0).with_ess(true).with_short_preamble(true),
+                status_code: mac::StatusCode::SUCCESS,
+                aid: 2, // does not matter
+            },
+        },
+        ies: {
+            // These rates will be captured in assoc_ctx to initialize Minstrel. 11b rates are
+            // ignored.
+            // tx_vec_idx:        _     _     _   129   130     _   131   132
+            supported_rates: &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24],
+            // tx_vec_idx:              133 134 basic_135  136
+            extended_supported_rates:  &[48, 72, 128 + 96, 108],
+        },
     })?;
-
-    // These rates will be captured in assoc_ctx to initialize Minstrel. 11b rates are ignored.
-    // tx_vec_idx:                            _     _     _   129   130     _   131   132
-    ie::write_supported_rates(frame_buf, &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?;
-    // tx_vec_idx:                            133 134 basic_135  136
-    ie::write_ext_supported_rates(frame_buf, &[48, 72, 128 + 96, 108])?;
-
-    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
+    proxy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 
@@ -270,7 +270,7 @@ fn handle_connect_events(
         WlantapPhyEvent::SetChannel { args } => {
             println!("channel: {:?}", args.chan);
             if args.chan.primary == CHANNEL.primary {
-                send_beacon(&mut vec![], &args.chan, bssid, ssid, protection, &phy, 0).unwrap();
+                send_beacon(&args.chan, bssid, ssid, protection, &phy, 0).unwrap();
             }
         }
         WlantapPhyEvent::Tx { args } => {
@@ -278,11 +278,11 @@ fn handle_connect_events(
                 Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
                     match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
                         Some(mac::MgmtBody::Authentication { .. }) => {
-                            send_authentication(&mut vec![], &CHANNEL, bssid, &phy)
+                            send_authentication(&CHANNEL, bssid, &phy)
                                 .expect("Error sending fake authentication frame.");
                         }
                         Some(mac::MgmtBody::AssociationReq { .. }) => {
-                            send_association_response(&mut vec![], &CHANNEL, bssid, &phy)
+                            send_association_response(&CHANNEL, bssid, &phy)
                                 .expect("Error sending fake association response frame.");
                             if let Some(authenticator) = authenticator {
                                 let mut updates = wlan_rsn::rsna::UpdateSink::default();
@@ -381,29 +381,24 @@ pub fn rx_wlan_data_frame(
     ether_type: u16,
     phy: &WlantapPhyProxy,
 ) -> Result<(), anyhow::Error> {
-    let buf: &mut Vec<u8> = &mut vec![];
-
-    let frame_ctrl = mac::FrameControl(0)
-        .with_frame_type(mac::FrameType::DATA)
-        .with_data_subtype(mac::DataSubtype(0))
-        .with_from_ds(true);
-    let seq_ctrl = mac::SequenceControl(0).with_seq_num(3);
-
-    data_writer::write_data_hdr(
-        buf,
-        mac::FixedDataHdrFields {
-            frame_ctrl,
-            duration: 0,
-            addr1: *addr1,
-            addr2: *addr2,
-            addr3: *addr3,
-            seq_ctrl,
+    let (mut buf, bytes_written) = write_frame_with_dynamic_buf!(vec![], {
+        headers: {
+            mac::FixedDataHdrFields: &mac::FixedDataHdrFields {
+                frame_ctrl: mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::DATA)
+                    .with_data_subtype(mac::DataSubtype(0))
+                    .with_from_ds(true),
+                duration: 0,
+                addr1: *addr1,
+                addr2: *addr2,
+                addr3: *addr3,
+                seq_ctrl: mac::SequenceControl(0).with_seq_num(3),
+            },
+            mac::LlcHdr: &data_writer::make_snap_llc_hdr(ether_type),
         },
-        mac::OptionalDataHdrFields::none(),
-    )?;
-
-    data_writer::write_snap_llc_hdr(buf, ether_type)?;
-    buf.append_bytes(payload)?;
+        payload: payload,
+    })?;
+    buf.truncate(bytes_written);
 
     phy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
     Ok(())

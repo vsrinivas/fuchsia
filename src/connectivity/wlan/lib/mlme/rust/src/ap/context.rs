@@ -4,25 +4,31 @@
 
 use {
     crate::{
-        ap::{frame_writer::*, TimedEvent},
+        ap::TimedEvent,
         buffer::{BufferProvider, InBuf},
         device::Device,
         error::Error,
         timer::{EventId, Timer},
-        write_eth_frame,
     },
+    anyhow::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     wlan_common::{
-        buffer_writer::BufferWriter,
-        frame_len,
-        ie::{self, IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN},
-        mac::{
-            self, Aid, AuthAlgorithmNumber, Bssid, MacAddr, OptionalField, Presence, StatusCode,
-        },
+        big_endian::BigEndianU16,
+        data_writer,
+        ie::{self, rsn::rsne},
+        mac::{self, Aid, AuthAlgorithmNumber, Bssid, MacAddr, StatusCode},
+        mgmt_writer,
         sequence::SequenceManager,
-        TimeUnit,
+        wmm, TimeUnit,
     },
+    wlan_frame_writer::{write_frame, write_frame_with_fixed_buf},
 };
+
+/// BeaconParams contains parameters that may be used to offload beaconing to the hardware.
+pub struct BeaconOffloadParams {
+    /// Offset from the start of the input buffer to the TIM element.
+    pub tim_ele_offset: usize,
+}
 
 pub struct Context {
     pub device: Device,
@@ -153,20 +159,19 @@ impl Context {
         auth_txn_seq_num: u16,
         status_code: StatusCode,
     ) -> Result<(InBuf, usize), Error> {
-        const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::AuthHdr);
-        let mut buf = self.buf_provider.get_buffer(FRAME_LEN)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_auth_frame(
-            &mut w,
-            addr,
-            self.bssid.clone(),
-            &mut self.seq_mgr,
-            auth_alg_num,
-            auth_txn_seq_num,
-            status_code,
-        )?;
-        let bytes_written = w.bytes_written();
-        Ok((buf, bytes_written))
+        write_frame!(&self.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::AUTH),
+                    addr,
+                    self.bssid,
+                    mac::SequenceControl(0).with_seq_num(self.seq_mgr.next_sns1(&addr) as u16)
+                ),
+                mac::AuthHdr: &mac::AuthHdr { auth_alg_num, auth_txn_seq_num, status_code },
+            }
+        })
     }
 
     /// Sends a WLAN association response frame (IEEE Std 802.11-2016, 9.3.3.7) to the PHY.
@@ -178,36 +183,40 @@ impl Context {
         rates: &[u8],
         max_idle_period: Option<u16>,
     ) -> Result<(InBuf, usize), Error> {
-        let frame_len = frame_len!(mac::MgmtHdr, mac::AssocRespHdr);
-        let rates_len = IE_PREFIX_LEN
-            + rates.len()
-            // If there are too many rates, they will be split into two IEs.
-            // In this case, the total length would be the sum of:
-            // 1) 1st IE: IE_PREFIX_LEN + SUPPORTED_RATES_MAX_LEN
-            // 2) 2nd IE: IE_PREFIX_LEN + rates().len - SUPPORTED_RATES_MAX_LEN
-            // The total length is IE_PREFIX_LEN + rates.len() + IE_PREFIX_LEN.
-            + if rates.len() > SUPPORTED_RATES_MAX_LEN { IE_PREFIX_LEN } else { 0 };
-        let max_idle_period_len = if max_idle_period.is_some() {
-            IE_PREFIX_LEN + std::mem::size_of::<ie::BssMaxIdlePeriod>()
-        } else {
-            0
-        };
-        let frame_len = frame_len + rates_len + max_idle_period_len;
-
-        let mut buf = self.buf_provider.get_buffer(frame_len)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_assoc_resp_frame(
-            &mut w,
-            addr,
-            self.bssid.clone(),
-            &mut self.seq_mgr,
-            capabilities,
-            aid,
-            rates,
-            max_idle_period,
-        )?;
-        let bytes_written = w.bytes_written();
-        Ok((buf, bytes_written))
+        write_frame!(&self.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_RESP),
+                    addr,
+                    self.bssid,
+                    mac::SequenceControl(0).with_seq_num(self.seq_mgr.next_sns1(&addr) as u16)
+                ),
+                mac::AssocRespHdr: &mac::AssocRespHdr {
+                    capabilities,
+                    status_code: StatusCode::SUCCESS,
+                    aid
+                },
+            },
+            // Order of association response frame body IEs is according to IEEE Std 802.11-2016,
+            // Table 9-30, numbered below.
+            ies: {
+                // 4: Supported Rates and BSS Membership Selectors
+                supported_rates: &rates,
+                // 5: Extended Supported Rates and BSS Membership Selectors
+                extended_supported_rates: {/* continue rates */},
+                // 19: BSS Max Idle Period
+                bss_max_idle_period?: if let Some(max_idle_period) = max_idle_period {
+                    ie::BssMaxIdlePeriod {
+                        max_idle_period,
+                        idle_options: ie::IdleOptions(0)
+                            // TODO(37891): Support configuring this.
+                            .with_protected_keep_alive_required(false),
+                    }
+                },
+            }
+        })
     }
 
     /// Sends a WLAN association response frame (IEEE Std 802.11-2016, 9.3.3.7) to the PHY, but only
@@ -218,19 +227,23 @@ impl Context {
         capabilities: mac::CapabilityInfo,
         status_code: StatusCode,
     ) -> Result<(InBuf, usize), Error> {
-        const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::AssocRespHdr);
-        let mut buf = self.buf_provider.get_buffer(FRAME_LEN)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_assoc_resp_frame_error(
-            &mut w,
-            addr,
-            self.bssid.clone(),
-            &mut self.seq_mgr,
-            capabilities,
-            status_code,
-        )?;
-        let bytes_written = w.bytes_written();
-        Ok((buf, bytes_written))
+        write_frame!(&self.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_RESP),
+                    addr,
+                    self.bssid,
+                    mac::SequenceControl(0).with_seq_num(self.seq_mgr.next_sns1(&addr) as u16)
+                ),
+                mac::AssocRespHdr: &mac::AssocRespHdr {
+                    capabilities,
+                    status_code,
+                    aid: 0,
+                },
+            },
+        })
     }
 
     /// Sends a WLAN deauthentication frame (IEEE Std 802.11-2016, 9.3.3.1) to the PHY.
@@ -239,11 +252,19 @@ impl Context {
         addr: MacAddr,
         reason_code: mac::ReasonCode,
     ) -> Result<(InBuf, usize), Error> {
-        let mut buf = self.buf_provider.get_buffer(frame_len!(mac::MgmtHdr, mac::DeauthHdr))?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_deauth_frame(&mut w, addr, self.bssid.clone(), &mut self.seq_mgr, reason_code)?;
-        let bytes_written = w.bytes_written();
-        Ok((buf, bytes_written))
+        write_frame!(&self.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::DEAUTH),
+                    addr,
+                    self.bssid,
+                    mac::SequenceControl(0).with_seq_num(self.seq_mgr.next_sns1(&addr) as u16)
+                ),
+                mac::DeauthHdr: &mac::DeauthHdr { reason_code },
+            },
+        })
     }
 
     /// Sends a WLAN disassociation frame (IEEE Std 802.11-2016, 9.3.3.5) to the PHY.
@@ -252,11 +273,19 @@ impl Context {
         addr: MacAddr,
         reason_code: mac::ReasonCode,
     ) -> Result<(InBuf, usize), Error> {
-        let mut buf = self.buf_provider.get_buffer(frame_len!(mac::MgmtHdr, mac::DeauthHdr))?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_disassoc_frame(&mut w, addr, self.bssid.clone(), &mut self.seq_mgr, reason_code)?;
-        let bytes_written = w.bytes_written();
-        Ok((buf, bytes_written))
+        write_frame!(&self.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::DISASSOC),
+                    addr,
+                    self.bssid,
+                    mac::SequenceControl(0).with_seq_num(self.seq_mgr.next_sns1(&addr) as u16)
+                ),
+                mac::DisassocHdr: &mac::DisassocHdr { reason_code },
+            },
+        })
     }
 
     /// Sends a WLAN probe response frame (IEEE Std 802.11-2016, 9.3.3.11) to the PHY.
@@ -272,35 +301,38 @@ impl Context {
         channel: u8,
         rsne: &[u8],
     ) -> Result<(InBuf, usize), Error> {
-        let frame_len = frame_len!(mac::MgmtHdr, mac::BeaconHdr);
-        let ssid_len = IE_PREFIX_LEN + ssid.len();
-        let dsss_len = IE_PREFIX_LEN + std::mem::size_of::<ie::DsssParamSet>();
-        let rates_len = IE_PREFIX_LEN
-            + rates.len()
-            // If there are too many rates, they will be split into two IEs.
-            // In this case, the total length would be the sum of:
-            // 1) 1st IE: IE_PREFIX_LEN + SUPPORTED_RATES_MAX_LEN
-            // 2) 2nd IE: IE_PREFIX_LEN + rates().len - SUPPORTED_RATES_MAX_LEN
-            // The total length is IE_PREFIX_LEN + rates.len() + IE_PREFIX_LEN.
-            + if rates.len() > SUPPORTED_RATES_MAX_LEN { IE_PREFIX_LEN } else { 0 };
-        let frame_len = frame_len + ssid_len + rates_len + dsss_len + rsne.len();
-        let mut buf = self.buf_provider.get_buffer(frame_len)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_probe_resp_frame(
-            &mut w,
-            addr,
-            self.bssid,
-            &mut self.seq_mgr,
-            timestamp,
-            beacon_interval,
-            capabilities,
-            ssid,
-            rates,
-            channel,
-            rsne,
-        )?;
-        let bytes_written = w.bytes_written();
-        Ok((buf, bytes_written))
+        write_frame!(&self.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::PROBE_RESP),
+                    addr,
+                    self.bssid,
+                    mac::SequenceControl(0).with_seq_num(self.seq_mgr.next_sns1(&addr) as u16)
+                ),
+                mac::ProbeRespHdr: &mac::ProbeRespHdr { timestamp, beacon_interval, capabilities },
+            },
+            // Order of beacon frame body IEs is according to IEEE Std 802.11-2016, Table 9-27,
+            // numbered below.
+            ies: {
+                // 4. Service Set Identifier (SSID)
+                ssid: ssid,
+                // 5. Supported Rates and BSS Membership Selectors
+                supported_rates: rates,
+                // 6. DSSS Parameter Set
+                dsss_param_set: &ie::DsssParamSet { current_chan: channel },
+                // 16. Extended Supported Rates and BSS Membership Selectors
+                extended_supported_rates: {/* continue rates */},
+                // 17. RSN
+                rsne?: if !rsne.is_empty() {
+                    rsne::from_bytes(rsne)
+                        .map_err(|e| format_err!("error parsing rsne {:?} : {:?}", rsne, e))?
+                        .1
+                },
+
+            }
+        })
     }
 
     pub fn make_beacon_frame(
@@ -315,66 +347,92 @@ impl Context {
         tim_bitmap: &[u8],
         rsne: &[u8],
     ) -> Result<(InBuf, usize, BeaconOffloadParams), Error> {
-        let frame_len = frame_len!(mac::MgmtHdr, mac::BeaconHdr);
-        let ssid_len = IE_PREFIX_LEN + ssid.len();
-        let dsss_len = IE_PREFIX_LEN + std::mem::size_of::<ie::DsssParamSet>();
-        let rates_len = IE_PREFIX_LEN
-            + rates.len()
-            // If there are too many rates, they will be split into two IEs.
-            // In this case, the total length would be the sum of:
-            // 1) 1st IE: IE_PREFIX_LEN + SUPPORTED_RATES_MAX_LEN
-            // 2) 2nd IE: IE_PREFIX_LEN + rates().len - SUPPORTED_RATES_MAX_LEN
-            // The total length is IE_PREFIX_LEN + rates.len() + IE_PREFIX_LEN.
-            + if rates.len() > SUPPORTED_RATES_MAX_LEN { IE_PREFIX_LEN } else { 0 };
-        let tim_len = IE_PREFIX_LEN + std::mem::size_of::<ie::TimHeader>() + tim_bitmap.len();
-        let frame_len = frame_len + ssid_len + rates_len + dsss_len + tim_len + rsne.len();
-        let mut buf = self.buf_provider.get_buffer(frame_len)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        let params = write_beacon_frame(
-            &mut w,
-            self.bssid,
-            timestamp,
-            beacon_interval,
-            capabilities,
-            ssid,
-            rates,
-            channel,
-            tim_header,
-            tim_bitmap,
-            rsne,
-        )?;
-        let bytes_written = w.bytes_written();
-        Ok((buf, bytes_written, params))
+        let mut tim_ele_offset = 0;
+        let (buf, bytes_written) = write_frame!(&self.buf_provider, {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::BEACON),
+                    mac::BCAST_ADDR,
+                    self.bssid,
+                    // The sequence control is 0 because the firmware will set it.
+                    mac::SequenceControl(0)
+                ),
+                mac::BeaconHdr: &mac::BeaconHdr { timestamp, beacon_interval, capabilities },
+            },
+            // Order of beacon frame body IEs is according to IEEE Std 802.11-2016, Table 9-27,
+            // numbered below.
+            ies: {
+                // 4. Service Set Identifier (SSID)
+                ssid: ssid,
+                // 5. Supported Rates and BSS Membership Selectors
+                supported_rates: rates,
+                // 6. DSSS Parameter Set
+                dsss_param_set: &ie::DsssParamSet { current_chan: channel },
+                // 9. Traffic indication map (TIM)
+                // Write a placeholder TIM element, which the firmware will fill in.
+                // We only support hardware with hardware offload beaconing for now (e.g. ath10k).
+                tim_ele_offset @ tim: ie::TimView {
+                    header: tim_header,
+                    bitmap: tim_bitmap,
+                },
+                // 17. Extended Supported Rates and BSS Membership Selectors
+                extended_supported_rates: {/* continue rates */},
+                // 18. RSN
+                rsne?: if !rsne.is_empty() {
+                    rsne::from_bytes(rsne)
+                        .map_err(|e| format_err!("error parsing rsne {:?} : {:?}", rsne, e))?
+                        .1
+                },
+
+            }
+        })?;
+        Ok((buf, bytes_written, BeaconOffloadParams { tim_ele_offset }))
     }
     /// Sends a WLAN data frame (IEEE Std 802.11-2016, 9.3.2) to the PHY.
     pub fn make_data_frame(
         &mut self,
-        dst_addr: MacAddr,
-        src_addr: MacAddr,
+        dst: MacAddr,
+        src: MacAddr,
         protected: bool,
         qos_ctrl: bool,
         ether_type: u16,
         payload: &[u8],
     ) -> Result<(InBuf, usize), Error> {
-        let qos_presence = Presence::from_bool(qos_ctrl);
-        let data_hdr_len =
-            mac::FixedDataHdrFields::len(mac::Addr4::ABSENT, qos_presence, mac::HtControl::ABSENT);
-        let frame_len = data_hdr_len + std::mem::size_of::<mac::LlcHdr>() + payload.len();
-        let mut buf = self.buf_provider.get_buffer(frame_len)?;
-        let mut w = BufferWriter::new(&mut buf[..]);
-        write_data_frame(
-            &mut w,
-            &mut self.seq_mgr,
-            dst_addr,
-            self.bssid.clone(),
-            src_addr,
-            protected,
-            qos_ctrl,
-            ether_type,
-            payload,
-        )?;
-        let bytes_written = w.bytes_written();
-        Ok((buf, bytes_written))
+        let qos_ctrl = if qos_ctrl {
+            Some(
+                wmm::derive_tid(ether_type, payload)
+                    .map_or(mac::QosControl(0), |tid| mac::QosControl(0).with_tid(tid as u16)),
+            )
+        } else {
+            None
+        };
+
+        write_frame!(&self.buf_provider, {
+            headers: {
+                mac::FixedDataHdrFields: &mac::FixedDataHdrFields {
+                    frame_ctrl: mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::DATA)
+                        .with_data_subtype(mac::DataSubtype(0).with_qos(qos_ctrl.is_some()))
+                        .with_protected(protected)
+                        .with_from_ds(true),
+                    duration: 0,
+                    addr1: dst,
+                    addr2: self.bssid.0,
+                    addr3: src,
+                    seq_ctrl:  mac::SequenceControl(0).with_seq_num(
+                        match qos_ctrl.as_ref() {
+                            None => self.seq_mgr.next_sns1(&dst),
+                            Some(qos_ctrl) => self.seq_mgr.next_sns2(&dst, qos_ctrl.tid()),
+                        } as u16
+                    ),
+                },
+                mac::QosControl?: qos_ctrl,
+                mac::LlcHdr: &data_writer::make_snap_llc_hdr(ether_type),
+            },
+            payload: payload,
+        })
     }
 
     /// Sends an EAPoL data frame (IEEE Std 802.1X, 11.3) to the PHY.
@@ -405,11 +463,19 @@ impl Context {
         protocol_id: u16,
         body: &[u8],
     ) -> Result<(), Error> {
-        let mut buf = [0u8; mac::MAX_ETH_FRAME_LEN];
-        let mut writer = BufferWriter::new(&mut buf[..]);
-        write_eth_frame(&mut writer, dst_addr, src_addr, protocol_id, body)?;
+        let (buf, bytes_written) = write_frame_with_fixed_buf!([0u8; mac::MAX_ETH_FRAME_LEN], {
+            headers: {
+                mac::EthernetIIHdr: &mac::EthernetIIHdr {
+                    da: dst_addr,
+                    sa: src_addr,
+                    ether_type: BigEndianU16::from_native(protocol_id),
+                },
+            },
+            payload: body,
+        })?;
+        let (written, _remaining) = buf.split_at(bytes_written);
         self.device
-            .deliver_eth_frame(writer.into_written())
+            .deliver_eth_frame(written)
             .map_err(|s| Error::Status(format!("could not deliver Ethernet II frame"), s))
     }
 }
@@ -839,6 +905,80 @@ mod test {
                 0x12, 0x34, // Protocol ID
                 // Data
                 1, 2, 3, 4, 5,
+            ][..]
+        );
+    }
+
+    #[test]
+    fn make_data_frame_ipv4_qos() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let (in_buf, bytes_written) = ctx
+            .make_data_frame(
+                CLIENT_ADDR2,
+                CLIENT_ADDR,
+                false,
+                true,
+                0x0800, // IPv4
+                // Not valid IPv4 payload (too short).
+                // However, we only care that it includes the DS field.
+                &[1, 0xB0, 3, 4, 5], // DSCP = 0b010110 (i.e. AF23)
+            )
+            .expect("error making data frame");
+        assert_eq!(
+            &in_buf.as_slice()[..bytes_written],
+            &[
+                // Mgmt header
+                0b10001000, 0b00000010, // Frame Control
+                0, 0, // Duration
+                3, 3, 3, 3, 3, 3, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                0x10, 0, // Sequence Control
+                0x06, 0, // QoS Control - TID = 6
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x08, 0x00, // Protocol ID
+                // Payload
+                1, 0xB0, 3, 4, 5,
+            ][..]
+        );
+    }
+
+    #[test]
+    fn make_data_frame_ipv6_qos() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let (in_buf, bytes_written) = ctx
+            .make_data_frame(
+                CLIENT_ADDR2,
+                CLIENT_ADDR,
+                false,
+                true,
+                0x86DD, // IPv6
+                // Not valid IPv6 payload (too short).
+                // However, we only care that it includes the DS field.
+                &[0b0101, 0b10000000, 3, 4, 5], // DSCP = 0b101100 (i.e. VOICE-ADMIT)
+            )
+            .expect("error making data frame");
+        assert_eq!(
+            &in_buf.as_slice()[..bytes_written],
+            &[
+                // Mgmt header
+                0b10001000, 0b00000010, // Frame Control
+                0, 0, // Duration
+                3, 3, 3, 3, 3, 3, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                0x10, 0, // Sequence Control
+                0x03, 0, // QoS Control - TID = 3
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x86, 0xDD, // Protocol ID
+                // Payload
+                0b0101, 0b10000000, 3, 4, 5,
             ][..]
         );
     }
