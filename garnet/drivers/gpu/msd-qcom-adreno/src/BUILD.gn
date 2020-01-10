@@ -50,4 +50,8 @@ source_set("src") {
   if (is_fuchsia) {
     deps += [ "$magma_build_root/src/magma_util/platform/zircon:device" ]
   }
+
+  if (is_linux) {
+    deps += [ "$magma_build_root/src/magma_util/platform/linux:device" ]
+  }
 }
