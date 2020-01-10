@@ -3,16 +3,21 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <atomic>
-#include <fbl/auto_lock.h>
 #include <inttypes.h>
-#include <memory>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <zircon/device/usb-peripheral.h>
 #include <zircon/errors.h>
+#include <zircon/hw/usb/cdc.h>
+#include <zircon/listnode.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+
+#include <atomic>
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -22,13 +27,9 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb/function.h>
 #include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
 #include <inet6/inet6.h>
 #include <usb/usb-request.h>
-#include <zircon/listnode.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/device/usb-peripheral.h>
-#include <zircon/hw/usb/cdc.h>
 
 namespace usb_cdc_function {
 
@@ -529,7 +530,9 @@ static void cdc_get_descriptors(void* ctx, void* buffer, size_t buffer_size, siz
 static zx_status_t cdc_control(void* ctx, const usb_setup_t* setup, const void* write_buffer,
                                size_t write_size, void* out_read_buffer, size_t read_size,
                                size_t* out_read_actual) {
-  *out_read_actual = 0;
+  if (out_read_actual != NULL) {
+    *out_read_actual = 0;
+  }
 
   zxlogf(TRACE, "%s\n", __func__);
 

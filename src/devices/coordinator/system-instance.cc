@@ -795,7 +795,7 @@ int SystemInstance::ServiceStarter(devmgr::Coordinator* coordinator) {
     __UNUSED auto leaked_handle = proc.release();
   }
 
-  {
+  if (!coordinator->disable_netsvc()) {
     // Launch device-name-provider with access to /dev, to discover network interfaces.
     const zx_handle_t handles[] = {device_name_provider_server_.release()};
     const uint32_t types[] = {PA_DIRECTORY_REQUEST};

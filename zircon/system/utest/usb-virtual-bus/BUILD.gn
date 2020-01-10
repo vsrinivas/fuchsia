@@ -6,6 +6,7 @@ group("test") {
   testonly = true
   deps = [
     ":usb-virtual-bus-cdc-acm",
+    ":usb-virtual-bus-cdc-ecm",
     ":usb-virtual-bus-ftdi",
     ":usb-virtual-bus-hid",
   ]
@@ -83,6 +84,27 @@ zx_test("usb-virtual-bus-cdc-acm") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/usb-virtual-bus-launcher",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+zx_test("usb-virtual-bus-cdc-ecm") {
+  sources = [
+    "usb-cdc-ecm-test.cc",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-device:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-ethernet:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/usb-virtual-bus-launcher",
     "$zx/system/ulib/zircon",
