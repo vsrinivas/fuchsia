@@ -60,7 +60,7 @@ func init() {
 	flag.Var(&level, "level", "output verbosity, can be fatal, error, warning, info, debug or trace")
 	flag.StringVar(&jsonOutput, "json-output", "", "outputs trigger information to the specified file")
 	flag.BoolVar(&idsRel, "ids-rel", false, "tells the symbolizer to always use ids.txt relative paths")
-	flag.UintVar(&llvmSymboRestartInterval, "llvm-symbolizer-restart-interval", 1,
+	flag.UintVar(&llvmSymboRestartInterval, "llvm-symbolizer-restart-interval", 15,
 		"How many queries to make to the llvm-symbolizer tool before restarting it. 0 means never restart it. Use to control memory usage. See fxbug.dev/42018.")
 }
 
