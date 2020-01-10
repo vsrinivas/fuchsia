@@ -44,16 +44,14 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
-    "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
+    "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
     "//third_party/rust_crates:pin-utils",
   ]
 }
 
 package("netstack3") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

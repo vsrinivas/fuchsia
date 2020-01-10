@@ -217,13 +217,9 @@ source_set("run_all_unittests") {
 source_set("gtest_main") {
   testonly = true
 
-  sources = [
-    "run_all_unittests_main.cc",
-  ]
+  sources = [ "run_all_unittests_main.cc" ]
 
-  deps = [
-    ":run_all_unittests",
-  ]
+  deps = [ ":run_all_unittests" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }
@@ -231,9 +227,7 @@ source_set("gtest_main") {
 test("run_all_unittests_test") {
   testonly = true
 
-  sources = [
-    "run_all_unittests_test.cc",
-  ]
+  sources = [ "run_all_unittests_test.cc" ]
 
   deps = [
     ":run_all_unittests",

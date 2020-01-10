@@ -29,9 +29,7 @@ zx_library("intel-hda") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":intel-hda-utils-test",
-  ]
+  deps = [ ":intel-hda-utils-test" ]
 }
 
 zx_test("intel-hda-utils-test") {

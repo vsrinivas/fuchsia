@@ -6,13 +6,9 @@ import("//build/fidl/fidl.gni")
 import("//build/fuzzing/fuzzer.gni")
 
 source_set("encoding") {
-  sources = [
-    "encoding.h",
-  ]
+  sources = [ "encoding.h" ]
 
-  deps = [
-    "//src/ledger/lib/convert",
-  ]
+  deps = [ "//src/ledger/lib/convert" ]
 
   public_deps = [
     "//sdk/lib/fidl/cpp",
@@ -28,17 +24,13 @@ fidl("testing_fidl") {
 
   name = "fuchsia.ledger.testing"
 
-  sources = [
-    "testing.test.fidl",
-  ]
+  sources = [ "testing.test.fidl" ]
 }
 
 source_set("unittests") {
   testonly = true
 
-  sources = [
-    "encoding_unittest.cc",
-  ]
+  sources = [ "encoding_unittest.cc" ]
 
   deps = [
     ":encoding",
@@ -51,9 +43,7 @@ source_set("unittests") {
 }
 
 fuzzer("encoding_buffer_fuzzer") {
-  sources = [
-    "encoding_fuzztest.cc",
-  ]
+  sources = [ "encoding_fuzztest.cc" ]
   deps = [
     ":encoding",
     ":testing_fidl",

@@ -28,9 +28,7 @@ rustc_binary("bin") {
 }
 
 package("odu") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -48,9 +46,7 @@ package("odu") {
 }
 
 test_package("odu_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
   tests = [
     {
       name = "odu_bin_test"
@@ -61,10 +57,6 @@ test_package("odu_tests") {
 }
 
 install_host_tools("odu_host") {
-  deps = [
-    ":bin($host_toolchain)",
-  ]
-  outputs = [
-    "odu",
-  ]
+  deps = [ ":bin($host_toolchain)" ]
+  outputs = [ "odu" ]
 }

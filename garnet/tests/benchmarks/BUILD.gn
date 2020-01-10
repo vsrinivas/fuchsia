@@ -9,13 +9,9 @@ import("//build/package.gni")
 executable("garnet_benchmarks_bin") {
   output_name = "garnet_benchmarks"
 
-  sources = [
-    "benchmarks.cc",
-  ]
+  sources = [ "benchmarks.cc" ]
 
-  deps = [
-    "//garnet/testing/benchmarking:benchmarking",
-  ]
+  deps = [ "//garnet/testing/benchmarking:benchmarking" ]
 }
 
 zircon_extras_manifest("zircon-test-manifest") {

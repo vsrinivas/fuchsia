@@ -6,9 +6,7 @@
 # This is a transitional target and will be removed soon.
 # Bug: 36759
 group("json") {
-  public_deps = [
-    ":json_parser",
-  ]
+  public_deps = [ ":json_parser" ]
 }
 
 source_set("json_parser") {
@@ -52,9 +50,7 @@ if (is_fuchsia) {
   import("//build/testing/environments.gni")
 
   test_package("json_parser_unittests") {
-    deps = [
-      ":json_parser_unittests_bin",
-    ]
+    deps = [ ":json_parser_unittests_bin" ]
     tests = [
       {
         name = "json_parser_unittests"
@@ -67,9 +63,7 @@ if (is_fuchsia) {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":json_parser_unittests_bin($host_toolchain)",
-  ]
+  deps = [ ":json_parser_unittests_bin($host_toolchain)" ]
   if (is_fuchsia) {
     deps += [ ":json_parser_unittests" ]
   }

@@ -84,11 +84,7 @@ source_set("perf_test") {
     "perf_test.h",
   ]
 
-  public_deps = [
-    "//third_party/googletest:gtest",
-  ]
+  public_deps = [ "//third_party/googletest:gtest" ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 }

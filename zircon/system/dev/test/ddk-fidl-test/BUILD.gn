@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("ddk-fidl-test") {
-  sources = [
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
   deps = [
     "$zx/system/dev/test/fuchsia-hardware-test:c",
     "$zx/system/dev/test/fuchsia-hardware-test:llcpp",

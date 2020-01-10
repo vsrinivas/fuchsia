@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 executable("benchmark_example") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   public_deps = [
     "//src/lib/fsl",
@@ -20,9 +18,7 @@ executable("benchmark_example") {
 }
 
 package("benchmark") {
-  deps = [
-    ":benchmark_example",
-  ]
+  deps = [ ":benchmark_example" ]
 
   binaries = [
     {

@@ -19,9 +19,7 @@ source_set("key_util") {
 }
 
 test("key_util_test") {
-  sources = [
-    "key_util_unittest.cc",
-  ]
+  sources = [ "key_util_unittest.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
@@ -31,9 +29,7 @@ test("key_util_test") {
 
 unittest_package("test") {
   package_name = "key_util_test"
-  deps = [
-    ":key_util_test",
-  ]
+  deps = [ ":key_util_test" ]
   tests = [
     {
       name = "key_util_test"

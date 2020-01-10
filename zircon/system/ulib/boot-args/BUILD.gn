@@ -5,9 +5,7 @@
 zx_library("boot-args") {
   sdk = "source"
   sdk_headers = [ "lib/boot-args/boot-args.h" ]
-  sources = [
-    "boot-args.cc",
-  ]
+  sources = [ "boot-args.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fbl",
@@ -20,9 +18,7 @@ zx_library("boot-args") {
 zx_test("devmgr-boot-args-test") {
   output_name = "devmgr-boot-args-test"
   test_group = "ddk"
-  sources = [
-    "boot-args-test.cc",
-  ]
+  sources = [ "boot-args-test.cc" ]
   deps = [
     ":boot-args",
     "$zx/system/ulib/zxtest",

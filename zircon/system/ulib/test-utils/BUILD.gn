@@ -4,9 +4,7 @@
 
 zx_library("test-utils") {
   testonly = true
-  sources = [
-    "test-utils.cc",
-  ]
+  sources = [ "test-utils.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-process:llcpp",
     "$zx/system/ulib/backtrace-request",

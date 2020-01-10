@@ -56,7 +56,5 @@ test_package("inspect_validator_test_rust") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":inspect_validator_test_rust",
-  ]
+  deps = [ ":inspect_validator_test_rust" ]
 }

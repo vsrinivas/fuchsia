@@ -22,7 +22,5 @@ fidl("fuchsia.bluetooth.control") {
     "remote_device.fidl",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.bluetooth",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.bluetooth" ]
 }

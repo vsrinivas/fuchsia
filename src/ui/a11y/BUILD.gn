@@ -23,10 +23,6 @@ group("tests") {
 
 config_data("config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "a11y.config",
-  ]
-  sources = [
-    "services.config",
-  ]
+  outputs = [ "a11y.config" ]
+  sources = [ "services.config" ]
 }

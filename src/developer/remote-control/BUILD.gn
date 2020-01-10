@@ -12,9 +12,7 @@ import("//build/testing/test_spec.gni")
 group("tests") {
   testonly = true
 
-  deps = [
-    ":remote-control-lib-tests",
-  ]
+  deps = [ ":remote-control-lib-tests" ]
 }
 
 rustc_library("lib") {
@@ -62,9 +60,7 @@ rustc_binary("bin") {
 }
 
 test_package("remote-control-lib-tests") {
-  deps = [
-    ":lib_test",
-  ]
+  deps = [ ":lib_test" ]
 
   tests = [
     {
@@ -74,9 +70,7 @@ test_package("remote-control-lib-tests") {
 }
 
 package("remote-control") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

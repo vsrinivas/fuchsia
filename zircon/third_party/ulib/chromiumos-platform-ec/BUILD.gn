@@ -5,7 +5,5 @@
 assert(current_cpu == "x64")
 
 zx_library("chromiumos-platform-ec") {
-  sources = [
-    "comm-lpc.cc",
-  ]
+  sources = [ "comm-lpc.cc" ]
 }

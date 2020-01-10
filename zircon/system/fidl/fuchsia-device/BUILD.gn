@@ -9,7 +9,5 @@ fidl_library("fuchsia-device") {
     "controller.fidl",
     "name-provider.fidl",
   ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-device-manager"
-  ]
+  public_deps = [ "$zx/system/fidl/fuchsia-device-manager" ]
 }

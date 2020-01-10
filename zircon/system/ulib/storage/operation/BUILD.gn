@@ -30,17 +30,13 @@ zx_library("operation") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":storage_operation",
-  ]
+  deps = [ ":storage_operation" ]
 }
 
 zx_test("storage_operation") {
   test_group = "storage"
   output_name = "storage-operation-test"
-  sources = [
-    "test/unbuffered_operations_builder_test.cc",
-  ]
+  sources = [ "test/unbuffered_operations_builder_test.cc" ]
   deps = [
     ":operation",
     "$zx/system/ulib/fdio",

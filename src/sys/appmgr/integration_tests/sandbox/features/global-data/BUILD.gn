@@ -16,9 +16,7 @@ group("global-data") {
 sandbox_test_package("has_global_data") {
   global_data = "//build"
 
-  sources = [
-    "has_global_data.cc",
-  ]
+  sources = [ "has_global_data.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -28,9 +26,7 @@ sandbox_test_package("has_global_data") {
 }
 
 sandbox_test_package("no_global_data") {
-  sources = [
-    "no_global_data.cc",
-  ]
+  sources = [ "no_global_data.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -43,9 +39,7 @@ sandbox_test_package("restricted_global_data") {
   # Has global-data feature, but not in appmgr allowlist.
   global_data = "//build"
 
-  sources = [
-    "no_global_data.cc",
-  ]
+  sources = [ "no_global_data.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",

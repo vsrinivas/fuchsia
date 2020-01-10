@@ -4,23 +4,17 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":ffl",
-  ]
+  deps = [ ":ffl" ]
 }
 
 zx_test("ffl") {
-  sources = [
-    "ffl_tests.cc",
-  ]
+  sources = [ "ffl_tests.cc" ]
   deps = [
     "$zx/system/ulib/ffl",
     "$zx/system/ulib/zxtest",
   ]
 
   if (is_fuchsia) {
-    deps += [
-      "$zx/system/ulib/fdio",
-    ]
+    deps += [ "$zx/system/ulib/fdio" ]
   }
 }

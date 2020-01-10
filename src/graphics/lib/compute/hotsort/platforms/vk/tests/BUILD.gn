@@ -4,7 +4,5 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "hotsort_vk_bench",
-  ]
+  public_deps = [ "hotsort_vk_bench" ]
 }

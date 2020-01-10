@@ -12,9 +12,7 @@ source_set("testing") {
     "page_sync_empty_impl.h",
   ]
 
-  public_deps = [
-    "//src/ledger/bin/cloud_sync/public",
-  ]
+  public_deps = [ "//src/ledger/bin/cloud_sync/public" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

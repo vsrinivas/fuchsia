@@ -8,15 +8,11 @@ source_set("check_vulkan_support") {
     "check_vulkan_support.h",
   ]
 
-  public_deps = [
-    "//src/ui/lib/escher:vulkan",
-  ]
+  public_deps = [ "//src/ui/lib/escher:vulkan" ]
 }
 
 source_set("escher_geometry_utils") {
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 
   sources = [
     "align.h",

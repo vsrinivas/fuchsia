@@ -5,9 +5,7 @@
 zx_library("log-writer-textfile") {
   shared = true
   host = true
-  sources = [
-    "log-writer-textfile.cc",
-  ]
+  sources = [ "log-writer-textfile.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

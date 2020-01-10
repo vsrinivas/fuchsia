@@ -4,9 +4,7 @@
 
 source_set("handle-wait") {
   testonly = true
-  sources = [
-    "handle-wait.c",
-  ]
+  sources = [ "handle-wait.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

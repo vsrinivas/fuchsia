@@ -4,21 +4,15 @@
 
 # Do not use this target directly, instead depend on //src/lib/inspect_deprecated:reader.
 group("reader") {
-  public_deps = [
-    "//src/lib/inspect_deprecated:reader",
-  ]
+  public_deps = [ "//src/lib/inspect_deprecated:reader" ]
 }
 
 # Do not use this target directly, instead depend on //src/lib/inspect_deprecated:inspect_deprecated.
 group("inspect_deprecated") {
-  public_deps = [
-    "//src/lib/inspect_deprecated:inspect_deprecated",
-  ]
+  public_deps = [ "//src/lib/inspect_deprecated:inspect_deprecated" ]
 }
 
 # Do not use this target directly, instead depend on //src/lib/inspect_deprecated:component.
 group("component") {
-  public_deps = [
-    "//src/lib/inspect_deprecated:component",
-  ]
+  public_deps = [ "//src/lib/inspect_deprecated:component" ]
 }

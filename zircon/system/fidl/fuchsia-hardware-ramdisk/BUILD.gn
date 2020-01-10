@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-hardware-ramdisk") {
-  sources = [
-    "ramdisk.fidl",
-  ]
+  sources = [ "ramdisk.fidl" ]
 }

@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 package("audio") {
-  deps = [
-    "//src/media/audio/audio:audio_bin",
-  ]
+  deps = [ "//src/media/audio/audio:audio_bin" ]
 
   binaries = [
     {
@@ -43,9 +41,7 @@ source_set("audio_core_client_lib") {
 executable("audio_bin") {
   output_name = "audio"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":audio_core_client_lib",
@@ -58,7 +54,5 @@ executable("audio_bin") {
 group("tests") {
   testonly = true
 
-  deps = [
-    "test",
-  ]
+  deps = [ "test" ]
 }

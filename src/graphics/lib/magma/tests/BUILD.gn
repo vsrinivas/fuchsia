@@ -4,9 +4,7 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "//garnet/packages/tests:magma",
-  ]
+  public_deps = [ "//garnet/packages/tests:magma" ]
 }
 
 # Tests that require a working libvulkan to run.

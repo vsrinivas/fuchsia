@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("math") {
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   include_dirs = [ "$zx/third_party/ulib/musl/third_party/include" ]
   sources = [
     "__cos.c",

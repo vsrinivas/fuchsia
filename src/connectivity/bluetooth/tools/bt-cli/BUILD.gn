@@ -34,9 +34,7 @@ rustc_binary("bt-cli") {
 test_package("tests") {
   package_name = "bt-cli-tests"
 
-  deps = [
-    ":bt-cli_test",
-  ]
+  deps = [ ":bt-cli_test" ]
 
   tests = [
     {

@@ -28,9 +28,7 @@ rustc_library("inspect-fidl-load") {
 }
 
 test_package("inspect_fidl_load_tests") {
-  deps = [
-    ":inspect-fidl-load_test",
-  ]
+  deps = [ ":inspect-fidl-load_test" ]
   tests = [
     {
       name = "inspect_fidl_load_lib_test"
@@ -40,7 +38,5 @@ test_package("inspect_fidl_load_tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":inspect_fidl_load_tests",
-  ]
+  deps = [ ":inspect_fidl_load_tests" ]
 }

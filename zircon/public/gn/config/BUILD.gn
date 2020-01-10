@@ -689,9 +689,7 @@ if (is_fuchsia) {
 
 config("rodso") {
   if (is_gcc) {
-    inputs = [
-      "rodso.ld",
-    ]
+    inputs = [ "rodso.ld" ]
     ldflags = [ "-Wl,-T," + rebase_path(inputs[0], root_build_dir) ]
   }
 }

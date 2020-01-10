@@ -162,9 +162,7 @@ zx_library("x86") {
 }
 
 source_set("syscall") {
-  sources = [
-    "syscall.S",
-  ]
+  sources = [ "syscall.S" ]
   deps = [
     "$zx/kernel/lib/code_patching",
     "$zx/kernel/syscalls:syscall-abi",

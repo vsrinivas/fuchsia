@@ -4,7 +4,5 @@
 
 zx_library("xdc-server-utils") {
   host = true
-  sources = [
-    "packet.c",
-  ]
+  sources = [ "packet.c" ]
 }

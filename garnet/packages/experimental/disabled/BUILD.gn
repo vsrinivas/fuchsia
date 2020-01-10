@@ -7,16 +7,12 @@
 
 group("examples_escher_linux") {
   testonly = true
-  public_deps = [
-    "//src/ui/lib/escher/build_linux:examples",
-  ]
+  public_deps = [ "//src/ui/lib/escher/build_linux:examples" ]
 }
 
 group("tests_escher_linux") {
   testonly = true
-  public_deps = [
-    "//src/ui/lib/escher/build_linux:tests",
-  ]
+  public_deps = [ "//src/ui/lib/escher/build_linux:tests" ]
 }
 
 group("rfb_layer") {
@@ -29,9 +25,7 @@ group("rfb_layer") {
 
 group("fidl_fuzz") {
   testonly = true
-  public_deps = [
-    "//garnet/public/lib/fidl/fuzz:host",
-  ]
+  public_deps = [ "//garnet/public/lib/fidl/fuzz:host" ]
 }
 
 group("biscotti_guest") {

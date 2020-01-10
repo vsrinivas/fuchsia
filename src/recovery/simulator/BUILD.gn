@@ -21,9 +21,7 @@ if (is_linux) {
 
     name = "fuchsia.googlesource.com/recovery/simulator"
 
-    deps = [
-      "//src/testing/qemu",
-    ]
+    deps = [ "//src/testing/qemu" ]
   }
 
   go_test("recovery_simulator_tests") {
@@ -31,10 +29,8 @@ if (is_linux) {
     # value for this test and causes flakes when running an ASAN build in QEMU.
     # See fxb/38507 for additional discussion.
     timeout = "0"
-    gopackages = ["fuchsia.googlesource.com/recovery/simulator"]
-    deps = [
-      ":lib",
-    ]
+    gopackages = [ "fuchsia.googlesource.com/recovery/simulator" ]
+    deps = [ ":lib" ]
     non_go_deps = [ "//build/images/recovery($target_toolchain)" ]
   }
 }

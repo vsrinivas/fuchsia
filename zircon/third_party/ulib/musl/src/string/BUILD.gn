@@ -16,9 +16,7 @@ group("string") {
 
 # These are the functions the compiler produces implicit calls to.
 source_set("compiler") {
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   if (current_cpu == "arm64") {
     # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
     include_dirs = [ "$zx/" ]
@@ -46,9 +44,7 @@ source_set("stdmem") {
     ":compiler",
     "$zx/third_party/ulib/musl:musl_internal",
   ]
-  sources = [
-    "memrchr.c",
-  ]
+  sources = [ "memrchr.c" ]
   if (current_cpu == "arm64") {
     # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
     include_dirs = [ "$zx/" ]
@@ -73,9 +69,7 @@ source_set("stdmem") {
 }
 
 source_set("extmem") {
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   sources = [
     "memccpy.c",
     "memmem.c",
@@ -91,9 +85,7 @@ source_set("extmem") {
 }
 
 source_set("minimal_str") {
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   if (current_cpu == "arm64") {
     # These use '#include "third_party/lib/cortex-strings/src/aarch64/..."'.
     include_dirs = [ "$zx/" ]
@@ -150,9 +142,7 @@ source_set("stdstr") {
 }
 
 source_set("extstr") {
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   sources = [
     "stpcpy.c",
     "stpncpy.c",
@@ -184,9 +174,7 @@ source_set("extstr") {
 }
 
 source_set("bsd") {
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   sources = [
     "bcmp.c",
     "bcopy.c",
@@ -200,9 +188,7 @@ source_set("bsd") {
 }
 
 source_set("wcs") {
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   sources = [
     "wcpcpy.c",
     "wcpncpy.c",
@@ -231,9 +217,7 @@ source_set("wcs") {
 }
 
 source_set("wmem") {
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   sources = [
     "wmemchr.c",
     "wmemcmp.c",

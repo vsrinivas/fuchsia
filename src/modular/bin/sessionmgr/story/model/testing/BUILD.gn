@@ -14,9 +14,7 @@ group("testing") {
 source_set("mutation_matchers") {
   testonly = true
 
-  sources = [
-    "mutation_matchers.h",
-  ]
+  sources = [ "mutation_matchers.h" ]
 
   public_deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.modular",

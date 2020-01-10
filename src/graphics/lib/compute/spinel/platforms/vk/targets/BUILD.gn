@@ -8,8 +8,6 @@
 
 if (current_toolchain == host_toolchain) {
   executable("spinel_modules_to_literals") {
-    sources = [
-      "spinel_modules_to_literals.c",
-    ]
+    sources = [ "spinel_modules_to_literals.c" ]
   }
 }

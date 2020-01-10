@@ -7,9 +7,7 @@ import("//build/package.gni")
 
 group("util") {
   testonly = true
-  deps = [
-    ":persistent_storage_test_util",
-  ]
+  deps = [ ":persistent_storage_test_util" ]
 }
 
 fidl("data_file_reader_writer") {
@@ -19,9 +17,7 @@ fidl("data_file_reader_writer") {
   testonly = true
   name = "test.appmgr.integration"
 
-  sources = [
-    "data_file_reader_writer.fidl",
-  ]
+  sources = [ "data_file_reader_writer.fidl" ]
 }
 
 source_set("data_file_reader_writer_util") {
@@ -43,9 +39,7 @@ executable("persistent_storage_test_util_bin") {
   testonly = true
   output_name = "persistent_storage_test_util"
 
-  sources = [
-    "persistent_storage_test_util.cc",
-  ]
+  sources = [ "persistent_storage_test_util.cc" ]
 
   deps = [
     ":data_file_reader_writer",
@@ -78,7 +72,5 @@ package("persistent_storage_test_util") {
     },
   ]
 
-  deps = [
-    ":persistent_storage_test_util_bin",
-  ]
+  deps = [ ":persistent_storage_test_util_bin" ]
 }

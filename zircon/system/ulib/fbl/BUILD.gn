@@ -45,9 +45,7 @@ zx_library("fbl") {
   kernel = true
   static = true
 
-  sources = [
-    "alloc_checker.cc",
-  ]
+  sources = [ "alloc_checker.cc" ]
   if (!is_kernel) {
     sources += [
       "string.cc",
@@ -66,8 +64,6 @@ zx_library("fbl") {
     # TODO(BLD-353): It doesn't really depend on the vDSO, but this is the
     # way to get the legacy build to use -Isystem/public for host library
     # builds (go figure).
-    deps = [
-      "$zx/system/ulib/zircon",
-    ]
+    deps = [ "$zx/system/ulib/zircon" ]
   }
 }

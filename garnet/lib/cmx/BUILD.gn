@@ -4,16 +4,12 @@
 
 # Do not use this target directly, instead depend on //src/lib/cmx:cmx_unittests.
 group("cmx_unittests") {
-  public_deps = [
-    "//src/lib/cmx:cmx_unittests",
-  ]
+  public_deps = [ "//src/lib/cmx:cmx_unittests" ]
 
   testonly = true
 }
 
 # Do not use this target directly, instead depend on //src/lib/cmx:cmx.
 group("cmx") {
-  public_deps = [
-    "//src/lib/cmx:cmx",
-  ]
+  public_deps = [ "//src/lib/cmx:cmx" ]
 }

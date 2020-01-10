@@ -9,13 +9,9 @@ zx_library("driver") {
   shared = true
   static = false
 
-  sources = [
-    "api.cc",
-  ]
+  sources = [ "api.cc" ]
 
-  deps = [
-    "$zx/system/ulib/ddk",
-  ]
+  deps = [ "$zx/system/ulib/ddk" ]
 
   # Since the tracing support is brought in via an archive, we need explicit
   # references to ensure everything is present.

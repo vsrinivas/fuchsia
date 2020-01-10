@@ -33,9 +33,7 @@ rustc_library("wlan-mlme") {
 }
 
 test_package("wlan-mlme-tests") {
-  deps = [
-    ":wlan-mlme_test",
-  ]
+  deps = [ ":wlan-mlme_test" ]
 
   tests = [
     {

@@ -5,13 +5,9 @@
 import("//build/package.gni")
 
 source_set("factory_protocol") {
-  sources = [
-    "factory_protocol.cc",
-  ]
+  sources = [ "factory_protocol.cc" ]
 
-  public = [
-    "factory_protocol.h",
-  ]
+  public = [ "factory_protocol.h" ]
 
   deps = [
     "//sdk/lib/fidl/cpp",

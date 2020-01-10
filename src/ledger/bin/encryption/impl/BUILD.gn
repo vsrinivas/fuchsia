@@ -36,25 +36,19 @@ source_set("impl") {
 }
 
 flatbuffer("encrypted_commit") {
-  sources = [
-    "encrypted_commit.fbs",
-  ]
+  sources = [ "encrypted_commit.fbs" ]
 
   extra_configs = [ "//src/ledger:ledger_config" ]
 }
 
 flatbuffer("encrypted_entry") {
-  sources = [
-    "encrypted_entry.fbs",
-  ]
+  sources = [ "encrypted_entry.fbs" ]
 
   extra_configs = [ "//src/ledger:ledger_config" ]
 }
 
 flatbuffer("remote_commit_id") {
-  sources = [
-    "remote_commit_id.fbs",
-  ]
+  sources = [ "remote_commit_id.fbs" ]
 
   extra_configs = [ "//src/ledger:ledger_config" ]
 }

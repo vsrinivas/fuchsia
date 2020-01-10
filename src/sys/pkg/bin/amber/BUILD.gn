@@ -50,9 +50,7 @@ metrics_registry("cobalt_sw_delivery_registry") {
 }
 
 package("pkgfs") {
-  deps = [
-    "//garnet/go/src/grand_unified_binary",
-  ]
+  deps = [ "//garnet/go/src/grand_unified_binary" ]
 
   binaries = [
     {
@@ -73,9 +71,7 @@ package("pkgfs") {
 package("amber") {
   deprecated_misc_storage = "//build"
 
-  deps = [
-    "//garnet/go/src/grand_unified_binary",
-  ]
+  deps = [ "//garnet/go/src/grand_unified_binary" ]
 
   binaries = [
     {
@@ -175,12 +171,8 @@ sysmgr_config("sysmgr_config") {
 # Retained for //garnet/packages/config:amber
 config_data("config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "amber.config",
-  ]
-  sources = [
-    "startup.config",
-  ]
+  outputs = [ "amber.config" ]
+  sources = [ "startup.config" ]
 }
 
 group("tests") {

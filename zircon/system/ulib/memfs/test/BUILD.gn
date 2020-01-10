@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":memfs-tests",
-  ]
+  deps = [ ":memfs-tests" ]
 }
 
 zx_test("memfs-tests") {
-  sources = [
-    "memfs-tests.cc",
-  ]
+  sources = [ "memfs-tests.cc" ]
   deps = [
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",

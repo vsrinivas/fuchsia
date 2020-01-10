@@ -6,17 +6,13 @@ import("//build/package.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    "tests",
-  ]
+  deps = [ "tests" ]
 }
 
 executable("bin") {
   output_name = "tz-util"
 
-  sources = [
-    "tz-util.cc",
-  ]
+  sources = [ "tz-util.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.intl",
@@ -32,9 +28,7 @@ executable("bin") {
 }
 
 package("tz-util") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

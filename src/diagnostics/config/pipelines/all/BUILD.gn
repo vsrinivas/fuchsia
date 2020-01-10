@@ -6,11 +6,7 @@ import("//build/package.gni")
 
 config_data("all_selectors") {
   for_pkg = "archivist"
-  outputs = [
-    "pipelines/all/all_selectors.txt",
-  ]
+  outputs = [ "pipelines/all/all_selectors.txt" ]
 
-  sources = [
-    "all_selectors.txt",
-  ]
+  sources = [ "all_selectors.txt" ]
 }

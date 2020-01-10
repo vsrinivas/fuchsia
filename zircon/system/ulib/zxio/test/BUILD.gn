@@ -4,9 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":zxio",
-  ]
+  deps = [ ":zxio" ]
 }
 
 zx_test("zxio") {

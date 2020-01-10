@@ -10,9 +10,7 @@ source_set("fidl_helpers") {
     "bound_interface_set.h",
   ]
 
-  public_deps = [
-    "//sdk/lib/fidl/cpp",
-  ]
+  public_deps = [ "//sdk/lib/fidl/cpp" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

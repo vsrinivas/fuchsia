@@ -16,9 +16,7 @@ template("fidl_ir") {
 
     inputs = invoker.sources
 
-    outputs = [
-      json_ir,
-    ]
+    outputs = [ json_ir ]
 
     args = [
              "--json",
@@ -68,9 +66,7 @@ action("run_difl_test") {
     "../text_output.py",
     "../tricium_output.py",
   ]
-  outputs = [
-    stamp,
-  ]
+  outputs = [ stamp ]
   args = [
     "--build-dir",
     rebase_path(root_build_dir),

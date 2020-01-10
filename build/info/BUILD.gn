@@ -13,9 +13,7 @@ if (build_info_files.version != build_info_files.latest_commit_date) {
 }
 
 package("build-info") {
-  deps = [
-    ":latest-commit-date",
-  ]
+  deps = [ ":latest-commit-date" ]
   resources = [
     {
       dest = "product"

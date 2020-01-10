@@ -64,9 +64,7 @@ config_data("hwinfo_default_config") {
 
 template("hwinfo_package") {
   package(target_name) {
-    deps = [
-      ":hwinfo_bin",
-    ]
+    deps = [ ":hwinfo_bin" ]
 
     binaries = [
       {
@@ -181,9 +179,7 @@ test_package("hwinfo_negative_tests") {
 config_data("hwinfo_tests_factory_config") {
   for_pkg = "fake_factory_store_providers"
 
-  sources = [
-    "testdata/fuchsia.factory.MiscFactoryStoreProvider.config",
-  ]
+  sources = [ "testdata/fuchsia.factory.MiscFactoryStoreProvider.config" ]
 }
 
 config_data("hwinfo_tests_config") {

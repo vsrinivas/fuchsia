@@ -8,7 +8,5 @@ import("//build/testing/environments.gni")
 
 rustc_library("fidl_fuchsia_intl_ext") {
   edition = "2018"
-  deps = [
-    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
-  ]
+  deps = [ "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc" ]
 }

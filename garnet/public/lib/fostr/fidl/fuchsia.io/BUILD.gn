@@ -7,7 +7,5 @@ import("//garnet/public/build/fostr/fostr_fidl.gni")
 fostr_fidl("fuchsia.io") {
   fidl_target = "//zircon/system/fidl/fuchsia-io"
 
-  deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.mem",
-  ]
+  deps = [ "//garnet/public/lib/fostr/fidl/fuchsia.mem" ]
 }

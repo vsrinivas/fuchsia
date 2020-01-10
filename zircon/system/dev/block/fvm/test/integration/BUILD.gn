@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":fvm-driver-integration",
-  ]
+  deps = [ ":fvm-driver-integration" ]
 }
 
 zx_test("fvm-driver-integration") {
-  sources = [
-    "volume_manager_api_test.cc",
-  ]
+  sources = [ "volume_manager_api_test.cc" ]
   include_dirs = [ ".." ]
   deps = [
     "$zx/system/dev/block/fvm:shared",

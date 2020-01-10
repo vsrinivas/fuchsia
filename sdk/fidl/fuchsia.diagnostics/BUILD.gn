@@ -11,7 +11,5 @@ fidl("fuchsia.diagnostics") {
     "selector.fidl",
   ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-mem",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-mem" ]
 }

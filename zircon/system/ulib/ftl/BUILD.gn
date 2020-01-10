@@ -67,7 +67,5 @@ zx_test("ftl_test") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":ftl_test",
-  ]
+  deps = [ ":ftl_test" ]
 }

@@ -10,8 +10,6 @@ zx_library("region-alloc") {
     "region-alloc.cc",
   ]
   if (!is_kernel) {
-    deps = [
-      "$zx/system/ulib/fbl",
-    ]
+    deps = [ "$zx/system/ulib/fbl" ]
   }
 }

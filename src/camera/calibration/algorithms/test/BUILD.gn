@@ -4,9 +4,7 @@
 
 executable("algorithms_test") {
   testonly = true
-  sources = [
-    "blc_test.cc",
-  ]
+  sources = [ "blc_test.cc" ]
 
   deps = [
     "//src/camera/calibration/algorithms",

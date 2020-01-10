@@ -4,9 +4,7 @@
 
 zx_driver("aml-securemem") {
   sources = []
-  deps = [
-    ":common",
-  ]
+  deps = [ ":common" ]
 
   # TODO(32708): (ZX-2863) This driver presently violates the allowed shlib deps policy:
   # + ../../prebuilt/third_party/gn/linux-x64/gn path . --root=../../zircon/ '//system/dev/securemem/aml-securemem:aml-securemem(//public/gn/toolchain:user-arm64-clang.shlib)' '//system/ulib/fdio:fdio.shared(//public/gn/toolchain:user-arm64-clang.shlib)'
@@ -58,9 +56,7 @@ source_set("common") {
 
 zx_test("aml-securemem-test") {
   output_name = "aml-securemem-test"
-  sources = [
-    "test/aml-securemem-test.cc",
-  ]
+  sources = [ "test/aml-securemem-test.cc" ]
   include_dirs = [ "." ]
   deps = [
     ":common",

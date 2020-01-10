@@ -35,14 +35,10 @@ group("core") {
 
 group("terminal") {
   testonly = true
-  public_deps = [
-    "//bundles:infratools",
-  ]
+  public_deps = [ "//bundles:infratools" ]
 }
 
 group("workstation") {
   testonly = true
-  public_deps = [
-    "//bundles:infratools",
-  ]
+  public_deps = [ "//bundles:infratools" ]
 }

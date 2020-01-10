@@ -26,9 +26,7 @@ rustc_binary("bin") {
 }
 
 package("update-bin") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   binaries = [
     {
       name = "update"
@@ -44,9 +42,7 @@ package("update-bin") {
 }
 
 test_package("update-bin-tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {
@@ -59,7 +55,5 @@ test_package("update-bin-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":update-bin-tests",
-  ]
+  deps = [ ":update-bin-tests" ]
 }

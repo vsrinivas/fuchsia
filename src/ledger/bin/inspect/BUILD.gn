@@ -10,9 +10,7 @@ source_set("inspect") {
     "inspect.h",
   ]
 
-  public_deps = [
-    "//src/ledger/bin/storage/public",
-  ]
+  public_deps = [ "//src/ledger/bin/storage/public" ]
 
   deps = [
     "//src/ledger/bin/app:constants",
@@ -24,9 +22,7 @@ source_set("inspect") {
 
 source_set("unittests") {
   testonly = true
-  sources = [
-    "inspect_unittest.cc",
-  ]
+  sources = [ "inspect_unittest.cc" ]
 
   deps = [
     ":inspect",

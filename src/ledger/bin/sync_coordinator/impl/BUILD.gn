@@ -28,9 +28,7 @@ source_set("impl") {
 source_set("unittests") {
   testonly = true
 
-  sources = [
-    "page_sync_impl_unittest.cc",
-  ]
+  sources = [ "page_sync_impl_unittest.cc" ]
 
   deps = [
     ":impl",

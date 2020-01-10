@@ -12,9 +12,7 @@ zx_library("hwreg") {
   ]
   kernel = true
   static = true
-  sources = [
-    "printers.cc",
-  ]
+  sources = [ "printers.cc" ]
 
   # **Note!** It's important that this library not depend on the
   # <lib/mmio/mmio.h> header at all, so it doesn't need to have
@@ -45,9 +43,7 @@ zx_library("hwreg-i2c") {
   ]
   kernel = true
   static = true
-  sources = [
-    "printers.cc",
-  ]
+  sources = [ "printers.cc" ]
 
   public_deps = [
     # <hwreg/i2c.h> has #include <lib/device-protocol/i2c.h>.

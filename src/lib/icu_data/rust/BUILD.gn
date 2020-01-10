@@ -3,15 +3,10 @@
 # found in the LICENSE file.
 
 group("rust") {
-  deps = [
-    "icu_data",
-  ]
+  deps = [ "icu_data" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "icu_data:tests",
-  ]
+  deps = [ "icu_data:tests" ]
 }
-

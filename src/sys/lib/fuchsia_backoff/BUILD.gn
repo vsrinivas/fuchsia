@@ -20,9 +20,7 @@ rustc_library("fuchsia_backoff") {
 }
 
 unittest_package("fuchsia_backoff_tests") {
-  deps = [
-    ":fuchsia_backoff_test",
-  ]
+  deps = [ ":fuchsia_backoff_test" ]
 
   tests = [
     {

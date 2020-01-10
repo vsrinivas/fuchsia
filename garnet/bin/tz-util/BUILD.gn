@@ -4,7 +4,5 @@
 
 # Do not use this target directly, instead depend on //src/sys/tz-util:tz-util.
 group("tz-util") {
-  public_deps = [
-    "//src/sys/tz-util:tz-util",
-  ]
+  public_deps = [ "//src/sys/tz-util:tz-util" ]
 }

@@ -31,9 +31,7 @@ rustc_library("scene_management") {
 }
 
 test_package("scene_management_tests") {
-  deps = [
-    ":scene_management_test",
-  ]
+  deps = [ ":scene_management_test" ]
   tests = [
     {
       name = "scene_management_lib_test"

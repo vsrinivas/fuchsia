@@ -78,7 +78,5 @@ test_package("system-updater-integration-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":system-updater-integration-tests",
-  ]
+  public_deps = [ ":system-updater-integration-tests" ]
 }

@@ -5,9 +5,7 @@
 assert(current_cpu == "x64")
 
 zx_driver("realtek-8111") {
-  sources = [
-    "rtl8111.c",
-  ]
+  sources = [ "rtl8111.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/banjo/ddk.protocol.pci",

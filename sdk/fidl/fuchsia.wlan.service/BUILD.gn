@@ -16,9 +16,7 @@ fidl("fuchsia.wlan.service") {
 
   sdk_category = "partner"
 
-  sources = [
-    "wlan_service.fidl",
-  ]
+  sources = [ "wlan_service.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.wlan.common",

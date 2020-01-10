@@ -33,9 +33,7 @@ kazoo("ktrace-info") {
   gen = [
     {
       args = [ "--ktrace" ]
-      outputs = [
-        "$target_gen_dir/zircon/syscall-ktrace-info.inc",
-      ]
+      outputs = [ "$target_gen_dir/zircon/syscall-ktrace-info.inc" ]
     },
   ]
 }

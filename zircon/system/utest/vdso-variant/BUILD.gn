@@ -3,24 +3,18 @@
 # found in the LICENSE file.
 
 zx_test("vdso-variant") {
-  sources = [
-    "vdso-variant.c",
-  ]
+  sources = [ "vdso-variant.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
   ]
-  data_deps = [
-    ":vdso-variant-helper",
-  ]
+  data_deps = [ ":vdso-variant-helper" ]
 }
 
 zx_executable("vdso-variant-helper") {
   visibility = [ ":*" ]
   testonly = true
-  sources = [
-    "helper/vdso-variant-helper.c",
-  ]
+  sources = [ "helper/vdso-variant-helper.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",

@@ -10,9 +10,7 @@ fidl("fuchsia.fonts.experimental") {
 
   sdk_category = "experimental"
 
-  sources = [
-    "provider.test.fidl",
-  ]
+  sources = [ "provider.test.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.fonts",

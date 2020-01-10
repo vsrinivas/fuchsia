@@ -13,9 +13,7 @@ group("test") {
 }
 
 zx_test("kernel-cmdline") {
-  sources = [
-    "kernel_cmdline_test.cc",
-  ]
+  sources = [ "kernel_cmdline_test.cc" ]
   deps = [
     "$zx/kernel/lib/cmdline",
     "$zx/system/ulib/fdio",
@@ -24,10 +22,6 @@ zx_test("kernel-cmdline") {
 }
 
 fuzzer("kernel-cmdline-fuzzer") {
-  sources = [
-    "kernel_cmdline_fuzztest.cc",
-  ]
-  deps = [
-    "$zx/kernel/lib/cmdline",
-  ]
+  sources = [ "kernel_cmdline_fuzztest.cc" ]
+  deps = [ "$zx/kernel/lib/cmdline" ]
 }

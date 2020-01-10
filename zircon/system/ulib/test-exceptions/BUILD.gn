@@ -5,10 +5,6 @@
 zx_library("test-exceptions") {
   testonly = true
   shared = true
-  sources = [
-    "exception-catcher.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/zx",
-  ]
+  sources = [ "exception-catcher.cc" ]
+  deps = [ "$zx/system/ulib/zx" ]
 }

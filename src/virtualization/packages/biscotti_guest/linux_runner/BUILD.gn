@@ -87,9 +87,7 @@ action("icd_manifest") {
     "${icd_filename}",
     rebase_path(icd_manifest, root_build_dir),
   ]
-  outputs = [
-    icd_manifest,
-  ]
+  outputs = [ icd_manifest ]
 }
 
 romfs_image("extras") {
@@ -131,13 +129,9 @@ romfs_image("extras") {
 executable("bin") {
   output_name = "linux_runner"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 package("linux_runner") {
@@ -171,9 +165,7 @@ executable("linux_runner_unittests") {
   visibility = [ ":*" ]
   testonly = true
 
-  sources = [
-    "guest_unittest.cc",
-  ]
+  sources = [ "guest_unittest.cc" ]
 
   deps = [
     ":lib",
@@ -186,9 +178,7 @@ executable("linux_runner_unittests") {
 }
 
 test_package("linux_runner_tests") {
-  deps = [
-    ":linux_runner_unittests",
-  ]
+  deps = [ ":linux_runner_unittests" ]
 
   tests = [
     {

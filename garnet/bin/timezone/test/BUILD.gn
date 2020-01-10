@@ -18,9 +18,7 @@ executable("deprecated_timezone_unit_tests") {
 
   output_name = "deprecated_timezone_unit_tests"
 
-  sources = [
-    "deprecated_timezone_unit_test.cc",
-  ]
+  sources = [ "deprecated_timezone_unit_test.cc" ]
 
   deps = [
     "//garnet/bin/timezone:lib",
@@ -31,9 +29,7 @@ executable("deprecated_timezone_unit_tests") {
 }
 
 test_package("timezone_tests") {
-  deps = [
-    ":deprecated_timezone_unit_tests",
-  ]
+  deps = [ ":deprecated_timezone_unit_tests" ]
 
   resources = [
     {

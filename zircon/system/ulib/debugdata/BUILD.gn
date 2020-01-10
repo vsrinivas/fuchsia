@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("debugdata") {
-  sources = [
-    "debugdata.cc",
-  ]
+  sources = [ "debugdata.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-debugdata:llcpp",
     "$zx/system/ulib/async:async-cpp",

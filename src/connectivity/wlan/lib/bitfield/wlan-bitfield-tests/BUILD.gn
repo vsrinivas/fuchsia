@@ -12,15 +12,11 @@ rustc_library("wlan-bitfield-wrapper") {
 
   with_unit_tests = true
 
-  deps = [
-    "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
-  ]
+  deps = [ "//src/connectivity/wlan/lib/bitfield:wlan-bitfield" ]
 }
 
 test_package("wlan-bitfield-tests") {
-  deps = [
-    ":wlan-bitfield-wrapper_test",
-  ]
+  deps = [ ":wlan-bitfield-wrapper_test" ]
 
   tests = [
     {

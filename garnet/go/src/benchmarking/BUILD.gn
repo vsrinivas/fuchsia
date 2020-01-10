@@ -15,15 +15,11 @@ go_library("benchmarking") {
 go_test("go_benchmarking_test") {
   gopackages = [ "fuchsia.googlesource.com/benchmarking" ]
 
-  deps = [
-    ":benchmarking",
-  ]
+  deps = [ ":benchmarking" ]
 }
 
 unittest_package("go_benchmarking_tests") {
-  deps = [
-    ":go_benchmarking_test",
-  ]
+  deps = [ ":go_benchmarking_test" ]
 
   tests = [
     {

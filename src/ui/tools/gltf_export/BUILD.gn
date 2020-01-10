@@ -5,9 +5,7 @@
 executable("gltf_export") {
   output_name = "gltf_export"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   configs += [ "//third_party/cobalt:cobalt_config" ]
 

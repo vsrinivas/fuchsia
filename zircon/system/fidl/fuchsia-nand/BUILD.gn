@@ -5,10 +5,6 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-nand") {
-  sources = [
-    "broker.fidl",
-  ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-nand",
-  ]
+  sources = [ "broker.fidl" ]
+  public_deps = [ "$zx/system/fidl/fuchsia-hardware-nand" ]
 }

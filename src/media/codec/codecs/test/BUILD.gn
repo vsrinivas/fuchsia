@@ -20,9 +20,7 @@ executable("codec_adapter_sw_test_bin") {
   output_name = "codec_adapter_sw_test"
   testonly = true
 
-  sources = [
-    "codec_adapter_sw_test.cc",
-  ]
+  sources = [ "codec_adapter_sw_test.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main_with_syslog",
@@ -38,9 +36,7 @@ test_package("codec_adapter_sw_test") {
     },
   ]
 
-  deps = [
-    ":codec_adapter_sw_test_bin",
-  ]
+  deps = [ ":codec_adapter_sw_test_bin" ]
 }
 
 executable("timestamp_extrapolator_test_bin") {
@@ -48,9 +44,7 @@ executable("timestamp_extrapolator_test_bin") {
 
   testonly = true
 
-  sources = [
-    "timestamp_extrapolator_tests.cc",
-  ]
+  sources = [ "timestamp_extrapolator_tests.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main_with_syslog",
@@ -59,9 +53,7 @@ executable("timestamp_extrapolator_test_bin") {
 }
 
 test_package("timestamp_extrapolator_tests") {
-  deps = [
-    ":timestamp_extrapolator_test_bin",
-  ]
+  deps = [ ":timestamp_extrapolator_test_bin" ]
 
   tests = [
     {
@@ -73,9 +65,7 @@ test_package("timestamp_extrapolator_tests") {
 
 source_set("test_codec_packets") {
   testonly = true
-  public = [
-    "test_codec_packets.h",
-  ]
+  public = [ "test_codec_packets.h" ]
   public_deps = [
     "//src/lib/syslog/cpp",
     "//src/media/lib/codec_impl",
@@ -88,9 +78,7 @@ executable("chunk_input_stream_test_bin") {
 
   testonly = true
 
-  sources = [
-    "chunk_input_stream_tests.cc",
-  ]
+  sources = [ "chunk_input_stream_tests.cc" ]
 
   deps = [
     ":test_codec_packets",
@@ -100,9 +88,7 @@ executable("chunk_input_stream_test_bin") {
 }
 
 test_package("chunk_input_stream_tests") {
-  deps = [
-    ":chunk_input_stream_test_bin",
-  ]
+  deps = [ ":chunk_input_stream_test_bin" ]
 
   tests = [
     {
@@ -117,9 +103,7 @@ executable("output_sink_test_bin") {
 
   testonly = true
 
-  sources = [
-    "output_sink_tests.cc",
-  ]
+  sources = [ "output_sink_tests.cc" ]
 
   deps = [
     ":test_codec_packets",
@@ -129,9 +113,7 @@ executable("output_sink_test_bin") {
 }
 
 test_package("output_sink_tests") {
-  deps = [
-    ":output_sink_test_bin",
-  ]
+  deps = [ ":output_sink_test_bin" ]
 
   tests = [
     {

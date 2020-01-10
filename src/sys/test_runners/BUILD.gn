@@ -21,14 +21,10 @@ rustc_library("lib") {
 
 group("test_runners") {
   testonly = true
-  deps = [
-    "gtest",
-  ]
+  deps = [ "gtest" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "gtest",
-  ]
+  deps = [ "gtest" ]
 }

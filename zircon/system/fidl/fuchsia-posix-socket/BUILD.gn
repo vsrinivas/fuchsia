@@ -6,10 +6,6 @@ import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-posix-socket") {
   sdk = true
-  sources = [
-    "socket.fidl",
-  ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-io",
-  ]
+  sources = [ "socket.fidl" ]
+  public_deps = [ "$zx/system/fidl/fuchsia-io" ]
 }

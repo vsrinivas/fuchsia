@@ -14,20 +14,14 @@ source_set("base64url") {
     "base64url.h",
   ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 
-  deps = [
-    "//third_party/modp_b64",
-  ]
+  deps = [ "//third_party/modp_b64" ]
 }
 
 source_set("unittests") {
   testonly = true
-  sources = [
-    "base64url_unittest.cc",
-  ]
+  sources = [ "base64url_unittest.cc" ]
 
   deps = [
     ":base64url",

@@ -7,9 +7,7 @@ import("//build/testing/environments.gni")
 
 static_library("lib") {
   testonly = true
-  sources = [
-    "fake_clock.cc",
-  ]
+  sources = [ "fake_clock.cc" ]
 
   deps = [
     "//src/lib/fake-clock/fidl:fidl_llcpp",
@@ -21,9 +19,7 @@ static_library("lib") {
 executable("test_bin") {
   testonly = true
   output_name = "fake_clock_lib_test"
-  sources = [
-    "fake_clock_test.cc",
-  ]
+  sources = [ "fake_clock_test.cc" ]
 
   deps = [
     ":lib",
@@ -39,9 +35,7 @@ executable("test_bin") {
 }
 
 test_package("fake_clock_lib_test") {
-  deps = [
-    ":test_bin",
-  ]
+  deps = [ ":test_bin" ]
 
   tests = [
     {
@@ -53,7 +47,5 @@ test_package("fake_clock_lib_test") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fake_clock_lib_test",
-  ]
+  deps = [ ":fake_clock_lib_test" ]
 }

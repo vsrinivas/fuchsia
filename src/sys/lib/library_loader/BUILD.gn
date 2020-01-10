@@ -29,9 +29,7 @@ rustc_library("library_loader") {
 }
 
 test_package("library_loader_tests") {
-  deps = [
-    ":library_loader_test",
-  ]
+  deps = [ ":library_loader_test" ]
 
   tests = [
     {
@@ -44,7 +42,5 @@ test_package("library_loader_tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":library_loader_tests",
-  ]
+  deps = [ ":library_loader_tests" ]
 }

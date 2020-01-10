@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.display.capture") {
-  sources = [
-    "display-capture.banjo",
-  ]
+  sources = [ "display-capture.banjo" ]
 }

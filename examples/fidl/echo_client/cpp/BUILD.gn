@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 executable("unified_echo_client") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//examples/fidl/fuchsia.examples",
@@ -18,9 +16,7 @@ executable("unified_echo_client") {
 }
 
 package("echo_client") {
-  deps = [
-    ":unified_echo_client",
-  ]
+  deps = [ ":unified_echo_client" ]
 
   binaries = [
     {

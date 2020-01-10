@@ -6,9 +6,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 test_package("garnet-rust-examples") {
-  deps = [
-    "testing:testing-tests",  #TARGET
-  ]
+  deps = [ "testing:testing-tests" ]  #TARGET
 
   # You need to include these for them to end up in the final image
   tests = [

@@ -4,7 +4,5 @@
 
 group("gtest_main") {
   testonly = true
-  public_deps = [
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  public_deps = [ "//src/lib/fxl/test:gtest_main" ]
 }

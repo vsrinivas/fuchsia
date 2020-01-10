@@ -8,9 +8,7 @@ zx_library("designware") {
     "dev/pci/designware/atu-cfg.h",
     "dev/pci/designware/dw-pcie.h",
   ]
-  sources = [
-    "dw-pcie.cc",
-  ]
+  sources = [ "dw-pcie.cc" ]
   deps = [
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",

@@ -8,9 +8,7 @@ import("//build/package.gni")
 driver_module("control_driver") {
   output_name = "goldfish_control"
 
-  sources = [
-    "control_device.cc",
-  ]
+  sources = [ "control_device.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_c",
@@ -45,9 +43,7 @@ driver_module("control_driver") {
 package("goldfish_control") {
   deprecated_system_image = true
 
-  deps = [
-    ":control_driver",
-  ]
+  deps = [ ":control_driver" ]
 
   drivers = [
     {

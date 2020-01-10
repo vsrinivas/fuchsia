@@ -28,18 +28,14 @@ source_set("entity_provider_runner") {
 }
 
 hermetic_tests_package("entity_provider_runner_unittests") {
-  deps = [
-    ":entity_provider_runner_unittest",
-  ]
+  deps = [ ":entity_provider_runner_unittest" ]
   environments = basic_envs
 }
 
 executable("entity_provider_runner_unittest") {
   testonly = true
 
-  sources = [
-    "entity_provider_runner_unittest.cc",
-  ]
+  sources = [ "entity_provider_runner_unittest.cc" ]
 
   deps = [
     ":entity_provider_runner",

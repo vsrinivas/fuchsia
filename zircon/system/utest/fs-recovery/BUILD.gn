@@ -7,15 +7,11 @@ import("$zx/public/gn/resource.gni")
 generated_resource("zxcrypt_config.txt") {
   testonly = true
   contents = "null"
-  outputs = [
-    "config/zxcrypt",
-  ]
+  outputs = [ "config/zxcrypt" ]
 }
 
 zx_test("fs-recovery") {
-  sources = [
-    "recovery.cc",
-  ]
+  sources = [ "recovery.cc" ]
   deps = [
     ":zxcrypt_config.txt",
     "$zx/system/ulib/devmgr-integration-test",

@@ -4,8 +4,6 @@
 
 # Do not use this target directly, instead depend on //src/sys/sysmgr/integration_tests:integration_tests.
 group("integration_tests") {
-  public_deps = [
-    "//src/sys/sysmgr/integration_tests:integration_tests",
-  ]
+  public_deps = [ "//src/sys/sysmgr/integration_tests:integration_tests" ]
   testonly = true
 }

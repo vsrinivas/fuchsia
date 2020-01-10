@@ -4,24 +4,18 @@
 
 zx_driver("core") {
   output_name = "block.core"
-  deps = [
-    ":shared",
-  ]
+  deps = [ ":shared" ]
 }
 
 group("test") {
   testonly = true
-  deps = [
-    ":core-unittest",
-  ]
+  deps = [ ":core-unittest" ]
 }
 
 zx_test("core-unittest") {
   output_name = "blockcore"
   include_dirs = [ "." ]
-  sources = [
-    "test/main.cc",
-  ]
+  sources = [ "test/main.cc" ]
   deps = [
     ":shared",
     "$zx/system/banjo/ddk.protocol.block",

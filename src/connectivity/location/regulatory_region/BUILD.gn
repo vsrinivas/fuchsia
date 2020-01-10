@@ -43,22 +43,16 @@ group("tests") {
 
 group("unit_tests") {
   testonly = true
-  deps = [
-    ":regulatory_region_tests",
-  ]
+  deps = [ ":regulatory_region_tests" ]
 }
 
 group("integration_tests") {
   testonly = true
-  deps = [
-    "tests:tests",
-  ]
+  deps = [ "tests:tests" ]
 }
 
 package("regulatory_region") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -75,9 +69,7 @@ package("regulatory_region") {
 }
 
 unittest_package("regulatory_region_tests") {
-  deps = [
-    ":lib_test",
-  ]
+  deps = [ ":lib_test" ]
 
   tests = [
     {

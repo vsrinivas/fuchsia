@@ -4,9 +4,7 @@
 
 zx_test("fvm-host") {
   disabled = "fxbug.dev/37779: 20min+ run-time"
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fvm-host",

@@ -9,7 +9,5 @@ fidl_library("fuchsia-hardware-block") {
     "block.fidl",
     "ftl.fidl",
   ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-storage-metrics",
-  ]
+  public_deps = [ "$zx/system/fidl/fuchsia-storage-metrics" ]
 }

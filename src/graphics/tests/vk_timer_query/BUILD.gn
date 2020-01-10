@@ -8,9 +8,7 @@ executable("vk_timer_query") {
   testonly = true
   output_name = "vk_timer_query_tests"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "$magma_build_root/include:magma_abi",

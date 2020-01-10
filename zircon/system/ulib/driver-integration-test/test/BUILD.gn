@@ -4,16 +4,12 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":driver-integration",
-  ]
+  deps = [ ":driver-integration" ]
 }
 
 zx_test("driver-integration") {
   test_group = "ddk"
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/ddk",

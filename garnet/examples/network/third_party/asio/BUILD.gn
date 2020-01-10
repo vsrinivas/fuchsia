@@ -5,21 +5,15 @@
 executable("async_client") {
   testonly = true
 
-  sources = [
-    "async_client.cpp",
-  ]
+  sources = [ "async_client.cpp" ]
 
-  deps = [
-    "//third_party/asio",
-  ]
+  deps = [ "//third_party/asio" ]
 }
 
 executable("async_https") {
   testonly = true
 
-  sources = [
-    "async_https.cpp",
-  ]
+  sources = [ "async_https.cpp" ]
 
   deps = [
     "//third_party/asio",

@@ -5,11 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.examples.intl.manager") {
-  sources = [
-    "manager.test.fidl",
-  ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.intl",
-  ]
+  sources = [ "manager.test.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.intl" ]
   sdk_category = "experimental"
 }

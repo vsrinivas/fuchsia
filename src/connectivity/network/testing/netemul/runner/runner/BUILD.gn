@@ -39,9 +39,7 @@ executable("bin") {
 package("netemul_runner") {
   testonly = true
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "netemul_runner"
 

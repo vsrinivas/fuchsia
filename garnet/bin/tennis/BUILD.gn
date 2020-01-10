@@ -4,21 +4,15 @@
 
 # Do not use this target directly, instead depend on //examples/tennis:tennis_sysmgr_config.
 group("tennis_sysmgr_config") {
-  public_deps = [
-    "//examples/tennis:tennis_sysmgr_config",
-  ]
+  public_deps = [ "//examples/tennis:tennis_sysmgr_config" ]
 }
 
 # Do not use this target directly, instead depend on //examples/tennis:tennis_service.
 group("tennis_service") {
-  public_deps = [
-    "//examples/tennis:tennis_service",
-  ]
+  public_deps = [ "//examples/tennis:tennis_service" ]
 }
 
 # Do not use this target directly, instead depend on //examples/tennis:tennis_viewer.
 group("tennis_viewer") {
-  public_deps = [
-    "//examples/tennis:tennis_viewer",
-  ]
+  public_deps = [ "//examples/tennis:tennis_viewer" ]
 }

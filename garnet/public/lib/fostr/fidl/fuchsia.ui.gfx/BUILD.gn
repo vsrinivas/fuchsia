@@ -12,9 +12,7 @@ fostr_fidl("fuchsia.ui.gfx") {
   amendments_path =
       "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx/amendments.json"
 
-  public_deps = [
-    ":amendments",
-  ]
+  public_deps = [ ":amendments" ]
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
@@ -31,7 +29,5 @@ source_set("amendments") {
 
   public_configs = [ "//garnet/public:config" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.gfx",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.gfx" ]
 }

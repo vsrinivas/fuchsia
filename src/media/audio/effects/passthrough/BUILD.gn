@@ -4,11 +4,7 @@
 
 # audio_core currently only supports a single .so that must be called 'audio_effects.so'.
 loadable_module("audio_effects") {
-  sources = [
-    "passthrough.cc",
-  ]
+  sources = [ "passthrough.cc" ]
 
-  deps = [
-    "//sdk/lib/media/audio/effects",
-  ]
+  deps = [ "//sdk/lib/media/audio/effects" ]
 }

@@ -33,28 +33,20 @@ group("config") {
 
 group("codec_factory") {
   testonly = true
-  public_deps = [
-    "//src/media/codec:codec_factory",
-  ]
+  public_deps = [ "//src/media/codec:codec_factory" ]
 }
 
 group("codec_sw_aac") {
   testonly = true
-  public_deps = [
-    "//src/media/codec:codec_runner_sw_aac",
-  ]
+  public_deps = [ "//src/media/codec:codec_runner_sw_aac" ]
 }
 
 group("codec_sw_sbc") {
   testonly = true
-  public_deps = [
-    "//src/media/codec:codec_runner_sw_sbc",
-  ]
+  public_deps = [ "//src/media/codec:codec_runner_sw_sbc" ]
 }
 
 group("codec_sw_ffmpeg") {
   testonly = true
-  public_deps = [
-    "//src/media/codec:codec_runner_sw_ffmpeg",
-  ]
+  public_deps = [ "//src/media/codec:codec_runner_sw_ffmpeg" ]
 }

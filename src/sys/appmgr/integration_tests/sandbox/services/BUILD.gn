@@ -15,9 +15,7 @@ group("services") {
 }
 
 sandbox_test_package("some_services") {
-  sources = [
-    "some_services.cc",
-  ]
+  sources = [ "some_services.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.sys",
@@ -31,9 +29,7 @@ sandbox_test_package("some_services") {
 }
 
 sandbox_test_package("no_services") {
-  sources = [
-    "no_services.cc",
-  ]
+  sources = [ "no_services.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -45,9 +41,7 @@ sandbox_test_package("no_services") {
 }
 
 sandbox_test_package("multiple_components") {
-  sources = [
-    "multiple_components.cc",
-  ]
+  sources = [ "multiple_components.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp",

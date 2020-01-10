@@ -13,9 +13,7 @@ zx_driver("serial-async") {
 }
 
 source_set("common") {
-  sources = [
-    "serial.cc",
-  ]
+  sources = [ "serial.cc" ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.serialimpl.async",
     "$zx/system/fidl/fuchsia-hardware-serial:llcpp",

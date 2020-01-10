@@ -4,9 +4,7 @@
 
 source_set("clock") {
   testonly = true
-  sources = [
-    "clock.cc",
-  ]
+  sources = [ "clock.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

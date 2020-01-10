@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("lsdev") {
-  sources = [
-    "lsdev.cc",
-  ]
+  sources = [ "lsdev.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/ulib/fdio",

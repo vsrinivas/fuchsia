@@ -11,15 +11,11 @@ config("config") {
 static_library("demangle") {
   public_configs = [ ":config" ]
 
-  sources = [
-    "Demangler.cpp",
-  ]
+  sources = [ "Demangler.cpp" ]
 }
 
 test("libdemangle_tests") {
-  sources = [
-    "DemangleTest.cpp",
-  ]
+  sources = [ "DemangleTest.cpp" ]
 
   deps = [
     ":demangle",

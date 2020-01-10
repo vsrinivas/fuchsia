@@ -5,9 +5,7 @@
 zx_library("framebuffer") {
   sdk = "static"
   sdk_headers = [ "lib/framebuffer/framebuffer.h" ]
-  sources = [
-    "framebuffer.cc",
-  ]
+  sources = [ "framebuffer.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/fidl/fuchsia-hardware-display:llcpp",
@@ -36,7 +34,5 @@ zx_test("framebuffer-test") {
     "$zx/system/ulib/image-format:image-format-llcpp",
     "$zx/system/ulib/zxtest",
   ]
-  sources = [
-    "framebuffer-test.cc",
-  ]
+  sources = [ "framebuffer-test.cc" ]
 }

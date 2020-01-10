@@ -7,9 +7,7 @@ executable("test") {
 
   output_name = "fake_stream_test"
 
-  sources = [
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
 
   deps = [
     "..",

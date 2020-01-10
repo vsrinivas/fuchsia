@@ -14,19 +14,13 @@ test("system_monitor_tests") {
 }
 
 source_set("lib") {
-  sources = [
-    "gt_log.cc",
-  ]
+  sources = [ "gt_log.cc" ]
 }
 
 source_set("tests") {
   testonly = true
 
-  sources = [
-    "gt_log_test.cc",
-  ]
+  sources = [ "gt_log_test.cc" ]
 
-  deps = [
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ "//third_party/googletest:gtest" ]
 }

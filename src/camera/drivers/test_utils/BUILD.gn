@@ -17,9 +17,7 @@ config("test_utils_config") {
 
 source_set("fake-buffer-collection") {
   visibility = [ ":*" ]
-  sources = [
-    "fake-buffer-collection.cc",
-  ]
+  sources = [ "fake-buffer-collection.cc" ]
   public_deps = [
     "//src/camera/drivers/isp/modules",
     "//zircon/public/lib/ddk",
@@ -34,9 +32,7 @@ source_set("fake-buffer-collection") {
 
 source_set("button_checker") {
   visibility = [ ":*" ]
-  sources = [
-    "button_checker.cc",
-  ]
+  sources = [ "button_checker.cc" ]
   deps = [
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fbl",

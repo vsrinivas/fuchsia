@@ -39,9 +39,7 @@ rustc_library("manifest") {
 }
 
 test_package("manifest_tests") {
-  deps = [
-    ":manifest_test",
-  ]
+  deps = [ ":manifest_test" ]
 
   tests = [
     {

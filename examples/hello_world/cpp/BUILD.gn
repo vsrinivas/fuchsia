@@ -7,31 +7,23 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 group("cpp") {
-  deps = [
-    ":hello_world_cpp",
-  ]
+  deps = [ ":hello_world_cpp" ]
 }
 
 group("tests") {
   testonly = true
 
-  deps = [
-    ":hello_world_cpp_tests",
-  ]
+  deps = [ ":hello_world_cpp_tests" ]
 }
 
 executable("bin") {
   output_name = "hello_world_cpp"
 
-  sources = [
-    "hello_world.cc",
-  ]
+  sources = [ "hello_world.cc" ]
 }
 
 package("hello_world_cpp") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -48,19 +40,13 @@ package("hello_world_cpp") {
 }
 
 test("hello_world_cpp_unittests") {
-  sources = [
-    "hello_world_unittest.cc",
-  ]
+  sources = [ "hello_world_unittest.cc" ]
 
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
 test_package("hello_world_cpp_tests") {
-  deps = [
-    ":hello_world_cpp_unittests",
-  ]
+  deps = [ ":hello_world_cpp_unittests" ]
 
   tests = [
     {

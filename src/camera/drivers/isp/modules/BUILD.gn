@@ -9,9 +9,7 @@ source_set("modules") {
     "sensor.cc",
   ]
 
-  deps = [
-    "//zircon/public/lib/mmio",
-  ]
+  deps = [ "//zircon/public/lib/mmio" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.camera:fuchsia.camera_c",
@@ -31,13 +29,9 @@ source_set("modules") {
 }
 
 source_set("sensor-module") {
-  sources = [
-    "sensor.cc",
-  ]
+  sources = [ "sensor.cc" ]
 
-  deps = [
-    "//zircon/public/lib/mmio",
-  ]
+  deps = [ "//zircon/public/lib/mmio" ]
 
   public_deps = [
     "//src/lib/syslog/cpp",
@@ -70,9 +64,7 @@ source_set("isp-blocks") {
 }
 
 source_set("isp-registers") {
-  sources = [
-    "gamma-rgb-registers.cc",
-  ]
+  sources = [ "gamma-rgb-registers.cc" ]
 
   public_deps = [
     ":isp-blocks",

@@ -9,9 +9,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 source_set("converter") {
-  sources = [
-    "converter.cc",
-  ]
+  sources = [ "converter.cc" ]
   deps = [
     "//src/lib/fxl",
     "//third_party/rapidjson",
@@ -21,9 +19,7 @@ source_set("converter") {
 executable("converter_bin") {
   output_name = "catapult_converter"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     ":converter",
     "//third_party/rapidjson",
@@ -52,9 +48,7 @@ package("catapult_converter") {
 }
 
 test("catapult_converter_unittest") {
-  sources = [
-    "converter_unittest.cc",
-  ]
+  sources = [ "converter_unittest.cc" ]
 
   deps = [
     ":converter",
@@ -66,9 +60,7 @@ test("catapult_converter_unittest") {
 }
 
 test_package("catapult_converter_tests") {
-  deps = [
-    ":catapult_converter_unittest",
-  ]
+  deps = [ ":catapult_converter_unittest" ]
 
   tests = [
     {
@@ -80,11 +72,7 @@ test_package("catapult_converter_tests") {
 }
 
 install_host_tools("host_tools") {
-  deps = [
-    ":converter_bin",
-  ]
+  deps = [ ":converter_bin" ]
 
-  outputs = [
-    "catapult_converter",
-  ]
+  outputs = [ "catapult_converter" ]
 }

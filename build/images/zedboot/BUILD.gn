@@ -98,9 +98,7 @@ action("devmgr_config.txt") {
   ]
 
   script = "../manifest.py"
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
+  outputs = [ "$target_out_dir/$target_name" ]
 
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
   entries = [
@@ -113,9 +111,7 @@ action("devmgr_config.txt") {
 }
 
 generated_file("zxcrypt_config.txt") {
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
+  outputs = [ "$target_out_dir/$target_name" ]
   contents = zxcrypt_key_source
 }
 
@@ -162,21 +158,15 @@ zbi("zbi") {
   foreach(ta_uuid, zedboot_ta_uuids) {
     manifest += [
       {
-        outputs = [
-          "lib/firmware/$ta_uuid$ta_dest_suffix",
-        ]
-        sources = [
-          rebase_path("$ta_path/$ta_uuid$ta_src_suffix"),
-        ]
+        outputs = [ "lib/firmware/$ta_uuid$ta_dest_suffix" ]
+        sources = [ rebase_path("$ta_path/$ta_uuid$ta_src_suffix") ]
       },
     ]
   }
   if (!include_devmgr_config_in_vbmeta) {
     manifest += [
       {
-        outputs = [
-          "config/devmgr",
-        ]
+        outputs = [ "config/devmgr" ]
         sources = get_target_outputs(":devmgr_config.txt")
       },
     ]
@@ -210,9 +200,7 @@ zbi("zbi") {
 if (custom_signing_script != "") {
   custom_signed_zbi("signed") {
     output_name = "zedboot.zbi"
-    deps = [
-      ":zbi",
-    ]
+    deps = [ ":zbi" ]
     zbi = get_target_outputs(":zbi")
 
     metadata = {
@@ -231,9 +219,7 @@ if (custom_signing_script != "") {
 } else if (use_vboot) {
   vboot("signed") {
     output_name = "zedboot"
-    deps = [
-      ":zbi",
-    ]
+    deps = [ ":zbi" ]
     metadata = {
       images = [
         {
@@ -254,14 +240,10 @@ if (use_vbmeta) {
     output_name = "zedboot"
     testonly = true
     if (custom_signing_script != "") {
-      deps = [
-        ":signed",
-      ]
+      deps = [ ":signed" ]
       zbi = get_target_outputs(":signed")
     } else {
-      deps = [
-        ":zbi",
-      ]
+      deps = [ ":zbi" ]
       zbi = get_target_outputs(":zbi")
     }
     if (include_devmgr_config_in_vbmeta) {
@@ -303,9 +285,7 @@ if (target_cpu != "arm64" && !use_vboot) {
   esp("esp") {
     output_name = "zedboot"
     cmdline = "efi_cmdline.txt"
-    deps = [
-      ":zbi",
-    ]
+    deps = [ ":zbi" ]
     zedboot_zbi_outputs = get_target_outputs(":zbi")
     zedboot = zedboot_zbi_outputs[0]
 
@@ -323,9 +303,7 @@ if (target_cpu != "arm64" && !use_vboot) {
 }
 
 group("zedboot") {
-  deps = [
-    ":zbi",
-  ]
+  deps = [ ":zbi" ]
   if (target_cpu != "arm64" && !use_vboot) {
     deps += [ ":esp" ]
   }

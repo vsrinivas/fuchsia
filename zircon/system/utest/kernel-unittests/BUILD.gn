@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("kernel-unittests") {
-  sources = [
-    "kernel-unittests.cc",
-  ]
+  sources = [ "kernel-unittests.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-kernel:c",
     "$zx/system/ulib/fdio",

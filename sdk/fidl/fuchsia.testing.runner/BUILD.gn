@@ -11,7 +11,5 @@ fidl("fuchsia.testing.runner") {
     "string-bounds-not-specified",
   ]
 
-  sources = [
-    "test_runner.fidl",
-  ]
+  sources = [ "test_runner.fidl" ]
 }

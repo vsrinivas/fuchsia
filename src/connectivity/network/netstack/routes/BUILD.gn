@@ -7,17 +7,13 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_test("netstack_routes_test") {
-  gopackages = ["netstack/routes"]
+  gopackages = [ "netstack/routes" ]
 
-  deps = [
-    "../:netstack_lib",
-  ]
+  deps = [ "../:netstack_lib" ]
 }
 
 test_package("netstack_routes_gotests") {
-  deps = [
-    ":netstack_routes_test",
-  ]
+  deps = [ ":netstack_routes_test" ]
 
   tests = [
     {

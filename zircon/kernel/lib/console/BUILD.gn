@@ -4,11 +4,7 @@
 
 zx_library("console") {
   kernel = true
-  sources = [
-    "console.cc",
-  ]
-  deps = [
-    "$zx/kernel/lib/cmdline",
-  ]
+  sources = [ "console.cc" ]
+  deps = [ "$zx/kernel/lib/cmdline" ]
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

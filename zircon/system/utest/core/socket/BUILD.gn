@@ -4,9 +4,7 @@
 
 source_set("socket") {
   testonly = true
-  sources = [
-    "socket.cc",
-  ]
+  sources = [ "socket.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

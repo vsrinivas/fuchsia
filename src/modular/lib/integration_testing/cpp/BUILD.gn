@@ -14,7 +14,5 @@ source_set("cpp") {
     "//sdk/lib/sys/cpp",
     "//src/modular/lib/async/cpp:future",
   ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.testing.runner",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.testing.runner" ]
 }

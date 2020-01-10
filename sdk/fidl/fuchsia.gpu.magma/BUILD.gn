@@ -11,7 +11,5 @@ fidl("fuchsia.gpu.magma") {
     "vector-bounds-not-specified",
   ]
 
-  sources = [
-    "magma.fidl",
-  ]
+  sources = [ "magma.fidl" ]
 }

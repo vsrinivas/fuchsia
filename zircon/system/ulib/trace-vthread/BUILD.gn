@@ -20,12 +20,8 @@ config("library_headers_config") {
 # Common pieces.
 source_set("common") {
   visibility = [ ":*" ]
-  sources = [
-    "event_vthread.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/zircon",
-  ]
+  sources = [ "event_vthread.cc" ]
+  deps = [ "$zx/system/ulib/zircon" ]
   public_configs = [ ":library_headers_config" ]
 }
 
@@ -86,9 +82,7 @@ group("tests") {
 source_set("test-common") {
   testonly = true
   visibility = [ ":*" ]
-  sources = [
-    "event_vthread_tests.cc",
-  ]
+  sources = [ "event_vthread_tests.cc" ]
   deps = [
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",

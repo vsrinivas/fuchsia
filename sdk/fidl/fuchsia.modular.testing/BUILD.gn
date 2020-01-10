@@ -13,9 +13,7 @@ fidl("fuchsia.modular.testing") {
 
   sdk_category = "partner"
 
-  sources = [
-    "test_harness.fidl",
-  ]
+  sources = [ "test_harness.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular",

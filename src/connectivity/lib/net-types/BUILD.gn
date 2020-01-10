@@ -23,9 +23,7 @@ rustc_library("net-types") {
 unittest_package("tests") {
   package_name = "net-types-tests"
 
-  deps = [
-    ":net-types_test",
-  ]
+  deps = [ ":net-types_test" ]
 
   tests = [
     {

@@ -4,15 +4,9 @@
 
 zx_library("disk-inspector") {
   static = true
-  sources = [
-    "disk-inspector.cc",
-  ]
-  public_deps = [
-    "$zx/system/ulib/fbl:headers",
-  ]
-  deps = [
-    "$zx/system/ulib/fbl",
-  ]
+  sources = [ "disk-inspector.cc" ]
+  public_deps = [ "$zx/system/ulib/fbl:headers" ]
+  deps = [ "$zx/system/ulib/fbl" ]
 
   if (is_fuchsia) {
     sources += [ "inspector-transaction-handler.cc" ]

@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("pci") {
-  deps = [
-    "amlogic-pcie",
-  ]
+  deps = [ "amlogic-pcie" ]
 }

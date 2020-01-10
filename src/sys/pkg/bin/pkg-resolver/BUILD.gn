@@ -67,9 +67,7 @@ rustc_binary("bin") {
 
 # Ensure the contents of this package stay in sync with //src/sys/pkg/tests/amberctl:amberctl-tests
 package("pkg-resolver") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   binaries = [
     {
       name = "pkg_resolver"
@@ -139,7 +137,5 @@ sysmgr_config("config") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":pkg-resolver-unit-tests",
-  ]
+  public_deps = [ ":pkg-resolver-unit-tests" ]
 }

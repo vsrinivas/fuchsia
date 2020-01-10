@@ -8,18 +8,12 @@ zx_library("mtd") {
   host = true
 
   if (current_os == "linux") {
-    sources = [
-      "mtd-interface.cc",
-    ]
+    sources = [ "mtd-interface.cc" ]
   }
 
-  public_deps = [
-    "$zx/system/ulib/fbl",
-  ]
+  public_deps = [ "$zx/system/ulib/fbl" ]
 
-  deps = [
-    "$zx/system/ulib/log",
-  ]
+  deps = [ "$zx/system/ulib/log" ]
 
   defines = []
 

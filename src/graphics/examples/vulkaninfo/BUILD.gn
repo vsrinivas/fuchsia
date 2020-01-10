@@ -7,9 +7,7 @@ import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 
 package("vulkaninfo") {
-  deps = [
-    "//src/lib/vulkan:vulkaninfo",
-  ]
+  deps = [ "//src/lib/vulkan:vulkaninfo" ]
 
   meta = [
     {

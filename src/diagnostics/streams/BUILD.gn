@@ -10,9 +10,7 @@ import("//build/test/test_package.gni")
 group("tests") {
   testonly = true
 
-  deps = [
-    ":diagnostic_streams_tests",
-  ]
+  deps = [ ":diagnostic_streams_tests" ]
 }
 
 rustc_library("lib") {
@@ -30,9 +28,7 @@ rustc_library("lib") {
 }
 
 unittest_package("diagnostic_streams_tests") {
-  deps = [
-    ":lib_test",
-  ]
+  deps = [ ":lib_test" ]
 
   tests = [
     {
@@ -42,7 +38,5 @@ unittest_package("diagnostic_streams_tests") {
 }
 
 fidl("fuchsia.diagnostics.streaming") {
-  sources = [
-    "record.fidl",
-  ]
+  sources = [ "record.fidl" ]
 }

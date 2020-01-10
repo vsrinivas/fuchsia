@@ -10,9 +10,7 @@ group("aml-scpi-s912") {
 }
 
 zx_driver("aml-scpi-s912.mailbox") {
-  sources = [
-    "aml-mailbox.cc",
-  ]
+  sources = [ "aml-mailbox.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.gpio",
@@ -32,9 +30,7 @@ zx_driver("aml-scpi-s912.mailbox") {
 }
 
 zx_driver("scpi") {
-  sources = [
-    "aml-scpi.cc",
-  ]
+  sources = [ "aml-scpi.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.mailbox",
     "$zx/system/banjo/ddk.protocol.scpi",

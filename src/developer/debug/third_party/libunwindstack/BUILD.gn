@@ -72,9 +72,7 @@ static_library("libunwindstack") {
     ]
   }
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
   if (is_mac) {
     deps += [ ":copy_elf_h" ]
   }
@@ -84,11 +82,7 @@ if (is_mac) {
   # libunwindstack needs elf.h which doesn't come on Mac. Copy the one out of
   # Zircon and use it in this build.
   copy("copy_elf_h") {
-    sources = [
-      "//zircon/third_party/ulib/musl/include/elf.h",
-    ]
-    outputs = [
-      "$target_gen_dir/elf.h",
-    ]
+    sources = [ "//zircon/third_party/ulib/musl/include/elf.h" ]
+    outputs = [ "$target_gen_dir/elf.h" ]
   }
 }

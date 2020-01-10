@@ -3,10 +3,6 @@
 # found in the LICENSE file.
 
 source_set("interrupt") {
-  sources = [
-    "interrupt.cc",
-  ]
-  deps = [
-    "$zx/kernel/dev/pdev",
-  ]
+  sources = [ "interrupt.cc" ]
+  deps = [ "$zx/kernel/dev/pdev" ]
 }

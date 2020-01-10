@@ -28,9 +28,7 @@ rustc_library("ethernet") {
 }
 
 unittest_package("ethernet-tests") {
-  deps = [
-    ":ethernet_test",
-  ]
+  deps = [ ":ethernet_test" ]
 
   tests = [
     {

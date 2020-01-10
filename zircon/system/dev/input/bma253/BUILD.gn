@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("bma253") {
-  sources = [
-    "bma253.cc",
-  ]
+  sources = [ "bma253.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.gpio",

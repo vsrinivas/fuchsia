@@ -10,9 +10,7 @@ import("//build/host.gni")
 go_library("fidl_lib") {
   name = "fidl"
 
-  deps = [
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
 go_binary("fidlgen") {
@@ -20,9 +18,7 @@ go_binary("fidlgen") {
 
   sdk_category = "partner"
 
-  deps = [
-    ":fidl_lib",
-  ]
+  deps = [ ":fidl_lib" ]
 }
 
 go_binary("fidlgen_llcpp") {
@@ -30,9 +26,7 @@ go_binary("fidlgen_llcpp") {
 
   sdk_category = "partner"
 
-  deps = [
-    ":fidl_lib",
-  ]
+  deps = [ ":fidl_lib" ]
 }
 
 install_host_tools("fidl") {
@@ -47,9 +41,7 @@ install_host_tools("fidl") {
 }
 
 go_library("fidlgen_test_lib") {
-  deps = [
-    ":fidl_lib",
-  ]
+  deps = [ ":fidl_lib" ]
   if (is_linux || is_mac) {
     non_go_deps = [ "compiler/backend/goldens" ]
   }
@@ -58,63 +50,47 @@ go_library("fidlgen_test_lib") {
 go_test("fidlgen_cpp_test") {
   gopackages = [ "fidl/compiler/backend/cpp" ]
 
-  deps = [
-    ":fidlgen_test_lib",
-  ]
+  deps = [ ":fidlgen_test_lib" ]
 }
 
 go_test("fidlgen_llcpp_test") {
   gopackages = [ "fidl/compiler/llcpp_backend" ]
 
-  deps = [
-    ":fidlgen_test_lib",
-  ]
+  deps = [ ":fidlgen_test_lib" ]
 }
 
 go_test("fidlgen_golang_test") {
   gopackages = [ "fidl/compiler/backend/golang" ]
 
-  deps = [
-    ":fidlgen_test_lib",
-  ]
+  deps = [ ":fidlgen_test_lib" ]
 }
 
 go_test("fidlgen_libfuzzer_test") {
   gopackages = [ "fidl/compiler/backend/cpp_libfuzzer" ]
 
-  deps = [
-    ":fidlgen_test_lib",
-  ]
+  deps = [ ":fidlgen_test_lib" ]
 }
 
 go_test("fidlgen_rust_test") {
   gopackages = [ "fidl/compiler/backend/rust" ]
 
-  deps = [
-    ":fidlgen_test_lib",
-  ]
+  deps = [ ":fidlgen_test_lib" ]
 }
 
 go_test("fidlgen_syzkaller_test") {
   gopackages = [ "fidl/compiler/backend/syzkaller" ]
 
-  deps = [
-    ":fidlgen_test_lib",
-  ]
+  deps = [ ":fidlgen_test_lib" ]
 }
 
 go_test("fidlgen_common_test") {
   gopackages = [ "fidl/compiler/backend/common" ]
 
-  deps = [
-    ":fidlgen_test_lib",
-  ]
+  deps = [ ":fidlgen_test_lib" ]
 }
 
 go_test("fidlgen_types_test") {
   gopackages = [ "fidl/compiler/backend/types" ]
 
-  deps = [
-    ":fidlgen_test_lib",
-  ]
+  deps = [ ":fidlgen_test_lib" ]
 }

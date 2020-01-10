@@ -2,14 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 zx_test("inspector") {
-  sources = [
-    "print_debug_info.cc",
-  ]
+  sources = [ "print_debug_info.cc" ]
 
   deps = [
+    "$zx/system/ulib/backtrace-request",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/inspector",
     "$zx/system/ulib/zxtest",
-    "$zx/system/ulib/backtrace-request",
   ]
 }

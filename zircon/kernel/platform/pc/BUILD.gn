@@ -63,9 +63,7 @@ zx_library("pc") {
 
 source_set("tests") {
   # TODO: testonly = true
-  sources = [
-    "interrupts_test.cc",
-  ]
+  sources = [ "interrupts_test.cc" ]
   deps = [
     ":headers",
     "$zx/kernel/dev/interrupt",

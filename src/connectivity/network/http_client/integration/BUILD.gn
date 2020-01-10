@@ -35,9 +35,7 @@ rustc_test("test") {
 }
 
 test_package("http_client_integration_test") {
-  deps = [
-    ":test",
-  ]
+  deps = [ ":test" ]
 
   tests = [
     {

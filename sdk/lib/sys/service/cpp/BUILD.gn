@@ -56,9 +56,7 @@ executable("sys_service_unittests") {
 }
 
 test_package("sys_service_tests") {
-  deps = [
-    ":sys_service_unittests",
-  ]
+  deps = [ ":sys_service_unittests" ]
 
   tests = [
     {

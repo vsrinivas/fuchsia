@@ -4,7 +4,5 @@
 
 group("tests") {
   testonly = true
-  deps = [
-    "test_framework:tests",
-  ]
+  deps = [ "test_framework:tests" ]
 }

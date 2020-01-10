@@ -4,11 +4,7 @@
 
 # Configurable logging, for audio tests or drivers
 source_set("logging") {
-  sources = [
-    "logging.h",
-  ]
+  sources = [ "logging.h" ]
 
-  public_deps = [
-    "//src/lib/syslog/cpp",
-  ]
+  public_deps = [ "//src/lib/syslog/cpp" ]
 }

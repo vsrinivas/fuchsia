@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 zx_host_tool("kernel-buildsig") {
-  sources = [
-    "kernel-buildsig.cc",
-  ]
+  sources = [ "kernel-buildsig.cc" ]
 }

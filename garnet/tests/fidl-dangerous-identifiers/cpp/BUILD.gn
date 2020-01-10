@@ -5,362 +5,206 @@
 source_set("fidl.test.dangerous.constants.lower_cpp") {
   output_name =
       "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.constants.lower"
-  sources = [
-    "fidl.test.dangerous.constants.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.constants.lower",
-  ]
+  sources = [ "fidl.test.dangerous.constants.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.constants.lower" ]
 }
 source_set("fidl.test.dangerous.using.lower_cpp") {
   output_name =
       "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.using.lower"
-  sources = [
-    "fidl.test.dangerous.using.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.using.lower",
-  ]
+  sources = [ "fidl.test.dangerous.using.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.using.lower" ]
 }
 source_set("fidl.test.dangerous.enums.lower_cpp") {
   output_name =
       "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.enums.lower"
-  sources = [
-    "fidl.test.dangerous.enums.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.enums.lower",
-  ]
+  sources = [ "fidl.test.dangerous.enums.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.enums.lower" ]
 }
 source_set("fidl.test.dangerous.struct.types.lower_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.struct.types.lower"
-  sources = [
-    "fidl.test.dangerous.struct.types.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.struct.types.lower",
-  ]
+  sources = [ "fidl.test.dangerous.struct.types.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.struct.types.lower" ]
 }
 source_set("fidl.test.dangerous.struct.names.lower_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.struct.names.lower"
-  sources = [
-    "fidl.test.dangerous.struct.names.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.struct.names.lower",
-  ]
+  sources = [ "fidl.test.dangerous.struct.names.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.struct.names.lower" ]
 }
 source_set("fidl.test.dangerous.table.names.lower_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.table.names.lower"
-  sources = [
-    "fidl.test.dangerous.table.names.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.table.names.lower",
-  ]
+  sources = [ "fidl.test.dangerous.table.names.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.table.names.lower" ]
 }
 source_set("fidl.test.dangerous.table.fields.lower_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.table.fields.lower"
-  sources = [
-    "fidl.test.dangerous.table.fields.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.table.fields.lower",
-  ]
+  sources = [ "fidl.test.dangerous.table.fields.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.table.fields.lower" ]
 }
 source_set("fidl.test.dangerous.protocol.names.lower_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.protocol.names.lower"
-  sources = [
-    "fidl.test.dangerous.protocol.names.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.protocol.names.lower",
-  ]
+  sources = [ "fidl.test.dangerous.protocol.names.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.protocol.names.lower" ]
 }
 source_set("fidl.test.dangerous.method.names.lower_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.method.names.lower"
-  sources = [
-    "fidl.test.dangerous.method.names.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.names.lower",
-  ]
+  sources = [ "fidl.test.dangerous.method.names.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.names.lower" ]
 }
 source_set("fidl.test.dangerous.event.names.lower_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.event.names.lower"
-  sources = [
-    "fidl.test.dangerous.event.names.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.event.names.lower",
-  ]
+  sources = [ "fidl.test.dangerous.event.names.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.event.names.lower" ]
 }
 source_set("fidl.test.dangerous.method.request.arguments.lower_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.method.request.arguments.lower"
-  sources = [
-    "fidl.test.dangerous.method.request.arguments.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.request.arguments.lower",
-  ]
+  sources = [ "fidl.test.dangerous.method.request.arguments.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.request.arguments.lower" ]
 }
 source_set("fidl.test.dangerous.method.response.arguments.lower_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.method.response.arguments.lower"
-  sources = [
-    "fidl.test.dangerous.method.response.arguments.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.response.arguments.lower",
-  ]
+  sources = [ "fidl.test.dangerous.method.response.arguments.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.response.arguments.lower" ]
 }
 source_set("fidl.test.dangerous.method.event.arguments.lower_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.method.event.arguments.lower"
-  sources = [
-    "fidl.test.dangerous.method.event.arguments.lower_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.event.arguments.lower",
-  ]
+  sources = [ "fidl.test.dangerous.method.event.arguments.lower_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.event.arguments.lower" ]
 }
 source_set("fidl.test.dangerous.constants.upper_cpp") {
   output_name =
       "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.constants.upper"
-  sources = [
-    "fidl.test.dangerous.constants.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.constants.upper",
-  ]
+  sources = [ "fidl.test.dangerous.constants.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.constants.upper" ]
 }
 source_set("fidl.test.dangerous.using.upper_cpp") {
   output_name =
       "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.using.upper"
-  sources = [
-    "fidl.test.dangerous.using.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.using.upper",
-  ]
+  sources = [ "fidl.test.dangerous.using.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.using.upper" ]
 }
 source_set("fidl.test.dangerous.enums.upper_cpp") {
   output_name =
       "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.enums.upper"
-  sources = [
-    "fidl.test.dangerous.enums.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.enums.upper",
-  ]
+  sources = [ "fidl.test.dangerous.enums.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.enums.upper" ]
 }
 source_set("fidl.test.dangerous.struct.types.upper_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.struct.types.upper"
-  sources = [
-    "fidl.test.dangerous.struct.types.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.struct.types.upper",
-  ]
+  sources = [ "fidl.test.dangerous.struct.types.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.struct.types.upper" ]
 }
 source_set("fidl.test.dangerous.struct.names.upper_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.struct.names.upper"
-  sources = [
-    "fidl.test.dangerous.struct.names.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.struct.names.upper",
-  ]
+  sources = [ "fidl.test.dangerous.struct.names.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.struct.names.upper" ]
 }
 source_set("fidl.test.dangerous.table.names.upper_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.table.names.upper"
-  sources = [
-    "fidl.test.dangerous.table.names.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.table.names.upper",
-  ]
+  sources = [ "fidl.test.dangerous.table.names.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.table.names.upper" ]
 }
 source_set("fidl.test.dangerous.table.fields.upper_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.table.fields.upper"
-  sources = [
-    "fidl.test.dangerous.table.fields.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.table.fields.upper",
-  ]
+  sources = [ "fidl.test.dangerous.table.fields.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.table.fields.upper" ]
 }
 source_set("fidl.test.dangerous.protocol.names.upper_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.protocol.names.upper"
-  sources = [
-    "fidl.test.dangerous.protocol.names.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.protocol.names.upper",
-  ]
+  sources = [ "fidl.test.dangerous.protocol.names.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.protocol.names.upper" ]
 }
 source_set("fidl.test.dangerous.method.names.upper_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.method.names.upper"
-  sources = [
-    "fidl.test.dangerous.method.names.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.names.upper",
-  ]
+  sources = [ "fidl.test.dangerous.method.names.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.names.upper" ]
 }
 source_set("fidl.test.dangerous.event.names.upper_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.event.names.upper"
-  sources = [
-    "fidl.test.dangerous.event.names.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.event.names.upper",
-  ]
+  sources = [ "fidl.test.dangerous.event.names.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.event.names.upper" ]
 }
 source_set("fidl.test.dangerous.method.request.arguments.upper_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.method.request.arguments.upper"
-  sources = [
-    "fidl.test.dangerous.method.request.arguments.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.request.arguments.upper",
-  ]
+  sources = [ "fidl.test.dangerous.method.request.arguments.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.request.arguments.upper" ]
 }
 source_set("fidl.test.dangerous.method.response.arguments.upper_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.method.response.arguments.upper"
-  sources = [
-    "fidl.test.dangerous.method.response.arguments.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.response.arguments.upper",
-  ]
+  sources = [ "fidl.test.dangerous.method.response.arguments.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.response.arguments.upper" ]
 }
 source_set("fidl.test.dangerous.method.event.arguments.upper_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.method.event.arguments.upper"
-  sources = [
-    "fidl.test.dangerous.method.event.arguments.upper_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.event.arguments.upper",
-  ]
+  sources = [ "fidl.test.dangerous.method.event.arguments.upper_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.event.arguments.upper" ]
 }
 source_set("fidl.test.dangerous.constants.camel_cpp") {
   output_name =
       "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.constants.camel"
-  sources = [
-    "fidl.test.dangerous.constants.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.constants.camel",
-  ]
+  sources = [ "fidl.test.dangerous.constants.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.constants.camel" ]
 }
 source_set("fidl.test.dangerous.using.camel_cpp") {
   output_name =
       "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.using.camel"
-  sources = [
-    "fidl.test.dangerous.using.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.using.camel",
-  ]
+  sources = [ "fidl.test.dangerous.using.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.using.camel" ]
 }
 source_set("fidl.test.dangerous.enums.camel_cpp") {
   output_name =
       "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.enums.camel"
-  sources = [
-    "fidl.test.dangerous.enums.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.enums.camel",
-  ]
+  sources = [ "fidl.test.dangerous.enums.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.enums.camel" ]
 }
 source_set("fidl.test.dangerous.struct.types.camel_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.struct.types.camel"
-  sources = [
-    "fidl.test.dangerous.struct.types.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.struct.types.camel",
-  ]
+  sources = [ "fidl.test.dangerous.struct.types.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.struct.types.camel" ]
 }
 source_set("fidl.test.dangerous.struct.names.camel_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.struct.names.camel"
-  sources = [
-    "fidl.test.dangerous.struct.names.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.struct.names.camel",
-  ]
+  sources = [ "fidl.test.dangerous.struct.names.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.struct.names.camel" ]
 }
 source_set("fidl.test.dangerous.table.names.camel_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.table.names.camel"
-  sources = [
-    "fidl.test.dangerous.table.names.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.table.names.camel",
-  ]
+  sources = [ "fidl.test.dangerous.table.names.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.table.names.camel" ]
 }
 source_set("fidl.test.dangerous.table.fields.camel_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.table.fields.camel"
-  sources = [
-    "fidl.test.dangerous.table.fields.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.table.fields.camel",
-  ]
+  sources = [ "fidl.test.dangerous.table.fields.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.table.fields.camel" ]
 }
 source_set("fidl.test.dangerous.protocol.names.camel_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.protocol.names.camel"
-  sources = [
-    "fidl.test.dangerous.protocol.names.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.protocol.names.camel",
-  ]
+  sources = [ "fidl.test.dangerous.protocol.names.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.protocol.names.camel" ]
 }
 source_set("fidl.test.dangerous.method.names.camel_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.method.names.camel"
-  sources = [
-    "fidl.test.dangerous.method.names.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.names.camel",
-  ]
+  sources = [ "fidl.test.dangerous.method.names.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.names.camel" ]
 }
 source_set("fidl.test.dangerous.event.names.camel_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.event.names.camel"
-  sources = [
-    "fidl.test.dangerous.event.names.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.event.names.camel",
-  ]
+  sources = [ "fidl.test.dangerous.event.names.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.event.names.camel" ]
 }
 source_set("fidl.test.dangerous.method.request.arguments.camel_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.method.request.arguments.camel"
-  sources = [
-    "fidl.test.dangerous.method.request.arguments.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.request.arguments.camel",
-  ]
+  sources = [ "fidl.test.dangerous.method.request.arguments.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.request.arguments.camel" ]
 }
 source_set("fidl.test.dangerous.method.response.arguments.camel_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.method.response.arguments.camel"
-  sources = [
-    "fidl.test.dangerous.method.response.arguments.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.response.arguments.camel",
-  ]
+  sources = [ "fidl.test.dangerous.method.response.arguments.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.response.arguments.camel" ]
 }
 source_set("fidl.test.dangerous.method.event.arguments.camel_cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test_fidl.test.dangerous.method.event.arguments.camel"
-  sources = [
-    "fidl.test.dangerous.method.event.arguments.camel_test.cc",
-  ]
-  deps = [
-    "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.event.arguments.camel",
-  ]
+  sources = [ "fidl.test.dangerous.method.event.arguments.camel_test.cc" ]
+  deps = [ "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.method.event.arguments.camel" ]
 }
 group("cpp") {
   deps = [

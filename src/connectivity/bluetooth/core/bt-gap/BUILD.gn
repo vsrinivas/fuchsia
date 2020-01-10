@@ -46,9 +46,7 @@ rustc_binary("bin") {
 }
 
 package("bt-gap") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "bt_gap"
 
@@ -63,9 +61,7 @@ package("bt-gap") {
 test_package("tests") {
   package_name = "bt-gap-tests"
 
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

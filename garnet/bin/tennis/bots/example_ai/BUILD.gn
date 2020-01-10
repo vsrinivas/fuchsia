@@ -4,7 +4,5 @@
 
 # Do not use this target directly, instead depend on //examples/tennis/bots/example_ai:tennis_example_ai.
 group("tennis_example_ai") {
-  public_deps = [
-    "//examples/tennis/bots/example_ai:tennis_example_ai",
-  ]
+  public_deps = [ "//examples/tennis/bots/example_ai:tennis_example_ai" ]
 }

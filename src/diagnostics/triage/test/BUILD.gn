@@ -26,11 +26,7 @@ rustc_binary("triage_test") {
 }
 
 install_host_tools("install") {
-  deps = [
-    ":triage_test",
-  ]
+  deps = [ ":triage_test" ]
 
-  outputs = [
-    "triage_test",
-  ]
+  outputs = [ "triage_test" ]
 }

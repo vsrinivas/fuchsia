@@ -18,9 +18,7 @@ import("//build/testing/environments.gni")
 executable("channel_conversion_test") {
   output_name = "channel_conversion_test"
   testonly = true
-  sources = [
-    "channel_conversion_test.cc",
-  ]
+  sources = [ "channel_conversion_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/fxl/test:gtest_main",
@@ -31,9 +29,7 @@ executable("channel_conversion_test") {
 executable("debug_test") {
   output_name = "debug_test"
   testonly = true
-  sources = [
-    "debug_test.cc",
-  ]
+  sources = [ "debug_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/lib/fxl/test:gtest_main",
@@ -44,9 +40,7 @@ executable("debug_test") {
 executable("dma_buffer_test") {
   output_name = "dma_buffer_test"
   testonly = true
-  sources = [
-    "dma_buffer_test.cc",
-  ]
+  sources = [ "dma_buffer_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/lib/fxl/test:gtest_main",
@@ -59,9 +53,7 @@ executable("dma_buffer_test") {
 executable("dma_pool_test") {
   output_name = "dma_pool_test"
   testonly = true
-  sources = [
-    "dma_pool_test.cc",
-  ]
+  sources = [ "dma_pool_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/lib/fxl/test:gtest_main",
@@ -74,9 +66,7 @@ executable("dma_pool_test") {
 executable("dma_ring_test") {
   output_name = "dma_ring_test"
   testonly = true
-  sources = [
-    "dma_ring_test.cc",
-  ]
+  sources = [ "dma_ring_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/lib/fxl/test:gtest_main",
@@ -89,9 +79,7 @@ executable("dma_ring_test") {
 executable("firmware_test") {
   output_name = "firmware_test"
   testonly = true
-  sources = [
-    "firmware_test.cc",
-  ]
+  sources = [ "firmware_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/lib/fxl/test:gtest_main",
@@ -102,9 +90,7 @@ executable("firmware_test") {
 executable("netbuf_test") {
   output_name = "netbuf_test"
   testonly = true
-  sources = [
-    "netbuf_test.cc",
-  ]
+  sources = [ "netbuf_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
@@ -116,9 +102,7 @@ executable("netbuf_test") {
 executable("workqueue_test") {
   output_name = "workqueue_test"
   testonly = true
-  sources = [
-    "workqueue_test.cc",
-  ]
+  sources = [ "workqueue_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//src/lib/fxl/test:gtest_main",

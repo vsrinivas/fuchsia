@@ -5,9 +5,7 @@
 zx_library("device-protocol-pci") {
   sdk = "source"
   sdk_headers = [ "lib/pci/pci.h" ]
-  sources = [
-    "pci.cc",
-  ]
+  sources = [ "pci.cc" ]
   deps = [
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
@@ -23,9 +21,7 @@ zx_library("device-protocol-pci") {
 
 zx_test("device-protocol-pci-test") {
   output_name = "device-protocol-pci-test"
-  sources = [
-    "pci-test.cc",
-  ]
+  sources = [ "pci-test.cc" ]
 
   deps = [
     "$zx/system/dev/lib/device-protocol-pci",

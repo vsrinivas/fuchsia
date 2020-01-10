@@ -5,10 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.routing") {
-  sources = [
-    "routing.fidl",
-  ]
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-net",
-  ]
+  sources = [ "routing.fidl" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-net" ]
 }

@@ -17,17 +17,13 @@ source_set("magma_abi") {
     "magma_abi/magma_sysmem.h",
   ]
 
-  public_deps = [
-    ":magma_abi_common",
-  ]
+  public_deps = [ ":magma_abi_common" ]
 }
 
 source_set("magma_abi_common") {
   public_configs = [ ":magma_abi_config" ]
 
-  sources = [
-    "magma_abi/magma_common_defs.h",
-  ]
+  sources = [ "magma_abi/magma_common_defs.h" ]
 }
 
 # Magma System Driver ABI
@@ -43,7 +39,5 @@ source_set("msd_abi") {
     "msd_abi/msd_defs.h",
   ]
 
-  public_deps = [
-    ":magma_abi_common",
-  ]
+  public_deps = [ ":magma_abi_common" ]
 }

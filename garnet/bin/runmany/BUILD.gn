@@ -4,7 +4,5 @@
 
 # Do not use this target directly, instead depend on //src/sys/tools/runmany:runmany.
 group("runmany") {
-  public_deps = [
-    "//src/sys/tools/runmany:runmany",
-  ]
+  public_deps = [ "//src/sys/tools/runmany:runmany" ]
 }

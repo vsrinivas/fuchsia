@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("lite-on") {
-  sources = [
-    "ltr-578als.cc",
-  ]
+  sources = [ "ltr-578als.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/banjo/ddk.protocol.i2c",

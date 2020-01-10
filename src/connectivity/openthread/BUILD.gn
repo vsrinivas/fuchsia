@@ -4,7 +4,5 @@
 
 group("openthread") {
   testonly = true
-  deps = [
-    "drivers",
-  ]
+  deps = [ "drivers" ]
 }

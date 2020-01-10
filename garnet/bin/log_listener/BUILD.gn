@@ -34,9 +34,7 @@ rustc_binary("bin") {
 }
 
 package("log_listener_shell") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -48,9 +46,7 @@ package("log_listener_shell") {
 }
 
 package("log_listener") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -66,16 +62,12 @@ package("log_listener") {
   ]
 
   if (persist_logs) {
-    data_deps = [
-      ":all_logs",
-    ]
+    data_deps = [ ":all_logs" ]
   }
 }
 
 test_package("log_listener_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

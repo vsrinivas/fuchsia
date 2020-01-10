@@ -10,9 +10,7 @@ fidl("echo") {
 
   name = "fidl.examples.echo"
 
-  sources = [
-    "echo.test.fidl",
-  ]
+  sources = [ "echo.test.fidl" ]
 
   fuzzers = [
     {
@@ -22,7 +20,5 @@ fidl("echo") {
 }
 
 group("echo2") {
-  public_deps = [
-    ":echo",
-  ]
+  public_deps = [ ":echo" ]
 }

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("bootpart") {
-  sources = [
-    "bootpart.c",
-  ]
+  sources = [ "bootpart.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.block.partition",

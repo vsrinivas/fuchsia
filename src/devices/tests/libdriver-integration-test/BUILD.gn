@@ -46,7 +46,8 @@ executable("tests") {
   ]
 }
 
-devmgr_manifest("devmgr-manifest") {}
+devmgr_manifest("devmgr-manifest") {
+}
 
 test_package("libdriver-integration-test") {
   deprecated_shell = "//build"
@@ -72,9 +73,7 @@ fidl("mock-device") {
 
   name = "fuchsia.device.mock"
 
-  sources = [
-    "//zircon/system/dev/test/mock-device/mock-device.fidl",
-  ]
+  sources = [ "//zircon/system/dev/test/mock-device/mock-device.fidl" ]
 
   public_deps = []
 }

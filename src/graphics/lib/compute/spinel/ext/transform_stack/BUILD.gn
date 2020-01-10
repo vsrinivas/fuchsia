@@ -14,8 +14,6 @@ source_set("transform_stack") {
     "transform_stack.c",
     "transform_stack.h",
   ]
-  public_deps = [
-    "${graphics_compute_dir}/spinel:spinel_headers",
-  ]
+  public_deps = [ "${graphics_compute_dir}/spinel:spinel_headers" ]
   public_configs = [ ":transform_stack_config" ]
 }

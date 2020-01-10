@@ -11,63 +11,43 @@ import("//build/host.gni")
 go_library("lib") {
   name = "gidl"
 
-  deps = [
-    "//garnet/go/src/fidl:fidl_lib",
-  ]
+  deps = [ "//garnet/go/src/fidl:fidl_lib" ]
 }
 
 go_binary("gidl") {
   gopackage = "gidl"
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 install_host_tools("host") {
-  deps = [
-    ":gidl",
-  ]
-  outputs = [
-    "gidl",
-  ]
+  deps = [ ":gidl" ]
+  outputs = [ "gidl" ]
 }
 
 go_test("gidl_parser_test") {
   gopackages = [ "gidl/parser" ]
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 go_test("gidl_golang_test") {
   gopackages = [ "gidl/golang" ]
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 fidl("gidl_mixer_test_fidl") {
   name = "test.mixer"
   testonly = true
-  sources = [
-    "//tools/fidl/gidl/mixer/mixer.test.fidl",
-  ]
+  sources = [ "//tools/fidl/gidl/mixer/mixer.test.fidl" ]
 }
 
 copy("copy_gidl_mixer_test_json") {
   testonly = true
-  deps = [
-    ":gidl_mixer_test_fidl($fidl_toolchain)",
-  ]
-  sources = [
-    "$root_build_dir/fidling/gen/tools/fidl/gidl/gidl_mixer_test_fidl.fidl.json",
-  ]
-  outputs = [
-    "$root_out_dir/test_data/gidl/mixer.test.fidl.json",
-  ]
+  deps = [ ":gidl_mixer_test_fidl($fidl_toolchain)" ]
+  sources = [ "$root_build_dir/fidling/gen/tools/fidl/gidl/gidl_mixer_test_fidl.fidl.json" ]
+  outputs = [ "$root_out_dir/test_data/gidl/mixer.test.fidl.json" ]
   metadata = {
     test_runtime_deps = outputs
   }
@@ -76,8 +56,6 @@ copy("copy_gidl_mixer_test_json") {
 go_test("gidl_mixer_test") {
   gopackages = [ "gidl/mixer" ]
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
   non_go_deps = [ ":copy_gidl_mixer_test_json" ]
 }

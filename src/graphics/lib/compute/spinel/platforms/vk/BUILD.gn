@@ -89,9 +89,7 @@ config("spinel_vk_ext_public_config") {
 #
 static_library("vk_find_target") {
   output_name = "spinel_vk_find_target"
-  public = [
-    "ext/spinel_vk_find_target.h",
-  ]
+  public = [ "ext/spinel_vk_find_target.h" ]
   sources = [
     "ext/spinel_vk_find_target.c",
     "ext/spinel_vk_find_target.h",

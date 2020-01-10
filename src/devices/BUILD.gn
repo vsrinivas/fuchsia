@@ -24,9 +24,7 @@ group("tests") {
 }
 
 group("driver") {
-  deps = [
-    "host:driver",
-  ]
+  deps = [ "host:driver" ]
 }
 
 generate_manifest("devices.bootfs") {

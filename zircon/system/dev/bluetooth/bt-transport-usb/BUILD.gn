@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("bt-transport-usb") {
-  sources = [
-    "bt-transport-usb.c",
-  ]
+  sources = [ "bt-transport-usb.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.bt.hci",
     "$zx/system/banjo/ddk.protocol.usb",

@@ -14,9 +14,7 @@ declare_args() {
 if (current_toolchain == default_toolchain) {
   action("gen-config-buildid-header") {
     visibility = [ ":*" ]
-    outputs = [
-      "$target_gen_dir/config-buildid.h",
-    ]
+    outputs = [ "$target_gen_dir/config-buildid.h" ]
     if (kernel_version_string != "") {
       script = "/usr/bin/touch"
     } else {
@@ -31,9 +29,7 @@ if (current_toolchain == default_toolchain) {
 } else {
   zx_library("version") {
     kernel = true
-    sources = [
-      "version.cc",
-    ]
+    sources = [ "version.cc" ]
     defines = [ "ARCH=\"$current_cpu\"" ]
     deps = [
       ":config-buildid-header",
@@ -47,9 +43,7 @@ if (current_toolchain == default_toolchain) {
   group("config-buildid-header") {
     public_configs = [ ":config-buildid-header.config" ]
     if (kernel_version_string == "") {
-      deps = [
-        gen_label,
-      ]
+      deps = [ gen_label ]
     }
   }
 

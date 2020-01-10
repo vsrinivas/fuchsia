@@ -50,9 +50,7 @@ source_set("implementation") {
 source_set("unittests") {
   testonly = true
 
-  sources = [
-    "platform_unittest.cc",
-  ]
+  sources = [ "platform_unittest.cc" ]
 
   deps = [
     ":implementation",

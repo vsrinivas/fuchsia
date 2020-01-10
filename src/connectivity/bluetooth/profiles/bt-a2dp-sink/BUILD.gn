@@ -80,20 +80,14 @@ package("bt-a2dp-sink") {
 
 config_data("startup_config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "bt-a2dp-startup.config",
-  ]
-  sources = [
-    "startup.config",
-  ]
+  outputs = [ "bt-a2dp-startup.config" ]
+  sources = [ "startup.config" ]
 }
 
 test_package("tests") {
   package_name = "bt-a2dp-sink-tests"
 
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

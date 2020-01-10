@@ -13,24 +13,20 @@ go_library("battery_manager_lib") {
   name = "battery_manager"
 
   deps = [
-    "//src/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//sdk/fidl/fuchsia.power($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//src/lib/component/go/src/app",
   ]
 }
 
 go_test("battery_manager_test") {
   gopackages = [ "battery_manager" ]
-  deps = [
-    ":battery_manager_lib",
-  ]
+  deps = [ ":battery_manager_lib" ]
 }
 
 test_package("battery_manager_gotests") {
-  deps = [
-    ":battery_manager_test",
-  ]
+  deps = [ ":battery_manager_test" ]
   tests = [
     {
       name = "battery_manager_test"

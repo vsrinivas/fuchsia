@@ -24,9 +24,7 @@ source_set("impl") {
 
 source_set("unittests") {
   testonly = true
-  sources = [
-    "device_id_manager_impl_unittest.cc",
-  ]
+  sources = [ "device_id_manager_impl_unittest.cc" ]
 
   deps = [
     ":impl",

@@ -22,9 +22,7 @@ rustc_library("unicode_blocks") {
 compiled_action("generate_unicode_blocks_source") {
   tool = ":unicode_block_generator"
   output_path = "$target_gen_dir/unicode_blocks.rs"
-  outputs = [
-    output_path,
-  ]
+  outputs = [ output_path ]
   args = [ rebase_path(output_path) ]
 }
 

@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("zircon.device.block") {
-  sources = [
-    "block.banjo",
-  ]
+  sources = [ "block.banjo" ]
 }

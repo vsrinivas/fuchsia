@@ -6,9 +6,7 @@ import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 
 dart_test("can_play_video_test") {
-  sources = [
-    "can_play_video_test.dart",
-  ]
+  sources = [ "can_play_video_test.dart" ]
 
   deps = [
     "//sdk/testing/sl4f/client",
@@ -34,7 +32,5 @@ dart_test("can_play_video_test") {
 group("test") {
   testonly = true
 
-  deps = [
-    ":can_play_video_test($host_toolchain)",
-  ]
+  deps = [ ":can_play_video_test($host_toolchain)" ]
 }

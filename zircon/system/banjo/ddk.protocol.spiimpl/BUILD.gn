@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.spiimpl") {
-  sources = [
-    "spi-impl.banjo",
-  ]
+  sources = [ "spi-impl.banjo" ]
 }

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("dwc2") {
-  sources = [
-    "dwc2.cc",
-  ]
+  sources = [ "dwc2.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.platform.device",

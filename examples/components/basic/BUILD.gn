@@ -25,9 +25,9 @@ rustc_binary("echo_args_bin") {
 
 package("components_basic_example") {
   deps = [
+    ":echo_args_bin",
     ":hello_world_bin",
     ":ls_root_pkg_bin",
-    ":echo_args_bin",
   ]
 
   binaries = [

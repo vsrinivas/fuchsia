@@ -13,11 +13,7 @@ fidl("wisdom") {
   ]
 
   name = "fuchsia.examples.intl.wisdom"
-  sources = [
-    "intl_wisdom.fidl",
-  ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.intl",
-  ]
+  sources = [ "intl_wisdom.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.intl" ]
   sdk_category = "internal"
 }

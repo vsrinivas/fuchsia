@@ -5,9 +5,7 @@
 # Separated into own target, so it is easier to cleanup later.
 zx_test("metrics-composite-latency-event") {
   test_group = "fs"
-  sources = [
-    "composite_latency_event_test.cc",
-  ]
+  sources = [ "composite_latency_event_test.cc" ]
   deps = [
     "$zx/system/ulib/cobalt-client",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
@@ -38,9 +36,7 @@ zx_test("metrics-inspect") {
 
 zx_test("metrics-cobalt") {
   test_group = "fs"
-  sources = [
-    "cobalt_metrics_test.cc",
-  ]
+  sources = [ "cobalt_metrics_test.cc" ]
 
   deps = [
     "$zx/system/ulib/cobalt-client",

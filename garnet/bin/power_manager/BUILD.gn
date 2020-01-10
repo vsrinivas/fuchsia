@@ -35,9 +35,7 @@ rustc_binary("bin") {
 }
 
 package("power_manager") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "power_manager"
 
@@ -50,9 +48,7 @@ package("power_manager") {
 }
 
 test_package("power_manager_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

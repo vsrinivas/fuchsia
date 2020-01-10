@@ -13,7 +13,5 @@ group("tools") {
 
 group("tests") {
   testonly = true
-  deps = [
-    "onet:tests",
-  ]
+  deps = [ "onet:tests" ]
 }

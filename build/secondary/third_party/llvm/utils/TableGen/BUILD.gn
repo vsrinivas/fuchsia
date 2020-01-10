@@ -53,9 +53,7 @@ executable("tablegen") {
     "X86RecognizableInstr.cpp",
   ]
 
-  deps = [
-    "../../lib/TableGen",
-  ]
+  deps = [ "../../lib/TableGen" ]
 
   libs = [ "dl" ]
 }

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test_driver("unit-test-fail") {
-  sources = [
-    "unit-test-fail.cc",
-  ]
+  sources = [ "unit-test-fail.cc" ]
   deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
@@ -13,9 +11,7 @@ zx_test_driver("unit-test-fail") {
 }
 
 zx_test_driver("unit-test-pass") {
-  sources = [
-    "unit-test-pass.cc",
-  ]
+  sources = [ "unit-test-pass.cc" ]
   deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",

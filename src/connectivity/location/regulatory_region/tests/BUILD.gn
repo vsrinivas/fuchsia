@@ -22,15 +22,11 @@ rustc_test("test") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":regulatory_region_integration_test",
-  ]
+  deps = [ ":regulatory_region_integration_test" ]
 }
 
 test_package("regulatory_region_integration_test") {
-  deps = [
-    ":test",
-  ]
+  deps = [ ":test" ]
 
   tests = [
     {

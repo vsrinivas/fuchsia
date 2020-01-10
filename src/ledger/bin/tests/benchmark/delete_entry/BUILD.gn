@@ -7,9 +7,7 @@ visibility = [ "//src/ledger/*" ]
 group("delete_entry") {
   testonly = true
 
-  public_deps = [
-    ":ledger_benchmark_delete_entry",
-  ]
+  public_deps = [ ":ledger_benchmark_delete_entry" ]
 }
 
 executable("ledger_benchmark_delete_entry") {
@@ -36,9 +34,7 @@ executable("ledger_benchmark_delete_entry") {
     "//zircon/public/lib/trace-provider-so",
   ]
 
-  sources = [
-    "delete_entry.cc",
-  ]
+  sources = [ "delete_entry.cc" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

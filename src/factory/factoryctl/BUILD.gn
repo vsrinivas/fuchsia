@@ -35,9 +35,7 @@ rustc_binary("bin") {
 }
 
 package("factoryctl") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

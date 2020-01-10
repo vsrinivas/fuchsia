@@ -5,9 +5,7 @@
 source_set("drm_test_runner") {
   testonly = true
 
-  sources = [
-    "drm_tests_main.cc",
-  ]
+  sources = [ "drm_tests_main.cc" ]
 
   deps = [
     "../tests/helper:platform_device_helper",

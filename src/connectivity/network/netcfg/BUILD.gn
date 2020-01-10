@@ -51,9 +51,7 @@ rustc_binary("bin") {
 }
 
 package("netcfg") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "netcfg"
 
@@ -67,20 +65,14 @@ package("netcfg") {
 
 config_data("filter_config") {
   for_pkg = "netcfg"
-  sources = [
-    rebase_path("config/default.json"),
-  ]
-  outputs = [
-    "default.json",
-  ]
+  sources = [ rebase_path("config/default.json") ]
+  outputs = [ "default.json" ]
 }
 
 if (netcfg_autostart) {
   config_data("config") {
     for_pkg = "sysmgr"
-    sources = [
-      "netcfg.config",
-    ]
+    sources = [ "netcfg.config" ]
   }
 } else {
   group("config") {
@@ -88,9 +80,7 @@ if (netcfg_autostart) {
 }
 
 test_package("netcfg_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
   tests = [
     {
       name = "netcfg_bin_test"

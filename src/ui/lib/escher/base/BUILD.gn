@@ -16,7 +16,5 @@ static_library("escher_base") {
 
   public_configs = [ "//src/ui/lib/escher/geometry:glm_config" ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 }

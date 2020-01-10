@@ -13,10 +13,6 @@ fidl("fuchsia.hwinfo") {
 
   sdk_category = "partner"
 
-  sources = [
-    "hwinfo.fidl",
-  ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.intl",
-  ]
+  sources = [ "hwinfo.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.intl" ]
 }

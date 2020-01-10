@@ -132,9 +132,7 @@ test_package("shutdown_integration_test") {
 }
 
 test_package("component_manager_panic_test") {
-  deps = [
-    ":component_manager_panic_test_bin",
-  ]
+  deps = [ ":component_manager_panic_test_bin" ]
 
   components =
       [ "//src/sys/component_manager:component_manager_as_v1_component" ]

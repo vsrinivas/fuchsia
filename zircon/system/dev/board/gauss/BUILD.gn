@@ -28,15 +28,11 @@ zx_driver("gauss") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
   ]
-  data_deps = [
-    ":gauss-i2c-test",
-  ]
+  data_deps = [ ":gauss-i2c-test" ]
 }
 
 zx_driver("gauss-i2c-test") {
-  sources = [
-    "gauss-i2c-test.c",
-  ]
+  sources = [ "gauss-i2c-test.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.platform.device",

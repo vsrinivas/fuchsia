@@ -8,7 +8,5 @@ static_library("BinaryFormat") {
     "Magic.cpp",
   ]
 
-  public_deps = [
-    "../Support",
-  ]
+  public_deps = [ "../Support" ]
 }

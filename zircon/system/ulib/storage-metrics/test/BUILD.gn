@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":storage-metrics",
-  ]
+  deps = [ ":storage-metrics" ]
 }
 
 zx_test("storage-metrics") {
-  sources = [
-    "storage-metrics-test.cc",
-  ]
+  sources = [ "storage-metrics-test.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/fidl/fuchsia-hardware-block:c",

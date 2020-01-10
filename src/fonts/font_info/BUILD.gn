@@ -43,9 +43,7 @@ rustc_test("font_info_test_bin") {
 
 # Needed for testing on Fuchsia
 test_package("font_info_tests") {
-  deps = [
-    ":font_info_test_bin",
-  ]
+  deps = [ ":font_info_test_bin" ]
 
   resources = [
     {
@@ -63,18 +61,12 @@ test_package("font_info_tests") {
 
 # Needed for testing on host
 copy("copy_test_data") {
-  sources = [
-    "//src/fonts/test_data/sample_font.ttf",
-  ]
-  outputs = [
-    "$root_out_dir/test_data/font_info/{{source_file_part}}",
-  ]
+  sources = [ "//src/fonts/test_data/sample_font.ttf" ]
+  outputs = [ "$root_out_dir/test_data/font_info/{{source_file_part}}" ]
 }
 
 group("test_data") {
-  deps = [
-    ":copy_test_data",
-  ]
+  deps = [ ":copy_test_data" ]
   metadata = {
     test_runtime_deps = get_target_outputs(":copy_test_data")
   }

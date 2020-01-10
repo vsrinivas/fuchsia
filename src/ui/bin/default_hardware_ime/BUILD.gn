@@ -9,9 +9,7 @@ import("//build/test/test_package.gni")
 group("tests") {
   testonly = true
 
-  deps = [
-    ":default_hardware_ime_tests",
-  ]
+  deps = [ ":default_hardware_ime_tests" ]
 }
 
 rustc_binary("bin") {
@@ -39,9 +37,7 @@ rustc_binary("bin") {
 }
 
 package("default_hardware_ime") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   meta = [
     {
@@ -80,9 +76,7 @@ test_package("default_hardware_ime_tests") {
     },
   ]
 
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

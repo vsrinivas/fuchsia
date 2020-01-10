@@ -6,9 +6,7 @@ import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 
 dart_test("audio_record_test") {
-  sources = [
-    "audio_record_test.dart",
-  ]
+  sources = [ "audio_record_test.dart" ]
 
   deps = [
     "//sdk/testing/sl4f/client",
@@ -29,7 +27,5 @@ dart_test("audio_record_test") {
 group("test") {
   testonly = true
 
-  deps = [
-    ":audio_record_test($host_toolchain)",
-  ]
+  deps = [ ":audio_record_test($host_toolchain)" ]
 }

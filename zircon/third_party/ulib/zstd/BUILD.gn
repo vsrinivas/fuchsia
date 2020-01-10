@@ -84,8 +84,6 @@ zx_host_tool("zstdcli") {
     "$zstd/programs/util.c",
     "$zstd/programs/zstdcli.c",
   ]
-  deps = [
-    ":zstd",
-  ]
+  deps = [ ":zstd" ]
   configs += [ ":zstd-config" ]
 }

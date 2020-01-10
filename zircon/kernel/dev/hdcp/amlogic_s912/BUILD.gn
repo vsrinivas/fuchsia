@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("amlogic_s912") {
-  sources = [
-    "hdcp.cc",
-  ]
+  sources = [ "hdcp.cc" ]
   deps = [
     "$zx/kernel/dev/interrupt",
     "$zx/kernel/dev/pdev",

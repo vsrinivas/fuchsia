@@ -4,16 +4,12 @@
 
 zx_library("fbl") {
   kernel = true
-  sources = [
-    "arena.cc",
-  ]
+  sources = [ "arena.cc" ]
   deps = [
     ":tests",
     "$zx/kernel/vm:headers",
   ]
-  public_deps = [
-    "$zx/system/ulib/fbl",
-  ]
+  public_deps = [ "$zx/system/ulib/fbl" ]
 }
 
 source_set("tests") {

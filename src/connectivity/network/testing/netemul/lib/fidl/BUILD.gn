@@ -12,13 +12,9 @@ fidl("network") {
   ]
 
   name = "fuchsia.netemul.network"
-  sources = [
-    "network.fidl",
-  ]
+  sources = [ "network.fidl" ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-hardware-ethernet",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-hardware-ethernet" ]
 }
 
 fidl("environment") {
@@ -29,9 +25,7 @@ fidl("environment") {
   ]
 
   name = "fuchsia.netemul.environment"
-  sources = [
-    "environment.fidl",
-  ]
+  sources = [ "environment.fidl" ]
 
   public_deps = [
     ":network",
@@ -50,16 +44,12 @@ fidl("sync") {
   ]
 
   name = "fuchsia.netemul.sync"
-  sources = [
-    "sync.fidl",
-  ]
+  sources = [ "sync.fidl" ]
 }
 
 fidl("sandbox") {
   name = "fuchsia.netemul.sandbox"
-  sources = [
-    "sandbox.fidl",
-  ]
+  sources = [ "sandbox.fidl" ]
 
   public_deps = [
     ":environment",
@@ -71,10 +61,6 @@ fidl("sandbox") {
 
 fidl("devmgr") {
   name = "fuchsia.netemul.devmgr"
-  sources = [
-    "devmgr.fidl",
-  ]
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-io",
-  ]
+  sources = [ "devmgr.fidl" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
 }

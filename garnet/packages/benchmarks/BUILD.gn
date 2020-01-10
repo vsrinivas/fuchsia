@@ -17,9 +17,7 @@ group("all") {
 # WARNING: Known to topaz.
 group("buildbot") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/catapult_converter",
-  ]
+  public_deps = [ "//garnet/bin/catapult_converter" ]
 }
 
 group("garnet") {
@@ -35,7 +33,5 @@ group("garnet") {
 
 group("zircon") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/zircon_benchmarks",
-  ]
+  public_deps = [ "//garnet/bin/zircon_benchmarks" ]
 }

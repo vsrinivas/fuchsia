@@ -53,9 +53,7 @@ if (current_toolchain == default_toolchain) {
     environment_label = ":user.vdso"
     direct = true
     shlib = true
-    deps = [
-      ":headers",
-    ]
+    deps = [ ":headers" ]
   }
 
   if (toolchain.base_environment == "user") {
@@ -64,9 +62,7 @@ if (current_toolchain == default_toolchain) {
       environment_label = ":user.vdso"
       direct = true
       shlib = true
-      deps = [
-        ":zircon",
-      ]
+      deps = [ ":zircon" ]
     }
   } else {
     # References from other environments only get the headers.  This
@@ -74,9 +70,7 @@ if (current_toolchain == default_toolchain) {
     # libraries that need to link against it in userland but that in
     # other contexts like kernel or userboot are just using the headers.
     group("zircon") {
-      public_deps = [
-        ":headers",
-      ]
+      public_deps = [ ":headers" ]
     }
   }
 } else {
@@ -114,9 +108,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel/lib/userabi:headers",
       "$zx/system/ulib/affine",
     ]
-    public_deps = [
-      ":generated-public-headers",
-    ]
+    public_deps = [ ":generated-public-headers" ]
 
     # Instruct the linker to preserve the hidden alternate entry points.
     # Note, "./" makes GN realize this is a file rather than a -l switch.
@@ -246,9 +238,7 @@ if (current_toolchain == default_toolchain) {
 
   group("generated-public-headers") {
     public_configs = [ ":generated-public-headers.config" ]
-    deps = [
-      ":generate",
-    ]
+    deps = [ ":generate" ]
   }
 
   config("generated-public-headers.config") {
@@ -262,36 +252,26 @@ if (current_toolchain == default_toolchain) {
       # These are the public headers.
       {
         args = [ "--user-header" ]
-        outputs = [
-          "$root_gen_dir/zircon/syscalls/definitions.h",
-        ]
+        outputs = [ "$root_gen_dir/zircon/syscalls/definitions.h" ]
       },
       {
         args = [ "--rust" ]
-        outputs = [
-          "$root_gen_dir/zircon/syscalls/definitions.rs",
-        ]
+        outputs = [ "$root_gen_dir/zircon/syscalls/definitions.rs" ]
       },
 
       # TODO(mcgrathr): Drop the zircon/ prefix from the remaining files.
       # These are private.
       {
         args = [ "--vdso-header" ]
-        outputs = [
-          "$target_gen_dir/zircon/syscall-vdso-definitions.h",
-        ]
+        outputs = [ "$target_gen_dir/zircon/syscall-vdso-definitions.h" ]
       },
       {
         args = [ "--vdso-wrappers" ]
-        outputs = [
-          "$target_gen_dir/zircon/syscall-vdso-wrappers.inc",
-        ]
+        outputs = [ "$target_gen_dir/zircon/syscall-vdso-wrappers.inc" ]
       },
       {
         args = [ "--${zircon_cpu}-asm" ]
-        outputs = [
-          "$target_gen_dir/zircon/syscalls-$zircon_cpu.S",
-        ]
+        outputs = [ "$target_gen_dir/zircon/syscalls-$zircon_cpu.S" ]
       },
     ]
   }

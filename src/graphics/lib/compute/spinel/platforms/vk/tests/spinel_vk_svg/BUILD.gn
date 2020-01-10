@@ -39,7 +39,5 @@ graphics_compute_vulkan_executable("spinel_vk_svg") {
     "${graphics_compute_dir}/hotsort/platforms/vk",
     "${graphics_compute_dir}/spinel:spinel_vk_for_tests",
   ]
-  public_deps = [
-    "${graphics_compute_dir}/spinel",
-  ]
+  public_deps = [ "${graphics_compute_dir}/spinel" ]
 }

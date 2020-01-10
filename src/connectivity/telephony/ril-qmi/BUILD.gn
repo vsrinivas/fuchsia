@@ -32,9 +32,7 @@ rustc_binary("bin") {
 }
 
 package("ril-qmi") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "ril_qmi"
 
@@ -49,9 +47,7 @@ package("ril-qmi") {
 unittest_package("ril-qmi-tests") {
   package_name = "ril-qmi-tests"
 
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

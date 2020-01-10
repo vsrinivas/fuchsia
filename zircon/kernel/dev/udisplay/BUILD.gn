@@ -4,9 +4,7 @@
 
 zx_library("udisplay") {
   kernel = true
-  sources = [
-    "udisplay.cc",
-  ]
+  sources = [ "udisplay.cc" ]
   deps = [
     "$zx/kernel/lib/crashlog",
     "$zx/kernel/lib/debuglog",

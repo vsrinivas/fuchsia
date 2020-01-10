@@ -27,9 +27,7 @@ group("testing") {
 source_set("component_base") {
   testonly = true
 
-  sources = [
-    "component_base.h",
-  ]
+  sources = [ "component_base.h" ]
 
   public_deps = [
     ":component_main",
@@ -43,9 +41,7 @@ source_set("component_base") {
 source_set("component_main") {
   testonly = true
 
-  sources = [
-    "component_main.h",
-  ]
+  sources = [ "component_main.h" ]
 
   public_deps = [
     "//src/modular/lib/app_driver/cpp:app_driver",
@@ -67,9 +63,7 @@ source_set("entity_resolver_fake") {
     "//src/lib/fxl",
   ]
 
-  deps = [
-    "//src/lib/fsl",
-  ]
+  deps = [ "//src/lib/fsl" ]
 }
 
 source_set("module_resolver_fake") {
@@ -104,9 +98,7 @@ source_set("module_facet_reader_fake") {
 source_set("session_shell_base") {
   testonly = true
 
-  sources = [
-    "session_shell_base.h",
-  ]
+  sources = [ "session_shell_base.h" ]
 
   public_deps = [
     ":component_base",
@@ -138,9 +130,7 @@ source_set("session_shell_impl") {
 source_set("story_controller_mock") {
   testonly = true
 
-  sources = [
-    "story_controller_mock.h",
-  ]
+  sources = [ "story_controller_mock.h" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
@@ -148,17 +138,13 @@ source_set("story_controller_mock") {
     "//src/lib/fxl",
   ]
 
-  deps = [
-    "//sdk/lib/fidl/cpp",
-  ]
+  deps = [ "//sdk/lib/fidl/cpp" ]
 }
 
 source_set("story_provider_mock") {
   testonly = true
 
-  sources = [
-    "story_provider_mock.h",
-  ]
+  sources = [ "story_provider_mock.h" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
@@ -185,9 +171,7 @@ source_set("test_story_command_executor") {
     "//src/modular/lib/fidl:clone",
   ]
 
-  public_deps = [
-    "//src/modular/bin/sessionmgr/storage",
-  ]
+  public_deps = [ "//src/modular/bin/sessionmgr/storage" ]
 }
 
 source_set("test_with_ledger") {
@@ -267,9 +251,7 @@ source_set("mock_base") {
 source_set("wait_until_idle") {
   testonly = true
 
-  sources = [
-    "wait_until_idle.h",
-  ]
+  sources = [ "wait_until_idle.h" ]
 
   public_deps = [
     "//zircon/public/lib/async-loop-cpp",
@@ -283,7 +265,5 @@ source_set("wait_until_idle") {
 }
 
 source_set("test_driver") {
-  sources = [
-    "test_driver.h",
-  ]
+  sources = [ "test_driver.h" ]
 }

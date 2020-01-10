@@ -40,9 +40,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "sysmgr"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -54,9 +52,7 @@ executable("bin") {
 }
 
 package("sysmgr") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   binaries = [
     {
       name = "sysmgr"
@@ -74,9 +70,7 @@ package("sysmgr") {
 template("cfg") {
   config_data(target_name) {
     for_pkg = "sysmgr"
-    sources = [
-      rebase_path("config/${invoker.name}"),
-    ]
+    sources = [ rebase_path("config/${invoker.name}") ]
   }
 }
 

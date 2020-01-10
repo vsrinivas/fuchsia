@@ -63,9 +63,7 @@ group("core") {
 
   # The zbi_test() doesn't go into any other zbi() image.  This just brings
   # it into the dependency graph for building and test-running metadata.
-  deps = [
-    ":core-tests",  # Together.
-  ]
+  deps = [ ":core-tests" ]  # Together.
 
   foreach(test, core_tests) {
     deps += [ ":$test" ]  # And alone.
@@ -82,9 +80,7 @@ group("core") {
 foreach(test_name, core_tests) {
   zx_test(test_name) {
     test_group = "core"
-    deps = [
-      test_name,
-    ]
+    deps = [ test_name ]
   }
 }
 
@@ -95,9 +91,7 @@ foreach(test_name, core_tests) {
 zx_test("standalone") {
   test_group = "core"
   deps = core_tests + unified_only
-  sources = [
-    "main.c",
-  ]
+  sources = [ "main.c" ]
   deps += [
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",

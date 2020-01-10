@@ -50,9 +50,7 @@ source_set("component_context") {
 source_set("gtest_main") {
   testonly = true
 
-  sources = [
-    "gtest_main.cc",
-  ]
+  sources = [ "gtest_main.cc" ]
 
   deps = [
     "//src/lib/fxl",
@@ -160,9 +158,7 @@ executable("trace_integration_tests") {
   testonly = true
   output_name = "trace_integration_tests"
 
-  sources = [
-    "trace_integration_tests.cc",
-  ]
+  sources = [ "trace_integration_tests.cc" ]
 
   deps = [
     ":gtest_main",
@@ -180,9 +176,7 @@ executable("run_integration_test") {
   testonly = true
   output_name = "run_integration_test"
 
-  sources = [
-    "run_integration_test.cc",
-  ]
+  sources = [ "run_integration_test.cc" ]
 
   deps = [
     ":component_context",
@@ -222,9 +216,7 @@ executable("two_providers_one_engine") {
   testonly = true
   output_name = "two_providers_one_engine"
 
-  sources = [
-    "two_providers_one_engine.cc",
-  ]
+  sources = [ "two_providers_one_engine.cc" ]
 
   deps = [
     "//src/lib/fxl",
@@ -283,9 +275,7 @@ executable("nested_environment_test") {
   testonly = true
   output_name = "nested_environment_test"
 
-  sources = [
-    "nested_environment_test.cc",
-  ]
+  sources = [ "nested_environment_test.cc" ]
 
   deps = [
     "//src/lib/fxl",
@@ -298,18 +288,14 @@ executable("return_1234") {
   testonly = true
   output_name = "return_1234"
 
-  sources = [
-    "return_1234.cc",
-  ]
+  sources = [ "return_1234.cc" ]
 }
 
 executable("return_child_result_tests") {
   testonly = true
   output_name = "return_child_result_tests"
 
-  sources = [
-    "return_child_result_tests.cc",
-  ]
+  sources = [ "return_child_result_tests.cc" ]
 
   deps = [
     ":gtest_main",
@@ -324,22 +310,16 @@ executable("run_awhile") {
   testonly = true
   output_name = "run_awhile"
 
-  sources = [
-    "run_awhile.cc",
-  ]
+  sources = [ "run_awhile.cc" ]
 
-  deps = [
-    "//zircon/public/lib/zx",
-  ]
+  deps = [ "//zircon/public/lib/zx" ]
 }
 
 executable("detach_tests") {
   testonly = true
   output_name = "detach_tests"
 
-  sources = [
-    "detach_tests.cc",
-  ]
+  sources = [ "detach_tests.cc" ]
 
   deps = [
     ":gtest_main",
@@ -354,9 +334,7 @@ executable("ktrace_integration_tests") {
   testonly = true
   output_name = "ktrace_integration_tests"
 
-  sources = [
-    "ktrace_integration_tests.cc",
-  ]
+  sources = [ "ktrace_integration_tests.cc" ]
 
   deps = [
     ":gtest_main",
@@ -372,9 +350,7 @@ executable("ktrace_integration_tests") {
 executable("shared_provider_app") {
   testonly = true
 
-  sources = [
-    "shared_provider.cc",
-  ]
+  sources = [ "shared_provider.cc" ]
 
   deps = [
     ":integration_test_utils",
@@ -390,9 +366,7 @@ executable("shared_provider_app") {
 executable("shared_provider_integration_tests") {
   testonly = true
 
-  sources = [
-    "shared_provider_integration_tests.cc",
-  ]
+  sources = [ "shared_provider_integration_tests.cc" ]
 
   deps = [
     ":gtest_main",
@@ -407,9 +381,7 @@ executable("shared_provider_integration_tests") {
 executable("provider_destruction_app") {
   testonly = true
 
-  sources = [
-    "provider_destruction.cc",
-  ]
+  sources = [ "provider_destruction.cc" ]
 
   deps = [
     ":integration_test_utils",
@@ -425,9 +397,7 @@ executable("provider_destruction_app") {
 executable("provider_destruction_tests") {
   testonly = true
 
-  sources = [
-    "provider_destruction_tests.cc",
-  ]
+  sources = [ "provider_destruction_tests.cc" ]
 
   deps = [
     ":gtest_main",

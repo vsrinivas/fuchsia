@@ -8,9 +8,7 @@ executable("bin") {
   testonly = true
   output_name = "goldfish_test"
 
-  sources = [
-    "goldfish_test.cc",
-  ]
+  sources = [ "goldfish_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_c",
@@ -25,9 +23,7 @@ executable("bin") {
 }
 
 test_package("goldfish_test") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   tests = [
     {

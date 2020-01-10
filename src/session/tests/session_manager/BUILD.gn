@@ -10,9 +10,7 @@ rustc_test("test") {
   edition = "2018"
   source_root = "src/main.rs"
 
-  deps = [
-    "//src/session/bin/session_manager:lib",
-  ]
+  deps = [ "//src/session/bin/session_manager:lib" ]
 }
 
 package("session_manager_integration_tests") {

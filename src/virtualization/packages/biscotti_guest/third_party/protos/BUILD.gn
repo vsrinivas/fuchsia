@@ -29,9 +29,7 @@ proto_library("vm_cc_proto") {
 }
 
 proto_library("vsh_cc_proto") {
-  sources = [
-    "vsh.proto",
-  ]
+  sources = [ "vsh.proto" ]
 
   generate_python = false
   cc_generator_options = "lite"

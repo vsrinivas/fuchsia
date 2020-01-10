@@ -10,9 +10,7 @@ import("//src/lib/vulkan/layers.gni")
 package("vkcube-on-scenic") {
   testonly = true
 
-  deps = [
-    ":vkcube_on_scenic",
-  ]
+  deps = [ ":vkcube_on_scenic" ]
   binary = "vkcube_on_scenic"
 
   meta = [
@@ -38,9 +36,7 @@ package("vkcube-on-scenic") {
 package("vkcube-on-fb") {
   testonly = true
 
-  deps = [
-    ":vkcube_on_fb",
-  ]
+  deps = [ ":vkcube_on_fb" ]
   binary = "vkcube_on_fb"
 
   meta = [
@@ -66,9 +62,7 @@ package("vkcube-on-fb") {
 package("vkcube-skip-present") {
   testonly = true
 
-  deps = [
-    ":vkcube_skip_present",
-  ]
+  deps = [ ":vkcube_skip_present" ]
   binary = "vkcube_skip_present"
 
   meta = [
@@ -132,9 +126,7 @@ executable("vkcube_on_fb") {
     "//src/lib/vulkan",
     "//zircon/public/lib/syslog",
   ]
-  public_deps = [
-    "//zircon/public/lib/fit",
-  ]
+  public_deps = [ "//zircon/public/lib/fit" ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
@@ -158,8 +150,6 @@ executable("vkcube_skip_present") {
     "//src/lib/vulkan",
     "//zircon/public/lib/syslog",
   ]
-  public_deps = [
-    "//zircon/public/lib/fit",
-  ]
+  public_deps = [ "//zircon/public/lib/fit" ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }

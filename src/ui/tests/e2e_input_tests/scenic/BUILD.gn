@@ -8,9 +8,7 @@ import("//build/test/test_package.gni")
 group("tests") {
   testonly = true
 
-  deps = [
-    ":e2e_input_tests",
-  ]
+  deps = [ ":e2e_input_tests" ]
 }
 
 test_package("e2e_input_tests") {
@@ -38,9 +36,7 @@ test_package("e2e_input_tests") {
 
 # Each e2e test must run in its own executable.
 test("minimal_input_test") {
-  sources = [
-    "minimal_input_test.cc",
-  ]
+  sources = [ "minimal_input_test.cc" ]
   output_name = "minimal_input_test"
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
@@ -64,9 +60,7 @@ test("minimal_input_test") {
 
 # Each e2e test must run in its own executable.
 test("base_view_ime_test") {
-  sources = [
-    "base_view_ime_test.cc",
-  ]
+  sources = [ "base_view_ime_test.cc" ]
   output_name = "base_view_ime_test"
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
@@ -90,9 +84,7 @@ test("base_view_ime_test") {
 
 # Each e2e test must run in its own executable.
 test("mediabuttons_listener_test") {
-  sources = [
-    "mediabuttons_listener_test.cc",
-  ]
+  sources = [ "mediabuttons_listener_test.cc" ]
   output_name = "mediabuttons_listener_test"
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",

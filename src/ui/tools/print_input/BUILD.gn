@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 executable("print_input") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",

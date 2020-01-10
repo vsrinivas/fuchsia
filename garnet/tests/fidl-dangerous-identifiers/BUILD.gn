@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("fidl-dangerous-identifiers") {
-  deps = [
-    "cpp",
-  ]
+  deps = [ "cpp" ]
 }

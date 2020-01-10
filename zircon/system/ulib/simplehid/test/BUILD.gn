@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":simplehid",
-  ]
+  deps = [ ":simplehid" ]
 }
 
 zx_test("simplehid") {
-  sources = [
-    "simplehid-test.cc",
-  ]
+  sources = [ "simplehid-test.cc" ]
   deps = [
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/ulib/ddk",

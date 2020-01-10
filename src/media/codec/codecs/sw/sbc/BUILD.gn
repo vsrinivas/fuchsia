@@ -6,9 +6,7 @@ import("//build/test.gni")
 import("//build/testing/environments.gni")
 
 group("sbc") {
-  deps = [
-    ":codec_runner_sw_sbc",
-  ]
+  deps = [ ":codec_runner_sw_sbc" ]
 }
 
 executable("codec_runner_sw_sbc") {

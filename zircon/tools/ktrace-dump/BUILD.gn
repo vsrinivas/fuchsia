@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_host_tool("ktrace-dump") {
-  sources = [
-    "ktrace-dump.cc",
-  ]
+  sources = [ "ktrace-dump.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon-internal",

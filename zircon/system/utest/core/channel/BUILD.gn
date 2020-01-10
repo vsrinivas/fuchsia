@@ -5,13 +5,13 @@
 source_set("channel") {
   testonly = true
   sources = [
-    "channel.cc",
     "channel-internal.cc",
+    "channel.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fit",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/mini-process",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

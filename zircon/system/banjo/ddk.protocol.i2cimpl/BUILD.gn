@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.i2cimpl") {
-  sources = [
-    "i2c-impl.banjo",
-  ]
+  sources = [ "i2c-impl.banjo" ]
 }

@@ -7,7 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("validate") {
   name = "test.inspect.validate"
 
-  sources = [
-    "validate.test.fidl",
-  ]
+  sources = [ "validate.test.fidl" ]
 }

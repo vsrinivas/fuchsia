@@ -21,9 +21,7 @@ group("ledger") {
 # WARNING: Known to infrastructure.
 group("all") {
   testonly = true
-  public_deps = [
-    "//peridot:tests",
-  ]
+  public_deps = [ "//peridot:tests" ]
 }
 
 # WARNING: Known to //topaz.

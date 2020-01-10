@@ -6,10 +6,6 @@ import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-inspect") {
   sdk = true
-  sources = [
-    "tree.fidl",
-  ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-mem",
-  ]
+  sources = [ "tree.fidl" ]
+  public_deps = [ "$zx/system/fidl/fuchsia-mem" ]
 }

@@ -4,21 +4,17 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":zx-panic-libc-test",
-  ]
+  deps = [ ":zx-panic-libc-test" ]
 }
 
 zx_test("zx-panic-libc-test") {
-  sources = [
-    "zx-panic-libc-test.cc",
-  ]
+  sources = [ "zx-panic-libc-test.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
     "$zx/system/ulib/zx-panic-libc",
+    "$zx/system/ulib/zxtest",
   ]
 }

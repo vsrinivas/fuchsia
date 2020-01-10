@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("pl031-rtc") {
-  sources = [
-    "pl031-rtc.c",
-  ]
+  sources = [ "pl031-rtc.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/device-protocol-platform-device",

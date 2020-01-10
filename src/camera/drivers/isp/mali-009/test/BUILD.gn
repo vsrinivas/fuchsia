@@ -4,9 +4,7 @@
 
 executable("mali_009_test") {
   testonly = true
-  sources = [
-    "isp.cc",
-  ]
+  sources = [ "isp.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.camera:fuchsia.camera_c",
     "//src/camera/drivers/test_utils",

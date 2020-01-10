@@ -7,9 +7,7 @@ import("$zx/public/gn/fuzzer.gni")
 
 # All non-test targets.
 group("controller") {
-  deps = [
-    ":intel-hda",
-  ]
+  deps = [ ":intel-hda" ]
 }
 
 # All test targets.
@@ -80,12 +78,8 @@ source_set("src") {
 }
 
 zx_driver("intel-hda") {
-  deps = [
-    ":src",
-  ]
-  data_deps = [
-    ":firmware",
-  ]
+  deps = [ ":src" ]
+  data_deps = [ ":firmware" ]
 }
 
 zx_test("controller_test") {
@@ -111,9 +105,7 @@ zx_test("controller_test") {
 #
 # Name needs to end with "-fuzzer" to be included in the Zircon fuzz test package.
 fuzzer("nhlt-fuzzer") {
-  sources = [
-    "nhlt_fuzzer.cc",
-  ]
+  sources = [ "nhlt_fuzzer.cc" ]
   deps = [
     ":src",
     "$zx/system/ulib/fbl",
@@ -121,7 +113,5 @@ fuzzer("nhlt-fuzzer") {
 }
 
 firmware("firmware") {
-  sources = [
-    "$firmware_dir/intel-adsp-sst/dsp_fw_kbl_v3420.bin",
-  ]
+  sources = [ "$firmware_dir/intel-adsp-sst/dsp_fw_kbl_v3420.bin" ]
 }

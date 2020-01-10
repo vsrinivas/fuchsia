@@ -4,10 +4,6 @@
 
 library("abi-type-validator") {
   testonly = true
-  sources = [
-    "abi_type_validator.cc",
-  ]
-  deps = [
-    "$zx/kernel/lib/abi_type_validator:headers",
-  ]
+  sources = [ "abi_type_validator.cc" ]
+  deps = [ "$zx/kernel/lib/abi_type_validator:headers" ]
 }

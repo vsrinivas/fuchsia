@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":zbi",
-  ]
+  deps = [ ":zbi" ]
 }
 
 zx_test("zbi") {
-  sources = [
-    "zbi.cc",
-  ]
+  sources = [ "zbi.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/libzbi",

@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":debugdata",
-  ]
+  deps = [ ":debugdata" ]
 }
 
 zx_test("debugdata") {
-  sources = [
-    "debugdata.cc",
-  ]
+  sources = [ "debugdata.cc" ]
   deps = [
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",

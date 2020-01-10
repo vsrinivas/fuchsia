@@ -123,17 +123,11 @@ if (current_toolchain == default_toolchain) {
 
     # Use the same link_output_rspfile() that lib/userabi uses to embed it,
     # so we're sure to be getting the exact same binary.
-    deps = [
-      "$zx/kernel/lib/userabi:vdso.rsp",
-    ]
+    deps = [ "$zx/kernel/lib/userabi:vdso.rsp" ]
     vdso_gen_dir = get_label_info(deps[0], "target_gen_dir")
-    sources = [
-      "$vdso_gen_dir/vdso.rsp",
-    ]
+    sources = [ "$vdso_gen_dir/vdso.rsp" ]
 
-    outputs = [
-      "$target_gen_dir/vdso-syms.h",
-    ]
+    outputs = [ "$target_gen_dir/vdso-syms.h" ]
     depfile = "${outputs[0]}.d"
     utils = [ "nm" ]
     script = "$zx/scripts/shlib-symbols"
@@ -154,16 +148,10 @@ if (current_toolchain == default_toolchain) {
   # find the vDSO and its entry points, keeping the code far simpler.
   toolchain_utils_action("gen-vdso-syms-ld") {
     visibility = [ ":*" ]
-    outputs = [
-      vdso_syms_ld,
-    ]
-    deps = [
-      ":gen-vdso-syms-header",
-    ]
+    outputs = [ vdso_syms_ld ]
+    deps = [ ":gen-vdso-syms-header" ]
     sources = get_target_outputs(deps[0])
-    inputs = [
-      "vdso-syms.ld.h",
-    ]
+    inputs = [ "vdso-syms.ld.h" ]
     utils = [ "cc" ]
     args = [
       "-o",
@@ -180,8 +168,6 @@ if (current_toolchain == default_toolchain) {
   environment_redirect("userboot") {
     environment_label = ":userboot"
     direct = true
-    deps = [
-      ":userboot",
-    ]
+    deps = [ ":userboot" ]
   }
 }

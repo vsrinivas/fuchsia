@@ -5,13 +5,9 @@
 # TODO(42701): Workaround for soft transition in renaming to $zx/third_party/ulib/boringssl
 
 group("uboringssl") {
-  public_deps = [
-    "$zx/third_party/ulib/boringssl",
-  ]
+  public_deps = [ "$zx/third_party/ulib/boringssl" ]
 }
 
 group("headers") {
-  public_deps = [
-    "$zx/third_party/ulib/boringssl:headers",
-  ]
+  public_deps = [ "$zx/third_party/ulib/boringssl:headers" ]
 }

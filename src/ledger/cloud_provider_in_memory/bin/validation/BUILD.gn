@@ -8,9 +8,7 @@ executable("validation") {
   output_name = "validation_in_memory"
   testonly = true
 
-  sources = [
-    "launch.cc",
-  ]
+  sources = [ "launch.cc" ]
 
   deps = [
     "//src/ledger/bin/tests/cloud_provider/launcher",

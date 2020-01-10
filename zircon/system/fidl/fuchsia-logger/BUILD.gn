@@ -6,7 +6,5 @@ import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-logger") {
   sdk = true
-  sources = [
-    "logger.fidl",
-  ]
+  sources = [ "logger.fidl" ]
 }

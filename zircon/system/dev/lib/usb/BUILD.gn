@@ -40,9 +40,7 @@ group("usb-lib-test") {
 
 zx_test("usb-request-cpp-test") {
   output_name = "usb-request-cpp-test"
-  sources = [
-    "request-cpp-test.cc",
-  ]
+  sources = [ "request-cpp-test.cc" ]
   deps = [
     ":usb",
     "$zx/system/banjo/ddk.protocol.usb",
@@ -61,9 +59,7 @@ zx_test("usb-request-cpp-test") {
 
 zx_test("usb-wrapper-test") {
   output_name = "usb-wrapper-test"
-  sources = [
-    "usb-wrapper-test.cc",
-  ]
+  sources = [ "usb-wrapper-test.cc" ]
   deps = [
     ":usb",
     "$zx/system/banjo/ddk.protocol.hidbus",

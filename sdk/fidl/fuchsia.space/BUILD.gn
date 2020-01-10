@@ -5,7 +5,5 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.space") {
-  sources = [
-    "space.fidl",
-  ]
+  sources = [ "space.fidl" ]
 }

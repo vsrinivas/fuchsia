@@ -44,21 +44,15 @@ driver_module("ralink_driver") {
 
 if (internal_access) {
   copy("ralink-firmware") {
-    sources = [
-      "firmware/rt2870.bin",
-    ]
-    outputs = [
-      "$root_out_dir/firmware/rt2870.bin",
-    ]
+    sources = [ "firmware/rt2870.bin" ]
+    outputs = [ "$root_out_dir/firmware/rt2870.bin" ]
   }
 }
 
 package("ralink") {
   deprecated_system_image = true
 
-  deps = [
-    ":ralink_driver",
-  ]
+  deps = [ ":ralink_driver" ]
 
   drivers = [
     {

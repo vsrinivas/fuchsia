@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("miscsvc") {
-  sources = [
-    "miscsvc.cc",
-  ]
+  sources = [ "miscsvc.cc" ]
   deps = [
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",

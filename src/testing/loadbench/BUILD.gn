@@ -36,9 +36,7 @@ executable("bin") {
 package("loadbench") {
   rootresource_svc = "//build"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "loadbench"
 

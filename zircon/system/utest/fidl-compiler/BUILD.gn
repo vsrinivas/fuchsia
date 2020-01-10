@@ -7,9 +7,7 @@ if (current_toolchain == default_toolchain) {
   action("gen-examples") {
     visibility = [ ":examples" ]
     examples_dir = "$zx/tools/fidl/examples"
-    outputs = [
-      "$target_gen_dir/examples.cc",
-    ]
+    outputs = [ "$target_gen_dir/examples.cc" ]
     sources = [
       "$examples_dir/alignment.test.fidl",
       "$examples_dir/bits.test.fidl",
@@ -48,9 +46,7 @@ if (current_toolchain == default_toolchain) {
 
   action("gen-goldens") {
     visibility = [ ":goldens" ]
-    outputs = [
-      "$target_gen_dir/goldens.cc",
-    ]
+    outputs = [ "$target_gen_dir/goldens.cc" ]
     sources = [
       "$zx/tools/fidl/goldens/bits.test.json.golden",
       "$zx/tools/fidl/goldens/byte_and_bytes.test.json.golden",
@@ -163,23 +159,15 @@ if (current_toolchain == default_toolchain) {
     gen_label = ":gen-examples($default_toolchain)"
     gen_dir = get_label_info(gen_label, "target_gen_dir")
     include_dirs = [ "." ]
-    sources = [
-      "$gen_dir/examples.cc",
-    ]
-    deps = [
-      gen_label,
-    ]
+    sources = [ "$gen_dir/examples.cc" ]
+    deps = [ gen_label ]
   }
 
   source_set("goldens") {
     gen_label = ":gen-goldens($default_toolchain)"
     gen_dir = get_label_info(gen_label, "target_gen_dir")
     include_dirs = [ "." ]
-    sources = [
-      "$gen_dir/goldens.cc",
-    ]
-    deps = [
-      gen_label,
-    ]
+    sources = [ "$gen_dir/goldens.cc" ]
+    deps = [ gen_label ]
   }
 }

@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 package("a11y_manager") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -26,9 +24,7 @@ package("a11y_manager") {
 executable("bin") {
   output_name = "a11y_manager"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",

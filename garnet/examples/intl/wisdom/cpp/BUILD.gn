@@ -39,14 +39,10 @@ package("intl_wisdom") {
 }
 
 group("cpp") {
-  deps = [
-    ":intl_wisdom",
-  ]
+  deps = [ ":intl_wisdom" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":cpp",
-  ]
+  deps = [ ":cpp" ]
 }

@@ -3,17 +3,13 @@
 # found in the LICENSE file.
 
 group("deprecated") {
-  public_deps = [
-    ":set_renderer_params",
-  ]
+  public_deps = [ ":set_renderer_params" ]
 }
 
 executable("set_renderer_params") {
   output_name = "set_renderer_params"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.ui.gfx",

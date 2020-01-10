@@ -17,9 +17,7 @@ group("vsh") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":vsh_tests",
-  ]
+  deps = [ ":vsh_tests" ]
 }
 
 source_set("util") {
@@ -73,9 +71,7 @@ executable("vsh_unittest") {
 }
 
 test_package("vsh_tests") {
-  deps = [
-    ":vsh_unittest",
-  ]
+  deps = [ ":vsh_unittest" ]
 
   tests = [
     {

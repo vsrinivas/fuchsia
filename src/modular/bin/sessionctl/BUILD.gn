@@ -8,9 +8,7 @@ import("//src/modular/build/tests_package.gni")
 
 executable("sessionctl_bin") {
   output_name = "sessionctl"
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -25,9 +23,7 @@ executable("sessionctl_bin") {
 }
 
 package("sessionctl") {
-  deps = [
-    ":sessionctl_bin",
-  ]
+  deps = [ ":sessionctl_bin" ]
   binaries = [
     {
       name = "sessionctl"
@@ -70,9 +66,7 @@ source_set("lib") {
 executable("sessionctl_unittest") {
   testonly = true
 
-  sources = [
-    "session_ctl_app_unittest.cc",
-  ]
+  sources = [ "session_ctl_app_unittest.cc" ]
 
   deps = [
     ":lib",
@@ -85,8 +79,6 @@ executable("sessionctl_unittest") {
 }
 
 hermetic_tests_package("sessionctl_unittests") {
-  deps = [
-    ":sessionctl_unittest",
-  ]
+  deps = [ ":sessionctl_unittest" ]
   environments = basic_envs
 }

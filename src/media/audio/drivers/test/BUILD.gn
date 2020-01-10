@@ -8,15 +8,11 @@ import("//src/media/audio/hardware.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":audio_driver_tests",
-  ]
+  deps = [ ":audio_driver_tests" ]
 }
 
 test_package("audio_driver_tests") {
-  deps = [
-    ":audio_driver_tests_bin",
-  ]
+  deps = [ ":audio_driver_tests_bin" ]
 
   tests = [
     {

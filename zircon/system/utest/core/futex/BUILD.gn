@@ -4,9 +4,7 @@
 
 source_set("futex") {
   testonly = true
-  sources = [
-    "futex.cc",
-  ]
+  sources = [ "futex.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

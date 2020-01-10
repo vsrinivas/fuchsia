@@ -8,9 +8,7 @@ zx_library("gpt") {
     "gpt.cc",
     "guid.cc",
   ]
-  public_deps = [
-    "$zx/system/ulib/fbl:headers",
-  ]
+  public_deps = [ "$zx/system/ulib/fbl:headers" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/ulib/fit",

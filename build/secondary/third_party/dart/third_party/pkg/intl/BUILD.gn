@@ -9,9 +9,7 @@ dart_library("intl") {
 
   sources = []
 
-  deps = [
-    "//third_party/dart-pkg/pub/path",
-  ]
+  deps = [ "//third_party/dart-pkg/pub/path" ]
 
   disable_analysis = true
 }

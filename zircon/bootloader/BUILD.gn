@@ -97,8 +97,6 @@ if (current_toolchain == default_toolchain) {
   environment_redirect("bootloader") {
     environment_label = ":efi"
     direct = true
-    deps = [
-      ":bootloader",
-    ]
+    deps = [ ":bootloader" ]
   }
 }

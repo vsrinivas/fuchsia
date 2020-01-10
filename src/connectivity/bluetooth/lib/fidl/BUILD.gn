@@ -5,13 +5,9 @@
 import("//build/test/test_package.gni")
 
 source_set("fidl") {
-  sources = [
-    "hanging_getter.h",
-  ]
+  sources = [ "hanging_getter.h" ]
 
-  public_deps = [
-    "//zircon/public/lib/fit",
-  ]
+  public_deps = [ "//zircon/public/lib/fit" ]
 }
 
 executable("tests") {
@@ -19,9 +15,7 @@ executable("tests") {
 
   output_name = "bt-lib-fidl-unittests"
 
-  sources = [
-    "hanging_getter_unittest.cc",
-  ]
+  sources = [ "hanging_getter_unittest.cc" ]
 
   deps = [
     ":fidl",

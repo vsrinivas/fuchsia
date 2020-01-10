@@ -7,9 +7,7 @@ import("//build/test/test_package.gni")
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":sched_tests",
-  ]
+  public_deps = [ ":sched_tests" ]
 }
 
 source_set("lib") {
@@ -22,31 +20,25 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//zircon/system/fidl/fuchsia-scheduler",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/cmdline",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-scheduler",
   ]
 }
 
 executable("bin") {
   output_name = "sched"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 package("sched") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -61,9 +53,7 @@ executable("bin_test") {
 
   output_name = "sched_tests"
 
-  sources = [
-    "sched_test.cc",
-  ]
+  sources = [ "sched_test.cc" ]
 
   deps = [
     ":lib",
@@ -76,9 +66,7 @@ executable("bin_test") {
 }
 
 test_package("sched_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

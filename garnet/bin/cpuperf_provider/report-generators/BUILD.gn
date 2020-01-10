@@ -4,7 +4,5 @@
 
 group("report-generators") {
   testonly = true
-  deps = [
-    "tally",
-  ]
+  deps = [ "tally" ]
 }

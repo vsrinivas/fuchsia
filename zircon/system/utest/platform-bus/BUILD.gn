@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("platform-bus") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/ddk",
@@ -71,9 +69,7 @@ zx_driver("test-board") {
 }
 
 zx_driver("test-gpio") {
-  sources = [
-    "test/gpio.cc",
-  ]
+  sources = [ "test/gpio.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.gpioimpl",
@@ -88,9 +84,7 @@ zx_driver("test-gpio") {
 }
 
 zx_driver("test-power") {
-  sources = [
-    "test/power.cc",
-  ]
+  sources = [ "test/power.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
@@ -105,9 +99,7 @@ zx_driver("test-power") {
 }
 
 zx_driver("test-clock") {
-  sources = [
-    "test/clock.cc",
-  ]
+  sources = [ "test/clock.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.clockimpl",
@@ -122,9 +114,7 @@ zx_driver("test-clock") {
 }
 
 zx_driver("test-i2c") {
-  sources = [
-    "test/i2c.cc",
-  ]
+  sources = [ "test/i2c.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.i2cimpl",
@@ -139,9 +129,7 @@ zx_driver("test-i2c") {
 }
 
 zx_driver("test-spi") {
-  sources = [
-    "test/spi.cc",
-  ]
+  sources = [ "test/spi.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
@@ -156,9 +144,7 @@ zx_driver("test-spi") {
 }
 
 zx_driver("test-audio-codec") {
-  sources = [
-    "test/audio-codec.cc",
-  ]
+  sources = [ "test/audio-codec.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.codec",
     "$zx/system/banjo/ddk.protocol.platform.bus",
@@ -172,9 +158,7 @@ zx_driver("test-audio-codec") {
 }
 
 zx_driver("test-pwm") {
-  sources = [
-    "test/pwm.cc",
-  ]
+  sources = [ "test/pwm.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
@@ -189,9 +173,7 @@ zx_driver("test-pwm") {
 
 foreach(driver, simple_drivers) {
   zx_driver("test-$driver") {
-    sources = [
-      "test/$driver.c",
-    ]
+    sources = [ "test/$driver.c" ]
     deps = [
       "$zx/system/banjo/ddk.protocol.clock",
       "$zx/system/banjo/ddk.protocol.codec",

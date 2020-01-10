@@ -34,9 +34,7 @@ rustc_library("integration_tests") {
 }
 
 unittest_package("overnet-integration-tests") {
-  deps = [
-    ":integration_tests_test",
-  ]
+  deps = [ ":integration_tests_test" ]
 
   tests = [
     {

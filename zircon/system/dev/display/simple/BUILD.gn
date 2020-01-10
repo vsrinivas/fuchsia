@@ -4,9 +4,7 @@
 
 source_set("shared") {
   visibility = [ ":*" ]
-  sources = [
-    "simple-display.cc",
-  ]
+  sources = [ "simple-display.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.pci",
@@ -33,9 +31,7 @@ group("simple") {
 
 foreach(driver, simple_drivers) {
   zx_driver("simple.$driver") {
-    sources = [
-      "simple-$driver.c",
-    ]
+    sources = [ "simple-$driver.c" ]
     deps = [
       ":shared",
       "$zx/system/banjo/ddk.protocol.display.controller",

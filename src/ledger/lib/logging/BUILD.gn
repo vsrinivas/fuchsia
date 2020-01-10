@@ -7,17 +7,13 @@ source_set("logging") {
     "logging.cc",
     "logging.h",
   ]
-  public_deps = [
-    "//third_party/abseil-cpp",
-  ]
+  public_deps = [ "//third_party/abseil-cpp" ]
   configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("unittests") {
   testonly = true
-  sources = [
-    "logging_unittest.cc",
-  ]
+  sources = [ "logging_unittest.cc" ]
   deps = [
     ":logging",
     "//third_party/abseil-cpp",

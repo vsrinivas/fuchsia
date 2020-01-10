@@ -4,9 +4,7 @@
 
 source_set("c11-thread") {
   testonly = true
-  sources = [
-    "thread.cc",
-  ]
+  sources = [ "thread.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

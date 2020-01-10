@@ -4,17 +4,13 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":gesture_manager_tests",
-  ]
+  public_deps = [ ":gesture_manager_tests" ]
 }
 
 executable("gesture_manager_tests") {
   testonly = true
 
-  sources = [
-    "gesture_manager_unittest.cc",
-  ]
+  sources = [ "gesture_manager_unittest.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",

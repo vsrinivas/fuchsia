@@ -19,15 +19,11 @@ go_library("dump_breakpad_symbols_lib") {
 go_binary("dump_breakpad_symbols") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/debug/dump_breakpad_symbols/cmd"
 
-  deps = [
-    ":dump_breakpad_symbols_lib",
-  ]
+  deps = [ ":dump_breakpad_symbols_lib" ]
 }
 
 go_test("dump_breakpad_symbols_tests") {
   gopackages =
       [ "go.fuchsia.dev/fuchsia/tools/debug/dump_breakpad_symbols/cmd" ]
-  deps = [
-    ":dump_breakpad_symbols_lib",
-  ]
+  deps = [ ":dump_breakpad_symbols_lib" ]
 }

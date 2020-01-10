@@ -8,7 +8,5 @@ zx_library("hw_rng") {
     "debug.cc",
     "hw_rng.cc",
   ]
-  deps = [
-    "$zx/kernel/lib/console",
-  ]
+  deps = [ "$zx/kernel/lib/console" ]
 }

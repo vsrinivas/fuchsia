@@ -74,9 +74,7 @@ golib("github.com/flynn/go-tuf") {
   ]
 }
 golib("github.com/fsnotify/fsnotify") {
-  deps = [
-    ":golang.org/x/sys",
-  ]
+  deps = [ ":golang.org/x/sys" ]
 }
 golib("github.com/go-yaml/yaml") {
 }
@@ -86,14 +84,10 @@ golib("github.com/golang/glog") {
 # Actually aggregates the dependencies of other google.golang.org/protobuf/*
 # packages as well. Use this as a convenience target for any such package.
 golib("github.com/golang/protobuf") {
-  deps = [
-    ":golang.org/x/net",
-  ]
+  deps = [ ":golang.org/x/net" ]
 }
 golib("github.com/googleapis/gax-go/v2") {
-  deps = [
-    ":google.golang.org/grpc",
-  ]
+  deps = [ ":google.golang.org/grpc" ]
 }
 golib("github.com/google/btree") {
 }
@@ -110,9 +104,7 @@ golib("github.com/google/uuid") {
 golib("github.com/kr/fs") {
 }
 golib("github.com/kr/pretty") {
-  deps = [
-    ":github.com/kr/text",
-  ]
+  deps = [ ":github.com/kr/text" ]
 }
 golib("github.com/kr/text") {
 }
@@ -126,14 +118,10 @@ golib("github.com/pkg/sftp") {
   ]
 }
 golib("github.com/rjw57/oauth2device") {
-  deps = [
-    ":golang.org/x/oauth2",
-  ]
+  deps = [ ":golang.org/x/oauth2" ]
 }
 golib("github.com/syndtr/goleveldb") {
-  deps = [
-    ":github.com/golang/snappy",
-  ]
+  deps = [ ":github.com/golang/snappy" ]
 }
 golib("github.com/tent/canonical-json-go") {
 }
@@ -154,9 +142,7 @@ go_library("go.opencensus.io") {
 golib("golang.org/x/crypto") {
 }
 golib("golang.org/x/net") {
-  deps = [
-    ":golang.org/x/text",
-  ]
+  deps = [ ":golang.org/x/text" ]
 }
 golib("golang.org/x/time") {
 }
@@ -175,9 +161,7 @@ go_library("golang.org/x/text") {
 ### google.golang.org/*
 go_library("google.golang.org/genproto/googleapis/api/annotations") {
   source_dir = "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/api/annotations"
-  deps = [
-    ":github.com/golang/protobuf",
-  ]
+  deps = [ ":github.com/golang/protobuf" ]
 }
 go_library("google.golang.org/genproto/googleapis/iam/v1") {
   source_dir =
@@ -191,21 +175,15 @@ go_library("google.golang.org/genproto/googleapis/iam/v1") {
 }
 go_library("google.golang.org/genproto/googleapis/rpc/code") {
   source_dir = "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/rpc/code"
-  deps = [
-    ":github.com/golang/protobuf",
-  ]
+  deps = [ ":github.com/golang/protobuf" ]
 }
 go_library("google.golang.org/genproto/googleapis/rpc/status") {
   source_dir = "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/rpc/status"
-  deps = [
-    ":github.com/golang/protobuf",
-  ]
+  deps = [ ":github.com/golang/protobuf" ]
 }
 go_library("google.golang.org/genproto/googleapis/type/expr") {
   source_dir = "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/type/expr"
-  deps = [
-    ":github.com/golang/protobuf",
-  ]
+  deps = [ ":github.com/golang/protobuf" ]
 }
 
 # Actually aggregates the dependencies of other google.golang.org/grpc/*
@@ -220,9 +198,7 @@ go_library("google.golang.org/grpc") {
 }
 go_library("google.golang.org/api/gensupport") {
   source_dir = "//third_party/golibs/github.com/googleapis/google-api-go-client/gensupport"
-  deps = [
-    ":google.golang.org/api/googleapi",
-  ]
+  deps = [ ":google.golang.org/api/googleapi" ]
 }
 go_library("google.golang.org/api/googleapi") {
   source_dir = "//third_party/golibs/github.com/googleapis/google-api-go-client/googleapi"
@@ -271,9 +247,7 @@ go_library("google.golang.org/api/transport/http") {
 go_library("gopkg.in/check.v1") {
   name = "gopkg.in/check.v1"
   source_dir = "//third_party/golibs/github.com/go-check/check"
-  deps = [
-    ":github.com/kr/pretty",
-  ]
+  deps = [ ":github.com/kr/pretty" ]
 }
 
 golib("gvisor.dev/gvisor") {

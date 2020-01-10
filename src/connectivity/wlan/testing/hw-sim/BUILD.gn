@@ -45,9 +45,7 @@ rustc_library("wlan-hw-sim") {
 }
 
 unittest_package("wlan-hw-sim-lib-tests") {
-  deps = [
-    ":wlan-hw-sim_test",
-  ]
+  deps = [ ":wlan-hw-sim_test" ]
 
   tests = [
     {

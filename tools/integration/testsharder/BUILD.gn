@@ -8,9 +8,7 @@ import("//build/go/go_test.gni")
 
 go_library("testsharder_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
-  deps = [
-    "//tools/build",
-  ]
+  deps = [ "//tools/build" ]
 }
 
 go_library("main") {
@@ -24,14 +22,10 @@ go_library("main") {
 
 go_binary("testsharder") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/integration/testsharder/cmd"
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }
 
 go_test("testsharder_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib" ]
-  deps = [
-    ":testsharder_lib",
-  ]
+  deps = [ ":testsharder_lib" ]
 }

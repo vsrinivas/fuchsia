@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("task-utils") {
-  sources = [
-    "walker.cc",
-  ]
+  sources = [ "walker.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:c",
     "$zx/system/ulib/fdio",

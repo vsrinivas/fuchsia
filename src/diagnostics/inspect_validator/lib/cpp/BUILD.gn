@@ -9,9 +9,7 @@ import("//build/testing/environments.gni")
 executable("inspect_validator_cpp_puppet_bin") {
   output_name = "inspect_validator_cpp_puppet"
 
-  sources = [
-    "validator_puppet.cc",
-  ]
+  sources = [ "validator_puppet.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp",
@@ -51,7 +49,5 @@ test_package("inspect_validator_test_cpp") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":inspect_validator_test_cpp",
-  ]
+  deps = [ ":inspect_validator_test_cpp" ]
 }

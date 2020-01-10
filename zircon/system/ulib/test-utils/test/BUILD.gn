@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":test-utils",
-  ]
+  deps = [ ":test-utils" ]
 }
 
 zx_test("test-utils") {
-  sources = [
-    "test-utils-test.cc",
-  ]
+  sources = [ "test-utils-test.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/test-utils",

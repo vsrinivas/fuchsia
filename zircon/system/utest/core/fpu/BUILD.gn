@@ -4,9 +4,7 @@
 
 source_set("fpu") {
   testonly = true
-  sources = [
-    "fpu_basic.cc",
-  ]
+  sources = [ "fpu_basic.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

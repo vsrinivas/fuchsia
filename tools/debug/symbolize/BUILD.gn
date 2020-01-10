@@ -27,15 +27,11 @@ go_library("main") {
 
 go_binary("symbolize") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/debug/symbolize/cmd"
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }
 
 go_test("symbolize_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib" ]
-  deps = [
-    ":symbolize_lib",
-  ]
+  deps = [ ":symbolize_lib" ]
   non_go_deps = [ "//tools/debug/symbolize/testdata" ]
 }

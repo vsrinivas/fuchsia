@@ -32,9 +32,7 @@ rustc_binary("bin") {
 }
 
 package("bt-init") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "bt_init"
 

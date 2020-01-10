@@ -10,13 +10,9 @@ declare_args() {
 }
 
 test("compiler") {
-  sources = [
-    "compiler.cc",
-  ]
+  sources = [ "compiler.cc" ]
   configs += [ "//build/config/sanitizers:asan" ]
-  deps = [
-    "//zircon/tools/fidl:compiler",
-  ]
+  deps = [ "//zircon/tools/fidl:compiler" ]
   if (enable_ossfuzz) {
     libs = [ "FuzzingEngine" ]
     lib_dirs = [ "/usr/lib" ]
@@ -27,7 +23,5 @@ test("compiler") {
 
 group("host") {
   testonly = true
-  deps = [
-    ":compiler($host_toolchain)",
-  ]
+  deps = [ ":compiler($host_toolchain)" ]
 }

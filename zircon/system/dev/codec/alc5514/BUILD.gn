@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("alc5514") {
-  sources = [
-    "alc5514.cc",
-  ]
+  sources = [ "alc5514.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.pci",

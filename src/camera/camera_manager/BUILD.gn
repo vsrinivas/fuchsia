@@ -35,9 +35,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "camera_manager"
 
-  sources = [
-    "camera_manager.cc",
-  ]
+  sources = [ "camera_manager.cc" ]
 
   deps = [
     ":lib",
@@ -48,9 +46,7 @@ executable("bin") {
 }
 
 package("camera_manager") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   meta = [
     {

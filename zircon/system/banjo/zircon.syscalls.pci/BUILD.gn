@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("zircon.syscalls.pci") {
-  sources = [
-    "pci.banjo",
-  ]
+  sources = [ "pci.banjo" ]
 }

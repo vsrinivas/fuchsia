@@ -253,9 +253,7 @@ if (toolchain_variant.with_shared) {
     # target in the -shared toolchain.
     template("shared_library") {
       group(target_name) {
-        public_deps = [
-          ":$target_name(${current_toolchain}-shared)",
-        ]
+        public_deps = [ ":$target_name(${current_toolchain}-shared)" ]
         forward_variables_from(invoker,
                                [
                                  "output_name",
@@ -996,9 +994,7 @@ template("variant_target") {
       if (defined(visibility)) {
         visibility += [ ":${target_name}" ]
       }
-      deps = [
-        ":${target_name}(${builder_toolchain})",
-      ]
+      deps = [ ":${target_name}(${builder_toolchain})" ]
     }
   } else {
     # When some variant was selected, then this target in all other
@@ -1023,9 +1019,7 @@ template("variant_target") {
         visibility += [ ":${target_name}" ]
       }
 
-      deps = [
-        ":${target_name}(${builder_toolchain})",
-      ]
+      deps = [ ":${target_name}(${builder_toolchain})" ]
 
       full_output_name = target_invoker.output_name
       if (defined(target_invoker.output_extension) &&
@@ -1043,12 +1037,8 @@ template("variant_target") {
         variant_out_dir = "$variant_out_dir/$relative_dir"
       }
 
-      sources = [
-        "$variant_out_dir/$full_output_name",
-      ]
-      outputs = [
-        "$local_out_dir/$full_output_name",
-      ]
+      sources = [ "$variant_out_dir/$full_output_name" ]
+      outputs = [ "$local_out_dir/$full_output_name" ]
     }
   }
 }

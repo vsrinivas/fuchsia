@@ -54,7 +54,5 @@ test_package("pkg-cache-integration-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":pkg-cache-integration-tests",
-  ]
+  public_deps = [ ":pkg-cache-integration-tests" ]
 }

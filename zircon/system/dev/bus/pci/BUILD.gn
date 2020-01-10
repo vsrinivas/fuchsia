@@ -50,9 +50,7 @@ source_set("user_pci") {
 }
 
 source_set("user_pci.proxy") {
-  sources = [
-    "device_proxy.cc",
-  ]
+  sources = [ "device_proxy.cc" ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/ulib/ddk",
@@ -68,21 +66,15 @@ if (enable_user_pci) {
       # The driver needs bind glue, unlike tests.
       "bind.cc",
     ]
-    deps = [
-      ":user_pci",
-    ]
+    deps = [ ":user_pci" ]
   }
 
   zx_driver("bus-pci.proxy") {
-    deps = [
-      ":user_pci.proxy",
-    ]
+    deps = [ ":user_pci.proxy" ]
   }
 } else {
   zx_driver("bus-pci") {
-    sources = [
-      "kpci/kpci.c",
-    ]
+    sources = [ "kpci/kpci.c" ]
     deps = [
       "$zx/system/banjo/ddk.protocol.pci",
       "$zx/system/banjo/ddk.protocol.pciroot",
@@ -95,9 +87,7 @@ if (enable_user_pci) {
   }
 
   zx_driver("bus-pci.proxy") {
-    sources = [
-      "kpci/proxy.c",
-    ]
+    sources = [ "kpci/proxy.c" ]
     deps = [
       "$zx/system/banjo/ddk.protocol.pci",
       "$zx/system/banjo/ddk.protocol.pciroot",
@@ -131,9 +121,7 @@ zx_test("pci-unit") {
 }
 
 zx_test("pci-driver") {
-  sources = [
-    "test/driver/driver_tests.cc",
-  ]
+  sources = [ "test/driver/driver_tests.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device-test:c",
     "$zx/system/ulib/ddk",
@@ -147,9 +135,7 @@ zx_test("pci-driver") {
 }
 
 zx_driver("pci_fake") {
-  sources = [
-    "test/driver/fake_bus_driver.cc",
-  ]
+  sources = [ "test/driver/fake_bus_driver.cc" ]
   public_deps = [
     ":user_pci",
     "$zx/system/ulib/ddk",
@@ -160,15 +146,11 @@ zx_driver("pci_fake") {
 }
 
 zx_driver("pci_fake.proxy") {
-  deps = [
-    ":user_pci.proxy",
-  ]
+  deps = [ ":user_pci.proxy" ]
 }
 
 zx_driver("pci_protocol_test_driver") {
-  sources = [
-    "test/driver/protocol_test_driver.cc",
-  ]
+  sources = [ "test/driver/protocol_test_driver.cc" ]
   deps = [
     ":user_pci",
     "$zx/system/fidl/fuchsia-device-test:c",

@@ -8,9 +8,7 @@ import("//build/testing/environments.gni")
 group("tests") {
   testonly = true
 
-  public_deps = [
-    ":present_view_tests",
-  ]
+  public_deps = [ ":present_view_tests" ]
 }
 
 test_package("present_view_tests") {
@@ -35,9 +33,7 @@ test_package("present_view_tests") {
 executable("present_view_unittests") {
   testonly = true
 
-  sources = [
-    "present_view_unittest.cc",
-  ]
+  sources = [ "present_view_unittest.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -57,9 +53,7 @@ executable("present_view_unittests") {
 executable("present_view_apptests") {
   testonly = true
 
-  sources = [
-    "present_view_apptest.cc",
-  ]
+  sources = [ "present_view_apptest.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -78,9 +72,7 @@ executable("present_view_apptests") {
 executable("present_view_integration_tests") {
   testonly = true
 
-  sources = [
-    "present_view_integration_test.cc",
-  ]
+  sources = [ "present_view_integration_test.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",

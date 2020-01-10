@@ -44,9 +44,7 @@ rustc_binary("box") {
 }
 
 package("fb_box_rs") {
-  deps = [
-    ":box",
-  ]
+  deps = [ ":box" ]
 
   binaries = [
     {
@@ -78,9 +76,7 @@ rustc_binary("fb_integration_test_bin") {
 }
 
 test_package("fb_integration_test") {
-  deps = [
-    ":fb_integration_test_bin",
-  ]
+  deps = [ ":fb_integration_test_bin" ]
 
   tests = [
     {

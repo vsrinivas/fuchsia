@@ -20,9 +20,7 @@ rustc_staticlib("guest") {
 
 executable("fuchsia_async_testloop_c_test") {
   output_name = "fuchsia_async_testloop_c_test"
-  sources = [
-    "host_test.cc",
-  ]
+  sources = [ "host_test.cc" ]
   deps = [
     ":guest",
     "//garnet/public/lib/gtest:gtest",
@@ -36,9 +34,7 @@ executable("fuchsia_async_testloop_c_test") {
 }
 
 test_package("fuchsia-async-testloop-tests") {
-  deps = [
-    ":fuchsia_async_testloop_c_test",
-  ]
+  deps = [ ":fuchsia_async_testloop_c_test" ]
   tests = [
     {
       name = "fuchsia_async_testloop_c_test"

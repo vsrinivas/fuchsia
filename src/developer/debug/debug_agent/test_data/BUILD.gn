@@ -20,13 +20,9 @@ group("debug_so") {
 source_set("debug_agent_test_so_lib") {
   testonly = true
 
-  public = [
-    "test_so_symbols.h",
-  ]
+  public = [ "test_so_symbols.h" ]
 
-  sources = [
-    "breakpoint_test_so.cc",
-  ]
+  sources = [ "breakpoint_test_so.cc" ]
 
   if (current_cpu == "x64") {
     sources += [ "x64_write_register_test_so.cc" ]
@@ -36,18 +32,14 @@ source_set("debug_agent_test_so_lib") {
 shared_library("debug_agent_test_so") {
   testonly = true
 
-  public_deps = [
-    ":debug_agent_test_so_lib",
-  ]
+  public_deps = [ ":debug_agent_test_so_lib" ]
 }
 
 loadable_module("debug_agent_test_loadable_module") {
   testonly = true
   output_name = "debug_agent_test_so"
 
-  deps = [
-    ":debug_agent_test_so_lib",
-  ]
+  deps = [ ":debug_agent_test_so_lib" ]
 }
 
 # Text Executables -------------------------------------------------------------
@@ -72,34 +64,24 @@ group("test_executables") {
 executable("breakpoint_test_exe") {
   testonly = true
   output_name = "breakpoint_test_exe"
-  sources = [
-    "breakpoint_test_exe.cc",
-  ]
-  deps = [
-    ":debug_agent_test_so",
-  ]
+  sources = [ "breakpoint_test_exe.cc" ]
+  deps = [ ":debug_agent_test_so" ]
 }
 
 executable("multithreaded_breakpoint_test_exe") {
   testonly = true
   output_name = "multithreaded_breakpoint_test_exe"
 
-  sources = [
-    "multithreaded_breakpoint_test_exe.cc",
-  ]
+  sources = [ "multithreaded_breakpoint_test_exe.cc" ]
 
-  deps = [
-    ":debug_agent_test_so",
-  ]
+  deps = [ ":debug_agent_test_so" ]
 }
 
 executable("watchpoint_test_exe") {
   testonly = true
   output_name = "watchpoint_test_exe"
 
-  sources = [
-    "watchpoint_test_exe.cc",
-  ]
+  sources = [ "watchpoint_test_exe.cc" ]
 }
 
 if (current_cpu == "x64") {
@@ -107,13 +89,9 @@ if (current_cpu == "x64") {
     testonly = true
     output_name = "write_register_test_exe"
 
-    sources = [
-      "x64_write_register_test_exe.cc",
-    ]
+    sources = [ "x64_write_register_test_exe.cc" ]
 
-    public_deps = [
-      ":debug_agent_test_so",
-    ]
+    public_deps = [ ":debug_agent_test_so" ]
   }
 }
 
@@ -138,9 +116,7 @@ group("helper_executables") {
 }
 
 executable("backtrace_request") {
-  sources = [
-    "backtrace_request.cc",
-  ]
+  sources = [ "backtrace_request.cc" ]
 
   deps = [
     "//zircon/public/lib/backtrace-request",
@@ -149,15 +125,11 @@ executable("backtrace_request") {
 }
 
 executable("debug_test_true") {
-  sources = [
-    "true.c",
-  ]
+  sources = [ "true.c" ]
 }
 
 executable("debug_test_false") {
-  sources = [
-    "false.c",
-  ]
+  sources = [ "false.c" ]
 }
 
 executable("hw_breakpointer") {
@@ -182,9 +154,7 @@ executable("hw_watchpointer") {
   testonly = true
   output_name = "hw_watchpointer"
 
-  sources = [
-    "hw_watchpointer.cc",
-  ]
+  sources = [ "hw_watchpointer.cc" ]
 
   deps = [
     "//src/developer/debug/shared",
@@ -196,9 +166,7 @@ executable("hw_watchpointer") {
 executable("multi_threaded") {
   testonly = true
 
-  sources = [
-    "multi_threaded.cc",
-  ]
+  sources = [ "multi_threaded.cc" ]
 
   deps = [
     "//src/lib/fxl",
@@ -207,27 +175,21 @@ executable("multi_threaded") {
 }
 
 executable("printer") {
-  sources = [
-    "printer.cc",
-  ]
+  sources = [ "printer.cc" ]
 }
 
 executable("process_loop") {
   testonly = true
   output_name = "process_loop"
 
-  sources = [
-    "process_loop.cc",
-  ]
+  sources = [ "process_loop.cc" ]
 }
 
 executable("process_spawner") {
   testonly = true
   output_name = "process_spawner"
 
-  sources = [
-    "process_spawner.cc",
-  ]
+  sources = [ "process_spawner.cc" ]
 
   deps = [
     "//src/lib/fxl",
@@ -240,9 +202,7 @@ executable("thread_signals") {
   testonly = true
   output_name = "thread_signals"
 
-  sources = [
-    "thread_signals.cc",
-  ]
+  sources = [ "thread_signals.cc" ]
 
   deps = [
     "//src/lib/fxl",
@@ -255,9 +215,7 @@ executable("limbo_caller") {
   testonly = true
   output_name = "limbo_caller"
 
-  sources = [
-    "limbo_caller.cc",
-  ]
+  sources = [ "limbo_caller.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp",

@@ -10,16 +10,12 @@
 
 group("svc") {
   testonly = true
-  public_deps = [
-    "//sdk/lib/svc:svc_tests",
-  ]
+  public_deps = [ "//sdk/lib/svc:svc_tests" ]
 }
 
 group("netfilter") {
   testonly = true
-  public_deps = [
-    "//garnet/lib/rust/netfilter:netfilter_tests",
-  ]
+  public_deps = [ "//garnet/lib/rust/netfilter:netfilter_tests" ]
 }
 
 group("containers_cpp") {
@@ -64,16 +60,12 @@ group("tracing") {
 
 group("sse") {
   testonly = true
-  public_deps = [
-    "//garnet/go/src/sse:sse_test($host_toolchain)",
-  ]
+  public_deps = [ "//garnet/go/src/sse:sse_test($host_toolchain)" ]
 }
 
 group("acts_tests") {
   testonly = true
-  public_deps = [
-    "//garnet/tests/acts_tests",
-  ]
+  public_deps = [ "//garnet/tests/acts_tests" ]
 }
 
 # WARNING: Known to topaz.
@@ -93,9 +85,7 @@ group("scenic") {
 
 group("vfs_cpp") {
   testonly = true
-  public_deps = [
-    "//sdk/lib/vfs/cpp:vfs_cpp_tests",
-  ]
+  public_deps = [ "//sdk/lib/vfs/cpp:vfs_cpp_tests" ]
 }
 
 group("fidl_compatibility_test_server_go") {
@@ -142,30 +132,22 @@ group("cpuperf_provider") {
 
 group("odu_tests") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/odu:odu_tests",
-  ]
+  public_deps = [ "//garnet/bin/odu:odu_tests" ]
 }
 
 group("odu_host_tests") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/odu:odu_tests($host_toolchain)",
-  ]
+  public_deps = [ "//garnet/bin/odu:odu_tests($host_toolchain)" ]
 }
 
 group("fostr") {
   testonly = true
-  public_deps = [
-    "//garnet/public/lib/fostr:tests_package",
-  ]
+  public_deps = [ "//garnet/public/lib/fostr:tests_package" ]
 }
 
 group("component_cpp") {
   testonly = true
-  public_deps = [
-    "//sdk/lib/sys/cpp/tests:component_cpp_tests",
-  ]
+  public_deps = [ "//sdk/lib/sys/cpp/tests:component_cpp_tests" ]
 }
 
 group("fuzzing") {
@@ -179,9 +161,7 @@ group("fuzzing") {
 
 group("process") {
   testonly = true
-  public_deps = [
-    "//garnet/lib/process:process_unittests",
-  ]
+  public_deps = [ "//garnet/lib/process:process_unittests" ]
 }
 
 group("escher") {
@@ -218,9 +198,7 @@ group("sysmgr") {
 
 group("zxdb") {
   testonly = true
-  public_deps = [
-    "//src/developer/debug/zxdb:zxdb_tests($host_toolchain)",
-  ]
+  public_deps = [ "//src/developer/debug/zxdb:zxdb_tests($host_toolchain)" ]
 }
 
 group("examples") {
@@ -252,16 +230,12 @@ group("boringssl") {
 
 group("go_far_tests") {
   testonly = true
-  public_deps = [
-    "//garnet/go/src/far:go_far_tests",
-  ]
+  public_deps = [ "//garnet/go/src/far:go_far_tests" ]
 }
 
 group("sched_tests") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/sched:tests",
-  ]
+  public_deps = [ "//garnet/bin/sched:tests" ]
 }
 
 group("all") {
@@ -387,16 +361,12 @@ group("all") {
 
 group("fidl_llcpp_conformance_test") {
   testonly = true
-  public_deps = [
-    "//garnet/public/lib/fidl/llcpp:fidl_llcpp_conformance_test",
-  ]
+  public_deps = [ "//garnet/public/lib/fidl/llcpp:fidl_llcpp_conformance_test" ]
 }
 
 group("fidl_llcpp_types_test") {
   testonly = true
-  public_deps = [
-    "//garnet/public/lib/fidl/llcpp:fidl_llcpp_types_test",
-  ]
+  public_deps = [ "//garnet/public/lib/fidl/llcpp:fidl_llcpp_types_test" ]
 }
 
 group("cmx") {
@@ -409,9 +379,7 @@ group("cmx") {
 
 group("libc") {
   testonly = true
-  public_deps = [
-    "//third_party/libc-tests",
-  ]
+  public_deps = [ "//third_party/libc-tests" ]
 }
 
 group("inspect_tests") {
@@ -437,37 +405,28 @@ group("inspect_unittests") {
 
 group("inspect_contrib_cpp_tests") {
   testonly = true
-  public_deps = [
-    "//sdk/lib/inspect/contrib/cpp:inspect_contrib_cpp_tests",
-  ]
+  public_deps = [ "//sdk/lib/inspect/contrib/cpp:inspect_contrib_cpp_tests" ]
 }
 
 group("sys_inspect_cpp_tests") {
   testonly = true
-  public_deps = [
-    "//sdk/lib/sys/inspect/cpp/tests:sys_inspect_cpp_tests",
-  ]
+  public_deps = [ "//sdk/lib/sys/inspect/cpp/tests:sys_inspect_cpp_tests" ]
 }
 
 group("inspect_service_cpp_tests") {
   testonly = true
-  public_deps = [
-    "//sdk/lib/inspect/service/cpp/tests:inspect_service_cpp_tests",
-  ]
+  public_deps =
+      [ "//sdk/lib/inspect/service/cpp/tests:inspect_service_cpp_tests" ]
 }
 
 group("inspect_health_unittests") {
   testonly = true
-  public_deps = [
-    "//garnet/public/lib/inspect_deprecated/health/tests:inspect_health_unittests",
-  ]
+  public_deps = [ "//garnet/public/lib/inspect_deprecated/health/tests:inspect_health_unittests" ]
 }
 
 group("inspect_query_unittests") {
   testonly = true
-  public_deps = [
-    "//garnet/public/lib/inspect_deprecated/query/tests:inspect_query_unittests",
-  ]
+  public_deps = [ "//garnet/public/lib/inspect_deprecated/query/tests:inspect_query_unittests" ]
 }
 
 group("memory_metrics") {
@@ -507,16 +466,12 @@ group("fidl") {
 
 group("difl") {
   testonly = true
-  public_deps = [
-    "//tools/fidl/difl/tests",
-  ]
+  public_deps = [ "//tools/fidl/difl/tests" ]
 }
 
 group("netemul") {
   testonly = true
-  public_deps = [
-    "//src/connectivity/network/testing/netemul:tests",
-  ]
+  public_deps = [ "//src/connectivity/network/testing/netemul:tests" ]
 }
 
 group("syslog") {
@@ -529,9 +484,7 @@ group("syslog") {
 
 group("fsl") {
   testonly = true
-  public_deps = [
-    "//src/lib/fsl:fsl_tests",
-  ]
+  public_deps = [ "//src/lib/fsl:fsl_tests" ]
 }
 
 group("setui_service") {
@@ -544,23 +497,17 @@ group("setui_service") {
 
 group("go_benchmarking_tests") {
   testonly = true
-  public_deps = [
-    "//garnet/go/src/benchmarking:go_benchmarking_tests",
-  ]
+  public_deps = [ "//garnet/go/src/benchmarking:go_benchmarking_tests" ]
 }
 
 group("go_thinfs_tests") {
   testonly = true
-  public_deps = [
-    "//garnet/go/src/thinfs:go_thinfs_tests",
-  ]
+  public_deps = [ "//garnet/go/src/thinfs:go_thinfs_tests" ]
 }
 
 group("pkg_url") {
   testonly = true
-  public_deps = [
-    "//src/lib/pkg_url:pkg_url_unittests",
-  ]
+  public_deps = [ "//src/lib/pkg_url:pkg_url_unittests" ]
 }
 
 group("guest") {
@@ -581,16 +528,12 @@ group("guest") {
 
 group("scpi") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/scpi:scpi_server_tests",
-  ]
+  public_deps = [ "//garnet/bin/scpi:scpi_server_tests" ]
 }
 
 group("uuid") {
   testonly = true
-  public_deps = [
-    "//src/lib/uuid:uuid_tests",
-  ]
+  public_deps = [ "//src/lib/uuid:uuid_tests" ]
 }
 
 group("fuchsia_component_test") {
@@ -606,23 +549,17 @@ group("fuchsia_component_test") {
 
 group("image_pipe_swapchain") {
   testonly = true
-  public_deps = [
-    "//src/lib/vulkan/tests:image-pipe-swapchain-tests",
-  ]
+  public_deps = [ "//src/lib/vulkan/tests:image-pipe-swapchain-tests" ]
 }
 
 group("sysmgr_tests") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/sysmgr/test:sysmgr_tests",
-  ]
+  public_deps = [ "//garnet/bin/sysmgr/test:sysmgr_tests" ]
 }
 
 group("url") {
   testonly = true
-  public_deps = [
-    "//src/lib/url:url_tests",
-  ]
+  public_deps = [ "//src/lib/url:url_tests" ]
 }
 
 group("fidl_compatibility_test_server_rust") {
@@ -659,9 +596,8 @@ group("log_listener") {
 
 group("system_monitor_fuchsia") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests",
-  ]
+  public_deps =
+      [ "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests" ]
 }
 
 group("system_monitor_host") {
@@ -735,9 +671,7 @@ group("profiler") {
 group("thermd") {
   testonly = true
   if (target_cpu == "arm64") {
-    public_deps = [
-      "//garnet/bin/thermd:thermd_tests_package",
-    ]
+    public_deps = [ "//garnet/bin/thermd:thermd_tests_package" ]
   } else {
     public_deps = []
   }
@@ -745,23 +679,17 @@ group("thermd") {
 
 group("tiles") {
   testonly = true
-  public_deps = [
-    "//src/ui/tools/tiles:tiles_tests",
-  ]
+  public_deps = [ "//src/ui/tools/tiles:tiles_tests" ]
 }
 
 group("timezone") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/timezone/test:timezone_tests",
-  ]
+  public_deps = [ "//garnet/bin/timezone/test:timezone_tests" ]
 }
 
 group("scenic_cpp") {
   testonly = true
-  public_deps = [
-    "//sdk/lib/ui/scenic/cpp/tests:scenic_cpp_tests",
-  ]
+  public_deps = [ "//sdk/lib/ui/scenic/cpp/tests:scenic_cpp_tests" ]
 }
 
 group("kms") {
@@ -793,9 +721,7 @@ group("vulkan") {
 
 group("graphics") {
   testonly = true
-  public_deps = [
-    "//src/graphics:tests",
-  ]
+  public_deps = [ "//src/graphics:tests" ]
 }
 
 group("magma") {
@@ -827,9 +753,7 @@ group("magma") {
 
 group("json") {
   testonly = true
-  public_deps = [
-    "//build/tools/json_merge:json_merge_test($host_toolchain)",
-  ]
+  public_deps = [ "//build/tools/json_merge:json_merge_test($host_toolchain)" ]
 }
 
 group("chrealm") {
@@ -851,9 +775,7 @@ group("go_tuf") {
 
 group("libinspect_integration_tests") {
   testonly = true
-  public_deps = [
-    "//garnet/public/lib/inspect_deprecated/integration:libinspect_integration_tests",
-  ]
+  public_deps = [ "//garnet/public/lib/inspect_deprecated/integration:libinspect_integration_tests" ]
 }
 
 group("zircon") {
@@ -878,16 +800,12 @@ group("runtime") {
 
 group("go_merkle_tests") {
   testonly = true
-  public_deps = [
-    "//garnet/go/src/merkle:go_merkle_tests",
-  ]
+  public_deps = [ "//garnet/go/src/merkle:go_merkle_tests" ]
 }
 
 group("asio") {
   testonly = true
-  public_deps = [
-    "//third_party/asio:asio_unittests",
-  ]
+  public_deps = [ "//third_party/asio:asio_unittests" ]
 }
 
 group("fxl") {
@@ -908,9 +826,7 @@ group("device_settings") {
 
 group("terminal") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/terminal:tests",
-  ]
+  public_deps = [ "//garnet/bin/terminal:tests" ]
 }
 
 # WARNING: Known to topaz.
@@ -970,16 +886,12 @@ group("fidl_compatibility_test_server_llcpp") {
 
 group("wayland") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/wayland:wayland_tests",
-  ]
+  public_deps = [ "//garnet/bin/wayland:wayland_tests" ]
 }
 
 group("e2e_input_tests") {
   testonly = true
-  public_deps = [
-    "//src/ui/tests/e2e_input_tests",
-  ]
+  public_deps = [ "//src/ui/tests/e2e_input_tests" ]
 }
 
 group("debug_agent") {
@@ -992,23 +904,18 @@ group("debug_agent") {
 
 group("sysmem_connector") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/sysmem_connector:sysmem_connector_test",
-  ]
+  public_deps = [ "//garnet/bin/sysmem_connector:sysmem_connector_test" ]
 }
 
 group("webpki_roots_fuchsia") {
   testonly = true
-  public_deps = [
-    "//garnet/lib/rust/webpki-roots-fuchsia:webpki-roots-fuchsia_tests",
-  ]
+  public_deps =
+      [ "//garnet/lib/rust/webpki-roots-fuchsia:webpki-roots-fuchsia_tests" ]
 }
 
 group("httpdate_hyper") {
   testonly = true
-  public_deps = [
-    "//garnet/lib/rust/httpdate-hyper:httpdate-hyper-tests",
-  ]
+  public_deps = [ "//garnet/lib/rust/httpdate-hyper:httpdate-hyper-tests" ]
 }
 
 group("setui_client") {
@@ -1022,16 +929,13 @@ group("setui_client") {
 
 group("intl") {
   testonly = true
-  public_deps = [
-    "//src/lib/intl:tests",
-  ]
+  public_deps = [ "//src/lib/intl:tests" ]
 }
 
 group("fuchsia-framebuffer") {
   testonly = true
-  public_deps = [
-    "//garnet/public/rust/fuchsia-framebuffer:fb_integration_test",
-  ]
+  public_deps =
+      [ "//garnet/public/rust/fuchsia-framebuffer:fb_integration_test" ]
 }
 
 group("carnelian") {
@@ -1044,9 +948,7 @@ group("carnelian") {
 
 group("linux_runner") {
   testonly = true
-  public_deps = [
-    "//src/virtualization/packages/biscotti_guest/linux_runner:linux_runner_tests",
-  ]
+  public_deps = [ "//src/virtualization/packages/biscotti_guest/linux_runner:linux_runner_tests" ]
 }
 
 group("catapult_converter") {
@@ -1058,55 +960,39 @@ group("catapult_converter") {
 
 group("sl4f") {
   testonly = true
-  public_deps = [
-    "//sdk/testing/sl4f/client:tests",
-  ]
+  public_deps = [ "//sdk/testing/sl4f/client:tests" ]
 }
 
 group("whereiscl") {
   testonly = true
-  public_deps = [
-    "//tools/whereiscl:whereiscl_test($host_toolchain)",
-  ]
+  public_deps = [ "//tools/whereiscl:whereiscl_test($host_toolchain)" ]
 }
 
 group("a11y") {
   testonly = true
-  public_deps = [
-    "//src/ui/a11y/bundles:tests",
-  ]
+  public_deps = [ "//src/ui/a11y/bundles:tests" ]
 }
 
 group("files_async") {
   testonly = true
-  public_deps = [
-    "//garnet/lib/rust/files_async:files_async_tests",
-  ]
+  public_deps = [ "//garnet/lib/rust/files_async:files_async_tests" ]
 }
 
 group("go_inspect_tests") {
   testonly = true
-  public_deps = [
-    "//garnet/go/src/inspect:go_inspect_tests",
-  ]
+  public_deps = [ "//garnet/go/src/inspect:go_inspect_tests" ]
 }
 
 group("fdio_spawn") {
   testonly = true
-  public_deps = [
-    "//garnet/tests/fdio_spawn:fdio_spawn_tests",
-  ]
+  public_deps = [ "//garnet/tests/fdio_spawn:fdio_spawn_tests" ]
 }
 group("zedmon") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/traceutil:zedmon_test($host_toolchain)",
-  ]
+  public_deps = [ "//garnet/bin/traceutil:zedmon_test($host_toolchain)" ]
 }
 
 group("sysconfig-client") {
   testonly = true
-  public_deps = [
-    "//garnet/lib/rust/sysconfig-client:sysconfig-client-test",
-  ]
+  public_deps = [ "//garnet/lib/rust/sysconfig-client:sysconfig-client-test" ]
 }

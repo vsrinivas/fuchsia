@@ -6,9 +6,7 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 
 fuzzer("frame_scheduler_fuzzer") {
-  sources = [
-    "frame_scheduler_fuzztest.cc",
-  ]
+  sources = [ "frame_scheduler_fuzztest.cc" ]
   deps = [
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",

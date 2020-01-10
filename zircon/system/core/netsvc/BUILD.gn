@@ -34,9 +34,7 @@ zx_executable("netsvc") {
 }
 
 zx_executable("device-name-provider") {
-  sources = [
-    "device-name-provider.cc",
-  ]
+  sources = [ "device-name-provider.cc" ]
   deps = [
     ":args",
     "$zx/system/fidl/fuchsia-device:llcpp",
@@ -50,9 +48,7 @@ zx_executable("device-name-provider") {
 }
 
 source_set("args") {
-  sources = [
-    "args.cc",
-  ]
+  sources = [ "args.cc" ]
 }
 
 source_set("netsvc_common") {
@@ -120,7 +116,5 @@ zx_test("netsvc-test") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
-  data_deps = [
-    ":netsvc",
-  ]
+  data_deps = [ ":netsvc" ]
 }

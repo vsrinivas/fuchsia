@@ -14,9 +14,7 @@ source_set("testing") {
     "page_sync_empty_impl.h",
   ]
 
-  public_deps = [
-    "//src/ledger/bin/sync_coordinator/public",
-  ]
+  public_deps = [ "//src/ledger/bin/sync_coordinator/public" ]
 
   deps = [
     "//src/ledger/lib/backoff/testing",

@@ -28,9 +28,7 @@ rustc_binary("bin") {
 }
 
 package("component_manager_sfw") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

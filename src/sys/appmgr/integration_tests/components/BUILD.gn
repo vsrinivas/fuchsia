@@ -8,53 +8,37 @@ import("//build/testing/environments.gni")
 
 group("components") {
   testonly = true
-  deps = [
-    ":components_binary_tests",
-  ]
+  deps = [ ":components_binary_tests" ]
 }
 
 executable("echo1") {
   output_name = "components_test_echo1"
 
-  sources = [
-    "echo.cc",
-  ]
+  sources = [ "echo.cc" ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 }
 
 executable("echo2") {
   output_name = "components_test_echo2"
 
-  sources = [
-    "echo.cc",
-  ]
+  sources = [ "echo.cc" ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 }
 
 executable("getenv") {
   output_name = "components_test_getenv"
 
-  sources = [
-    "getenv.cc",
-  ]
+  sources = [ "getenv.cc" ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 }
 
 executable("components_binary_test") {
   testonly = true
 
-  sources = [
-    "components_binary_test.cc",
-  ]
+  sources = [ "components_binary_test.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration",

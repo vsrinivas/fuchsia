@@ -13,7 +13,5 @@ fidl("index") {
 
   name = "fuchsia.sys.index"
 
-  sources = [
-    "index.fidl",
-  ]
+  sources = [ "index.fidl" ]
 }

@@ -5,9 +5,7 @@
 group("testing") {
   testonly = true
 
-  public_deps = [
-    ":mock_input_device",
-  ]
+  public_deps = [ ":mock_input_device" ]
 }
 
 group("tests") {

@@ -4,7 +4,5 @@
 
 zx_library("watchdog") {
   kernel = true
-  sources = [
-    "watchdog.c",
-  ]
+  sources = [ "watchdog.c" ]
 }

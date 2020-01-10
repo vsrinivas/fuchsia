@@ -4,10 +4,6 @@
 zx_library("utf_conversion") {
   sdk = "static"
   sdk_headers = [ "utf_conversion/utf_conversion.h" ]
-  sources = [
-    "utf_conversion.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/fbl",
-  ]
+  sources = [ "utf_conversion.cc" ]
+  deps = [ "$zx/system/ulib/fbl" ]
 }

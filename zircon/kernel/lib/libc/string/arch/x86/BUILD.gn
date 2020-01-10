@@ -17,10 +17,6 @@ source_set("x86") {
 source_set("tests") {
   # TODO(mcgrathr): Make this optional somehow and enable testonly taint.
   # testonly = true
-  sources = [
-    "tests.cc",
-  ]
-  deps = [
-    "$zx/kernel/lib/unittest",
-  ]
+  sources = [ "tests.cc" ]
+  deps = [ "$zx/kernel/lib/unittest" ]
 }

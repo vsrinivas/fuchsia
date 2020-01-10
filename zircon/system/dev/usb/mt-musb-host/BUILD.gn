@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("mt-musb-host") {
-  deps = [
-    ":common",
-  ]
+  deps = [ ":common" ]
 }
 
 source_set("common") {
@@ -38,9 +36,7 @@ source_set("common") {
 
 zx_test("mt-hci-test") {
   output_name = "mt-hci-test"
-  sources = [
-    "usb-hci-test.cc",
-  ]
+  sources = [ "usb-hci-test.cc" ]
   deps = [
     ":common",
     "$zx/system/dev/lib/fake_ddk",

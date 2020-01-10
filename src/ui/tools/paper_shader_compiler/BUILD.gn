@@ -5,9 +5,7 @@
 executable("paper_shader_compiler") {
   output_name = "paper_shader_compiler"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//src/ui/lib/escher:escher",

@@ -5,17 +5,13 @@
 zx_library("user_copy") {
   kernel = true
   sources = []
-  deps = [
-    ":tests",
-  ]
+  deps = [ ":tests" ]
 }
 
 source_set("tests") {
   #TODO: testonly = true
   visibility = [ ":*" ]
-  sources = [
-    "user_copy_tests.cc",
-  ]
+  sources = [ "user_copy_tests.cc" ]
 
   deps = [
     ":headers",

@@ -11,7 +11,5 @@ fidl("fuchsia.devicesettings") {
     "string-bounds-not-specified",
   ]
 
-  sources = [
-    "devicesettings.fidl",
-  ]
+  sources = [ "devicesettings.fidl" ]
 }

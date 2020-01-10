@@ -6,9 +6,7 @@ zx_library("async-loop") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [ "lib/async-loop/loop.h" ]
-  sources = [
-    "loop.c",
-  ]
+  sources = [ "loop.c" ]
   public_deps = [
     # <lib/async-loop/loop.h> has #include <lib/async/dispatcher.h>.
     "$zx/system/ulib/async:headers",
@@ -23,9 +21,7 @@ zx_library("async-loop-cpp") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [ "lib/async-loop/cpp/loop.h" ]
-  sources = [
-    "loop_wrapper.cc",
-  ]
+  sources = [ "loop_wrapper.cc" ]
   deps = [
     ":async-loop",
     "$zx/system/ulib/async",
@@ -44,12 +40,8 @@ zx_library("async-loop-default") {
   sdk_publishable = true
   sdk_headers = [ "lib/async-loop/default.h" ]
   shared = false
-  sources = [
-    "default.c",
-  ]
-  deps = [
-    "$zx/system/ulib/async:async-default",
-  ]
+  sources = [ "default.c" ]
+  deps = [ "$zx/system/ulib/async:async-default" ]
   public_deps = [
     # <lib/async-loop/default.h> has #include <lib/async-loop/loop.h>.
     ":async-loop.headers",

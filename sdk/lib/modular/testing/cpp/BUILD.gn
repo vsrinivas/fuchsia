@@ -37,9 +37,7 @@ sdk_source_set("cpp") {
 }
 
 fidl("fuchsia.modular.test.harness") {
-  sources = [
-    "test_harness_builder.test.fidl",
-  ]
+  sources = [ "test_harness_builder.test.fidl" ]
 }
 
 executable("modular_testing_cpp_tests_bin") {
@@ -75,7 +73,5 @@ test_package("modular_testing_cpp_tests") {
     },
   ]
 
-  deps = [
-    ":modular_testing_cpp_tests_bin",
-  ]
+  deps = [ ":modular_testing_cpp_tests_bin" ]
 }

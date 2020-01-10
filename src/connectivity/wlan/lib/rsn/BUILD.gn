@@ -37,9 +37,7 @@ rustc_library("wlan-rsn") {
 }
 
 test_package("wlan-rsn-tests") {
-  deps = [
-    ":wlan-rsn_test",
-  ]
+  deps = [ ":wlan-rsn_test" ]
 
   tests = [
     {

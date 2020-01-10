@@ -4,7 +4,5 @@
 
 group("atheros") {
   testonly = true
-  deps = [
-    "ath10k",
-  ]
+  deps = [ "ath10k" ]
 }

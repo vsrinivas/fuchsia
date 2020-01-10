@@ -25,9 +25,7 @@ group("examples") {
 }
 
 package("bouncing_ball") {
-  deps = [
-    "bouncing_ball",
-  ]
+  deps = [ "bouncing_ball" ]
 
   binary = "bouncing_ball"
 
@@ -67,9 +65,7 @@ package("embedder") {
 }
 
 package("direct_input") {
-  deps = [
-    "lab/direct_input",
-  ]
+  deps = [ "lab/direct_input" ]
 
   binary = "direct_input"
 
@@ -82,9 +78,7 @@ package("direct_input") {
 }
 
 package("direct_input_child") {
-  deps = [
-    "lab/direct_input/child",
-  ]
+  deps = [ "lab/direct_input/child" ]
 
   binary = "direct_input_child"
 
@@ -117,9 +111,7 @@ package("pose_buffer_presenter") {
 }
 
 package("scenic_dev_app") {
-  deps = [
-    "lab/scenic_dev_app",
-  ]
+  deps = [ "lab/scenic_dev_app" ]
 
   binary = "scenic_dev_app"
 
@@ -132,9 +124,7 @@ package("scenic_dev_app") {
 }
 
 package("shadertoy_client") {
-  deps = [
-    "shadertoy/client",
-  ]
+  deps = [ "shadertoy/client" ]
 
   binary = "shadertoy_client"
 
@@ -167,9 +157,7 @@ package("shadertoy_service") {
 }
 
 package("simplest_app") {
-  deps = [
-    "simplest_app",
-  ]
+  deps = [ "simplest_app" ]
 
   binary = "simplest_app"
 
@@ -200,9 +188,7 @@ package("simplest_embedder") {
 }
 
 package("spinning_square_view") {
-  deps = [
-    "spinning_square",
-  ]
+  deps = [ "spinning_square" ]
 
   binary = "spinning_square_view"
 
@@ -215,9 +201,7 @@ package("spinning_square_view") {
 }
 
 package("standalone_app") {
-  deps = [
-    "standalone_app",
-  ]
+  deps = [ "standalone_app" ]
 
   binary = "standalone_app"
 
@@ -230,9 +214,7 @@ package("standalone_app") {
 }
 
 package("tile_view") {
-  deps = [
-    "tile",
-  ]
+  deps = [ "tile" ]
 
   binary = "tile_view"
 
@@ -245,9 +227,7 @@ package("tile_view") {
 }
 
 package("yuv_to_image_pipe") {
-  deps = [
-    "yuv_to_image_pipe",
-  ]
+  deps = [ "yuv_to_image_pipe" ]
 
   binary = "yuv_to_image_pipe"
 

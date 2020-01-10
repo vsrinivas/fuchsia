@@ -9,17 +9,15 @@ import("//build/go/toolchain.gni")
 go_binary("go") {
   output_name = "fidl_changes_go"
   gopackage = "fidl_changes_go_lib"
-  deps = [
-    ":fidl_changes_go_lib",
-  ]
+  deps = [ ":fidl_changes_go_lib" ]
 }
 
 go_library("fidl_changes_go_lib") {
   name = "fidl_changes_go_lib"
   deps = [
-    "//src/lib/component/go/src/app",
     "//garnet/tests/fidl-changes:fidl.test.after($go_toolchain)",
     "//garnet/tests/fidl-changes:fidl.test.before($go_toolchain)",
     "//garnet/tests/fidl-changes:fidl.test.during($go_toolchain)",
+    "//src/lib/component/go/src/app",
   ]
 }

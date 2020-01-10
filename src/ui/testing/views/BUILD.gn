@@ -39,9 +39,7 @@ source_set("views") {
 executable("test_views_app") {
   testonly = true
 
-  sources = [
-    "app.cc",
-  ]
+  sources = [ "app.cc" ]
 
   deps = [
     ":views",
@@ -78,7 +76,5 @@ package("test_views") {
     },
   ]
 
-  deps = [
-    ":test_views_app",
-  ]
+  deps = [ ":test_views_app" ]
 }

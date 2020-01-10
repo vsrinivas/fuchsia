@@ -10,9 +10,7 @@ import("//build/test/test_package.gni")
 group("unittests") {
   testonly = true
 
-  deps = [
-    ":test_harness_impl_unittest",
-  ]
+  deps = [ ":test_harness_impl_unittest" ]
 }
 
 source_set("test_harness_fixture") {
@@ -31,9 +29,7 @@ source_set("test_harness_fixture") {
     "test_harness_fixture.h",
   ]
 
-  public_deps = [
-    "//sdk/lib/modular/testing/cpp",
-  ]
+  public_deps = [ "//sdk/lib/modular/testing/cpp" ]
 
   deps = [
     "//garnet/public/lib/svc/cpp",
@@ -49,9 +45,7 @@ source_set("test_harness_fixture") {
 executable("test_harness_fixture_test_bin") {
   testonly = true
 
-  sources = [
-    "test_harness_fixture_test.cc",
-  ]
+  sources = [ "test_harness_fixture_test.cc" ]
 
   deps = [
     ":test_harness_fixture",
@@ -74,9 +68,7 @@ test_package("test_harness_fixture_test") {
     },
   ]
 
-  deps = [
-    ":test_harness_fixture_test_bin",
-  ]
+  deps = [ ":test_harness_fixture_test_bin" ]
 }
 
 source_set("test_harness_impl") {
@@ -114,9 +106,7 @@ source_set("test_harness_impl") {
 source_set("test_harness_impl_unittest") {
   testonly = true
 
-  sources = [
-    "test_harness_impl_unittest.cc",
-  ]
+  sources = [ "test_harness_impl_unittest.cc" ]
 
   deps = [
     ":test_harness_impl",

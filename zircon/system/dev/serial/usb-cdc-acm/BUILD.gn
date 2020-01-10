@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("usb-cdc-acm") {
-  sources = [
-    "usb-cdc-acm.cc",
-  ]
+  sources = [ "usb-cdc-acm.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.serial",
     "$zx/system/banjo/ddk.protocol.serialimpl",
@@ -23,9 +21,7 @@ zx_driver("usb-cdc-acm") {
 }
 
 zx_driver("fake-usb-cdc-acm") {
-  sources = [
-    "usb-cdc-acm-function.cc",
-  ]
+  sources = [ "usb-cdc-acm-function.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",
     "$zx/system/banjo/ddk.protocol.usb.composite",

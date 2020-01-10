@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("snapshot_config") {
-  sources = [
-    "snapshot_config.h",
-  ]
+  sources = [ "snapshot_config.h" ]
 }
 
 source_set("inspect_config_reader") {

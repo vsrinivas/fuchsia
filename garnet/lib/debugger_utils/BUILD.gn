@@ -63,9 +63,7 @@ static_library("debugger_utils") {
     "//zircon/public/lib/zircon-internal",
   ]
 
-  deps = [
-    "//zircon/public/lib/fit",
-  ]
+  deps = [ "//zircon/public/lib/fit" ]
 
   if (is_fuchsia) {
     deps += [ "//zircon/public/lib/inspector" ]
@@ -114,9 +112,7 @@ executable("test_helper") {
   # the entire system.
   output_name = "debugger_utils_test_helper"
 
-  sources = [
-    "test_helper.cc",
-  ]
+  sources = [ "test_helper.cc" ]
 
   deps = [
     ":debugger_utils",

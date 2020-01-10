@@ -8,9 +8,7 @@ import("//build/testing/environments.gni")
 group("tests") {
   testonly = true
 
-  public_deps = [
-    ":input_reader_tests",
-  ]
+  public_deps = [ ":input_reader_tests" ]
 }
 
 test_package("input_reader_tests") {
@@ -45,9 +43,7 @@ source_set("end_to_end_tests") {
   visibility = [ ":*" ]
   testonly = true
 
-  sources = [
-    "end_to_end_tests.cc",
-  ]
+  sources = [ "end_to_end_tests.cc" ]
 
   deps = [
     ":mock_device_watcher",
@@ -65,9 +61,7 @@ source_set("interface_tests") {
   visibility = [ ":*" ]
   testonly = true
 
-  sources = [
-    "interface_tests.cc",
-  ]
+  sources = [ "interface_tests.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -84,9 +78,7 @@ source_set("mock_device_watcher") {
     "mock_device_watcher.h",
   ]
 
-  public_deps = [
-    "//src/ui/lib/input_reader:device",
-  ]
+  public_deps = [ "//src/ui/lib/input_reader:device" ]
 
   deps = [
     "//src/lib/fxl",

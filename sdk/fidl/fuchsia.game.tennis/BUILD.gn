@@ -13,7 +13,5 @@ fidl("fuchsia.game.tennis") {
     "string-bounds-not-specified",
   ]
 
-  sources = [
-    "tennis.fidl",
-  ]
+  sources = [ "tennis.fidl" ]
 }

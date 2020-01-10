@@ -31,9 +31,7 @@ source_set("perf-mon") {
 }
 
 zx_driver("cpu-trace") {
-  sources = [
-    "cpu-trace.cc",
-  ]
+  sources = [ "cpu-trace.cc" ]
 
   if (current_cpu == "x64") {
     sources += [ "intel-pt.cc" ]
@@ -55,15 +53,11 @@ zx_driver("cpu-trace") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":perf-mon-tests",
-  ]
+  deps = [ ":perf-mon-tests" ]
 }
 
 zx_test("perf-mon-tests") {
-  sources = [
-    "tests/perf-mon-tests.cc",
-  ]
+  sources = [ "tests/perf-mon-tests.cc" ]
   deps = [
     ":perf-mon",
     "$zx/system/dev/lib/fake-bti",

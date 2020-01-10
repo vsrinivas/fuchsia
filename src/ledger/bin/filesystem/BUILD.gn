@@ -17,17 +17,13 @@ source_set("filesystem") {
     "//zircon/public/lib/fit",
   ]
 
-  deps = [
-    "//src/ledger/lib/logging",
-  ]
+  deps = [ "//src/ledger/lib/logging" ]
 }
 
 source_set("unittests") {
   testonly = true
 
-  sources = [
-    "get_directory_content_size_unittest.cc",
-  ]
+  sources = [ "get_directory_content_size_unittest.cc" ]
 
   deps = [
     ":filesystem",

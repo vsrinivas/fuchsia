@@ -7,17 +7,13 @@ import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 
 group("isolated_cache") {
-  deps = [
-    ":isolated_cache_example",
-  ]
+  deps = [ ":isolated_cache_example" ]
 }
 
 group("tests") {
   testonly = true
 
-  deps = [
-    ":isolated_cache_example_tests",
-  ]
+  deps = [ ":isolated_cache_example_tests" ]
 }
 
 rustc_binary("bin") {
@@ -34,9 +30,7 @@ rustc_binary("bin") {
 }
 
 package("isolated_cache_example") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -53,9 +47,7 @@ package("isolated_cache_example") {
 }
 
 test_package("isolated_cache_example_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
   tests = [
     {
       name = "isolated_cache_example_bin_test"

@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/go/go_library.gni")
 import("//build/config/fuchsia/zircon.gni")
+import("//build/go/go_library.gni")
 
 # Currently, we ony support working with the QEMU simulator on Linux.
 if (is_linux) {
@@ -15,9 +15,7 @@ if (is_linux) {
 
     archive_path = "$root_out_dir/test_data/qemu/qemu.tar.gz"
 
-    outputs = [
-      archive_path,
-    ]
+    outputs = [ archive_path ]
 
     depfile = "${archive_path}.d"
 
@@ -65,6 +63,9 @@ if (is_linux) {
 
   go_library("qemu") {
     name = "fuchsia.googlesource.com/testing/qemu"
-    non_go_deps = [ ":archive", ":kernel" ]
+    non_go_deps = [
+      ":archive",
+      ":kernel",
+    ]
   }
 }

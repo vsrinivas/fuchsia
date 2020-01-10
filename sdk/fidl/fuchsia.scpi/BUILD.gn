@@ -8,7 +8,5 @@ fidl("fuchsia.scpi") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "vector-bounds-not-specified" ]
 
-  sources = [
-    "scpi.fidl",
-  ]
+  sources = [ "scpi.fidl" ]
 }

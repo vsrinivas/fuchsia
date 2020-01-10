@@ -7,9 +7,7 @@ import("//build/package.gni")
 
 executable("bin") {
   output_name = "mem"
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "//sdk/lib/sys/cpp",
     "//src/developer/memory/metrics",
@@ -22,9 +20,7 @@ executable("bin") {
 }
 
 package("mem") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   binaries = [
     {
       name = "mem"

@@ -42,9 +42,7 @@ source_set("iwlwifi_sim_trans_ss") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":iwlwifi_test",
-  ]
+  deps = [ ":iwlwifi_test" ]
 }
 
 # Definition for simulated transportation layer + gtest
@@ -60,9 +58,7 @@ executable("dummy_test") {
   output_name = "dummy_test"
   testonly = true
 
-  sources = [
-    "dummy_test.cc",
-  ]
+  sources = [ "dummy_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps
@@ -72,9 +68,7 @@ executable("fuchsia_porting_test") {
   output_name = "fuchsia_porting_test"
   testonly = true
 
-  sources = [
-    "fuchsia_porting_test.cc",
-  ]
+  sources = [ "fuchsia_porting_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps
@@ -84,9 +78,7 @@ executable("iwl-phy-db_test") {
   output_name = "iwl-phy-db_test"
   testonly = true
 
-  sources = [
-    "iwl-phy-db_test.cc",
-  ]
+  sources = [ "iwl-phy-db_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps
@@ -96,9 +88,7 @@ executable("mac80211_test") {
   output_name = "mac80211_test"
   testonly = true
 
-  sources = [
-    "mac80211_test.cc",
-  ]
+  sources = [ "mac80211_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps
@@ -108,9 +98,7 @@ executable("mac-ctxt_test") {
   output_name = "mac-ctxt_test"
   testonly = true
 
-  sources = [
-    "mac-ctxt_test.cc",
-  ]
+  sources = [ "mac-ctxt_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps
@@ -121,9 +109,7 @@ executable("mvm_test") {
   output_name = "mvm_test"
   testonly = true
 
-  sources = [
-    "mvm_test.cc",
-  ]
+  sources = [ "mvm_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps
@@ -133,9 +119,7 @@ executable("notif-wait_test") {
   output_name = "notif-wait_test"
   testonly = true
 
-  sources = [
-    "notif-wait_test.cc",
-  ]
+  sources = [ "notif-wait_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps
@@ -145,9 +129,7 @@ executable("nvm_test") {
   output_name = "nvm_test"
   testonly = true
 
-  sources = [
-    "nvm_test.cc",
-  ]
+  sources = [ "nvm_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps
@@ -157,9 +139,7 @@ executable("pcie_test") {
   output_name = "pcie_test"
   testonly = true
 
-  sources = [
-    "pcie_test.cc",
-  ]
+  sources = [ "pcie_test.cc" ]
 
   defines = testing_defines
   deps = [
@@ -178,9 +158,7 @@ executable("phy-ctxt_test") {
   output_name = "phy-ctxt_test"
   testonly = true
 
-  sources = [
-    "phy-ctxt_test.cc",
-  ]
+  sources = [ "phy-ctxt_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps
@@ -190,9 +168,7 @@ executable("utils_test") {
   output_name = "utils_test"
   testonly = true
 
-  sources = [
-    "utils_test.cc",
-  ]
+  sources = [ "utils_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps
@@ -202,9 +178,7 @@ executable("wlan-device_test") {
   output_name = "wlan-device_test"
   testonly = true
 
-  sources = [
-    "wlan-device_test.cc",
-  ]
+  sources = [ "wlan-device_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps

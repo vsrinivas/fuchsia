@@ -7,9 +7,7 @@ visibility = [ "//src/ledger/*" ]
 group("put") {
   testonly = true
 
-  public_deps = [
-    ":ledger_benchmark_put",
-  ]
+  public_deps = [ ":ledger_benchmark_put" ]
 }
 
 executable("ledger_benchmark_put") {
@@ -32,9 +30,7 @@ executable("ledger_benchmark_put") {
     "//zircon/public/lib/trace-provider-so",
   ]
 
-  sources = [
-    "put.cc",
-  ]
+  sources = [ "put.cc" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

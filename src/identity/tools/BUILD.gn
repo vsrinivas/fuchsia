@@ -15,15 +15,11 @@ group("tools") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":identity_tools_unittests",
-  ]
+  deps = [ ":identity_tools_unittests" ]
 }
 
 test_package("identity_tools_unittests") {
-  deps = [
-    "sktool:bin_test",
-  ]
+  deps = [ "sktool:bin_test" ]
 
   tests = [
     {

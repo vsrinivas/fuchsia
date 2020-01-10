@@ -12,9 +12,7 @@ config("codec_impl_include_config") {
 source_set("fourcc") {
   public_configs = [ ":codec_impl_include_config" ]
 
-  public = [
-    "include/lib/media/codec_impl/fourcc.h",
-  ]
+  public = [ "include/lib/media/codec_impl/fourcc.h" ]
 }
 
 source_set("codec_impl") {
@@ -63,7 +61,5 @@ source_set("codec_impl") {
 
 group("tests") {
   testonly = true
-  deps = [
-    "unit_tests",
-  ]
+  deps = [ "unit_tests" ]
 }

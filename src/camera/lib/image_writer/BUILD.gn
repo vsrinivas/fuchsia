@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 source_set("image_writer") {
-  sources = [
-    "raw12_writer.cc",
-  ]
+  sources = [ "raw12_writer.cc" ]
 
   public = [
     "image_writer.h",
@@ -46,13 +44,9 @@ source_set("hsv_color_source") {
 }
 
 source_set("image_format_rgba") {
-  sources = [
-    "image_format_rgba.cc",
-  ]
+  sources = [ "image_format_rgba.cc" ]
 
-  public = [
-    "image_format_rgba.h",
-  ]
+  public = [ "image_format_rgba.h" ]
 
   deps = [
     "//sdk/lib/fidl/cpp",

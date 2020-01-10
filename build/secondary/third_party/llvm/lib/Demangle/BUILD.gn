@@ -3,11 +3,7 @@
 # found in the LICENSE file.
 
 static_library("Demangle") {
-  sources = [
-    "ItaniumDemangle.cpp",
-  ]
+  sources = [ "ItaniumDemangle.cpp" ]
 
-  deps = [
-    "../Support",
-  ]
+  deps = [ "../Support" ]
 }

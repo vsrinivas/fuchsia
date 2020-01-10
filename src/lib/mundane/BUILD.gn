@@ -27,9 +27,7 @@ rustc_library("mundane") {
 }
 
 unittest_package("mundane-tests") {
-  deps = [
-    ":mundane_test",
-  ]
+  deps = [ ":mundane_test" ]
 
   tests = [
     {
@@ -41,7 +39,5 @@ unittest_package("mundane-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":mundane-tests",
-  ]
+  deps = [ ":mundane-tests" ]
 }

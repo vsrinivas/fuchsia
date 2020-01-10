@@ -4,7 +4,5 @@
 
 zx_library("pci") {
   kernel = true
-  sources = [
-    "pio.cc",
-  ]
+  sources = [ "pio.cc" ]
 }

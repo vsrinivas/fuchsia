@@ -11,18 +11,14 @@ zx_library("pretty") {
   kernel = true
   host = true
   static = true
-  sources = [
-    "sizes.c",
-  ]
+  sources = [ "sizes.c" ]
   if (!is_kernel) {
     sources += [ "hexdump.c" ]
   }
 }
 
 zx_test("pretty-test") {
-  sources = [
-    "test.c",
-  ]
+  sources = [ "test.c" ]
   deps = [
     ":pretty",
     "$zx/system/ulib/fdio",

@@ -14,9 +14,7 @@ group("system-temp") {
 }
 
 sandbox_test_package("has_system_temp") {
-  sources = [
-    "has_system_temp.cc",
-  ]
+  sources = [ "has_system_temp.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -26,9 +24,7 @@ sandbox_test_package("has_system_temp") {
 }
 
 sandbox_test_package("no_system_temp") {
-  sources = [
-    "no_system_temp.cc",
-  ]
+  sources = [ "no_system_temp.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",

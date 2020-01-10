@@ -5,9 +5,7 @@
 zx_library("log") {
   shared = true
   host = true
-  sources = [
-    "log.cc",
-  ]
+  sources = [ "log.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

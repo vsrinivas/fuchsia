@@ -8,9 +8,7 @@ import("//build/test/test_package.gni")
 executable("bin") {
   output_name = "libinspect_example_component"
 
-  sources = [
-    "example.cc",
-  ]
+  sources = [ "example.cc" ]
 
   deps = [
     "//src/lib/inspect_deprecated:component",
@@ -23,9 +21,7 @@ executable("test") {
   testonly = true
   output_name = "libinspect_integration_tests"
 
-  sources = [
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration",

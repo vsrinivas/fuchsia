@@ -4,9 +4,7 @@
 
 group("integration") {
   testonly = true
-  deps = [
-    ":zxtest-integration",
-  ]
+  deps = [ ":zxtest-integration" ]
 }
 
 zx_test("zxtest-integration") {

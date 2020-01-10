@@ -4,10 +4,6 @@
 
 zx_library("common") {
   kernel = true
-  sources = [
-    "arm_gic_hw_interface.cc",
-  ]
-  deps = [
-    "$zx/kernel/dev/interrupt",
-  ]
+  sources = [ "arm_gic_hw_interface.cc" ]
+  deps = [ "$zx/kernel/dev/interrupt" ]
 }

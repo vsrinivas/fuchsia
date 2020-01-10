@@ -41,15 +41,11 @@ source_set("test_sources") {
 
 test("fidl_transformer_tests") {
   testonly = true
-  deps = [
-    ":test_sources",
-  ]
+  deps = [ ":test_sources" ]
 }
 
 test_package("fidl_transformer_conformance") {
-  deps = [
-    ":fidl_transformer_tests",
-  ]
+  deps = [ ":fidl_transformer_tests" ]
   binaries = [
     {
       name = "fidl_transformer_tests"
@@ -64,9 +60,7 @@ test_package("fidl_transformer_conformance") {
 
 if (is_linux || is_mac) {
   test("fidl_transformer_host_tests") {
-    deps = [
-      ":test_sources",
-    ]
+    deps = [ ":test_sources" ]
   }
 }
 

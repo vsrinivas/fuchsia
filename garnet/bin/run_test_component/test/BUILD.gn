@@ -17,9 +17,7 @@ executable("bin") {
   testonly = true
   output_name = "run_test_component_test"
 
-  sources = [
-    "run_test_component_test.cc",
-  ]
+  sources = [ "run_test_component_test.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -40,9 +38,7 @@ executable("bin") {
 executable("coverage_component") {
   testonly = true
 
-  sources = [
-    "coverage_component.cc",
-  ]
+  sources = [ "coverage_component.cc" ]
 
   deps = [
     "//sdk/lib/fidl/cpp",

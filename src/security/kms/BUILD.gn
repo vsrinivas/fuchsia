@@ -44,9 +44,7 @@ rustc_binary("bin") {
 }
 
 package("kms") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "kms"
 
@@ -59,9 +57,7 @@ package("kms") {
 }
 
 test_package("kms_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
   tests = [
     {
       name = "kms_bin_test"
@@ -72,21 +68,13 @@ test_package("kms_tests") {
 }
 
 config_data("optee_provider_config") {
-  sources = [
-    "config/optee_provider_config.json",
-  ]
+  sources = [ "config/optee_provider_config.json" ]
   for_pkg = "kms"
-  outputs = [
-    "crypto_provider_config.json",
-  ]
+  outputs = [ "crypto_provider_config.json" ]
 }
 
 config_data("optee_provider_test_config") {
-  sources = [
-    "config/optee_provider_config.json",
-  ]
+  sources = [ "config/optee_provider_config.json" ]
   for_pkg = "kms_test_client_pkg"
-  outputs = [
-    "crypto_provider_config.json",
-  ]
+  outputs = [ "crypto_provider_config.json" ]
 }

@@ -96,9 +96,7 @@ group("meta_packages") {
 group("base_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = [
-    "//:additional_base_packages",
-  ]
+  public_deps = [ "//:additional_base_packages" ]
   if (check_production_eligibility) {
     assert_no_deps = [ ":non_production_tag" ]
   }
@@ -107,9 +105,7 @@ group("base_packages") {
 group("cache_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = [
-    "//:additional_cache_packages",
-  ]
+  public_deps = [ "//:additional_cache_packages" ]
   if (check_production_eligibility) {
     assert_no_deps = [ ":non_production_tag" ]
   }
@@ -152,9 +148,7 @@ template("package_list") {
 
     data_keys = [ "package_names" ]
     walk_keys = [ "package_barrier" ]
-    outputs = [
-      "$root_out_dir/$target_name",
-    ]
+    outputs = [ "$root_out_dir/$target_name" ]
   }
 }
 
@@ -168,16 +162,12 @@ package_list("base_packages.list") {
 
 package_list("cache_packages.list") {
   visibility = [ ":*" ]
-  deps = [
-    ":cache_packages",
-  ]
+  deps = [ ":cache_packages" ]
 }
 
 package_list("universe_packages.list") {
   visibility = [ ":*" ]
-  deps = [
-    ":universe_packages",
-  ]
+  deps = [ ":universe_packages" ]
 }
 
 group("package_lists") {
@@ -195,17 +185,13 @@ group("package_lists") {
 config_package("config-data") {
   testonly = true
   visibility = [ ":*" ]
-  deps = [
-    ":universe_packages",
-  ]
+  deps = [ ":universe_packages" ]
 }
 
 shell_commands("shell-commands") {
   testonly = true
   visibility = [ ":*" ]
-  deps = [
-    ":universe_packages",
-  ]
+  deps = [ ":universe_packages" ]
 }
 
 ###
@@ -218,9 +204,7 @@ if (!bootfs_only) {
       "$target_out_dir/monolith_meta_far_merkle_index"
   package_metadata_list("monolith_meta_far_merkle_index") {
     testonly = true
-    outputs = [
-      monolith_meta_far_merkle_index,
-    ]
+    outputs = [ monolith_meta_far_merkle_index ]
     data_keys = [ "meta_far_merkle_index_entries" ]
     deps = [
       ":base_packages",
@@ -239,15 +223,9 @@ if (!bootfs_only) {
       ":update_packages.manifest",
     ]
     testonly = true
-    outputs = [
-      "$target_out_dir/$target_name",
-    ]
-    deps = [
-      ":monolith_meta_far_merkle_index",
-    ]
-    inputs = [
-      monolith_meta_far_merkle_index,
-    ]
+    outputs = [ "$target_out_dir/$target_name" ]
+    deps = [ ":monolith_meta_far_merkle_index" ]
+    inputs = [ monolith_meta_far_merkle_index ]
 
     script = "//build/images/manifest_content_expand.sh"
     args = [
@@ -260,13 +238,9 @@ if (!bootfs_only) {
       "$target_out_dir/preinstall_meta_far_merkle_index"
   package_metadata_list("preinstall_meta_far_merkle_index") {
     testonly = true
-    outputs = [
-      preinstall_meta_far_merkle_index,
-    ]
+    outputs = [ preinstall_meta_far_merkle_index ]
     data_keys = [ "meta_far_merkle_index_entries" ]
-    deps = [
-      ":cache_packages",
-    ]
+    deps = [ ":cache_packages" ]
   }
 
   #
@@ -277,15 +251,9 @@ if (!bootfs_only) {
   action("cache_index") {
     visibility = [ ":system_image.manifest" ]
     testonly = true
-    outputs = [
-      "$target_out_dir/$target_name",
-    ]
-    deps = [
-      ":preinstall_meta_far_merkle_index",
-    ]
-    inputs = [
-      preinstall_meta_far_merkle_index,
-    ]
+    outputs = [ "$target_out_dir/$target_name" ]
+    deps = [ ":preinstall_meta_far_merkle_index" ]
+    inputs = [ preinstall_meta_far_merkle_index ]
 
     script = "//build/images/manifest_content_expand.sh"
     args = [
@@ -304,9 +272,7 @@ system_image_manifest_args_path = target_gen_dir + "/system_image.manifest_args"
 
 generated_file(system_image_manifest_args) {
   testonly = true
-  outputs = [
-    system_image_manifest_args_path,
-  ]
+  outputs = [ system_image_manifest_args_path ]
   data_keys = [ "system_image_rsps" ]
   walk_keys = [ "package_barrier" ]
   deps = [
@@ -337,12 +303,8 @@ generate_manifest("system_image.manifest") {
   # Now each package() target in the build contributes manifest entries.
   # For system_image packages, these contain binaries that need their
   # references resolved from the auxiliary manifests or /boot (above).
-  deps = [
-    ":" + system_image_manifest_args,
-  ]
-  sources = [
-    system_image_manifest_args_path,
-  ]
+  deps = [ ":" + system_image_manifest_args ]
+  sources = [ system_image_manifest_args_path ]
   args = [ "@" + rebase_path(system_image_manifest_args_path, root_build_dir) ]
 
   if (!bootfs_only) {
@@ -382,13 +344,9 @@ action("system_image_prime.manifest") {
   visibility = [ ":*" ]
   testonly = true
   script = "manifest.py"
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
+  outputs = [ "$target_out_dir/$target_name" ]
 
-  deps = [
-    ":system_image.manifest",
-  ]
+  deps = [ ":system_image.manifest" ]
   sources = system_manifest_outputs + [
               "system_image_prime_meta_package.json",
               "dummy/example.txt",
@@ -426,9 +384,7 @@ if (!bootfs_only) {
   collect_blob_manifest("blob.manifest") {
     testonly = true
     visibility = [ ":*" ]
-    outputs = [
-      blob_manifest,
-    ]
+    outputs = [ blob_manifest ]
     deps = [
       ":base_packages",
       ":cache_packages",
@@ -446,9 +402,7 @@ if (!bootfs_only) {
   zircon_tool_action("blob.blk") {
     visibility = [ ":*" ]
     testonly = true
-    deps = [
-      ":blob.manifest",
-    ]
+    deps = [ ":blob.manifest" ]
     blob_size_list = "$root_build_dir/blob.sizes"
     outputs = [
       blob_image_path,
@@ -457,9 +411,7 @@ if (!bootfs_only) {
       # blob_size_list
     ]
     depfile = blob_image_path + ".d"
-    inputs = [
-      blob_manifest,
-    ]
+    inputs = [ blob_manifest ]
     tool = "blobfs"
     args = [
       "--depfile",
@@ -585,14 +537,10 @@ action("devmgr_config.txt") {
   testonly = true
 
   script = "manifest.py"
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
+  outputs = [ "$target_out_dir/$target_name" ]
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
   sources = []
-  deps = [
-    ":system_image.manifest",
-  ]
+  deps = [ ":system_image.manifest" ]
 
   if (!bootfs_only) {
     pkgfs = "bin/" + pkgfs_binary_name
@@ -674,13 +622,9 @@ action("devmgr_config_prime.txt") {
   testonly = true
 
   script = "manifest.py"
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
+  outputs = [ "$target_out_dir/$target_name" ]
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-  deps = [
-    ":devmgr_config.txt",
-  ]
+  deps = [ ":devmgr_config.txt" ]
   devmgr_config_outputs = get_target_outputs(":devmgr_config.txt")
   sources = devmgr_config_outputs
   args += [
@@ -712,9 +656,7 @@ action("devmgr_config_prime.txt") {
 }
 
 generated_file("zxcrypt_config.txt") {
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
+  outputs = [ "$target_out_dir/$target_name" ]
   contents = zxcrypt_key_source
 }
 
@@ -760,9 +702,7 @@ zbi("fuchsia") {
   if (!include_devmgr_config_in_vbmeta) {
     manifest += [
       {
-        outputs = [
-          "config/devmgr",
-        ]
+        outputs = [ "config/devmgr" ]
         sources = get_target_outputs(":devmgr_config.txt")
       },
     ]
@@ -770,12 +710,8 @@ zbi("fuchsia") {
   foreach(ta_uuid, fuchsia_ta_uuids) {
     manifest += [
       {
-        outputs = [
-          "lib/firmware/$ta_uuid$ta_dest_suffix",
-        ]
-        sources = [
-          rebase_path("$ta_path/$ta_uuid$ta_src_suffix"),
-        ]
+        outputs = [ "lib/firmware/$ta_uuid$ta_dest_suffix" ]
+        sources = [ rebase_path("$ta_path/$ta_uuid$ta_src_suffix") ]
       },
     ]
   }
@@ -783,12 +719,8 @@ zbi("fuchsia") {
     deps += [ ":zxcrypt_config.txt" ]
     manifest += [
       {
-        outputs = [
-          "config/zxcrypt",
-        ]
-        sources = [
-          "$target_out_dir/zxcrypt_config.txt",
-        ]
+        outputs = [ "config/zxcrypt" ]
+        sources = [ "$target_out_dir/zxcrypt_config.txt" ]
       },
     ]
   }
@@ -855,9 +787,7 @@ if (!use_vboot && custom_signing_script == "") {
   update_manifest += [
     {
       target = "zbi"
-      deps = [
-        ":fuchsia",
-      ]
+      deps = [ ":fuchsia" ]
     },
   ]
 }
@@ -879,9 +809,7 @@ zbi("fuchsia_prime") {
     replace = true
     manifest += [
       {
-        outputs = [
-          "config/devmgr",
-        ]
+        outputs = [ "config/devmgr" ]
         sources = get_target_outputs(":devmgr_config_prime.txt")
       },
     ]
@@ -897,9 +825,7 @@ if (custom_signing_script != "") {
   custom_signed_zbi("signed") {
     output_name = "fuchsia.zbi"
     testonly = true
-    deps = [
-      ":fuchsia",
-    ]
+    deps = [ ":fuchsia" ]
     zbi = get_target_outputs(":fuchsia")
     metadata = {
       images = [
@@ -918,9 +844,7 @@ if (custom_signing_script != "") {
   vboot("signed") {
     testonly = true
     output_name = "fuchsia.zbi"
-    deps = [
-      ":fuchsia",
-    ]
+    deps = [ ":fuchsia" ]
 
     metadata = {
       images = [
@@ -941,9 +865,7 @@ if (custom_signing_script != "" || use_vboot) {
   update_manifest += [
     {
       target = "zbi.signed"
-      deps = [
-        ":signed",
-      ]
+      deps = [ ":signed" ]
     },
   ]
 }
@@ -955,9 +877,7 @@ if (custom_signing_script != "") {
   custom_signed_zbi("fuchsia_prime_signed") {
     output_name = "fuchsia_prime.zbi"
     testonly = true
-    deps = [
-      ":fuchsia_prime",
-    ]
+    deps = [ ":fuchsia_prime" ]
     zbi = get_target_outputs(":fuchsia_prime")
   }
   zbi_prime = {
@@ -970,9 +890,7 @@ if (custom_signing_script != "") {
   vboot("fuchsia_prime_signed") {
     testonly = true
     output_name = "fuchsia_prime.zbi"
-    deps = [
-      ":fuchsia_prime",
-    ]
+    deps = [ ":fuchsia_prime" ]
   }
 
   zbi_prime = {
@@ -989,14 +907,10 @@ if (use_vbmeta) {
     output_name = "fuchsia"
     testonly = true
     if (custom_signing_script != "") {
-      deps = [
-        ":signed",
-      ]
+      deps = [ ":signed" ]
       zbi = get_target_outputs(":signed")
     } else {
-      deps = [
-        ":fuchsia",
-      ]
+      deps = [ ":fuchsia" ]
       zbi = get_target_outputs(":fuchsia")
     }
     if (include_devmgr_config_in_vbmeta) {
@@ -1036,14 +950,10 @@ if (use_vbmeta) {
     output_name = "fuchsia_prime"
     testonly = true
     if (custom_signing_script != "") {
-      deps = [
-        ":fuchsia_prime_signed",
-      ]
+      deps = [ ":fuchsia_prime_signed" ]
       zbi = get_target_outputs(":fuchsia_prime_signed")
     } else {
-      deps = [
-        ":fuchsia_prime",
-      ]
+      deps = [ ":fuchsia_prime" ]
       zbi = get_target_outputs(":fuchsia_prime")
     }
     if (include_devmgr_config_in_vbmeta) {
@@ -1071,12 +981,8 @@ if (use_vbmeta) {
   update_manifest += [
     {
       target = "fuchsia.vbmeta"
-      sources = [
-        "$root_build_dir/fuchsia.vbmeta",
-      ]
-      deps = [
-        ":fuchsia.vbmeta",
-      ]
+      sources = [ "$root_build_dir/fuchsia.vbmeta" ]
+      deps = [ ":fuchsia.vbmeta" ]
     },
   ]
 }
@@ -1085,24 +991,16 @@ if (use_vbmeta) {
 if (custom_signing_script != "") {
   update_manifest += [
     {
-      deps = [
-        "zedboot:signed",
-      ]
-      sources = [
-        "$root_out_dir/zedboot.zbi.signed",
-      ]
+      deps = [ "zedboot:signed" ]
+      sources = [ "$root_out_dir/zedboot.zbi.signed" ]
       target = "zedboot.signed"
     },
   ]
 } else if (use_vboot) {
   update_manifest += [
     {
-      deps = [
-        "zedboot:signed",
-      ]
-      sources = [
-        "$root_out_dir/zedboot.vboot",
-      ]
+      deps = [ "zedboot:signed" ]
+      sources = [ "$root_out_dir/zedboot.vboot" ]
 
       target = "zedboot.signed"
     },
@@ -1110,12 +1008,8 @@ if (custom_signing_script != "") {
 } else {
   update_manifest += [
     {
-      deps = [
-        "zedboot:zbi",
-      ]
-      sources = [
-        "$root_out_dir/zedboot.zbi",
-      ]
+      deps = [ "zedboot:zbi" ]
+      sources = [ "$root_out_dir/zedboot.zbi" ]
       target = "zedboot"
     },
   ]
@@ -1123,12 +1017,8 @@ if (custom_signing_script != "") {
 if (use_vbmeta) {
   update_manifest += [
     {
-      deps = [
-        "zedboot:zedboot.vbmeta",
-      ]
-      sources = [
-        "$root_out_dir/zedboot.vbmeta",
-      ]
+      deps = [ "zedboot:zedboot.vbmeta" ]
+      sources = [ "$root_out_dir/zedboot.vbmeta" ]
       target = "recovery.vbmeta"
     },
   ]
@@ -1163,9 +1053,7 @@ if (!bootfs_only) {
     rebased_data_image_path = rebase_path(data_image_path, root_build_dir)
 
     tool = "minfs"
-    outputs = [
-      data_image_path,
-    ]
+    outputs = [ data_image_path ]
     depfile = data_image_path + ".d"
     args = [
       "--depfile",
@@ -1337,9 +1225,7 @@ if (!bootfs_only) {
   generate_fvm("fvm.blob.sparse.blk") {
     testonly = true
     output_name = fvm_blob_sparse_blk_path
-    deps = [
-      ":blob.blk",
-    ]
+    deps = [ ":blob.blk" ]
     args = fvm_sparse_args
     partitions = [
       {
@@ -1399,9 +1285,7 @@ if (!bootfs_only) {
     testonly = true
 
     # netboot-specific metadata is attached to :fuchsia when bootfs_only os true.
-    deps = [
-      ":fuchsia",
-    ]
+    deps = [ ":fuchsia" ]
   }
 }
 
@@ -1410,9 +1294,7 @@ if (target_cpu != "arm64" && !use_vboot) {
   vboot("vboot") {
     testonly = true
     output_name = "fuchsia"
-    deps = [
-      ":fuchsia",
-    ]
+    deps = [ ":fuchsia" ]
 
     metadata = {
       images = [
@@ -1453,9 +1335,7 @@ if (target_cpu != "arm64" && !use_vboot) {
   if (!use_vboot && custom_signing_script == "") {
     update_manifest += [
       {
-        deps = [
-          ":esp",
-        ]
+        deps = [ ":esp" ]
         target = "bootloader"
       },
     ]
@@ -1464,13 +1344,9 @@ if (target_cpu != "arm64" && !use_vboot) {
   if (bootloader_prebuilt != "") {
     copy("bootloader_image") {
       testonly = true
-      sources = [
-        rebase_path("$bootloader_prebuilt$bootloader_hw_revision",
-                    root_build_dir),
-      ]
-      outputs = [
-        "$root_out_dir/bootloader.img",
-      ]
+      sources = [ rebase_path("$bootloader_prebuilt$bootloader_hw_revision",
+                              root_build_dir) ]
+      outputs = [ "$root_out_dir/bootloader.img" ]
 
       metadata = {
         images = [
@@ -1491,12 +1367,8 @@ if (target_cpu != "arm64" && !use_vboot) {
     update_manifest += [
       {
         target = "bootloader"
-        deps = [
-          ":bootloader_image",
-        ]
-        sources = [
-          "$root_out_dir/bootloader.img",
-        ]
+        deps = [ ":bootloader_image" ]
+        sources = [ "$root_out_dir/bootloader.img" ]
       },
     ]
   }
@@ -1510,9 +1382,7 @@ action("filesystem_sizes.json") {
            "zedboot:zbi",
          ]
   output_name = "$root_build_dir/filesystem_sizes.json"
-  outputs = [
-    output_name,
-  ]
+  outputs = [ output_name ]
   fuchsia_target_outputs = get_target_outputs(":fuchsia")
 
   # Can't use get_target_outputs() because this defined in another file.
@@ -1558,9 +1428,7 @@ group("nil-archives") {
 
 action("flash_script") {
   script = "//build/images/generate_flash_script.sh"
-  outputs = [
-    "$root_out_dir/flash.sh",
-  ]
+  outputs = [ "$root_out_dir/flash.sh" ]
   image = "$root_out_dir/zedboot.zbi"
   args = [
     "--image=" + rebase_path(image, root_build_dir),
@@ -1581,9 +1449,7 @@ action("flash_script") {
 paver_targets = [
   {
     name = "netboot-script"
-    outputs = [
-      "$root_build_dir/netboot.sh",
-    ]
+    outputs = [ "$root_build_dir/netboot.sh" ]
     switch = "--netboot="
     extra_bootserver_arguments = ""
     metadata = {
@@ -1594,9 +1460,7 @@ paver_targets = [
   },
   {
     name = "zedboot-script"
-    outputs = [
-      "$root_build_dir/pave-zedboot.sh",
-    ]
+    outputs = [ "$root_build_dir/pave-zedboot.sh" ]
     if (bootfs_only) {
       switch = "--netboot="
     } else {
@@ -1611,9 +1475,7 @@ paver_targets = [
   },
   {
     name = "paver-script"
-    outputs = [
-      "$root_build_dir/pave.sh",
-    ]
+    outputs = [ "$root_build_dir/pave.sh" ]
     if (bootfs_only) {
       switch = "--netboot="
     } else {
@@ -1637,9 +1499,7 @@ foreach(format,
   paver_targets += [
     {
       name = "archive-$format"
-      outputs = [
-        "$root_build_dir/build-archive.$format",
-      ]
+      outputs = [ "$root_build_dir/build-archive.$format" ]
       switch = "--archive="
       extra_bootserver_arguments = ""
       metadata = {
@@ -1650,9 +1510,7 @@ foreach(format,
     },
     {
       name = "symbol-archive-$format"
-      outputs = [
-        "$root_build_dir/symbol-archive.$format",
-      ]
+      outputs = [ "$root_build_dir/symbol-archive.$format" ]
       switch = "--symbol-archive="
       extra_bootserver_arguments = ""
       metadata = {
@@ -1718,9 +1576,7 @@ group("archives") {
 update_meta_far_merkle_index = "$target_out_dir/update_meta_far_merkle_index"
 package_metadata_list("update_meta_far_merkle_index") {
   testonly = true
-  outputs = [
-    update_meta_far_merkle_index,
-  ]
+  outputs = [ update_meta_far_merkle_index ]
   data_keys = [ "meta_far_merkle_index_entries" ]
   deps = [
     ":base_packages",
@@ -1735,15 +1591,9 @@ action("update_packages.manifest") {
   visibility = [ ":update.manifest" ]
   testonly = true
 
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
-  deps = [
-    ":update_meta_far_merkle_index",
-  ]
-  inputs = [
-    update_meta_far_merkle_index,
-  ]
+  outputs = [ "$target_out_dir/$target_name" ]
+  deps = [ ":update_meta_far_merkle_index" ]
+  inputs = [ update_meta_far_merkle_index ]
 
   script = "manifest_content_expand.sh"
   args = [
@@ -1761,37 +1611,27 @@ action("update.manifest") {
   additional_update_manifest_entries = [
     {
       target = "packages"
-      deps = [
-        ":update_packages.manifest",
-      ]
+      deps = [ ":update_packages.manifest" ]
     },
 
     # Add the meta/package JSON file that makes this the "update" package.
     {
       target = "meta/package"
-      sources = [
-        "update_package.json",
-      ]
+      sources = [ "update_package.json" ]
     },
     {
       target = "version"
-      sources = [
-        rebase_path(build_info_files.version, "", root_build_dir),
-      ]
+      sources = [ rebase_path(build_info_files.version, "", root_build_dir) ]
     },
     {
       target = "board"
-      sources = [
-        board_name_file,
-      ]
+      sources = [ board_name_file ]
     },
   ]
 
   script = "manifest.py"
 
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
+  outputs = [ "$target_out_dir/$target_name" ]
 
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
   sources = []
@@ -1848,9 +1688,7 @@ update_prime_meta_far_merkle_index =
     "$target_out_dir/update_prime_meta_far_merkle_index"
 package_metadata_list("update_prime_meta_far_merkle_index") {
   testonly = true
-  outputs = [
-    update_prime_meta_far_merkle_index,
-  ]
+  outputs = [ update_prime_meta_far_merkle_index ]
   data_keys = [ "meta_far_merkle_index_entries" ]
   deps = [
     ":base_packages",
@@ -1865,15 +1703,9 @@ action("update_prime_packages.manifest") {
   visibility = [ ":update_prime.manifest" ]
   testonly = true
 
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
-  deps = [
-    ":update_prime_meta_far_merkle_index",
-  ]
-  inputs = [
-    update_prime_meta_far_merkle_index,
-  ]
+  outputs = [ "$target_out_dir/$target_name" ]
+  deps = [ ":update_prime_meta_far_merkle_index" ]
+  inputs = [ update_prime_meta_far_merkle_index ]
 
   script = "manifest_content_expand.sh"
   args = [
@@ -1888,9 +1720,7 @@ action("update_prime.manifest") {
 
   script = "manifest.py"
 
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
+  outputs = [ "$target_out_dir/$target_name" ]
 
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
 
@@ -1949,12 +1779,8 @@ action("update.sources.manifest") {
   visibility = [ ":*" ]
   testonly = true
   script = "manifest.py"
-  deps = [
-    ":update.manifest",
-  ]
-  outputs = [
-    "$target_out_dir/update.sources.manifest",
-  ]
+  deps = [ ":update.manifest" ]
+  outputs = [ "$target_out_dir/update.sources.manifest" ]
   update_manifests = get_target_outputs(deps[0])
   args = [
     "--sources",
@@ -1969,9 +1795,7 @@ action("update.sources.manifest") {
 all_package_manifests_list = root_build_dir + "/all_package_manifests.list"
 package_metadata_list("all_package_manifests.list") {
   testonly = true
-  outputs = [
-    all_package_manifests_list,
-  ]
+  outputs = [ all_package_manifests_list ]
   data_keys = [ "package_output_manifests" ]
   rebase = root_build_dir
   deps = [
@@ -1997,28 +1821,18 @@ component_index_metadata_list("component_index_metadata") {
 
   testonly = true
 
-  outputs = [
-    component_index_metadata,
-  ]
+  outputs = [ component_index_metadata ]
 
-  deps = [
-    ":universe_packages",
-  ]
+  deps = [ ":universe_packages" ]
 }
 
 # We copy the metatdata to the root dir so that it can easily be used by host
 # tools
 copy("root_component_index_metadata") {
   testonly = true
-  sources = [
-    component_index_metadata,
-  ]
-  outputs = [
-    "$root_out_dir/component_index_metadata",
-  ]
-  deps = [
-    ":component_index_metadata",
-  ]
+  sources = [ component_index_metadata ]
+  outputs = [ "$root_out_dir/component_index_metadata" ]
+  deps = [ ":component_index_metadata" ]
 }
 
 # The system index is the index of all universe packages, naming each
@@ -2041,15 +1855,11 @@ tagged_snapshot_manifests = [
   },
   {
     tag = "preinstall"
-    deps = [
-      ":cache_packages",
-    ]
+    deps = [ ":cache_packages" ]
   },
   {
     tag = "available"
-    deps = [
-      ":universe_packages",
-    ]
+    deps = [ ":universe_packages" ]
   },
 ]
 
@@ -2058,9 +1868,7 @@ foreach(manifest, tagged_snapshot_manifests) {
   untagged_entries = "${manifest.tag}.snapshot_entries.untagged"
   package_metadata_list(untagged_entries) {
     testonly = true
-    outputs = [
-      target_gen_dir + "/" + target_name,
-    ]
+    outputs = [ target_gen_dir + "/" + target_name ]
     deps = manifest.deps
     data_keys = [ "snapshot_entries" ]
   }
@@ -2068,16 +1876,10 @@ foreach(manifest, tagged_snapshot_manifests) {
   tagged_entries = "${manifest.tag}.snapshot_entries"
   action(tagged_entries) {
     testonly = true
-    deps = [
-      ":" + untagged_entries,
-    ]
+    deps = [ ":" + untagged_entries ]
     script = "add_tag_to_manifest.sh"
-    inputs = [
-      target_gen_dir + "/" + untagged_entries,
-    ]
-    outputs = [
-      root_build_dir + "/" + target_name,
-    ]
+    inputs = [ target_gen_dir + "/" + untagged_entries ]
+    outputs = [ root_build_dir + "/" + target_name ]
     args = [
       manifest.tag,
       rebase_path(inputs[0], root_build_dir),
@@ -2092,9 +1894,7 @@ action("system_index") {
   testonly = true
 
   script = "//build/cat.sh"
-  outputs = [
-    "$target_out_dir/$target_name",
-  ]
+  outputs = [ "$target_out_dir/$target_name" ]
   args = [ rebase_path(outputs[0], root_build_dir) ]
   deps = []
   foreach(entry, all_snapshot_entries) {
@@ -2110,17 +1910,11 @@ compiled_action("system_snapshot") {
   visibility = [ ":updates" ]
   testonly = true
 
-  deps = [
-    ":system_index",
-  ]
+  deps = [ ":system_index" ]
 
-  inputs = [
-    system_index,
-  ]
+  inputs = [ system_index ]
 
-  outputs = [
-    "$target_out_dir/system.snapshot",
-  ]
+  outputs = [ "$target_out_dir/system.snapshot" ]
 
   args = [
     "snapshot",
@@ -2134,12 +1928,8 @@ compiled_action("system_snapshot") {
 # publish all packages to the package repository.
 pm_publish("publish") {
   testonly = true
-  deps = [
-    ":all_package_manifests.list",
-  ]
-  inputs = [
-    all_package_manifests_list,
-  ]
+  deps = [ ":all_package_manifests.list" ]
+  inputs = [ all_package_manifests_list ]
 }
 
 group("updates") {
@@ -2166,30 +1956,20 @@ generated_file("package-build-id-files.list") {
 
   data_keys = [ "build_ids" ]
   walk_keys = [ "build_ids_barrier" ]
-  outputs = [
-    "$target_gen_dir/package-build-id-files.list",
-  ]
+  outputs = [ "$target_gen_dir/package-build-id-files.list" ]
 
-  deps = [
-    ":universe_packages",
-  ]
+  deps = [ ":universe_packages" ]
 }
 
 compiled_action("package-ids.txt") {
   testonly = true
   visibility = [ ":ids.txt" ]
 
-  deps = [
-    ":package-build-id-files.list",
-  ]
+  deps = [ ":package-build-id-files.list" ]
 
-  inputs = [
-    "$target_gen_dir/package-build-id-files.list",
-  ]
+  inputs = [ "$target_gen_dir/package-build-id-files.list" ]
 
-  outputs = [
-    "$target_gen_dir/package-ids.txt",
-  ]
+  outputs = [ "$target_gen_dir/package-ids.txt" ]
 
   depfile = "$target_gen_dir/package-ids.txt.d"
 
@@ -2204,9 +1984,7 @@ compiled_action("package-ids.txt") {
 # for symbolization.  Likewise for the kernel itself, whose build ID is
 # useful to have in the map.
 action("kernel-ids.txt") {
-  outputs = [
-    "$target_out_dir/kernel-ids.txt",
-  ]
+  outputs = [ "$target_out_dir/kernel-ids.txt" ]
 
   foreach(entry, zircon_legacy_sysroot) {
     if (defined(entry.vdso)) {
@@ -2261,9 +2039,7 @@ action("ids.txt") {
   ]
 
   script = "/usr/bin/sort"
-  outputs = [
-    "$root_out_dir/ids.txt",
-  ]
+  outputs = [ "$root_out_dir/ids.txt" ]
   args = [
            "-u",
            "-o",
@@ -2282,9 +2058,7 @@ action("ids.txt") {
 default_image_deps += [ ":ids.txt" ]
 
 group("bootserver") {
-  deps = [
-    "//zircon/public/tool/bootserver($host_toolchain)",
-  ]
+  deps = [ "//zircon/public/tool/bootserver($host_toolchain)" ]
 
   metadata = {
     images = [
@@ -2339,14 +2113,10 @@ group("default-images") {
 
 generated_file("image_paths") {
   testonly = true
-  outputs = [
-    "$root_build_dir/image_paths.sh",
-  ]
+  outputs = [ "$root_build_dir/image_paths.sh" ]
   output_conversion = "list lines"
   data_keys = [ "image_paths" ]
-  deps = [
-    ":images",
-  ]
+  deps = [ ":images" ]
 }
 
 # Add this tag to deps of non_production GN labels (packages/configs).

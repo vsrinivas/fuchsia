@@ -21,9 +21,7 @@ zx_library("lockdep") {
   kernel = true
   static = true
   sources = []
-  public_deps = [
-    "$zx/system/ulib/fbl:headers",
-  ]
+  public_deps = [ "$zx/system/ulib/fbl:headers" ]
   if (!is_kernel) {
     sources += [ "lock_dep.cc" ]
     deps = [
@@ -35,9 +33,7 @@ zx_library("lockdep") {
 
 zx_test("lockdep-test") {
   testonly = true
-  sources = [
-    "lock_dep_test.cc",
-  ]
+  sources = [ "lock_dep_test.cc" ]
   deps = [
     ":lockdep",
     "$zx/system/ulib/fdio",
@@ -48,7 +44,5 @@ zx_test("lockdep-test") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":lockdep-test",
-  ]
+  deps = [ ":lockdep-test" ]
 }

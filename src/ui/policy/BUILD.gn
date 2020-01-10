@@ -4,22 +4,14 @@
 import("//build/config.gni")
 
 group("policy") {
-  deps = [
-    ":configs",
-  ]
+  deps = [ ":configs" ]
 }
 group("configs") {
-  deps = [
-    ":ui_policy_config",
-  ]
+  deps = [ ":ui_policy_config" ]
 }
 
 config_data("ui_policy_config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "ui_policy.config",
-  ]
-  sources = [
-    "service.config",
-  ]
+  outputs = [ "ui_policy.config" ]
+  sources = [ "service.config" ]
 }

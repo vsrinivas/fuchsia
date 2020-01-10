@@ -51,9 +51,7 @@ rustc_library("lib") {
 }
 
 package("vsock_service") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "vsock_service"
 
@@ -66,9 +64,7 @@ package("vsock_service") {
 }
 
 test_package("vsock_service-tests") {
-  deps = [
-    ":lib_test",
-  ]
+  deps = [ ":lib_test" ]
 
   tests = [
     {

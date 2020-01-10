@@ -12,9 +12,7 @@ import("//build/testing/environments.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 package("netstack") {
-  deps = [
-    "//garnet/go/src/grand_unified_binary",
-  ]
+  deps = [ "//garnet/go/src/grand_unified_binary" ]
 
   binaries = [
     {
@@ -36,9 +34,7 @@ package("netstack") {
 }
 
 package("tools") {
-  deps = [
-    "ifconfig",
-  ]
+  deps = [ "ifconfig" ]
 
   binaries = [
     {
@@ -139,37 +135,27 @@ go_library("netstack_lib") {
 
 go_test("netstack_connectivity_test") {
   gopackages = [ "netstack/connectivity" ]
-  deps = [
-    ":netstack_lib",
-  ]
+  deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_fidlconv_test") {
   gopackages = [ "netstack/fidlconv" ]
-  deps = [
-    ":netstack_lib",
-  ]
+  deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_filter_test") {
   gopackages = [ "netstack/filter" ]
-  deps = [
-    ":netstack_lib",
-  ]
+  deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_link_eth_test") {
   gopackages = [ "netstack/link/eth" ]
-  deps = [
-    ":netstack_lib",
-  ]
+  deps = [ ":netstack_lib" ]
 }
 
 go_test("netstack_test") {
   gopackages = [ "netstack" ]
-  deps = [
-    ":netstack_lib",
-  ]
+  deps = [ ":netstack_lib" ]
 }
 
 group("tests") {

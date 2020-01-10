@@ -26,10 +26,10 @@ copy("copy_test_commands") {
 
   metadata = {
     test_runtime_deps = [
-      "$root_out_dir/overnet_host_examples_test_commands/overnet_echo",
-      "$root_out_dir/overnet_host_examples_test_commands/overnet_interface_passing",
       "$root_out_dir/overnet_host_examples_test_commands/ascendd",
       "$root_out_dir/overnet_host_examples_test_commands/onet",
+      "$root_out_dir/overnet_host_examples_test_commands/overnet_echo",
+      "$root_out_dir/overnet_host_examples_test_commands/overnet_interface_passing",
     ]
   }
 

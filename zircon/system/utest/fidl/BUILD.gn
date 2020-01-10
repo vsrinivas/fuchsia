@@ -44,9 +44,7 @@ if (is_fuchsia) {
   zx_executable("fidl-handle-policy-test-app") {
     testonly = true
     sources = []
-    deps = [
-      ":common",
-    ]
+    deps = [ ":common" ]
   }
 
   zx_test("fidl") {
@@ -93,7 +91,5 @@ fidl_library("example") {
     ":*",
     "$zx/system/utest/fidl-simple:*",
   ]
-  sources = [
-    "transformer.test.fidl",
-  ]
+  sources = [ "transformer.test.fidl" ]
 }

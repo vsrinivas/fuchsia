@@ -7,17 +7,13 @@ source_set("fcs") {
     "fcs.cc",
     "fcs.h",
   ]
-  deps = [
-    "//zircon/public/lib/fbl",
-  ]
+  deps = [ "//zircon/public/lib/fbl" ]
 }
 
 source_set("fcs-test") {
   testonly = true
 
-  sources = [
-    "fcs-test.cc",
-  ]
+  sources = [ "fcs-test.cc" ]
 
   include_dirs = [ "//src/connectivity/ppp" ]
 
@@ -46,9 +42,7 @@ source_set("frame") {
 source_set("frame-test") {
   testonly = true
 
-  sources = [
-    "frame-test.cc",
-  ]
+  sources = [ "frame-test.cc" ]
 
   include_dirs = [ "//src/connectivity/ppp" ]
 

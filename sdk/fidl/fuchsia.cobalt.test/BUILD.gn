@@ -7,11 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.cobalt.test") {
   sdk_category = "internal"
 
-  sources = [
-    "query.test.fidl",
-  ]
+  sources = [ "query.test.fidl" ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-cobalt",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-cobalt" ]
 }

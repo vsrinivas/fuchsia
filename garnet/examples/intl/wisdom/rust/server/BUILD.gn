@@ -93,9 +93,7 @@ test_package("intl_wisdom_server_rust_tests") {
 # other Fuchsia binaries, see the remark all the way up top at the
 # rustc_binary("...") declaration.  So we must make do with this indirection.
 group("server") {
-  deps = [
-    ":intl_wisdom_server_rust",
-  ]
+  deps = [ ":intl_wisdom_server_rust" ]
 }
 
 # This group contains all tests in this package.  It is intentonally given a
@@ -103,7 +101,5 @@ group("server") {
 # without needing to look into this file to see what the precise target name is.
 group("tests") {
   testonly = true
-  deps = [
-    ":intl_wisdom_server_rust_tests",
-  ]
+  deps = [ ":intl_wisdom_server_rust_tests" ]
 }

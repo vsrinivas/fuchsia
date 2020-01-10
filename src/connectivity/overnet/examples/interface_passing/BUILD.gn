@@ -34,9 +34,7 @@ rustc_binary("bin") {
 }
 
 package("overnet-interface-passing") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "overnet_interface_passing"
 

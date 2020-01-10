@@ -47,9 +47,7 @@ package("rtl88xx") {
   # Fuchsia does not yet support loading drivers out of packages.
   deprecated_system_image = true
 
-  deps = [
-    ":rtl88xx_driver",
-  ]
+  deps = [ ":rtl88xx_driver" ]
 
   drivers = [
     {

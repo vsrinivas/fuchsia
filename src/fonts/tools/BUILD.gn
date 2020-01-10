@@ -4,7 +4,5 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "manifest_generator:tests",
-  ]
+  public_deps = [ "manifest_generator:tests" ]
 }

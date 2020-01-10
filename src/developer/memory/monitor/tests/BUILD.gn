@@ -35,9 +35,7 @@ executable("memory_monitor_unittests") {
 }
 
 test_package("memory_monitor_tests") {
-  deps = [
-    ":memory_monitor_unittests",
-  ]
+  deps = [ ":memory_monitor_unittests" ]
 
   tests = [
     {
@@ -50,9 +48,7 @@ test_package("memory_monitor_tests") {
 executable("bin-monitor") {
   output_name = "memory_monitor_test_app"
 
-  sources = [
-    "monitor_test_app.cc",
-  ]
+  sources = [ "monitor_test_app.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp",
@@ -67,9 +63,7 @@ executable("test-inspect") {
   testonly = true
   output_name = "memory_monitor_inspect_integration_tests"
 
-  sources = [
-    "monitor_inspect_test.cc",
-  ]
+  sources = [ "monitor_inspect_test.cc" ]
 
   deps = [
     "//sdk/lib/inspect/testing/cpp",

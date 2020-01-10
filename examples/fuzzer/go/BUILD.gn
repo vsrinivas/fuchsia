@@ -8,16 +8,12 @@ import("//build/go/go_library.gni")
 
 group("go") {
   testonly = true
-  deps = [
-    ":tests",
-  ]
+  deps = [ ":tests" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":go_fuzzers",
-  ]
+  deps = [ ":go_fuzzers" ]
 }
 
 fuzzers_package("go_fuzzers") {
@@ -29,13 +25,9 @@ fuzzers_package("go_fuzzers") {
 
 go_fuzzer("basic_fuzzer") {
   gopackage = "fuzzer_lib/basic"
-  deps = [
-    ":fuzzer_lib",
-  ]
+  deps = [ ":fuzzer_lib" ]
 }
 
 go_library("fuzzer_lib") {
-  sources = [
-    "basic/basic.go",
-  ]
+  sources = [ "basic/basic.go" ]
 }

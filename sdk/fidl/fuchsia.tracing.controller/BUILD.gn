@@ -11,7 +11,5 @@ fidl("fuchsia.tracing.controller") {
     "vector-bounds-not-specified",
   ]
 
-  sources = [
-    "trace_controller.fidl",
-  ]
+  sources = [ "trace_controller.fidl" ]
 }

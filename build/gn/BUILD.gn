@@ -25,9 +25,7 @@ action("unpack_build_id_archives") {
   # Ideally, we would list explicitly all the archives downloaded from CIPD,
   # but those aren't available from jiri so today, we glob `prebuilt_build_ids`
   # inside `script` so the best approximation is a jiri snapshot change.
-  inputs = [
-    "//.jiri_root/update_history/latest",
-  ]
+  inputs = [ "//.jiri_root/update_history/latest" ]
 
   # We output a text list of the build-id archives, as actions
   # require outputs, though it is not needed.
@@ -37,9 +35,7 @@ action("unpack_build_id_archives") {
     rebase_path(prebuilt_build_ids),
     rebase_path(_build_id_manifest),
   ]
-  outputs = [
-    _build_id_manifest,
-  ]
+  outputs = [ _build_id_manifest ]
 }
 
 prebuilt_ids_txt = "$target_gen_dir/prebuilt_ids.txt"
@@ -54,13 +50,9 @@ action("prebuilt_ids.txt") {
     rebase_path(prebuilt_ids_txt),
   ]
 
-  outputs = [
-    prebuilt_ids_txt,
-  ]
+  outputs = [ prebuilt_ids_txt ]
 
-  deps = [
-    ":unpack_build_id_archives",
-  ]
+  deps = [ ":unpack_build_id_archives" ]
 }
 
 extended_ids_txt = "$root_build_dir/extended_ids.txt"
@@ -81,9 +73,7 @@ action("concatenate_ids_txts") {
     "cat ${_sources[0]} ${_sources[1]} > $_extended",
   ]
 
-  outputs = [
-    extended_ids_txt,
-  ]
+  outputs = [ extended_ids_txt ]
 
   deps = [
     ":prebuilt_ids.txt",
@@ -100,19 +90,14 @@ action("breakpad_symbols") {
     "//tools/debug/dump_breakpad_symbols($host_toolchain)",
   ]
 
-  inputs = [
-    "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms",
-  ]
+  inputs =
+      [ "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms" ]
 
-  sources = [
-    extended_ids_txt,
-  ]
+  sources = [ extended_ids_txt ]
 
   # This action generates a single xxx.sym file for each binary in the ids file
   # and produces an archived output of them all.
-  outputs = [
-    "$root_out_dir/breakpad_symbols/breakpad_symbols.tar.gz",
-  ]
+  outputs = [ "$root_out_dir/breakpad_symbols/breakpad_symbols.tar.gz" ]
 
   depfile = "${outputs[0]}.d"
 
@@ -151,19 +136,13 @@ pkg_archive = "$root_build_dir/packages.tar.gz"
 compiled_action("package_archive") {
   testonly = true
   tool = "//build/tools/tar_maker"
-  inputs = [
-    pkg_archive_manifest,
-  ]
-  outputs = [
-    pkg_archive,
-  ]
+  inputs = [ pkg_archive_manifest ]
+  outputs = [ pkg_archive ]
   args = [
     "-manifest",
     rebase_path(pkg_archive_manifest),
     "-output",
     rebase_path(pkg_archive),
   ]
-  deps = [
-    "//build/images:updates",
-  ]
+  deps = [ "//build/images:updates" ]
 }

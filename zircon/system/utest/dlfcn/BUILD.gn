@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("dlfcn") {
-  sources = [
-    "dlfcn.c",
-  ]
+  sources = [ "dlfcn.c" ]
   deps = [
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-default",
@@ -19,17 +17,13 @@ zx_test("dlfcn") {
     "$zx/system/ulib/zircon",
   ]
 
-  data_deps = [
-    ":test-dso-no-note",
-  ]
+  data_deps = [ ":test-dso-no-note" ]
 }
 
 loadable_module("test-dso-no-note") {
   visibility = [ ":*" ]
   testonly = true
-  sources = [
-    "test-dso-no-note.cc",
-  ]
+  sources = [ "test-dso-no-note.cc" ]
   configs += [ ":no-build-id" ]
   install_path = "lib/test-dso-no-note.so"
 }

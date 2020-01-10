@@ -4,9 +4,7 @@
 
 zx_library("acpi_tables") {
   kernel = true
-  sources = [
-    "acpi_tables.cc",
-  ]
+  sources = [ "acpi_tables.cc" ]
   public_deps = [
     # <lib/acpi_tables.h> has #include <acpica/acpi.h>.
     "$zx/third_party/lib/acpica:headers",
@@ -16,16 +14,12 @@ zx_library("acpi_tables") {
   ]
 
   # TODO: testonly
-  deps = [
-    ":test",
-  ]
+  deps = [ ":test" ]
 }
 
 source_set("test") {
   # TODO: testonly = true
-  sources = [
-    "acpi_tables_test.cc",
-  ]
+  sources = [ "acpi_tables_test.cc" ]
   deps = [
     ":acpi_tables.headers",
     "$zx/kernel/lib/unittest",

@@ -5,9 +5,7 @@
 import("//src/virtualization/buildtools/romfs_image.gni")
 
 executable("mkromfs") {
-  sources = [
-    "mkromfs.cc",
-  ]
+  sources = [ "mkromfs.cc" ]
 }
 
 test_file = "${target_out_dir}/foo"
@@ -16,23 +14,15 @@ test_image = "${target_out_dir}/test.img"
 
 romfs_image("romfs_test_image") {
   write_file(test_file, test_file_contents)
-  inputs = [
-    test_file,
-  ]
+  inputs = [ test_file ]
   output = test_image
 }
 
 action("romfs_test_image_verify") {
-  deps = [
-    ":romfs_test_image",
-  ]
+  deps = [ ":romfs_test_image" ]
   script = "romfsck.py"
-  inputs = [
-    test_image,
-  ]
-  outputs = [
-    "${test_image}.verify",
-  ]
+  inputs = [ test_image ]
+  outputs = [ "${test_image}.verify" ]
   args = [
     rebase_path(test_image, root_out_dir),
     rebase_path("${test_image}.verify", root_out_dir),

@@ -92,8 +92,8 @@ rustc_library("lib") {
   ]
 
   test_deps = [
-    "//src/storage/lib/pseudo-fs",
     "//src/lib/fuchsia-async",
+    "//src/storage/lib/pseudo-fs",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
   ]
@@ -126,17 +126,13 @@ package("sl4f") {
     },
   ]
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "sl4f"
 }
 
 test_package("sl4f-service-tests") {
-  deps = [
-    ":lib_test",
-  ]
+  deps = [ ":lib_test" ]
 
   resources = [
     {
@@ -176,9 +172,7 @@ config_data("fake-factory-store-providers-config") {
 }
 
 unittest_package("sl4f-tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {
@@ -209,10 +203,6 @@ group("tests") {
 
 config_data("sl4f_sysmgr_config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "sl4f.config",
-  ]
-  sources = [
-    "config/sl4f_sysmgr.config",
-  ]
+  outputs = [ "sl4f.config" ]
+  sources = [ "config/sl4f_sysmgr.config" ]
 }

@@ -45,9 +45,7 @@ zx_library("ngunwind") {
   ]
 
   configs += [ ":private_config" ]
-  deps = [
-    "$zx/system/ulib/zircon",
-  ]
+  deps = [ "$zx/system/ulib/zircon" ]
   sources = [
     "src/dwarf/Gexpr.c",
     "src/dwarf/Gfde.c",

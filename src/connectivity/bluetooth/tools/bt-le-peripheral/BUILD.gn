@@ -29,9 +29,7 @@ rustc_binary("bt-le-peripheral") {
 test_package("tests") {
   package_name = "bt-le-peripheral-tests"
 
-  deps = [
-    ":bt-le-peripheral_test",
-  ]
+  deps = [ ":bt-le-peripheral_test" ]
 
   tests = [
     {

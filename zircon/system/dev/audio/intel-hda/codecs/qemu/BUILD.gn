@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("qemu") {
-  deps = [
-    ":qemu-audio-codec",
-  ]
+  deps = [ ":qemu-audio-codec" ]
 }
 
 zx_driver("qemu-audio-codec") {

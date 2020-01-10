@@ -41,16 +41,12 @@ if (current_toolchain == host_toolchain) {
       "//zircon/public/lib/fit",
     ]
 
-    public_deps = [
-      "//zircon/system/public",
-    ]
+    public_deps = [ "//zircon/system/public" ]
   }
 
   source_set("host_tests") {
     testonly = true
-    sources = [
-      "comparator_test.cc",
-    ]
+    sources = [ "comparator_test.cc" ]
 
     deps = [
       ":host_lib",
@@ -68,9 +64,7 @@ action("json_for_test") {
     "//sdk/lib/fidl/cpp/test:frobinator",
     "//zircon/system/fidl/fuchsia-io",
   ]
-  outputs = [
-    "$target_gen_dir/library_loader_test_data.h",
-  ]
+  outputs = [ "$target_gen_dir/library_loader_test_data.h" ]
   script = "generate_test_includes.sh"
   args = [
     rebase_path(target_gen_dir, root_build_dir) + "/library_loader_test_data.h",
@@ -99,19 +93,13 @@ fidl("fidl") {
 fidl("fidl-composed") {
   name = "test.fidlcat.composedinto"
 
-  sources = [
-    "testdata/composed_into.test.fidl",
-  ]
+  sources = [ "testdata/composed_into.test.fidl" ]
 
-  public_deps = [
-    ":fidl",
-  ]
+  public_deps = [ ":fidl" ]
 }
 
 fidl("fidl-sys") {
   name = "test.fidlcat.sys"
 
-  sources = [
-    "testdata/sys.test.fidl",
-  ]
+  sources = [ "testdata/sys.test.fidl" ]
 }

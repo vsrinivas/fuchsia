@@ -6,9 +6,7 @@ import("//build/go/go_library.gni")
 
 # Do not use this target directly, instead depend on //src/lib/syslog/go/src/syslog:syslog_gotests.
 group("syslog_gotests") {
-  public_deps = [
-    "//src/lib/syslog/go/src/syslog:syslog_gotests",
-  ]
+  public_deps = [ "//src/lib/syslog/go/src/syslog:syslog_gotests" ]
   testonly = true
 }
 
@@ -16,7 +14,5 @@ group("syslog_gotests") {
 go_library("syslog") {
   name = "syslog_forwarding_target"
 
-  deps = [
-    "//src/lib/syslog/go/src/syslog:syslog",
-  ]
+  deps = [ "//src/lib/syslog/go/src/syslog:syslog" ]
 }

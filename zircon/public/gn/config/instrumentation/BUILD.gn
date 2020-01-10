@@ -33,9 +33,7 @@ config("asan") {
 
 source_set("asan_default_options") {
   if (asan_default_options != "") {
-    sources = [
-      "asan_default_options.c",
-    ]
+    sources = [ "asan_default_options.c" ]
     defines = [ "ASAN_DEFAULT_OPTIONS=\"${asan_default_options}\"" ]
 
     # On Fuchsia, the ASan runtime is dynamically linked and needs to have
@@ -54,9 +52,7 @@ config("ubsan") {
 
 source_set("ubsan_default_options") {
   if (ubsan_default_options != "") {
-    sources = [
-      "ubsan_default_options.c",
-    ]
+    sources = [ "ubsan_default_options.c" ]
     defines = [ "UBSAN_DEFAULT_OPTIONS=\"${ubsan_default_options}\"" ]
 
     # On Fuchsia, the Ubsan runtime is dynamically linked and needs to have
@@ -123,8 +119,6 @@ config("profile") {
 group("profile_deps") {
   if (is_fuchsia && !is_kernel) {
     # The statically-linked profiling runtime depends on libzircon.
-    deps = [
-      "$zx/system/ulib/zircon",
-    ]
+    deps = [ "$zx/system/ulib/zircon" ]
   }
 }

@@ -10,7 +10,5 @@ group("gtest") {
   public_configs =
       [ "//garnet/drivers/gpu/msd-arm-mali:msd_tests_include_config" ]
 
-  public_deps = [
-    "unit_tests:tests_requiring_hardware",
-  ]
+  public_deps = [ "unit_tests:tests_requiring_hardware" ]
 }

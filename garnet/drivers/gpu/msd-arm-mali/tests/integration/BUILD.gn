@@ -7,9 +7,7 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 group("integration") {
   testonly = true
 
-  public_deps = [
-    ":msd_arm_mali_integration_tests",
-  ]
+  public_deps = [ ":msd_arm_mali_integration_tests" ]
 }
 
 executable("msd_arm_mali_integration_tests") {
@@ -41,7 +39,5 @@ executable("msd_arm_mali_integration_tests") {
     "//zircon/system/fidl/fuchsia-device:fuchsia-device_llcpp",
   ]
 
-  deps = [
-    "../../include",
-  ]
+  deps = [ "../../include" ]
 }

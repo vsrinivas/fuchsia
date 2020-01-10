@@ -30,9 +30,7 @@ rustc_library("fuchsia-stream-processors") {
 }
 
 test_package("fuchsia-stream-processors-tests") {
-  deps = [
-    ":fuchsia-stream-processors_test",
-  ]
+  deps = [ ":fuchsia-stream-processors_test" ]
 
   tests = [
     {

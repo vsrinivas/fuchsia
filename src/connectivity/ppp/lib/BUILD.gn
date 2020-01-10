@@ -19,9 +19,7 @@ executable("ppp-tests") {
 test_package("tests") {
   package_name = "ppp-tests"
 
-  deps = [
-    ":ppp-tests",
-  ]
+  deps = [ ":ppp-tests" ]
 
   tests = [
     {

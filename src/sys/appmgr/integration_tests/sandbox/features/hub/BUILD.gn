@@ -15,9 +15,7 @@ group("hub") {
 }
 
 sandbox_test_package("has_hub") {
-  sources = [
-    "has_hub.cc",
-  ]
+  sources = [ "has_hub.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -29,9 +27,7 @@ sandbox_test_package("has_hub") {
 sandbox_test_package("has_hub_deprecated_shell") {
   deprecated_shell = "//build"
 
-  sources = [
-    "has_hub.cc",
-  ]
+  sources = [ "has_hub.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -41,9 +37,7 @@ sandbox_test_package("has_hub_deprecated_shell") {
 }
 
 sandbox_test_package("no_hub") {
-  sources = [
-    "no_hub.cc",
-  ]
+  sources = [ "no_hub.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",

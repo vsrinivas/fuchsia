@@ -10,9 +10,7 @@ import("//build/testing/environments.gni")
 executable("bin") {
   output_name = "inspect_health_unittests"
   testonly = true
-  sources = [
-    "health_unittest.cc",
-  ]
+  sources = [ "health_unittest.cc" ]
   public_deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
@@ -29,9 +27,7 @@ executable("bin") {
 }
 
 test_package("inspect_health_unittests") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   tests = [
     {

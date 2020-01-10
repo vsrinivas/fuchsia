@@ -10,9 +10,7 @@ import("//build/go/toolchain.gni")
 go_binary("ifconfig") {
   gopackage = "netstack/ifconfig"
 
-  deps = [
-    ":ifconfig_lib",
-  ]
+  deps = [ ":ifconfig_lib" ]
 }
 
 go_library("ifconfig_lib") {
@@ -20,16 +18,14 @@ go_library("ifconfig_lib") {
 
   deps = [
     "../:netstack_lib",
-    "//src/lib/component/go/src/app",
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//sdk/fidl/fuchsia.wlan.service($go_toolchain)",
+    "//src/lib/component/go/src/app",
   ]
 }
 
 go_test("netstack_ifconfig_test") {
-  gopackages = ["netstack/ifconfig"]
-  deps = [
-    ":ifconfig_lib",
-  ]
+  gopackages = [ "netstack/ifconfig" ]
+  deps = [ ":ifconfig_lib" ]
 }

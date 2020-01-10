@@ -11,9 +11,7 @@ sdk_executable("bin") {
 
   category = "partner"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//garnet/lib/far",
@@ -22,9 +20,7 @@ sdk_executable("bin") {
 }
 
 package("far") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -35,10 +31,6 @@ package("far") {
 }
 
 install_host_tools("host") {
-  deps = [
-    ":bin",
-  ]
-  outputs = [
-    "far",
-  ]
+  deps = [ ":bin" ]
+  outputs = [ "far" ]
 }

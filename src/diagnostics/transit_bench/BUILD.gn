@@ -12,9 +12,7 @@ test_package("transit_bench") {
       name = "transit_bench"
     },
   ]
-  public_deps = [
-    ":bin",
-  ]
+  public_deps = [ ":bin" ]
 }
 
 rustc_binary("bin") {

@@ -24,17 +24,13 @@ source_set("scoped_tmpfs") {
     "//zircon/public/lib/sync",
   ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
 source_set("unittests") {
   testonly = true
 
-  sources = [
-    "scoped_tmpfs_unittest.cc",
-  ]
+  sources = [ "scoped_tmpfs_unittest.cc" ]
 
   deps = [
     ":scoped_tmpfs",

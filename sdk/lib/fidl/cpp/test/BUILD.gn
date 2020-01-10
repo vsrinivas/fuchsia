@@ -17,9 +17,7 @@ source_set("test") {
     "frobinator_impl.cc",
   ]
 
-  public_deps = [
-    ":frobinator",
-  ]
+  public_deps = [ ":frobinator" ]
 
   deps = [
     "//sdk/lib/fidl/cpp",
@@ -38,7 +36,5 @@ fidl("frobinator") {
 
   name = "fidl.test.frobinator"
 
-  sources = [
-    "frobinator.test.fidl",
-  ]
+  sources = [ "frobinator.test.fidl" ]
 }

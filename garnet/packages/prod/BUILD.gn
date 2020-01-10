@@ -7,9 +7,7 @@
 
 group("tz-util") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/tz-util",
-  ]
+  public_deps = [ "//garnet/bin/tz-util" ]
 }
 
 group("broadcom") {
@@ -23,9 +21,7 @@ group("broadcom") {
 
 group("bluetooth_hid") {
   testonly = true
-  public_deps = [
-    "//src/connectivity/bluetooth/profiles/bt-hog",
-  ]
+  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-hog" ]
 }
 
 group("netcfg") {
@@ -53,9 +49,7 @@ group("tracing") {
 
 group("thermd") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/thermd",
-  ]
+  public_deps = [ "//garnet/bin/thermd" ]
 }
 
 group("bluetooth_intel") {
@@ -100,30 +94,22 @@ group("cpuperf") {
 
 group("auth") {
   testonly = true
-  public_deps = [
-    "//src/identity/bin:core",
-  ]
+  public_deps = [ "//src/identity/bin:core" ]
 }
 
 group("bindc") {
   testonly = true
-  public_deps = [
-    "//tools/bindc",
-  ]
+  public_deps = [ "//tools/bindc" ]
 }
 
 group("ssh") {
   testonly = true
-  public_deps = [
-    "//third_party/openssh-portable:openssh-tools",
-  ]
+  public_deps = [ "//third_party/openssh-portable:openssh-tools" ]
 }
 
 group("sysmgr") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/sysmgr",
-  ]
+  public_deps = [ "//garnet/bin/sysmgr" ]
 }
 
 # WARNING: Known to topaz.
@@ -153,9 +139,7 @@ group("drivers") {
 
 group("openthread") {
   testonly = true
-  public_deps = [
-    "//src/connectivity/openthread/drivers/ot-radio:openthread",
-  ]
+  public_deps = [ "//src/connectivity/openthread/drivers/ot-radio:openthread" ]
 }
 
 group("all") {
@@ -323,16 +307,12 @@ group("insntrace") {
 
 group("setui_service") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/setui:setui_service",
-  ]
+  public_deps = [ "//garnet/bin/setui:setui_service" ]
 }
 
 group("openssh") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/sshd-host",
-  ]
+  public_deps = [ "//garnet/bin/sshd-host" ]
 }
 
 group("guest_runner") {
@@ -359,16 +339,12 @@ group("guest_runner") {
 
 group("usb_video") {
   testonly = true
-  public_deps = [
-    "//src/camera/drivers/usb_video",
-  ]
+  public_deps = [ "//src/camera/drivers/usb_video" ]
 }
 
 group("virtual_camera") {
   testonly = true
-  public_deps = [
-    "//src/camera/drivers/virtual_camera",
-  ]
+  public_deps = [ "//src/camera/drivers/virtual_camera" ]
 }
 
 group("bluetooth_atheros") {
@@ -381,9 +357,7 @@ group("bluetooth_atheros") {
 
 group("bluetooth_hci") {
   testonly = true
-  public_deps = [
-    "//src/connectivity/bluetooth/hci/passthrough",
-  ]
+  public_deps = [ "//src/connectivity/bluetooth/hci/passthrough" ]
 }
 
 group("cmdutils") {
@@ -399,9 +373,7 @@ group("cmdutils") {
 
 group("pkg_ctl") {
   testonly = true
-  public_deps = [
-    "//src/sys/pkg/bin/pkgctl",
-  ]
+  public_deps = [ "//src/sys/pkg/bin/pkgctl" ]
 }
 
 group("bluetooth_drivers") {
@@ -418,9 +390,7 @@ group("bluetooth_drivers") {
 
 group("scpi") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/scpi",
-  ]
+  public_deps = [ "//garnet/bin/scpi" ]
 }
 
 group("vboot_reference") {
@@ -433,9 +403,7 @@ group("vboot_reference") {
 
 group("odu") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/odu",
-  ]
+  public_deps = [ "//garnet/bin/odu" ]
 }
 
 group("cobalt_client") {
@@ -465,44 +433,32 @@ group("bluetooth_profiles") {
 
 group("scenic_tools") {
   testonly = true
-  public_deps = [
-    "//garnet/packages/tools:scenic",
-  ]
+  public_deps = [ "//garnet/packages/tools:scenic" ]
 }
 
 group("pkg_cache") {
   testonly = true
-  public_deps = [
-    "//src/sys/pkg/bin/pkg-cache",
-  ]
+  public_deps = [ "//src/sys/pkg/bin/pkg-cache" ]
 }
 
 group("root_ssl_certificates") {
   testonly = true
-  public_deps = [
-    "//garnet/lib/root_ssl_certificates",
-  ]
+  public_deps = [ "//garnet/lib/root_ssl_certificates" ]
 }
 
 group("battery_manager") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/battery_manager:battery_manager",
-  ]
+  public_deps = [ "//garnet/bin/battery_manager:battery_manager" ]
 }
 
 group("network_time") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/network_time_service",
-  ]
+  public_deps = [ "//garnet/bin/network_time_service" ]
 }
 
 group("vim") {
   testonly = true
-  public_deps = [
-    "//third_party/vim",
-  ]
+  public_deps = [ "//third_party/vim" ]
 }
 
 group("telephony") {
@@ -519,16 +475,12 @@ group("telephony") {
 
 group("tiles") {
   testonly = true
-  public_deps = [
-    "//src/ui/tools/tiles",
-  ]
+  public_deps = [ "//src/ui/tools/tiles" ]
 }
 
 group("timezone") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/timezone",
-  ]
+  public_deps = [ "//garnet/bin/timezone" ]
 }
 
 group("vulkan") {
@@ -541,51 +493,37 @@ group("vulkan") {
 
 group("run") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/run",
-  ]
+  public_deps = [ "//garnet/bin/run" ]
 }
 
 group("pkg_resolver") {
   testonly = true
-  public_deps = [
-    "//src/sys/pkg/bin/pkg-resolver",
-  ]
+  public_deps = [ "//src/sys/pkg/bin/pkg-resolver" ]
 }
 
 group("chrealm") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/chrealm",
-  ]
+  public_deps = [ "//garnet/bin/chrealm" ]
 }
 
 group("bluetooth_avrcp") {
   testonly = true
-  public_deps = [
-    "//src/connectivity/bluetooth/profiles/bt-avrcp",
-  ]
+  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-avrcp" ]
 }
 
 group("bluetooth_a2dp") {
   testonly = true
-  public_deps = [
-    "//src/connectivity/bluetooth/profiles/bt-a2dp-sink",
-  ]
+  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp-sink" ]
 }
 
 group("amber") {
   testonly = true
-  public_deps = [
-    "//src/sys/pkg/bin/amber",
-  ]
+  public_deps = [ "//src/sys/pkg/bin/amber" ]
 }
 
 group("network-speed-test") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/network-speed-test",
-  ]
+  public_deps = [ "//garnet/bin/network-speed-test" ]
 }
 
 group("sbase") {
@@ -690,16 +628,12 @@ group("runtime") {
 
 group("device_settings") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/device_settings:device_settings_manager",
-  ]
+  public_deps = [ "//garnet/bin/device_settings:device_settings_manager" ]
 }
 
 group("terminal") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/terminal",
-  ]
+  public_deps = [ "//garnet/bin/terminal" ]
 }
 
 group("wlanif") {
@@ -712,9 +646,7 @@ group("wlanif") {
 
 group("tts") {
   testonly = true
-  public_deps = [
-    "//src/speech/tts:tts_service",
-  ]
+  public_deps = [ "//src/speech/tts:tts_service" ]
 }
 
 if (target_cpu == "arm64") {
@@ -762,9 +694,7 @@ group("ralink") {
 
 group("iquery") {
   testonly = true
-  public_deps = [
-    "//src/diagnostics/iquery",
-  ]
+  public_deps = [ "//src/diagnostics/iquery" ]
 }
 
 group("bluetooth_core") {
@@ -787,16 +717,12 @@ group("appmgr") {
 
 group("debug_agent") {
   testonly = true
-  public_deps = [
-    "//src/developer/debug/debug_agent",
-  ]
+  public_deps = [ "//src/developer/debug/debug_agent" ]
 }
 
 group("sysmem_connector") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/sysmem_connector",
-  ]
+  public_deps = [ "//garnet/bin/sysmem_connector" ]
 }
 
 group("wlan_drivers") {
@@ -814,9 +740,7 @@ group("wlan_drivers") {
 
 group("fortune") {
   testonly = true
-  public_deps = [
-    "//examples/fortune",
-  ]
+  public_deps = [ "//examples/fortune" ]
 }
 
 group("bluetooth_all") {
@@ -850,9 +774,7 @@ if (target_cpu == "x64") {
 
 group("magma-img-rgx-mt8167") {
   testonly = true
-  public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-img-rgx:magma-vulkan",
-  ]
+  public_deps = [ "//garnet/lib/magma/gnbuild/magma-img-rgx:magma-vulkan" ]
 }
 
 group("magma-qcom-adreno") {
@@ -865,16 +787,12 @@ group("magma-qcom-adreno") {
 
 group("magma-vsl-gc") {
   testonly = true
-  public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-vsl-gc:magma-vulkan",
-  ]
+  public_deps = [ "//garnet/lib/magma/gnbuild/magma-vsl-gc:magma-vulkan" ]
 }
 
 group("setui_client") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/setui_client",
-  ]
+  public_deps = [ "//garnet/bin/setui_client" ]
 }
 
 group("tee_manager") {
@@ -892,9 +810,7 @@ group("sysmem-assistant") {
 
 group("goldfish-vulkan") {
   testonly = true
-  public_deps = [
-    "//garnet/lib/goldfish-vulkan/gnbuild:goldfish-vulkan",
-  ]
+  public_deps = [ "//garnet/lib/goldfish-vulkan/gnbuild:goldfish-vulkan" ]
 }
 
 group("factory_reset") {
@@ -907,7 +823,5 @@ group("factory_reset") {
 
 group("ui_policy") {
   testonly = true
-  public_deps = [
-    "//src/ui/policy:configs",
-  ]
+  public_deps = [ "//src/ui/policy:configs" ]
 }

@@ -53,9 +53,7 @@ executable("virtual-console") {
               "vc-display.cc",
               "vc-log.cc",
             ]
-  deps = [
-    ":common",
-  ]
+  deps = [ ":common" ]
 }
 
 test("virtual-console-test-display") {
@@ -90,9 +88,7 @@ test("virtual-console-test-text") {
 }
 
 test("virtual-console-test-integration") {
-  sources = [
-    "vc-integration-test.cc",
-  ]
+  sources = [ "vc-integration-test.cc" ]
 
   deps = [
     "//zircon/public/lib/fdio",

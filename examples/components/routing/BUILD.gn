@@ -6,8 +6,8 @@ import("//build/package.gni")
 
 package("components_routing_example") {
   deps = [
-    "//examples/components/routing/echo_server",
     "//examples/components/routing/echo_client",
+    "//examples/components/routing/echo_server",
   ]
   binaries = [
     {

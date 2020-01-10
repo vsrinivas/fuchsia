@@ -7,9 +7,7 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "echo_client_llcpp"
 
-  sources = [
-    "echo_client.cc",
-  ]
+  sources = [ "echo_client.cc" ]
 
   deps = [
     "//garnet/examples/fidl/services:echo_llcpp",
@@ -24,9 +22,7 @@ executable("bin") {
 }
 
 package("echo_client_llcpp") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "echo_client_llcpp"
 

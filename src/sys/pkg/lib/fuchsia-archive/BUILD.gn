@@ -20,9 +20,7 @@ rustc_library("fuchsia-archive") {
 }
 
 unittest_package("fuchsia-archive-tests") {
-  deps = [
-    ":fuchsia-archive_test",
-  ]
+  deps = [ ":fuchsia-archive_test" ]
 
   tests = [
     {
@@ -34,7 +32,5 @@ unittest_package("fuchsia-archive-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":fuchsia-archive-tests",
-  ]
+  public_deps = [ ":fuchsia-archive-tests" ]
 }

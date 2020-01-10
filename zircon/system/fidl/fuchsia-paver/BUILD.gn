@@ -5,9 +5,7 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-paver") {
-  sources = [
-    "paver.fidl",
-  ]
+  sources = [ "paver.fidl" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-block",
     "$zx/system/fidl/fuchsia-hardware-block-volume",

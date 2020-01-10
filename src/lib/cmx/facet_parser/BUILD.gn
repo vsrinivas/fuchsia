@@ -26,9 +26,7 @@ executable("tests") {
 
   output_name = "cmx_facet_parser_unittest"
 
-  sources = [
-    "cmx_facet_parser_unittest.cc",
-  ]
+  sources = [ "cmx_facet_parser_unittest.cc" ]
 
   deps = [
     ":cmx_facet_parser",
@@ -42,9 +40,7 @@ executable("tests") {
 }
 
 test_package("cmx_facet_parser_unittests") {
-  deps = [
-    ":tests",
-  ]
+  deps = [ ":tests" ]
   tests = [
     {
       name = "cmx_facet_parser_unittest"

@@ -4,15 +4,10 @@
 
 group("tools") {
   testonly = true
-  deps = [
-    "banjo"
-  ]
+  deps = [ "banjo" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "banjo:tests"
-  ]
+  deps = [ "banjo:tests" ]
 }
-

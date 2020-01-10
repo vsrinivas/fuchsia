@@ -6,7 +6,5 @@ import("//build/config.gni")
 
 config_data("config") {
   for_pkg = "sysmgr"
-  sources = [
-    "netstack.config",
-  ]
+  sources = [ "netstack.config" ]
 }

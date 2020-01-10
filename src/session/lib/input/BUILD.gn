@@ -31,9 +31,7 @@ rustc_library("input") {
 }
 
 test_package("input_tests") {
-  deps = [
-    ":input_test",
-  ]
+  deps = [ ":input_test" ]
   tests = [
     {
       name = "input_lib_test"

@@ -44,16 +44,12 @@ source_set("gesture") {
     "//src/ui/lib/glm_workaround",
   ]
 
-  deps = [
-    "//src/lib/syslog/cpp",
-  ]
+  deps = [ "//src/lib/syslog/cpp" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":input_unit_tests",
-  ]
+  deps = [ ":input_unit_tests" ]
 }
 
 test_package("input_unit_tests") {
@@ -64,9 +60,7 @@ test_package("input_unit_tests") {
     },
   ]
 
-  deps = [
-    ":gesture_tests",
-  ]
+  deps = [ ":gesture_tests" ]
 }
 
 executable("gesture_tests") {

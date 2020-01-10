@@ -9,17 +9,11 @@ import("//build/test/test_package.gni")
 # A collection of utilities useful to debuggers and similar programs.
 
 static_library("elflib") {
-  sources = [
-    "elflib.cc",
-  ]
+  sources = [ "elflib.cc" ]
 
-  deps = [
-    "//zircon/system/public",
-  ]
+  deps = [ "//zircon/system/public" ]
 
-  public_deps = [
-    "//zircon/public/lib/fbl",
-  ]
+  public_deps = [ "//zircon/public/lib/fbl" ]
 }
 
 # An example stripped binary. Originally copied from out/x64/cowsay.
@@ -32,9 +26,7 @@ static_library("elflib") {
 #     --strip-sections out/default/exe.unstripped/cowsay \
 #     src/lib/elflib/test_data/unstripped_example_stripped.arm64.elf
 test("elflib_unittest") {
-  sources = [
-    "elflib_unittest.cc",
-  ]
+  sources = [ "elflib_unittest.cc" ]
 
   deps = [
     ":elflib",
@@ -45,9 +37,7 @@ test("elflib_unittest") {
 }
 
 test_package("elflib_tests") {
-  deps = [
-    ":elflib_unittest",
-  ]
+  deps = [ ":elflib_unittest" ]
 
   tests = [
     {
@@ -83,18 +73,12 @@ test_package("elflib_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":elflib_tests",
-  ]
+  deps = [ ":elflib_tests" ]
 }
 
 fuzzer("elflib_fuzzer") {
-  sources = [
-    "elflib_fuzztest.cc",
-  ]
-  deps = [
-    ":elflib",
-  ]
+  sources = [ "elflib_fuzztest.cc" ]
+  deps = [ ":elflib" ]
 }
 
 fuzzers_package("elflib_fuzzers") {

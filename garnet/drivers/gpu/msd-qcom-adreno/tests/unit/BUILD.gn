@@ -6,9 +6,7 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 
 group("msd_qcom_adreno_unittests_linux_arm64") {
   testonly = true
-  deps = [
-    ":msd_qcom_adreno_unittests(//build/toolchain:linux_arm64)",
-  ]
+  deps = [ ":msd_qcom_adreno_unittests(//build/toolchain:linux_arm64)" ]
 }
 
 executable("msd_qcom_adreno_unittests") {

@@ -6,9 +6,7 @@ import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia.device.lifecycle.test") {
   visibility = [ ":*" ]
-  sources = [
-    "lifecycle.test.fidl",
-  ]
+  sources = [ "lifecycle.test.fidl" ]
 }
 
 if (current_toolchain != default_toolchain) {
@@ -33,9 +31,7 @@ if (current_toolchain != default_toolchain) {
   }
 
   zx_test("ddk-lifecycle") {
-    sources = [
-      "test.cc",
-    ]
+    sources = [ "test.cc" ]
     deps = [
       ":fuchsia.device.lifecycle.test.llcpp",
       "$zx/system/ulib/ddk",

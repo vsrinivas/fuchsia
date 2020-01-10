@@ -42,9 +42,7 @@ zx_library("test_support") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":fs_test_support",
-  ]
+  deps = [ ":fs_test_support" ]
 }
 
 zx_test("fs_test_support") {

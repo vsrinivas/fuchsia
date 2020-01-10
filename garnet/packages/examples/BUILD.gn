@@ -16,9 +16,7 @@ group("components") {
 
 group("fuchsia-framebuffer") {
   testonly = true
-  public_deps = [
-    "//garnet/public/rust/fuchsia-framebuffer:fb_box_rs",
-  ]
+  public_deps = [ "//garnet/public/rust/fuchsia-framebuffer:fb_box_rs" ]
 }
 
 group("carnelian") {
@@ -101,16 +99,12 @@ group("all") {
 
 group("eth-rs") {
   testonly = true
-  public_deps = [
-    "//examples/rust/eth-rs:eth-rs",
-  ]
+  public_deps = [ "//examples/rust/eth-rs:eth-rs" ]
 }
 
 group("netstack") {
   testonly = true
-  public_deps = [
-    "//garnet/examples/network:nc",
-  ]
+  public_deps = [ "//garnet/examples/network:nc" ]
 }
 
 group("http") {
@@ -163,16 +157,12 @@ group("overnet") {
 
 group("speech") {
   testonly = true
-  public_deps = [
-    "//examples/speech/tts/speak",
-  ]
+  public_deps = [ "//examples/speech/tts/speak" ]
 }
 
 group("vkcube-on-scenic") {
   testonly = true
-  public_deps = [
-    "//src/graphics/examples/vkcube:vkcube-on-scenic",
-  ]
+  public_deps = [ "//src/graphics/examples/vkcube:vkcube-on-scenic" ]
 }
 
 group("vulkaninfo") {
@@ -185,9 +175,7 @@ group("vulkaninfo") {
 
 group("benchmark") {
   testonly = true
-  public_deps = [
-    "//garnet/examples/benchmark",
-  ]
+  public_deps = [ "//garnet/examples/benchmark" ]
 }
 
 group("intl") {
@@ -201,9 +189,7 @@ group("intl") {
 
 group("bluetooth") {
   testonly = true
-  public_deps = [
-    "//src/connectivity/bluetooth/examples",
-  ]
+  public_deps = [ "//src/connectivity/bluetooth/examples" ]
 }
 
 group("tcp") {
@@ -216,28 +202,20 @@ group("tcp") {
 
 group("rust") {
   testonly = true
-  public_deps = [
-    "//examples/rust:garnet-rust-examples",
-  ]
+  public_deps = [ "//examples/rust:garnet-rust-examples" ]
 }
 
 group("vkcube-on-fb") {
   testonly = true
-  public_deps = [
-    "//src/graphics/examples/vkcube:vkcube-on-fb",
-  ]
+  public_deps = [ "//src/graphics/examples/vkcube:vkcube-on-fb" ]
 }
 
 group("vkcube-skip-present") {
   testonly = true
-  public_deps = [
-    "//src/graphics/examples/vkcube:vkcube-skip-present",
-  ]
+  public_deps = [ "//src/graphics/examples/vkcube:vkcube-skip-present" ]
 }
 
 group("vkprimer") {
   testonly = true
-  public_deps = [
-    "//src/graphics/examples/vkprimer",
-  ]
+  public_deps = [ "//src/graphics/examples/vkprimer" ]
 }

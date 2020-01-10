@@ -7,9 +7,7 @@ visibility = [ "//src/ledger/*" ]
 group("get_entry") {
   testonly = true
 
-  public_deps = [
-    ":ledger_benchmark_get_entry",
-  ]
+  public_deps = [ ":ledger_benchmark_get_entry" ]
 }
 
 executable("ledger_benchmark_get_entry") {
@@ -32,9 +30,7 @@ executable("ledger_benchmark_get_entry") {
     "//zircon/public/lib/trace-provider-so",
   ]
 
-  sources = [
-    "get_entry.cc",
-  ]
+  sources = [ "get_entry.cc" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

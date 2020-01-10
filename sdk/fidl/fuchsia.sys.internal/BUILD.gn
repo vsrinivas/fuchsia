@@ -12,7 +12,5 @@ fidl("fuchsia.sys.internal") {
     "source_identity.fidl",
   ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-io",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
 }

@@ -6,9 +6,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 
 test_package("sequential_futures_tests") {
-  deps = [
-    ":tests",
-  ]
+  deps = [ ":tests" ]
 
   tests = [
     {
@@ -31,7 +29,5 @@ rustc_library("sequential_futures") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":sequential_futures_test",
-  ]
+  public_deps = [ ":sequential_futures_test" ]
 }

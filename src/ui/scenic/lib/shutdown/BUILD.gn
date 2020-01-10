@@ -24,9 +24,7 @@ source_set("lifecycle_controller") {
     "lifecycle_controller_impl.h",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.lifecycle",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.lifecycle" ]
 
   deps = [
     ":shutdown",

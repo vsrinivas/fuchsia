@@ -33,13 +33,9 @@ source_set("test_fixture") {
 source_set("constants") {
   testonly = true
 
-  sources = [
-    "constants.h",
-  ]
+  sources = [ "constants.h" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.media",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.media" ]
 }
 
 # Base class for hermetic test cases
@@ -63,9 +59,7 @@ source_set("hermetic_audio_test") {
     "//src/lib/syslog/cpp",
   ]
 
-  deps = [
-    "//zircon/system/fidl/fuchsia-scheduler",
-  ]
+  deps = [ "//zircon/system/fidl/fuchsia-scheduler" ]
 }
 
 # Flexible utility class for channel-based communication (such as to drivers or device services).
@@ -88,7 +82,5 @@ source_set("null_renderer_capturer") {
     "null_audio_renderer.h",
   ]
 
-  deps = [
-    "//sdk/fidl/fuchsia.media",
-  ]
+  deps = [ "//sdk/fidl/fuchsia.media" ]
 }

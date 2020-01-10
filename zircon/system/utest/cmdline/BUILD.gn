@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("cmdline") {
-  sources = [
-    "args_parser_unittest.cc",
-  ]
+  sources = [ "args_parser_unittest.cc" ]
   deps = [
     "$zx/system/ulib/cmdline",
     "$zx/system/ulib/zxtest",

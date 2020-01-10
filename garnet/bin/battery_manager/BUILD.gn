@@ -34,9 +34,7 @@ rustc_binary("bin") {
 }
 
 package("battery_manager") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "battery_manager"
 
@@ -49,9 +47,7 @@ package("battery_manager") {
 }
 
 test_package("battery_manager_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

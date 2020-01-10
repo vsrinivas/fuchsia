@@ -4,9 +4,7 @@
 import("//build/package.gni")
 
 package("signal_generator") {
-  deps = [
-    ":sig_gen_bin",
-  ]
+  deps = [ ":sig_gen_bin" ]
 
   binaries = [
     {

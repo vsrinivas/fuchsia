@@ -22,9 +22,7 @@ rustc_library("eapol") {
 }
 
 unittest_package("eapol-tests") {
-  deps = [
-    ":eapol_test",
-  ]
+  deps = [ ":eapol_test" ]
 
   tests = [
     {

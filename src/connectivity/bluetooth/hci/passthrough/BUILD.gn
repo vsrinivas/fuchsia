@@ -8,9 +8,7 @@ import("//build/package.gni")
 driver_module("driver") {
   output_name = "bt-hci-passthrough"
 
-  sources = [
-    "passthrough.c",
-  ]
+  sources = [ "passthrough.c" ]
 
   deps = [
     "//src/devices:driver",
@@ -30,9 +28,7 @@ driver_module("driver") {
 package("passthrough") {
   deprecated_system_image = true
 
-  deps = [
-    ":driver",
-  ]
+  deps = [ ":driver" ]
 
   drivers = [
     {

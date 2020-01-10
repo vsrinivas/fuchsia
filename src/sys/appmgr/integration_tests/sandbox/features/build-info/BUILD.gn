@@ -7,15 +7,11 @@ import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 group("build-info") {
   testonly = true
-  deps = [
-    ":build_info_tests",
-  ]
+  deps = [ ":build_info_tests" ]
 }
 
 sandbox_test_package("build_info_tests") {
-  sources = [
-    "build_info.cc",
-  ]
+  sources = [ "build_info.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",

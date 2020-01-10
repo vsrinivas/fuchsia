@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("tee-test") {
-  sources = [
-    "tee-test.c",
-  ]
+  sources = [ "tee-test.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/tee-client-api",

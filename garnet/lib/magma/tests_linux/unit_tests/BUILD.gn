@@ -15,9 +15,7 @@ executable("virtmagma_unit_tests_linux") {
     "//third_party/rapidjson",
   ]
 
-  sources = [
-    "virtmagma_unit_tests.cc",
-  ]
+  sources = [ "virtmagma_unit_tests.cc" ]
 }
 
 executable("virtmagma_vulkan_unit_tests") {
@@ -29,19 +27,13 @@ executable("virtmagma_vulkan_unit_tests") {
     "//src/lib/vulkan",
   ]
 
-  sources = [
-    "virtmagma_vulkan_unit_tests.cc",
-  ]
+  sources = [ "virtmagma_vulkan_unit_tests.cc" ]
 }
 
 compiled_action("basic_compute") {
   tool = "//third_party/glslang:glslang_validator"
-  inputs = [
-    "${target_name}.glsl",
-  ]
-  outputs = [
-    "$target_gen_dir/${target_name}.h",
-  ]
+  inputs = [ "${target_name}.glsl" ]
+  outputs = [ "$target_gen_dir/${target_name}.h" ]
   args = [
     rebase_path("${target_name}.glsl", root_build_dir),
     "-s",
@@ -57,9 +49,7 @@ compiled_action("basic_compute") {
 
 group("drm_unit_tests_linux_arm64") {
   testonly = true
-  deps = [
-    ":drm_unit_tests(//build/toolchain:linux_arm64)",
-  ]
+  deps = [ ":drm_unit_tests(//build/toolchain:linux_arm64)" ]
 }
 
 executable("drm_unit_tests") {

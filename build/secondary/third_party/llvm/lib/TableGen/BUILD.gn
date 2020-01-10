@@ -17,7 +17,5 @@ static_library("TableGen") {
     "TableGenBackend.cpp",
   ]
 
-  public_deps = [
-    "../Support",
-  ]
+  public_deps = [ "../Support" ]
 }

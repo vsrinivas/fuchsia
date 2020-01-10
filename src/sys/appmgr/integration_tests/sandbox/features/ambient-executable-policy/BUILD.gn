@@ -16,9 +16,7 @@ group("ambient-executable-policy") {
 }
 
 sandbox_test_package("has_ambient_executable") {
-  sources = [
-    "has_ambient_executable.cc",
-  ]
+  sources = [ "has_ambient_executable.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -28,9 +26,7 @@ sandbox_test_package("has_ambient_executable") {
 }
 
 sandbox_test_package("no_ambient_executable") {
-  sources = [
-    "no_ambient_executable.cc",
-  ]
+  sources = [ "no_ambient_executable.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -40,9 +36,7 @@ sandbox_test_package("no_ambient_executable") {
 }
 
 sandbox_test_package("no_ambient_executable_with_features") {
-  sources = [
-    "no_ambient_executable.cc",
-  ]
+  sources = [ "no_ambient_executable.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -52,9 +46,7 @@ sandbox_test_package("no_ambient_executable_with_features") {
 }
 
 sandbox_test_package("no_ambient_executable_with_sandbox") {
-  sources = [
-    "no_ambient_executable.cc",
-  ]
+  sources = [ "no_ambient_executable.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",

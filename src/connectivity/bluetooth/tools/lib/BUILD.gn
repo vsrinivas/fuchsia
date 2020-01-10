@@ -13,7 +13,5 @@ source_set("lib") {
     "//zircon/public/lib/fbl",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/fit",
-  ]
+  public_deps = [ "//zircon/public/lib/fit" ]
 }

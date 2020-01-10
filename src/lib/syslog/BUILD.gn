@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("syslog") {
-  deps = [
-    "rust:syslog",
-  ]
+  deps = [ "rust:syslog" ]
 }
 
 group("tests") {

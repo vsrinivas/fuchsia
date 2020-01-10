@@ -44,9 +44,7 @@ rustc_test("test") {
 }
 
 test_package("account_manager_integration_test_pkg") {
-  deps = [
-    ":test",
-  ]
+  deps = [ ":test" ]
 
   tests = [
     {
@@ -61,9 +59,7 @@ package("account_manager_prototype") {
   # to integration tests.  This package is only available in tests and does not
   # change whether or not the account manager run as a system service has the
   # prototype enabled.
-  deps = [
-    "//src/identity/bin/account_manager:bin",
-  ]
+  deps = [ "//src/identity/bin/account_manager:bin" ]
 
   binary = "account_manager"
 

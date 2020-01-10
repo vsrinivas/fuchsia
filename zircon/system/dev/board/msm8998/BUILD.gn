@@ -3,16 +3,12 @@
 # found in the LICENSE file.
 
 zx_driver("msm8998") {
-  sources = [
-    "msm8998.cc",
-  ]
+  sources = [ "msm8998.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
   ]
-  data_deps = [
-    "$zx/kernel/target/arm64/boot-shim:msm8998",
-  ]
+  data_deps = [ "$zx/kernel/target/arm64/boot-shim:msm8998" ]
 }

@@ -6,15 +6,11 @@ import("$zx/public/gn/fuzzer.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":elfload-fuzzer",
-  ]
+  deps = [ ":elfload-fuzzer" ]
 }
 
 fuzzer("elfload-fuzzer") {
-  sources = [
-    "elfload-fuzzer.cc",
-  ]
+  sources = [ "elfload-fuzzer.cc" ]
   deps = [
     "$zx/kernel/vm",
     "$zx/system/ulib/elfload",

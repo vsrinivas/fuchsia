@@ -3,11 +3,7 @@
 # found in the LICENSE file.
 
 executable("vulkan_is_supported") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
-  deps = [
-    "//src/ui/lib/escher/util:check_vulkan_support",
-  ]
+  deps = [ "//src/ui/lib/escher/util:check_vulkan_support" ]
 }

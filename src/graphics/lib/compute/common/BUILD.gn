@@ -31,7 +31,5 @@ graphics_compute_unittests("common_unittests") {
     "file_utils_unittest.cc",
     "util_unittests.cc",
   ]
-  deps = [
-    ":common",
-  ]
+  deps = [ ":common" ]
 }

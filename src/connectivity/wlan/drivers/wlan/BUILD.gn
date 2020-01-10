@@ -69,9 +69,7 @@ executable("wlan_minstrel_unittest") {
 }
 
 test_package("wlan_drivers_tests") {
-  deps = [
-    ":wlan_minstrel_unittest",
-  ]
+  deps = [ ":wlan_minstrel_unittest" ]
   tests = [
     {
       name = "wlan_minstrel_unittest"
@@ -83,9 +81,7 @@ test_package("wlan_drivers_tests") {
 package("wlan") {
   deprecated_system_image = true
 
-  deps = [
-    ":wlan_driver",
-  ]
+  deps = [ ":wlan_driver" ]
 
   drivers = [
     {

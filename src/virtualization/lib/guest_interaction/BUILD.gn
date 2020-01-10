@@ -27,9 +27,7 @@ group("guest_interaction") {
 }
 
 proto_library("proto") {
-  sources = [
-    "proto/guest_interaction.proto",
-  ]
+  sources = [ "proto/guest_interaction.proto" ]
 
   generate_python = false
   cc_generator_options = "lite"
@@ -37,15 +35,11 @@ proto_library("proto") {
   generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
 
   import_dirs = [ "//third_party/protobuf/src" ]
-  deps = [
-    "//third_party/grpc:grpc++",
-  ]
+  deps = [ "//third_party/grpc:grpc++" ]
 }
 
 source_set("common") {
-  sources = [
-    "common.h",
-  ]
+  sources = [ "common.h" ]
   deps = [
     ":proto",
     "//third_party/grpc:grpc++",
@@ -93,9 +87,7 @@ source_set("server_lib") {
 
 source_set("operation_test_lib") {
   testonly = true
-  sources = [
-    "test/operation_test_lib.h",
-  ]
+  sources = [ "test/operation_test_lib.h" ]
   deps = [
     ":proto",
     "//src/lib/fxl",
@@ -108,9 +100,7 @@ source_set("operation_test_lib") {
 
 source_set("integration_test_lib") {
   testonly = true
-  sources = [
-    "test/operation_test_lib.h",
-  ]
+  sources = [ "test/operation_test_lib.h" ]
   deps = [
     ":proto",
     "//sdk/fidl/fuchsia.net.stack",
@@ -127,9 +117,7 @@ source_set("integration_test_lib") {
 
 executable("client_operation_test") {
   testonly = true
-  sources = [
-    "test/client_operation_test.cc",
-  ]
+  sources = [ "test/client_operation_test.cc" ]
   deps = [
     ":client_lib",
     ":fuchsia.netemul.guest",
@@ -146,9 +134,7 @@ executable("client_operation_test") {
 
 executable("server_operation_test") {
   testonly = true
-  sources = [
-    "test/server_operation_test.cc",
-  ]
+  sources = [ "test/server_operation_test.cc" ]
   deps = [
     ":operation_test_lib",
     ":proto",
@@ -197,9 +183,7 @@ test_package("guest_interaction_tests") {
 
 executable("debian_guest_interaction_daemon") {
   output_name = "guest_interaction_daemon"
-  sources = [
-    "server/debian_server.cc",
-  ]
+  sources = [ "server/debian_server.cc" ]
   deps = [
     ":platform_interface_posix",
     ":proto",
@@ -244,12 +228,8 @@ executable("server_daemon_test") {
 
 fidl("fuchsia.netemul.guest") {
   sdk_category = "internal"
-  sources = [
-    "fidl/fuchsia.netemul.guest_interaction.fidl",
-  ]
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-io",
-  ]
+  sources = [ "fidl/fuchsia.netemul.guest_interaction.fidl" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
 }
 
 executable("guest_discovery_service_bin") {
@@ -288,9 +268,7 @@ executable("guest_discovery_service_bin") {
 }
 
 package("guest_discovery_service") {
-  deps = [
-    ":guest_discovery_service_bin",
-  ]
+  deps = [ ":guest_discovery_service_bin" ]
 
   binary = "guest_discovery_service"
 
@@ -305,9 +283,7 @@ package("guest_discovery_service") {
 executable("guest_interaction_service_test") {
   testonly = true
 
-  sources = [
-    "test/service_integration_test.cc",
-  ]
+  sources = [ "test/service_integration_test.cc" ]
 
   deps = [
     ":common",

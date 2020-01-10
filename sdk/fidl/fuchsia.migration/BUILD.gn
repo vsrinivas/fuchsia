@@ -7,11 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.migration") {
   sdk_category = "partner"
 
-  sources = [
-    "migration.fidl",
-  ]
+  sources = [ "migration.fidl" ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-io",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
 }

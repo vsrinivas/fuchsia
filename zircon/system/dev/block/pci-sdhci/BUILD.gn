@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("pci-sdhci") {
-  sources = [
-    "pci-sdhci.c",
-  ]
+  sources = [ "pci-sdhci.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.pci",

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("aml-pwm") {
-  sources = [
-    "aml-pwm.cc",
-  ]
+  sources = [ "aml-pwm.cc" ]
   deps = [
     ":common",
     "$zx/system/dev/lib/mmio",

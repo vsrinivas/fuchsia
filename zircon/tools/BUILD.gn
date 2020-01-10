@@ -17,9 +17,7 @@ foreach(host, standard_build_hosts) {
     testonly = true
     data_keys = [ "tool_executables" ]
     walk_keys = [ "action_barrier" ]
-    deps = [
-      ":$_tools_target.redirect",
-    ]
+    deps = [ ":$_tools_target.redirect" ]
   }
   _all_hosts_deps += [ ":$_tools_target" ]
 
@@ -67,9 +65,7 @@ group("all-hosts") {
 copied_files_dir("tools") {
   testonly = true
   data_keys = [ "tool_executables" ]
-  deps = [
-    ":tools-${host_os}-${host_cpu}.redirect",
-  ]
+  deps = [ ":tools-${host_os}-${host_cpu}.redirect" ]
 }
 
 group("tests") {

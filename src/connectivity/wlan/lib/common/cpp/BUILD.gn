@@ -46,22 +46,20 @@ source_set("common") {
   ]
 
   public_deps = [
+    "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//sdk/fidl/fuchsia.wlan.mlme",
     "//sdk/fidl/fuchsia.wlan.stats",
-    "//zircon/system/banjo/ddk.hw.wlan.ieee80211",
-    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
-    "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.hw.wlan.ieee80211",
+    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
   ]
 
   public_configs = [ ":wlan_common_config" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 
-  deps = [
-    "//garnet/lib/wlan/protocol",
-  ]
+  deps = [ "//garnet/lib/wlan/protocol" ]
 }

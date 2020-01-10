@@ -35,8 +35,8 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-url",
     "//src/lib/inspect/rust/fuchsia-inspect",
-    "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/lib/syslog/rust:syslog",
+    "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/sys/pkg/lib/omaha-client",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
@@ -53,17 +53,15 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
-    "//third_party/rust_crates:pretty_assertions",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:pretty_assertions",
   ]
 
   non_rust_deps = [ "//zircon/public/lib/sysconfig-sync-client-c" ]
 }
 
 package("omaha-client") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -81,9 +79,7 @@ package("omaha-client") {
 }
 
 test_package("omaha-client-service-bin-tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {
@@ -104,44 +100,28 @@ metrics_registry("mos_metrics_registry") {
 
 config_data("omaha-client-config") {
   for_pkg = "omaha-client"
-  outputs = [
-    "omaha_app_id",
-  ]
-  sources = [
-    omaha_app_id_file,
-  ]
+  outputs = [ "omaha_app_id" ]
+  sources = [ omaha_app_id_file ]
 }
 
 config_data("omaha-client-test-config") {
   testonly = true
   for_pkg = "omaha-client-service-bin-tests"
-  outputs = [
-    "omaha_app_id",
-  ]
-  sources = [
-    rebase_path("test_data/omaha_test_app_id"),
-  ]
+  outputs = [ "omaha_app_id" ]
+  sources = [ rebase_path("test_data/omaha_test_app_id") ]
 }
 
 config_data("omaha-client-channels-test-config") {
   testonly = true
   for_pkg = "omaha-client-service-bin-tests"
-  outputs = [
-    "channel_config.json",
-  ]
-  sources = [
-    rebase_path("test_data/test_channel_config.json"),
-  ]
+  outputs = [ "channel_config.json" ]
+  sources = [ rebase_path("test_data/test_channel_config.json") ]
 }
 
 config_data("omaha-client-sysmgr-config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "omaha_client.config",
-  ]
-  sources = [
-    "sysmgr.config",
-  ]
+  outputs = [ "omaha_client.config" ]
+  sources = [ "sysmgr.config" ]
 }
 
 group("tests") {

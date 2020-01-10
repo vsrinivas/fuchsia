@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.ethernet") {
-  sources = [
-    "ethernet.banjo",
-  ]
+  sources = [ "ethernet.banjo" ]
 }

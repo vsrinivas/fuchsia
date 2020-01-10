@@ -8,9 +8,7 @@ zx_library("bootfs") {
   sdk = "source"
   sdk_headers = [ "lib/bootfs/parser.h" ]
 
-  sources = [
-    "parser.cc",
-  ]
+  sources = [ "parser.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
@@ -19,9 +17,7 @@ zx_library("bootfs") {
 }
 
 zx_test("bootfs-test") {
-  sources = [
-    "parser-test.cc",
-  ]
+  sources = [ "parser-test.cc" ]
   deps = [
     "$zx/system/ulib/bootfs",
     "$zx/system/ulib/fbl",
@@ -33,9 +29,7 @@ zx_test("bootfs-test") {
 }
 
 fuzzer("bootfs-parser-fuzzer") {
-  sources = [
-    "parser-fuzzer.cc",
-  ]
+  sources = [ "parser-fuzzer.cc" ]
   deps = [
     "$zx/system/ulib/bootfs",
     "$zx/system/ulib/fbl",

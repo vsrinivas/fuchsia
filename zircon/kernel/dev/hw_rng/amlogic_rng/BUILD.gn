@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("amlogic_rng") {
-  sources = [
-    "amlogic-rng.cc",
-  ]
+  sources = [ "amlogic-rng.cc" ]
   deps = [
     "$zx/kernel/dev/hw_rng",
     "$zx/kernel/dev/pdev",

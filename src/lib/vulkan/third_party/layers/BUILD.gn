@@ -25,9 +25,7 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 package("screenshot_layer") {
   deprecated_system_image = true
 
-  deps = [
-    ":VkLayer_screenshot",
-  ]
+  deps = [ ":VkLayer_screenshot" ]
 
   libraries = [
     {
@@ -46,9 +44,7 @@ package("screenshot_layer") {
 package("rfb_layer") {
   deprecated_system_image = true
 
-  deps = [
-    ":VkLayer_rfb",
-  ]
+  deps = [ ":VkLayer_rfb" ]
 
   libraries = [
     {
@@ -65,9 +61,7 @@ package("rfb_layer") {
 }
 
 shared_library("VkLayer_rfb") {
-  sources = [
-    "rfb.cpp",
-  ]
+  sources = [ "rfb.cpp" ]
   deps = [
     "//garnet/lib/vulkan/src/rfb_server",
     "//src/lib/vulkan:micro_layer_common",
@@ -80,7 +74,5 @@ shared_library("VkLayer_screenshot") {
     "screenshot_parsing.cpp",
     "screenshot_parsing.h",
   ]
-  deps = [
-    "//src/lib/vulkan:micro_layer_common",
-  ]
+  deps = [ "//src/lib/vulkan:micro_layer_common" ]
 }

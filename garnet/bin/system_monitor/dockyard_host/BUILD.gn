@@ -18,9 +18,7 @@ if (current_toolchain == host_toolchain) {
   }
 
   executable("dockyard_host") {
-    sources = [
-      "dockyard_main.cc",
-    ]
+    sources = [ "dockyard_main.cc" ]
 
     deps = [
       ":lib",
@@ -30,10 +28,6 @@ if (current_toolchain == host_toolchain) {
 }
 
 install_host_tools("host_tools") {
-  deps = [
-    ":dockyard_host",
-  ]
-  outputs = [
-    "dockyard_host",
-  ]
+  deps = [ ":dockyard_host" ]
+  outputs = [ "dockyard_host" ]
 }

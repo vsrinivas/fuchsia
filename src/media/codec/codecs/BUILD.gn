@@ -28,25 +28,15 @@ config("local_header_include_config") {
 }
 
 source_set("timestamp_extrapolator") {
-  public = [
-    "timestamp_extrapolator.h",
-  ]
-  sources = [
-    "timestamp_extrapolator.cc",
-  ]
+  public = [ "timestamp_extrapolator.h" ]
+  sources = [ "timestamp_extrapolator.cc" ]
   public_configs = [ ":local_header_include_config" ]
-  public_deps = [
-    "//zircon/public/lib/zx",
-  ]
+  public_deps = [ "//zircon/public/lib/zx" ]
 }
 
 source_set("chunk_input_stream") {
-  public = [
-    "chunk_input_stream.h",
-  ]
-  sources = [
-    "chunk_input_stream.cc",
-  ]
+  public = [ "chunk_input_stream.h" ]
+  sources = [ "chunk_input_stream.cc" ]
   public_configs = [ ":local_header_include_config" ]
   public_deps = [
     ":timestamp_extrapolator",
@@ -56,12 +46,8 @@ source_set("chunk_input_stream") {
 }
 
 source_set("output_sink") {
-  public = [
-    "output_sink.h",
-  ]
-  sources = [
-    "output_sink.cc",
-  ]
+  public = [ "output_sink.h" ]
+  sources = [ "output_sink.cc" ]
   public_configs = [ ":local_header_include_config" ]
   public_deps = [
     "//src/media/lib/codec_impl",

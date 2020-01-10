@@ -36,15 +36,11 @@ zx_library("backtrace") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":backtrace-test",
-  ]
+  deps = [ ":backtrace-test" ]
 }
 
 zx_test("backtrace-test") {
-  sources = [
-    "test/backtrace_test.cc",
-  ]
+  sources = [ "test/backtrace_test.cc" ]
 
   deps = [
     ":backtrace",

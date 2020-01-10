@@ -5,21 +5,15 @@
 import("//build/test/test_package.gni")
 
 source_set("timekeeper") {
-  sources = [
-    "clock.h",
-  ]
+  sources = [ "clock.h" ]
 
-  public_deps = [
-    "//zircon/public/lib/zx",
-  ]
+  public_deps = [ "//zircon/public/lib/zx" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("system") {
-  sources = [
-    "system_clock.h",
-  ]
+  sources = [ "system_clock.h" ]
 
   public_deps = [
     ":timekeeper",

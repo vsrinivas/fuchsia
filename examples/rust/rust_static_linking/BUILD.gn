@@ -14,15 +14,11 @@ rustc_library("static_linking") {
 }
 
 static_library("static") {
-  sources = [
-    "static.c",
-  ]
+  sources = [ "static.c" ]
 }
 
 unittest_package("static_linking_tests") {
-  deps = [
-    ":static_linking_test",
-  ]
+  deps = [ ":static_linking_test" ]
   tests = [
     {
       name = "static_linking_lib_test"

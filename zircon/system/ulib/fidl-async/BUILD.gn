@@ -6,9 +6,7 @@ zx_library("fidl-async") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [ "lib/fidl-async/bind.h" ]
-  sources = [
-    "bind.c",
-  ]
+  sources = [ "bind.c" ]
   deps = [
     "$zx/system/ulib/async",
     "$zx/system/ulib/fidl",

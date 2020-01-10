@@ -4,7 +4,5 @@
 
 zx_library("pow2_range_allocator") {
   kernel = true
-  sources = [
-    "pow2_range_allocator.cc",
-  ]
+  sources = [ "pow2_range_allocator.cc" ]
 }

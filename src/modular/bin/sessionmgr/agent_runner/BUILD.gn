@@ -48,9 +48,7 @@ source_set("agent_runner") {
 executable("agent_runner_unittest") {
   testonly = true
 
-  sources = [
-    "agent_runner_unittest.cc",
-  ]
+  sources = [ "agent_runner_unittest.cc" ]
 
   deps = [
     ":agent_runner",
@@ -76,9 +74,7 @@ executable("agent_runner_unittest") {
 }
 
 hermetic_tests_package("agent_runner_unittests") {
-  deps = [
-    ":agent_runner_unittest",
-  ]
+  deps = [ ":agent_runner_unittest" ]
   environments = basic_envs
 }
 

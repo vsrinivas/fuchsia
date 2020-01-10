@@ -12,11 +12,7 @@ fidl("fuchsia.ui.text.testing") {
     "vector-bounds-not-specified",
   ]
 
-  sources = [
-    "testing.fidl",
-  ]
+  sources = [ "testing.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.text",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.text" ]
 }

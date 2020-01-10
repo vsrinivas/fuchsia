@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("mt-musb-peripheral") {
-  sources = [
-    "mt-usb.cc",
-  ]
+  sources = [ "mt-usb.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.gpio",

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_host_tool("merkleroot") {
-  sources = [
-    "merkleroot.cc",
-  ]
+  sources = [ "merkleroot.cc" ]
   deps = [
     "$zx/system/ulib/digest",
     "$zx/system/ulib/fbl",

@@ -11,7 +11,5 @@ dart_library("build_integration") {
 
   disable_analysis = true
 
-  deps = [
-    "//third_party/dart/pkg/front_end",
-  ]
+  deps = [ "//third_party/dart/pkg/front_end" ]
 }

@@ -47,9 +47,7 @@ source_set("test_loop_notification") {
     "//zircon/public/lib/async-testing",
   ]
 
-  deps = [
-    "//src/ledger/lib/logging",
-  ]
+  deps = [ "//src/ledger/lib/logging" ]
 }
 
 source_set("unittests") {

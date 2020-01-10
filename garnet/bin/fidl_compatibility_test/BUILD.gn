@@ -17,9 +17,7 @@ template("hlcpp_compatibility_test_server") {
   executable(executable_target_name) {
     output_name = executable_name
 
-    sources = [
-      "compatibility_test_server_cpp.cc",
-    ]
+    sources = [ "compatibility_test_server_cpp.cc" ]
 
     deps = [
       "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
@@ -38,9 +36,7 @@ template("hlcpp_compatibility_test_server") {
   }
 
   package(package_target_name) {
-    deps = [
-      ":" + executable_target_name,
-    ]
+    deps = [ ":" + executable_target_name ]
 
     meta = [
       {
@@ -60,9 +56,7 @@ executable("fidl_compatibility_test_executable") {
 
   testonly = true
 
-  sources = [
-    "compatibility_test.cc",
-  ]
+  sources = [ "compatibility_test.cc" ]
 
   deps = [
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
@@ -90,9 +84,7 @@ hlcpp_compatibility_test_server("compatibility_test_server_cpp_write_xunion") {
 executable("compatibility_test_server_llcpp_bin") {
   output_name = "compatibility_test_server_llcpp"
 
-  sources = [
-    "compatibility_test_server_llcpp.cc",
-  ]
+  sources = [ "compatibility_test_server_llcpp.cc" ]
 
   deps = [
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service_llcpp",
@@ -125,18 +117,12 @@ rustc_binary("compatibility_test_server_rust_bin") {
 }
 
 copy("run_fidl_compatibility_test_garnet_sh") {
-  sources = [
-    "run_fidl_compatibility_test_garnet.sh",
-  ]
-  outputs = [
-    "${root_build_dir}/run_fidl_compatibility_test_garnet.sh",
-  ]
+  sources = [ "run_fidl_compatibility_test_garnet.sh" ]
+  outputs = [ "${root_build_dir}/run_fidl_compatibility_test_garnet.sh" ]
 }
 
 package("fidl_compatibility_test_server_llcpp") {
-  deps = [
-    ":compatibility_test_server_llcpp_bin",
-  ]
+  deps = [ ":compatibility_test_server_llcpp_bin" ]
 
   meta = [
     {
@@ -151,9 +137,7 @@ package("fidl_compatibility_test_server_llcpp") {
 }
 
 package("fidl_compatibility_test_server_llcpp_write_xunion") {
-  deps = [
-    ":compatibility_test_server_llcpp_bin",
-  ]
+  deps = [ ":compatibility_test_server_llcpp_bin" ]
 
   meta = [
     {
@@ -168,9 +152,7 @@ package("fidl_compatibility_test_server_llcpp_write_xunion") {
 }
 
 package("fidl_compatibility_test_server_rust") {
-  deps = [
-    ":compatibility_test_server_rust_bin",
-  ]
+  deps = [ ":compatibility_test_server_rust_bin" ]
 
   meta = [
     {
@@ -185,9 +167,7 @@ package("fidl_compatibility_test_server_rust") {
 }
 
 package("fidl_compatibility_test_server_rust_write_xunion") {
-  deps = [
-    ":compatibility_test_server_rust_bin",
-  ]
+  deps = [ ":compatibility_test_server_rust_bin" ]
 
   meta = [
     {
@@ -202,9 +182,7 @@ package("fidl_compatibility_test_server_rust_write_xunion") {
 }
 
 test_package("fidl_compatibility_test") {
-  deps = [
-    ":fidl_compatibility_test_executable",
-  ]
+  deps = [ ":fidl_compatibility_test_executable" ]
 
   tests = [
     {

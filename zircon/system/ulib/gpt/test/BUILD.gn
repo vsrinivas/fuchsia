@@ -4,9 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":gpt-unit",
-  ]
+  deps = [ ":gpt-unit" ]
 }
 
 zx_test("gpt-unit") {

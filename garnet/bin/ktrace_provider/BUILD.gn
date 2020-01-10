@@ -54,9 +54,7 @@ executable("bin") {
 package("ktrace_provider") {
   rootjob_svc = "//build"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "ktrace_provider"
 
@@ -90,9 +88,7 @@ executable("importer_test_app") {
 }
 
 test_package("ktrace_provider_tests") {
-  deps = [
-    ":importer_test_app",
-  ]
+  deps = [ ":importer_test_app" ]
 
   tests = [
     {

@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 source_set("rng") {
-  sources = [
-    "random.h",
-  ]
+  sources = [ "random.h" ]
 }
 
 source_set("system") {
-  sources = [
-    "system_random.h",
-  ]
+  sources = [ "system_random.h" ]
 
   public_deps = [
     ":rng",
@@ -27,9 +23,7 @@ source_set("testing") {
     "test_random.h",
   ]
 
-  public_deps = [
-    ":rng",
-  ]
+  public_deps = [ ":rng" ]
 }
 
 source_set("unittests") {

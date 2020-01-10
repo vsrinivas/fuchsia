@@ -6,19 +6,13 @@ import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia.device.power.test") {
   visibility = [ ":*" ]
-  sources = [
-    "test.fidl",
-  ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-device",
-  ]
+  sources = [ "test.fidl" ]
+  public_deps = [ "$zx/system/fidl/fuchsia-device" ]
 }
 
 if (current_toolchain != default_toolchain) {
   zx_driver("ddk-power-test") {
-    sources = [
-      "test-driver.cc",
-    ]
+    sources = [ "test-driver.cc" ]
     deps = [
       ":fuchsia.device.power.test.llcpp",
       "$zx/system/ulib/ddk",
@@ -33,9 +27,7 @@ if (current_toolchain != default_toolchain) {
   }
 
   zx_driver("ddk-power-test-child") {
-    sources = [
-      "test-driver-child.cc",
-    ]
+    sources = [ "test-driver-child.cc" ]
     deps = [
       ":fuchsia.device.power.test.llcpp",
       "$zx/system/ulib/ddk",
@@ -49,9 +41,7 @@ if (current_toolchain != default_toolchain) {
   }
 
   zx_test("ddk-power") {
-    sources = [
-      "test.cc",
-    ]
+    sources = [ "test.cc" ]
     deps = [
       ":fuchsia.device.power.test.llcpp",
       "$zx/system/fidl/fuchsia-device:llcpp",

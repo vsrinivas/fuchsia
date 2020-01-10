@@ -4,14 +4,8 @@
 
 zx_library("gfx") {
   kernel = true
-  sources = [
-    "gfx.cc",
-  ]
-  deps = [
-    "$zx/kernel/lib/console",
-  ]
-  public_deps = [
-    "$zx/system/ulib/gfx-font-data",
-  ]
+  sources = [ "gfx.cc" ]
+  deps = [ "$zx/kernel/lib/console" ]
+  public_deps = [ "$zx/system/ulib/gfx-font-data" ]
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

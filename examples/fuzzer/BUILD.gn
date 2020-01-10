@@ -32,43 +32,27 @@ fuzzers_package("example_fuzzers") {
 }
 
 fuzzer("overflow_fuzzer") {
-  sources = [
-    "overflow.cc",
-  ]
+  sources = [ "overflow.cc" ]
 }
 
 fuzzer("trap_fuzzer") {
-  sources = [
-    "trap.cc",
-  ]
+  sources = [ "trap.cc" ]
 }
 
 fuzzer("fuzzed_data_provider_fuzzer") {
-  sources = [
-    "fuzzed-data-provider.cc",
-  ]
+  sources = [ "fuzzed-data-provider.cc" ]
 }
 
 fuzzer("corpus_fuzzer") {
-  sources = [
-    "corpus.cc",
-  ]
+  sources = [ "corpus.cc" ]
 }
 
 fuzzer("baz_fuzzer") {
-  sources = [
-    "target.cc",
-  ]
-  deps = [
-    ":baz",
-  ]
+  sources = [ "target.cc" ]
+  deps = [ ":baz" ]
 }
 
 source_set("baz") {
-  sources = [
-    "baz.cc",
-  ]
-  deps = [
-    "//src/lib/fxl",
-  ]
+  sources = [ "baz.cc" ]
+  deps = [ "//src/lib/fxl" ]
 }

@@ -12,9 +12,7 @@ rustc_library("internet-checksum") {
   edition = "2018"
   with_unit_tests = true
 
-  deps = [
-    "//third_party/rust_crates:byteorder",
-  ]
+  deps = [ "//third_party/rust_crates:byteorder" ]
 
   test_deps = [
     "//third_party/rust_crates:rand",
@@ -25,9 +23,7 @@ rustc_library("internet-checksum") {
 unittest_package("tests") {
   package_name = "internet-checksum-tests"
 
-  deps = [
-    ":internet-checksum_test",
-  ]
+  deps = [ ":internet-checksum_test" ]
 
   tests = [
     {

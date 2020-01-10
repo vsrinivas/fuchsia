@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-hardware-usb-device") {
-  sources = [
-    "usb-device.fidl",
-  ]
+  sources = [ "usb-device.fidl" ]
 }

@@ -51,10 +51,10 @@ sdk_source_set("cpp") {
 
   public_deps = [
     "//sdk/lib/fidl/cpp",
-    "//zircon/system/fidl/fuchsia-io",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-io",
   ]
 
   public_configs = [ "//sdk/config" ]
@@ -84,9 +84,7 @@ test("vfs_cpp_unittests") {
 }
 
 test_package("vfs_cpp_tests") {
-  deps = [
-    ":vfs_cpp_unittests",
-  ]
+  deps = [ ":vfs_cpp_unittests" ]
 
   tests = [
     {

@@ -36,9 +36,7 @@ source_set("package_util") {
     "package_util.h",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 }
 
 source_set("module_package_source") {

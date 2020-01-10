@@ -3,14 +3,10 @@
 # found in the LICENSE file.
 
 group("hotsort") {
-  deps = [
-    "platforms/vk",
-  ]
+  deps = [ "platforms/vk" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "platforms/vk/tests",
-  ]
+  public_deps = [ "platforms/vk/tests" ]
 }

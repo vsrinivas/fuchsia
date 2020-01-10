@@ -24,9 +24,7 @@ rustc_library("bt-a2dp") {
 test_package("tests") {
   package_name = "bt-a2dp-tests"
 
-  deps = [
-    ":bt-a2dp_test",
-  ]
+  deps = [ ":bt-a2dp_test" ]
 
   tests = [
     {

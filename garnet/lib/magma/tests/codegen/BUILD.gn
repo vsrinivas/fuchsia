@@ -7,9 +7,7 @@
 
 action("magma_header_compare") {
   testonly = true
-  deps = [
-    "//garnet/lib/magma/include/magma_abi",
-  ]
+  deps = [ "//garnet/lib/magma/include/magma_abi" ]
   script = "verify_identical.sh"
   args = [
     rebase_path("$root_gen_dir/garnet/lib/magma/include/magma_abi/magma.h",
@@ -21,9 +19,7 @@ action("magma_header_compare") {
     "$root_gen_dir/garnet/lib/magma/include/magma_abi/magma.h",
     "//garnet/lib/magma/include/magma_abi/magma.h",
   ]
-  outputs = [
-    "$target_gen_dir/magma.h.compare_out",
-  ]
+  outputs = [ "$target_gen_dir/magma.h.compare_out" ]
 }
 
 action_foreach("magma_ordinal_error_tests") {
@@ -34,9 +30,7 @@ action_foreach("magma_ordinal_error_tests") {
     "magma_ordinal-collision.json",
     "magma_ordinal-overflow.json",
   ]
-  inputs = [
-    "//garnet/lib/magma/include/virtio/virtio_magma.h.gen.py",
-  ]
+  inputs = [ "//garnet/lib/magma/include/virtio/virtio_magma.h.gen.py" ]
   script = "call_expect_error.sh"
   args = [
     rebase_path("$target_gen_dir/{{source_name_part}}-exitcode",
@@ -47,9 +41,7 @@ action_foreach("magma_ordinal_error_tests") {
     "{{source}}",
     rebase_path("$target_gen_dir/{{source_name_part}}.h", root_build_dir),
   ]
-  outputs = [
-    "$target_gen_dir/{{source_name_part}}-exitcode",
-  ]
+  outputs = [ "$target_gen_dir/{{source_name_part}}-exitcode" ]
 }
 
 generated_icd_manifest_file = "${target_gen_dir}/test_manifest.json"
@@ -61,9 +53,7 @@ action("icd_manifest") {
     "path/to/ICD/library.so",
     rebase_path(generated_icd_manifest_file, root_build_dir),
   ]
-  outputs = [
-    generated_icd_manifest_file,
-  ]
+  outputs = [ generated_icd_manifest_file ]
 }
 
 action("icd_manifest_compare") {
@@ -74,15 +64,9 @@ action("icd_manifest_compare") {
     rebase_path(generated_icd_manifest_file, root_build_dir),
     rebase_path("${target_gen_dir}/diff", root_build_dir),
   ]
-  inputs = [
-    "vulkan_reference_icd_manifest.json",
-  ]
-  outputs = [
-    "${target_gen_dir}/diff",
-  ]
-  deps = [
-    ":icd_manifest",
-  ]
+  inputs = [ "vulkan_reference_icd_manifest.json" ]
+  outputs = [ "${target_gen_dir}/diff" ]
+  deps = [ ":icd_manifest" ]
 }
 
 group("codegen") {

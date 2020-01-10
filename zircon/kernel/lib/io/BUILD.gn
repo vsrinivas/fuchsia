@@ -4,10 +4,6 @@
 
 zx_library("io") {
   kernel = true
-  sources = [
-    "console.cc",
-  ]
-  deps = [
-    "$zx/kernel/lib/debuglog",
-  ]
+  sources = [ "console.cc" ]
+  deps = [ "$zx/kernel/lib/debuglog" ]
 }

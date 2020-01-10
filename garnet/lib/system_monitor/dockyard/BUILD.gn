@@ -28,39 +28,29 @@ source_set("lib") {
     "dockyard_service_impl.cc",
   ]
 
-  public_deps = [
-    ":headers",
-  ]
+  public_deps = [ ":headers" ]
 }
 
 proto_library("proto") {
-  sources = [
-    "../proto/dockyard.proto",
-  ]
+  sources = [ "../proto/dockyard.proto" ]
 
   generate_python = false
   cc_generator_options = "lite"
   generator_plugin_suffix = ".grpc.pb"
   generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
 
-  deps = [
-    "//third_party/grpc:grpc++",
-  ]
+  deps = [ "//third_party/grpc:grpc++" ]
 }
 
 static_library("dockyard") {
   output_name = "dockyard"
   complete_static_lib = true
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 group("libdockyard") {
-  public_deps = [
-    ":dockyard($host_toolchain)",
-  ]
+  public_deps = [ ":dockyard($host_toolchain)" ]
 }
 
 source_set("tests") {

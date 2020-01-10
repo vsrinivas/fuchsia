@@ -7,13 +7,7 @@ zx_library("thread-safe-deleter") {
   # in the sdk. It's just the way we export from zircon for use elsewhere.
   sdk = "source"
   sdk_headers = [ "lib/thread-safe-deleter/thread_safe_deleter.h" ]
-  sources = [
-    "thread_safe_deleter.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/closure-queue",
-  ]
-  public_deps = [
-    "$zx/system/ulib/closure-queue:closure-queue.headers",
-  ]
+  sources = [ "thread_safe_deleter.cc" ]
+  deps = [ "$zx/system/ulib/closure-queue" ]
+  public_deps = [ "$zx/system/ulib/closure-queue:closure-queue.headers" ]
 }

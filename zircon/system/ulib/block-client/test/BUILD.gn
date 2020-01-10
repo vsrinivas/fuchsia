@@ -4,9 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":block-client-unit",
-  ]
+  deps = [ ":block-client-unit" ]
 }
 
 zx_test("block-client-unit") {

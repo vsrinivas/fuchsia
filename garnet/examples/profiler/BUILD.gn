@@ -20,9 +20,7 @@ executable("profiler_example_bin") {
 }
 
 package("profiler_example") {
-  deps = [
-    ":profiler_example_bin",
-  ]
+  deps = [ ":profiler_example_bin" ]
 
   binary = "profiler_example_bin"
 

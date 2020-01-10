@@ -9,9 +9,7 @@ import("//build/testing/environments.gni")
 
 executable("bin") {
   output_name = "sys_inspect_cpp_bin"
-  sources = [
-    "program.cc",
-  ]
+  sources = [ "program.cc" ]
   deps = [
     "//sdk/lib/sys/inspect/cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -24,9 +22,7 @@ executable("bin") {
 executable("test") {
   testonly = true
   output_name = "sys_inspect_cpp_tests"
-  sources = [
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
   deps = [
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",

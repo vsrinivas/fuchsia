@@ -7,21 +7,15 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "time"
 
-  sources = [
-    "time.c",
-  ]
+  sources = [ "time.c" ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 
   libs = [ "zircon" ]
 }
 
 package("time") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

@@ -18,9 +18,7 @@ rustc_library("wlan-statemachine") {
 }
 
 test_package("wlan-statemachine-tests") {
-  deps = [
-    ":wlan-statemachine_test",
-  ]
+  deps = [ ":wlan-statemachine_test" ]
 
   tests = [
     {

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("time") {
-  sources = [
-    "time_test.cc",
-  ]
+  sources = [ "time_test.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

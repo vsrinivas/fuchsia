@@ -42,9 +42,7 @@ source_set("impl") {
 }
 
 flatbuffer("message") {
-  sources = [
-    "message.fbs",
-  ]
+  sources = [ "message.fbs" ]
 }
 
 source_set("unittests") {
@@ -79,9 +77,7 @@ source_set("unittests") {
 }
 
 fuzzer("p2p_sync_fuzzer") {
-  sources = [
-    "user_communicator_impl_fuzztest.cc",
-  ]
+  sources = [ "user_communicator_impl_fuzztest.cc" ]
   deps = [
     ":impl",
     "//src/ledger/bin/environment:test_loop_notification",

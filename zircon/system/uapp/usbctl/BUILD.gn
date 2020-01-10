@@ -3,18 +3,16 @@
 # found in the LICENSE file.
 
 zx_executable("usbctl") {
-  sources = [
-    "usbctl.cc",
-  ]
+  sources = [ "usbctl.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb.modeswitch",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:c",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/usb-peripheral-utils",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

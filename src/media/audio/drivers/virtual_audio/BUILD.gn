@@ -7,9 +7,7 @@ import("//build/package.gni")
 package("virtual_audio") {
   deprecated_system_image = true
 
-  deps = [
-    ":virtual_audio_driver",
-  ]
+  deps = [ ":virtual_audio_driver" ]
 
   drivers = [
     {

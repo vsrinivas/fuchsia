@@ -54,9 +54,8 @@ source_set("network_service") {
     "//zircon/public/lib/fdio",
   ]
 
-  public_deps = [
-    "//src/connectivity/network/testing/netemul/lib/fidl:network",
-  ]
+  public_deps =
+      [ "//src/connectivity/network/testing/netemul/lib/fidl:network" ]
 }
 
 source_set("netdump") {
@@ -65,12 +64,9 @@ source_set("netdump") {
     "netdump.h",
     "netdump_types.h",
   ]
-  deps = [
-    "//src/lib/fxl",
-  ]
-  public_deps = [
-    "//src/connectivity/network/testing/netemul/lib/fidl:network",
-  ]
+  deps = [ "//src/lib/fxl" ]
+  public_deps =
+      [ "//src/connectivity/network/testing/netemul/lib/fidl:network" ]
 }
 
 executable("network_test_bin") {
@@ -98,7 +94,5 @@ executable("network_test_bin") {
     "//zircon/public/lib/fzl",
   ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-hardware-ethertap",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-hardware-ethertap" ]
 }

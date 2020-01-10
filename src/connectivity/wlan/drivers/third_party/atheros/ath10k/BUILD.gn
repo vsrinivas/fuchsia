@@ -123,12 +123,8 @@ if (internal_access) {
 
   foreach(fw_file, all_fw_files) {
     copy("ath10k-firmware-copy-" + fw_file) {
-      sources = [
-        "firmware/" + fw_file,
-      ]
-      outputs = [
-        "$root_out_dir/firmware/ath10k/" + fw_file,
-      ]
+      sources = [ "firmware/" + fw_file ]
+      outputs = [ "$root_out_dir/firmware/ath10k/" + fw_file ]
     }
   }
 }
@@ -136,9 +132,7 @@ if (internal_access) {
 package("ath10k") {
   deprecated_system_image = true
 
-  deps = [
-    ":ath10k_driver",
-  ]
+  deps = [ ":ath10k_driver" ]
 
   drivers = [
     {
@@ -175,9 +169,7 @@ executable("sparse_array_tests") {
     "sparse_array_tests.cc",
   ]
 
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
 executable("bitarr_tests") {
@@ -189,9 +181,7 @@ executable("bitarr_tests") {
     "bitarr_tests.cc",
   ]
 
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
 unittest_package("ath10k_test") {

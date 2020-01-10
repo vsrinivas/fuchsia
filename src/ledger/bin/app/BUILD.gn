@@ -9,9 +9,7 @@ visibility = [
 
 executable("app") {
   output_name = "ledger"
-  sources = [
-    "app.cc",
-  ]
+  sources = [ "app.cc" ]
 
   deps = [
     ":constants",
@@ -161,13 +159,9 @@ source_set("constants") {
     "constants.h",
   ]
 
-  deps = [
-    "//src/ledger/fidl/fuchsia.ledger",
-  ]
+  deps = [ "//src/ledger/fidl/fuchsia.ledger" ]
 
-  public_deps = [
-    "//third_party/abseil-cpp",
-  ]
+  public_deps = [ "//third_party/abseil-cpp" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }
@@ -188,13 +182,9 @@ source_set("flags") {
 }
 
 source_set("serialization_version") {
-  sources = [
-    "serialization_version.h",
-  ]
+  sources = [ "serialization_version.h" ]
 
-  public_deps = [
-    "//third_party/abseil-cpp",
-  ]
+  public_deps = [ "//third_party/abseil-cpp" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

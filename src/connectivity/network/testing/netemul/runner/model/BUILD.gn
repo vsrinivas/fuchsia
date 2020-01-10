@@ -26,9 +26,7 @@ source_set("model") {
     "network.h",
   ]
 
-  public_deps = [
-    "//garnet/public/lib/json",
-  ]
+  public_deps = [ "//garnet/public/lib/json" ]
 
   deps = [
     "//src/lib/fsl",
@@ -40,9 +38,7 @@ source_set("model") {
 }
 
 test("model_unittest") {
-  sources = [
-    "model_unittest.cc",
-  ]
+  sources = [ "model_unittest.cc" ]
 
   deps = [
     ":model",

@@ -4,16 +4,12 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":devmgr-integration",
-  ]
+  deps = [ ":devmgr-integration" ]
 }
 
 zx_test("devmgr-integration") {
   test_group = "ddk"
-  sources = [
-    "launcher_test.cc",
-  ]
+  sources = [ "launcher_test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/ulib/devmgr-integration-test",

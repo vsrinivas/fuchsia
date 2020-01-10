@@ -7,9 +7,7 @@ import("//build/go/go_test.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":cpuperf_raw_printer_test",
-  ]
+  deps = [ ":cpuperf_raw_printer_test" ]
 }
 
 copy("raw_printer_test_data") {
@@ -21,16 +19,14 @@ copy("raw_printer_test_data") {
     "raw-test.0.3.cpuperf",
     "raw-test.cpsession",
   ]
-  outputs = [
-    "$root_out_dir/test_data/cpuperf/{{source_file_part}}",
-  ]
+  outputs = [ "$root_out_dir/test_data/cpuperf/{{source_file_part}}" ]
 }
 
 go_library("raw_printer_test_lib") {
   name = "cpuperf/printer/tests"
   non_go_deps = [
-    "//garnet/bin/cpuperf/print:cpuperf_print($host_toolchain)",
     ":raw_printer_test_data",
+    "//garnet/bin/cpuperf/print:cpuperf_print($host_toolchain)",
   ]
   metadata = {
     test_runtime_deps = [ "$root_out_dir/cpuperf_print" ] +
@@ -39,8 +35,6 @@ go_library("raw_printer_test_lib") {
 }
 
 go_test("cpuperf_raw_printer_test") {
-  gopackages = ["cpuperf/printer/tests"]
-  deps = [
-    ":raw_printer_test_lib",
-  ]
+  gopackages = [ "cpuperf/printer/tests" ]
+  deps = [ ":raw_printer_test_lib" ]
 }

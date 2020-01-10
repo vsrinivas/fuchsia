@@ -13,9 +13,7 @@ template("fidl_example") {
     }
     name = "fidl.examples.$nick"
 
-    sources = [
-      "//zircon/tools/fidl/examples/${target_name}.test.fidl",
-    ]
+    sources = [ "//zircon/tools/fidl/examples/${target_name}.test.fidl" ]
   }
 }
 
@@ -72,21 +70,15 @@ fidl_example("xunion") {
 fidl("point") {
   name = "fidl.examples.librarya"
 
-  sources = [
-    "//zircon/tools/fidl/examples/library-a/point.test.fidl",
-  ]
+  sources = [ "//zircon/tools/fidl/examples/library-a/point.test.fidl" ]
 }
 
 fidl("view") {
   name = "fidl.examples.libraryb"
 
-  sources = [
-    "//zircon/tools/fidl/examples/library-b/view.test.fidl",
-  ]
+  sources = [ "//zircon/tools/fidl/examples/library-b/view.test.fidl" ]
 
-  public_deps = [
-    ":point",
-  ]
+  public_deps = [ ":point" ]
 }
 
 group("examples") {

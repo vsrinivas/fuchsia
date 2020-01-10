@@ -7,9 +7,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 group("trace_converters") {
-  deps = [
-    ":chromium",
-  ]
+  deps = [ ":chromium" ]
 }
 
 source_set("chromium") {
@@ -18,9 +16,7 @@ source_set("chromium") {
     "chromium_exporter.h",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 
   public_deps = [
     "//garnet/lib/perfmon",
@@ -32,9 +28,7 @@ source_set("chromium") {
 test("chromium_unittests") {
   output_name = "chromium_exporter_unittests"
 
-  sources = [
-    "chromium_exporter_unittest.cc",
-  ]
+  sources = [ "chromium_exporter_unittest.cc" ]
 
   deps = [
     ":chromium",
@@ -44,9 +38,7 @@ test("chromium_unittests") {
 }
 
 test_package("trace_converter_tests") {
-  deps = [
-    ":chromium_unittests",
-  ]
+  deps = [ ":chromium_unittests" ]
 
   tests = [
     {

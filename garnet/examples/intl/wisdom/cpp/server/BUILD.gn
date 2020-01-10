@@ -20,9 +20,7 @@ source_set("lib") {
 }
 
 executable("intl_wisdom_server") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",

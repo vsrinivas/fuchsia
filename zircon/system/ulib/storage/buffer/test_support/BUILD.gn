@@ -4,9 +4,7 @@
 
 zx_library("test_support") {
   testonly = true
-  sources = [
-    "array_buffer.cc",
-  ]
+  sources = [ "array_buffer.cc" ]
   static = true
 
   public_deps = [
@@ -21,17 +19,13 @@ zx_library("test_support") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":storage_buffer_test_support",
-  ]
+  deps = [ ":storage_buffer_test_support" ]
 }
 
 zx_test("storage_buffer_test_support") {
   output_name = "storage-buffer-test-support-test"
   test_group = "storage"
-  sources = [
-    "test/array_buffer_test.cc",
-  ]
+  sources = [ "test/array_buffer_test.cc" ]
   deps = [
     ":test_support",
     "$zx/system/ulib/fdio",

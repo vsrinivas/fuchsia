@@ -68,9 +68,7 @@ rustc_binary("font_server") {
 }
 
 package("fonts") {
-  deps = [
-    ":font_server",
-  ]
+  deps = [ ":font_server" ]
 
   binary = "font_server"
 

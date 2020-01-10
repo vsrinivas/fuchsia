@@ -11,9 +11,7 @@ prebuilt_package("dachsiaboard") {
 
 config_data("system_config") {
   for_pkg = "sysmgr"
-  sources = [
-    "config/present_view_dachsiaboard.config",
-  ]
+  sources = [ "config/present_view_dachsiaboard.config" ]
 }
 
 # The complete set of packages needed to build a system image which runs

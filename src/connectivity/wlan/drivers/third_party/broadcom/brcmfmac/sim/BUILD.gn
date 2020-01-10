@@ -27,9 +27,7 @@ source_set("sim") {
     "sim_hw.cc",
     "sim_hw.h",
   ]
-  public = [
-    "sim_device.h",
-  ]
+  public = [ "sim_device.h" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",

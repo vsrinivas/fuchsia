@@ -19,7 +19,7 @@ zx_executable("kstress") {
 
   # The vmstress test has starvation issues when run without the fair scheduler.
   if (select_scheduler != "legacy") {
-    sources += ["vmstress.cc"]
+    sources += [ "vmstress.cc" ]
   } else {
     defines = [ "DISABLE_VMSTRESS" ]
   }

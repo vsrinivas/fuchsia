@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("max98927") {
-  sources = [
-    "max98927.cc",
-  ]
+  sources = [ "max98927.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.pci",

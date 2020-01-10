@@ -57,9 +57,7 @@ executable("use_media_decoder") {
 
   output_name = "use_media_decoder"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":use_media_decoder_source_set",
@@ -74,9 +72,7 @@ executable("use_aac_decoder_test") {
   testonly = true
   output_name = "use_aac_decoder_test"
 
-  sources = [
-    "test/use_aac_decoder_test.cc",
-  ]
+  sources = [ "test/use_aac_decoder_test.cc" ]
 
   deps = [
     ":use_media_decoder_source_set",
@@ -91,13 +87,9 @@ test("use_h264_decoder_test") {
 
   output_name = "use_h264_decoder_test"
 
-  sources = [
-    "test/use_h264_decoder_test.cc",
-  ]
+  sources = [ "test/use_h264_decoder_test.cc" ]
 
-  deps = [
-    ":use_media_decoder_source_set",
-  ]
+  deps = [ ":use_media_decoder_source_set" ]
 
   # In environments without an h264 HW decoder, this test will fall back to a SW
   # decoder.
@@ -109,13 +101,9 @@ test("use_h264_decoder_secure_output_test") {
 
   output_name = "use_h264_decoder_secure_output_test"
 
-  sources = [
-    "test/use_h264_decoder_secure_output_test.cc",
-  ]
+  sources = [ "test/use_h264_decoder_secure_output_test.cc" ]
 
-  deps = [
-    ":use_media_decoder_source_set",
-  ]
+  deps = [ ":use_media_decoder_source_set" ]
 
   # This test can only use HW decode because codec_impl won't map the output
   # VMOs for CPU access.
@@ -127,13 +115,9 @@ test("use_h264_decoder_secure_input_output_test") {
 
   output_name = "use_h264_decoder_secure_input_output_test"
 
-  sources = [
-    "test/use_h264_decoder_secure_input_output_test.cc",
-  ]
+  sources = [ "test/use_h264_decoder_secure_input_output_test.cc" ]
 
-  deps = [
-    ":use_media_decoder_source_set",
-  ]
+  deps = [ ":use_media_decoder_source_set" ]
 
   # This test needs a the clearTVP TA
   environments = [ sherlock_env ]
@@ -144,13 +128,9 @@ test("use_vp9_decoder_test") {
 
   output_name = "use_vp9_decoder_test"
 
-  sources = [
-    "test/use_vp9_decoder_test.cc",
-  ]
+  sources = [ "test/use_vp9_decoder_test.cc" ]
 
-  deps = [
-    ":use_media_decoder_source_set",
-  ]
+  deps = [ ":use_media_decoder_source_set" ]
 
   # In contrast to use_h264_decoder_test, there is no SW fallback for VP9 at the
   # moment, so for now only list envs with HW decode.
@@ -166,13 +146,9 @@ test("use_vp9_decoder_24_output_frames_test") {
 
   output_name = "use_vp9_decoder_24_output_frames_test"
 
-  sources = [
-    "test/use_vp9_decoder_24_output_frames_test.cc",
-  ]
+  sources = [ "test/use_vp9_decoder_24_output_frames_test.cc" ]
 
-  deps = [
-    ":use_media_decoder_source_set",
-  ]
+  deps = [ ":use_media_decoder_source_set" ]
 
   # In contrast to use_h264_decoder_test, there is no SW fallback for VP9 at the
   # moment, so for now only list envs with HW decode, and which also have
@@ -190,13 +166,9 @@ test("use_vp9_decoder_secure_output_test") {
 
   output_name = "use_vp9_decoder_secure_output_test"
 
-  sources = [
-    "test/use_vp9_decoder_secure_output_test.cc",
-  ]
+  sources = [ "test/use_vp9_decoder_secure_output_test.cc" ]
 
-  deps = [
-    ":use_media_decoder_source_set",
-  ]
+  deps = [ ":use_media_decoder_source_set" ]
 }
 
 test("use_vp9_decoder_secure_input_output_test") {
@@ -204,13 +176,9 @@ test("use_vp9_decoder_secure_input_output_test") {
 
   output_name = "use_vp9_decoder_secure_input_output_test"
 
-  sources = [
-    "test/use_vp9_decoder_secure_input_output_test.cc",
-  ]
+  sources = [ "test/use_vp9_decoder_secure_input_output_test.cc" ]
 
-  deps = [
-    ":use_media_decoder_source_set",
-  ]
+  deps = [ ":use_media_decoder_source_set" ]
 }
 
 test("vp9_decoder_conformance_test") {
@@ -218,13 +186,9 @@ test("vp9_decoder_conformance_test") {
 
   output_name = "vp9_decoder_conformance_test"
 
-  sources = [
-    "test/vp9_decoder_conformance_test.cc",
-  ]
+  sources = [ "test/vp9_decoder_conformance_test.cc" ]
 
-  deps = [
-    ":use_media_decoder_source_set",
-  ]
+  deps = [ ":use_media_decoder_source_set" ]
 
   # No VP9 SW fallback for now, so the test can only pass running on envs with
   # HW decode.

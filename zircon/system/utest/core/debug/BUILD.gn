@@ -4,9 +4,7 @@
 
 source_set("debug") {
   testonly = true
-  sources = [
-    "process.cc",
-  ]
+  sources = [ "process.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
@@ -21,9 +19,7 @@ source_set("debug") {
 # This test binary has get_root_resource() available.
 source_set("unified-only") {
   testonly = true
-  sources = [
-    "debuglog.cc",
-  ]
+  sources = [ "debuglog.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",

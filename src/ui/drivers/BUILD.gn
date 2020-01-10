@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("drivers") {
-  deps = [
-    "hid-input-report",
-  ]
+  deps = [ "hid-input-report" ]
 }
 
 group("tests") {
   testonly = true
 
-  deps = [
-    "hid-input-report:hid-input-report-test",
-  ]
+  deps = [ "hid-input-report:hid-input-report-test" ]
 }

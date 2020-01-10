@@ -34,9 +34,7 @@ rustc_binary("bin") {
 }
 
 package("bt-avrcp-target") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "bt_avrcp_target"
 
@@ -51,9 +49,7 @@ package("bt-avrcp-target") {
 test_package("tests") {
   package_name = "bt-avrcp-target-tests"
 
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

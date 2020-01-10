@@ -5,9 +5,7 @@
 group("devmgr") {
   # Everything else is in data_deps of devmgr.
   # TODO: consider moving devmgr/* back to this dir
-  deps = [
-    "devmgr",
-  ]
+  deps = [ "devmgr" ]
 }
 
 # Drivers depend on this (see $standard_environments).

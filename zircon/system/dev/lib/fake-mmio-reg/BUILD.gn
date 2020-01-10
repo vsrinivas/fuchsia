@@ -11,9 +11,7 @@ zx_library("fake-mmio-reg") {
 
 zx_test("fake-mmio-reg-test") {
   output_name = "fake-mmio-reg-test"
-  sources = [
-    "fake-mmio-reg-test.cc",
-  ]
+  sources = [ "fake-mmio-reg-test.cc" ]
   deps = [
     ":fake-mmio-reg",
     "$zx/system/ulib/ddk",

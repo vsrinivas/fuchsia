@@ -87,9 +87,7 @@ source_set("device") {
     "touchscreen.h",
   ]
 
-  deps = [
-    "//zircon/public/lib/trace",
-  ]
+  deps = [ "//zircon/public/lib/trace" ]
 
   public_deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",

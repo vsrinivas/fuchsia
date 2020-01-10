@@ -5,11 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.scenic.snapshot") {
-  sources = [
-    "loader.fidl",
-  ]
+  sources = [ "loader.fidl" ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-mem",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-mem" ]
 }

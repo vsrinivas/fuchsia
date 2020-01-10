@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("aml-usb-phy-v2") {
-  sources = [
-    "aml-usb-phy.cc",
-  ]
+  sources = [ "aml-usb-phy.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.usb.phy",

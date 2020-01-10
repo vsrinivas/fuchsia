@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("stream_utils") {
-  public_deps = [
-    ":stream_utils_lib",
-  ]
+  public_deps = [ ":stream_utils_lib" ]
 }
 
 source_set("stream_utils_lib") {
-  sources = [
-    "image_io_util.cc",
-  ]
+  sources = [ "image_io_util.cc" ]
 
   deps = [
     "//src/lib/files",

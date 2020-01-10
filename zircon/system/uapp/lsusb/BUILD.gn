@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("lsusb") {
-  sources = [
-    "lsusb.c",
-  ]
+  sources = [ "lsusb.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-usb-device:c",
     "$zx/system/ulib/fdio",

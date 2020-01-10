@@ -5,9 +5,7 @@
 import("$zx/public/gn/firmware.gni")
 
 zx_driver("bt-hci-mediatek") {
-  sources = [
-    "bt-hci-mediatek.cc",
-  ]
+  sources = [ "bt-hci-mediatek.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.bt.hci",
     "$zx/system/banjo/ddk.protocol.sdio",
@@ -21,15 +19,11 @@ zx_driver("bt-hci-mediatek") {
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
-  data_deps = [
-    ":firmware",
-  ]
+  data_deps = [ ":firmware" ]
 }
 
 firmware("firmware") {
-  sources = [
-    "$firmware_dir/bluetooth/mt7668/mt7668_patch_e2_hdr.bin",
-  ]
+  sources = [ "$firmware_dir/bluetooth/mt7668/mt7668_patch_e2_hdr.bin" ]
 }
 
 zx_test("bt-hci-mediatek-test") {

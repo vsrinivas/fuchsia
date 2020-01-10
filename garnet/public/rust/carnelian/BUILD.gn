@@ -238,19 +238,19 @@ rustc_binary("clockface") {
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
   non_rust_deps = [
-    "//src/lib/vulkan",
     "//src/graphics/lib/compute/common",
     "//src/graphics/lib/compute/common/vk",
     "//src/graphics/lib/compute/hotsort/platforms/vk",
     "//src/graphics/lib/compute/spinel",
     "//src/graphics/lib/compute/spinel/platforms/vk",
     "//src/graphics/lib/compute/spinel/platforms/vk:vk_find_target",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
     "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3:generate",
     "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
+    "//src/lib/vulkan",
   ]
 }
 
@@ -283,19 +283,19 @@ rustc_binary("ink") {
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
   non_rust_deps = [
-    "//src/graphics/lib/vulkan",
     "//src/graphics/lib/compute/common",
     "//src/graphics/lib/compute/common/vk",
     "//src/graphics/lib/compute/hotsort/platforms/vk",
     "//src/graphics/lib/compute/spinel",
     "//src/graphics/lib/compute/spinel/platforms/vk",
     "//src/graphics/lib/compute/spinel/platforms/vk:vk_find_target",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
     "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3:generate",
     "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
+    "//src/graphics/lib/vulkan",
   ]
 }
 
@@ -334,26 +334,24 @@ rustc_binary("infinite_scroll") {
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
   non_rust_deps = [
-    "//src/graphics/lib/vulkan",
     "//src/graphics/lib/compute/common",
     "//src/graphics/lib/compute/common/vk",
     "//src/graphics/lib/compute/hotsort/platforms/vk",
     "//src/graphics/lib/compute/spinel",
     "//src/graphics/lib/compute/spinel/platforms/vk",
     "//src/graphics/lib/compute/spinel/platforms/vk:vk_find_target",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
     "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3:generate",
     "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
+    "//src/graphics/lib/vulkan",
   ]
 }
 
 package("spinning_square_rs") {
-  deps = [
-    ":spinning_square_example",
-  ]
+  deps = [ ":spinning_square_example" ]
 
   binaries = [
     {
@@ -371,9 +369,7 @@ package("spinning_square_rs") {
 }
 
 package("embedding_rs") {
-  deps = [
-    ":embedding_example",
-  ]
+  deps = [ ":embedding_example" ]
 
   binaries = [
     {
@@ -391,9 +387,7 @@ package("embedding_rs") {
 }
 
 package("button_rs") {
-  deps = [
-    ":button_example",
-  ]
+  deps = [ ":button_example" ]
 
   binaries = [
     {
@@ -411,9 +405,7 @@ package("button_rs") {
 }
 
 package("perf_test_01_rs") {
-  deps = [
-    ":perf_test_01",
-  ]
+  deps = [ ":perf_test_01" ]
 
   binaries = [
     {
@@ -431,9 +423,7 @@ package("perf_test_01_rs") {
 }
 
 package("perf_test_02_rs") {
-  deps = [
-    ":perf_test_02",
-  ]
+  deps = [ ":perf_test_02" ]
 
   binaries = [
     {
@@ -451,9 +441,7 @@ package("perf_test_02_rs") {
 }
 
 package("perf_test_03_rs") {
-  deps = [
-    ":perf_test_03",
-  ]
+  deps = [ ":perf_test_03" ]
 
   binaries = [
     {
@@ -471,9 +459,7 @@ package("perf_test_03_rs") {
 }
 
 package("perf_test_04_rs") {
-  deps = [
-    ":perf_test_04",
-  ]
+  deps = [ ":perf_test_04" ]
 
   binaries = [
     {
@@ -491,9 +477,7 @@ package("perf_test_04_rs") {
 }
 
 package("drawing_rs") {
-  deps = [
-    ":drawing",
-  ]
+  deps = [ ":drawing" ]
 
   binaries = [
     {
@@ -511,9 +495,7 @@ package("drawing_rs") {
 }
 
 package("drawing_mold_rs") {
-  deps = [
-    ":drawing_mold",
-  ]
+  deps = [ ":drawing_mold" ]
 
   binaries = [
     {
@@ -531,9 +513,7 @@ package("drawing_mold_rs") {
 }
 
 package("clockface_rs") {
-  deps = [
-    ":clockface",
-  ]
+  deps = [ ":clockface" ]
 
   binaries = [
     {
@@ -555,9 +535,7 @@ package("clockface_rs") {
 }
 
 package("ink_rs") {
-  deps = [
-    ":ink",
-  ]
+  deps = [ ":ink" ]
 
   binaries = [
     {
@@ -579,9 +557,7 @@ package("ink_rs") {
 }
 
 package("infinite_scroll_rs") {
-  deps = [
-    ":infinite_scroll",
-  ]
+  deps = [ ":infinite_scroll" ]
 
   binaries = [
     {
@@ -618,9 +594,7 @@ package("infinite_scroll_rs") {
 }
 
 unittest_package("carnelian_tests") {
-  deps = [
-    ":carnelian_test",
-  ]
+  deps = [ ":carnelian_test" ]
 
   tests = [
     {
@@ -647,9 +621,7 @@ rustc_binary("carnelian_integration_test_bin") {
 }
 
 test_package("carnelian_integration_test") {
-  deps = [
-    ":carnelian_integration_test_bin",
-  ]
+  deps = [ ":carnelian_integration_test_bin" ]
 
   tests = [
     {
@@ -676,9 +648,7 @@ rustc_binary("carnelian_fb_integration_test_bin") {
 }
 
 test_package("carnelian_fb_integration_test") {
-  deps = [
-    ":carnelian_fb_integration_test_bin",
-  ]
+  deps = [ ":carnelian_fb_integration_test_bin" ]
 
   tests = [
     {

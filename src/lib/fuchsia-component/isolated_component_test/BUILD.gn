@@ -10,9 +10,7 @@ import("//build/testing/environments.gni")
 fidl("echos") {
   name = "fuchsia.test.echos"
 
-  sources = [
-    "echos.test.fidl",
-  ]
+  sources = [ "echos.test.fidl" ]
 }
 
 rustc_binary("fuchsia_component_test_outer_bin") {
@@ -32,9 +30,7 @@ rustc_binary("fuchsia_component_test_outer_bin") {
 }
 
 test_package("fuchsia_component_test_outer") {
-  deps = [
-    ":fuchsia_component_test_outer_bin",
-  ]
+  deps = [ ":fuchsia_component_test_outer_bin" ]
 
   tests = [
     {
@@ -63,9 +59,7 @@ rustc_binary("fuchsia_component_test_middle_bin") {
 }
 
 package("fuchsia_component_test_middle") {
-  deps = [
-    ":fuchsia_component_test_middle_bin",
-  ]
+  deps = [ ":fuchsia_component_test_middle_bin" ]
 
   binary = "fuchsia_component_test_middle"
 
@@ -95,9 +89,7 @@ rustc_binary("fuchsia_component_test_middle_sibling_bin") {
 }
 
 package("fuchsia_component_test_middle_sibling") {
-  deps = [
-    ":fuchsia_component_test_middle_sibling_bin",
-  ]
+  deps = [ ":fuchsia_component_test_middle_sibling_bin" ]
 
   binary = "fuchsia_component_test_middle_sibling"
 
@@ -125,9 +117,7 @@ rustc_binary("fuchsia_component_test_inner_bin") {
 }
 
 package("fuchsia_component_test_inner") {
-  deps = [
-    ":fuchsia_component_test_inner_bin",
-  ]
+  deps = [ ":fuchsia_component_test_inner_bin" ]
 
   binary = "fuchsia_component_test_inner"
 

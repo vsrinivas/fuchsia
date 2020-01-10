@@ -4,9 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":fvm-unit",
-  ]
+  deps = [ ":fvm-unit" ]
 }
 
 zx_test("fvm-unit") {
@@ -33,9 +31,7 @@ zx_test("fvm-unit") {
 
 zx_library("devices") {
   testonly = true
-  sources = [
-    "device-ref.cc",
-  ]
+  sources = [ "device-ref.cc" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",
     "$zx/system/ulib/fbl:headers",

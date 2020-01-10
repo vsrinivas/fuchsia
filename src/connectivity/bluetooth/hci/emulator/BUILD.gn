@@ -42,9 +42,7 @@ package("emulator") {
   deprecated_system_image = true
   testonly = true
 
-  deps = [
-    ":driver",
-  ]
+  deps = [ ":driver" ]
 
   drivers = [
     {

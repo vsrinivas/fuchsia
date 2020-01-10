@@ -57,9 +57,7 @@ zx_test("blobfs-unit") {
 }
 
 zx_test("blobfs-host") {
-  sources = [
-    "host/host-test.cc",
-  ]
+  sources = [ "host/host-test.cc" ]
   deps = [
     "$zx/system/ulib/blobfs",
     "$zx/system/ulib/zxtest",
@@ -68,9 +66,7 @@ zx_test("blobfs-host") {
 
 source_set("integration-fixtures") {
   testonly = true
-  sources = [
-    "integration/blobfs_fixtures.cc",
-  ]
+  sources = [ "integration/blobfs_fixtures.cc" ]
   deps = [
     "$zx/system/ulib/blobfs",
     "$zx/system/ulib/fdio",
@@ -135,9 +131,7 @@ zx_test("blobfs-large-integration") {
 }
 
 fuzzer("zstd-fuzzer") {
-  sources = [
-    "zstd-fuzzer.cc",
-  ]
+  sources = [ "zstd-fuzzer.cc" ]
   deps = [
     "$zx/system/ulib/blobfs",
     "$zx/third_party/ulib/lz4",
@@ -147,9 +141,7 @@ fuzzer("zstd-fuzzer") {
 }
 
 fuzzer("lz4-fuzzer") {
-  sources = [
-    "zstd-fuzzer.cc",
-  ]
+  sources = [ "zstd-fuzzer.cc" ]
   deps = [
     "$zx/system/ulib/blobfs",
     "$zx/third_party/ulib/lz4",

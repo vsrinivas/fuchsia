@@ -7,9 +7,7 @@ visibility = [ "//src/ledger/*" ]
 group("disk_space") {
   testonly = true
 
-  public_deps = [
-    ":ledger_benchmark_disk_space",
-  ]
+  public_deps = [ ":ledger_benchmark_disk_space" ]
 }
 
 executable("ledger_benchmark_disk_space") {
@@ -34,9 +32,7 @@ executable("ledger_benchmark_disk_space") {
     "//zircon/public/lib/trace-provider-so",
   ]
 
-  sources = [
-    "disk_space.cc",
-  ]
+  sources = [ "disk_space.cc" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

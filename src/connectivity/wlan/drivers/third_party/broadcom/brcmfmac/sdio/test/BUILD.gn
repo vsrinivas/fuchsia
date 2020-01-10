@@ -17,9 +17,7 @@ import("//build/testing/environments.gni")
 executable("sdio_test") {
   output_name = "sdio_test"
   testonly = true
-  sources = [
-    "sdio_test.cc",
-  ]
+  sources = [ "sdio_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio",
@@ -38,9 +36,7 @@ executable("sdio_test") {
 unittest_package("brcmfmac_sdio_test") {
   package_name = "brcmfmac_sdio_test"
 
-  deps = [
-    ":sdio_test",
-  ]
+  deps = [ ":sdio_test" ]
 
   tests = [
     {

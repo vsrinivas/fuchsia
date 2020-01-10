@@ -8,9 +8,7 @@ zx_library("hisi-lib") {
     "dev/clk/hisi-lib/hisi-gate.h",
     "dev/clk/hisi-lib/hisi-clk.h",
   ]
-  sources = [
-    "hisi-clk.cc",
-  ]
+  sources = [ "hisi-clk.cc" ]
   public_deps = [
     # <dev/clk/hisi-lib/hisi-clk.h> has #include <lib/mmio/mmio.h>.
     "$zx/system/dev/lib/mmio:headers",

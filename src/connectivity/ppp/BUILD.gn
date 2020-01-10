@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("drivers") {
-  deps = [
-    "//src/connectivity/ppp/drivers/serial-ppp",
-  ]
+  deps = [ "//src/connectivity/ppp/drivers/serial-ppp" ]
 }
 
 group("tests") {
@@ -19,7 +17,5 @@ group("tests") {
 }
 
 group("ppp") {
-  deps = [
-    ":drivers",
-  ]
+  deps = [ ":drivers" ]
 }

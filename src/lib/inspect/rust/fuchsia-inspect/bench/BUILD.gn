@@ -32,9 +32,7 @@ package("rust_inspect_benchmarks") {
     },
   ]
 
-  public_deps = [
-    ":bin",
-  ]
+  public_deps = [ ":bin" ]
 }
 
 rustc_binary("bin") {

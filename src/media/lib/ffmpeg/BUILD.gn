@@ -40,13 +40,9 @@ group("ffmpeg") {
   ]
 
   if (use_prebuilt_ffmpeg) {
-    public_deps = [
-      ":prebuilt_ffmpeg($shlib_toolchain)",
-    ]
+    public_deps = [ ":prebuilt_ffmpeg($shlib_toolchain)" ]
   } else {
-    deps = [
-      "//third_party/ffmpeg",
-    ]
+    deps = [ "//third_party/ffmpeg" ]
     public_configs = [ "//third_party/ffmpeg:ffmpeg_dependent_config" ]
   }
 }
@@ -80,22 +76,14 @@ if (use_prebuilt_ffmpeg) {
 
   copy("prebuilt_libffmpeg_copy") {
     visibility = [ ":prebuilt_ffmpeg" ]
-    sources = [
-      libffmpeg,
-    ]
-    outputs = [
-      "$root_out_dir/libffmpeg.so",
-    ]
+    sources = [ libffmpeg ]
+    outputs = [ "$root_out_dir/libffmpeg.so" ]
   }
 
   copy("prebuilt_libffmpeg_debug_copy") {
     visibility = [ ":prebuilt_ffmpeg" ]
-    sources = [
-      libffmpeg_debug,
-    ]
-    outputs = [
-      "$root_out_dir/lib.unstripped/libffmpeg.so",
-    ]
+    sources = [ libffmpeg_debug ]
+    outputs = [ "$root_out_dir/lib.unstripped/libffmpeg.so" ]
   }
 
   config("prebuilt_ffmpeg_config") {

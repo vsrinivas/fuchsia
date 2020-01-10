@@ -14,9 +14,7 @@ fidl("fuchsia.developer.tiles") {
 
   sdk_category = "partner"
 
-  sources = [
-    "tiles.fidl",
-  ]
+  sources = [ "tiles.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.app",

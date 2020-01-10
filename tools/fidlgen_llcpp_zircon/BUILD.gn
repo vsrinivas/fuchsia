@@ -12,9 +12,7 @@ executable("fidlgen_llcpp_zircon") {
     "llcpp_codegen.h",
     "main.cc",
   ]
-  deps = [
-    "//third_party/rapidjson",
-  ]
+  deps = [ "//third_party/rapidjson" ]
 }
 
 foreach(command,
@@ -38,15 +36,9 @@ foreach(command,
     # This dependency delivers $root_build_dir/tools/fidlgen_llcpp.
     # It doesn't have to appear in inputs, because the tool will output
     # the exact path to fidlgen_llcpp in the depfile.
-    deps = [
-      "//garnet/go/src/fidl",
-    ]
+    deps = [ "//garnet/go/src/fidl" ]
     depfile = "$target_gen_dir/fidlgen_llcpp_zircon_${command}.d"
-    inputs = [
-      "$zircon_root_build_dir/fidl_gen.json",
-    ]
-    outputs = [
-      "$target_gen_dir/fidlgen_llcpp_zircon_${command}.stamp",
-    ]
+    inputs = [ "$zircon_root_build_dir/fidl_gen.json" ]
+    outputs = [ "$target_gen_dir/fidlgen_llcpp_zircon_${command}.stamp" ]
   }
 }

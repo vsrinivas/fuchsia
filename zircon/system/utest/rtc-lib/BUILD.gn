@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("rtc-lib") {
-  sources = [
-    "rtc.cc",
-  ]
+  sources = [ "rtc.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-rtc:c",
     "$zx/system/ulib/ddk",

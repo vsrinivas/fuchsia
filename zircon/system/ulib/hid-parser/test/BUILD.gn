@@ -31,9 +31,7 @@ zx_test("hid-parser") {
 }
 
 fuzzer("hid-parser-fuzzer") {
-  sources = [
-    "hid-parser-fuzztest.cc",
-  ]
+  sources = [ "hid-parser-fuzztest.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hid-parser",

@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 source_set("target") {
-  sources = [
-    "init.cc",
-  ]
+  sources = [ "init.cc" ]
 }

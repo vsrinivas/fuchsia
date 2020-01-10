@@ -30,9 +30,7 @@ rustc_binary("bin") {
 }
 
 package("wlan-stress-test") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "wlan_stress_test"
 

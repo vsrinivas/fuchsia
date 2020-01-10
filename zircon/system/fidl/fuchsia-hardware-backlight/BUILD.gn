@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-hardware-backlight") {
-  sources = [
-    "backlight.fidl",
-  ]
+  sources = [ "backlight.fidl" ]
 }

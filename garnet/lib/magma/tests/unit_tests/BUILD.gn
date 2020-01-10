@@ -126,13 +126,9 @@ source_set("magma_platform_device_test") {
   testonly = true
 
   if (current_cpu == "arm64") {
-    sources = [
-      "test_platform_device.cc",
-    ]
+    sources = [ "test_platform_device.cc" ]
   } else if (current_cpu == "x64") {
-    sources = [
-      "test_platform_pci_device.cc",
-    ]
+    sources = [ "test_platform_pci_device.cc" ]
   }
 
   deps = [

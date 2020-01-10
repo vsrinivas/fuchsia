@@ -19,7 +19,5 @@ zx_driver("msm8x53-som") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hwreg",
   ]
-  data_deps = [
-    "$zx/kernel/target/arm64/boot-shim:msm8x53-som",
-  ]
+  data_deps = [ "$zx/kernel/target/arm64/boot-shim:msm8x53-som" ]
 }

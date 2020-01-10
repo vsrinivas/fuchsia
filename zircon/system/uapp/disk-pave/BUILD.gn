@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("disk-pave") {
-  deps = [
-    ":install-disk-image",
-  ]
+  deps = [ ":install-disk-image" ]
 }
 
 zx_executable("install-disk-image") {

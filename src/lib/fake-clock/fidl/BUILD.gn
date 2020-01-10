@@ -6,7 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "fuchsia.testing"
-  sources = [
-    "fake_clock.fidl",
-  ]
+  sources = [ "fake_clock.fidl" ]
 }

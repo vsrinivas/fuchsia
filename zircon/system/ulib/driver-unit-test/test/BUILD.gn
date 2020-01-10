@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":logger-unit",
-  ]
+  deps = [ ":logger-unit" ]
 }
 
 zx_test("logger-unit") {
-  sources = [
-    "logger-test.cc",
-  ]
+  sources = [ "logger-test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-driver-test:c",
     "$zx/system/ulib/driver-unit-test",

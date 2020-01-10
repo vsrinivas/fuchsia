@@ -21,14 +21,13 @@ executable("bin") {
       "utils.h",
     ]
   } else {
-    sources = [
-      "main.cc",
-    ]
+    sources = [ "main.cc" ]
   }
 
   deps = [
     "//garnet/lib/debugger_utils",
     "//sdk/lib/sys/cpp",
+
     #"//src/lib/files",
     #"//src/lib/fsl",
     "//src/lib/fxl",
@@ -43,18 +42,12 @@ executable("bin") {
 }
 
 install_host_tools("host_insntrace_print") {
-  deps = [
-    "print:insntrace_print",
-  ]
-  outputs = [
-    "insntrace_print",
-  ]
+  deps = [ "print:insntrace_print" ]
+  outputs = [ "insntrace_print" ]
 }
 
 package("insntrace") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

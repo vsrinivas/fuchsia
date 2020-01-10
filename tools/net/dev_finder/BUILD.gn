@@ -20,9 +20,7 @@ go_library("main") {
 
 go_binary("dev_finder") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/net/dev_finder"
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
   sdk_category = "partner"
 }
 
@@ -32,24 +30,16 @@ go_binary("dev_finder") {
 # -- Removing "dev_finder"
 go_binary("device-finder") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/net/dev_finder"
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
   sdk_category = "partner"
 }
 
 go_test("dev_finder_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/dev_finder" ]
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }
 
 install_host_tools("host") {
-  deps = [
-    ":device-finder",
-  ]
-  outputs = [
-    "device-finder",
-  ]
+  deps = [ ":device-finder" ]
+  outputs = [ "device-finder" ]
 }

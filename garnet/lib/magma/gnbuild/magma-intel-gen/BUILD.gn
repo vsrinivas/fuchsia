@@ -12,9 +12,7 @@ if (target_cpu == "x64") {
   group("magma-vulkan") {
     if (magma_enable_developer_build) {
       testonly = true
-      deps = [
-        "//garnet/lib/magma/tests/unit_tests:testing_firmware_file",
-      ]
+      deps = [ "//garnet/lib/magma/tests/unit_tests:testing_firmware_file" ]
     }
     public_deps = [
       ":magma-intel-gen",
@@ -28,9 +26,7 @@ if (target_cpu == "x64") {
       testonly = true
     }
 
-    deps = [
-      "//third_party/mesa:magma_vulkan",
-    ]
+    deps = [ "//third_party/mesa:magma_vulkan" ]
 
     libraries = [
       {
@@ -93,9 +89,7 @@ if (target_cpu == "x64") {
   }
 
   test_package("magma_intel_gen_integration_tests") {
-    deps = [
-      "//garnet/drivers/gpu/msd-intel-gen/tests/integration",
-    ]
+    deps = [ "//garnet/drivers/gpu/msd-intel-gen/tests/integration" ]
 
     tests = [
       {

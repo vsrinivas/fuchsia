@@ -8,17 +8,13 @@ import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":metric_broker_config_inspect_tests",
-  ]
+  deps = [ ":metric_broker_config_inspect_tests" ]
 }
 
 executable("inspect_config_reader_test") {
   testonly = true
   output_name = "inspect_config_reader_test"
-  sources = [
-    "inspect_config_reader_test.cc",
-  ]
+  sources = [ "inspect_config_reader_test.cc" ]
   deps = [
     "//garnet/bin/metric_broker/config/inspect:inspect_config_reader",
     "//src/lib/fxl/test:gtest_main",
@@ -30,9 +26,7 @@ executable("inspect_config_reader_test") {
 executable("snapshot_config_test") {
   testonly = true
   output_name = "snapshot_config_test"
-  sources = [
-    "snapshot_config_test.cc",
-  ]
+  sources = [ "snapshot_config_test.cc" ]
   deps = [
     "//garnet/bin/metric_broker/config/inspect:snapshot_config",
     "//src/lib/fxl/test:gtest_main",

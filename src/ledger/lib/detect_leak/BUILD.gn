@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("detect_leak") {
-  sources = [
-    "detect_leak.cc",
-  ]
+  sources = [ "detect_leak.cc" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

@@ -8,11 +8,7 @@ fidl("fuchsia.stash") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "vector-bounds-not-specified" ]
 
-  sources = [
-    "stash.fidl",
-  ]
+  sources = [ "stash.fidl" ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-mem",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-mem" ]
 }

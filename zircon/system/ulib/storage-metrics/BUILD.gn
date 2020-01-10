@@ -7,9 +7,7 @@ assert(is_fuchsia, "Fuchsia-only library")
 zx_library("storage-metrics") {
   sdk = "source"
   sdk_headers = [ "storage-metrics/storage-metrics.h" ]
-  sources = [
-    "storage-metrics.cc",
-  ]
+  sources = [ "storage-metrics.cc" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c.headers",
     "$zx/system/fidl/fuchsia-hardware-block:llcpp.headers",

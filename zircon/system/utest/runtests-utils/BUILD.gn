@@ -27,9 +27,7 @@ zx_test("runtests-utils") {
 zx_executable("publish-data-helper") {
   testonly = true
   visibility = [ ":*" ]
-  sources = [
-    "helper/publish-data-helper.cc",
-  ]
+  sources = [ "helper/publish-data-helper.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
@@ -44,23 +42,15 @@ zx_executable("publish-data-helper") {
 
 resource("packaged-publish-data-helper") {
   testonly = true
-  deps = [
-    ":publish-data-helper",
-  ]
-  outputs = [
-    "testdata/runtests-utils/publish-data/publish-data-helper",
-  ]
-  sources = [
-    "$target_out_dir/publish-data-helper",
-  ]
+  deps = [ ":publish-data-helper" ]
+  outputs = [ "testdata/runtests-utils/publish-data/publish-data-helper" ]
+  sources = [ "$target_out_dir/publish-data-helper" ]
 }
 
 generated_resource("test-data") {
   testonly = true
   contents = [ "Hello world!" ]
-  outputs = [
-    "testdata/runtests-utils/test-data",
-  ]
+  outputs = [ "testdata/runtests-utils/test-data" ]
 }
 
 # Generates a build script with a sensible #! depending on what our target is.
@@ -68,7 +58,12 @@ generated_resource("test-data") {
 # goals around verified execution, so now we pregenerate them and include them
 # as part of a signed package.
 template("runtests_test_script") {
-  forward_variables_from(invoker, "*", ["contents", "subdirectory"])
+  forward_variables_from(invoker,
+                         "*",
+                         [
+                           "contents",
+                           "subdirectory",
+                         ])
   assert(defined(invoker.contents))
 
   if (!defined(invoker.subdirectory)) {
@@ -77,32 +72,23 @@ template("runtests_test_script") {
     subdirectory = "${invoker.subdirectory}/"
   }
 
-  genfile = "$target_out_dir/testdata/runtests-utils/${subdirectory}${target_name}"
+  genfile =
+      "$target_out_dir/testdata/runtests-utils/${subdirectory}${target_name}"
 
   action("${target_name}.txt") {
     testonly = true
     script = "/bin/bash"
-    args = ["-c"]
+    args = [ "-c" ]
     shebang = "#!/boot/bin/sh"
-    args += [
-      "printf '${shebang}\n\n${invoker.contents}\n' > $genfile && chmod a+x $genfile"
-    ]
-    outputs = [
-      "$genfile",
-    ]
+    args += [ "printf '${shebang}\n\n${invoker.contents}\n' > $genfile && chmod a+x $genfile" ]
+    outputs = [ "$genfile" ]
   }
 
   resource("${target_name}") {
     testonly = true
-    deps = [
-      ":${target_name}.txt",
-    ]
-    outputs = [
-      "testdata/runtests-utils/${subdirectory}${target_name}",
-    ]
-    sources = [
-      "$genfile",
-    ]
+    deps = [ ":${target_name}.txt" ]
+    outputs = [ "testdata/runtests-utils/${subdirectory}${target_name}" ]
+    sources = [ "$genfile" ]
   }
 }
 
@@ -204,19 +190,17 @@ group("test-scripts") {
     ":b.sh",
 
     # Used in an isolated directory by DiscoverAndRunTestsBasicFail
-    ":test-basic-succeed.sh",
     ":test-basic-fail.sh",
+    ":test-basic-succeed.sh",
 
     # Used in an isolated tree by DiscoverAndRunTestsWithGlobs
-    ":test-globs-root.sh",
     ":test-globs-one.sh",
+    ":test-globs-root.sh",
     ":test-globs-two.sh",
 
     # Used in an isolated directory by DiscoverAndRunTestsWithOutput and
     # DiscoverAndRunTestsWithSyslogOutput
-    ":test-with-output-succeed.sh",
     ":test-with-output-fail.sh",
-
+    ":test-with-output-succeed.sh",
   ]
 }
-

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("disk-inspect") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "$zx/system/ulib/disk-inspector",
     "$zx/system/ulib/minfs",

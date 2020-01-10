@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("mtk-thermal") {
-  sources = [
-    "mtk-thermal.cc",
-  ]
+  sources = [ "mtk-thermal.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.composite",

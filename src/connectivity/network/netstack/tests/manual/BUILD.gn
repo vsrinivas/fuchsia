@@ -5,139 +5,99 @@
 executable("sockettest") {
   testonly = true
 
-  sources = [
-    "sockettest.c",
-  ]
+  sources = [ "sockettest.c" ]
 
   libs = [ "zircon" ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
 executable("keepalivetest") {
   testonly = true
 
-  sources = [
-    "keepalivetest.c",
-  ]
+  sources = [ "keepalivetest.c" ]
 
   libs = [ "zircon" ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
 executable("mctest") {
   testonly = true
 
-  sources = [
-    "mctest.c",
-  ]
+  sources = [ "mctest.c" ]
 
   libs = [ "zircon" ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
 executable("nbiotest") {
   testonly = true
 
-  sources = [
-    "nbiotest.c",
-  ]
+  sources = [ "nbiotest.c" ]
 
   libs = [ "zircon" ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
 executable("polltest") {
   testonly = true
 
-  sources = [
-    "polltest.c",
-  ]
+  sources = [ "polltest.c" ]
 
   libs = [ "zircon" ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
 executable("selecttest") {
   testonly = true
 
-  sources = [
-    "selecttest.c",
-  ]
+  sources = [ "selecttest.c" ]
 
   libs = [ "zircon" ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
 executable("udptest") {
   testonly = true
 
-  sources = [
-    "udptest.c",
-  ]
+  sources = [ "udptest.c" ]
 
   libs = [ "zircon" ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
 executable("sockopttest") {
   testonly = true
 
-  sources = [
-    "sockopttest.c",
-  ]
+  sources = [ "sockopttest.c" ]
 
   libs = [ "zircon" ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
 executable("passfdtest") {
   testonly = true
 
-  sources = [
-    "passfdtest.c",
-  ]
+  sources = [ "passfdtest.c" ]
 
   libs = [ "zircon" ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
 executable("gethostbyname_test") {
   testonly = true
 
-  sources = [
-    "gethostbyname_test.c",
-  ]
+  sources = [ "gethostbyname_test.c" ]
 
   libs = [ "zircon" ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }

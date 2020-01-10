@@ -16,17 +16,13 @@ source_set("backoff") {
     "//zircon/public/lib/zx",
   ]
 
-  deps = [
-    "//src/ledger/lib/logging",
-  ]
+  deps = [ "//src/ledger/lib/logging" ]
 }
 
 source_set("unittests") {
   testonly = true
 
-  sources = [
-    "exponential_backoff_unittest.cc",
-  ]
+  sources = [ "exponential_backoff_unittest.cc" ]
 
   deps = [
     ":backoff",

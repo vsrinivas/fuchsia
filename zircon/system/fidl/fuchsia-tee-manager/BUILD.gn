@@ -5,10 +5,6 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-tee-manager") {
-  sources = [
-    "provider.fidl",
-  ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-io",
-  ]
+  sources = [ "provider.fidl" ]
+  public_deps = [ "$zx/system/fidl/fuchsia-io" ]
 }

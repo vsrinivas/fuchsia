@@ -3,10 +3,6 @@
 # found in the LICENSE file.
 
 source_set("header_tests") {
-  sources = [
-    "pow2_tests.cc",
-  ]
-  deps = [
-    "$zx/kernel/lib/unittest",
-  ]
+  sources = [ "pow2_tests.cc" ]
+  deps = [ "$zx/kernel/lib/unittest" ]
 }

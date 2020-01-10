@@ -3,12 +3,8 @@
 # found in the LICENSE file.
 
 source_set("types-internal") {
-  public = [
-    "cpp/types-internal.h",
-  ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-cobalt:llcpp",
-  ]
+  public = [ "cpp/types-internal.h" ]
+  public_deps = [ "$zx/system/fidl/fuchsia-cobalt:llcpp" ]
   visibility = [ "./*" ]
 }
 
@@ -57,13 +53,7 @@ zx_library("cobalt-client") {
 # This library may only be imported from tests.
 zx_library("in-memory-logger") {
   testonly = true
-  sources = [
-    "in_memory_logger.cc",
-  ]
-  public_deps = [
-    ":metrics",
-  ]
-  deps = [
-    ":types-internal",
-  ]
+  sources = [ "in_memory_logger.cc" ]
+  public_deps = [ ":metrics" ]
+  deps = [ ":types-internal" ]
 }

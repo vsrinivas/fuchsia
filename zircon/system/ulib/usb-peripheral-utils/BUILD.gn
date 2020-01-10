@@ -4,9 +4,7 @@
 
 zx_library("usb-peripheral-utils") {
   shared = true
-  sources = [
-    "event-watcher.cc",
-  ]
+  sources = [ "event-watcher.cc" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",

@@ -5,9 +5,7 @@
 zx_library("log-writer-logger") {
   shared = true
   host = true
-  sources = [
-    "log-writer-logger.cc",
-  ]
+  sources = [ "log-writer-logger.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-logger:c",
     "$zx/system/ulib/fbl",

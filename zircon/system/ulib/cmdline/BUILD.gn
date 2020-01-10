@@ -11,7 +11,5 @@ zx_library("cmdline") {
   ]
   host = true
 
-  sources = [
-    "args_parser.cc",
-  ]
+  sources = [ "args_parser.cc" ]
 }

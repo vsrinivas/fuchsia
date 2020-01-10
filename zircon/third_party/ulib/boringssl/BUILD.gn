@@ -84,9 +84,7 @@ zx_library("boringssl") {
                    [ "$bssl_dir/src" ]
 
     if (is_fuchsia) {
-      deps = [
-        "$zx/system/ulib/zircon",
-      ]
+      deps = [ "$zx/system/ulib/zircon" ]
     } else {
       defines = [
         # Required for `pthread_rwlock_t`.

@@ -95,9 +95,7 @@ source_set("fake_netstack") {
 executable("unit_tests") {
   testonly = true
   output_name = "guest_unit_tests"
-  sources = [
-    "guest_console_test.cc",
-  ]
+  sources = [ "guest_console_test.cc" ]
   deps = [
     ":guest_console",
     "//src/lib/fxl/test:gtest_main",
@@ -109,9 +107,7 @@ executable("unit_tests") {
 source_set("test_main") {
   testonly = true
   visibility = [ ":*" ]
-  sources = [
-    "test_main.cc",
-  ]
+  sources = [ "test_main.cc" ]
   deps = [
     ":logger",
     "//src/lib/fxl/test:test_settings",
@@ -201,9 +197,7 @@ executable("guest_integration_tests_bin") {
 }
 
 unittest_package("guest_unit_tests") {
-  deps = [
-    ":unit_tests",
-  ]
+  deps = [ ":unit_tests" ]
 
   tests = [
     {
@@ -223,9 +217,7 @@ action("icd_manifest") {
     "${icd_filename}",
     rebase_path(icd_manifest, root_build_dir),
   ]
-  outputs = [
-    icd_manifest,
-  ]
+  outputs = [ icd_manifest ]
 }
 
 romfs_image("extras") {

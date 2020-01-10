@@ -6,9 +6,7 @@ import("//build/config.gni")
 import("//build/packages/prebuilt_package.gni")
 
 group("cast") {
-  public_deps = [
-    ":cast_runner",
-  ]
+  public_deps = [ ":cast_runner" ]
 }
 
 group("cast_runner") {
@@ -23,13 +21,9 @@ config_data("cast_runner_config") {
 
   for_pkg = "appmgr"
 
-  sources = [
-    "config/cast_scheme_map.config",
-  ]
+  sources = [ "config/cast_scheme_map.config" ]
 
-  outputs = [
-    "scheme_map/cast.config",
-  ]
+  outputs = [ "scheme_map/cast.config" ]
 }
 
 prebuilt_package("cast_runner_pkg") {

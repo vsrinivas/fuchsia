@@ -7,9 +7,7 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 source_set("address_range") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "zircon_platform_address_range.cc",
-  ]
+  sources = [ "zircon_platform_address_range.cc" ]
 
   deps = [
     "//garnet/lib/magma/src/magma_util",
@@ -76,28 +74,20 @@ entry_deps = [
 ]
 
 source_set("entry") {
-  sources = [
-    "zircon_entry.cc",
-  ]
+  sources = [ "zircon_entry.cc" ]
   deps = entry_deps
 }
 
 source_set("entry_test") {
-  sources = [
-    "zircon_entry.cc",
-  ]
+  sources = [ "zircon_entry.cc" ]
   defines = [ "MAGMA_TEST_DRIVER=1" ]
   deps = entry_deps
 }
 
 source_set("interrupt") {
-  sources = [
-    "zircon_platform_interrupt.h",
-  ]
+  sources = [ "zircon_platform_interrupt.h" ]
 
-  public_deps = [
-    "$zircon_build_root/public/lib/zx",
-  ]
+  public_deps = [ "$zircon_build_root/public/lib/zx" ]
 }
 
 source_set("device") {
@@ -135,9 +125,7 @@ source_set("device") {
 source_set("futex") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "zircon_platform_futex.cc",
-  ]
+  sources = [ "zircon_platform_futex.cc" ]
 
   deps = [
     "$magma_build_root/src/magma_util",
@@ -148,9 +136,7 @@ source_set("futex") {
 source_set("connection_client") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "zircon_platform_connection_client.cc",
-  ]
+  sources = [ "zircon_platform_connection_client.cc" ]
 
   deps = [
     "$magma_build_root/include:msd_abi",
@@ -166,9 +152,7 @@ source_set("connection_client") {
 source_set("connection") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "zircon_platform_connection.cc",
-  ]
+  sources = [ "zircon_platform_connection.cc" ]
 
   deps = [
     "$magma_build_root/include:msd_abi",
@@ -183,9 +167,7 @@ source_set("connection") {
 source_set("device_client") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "zircon_platform_device_client.cc",
-  ]
+  sources = [ "zircon_platform_device_client.cc" ]
 
   deps = [
     "..:device_client_header",
@@ -199,9 +181,7 @@ source_set("device_client") {
 source_set("sysmem_connection") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "zircon_platform_sysmem_connection.cc",
-  ]
+  sources = [ "zircon_platform_sysmem_connection.cc" ]
 
   deps = [
     ":buffer",
@@ -215,9 +195,7 @@ source_set("sysmem_connection") {
 source_set("thread") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "zircon_platform_thread.cc",
-  ]
+  sources = [ "zircon_platform_thread.cc" ]
 
   deps = [
     ":handle",
@@ -229,9 +207,7 @@ source_set("thread") {
 source_set("event") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "zircon_platform_event.cc",
-  ]
+  sources = [ "zircon_platform_event.cc" ]
 
   deps = [
     "$magma_build_root/src/magma_util",
@@ -253,31 +229,21 @@ source_set("handle") {
     "..:handle_header",
   ]
 
-  deps = [
-    "$magma_build_root/src/magma_util",
-  ]
+  deps = [ "$magma_build_root/src/magma_util" ]
 }
 
 source_set("iommu") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "zircon_platform_iommu.cc",
-  ]
+  sources = [ "zircon_platform_iommu.cc" ]
 
-  deps = [
-    "..:iommu_header",
-  ]
+  deps = [ "..:iommu_header" ]
 }
 
 source_set("logger") {
-  public_deps = [
-    "..:logger_header",
-  ]
+  public_deps = [ "..:logger_header" ]
 
-  sources = [
-    "zircon_platform_logger_syslog.cc",
-  ]
+  sources = [ "zircon_platform_logger_syslog.cc" ]
 
   deps = [
     ":handle",
@@ -288,25 +254,17 @@ source_set("logger") {
 }
 
 source_set("logger_for_system_drivers") {
-  public_deps = [
-    "..:logger_header",
-  ]
+  public_deps = [ "..:logger_header" ]
 
-  sources = [
-    "zircon_platform_logger_ddk.cc",
-  ]
+  sources = [ "zircon_platform_logger_ddk.cc" ]
 
-  deps = [
-    "$zircon_build_root/public/lib/ddk",
-  ]
+  deps = [ "$zircon_build_root/public/lib/ddk" ]
 }
 
 source_set("object") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "zircon_platform_object.cc",
-  ]
+  sources = [ "zircon_platform_object.cc" ]
 
   deps = [
     "$magma_build_root/src/magma_util",
@@ -339,9 +297,7 @@ source_set("semaphore") {
 source_set("port") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "zircon_platform_port.cc",
-  ]
+  sources = [ "zircon_platform_port.cc" ]
 
   deps = [
     "$magma_build_root/src/magma_util",
@@ -371,9 +327,7 @@ source_set("trace") {
     "..:trace_header",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/fit",
-  ]
+  public_deps = [ "//zircon/public/lib/fit" ]
 }
 
 source_set("trace_provider") {
@@ -408,9 +362,7 @@ source_set("trace_provider_with_fdio") {
     "..:tracing",
   ]
 
-  sources = [
-    "zircon_platform_trace_provider_with_fdio.cc",
-  ]
+  sources = [ "zircon_platform_trace_provider_with_fdio.cc" ]
 
   deps = [
     ":trace_provider",
@@ -419,26 +371,18 @@ source_set("trace_provider_with_fdio") {
     "//zircon/public/lib/fdio",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/fit",
-  ]
+  public_deps = [ "//zircon/public/lib/fit" ]
 }
 
 source_set("random") {
-  deps = [
-    "..:random_header",
-  ]
-  sources = [
-    "zircon_platform_random.cc",
-  ]
+  deps = [ "..:random_header" ]
+  sources = [ "zircon_platform_random.cc" ]
 }
 
 source_set("pci_driver_gtest") {
   testonly = true
 
-  sources = [
-    "pci_driver_test_gtest.cc",
-  ]
+  sources = [ "pci_driver_test_gtest.cc" ]
 
   deps = [
     "$magma_build_root/src/magma_util/platform:device",
@@ -450,9 +394,7 @@ source_set("pci_driver_gtest") {
 source_set("pdev_driver_gtest") {
   testonly = true
 
-  sources = [
-    "pdev_driver_test_gtest.cc",
-  ]
+  sources = [ "pdev_driver_test_gtest.cc" ]
 
   deps = [
     "$magma_build_root/tests/helper:platform_device_helper",

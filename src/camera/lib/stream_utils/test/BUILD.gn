@@ -4,9 +4,7 @@
 
 executable("stream_utils_test") {
   testonly = true
-  sources = [
-    "image_io_util_test.cc",
-  ]
+  sources = [ "image_io_util_test.cc" ]
   deps = [
     "//src/camera/drivers/test_utils",
     "//src/camera/lib/stream_utils",

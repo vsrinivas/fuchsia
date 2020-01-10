@@ -22,9 +22,7 @@ rustc_binary("echo_client_rust_synchronous_bin") {
 }
 
 package("echo_client_rust_synchronous") {
-  deps = [
-    ":echo_client_rust_synchronous_bin",
-  ]
+  deps = [ ":echo_client_rust_synchronous_bin" ]
 
   binary = "echo_client_rust_synchronous"
 

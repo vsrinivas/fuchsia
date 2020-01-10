@@ -48,235 +48,157 @@ group("fidl") {
   ]
 }
 fidl("fidl.test.dangerous.constants.lower") {
-  sources = [
-    "fidl.test.dangerous.constants.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.constants.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.using.lower") {
-  sources = [
-    "fidl.test.dangerous.using.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.using.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.enums.lower") {
-  sources = [
-    "fidl.test.dangerous.enums.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.enums.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.struct.types.lower") {
-  sources = [
-    "fidl.test.dangerous.struct.types.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.struct.types.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.struct.names.lower") {
-  sources = [
-    "fidl.test.dangerous.struct.names.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.struct.names.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.table.names.lower") {
-  sources = [
-    "fidl.test.dangerous.table.names.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.table.names.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.table.fields.lower") {
-  sources = [
-    "fidl.test.dangerous.table.fields.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.table.fields.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.protocol.names.lower") {
-  sources = [
-    "fidl.test.dangerous.protocol.names.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.protocol.names.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.method.names.lower") {
-  sources = [
-    "fidl.test.dangerous.method.names.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.method.names.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.event.names.lower") {
-  sources = [
-    "fidl.test.dangerous.event.names.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.event.names.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.method.request.arguments.lower") {
-  sources = [
-    "fidl.test.dangerous.method.request.arguments.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.method.request.arguments.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.method.response.arguments.lower") {
-  sources = [
-    "fidl.test.dangerous.method.response.arguments.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.method.response.arguments.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.method.event.arguments.lower") {
-  sources = [
-    "fidl.test.dangerous.method.event.arguments.lower.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.method.event.arguments.lower.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.constants.upper") {
-  sources = [
-    "fidl.test.dangerous.constants.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.constants.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.using.upper") {
-  sources = [
-    "fidl.test.dangerous.using.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.using.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.enums.upper") {
-  sources = [
-    "fidl.test.dangerous.enums.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.enums.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.struct.types.upper") {
-  sources = [
-    "fidl.test.dangerous.struct.types.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.struct.types.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.struct.names.upper") {
-  sources = [
-    "fidl.test.dangerous.struct.names.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.struct.names.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.table.names.upper") {
-  sources = [
-    "fidl.test.dangerous.table.names.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.table.names.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.table.fields.upper") {
-  sources = [
-    "fidl.test.dangerous.table.fields.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.table.fields.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.protocol.names.upper") {
-  sources = [
-    "fidl.test.dangerous.protocol.names.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.protocol.names.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.method.names.upper") {
-  sources = [
-    "fidl.test.dangerous.method.names.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.method.names.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.event.names.upper") {
-  sources = [
-    "fidl.test.dangerous.event.names.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.event.names.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.method.request.arguments.upper") {
-  sources = [
-    "fidl.test.dangerous.method.request.arguments.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.method.request.arguments.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.method.response.arguments.upper") {
-  sources = [
-    "fidl.test.dangerous.method.response.arguments.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.method.response.arguments.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.method.event.arguments.upper") {
-  sources = [
-    "fidl.test.dangerous.method.event.arguments.upper.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.method.event.arguments.upper.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.constants.camel") {
-  sources = [
-    "fidl.test.dangerous.constants.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.constants.camel.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.using.camel") {
-  sources = [
-    "fidl.test.dangerous.using.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.using.camel.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.enums.camel") {
-  sources = [
-    "fidl.test.dangerous.enums.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.enums.camel.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.struct.types.camel") {
-  sources = [
-    "fidl.test.dangerous.struct.types.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.struct.types.camel.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.struct.names.camel") {
-  sources = [
-    "fidl.test.dangerous.struct.names.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.struct.names.camel.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.table.names.camel") {
-  sources = [
-    "fidl.test.dangerous.table.names.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.table.names.camel.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.table.fields.camel") {
-  sources = [
-    "fidl.test.dangerous.table.fields.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.table.fields.camel.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.protocol.names.camel") {
-  sources = [
-    "fidl.test.dangerous.protocol.names.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.protocol.names.camel.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.method.names.camel") {
-  sources = [
-    "fidl.test.dangerous.method.names.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.method.names.camel.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.event.names.camel") {
-  sources = [
-    "fidl.test.dangerous.event.names.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.event.names.camel.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.method.request.arguments.camel") {
-  sources = [
-    "fidl.test.dangerous.method.request.arguments.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.method.request.arguments.camel.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.method.response.arguments.camel") {
-  sources = [
-    "fidl.test.dangerous.method.response.arguments.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.method.response.arguments.camel.test.fidl" ]
 }
 
 fidl("fidl.test.dangerous.method.event.arguments.camel") {
-  sources = [
-    "fidl.test.dangerous.method.event.arguments.camel.test.fidl",
-  ]
+  sources = [ "fidl.test.dangerous.method.event.arguments.camel.test.fidl" ]
 }

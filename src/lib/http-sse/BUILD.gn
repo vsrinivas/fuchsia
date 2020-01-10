@@ -26,9 +26,7 @@ rustc_library("http_sse") {
 }
 
 test_package("rust-http-sse-tests") {
-  deps = [
-    ":http_sse_test",
-  ]
+  deps = [ ":http_sse_test" ]
 
   tests = [
     {
@@ -42,7 +40,5 @@ test_package("rust-http-sse-tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":rust-http-sse-tests",
-  ]
+  deps = [ ":rust-http-sse-tests" ]
 }

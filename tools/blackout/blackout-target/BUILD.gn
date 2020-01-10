@@ -49,7 +49,5 @@ test_package("blackout-target-test") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":blackout-target-test",
-  ]
+  public_deps = [ ":blackout-target-test" ]
 }

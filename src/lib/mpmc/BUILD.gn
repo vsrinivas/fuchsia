@@ -9,9 +9,7 @@ import("//build/test/test_package.gni")
 group("tests") {
   testonly = true
 
-  deps = [
-    ":mpmc_tests",
-  ]
+  deps = [ ":mpmc_tests" ]
 }
 
 rustc_library("mpmc") {
@@ -34,9 +32,7 @@ rustc_test("mpmc_lib_test") {
 }
 
 test_package("mpmc_tests") {
-  deps = [
-    ":mpmc_lib_test",
-  ]
+  deps = [ ":mpmc_lib_test" ]
 
   tests = [
     {

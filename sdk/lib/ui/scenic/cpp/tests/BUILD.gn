@@ -19,9 +19,7 @@ test("scenic_cpp_unittests") {
 }
 
 test_package("scenic_cpp_tests") {
-  deps = [
-    ":scenic_cpp_unittests",
-  ]
+  deps = [ ":scenic_cpp_unittests" ]
 
   tests = [
     {

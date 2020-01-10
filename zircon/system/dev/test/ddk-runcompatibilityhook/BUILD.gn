@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("ddk-runcompatibilityhook-test") {
-  sources = [
-    "test-driver.cc",
-  ]
+  sources = [ "test-driver.cc" ]
   deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
@@ -19,9 +17,7 @@ zx_driver("ddk-runcompatibilityhook-test") {
 }
 
 zx_driver("ddk-runcompatibilityhook-test-child") {
-  sources = [
-    "test-driver-child.cc",
-  ]
+  sources = [ "test-driver-child.cc" ]
   deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
@@ -34,9 +30,7 @@ zx_driver("ddk-runcompatibilityhook-test-child") {
 }
 
 zx_test("ddk-runcompatibilityhook") {
-  sources = [
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-device-manager:c",

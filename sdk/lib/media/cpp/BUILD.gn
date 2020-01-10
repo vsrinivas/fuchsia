@@ -59,9 +59,7 @@ executable("test_bin") {
 }
 
 test_package("media_lib_timeline_tests") {
-  deps = [
-    ":test_bin",
-  ]
+  deps = [ ":test_bin" ]
 
   tests = [
     {

@@ -4,9 +4,7 @@
 
 source_set("shared") {
   visibility = [ "$zx/system/core/devmgr/*" ]
-  sources = [
-    "fdio.cc",
-  ]
+  sources = [ "fdio.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

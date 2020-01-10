@@ -3,12 +3,8 @@
 # found in the LICENSE file.
 
 zx_test("util") {
-  sources = [
-    "listnode.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/unittest",
-  ]
+  sources = [ "listnode.cc" ]
+  deps = [ "$zx/system/ulib/unittest" ]
   if (is_fuchsia) {
     deps += [
       "$zx/system/ulib/fdio",

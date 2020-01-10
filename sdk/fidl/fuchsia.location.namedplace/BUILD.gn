@@ -6,7 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.location.namedplace") {
   sdk_category = "partner"
-  sources = [
-    "namedplace.fidl",
-  ]
+  sources = [ "namedplace.fidl" ]
 }

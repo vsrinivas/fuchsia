@@ -4,7 +4,5 @@
 
 group("drivers") {
   testonly = true
-  deps = [
-    "ot-radio",
-  ]
+  deps = [ "ot-radio" ]
 }

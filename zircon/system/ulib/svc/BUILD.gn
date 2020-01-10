@@ -8,9 +8,7 @@ zx_library("svc") {
     "lib/svc/outgoing.h",
     "lib/svc/service.h",
   ]
-  sources = [
-    "outgoing.cc",
-  ]
+  sources = [ "outgoing.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/fdio",

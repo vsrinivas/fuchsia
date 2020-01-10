@@ -28,8 +28,6 @@ group("tests") {
 }
 
 hermetic_tests_package("modular_lib_tests") {
-  deps = [
-    "//src/modular/lib:modular_lib_unittests",
-  ]
+  deps = [ "//src/modular/lib:modular_lib_unittests" ]
   environments = basic_envs
 }

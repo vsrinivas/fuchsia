@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 package("sync_sine") {
-  deps = [
-    ":sync_sine_bin",
-  ]
+  deps = [ ":sync_sine_bin" ]
 
   binaries = [
     {

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("usb-harriet") {
-  sources = [
-    "usb-harriet.cc",
-  ]
+  sources = [ "usb-harriet.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",
     "$zx/system/banjo/ddk.protocol.usb.composite",

@@ -5,9 +5,7 @@
 import("$zx/public/gn/package.gni")
 
 zx_executable("ptysvc") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     ":common",
     "$zx/system/ulib/async-loop:async-loop-cpp",
@@ -54,9 +52,7 @@ source_set("common") {
 zx_test("ptysvc-test") {
   test_group = "sys"
 
-  sources = [
-    "pty-tests.cc",
-  ]
+  sources = [ "pty-tests.cc" ]
   deps = [
     ":common",
     "$zx/system/fidl/fuchsia-io:llcpp",

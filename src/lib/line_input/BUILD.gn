@@ -44,13 +44,9 @@ if (current_toolchain == host_toolchain) {
 
   # Currently compiled for the host only, but could be packaged for the target if desired.
   executable("line_input_example") {
-    sources = [
-      "line_input_example.cc",
-    ]
+    sources = [ "line_input_example.cc" ]
 
-    deps = [
-      ":line_input",
-    ]
+    deps = [ ":line_input" ]
   }
 } else {
   executable("line_input_tests_bin") {
@@ -69,9 +65,7 @@ if (current_toolchain == host_toolchain) {
   }
 
   unittest_package("line_input_tests") {
-    deps = [
-      ":line_input_tests_bin",
-    ]
+    deps = [ ":line_input_tests_bin" ]
     tests = [
       {
         name = "line_input_tests_bin"

@@ -38,9 +38,7 @@ package("openthread") {
   # Fuchsia does not yet support loading drivers out of packages.
   deprecated_system_image = true
 
-  deps = [
-    ":ot-radio",
-  ]
+  deps = [ ":ot-radio" ]
 
   drivers = [
     {

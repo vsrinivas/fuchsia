@@ -20,9 +20,7 @@ rustc_library("escaped-cstring") {
 }
 
 test_package("escaped-cstring-tests") {
-  deps = [
-    ":escaped-cstring_test",
-  ]
+  deps = [ ":escaped-cstring_test" ]
 
   tests = [
     {

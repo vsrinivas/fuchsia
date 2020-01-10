@@ -22,9 +22,7 @@ rustc_binary("bin") {
 }
 
 package("cs2") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -44,7 +42,5 @@ package("cs2") {
 group("tests") {
   testonly = true
 
-  deps = [
-    "tests:cs2_test",
-  ]
+  deps = [ "tests:cs2_test" ]
 }

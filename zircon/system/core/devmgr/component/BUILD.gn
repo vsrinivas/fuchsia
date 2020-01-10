@@ -3,12 +3,8 @@
 # found in the LICENSE file.
 
 zx_driver("component") {
-  sources = [
-    "component.cc",
-  ]
-  data_deps = [
-    ":component.proxy",
-  ]
+  sources = [ "component.cc" ]
+  data_deps = [ ":component.proxy" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",
     "$zx/system/banjo/ddk.protocol.buttons",
@@ -34,9 +30,7 @@ zx_driver("component") {
 }
 
 zx_driver("component.proxy") {
-  sources = [
-    "component-proxy.cc",
-  ]
+  sources = [ "component-proxy.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",
     "$zx/system/banjo/ddk.protocol.buttons",

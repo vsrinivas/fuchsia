@@ -13,9 +13,7 @@ assert(current_toolchain == "${default_toolchain}-shared")
 
 group("test_data") {
   testonly = true
-  deps = [
-    ":zxdb_symbol_test",
-  ]
+  deps = [ ":zxdb_symbol_test" ]
 }
 
 # This rule will be called as a dependency of the zxdb tests.

@@ -45,9 +45,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "trace_manager"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -58,9 +56,7 @@ executable("bin") {
 }
 
 package("trace_manager") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "trace_manager"
 

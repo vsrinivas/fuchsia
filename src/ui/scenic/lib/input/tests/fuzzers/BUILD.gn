@@ -6,9 +6,7 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 
 fuzzer("input_fuzzer") {
-  sources = [
-    "input_fuzztest.cc",
-  ]
+  sources = [ "input_fuzztest.cc" ]
   deps = [
     "//sdk/lib/fidl/cpp",
     "//src/lib/ui/scenic/cpp",

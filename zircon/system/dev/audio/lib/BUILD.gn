@@ -6,7 +6,5 @@
 # the legacy Fuchsia GN build.  This file should not exist at all.
 
 group("lib") {
-  deps = [
-    "simple-audio-stream",
-  ]
+  deps = [ "simple-audio-stream" ]
 }

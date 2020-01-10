@@ -7,7 +7,5 @@ import("//build/go/go_test.gni")
 go_test("netstack_schedule_test") {
   gopackages = [ "netstack/schedule" ]
 
-  deps = [
-    "../:netstack_lib",
-  ]
+  deps = [ "../:netstack_lib" ]
 }

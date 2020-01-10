@@ -5,10 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.icmp") {
-  sources = [
-    "echo.fidl",
-  ]
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-net",
-  ]
+  sources = [ "echo.fidl" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-net" ]
 }

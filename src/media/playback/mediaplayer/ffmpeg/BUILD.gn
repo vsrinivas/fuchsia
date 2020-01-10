@@ -67,9 +67,7 @@ source_set("ffmpeg") {
 test("tests") {
   output_name = "mediaplayer_ffmpeg_tests"
 
-  sources = [
-    "test/av_codec_context_test.cc",
-  ]
+  sources = [ "test/av_codec_context_test.cc" ]
 
   deps = [
     ":ffmpeg",

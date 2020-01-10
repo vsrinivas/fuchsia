@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.serial") {
-  sources = [
-    "serial.banjo",
-  ]
+  sources = [ "serial.banjo" ]
 }

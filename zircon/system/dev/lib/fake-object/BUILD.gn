@@ -11,9 +11,7 @@ zx_library("fake-object") {
     "fake-handle.cc",
     "fake-object.cc",
   ]
-  public_deps = [
-    "$zx/system/ulib/zircon-internal",
-  ]
+  public_deps = [ "$zx/system/ulib/zircon-internal" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

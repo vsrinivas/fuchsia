@@ -18,9 +18,7 @@ group("camera") {
 }
 
 group("camera_manager") {
-  public_deps = [
-    "//src/camera/camera_manager2",
-  ]
+  public_deps = [ "//src/camera/camera_manager2" ]
 }
 
 group("tests") {

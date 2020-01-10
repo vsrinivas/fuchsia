@@ -8,7 +8,5 @@ fidl("fuchsia.update") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "string-bounds-not-specified" ]
 
-  sources = [
-    "update.fidl",
-  ]
+  sources = [ "update.fidl" ]
 }

@@ -14,9 +14,7 @@ group("test") {
 }
 
 test_package("audio_loopback_tests") {
-  deps = [
-    ":audio_loopback_tests_bin",
-  ]
+  deps = [ ":audio_loopback_tests_bin" ]
 
   tests = [
     {
@@ -32,9 +30,7 @@ executable("audio_loopback_tests_bin") {
   testonly = true
   output_name = "audio_loopback_tests"
 
-  sources = [
-    "audio_loopback_test.cc",
-  ]
+  sources = [ "audio_loopback_test.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",

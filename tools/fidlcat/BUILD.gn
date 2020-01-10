@@ -14,9 +14,7 @@ if (current_toolchain == host_toolchain) {
 
     output_name = "fidlcat"
 
-    sources = [
-      "main.cc",
-    ]
+    sources = [ "main.cc" ]
     deps = [
       ":lib",
       "//src/developer/debug/ipc:client",
@@ -32,13 +30,9 @@ if (current_toolchain == host_toolchain) {
   }
 
   static_library("lib") {
-    public = [
-      "command_line_options.h",
-    ]
+    public = [ "command_line_options.h" ]
 
-    sources = [
-      "command_line_options.cc",
-    ]
+    sources = [ "command_line_options.cc" ]
 
     deps = [
       "//src/lib/fidl_codec",
@@ -59,9 +53,7 @@ if (current_toolchain == host_toolchain) {
 
   source_set("host_tests") {
     testonly = true
-    sources = [
-      "command_line_options_test.cc",
-    ]
+    sources = [ "command_line_options_test.cc" ]
     deps = [
       ":lib",
       "//src/lib/fxl",
@@ -72,10 +64,6 @@ if (current_toolchain == host_toolchain) {
 }
 
 install_host_tools("fidlcat_host") {
-  deps = [
-    ":fidlcat",
-  ]
-  outputs = [
-    "fidlcat",
-  ]
+  deps = [ ":fidlcat" ]
+  outputs = [ "fidlcat" ]
 }

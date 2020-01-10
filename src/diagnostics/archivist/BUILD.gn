@@ -82,9 +82,7 @@ rustc_binary("bin") {
 package("archivist") {
   global_data = "//build"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -106,35 +104,23 @@ package("archivist") {
 
 config_data("archivist_config") {
   for_pkg = "archivist"
-  outputs = [
-    "archivist_config.json",
-  ]
+  outputs = [ "archivist_config.json" ]
 
-  sources = [
-    "configs/archivist_config.json",
-  ]
+  sources = [ "configs/archivist_config.json" ]
 }
 
 config_data("observer_config") {
   for_pkg = "archivist"
-  outputs = [
-    "observer_config.json",
-  ]
+  outputs = [ "observer_config.json" ]
 
-  sources = [
-    "configs/observer_config.json",
-  ]
+  sources = [ "configs/observer_config.json" ]
 }
 
 config_data("archivist_startup") {
   for_pkg = "sysmgr"
-  outputs = [
-    "archivist.config",
-  ]
+  outputs = [ "archivist.config" ]
 
-  sources = [
-    "configs/sysmgr_config.json",
-  ]
+  sources = [ "configs/sysmgr_config.json" ]
 }
 
 group("with_default_config") {
@@ -147,9 +133,7 @@ group("with_default_config") {
 }
 
 test_package("archivist_tests") {
-  deps = [
-    ":lib_test",
-  ]
+  deps = [ ":lib_test" ]
 
   tests = [
     {

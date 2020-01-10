@@ -4,15 +4,11 @@
 
 # Do not use this target directly, instead depend on //src/sys/tools/stash_ctl:stash_ctl_tests.
 group("stash_ctl_tests") {
-  public_deps = [
-    "//src/sys/tools/stash_ctl:stash_ctl_tests",
-  ]
+  public_deps = [ "//src/sys/tools/stash_ctl:stash_ctl_tests" ]
   testonly = true
 }
 
 # Do not use this target directly, instead depend on //src/sys/tools/stash_ctl:stash_ctl.
 group("stash_ctl") {
-  public_deps = [
-    "//src/sys/tools/stash_ctl:stash_ctl",
-  ]
+  public_deps = [ "//src/sys/tools/stash_ctl:stash_ctl" ]
 }

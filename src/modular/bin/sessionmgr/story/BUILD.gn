@@ -7,7 +7,5 @@ import("//src/modular/build/tests_package.gni")
 
 group("story") {
   testonly = true
-  deps = [
-    "model",
-  ]
+  deps = [ "model" ]
 }

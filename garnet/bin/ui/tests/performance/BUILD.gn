@@ -24,9 +24,7 @@ group("performance") {
 package("vulkan_is_supported") {
   testonly = true
 
-  deps = [
-    "vulkan_is_supported",
-  ]
+  deps = [ "vulkan_is_supported" ]
   binaries = [
     {
       name = "vulkan_is_supported"
@@ -44,9 +42,7 @@ package("vulkan_is_supported") {
 package("scenic_benchmarks") {
   testonly = true
 
-  deps = [
-    ":process_gfx_trace",
-  ]
+  deps = [ ":process_gfx_trace" ]
 
   binaries = [
     {
@@ -69,17 +65,13 @@ package("scenic_benchmarks") {
 
 go_library("process_trace_lib") {
   name = "process_gfx_trace"
-  deps = [
-    "//garnet/go/src/benchmarking",
-  ]
+  deps = [ "//garnet/go/src/benchmarking" ]
 }
 
 go_test("process_trace_helpers_test") {
   gopackages = [ "process_gfx_trace" ]
 
-  deps = [
-    ":process_trace_lib",
-  ]
+  deps = [ ":process_trace_lib" ]
 }
 
 go_binary("process_gfx_trace") {
@@ -87,15 +79,11 @@ go_binary("process_gfx_trace") {
 
   gopackage = "process_gfx_trace"
 
-  deps = [
-    ":process_trace_lib",
-  ]
+  deps = [ ":process_trace_lib" ]
 }
 
 unittest_package("benchmark_tests") {
-  deps = [
-    ":process_trace_helpers_test",
-  ]
+  deps = [ ":process_trace_helpers_test" ]
 
   tests = [
     {

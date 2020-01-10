@@ -7,7 +7,5 @@ assert(current_os == "linux")
 zx_library("usbhost") {
   host = true
   static = false
-  sources = [
-    "usbhost.c",
-  ]
+  sources = [ "usbhost.c" ]
 }

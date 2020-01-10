@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 executable("merge_and_sort") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 }

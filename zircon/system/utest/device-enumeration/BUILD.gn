@@ -3,17 +3,15 @@
 # found in the LICENSE file.
 
 zx_test("device-enumeration") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:c",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

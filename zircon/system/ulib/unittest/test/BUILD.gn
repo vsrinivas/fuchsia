@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":unittest",
-  ]
+  deps = [ ":unittest" ]
 }
 
 zx_test("unittest") {
-  sources = [
-    "unittest-test.cpp",
-  ]
+  sources = [ "unittest-test.cpp" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",

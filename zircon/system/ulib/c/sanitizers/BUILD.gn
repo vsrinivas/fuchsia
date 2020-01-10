@@ -30,8 +30,6 @@ source_set("sanitizers") {
 # must be compiled without instrumentation of any kind.
 source_set("sancov-stubs") {
   visibility = [ ":*" ]
-  sources = [
-    "sancov-stubs.cc",
-  ]
+  sources = [ "sancov-stubs.cc" ]
   configs += [ "$zx/public/gn/config:no_sanitizers" ]
 }

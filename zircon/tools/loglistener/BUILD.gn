@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 zx_host_tool("loglistener") {
-  sources = [
-    "loglistener.c",
-  ]
+  sources = [ "loglistener.c" ]
 }

@@ -30,9 +30,7 @@ driver_module("driver") {
 package("bt-hog") {
   deprecated_system_image = true
 
-  deps = [
-    ":driver",
-  ]
+  deps = [ ":driver" ]
 
   drivers = [
     {

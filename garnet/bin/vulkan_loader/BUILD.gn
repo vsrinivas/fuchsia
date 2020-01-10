@@ -7,9 +7,7 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "vulkan_loader"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.vulkan.loader",
@@ -24,9 +22,7 @@ executable("bin") {
 }
 
 package("vulkan_loader") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "vulkan_loader"
 

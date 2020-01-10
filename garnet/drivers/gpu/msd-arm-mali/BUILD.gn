@@ -48,9 +48,7 @@ magma_pdev_entry("msd_arm_test_entry") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "tests/unit_tests:msd_arm_mali_nonhardware_tests",
-  ]
+  public_deps = [ "tests/unit_tests:msd_arm_mali_nonhardware_tests" ]
 }
 
 config("msd_tests_include_config") {

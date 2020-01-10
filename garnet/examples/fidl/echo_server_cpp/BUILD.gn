@@ -21,9 +21,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "echo_server_cpp"
 
-  sources = [
-    "echo_server.cc",
-  ]
+  sources = [ "echo_server.cc" ]
 
   deps = [
     ":lib",
@@ -34,9 +32,7 @@ executable("bin") {
 }
 
 package("echo_server_cpp") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   binaries = [
     {
       name = "echo_server_cpp"
@@ -55,9 +51,7 @@ package("echo_server_cpp") {
 executable("echo_server_cpp_unittests") {
   testonly = true
 
-  sources = [
-    "echo_server_app_unittest.cc",
-  ]
+  sources = [ "echo_server_app_unittest.cc" ]
 
   deps = [
     ":lib",
@@ -68,9 +62,7 @@ executable("echo_server_cpp_unittests") {
 }
 
 test_package("echo_server_cpp_tests") {
-  deps = [
-    ":echo_server_cpp_unittests",
-  ]
+  deps = [ ":echo_server_cpp_unittests" ]
 
   tests = [
     {

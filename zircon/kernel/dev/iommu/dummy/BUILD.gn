@@ -4,7 +4,5 @@
 
 zx_library("dummy") {
   kernel = true
-  sources = [
-    "dummy_iommu.cc",
-  ]
+  sources = [ "dummy_iommu.cc" ]
 }

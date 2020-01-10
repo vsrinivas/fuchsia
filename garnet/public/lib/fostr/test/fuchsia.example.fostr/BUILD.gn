@@ -5,7 +5,5 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.example.fostr") {
-  sources = [
-    "fostr.test.fidl",
-  ]
+  sources = [ "fostr.test.fidl" ]
 }

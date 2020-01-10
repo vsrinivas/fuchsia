@@ -4,7 +4,5 @@
 
 zx_library("interrupt") {
   kernel = true
-  sources = [
-    "msi.cc",
-  ]
+  sources = [ "msi.cc" ]
 }

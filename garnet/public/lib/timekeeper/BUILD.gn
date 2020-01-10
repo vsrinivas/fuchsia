@@ -4,22 +4,16 @@
 
 # Do not use this target directly, instead depend on //src/lib/timekeeper:system.
 group("system") {
-  public_deps = [
-    "//src/lib/timekeeper:system",
-  ]
+  public_deps = [ "//src/lib/timekeeper:system" ]
 }
 
 # Do not use this target directly, instead depend on //src/lib/timekeeper:timekeeper.
 group("timekeeper") {
-  public_deps = [
-    "//src/lib/timekeeper:timekeeper",
-  ]
+  public_deps = [ "//src/lib/timekeeper:timekeeper" ]
 }
 
 # Do not use this target directly, instead depend on //src/lib/timekeeper:testing.
 group("testing") {
-  public_deps = [
-    "//src/lib/timekeeper:testing",
-  ]
+  public_deps = [ "//src/lib/timekeeper:testing" ]
   testonly = true
 }

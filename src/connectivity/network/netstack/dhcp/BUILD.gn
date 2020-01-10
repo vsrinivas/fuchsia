@@ -9,15 +9,11 @@ import("//build/testing/environments.gni")
 go_test("netstack_dhcp_test") {
   gopackages = [ "netstack/dhcp" ]
 
-  deps = [
-    "../:netstack_lib",
-  ]
+  deps = [ "../:netstack_lib" ]
 }
 
 test_package("netstack_dhcp_gotests") {
-  deps = [
-    ":netstack_dhcp_test",
-  ]
+  deps = [ ":netstack_dhcp_test" ]
 
   tests = [
     {

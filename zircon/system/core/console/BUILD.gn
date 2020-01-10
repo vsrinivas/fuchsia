@@ -5,9 +5,7 @@
 import("$zx/public/gn/package.gni")
 
 zx_executable("console") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     ":common",
     "$zx/system/fidl/fuchsia-boot:llcpp",

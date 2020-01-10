@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.bt.hci") {
-  sources = [
-    "bt-hci.banjo",
-  ]
+  sources = [ "bt-hci.banjo" ]
 }

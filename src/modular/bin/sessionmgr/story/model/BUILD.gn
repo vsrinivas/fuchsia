@@ -24,9 +24,7 @@ hermetic_tests_package("story_model_unittests") {
 }
 
 source_set("story_observer") {
-  sources = [
-    "story_observer.h",
-  ]
+  sources = [ "story_observer.h" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular.storymodel",
@@ -70,17 +68,13 @@ source_set("apply_mutations") {
     "//sdk/fidl/fuchsia.modular.storymodel",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 }
 
 executable("apply_mutations_unittest") {
   testonly = true
 
-  sources = [
-    "apply_mutations_unittest.cc",
-  ]
+  sources = [ "apply_mutations_unittest.cc" ]
 
   deps = [
     ":apply_mutations",
@@ -95,9 +89,7 @@ source_set("noop_story_model_storage") {
     "noop_story_model_storage.h",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.modular.storymodel",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.modular.storymodel" ]
 
   deps = [
     ":story_model_storage",
@@ -111,9 +103,7 @@ source_set("ledger_story_model_storage") {
     "ledger_story_model_storage.h",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.modular.storymodel",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.modular.storymodel" ]
 
   deps = [
     ":apply_mutations",
@@ -130,9 +120,7 @@ source_set("ledger_story_model_storage") {
 executable("ledger_story_model_storage_unittest") {
   testonly = true
 
-  sources = [
-    "ledger_story_model_storage_unittest.cc",
-  ]
+  sources = [ "ledger_story_model_storage_unittest.cc" ]
 
   deps = [
     ":apply_mutations",
@@ -169,9 +157,7 @@ source_set("story_model_owner") {
 executable("story_model_owner_unittest") {
   testonly = true
 
-  sources = [
-    "story_model_owner_unittest.cc",
-  ]
+  sources = [ "story_model_owner_unittest.cc" ]
 
   deps = [
     ":story_model_owner",

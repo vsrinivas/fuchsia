@@ -44,17 +44,13 @@ package("wlan-smoke-test") {
     },
   ]
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "wlan_smoke_test"
 }
 
 test_package("wlan-smoke-test-tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
   tests = [
     {
       name = "wlan_smoke_test_bin_test"

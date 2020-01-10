@@ -39,16 +39,14 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
+    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//src/lib/mundane",
     "//third_party/rust_crates:hex",
-    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
   ]
 }
 
 package("bt-a2dp-source") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "bt_a2dp_source"
 
@@ -61,9 +59,7 @@ package("bt-a2dp-source") {
 }
 
 test_package("bt-a2dp-source-tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

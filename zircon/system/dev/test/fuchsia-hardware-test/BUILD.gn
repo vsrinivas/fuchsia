@@ -5,7 +5,5 @@
 import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia-hardware-test") {
-  sources = [
-    "test.fidl",
-  ]
+  sources = [ "test.fidl" ]
 }

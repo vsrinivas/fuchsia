@@ -42,21 +42,15 @@ if (current_toolchain != default_toolchain) {
 
 fidl_library("fidl.test.llcpp.basictypes") {
   visibility = [ ":*" ]
-  sources = [
-    "basictypes.test.fidl",
-  ]
+  sources = [ "basictypes.test.fidl" ]
 }
 
 fidl_library("fidl.test.llcpp.controlflow") {
   visibility = [ ":*" ]
-  sources = [
-    "controlflow.fidl",
-  ]
+  sources = [ "controlflow.fidl" ]
 }
 
 fidl_library("fidl.test.llcpp.dirent") {
   visibility = [ ":*" ]
-  sources = [
-    "dirent.fidl",
-  ]
+  sources = [ "dirent.fidl" ]
 }

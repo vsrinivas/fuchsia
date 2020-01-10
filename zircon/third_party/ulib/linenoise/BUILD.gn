@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("linenoise") {
-  sources = [
-    "linenoise.c",
-  ]
+  sources = [ "linenoise.c" ]
   include_dirs = [ "include/linenoise" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-pty:c",
@@ -15,15 +13,11 @@ zx_library("linenoise") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":linenoise-test",
-  ]
+  deps = [ ":linenoise-test" ]
 }
 
 zx_test("linenoise-test") {
-  sources = [
-    "linenoise_tests.cc",
-  ]
+  sources = [ "linenoise_tests.cc" ]
 
   deps = [
     ":linenoise",

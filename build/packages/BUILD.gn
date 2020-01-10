@@ -12,7 +12,5 @@ group("json_merge") {
 
 group("json_validator") {
   testonly = true
-  public_deps = [
-    "//build/tools/json_validator:install",
-  ]
+  public_deps = [ "//build/tools/json_validator:install" ]
 }

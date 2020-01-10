@@ -4,9 +4,7 @@
 
 zx_executable("usb-fwloader") {
   testonly = true
-  sources = [
-    "usb-fwloader.cc",
-  ]
+  sources = [ "usb-fwloader.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device:llcpp",

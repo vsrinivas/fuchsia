@@ -7,11 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fidl") {
   name = "fuchsia.ledger.syncabletest"
 
-  sources = [
-    "syncable_test.fidl",
-  ]
+  sources = [ "syncable_test.fidl" ]
 
-  public_deps = [
-    "//src/ledger/fidl/fuchsia.ledger",
-  ]
+  public_deps = [ "//src/ledger/fidl/fuchsia.ledger" ]
 }

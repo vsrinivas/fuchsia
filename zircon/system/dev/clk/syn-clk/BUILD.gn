@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("syn-clk") {
-  sources = [
-    "syn-clk.cc",
-  ]
+  sources = [ "syn-clk.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.clockimpl",

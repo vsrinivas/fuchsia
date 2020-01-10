@@ -14,9 +14,7 @@ executable_package("sessionmgr") {
     },
   ]
 
-  sources = [
-    "sessionmgr.cc",
-  ]
+  sources = [ "sessionmgr.cc" ]
 
   deps = [
     ":sessionmgr_lib",
@@ -108,9 +106,7 @@ executable_package("dev_session_shell") {
     },
   ]
 
-  sources = [
-    "dev_session_shell.cc",
-  ]
+  sources = [ "dev_session_shell.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular",
@@ -208,13 +204,9 @@ source_set("presentation_provider") {
 }
 
 source_set("agent_services_factory") {
-  sources = [
-    "agent_services_factory.h",
-  ]
+  sources = [ "agent_services_factory.h" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.sys",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.sys" ]
 }
 
 source_set("startup_agent_launcher") {
@@ -250,9 +242,7 @@ source_set("rate_limited_retry") {
     "rate_limited_retry.h",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/zx",
-  ]
+  public_deps = [ "//zircon/public/lib/zx" ]
 }
 
 source_set("annotations") {
@@ -261,24 +251,18 @@ source_set("annotations") {
     "annotations.h",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.modular" ]
 }
 
 hermetic_tests_package("sessionmgr_unittests") {
-  deps = [
-    ":annotations_unittest",
-  ]
+  deps = [ ":annotations_unittest" ]
   environments = basic_envs
 }
 
 executable("annotations_unittest") {
   testonly = true
 
-  sources = [
-    "annotations_unittest.cc",
-  ]
+  sources = [ "annotations_unittest.cc" ]
 
   deps = [
     ":annotations",

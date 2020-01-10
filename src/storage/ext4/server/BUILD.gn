@@ -48,15 +48,11 @@ rustc_test("ext4_server_integration_test") {
 }
 
 group("server") {
-  deps = [
-    ":ext4_readonly",
-  ]
+  deps = [ ":ext4_readonly" ]
 }
 
 package("ext4_readonly") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -73,9 +69,7 @@ package("ext4_readonly") {
 }
 
 test_package("ext4_server_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

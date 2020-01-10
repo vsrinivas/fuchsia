@@ -25,9 +25,7 @@ executable("passing-test-example") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
-  sources = [
-    "passing_test_example.cc",
-  ]
+  sources = [ "passing_test_example.cc" ]
 }
 
 executable("failing-test-example") {
@@ -37,9 +35,7 @@ executable("failing-test-example") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
-  sources = [
-    "failing_test_example.cc",
-  ]
+  sources = [ "failing_test_example.cc" ]
 }
 
 executable("incomplete-test-example") {
@@ -48,9 +44,7 @@ executable("incomplete-test-example") {
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
-  sources = [
-    "incomplete_test_example.cc",
-  ]
+  sources = [ "incomplete_test_example.cc" ]
 }
 
 executable("invalid-test-example") {
@@ -59,9 +53,7 @@ executable("invalid-test-example") {
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
-  sources = [
-    "invalid_test_example.cc",
-  ]
+  sources = [ "invalid_test_example.cc" ]
 }
 
 executable("no-test-example") {
@@ -71,9 +63,7 @@ executable("no-test-example") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
-  sources = [
-    "no_test_example.cc",
-  ]
+  sources = [ "no_test_example.cc" ]
 }
 
 executable("get-tests-hangs-example") {
@@ -83,9 +73,7 @@ executable("get-tests-hangs-example") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
-  sources = [
-    "get_tests_hangs_example.cc",
-  ]
+  sources = [ "get_tests_hangs_example.cc" ]
 }
 
 executable("get-tests-closes-channel-example") {
@@ -95,9 +83,7 @@ executable("get-tests-closes-channel-example") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
-  sources = [
-    "get_tests_closes_channel_example.cc",
-  ]
+  sources = [ "get_tests_closes_channel_example.cc" ]
 }
 
 executable("run-hangs-example") {
@@ -107,9 +93,7 @@ executable("run-hangs-example") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
-  sources = [
-    "run_hangs_example.cc",
-  ]
+  sources = [ "run_hangs_example.cc" ]
 }
 
 executable("run-closes-channel-example") {
@@ -119,9 +103,7 @@ executable("run-closes-channel-example") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
-  sources = [
-    "run_closes_channel_example.cc",
-  ]
+  sources = [ "run_closes_channel_example.cc" ]
 }
 
 group("all_bins") {
@@ -142,9 +124,7 @@ group("all_bins") {
 
 package("example-tests") {
   testonly = true
-  deps = [
-    ":all_bins",
-  ]
+  deps = [ ":all_bins" ]
 
   binaries = [
     {
@@ -248,7 +228,5 @@ package("example-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":example-tests",
-  ]
+  deps = [ ":example-tests" ]
 }

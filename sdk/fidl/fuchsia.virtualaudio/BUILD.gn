@@ -10,7 +10,5 @@ fidl("fuchsia.virtualaudio") {
 
   sdk_category = "internal"
 
-  sources = [
-    "virtual_audio.fidl",
-  ]
+  sources = [ "virtual_audio.fidl" ]
 }

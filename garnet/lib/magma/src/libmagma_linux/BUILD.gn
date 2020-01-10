@@ -6,9 +6,7 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 import("//garnet/lib/magma/include/virtio/virtmagma_debug.gni")
 
 static_library("libmagma_linux") {
-  public_deps = [
-    "$magma_build_root/include:magma_abi",
-  ]
+  public_deps = [ "$magma_build_root/include:magma_abi" ]
 
   deps = [
     ":magma_generic($shlib_toolchain)",
@@ -44,7 +42,5 @@ action("magma_generic") {
     "//garnet/lib/magma/include/magma_abi/magma.json",
     "//garnet/lib/magma/src/libmagma_linux/magma.cc",
   ]
-  outputs = [
-    "$out_file",
-  ]
+  outputs = [ "$out_file" ]
 }

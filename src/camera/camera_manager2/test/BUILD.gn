@@ -8,9 +8,7 @@ import("//build/test/test_package.gni")
 executable("camera-manager-test") {
   testonly = true
 
-  sources = [
-    "camera_manager_test.cc",
-  ]
+  sources = [ "camera_manager_test.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -34,9 +32,7 @@ executable("camera-manager-test") {
 executable("camera_plug_detector_test") {
   testonly = true
 
-  sources = [
-    "camera_plug_detector_test.cc",
-  ]
+  sources = [ "camera_plug_detector_test.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -88,9 +84,7 @@ source_set("camera-fakes") {
 executable("video_device_client_test") {
   testonly = true
 
-  sources = [
-    "video_device_client_test.cc",
-  ]
+  sources = [ "video_device_client_test.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -115,9 +109,7 @@ executable("video_device_client_test") {
 executable("buffer_leak_test") {
   testonly = true
 
-  sources = [
-    "buffer_leak_test.cc",
-  ]
+  sources = [ "buffer_leak_test.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",

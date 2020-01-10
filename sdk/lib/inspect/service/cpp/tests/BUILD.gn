@@ -25,9 +25,7 @@ test("inspect_service_cpp_unittests") {
 }
 
 test_package("inspect_service_cpp_tests") {
-  deps = [
-    ":inspect_service_cpp_unittests",
-  ]
+  deps = [ ":inspect_service_cpp_unittests" ]
 
   tests = [
     {

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("as370-usb-phy") {
-  sources = [
-    "as370-usb-phy.cc",
-  ]
+  sources = [ "as370-usb-phy.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/as370",

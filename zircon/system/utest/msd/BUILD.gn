@@ -5,9 +5,7 @@
 zx_executable("msd") {
   output_name = "msd-test"
   testonly = true
-  sources = [
-    "msd.c",
-  ]
+  sources = [ "msd.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

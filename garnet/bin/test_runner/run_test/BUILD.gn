@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 executable("run_test") {
-  sources = [
-    "run_test.cc",
-  ]
+  sources = [ "run_test.cc" ]
   deps = [
     "//garnet/public/lib/test_runner/cpp",
     "//sdk/lib/sys/cpp",

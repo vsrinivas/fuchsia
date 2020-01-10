@@ -6,17 +6,13 @@ import("//build/package.gni")
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":unittests",
-  ]
+  public_deps = [ ":unittests" ]
 }
 
 executable("unittests") {
   testonly = true
   output_name = "gfx_util_unittests"
-  sources = [
-    "validate_eventpair_unittest.cc",
-  ]
+  sources = [ "validate_eventpair_unittest.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/fxl/test:gtest_main",

@@ -34,9 +34,7 @@ rustc_binary("bin") {
 }
 
 package("wlan-ap-smoke-test") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "wlan_ap_smoke_test"
 

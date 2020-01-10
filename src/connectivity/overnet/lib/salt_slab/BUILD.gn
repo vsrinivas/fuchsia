@@ -9,15 +9,11 @@ import("//build/testing/environments.gni")
 rustc_library("salt_slab") {
   with_unit_tests = true
   edition = "2018"
-  deps = [
-    "//third_party/rust_crates:rand",
-  ]
+  deps = [ "//third_party/rust_crates:rand" ]
 }
 
 unittest_package("overnet-salt_slab-tests") {
-  deps = [
-    ":salt_slab_test",
-  ]
+  deps = [ ":salt_slab_test" ]
 
   tests = [
     {

@@ -7,10 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.factory") {
   sdk_category = "partner"
 
-  sources = [
-    "factory.fidl",
-  ]
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-io",
-  ]
+  sources = [ "factory.fidl" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
 }

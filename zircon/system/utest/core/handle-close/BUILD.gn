@@ -4,9 +4,7 @@
 
 source_set("handle-close") {
   testonly = true
-  sources = [
-    "handle-close.cc",
-  ]
+  sources = [ "handle-close.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

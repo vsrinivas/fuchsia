@@ -30,9 +30,7 @@ zx_test("libhwreg") {
 }
 
 zx_test("libhwreg-i2c") {
-  sources = [
-    "i2c-hwreg-test.cc",
-  ]
+  sources = [ "i2c-hwreg-test.cc" ]
   deps = [
     "$zx/system/dev/lib/mock-i2c",
     "$zx/system/ulib/ddk",

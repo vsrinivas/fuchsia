@@ -15,31 +15,21 @@ group("test") {
 executable("fake_command") {
   testonly = true
 
-  sources = [
-    "fake_command.cc",
-  ]
+  sources = [ "fake_command.cc" ]
 }
 
 executable("fake_failing_test") {
   testonly = true
 
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 
-  sources = [
-    "fake_failing_test.cc",
-  ]
+  sources = [ "fake_failing_test.cc" ]
 }
 
 executable("fake_passing_test") {
   testonly = true
 
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 
-  sources = [
-    "fake_passing_test.cc",
-  ]
+  sources = [ "fake_passing_test.cc" ]
 }

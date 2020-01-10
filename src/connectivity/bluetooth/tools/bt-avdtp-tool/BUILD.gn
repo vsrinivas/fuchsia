@@ -34,9 +34,7 @@ rustc_binary("bt-avdtp-tool") {
 test_package("tests") {
   package_name = "bt-avdtp-tool-tests"
 
-  deps = [
-    ":bt-avdtp-tool_test",
-  ]
+  deps = [ ":bt-avdtp-tool_test" ]
 
   tests = [
     {

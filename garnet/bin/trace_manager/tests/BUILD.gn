@@ -8,9 +8,7 @@ import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":trace_manager_tests",
-  ]
+  deps = [ ":trace_manager_tests" ]
 }
 
 executable("trace_manager_tests_bin") {
@@ -40,9 +38,7 @@ executable("trace_manager_tests_bin") {
 }
 
 test_package("trace_manager_tests") {
-  deps = [
-    ":trace_manager_tests_bin",
-  ]
+  deps = [ ":trace_manager_tests_bin" ]
 
   tests = [
     {

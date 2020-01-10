@@ -5,9 +5,7 @@
 import("$zx/public/gn/firmware.gni")
 
 zx_driver("qcom-pil") {
-  sources = [
-    "qcom-pil.cc",
-  ]
+  sources = [ "qcom-pil.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.composite",
@@ -22,9 +20,7 @@ zx_driver("qcom-pil") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon-internal",
   ]
-  data_deps = [
-    ":firmware",
-  ]
+  data_deps = [ ":firmware" ]
 }
 
 firmware("firmware") {

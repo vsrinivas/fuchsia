@@ -10,9 +10,7 @@ config("vk_public_config") {
 
 static_library("vk") {
   output_name = "hotsort_vk"
-  public = [
-    "hotsort_vk.h",
-  ]
+  public = [ "hotsort_vk.h" ]
   sources = [
     "hotsort_vk.c",
     "hotsort_vk.h",

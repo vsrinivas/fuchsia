@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 executable("memfs") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   public_deps = [
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

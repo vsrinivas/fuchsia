@@ -4,9 +4,7 @@
 
 zx_library("jitterentropy") {
   kernel = true
-  sources = [
-    "jitterentropy-base.c",
-  ]
+  sources = [ "jitterentropy-base.c" ]
   include_dirs = [ "arch/$zircon_cpu" ]
 
   # According to its documentation, jitterentropy must be compiled at

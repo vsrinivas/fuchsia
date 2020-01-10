@@ -7,17 +7,13 @@ import("//build/test/test_package.gni")
 group("all") {
   testonly = true
 
-  deps = [
-    ":examples_fidl_hlcpptests",
-  ]
+  deps = [ ":examples_fidl_hlcpptests" ]
 }
 
 executable("unittests") {
   testonly = true
 
-  sources = [
-    "niceoutput_unittest.cc",
-  ]
+  sources = [ "niceoutput_unittest.cc" ]
 
   deps = [
     "//examples/fidl/fostr/fuchsia.examples",
@@ -32,9 +28,7 @@ executable("unittests") {
 #   fx set core.x64 --with //examples/fidl/hlcpptests:all
 #   fx run-test examples_fidl_hlcpptests
 unittest_package("examples_fidl_hlcpptests") {
-  deps = [
-    ":unittests",
-  ]
+  deps = [ ":unittests" ]
 
   tests = [
     {

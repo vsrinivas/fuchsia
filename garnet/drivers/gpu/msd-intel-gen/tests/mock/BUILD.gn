@@ -17,7 +17,5 @@ source_set("mock") {
     "$msd_intel_gen_build_root/src",
   ]
 
-  sources = [
-    "mock_mapped_batch.h",
-  ]
+  sources = [ "mock_mapped_batch.h" ]
 }

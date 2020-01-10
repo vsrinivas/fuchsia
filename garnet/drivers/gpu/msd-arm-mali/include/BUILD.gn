@@ -12,7 +12,5 @@ source_set("include") {
     "magma_arm_mali_types.h",
     "magma_vendor_queries.h",
   ]
-  public_deps = [
-    "//garnet/lib/magma/include:magma_abi_common",
-  ]
+  public_deps = [ "//garnet/lib/magma/include:magma_abi_common" ]
 }

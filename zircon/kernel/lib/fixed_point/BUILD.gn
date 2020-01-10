@@ -4,7 +4,5 @@
 
 zx_library("fixed_point") {
   kernel = true
-  sources = [
-    "fixed_point.cc",
-  ]
+  sources = [ "fixed_point.cc" ]
 }

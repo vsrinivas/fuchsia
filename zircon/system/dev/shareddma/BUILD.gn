@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("shareddma") {
-  deps = [
-    "syn-dma",
-  ]
+  deps = [ "syn-dma" ]
 }

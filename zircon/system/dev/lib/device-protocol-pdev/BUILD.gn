@@ -5,9 +5,7 @@
 zx_library("device-protocol-pdev") {
   sdk = "source"
   sdk_headers = [ "lib/device-protocol/pdev.h" ]
-  sources = [
-    "pdev.cc",
-  ]
+  sources = [ "pdev.cc" ]
   public_deps = [
     # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/platform/device.h>.
     "$zx/system/banjo/ddk.protocol.platform.device",
@@ -27,9 +25,7 @@ zx_library("device-protocol-pdev") {
 
 zx_test("device-protocol-pdev-test") {
   output_name = "device-protocol-pdev-test"
-  sources = [
-    "pdev-test.cc",
-  ]
+  sources = [ "pdev-test.cc" ]
   public_deps = [
     # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/platform/device.h>.
     "$zx/system/banjo/ddk.protocol.platform.device",

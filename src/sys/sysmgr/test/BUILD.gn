@@ -17,9 +17,7 @@ group("test") {
 executable("config_test") {
   testonly = true
   output_name = "config_test"
-  sources = [
-    "config_test.cc",
-  ]
+  sources = [ "config_test.cc" ]
   deps = [
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
@@ -29,9 +27,7 @@ executable("config_test") {
 }
 
 test_package("sysmgr_tests") {
-  deps = [
-    ":config_test",
-  ]
+  deps = [ ":config_test" ]
 
   tests = [
     {

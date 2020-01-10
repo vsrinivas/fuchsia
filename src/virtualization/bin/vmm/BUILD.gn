@@ -8,9 +8,7 @@ import("//build/testing/environments.gni")
 group("tests") {
   testonly = true
 
-  deps = [
-    ":vmm_tests",
-  ]
+  deps = [ ":vmm_tests" ]
 }
 
 source_set("lib") {
@@ -127,9 +125,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "vmm"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -146,9 +142,7 @@ package("vmm") {
 
   binary = "vmm"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   meta = [
     {

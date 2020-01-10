@@ -75,9 +75,7 @@ zx_test("minfs-integration") {
 }
 
 zx_test("minfs-host") {
-  sources = [
-    "host/bcache-test.cc",
-  ]
+  sources = [ "host/bcache-test.cc" ]
   deps = [
     "$zx/system/ulib/minfs",
     "$zx/system/ulib/zxtest",

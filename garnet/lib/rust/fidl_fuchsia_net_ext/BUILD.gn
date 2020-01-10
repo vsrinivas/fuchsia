@@ -18,9 +18,7 @@ rustc_library("fidl_fuchsia_net_ext") {
 }
 
 unittest_package("fidl_fuchsia_net_ext_tests") {
-  deps = [
-    ":fidl_fuchsia_net_ext_test",
-  ]
+  deps = [ ":fidl_fuchsia_net_ext_test" ]
   tests = [
     {
       name = "fidl_fuchsia_net_ext_lib_test"

@@ -33,11 +33,7 @@ executable("cpuperf_print") {
 }
 
 install_host_tools("host_cpuperf_print") {
-  deps = [
-    ":cpuperf_print",
-  ]
+  deps = [ ":cpuperf_print" ]
 
-  outputs = [
-    "cpuperf_print",
-  ]
+  outputs = [ "cpuperf_print" ]
 }

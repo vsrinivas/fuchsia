@@ -4,9 +4,7 @@
 
 zx_executable("biotime") {
   testonly = true
-  sources = [
-    "biotime.cc",
-  ]
+  sources = [ "biotime.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/ulib/fbl",

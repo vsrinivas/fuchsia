@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("connect") {
-  sources = [
-    "connect.h",
-  ]
+  sources = [ "connect.h" ]
 
   deps = [
     "//sdk/fidl/fuchsia.sys",

@@ -53,9 +53,7 @@ source_set("system_metrics_daemon_lib") {
 executable("system-metrics") {
   output_name = "cobalt_system_metrics_bin"
 
-  sources = [
-    "system_metrics_main.cc",
-  ]
+  sources = [ "system_metrics_main.cc" ]
 
   deps = [
     ":system_metrics_daemon_lib",
@@ -64,9 +62,7 @@ executable("system-metrics") {
 }
 
 package("cobalt_system_metrics") {
-  deps = [
-    ":system-metrics",
-  ]
+  deps = [ ":system-metrics" ]
 
   meta = [
     {
@@ -81,9 +77,7 @@ package("cobalt_system_metrics") {
 executable("cobalt_system_metrics_unittests") {
   testonly = true
 
-  sources = [
-    "system_metrics_daemon_test.cc",
-  ]
+  sources = [ "system_metrics_daemon_test.cc" ]
 
   deps = [
     ":system_metrics_daemon_lib",

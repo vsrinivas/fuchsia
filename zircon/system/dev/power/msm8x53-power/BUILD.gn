@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("msm8x53-power") {
-  sources = [
-    "msm8x53-power.cc",
-  ]
+  sources = [ "msm8x53-power.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",

@@ -27,9 +27,7 @@ rustc_binary("mediasession_cli_tool_bin") {
 }
 
 package("mediasession_cli_tool") {
-  deps = [
-    ":mediasession_cli_tool_bin",
-  ]
+  deps = [ ":mediasession_cli_tool_bin" ]
 
   binaries = [
     {

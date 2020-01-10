@@ -14,19 +14,13 @@ group("test") {
 source_set("common") {
   testonly = true
 
-  sources = [
-    "fake-nand-interface.cc",
-  ]
+  sources = [ "fake-nand-interface.cc" ]
 
-  deps = [
-    "$zx/system/ulib/mtd:headers",
-  ]
+  deps = [ "$zx/system/ulib/mtd:headers" ]
 }
 
 zx_test("nand-volume-driver") {
-  sources = [
-    "nand-volume-driver-tests.cc",
-  ]
+  sources = [ "nand-volume-driver-tests.cc" ]
 
   deps = [
     ":common",
@@ -37,9 +31,7 @@ zx_test("nand-volume-driver") {
 }
 
 zx_test("ftl-volume-wrapper") {
-  sources = [
-    "ftl-volume-wrapper-tests.cc",
-  ]
+  sources = [ "ftl-volume-wrapper-tests.cc" ]
 
   deps = [
     "$zx/system/ulib/ftl-mtd",

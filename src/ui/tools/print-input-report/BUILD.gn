@@ -24,9 +24,7 @@ executable("bin") {
 }
 
 package("print-input-report") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -60,9 +58,7 @@ test("print-input-report-test-bin") {
 }
 
 test_package("print-input-report-test") {
-  deps = [
-    ":print-input-report-test-bin",
-  ]
+  deps = [ ":print-input-report-test-bin" ]
   tests = [
     {
       name = "print-input-report-test-bin"

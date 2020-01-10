@@ -23,9 +23,7 @@ test_package("exception_broker_config_tests") {
     },
   ]
 
-  deps = [
-    ":exception_broker_config_test",
-  ]
+  deps = [ ":exception_broker_config_test" ]
 
   resources = [
     {
@@ -63,7 +61,6 @@ test_package("exception_broker_tests") {
     ":exception_broker_config_test",
     ":exception_broker_integration_test",
     ":exception_broker_unittest",
-
     "//src/developer/exception_broker/limbo_client:tests",
   ]
 
@@ -118,9 +115,7 @@ executable("exception_broker_unittest") {
 executable("exception_broker_integration_test") {
   testonly = true
 
-  sources = [
-    "exception_broker_integration_test.cc",
-  ]
+  sources = [ "exception_broker_integration_test.cc" ]
 
   deps = [
     ":test_lib",
@@ -135,9 +130,7 @@ executable("exception_broker_integration_test") {
 executable("exception_broker_config_test") {
   testonly = true
 
-  sources = [
-    "exception_broker_config_test.cc",
-  ]
+  sources = [ "exception_broker_config_test.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
@@ -153,7 +146,5 @@ executable("crasher") {
   testonly = true
   output_name = "exception_broker_crasher"
 
-  sources = [
-    "crasher.cc",
-  ]
+  sources = [ "crasher.cc" ]
 }

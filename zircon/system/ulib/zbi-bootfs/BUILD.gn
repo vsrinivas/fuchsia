@@ -11,9 +11,7 @@ zx_library("zbi-bootfs") {
   sdk = "shared"
   shared = true
 
-  sources = [
-    "zbi-bootfs.cc",
-  ]
+  sources = [ "zbi-bootfs.cc" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-skipblock:c",
     "$zx/system/ulib/zx",
@@ -38,9 +36,7 @@ group("test") {
 }
 
 zx_test("zbi-bootfs-test") {
-  sources = [
-    "zbi-bootfs-test.cc",
-  ]
+  sources = [ "zbi-bootfs-test.cc" ]
   deps = [
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/zbi-bootfs",
@@ -53,28 +49,16 @@ zx_test("zbi-bootfs-test") {
 }
 
 resource("generated-lz4f-zbi") {
-  sources = [
-    "$target_out_dir/generated-lz4f.zbi",
-  ]
-  outputs = [
-    "testdata/zbi-bootfs/generated-lz4f.zbi",
-  ]
-  deps = [
-    ":generated-lz4f",
-  ]
+  sources = [ "$target_out_dir/generated-lz4f.zbi" ]
+  outputs = [ "testdata/zbi-bootfs/generated-lz4f.zbi" ]
+  deps = [ ":generated-lz4f" ]
   testonly = true
 }
 
 resource("generated-zstd-zbi") {
-  sources = [
-    "$target_out_dir/generated-zstd.zbi",
-  ]
-  outputs = [
-    "testdata/zbi-bootfs/generated-zstd.zbi",
-  ]
-  deps = [
-    ":generated-zstd",
-  ]
+  sources = [ "$target_out_dir/generated-zstd.zbi" ]
+  outputs = [ "testdata/zbi-bootfs/generated-zstd.zbi" ]
+  deps = [ ":generated-zstd" ]
   testonly = true
 }
 
@@ -83,32 +67,22 @@ zbi("generated-zstd") {
   compress = "zstd"
   testonly = true
   cpu = ""
-  deps = [
-    ":create-zbi-image",
-  ]
+  deps = [ ":create-zbi-image" ]
 }
 
 zbi("generated-lz4f") {
   compress = "lz4f"
   testonly = true
   cpu = ""
-  deps = [
-    ":create-zbi-image",
-  ]
+  deps = [ ":create-zbi-image" ]
 }
 
 zbi_input("create-zbi-image") {
   testonly = true
-  sources = [
-    "$zx/system/ulib/zbi-bootfs/test/payload/",
-  ]
+  sources = [ "$zx/system/ulib/zbi-bootfs/test/payload/" ]
 }
 
 fuzzer("zbi-bootfs-fuzzer") {
-  sources = [
-    "zbi-bootfs-fuzzer.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/zbi-bootfs",
-  ]
+  sources = [ "zbi-bootfs-fuzzer.cc" ]
+  deps = [ "$zx/system/ulib/zbi-bootfs" ]
 }

@@ -7,7 +7,5 @@ zx_library("mock-function") {
   sdk = "source"
   sdk_headers = [ "lib/mock-function/mock-function.h" ]
   sources = []
-  public_deps = [
-    "$zx/system/ulib/zxtest",
-  ]
+  public_deps = [ "$zx/system/ulib/zxtest" ]
 }

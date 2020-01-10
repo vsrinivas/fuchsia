@@ -4,9 +4,7 @@
 
 source_set("pthread-tls") {
   testonly = true
-  sources = [
-    "tls-test.c",
-  ]
+  sources = [ "tls-test.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",

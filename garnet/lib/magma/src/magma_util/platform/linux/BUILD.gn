@@ -33,17 +33,13 @@ source_set("bus_mapper") {
     ":logger",
   ]
 
-  sources = [
-    "linux_platform_bus_mapper.cc",
-  ]
+  sources = [ "linux_platform_bus_mapper.cc" ]
 }
 
 source_set("connection_client") {
   configs += [ "..:platform_include_config" ]
 
-  public_deps = [
-    "..:connection_client_header",
-  ]
+  public_deps = [ "..:connection_client_header" ]
 
   sources = [
     "linux_platform_connection_client.cc",
@@ -51,26 +47,20 @@ source_set("connection_client") {
   ]
 
   # Calls directly through to the delegate
-  deps = [
-    "..:connection_header",
-  ]
+  deps = [ "..:connection_header" ]
 }
 
 source_set("connection") {
   configs += [ "..:platform_include_config" ]
 
-  public_deps = [
-    "..:connection_header",
-  ]
+  public_deps = [ "..:connection_header" ]
 
   sources = [
     "linux_platform_connection.cc",
     "linux_platform_connection.h",
   ]
 
-  deps = [
-    "..:connection_header",
-  ]
+  deps = [ "..:connection_header" ]
 }
 
 source_set("device") {
@@ -93,13 +83,9 @@ source_set("device") {
 source_set("device_client") {
   configs += [ "..:platform_include_config" ]
 
-  public_deps = [
-    "..:device_client_header",
-  ]
+  public_deps = [ "..:device_client_header" ]
 
-  sources = [
-    "linux_platform_device_client.cc",
-  ]
+  sources = [ "linux_platform_device_client.cc" ]
 
   deps = [
     ":connection_client",
@@ -109,15 +95,11 @@ source_set("device_client") {
 }
 
 source_set("entry_header") {
-  sources = [
-    "linux_entry.h",
-  ]
+  sources = [ "linux_entry.h" ]
 }
 
 source_set("entry") {
-  sources = [
-    "linux_entry.cc",
-  ]
+  sources = [ "linux_entry.cc" ]
 
   deps = [
     ":connection",
@@ -136,13 +118,9 @@ source_set("handle") {
     "linux_platform_handle.h",
   ]
 
-  public_deps = [
-    "..:handle_header",
-  ]
+  public_deps = [ "..:handle_header" ]
 
-  deps = [
-    "$magma_build_root/src/magma_util",
-  ]
+  deps = [ "$magma_build_root/src/magma_util" ]
 }
 
 source_set("iommu") {
@@ -153,9 +131,7 @@ source_set("iommu") {
     "linux_platform_iommu.h",
   ]
 
-  public_deps = [
-    "//garnet/lib/magma/src/magma_util/platform:iommu_header",
-  ]
+  public_deps = [ "//garnet/lib/magma/src/magma_util/platform:iommu_header" ]
 
   deps = [
     ":device",
@@ -164,18 +140,12 @@ source_set("iommu") {
 }
 
 source_set("logger") {
-  public_deps = [
-    "..:logger_header",
-  ]
-  sources = [
-    "linux_platform_logger.cc",
-  ]
+  public_deps = [ "..:logger_header" ]
+  sources = [ "linux_platform_logger.cc" ]
 }
 
 source_set("object") {
-  sources = [
-    "linux_platform_object.cc",
-  ]
+  sources = [ "linux_platform_object.cc" ]
 
   deps = [
     "$magma_build_root/src/magma_util",
@@ -186,35 +156,23 @@ source_set("object") {
 source_set("port") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "linux_platform_port.cc",
-  ]
+  sources = [ "linux_platform_port.cc" ]
 
-  deps = [
-    "..:port_header",
-  ]
+  deps = [ "..:port_header" ]
 }
 
 source_set("semaphore") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "linux_platform_semaphore.cc",
-  ]
+  sources = [ "linux_platform_semaphore.cc" ]
 
-  deps = [
-    "..:semaphore_header",
-  ]
+  deps = [ "..:semaphore_header" ]
 }
 
 source_set("thread") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [
-    "linux_platform_thread.cc",
-  ]
+  sources = [ "linux_platform_thread.cc" ]
 
-  deps = [
-    "..:thread_header",
-  ]
+  deps = [ "..:thread_header" ]
 }

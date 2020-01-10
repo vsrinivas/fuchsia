@@ -4,7 +4,5 @@
 
 group("fidl") {
   testonly = true
-  deps = [
-    "fuchsia.testing.chrealm",
-  ]
+  deps = [ "fuchsia.testing.chrealm" ]
 }

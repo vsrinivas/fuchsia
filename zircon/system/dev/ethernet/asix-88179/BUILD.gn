@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("asix-88179") {
-  sources = [
-    "asix-88179.cc",
-  ]
+  sources = [ "asix-88179.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/banjo/ddk.protocol.usb",

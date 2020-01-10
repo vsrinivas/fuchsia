@@ -39,9 +39,7 @@ package("onet") {
     },
   ]
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -57,10 +55,6 @@ group("tests") {
 }
 
 install_host_tools("host") {
-  deps = [
-    ":bin",
-  ]
-  outputs = [
-    "onet",
-  ]
+  deps = [ ":bin" ]
+  outputs = [ "onet" ]
 }

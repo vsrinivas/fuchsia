@@ -5,11 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.ui.remotewidgets") {
-  sources = [
-    "quickui.fidl",
-  ]
+  sources = [ "quickui.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.fonts",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.fonts" ]
 }

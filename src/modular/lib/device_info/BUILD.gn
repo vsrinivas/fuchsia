@@ -25,7 +25,5 @@ source_set("device_profile") {
     "//src/lib/fxl",
   ]
 
-  deps = [
-    "//third_party/rapidjson",
-  ]
+  deps = [ "//third_party/rapidjson" ]
 }

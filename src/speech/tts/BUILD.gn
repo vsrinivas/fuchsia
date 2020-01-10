@@ -35,9 +35,7 @@ executable("bin") {
 }
 
 package("tts_service") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "tts_service"
 

@@ -10,7 +10,5 @@ zx_library("cmdline") {
   ]
   kernel = true
   static = true
-  sources = [
-    "cmdline.cc",
-  ]
+  sources = [ "cmdline.cc" ]
 }

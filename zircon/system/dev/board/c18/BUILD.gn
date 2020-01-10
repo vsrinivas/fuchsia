@@ -19,7 +19,5 @@ zx_driver("c18") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
-  data_deps = [
-    "$zx/kernel/target/arm64/boot-shim:c18",
-  ]
+  data_deps = [ "$zx/kernel/target/arm64/boot-shim:c18" ]
 }

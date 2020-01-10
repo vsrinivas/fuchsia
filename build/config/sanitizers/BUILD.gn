@@ -61,18 +61,14 @@ variant("asan") {
   configs = [ ":frame_pointers" ]
 
   if (asan_default_options != "") {
-    deps = [
-      ":asan_default_options",
-    ]
+    deps = [ ":asan_default_options" ]
   }
 }
 
 if (asan_default_options != "") {
   source_set("asan_default_options") {
     visibility = [ ":*" ]
-    sources = [
-      "asan_default_options.c",
-    ]
+    sources = [ "asan_default_options.c" ]
     defines = [ "ASAN_DEFAULT_OPTIONS=\"${asan_default_options}\"" ]
 
     # On Fuchsia, the ASan runtime is dynamically linked and needs to have
@@ -96,18 +92,14 @@ variant("ubsan") {
   rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
 
   if (ubsan_default_options != "") {
-    deps = [
-      ":ubsan_default_options",
-    ]
+    deps = [ ":ubsan_default_options" ]
   }
 }
 
 if (ubsan_default_options != "") {
   source_set("ubsan_default_options") {
     visibility = [ ":*" ]
-    sources = [
-      "ubsan_default_options.c",
-    ]
+    sources = [ "ubsan_default_options.c" ]
     defines = [ "UBSAN_DEFAULT_OPTIONS=\"${ubsan_default_options}\"" ]
 
     # On Fuchsia, the UBSan runtime is dynamically linked and needs to have

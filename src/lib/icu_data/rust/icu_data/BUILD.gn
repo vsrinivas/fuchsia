@@ -24,16 +24,14 @@ rustc_library("icu_data") {
   ]
 
   non_rust_deps = [
+    "../../cpp:icu_data_cpp",
     "//third_party/icu",
     "//third_party/icu:icudata",
-    "../../cpp:icu_data_cpp",
   ]
 }
 
 test_package("icu_data_rust_tests") {
-  deps = [
-    ":icu_data_test",
-  ]
+  deps = [ ":icu_data_test" ]
   tests = [
     {
       name = "icu_data_lib_test"
@@ -53,7 +51,5 @@ test_package("icu_data_rust_tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":icu_data_rust_tests",
-  ]
+  deps = [ ":icu_data_rust_tests" ]
 }

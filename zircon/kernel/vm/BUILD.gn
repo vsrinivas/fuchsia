@@ -52,11 +52,7 @@ zx_library("vm") {
 }
 
 source_set("tests") {
-  sources = [
-    "vm_unittest.cc",
-  ]
-  deps = [
-    "$zx/kernel/lib/unittest",
-  ]
+  sources = [ "vm_unittest.cc" ]
+  deps = [ "$zx/kernel/lib/unittest" ]
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

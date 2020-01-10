@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.intelgpucore") {
-  sources = [
-    "intel-gpu-core.banjo",
-  ]
+  sources = [ "intel-gpu-core.banjo" ]
 }

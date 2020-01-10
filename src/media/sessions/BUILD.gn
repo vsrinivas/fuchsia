@@ -21,9 +21,7 @@ group("sessions") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":mediasession_tests",
-  ]
+  deps = [ ":mediasession_tests" ]
 }
 
 rustc_binary("bin") {
@@ -60,9 +58,7 @@ rustc_binary("bin") {
 }
 
 test_package("mediasession_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {
@@ -73,9 +69,7 @@ test_package("mediasession_tests") {
 }
 
 package("mediasession") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "mediasession"
 
@@ -89,10 +83,6 @@ package("mediasession") {
 
 config_data("mediasession_config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "mediasession.config",
-  ]
-  sources = [
-    "service.config",
-  ]
+  outputs = [ "mediasession.config" ]
+  sources = [ "service.config" ]
 }

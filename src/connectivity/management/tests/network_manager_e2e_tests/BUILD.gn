@@ -12,9 +12,7 @@ group("netemul_empty_binaries") {
 }
 
 test_package("network_manager_e2e_tests") {
-  deps = [
-    "nat:network_manager_e2e_nat",
-  ]
+  deps = [ "nat:network_manager_e2e_nat" ]
   meta = [
     {
       path = rebase_path("nat/meta/bin.cmx")

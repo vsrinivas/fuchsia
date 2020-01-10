@@ -8,9 +8,7 @@ import("//src/modular/build/tests_package.gni")
 
 executable("basemgr_launcher_bin") {
   output_name = "basemgr_launcher"
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular.internal",
@@ -34,9 +32,7 @@ executable("basemgr_launcher_bin") {
 }
 
 package("basemgr_launcher") {
-  deps = [
-    ":basemgr_launcher_bin",
-  ]
+  deps = [ ":basemgr_launcher_bin" ]
   binaries = [
     {
       name = "basemgr_launcher"
@@ -55,9 +51,7 @@ package("basemgr_launcher") {
 executable("basemgr_launcher_test") {
   testonly = true
 
-  sources = [
-    "basemgr_launcher_test.cc",
-  ]
+  sources = [ "basemgr_launcher_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.devicesettings",
@@ -74,7 +68,5 @@ executable("basemgr_launcher_test") {
 }
 
 hermetic_tests_package("basemgr_launcher_tests") {
-  deps = [
-    ":basemgr_launcher_test",
-  ]
+  deps = [ ":basemgr_launcher_test" ]
 }

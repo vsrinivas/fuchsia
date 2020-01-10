@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("fallback") {
-  sources = [
-    "rtc-impl.cc",
-  ]
+  sources = [ "rtc-impl.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-rtc:c",
     "$zx/system/ulib/ddk",

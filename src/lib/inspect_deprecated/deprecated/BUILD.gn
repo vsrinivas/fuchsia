@@ -12,9 +12,7 @@ source_set("deprecated") {
     "object_dir.h",
   ]
 
-  deps = [
-    "//src/lib/syslog/cpp",
-  ]
+  deps = [ "//src/lib/syslog/cpp" ]
 
   public_deps = [
     "//sdk/lib/fidl/cpp",

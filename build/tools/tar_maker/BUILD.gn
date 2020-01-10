@@ -8,15 +8,11 @@ import("//build/go/go_library.gni")
 go_library("lib") {
   name = "fuchsia.googlesource.com/tarmaker"
 
-  sources = [
-    "main.go",
-  ]
+  sources = [ "main.go" ]
 }
 
 go_binary("tar_maker") {
   gopackage = "fuchsia.googlesource.com/tarmaker"
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }

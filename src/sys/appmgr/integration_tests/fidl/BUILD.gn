@@ -16,11 +16,7 @@ fidl("test.component.mockrunner") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "string-bounds-not-specified" ]
 
-  sources = [
-    "runner.fidl",
-  ]
+  sources = [ "runner.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.sys",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.sys" ]
 }

@@ -16,9 +16,7 @@ group("tests") {
 }
 
 package("mediaplayer") {
-  deps = [
-    ":mediaplayer_bin",
-  ]
+  deps = [ ":mediaplayer_bin" ]
 
   binaries = [
     {
@@ -106,9 +104,7 @@ package("mediaplayer_test_util") {
 
   testonly = true
 
-  deps = [
-    ":mediaplayer_test_util_bin",
-  ]
+  deps = [ ":mediaplayer_test_util_bin" ]
 
   meta = [
     {
@@ -226,10 +222,6 @@ test_package("mediaplayer_tests") {
 
 config_data("audio_consumer_config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "audio_consumer.config",
-  ]
-  sources = [
-    rebase_path("config/audio_consumer.config"),
-  ]
+  outputs = [ "audio_consumer.config" ]
+  sources = [ rebase_path("config/audio_consumer.config") ]
 }

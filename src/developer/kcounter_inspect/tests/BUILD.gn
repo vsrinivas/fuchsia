@@ -26,9 +26,7 @@ test_package("kcounter_inspect_tests") {
 executable("kcounter_inspect_unittest") {
   testonly = true
 
-  sources = [
-    "vmo_file_with_update_test.cc",
-  ]
+  sources = [ "vmo_file_with_update_test.cc" ]
 
   deps = [
     "../:lib",
@@ -45,9 +43,7 @@ executable("kcounter_inspect_unittest") {
 executable("kcounter_inspect_integration_test") {
   testonly = true
 
-  sources = [
-    "kcounter_inspect_integration_test.cc",
-  ]
+  sources = [ "kcounter_inspect_integration_test.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp",

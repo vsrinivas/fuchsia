@@ -8,9 +8,7 @@ import("//build/test.gni")
 
 executable("controller-test") {
   testonly = true
-  sources = [
-    "device_test.cc",
-  ]
+  sources = [ "device_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/banjo/ddk.protocol.isp",
@@ -49,9 +47,7 @@ executable("controller-test") {
 
 executable("controller-protocol-test") {
   testonly = true
-  sources = [
-    "protocol_test.cc",
-  ]
+  sources = [ "protocol_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/banjo/ddk.protocol.isp",
@@ -95,9 +91,7 @@ executable("controller-protocol-test") {
 
 executable("controller-allocator-test") {
   testonly = true
-  sources = [
-    "allocator_test.cc",
-  ]
+  sources = [ "allocator_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/banjo/ddk.protocol.isp",

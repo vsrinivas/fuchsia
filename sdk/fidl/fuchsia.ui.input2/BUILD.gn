@@ -16,7 +16,5 @@ fidl("fuchsia.ui.input2") {
     "semantic_keys.fidl",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.views",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.views" ]
 }

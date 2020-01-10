@@ -17,17 +17,11 @@ config("tracing") {
 source_set("address_range") {
   public_configs = [ ":platform_include_config" ]
 
-  public_deps = [
-    "$magma_build_root/src/magma_util",
-  ]
+  public_deps = [ "$magma_build_root/src/magma_util" ]
 
-  sources = [
-    "platform_address_range.h",
-  ]
+  sources = [ "platform_address_range.h" ]
 
-  deps = [
-    "zircon:address_range",
-  ]
+  deps = [ "zircon:address_range" ]
 
   allow_circular_includes_from = [ "zircon:address_range" ]
 }
@@ -35,14 +29,10 @@ source_set("address_range") {
 source_set("barriers") {
   public_configs = [ ":platform_include_config" ]
 
-  sources = [
-    "platform_barriers.h",
-  ]
+  sources = [ "platform_barriers.h" ]
 
   if (is_fuchsia) {
-    public_deps = [
-      "//zircon/public/lib/ddk",
-    ]
+    public_deps = [ "//zircon/public/lib/ddk" ]
   }
 }
 
@@ -52,9 +42,7 @@ source_set("buffer_header") {
     ":handle",
     "//garnet/lib/magma/include:magma_abi",
   ]
-  sources = [
-    "platform_buffer.h",
-  ]
+  sources = [ "platform_buffer.h" ]
 }
 
 source_set("buffer") {
@@ -66,13 +54,9 @@ source_set("buffer") {
   ]
 
   if (is_fuchsia) {
-    deps = [
-      "zircon:buffer",
-    ]
+    deps = [ "zircon:buffer" ]
   } else {
-    deps = [
-      "linux:buffer",
-    ]
+    deps = [ "linux:buffer" ]
   }
 }
 
@@ -84,9 +68,7 @@ source_set("bus_mapper_header") {
     ":handle",
   ]
 
-  sources = [
-    "platform_bus_mapper.h",
-  ]
+  sources = [ "platform_bus_mapper.h" ]
 }
 
 source_set("bus_mapper") {
@@ -100,64 +82,44 @@ source_set("bus_mapper") {
   ]
 
   if (is_fuchsia) {
-    deps = [
-      "zircon:bus_mapper",
-    ]
+    deps = [ "zircon:bus_mapper" ]
   } else {
-    deps = [
-      "linux:bus_mapper",
-    ]
+    deps = [ "linux:bus_mapper" ]
   }
 }
 
 group("entry") {
   if (is_fuchsia) {
-    deps = [
-      "zircon:entry",
-    ]
+    deps = [ "zircon:entry" ]
   }
   if (is_linux) {
-    deps = [
-      "linux:entry",
-    ]
+    deps = [ "linux:entry" ]
   }
 }
 
 group("entry_test") {
   testonly = true
   if (is_fuchsia) {
-    deps = [
-      "zircon:entry_test",
-    ]
+    deps = [ "zircon:entry_test" ]
   }
 }
 
 source_set("handle_header") {
   public_configs = [ ":platform_include_config" ]
 
-  public_deps = [
-    "$magma_build_root/src/magma_util:common",
-  ]
+  public_deps = [ "$magma_build_root/src/magma_util:common" ]
 
-  sources = [
-    "platform_handle.h",
-  ]
+  sources = [ "platform_handle.h" ]
 }
 
 source_set("handle") {
-  public_deps = [
-    ":handle_header",
-  ]
+  public_deps = [ ":handle_header" ]
 
   if (is_fuchsia) {
-    deps = [
-      "zircon:handle",
-    ]
+    deps = [ "zircon:handle" ]
   }
   if (is_linux) {
-    deps = [
-      "linux:handle",
-    ]
+    deps = [ "linux:handle" ]
   }
 }
 
@@ -169,38 +131,26 @@ source_set("iommu_header") {
     "$magma_build_root/src/magma_util:common",
   ]
 
-  sources = [
-    "platform_iommu.h",
-  ]
+  sources = [ "platform_iommu.h" ]
 }
 
 source_set("iommu") {
-  public_deps = [
-    ":iommu_header",
-  ]
+  public_deps = [ ":iommu_header" ]
 
   if (is_fuchsia) {
-    deps = [
-      "zircon:iommu",
-    ]
+    deps = [ "zircon:iommu" ]
   }
   if (is_linux) {
-    deps = [
-      "linux:iommu",
-    ]
+    deps = [ "linux:iommu" ]
   }
 }
 
 source_set("mmio_header") {
   public_configs = [ ":platform_include_config" ]
 
-  public_deps = [
-    "$magma_build_root/src/magma_util:common",
-  ]
+  public_deps = [ "$magma_build_root/src/magma_util:common" ]
 
-  sources = [
-    "platform_mmio.h",
-  ]
+  sources = [ "platform_mmio.h" ]
 }
 
 source_set("device_header") {
@@ -227,46 +177,32 @@ source_set("device") {
   ]
 
   if (is_fuchsia) {
-    deps = [
-      "zircon:device",
-    ]
+    deps = [ "zircon:device" ]
   } else if (is_linux) {
-    deps = [
-      "linux:device",
-    ]
+    deps = [ "linux:device" ]
   }
 }
 
 source_set("random_header") {
   public_configs = [ ":platform_include_config" ]
 
-  sources = [
-    "platform_random.h",
-  ]
+  sources = [ "platform_random.h" ]
 }
 
 group("random") {
   public_configs = [ ":platform_include_config" ]
 
-  public_deps = [
-    ":random_header",
-  ]
+  public_deps = [ ":random_header" ]
 
-  deps = [
-    "zircon:random",
-  ]
+  deps = [ "zircon:random" ]
 }
 
 source_set("futex") {
   public_configs = [ ":platform_include_config" ]
 
-  sources = [
-    "platform_futex.h",
-  ]
+  sources = [ "platform_futex.h" ]
 
-  deps = [
-    "zircon:futex",
-  ]
+  deps = [ "zircon:futex" ]
 
   allow_circular_includes_from = [ "zircon:futex" ]
 }
@@ -274,9 +210,7 @@ source_set("futex") {
 source_set("connection_client_header") {
   public_configs = [ ":platform_include_config" ]
 
-  sources = [
-    "platform_connection_client.h",
-  ]
+  sources = [ "platform_connection_client.h" ]
 
   public_deps = [
     ":buffer",
@@ -288,28 +222,20 @@ source_set("connection_client_header") {
 }
 
 source_set("connection_client") {
-  public_deps = [
-    ":connection_client_header",
-  ]
+  public_deps = [ ":connection_client_header" ]
 
   if (is_fuchsia) {
-    deps = [
-      "zircon:connection_client",
-    ]
+    deps = [ "zircon:connection_client" ]
   }
   if (is_linux) {
-    deps = [
-      "linux:connection_client",
-    ]
+    deps = [ "linux:connection_client" ]
   }
 }
 
 source_set("connection_header") {
   public_configs = [ ":platform_include_config" ]
 
-  sources = [
-    "platform_connection.h",
-  ]
+  sources = [ "platform_connection.h" ]
 
   public_deps = [
     ":buffer",
@@ -324,181 +250,121 @@ source_set("connection_header") {
 }
 
 source_set("connection") {
-  public_deps = [
-    ":connection_header",
-  ]
+  public_deps = [ ":connection_header" ]
 
   if (is_fuchsia) {
-    deps = [
-      "zircon:connection",
-    ]
+    deps = [ "zircon:connection" ]
   }
   if (is_linux) {
-    deps = [
-      "linux:connection",
-    ]
+    deps = [ "linux:connection" ]
   }
 }
 
 source_set("device_client_header") {
   public_configs = [ ":platform_include_config" ]
 
-  public_deps = [
-    ":connection_client_header",
-  ]
+  public_deps = [ ":connection_client_header" ]
 
-  sources = [
-    "platform_device_client.h",
-  ]
+  sources = [ "platform_device_client.h" ]
 }
 
 source_set("device_client") {
-  public_deps = [
-    ":device_client_header",
-  ]
+  public_deps = [ ":device_client_header" ]
 
   if (is_fuchsia) {
-    deps = [
-      "zircon:device_client",
-    ]
+    deps = [ "zircon:device_client" ]
   }
   if (is_linux) {
-    deps = [
-      "linux:device_client",
-    ]
+    deps = [ "linux:device_client" ]
   }
 }
 
 source_set("thread_header") {
   public_configs = [ ":platform_include_config" ]
 
-  public_deps = [
-    ":handle",
-  ]
+  public_deps = [ ":handle" ]
 
-  sources = [
-    "platform_thread.h",
-  ]
+  sources = [ "platform_thread.h" ]
 }
 
 source_set("thread") {
-  public_deps = [
-    ":thread_header",
-  ]
+  public_deps = [ ":thread_header" ]
 
   if (is_fuchsia) {
-    deps = [
-      "zircon:thread",
-    ]
+    deps = [ "zircon:thread" ]
   } else if (is_linux) {
-    deps = [
-      "linux:thread",
-    ]
+    deps = [ "linux:thread" ]
   }
 }
 
 source_set("event_header") {
   public_configs = [ ":platform_include_config" ]
 
-  sources = [
-    "platform_event.h",
-  ]
+  sources = [ "platform_event.h" ]
 }
 
 source_set("event") {
-  public_deps = [
-    ":event_header",
-  ]
+  public_deps = [ ":event_header" ]
 
   if (is_fuchsia) {
-    deps = [
-      "zircon:event",
-    ]
+    deps = [ "zircon:event" ]
   }
 }
 
 source_set("logger_header") {
   public_configs = [ ":platform_include_config" ]
 
-  public_deps = [
-    ":handle_header",
-  ]
+  public_deps = [ ":handle_header" ]
 
-  sources = [
-    "platform_logger.h",
-  ]
+  sources = [ "platform_logger.h" ]
 }
 
 # Just redirect users to the header; implementation varies for
 # client drivers vs system drivers.
 group("logger") {
-  public_deps = [
-    ":logger_header",
-  ]
+  public_deps = [ ":logger_header" ]
 }
 
 group("logger_impl") {
-  public_deps = [
-    ":logger_header",
-  ]
+  public_deps = [ ":logger_header" ]
   if (is_fuchsia) {
-    deps = [
-      "zircon:logger",
-    ]
+    deps = [ "zircon:logger" ]
   }
   if (is_linux) {
-    deps = [
-      "linux:logger",
-    ]
+    deps = [ "linux:logger" ]
   }
 }
 
 source_set("logger_for_system_drivers") {
-  public_deps = [
-    ":logger_header",
-  ]
+  public_deps = [ ":logger_header" ]
   if (is_fuchsia) {
-    deps = [
-      "zircon:logger_for_system_drivers",
-    ]
+    deps = [ "zircon:logger_for_system_drivers" ]
   } else {
-    deps = [
-      ":logger",
-    ]
+    deps = [ ":logger" ]
   }
 }
 
 source_set("object_header") {
   public_configs = [ ":platform_include_config" ]
 
-  sources = [
-    "platform_object.h",
-  ]
+  sources = [ "platform_object.h" ]
 }
 
 source_set("object") {
-  public_deps = [
-    ":object_header",
-  ]
+  public_deps = [ ":object_header" ]
 
   if (is_fuchsia) {
-    deps = [
-      "zircon:object",
-    ]
+    deps = [ "zircon:object" ]
   }
   if (is_linux) {
-    deps = [
-      "linux:object",
-    ]
+    deps = [ "linux:object" ]
   }
 }
 
 source_set("semaphore_header") {
   public_configs = [ ":platform_include_config" ]
 
-  sources = [
-    "platform_semaphore.h",
-  ]
+  sources = [ "platform_semaphore.h" ]
 
   public_deps = [
     ":object",
@@ -509,42 +375,28 @@ source_set("semaphore_header") {
 source_set("semaphore") {
   public_configs = [ ":platform_include_config" ]
 
-  public_deps = [
-    ":semaphore_header",
-  ]
+  public_deps = [ ":semaphore_header" ]
 
   if (is_fuchsia) {
-    deps = [
-      "zircon:semaphore",
-    ]
+    deps = [ "zircon:semaphore" ]
   }
   if (is_linux) {
-    deps = [
-      "linux:semaphore",
-    ]
+    deps = [ "linux:semaphore" ]
   }
 }
 
 source_set("port_header") {
   public_configs = [ ":platform_include_config" ]
 
-  sources = [
-    "platform_port.h",
-  ]
+  sources = [ "platform_port.h" ]
 
-  public_deps = [
-    "$magma_build_root/src/magma_util",
-  ]
+  public_deps = [ "$magma_build_root/src/magma_util" ]
 }
 
 source_set("port") {
-  public_deps = [
-    ":port_header",
-  ]
+  public_deps = [ ":port_header" ]
 
-  deps = [
-    ":object",
-  ]
+  deps = [ ":object" ]
 
   if (is_fuchsia) {
     deps += [ "zircon:port" ]
@@ -560,14 +412,10 @@ source_set("trace_header") {
     ":tracing",
   ]
 
-  sources = [
-    "platform_trace.h",
-  ]
+  sources = [ "platform_trace.h" ]
 
   if (is_fuchsia) {
-    public_deps = [
-      "//zircon/public/lib/fit",
-    ]
+    public_deps = [ "//zircon/public/lib/fit" ]
 
     if (magma_enable_tracing) {
       public_deps += [
@@ -579,20 +427,14 @@ source_set("trace_header") {
 }
 
 source_set("trace") {
-  public_deps = [
-    ":trace_header",
-  ]
+  public_deps = [ ":trace_header" ]
 
   if (magma_enable_tracing) {
     if (is_fuchsia) {
-      deps = [
-        "zircon:trace",
-      ]
+      deps = [ "zircon:trace" ]
     }
   } else {
-    sources = [
-      "platform_trace_stubs.cc",
-    ]
+    sources = [ "platform_trace_stubs.cc" ]
   }
 }
 
@@ -602,30 +444,20 @@ source_set("trace_provider_header") {
     ":tracing",
   ]
 
-  sources = [
-    "platform_trace_provider.h",
-  ]
+  sources = [ "platform_trace_provider.h" ]
 
-  public_deps = [
-    ":trace",
-  ]
+  public_deps = [ ":trace" ]
 }
 
 source_set("trace_provider") {
-  public_deps = [
-    ":trace_provider_header",
-  ]
+  public_deps = [ ":trace_provider_header" ]
 
   if (magma_enable_tracing) {
     if (is_fuchsia) {
-      deps = [
-        "zircon:trace_provider",
-      ]
+      deps = [ "zircon:trace_provider" ]
     }
   } else {
-    sources = [
-      "platform_trace_provider_stubs.cc",
-    ]
+    sources = [ "platform_trace_provider_stubs.cc" ]
   }
 }
 
@@ -635,9 +467,7 @@ source_set("trace_provider_with_fdio_header") {
     ":tracing",
   ]
 
-  sources = [
-    "platform_trace_provider_with_fdio.h",
-  ]
+  sources = [ "platform_trace_provider_with_fdio.h" ]
 
   public_deps = [
     ":trace",
@@ -646,29 +476,21 @@ source_set("trace_provider_with_fdio_header") {
 }
 
 source_set("trace_provider_with_fdio") {
-  public_deps = [
-    ":trace_provider_with_fdio_header",
-  ]
+  public_deps = [ ":trace_provider_with_fdio_header" ]
 
   if (magma_enable_tracing) {
     if (is_fuchsia) {
-      deps = [
-        "zircon:trace_provider_with_fdio",
-      ]
+      deps = [ "zircon:trace_provider_with_fdio" ]
     }
   } else {
-    sources = [
-      "platform_trace_provider_with_fdio_stubs.cc",
-    ]
+    sources = [ "platform_trace_provider_with_fdio_stubs.cc" ]
   }
 }
 
 source_set("sysmem_connection_header") {
   public_configs = [ "$magma_build_root:magma_src_include_config" ]
 
-  sources = [
-    "platform_sysmem_connection.h",
-  ]
+  sources = [ "platform_sysmem_connection.h" ]
 
   public_deps = [
     ":buffer",
@@ -678,10 +500,6 @@ source_set("sysmem_connection_header") {
 }
 
 source_set("sysmem_connection") {
-  public_deps = [
-    ":sysmem_connection_header",
-  ]
-  deps = [
-    "zircon:sysmem_connection",
-  ]
+  public_deps = [ ":sysmem_connection_header" ]
+  deps = [ "zircon:sysmem_connection" ]
 }

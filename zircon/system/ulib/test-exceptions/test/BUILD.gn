@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":test-exceptions",
-  ]
+  deps = [ ":test-exceptions" ]
 }
 
 zx_test("test-exceptions") {
-  sources = [
-    "exception-catcher-test.cc",
-  ]
+  sources = [ "exception-catcher-test.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/test-exceptions",

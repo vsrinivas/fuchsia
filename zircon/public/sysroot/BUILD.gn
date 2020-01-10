@@ -44,12 +44,8 @@ foreach(entry, zircon_legacy_sysroot) {
           sysroot_deps += [ ":$copy_target" ]
           copy(copy_target) {
             visibility = [ ":sysroot" ]
-            sources = [
-              "$dir/$file",
-            ]
-            outputs = [
-              "$sysroot_dir/include/$file",
-            ]
+            sources = [ "$dir/$file" ]
+            outputs = [ "$sysroot_dir/include/$file" ]
           }
         }
         version_content.headers += [ "$file_base/include/$file" ]
@@ -93,12 +89,8 @@ foreach(entry, zircon_legacy_sysroot) {
         sysroot_deps += [ ":$copy_target" ]
         copy(copy_target) {
           visibility = [ ":sysroot" ]
-          sources = [
-            "$zircon_root_build_dir/${sdk.source}",
-          ]
-          outputs = [
-            file,
-          ]
+          sources = [ "$zircon_root_build_dir/${sdk.source}" ]
+          outputs = [ file ]
         }
       }
     }
@@ -110,9 +102,7 @@ group("sysroot") {
     deps = sysroot_deps
   } else {
     assert(sysroot_deps == [])
-    public_deps = [
-      ":sysroot($sysroot_toolchain)",
-    ]
+    public_deps = [ ":sysroot($sysroot_toolchain)" ]
   }
 }
 
@@ -135,9 +125,7 @@ write_file("$target_gen_dir/sysroot.meta.in.json",
 action("sysroot-meta") {
   visibility = [ ":*" ]
   script = "//build/zircon/sdk_build_id.py"
-  sources = [
-    "$target_gen_dir/sysroot.meta.in.json",
-  ]
+  sources = [ "$target_gen_dir/sysroot.meta.in.json" ]
   outputs = [
     "$target_out_dir/sysroot.meta.out.json",
     "$target_out_dir/sysroot.debug.manifest",

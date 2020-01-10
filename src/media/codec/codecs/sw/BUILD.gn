@@ -22,17 +22,11 @@ config("codec_runner_sw_include_config") {
 }
 
 source_set("codec_runner_sw") {
-  sources = [
-    "local_single_codec_factory.h",
-  ]
+  sources = [ "local_single_codec_factory.h" ]
 
-  public = [
-    "codec_runner_app.h",
-  ]
+  public = [ "codec_runner_app.h" ]
 
-  deps = [
-    "//src/media/lib/codec_impl",
-  ]
+  deps = [ "//src/media/lib/codec_impl" ]
 
   public_deps = [
     "//sdk/lib/sys/cpp",
@@ -45,9 +39,7 @@ config("codec_adapter_sw_include_config") {
 }
 
 source_set("codec_adapter_sw") {
-  sources = [
-    "buffer_pool.cc",
-  ]
+  sources = [ "buffer_pool.cc" ]
 
   public = [
     "buffer_pool.h",

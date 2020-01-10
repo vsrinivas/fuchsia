@@ -65,9 +65,8 @@ copy("copy_test_data") {
     "tests/data/product_ab.local_fonts.json",
     "tests/goldens/product_ab.font_manifest.json",
   ]
-  outputs = [
-    "$root_out_dir/test_data/font_manifest_generator/{{source_file_part}}",
-  ]
+  outputs =
+      [ "$root_out_dir/test_data/font_manifest_generator/{{source_file_part}}" ]
 }
 
 group("test_files") {
@@ -82,9 +81,7 @@ group("test_files") {
 }
 
 group("manifest_generator") {
-  public_deps = [
-    ":font_manifest_generator($host_toolchain)",
-  ]
+  public_deps = [ ":font_manifest_generator($host_toolchain)" ]
 }
 
 group("tests") {

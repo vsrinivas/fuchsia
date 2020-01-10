@@ -4,9 +4,7 @@
 
 # A device that causes a crash when it's operated on
 zx_driver("crash-device") {
-  sources = [
-    "crash_device.cc",
-  ]
+  sources = [ "crash_device.cc" ]
   deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

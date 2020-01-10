@@ -27,9 +27,7 @@ source_set("hypervisor") {
 
 source_set("tests") {
   # TODO: testonly = true
-  sources = [
-    "gich_state_test.cc",
-  ]
+  sources = [ "gich_state_test.cc" ]
   deps = [
     "$zx/kernel/dev/interrupt/arm_gic/common",
     "$zx/kernel/hypervisor:headers",

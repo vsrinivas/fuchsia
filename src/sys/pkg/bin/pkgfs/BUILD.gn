@@ -29,12 +29,10 @@ test_packages = [
 foreach(testpkg, test_packages) {
   go_test("pmd_${testpkg}_test") {
     gopackages = [ "fuchsia.googlesource.com/pmd/${testpkg}" ]
-    deps = [
-      ":pmd",
-    ]
+    deps = [ ":pmd" ]
     non_go_deps = [
-      "//zircon/public/lib/ramdevice-client",
       "//zircon/public/lib/fdio",
+      "//zircon/public/lib/ramdevice-client",
     ]
   }
 }
@@ -49,9 +47,7 @@ manifest_outputs = get_target_outputs(":blobfs.manifest")
 manifest_file = manifest_outputs[0]
 
 test_package("pmd_tests") {
-  deps = [
-    ":blobfs.manifest",
-  ]
+  deps = [ ":blobfs.manifest" ]
   tests = []
 
   extra = [ manifest_file ]
@@ -69,7 +65,5 @@ test_package("pmd_tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":pmd_tests",
-  ]
+  public_deps = [ ":pmd_tests" ]
 }

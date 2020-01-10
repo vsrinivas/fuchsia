@@ -4,9 +4,7 @@
 
 zx_test("driver-test") {
   test_group = "ddk"
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device:llcpp",

@@ -7,9 +7,7 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/layers.gni")
 
 package("magma-tools") {
-  deps = [
-    ":tools",
-  ]
+  deps = [ ":tools" ]
   binaries = [
     {
       name = "magma_info"
@@ -34,7 +32,5 @@ config("magma_tests_include_config") {
 }
 
 group("tools") {
-  public_deps = [
-    "src/tools",
-  ]
+  public_deps = [ "src/tools" ]
 }

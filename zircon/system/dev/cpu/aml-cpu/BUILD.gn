@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("aml-cpu") {
-  sources = [
-    "aml-cpu.cc",
-  ]
+  sources = [ "aml-cpu.cc" ]
   deps = [
     "$zx/system/dev/lib/amlogic",
     "$zx/system/fidl/fuchsia-hardware-cpu-ctrl:llcpp",

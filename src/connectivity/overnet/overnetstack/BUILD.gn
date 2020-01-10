@@ -31,9 +31,7 @@ rustc_binary("bin") {
 }
 
 package("overnetstack") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "overnetstack"
 
@@ -59,9 +57,7 @@ package("overnetstack") {
 }
 
 test_package("overnetstack-tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {
@@ -73,7 +69,5 @@ test_package("overnetstack-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":overnetstack-tests",
-  ]
+  public_deps = [ ":overnetstack-tests" ]
 }

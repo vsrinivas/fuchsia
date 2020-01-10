@@ -33,9 +33,7 @@ source_set("tiles_lib") {
 executable("bin") {
   output_name = "tiles"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":tiles_lib",
@@ -58,17 +56,13 @@ package("tiles") {
 
   binary = "tiles"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 }
 
 executable("tiles_unittests") {
   testonly = true
 
-  sources = [
-    "tiles_unittest.cc",
-  ]
+  sources = [ "tiles_unittest.cc" ]
 
   deps = [
     ":tiles_lib",
@@ -80,9 +74,7 @@ executable("tiles_unittests") {
 }
 
 test_package("tiles_tests") {
-  deps = [
-    ":tiles_unittests",
-  ]
+  deps = [ ":tiles_unittests" ]
 
   tests = [
     {

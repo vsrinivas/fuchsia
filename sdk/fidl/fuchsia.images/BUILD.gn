@@ -19,7 +19,5 @@ fidl("fuchsia.images") {
     "presentation_info.fidl",
   ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-sysmem",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-sysmem" ]
 }

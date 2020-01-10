@@ -5,22 +5,16 @@
 import("//build/test/test_package.gni")
 
 group("mpsc_queue") {
-  public_deps = [
-    ":mpsc_queue_sources",
-  ]
+  public_deps = [ ":mpsc_queue_sources" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":mpsc_queue_unittests",
-  ]
+  deps = [ ":mpsc_queue_unittests" ]
 }
 
 source_set("mpsc_queue_sources") {
-  public = [
-    "mpsc_queue.h",
-  ]
+  public = [ "mpsc_queue.h" ]
 
   public_deps = [
     "//src/lib/fxl",
@@ -33,9 +27,7 @@ executable("mpsc_queue_unittest_bin") {
 
   testonly = true
 
-  sources = [
-    "mpsc_queue_unittests.cc",
-  ]
+  sources = [ "mpsc_queue_unittests.cc" ]
 
   deps = [
     ":mpsc_queue",
@@ -47,9 +39,7 @@ executable("mpsc_queue_unittest_bin") {
 }
 
 test_package("mpsc_queue_unittests") {
-  deps = [
-    ":mpsc_queue_unittest_bin",
-  ]
+  deps = [ ":mpsc_queue_unittest_bin" ]
 
   tests = [
     {

@@ -4,9 +4,7 @@
 
 executable("sample_tests") {
   testonly = true
-  sources = [
-    "sample_tests.cc",
-  ]
+  sources = [ "sample_tests.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -16,9 +14,7 @@ executable("sample_tests") {
 
 executable("no_tests") {
   testonly = true
-  sources = [
-    "empty_test_file.cc",
-  ]
+  sources = [ "empty_test_file.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",

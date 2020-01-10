@@ -13,9 +13,7 @@ source_set("cpp") {
     "vector_buffer.h",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/safemath",
-  ]
+  public_deps = [ "//zircon/public/lib/safemath" ]
 }
 
 test("containers_cpp_unittests") {
@@ -43,15 +41,11 @@ test_package("containers_cpp_tests") {
     },
   ]
 
-  deps = [
-    ":containers_cpp_unittests",
-  ]
+  deps = [ ":containers_cpp_unittests" ]
 }
 
 group("tests") {
   testonly = true
 
-  deps = [
-    ":containers_cpp_tests",
-  ]
+  deps = [ ":containers_cpp_tests" ]
 }

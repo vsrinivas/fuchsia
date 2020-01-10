@@ -6,9 +6,7 @@ import("../hermetic_module.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":hermetic-compute-module",
-  ]
+  deps = [ ":hermetic-compute-module" ]
 }
 
 test_modules = [
@@ -27,9 +25,7 @@ foreach(name, test_modules) {
   hermetic_module("test-module-$name") {
     testonly = true
     visibility = [ ":*" ]
-    sources = [
-      "test-module-$name.cc",
-    ]
+    sources = [ "test-module-$name.cc" ]
     ldflags = [ "-Wl,-z,stack-size=128" ]
     deps = [
       "$zx/system/ulib/hermetic-compute:hermetic-engine",
@@ -39,9 +35,7 @@ foreach(name, test_modules) {
 }
 
 zx_test("hermetic-compute-module") {
-  sources = [
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/hermetic-compute",

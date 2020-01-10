@@ -39,9 +39,7 @@ package("run_integration_tests") {
 }
 
 package("run_test") {
-  deps = [
-    "run_test",
-  ]
+  deps = [ "run_test" ]
 
   binaries = [
     {
@@ -54,9 +52,7 @@ package("run_test") {
 package("test_runner_tests") {
   testonly = true
 
-  deps = [
-    "test",
-  ]
+  deps = [ "test" ]
 
   binaries = [
     {

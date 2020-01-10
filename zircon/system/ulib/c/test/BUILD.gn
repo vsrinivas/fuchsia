@@ -20,17 +20,13 @@ if (toolchain.tool_dir == "") {
   }
 } else {
   zx_test("noop") {
-    sources = [
-      "noop-test.cc",
-    ]
+    sources = [ "noop-test.cc" ]
   }
 }
 
 group("noop-tests.instrumented") {
   testonly = true
-  deps = [
-    ":noop",
-  ]
+  deps = [ ":noop" ]
 
   # Generate a variant-suffixed noop test for each instrumented variant.
   # Those all have their own libprefix so they can coexist in the
@@ -48,9 +44,7 @@ group("noop-tests.instrumented") {
 
 group("noop-tests") {
   testonly = true
-  deps = [
-    ":noop",
-  ]
+  deps = [ ":noop" ]
 
   foreach(selector, toolchain.variant_selectors) {
     deps += [ ":noop.${selector.variant}" ]
@@ -72,9 +66,7 @@ default_stack_size_cases = [
 
 foreach(case, default_stack_size_cases) {
   zx_test("default-stack-size-${case.name}") {
-    sources = [
-      "default-stack-size-test.cc",
-    ]
+    sources = [ "default-stack-size-test.cc" ]
     deps = [
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/zircon-internal",
@@ -89,22 +81,14 @@ foreach(case, default_stack_size_cases) {
 
 zx_executable("debugdata-test-helper") {
   testonly = true
-  sources = [
-    "debugdata-test-helper.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/zx",
-  ]
+  sources = [ "debugdata-test-helper.cc" ]
+  deps = [ "$zx/system/ulib/zx" ]
 }
 
 zx_test("debugdata") {
   test_group = "c"
-  sources = [
-    "debugdata.cc",
-  ]
-  data_deps = [
-    ":debugdata-test-helper",
-  ]
+  sources = [ "debugdata.cc" ]
+  data_deps = [ ":debugdata-test-helper" ]
   deps = [
     "$zx/system/fidl/fuchsia-debugdata:llcpp",
     "$zx/system/ulib/async",
@@ -125,9 +109,7 @@ zx_test("debugdata") {
 
 zx_test("posix-clocks") {
   test_group = "c"
-  sources = [
-    "posix-clocks.cc",
-  ]
+  sources = [ "posix-clocks.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

@@ -42,9 +42,7 @@ dart_tool("fxtest") {
 }
 
 dart_test("fxtest_tests") {
-  sources = [
-    "fxtest_test.dart",
-  ]
+  sources = [ "fxtest_test.dart" ]
 
   deps = [
     ":fxtest_dart_library",
@@ -57,7 +55,5 @@ dart_test("fxtest_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":fxtest_tests($host_toolchain)",
-  ]
+  deps = [ ":fxtest_tests($host_toolchain)" ]
 }

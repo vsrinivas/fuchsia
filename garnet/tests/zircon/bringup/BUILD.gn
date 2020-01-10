@@ -6,16 +6,12 @@ import("//build/test/test_package.gni")
 
 group("bringup") {
   testonly = true
-  deps = [
-    ":bringup_bootfs_test",
-  ]
+  deps = [ ":bringup_bootfs_test" ]
 }
 
 executable("running_on_bootfs_test") {
   testonly = true
-  sources = [
-    "running_on_bootfs_test.cc",
-  ]
+  sources = [ "running_on_bootfs_test.cc" ]
   deps = [
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
@@ -26,9 +22,7 @@ executable("running_on_bootfs_test") {
 # irrelevant, however, we don't allow bare tests in packages anymore, so the
 # cmx production avoids needing a very specialized exception for this case.
 unittest_package("bringup_bootfs_test") {
-  deps = [
-    ":running_on_bootfs_test",
-  ]
+  deps = [ ":running_on_bootfs_test" ]
   tests = [
     {
       name = "running_on_bootfs_test"

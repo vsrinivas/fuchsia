@@ -37,10 +37,6 @@ rustc_library("lib") {
 }
 
 static_library("ext_ping") {
-  sources = [
-    "src/ping.cc",
-  ]
-  deps = [
-    "//zircon/public/lib/zx",
-  ]
+  sources = [ "src/ping.cc" ]
+  deps = [ "//zircon/public/lib/zx" ]
 }

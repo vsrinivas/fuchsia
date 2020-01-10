@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("waitfor") {
-  sources = [
-    "waitfor.cc",
-  ]
+  sources = [ "waitfor.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",

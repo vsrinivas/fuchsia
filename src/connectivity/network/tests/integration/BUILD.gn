@@ -7,7 +7,5 @@ import("//build/testing/environments.gni")
 
 group("integration") {
   testonly = true
-  deps = [
-    "dhcp:netemul_dhcp_tests",
-  ]
+  deps = [ "dhcp:netemul_dhcp_tests" ]
 }

@@ -6,7 +6,5 @@ import("//build/config.gni")
 
 config_data("config") {
   for_pkg = "sysmgr"
-  sources = [
-    "dhcp.config",
-  ]
+  sources = [ "dhcp.config" ]
 }

@@ -81,9 +81,7 @@ package("session_manager") {
 }
 
 unittest_package("session_manager_tests") {
-  deps = [
-    ":lib_test",
-  ]
+  deps = [ ":lib_test" ]
 
   tests = [
     {
@@ -96,10 +94,6 @@ unittest_package("session_manager_tests") {
 
 config_data("session_manager.config") {
   for_pkg = "sysmgr"
-  sources = [
-    "//src/session/bin/session_manager/meta/session_manager.config",
-  ]
-  outputs = [
-    "session_manager.config",
-  ]
+  sources = [ "//src/session/bin/session_manager/meta/session_manager.config" ]
+  outputs = [ "session_manager.config" ]
 }

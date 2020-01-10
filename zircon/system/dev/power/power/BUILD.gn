@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("power") {
-  sources = [
-    "power.cc",
-  ]
+  sources = [ "power.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.power",
     "$zx/system/banjo/ddk.protocol.powerimpl",

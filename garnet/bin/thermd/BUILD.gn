@@ -11,9 +11,7 @@ if (target_cpu == "x64") {
   executable("bin") {
     output_name = "thermd"
 
-    sources = [
-      "thermd.cc",
-    ]
+    sources = [ "thermd.cc" ]
 
     deps = [
       "//zircon/public/lib/async",
@@ -55,9 +53,7 @@ if (target_cpu == "arm64") {
   }
 
   test_package("thermd_tests_package") {
-    deps = [
-      ":bin_test",
-    ]
+    deps = [ ":bin_test" ]
 
     tests = [
       {
@@ -75,9 +71,7 @@ package("thermd") {
     rootresource_svc = "//build"
   }
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "thermd"
 
@@ -91,7 +85,5 @@ package("thermd") {
 
 config_data("config") {
   for_pkg = "sysmgr"
-  sources = [
-    "thermd.config",
-  ]
+  sources = [ "thermd.config" ]
 }

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("pci") {
-  sources = [
-    "pio.cc",
-  ]
+  sources = [ "pio.cc" ]
   deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

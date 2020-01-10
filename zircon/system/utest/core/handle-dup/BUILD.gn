@@ -4,22 +4,19 @@
 
 source_set("handle-dup") {
   testonly = true
-  sources = [
-    "handle-dup.cc",
-  ]
+  sources = [ "handle-dup.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
+
   # Need to disable null checks as we are going to pass nullptrs to functions that say they don't
   # take nullptrs
-  public_configs = [":no_nonnull"]
+  public_configs = [ ":no_nonnull" ]
 }
 
 config("no_nonnull") {
-  cflags = [
-    "-Wno-nonnull",
-  ]
+  cflags = [ "-Wno-nonnull" ]
 }

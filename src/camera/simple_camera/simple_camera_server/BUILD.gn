@@ -21,9 +21,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "simple_camera_server_cpp"
 
-  sources = [
-    "simple_camera_server.cc",
-  ]
+  sources = [ "simple_camera_server.cc" ]
 
   deps = [
     ":lib",
@@ -34,9 +32,7 @@ executable("bin") {
 }
 
 package("simple_camera_server_cpp") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   meta = [
     {
       path = rebase_path("meta/simple_camera_server_cpp.cmx")

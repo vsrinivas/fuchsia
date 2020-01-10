@@ -18,7 +18,5 @@ fidl("fuchsia.camera") {
     "manager.fidl",
   ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-sysmem",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-sysmem" ]
 }

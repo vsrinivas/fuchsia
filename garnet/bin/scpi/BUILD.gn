@@ -16,20 +16,18 @@ source_set("lib") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//zircon/system/banjo/ddk.protocol.scpi",
-    "//zircon/system/fidl/fuchsia-kernel:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
+    "//zircon/system/banjo/ddk.protocol.scpi",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
+    "//zircon/system/fidl/fuchsia-kernel:llcpp",
   ]
 }
 
 executable("bin") {
   output_name = "scpi"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -42,9 +40,7 @@ executable("bin") {
 executable("scpi_unittests") {
   testonly = true
 
-  sources = [
-    "app_unittest.cc",
-  ]
+  sources = [ "app_unittest.cc" ]
 
   deps = [
     ":lib",
@@ -55,9 +51,7 @@ executable("scpi_unittests") {
 }
 
 package("scpi") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   meta = [
     {
       path = rebase_path("meta/scpi.cmx")
@@ -69,9 +63,7 @@ package("scpi") {
 }
 
 unittest_package("scpi_server_tests") {
-  deps = [
-    ":scpi_unittests",
-  ]
+  deps = [ ":scpi_unittests" ]
   tests = [
     {
       name = "scpi_unittests"

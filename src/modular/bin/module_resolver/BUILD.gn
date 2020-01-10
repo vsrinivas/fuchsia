@@ -15,9 +15,7 @@ executable_package("module_resolver") {
     },
   ]
 
-  sources = [
-    "module_resolver_main.cc",
-  ]
+  sources = [ "module_resolver_main.cc" ]
 
   deps = [
     ":local_module_resolver",
@@ -34,9 +32,7 @@ executable_package("module_resolver") {
 }
 
 hermetic_tests_package("module_resolver_unittests") {
-  deps = [
-    ":local_module_resolver_unittest",
-  ]
+  deps = [ ":local_module_resolver_unittest" ]
   environments = basic_envs
 }
 
@@ -59,9 +55,7 @@ source_set("local_module_resolver") {
 executable("local_module_resolver_unittest") {
   testonly = true
 
-  sources = [
-    "local_module_resolver_unittest.cc",
-  ]
+  sources = [ "local_module_resolver_unittest.cc" ]
 
   deps = [
     ":local_module_resolver",

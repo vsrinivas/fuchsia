@@ -37,15 +37,13 @@ rustc_binary("bin") {
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/memfs",
+    "//zircon/public/lib/sync",
   ]
 }
 
 package("gtest_v1_runner") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -62,9 +60,7 @@ package("gtest_v1_runner") {
 }
 
 test_package("gtest_v1_runner_unittests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

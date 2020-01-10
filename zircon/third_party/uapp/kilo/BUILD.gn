@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("kilo") {
-  sources = [
-    "kilo.c",
-  ]
+  sources = [ "kilo.c" ]
   configs += [ ":config" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-pty:c",

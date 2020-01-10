@@ -7,7 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.castauth") {
   sdk_category = "partner"
 
-  sources = [
-    "cast_auth.fidl",
-  ]
+  sources = [ "cast_auth.fidl" ]
 }

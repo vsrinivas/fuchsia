@@ -12,18 +12,14 @@ source_set("cpp") {
     "logger_init.cc",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/syslog",
-  ]
+  public_deps = [ "//zircon/public/lib/syslog" ]
   public_configs = [ "//garnet/public:config" ]
 }
 
 executable("syslog_cpp_unittests") {
   testonly = true
 
-  sources = [
-    "logger_unittest.cc",
-  ]
+  sources = [ "logger_unittest.cc" ]
   deps = [
     ":cpp",
     "//src/lib/fxl/test:gtest_main",
@@ -36,9 +32,7 @@ executable("syslog_cpp_unittests") {
 test_package("cpp-tests") {
   package_name = "syslog_cpp_tests"
 
-  deps = [
-    ":syslog_cpp_unittests",
-  ]
+  deps = [ ":syslog_cpp_unittests" ]
   tests = [
     {
       name = "syslog_cpp_unittests"
@@ -49,7 +43,5 @@ test_package("cpp-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":cpp-tests",
-  ]
+  deps = [ ":cpp-tests" ]
 }

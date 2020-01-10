@@ -5,10 +5,6 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.sdio") {
-  sources = [
-    "sdio.banjo",
-  ]
-  public_deps = [
-    "$zx/system/banjo/ddk.protocol.sdmmc",
-  ]
+  sources = [ "sdio.banjo" ]
+  public_deps = [ "$zx/system/banjo/ddk.protocol.sdmmc" ]
 }

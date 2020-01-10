@@ -4,9 +4,7 @@
 
 source_set("sync-mutex") {
   testonly = true
-  sources = [
-    "mutex.c",
-  ]
+  sources = [ "mutex.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/sync",

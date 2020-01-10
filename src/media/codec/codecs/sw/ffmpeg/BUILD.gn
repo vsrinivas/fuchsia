@@ -7,9 +7,7 @@ import("//build/testing/environments.gni")
 
 group("ffmpeg") {
   testonly = true
-  deps = [
-    ":codec_runner_sw_ffmpeg",
-  ]
+  deps = [ ":codec_runner_sw_ffmpeg" ]
 }
 
 executable("codec_runner_sw_ffmpeg") {

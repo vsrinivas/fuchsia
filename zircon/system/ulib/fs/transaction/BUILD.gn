@@ -7,9 +7,7 @@ zx_library("transaction") {
   sources = []
   static = true
 
-  sources = [
-    "block_transaction.cc",
-  ]
+  sources = [ "block_transaction.cc" ]
 
   public_deps = [
     "$zx/system/ulib/fbl:headers",
@@ -38,15 +36,11 @@ zx_library("transaction") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":fs-transaction",
-  ]
+  deps = [ ":fs-transaction" ]
 }
 
 zx_test("fs-transaction") {
-  sources = [
-    "test/writeback_test.cc",
-  ]
+  sources = [ "test/writeback_test.cc" ]
   deps = [
     ":transaction",
     "$zx/system/ulib/zxtest",

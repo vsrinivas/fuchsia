@@ -19,7 +19,5 @@ if (host_toolchain == current_toolchain) {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":blackout-host_test($host_toolchain)",
-  ]
+  public_deps = [ ":blackout-host_test($host_toolchain)" ]
 }

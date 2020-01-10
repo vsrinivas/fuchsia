@@ -9,16 +9,12 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 group("banjo") {
-  public_deps = [
-    ":banjo_bin($host_toolchain)",
-  ]
+  public_deps = [ ":banjo_bin($host_toolchain)" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":banjo_unittests($host_toolchain)",
-  ]
+  public_deps = [ ":banjo_unittests($host_toolchain)" ]
 }
 
 rustc_binary("banjo_bin") {

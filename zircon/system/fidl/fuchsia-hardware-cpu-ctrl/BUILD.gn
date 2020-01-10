@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-hardware-cpu-ctrl") {
-  sources = [
-    "ctrl.fidl",
-  ]
+  sources = [ "ctrl.fidl" ]
 }

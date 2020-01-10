@@ -3,10 +3,6 @@
 # found in the LICENSE file.
 
 source_set("uart") {
-  sources = [
-    "uart.cc",
-  ]
-  deps = [
-    "$zx/kernel/dev/pdev",
-  ]
+  sources = [ "uart.cc" ]
+  deps = [ "$zx/kernel/dev/pdev" ]
 }

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("pwrbtn-monitor") {
-  sources = [
-    "pwrbtn-monitor.cc",
-  ]
+  sources = [ "pwrbtn-monitor.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-hardware-input:c",

@@ -53,18 +53,14 @@ if (internal_access) {
       "firmware/rampatch_usb_00000300.bin",
       "firmware/rampatch_usb_00000302.bin",
     ]
-    outputs = [
-      "$root_out_dir/firmware/{{source_file_part}}",
-    ]
+    outputs = [ "$root_out_dir/firmware/{{source_file_part}}" ]
   }
 }
 
 package("atheros") {
   deprecated_system_image = true
 
-  deps = [
-    ":driver",
-  ]
+  deps = [ ":driver" ]
 
   drivers = [
     {

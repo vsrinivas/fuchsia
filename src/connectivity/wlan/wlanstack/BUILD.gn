@@ -84,9 +84,7 @@ package("wlanstack") {
 }
 
 test_package("wlanstack-tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

@@ -63,14 +63,10 @@ test_package("rust_test_adapter_tests") {
 
 group("rust") {
   testonly = true
-  public_deps = [
-    ":bin",
-  ]
+  public_deps = [ ":bin" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":rust_test_adapter_tests",
-  ]
+  public_deps = [ ":rust_test_adapter_tests" ]
 }

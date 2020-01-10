@@ -8,9 +8,7 @@ executable("test") {
 
   output_name = "stream_provider_test"
 
-  sources = [
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
 
   deps = [
     "..",

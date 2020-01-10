@@ -36,9 +36,7 @@ rustc_binary("bin") {
 }
 
 package("wlan") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -50,9 +48,7 @@ package("wlan") {
 }
 
 test_package("wlantool-tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

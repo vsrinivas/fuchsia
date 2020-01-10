@@ -4,9 +4,7 @@
 
 zx_library("arm_generic") {
   kernel = true
-  sources = [
-    "arm_generic_timer.cc",
-  ]
+  sources = [ "arm_generic_timer.cc" ]
   deps = [
     "$zx/kernel/dev/interrupt",
     "$zx/kernel/dev/pdev",

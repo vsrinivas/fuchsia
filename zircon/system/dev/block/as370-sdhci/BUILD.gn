@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("as370-sdhci") {
-  sources = [
-    "as370-sdhci.cc",
-  ]
+  sources = [ "as370-sdhci.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.platform.device",

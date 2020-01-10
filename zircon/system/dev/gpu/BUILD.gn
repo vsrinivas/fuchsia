@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("gpu") {
-  deps = [
-    "aml-gpu",
-  ]
+  deps = [ "aml-gpu" ]
 }

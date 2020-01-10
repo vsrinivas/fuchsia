@@ -4,9 +4,7 @@
 
 executable("factory_protocol_test") {
   testonly = true
-  sources = [
-    "factory_protocol_test.cc",
-  ]
+  sources = [ "factory_protocol_test.cc" ]
 
   deps = [
     "//src/camera/calibration/factory_protocol",

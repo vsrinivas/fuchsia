@@ -11,7 +11,5 @@ fidl("fuchsia.net.dhcp") {
     "options.fidl",
     "server.fidl",
   ]
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-net",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-net" ]
 }

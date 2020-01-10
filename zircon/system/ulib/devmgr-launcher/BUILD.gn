@@ -9,12 +9,8 @@ zx_library("devmgr-launcher") {
     "lib/devmgr-launcher/processargs.h",
   ]
   shared = true
-  sources = [
-    "launcher.cc",
-  ]
-  public_deps = [
-    "$zx/system/ulib/fit:headers",
-  ]
+  sources = [ "launcher.cc" ]
+  public_deps = [ "$zx/system/ulib/fit:headers" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

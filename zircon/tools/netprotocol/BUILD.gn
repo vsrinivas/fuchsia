@@ -12,24 +12,16 @@ group("netprotocol") {
 }
 
 source_set("common") {
-  sources = [
-    "netprotocol.c",
-  ]
+  sources = [ "netprotocol.c" ]
 }
 
 zx_host_tool("netruncmd") {
-  sources = [
-    "netruncmd.c",
-  ]
-  deps = [
-    ":common",
-  ]
+  sources = [ "netruncmd.c" ]
+  deps = [ ":common" ]
 }
 
 zx_host_tool("netcp") {
-  sources = [
-    "netcp.c",
-  ]
+  sources = [ "netcp.c" ]
   deps = [
     ":common",
     "$zx/system/ulib/tftp",
@@ -37,19 +29,11 @@ zx_host_tool("netcp") {
 }
 
 zx_host_tool("netls") {
-  sources = [
-    "netls.c",
-  ]
-  deps = [
-    ":common",
-  ]
+  sources = [ "netls.c" ]
+  deps = [ ":common" ]
 }
 
 zx_host_tool("netaddr") {
-  sources = [
-    "netaddr.c",
-  ]
-  deps = [
-    ":common",
-  ]
+  sources = [ "netaddr.c" ]
+  deps = [ ":common" ]
 }

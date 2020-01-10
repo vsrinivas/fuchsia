@@ -3,10 +3,6 @@
 # found in the LICENSE file.
 
 source_set("debug") {
-  sources = [
-    "debug.cc",
-  ]
-  deps = [
-    "$zx/kernel/dev/hw_rng",
-  ]
+  sources = [ "debug.cc" ]
+  deps = [ "$zx/kernel/dev/hw_rng" ]
 }

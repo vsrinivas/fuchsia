@@ -12,9 +12,7 @@ package("crust") {
     },
   ]
 
-  deps = [
-    "c:bin",
-  ]
+  deps = [ "c:bin" ]
 
   binary = "crust"
 }

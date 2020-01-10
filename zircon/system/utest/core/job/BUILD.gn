@@ -4,9 +4,7 @@
 
 source_set("job") {
   testonly = true
-  sources = [
-    "jobs.cc",
-  ]
+  sources = [ "jobs.cc" ]
   deps = [
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fdio",

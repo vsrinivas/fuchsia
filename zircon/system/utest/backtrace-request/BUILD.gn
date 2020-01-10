@@ -7,9 +7,7 @@
 # Related unittests exist alongside the backtrace and crashsvc code, but
 # this verifies that the pieces are working together correctly.
 zx_test("backtrace-request-integration") {
-  sources = [
-    "backtrace-request-test.cc",
-  ]
+  sources = [ "backtrace-request-test.cc" ]
   deps = [
     "$zx/system/ulib/backtrace-request",
     "$zx/system/ulib/fdio",

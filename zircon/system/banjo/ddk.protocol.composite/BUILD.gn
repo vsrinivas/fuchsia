@@ -5,11 +5,7 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.composite") {
-  sources = [
-    "composite.banjo",
-  ]
+  sources = [ "composite.banjo" ]
 
-  public_deps = [
-    "$zx/system/banjo/ddk.driver",
-  ]
+  public_deps = [ "$zx/system/banjo/ddk.driver" ]
 }

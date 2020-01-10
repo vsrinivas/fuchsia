@@ -5,9 +5,7 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.wlanif") {
-  sources = [
-    "wlanif.banjo",
-  ]
+  sources = [ "wlanif.banjo" ]
   public_deps = [
     "$zx/system/banjo/ddk.hw.wlan.ieee80211",
     "$zx/system/banjo/ddk.hw.wlan.wlaninfo",

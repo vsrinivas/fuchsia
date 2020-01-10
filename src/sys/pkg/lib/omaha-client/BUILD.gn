@@ -33,9 +33,7 @@ rustc_library("omaha-client") {
 }
 
 test_package("omaha-client-lib-tests") {
-  deps = [
-    ":omaha-client_test",
-  ]
+  deps = [ ":omaha-client_test" ]
 
   tests = [
     {
@@ -48,7 +46,5 @@ test_package("omaha-client-lib-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":omaha-client-lib-tests",
-  ]
+  deps = [ ":omaha-client-lib-tests" ]
 }

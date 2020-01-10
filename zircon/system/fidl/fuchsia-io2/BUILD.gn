@@ -25,7 +25,5 @@ fidl_library("fuchsia-io2") {
     "posix-socket.fidl",
     "rights-abilities.fidl",
   ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-mem",
-  ]
+  public_deps = [ "$zx/system/fidl/fuchsia-mem" ]
 }

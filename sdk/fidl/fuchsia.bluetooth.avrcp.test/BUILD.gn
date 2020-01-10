@@ -14,11 +14,7 @@ fidl("fuchsia.bluetooth.avrcp.test") {
 
   sdk_category = "excluded"
 
-  sources = [
-    "test.fidl",
-  ]
+  sources = [ "test.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.bluetooth.avrcp",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.bluetooth.avrcp" ]
 }

@@ -8,11 +8,7 @@ fidl("fuchsia.overnet") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "protocol-name-includes-service" ]
 
-  sources = [
-    "overnet.fidl",
-  ]
+  sources = [ "overnet.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.overnet.protocol",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.overnet.protocol" ]
 }

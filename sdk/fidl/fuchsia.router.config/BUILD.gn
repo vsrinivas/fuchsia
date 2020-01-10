@@ -28,7 +28,5 @@ fidl("fuchsia.router.config") {
     "wireless.fidl",
   ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-net",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-net" ]
 }

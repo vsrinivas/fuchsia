@@ -3,12 +3,8 @@
 # found in the LICENSE file.
 
 zx_driver("pwm") {
-  sources = [
-    "pwm.cc",
-  ]
-  deps = [
-    ":common",
-  ]
+  sources = [ "pwm.cc" ]
+  deps = [ ":common" ]
 }
 
 zx_test("pwm-test") {

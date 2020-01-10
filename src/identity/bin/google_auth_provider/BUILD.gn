@@ -40,9 +40,7 @@ rustc_binary("bin") {
 }
 
 package("google_auth_provider") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "google_auth_provider"
 

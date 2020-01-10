@@ -46,9 +46,7 @@ rustc_library("process_builder") {
 group("tests") {
   testonly = true
 
-  data_deps = [
-    ":process_builder_tests",
-  ]
+  data_deps = [ ":process_builder_tests" ]
 }
 
 rustc_binary("root_job_test_runner") {
@@ -76,9 +74,7 @@ fidl("test-util-fidl") {
   # testonly = true
   name = "test.processbuilder"
 
-  sources = [
-    "test_util.test.fidl",
-  ]
+  sources = [ "test_util.test.fidl" ]
 }
 
 rustc_binary("test_util") {
@@ -114,9 +110,7 @@ config("static-pie-config") {
 # executables.  Warning: Don't copy this unless you know what you're doing.
 executable("static_pie_test_util") {
   testonly = true
-  sources = [
-    "test/static_pie_test_util.c",
-  ]
+  sources = [ "test/static_pie_test_util.c" ]
   configs += [ ":static-pie-config" ]
 
   # Profiling instrumentation needs to be disabled too, but

@@ -9,13 +9,9 @@ import("//build/test/test_package.gni")
 executable("getaddrinfo_test_client") {
   testonly = true
 
-  sources = [
-    "getaddrinfo_test_client.cc",
-  ]
+  sources = [ "getaddrinfo_test_client.cc" ]
 
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
 rustc_test("getaddrinfo_test") {

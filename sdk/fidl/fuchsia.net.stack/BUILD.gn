@@ -5,9 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.stack") {
-  sources = [
-    "stack.fidl",
-  ]
+  sources = [ "stack.fidl" ]
   public_deps = [
     "//zircon/system/fidl/fuchsia-hardware-ethernet",
     "//zircon/system/fidl/fuchsia-net",

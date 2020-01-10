@@ -54,9 +54,7 @@ test("hid-input-report-test-bin") {
 }
 
 test_package("hid-input-report-test") {
-  deps = [
-    ":hid-input-report-test-bin",
-  ]
+  deps = [ ":hid-input-report-test-bin" ]
   tests = [
     {
       name = "hid-input-report-test-bin"

@@ -7,10 +7,6 @@ import("$zx/public/gn/fuzzer.gni")
 zx_library("gfx") {
   sdk = "source"
   sdk_headers = [ "gfx/gfx.h" ]
-  sources = [
-    "gfx.c",
-  ]
-  deps = [
-    "$zx/system/ulib/zircon",
-  ]
+  sources = [ "gfx.c" ]
+  deps = [ "$zx/system/ulib/zircon" ]
 }

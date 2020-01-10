@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("fs-mkfs") {
-  deps = [
-    ":mkfs",
-  ]
+  deps = [ ":mkfs" ]
 }
 
 zx_executable("mkfs") {
-  sources = [
-    "main.c",
-  ]
+  sources = [ "main.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs-management",

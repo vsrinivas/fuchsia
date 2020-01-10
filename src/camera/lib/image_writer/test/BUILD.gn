@@ -4,9 +4,7 @@
 
 executable("image_writer_test") {
   testonly = true
-  sources = [
-    "raw12_writer_test.cc",
-  ]
+  sources = [ "raw12_writer_test.cc" ]
   deps = [
     "//src/camera/drivers/test_utils",
     "//src/camera/lib/image_writer",
@@ -16,9 +14,7 @@ executable("image_writer_test") {
 
 executable("hsv_generator_test") {
   testonly = true
-  sources = [
-    "hsv_generator_test.cc",
-  ]
+  sources = [ "hsv_generator_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",
@@ -34,9 +30,7 @@ executable("hsv_generator_test") {
 
 executable("image_format_test") {
   testonly = true
-  sources = [
-    "image_format_test.cc",
-  ]
+  sources = [ "image_format_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",

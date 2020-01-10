@@ -4,9 +4,7 @@
 
 group("tests") {
   testonly = true
-  deps = [
-    ":sysconfig-sync-client-test",
-  ]
+  deps = [ ":sysconfig-sync-client-test" ]
 }
 
 group("sysconfig-client") {
@@ -20,9 +18,7 @@ zx_library("sysconfig-sync-client") {
   sdk = "source"
   sdk_headers = [ "include/lib/sysconfig/sync-client.h" ]
 
-  sources = [
-    "sync-client.cc",
-  ]
+  sources = [ "sync-client.cc" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-skipblock:llcpp.headers",
     "$zx/system/ulib/fbl",
@@ -44,9 +40,7 @@ zx_library("sysconfig-sync-client-c") {
   sdk = "shared"
   sdk_headers = [ "include/lib/sysconfig/sync-client-c.h" ]
 
-  sources = [
-    "sync-client-c.cc",
-  ]
+  sources = [ "sync-client-c.cc" ]
   deps = [
     ":sysconfig-sync-client",
     "$zx/system/ulib/zircon",
@@ -57,9 +51,7 @@ zx_library("sysconfig-sync-client-c") {
 
 zx_test("sysconfig-sync-client-test") {
   output_name = "sysconfig-sync-client-test"
-  sources = [
-    "sync-client-test.cc",
-  ]
+  sources = [ "sync-client-test.cc" ]
   include_dirs = [ "." ]
   deps = [
     ":sysconfig-sync-client",

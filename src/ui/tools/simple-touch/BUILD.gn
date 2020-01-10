@@ -7,9 +7,7 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "simple-touch"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.input.report",
@@ -22,9 +20,7 @@ executable("bin") {
 }
 
 package("simple-touch") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

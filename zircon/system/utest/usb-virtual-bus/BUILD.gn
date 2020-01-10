@@ -37,9 +37,7 @@ zx_test("usb-virtual-bus-ums") {
 }
 
 zx_test("usb-virtual-bus-hid") {
-  sources = [
-    "usb-hid-test.cc",
-  ]
+  sources = [ "usb-hid-test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-input:llcpp",
@@ -57,9 +55,7 @@ zx_test("usb-virtual-bus-hid") {
 }
 
 zx_test("usb-virtual-bus-ftdi") {
-  sources = [
-    "ftdi-test.cc",
-  ]
+  sources = [ "ftdi-test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
@@ -75,9 +71,7 @@ zx_test("usb-virtual-bus-ftdi") {
 }
 
 zx_test("usb-virtual-bus-cdc-acm") {
-  sources = [
-    "usb-cdc-acm-test.cc",
-  ]
+  sources = [ "usb-cdc-acm-test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
@@ -93,9 +87,7 @@ zx_test("usb-virtual-bus-cdc-acm") {
 }
 
 zx_test("usb-virtual-bus-cdc-ecm") {
-  sources = [
-    "usb-cdc-ecm-test.cc",
-  ]
+  sources = [ "usb-cdc-ecm-test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-ethernet:llcpp",

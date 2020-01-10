@@ -31,9 +31,7 @@ flutter_jit_app("google_signin_e2e_tester") {
 }
 
 dart_test("google_signin_e2e_test") {
-  sources = [
-    "google_signin_test.dart",
-  ]
+  sources = [ "google_signin_test.dart" ]
 
   deps = [
     "//sdk/testing/sl4f/client",
@@ -48,13 +46,9 @@ dart_test("google_signin_e2e_test") {
 copy("runtime_deps") {
   _data_dir = "$target_gen_dir/runtime_deps"
 
-  sources = [
-    "//prebuilt/third_party/chromedriver/linux-x64/chromedriver",
-  ]
+  sources = [ "//prebuilt/third_party/chromedriver/linux-x64/chromedriver" ]
 
-  outputs = [
-    "$_data_dir/{{source_file_part}}",
-  ]
+  outputs = [ "$_data_dir/{{source_file_part}}" ]
 }
 
 group("test") {

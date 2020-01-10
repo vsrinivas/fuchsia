@@ -51,7 +51,5 @@ test_package("archivist_data_stats_test") {
 
 group("data_stats") {
   testonly = true
-  public_deps = [
-    ":archivist_data_stats_test",
-  ]
+  public_deps = [ ":archivist_data_stats_test" ]
 }

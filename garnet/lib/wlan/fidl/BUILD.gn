@@ -10,9 +10,7 @@ fidl("fidl") {
 
   name = "fuchsia.wlan.device"
 
-  sources = [
-    "phy.fidl",
-  ]
+  sources = [ "phy.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.wlan.common",
@@ -29,9 +27,7 @@ fidl("sme") {
 
   name = "fuchsia.wlan.sme"
 
-  sources = [
-    "sme.fidl",
-  ]
+  sources = [ "sme.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.wlan.common",
@@ -51,9 +47,7 @@ fidl("service") {
 
   name = "fuchsia.wlan.device.service"
 
-  sources = [
-    "service.fidl",
-  ]
+  sources = [ "service.fidl" ]
 
   public_deps = [
     ":fidl",
@@ -74,9 +68,7 @@ fidl("wlantap") {
 
   name = "fuchsia.wlan.tap"
 
-  sources = [
-    "wlantap.fidl",
-  ]
+  sources = [ "wlantap.fidl" ]
 
   public_deps = [
     ":fidl",

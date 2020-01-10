@@ -4,15 +4,11 @@
 
 # Do not use this target directly, instead depend on //src/lib/syslog/cpp:tests.
 group("tests") {
-  public_deps = [
-    "//src/lib/syslog/cpp:tests",
-  ]
+  public_deps = [ "//src/lib/syslog/cpp:tests" ]
   testonly = true
 }
 
 # Do not use this target directly, instead depend on //src/lib/syslog/cpp.
 group("cpp") {
-  public_deps = [
-    "//src/lib/syslog/cpp",
-  ]
+  public_deps = [ "//src/lib/syslog/cpp" ]
 }

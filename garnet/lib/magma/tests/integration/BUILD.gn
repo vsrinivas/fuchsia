@@ -7,9 +7,7 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 group("integration") {
   testonly = true
 
-  public_deps = [
-    ":magma_abi_conformance_tests",
-  ]
+  public_deps = [ ":magma_abi_conformance_tests" ]
 }
 
 executable("magma_abi_conformance_tests") {

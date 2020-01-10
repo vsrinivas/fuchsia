@@ -28,9 +28,7 @@ rustc_library("httpdate-hyper") {
 }
 
 test_package("httpdate-hyper-tests") {
-  deps = [
-    ":httpdate-hyper_test",
-  ]
+  deps = [ ":httpdate-hyper_test" ]
 
   tests = [
     {

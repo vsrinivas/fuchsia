@@ -9,9 +9,7 @@ source_set("process") {
     "software_processor.h",
   ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 
   deps = [
     "//src/lib/syslog/cpp",

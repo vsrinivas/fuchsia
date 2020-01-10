@@ -6,9 +6,7 @@ import("//build/package.gni")
 
 executable("echo_gtest_client") {
   testonly = true
-  sources = [
-    "echo_test.cc",
-  ]
+  sources = [ "echo_test.cc" ]
 
   deps = [
     "//examples/components/routing/fidl:echo",
@@ -70,7 +68,5 @@ package("gtest_adapter_echo_example") {
 
 group("echo-example") {
   testonly = true
-  deps = [
-    ":gtest_adapter_echo_example",
-  ]
+  deps = [ ":gtest_adapter_echo_example" ]
 }

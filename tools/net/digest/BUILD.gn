@@ -11,7 +11,5 @@ go_library("digest") {
 
 go_test("digest_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/digest" ]
-  deps = [
-    ":digest",
-  ]
+  deps = [ ":digest" ]
 }

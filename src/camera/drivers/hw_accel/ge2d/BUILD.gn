@@ -52,9 +52,7 @@ driver_module("ge2d-driver") {
 package("ge2d") {
   deprecated_system_image = true
 
-  deps = [
-    ":ge2d-driver",
-  ]
+  deps = [ ":ge2d-driver" ]
 
   drivers = [
     {

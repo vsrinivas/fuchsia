@@ -17,16 +17,14 @@ go_test("device_settings_integration_test") {
 
   deps = [
     ":device_settings",
-    "//src/lib/component/go/src/app",
     "//sdk/fidl/fuchsia.devicesettings($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//src/lib/component/go/src/app",
   ]
 }
 
 test_package("device_settings_gotests") {
-  deps = [
-    ":device_settings_integration_test",
-  ]
+  deps = [ ":device_settings_integration_test" ]
   tests = [
     {
       name = "device_settings_integration_test"

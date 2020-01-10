@@ -6,16 +6,10 @@ import("$zx/public/gn/fuzzer.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":ldmsg-fuzzer",
-  ]
+  deps = [ ":ldmsg-fuzzer" ]
 }
 
 fuzzer("ldmsg-fuzzer") {
-  sources = [
-    "ldmsg-fuzzer.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/ldmsg"
-  ]
+  sources = [ "ldmsg-fuzzer.cc" ]
+  deps = [ "$zx/system/ulib/ldmsg" ]
 }

@@ -5,11 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.vsock") {
-  sources = [
-    "connector.fidl",
-  ]
+  sources = [ "connector.fidl" ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-hardware-vsock",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-hardware-vsock" ]
 }

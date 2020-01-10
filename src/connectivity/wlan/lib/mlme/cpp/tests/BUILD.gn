@@ -44,9 +44,7 @@ source_set("test_main") {
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
   ]
 
-  deps = [
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ "//third_party/googletest:gtest" ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
@@ -57,9 +55,7 @@ executable("ap_mlme_tests") {
 
   testonly = true
 
-  sources = [
-    "ap_mlme_unittest.cc",
-  ]
+  sources = [ "ap_mlme_unittest.cc" ]
 
   deps = [
     ":test_main",
@@ -78,9 +74,7 @@ executable("client_mlme_tests") {
 
   testonly = true
 
-  sources = [
-    "client_mlme_unittest.cc",
-  ]
+  sources = [ "client_mlme_unittest.cc" ]
 
   deps = [
     ":test_main",
@@ -159,9 +153,7 @@ executable("service_tests") {
 
   testonly = true
 
-  sources = [
-    "service_unittest.cc",
-  ]
+  sources = [ "service_unittest.cc" ]
 
   deps = [
     ":test_main",
@@ -178,9 +170,7 @@ executable("timer_manager_tests") {
 
   testonly = true
 
-  sources = [
-    "timer_manager_unittest.cc",
-  ]
+  sources = [ "timer_manager_unittest.cc" ]
 
   deps = [
     ":test_main",
@@ -198,9 +188,7 @@ executable("buffer_utils_tests") {
 
   testonly = true
 
-  sources = [
-    "buffer_utils_unittest.cc",
-  ]
+  sources = [ "buffer_utils_unittest.cc" ]
 
   deps = [
     ":test_main",
@@ -253,9 +241,7 @@ test_package("wlan_tests") {
     "//src/connectivity/wlan/drivers/testing",
   ]
 
-  data_deps = [
-    ":wlanphy-testdev-driver",
-  ]
+  data_deps = [ ":wlanphy-testdev-driver" ]
 
   binaries = [
     {

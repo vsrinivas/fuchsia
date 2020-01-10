@@ -52,9 +52,7 @@ rustc_binary("bin") {
 }
 
 package("account_manager") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "account_manager"
 
@@ -71,7 +69,5 @@ package("account_manager") {
 }
 
 group("account_manager_auth_providers") {
-  public_deps = [
-    "../google_auth_provider",
-  ]
+  public_deps = [ "../google_auth_provider" ]
 }

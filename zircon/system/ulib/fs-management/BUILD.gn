@@ -20,9 +20,7 @@ zx_library("fs-management") {
     "mkfs.cc",
     "mount.cc",
   ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-block-volume:c.headers",
-  ]
+  public_deps = [ "$zx/system/fidl/fuchsia-hardware-block-volume:c.headers" ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:llcpp",
     "$zx/system/fidl/fuchsia-fshost:llcpp",
@@ -44,9 +42,9 @@ zx_library("fs-management") {
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
 
   data_deps = [
-    "$zx/system/uapp/minfs",
     "$zx/system/uapp/blobfs",
-    "$zx/third_party/uapp/mkfs-msdosfs",
+    "$zx/system/uapp/minfs",
     "$zx/third_party/uapp/fsck-msdosfs",
+    "$zx/third_party/uapp/mkfs-msdosfs",
   ]
 }

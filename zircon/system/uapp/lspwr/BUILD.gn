@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("lspwr") {
-  sources = [
-    "lspwr.cc",
-  ]
+  sources = [ "lspwr.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-power:c",
     "$zx/system/ulib/fbl",

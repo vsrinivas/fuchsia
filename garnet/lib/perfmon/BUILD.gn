@@ -61,8 +61,8 @@ static_library("perfmon") {
     ]
 
     public_deps += [
-      "//zircon/system/fidl/fuchsia-perfmon-cpu",
       "//zircon/public/lib/zx",
+      "//zircon/system/fidl/fuchsia-perfmon-cpu",
     ]
   } else {
     sources += [
@@ -80,9 +80,7 @@ executable("perfmon_tests_app") {
   testonly = true
   output_name = "perfmon_tests"
 
-  sources = [
-    "config_unittest.cc",
-  ]
+  sources = [ "config_unittest.cc" ]
 
   deps = [
     ":perfmon",
@@ -97,9 +95,7 @@ executable("perfmon_tests_app") {
 }
 
 test_package("perfmon_tests") {
-  deps = [
-    ":perfmon_tests_app",
-  ]
+  deps = [ ":perfmon_tests_app" ]
 
   tests = [
     {

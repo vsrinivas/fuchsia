@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("stdlib") {
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   sources = [
     "abs.c",
     "atof.c",

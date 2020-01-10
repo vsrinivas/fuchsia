@@ -39,9 +39,7 @@ rustc_binary("intl_wisdom_client_rust") {
 }
 
 test_package("intl_wisdom_client_rust_tests") {
-  deps = [
-    ":intl_wisdom_client_rust_test",
-  ]
+  deps = [ ":intl_wisdom_client_rust_test" ]
   tests = [
     {
       name = "intl_wisdom_client_rust_bin_test"
@@ -58,14 +56,10 @@ test_package("intl_wisdom_client_rust_tests") {
 }
 
 group("client") {
-  deps = [
-    ":intl_wisdom_client_rust",
-  ]
+  deps = [ ":intl_wisdom_client_rust" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":intl_wisdom_client_rust_tests",
-  ]
+  deps = [ ":intl_wisdom_client_rust_tests" ]
 }

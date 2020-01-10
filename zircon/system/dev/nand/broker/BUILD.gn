@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("broker") {
-  deps = [
-    ":nand-broker",
-  ]
+  deps = [ ":nand-broker" ]
 }
 
 zx_driver("nand-broker") {
-  sources = [
-    "broker.cc",
-  ]
+  sources = [ "broker.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/fidl/fuchsia-hardware-nand:c",

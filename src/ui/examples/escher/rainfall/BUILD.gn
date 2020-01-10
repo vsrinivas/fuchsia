@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 executable("rainfall") {
-  sources = [
-    "rainfall_main.cc",
-  ]
+  sources = [ "rainfall_main.cc" ]
 
   deps = [
     ":rainfall_demo",
@@ -39,15 +37,13 @@ source_set("rainfall_demo") {
 
 source_set("rainfall_scenes") {
   sources = [
+    "rainfall_demo.h",
     "scenes/flatland_demo_scene1.cc",
     "scenes/flatland_demo_scene1.h",
     "scenes/flatland_demo_scene2.cc",
     "scenes/flatland_demo_scene2.h",
     "scenes/scene.h",
-     "rainfall_demo.h",
   ]
 
-  deps = [
-    "//src/ui/examples/escher/common:demo_base",
-  ]
+  deps = [ "//src/ui/examples/escher/common:demo_base" ]
 }

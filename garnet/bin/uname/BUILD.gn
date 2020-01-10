@@ -7,17 +7,13 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "uname"
 
-  sources = [
-    "uname.c",
-  ]
+  sources = [ "uname.c" ]
 
   libs = [ "zircon" ]
 }
 
 package("uname") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

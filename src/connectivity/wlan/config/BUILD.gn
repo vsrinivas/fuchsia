@@ -7,16 +7,10 @@ import("//build/config.gni")
 template("wlan_service_config") {
   config_data(target_name) {
     for_pkg = "sysmgr"
-    outputs = [
-      "wlan_${invoker.config}.config",
-    ]
-    sources = [
-      rebase_path("${invoker.config}"),
-    ]
+    outputs = [ "wlan_${invoker.config}.config" ]
+    sources = [ rebase_path("${invoker.config}") ]
 
-    deps = [
-      "//src/connectivity/wlan/wlancfg:config",
-    ]
+    deps = [ "//src/connectivity/wlan/wlancfg:config" ]
   }
 }
 

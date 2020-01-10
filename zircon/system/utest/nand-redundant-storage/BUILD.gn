@@ -3,13 +3,9 @@
 # found in the LICENSE file.
 
 zx_test("nand-redundant-storage") {
-  sources = [
-    "nand-rs-tests.cc",
-  ]
+  sources = [ "nand-rs-tests.cc" ]
 
-  deps = [
-    "$zx/system/ulib/zxtest",
-  ]
+  deps = [ "$zx/system/ulib/zxtest" ]
 
   if (current_os == "linux") {
     # This library requires an environment with mtd/mtd-user.h and MTD support.

@@ -7,11 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.net.http") {
   sdk_category = "partner"
 
-  sources = [
-    "client.fidl",
-  ]
+  sources = [ "client.fidl" ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-mem",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-mem" ]
 }

@@ -7,7 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.update.channel") {
   sdk_category = "partner"
 
-  sources = [
-    "channel.fidl",
-  ]
+  sources = [ "channel.fidl" ]
 }

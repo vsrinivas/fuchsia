@@ -16,11 +16,7 @@ source_set("entity_watcher") {
     "entity_watcher_impl.h",
   ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
-  ]
+  deps = [ "//sdk/fidl/fuchsia.modular" ]
 }

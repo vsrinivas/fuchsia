@@ -8,9 +8,7 @@ import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
 executable("tz_version_parrot_bin") {
   output_name = "tz_version_parrot"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp",
@@ -67,7 +65,5 @@ package("tz_version_parrot") {
 
 group("tests") {
   testonly = true
-  deps = [
-    "test",
-  ]
+  deps = [ "test" ]
 }

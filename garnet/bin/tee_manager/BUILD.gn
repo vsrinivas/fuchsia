@@ -16,9 +16,7 @@ package("tee_manager") {
     },
   ]
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -51,17 +49,13 @@ rustc_binary("bin") {
 
 config_data("config") {
   for_pkg = "sysmgr"
-  sources = [
-    "tee_manager.config",
-  ]
+  sources = [ "tee_manager.config" ]
 }
 
 source_set("test_common") {
   testonly = true
   visibility = [ ":*" ]
-  sources = [
-    "test/common.cc",
-  ]
+  sources = [ "test/common.cc" ]
   public_deps = [
     "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
@@ -72,9 +66,7 @@ source_set("test_common") {
 }
 
 test_package("optee_test") {
-  deps = [
-    ":optee_test_bin",
-  ]
+  deps = [ ":optee_test_bin" ]
 
   binaries = [
     {
@@ -94,19 +86,13 @@ executable("optee_test_bin") {
   testonly = true
   output_name = "optee_test"
 
-  sources = [
-    "test/optee_test.cc",
-  ]
+  sources = [ "test/optee_test.cc" ]
 
-  deps = [
-    ":test_common",
-  ]
+  deps = [ ":test_common" ]
 }
 
 test_package("optee_smoke_test") {
-  deps = [
-    ":optee_smoke_test_bin",
-  ]
+  deps = [ ":optee_smoke_test_bin" ]
 
   binaries = [
     {
@@ -126,11 +112,7 @@ executable("optee_smoke_test_bin") {
   testonly = true
   output_name = "optee_smoke_test"
 
-  sources = [
-    "test/optee_smoke_test.cc",
-  ]
+  sources = [ "test/optee_smoke_test.cc" ]
 
-  deps = [
-    ":test_common",
-  ]
+  deps = [ ":test_common" ]
 }

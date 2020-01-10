@@ -37,18 +37,12 @@ rustc_binary("bin") {
 }
 
 install_host_tools("diag_tool_host") {
-  deps = [
-    ":bin($host_toolchain)",
-  ]
-  outputs = [
-    "diag_tool",
-  ]
+  deps = [ ":bin($host_toolchain)" ]
+  outputs = [ "diag_tool" ]
 }
 
 test_package("diag_tool_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
   tests = [
     {
       name = "diag_tool_bin_test"
@@ -60,7 +54,5 @@ test_package("diag_tool_tests") {
 
 group("host_tests") {
   testonly = true
-  deps = [
-    ":diag_tool_tests($host_toolchain)",
-  ]
+  deps = [ ":diag_tool_tests($host_toolchain)" ]
 }

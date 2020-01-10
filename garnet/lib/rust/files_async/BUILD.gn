@@ -18,18 +18,16 @@ rustc_library("files_async") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
   test_deps = [
-    "//src/storage/lib/pseudo-fs",
-    "//src/lib/fuchsia-async",
     "//garnet/lib/rust/io_util",
+    "//src/lib/fuchsia-async",
+    "//src/storage/lib/pseudo-fs",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:tempfile",
   ]
 }
 
 test_package("files_async_tests") {
-  deps = [
-    ":files_async_test",
-  ]
+  deps = [ ":files_async_test" ]
 
   tests = [
     {

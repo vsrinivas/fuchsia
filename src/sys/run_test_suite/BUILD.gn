@@ -43,9 +43,7 @@ rustc_binary("bin") {
 
 package("run_test_suite") {
   testonly = true
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -58,7 +56,5 @@ package("run_test_suite") {
 
 group("tests") {
   testonly = true
-  deps = [
-    "tests",
-  ]
+  deps = [ "tests" ]
 }

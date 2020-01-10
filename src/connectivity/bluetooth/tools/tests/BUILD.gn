@@ -8,7 +8,5 @@ import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    "bt-tool-cli-tests",
-  ]
+  deps = [ "bt-tool-cli-tests" ]
 }

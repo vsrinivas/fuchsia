@@ -4,9 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":minfs-allocator-unit",
-  ]
+  deps = [ ":minfs-allocator-unit" ]
 }
 
 zx_test("minfs-allocator-unit") {

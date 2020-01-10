@@ -19,18 +19,14 @@ package("environment_delegating_runner") {
     },
   ]
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 }
 
 executable("bin") {
   output_name = "environment_delegating_runner"
   testonly = true
 
-  sources = [
-    "environment_delegating_runner.cc",
-  ]
+  sources = [ "environment_delegating_runner.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.sys",

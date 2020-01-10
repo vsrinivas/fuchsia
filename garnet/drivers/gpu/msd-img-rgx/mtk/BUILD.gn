@@ -12,13 +12,9 @@ driver_module("msd_img_rgx_mt8167") {
   }
 
   if (magma_enable_developer_build) {
-    deps = [
-      ":test_driver_sources",
-    ]
+    deps = [ ":test_driver_sources" ]
   } else {
-    deps = [
-      ":driver_sources",
-    ]
+    deps = [ ":driver_sources" ]
   }
   deps +=
       [ "//garnet/lib/magma/src/magma_util/platform:logger_for_system_drivers" ]

@@ -19,9 +19,7 @@ package("kcounter_inspect") {
     },
   ]
 
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }
 
 source_set("lib") {
@@ -32,25 +30,23 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/lib/vfs/cpp",
-    "//zircon/system/fidl/fuchsia-kernel",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-kernel",
   ]
 }
 
 executable("main") {
   output_name = "kcounter_inspect"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
     "//garnet/public/lib/inspect_deprecated",
     "//garnet/public/lib/inspect_deprecated:component",
     "//sdk/lib/sys/cpp",
-    "//zircon/system/fidl/fuchsia-kernel",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/system/fidl/fuchsia-kernel",
   ]
 }

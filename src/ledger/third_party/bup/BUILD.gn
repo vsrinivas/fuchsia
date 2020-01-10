@@ -22,9 +22,7 @@ source_set("bup") {
 executable("bupsplit_unittest") {
   testonly = true
 
-  sources = [
-    "bupsplit_unittest.cc",
-  ]
+  sources = [ "bupsplit_unittest.cc" ]
 
   deps = [
     ":bup",
@@ -34,8 +32,6 @@ executable("bupsplit_unittest") {
 }
 
 hermetic_tests_package("bup_tests") {
-  deps = [
-    ":bupsplit_unittest",
-  ]
+  deps = [ ":bupsplit_unittest" ]
   environments = basic_envs
 }

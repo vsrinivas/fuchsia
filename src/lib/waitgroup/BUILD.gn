@@ -9,17 +9,13 @@ import("//build/test/test_package.gni")
 group("tests") {
   testonly = true
 
-  deps = [
-    ":waitgroup_tests",
-  ]
+  deps = [ ":waitgroup_tests" ]
 }
 
 rustc_library("waitgroup") {
   name = "waitgroup"
   edition = "2018"
-  deps = [
-    "//third_party/rust_crates:futures",
-  ]
+  deps = [ "//third_party/rust_crates:futures" ]
 }
 
 rustc_test("waitgroup_lib_test") {
@@ -33,9 +29,7 @@ rustc_test("waitgroup_lib_test") {
 }
 
 test_package("waitgroup_tests") {
-  deps = [
-    ":waitgroup_lib_test",
-  ]
+  deps = [ ":waitgroup_lib_test" ]
 
   tests = [
     {

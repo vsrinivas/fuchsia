@@ -4,9 +4,7 @@
 import("../vulkan_testing.gni")
 
 vulkan_test_app("vk_transfer_test") {
-  sources = [
-    "main.c",
-  ]
+  sources = [ "main.c" ]
   glsl_shaders = [
     "../vk_triangle_test/shaders/triangle.vert.glsl",
     "../vk_triangle_test/shaders/triangle.frag.glsl",

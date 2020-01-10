@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("usb-hub") {
-  sources = [
-    "usb-hub.c",
-  ]
+  sources = [ "usb-hub.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",
     "$zx/system/banjo/ddk.protocol.usb.bus",

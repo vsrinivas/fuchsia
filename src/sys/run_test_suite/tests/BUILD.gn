@@ -89,7 +89,5 @@ test_package("run_test_suite_integration_tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":run_test_suite_integration_tests",
-  ]
+  deps = [ ":run_test_suite_integration_tests" ]
 }

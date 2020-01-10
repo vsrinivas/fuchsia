@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("syncable") {
-  sources = [
-    "syncable_binding.h",
-  ]
+  sources = [ "syncable_binding.h" ]
 
   public_deps = [
     "//sdk/lib/fidl/cpp",

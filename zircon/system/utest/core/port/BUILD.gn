@@ -4,9 +4,7 @@
 
 source_set("port") {
   testonly = true
-  sources = [
-    "ports.cc",
-  ]
+  sources = [ "ports.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

@@ -18,12 +18,8 @@ compiled_action("revision") {
   tz_res_dir = "//third_party/icu/tzres/"
   output_path = "${target_gen_dir}/revision.txt"
 
-  sources = [
-    icu_data_file,
-  ]
-  outputs = [
-    output_path,
-  ]
+  sources = [ icu_data_file ]
+  outputs = [ output_path ]
 
   rebased_icu_data_file = rebase_path(icu_data_file)
   rebased_tz_res_dir = rebase_path(tz_res_dir)

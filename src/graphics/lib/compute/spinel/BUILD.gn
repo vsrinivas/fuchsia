@@ -58,19 +58,13 @@ static_library("spinel") {
     "weakref.c",
     "weakref.h",
   ]
-  deps = [
-    "${graphics_compute_dir}/common",
-  ]
-  public_deps = [
-    ":spinel_headers",
-  ]
+  deps = [ "${graphics_compute_dir}/common" ]
+  public_deps = [ ":spinel_headers" ]
 }
 
 group("spinel_ext_unittests") {
   testonly = true
-  public_deps = [
-    "ext/svg2spinel:svg2spinel_unittests",
-  ]
+  public_deps = [ "ext/svg2spinel:svg2spinel_unittests" ]
 }
 
 # This group provides a target that tests can link against.
@@ -88,14 +82,10 @@ group("spinel_vk_for_tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "platforms/vk/tests",
-  ]
+  public_deps = [ "platforms/vk/tests" ]
 }
 
 group("vk_unittests") {
   testonly = true
-  public_deps = [
-    "platforms/vk/tests:vk_unittests",
-  ]
+  public_deps = [ "platforms/vk/tests:vk_unittests" ]
 }

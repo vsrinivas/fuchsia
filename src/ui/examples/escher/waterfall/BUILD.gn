@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 executable("waterfall") {
-  sources = [
-    "waterfall_main.cc",
-  ]
+  sources = [ "waterfall_main.cc" ]
 
   deps = [
     ":waterfall_demo",
@@ -45,7 +43,5 @@ source_set("waterfall_scenes") {
     "scenes/scene.h",
   ]
 
-  deps = [
-    "//src/ui/examples/escher/common:demo_base",
-  ]
+  deps = [ "//src/ui/examples/escher/common:demo_base" ]
 }

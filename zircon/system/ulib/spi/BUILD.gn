@@ -6,7 +6,5 @@ zx_library("spi") {
   sdk = "source"
   sdk_headers = [ "lib/spi/spi.h" ]
   sources = []
-  public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-spi:c",
-  ]
+  public_deps = [ "$zx/system/fidl/fuchsia-hardware-spi:c" ]
 }

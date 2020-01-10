@@ -38,21 +38,15 @@ source_set("src") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
 executable("bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "audio"
   output_dir = "$root_out_dir/zircon-migrated"
-  sources = [
-    "audio.cc",
-  ]
-  deps = [
-    ":src",
-  ]
+  sources = [ "audio.cc" ]
+  deps = [ ":src" ]
 }
 
 test("test") {
@@ -61,9 +55,7 @@ test("test") {
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "audio-test"
-  sources = [
-    "sine-source-test.cc",
-  ]
+  sources = [ "sine-source-test.cc" ]
   include_dirs = [ "." ]
   deps = [
     ":src",
@@ -76,13 +68,9 @@ test("test") {
 }
 
 migrated_manifest("bin-manifest") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 }
 
 migrated_manifest("test-manifest") {
-  deps = [
-    ":test",
-  ]
+  deps = [ ":test" ]
 }

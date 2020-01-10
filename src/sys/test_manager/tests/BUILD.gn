@@ -25,9 +25,7 @@ rustc_binary("test_manager_test_bin") {
 
 package("test_manager_test") {
   testonly = true
-  deps = [
-    ":test_manager_test_bin",
-  ]
+  deps = [ ":test_manager_test_bin" ]
 
   meta = [
     {

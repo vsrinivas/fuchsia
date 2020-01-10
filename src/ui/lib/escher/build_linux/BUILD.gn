@@ -22,7 +22,5 @@ group("examples") {
 # Escher-on-Linux developer workflow.  See ../README.md
 group("tests") {
   testonly = true
-  deps = [
-    "//src/ui/lib/escher/test:escher_unittests($host_toolchain)",
-  ]
+  deps = [ "//src/ui/lib/escher/test:escher_unittests($host_toolchain)" ]
 }

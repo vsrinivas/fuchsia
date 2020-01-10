@@ -25,9 +25,7 @@ rustc_library("sysconfig-client") {
 }
 
 test_package("sysconfig-client-test") {
-  deps = [
-    ":sysconfig-client_test",
-  ]
+  deps = [ ":sysconfig-client_test" ]
   tests = [
     {
       name = "sysconfig_client_lib_test"

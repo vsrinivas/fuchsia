@@ -42,9 +42,7 @@ if (host_toolchain == current_toolchain) {
 }
 
 group("bindc") {
-  deps = [
-    ":bin($host_toolchain)",
-  ]
+  deps = [ ":bin($host_toolchain)" ]
 }
 
 group("tests") {

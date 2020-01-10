@@ -34,9 +34,7 @@ rustc_binary("simple_component_bin") {
   name = "simple"
   edition = "2018"
   source_root = "simple_component/main.rs"
-  deps = [
-    "//third_party/rust_crates:anyhow",
-  ]
+  deps = [ "//third_party/rust_crates:anyhow" ]
 }
 
 rustc_binary("dynamic_child_reporter_bin") {

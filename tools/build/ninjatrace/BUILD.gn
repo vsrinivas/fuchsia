@@ -8,14 +8,10 @@ import("//build/go/go_library.gni")
 go_library("main") {
   name = "go.fuchsia.dev/fuchsia/tools/build/lib/ninjatrace/cmd"
   source_dir = "cmd"
-  deps = [
-    "//tools/build/ninjalog",
-  ]
+  deps = [ "//tools/build/ninjalog" ]
 }
 
 go_binary("ninjatrace") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/build/lib/ninjatrace/cmd"
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }

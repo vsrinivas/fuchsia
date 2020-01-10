@@ -14,33 +14,21 @@ group("mocks") {
 source_set("mock_magnifier") {
   testonly = true
 
-  public = [
-    "mock_magnifier.h",
-  ]
+  public = [ "mock_magnifier.h" ]
 
-  sources = [
-    "mock_magnifier.cc",
-  ]
+  sources = [ "mock_magnifier.cc" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.accessibility",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.accessibility" ]
 
-  deps = [
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ "//third_party/googletest:gtest" ]
 }
 
 source_set("mock_magnification_handler") {
   testonly = true
 
-  public = [
-    "mock_magnification_handler.h",
-  ]
+  public = [ "mock_magnification_handler.h" ]
 
-  sources = [
-    "mock_magnification_handler.cc",
-  ]
+  sources = [ "mock_magnification_handler.cc" ]
 
   public_deps = [
     ":clip_space_transform",
@@ -50,23 +38,15 @@ source_set("mock_magnification_handler") {
     "//zircon/public/lib/zx",
   ]
 
-  deps = [
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ "//third_party/googletest:gtest" ]
 }
 
 source_set("clip_space_transform") {
   testonly = true
 
-  public = [
-    "clip_space_transform.h",
-  ]
+  public = [ "clip_space_transform.h" ]
 
-  sources = [
-    "clip_space_transform.cc",
-  ]
+  sources = [ "clip_space_transform.cc" ]
 
-  public_deps = [
-    "//src/ui/lib/glm_workaround",
-  ]
+  public_deps = [ "//src/ui/lib/glm_workaround" ]
 }

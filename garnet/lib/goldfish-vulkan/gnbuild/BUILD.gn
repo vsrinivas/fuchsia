@@ -6,8 +6,7 @@ import("//build/config.gni")
 import("//build/package.gni")
 
 declare_args() {
-  prebuilt_libvulkan_goldfish_path =
-      "//prebuilt/third_party/libvulkan_goldfish/${target_cpu}/libvulkan_goldfish.so"
+  prebuilt_libvulkan_goldfish_path = "//prebuilt/third_party/libvulkan_goldfish/${target_cpu}/libvulkan_goldfish.so"
 }
 
 declare_args() {
@@ -19,9 +18,7 @@ have_prebuilt_libvulkan = prebuilt_libvulkan_goldfish_path != ""
 have_libvulkan = build_libvulkan_goldfish != [] || have_prebuilt_libvulkan
 
 group("goldfish-vulkan") {
-  public_deps = [
-    ":goldfish",
-  ]
+  public_deps = [ ":goldfish" ]
   if (have_libvulkan) {
     public_deps += [ ":goldfish-config" ]
   }
@@ -105,9 +102,7 @@ if (have_libvulkan) {
     }
 
     for_pkg = "vulkan-icd"
-    outputs = [
-      "icd.d/{{source_file_part}}",
-    ]
+    outputs = [ "icd.d/{{source_file_part}}" ]
   }
 }
 
@@ -118,14 +113,8 @@ if (have_prebuilt_libvulkan) {
   }
   copy("prebuilt_libvulkan") {
     public_configs = [ ":libvulkan_config" ]
-    sources = [
-      prebuilt_libvulkan_goldfish_path,
-    ]
-    outputs = [
-      "$libvulkan_gen_path/libvulkan_goldfish.so",
-    ]
-    deps = [
-      "//third_party/zlib",
-    ]
+    sources = [ prebuilt_libvulkan_goldfish_path ]
+    outputs = [ "$libvulkan_gen_path/libvulkan_goldfish.so" ]
+    deps = [ "//third_party/zlib" ]
   }
 }

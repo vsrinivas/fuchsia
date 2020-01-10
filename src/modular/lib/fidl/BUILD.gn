@@ -43,13 +43,9 @@ source_set("app_client") {
 }
 
 source_set("array_to_string") {
-  sources = [
-    "array_to_string.h",
-  ]
+  sources = [ "array_to_string.h" ]
 
-  deps = [
-    "//sdk/lib/fidl/cpp",
-  ]
+  deps = [ "//sdk/lib/fidl/cpp" ]
 }
 
 source_set("json_xdr") {
@@ -79,9 +75,7 @@ source_set("proxy") {
 }
 
 source_set("clone") {
-  sources = [
-    "clone.h",
-  ]
+  sources = [ "clone.h" ]
   deps = [
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
@@ -100,15 +94,11 @@ source_set("environment") {
     "//zircon/public/lib/fs",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 }
 
 source_set("single_service_app") {
-  sources = [
-    "single_service_app.h",
-  ]
+  sources = [ "single_service_app.h" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
@@ -151,9 +141,7 @@ fidl("app_client_unittest_fidl") {
 
   name = "test.peridot.lib.fidl.appclient"
 
-  sources = [
-    "app_client_unittest.fidl",
-  ]
+  sources = [ "app_client_unittest.fidl" ]
 }
 
 group("unittests") {
@@ -168,9 +156,7 @@ group("unittests") {
 source_set("app_client_unittest") {
   testonly = true
 
-  sources = [
-    "app_client_unittest.cc",
-  ]
+  sources = [ "app_client_unittest.cc" ]
 
   deps = [
     ":app_client",
@@ -196,17 +182,13 @@ fidl("json_xdr_unittest_fidl") {
 
   name = "test.peridot.lib.fidl.jsonxdr"
 
-  sources = [
-    "json_xdr_unittest.test.fidl",
-  ]
+  sources = [ "json_xdr_unittest.test.fidl" ]
 }
 
 source_set("json_xdr_unittest") {
   testonly = true
 
-  sources = [
-    "json_xdr_unittest.cc",
-  ]
+  sources = [ "json_xdr_unittest.cc" ]
 
   deps = [
     ":json_xdr",

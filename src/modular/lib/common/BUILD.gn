@@ -22,11 +22,7 @@ source_set("async_holder") {
 }
 
 source_set("teardown") {
-  sources = [
-    "teardown.h",
-  ]
+  sources = [ "teardown.h" ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 }

@@ -7,9 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 group("examples") {
   testonly = true
-  deps = [
-    ":example_player",
-  ]
+  deps = [ ":example_player" ]
 }
 
 rustc_binary("example_player_bin") {
@@ -32,9 +30,7 @@ rustc_binary("example_player_bin") {
 }
 
 package("example_player") {
-  deps = [
-    ":example_player_bin",
-  ]
+  deps = [ ":example_player_bin" ]
 
   binary = "example_player"
 

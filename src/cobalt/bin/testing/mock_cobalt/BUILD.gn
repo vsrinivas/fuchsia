@@ -27,9 +27,7 @@ rustc_binary("bin") {
 }
 
 package("mock_cobalt") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "mock_cobalt"
 
@@ -44,9 +42,7 @@ package("mock_cobalt") {
 test_package("tests") {
   package_name = "mock-cobalt-tests"
 
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

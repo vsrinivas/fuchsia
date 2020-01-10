@@ -38,9 +38,7 @@ source_set("operation") {
     "//zircon/public/lib/async-cpp",
   ]
 
-  deps = [
-    "//zircon/public/lib/trace",
-  ]
+  deps = [ "//zircon/public/lib/trace" ]
 }
 
 group("unittests") {
@@ -55,9 +53,7 @@ group("unittests") {
 source_set("future_unittest") {
   testonly = true
 
-  sources = [
-    "future_unittest.cc",
-  ]
+  sources = [ "future_unittest.cc" ]
 
   deps = [
     ":future",
@@ -69,9 +65,7 @@ source_set("future_unittest") {
 source_set("operation_unittest") {
   testonly = true
 
-  sources = [
-    "operation_unittest.cc",
-  ]
+  sources = [ "operation_unittest.cc" ]
 
   deps = [
     ":operation",

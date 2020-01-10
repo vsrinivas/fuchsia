@@ -20,9 +20,7 @@ zx_library("inet6") {
 }
 
 zx_library("netifc-discover") {
-  sources = [
-    "netifc-discover.cc",
-  ]
+  sources = [ "netifc-discover.cc" ]
 
   deps = [
     "$zx/system/fidl/fuchsia-device:c",

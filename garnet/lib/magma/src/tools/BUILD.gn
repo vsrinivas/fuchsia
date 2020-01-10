@@ -5,15 +5,11 @@
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 group("tools") {
-  public_deps = [
-    ":magma_info",
-  ]
+  public_deps = [ ":magma_info" ]
 }
 
 executable("magma_info") {
-  sources = [
-    "info.cc",
-  ]
+  sources = [ "info.cc" ]
 
   deps = [
     "$magma_build_root/include:magma_abi",

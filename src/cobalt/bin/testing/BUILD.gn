@@ -28,18 +28,12 @@ source_set("fake_logger_lib") {
 
 source_set("fake_clock_lib") {
   testonly = true
-  sources = [
-    "fake_clock.h",
-  ]
+  sources = [ "fake_clock.h" ]
 
-  public_deps = [
-    "//src/cobalt/bin/utils:clock",
-  ]
+  public_deps = [ "//src/cobalt/bin/utils:clock" ]
 }
 
 source_set("log_method") {
   testonly = true
-  sources = [
-    "log_method.h",
-  ]
+  sources = [ "log_method.h" ]
 }

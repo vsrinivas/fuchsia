@@ -32,9 +32,7 @@ group("service") {
 executable("bin") {
   output_name = "mdns"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":source_set",
@@ -138,9 +136,7 @@ test("tests") {
 }
 
 package("mdns") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -158,25 +154,17 @@ package("mdns") {
 
 config_data("mdns_config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "mdns.config",
-  ]
-  sources = [
-    rebase_path("config/service.config"),
-  ]
+  outputs = [ "mdns.config" ]
+  sources = [ rebase_path("config/service.config") ]
 }
 
 config_data("mdns_fuchsia_udp_config") {
   for_pkg = "mdns"
-  sources = [
-    rebase_path("config/fuchsia_udp.config"),
-  ]
+  sources = [ rebase_path("config/fuchsia_udp.config") ]
 }
 
 test_package("mdns_tests") {
-  deps = [
-    ":tests",
-  ]
+  deps = [ ":tests" ]
 
   tests = [
     {
@@ -209,9 +197,7 @@ fuzzers_package("mdns_fuzzers") {
 executable("mdns_netemul_test_agent") {
   testonly = true
 
-  sources = [
-    "test/mdns_netemul_test_agent.cc",
-  ]
+  sources = [ "test/mdns_netemul_test_agent.cc" ]
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.net",

@@ -8,9 +8,7 @@ import("//build/testing/environments.gni")
 group("tests") {
   testonly = true
 
-  deps = [
-    ":guest_manager_tests",
-  ]
+  deps = [ ":guest_manager_tests" ]
 }
 
 source_set("lib") {
@@ -47,21 +45,15 @@ source_set("lib") {
 executable("bin") {
   output_name = "guest_manager"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 package("guest_manager") {
   binary = "guest_manager"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   meta = [
     {
       path = rebase_path("meta/guest_manager.cmx")
@@ -74,9 +66,7 @@ executable("guest_manager_unittests") {
   visibility = [ ":*" ]
   testonly = true
 
-  sources = [
-    "host_vsock_endpoint_unittest.cc",
-  ]
+  sources = [ "host_vsock_endpoint_unittest.cc" ]
 
   deps = [
     ":lib",
@@ -87,9 +77,7 @@ executable("guest_manager_unittests") {
 }
 
 test_package("guest_manager_tests") {
-  deps = [
-    ":guest_manager_unittests",
-  ]
+  deps = [ ":guest_manager_unittests" ]
 
   tests = [
     {

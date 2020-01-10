@@ -34,8 +34,6 @@ if (host_toolchain == current_toolchain) {
 } else {
   group("tests") {
     testonly = true
-    public_deps = [
-      ":tests($host_toolchain)",
-    ]
+    public_deps = [ ":tests($host_toolchain)" ]
   }
 }

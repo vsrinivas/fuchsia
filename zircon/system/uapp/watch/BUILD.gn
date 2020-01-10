@@ -3,10 +3,6 @@
 # found in the LICENSE file.
 
 zx_executable("watch") {
-  sources = [
-    "watch.c",
-  ]
-  deps = [
-    "$zx/system/ulib/fdio",
-  ]
+  sources = [ "watch.c" ]
+  deps = [ "$zx/system/ulib/fdio" ]
 }

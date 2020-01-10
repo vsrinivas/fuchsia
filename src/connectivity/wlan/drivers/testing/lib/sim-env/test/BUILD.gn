@@ -11,9 +11,7 @@ executable("event_unittests") {
 
   testonly = true
 
-  sources = [
-    "event_unittests.cc",
-  ]
+  sources = [ "event_unittests.cc" ]
 
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
@@ -26,9 +24,7 @@ executable("rx_tests") {
 
   testonly = true
 
-  sources = [
-    "rx_tests.cc",
-  ]
+  sources = [ "rx_tests.cc" ]
 
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",

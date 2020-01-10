@@ -6,16 +6,10 @@ import("$zx_build/public/gn/fuzzer.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":cmdline-fuzzer",
-  ]
+  deps = [ ":cmdline-fuzzer" ]
 }
 
 fuzzer("cmdline-fuzzer") {
-  sources = [
-    "cmdline_fuzzer.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/cmdline",
-  ]
+  sources = [ "cmdline_fuzzer.cc" ]
+  deps = [ "$zx/system/ulib/cmdline" ]
 }

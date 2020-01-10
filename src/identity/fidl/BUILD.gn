@@ -10,9 +10,7 @@ fidl("account") {
 
   name = "fuchsia.identity.internal"
 
-  sources = [
-    "account_handler.fidl",
-  ]
+  sources = [ "account_handler.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.auth",
@@ -25,9 +23,7 @@ fidl("account") {
 fidl("account-transfer") {
   name = "fuchsia.identity.transfer"
 
-  sources = [
-    "account_transfer.fidl",
-  ]
+  sources = [ "account_transfer.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.identity.account",
@@ -38,9 +34,7 @@ fidl("account-transfer") {
 fidl("account-prototype") {
   name = "fuchsia.identity.prototype"
 
-  sources = [
-    "account_transfer_prototype.fidl",
-  ]
+  sources = [ "account_transfer_prototype.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.identity.account",

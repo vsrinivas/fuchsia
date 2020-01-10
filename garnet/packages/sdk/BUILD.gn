@@ -15,14 +15,10 @@ group("all") {
 
 group("garnet") {
   testonly = true
-  public_deps = [
-    "//sdk:core",
-  ]
+  public_deps = [ "//sdk:core" ]
 }
 
 group("ddk") {
   testonly = true
-  public_deps = [
-    "//sdk:ddk",
-  ]
+  public_deps = [ "//sdk:ddk" ]
 }

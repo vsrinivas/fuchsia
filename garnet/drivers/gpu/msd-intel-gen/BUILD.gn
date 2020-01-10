@@ -37,9 +37,7 @@ driver_module("msd_intel_test") {
 
 source_set("msd_intel_entry") {
   public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
-  sources = [
-    "src/driver_entry.cc",
-  ]
+  sources = [ "src/driver_entry.cc" ]
 
   deps = [
     "src",
@@ -60,9 +58,7 @@ source_set("msd_intel_test_entry") {
   testonly = true
 
   public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
-  sources = [
-    "src/driver_entry.cc",
-  ]
+  sources = [ "src/driver_entry.cc" ]
   defines = [ "MAGMA_TEST_DRIVER=1" ]
 
   deps = [
@@ -88,9 +84,7 @@ source_set("msd_intel_test_entry") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "tests/unit_tests:msd_intel_gen_nonhardware_tests",
-  ]
+  public_deps = [ "tests/unit_tests:msd_intel_gen_nonhardware_tests" ]
 }
 
 # This config allows inclusion of headers via relative paths

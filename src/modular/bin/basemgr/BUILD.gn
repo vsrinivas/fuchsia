@@ -77,9 +77,7 @@ executable_package("basemgr") {
 }
 
 hermetic_tests_package("basemgr_unittests") {
-  deps = [
-    ":session_context_impl_unittest",
-  ]
+  deps = [ ":session_context_impl_unittest" ]
   environments = basic_envs
 }
 
@@ -151,9 +149,7 @@ executable_package("dev_base_shell") {
     },
   ]
 
-  sources = [
-    "dev_base_shell.cc",
-  ]
+  sources = [ "dev_base_shell.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.identity.account",
@@ -172,9 +168,7 @@ executable_package("dev_base_shell") {
 executable("auto_login_base_shell_bin") {
   output_name = "auto_login_base_shell"
 
-  sources = [
-    "auto_login_base_shell.cc",
-  ]
+  sources = [ "auto_login_base_shell.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.identity.account",
@@ -190,9 +184,7 @@ executable("auto_login_base_shell_bin") {
 }
 
 package("auto_login_base_shell") {
-  deps = [
-    ":auto_login_base_shell_bin",
-  ]
+  deps = [ ":auto_login_base_shell_bin" ]
 
   binaries = [
     {
@@ -213,9 +205,7 @@ executable("auto_login_base_shell_test_bin") {
 
   output_name = "auto_login_base_shell_test"
 
-  sources = [
-    "auto_login_base_shell_test.cc",
-  ]
+  sources = [ "auto_login_base_shell_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
@@ -244,9 +234,7 @@ test_package("auto_login_base_shell_test") {
 executable("session_context_impl_unittest") {
   testonly = true
 
-  sources = [
-    "session_context_impl_unittest.cc",
-  ]
+  sources = [ "session_context_impl_unittest.cc" ]
 
   deps = [
     ":lib",

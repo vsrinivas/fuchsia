@@ -11,9 +11,7 @@ fidl("fuchsia.virtualization.hardware") {
     "vector-bounds-not-specified",
   ]
 
-  sources = [
-    "device.fidl",
-  ]
+  sources = [ "device.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.gfx",

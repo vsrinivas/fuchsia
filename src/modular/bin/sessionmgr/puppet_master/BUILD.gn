@@ -59,9 +59,7 @@ source_set("puppet_master_impl") {
 executable("puppet_master_impl_unittest") {
   testonly = true
 
-  sources = [
-    "puppet_master_impl_unittest.cc",
-  ]
+  sources = [ "puppet_master_impl_unittest.cc" ]
 
   deps = [
     ":puppet_master_impl",
@@ -91,9 +89,7 @@ source_set("story_command_executor") {
 executable("story_command_executor_unittest") {
   testonly = true
 
-  sources = [
-    "story_command_executor_unittest.cc",
-  ]
+  sources = [ "story_command_executor_unittest.cc" ]
 
   deps = [
     ":story_command_executor",
@@ -120,9 +116,7 @@ source_set("dispatch_story_command_executor") {
 executable("dispatch_story_command_executor_unittest") {
   testonly = true
 
-  sources = [
-    "dispatch_story_command_executor_unittest.cc",
-  ]
+  sources = [ "dispatch_story_command_executor_unittest.cc" ]
 
   deps = [
     ":dispatch_story_command_executor",

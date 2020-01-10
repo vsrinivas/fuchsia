@@ -5,9 +5,7 @@
 zx_library("loader-service") {
   sdk = "static"
   sdk_headers = [ "loader-service/loader-service.h" ]
-  sources = [
-    "loader-service.c",
-  ]
+  sources = [ "loader-service.c" ]
   deps = [
     "$zx/system/ulib/async",
     "$zx/system/ulib/async-loop",

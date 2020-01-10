@@ -17,15 +17,9 @@ import("//build/testing/environments.gni")
 source_set("sim_test") {
   output_name = "sim_test"
   testonly = true
-  sources = [
-    "sim_test.cc",
-  ]
-  public = [
-    "sim_test.h",
-  ]
-  deps = [
-    "//zircon/system/public",
-  ]
+  sources = [ "sim_test.cc" ]
+  public = [ "sim_test.h" ]
+  deps = [ "//zircon/system/public" ]
   public_deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
@@ -37,9 +31,7 @@ source_set("sim_test") {
 executable("assoc_test") {
   output_name = "assoc_test"
   testonly = true
-  sources = [
-    "assoc_test.cc",
-  ]
+  sources = [ "assoc_test.cc" ]
   deps = [
     ":sim_test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
@@ -55,9 +47,7 @@ executable("assoc_test") {
 executable("dynamic_if_test") {
   output_name = "dynamic_if_test"
   testonly = true
-  sources = [
-    "dynamic_if_test.cc",
-  ]
+  sources = [ "dynamic_if_test.cc" ]
   deps = [
     ":sim_test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
@@ -71,9 +61,7 @@ executable("dynamic_if_test") {
 executable("firmware_config_test") {
   output_name = "firmware_config_test"
   testonly = true
-  sources = [
-    "firmware_config_test.cc",
-  ]
+  sources = [ "firmware_config_test.cc" ]
   deps = [
     ":sim_test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
@@ -88,9 +76,7 @@ executable("firmware_config_test") {
 executable("lifecycle_test") {
   output_name = "lifecycle_test"
   testonly = true
-  sources = [
-    "lifecycle_test.cc",
-  ]
+  sources = [ "lifecycle_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
@@ -103,9 +89,7 @@ executable("lifecycle_test") {
 executable("scan_dwell_time_test") {
   output_name = "scan_dwell_time_test"
   testonly = true
-  sources = [
-    "scan_dwell_time_test.cc",
-  ]
+  sources = [ "scan_dwell_time_test.cc" ]
   deps = [
     ":sim_test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
@@ -119,9 +103,7 @@ executable("scan_dwell_time_test") {
 executable("passive_scan_test") {
   output_name = "passive_scan_test"
   testonly = true
-  sources = [
-    "passive_scan_test.cc",
-  ]
+  sources = [ "passive_scan_test.cc" ]
   deps = [
     ":sim_test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
@@ -136,9 +118,7 @@ executable("passive_scan_test") {
 executable("active_scan_test") {
   output_name = "active_scan_test"
   testonly = true
-  sources = [
-    "active_scan_test.cc",
-  ]
+  sources = [ "active_scan_test.cc" ]
   deps = [
     ":sim_test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
@@ -153,9 +133,7 @@ executable("active_scan_test") {
 executable("set_cc_test") {
   output_name = "set_cc_test"
   testonly = true
-  sources = [
-    "set_cc_test.cc",
-  ]
+  sources = [ "set_cc_test.cc" ]
   deps = [
     ":sim_test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",

@@ -15,20 +15,14 @@ copy("copy") {
     "//prebuilt/tools/artifacts/artifacts",
     "//prebuilt/tools/lkgb/lkgb",
   ]
-  outputs = [
-    "$root_out_dir/test_data/system_ota_tests/{{source_file_part}}",
-  ]
-  deps = [
-    "//zircon/public/tool/netaddr($host_toolchain)",
-  ]
+  outputs = [ "$root_out_dir/test_data/system_ota_tests/{{source_file_part}}" ]
+  deps = [ "//zircon/public/tool/netaddr($host_toolchain)" ]
 }
 
 go_library("system_ota_tests_lib") {
   testonly = true
   name = "fuchsia.googlesource.com/system_ota_tests"
-  deps = [
-    "//src/testing/host-target-testing",
-  ]
+  deps = [ "//src/testing/host-target-testing" ]
   non_go_deps = [ ":copy" ]
   metadata = {
     test_runtime_deps = get_target_outputs(":copy")
@@ -38,21 +32,15 @@ go_library("system_ota_tests_lib") {
 go_test("system_ota_tests_upgrade") {
   gopackages = [ "fuchsia.googlesource.com/system_ota_tests/upgrade_test" ]
   disabled = true
-  deps = [
-    ":system_ota_tests_lib",
-  ]
+  deps = [ ":system_ota_tests_lib" ]
 }
 
 group("system_ota_tests") {
   testonly = true
-  deps = [
-    ":system_ota_tests_upgrade($host_toolchain)",
-  ]
+  deps = [ ":system_ota_tests_upgrade($host_toolchain)" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":system_ota_tests",
-  ]
+  public_deps = [ ":system_ota_tests" ]
 }

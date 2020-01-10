@@ -36,9 +36,7 @@ target(fxl_logging_type, "fxl_logging") {
     "logging.h",
   ]
 
-  public_deps = [
-    ":common",
-  ]
+  public_deps = [ ":common" ]
 
   if (is_fuchsia) {
     libs = [ "zircon" ]
@@ -166,20 +164,14 @@ static_library("fxl") {
 source_set("printers") {
   testonly = true
 
-  sources = [
-    "time/time_printers.cc",
-  ]
-  deps = [
-    ":fxl",
-  ]
+  sources = [ "time/time_printers.cc" ]
+  deps = [ ":fxl" ]
 }
 
 group("fxl_printers") {
   testonly = true
 
-  public_deps = [
-    ":printers",
-  ]
+  public_deps = [ ":printers" ]
 }
 
 executable("fxl_unittests") {
@@ -234,9 +226,7 @@ executable("fxl_unittests") {
 
 executable("build_gtest_main_with_syslog") {
   testonly = true
-  deps = [
-    "test:gtest_main_with_syslog",
-  ]
+  deps = [ "test:gtest_main_with_syslog" ]
 }
 
 if (is_fuchsia) {

@@ -3,12 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("chromeos-disk-setup") {
-  sources = [
-    "chromeos-disk-setup.cc",
-  ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-block:c",
-  ]
+  sources = [ "chromeos-disk-setup.cc" ]
+  public_deps = [ "$zx/system/fidl/fuchsia-hardware-block:c" ]
   deps = [
     "$zx/system/ulib/fit",
     "$zx/system/ulib/gpt",

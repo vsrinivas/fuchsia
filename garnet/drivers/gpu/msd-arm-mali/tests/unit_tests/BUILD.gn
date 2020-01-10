@@ -47,9 +47,7 @@ source_set("tests_requiring_hardware") {
     "test_device.cc",
   ]
 
-  deps = [
-    ":test_deps",
-  ]
+  deps = [ ":test_deps" ]
 }
 
 group("test_deps") {

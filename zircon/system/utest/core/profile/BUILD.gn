@@ -4,9 +4,7 @@
 
 source_set("profile") {
   testonly = true
-  sources = [
-    "profile.cc",
-  ]
+  sources = [ "profile.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

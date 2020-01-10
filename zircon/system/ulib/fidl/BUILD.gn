@@ -43,9 +43,7 @@ zx_library("fidl_base") {
     "validating.cc",
     "walker.cc",
   ]
-  deps = [
-    "$zx/system/ulib/zircon",
-  ]
+  deps = [ "$zx/system/ulib/zircon" ]
   if (fidl_write_v1_wireformat) {
     defines = [ "FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT" ]
   }
@@ -81,9 +79,7 @@ zx_library("fidl-llcpp") {
     "lib/fidl/llcpp/string_view.h",
     "lib/fidl/llcpp/vector_view.h",
   ]
-  sources = [
-    "llcpp_transaction.cc",
-  ]
+  sources = [ "llcpp_transaction.cc" ]
   public_deps = [
     ":headers",
 

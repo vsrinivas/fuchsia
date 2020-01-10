@@ -10,7 +10,5 @@ fidl("fuchsia.test") {
 
   sdk_category = "internal"
 
-  sources = [
-    "suite.fidl",
-  ]
+  sources = [ "suite.fidl" ]
 }

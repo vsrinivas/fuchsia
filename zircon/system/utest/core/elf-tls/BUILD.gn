@@ -4,9 +4,7 @@
 
 source_set("elf-tls") {
   testonly = true
-  sources = [
-    "tls.cc",
-  ]
+  sources = [ "tls.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

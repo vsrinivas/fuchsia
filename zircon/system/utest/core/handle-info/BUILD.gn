@@ -4,9 +4,7 @@
 
 source_set("handle-info") {
   testonly = true
-  sources = [
-    "handle-info.cc",
-  ]
+  sources = [ "handle-info.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

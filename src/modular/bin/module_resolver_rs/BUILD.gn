@@ -24,9 +24,7 @@ rustc_binary("bin") {
 }
 
 package("module_resolver_rs") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "module_resolver_rs"
 
@@ -39,9 +37,7 @@ package("module_resolver_rs") {
 }
 
 unittest_package("module_resolver_rs_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

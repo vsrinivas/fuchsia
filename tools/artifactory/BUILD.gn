@@ -9,9 +9,7 @@ import("//build/go/go_test.gni")
 go_binary("artifactory") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/artifactory/cmd"
 
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }
 
 group("tests") {
@@ -45,14 +43,10 @@ go_library("lib") {
 
 go_test("artifactory_lib_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/artifactory/lib" ]
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 go_test("artifactory_main_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/artifactory/cmd" ]
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }

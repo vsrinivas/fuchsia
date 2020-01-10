@@ -20,17 +20,13 @@ source_set("lib") {
     "//src/lib/fxl",
   ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-exception",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-exception" ]
 }
 
 executable("exe") {
   output_name = "limbo_client"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -42,9 +38,7 @@ executable("exe") {
 }
 
 package("limbo_client") {
-  deps = [
-    ":exe",
-  ]
+  deps = [ ":exe" ]
 
   binaries = [
     {
@@ -66,9 +60,7 @@ package("limbo_client") {
 group("tests") {
   testonly = true
 
-  public_deps = [
-    ":limbo_client_unittest",
-  ]
+  public_deps = [ ":limbo_client_unittest" ]
 }
 
 executable("limbo_client_unittest") {

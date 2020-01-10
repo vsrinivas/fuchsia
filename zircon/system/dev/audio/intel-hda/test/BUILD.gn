@@ -38,19 +38,11 @@ source_set("test_libs") {
 }
 
 zx_test("intel-hda-test") {
-  sources = [
-    "intel_hda_test.cc",
-  ]
-  deps = [
-    ":test_libs",
-  ]
+  sources = [ "intel_hda_test.cc" ]
+  deps = [ ":test_libs" ]
 }
 
 zx_test("pixelbook-eve-test") {
-  sources = [
-    "pixelbook_eve_test.cc",
-  ]
-  deps = [
-    ":test_libs",
-  ]
+  sources = [ "pixelbook_eve_test.cc" ]
+  deps = [ ":test_libs" ]
 }

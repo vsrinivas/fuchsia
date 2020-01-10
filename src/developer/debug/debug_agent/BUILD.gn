@@ -78,9 +78,7 @@ static_library("lib") {
     assert(false, "Un-supported CPU: ${current_cpu}")
   }
 
-  deps = [
-    "//src/lib/elflib",
-  ]
+  deps = [ "//src/lib/elflib" ]
 
   public_deps = [
     "//garnet/lib/process",
@@ -107,20 +105,14 @@ if (include_test_app) {
       cflags = [ "-O0" ]
     }
 
-    sources = [
-      "zxdb_test_app.cc",
-    ]
-    deps = [
-      "//zircon/public/lib/zx",
-    ]
+    sources = [ "zxdb_test_app.cc" ]
+    deps = [ "//zircon/public/lib/zx" ]
   }
 }
 
 executable("bin") {
   output_name = "debug_agent"
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -132,9 +124,7 @@ executable("bin") {
 package("debug_agent") {
   rootjob_svc = "//build"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   meta = [
     {
@@ -161,9 +151,7 @@ source_set("test_lib") {
     "mock_thread.h",
   ]
 
-  public_deps = [
-    ":lib",
-  ]
+  public_deps = [ ":lib" ]
 }
 
 executable("unit_tests") {
@@ -343,7 +331,5 @@ test_package("debug_agent_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":debug_agent_tests",
-  ]
+  deps = [ ":debug_agent_tests" ]
 }

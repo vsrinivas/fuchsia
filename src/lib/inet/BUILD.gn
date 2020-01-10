@@ -26,9 +26,7 @@ static_library("inet") {
 test("tests_bin") {
   output_name = "libinet_tests"
 
-  sources = [
-    "test/ip_address_test.cc",
-  ]
+  sources = [ "test/ip_address_test.cc" ]
 
   deps = [
     ":inet",
@@ -37,9 +35,7 @@ test("tests_bin") {
 }
 
 test_package("libinet_tests") {
-  deps = [
-    ":tests_bin",
-  ]
+  deps = [ ":tests_bin" ]
 
   tests = [
     {
@@ -52,7 +48,5 @@ test_package("libinet_tests") {
 group("tests") {
   testonly = true
 
-  public_deps = [
-    ":libinet_tests",
-  ]
+  public_deps = [ ":libinet_tests" ]
 }

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("thread-safe-deleter") {
-  sources = [
-    "thread-safe-deleter-test.cc",
-  ]
+  sources = [ "thread-safe-deleter-test.cc" ]
   deps = [
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default",

@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-hardware-cpu-insntrace") {
-  sources = [
-    "insntrace.fidl",
-  ]
+  sources = [ "insntrace.fidl" ]
 }

@@ -14,9 +14,7 @@ group("test") {
 
 zx_test("bootsvc-unit-test") {
   output_name = "bootsvc-unit-test"
-  sources = [
-    "unit-test.cc",
-  ]
+  sources = [ "unit-test.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/unittest",
@@ -27,9 +25,7 @@ zx_test("bootsvc-unit-test") {
 zx_executable("bootsvc-integration-test") {
   testonly = true
   defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
-  sources = [
-    "integration-test.cc",
-  ]
+  sources = [ "integration-test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/fidl/fuchsia-io:llcpp",
@@ -101,9 +97,7 @@ generated_file("bootsvc-integration-test-image-arg") {
   visibility = [ ":*" ]
   testonly = true
 
-  outputs = [
-    "$target_out_dir/$target_name.txt",
-  ]
+  outputs = [ "$target_out_dir/$target_name.txt" ]
 
   # Writing out a list rather than a string means it gets a trailing newline.
   contents = [ "testkey=testvalue" ]
@@ -112,9 +106,7 @@ generated_file("bootsvc-integration-test-image-arg") {
 zbi_input("integration-test-image-arg") {
   visibility = [ ":*" ]
   testonly = true
-  deps = [
-    ":bootsvc-integration-test-image-arg",
-  ]
+  deps = [ ":bootsvc-integration-test-image-arg" ]
   type = "IMAGE_ARGS"
   sources = get_target_outputs(deps[0])
 }

@@ -8,9 +8,7 @@ import("//build/go/go_test.gni")
 group("tools") {
   testonly = true
 
-  public_deps = [
-    "//tools/build/ninjatrace",
-  ]
+  public_deps = [ "//tools/build/ninjatrace" ]
 }
 
 group("tests") {
@@ -28,7 +26,5 @@ go_library("build") {
 
 go_test("build_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/lib" ]
-  deps = [
-    ":build",
-  ]
+  deps = [ ":build" ]
 }

@@ -23,9 +23,7 @@ if (internal_access) {
 
 driver_module("controller-driver") {
   output_name = "controller"
-  deps = [
-    "//src/camera/drivers/controller/:controller-source",
-  ]
+  deps = [ "//src/camera/drivers/controller/:controller-source" ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -34,12 +32,8 @@ driver_module("controller-driver") {
   if (internal_access) {
     foreach(config_file, all_gdc_config_files) {
       copy("gdc-config" + config_file) {
-        sources = [
-          "//prebuilt/camera/arm/gdc/configs/" + config_file,
-        ]
-        outputs = [
-          "$root_out_dir/firmware/" + config_file,
-        ]
+        sources = [ "//prebuilt/camera/arm/gdc/configs/" + config_file ]
+        outputs = [ "$root_out_dir/firmware/" + config_file ]
       }
     }
   }
@@ -99,9 +93,7 @@ source_set("controller-source") {
 package("controller") {
   deprecated_system_image = true
 
-  deps = [
-    ":controller-driver",
-  ]
+  deps = [ ":controller-driver" ]
 
   drivers = [
     {

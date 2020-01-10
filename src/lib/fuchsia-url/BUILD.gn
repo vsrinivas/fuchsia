@@ -23,9 +23,7 @@ rustc_library("fuchsia-url") {
 }
 
 test_package("fuchsia-url-tests") {
-  deps = [
-    ":fuchsia-url_test",
-  ]
+  deps = [ ":fuchsia-url_test" ]
 
   tests = [
     {
@@ -38,7 +36,5 @@ test_package("fuchsia-url-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fuchsia-url-tests",
-  ]
+  deps = [ ":fuchsia-url-tests" ]
 }

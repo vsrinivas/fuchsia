@@ -5,9 +5,7 @@
 zx_library("sysmem-connector") {
   sdk = "source"
   sdk_headers = [ "lib/sysmem-connector/sysmem-connector.h" ]
-  sources = [
-    "sysmem-connector.cc",
-  ]
+  sources = [ "sysmem-connector.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/async",

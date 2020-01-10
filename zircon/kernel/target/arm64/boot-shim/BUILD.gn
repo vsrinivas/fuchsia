@@ -18,18 +18,14 @@ if (toolchain.environment == "physmem") {
       "devicetree.c",
       "util.c",
     ]
-    deps = [
-      "$zx/kernel/lib/libc/string",
-    ]
+    deps = [ "$zx/kernel/lib/libc/string" ]
     public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
   }
 
   config("boot_shim_config") {
     visibility = [ ":*" ]
     defines = [ "KERNEL_ALIGN=0x10000" ]
-    inputs = [
-      "boot-shim.ld",
-    ]
+    inputs = [ "boot-shim.ld" ]
     ldflags = [
       "-Wl,--build-id=none",
       "-Wl,-T," + rebase_path("boot-shim.ld", root_build_dir),
@@ -63,12 +59,8 @@ template("boot_shim") {
 
     shim_rspfile = "$target_gen_dir/$shim_name.elf.rsp"
     link_output_rspfile("$shim_name.elf.rsp") {
-      deps = [
-        ":$shim_name",
-      ]
-      outputs = [
-        shim_rspfile,
-      ]
+      deps = [ ":$shim_name" ]
+      outputs = [ shim_rspfile ]
     }
 
     # The shim code should be purely position-independent code.
@@ -78,12 +70,8 @@ template("boot_shim") {
         ":$shim_name",
         ":$shim_name.elf.rsp",
       ]
-      sources = [
-        shim_rspfile,
-      ]
-      outputs = [
-        "$target_out_dir/$shim_name.pure-stamp",
-      ]
+      sources = [ shim_rspfile ]
+      outputs = [ "$target_out_dir/$shim_name.pure-stamp" ]
       script = "$zx/kernel/gen-kaslr-fixups.sh"
       utils = [
         "readelf",
@@ -146,9 +134,7 @@ template("boot_shim") {
     environment_redirect(board) {
       environment_label = "$zx/kernel/arch/arm64:physmem"
       direct = true
-      deps = [
-        ":$board",
-      ]
+      deps = [ ":$board" ]
     }
     not_needed(invoker, "*")
   }

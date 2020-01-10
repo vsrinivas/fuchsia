@@ -5,9 +5,7 @@
 assert(current_cpu == "x64")
 
 zx_driver("intel-rtc") {
-  sources = [
-    "intel-rtc.c",
-  ]
+  sources = [ "intel-rtc.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-rtc:c",
     "$zx/system/ulib/ddk",

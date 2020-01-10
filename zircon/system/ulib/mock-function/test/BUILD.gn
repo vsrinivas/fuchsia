@@ -3,16 +3,12 @@
 # found in the LICENSE file.
 group("test") {
   testonly = true
-  deps = [
-    ":mock-function-test",
-  ]
+  deps = [ ":mock-function-test" ]
 }
 
 zx_test("mock-function-test") {
   output_name = "mock-function-test"
-  sources = [
-    "mock-function-test.cc",
-  ]
+  sources = [ "mock-function-test.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

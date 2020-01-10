@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("scpi") {
-  deps = [
-    "aml-scpi-s912",
-  ]
+  deps = [ "aml-scpi-s912" ]
 }

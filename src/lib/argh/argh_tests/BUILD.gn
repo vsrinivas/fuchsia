@@ -7,15 +7,11 @@ import("//build/test/test_package.gni")
 
 rustc_test("argh_tests_bin") {
   edition = "2018"
-  deps = [
-    "//src/lib/argh",
-  ]
+  deps = [ "//src/lib/argh" ]
 }
 
 test_package("argh_tests") {
-  deps = [
-    ":argh_tests_bin_test",
-  ]
+  deps = [ ":argh_tests_bin_test" ]
 
   tests = [
     {

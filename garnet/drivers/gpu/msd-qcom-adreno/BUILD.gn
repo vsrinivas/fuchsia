@@ -43,9 +43,7 @@ target(driver_module, "msd_qcom") {
 }
 
 group("msd_qcom_linux_arm64") {
-  deps = [
-    ":msd_qcom(//build/toolchain:linux_arm64-shared)",
-  ]
+  deps = [ ":msd_qcom(//build/toolchain:linux_arm64-shared)" ]
 }
 
 target(driver_module_test, "msd_qcom_test") {
@@ -80,7 +78,5 @@ target(driver_module_test, "msd_qcom_test") {
 
 group("msd_qcom_test_linux_arm64") {
   testonly = true
-  deps = [
-    ":msd_qcom_test(//build/toolchain:linux_arm64)",
-  ]
+  deps = [ ":msd_qcom_test(//build/toolchain:linux_arm64)" ]
 }

@@ -54,9 +54,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/syscalls/vmo.fidl",
       "$zx/syscalls/zx.fidl",
     ]
-    outputs = [
-      syscall_ir_json,
-    ]
+    outputs = [ syscall_ir_json ]
     args = [
       "--json",
       rebase_path(syscall_ir_json, root_build_dir),
@@ -76,9 +74,7 @@ if (current_toolchain == default_toolchain) {
     ]
 
     public_configs = [ ":syscall-abi.config" ]
-    deps = [
-      ":syscall-abi.generate",
-    ]
+    deps = [ ":syscall-abi.generate" ]
   }
 
   config("syscall-abi.config") {
@@ -93,33 +89,23 @@ if (current_toolchain == default_toolchain) {
     gen = [
       {
         args = [ "--syscall-numbers" ]
-        outputs = [
-          "$target_gen_dir/zircon/zx-syscall-numbers.h",
-        ]
+        outputs = [ "$target_gen_dir/zircon/zx-syscall-numbers.h" ]
       },
       {
         args = [ "--kernel-header" ]
-        outputs = [
-          "$target_gen_dir/zircon/syscall-definitions.h",
-        ]
+        outputs = [ "$target_gen_dir/zircon/syscall-definitions.h" ]
       },
       {
         args = [ "--kernel-wrappers" ]
-        outputs = [
-          "$target_gen_dir/zircon/syscall-kernel-wrappers.inc",
-        ]
+        outputs = [ "$target_gen_dir/zircon/syscall-kernel-wrappers.inc" ]
       },
       {
         args = [ "--kernel-branches" ]
-        outputs = [
-          "$target_gen_dir/zircon/syscall-kernel-branches.S",
-        ]
+        outputs = [ "$target_gen_dir/zircon/syscall-kernel-branches.S" ]
       },
       {
         args = [ "--json" ]
-        outputs = [
-          "$target_gen_dir/zircon/definitions.json",
-        ]
+        outputs = [ "$target_gen_dir/zircon/definitions.json" ]
       },
     ]
   }
@@ -183,9 +169,7 @@ if (is_kernel) {
 
   # Only this file depends on vdso-valid-sysret.h.
   source_set("dispatch") {
-    sources = [
-      "syscalls.cc",
-    ]
+    sources = [ "syscalls.cc" ]
     deps = [
       ":syscall-abi",
       "$zx/kernel/lib/userabi:headers",

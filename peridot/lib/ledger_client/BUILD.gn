@@ -13,15 +13,11 @@ group("ledger_client") {
 }
 
 source_set("constants") {
-  sources = [
-    "constants.h",
-  ]
+  sources = [ "constants.h" ]
 }
 
 source_set("operations") {
-  sources = [
-    "operations.h",
-  ]
+  sources = [ "operations.h" ]
 
   public_deps = [
     ":page_client",
@@ -62,9 +58,7 @@ source_set("page_client") {
 }
 
 source_set("promise") {
-  sources = [
-    "promise.h",
-  ]
+  sources = [ "promise.h" ]
 
   public_deps = [
     "//src/ledger/fidl/fuchsia.ledger",
@@ -73,29 +67,21 @@ source_set("promise") {
 }
 
 source_set("types") {
-  sources = [
-    "types.h",
-  ]
+  sources = [ "types.h" ]
 
-  deps = [
-    "//sdk/lib/fidl/cpp",
-  ]
+  deps = [ "//sdk/lib/fidl/cpp" ]
 }
 
 group("unittests") {
   testonly = true
 
-  deps = [
-    ":page_client_unittest",
-  ]
+  deps = [ ":page_client_unittest" ]
 }
 
 source_set("page_client_unittest") {
   testonly = true
 
-  sources = [
-    "page_client_unittest.cc",
-  ]
+  sources = [ "page_client_unittest.cc" ]
 
   deps = [
     ":page_client",

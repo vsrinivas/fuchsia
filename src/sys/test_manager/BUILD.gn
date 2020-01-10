@@ -51,9 +51,7 @@ rustc_binary("bin") {
 
 package("test_manager") {
   testonly = true
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -73,7 +71,5 @@ package("test_manager") {
 
 group("tests") {
   testonly = true
-  deps = [
-    "tests",
-  ]
+  deps = [ "tests" ]
 }

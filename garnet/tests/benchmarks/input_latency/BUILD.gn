@@ -9,9 +9,7 @@ import("//build/package.gni")
 
 go_library("process_input_latency_trace_lib") {
   name = "process_input_latency_trace"
-  deps = [
-    "//garnet/go/src/benchmarking",
-  ]
+  deps = [ "//garnet/go/src/benchmarking" ]
 }
 
 go_binary("process_input_latency_trace") {
@@ -19,9 +17,7 @@ go_binary("process_input_latency_trace") {
 
   gopackage = "process_input_latency_trace"
 
-  deps = [
-    ":process_input_latency_trace_lib",
-  ]
+  deps = [ ":process_input_latency_trace_lib" ]
 }
 
 package("garnet_input_latency_benchmarks") {
@@ -30,9 +26,7 @@ package("garnet_input_latency_benchmarks") {
 
   testonly = true
 
-  deps = [
-    ":process_input_latency_trace",
-  ]
+  deps = [ ":process_input_latency_trace" ]
 
   meta = [
     {

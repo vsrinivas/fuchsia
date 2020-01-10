@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("fpu") {
-  sources = [
-    "fputest.c",
-  ]
+  sources = [ "fputest.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",

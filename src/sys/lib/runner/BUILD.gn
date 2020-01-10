@@ -24,9 +24,7 @@ rustc_library("runner") {
 }
 
 test_package("runner_tests") {
-  deps = [
-    ":runner_test",
-  ]
+  deps = [ ":runner_test" ]
 
   tests = [
     {
@@ -39,7 +37,5 @@ test_package("runner_tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":runner_tests",
-  ]
+  deps = [ ":runner_tests" ]
 }

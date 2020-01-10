@@ -21,65 +21,49 @@ go_library("thinfs_lib") {
 go_test("thinfs_bitops_test") {
   gopackages = [ "thinfs/bitops" ]
 
-  deps = [
-    ":thinfs_lib",
-  ]
+  deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_block_fake_test") {
   gopackages = [ "thinfs/block/fake" ]
 
-  deps = [
-    ":thinfs_lib",
-  ]
+  deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_block_file_test") {
   gopackages = [ "thinfs/block/file" ]
 
-  deps = [
-    ":thinfs_lib",
-  ]
+  deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_cache_test") {
   gopackages = [ "thinfs/cache" ]
 
-  deps = [
-    ":thinfs_lib",
-  ]
+  deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_gpt_test") {
   gopackages = [ "thinfs/gpt" ]
 
-  deps = [
-    ":thinfs_lib",
-  ]
+  deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_mbr_test") {
   gopackages = [ "thinfs/mbr" ]
 
-  deps = [
-    ":thinfs_lib",
-  ]
+  deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_thinio_test") {
   gopackages = [ "thinfs/thinio" ]
 
-  deps = [
-    ":thinfs_lib",
-  ]
+  deps = [ ":thinfs_lib" ]
 }
 
 go_test("thinfs_zircon_rpc_test") {
   gopackages = [ "thinfs/zircon/rpc" ]
 
-  deps = [
-    ":thinfs_lib",
-  ]
+  deps = [ ":thinfs_lib" ]
 }
 
 unittest_package("go_thinfs_tests") {

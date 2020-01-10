@@ -10,7 +10,5 @@ fidl("fuchsia.wlan.mesh") {
 
   sdk_category = "internal"
 
-  sources = [
-    "wlan_mesh.fidl",
-  ]
+  sources = [ "wlan_mesh.fidl" ]
 }

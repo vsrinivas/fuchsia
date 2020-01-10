@@ -24,9 +24,7 @@ rustc_binary("bin") {
 }
 
 package("session_control") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   meta = [
     {
@@ -44,9 +42,7 @@ package("session_control") {
 }
 
 unittest_package("session_control_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

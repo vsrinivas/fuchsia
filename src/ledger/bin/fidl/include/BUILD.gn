@@ -5,9 +5,7 @@
 visibility = [ "//src/ledger/*" ]
 
 source_set("include") {
-  sources = [
-    "types.h",
-  ]
+  sources = [ "types.h" ]
 
   public_deps = [
     "//src/ledger/fidl/fuchsia.ledger",

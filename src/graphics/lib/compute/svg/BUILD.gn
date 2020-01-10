@@ -48,9 +48,7 @@ source_set("svg") {
 # svg unittests
 #
 graphics_compute_unittests("svg_unittests") {
-  sources = [
-    "svg_unittests.cc",
-  ]
+  sources = [ "svg_unittests.cc" ]
   deps = [
     ":svg",
     ":yxml",

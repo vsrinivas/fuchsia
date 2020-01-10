@@ -16,9 +16,7 @@ declare_args() {
 import("//build/test.gni")
 
 source_set("e2e_test_headers") {
-  public = [
-    "main_e2e_test.h",
-  ]
+  public = [ "main_e2e_test.h" ]
 }
 
 # ZXDB currently only compiles for the host.
@@ -26,9 +24,7 @@ if (current_toolchain == host_toolchain) {
   sdk_executable("zxdb") {
     category = "partner"
 
-    sources = [
-      "main_host.cc",
-    ]
+    sources = [ "main_host.cc" ]
     deps = [
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
@@ -37,9 +33,7 @@ if (current_toolchain == host_toolchain) {
   }
 
   test("zxdb_e2e_tests") {
-    sources = [
-      "main_e2e_test.cc",
-    ]
+    sources = [ "main_e2e_test.cc" ]
     deps = [
       ":e2e_test_headers",
       "//src/developer/debug/zxdb/console:e2e_tests",
@@ -65,9 +59,7 @@ if (current_toolchain == host_toolchain) {
   if (include_zxdb_large_tests) {
     # See symbols/test_data/README.md for how to download the data required for this test.
     test("zxdb_large_tests") {
-      sources = [
-        "symbols/index_largetest.cc",
-      ]
+      sources = [ "symbols/index_largetest.cc" ]
 
       deps = [
         ":copy_large_test_data",
@@ -79,9 +71,8 @@ if (current_toolchain == host_toolchain) {
 
     copy("copy_large_test_data") {
       # Each file must be individually listed here.
-      sources = [
-        "//prebuilt/test_data/debug/large_test_data/flutter_runner_tests",
-      ]
+      sources =
+          [ "//prebuilt/test_data/debug/large_test_data/flutter_runner_tests" ]
 
       outputs = [
         "$root_out_dir/test_data/zxdb/large_test_data/{{source_file_part}}",
@@ -90,9 +81,7 @@ if (current_toolchain == host_toolchain) {
   }
 
   test("zxdb_perftests") {
-    sources = [
-      "zxdb_perftests.cc",
-    ]
+    sources = [ "zxdb_perftests.cc" ]
 
     deps = [
       "//src/developer/debug/zxdb/common:perf_test",
@@ -104,12 +93,8 @@ if (current_toolchain == host_toolchain) {
 }
 
 install_host_tools("zxdb_host") {
-  deps = [
-    ":zxdb",
-  ]
-  outputs = [
-    "zxdb",
-  ]
+  deps = [ ":zxdb" ]
+  outputs = [ "zxdb" ]
 }
 
 # This group of tests is run in CQ/CI.

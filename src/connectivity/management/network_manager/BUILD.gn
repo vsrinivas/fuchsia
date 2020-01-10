@@ -116,7 +116,5 @@ test_package("network_manager_tests") {
 
 config_data("network_manager_sysmgr_config") {
   for_pkg = "sysmgr"
-  sources = [
-    rebase_path("config/network_manager.sysmgr_config"),
-  ]
+  sources = [ rebase_path("config/network_manager.sysmgr_config") ]
 }

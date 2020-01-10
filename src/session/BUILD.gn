@@ -14,9 +14,7 @@ group("session") {
 group("examples") {
   testonly = true
 
-  deps = [
-    "//src/session/examples:all",
-  ]
+  deps = [ "//src/session/examples:all" ]
 }
 
 group("tests") {

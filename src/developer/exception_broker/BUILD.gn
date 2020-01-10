@@ -34,19 +34,13 @@ source_set("lib") {
 executable("exe") {
   output_name = "exception_broker"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 package("exception_broker") {
-  deps = [
-    ":exe",
-  ]
+  deps = [ ":exe" ]
 
   binaries = [
     {
@@ -65,11 +59,7 @@ package("exception_broker") {
 config_data("enable_jitd_on_startup") {
   for_pkg = "exception_broker"
 
-  sources = [
-    "configs/jitd_on_startup.json",
-  ]
+  sources = [ "configs/jitd_on_startup.json" ]
 
-  outputs = [
-    "enable_jitd_on_startup.json",
-  ]
+  outputs = [ "enable_jitd_on_startup.json" ]
 }

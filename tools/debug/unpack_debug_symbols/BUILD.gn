@@ -18,7 +18,5 @@ go_library("main") {
 go_binary("unpack_debug_symbols") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/debug/unpack_debug_symbols/cmd"
 
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }

@@ -34,9 +34,7 @@ rustc_binary("bin") {
 }
 
 package("pkg-cache") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   binaries = [
     {
       name = "pkg_cache"
@@ -53,9 +51,7 @@ package("pkg-cache") {
 }
 
 test_package("pkg-cache-tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {
@@ -72,7 +68,5 @@ sysmgr_config("config") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":pkg-cache-tests",
-  ]
+  public_deps = [ ":pkg-cache-tests" ]
 }

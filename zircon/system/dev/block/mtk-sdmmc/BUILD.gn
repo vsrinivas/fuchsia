@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("mtk-sdmmc") {
-  sources = [
-    "mtk-sdmmc.cc",
-  ]
+  sources = [ "mtk-sdmmc.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.clock",

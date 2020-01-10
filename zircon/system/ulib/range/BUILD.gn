@@ -5,9 +5,7 @@
 zx_library("range") {
   sdk = "source"
   sdk_headers = [ "range/range.h" ]
-  sources = [
-    "range.cc",
-  ]
+  sources = [ "range.cc" ]
   public_deps = [
     # "$zx/system/ulib/fbl:headers",
   ]

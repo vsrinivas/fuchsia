@@ -7,9 +7,7 @@ visibility = [ "//src/ledger/*" ]
 group("fake") {
   testonly = true
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 source_set("lib") {

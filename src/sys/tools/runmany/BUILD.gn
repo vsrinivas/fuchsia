@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 package("runmany") {
-  deps = [
-    ":runn",
-  ]
+  deps = [ ":runn" ]
 
   binaries = [
     {
@@ -19,9 +17,7 @@ package("runmany") {
 
 executable("runn") {
   output_name = "runmany"
-  sources = [
-    "src/runmany.c",
-  ]
+  sources = [ "src/runmany.c" ]
   deps = [
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("realtek-8211f") {
-  sources = [
-    "rtl8211f.cc",
-  ]
+  sources = [ "rtl8211f.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet.mac",
     "$zx/system/ulib/ddk",

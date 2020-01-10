@@ -25,9 +25,7 @@ zx_library("v2") {
 
 source_set("test") {
   # TODO: testonly = true
-  sources = [
-    "arm_gicv2_test.cc",
-  ]
+  sources = [ "arm_gicv2_test.cc" ]
   include_dirs = [ "include" ]
   deps = [
     "$zx/kernel/lib/fbl",

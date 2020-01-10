@@ -36,9 +36,7 @@ executable("bin") {
 }
 
 test_package("inspect_query_unittests") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   tests = [
     {

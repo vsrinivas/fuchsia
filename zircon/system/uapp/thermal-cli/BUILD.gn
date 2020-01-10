@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("thermal-cli") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     ":common",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
@@ -31,9 +29,7 @@ source_set("common") {
 
 zx_test("thermal-cli-test") {
   output_name = "thermal-cli-test"
-  sources = [
-    "test/thermal-cli-test.cc",
-  ]
+  sources = [ "test/thermal-cli-test.cc" ]
   include_dirs = [ "." ]
   deps = [
     ":common",

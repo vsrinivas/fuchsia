@@ -21,7 +21,5 @@ fidl_library("fuchsia-cobalt") {
     "cobalt.fidl",
     "cobalt_controller.fidl",
   ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-mem",
-  ]
+  public_deps = [ "$zx/system/fidl/fuchsia-mem" ]
 }

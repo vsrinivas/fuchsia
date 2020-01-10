@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("register-state") {
-  sources = [
-    "register-state-test.cc",
-  ]
+  sources = [ "register-state-test.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

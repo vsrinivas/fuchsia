@@ -78,19 +78,13 @@ source_set("codec_client") {
 source_set("one_shot_event") {
   testonly = true
 
-  sources = [
-    "one_shot_event.cc",
-  ]
+  sources = [ "one_shot_event.cc" ]
 
   include_dirs = [ "include" ]
 
   public_configs = [ ":media_test_include_config" ]
 
-  public = [
-    "include/lib/media/test/one_shot_event.h",
-  ]
+  public = [ "include/lib/media/test/one_shot_event.h" ]
 
-  deps = [
-    "//zircon/public/lib/zx",
-  ]
+  deps = [ "//zircon/public/lib/zx" ]
 }

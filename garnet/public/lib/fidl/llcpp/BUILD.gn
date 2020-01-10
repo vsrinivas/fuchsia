@@ -12,9 +12,7 @@ gidl_llcpp("generated_conformance_test") {
   testonly = true
   inputs = conformance_suite_gidl_files
   fidl = conformance_suite_fidl_target
-  deps = [
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ "//third_party/googletest:gtest" ]
 }
 
 executable("fidl_llcpp_conformance_test_bin") {
@@ -40,9 +38,7 @@ executable("fidl_llcpp_conformance_test_bin") {
 }
 
 unittest_package("fidl_llcpp_conformance_test") {
-  deps = [
-    ":fidl_llcpp_conformance_test_bin",
-  ]
+  deps = [ ":fidl_llcpp_conformance_test_bin" ]
 
   tests = [
     {
@@ -53,27 +49,19 @@ unittest_package("fidl_llcpp_conformance_test") {
 }
 
 fidl("fidl.llcpp.types.test") {
-  sources = [
-    "types.test.fidl",
-  ]
+  sources = [ "types.test.fidl" ]
 }
 
 fidl("llcpptest.flexible.test") {
-  sources = [
-    "flexible.test.fidl",
-  ]
+  sources = [ "flexible.test.fidl" ]
 }
 
 fidl("llcpptest.protocol.test") {
-  sources = [
-    "protocol.test.fidl",
-  ]
+  sources = [ "protocol.test.fidl" ]
 }
 
 fidl("llcpptest.transitional.test") {
-  sources = [
-    "transitional.test.fidl",
-  ]
+  sources = [ "transitional.test.fidl" ]
 }
 
 executable("fidl_llcpp_types_test_bin") {
@@ -110,9 +98,7 @@ executable("fidl_llcpp_types_test_bin") {
 package("fidl_llcpp_types_test") {
   testonly = true
 
-  deps = [
-    ":fidl_llcpp_types_test_bin",
-  ]
+  deps = [ ":fidl_llcpp_types_test_bin" ]
 
   meta = [
     {

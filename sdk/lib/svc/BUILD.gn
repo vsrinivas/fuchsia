@@ -15,9 +15,7 @@ sdk_shared_library("svc") {
     "dir.h",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/async",
-  ]
+  public_deps = [ "//zircon/public/lib/async" ]
 
   deps = [
     "//sdk/lib/sys/cpp",
@@ -34,9 +32,7 @@ sdk_shared_library("svc") {
 }
 
 test("svc_unittests") {
-  sources = [
-    "dir_unittest.cc",
-  ]
+  sources = [ "dir_unittest.cc" ]
 
   deps = [
     ":svc",
@@ -48,9 +44,7 @@ test("svc_unittests") {
 }
 
 test_package("svc_tests") {
-  deps = [
-    ":svc_unittests",
-  ]
+  deps = [ ":svc_unittests" ]
 
   tests = [
     {

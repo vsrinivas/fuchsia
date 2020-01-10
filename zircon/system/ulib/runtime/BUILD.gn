@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("runtime") {
-  sources = [
-    "thread.c",
-  ]
+  sources = [ "thread.c" ]
 
   deps = [
     "$zx/system/ulib/elf-psabi",

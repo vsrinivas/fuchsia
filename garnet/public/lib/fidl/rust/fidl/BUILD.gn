@@ -45,21 +45,15 @@ rustc_library("fidl") {
 
 # not actually used-- just to ensure successful compilation
 fidl("fidl.rust.test.compilation") {
-  sources = [
-    "compilation.test.fidl",
-  ]
+  sources = [ "compilation.test.fidl" ]
 }
 
 # not actually used-- just to ensure successful compilation
 # tests we can compose protocols from another FIDL crate
 fidl("fidl.rust.test.compilation.compose") {
-  sources = [
-    "compilation_compose.test.fidl",
-  ]
+  sources = [ "compilation_compose.test.fidl" ]
 
-  public_deps = [
-    ":fidl.rust.test.compilation",
-  ]
+  public_deps = [ ":fidl.rust.test.compilation" ]
 }
 
 test_package("rust_fidl_tests") {

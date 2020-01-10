@@ -29,9 +29,7 @@ zx_driver("ftdi") {
 }
 
 zx_driver("ftdi-fake-usb") {
-  sources = [
-    "ftdi-function.cc",
-  ]
+  sources = [ "ftdi-function.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",
     "$zx/system/banjo/ddk.protocol.usb.function",

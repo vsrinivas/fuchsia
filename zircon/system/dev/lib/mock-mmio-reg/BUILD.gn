@@ -11,9 +11,7 @@ zx_library("mock-mmio-reg") {
 
 zx_test("mock-mmio-reg-test") {
   output_name = "mock-mmio-reg-test"
-  sources = [
-    "mock-mmio-reg-test.cc",
-  ]
+  sources = [ "mock-mmio-reg-test.cc" ]
   deps = [
     ":mock-mmio-reg",
     "$zx/system/ulib/ddk",

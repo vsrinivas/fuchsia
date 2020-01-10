@@ -9,9 +9,7 @@ package("qmi-fake-transport") {
   deprecated_system_image = true
   testonly = true
 
-  deps = [
-    ":fake_qmi_driver",
-  ]
+  deps = [ ":fake_qmi_driver" ]
 
   drivers = [
     {

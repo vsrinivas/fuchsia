@@ -7,11 +7,11 @@ import("//build/package.gni")
 package("zircon_rust_examples") {
   system_image = true
 
-  deps = [
-    "zx_toy",
-  ]
+  deps = [ "zx_toy" ]
 
-  binaries = [ {
-        name = "example_zx_toy"
-      } ]
+  binaries = [
+    {
+      name = "example_zx_toy"
+    },
+  ]
 }

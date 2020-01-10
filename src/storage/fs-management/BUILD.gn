@@ -48,7 +48,5 @@ test_package("fs-management-test") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fs-management-test",
-  ]
+  deps = [ ":fs-management-test" ]
 }

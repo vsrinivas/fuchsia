@@ -48,9 +48,7 @@ source_set("mock_server") {
     "mock_get.h",
   ]
 
-  public_deps = [
-    ":test_server",
-  ]
+  public_deps = [ ":test_server" ]
 
   deps = [
     "//src/lib/fxl",
@@ -62,9 +60,7 @@ source_set("mock_server") {
 executable("web_runner_integration_tests") {
   testonly = true
 
-  sources = [
-    "web_runner_integration_tests.cc",
-  ]
+  sources = [ "web_runner_integration_tests.cc" ]
 
   deps = [
     ":test_server",
@@ -83,9 +79,7 @@ executable("web_runner_integration_tests") {
 executable("web_runner_pixel_tests") {
   testonly = true
 
-  sources = [
-    "web_runner_pixel_tests.cc",
-  ]
+  sources = [ "web_runner_pixel_tests.cc" ]
 
   deps = [
     ":mock_server",

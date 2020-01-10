@@ -27,9 +27,7 @@ test("shell_tests_bin") {
 action("generate_fidl_json") {
   script = "generate_fidl_json.sh"
   generated_output = "$target_gen_dir/sdk_fidl_json.manifest"
-  outputs = [
-    "$generated_output",
-  ]
+  outputs = [ "$generated_output" ]
   testonly = true
   deps = [
     "//garnet/examples/fidl/services:echo",
@@ -91,17 +89,13 @@ test_package("shell_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":shell_tests",
-  ]
+  deps = [ ":shell_tests" ]
 }
 
 executable("bin") {
   output_name = "josh"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//src/developer/shell/console",

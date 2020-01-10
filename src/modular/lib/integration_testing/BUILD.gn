@@ -4,7 +4,5 @@
 
 group("integration_testing") {
   testonly = true
-  deps = [
-    "cpp",
-  ]
+  deps = [ "cpp" ]
 }

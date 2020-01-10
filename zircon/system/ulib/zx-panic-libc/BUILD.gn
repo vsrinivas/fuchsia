@@ -10,16 +10,12 @@ zx_library("zx-panic-libc") {
 
   sdk_headers = []
 
-  sources = [
-    "zx_panic_libc.cc",
-  ]
+  sources = [ "zx_panic_libc.cc" ]
 }
 
 source_set("as_source") {
   visibility = [ "$zx/system/ulib/c:*" ]
-  sources = [
-    "zx_panic_libc.cc",
-  ]
+  sources = [ "zx_panic_libc.cc" ]
 
   # This library is linked into libc, which is used by libfuzzer.
   # Don't instrument it to avoid getting noise in code coverage.

@@ -31,9 +31,7 @@ rustc_binary("bin") {
 }
 
 package("component_test_runner") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -50,9 +48,7 @@ package("component_test_runner") {
 }
 
 test_package("component_test_runner_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

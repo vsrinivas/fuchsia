@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("cpp") {
-  sources = [
-    "fidl_ext.h",
-  ]
+  sources = [ "fidl_ext.h" ]
 
   deps = [
     "//sdk/fidl/fuchsia.intl",

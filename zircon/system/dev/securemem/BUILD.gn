@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("securemem") {
-  deps = [
-    "aml-securemem",
-  ]
+  deps = [ "aml-securemem" ]
 }

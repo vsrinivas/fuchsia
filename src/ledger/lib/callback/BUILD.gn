@@ -10,9 +10,7 @@ source_set("crossplatform") {
     "set_when_called.cc",
     "set_when_called.h",
   ]
-  public_deps = [
-    "//zircon/public/lib/fit:fit",
-  ]
+  public_deps = [ "//zircon/public/lib/fit:fit" ]
 }
 
 source_set("callback") {

@@ -4,9 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":region-alloc",
-  ]
+  deps = [ ":region-alloc" ]
 }
 
 zx_test("region-alloc") {

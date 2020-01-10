@@ -55,9 +55,7 @@ import("//build/go/go_test.gni")
 import("//build/host.gni")
 
 generated_file("size_checker_json") {
-  outputs = [
-    "$root_build_dir/size_checker.json",
-  ]
+  outputs = [ "$root_build_dir/size_checker.json" ]
   contents = size_checker_input
   output_conversion = "json"
 }
@@ -69,43 +67,29 @@ go_library("size_checker_lib") {
 go_binary("size_checker") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/size_checker/cmd"
 
-  deps = [
-    ":size_checker_lib",
-  ]
+  deps = [ ":size_checker_lib" ]
 
   non_go_deps = [ ":size_checker_json" ]
 }
 
 go_test("size_checker_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/size_checker/cmd" ]
-  deps = [
-    ":size_checker_lib",
-  ]
+  deps = [ ":size_checker_lib" ]
 }
 
 install_host_tools("host") {
-  deps = [
-    ":size_checker",
-  ]
-  outputs = [
-    "size_checker",
-  ]
+  deps = [ ":size_checker" ]
+  outputs = [ "size_checker" ]
 }
 
 install_host_tools("host_tests") {
   testonly = true
 
-  deps = [
-    ":size_checker_tests",
-  ]
-  outputs = [
-    "size_checker_tests",
-  ]
+  deps = [ ":size_checker_tests" ]
+  outputs = [ "size_checker_tests" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":host_tests",
-  ]
+  deps = [ ":host_tests" ]
 }

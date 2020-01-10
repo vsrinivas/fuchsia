@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("diagnostics") {
-  deps = [
-    "archivist",
-  ]
+  deps = [ "archivist" ]
 }
 
 group("tests") {

@@ -37,15 +37,11 @@ source_set("mmio") {
 source_set("bus_mapper") {
   public_configs = [ "$magma_build_root:magma_tests_include_config" ]
 
-  sources = [
-    "mock_bus_mapper.h",
-  ]
+  sources = [ "mock_bus_mapper.h" ]
 }
 
 source_set("magma_system") {
-  sources = [
-    "mock_magma_system.cc",
-  ]
+  sources = [ "mock_magma_system.cc" ]
   deps = [
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util:common",
@@ -55,9 +51,7 @@ source_set("magma_system") {
 }
 
 source_set("address_space") {
-  sources = [
-    "fake_address_space.h",
-  ]
+  sources = [ "fake_address_space.h" ]
   deps = [
     "$magma_build_root/src/magma_util:address_space",
     "$magma_build_root/src/magma_util:common",

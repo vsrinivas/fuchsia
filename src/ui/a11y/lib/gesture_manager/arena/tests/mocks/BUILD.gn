@@ -10,9 +10,7 @@ source_set("mocks") {
     "mock_contest_member.h",
   ]
 
-  public_deps = [
-    "//src/ui/a11y/lib/gesture_manager/arena",
-  ]
+  public_deps = [ "//src/ui/a11y/lib/gesture_manager/arena" ]
 
   deps = [
     "//src/lib/syslog/cpp",

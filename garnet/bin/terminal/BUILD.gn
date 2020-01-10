@@ -67,9 +67,7 @@ rustc_binary("bin") {
 }
 
 package("terminal") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -87,9 +85,7 @@ package("terminal") {
 
 config_data("tiles_with_terminal_config") {
   for_pkg = "sysmgr"
-  sources = [
-    "config/tiles_with_terminal.config",
-  ]
+  sources = [ "config/tiles_with_terminal.config" ]
 }
 
 zircon_extras_manifest("terminal_tests_zircon_deps.manifest") {
@@ -116,9 +112,7 @@ test_package("terminal_tests") {
 }
 
 test_package("term_model_tests") {
-  deps = [
-    "third_party/term-model:term-model_test",
-  ]
+  deps = [ "third_party/term-model:term-model_test" ]
   tests = [
     {
       name = "term_model_lib_test"

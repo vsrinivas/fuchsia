@@ -9,9 +9,7 @@ import("//build/testing/environments.gni")
 
 executable("test_utils_test") {
   testonly = true
-  sources = [
-    "fake_buffer_collection_test.cc",
-  ]
+  sources = [ "fake_buffer_collection_test.cc" ]
   deps = [
     "//src/camera/drivers/test_utils",
     "//src/lib/fxl/test:gtest_main_with_syslog",
@@ -30,9 +28,7 @@ executable("test_utils_test") {
 
 executable("button_checker_test") {
   testonly = true
-  sources = [
-    "button_checker_test.cc",
-  ]
+  sources = [ "button_checker_test.cc" ]
   deps = [
     "//src/camera/drivers/test_utils",
     "//src/lib/fxl/test:gtest_main_with_syslog",

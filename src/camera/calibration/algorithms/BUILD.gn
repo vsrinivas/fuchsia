@@ -5,15 +5,9 @@
 import("//build/package.gni")
 
 source_set("algorithms") {
-  sources = [
-    "blc.cc",
-  ]
+  sources = [ "blc.cc" ]
 
-  public = [
-    "blc.h",
-  ]
+  public = [ "blc.h" ]
 
-  deps = [
-    "//src/camera/lib/image_writer",
-  ]
+  deps = [ "//src/camera/lib/image_writer" ]
 }

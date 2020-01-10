@@ -26,33 +26,31 @@ source_set("profiler_lib") {
   public_configs = [ ":headers_config" ]
 
   gperftools_sources = [
-    "gperftools/profiler.h",
-    "profile-handler.h",
-    "getpc.h",
     "base/basictypes.h",
     "base/commandlineflags.h",
     "base/googleinit.h",
+    "base/logging.cc",
     "base/logging.h",
     "base/simple_mutex.h",
-    "base/sysinfo.h",
-
-    "profiledata.cc",
-    "profiler.cc",
-    "gperftools/stacktrace.h",
-    "stacktrace.cc",
-    "stacktrace_libunwind-inl.h",
-    "emergency_malloc_for_stacktrace.cc",
-    "profile-handler.cc",
-
     "base/spinlock.cc",
     "base/spinlock_internal.cc",
     "base/sysinfo.cc",
-    "base/logging.cc",
+    "base/sysinfo.h",
+    "emergency_malloc_for_stacktrace.cc",
+    "getpc.h",
+    "gperftools/profiler.h",
+    "gperftools/stacktrace.h",
+    "profile-handler.cc",
+    "profile-handler.h",
+    "profiledata.cc",
+    "profiler.cc",
+    "stacktrace.cc",
+    "stacktrace_libunwind-inl.h",
   ]
 
   additional_sources = [
-    "fuchsia/profiler_log_listener.h",
     "fuchsia/profiler_log_listener.cc",
+    "fuchsia/profiler_log_listener.h",
     "fuchsia/thread_interrupter.cc",
     "fuchsia/thread_interrupter.h",
   ]
@@ -72,13 +70,9 @@ source_set("profiler_lib") {
 }
 
 static_library("profiler_static") {
-  public_deps = [
-    ":profiler_lib",
-  ]
+  public_deps = [ ":profiler_lib" ]
 }
 
 shared_library("profiler") {
-  public_deps = [
-    ":profiler_lib",
-  ]
+  public_deps = [ ":profiler_lib" ]
 }

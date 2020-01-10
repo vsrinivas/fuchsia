@@ -36,9 +36,7 @@ rustc_binary("bin") {
 }
 
 package("fake_factory_store_providers") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -84,9 +82,7 @@ rustc_test("fake_factory_store_providers_test") {
 }
 
 test_package("fake_factory_store_providers_tests") {
-  deps = [
-    ":fake_factory_store_providers_test",
-  ]
+  deps = [ ":fake_factory_store_providers_test" ]
 
   tests = [
     {

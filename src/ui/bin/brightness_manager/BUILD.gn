@@ -39,9 +39,7 @@ rustc_binary("bin") {
 }
 
 package("brightness_manager") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   binaries = [
     {
       name = "brightness_manager"
@@ -56,9 +54,7 @@ package("brightness_manager") {
 }
 
 test_package("brightness_manager_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

@@ -8,12 +8,8 @@ import("//build/testing/environments.gni")
 copy("acts") {
   _data_dir = "$target_gen_dir/acts"
 
-  sources = [
-    "//prebuilt/test_data/connectivity/acts/acts.zip",
-  ]
-  outputs = [
-    "$_data_dir/{{source_file_part}}",
-  ]
+  sources = [ "//prebuilt/test_data/connectivity/acts/acts.zip" ]
+  outputs = [ "$_data_dir/{{source_file_part}}" ]
 
   metadata = {
     test_runtime_deps = [ "$_data_dir/acts.zip" ]
@@ -62,9 +58,7 @@ test_labels = []
 
 foreach(spec, specs) {
   dart_test(spec.name) {
-    sources = [
-      "acts_test.dart",
-    ]
+    sources = [ "acts_test.dart" ]
 
     deps = [
       "//third_party/dart-pkg/pub/archive",

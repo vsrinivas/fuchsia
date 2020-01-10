@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("nand-loader") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/fbl",

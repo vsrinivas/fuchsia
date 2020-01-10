@@ -11,9 +11,7 @@ copy("testdata") {
     "libcrypto.elf",
     "libcrypto.yaml",
   ]
-  outputs = [
-    "$root_out_dir/testdata/symbolize/{{source_file_part}}",
-  ]
+  outputs = [ "$root_out_dir/testdata/symbolize/{{source_file_part}}" ]
   metadata = {
     test_runtime_deps = [
       "$root_out_dir/testdata/symbolize/gobug.elf",

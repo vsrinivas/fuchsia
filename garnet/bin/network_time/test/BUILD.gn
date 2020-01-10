@@ -47,9 +47,7 @@ executable("system_time_updater_test_bin") {
 }
 
 test_package("system_time_updater_test") {
-  deps = [
-    ":system_time_updater_test_bin",
-  ]
+  deps = [ ":system_time_updater_test_bin" ]
 
   tests = [
     {

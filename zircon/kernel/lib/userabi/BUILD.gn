@@ -77,9 +77,7 @@ template("rodso") {
                              "testonly",
                              "visibility",
                            ])
-    outputs = [
-      rspfile,
-    ]
+    outputs = [ rspfile ]
   }
 
   if (is_kernel) {
@@ -95,12 +93,8 @@ template("rodso") {
                                "visibility",
                              ])
 
-      deps = [
-        ":$rspfile_target",
-      ]
-      outputs = [
-        header,
-      ]
+      deps = [ ":$rspfile_target" ]
+      outputs = [ header ]
       depfile = "$header.d"
 
       script = "gen-rodso-code.sh"
@@ -108,9 +102,7 @@ template("rodso") {
         "nm",
         "readelf",
       ]
-      sources = [
-        rspfile,
-      ]
+      sources = [ rspfile ]
       args = [
         "--depfile",
         rebase_path(depfile, root_build_dir),
@@ -136,9 +128,7 @@ template("rodso") {
     rodso_name = target_name
     source_set("$target_name.image") {
       visibility = [ ":*" ]
-      sources = [
-        "$target_gen_dir/$target_name.S",
-      ]
+      sources = [ "$target_gen_dir/$target_name.S" ]
 
       # The generated header is also needed to tell .incbin how much of the
       # image file to embed (see rodso-asm.h).
@@ -147,9 +137,7 @@ template("rodso") {
         target_gen_dir,
         ".",
       ]
-      deps = [
-        ":$header_target",
-      ]
+      deps = [ ":$header_target" ]
 
       # $target_name.S includes the image contents and so must be
       # reassembled when that changes.  We can't express that in $inputs here
@@ -178,26 +166,20 @@ template("rodso") {
 environment_redirect("userland-vdso") {
   visibility = [ ":*" ]
   environment_label = "$zx/public/gn/toolchain:user"
-  deps = [
-    "$zx/system/ulib/zircon",
-  ]
+  deps = [ "$zx/system/ulib/zircon" ]
 }
 
 rodso("vdso") {
   visibility = [ "./*" ]
   name = "VDSO"
-  deps = [
-    ":userland-vdso",
-  ]
+  deps = [ ":userland-vdso" ]
 }
 
 if (is_kernel) {
   # Support for loading embedded ELF files, used for both vdso and userboot.
   source_set("rodso") {
     visibility = [ ":*" ]
-    sources = [
-      "rodso.cc",
-    ]
+    sources = [ "rodso.cc" ]
     deps = [
       ":headers",
       "$zx/kernel/vm:headers",
@@ -207,9 +189,7 @@ if (is_kernel) {
   # Initializing, supporting, and validating the vDSO itself.
   source_set("vdso") {
     visibility = [ ":*" ]
-    sources = [
-      "vdso.cc",
-    ]
+    sources = [ "vdso.cc" ]
     deps = [
       ":gen-categories",
       ":headers",
@@ -233,20 +213,14 @@ if (is_kernel) {
   action("gen-vdso-valid-sysret") {
     visibility = [ ":*" ]
     script = "gen-vdso-valid-sysret.sh"
-    deps = [
-      ":vdso-code.h",
-    ]
+    deps = [ ":vdso-code.h" ]
     sources = get_target_outputs(":vdso-code.h")
-    outputs = [
-      "$target_gen_dir/vdso-valid-sysret.h",
-    ]
+    outputs = [ "$target_gen_dir/vdso-valid-sysret.h" ]
     args = rebase_path(sources + outputs)
   }
 
   group("vdso-code-header") {
-    deps = [
-      ":vdso-code.h",
-    ]
+    deps = [ ":vdso-code.h" ]
     public_configs = [ ":vdso-code-header.config" ]
   }
 
@@ -260,9 +234,7 @@ if (is_kernel) {
     gen = [
       {
         args = [ "--category" ]
-        outputs = [
-          "$target_gen_dir/zircon/syscall-category.inc",
-        ]
+        outputs = [ "$target_gen_dir/zircon/syscall-category.inc" ]
       },
     ]
   }
@@ -272,9 +244,7 @@ if (is_kernel) {
   # Loading and launching userboot, which loads and launches "real" userland.
   source_set("userboot") {
     visibility = [ ":*" ]
-    sources = [
-      "userboot.cc",
-    ]
+    sources = [ "userboot.cc" ]
     include_dirs = [ target_gen_dir ]
     deps = [
       ":headers",
@@ -299,18 +269,14 @@ if (is_kernel) {
   rodso("userboot") {
     visibility = [ ":*" ]
     name = "USERBOOT"
-    deps = [
-      "userboot",
-    ]
+    deps = [ "userboot" ]
   }
 
   if (zbi_compression_algorithm != "none") {
     rodso("decompress_zbi") {
       visibility = [ ":*" ]
       name = "DECOMPRESS_ZBI"
-      deps = [
-        "$zx/system/ulib/hermetic-decompressor:decompress-$zbi_compression_algorithm",
-      ]
+      deps = [ "$zx/system/ulib/hermetic-decompressor:decompress-$zbi_compression_algorithm" ]
 
       # It's hermetic, but it's allowed to have data and bss.
       writable = true

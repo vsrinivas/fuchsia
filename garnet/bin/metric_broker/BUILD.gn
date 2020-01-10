@@ -7,9 +7,7 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "metric_broker"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "config/cobalt",
@@ -19,9 +17,7 @@ executable("bin") {
 }
 
 package("metric_broker") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -40,7 +36,5 @@ package("metric_broker") {
 
 group("test") {
   testonly = true
-  deps = [
-    "config:test",
-  ]
+  deps = [ "config:test" ]
 }

@@ -17,9 +17,7 @@ group("test") {
 driver_module("wlanif-test-driver") {
   output_name = "wlanif-test"
 
-  sources = [
-    "binding.c",
-  ]
+  sources = [ "binding.c" ]
 
   deps = [
     "//garnet/lib/wlan/protocol",
@@ -38,9 +36,7 @@ driver_module("wlanif-test-driver") {
 package("wlanif-test") {
   deprecated_system_image = true
 
-  deps = [
-    ":wlanif-test-driver",
-  ]
+  deps = [ ":wlanif-test-driver" ]
 
   drivers = [
     {
@@ -54,9 +50,7 @@ executable("convert_unittest") {
 
   testonly = true
 
-  sources = [
-    "convert_unittest.cc",
-  ]
+  sources = [ "convert_unittest.cc" ]
 
   deps = [
     "//src/connectivity/wlan/drivers/wlanif:test_source",
@@ -70,9 +64,7 @@ executable("device_unittest") {
 
   testonly = true
 
-  sources = [
-    "device_unittest.cc",
-  ]
+  sources = [ "device_unittest.cc" ]
 
   deps = [
     "//src/connectivity/wlan/drivers/wlanif:test_source",
@@ -92,9 +84,7 @@ executable("impl_unittest") {
 
   testonly = true
 
-  sources = [
-    "impl_unittest.cc",
-  ]
+  sources = [ "impl_unittest.cc" ]
 
   deps = [
     "//garnet/lib/wlan/protocol",

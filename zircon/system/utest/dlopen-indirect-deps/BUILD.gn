@@ -3,47 +3,44 @@
 # found in the LICENSE file.
 
 zx_test("dlopen-indirect-deps") {
-  sources = [
-    "dlopen-indirect-deps.c",
-  ]
+  sources = [ "dlopen-indirect-deps.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
   ]
-  data_deps = [
-    ":dlopen-indirect-deps-test-module",
-  ]
+  data_deps = [ ":dlopen-indirect-deps-test-module" ]
 }
 
 zx_library("dlopen-indirect-deps-test-module") {
-  visibility = [ ":*", "$zx/system/utest/debugger:*" ]
+  visibility = [
+    ":*",
+    "$zx/system/utest/debugger:*",
+  ]
   testonly = true
   shared = true
-  sources = [
-    "dlopen-indirect-deps-test-module/test-module.c",
-  ]
-  deps = [
-    ":dlopen-indirect-deps-test-liba",
-  ]
+  sources = [ "dlopen-indirect-deps-test-module/test-module.c" ]
+  deps = [ ":dlopen-indirect-deps-test-liba" ]
 }
 
 zx_library("dlopen-indirect-deps-test-liba") {
-  visibility = [ ":*", "$zx/system/utest/debugger:*" ]
+  visibility = [
+    ":*",
+    "$zx/system/utest/debugger:*",
+  ]
   testonly = true
   shared = true
   sources = [
     "dlopen-indirect-deps-test-module/dlopen-indirect-deps-test-liba/liba.c",
   ]
-  deps = [
-    ":dlopen-indirect-deps-test-libb",
-  ]
+  deps = [ ":dlopen-indirect-deps-test-libb" ]
 }
 
 zx_library("dlopen-indirect-deps-test-libb") {
-  visibility = [ ":*", "$zx/system/utest/debugger:*" ]
+  visibility = [
+    ":*",
+    "$zx/system/utest/debugger:*",
+  ]
   testonly = true
   shared = true
-  sources = [
-    "dlopen-indirect-deps-test-module/dlopen-indirect-deps-test-liba/dlopen-indirect-deps-test-libb/libb.c",
-  ]
+  sources = [ "dlopen-indirect-deps-test-module/dlopen-indirect-deps-test-liba/dlopen-indirect-deps-test-libb/libb.c" ]
 }

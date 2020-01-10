@@ -4,7 +4,5 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "//src/lib/intl/unicode_utils:tests",
-  ]
+  public_deps = [ "//src/lib/intl/unicode_utils:tests" ]
 }

@@ -4,9 +4,7 @@
 
 source_set("time") {
   testonly = true
-  sources = [
-    "ticks.cc",
-  ]
+  sources = [ "ticks.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("processor") {
-  sources = [
-    "processor.c",
-  ]
+  sources = [ "processor.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

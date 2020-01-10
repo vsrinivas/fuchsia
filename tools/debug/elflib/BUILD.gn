@@ -11,8 +11,6 @@ go_library("elflib") {
 
 go_test("tools_debug_elflib_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/elflib" ]
-  deps = [
-    ":elflib",
-  ]
+  deps = [ ":elflib" ]
   non_go_deps = [ "//tools/debug/elflib/testdata" ]
 }

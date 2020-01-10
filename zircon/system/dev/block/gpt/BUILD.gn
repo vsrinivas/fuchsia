@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("gpt") {
-  sources = [
-    "gpt.cc",
-  ]
+  sources = [ "gpt.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.block.partition",

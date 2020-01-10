@@ -4,9 +4,7 @@
 
 source_set("bti") {
   testonly = true
-  sources = [
-    "bti.cc",
-  ]
+  sources = [ "bti.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",

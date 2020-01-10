@@ -13,7 +13,5 @@ fidl("fuchsia.wlan.minstrel") {
 
   sdk_category = "partner"
 
-  sources = [
-    "wlan_minstrel.fidl",
-  ]
+  sources = [ "wlan_minstrel.fidl" ]
 }

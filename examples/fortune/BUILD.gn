@@ -7,15 +7,11 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "fortune"
 
-  sources = [
-    "fortune.c",
-  ]
+  sources = [ "fortune.c" ]
 }
 
 package("fortune") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

@@ -86,7 +86,5 @@ deprecated_fuchsia_component("dash_component") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":dash_test",
-  ]
+  deps = [ ":dash_test" ]
 }

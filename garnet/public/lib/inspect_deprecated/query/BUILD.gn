@@ -4,21 +4,15 @@
 
 # Do not use this target directly, instead depend on //src/lib/inspect_deprecated/query:query.
 group("query") {
-  public_deps = [
-    "//src/lib/inspect_deprecated/query:query",
-  ]
+  public_deps = [ "//src/lib/inspect_deprecated/query:query" ]
 }
 
 # Do not use this target directly, instead depend on //src/lib/inspect_deprecated/query:text_formatter.
 group("text_formatter") {
-  public_deps = [
-    "//src/lib/inspect_deprecated/query:text_formatter",
-  ]
+  public_deps = [ "//src/lib/inspect_deprecated/query:text_formatter" ]
 }
 
 # Do not use this target directly, instead depend on //src/lib/inspect_deprecated/query:json_formatter.
 group("json_formatter") {
-  public_deps = [
-    "//src/lib/inspect_deprecated/query:json_formatter",
-  ]
+  public_deps = [ "//src/lib/inspect_deprecated/query:json_formatter" ]
 }

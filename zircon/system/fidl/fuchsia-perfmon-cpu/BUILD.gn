@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-perfmon-cpu") {
-  sources = [
-    "perfmon.fidl",
-  ]
+  sources = [ "perfmon.fidl" ]
 }

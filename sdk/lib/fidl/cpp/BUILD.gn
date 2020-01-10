@@ -141,21 +141,15 @@ source_set("test_util") {
     "test/test_util.h",
   ]
 
-  public_deps = [
-    ":cpp_base",
-  ]
+  public_deps = [ ":cpp_base" ]
 }
 
 source_set("test_support") {
   testonly = true
 
-  public = [
-    "test/async_loop_for_test.h",
-  ]
+  public = [ "test/async_loop_for_test.h" ]
 
-  public_deps = [
-    "//zircon/public/lib/async",
-  ]
+  public_deps = [ "//zircon/public/lib/async" ]
 }
 
 fidl("fidl_test") {
@@ -163,9 +157,7 @@ fidl("fidl_test") {
 
   testonly = true
 
-  sources = [
-    "fidl_test.test.fidl",
-  ]
+  sources = [ "fidl_test.test.fidl" ]
 }
 
 gidl_cpp("conformance_test_sources") {
@@ -252,9 +244,7 @@ source_set("test_sources") {
 executable("conformance_test") {
   testonly = true
 
-  sources = [
-    "test/async_loop_for_test.cc",
-  ]
+  sources = [ "test/async_loop_for_test.cc" ]
 
   deps = [
     ":conformance_test_sources",
@@ -271,9 +261,7 @@ executable("conformance_test") {
 executable("fidl_cpp_unittests") {
   testonly = true
 
-  sources = [
-    "test/async_loop_for_test.cc",
-  ]
+  sources = [ "test/async_loop_for_test.cc" ]
 
   deps = [
     ":host_test_sources",
@@ -337,22 +325,14 @@ if (is_linux || is_mac) {
 fidl("union_migration_test_fidl") {
   name = "fidl.test.unionmigration"
 
-  sources = [
-    "union_migration.test.fidl",
-  ]
+  sources = [ "union_migration.test.fidl" ]
 }
 
 fidl("example") {
-  sources = [
-    "transformer_integration_example_lib.test.fidl",
-  ]
+  sources = [ "transformer_integration_example_lib.test.fidl" ]
 }
 
 fidl("transformerintegration.test") {
-  sources = [
-    "transformer_integration.test.fidl",
-  ]
-  public_deps = [
-    ":example",
-  ]
+  sources = [ "transformer_integration.test.fidl" ]
+  public_deps = [ ":example" ]
 }

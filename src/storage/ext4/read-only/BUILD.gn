@@ -29,9 +29,7 @@ rustc_library("ext4-read-only") {
 }
 
 test_package("ext4-read-only-tests") {
-  deps = [
-    ":ext4-read-only_test",
-  ]
+  deps = [ ":ext4-read-only_test" ]
 
   resources = [
     {

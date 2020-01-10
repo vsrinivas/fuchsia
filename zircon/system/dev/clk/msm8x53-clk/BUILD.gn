@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("msm8x53-clk") {
-  sources = [
-    "msm8x53-clk.cc",
-  ]
+  sources = [ "msm8x53-clk.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.clockimpl",

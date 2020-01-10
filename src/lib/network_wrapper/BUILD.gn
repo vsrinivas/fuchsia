@@ -64,9 +64,7 @@ executable("network_wrapper_unittests") {
 }
 
 unittest_package("network_wrapper_tests") {
-  deps = [
-    ":network_wrapper_unittests",
-  ]
+  deps = [ ":network_wrapper_unittests" ]
 
   tests = [
     {
@@ -79,7 +77,5 @@ unittest_package("network_wrapper_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":network_wrapper_tests",
-  ]
+  deps = [ ":network_wrapper_tests" ]
 }

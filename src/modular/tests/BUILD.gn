@@ -21,9 +21,7 @@ group("tests") {
 
 # FIDL services/structs used for testing code only.
 fidl("fuchsia.testing.modular") {
-  sources = [
-    "test_service.test.fidl",
-  ]
+  sources = [ "test_service.test.fidl" ]
 }
 
 executable("agent_services_test") {
@@ -31,9 +29,7 @@ executable("agent_services_test") {
 
   output_name = "agent_services_test"
 
-  sources = [
-    "agent_services_test.cc",
-  ]
+  sources = [ "agent_services_test.cc" ]
 
   deps = [
     ":fuchsia.testing.modular",
@@ -49,9 +45,7 @@ executable("last_focus_time_test") {
 
   output_name = "last_focus_time_test"
 
-  sources = [
-    "last_focus_time_test.cc",
-  ]
+  sources = [ "last_focus_time_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
@@ -66,9 +60,7 @@ executable("last_focus_time_test") {
 executable("sessionctl_test") {
   testonly = true
   output_name = "sessionctl_test"
-  sources = [
-    "sessionctl_test.cc",
-  ]
+  sources = [ "sessionctl_test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
@@ -83,9 +75,7 @@ executable("sessionctl_test") {
 executable("session_shell_test") {
   testonly = true
 
-  sources = [
-    "session_shell_test.cc",
-  ]
+  sources = [ "session_shell_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
@@ -101,9 +91,7 @@ executable("session_shell_test") {
 executable("inspect_session_test") {
   testonly = true
 
-  sources = [
-    "inspect_session_test.cc",
-  ]
+  sources = [ "inspect_session_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
@@ -122,9 +110,7 @@ executable("inspect_session_test") {
 executable("intents_test") {
   testonly = true
 
-  sources = [
-    "intents_test.cc",
-  ]
+  sources = [ "intents_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
@@ -137,9 +123,7 @@ executable("intents_test") {
 
 executable("intl_property_provider_test") {
   testonly = true
-  sources = [
-    "intl_property_provider_test.cc",
-  ]
+  sources = [ "intl_property_provider_test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular.testing",
@@ -158,9 +142,7 @@ executable("module_context_test") {
 
   output_name = "module_context_test"
 
-  sources = [
-    "module_context_test.cc",
-  ]
+  sources = [ "module_context_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
@@ -175,9 +157,7 @@ executable("module_context_test") {
 executable("story_module_test") {
   testonly = true
 
-  sources = [
-    "story_module_test.cc",
-  ]
+  sources = [ "story_module_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.app.discover",
@@ -192,9 +172,7 @@ executable("story_module_test") {
 executable("sessionmgr_integration_test") {
   testonly = true
 
-  sources = [
-    "sessionmgr_integration_test.cc",
-  ]
+  sources = [ "sessionmgr_integration_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.intl",
@@ -215,9 +193,7 @@ executable("sessionmgr_integration_test") {
 executable("story_shell_factory_test") {
   testonly = true
 
-  sources = [
-    "story_shell_factory_test.cc",
-  ]
+  sources = [ "story_shell_factory_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
@@ -235,9 +211,7 @@ executable("story_shell_test") {
 
   output_name = "story_shell_test"
 
-  sources = [
-    "story_shell_test.cc",
-  ]
+  sources = [ "story_shell_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
@@ -252,9 +226,7 @@ executable("story_shell_test") {
 executable("story_shell_embedded_mod_test") {
   testonly = true
 
-  sources = [
-    "story_shell_embedded_mod_test.cc",
-  ]
+  sources = [ "story_shell_embedded_mod_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
@@ -271,9 +243,7 @@ executable("login_override_test") {
 
   output_name = "login_override_test"
 
-  sources = [
-    "login_override_test.cc",
-  ]
+  sources = [ "login_override_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.devicesettings",
@@ -290,9 +260,7 @@ executable("login_override_test") {
 executable("component_context_test") {
   testonly = true
 
-  sources = [
-    "component_context_test.cc",
-  ]
+  sources = [ "component_context_test.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
@@ -306,9 +274,7 @@ executable("component_context_test") {
 executable("stories_share_session_runners_test") {
   testonly = true
 
-  sources = [
-    "stories_share_session_runners_test.cc",
-  ]
+  sources = [ "stories_share_session_runners_test.cc" ]
 
   deps = [
     ":module_with_fake_runner",
@@ -326,9 +292,7 @@ executable("module_with_fake_runner_bin") {
 
   output_name = "module_with_fake_runner"
 
-  sources = [
-    "module_with_fake_runner.cc",
-  ]
+  sources = [ "module_with_fake_runner.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular",
@@ -343,9 +307,7 @@ executable("module_with_fake_runner_bin") {
 package("module_with_fake_runner") {
   testonly = true
 
-  deps = [
-    ":module_with_fake_runner_bin",
-  ]
+  deps = [ ":module_with_fake_runner_bin" ]
 
   binaries = [
     {

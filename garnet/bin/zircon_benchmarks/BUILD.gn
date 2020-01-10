@@ -46,9 +46,7 @@ executable("bin") {
     "//zircon/public/lib/inspect",
     "//zircon/public/lib/zx",
   ]
-  public_deps = [
-    "//zircon/public/lib/perftest",
-  ]
+  public_deps = [ "//zircon/public/lib/perftest" ]
   libs = [ "zircon" ]
 }
 
@@ -56,9 +54,7 @@ executable("bin") {
 executable("fdio_spawn_helper") {
   output_name = "fdio_spawn_helper"
   testonly = true
-  sources = [
-    "fdio_spawn_helper.cc",
-  ]
+  sources = [ "fdio_spawn_helper.cc" ]
   deps = []
   public_deps = []
 }
@@ -69,9 +65,7 @@ fidl("fidl_interface") {
 
   testonly = true
   name = "fuchsia.zircon.benchmarks"
-  sources = [
-    "round_trip_service.fidl",
-  ]
+  sources = [ "round_trip_service.fidl" ]
 }
 
 # Installing this package causes zircon_benchmarks to be run in unit test
@@ -102,9 +96,7 @@ fidl("fidl_interface") {
 test_package("zircon_benchmarks_unittestmode") {
   package_name = "zircon_benchmarks"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -151,7 +143,7 @@ package("zircon_benchmarks_perftestmode") {
 group("zircon_benchmarks") {
   testonly = true
   deps = [
-    ":zircon_benchmarks_unittestmode",
     ":zircon_benchmarks_perftestmode",
+    ":zircon_benchmarks_unittestmode",
   ]
 }

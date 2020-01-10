@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("registry") {
-  sources = [
-    "config-registry.h",
-  ]
+  sources = [ "config-registry.h" ]
 }
 
 source_set("json_reader") {
@@ -13,9 +11,7 @@ source_set("json_reader") {
     "json_reader.cc",
     "json_reader.h",
   ]
-  deps = [
-    "//third_party/rapidjson",
-  ]
+  deps = [ "//third_party/rapidjson" ]
 }
 
 group("test") {

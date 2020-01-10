@@ -7,16 +7,12 @@ import("//build/testing/environments.gni")
 
 group("bin") {
   testonly = true
-  deps = [
-    ":identity_bin_unittests",
-  ]
+  deps = [ ":identity_bin_unittests" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":identity_bin_unittests",
-  ]
+  deps = [ ":identity_bin_unittests" ]
 }
 
 test_package("identity_bin_unittests") {

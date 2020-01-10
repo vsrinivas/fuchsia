@@ -24,9 +24,7 @@ rustc_library("async-helpers") {
 test_package("async-helpers-tests") {
   package_name = "async-helpers-tests"
 
-  deps = [
-    ":async-helpers_test",
-  ]
+  deps = [ ":async-helpers_test" ]
 
   tests = [
     {

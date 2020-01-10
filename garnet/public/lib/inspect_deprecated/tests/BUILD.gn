@@ -4,8 +4,6 @@
 
 # Do not use this target directly, instead depend on //src/lib/inspect_deprecated/tests:inspect_unittests.
 group("inspect_unittests") {
-  public_deps = [
-    "//src/lib/inspect_deprecated/tests:inspect_unittests",
-  ]
+  public_deps = [ "//src/lib/inspect_deprecated/tests:inspect_unittests" ]
   testonly = true
 }

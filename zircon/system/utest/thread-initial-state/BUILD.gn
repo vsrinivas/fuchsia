@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("thread-initial-state") {
-  sources = [
-    "init-state.c",
-  ]
+  sources = [ "init-state.c" ]
   if (current_cpu == "x64") {
     sources += [ "x86-64.S" ]
   } else {

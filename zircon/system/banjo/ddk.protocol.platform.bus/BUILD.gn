@@ -5,9 +5,7 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.platform.bus") {
-  sources = [
-    "platform-bus.banjo",
-  ]
+  sources = [ "platform-bus.banjo" ]
   public_deps = [
     "$zx/system/banjo/ddk.driver",
     "$zx/system/banjo/ddk.protocol.platform.device",

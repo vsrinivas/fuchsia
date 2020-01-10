@@ -5,12 +5,8 @@
 zx_library("ldmsg") {
   sdk = "static"
   sdk_headers = [ "ldmsg/ldmsg.h" ]
-  sources = [
-    "ldmsg.c",
-  ]
-  deps = [
-    "$zx/system/ulib/zircon",
-  ]
+  sources = [ "ldmsg.c" ]
+  deps = [ "$zx/system/ulib/zircon" ]
 
   if (toolchain.base_environment == "user") {
     # This library is used by libc, so suppress the circularity.

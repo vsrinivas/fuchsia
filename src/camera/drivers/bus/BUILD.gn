@@ -4,7 +4,5 @@
 
 group("bus") {
   testonly = true
-  deps = [
-    "aml-mipicsi",
-  ]
+  deps = [ "aml-mipicsi" ]
 }

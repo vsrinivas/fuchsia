@@ -7,13 +7,9 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "simple_gtest_adapter_example"
   testonly = true
-  sources = [
-    "simple_gtest_adapter_example.cc",
-  ]
+  sources = [ "simple_gtest_adapter_example.cc" ]
 
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
 package("simple_gtest_adapter_example") {
@@ -45,7 +41,5 @@ package("simple_gtest_adapter_example") {
 
 group("simple-example") {
   testonly = true
-  deps = [
-    ":simple_gtest_adapter_example",
-  ]
+  deps = [ ":simple_gtest_adapter_example" ]
 }

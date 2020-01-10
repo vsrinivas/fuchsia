@@ -45,9 +45,7 @@ rustc_test("tests") {
 }
 
 package("dhcpd-cli") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

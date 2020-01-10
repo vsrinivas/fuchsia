@@ -16,9 +16,7 @@ rustc_library("fuchsia-async-testloop") {
 }
 
 group("tests") {
-  public_deps = [
-    "test:fuchsia-async-testloop-tests",
-  ]
+  public_deps = [ "test:fuchsia-async-testloop-tests" ]
 
   testonly = true
 }

@@ -9,9 +9,7 @@ zx_library("lazy_init") {
   kernel = true
   static = true
   if (!is_kernel) {
-    deps = [
-      "$zx/system/ulib/zx",
-    ]
+    deps = [ "$zx/system/ulib/zx" ]
   }
 }
 

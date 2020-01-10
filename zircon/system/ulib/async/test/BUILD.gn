@@ -4,9 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":async",
-  ]
+  deps = [ ":async" ]
 }
 
 zx_test("async") {

@@ -21,9 +21,7 @@ if (is_linux) {
 
     name = "fuchsia.googlesource.com/tests/oom"
 
-    deps = [
-      "//src/testing/qemu",
-    ]
+    deps = [ "//src/testing/qemu" ]
   }
 
   group("main_zbi") {
@@ -33,10 +31,8 @@ if (is_linux) {
   }
 
   go_test("oom_tests") {
-    gopackages = ["fuchsia.googlesource.com/tests/oom"]
-    deps = [
-      ":lib",
-    ]
+    gopackages = [ "fuchsia.googlesource.com/tests/oom" ]
+    deps = [ ":lib" ]
     non_go_deps = [ ":main_zbi" ]
   }
 }

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("mt8167-thermal") {
-  sources = [
-    "mt8167-thermal.cc",
-  ]
+  sources = [ "mt8167-thermal.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/fidl/fuchsia-sysinfo:c",

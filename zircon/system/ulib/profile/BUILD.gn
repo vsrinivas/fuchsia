@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("profile") {
-  sources = [
-    "profile.cc",
-  ]
+  sources = [ "profile.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-scheduler:c",
     "$zx/system/ulib/async",

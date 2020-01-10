@@ -18,17 +18,15 @@ rustc_library("parser") {
   ]
 
   test_deps = [
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//src/lib/test_util",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
 test_package("tests") {
   package_name = "storage-ext4-parser-tests"
 
-  deps = [
-    ":parser_test",
-  ]
+  deps = [ ":parser_test" ]
 
   resources = [
     {

@@ -5,9 +5,7 @@
 import("//build/go/go_test.gni")
 
 go_test("netstack_link_bridge_test") {
-  gopackages = ["netstack/link/bridge"]
+  gopackages = [ "netstack/link/bridge" ]
 
-  deps = [
-    "../../:netstack_lib",
-  ]
+  deps = [ "../../:netstack_lib" ]
 }

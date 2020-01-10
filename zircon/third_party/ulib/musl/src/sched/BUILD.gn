@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("sched") {
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   sources = [
     "affinity.c",
     "sched_cpucount.c",

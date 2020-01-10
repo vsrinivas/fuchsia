@@ -36,9 +36,7 @@ rustc_binary("test_suite") {
 package("text_test_suite") {
   testonly = true
 
-  deps = [
-    ":test_suite",
-  ]
+  deps = [ ":test_suite" ]
 
   binary = "text_test_suite"
 
@@ -51,9 +49,7 @@ package("text_test_suite") {
 }
 
 test_package("text_test_suite_tests") {
-  deps = [
-    ":test_suite_test",
-  ]
+  deps = [ ":test_suite_test" ]
 
   tests = [
     {

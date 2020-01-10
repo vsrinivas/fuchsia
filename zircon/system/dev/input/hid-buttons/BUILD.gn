@@ -4,18 +4,14 @@
 
 zx_driver("hid-buttons") {
   sources = []
-  deps = [
-    ":common",
-  ]
+  deps = [ ":common" ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
   deprecated_inhibit_driver_shlib_allowlist = true
 }
 
 source_set("common") {
-  sources = [
-    "hid-buttons.cc",
-  ]
+  sources = [ "hid-buttons.cc" ]
 
   public_deps = [
     "$zx/system/banjo/ddk.protocol.buttons",
@@ -40,9 +36,7 @@ source_set("common") {
 
 zx_test("hid-buttons-test") {
   output_name = "hid-buttons-test"
-  sources = [
-    "hid-buttons-test.cc",
-  ]
+  sources = [ "hid-buttons-test.cc" ]
   deps = [
     ":common",
     "$zx/system/dev/lib/fake_ddk",

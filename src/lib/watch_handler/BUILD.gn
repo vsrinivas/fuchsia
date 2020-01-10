@@ -15,7 +15,5 @@ rustc_library("watch_handler") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":watch_handler_test",
-  ]
+  deps = [ ":watch_handler_test" ]
 }

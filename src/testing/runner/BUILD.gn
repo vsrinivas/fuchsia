@@ -16,7 +16,5 @@ dart_tool("test_runner") {
 }
 
 group("runner") {
-  deps = [
-    ":test_runner($host_toolchain)",
-  ]
+  deps = [ ":test_runner($host_toolchain)" ]
 }

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("unbind") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/ulib/fdio",

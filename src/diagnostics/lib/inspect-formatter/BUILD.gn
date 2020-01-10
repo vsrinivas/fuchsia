@@ -24,9 +24,7 @@ rustc_library("inspect-formatter") {
 }
 
 test_package("inspect_formatter_tests") {
-  deps = [
-    ":inspect-formatter_test",
-  ]
+  deps = [ ":inspect-formatter_test" ]
   tests = [
     {
       name = "inspect_formatter_lib_test"
@@ -36,7 +34,5 @@ test_package("inspect_formatter_tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":inspect_formatter_tests",
-  ]
+  deps = [ ":inspect_formatter_tests" ]
 }

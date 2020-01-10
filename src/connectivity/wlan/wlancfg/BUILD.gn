@@ -52,9 +52,7 @@ rustc_binary("bin") {
 }
 
 package("wlancfg") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -74,26 +72,16 @@ package("wlancfg") {
 config_data("config") {
   for_pkg = "wlancfg"
   if (wlancfg_config_type == "ap") {
-    sources = [
-      rebase_path("config/ap.json"),
-    ]
-    outputs = [
-      "default.json",
-    ]
+    sources = [ rebase_path("config/ap.json") ]
+    outputs = [ "default.json" ]
   } else if (wlancfg_config_type == "client") {
-    sources = [
-      rebase_path("config/client.json"),
-    ]
-    outputs = [
-      "default.json",
-    ]
+    sources = [ rebase_path("config/client.json") ]
+    outputs = [ "default.json" ]
   }
 }
 
 test_package("wlancfg-tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
   tests = [
     {
       name = "wlancfg_bin_test"

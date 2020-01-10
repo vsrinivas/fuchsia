@@ -15,15 +15,11 @@ go_library("far") {
 go_test("go_far_test") {
   gopackages = [ "fuchsia.googlesource.com/far" ]
 
-  deps = [
-    ":far",
-  ]
+  deps = [ ":far" ]
 }
 
 test_package("go_far_tests") {
-  deps = [
-    ":go_far_test",
-  ]
+  deps = [ ":go_far_test" ]
 
   tests = [
     {

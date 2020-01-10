@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":libfs-pty-test",
-  ]
+  deps = [ ":libfs-pty-test" ]
 }
 
 zx_test("libfs-pty-test") {
-  sources = [
-    "service-test.cc",
-  ]
+  sources = [ "service-test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-pty:llcpp",
     "$zx/system/ulib/async:async-cpp",

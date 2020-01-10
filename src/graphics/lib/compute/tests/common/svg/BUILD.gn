@@ -30,12 +30,8 @@ source_set("svg") {
 }
 
 executable("spn_svg_dump") {
-  sources = [
-    "svg_dump_main.cc",
-  ]
-  deps = [
-    ":svg",
-  ]
+  sources = [ "svg_dump_main.cc" ]
+  deps = [ ":svg" ]
 }
 
 graphics_compute_unittests("unittests") {
@@ -44,7 +40,5 @@ graphics_compute_unittests("unittests") {
     "svg_bounds_unittest.cc",
     "svg_print_unittest.cc",
   ]
-  deps = [
-    ":svg",
-  ]
+  deps = [ ":svg" ]
 }

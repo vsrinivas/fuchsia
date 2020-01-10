@@ -7,9 +7,7 @@ import("$zx/public/gn/fidl.gni")
 if (is_fuchsia) {
   group("test") {
     testonly = true
-    deps = [
-      ":service-llcpp-test",
-    ]
+    deps = [ ":service-llcpp-test" ]
   }
 
   zx_test("service-llcpp-test") {
@@ -34,17 +32,13 @@ if (is_fuchsia) {
   # Manually generated LLCPP bindings.
   source_set("fidl.service.test-llcpp") {
     testonly = true
-    sources = [
-      "generated/fidl_llcpp_test.test.cc",
-    ]
+    sources = [ "generated/fidl_llcpp_test.test.cc" ]
     include_dirs = [ "generated" ]
     deps = [
       ":fidl.service.test.c",
       "$zx/system/ulib/fidl:fidl-llcpp",
     ]
-    public_deps = [
-      "$zx/system/ulib/fidl:fidl-llcpp.headers",
-    ]
+    public_deps = [ "$zx/system/ulib/fidl:fidl-llcpp.headers" ]
   }
 }
 
@@ -52,7 +46,5 @@ if (is_fuchsia) {
 fidl_library("fidl.service.test") {
   testonly = true
   visibility = [ ":*" ]
-  sources = [
-    "test.test.fidl",
-  ]
+  sources = [ "test.test.fidl" ]
 }

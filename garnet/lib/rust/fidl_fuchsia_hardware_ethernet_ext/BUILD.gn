@@ -21,9 +21,7 @@ rustc_library("fidl_fuchsia_hardware_ethernet_ext") {
 }
 
 unittest_package("fidl_fuchsia_hardware_ethernet_ext_tests") {
-  deps = [
-    ":fidl_fuchsia_hardware_ethernet_ext_test",
-  ]
+  deps = [ ":fidl_fuchsia_hardware_ethernet_ext_test" ]
   tests = [
     {
       name = "fidl_fuchsia_hardware_ethernet_ext_lib_test"

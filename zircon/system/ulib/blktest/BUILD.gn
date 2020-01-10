@@ -5,9 +5,7 @@
 zx_library("blktest") {
   shared = true
   testonly = true
-  sources = [
-    "blktest.cc",
-  ]
+  sources = [ "blktest.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/ulib/block-client",

@@ -21,9 +21,7 @@ zx_library("async") {
     # <lib/async/cpp/wait.h> has #include <lib/fit/function.h>.
     "$zx/system/ulib/fit:headers",
   ]
-  sources = [
-    "ops.c",
-  ]
+  sources = [ "ops.c" ]
   deps = [
     "$zx/system/ulib/fit",
     "$zx/system/ulib/zircon",
@@ -73,9 +71,7 @@ zx_library("async-default") {
   sdk_publishable = true
   sdk_headers = [ "lib/async/default.h" ]
   shared = true
-  sources = [
-    "default.c",
-  ]
+  sources = [ "default.c" ]
   public_deps = [
     # <lib/async/default.h> has #include <lib/async/dispatcher.h>.
     ":async.headers",

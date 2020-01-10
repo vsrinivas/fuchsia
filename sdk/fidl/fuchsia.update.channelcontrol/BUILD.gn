@@ -7,11 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.update.channelcontrol") {
   sdk_category = "partner"
 
-  sources = [
-    "channelcontrol.fidl",
-  ]
+  sources = [ "channelcontrol.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.update.channel",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.update.channel" ]
 }

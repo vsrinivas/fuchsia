@@ -21,18 +21,14 @@ source_set("test_utils") {
     "//zircon/public/lib/zx",
   ]
 
-  deps = [
-    "//src/lib/fsl",
-  ]
+  deps = [ "//src/lib/fsl" ]
 }
 
 executable("tracing_test_utils_tests_app") {
   testonly = true
   output_name = "tracing_test_utils_tests"
 
-  sources = [
-    "run_program_tests.cc",
-  ]
+  sources = [ "run_program_tests.cc" ]
 
   deps = [
     ":test_utils",
@@ -43,21 +39,15 @@ executable("tracing_test_utils_tests_app") {
 executable("tracing_test_utils_return_1234") {
   testonly = true
 
-  sources = [
-    "return_1234.cc",
-  ]
+  sources = [ "return_1234.cc" ]
 }
 
 executable("tracing_test_utils_signal_peer") {
   testonly = true
 
-  sources = [
-    "signal_peer.cc",
-  ]
+  sources = [ "signal_peer.cc" ]
 
-  deps = [
-    "//zircon/public/lib/zx",
-  ]
+  deps = [ "//zircon/public/lib/zx" ]
 }
 
 test_package("tracing_test_utils_tests") {

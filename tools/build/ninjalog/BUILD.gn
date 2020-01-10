@@ -11,7 +11,5 @@ go_library("ninjalog") {
 
 go_test("ninjalog_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/lib/ninjalog" ]
-  deps = [
-    ":ninjalog",
-  ]
+  deps = [ ":ninjalog" ]
 }

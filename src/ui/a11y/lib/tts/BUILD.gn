@@ -10,9 +10,7 @@ source_set("tts") {
     "tts_manager.h",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.accessibility.tts",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.accessibility.tts" ]
 
   deps = [
     "//garnet/public/lib/syslog/cpp",

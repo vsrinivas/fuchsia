@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("usb-cdc-function") {
-  sources = [
-    "cdc-eth-function.cc",
-  ]
+  sources = [ "cdc-eth-function.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/banjo/ddk.protocol.usb",

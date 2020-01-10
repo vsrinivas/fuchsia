@@ -25,9 +25,7 @@ rustc_binary("locate_bin") {
 }
 
 package("locate") {
-  deps = [
-    ":locate_bin",
-  ]
+  deps = [ ":locate_bin" ]
 
   meta = [
     {
@@ -62,9 +60,7 @@ rustc_binary("locate_integration_test_bin") {
 }
 
 test_package("locate_integration_test") {
-  deps = [
-    ":locate_integration_test_bin",
-  ]
+  deps = [ ":locate_integration_test_bin" ]
 
   tests = [
     {
@@ -78,7 +74,5 @@ test_package("locate_integration_test") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":locate_integration_test",
-  ]
+  deps = [ ":locate_integration_test" ]
 }

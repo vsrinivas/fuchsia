@@ -8,7 +8,5 @@ import("//build/dart/dart_tool.gni")
 dart_tool("rotated_square_test") {
   main_dart = "lib/rotated_square_test.dart"
 
-  deps = [
-    "//third_party/dart-pkg/pub/test",
-  ]
+  deps = [ "//third_party/dart-pkg/pub/test" ]
 }

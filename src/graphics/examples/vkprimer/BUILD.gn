@@ -12,9 +12,7 @@ package("vkprimer") {
 
   binary = "vkprimer"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   resources = [
     {
@@ -67,9 +65,7 @@ executable("bin") {
 
   defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 
   if (is_fuchsia) {
     include_dirs += [ "//src/graphics/examples/vkprimer/fuchsia" ]
@@ -118,16 +114,12 @@ copy("spirv_copy") {
     "common/shaders/vert.spv",
   ]
 
-  outputs = [
-    "$target_out_dir/{{source_file_part}}",
-  ]
+  outputs = [ "$target_out_dir/{{source_file_part}}" ]
 }
 
 #
 # Linux / Mac Build
 #
 group("vkprimer_glfw") {
-  deps = [
-    ":bin($host_toolchain)",
-  ]
+  deps = [ ":bin($host_toolchain)" ]
 }

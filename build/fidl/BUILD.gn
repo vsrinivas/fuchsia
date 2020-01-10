@@ -29,12 +29,8 @@ toolchain("fidling") {
 # A generated file that lists all of the .fidl.json files.
 generated_file("all_fidl_json") {
   testonly = true
-  deps = [
-    "//:default",
-  ]
+  deps = [ "//:default" ]
 
-  outputs = [
-    "$root_build_dir/all_fidl_json.txt",
-  ]
+  outputs = [ "$root_build_dir/all_fidl_json.txt" ]
   data_keys = [ "fidl_json" ]
 }

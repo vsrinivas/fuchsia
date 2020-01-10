@@ -41,9 +41,7 @@ rustc_binary("bin") {
 }
 
 package("net-cli") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -54,9 +52,7 @@ package("net-cli") {
 }
 
 test_package("net-cli-tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

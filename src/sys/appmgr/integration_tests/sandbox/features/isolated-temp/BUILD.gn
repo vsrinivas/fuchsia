@@ -14,9 +14,7 @@ group("isolated-temp") {
 }
 
 sandbox_test_package("has_isolated_temp") {
-  sources = [
-    "has_isolated_temp.cc",
-  ]
+  sources = [ "has_isolated_temp.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -26,9 +24,7 @@ sandbox_test_package("has_isolated_temp") {
 }
 
 sandbox_test_package("no_isolated_temp") {
-  sources = [
-    "no_isolated_temp.cc",
-  ]
+  sources = [ "no_isolated_temp.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",

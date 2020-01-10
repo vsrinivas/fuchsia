@@ -7,15 +7,13 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "transparency_benchmark"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
-    "//sdk/lib/sys/cpp",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp:cpp",
     "//sdk/lib/ui/scenic/cpp:cpp",
     "//src/lib/fxl",
@@ -26,9 +24,7 @@ executable("bin") {
 }
 
 package("transparency_benchmark") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "transparency_benchmark"
 

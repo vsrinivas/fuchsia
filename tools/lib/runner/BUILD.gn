@@ -15,7 +15,5 @@ go_library("runner") {
 
 go_test("runner_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/runner" ]
-  deps = [
-    ":runner",
-  ]
+  deps = [ ":runner" ]
 }

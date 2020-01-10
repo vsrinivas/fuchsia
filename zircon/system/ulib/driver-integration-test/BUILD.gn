@@ -7,9 +7,7 @@ zx_library("driver-integration-test") {
   sdk_headers = [ "lib/driver-integration-test/fixture.h" ]
 
   shared = true
-  sources = [
-    "launcher.cc",
-  ]
+  sources = [ "launcher.cc" ]
   deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-integration-test",

@@ -25,7 +25,5 @@ fidl("fuchsia.net.oldhttp") {
     "url_response.fidl",
   ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-mem",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-mem" ]
 }

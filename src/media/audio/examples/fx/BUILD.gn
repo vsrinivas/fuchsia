@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 package("fx") {
-  deps = [
-    ":fx_bin",
-  ]
+  deps = [ ":fx_bin" ]
 
   binaries = [
     {
@@ -27,9 +25,7 @@ package("fx") {
 executable("fx_bin") {
   output_name = "fx"
 
-  sources = [
-    "fx.cc",
-  ]
+  sources = [ "fx.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.media",

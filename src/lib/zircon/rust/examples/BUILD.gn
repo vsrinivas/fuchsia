@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 package("zircon_rust_examples") {
-  deps = [
-    "zx_toy",
-  ]
+  deps = [ "zx_toy" ]
 
   binaries = [
     {

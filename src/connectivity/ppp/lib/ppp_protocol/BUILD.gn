@@ -34,9 +34,7 @@ rustc_test("ppp_protocol_test_bin") {
 }
 
 unittest_package("ppp-protocol-tests") {
-  deps = [
-    ":ppp_protocol_test_bin",
-  ]
+  deps = [ ":ppp_protocol_test_bin" ]
 
   tests = [
     {

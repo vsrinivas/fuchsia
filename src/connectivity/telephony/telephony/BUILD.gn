@@ -32,9 +32,7 @@ rustc_binary("bin") {
 }
 
 package("telephony") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "telephony"
 
@@ -49,15 +47,11 @@ package("telephony") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":telephony_tests",
-  ]
+  deps = [ ":telephony_tests" ]
 }
 
 test_package("telephony_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
   tests = [
     {
       name = "telephony_bin_test"

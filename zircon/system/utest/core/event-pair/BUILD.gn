@@ -4,9 +4,7 @@
 
 source_set("event-pair") {
   testonly = true
-  sources = [
-    "event-pair.cc",
-  ]
+  sources = [ "event-pair.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

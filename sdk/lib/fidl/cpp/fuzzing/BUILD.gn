@@ -27,15 +27,11 @@ source_set("fuzzing") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fidl_cpp_fuzzing_tests",
-  ]
+  deps = [ ":fidl_cpp_fuzzing_tests" ]
 }
 
 test("fidl_cpp_fuzzing_unittests") {
-  sources = [
-    "traits_unittest.cc",
-  ]
+  sources = [ "traits_unittest.cc" ]
   deps = [
     ":fuzzing",
     "//src/lib/fxl/test:gtest_main",
@@ -43,9 +39,7 @@ test("fidl_cpp_fuzzing_unittests") {
 }
 
 test_package("fidl_cpp_fuzzing_tests") {
-  deps = [
-    ":fidl_cpp_fuzzing_unittests",
-  ]
+  deps = [ ":fidl_cpp_fuzzing_unittests" ]
   tests = [
     {
       name = "fidl_cpp_fuzzing_unittests"

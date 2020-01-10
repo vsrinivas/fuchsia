@@ -12,9 +12,7 @@ fostr_fidl("fuchsia.math") {
   amendments_path =
       "//garnet/public/lib/fostr/fidl/fuchsia.math/amendments.json"
 
-  public_deps = [
-    ":amendments",
-  ]
+  public_deps = [ ":amendments" ]
 }
 
 source_set("amendments") {
@@ -25,7 +23,5 @@ source_set("amendments") {
 
   public_configs = [ "//garnet/public:config" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.math",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.math" ]
 }

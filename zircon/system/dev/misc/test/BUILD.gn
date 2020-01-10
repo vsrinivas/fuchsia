@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("test") {
-  sources = [
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.test",
     "$zx/system/fidl/fuchsia-device-test:c",

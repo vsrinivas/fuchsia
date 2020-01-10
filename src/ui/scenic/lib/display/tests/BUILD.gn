@@ -5,9 +5,7 @@
 group("tests") {
   testonly = true
 
-  public_deps = [
-    ":unittests",
-  ]
+  public_deps = [ ":unittests" ]
 }
 
 executable("unittests") {

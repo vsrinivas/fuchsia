@@ -4,7 +4,5 @@
 
 # Do not use this target directly, instead depend on //src/sys/lib/chrealm:chrealm.
 group("chrealm") {
-  public_deps = [
-    "//src/sys/lib/chrealm:chrealm",
-  ]
+  public_deps = [ "//src/sys/lib/chrealm:chrealm" ]
 }

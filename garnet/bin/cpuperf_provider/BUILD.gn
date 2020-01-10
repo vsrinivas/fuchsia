@@ -70,9 +70,7 @@ executable("bin") {
 }
 
 package("cpuperf_provider") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "cpuperf_provider"
 
@@ -85,18 +83,14 @@ package("cpuperf_provider") {
 }
 
 group("report_generators") {
-  deps = [
-    "//garnet/bin/cpuperf_provider/report-generators/tally",
-  ]
+  deps = [ "//garnet/bin/cpuperf_provider/report-generators/tally" ]
 }
 
 executable("cpuperf_provider_tests_bin") {
   testonly = true
   output_name = "cpuperf_provider_tests"
 
-  sources = [
-    "categories_unittest.cc",
-  ]
+  sources = [ "categories_unittest.cc" ]
 
   deps = [
     ":categories",
@@ -109,9 +103,7 @@ if (current_cpu == "x64") {
     testonly = true
     output_name = "cpuperf_provider_integration_tests"
 
-    sources = [
-      "cpuperf_provider_integration_tests.cc",
-    ]
+    sources = [ "cpuperf_provider_integration_tests.cc" ]
 
     deps = [
       "//garnet/lib/perfmon",
@@ -128,9 +120,7 @@ if (current_cpu == "x64") {
 test_package("cpuperf_provider_tests") {
   deprecated_shell = "//build"
 
-  deps = [
-    ":cpuperf_provider_tests_bin",
-  ]
+  deps = [ ":cpuperf_provider_tests_bin" ]
 
   tests = [
     {

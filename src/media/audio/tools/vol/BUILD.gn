@@ -4,9 +4,7 @@
 import("//build/package.gni")
 
 package("vol") {
-  deps = [
-    ":vol_bin",
-  ]
+  deps = [ ":vol_bin" ]
 
   binaries = [
     {
@@ -19,9 +17,7 @@ package("vol") {
 executable("vol_bin") {
   output_name = "vol"
 
-  sources = [
-    "vol_app.cc",
-  ]
+  sources = [ "vol_app.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.media",

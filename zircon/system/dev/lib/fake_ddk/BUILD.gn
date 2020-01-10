@@ -15,9 +15,7 @@ zx_library("fake_ddk") {
   sdk = "static"
   sdk_headers = [ "lib/fake_ddk/fake_ddk.h" ]
   testonly = true
-  sources = [
-    "fake_ddk.cc",
-  ]
+  sources = [ "fake_ddk.cc" ]
   if (enable_driver_unittest_logs) {
     defines = [ "LOG_FLAGS=${driver_unittest_log_flags}" ]
   } else {

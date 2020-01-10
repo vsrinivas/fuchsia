@@ -19,9 +19,7 @@ rustc_library("char_set") {
 }
 
 test_package("char_set_tests") {
-  deps = [
-    ":char_set_test",
-  ]
+  deps = [ ":char_set_test" ]
 
   tests = [
     {
@@ -33,7 +31,5 @@ test_package("char_set_tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":char_set_tests",
-  ]
+  public_deps = [ ":char_set_tests" ]
 }

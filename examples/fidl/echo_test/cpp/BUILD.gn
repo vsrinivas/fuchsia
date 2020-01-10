@@ -7,9 +7,7 @@ import("//build/test/test_package.gni")
 executable("echo_integration_test") {
   testonly = true
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp",
@@ -20,9 +18,7 @@ executable("echo_integration_test") {
 }
 
 test_package("echo_test") {
-  deps = [
-    ":echo_integration_test",
-  ]
+  deps = [ ":echo_integration_test" ]
 
   tests = [
     {

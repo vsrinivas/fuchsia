@@ -32,9 +32,7 @@ zx_executable("ps") {
 }
 
 zx_executable("top") {
-  sources = [
-    "top.c",
-  ]
+  sources = [ "top.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
@@ -45,9 +43,7 @@ zx_executable("top") {
 }
 
 zx_executable("kill") {
-  sources = [
-    "kill.c",
-  ]
+  sources = [ "kill.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
@@ -57,9 +53,7 @@ zx_executable("kill") {
 }
 
 zx_executable("killall") {
-  sources = [
-    "killall.c",
-  ]
+  sources = [ "killall.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
@@ -69,9 +63,7 @@ zx_executable("killall") {
 }
 
 zx_executable("vmaps") {
-  sources = [
-    "vmaps.c",
-  ]
+  sources = [ "vmaps.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",
@@ -113,12 +105,8 @@ zx_executable("memgraph") {
 
 # Generate an include file that contains the schema JSON.
 action("gen-memgraph-schema") {
-  outputs = [
-    "$target_gen_dir/memgraph-schema.h",
-  ]
-  sources = [
-    "memgraph-schema.json",
-  ]
+  outputs = [ "$target_gen_dir/memgraph-schema.h" ]
+  sources = [ "memgraph-schema.json" ]
   script = "gen-memgraph-schema-header.sh"
   args = rebase_path(outputs, root_build_dir) +
          rebase_path(sources, root_build_dir)
@@ -138,9 +126,7 @@ zx_executable("kstats") {
 }
 
 zx_executable("threads") {
-  sources = [
-    "threads.cc",
-  ]
+  sources = [ "threads.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fbl",
@@ -154,9 +140,7 @@ zx_executable("threads") {
 }
 
 zx_executable("signal") {
-  sources = [
-    "signal.c",
-  ]
+  sources = [ "signal.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",

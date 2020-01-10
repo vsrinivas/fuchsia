@@ -4,9 +4,7 @@
 
 source_set("handle-transfer") {
   testonly = true
-  sources = [
-    "handle-transfer.cc",
-  ]
+  sources = [ "handle-transfer.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

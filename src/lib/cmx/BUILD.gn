@@ -53,9 +53,7 @@ executable("tests") {
 }
 
 test_package("cmx_unittests") {
-  deps = [
-    ":tests",
-  ]
+  deps = [ ":tests" ]
   tests = [
     {
       name = "cmx_unittests"
@@ -69,9 +67,7 @@ fuzz_package("cmx_fuzzers") {
 }
 
 fuzz_target("cmx_fuzzer") {
-  sources = [
-    "cmx_fuzztest.cc",
-  ]
+  sources = [ "cmx_fuzztest.cc" ]
   deps = [
     ":cmx",
     "//src/lib/files",

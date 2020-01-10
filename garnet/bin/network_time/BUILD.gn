@@ -7,9 +7,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 test_package("network_time_tests") {
-  deps = [
-    ":tests",
-  ]
+  deps = [ ":tests" ]
 
   tests = [
     {
@@ -49,9 +47,7 @@ static_library("time_util_lib") {
     "time_util.cc",
     "time_util.h",
   ]
-  deps = [
-    "//zircon/system/fidl/fuchsia-hardware-rtc",
-  ]
+  deps = [ "//zircon/system/fidl/fuchsia-hardware-rtc" ]
 }
 
 executable("tests") {

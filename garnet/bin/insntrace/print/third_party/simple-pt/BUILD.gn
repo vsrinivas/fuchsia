@@ -4,9 +4,7 @@
 
 group("simple-pt") {
   testonly = true
-  deps = [
-    ":printer",
-  ]
+  deps = [ ":printer" ]
 }
 
 source_set("printer") {

@@ -27,9 +27,7 @@ executable("bin") {
 }
 
 package("image_grid_cpp") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

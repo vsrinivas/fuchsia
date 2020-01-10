@@ -8,7 +8,5 @@ config("include-config") {
 
 source_set("include") {
   public_configs = [ ":include-config" ]
-  sources = [
-    "img-sys-device.h",
-  ]
+  sources = [ "img-sys-device.h" ]
 }

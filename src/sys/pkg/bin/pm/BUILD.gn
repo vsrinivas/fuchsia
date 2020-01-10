@@ -36,9 +36,7 @@ foreach(pkg, test_packages) {
   name = "pm_${pkg_}_test"
   go_test(name) {
     gopackages = [ "fuchsia.googlesource.com/pm/${pkg}" ]
-    deps = [
-      ":pm_lib",
-    ]
+    deps = [ ":pm_lib" ]
   }
 
   test_labels += [ ":$name" ]
@@ -56,15 +54,11 @@ go_binary("pm_bin") {
   output_name = "pm"
   gopackage = "fuchsia.googlesource.com/pm/cmd/pm"
   sdk_category = "partner"
-  deps = [
-    ":pm_lib",
-  ]
+  deps = [ ":pm_lib" ]
 }
 
 package("pm") {
-  deps = [
-    ":pm_bin",
-  ]
+  deps = [ ":pm_bin" ]
 
   binaries = [
     {
@@ -82,17 +76,11 @@ package("pm") {
 }
 
 install_host_tools("host") {
-  deps = [
-    ":pm_bin",
-  ]
-  outputs = [
-    "pm",
-  ]
+  deps = [ ":pm_bin" ]
+  outputs = [ "pm" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":host_tests",
-  ]
+  public_deps = [ ":host_tests" ]
 }

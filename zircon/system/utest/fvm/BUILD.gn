@@ -48,9 +48,7 @@ zx_test("fvm") {
 }
 
 zx_test("fvm-integration") {
-  sources = [
-    "resize-tests.cc",
-  ]
+  sources = [ "resize-tests.cc" ]
 
   deps = [
     "$zx/system/ulib/devmgr-integration-test",

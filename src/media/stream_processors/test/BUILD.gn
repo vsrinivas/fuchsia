@@ -46,9 +46,7 @@ rustc_library("stream_processor_test_lib") {
 }
 
 test_package("stream_processor_lib_test") {
-  deps = [
-    ":stream_processor_test_lib_test",
-  ]
+  deps = [ ":stream_processor_test_lib_test" ]
 
   tests = [
     {
@@ -119,9 +117,7 @@ rustc_test("audio_encoder_test_bin") {
 }
 
 test_package("audio_encoder_test") {
-  deps = [
-    ":audio_encoder_test_bin",
-  ]
+  deps = [ ":audio_encoder_test_bin" ]
 
   tests = [
     {
@@ -153,9 +149,7 @@ rustc_library("video_frame_hasher_lib") {
 }
 
 test_package("video_frame_hasher_test") {
-  deps = [
-    ":video_frame_hasher_lib_test",
-  ]
+  deps = [ ":video_frame_hasher_lib_test" ]
 
   tests = [
     {
@@ -187,9 +181,7 @@ rustc_test("h264_decoder_test_bin") {
 }
 
 test_package("h264_decoder_test") {
-  deps = [
-    ":h264_decoder_test_bin",
-  ]
+  deps = [ ":h264_decoder_test_bin" ]
 
   tests = [
     {

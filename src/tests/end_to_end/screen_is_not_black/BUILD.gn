@@ -6,9 +6,7 @@ import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 
 dart_test("screen_is_not_black_test") {
-  sources = [
-    "screen_is_not_black_test.dart",
-  ]
+  sources = [ "screen_is_not_black_test.dart" ]
 
   deps = [
     "//sdk/testing/sl4f/client",
@@ -28,9 +26,7 @@ dart_test("screen_is_not_black_test") {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"
       }
-      tags = [
-        "e2e-fyi",
-      ]
+      tags = [ "e2e-fyi" ]
     },
 
     # The astro environment has tags as it is still to be run on an FYI builder.
@@ -38,9 +34,7 @@ dart_test("screen_is_not_black_test") {
       dimensions = {
         device_type = "Astro"
       }
-      tags = [
-        "e2e-fyi",
-      ]
+      tags = [ "e2e-fyi" ]
     },
   ]
 }
@@ -48,7 +42,5 @@ dart_test("screen_is_not_black_test") {
 group("test") {
   testonly = true
 
-  deps = [
-    ":screen_is_not_black_test($host_toolchain)",
-  ]
+  deps = [ ":screen_is_not_black_test($host_toolchain)" ]
 }

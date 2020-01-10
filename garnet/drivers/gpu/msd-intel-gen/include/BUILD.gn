@@ -8,10 +8,6 @@ config("msd_include_config") {
 
 source_set("include") {
   public_configs = [ ":msd_include_config" ]
-  sources = [
-    "msd_intel_gen_query.h",
-  ]
-  public_deps = [
-    "//garnet/lib/magma/include:magma_abi_common",
-  ]
+  sources = [ "msd_intel_gen_query.h" ]
+  public_deps = [ "//garnet/lib/magma/include:magma_abi_common" ]
 }

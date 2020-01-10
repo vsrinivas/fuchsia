@@ -12,39 +12,23 @@ group("cpp") {
 }
 
 executable("cpp_before") {
-  sources = [
-    "before.cc",
-  ]
+  sources = [ "before.cc" ]
   defines = [ "BEFORE" ]
-  deps = [
-    "../:fidl.test.before",
-  ]
+  deps = [ "../:fidl.test.before" ]
 }
 
 executable("cpp_during_1") {
-  sources = [
-    "before.cc",
-  ]
-  deps = [
-    "../:fidl.test.during",
-  ]
+  sources = [ "before.cc" ]
+  deps = [ "../:fidl.test.during" ]
 }
 
 executable("cpp_during_2") {
-  sources = [
-    "after.cc",
-  ]
-  deps = [
-    "../:fidl.test.during",
-  ]
+  sources = [ "after.cc" ]
+  deps = [ "../:fidl.test.during" ]
 }
 
 executable("cpp_after") {
-  sources = [
-    "after.cc",
-  ]
+  sources = [ "after.cc" ]
   defines = [ "AFTER" ]
-  deps = [
-    "../:fidl.test.after",
-  ]
+  deps = [ "../:fidl.test.after" ]
 }

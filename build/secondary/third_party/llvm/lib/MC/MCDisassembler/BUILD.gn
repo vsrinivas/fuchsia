@@ -11,7 +11,5 @@ static_library("MCDisassembler") {
     "MCSymbolizer.cpp",
   ]
 
-  public_deps = [
-    "..",
-  ]
+  public_deps = [ ".." ]
 }

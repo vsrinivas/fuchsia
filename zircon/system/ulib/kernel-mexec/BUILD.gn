@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("kernel-mexec") {
-  sources = [
-    "kernel-mexec.cc",
-  ]
+  sources = [ "kernel-mexec.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-kernel:c",
@@ -20,15 +18,11 @@ zx_library("kernel-mexec") {
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
-  public_deps = [
-    "$zx/system/ulib/svc:headers",
-  ]
+  public_deps = [ "$zx/system/ulib/svc:headers" ]
 }
 
 zx_test("kernel-mexec-test") {
-  sources = [
-    "kernel-mexec_test.cc",
-  ]
+  sources = [ "kernel-mexec_test.cc" ]
   deps = [
     ":kernel-mexec",
     "$zx/system/fidl/fuchsia-device-manager:c",

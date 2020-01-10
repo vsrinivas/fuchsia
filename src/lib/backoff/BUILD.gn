@@ -23,13 +23,9 @@ source_set("backoff") {
 executable("backoff_unittests") {
   testonly = true
 
-  sources = [
-    "exponential_backoff_unittest.cc",
-  ]
+  sources = [ "exponential_backoff_unittest.cc" ]
 
-  public_deps = [
-    "//src/lib/fxl:printers",
-  ]
+  public_deps = [ "//src/lib/fxl:printers" ]
 
   deps = [
     ":backoff",
@@ -39,9 +35,7 @@ executable("backoff_unittests") {
 }
 
 unittest_package("backoff_tests") {
-  deps = [
-    ":backoff_unittests",
-  ]
+  deps = [ ":backoff_unittests" ]
 
   tests = [
     {
@@ -54,7 +48,5 @@ unittest_package("backoff_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":backoff_tests",
-  ]
+  deps = [ ":backoff_tests" ]
 }

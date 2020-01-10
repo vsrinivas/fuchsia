@@ -6,15 +6,11 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
 group("example") {
-  deps = [
-    ":soundplayer_example",
-  ]
+  deps = [ ":soundplayer_example" ]
 }
 
 package("soundplayer_example") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

@@ -25,9 +25,7 @@ rustc_binary("bin") {
 }
 
 package("dev_authenticator") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "dev_authenticator"
 

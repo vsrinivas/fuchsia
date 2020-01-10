@@ -28,7 +28,7 @@ group("tests") {
     "hello_world:tests",
     "isolated_cache:tests",
     "rolldice:rolldice-tests",
-    "rust/rust_static_linking:static_linking_tests",
     "rust/inspect-rs:inspect_example_rs_tests",
+    "rust/rust_static_linking:static_linking_tests",
   ]
 }

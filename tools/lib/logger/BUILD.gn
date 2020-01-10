@@ -7,14 +7,10 @@ import("//build/go/go_test.gni")
 
 go_library("logger") {
   name = "go.fuchsia.dev/fuchsia/tools/lib/logger"
-  deps = [
-    "//tools/lib/color",
-  ]
+  deps = [ "//tools/lib/color" ]
 }
 
 go_test("logger_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/logger" ]
-  deps = [
-    ":logger",
-  ]
+  deps = [ ":logger" ]
 }

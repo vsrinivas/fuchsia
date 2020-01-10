@@ -61,9 +61,7 @@ if (defined(zx)) {
 
   source_set("json_schema") {
     visibility = [ ":*" ]
-    sources = [
-      "$target_gen_dir/json_schema.cc",
-    ]
+    sources = [ "$target_gen_dir/json_schema.cc" ]
     deps = [
       ":gen-json-schema",
       ":headers",
@@ -72,12 +70,8 @@ if (defined(zx)) {
 
   action("gen-json-schema") {
     visibility = [ ":json_schema" ]
-    outputs = [
-      "$target_gen_dir/json_schema.cc",
-    ]
-    sources = [
-      "schema.json",
-    ]
+    outputs = [ "$target_gen_dir/json_schema.cc" ]
+    sources = [ "schema.json" ]
     script = "gen-json-schema.sh"
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(sources, root_build_dir)
@@ -92,21 +86,13 @@ if (defined(zx)) {
   }
 
   zx_host_tool("fidlc") {
-    sources = [
-      "compiler/main.cc",
-    ]
-    deps = [
-      ":fidl",
-    ]
+    sources = [ "compiler/main.cc" ]
+    deps = [ ":fidl" ]
   }
 
   zx_host_tool("fidl-format") {
-    sources = [
-      "formatter/main.cc",
-    ]
-    deps = [
-      ":fidl",
-    ]
+    sources = [ "formatter/main.cc" ]
+    deps = [ ":fidl" ]
   }
 
   zx_host_tool("fidl-lint") {
@@ -114,9 +100,7 @@ if (defined(zx)) {
       "linter/command_line_options.cc",
       "linter/main.cc",
     ]
-    deps = [
-      ":fidl",
-    ]
+    deps = [ ":fidl" ]
   }
 } else {
   # TODO(BLD-353): Referenced by //garnet/public/lib/fidl/fuzz:compiler.

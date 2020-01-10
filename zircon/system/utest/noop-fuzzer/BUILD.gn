@@ -5,7 +5,5 @@
 import("$zx/public/gn/fuzzer.gni")
 
 fuzzer("noop-fuzzer") {
-  sources = [
-    "noop-fuzzer.cc",
-  ]
+  sources = [ "noop-fuzzer.cc" ]
 }

@@ -39,9 +39,7 @@ source_set("testing") {
 source_set("unittests") {
   testonly = true
 
-  sources = [
-    "storage_matcher_unittest.cc",
-  ]
+  sources = [ "storage_matcher_unittest.cc" ]
 
   deps = [
     ":testing",

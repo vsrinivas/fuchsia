@@ -15,9 +15,7 @@ source_set("pkg_url") {
     "url_resolver.h",
   ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 }
 
 executable("tests") {
@@ -37,9 +35,7 @@ executable("tests") {
 }
 
 test_package("pkg_url_unittests") {
-  deps = [
-    ":tests",
-  ]
+  deps = [ ":tests" ]
   tests = [
     {
       name = "pkg_url_unittests"
@@ -53,7 +49,10 @@ fuzz_package("pkg_url_fuzzers") {
     ":fuchsia_pkg_url_fuzzer",
     ":url_resolver_fuzzer",
   ]
-  sanitizers = [ "asan", "ubsan" ]
+  sanitizers = [
+    "asan",
+    "ubsan",
+  ]
 }
 
 fuzz_target("fuchsia_pkg_url_fuzzer") {

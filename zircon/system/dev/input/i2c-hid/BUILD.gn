@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("i2c-hid") {
-  sources = [
-    "i2c-hid.cc",
-  ]
+  sources = [ "i2c-hid.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/banjo/ddk.protocol.i2c",

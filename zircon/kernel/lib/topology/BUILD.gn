@@ -5,9 +5,7 @@
 zx_library("topology") {
   host = true
   kernel = true
-  sources = [
-    "system-topology.cc",
-  ]
+  sources = [ "system-topology.cc" ]
   deps = [
     ":test",
     "$zx/system/ulib/fbl",
@@ -16,11 +14,7 @@ zx_library("topology") {
 
 source_set("test") {
   # TODO: testonly = true
-  sources = [
-    "system-topology_test.cc",
-  ]
+  sources = [ "system-topology_test.cc" ]
   include_dirs = [ "include" ]
-  deps = [
-    "$zx/kernel/lib/unittest",
-  ]
+  deps = [ "$zx/kernel/lib/unittest" ]
 }

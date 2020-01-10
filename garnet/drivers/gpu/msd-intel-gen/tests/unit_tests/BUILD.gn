@@ -38,9 +38,7 @@ source_set("nonhardware_tests") {
     "test_sequencer.cc",
   ]
 
-  deps = [
-    ":test_deps",
-  ]
+  deps = [ ":test_deps" ]
 }
 
 # These tests do require Intel graphics hardware to run.  They can be
@@ -55,9 +53,7 @@ source_set("hardware_tests") {
     "test_forcewake.cc",
   ]
 
-  deps = [
-    ":test_deps",
-  ]
+  deps = [ ":test_deps" ]
 }
 
 group("test_deps") {

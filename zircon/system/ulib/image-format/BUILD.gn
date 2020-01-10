@@ -5,12 +5,8 @@
 zx_library("image-format") {
   sdk = "source"
   sdk_headers = [ "lib/image-format/image_format.h" ]
-  sources = [
-    "image_format.cc",
-  ]
-  public_deps = [
-    "$zx/system/fidl/fuchsia-sysmem:c.headers",
-  ]
+  sources = [ "image_format.cc" ]
+  public_deps = [ "$zx/system/fidl/fuchsia-sysmem:c.headers" ]
   deps = [
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/fbl",
@@ -22,9 +18,7 @@ zx_library("image-format") {
 zx_library("image-format-llcpp") {
   sdk = "source"
   sdk_headers = [ "lib/image-format-llcpp/image-format-llcpp.h" ]
-  sources = [
-    "image-format-llcpp.cc",
-  ]
+  sources = [ "image-format-llcpp.cc" ]
   public_deps = [
     ":image-format",
     "$zx/system/fidl/fuchsia-sysmem:c.headers",
@@ -34,9 +28,7 @@ zx_library("image-format-llcpp") {
 }
 
 zx_test("image-format-test") {
-  sources = [
-    "image-format-test.cc",
-  ]
+  sources = [ "image-format-test.cc" ]
   deps = [
     ":image-format",
     "$zx/system/ulib/fdio",

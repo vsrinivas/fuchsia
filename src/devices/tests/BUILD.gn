@@ -4,7 +4,5 @@
 
 group("tests") {
   testonly = true
-  deps = [
-    "libdriver-integration-test",
-  ]
+  deps = [ "libdriver-integration-test" ]
 }

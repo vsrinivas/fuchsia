@@ -4,9 +4,7 @@
 
 zx_executable("evil") {
   output_name = "evil-tests"
-  sources = [
-    "evil.c",
-  ]
+  sources = [ "evil.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

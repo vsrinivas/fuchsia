@@ -14,9 +14,7 @@ group("examples") {
 }
 
 package("nc") {
-  deps = [
-    "third_party/openbsd-netcat:nc",
-  ]
+  deps = [ "third_party/openbsd-netcat:nc" ]
 
   binaries = [
     {

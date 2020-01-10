@@ -36,9 +36,7 @@ zx_library("block-client") {
 
 zx_library("fake-device") {
   testonly = true
-  sources = [
-    "fake-device.cc",
-  ]
+  sources = [ "fake-device.cc" ]
   public_deps = [
     ":block-client",
     "$zx/system/ulib/fbl",

@@ -19,9 +19,7 @@ rustc_binary("bin") {
 }
 
 package("eth-rs") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "eth_rs"
 

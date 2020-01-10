@@ -38,9 +38,7 @@ executable("video_display_bin") {
 }
 
 package("video_display") {
-  deps = [
-    ":video_display_bin",
-  ]
+  deps = [ ":video_display_bin" ]
 
   binary = "video_display"
 

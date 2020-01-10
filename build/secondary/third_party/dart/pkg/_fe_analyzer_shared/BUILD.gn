@@ -11,7 +11,5 @@ dart_library("_fe_analyzer_shared") {
 
   disable_analysis = true
 
-  deps = [
-    "//third_party/dart-pkg/pub/meta",
-  ]
+  deps = [ "//third_party/dart-pkg/pub/meta" ]
 }

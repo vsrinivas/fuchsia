@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("crashsvc") {
-  sources = [
-    "crashsvc.cc",
-  ]
+  sources = [ "crashsvc.cc" ]
 
   deps = [
     "$zx/system/fidl/fuchsia-exception:llcpp",
@@ -15,9 +13,7 @@ zx_library("crashsvc") {
     "$zx/system/ulib/inspector",
   ]
 
-  public_deps = [
-    "$zx/system/ulib/zx",
-  ]
+  public_deps = [ "$zx/system/ulib/zx" ]
 }
 
 zx_executable("svchost") {
@@ -63,9 +59,7 @@ zx_executable("svchost") {
 
 zx_test("crashsvc-test") {
   output_name = "crashsvc-test"
-  sources = [
-    "crashsvc-test.cc",
-  ]
+  sources = [ "crashsvc-test.cc" ]
   deps = [
     ":crashsvc",
     "$zx/system/fidl/fuchsia-exception:llcpp",

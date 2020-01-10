@@ -3,17 +3,13 @@
 # found in the LICENSE file.
 
 group("cpp") {
-  public_deps = [
-    ":json",
-  ]
+  public_deps = [ ":json" ]
 }
 
 group("unittests") {
   testonly = true
 
-  deps = [
-    ":json_unittest",
-  ]
+  deps = [ ":json_unittest" ]
 }
 
 source_set("json") {
@@ -31,9 +27,7 @@ source_set("json") {
 source_set("json_unittest") {
   testonly = true
 
-  sources = [
-    "json_unittest.cc",
-  ]
+  sources = [ "json_unittest.cc" ]
 
   deps = [
     ":json",

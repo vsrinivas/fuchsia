@@ -4,9 +4,7 @@
 
 zx_library("debuglog") {
   kernel = true
-  sources = [
-    "debuglog.cc",
-  ]
+  sources = [ "debuglog.cc" ]
   deps = [
     "$zx/kernel/dev/udisplay:headers",
     "$zx/kernel/lib/cmdline",

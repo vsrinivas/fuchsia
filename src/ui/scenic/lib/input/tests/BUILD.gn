@@ -6,16 +6,12 @@ import("//build/package.gni")
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":unittests",
-  ]
+  public_deps = [ ":unittests" ]
 }
 
 group("fuzztests") {
   testonly = true
-  public_deps = [
-    "//src/ui/scenic/lib/input/tests/fuzzers:input_fuzzers",
-  ]
+  public_deps = [ "//src/ui/scenic/lib/input/tests/fuzzers:input_fuzzers" ]
 }
 
 executable("unittests") {
@@ -59,7 +55,5 @@ source_set("util") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/hid",
   ]
-  public_deps = [
-    "//src/ui/scenic/lib/gfx/tests:testing_deps",
-  ]
+  public_deps = [ "//src/ui/scenic/lib/gfx/tests:testing_deps" ]
 }

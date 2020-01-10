@@ -27,21 +27,15 @@ source_set("lib") {
 executable("bin") {
   output_name = "guest_runner"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 package("guest_runner") {
   binary = "guest_runner"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   meta = [
     {

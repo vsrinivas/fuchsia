@@ -4,9 +4,7 @@
 
 group("aac") {
   testonly = true
-  deps = [
-    ":libFraunhoferAAC",
-  ]
+  deps = [ ":libFraunhoferAAC" ]
 }
 
 config("public_include_dirs") {
@@ -25,9 +23,7 @@ static_library("libFraunhoferAAC") {
     ":*",
     "//src/media/codec/codecs/sw/aac:*",
   ]
-  public = [
-    "//third_party/android/platform/external/aac/libAACdec/include/aacdecoder_lib.h",
-  ]
+  public = [ "//third_party/android/platform/external/aac/libAACdec/include/aacdecoder_lib.h" ]
   public_configs = [ ":public_include_dirs" ]
   sources = [
     "//third_party/android/platform/external/aac/libAACdec/src/FDK_delay.cpp",

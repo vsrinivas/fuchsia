@@ -4,9 +4,7 @@
 
 zx_test("sanitizer") {
   test_group = "libc"
-  sources = [
-    "sanitizer-utils.cc",
-  ]
+  sources = [ "sanitizer-utils.cc" ]
   deps = [
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-default",

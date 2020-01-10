@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("stream_provider") {
-  public_deps = [
-    ":stream_provider_lib",
-  ]
+  public_deps = [ ":stream_provider_lib" ]
   public_configs = [ ":stream_provider_config" ]
 }
 

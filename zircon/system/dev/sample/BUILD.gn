@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("sample") {
-  deps = [
-    "fifo",
-  ]
+  deps = [ "fifo" ]
 }

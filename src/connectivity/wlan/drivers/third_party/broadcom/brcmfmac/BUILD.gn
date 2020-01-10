@@ -43,12 +43,8 @@ visibility = [ "./*" ]
 
 # Sources for driver debug logging.
 source_set("debug") {
-  sources = [
-    "debug.cc",
-  ]
-  public = [
-    "debug.h",
-  ]
+  sources = [ "debug.cc" ]
+  public = [ "debug.h" ]
   public_deps = [
     "//zircon/public/lib/ddk",
     "//zircon/system/public",
@@ -71,9 +67,7 @@ source_set("linuxisms") {
     ":debug",
     "//zircon/public/lib/sync",
   ]
-  public_deps = [
-    "//zircon/system/public",
-  ]
+  public_deps = [ "//zircon/system/public" ]
 }
 
 # Sources for DMA buffer handling.
@@ -88,9 +82,7 @@ source_set("dmabuf") {
     "dma_pool.h",
     "dma_ring.h",
   ]
-  deps = [
-    ":debug",
-  ]
+  deps = [ ":debug" ]
   public_deps = [
     "//zircon/public/lib/zx",
     "//zircon/system/public",
@@ -105,9 +97,7 @@ source_set("bcdc") {
     "fwsignal.cc",
     "fwsignal.h",
   ]
-  public = [
-    "bcdc.h",
-  ]
+  public = [ "bcdc.h" ]
   deps = [
     ":core",
     ":debug",
@@ -212,9 +202,7 @@ source_set("driver_sources") {
 # Driver module for the brcmfmac driver.
 driver_module("driver_module") {
   output_name = "brcmfmac"
-  sources = [
-    "binding.cc",
-  ]
+  sources = [ "binding.cc" ]
   deps = [
     ":core",
     ":driver_sources",
@@ -227,9 +215,7 @@ driver_module("driver_module") {
 # tests.
 driver_module("test_driver_module") {
   output_name = "brcmfmac-test"
-  sources = [
-    "binding.cc",
-  ]
+  sources = [ "binding.cc" ]
   deps = [
     ":core",
     ":driver_sources",
@@ -260,28 +246,17 @@ if (internal_access) {
   # Firmware files from git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
   if (board_name == "astro") {
     copy("brcmfmac-firmware-copy") {
-      sources = [
-        "firmware/brcmfmac43455-sdio-astro.bin",
-      ]
-      outputs = [
-        "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin",
-      ]
+      sources = [ "firmware/brcmfmac43455-sdio-astro.bin" ]
+      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin" ]
     }
     copy("brcmfmac-nvram-copy") {
-      sources = [
-        "firmware/brcmfmac43455-sdio-astro.txt",
-      ]
-      outputs = [
-        "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.txt",
-      ]
+      sources = [ "firmware/brcmfmac43455-sdio-astro.txt" ]
+      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.txt" ]
     }
     copy("brcmfmac-clm-copy") {
-      sources = [
-        "firmware/brcmfmac43455-sdio-astro.clm_blob",
-      ]
-      outputs = [
-        "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.clm_blob",
-      ]
+      sources = [ "firmware/brcmfmac43455-sdio-astro.clm_blob" ]
+      outputs =
+          [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.clm_blob" ]
     }
     driver_library_files += [
       "brcmfmac43455-sdio.bin",
@@ -290,28 +265,17 @@ if (internal_access) {
     ]
   } else if (board_name == "sherlock") {
     copy("brcmfmac-firmware-copy") {
-      sources = [
-        "firmware/brcmfmac43455-sdio-sherlock.bin",
-      ]
-      outputs = [
-        "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin",
-      ]
+      sources = [ "firmware/brcmfmac43455-sdio-sherlock.bin" ]
+      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin" ]
     }
     copy("brcmfmac-nvram-copy") {
-      sources = [
-        "firmware/brcmfmac43455-sdio-sherlock.txt",
-      ]
-      outputs = [
-        "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.txt",
-      ]
+      sources = [ "firmware/brcmfmac43455-sdio-sherlock.txt" ]
+      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.txt" ]
     }
     copy("brcmfmac-clm-copy") {
-      sources = [
-        "firmware/brcmfmac43455-sdio-sherlock.clm_blob",
-      ]
-      outputs = [
-        "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.clm_blob",
-      ]
+      sources = [ "firmware/brcmfmac43455-sdio-sherlock.clm_blob" ]
+      outputs =
+          [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.clm_blob" ]
     }
     driver_library_files += [
       "brcmfmac43455-sdio.bin",
@@ -321,20 +285,12 @@ if (internal_access) {
   } else if (target_cpu == "x64") {
     # Assume for now that x64 boards use the PCIE interface.
     copy("brcmfmac-firmware-copy") {
-      sources = [
-        "firmware/brcmfmac4356-pcie-ap6356sdp.bin",
-      ]
-      outputs = [
-        "$root_out_dir/firmware/brcmfmac/brcmfmac4356-pcie.bin",
-      ]
+      sources = [ "firmware/brcmfmac4356-pcie-ap6356sdp.bin" ]
+      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac4356-pcie.bin" ]
     }
     copy("brcmfmac-nvram-copy") {
-      sources = [
-        "firmware/brcmfmac4356-pcie-ap6356sdp.txt",
-      ]
-      outputs = [
-        "$root_out_dir/firmware/brcmfmac/brcmfmac4356-pcie.txt",
-      ]
+      sources = [ "firmware/brcmfmac4356-pcie-ap6356sdp.txt" ]
+      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac4356-pcie.txt" ]
     }
     group("brcmfmac-clm-copy") {
     }
@@ -354,9 +310,7 @@ if (internal_access) {
         "firmware/brcmfmac4359-sdio.bin",
         "firmware/brcmfmac4359-sdio.txt",
       ]
-      outputs = [
-        "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
-      ]
+      outputs = [ "$root_out_dir/firmware/brcmfmac/{{source_file_part}}" ]
     }
     group("brcmfmac-nvram-copy") {
     }

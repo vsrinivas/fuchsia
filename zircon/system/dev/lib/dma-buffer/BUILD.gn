@@ -6,9 +6,7 @@ zx_library("dma-buffer") {
   sdk = "shared"
   sdk_headers = [ "lib/dma-buffer/buffer.h" ]
   shared = true
-  sources = [
-    "dma-buffer.cc",
-  ]
+  sources = [ "dma-buffer.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

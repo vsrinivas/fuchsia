@@ -45,9 +45,7 @@ driver_module("wlanphy_driver") {
 package("wlanphy") {
   deprecated_system_image = true
 
-  deps = [
-    ":wlanphy_driver",
-  ]
+  deps = [ ":wlanphy_driver" ]
 
   drivers = [
     {
@@ -70,9 +68,7 @@ executable("wlanphy_convert_unittest") {
 }
 
 unittest_package("wlanphy-unittests") {
-  deps = [
-    ":wlanphy_convert_unittest",
-  ]
+  deps = [ ":wlanphy_convert_unittest" ]
   tests = [
     {
       name = "wlanphy_convert_unittest"

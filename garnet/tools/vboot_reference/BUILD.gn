@@ -134,21 +134,15 @@ executable("cgpt") {
       "$vboot_dir/cgpt/cmd_find.c",
     ]
   }
-  deps = [
-    "//third_party/boringssl:crypto",
-  ]
+  deps = [ "//third_party/boringssl:crypto" ]
   configs += [ ":internal_config" ]
 }
 
 # The upstream makefile actually generates this source, but for simplicities
 # sake, we just have a pre-generated version.
 copy("futility_cmds.c") {
-  sources = [
-    "futility_cmds.c",
-  ]
-  outputs = [
-    "$target_gen_dir/futility_cmds.c",
-  ]
+  sources = [ "futility_cmds.c" ]
+  outputs = [ "$target_gen_dir/futility_cmds.c" ]
 }
 
 executable("futility") {
@@ -180,9 +174,7 @@ executable("futility") {
     "$vboot_dir/futility/vb1_helper.c",
     "$vboot_dir/futility/vb2_helper.c",
   ]
-  deps = [
-    ":futility_cmds.c",
-  ]
+  deps = [ ":futility_cmds.c" ]
   sources += get_target_outputs(":futility_cmds.c")
   if (!is_mac) {
     sources += [
@@ -238,19 +230,11 @@ config("internal_config") {
 }
 
 install_host_tools("cgpt_host") {
-  deps = [
-    ":cgpt",
-  ]
-  outputs = [
-    "cgpt",
-  ]
+  deps = [ ":cgpt" ]
+  outputs = [ "cgpt" ]
 }
 
 install_host_tools("futility_host") {
-  deps = [
-    ":futility",
-  ]
-  outputs = [
-    "futility",
-  ]
+  deps = [ ":futility" ]
+  outputs = [ "futility" ]
 }

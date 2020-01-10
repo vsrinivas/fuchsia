@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.clock") {
-  sources = [
-    "clock.banjo",
-  ]
+  sources = [ "clock.banjo" ]
 }

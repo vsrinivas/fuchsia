@@ -54,17 +54,13 @@ if (defined(zx)) {
       "writer.h",
     ]
 
-    deps = [
-      "$zx/system/public",
-    ]
+    deps = [ "$zx/system/public" ]
   }
 
   zx_host_tool("kazoo") {
     configs += [ ":kazoo_config" ]
 
-    sources = [
-      "main.cc",
-    ]
+    sources = [ "main.cc" ]
 
     deps = [
       ":kazoo_lib",
@@ -120,9 +116,7 @@ if (defined(zx)) {
       "{{source}}",
     ]
 
-    outputs = [
-      "$target_gen_dir/{{source_name_part}}.json",
-    ]
+    outputs = [ "$target_gen_dir/{{source_name_part}}.json" ]
 
     sources = [
       "test_aliases.test.fidl",
@@ -148,9 +142,7 @@ if (defined(zx)) {
   action_foreach("generate_test_files") {
     script = "fidl_to_h.py"
 
-    deps = [
-      ":test_files_fidl_to_json",
-    ]
+    deps = [ ":test_files_fidl_to_json" ]
 
     args = [
       "{{source}}",
@@ -158,9 +150,7 @@ if (defined(zx)) {
       "{{source_name_part}}",
     ]
 
-    outputs = [
-      "$target_gen_dir/test_ir_{{source_name_part}}.h",
-    ]
+    outputs = [ "$target_gen_dir/test_ir_{{source_name_part}}.h" ]
 
     sources = get_target_outputs(":test_files_fidl_to_json")
   }

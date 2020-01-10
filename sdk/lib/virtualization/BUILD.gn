@@ -24,9 +24,7 @@ executable("virtualization_lib_unittests") {
   visibility = [ ":*" ]
   testonly = true
 
-  sources = [
-    "scenic_wayland_dispatcher_unittest.cc",
-  ]
+  sources = [ "scenic_wayland_dispatcher_unittest.cc" ]
 
   deps = [
     ":virtualization",
@@ -37,9 +35,7 @@ executable("virtualization_lib_unittests") {
 }
 
 test_package("virtualization_lib_tests") {
-  deps = [
-    ":virtualization_lib_unittests",
-  ]
+  deps = [ ":virtualization_lib_unittests" ]
 
   tests = [
     {

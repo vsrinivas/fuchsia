@@ -9,9 +9,7 @@ package("at-fake-transport") {
   deprecated_system_image = true
   testonly = true
 
-  deps = [
-    ":fake_at_driver",
-  ]
+  deps = [ ":fake_at_driver" ]
 
   drivers = [
     {

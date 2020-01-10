@@ -9,9 +9,7 @@ library("abi_type_validator") {
     "$zx/kernel/*",
     "$zx/system/utest/abi-type-validator/*",
   ]
-  sources = [
-    "abi_type_validator.cc",
-  ]
+  sources = [ "abi_type_validator.cc" ]
   public_deps = [
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",

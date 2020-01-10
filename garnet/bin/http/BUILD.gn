@@ -13,9 +13,7 @@ source_set("errors") {
     "http_errors.h",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 }
 
 source_set("lib") {
@@ -59,9 +57,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "http"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -71,9 +67,7 @@ executable("bin") {
 }
 
 package("http") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "http"
 
@@ -88,9 +82,7 @@ package("http") {
 executable("http_service_tests_bin") {
   testonly = true
 
-  sources = [
-    "upload_element_reader_unittest.cc",
-  ]
+  sources = [ "upload_element_reader_unittest.cc" ]
 
   output_name = "http_service_tests"
 
@@ -101,9 +93,7 @@ executable("http_service_tests_bin") {
 }
 
 test_package("http_service_tests") {
-  deps = [
-    ":http_service_tests_bin",
-  ]
+  deps = [ ":http_service_tests_bin" ]
 
   tests = [
     {

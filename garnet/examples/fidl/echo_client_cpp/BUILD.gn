@@ -20,9 +20,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "echo_client_cpp"
 
-  sources = [
-    "echo_client.cc",
-  ]
+  sources = [ "echo_client.cc" ]
 
   deps = [
     ":lib",
@@ -36,9 +34,7 @@ executable("bin") {
 }
 
 package("echo_client_cpp") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "echo_client_cpp"
 

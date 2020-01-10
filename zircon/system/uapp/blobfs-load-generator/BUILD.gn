@@ -4,9 +4,7 @@
 
 zx_executable("blobfs-load-generator") {
   testonly = true
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "$zx/system/ulib/digest",
     "$zx/system/ulib/fs",

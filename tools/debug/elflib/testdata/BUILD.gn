@@ -9,9 +9,7 @@ copy("testdata") {
     "libc.yaml",
     "libc.yaml.section-only",
   ]
-  outputs = [
-    "$root_out_dir/testdata/elflib/{{source_file_part}}",
-  ]
+  outputs = [ "$root_out_dir/testdata/elflib/{{source_file_part}}" ]
   metadata = {
     test_runtime_deps = [
       "$root_out_dir/testdata/elflib/libc.elf.section-only",

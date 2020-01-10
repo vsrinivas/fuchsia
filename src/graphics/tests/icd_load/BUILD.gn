@@ -19,7 +19,5 @@ source_set("icd_load_src") {
 executable("icd_load") {
   testonly = true
 
-  deps = [
-    ":icd_load_src",
-  ]
+  deps = [ ":icd_load_src" ]
 }

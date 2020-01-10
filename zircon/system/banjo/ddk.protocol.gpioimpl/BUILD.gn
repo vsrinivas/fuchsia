@@ -5,10 +5,6 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.gpioimpl") {
-  sources = [
-    "gpio-impl.banjo",
-  ]
-  public_deps = [
-    "$zx/system/banjo/ddk.protocol.gpio",
-  ]
+  sources = [ "gpio-impl.banjo" ]
+  public_deps = [ "$zx/system/banjo/ddk.protocol.gpio" ]
 }

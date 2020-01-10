@@ -14,9 +14,7 @@ group("example_ai") {
 }
 
 package("tennis_example_ai") {
-  deps = [
-    ":tennis_example_ai_bin",
-  ]
+  deps = [ ":tennis_example_ai_bin" ]
 
   binary = "tennis_example_ai"
 

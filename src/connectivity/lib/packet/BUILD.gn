@@ -26,9 +26,7 @@ rustc_library("packet") {
 unittest_package("tests") {
   package_name = "packet-tests"
 
-  deps = [
-    ":packet_test",
-  ]
+  deps = [ ":packet_test" ]
 
   tests = [
     {

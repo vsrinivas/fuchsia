@@ -18,7 +18,5 @@ fidl("fuchsia.ui.scenic.internal") {
     "snapshot.fidl",
   ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-mem",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-mem" ]
 }

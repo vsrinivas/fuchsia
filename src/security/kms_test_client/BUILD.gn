@@ -32,9 +32,7 @@ rustc_test("bin") {
 }
 
 test_package("kms_test_client_pkg") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   tests = [
     {

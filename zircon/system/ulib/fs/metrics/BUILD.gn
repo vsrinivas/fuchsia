@@ -4,9 +4,7 @@
 
 # Metrics which depend on cobalt only.
 zx_library("metrics-cobalt") {
-  sources = [
-    "cobalt_metrics.cc",
-  ]
+  sources = [ "cobalt_metrics.cc" ]
   public_deps = [
     "$zx/system/ulib/cobalt-client:headers",
     "$zx/system/ulib/fbl:headers",
@@ -19,9 +17,7 @@ zx_library("metrics-cobalt") {
 
 # Metrics which are logged by inspect vmo only.
 zx_library("metrics-inspect") {
-  sources = [
-    "histograms.cc",
-  ]
+  sources = [ "histograms.cc" ]
   public_deps = [
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fzl:headers",
@@ -39,9 +35,7 @@ zx_library("metrics-inspect") {
 # Helper library that uses both cobalt and inspect to record metrics.
 # TODO(ZX-3150): Remove once inspect broker service is complete.
 zx_library("metrics-composite-latency-event") {
-  sources = [
-    "composite_latency_event.cc",
-  ]
+  sources = [ "composite_latency_event.cc" ]
   public_deps = [
     "$zx/system/ulib/cobalt-client:headers",
     "$zx/system/ulib/fs/metrics:metrics-cobalt.headers",

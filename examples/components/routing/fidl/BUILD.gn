@@ -13,7 +13,5 @@ fidl("echo") {
 
   name = "fidl.examples.routing.echo"
 
-  sources = [
-    "echo.fidl",
-  ]
+  sources = [ "echo.fidl" ]
 }

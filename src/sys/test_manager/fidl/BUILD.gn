@@ -7,11 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("test_manager") {
   name = "fuchsia.test.manager"
 
-  sources = [
-    "test_manager.fidl",
-  ]
+  sources = [ "test_manager.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.sys2",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.sys2" ]
 }

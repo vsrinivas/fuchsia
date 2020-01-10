@@ -18,25 +18,17 @@ group("components") {
 executable("bin") {
   output_name = "app"
 
-  sources = [
-    "hello_world.cc",
-  ]
+  sources = [ "hello_world.cc" ]
 
-  deps = [
-    "//zircon/public/lib/zx",
-  ]
+  deps = [ "//zircon/public/lib/zx" ]
 }
 
 executable("bin2") {
   output_name = "app2"
 
-  sources = [
-    "hello_world2.cc",
-  ]
+  sources = [ "hello_world2.cc" ]
 
-  deps = [
-    "//zircon/public/lib/zx",
-  ]
+  deps = [ "//zircon/public/lib/zx" ]
 }
 
 package("component_hello_world") {
@@ -68,18 +60,12 @@ package("component_hello_world") {
 
 executable("hello_world_test") {
   testonly = true
-  sources = [
-    "hello_world_test.cc",
-  ]
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  sources = [ "hello_world_test.cc" ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
 test_package("component_hello_world_tests") {
-  deps = [
-    ":hello_world_test",
-  ]
+  deps = [ ":hello_world_test" ]
 
   tests = [
     {

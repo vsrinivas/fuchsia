@@ -23,9 +23,7 @@ rustc_library("input-synthesis") {
 }
 
 unittest_package("input-synthesis-tests") {
-  deps = [
-    ":input-synthesis_test",
-  ]
+  deps = [ ":input-synthesis_test" ]
   tests = [
     {
       name = "input_synthesis_lib_test"

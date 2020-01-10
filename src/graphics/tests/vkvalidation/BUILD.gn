@@ -27,9 +27,7 @@ test_package("test-vk-validation") {
 
 executable("test_vk_validation") {
   testonly = true
-  sources = [
-    "test_validation_layers.cc",
-  ]
+  sources = [ "test_validation_layers.cc" ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan",

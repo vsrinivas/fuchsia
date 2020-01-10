@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 action("headers") {
-  public_deps = [
-    "//zircon/system/public",
-  ]
+  public_deps = [ "//zircon/system/public" ]
   out_file = "$target_gen_dir/virtio_magma.h"
   script = "virtio_magma.h.gen.py"
   args = [
@@ -13,16 +11,10 @@ action("headers") {
     rebase_path("../magma_abi/magma.json", root_build_dir),
     rebase_path(out_file, root_build_dir),
   ]
-  inputs = [
-    "../magma_abi/magma.json",
-  ]
-  outputs = [
-    "$out_file",
-  ]
+  inputs = [ "../magma_abi/magma.json" ]
+  outputs = [ "$out_file" ]
 }
 
 group("virtio") {
-  public_deps = [
-    ":headers",
-  ]
+  public_deps = [ ":headers" ]
 }

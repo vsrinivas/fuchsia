@@ -4,9 +4,7 @@
 
 group("services") {
   testonly = true
-  public_deps = [
-    "//src/media/sounds/soundplayer",
-  ]
+  public_deps = [ "//src/media/sounds/soundplayer" ]
 }
 
 group("tools") {
@@ -16,14 +14,10 @@ group("tools") {
 
 group("examples") {
   testonly = true
-  public_deps = [
-    "//src/media/sounds/example",
-  ]
+  public_deps = [ "//src/media/sounds/example" ]
 }
 
 group("config") {
   testonly = true
-  public_deps = [
-    "//src/media/sounds/soundplayer:configs",
-  ]
+  public_deps = [ "//src/media/sounds/soundplayer:configs" ]
 }

@@ -17,9 +17,7 @@ group("inspect") {
 executable("bin") {
   output_name = "inspect_test_app"
 
-  sources = [
-    "program.cc",
-  ]
+  sources = [ "program.cc" ]
 
   deps = [
     "//src/lib/inspect_deprecated:component",
@@ -32,9 +30,7 @@ executable("test") {
   testonly = true
   output_name = "inspect_integration_tests"
 
-  sources = [
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration",
@@ -48,9 +44,7 @@ executable("test") {
 executable("bin-vmo") {
   output_name = "inspect_vmo_test_app"
 
-  sources = [
-    "program-vmo.cc",
-  ]
+  sources = [ "program-vmo.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp",
@@ -64,9 +58,7 @@ executable("test-vmo") {
   testonly = true
   output_name = "inspect_vmo_integration_tests"
 
-  sources = [
-    "test-vmo.cc",
-  ]
+  sources = [ "test-vmo.cc" ]
 
   deps = [
     "//sdk/lib/inspect/testing/cpp",
@@ -82,9 +74,7 @@ executable("test-vmo") {
 executable("bin-health") {
   output_name = "inspect_health_test_app"
 
-  sources = [
-    "program-health.cc",
-  ]
+  sources = [ "program-health.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp",
@@ -98,9 +88,7 @@ executable("test-health") {
   testonly = true
   output_name = "inspect_health_integration_tests"
 
-  sources = [
-    "test-health.cc",
-  ]
+  sources = [ "test-health.cc" ]
 
   deps = [
     "//sdk/lib/inspect/testing/cpp",

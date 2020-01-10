@@ -13,12 +13,8 @@ if (is_mac) {
   source_set("no_op_mac_unittest") {
     testonly = true
 
-    sources = [
-      "no_op_mac_unittest.cc",
-    ]
-    deps = [
-      "//third_party/googletest:gtest",
-    ]
+    sources = [ "no_op_mac_unittest.cc" ]
+    deps = [ "//third_party/googletest:gtest" ]
   }
 
   test("escher_unittests") {
@@ -163,9 +159,7 @@ source_set("gtest_vulkan") {
     "//third_party/googletest:gtest",
   ]
 
-  deps = [
-    "//src/ui/lib/escher/util:check_vulkan_support",
-  ]
+  deps = [ "//src/ui/lib/escher/util:check_vulkan_support" ]
 
   sources = [
     "gtest_vulkan.cc",
@@ -181,13 +175,9 @@ source_set("gtest_vulkan") {
 source_set("gtest_escher") {
   testonly = true
   if (escher_use_runtime_glsl) {
-    public_deps = [
-      ":gtest_escher_with_runtime_glsl",
-    ]
+    public_deps = [ ":gtest_escher_with_runtime_glsl" ]
   } else {
-    public_deps = [
-      ":gtest_escher_no_runtime_glsl",
-    ]
+    public_deps = [ ":gtest_escher_no_runtime_glsl" ]
   }
 }
 
@@ -209,9 +199,7 @@ template("gtest_escher_library") {
       "vk_debug_report_collector.cc",
       "vk_debug_report_collector.h",
     ]
-    public_deps = [
-      ":gtest_vulkan",
-    ]
+    public_deps = [ ":gtest_vulkan" ]
     if (gtest_escher_library_use_runtime_glsl) {
       public_deps += [ "//src/ui/lib/escher" ]
     } else {
@@ -243,8 +231,6 @@ group("force_examples_to_build_on_host") {
 # even if they are not run.
 group("force_paper_shader_compiler_to_build_on_host") {
   if (is_linux) {
-    deps = [
-      "//src/ui/tools/paper_shader_compiler($host_toolchain)",
-    ]
+    deps = [ "//src/ui/tools/paper_shader_compiler($host_toolchain)" ]
   }
 }

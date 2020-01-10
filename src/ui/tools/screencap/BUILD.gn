@@ -5,9 +5,7 @@
 executable("screencap") {
   output_name = "screencap"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.ui.scenic",

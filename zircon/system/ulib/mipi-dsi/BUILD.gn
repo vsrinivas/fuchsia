@@ -3,18 +3,12 @@
 # found in the LICENSE file.
 
 zx_library("mipi-dsi") {
-  sources = [
-    "mipi-dsi.cc",
-  ]
-  deps = [
-    "$zx/system/banjo/ddk.protocol.dsiimpl",
-  ]
+  sources = [ "mipi-dsi.cc" ]
+  deps = [ "$zx/system/banjo/ddk.protocol.dsiimpl" ]
 }
 
 zx_test("mipidsi") {
-  sources = [
-    "test/mipi-dsi-test.cc",
-  ]
+  sources = [ "test/mipi-dsi-test.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.dsiimpl",
     "$zx/system/ulib/fbl",

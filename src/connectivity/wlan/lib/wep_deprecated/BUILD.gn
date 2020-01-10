@@ -23,9 +23,7 @@ rustc_library("wep_deprecated") {
 }
 
 unittest_package("wep-deprecated-tests") {
-  deps = [
-    ":wep_deprecated_test",
-  ]
+  deps = [ ":wep_deprecated_test" ]
 
   tests = [
     {

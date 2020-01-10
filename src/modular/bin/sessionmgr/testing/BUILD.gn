@@ -5,17 +5,13 @@
 group("testing") {
   testonly = true
 
-  public_deps = [
-    ":annotations_matchers",
-  ]
+  public_deps = [ ":annotations_matchers" ]
 }
 
 source_set("annotations_matchers") {
   testonly = true
 
-  sources = [
-    "annotations_matchers.h",
-  ]
+  sources = [ "annotations_matchers.h" ]
 
   public_deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.modular",

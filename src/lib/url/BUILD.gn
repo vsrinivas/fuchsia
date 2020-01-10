@@ -56,20 +56,14 @@ static_library("url") {
 
   defines = [ "URL_IMPLEMENTATION" ]
 
-  deps = [
-    "//third_party/icu",
-  ]
+  deps = [ "//third_party/icu" ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 }
 
 source_set("url_unittests_main") {
   testonly = true
-  sources = [
-    "url_unittests_main.cc",
-  ]
+  sources = [ "url_unittests_main.cc" ]
 
   deps = [
     "//src/lib/fxl",
@@ -100,9 +94,7 @@ executable("url_unittests") {
 }
 
 test_package("url_tests") {
-  deps = [
-    ":url_unittests",
-  ]
+  deps = [ ":url_unittests" ]
 
   resources = [
     {

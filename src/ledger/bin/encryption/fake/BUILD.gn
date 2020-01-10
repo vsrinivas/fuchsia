@@ -25,9 +25,7 @@ source_set("fake") {
 source_set("unittests") {
   testonly = true
 
-  sources = [
-    "fake_encryption_service_unittest.cc",
-  ]
+  sources = [ "fake_encryption_service_unittest.cc" ]
 
   deps = [
     ":fake",

@@ -23,9 +23,7 @@ rustc_library("offset_string") {
 }
 
 test_package("offset_string_tests") {
-  deps = [
-    ":offset_string_test",
-  ]
+  deps = [ ":offset_string_test" ]
 
   tests = [
     {
@@ -37,7 +35,5 @@ test_package("offset_string_tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":offset_string_tests",
-  ]
+  public_deps = [ ":offset_string_tests" ]
 }

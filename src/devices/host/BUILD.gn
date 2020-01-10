@@ -15,9 +15,7 @@ group("host") {
 }
 
 executable("device-host") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":common",
@@ -74,16 +72,12 @@ source_set("common") {
 shared_library("driver") {
   sources = []
 
-  deps = [
-    ":common",
-  ]
+  deps = [ ":common" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":devhost-tests",
-  ]
+  deps = [ ":devhost-tests" ]
 }
 
 executable("devhost-test-bin") {
@@ -108,9 +102,7 @@ executable("devhost-test-bin") {
 }
 
 test_package("devhost-tests") {
-  deps = [
-    ":devhost-test-bin",
-  ]
+  deps = [ ":devhost-test-bin" ]
 
   binaries = [
     {

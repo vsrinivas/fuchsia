@@ -7,9 +7,7 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "mwget"
 
-  sources = [
-    "mwget.cc",
-  ]
+  sources = [ "mwget.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.net.oldhttp",
@@ -23,9 +21,7 @@ executable("bin") {
 }
 
 package("mwget") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

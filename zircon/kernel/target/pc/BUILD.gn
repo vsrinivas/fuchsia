@@ -9,7 +9,5 @@ group("pc") {
   ]
 
   # Also build the Multiboot trampoline to support legacy boot loaders.
-  data_deps = [
-    "multiboot",
-  ]
+  data_deps = [ "multiboot" ]
 }

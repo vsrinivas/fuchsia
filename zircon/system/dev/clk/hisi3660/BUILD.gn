@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("hisi3660") {
-  sources = [
-    "hisi3660-clk.cc",
-  ]
+  sources = [ "hisi3660-clk.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clockimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",

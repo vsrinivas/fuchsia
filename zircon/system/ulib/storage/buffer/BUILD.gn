@@ -35,9 +35,7 @@ zx_library("buffer") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":storage_buffer",
-  ]
+  deps = [ ":storage_buffer" ]
 }
 
 zx_test("storage_buffer") {

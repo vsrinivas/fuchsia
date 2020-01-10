@@ -4,16 +4,12 @@
 
 # Do not use this target directly, instead depend on //src/lib/cmx/facet_parser:cmx_facet_parser_unittests.
 group("cmx_facet_parser_unittests") {
-  public_deps = [
-    "//src/lib/cmx/facet_parser:cmx_facet_parser_unittests",
-  ]
+  public_deps = [ "//src/lib/cmx/facet_parser:cmx_facet_parser_unittests" ]
 
   testonly = true
 }
 
 # Do not use this target directly, instead depend on //src/lib/cmx/facet_parser:cmx_facet_parser.
 group("cmx_facet_parser") {
-  public_deps = [
-    "//src/lib/cmx/facet_parser:cmx_facet_parser",
-  ]
+  public_deps = [ "//src/lib/cmx/facet_parser:cmx_facet_parser" ]
 }

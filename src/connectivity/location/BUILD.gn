@@ -4,14 +4,10 @@
 
 group("location") {
   testonly = true
-  deps = [
-    "regulatory_region",
-  ]
+  deps = [ "regulatory_region" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "regulatory_region:tests",
-  ]
+  deps = [ "regulatory_region:tests" ]
 }

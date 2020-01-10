@@ -72,9 +72,7 @@ executable("fidl_codec_test_bin") {
 }
 
 unittest_package("fidl_codec_tests") {
-  deps = [
-    ":fidl_codec_test_bin",
-  ]
+  deps = [ ":fidl_codec_test_bin" ]
   tests = [
     {
       name = "fidl_codec_test_bin"
@@ -86,9 +84,7 @@ unittest_package("fidl_codec_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":fidl_codec_tests",
-  ]
+  deps = [ ":fidl_codec_tests" ]
 }
 
 action("json_for_test") {
@@ -100,9 +96,7 @@ action("json_for_test") {
     "//sdk/lib/fidl/cpp/test:frobinator",
     "//zircon/system/fidl/fuchsia-io",
   ]
-  outputs = [
-    "$target_gen_dir/library_loader_test_data.h",
-  ]
+  outputs = [ "$target_gen_dir/library_loader_test_data.h" ]
   script = "generate_test_includes.sh"
   args = [
     rebase_path(target_gen_dir, root_build_dir) + "/library_loader_test_data.h",
@@ -122,12 +116,8 @@ action("json_for_test") {
 
 action("list_for_test") {
   testonly = true
-  deps = [
-    "//sdk:core_fidl_json",
-  ]
-  outputs = [
-    "$target_gen_dir/list_test_data.h",
-  ]
+  deps = [ "//sdk:core_fidl_json" ]
+  outputs = [ "$target_gen_dir/list_test_data.h" ]
   script = "generate_test_includes.sh"
   args = [
     rebase_path(target_gen_dir, root_build_dir) + "/list_test_data.h",
@@ -151,19 +141,13 @@ fidl("fidl") {
 fidl("fidl-composed") {
   name = "test.fidlcodec.composedinto"
 
-  sources = [
-    "testdata/composed_into.test.fidl",
-  ]
+  sources = [ "testdata/composed_into.test.fidl" ]
 
-  public_deps = [
-    ":fidl",
-  ]
+  public_deps = [ ":fidl" ]
 }
 
 fidl("fidl-sys") {
   name = "test.fidlcodec.sys"
 
-  sources = [
-    "testdata/sys.test.fidl",
-  ]
+  sources = [ "testdata/sys.test.fidl" ]
 }

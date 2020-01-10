@@ -13,13 +13,9 @@ template("rebased_manifest") {
   action(target_name) {
     script = "//build/images/manifest.py"
 
-    inputs = [
-      "$zircon_root_build_dir/${invoker.manifest}",
-    ]
+    inputs = [ "$zircon_root_build_dir/${invoker.manifest}" ]
 
-    outputs = [
-      "$target_gen_dir/$target_name.rebased.manifest",
-    ]
+    outputs = [ "$target_gen_dir/$target_name.rebased.manifest" ]
 
     args = [
       "--output",

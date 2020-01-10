@@ -7,9 +7,7 @@ import("//build/package.gni")
 
 group("benchmarks") {
   testonly = true
-  deps = [
-    ":fuchsia_benchmarks",
-  ]
+  deps = [ ":fuchsia_benchmarks" ]
 }
 
 executable("fuchsia_benchmarks_bin") {

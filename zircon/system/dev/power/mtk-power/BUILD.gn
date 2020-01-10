@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("mtk-power") {
-  sources = [
-    "mtk-power.cc",
-  ]
+  sources = [ "mtk-power.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.i2c",

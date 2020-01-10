@@ -29,16 +29,12 @@ sdk_source_set("cpp") {
 }
 
 fidl("test.modular.agent") {
-  sources = [
-    "agent.test.fidl",
-  ]
+  sources = [ "agent.test.fidl" ]
 }
 
 executable("modular_cpp_tests_bin") {
   testonly = true
-  sources = [
-    "agent_unittest.cc",
-  ]
+  sources = [ "agent_unittest.cc" ]
 
   deps = [
     ":cpp",
@@ -57,7 +53,5 @@ test_package("modular_cpp_tests") {
     },
   ]
 
-  deps = [
-    ":modular_cpp_tests_bin",
-  ]
+  deps = [ ":modular_cpp_tests_bin" ]
 }

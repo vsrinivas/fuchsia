@@ -11,7 +11,5 @@ go_library("tarutil") {
 
 go_test("tarutil_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/tarutil" ]
-  deps = [
-    ":tarutil",
-  ]
+  deps = [ ":tarutil" ]
 }

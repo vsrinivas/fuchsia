@@ -164,12 +164,8 @@ source_set("tests") {
 }
 
 fuzzer("expr_parser_fuzzer") {
-  sources = [
-    "expr_parser_fuzzer.cc",
-  ]
-  deps = [
-    ":expr",
-  ]
+  sources = [ "expr_parser_fuzzer.cc" ]
+  deps = [ ":expr" ]
 }
 
 fuzzers_package("expr_fuzzers") {

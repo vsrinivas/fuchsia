@@ -22,10 +22,6 @@ if (current_toolchain == host_toolchain) {
 
 install_host_tools("host") {
   testonly = true
-  deps = [
-    ":icu_data_extractor",
-  ]
-  outputs = [
-    "icu_data_extractor",
-  ]
+  deps = [ ":icu_data_extractor" ]
+  outputs = [ "icu_data_extractor" ]
 }

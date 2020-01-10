@@ -24,9 +24,7 @@ source_set("sdio") {
     "sdio.h",
     "sdio_device.cc",
   ]
-  public = [
-    "sdio_device.h",
-  ]
+  public = [ "sdio_device.h" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",

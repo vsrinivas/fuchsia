@@ -3,13 +3,9 @@
 # found in the LICENSE file.
 
 source_set("magnifier") {
-  public = [
-    "magnifier.h",
-  ]
+  public = [ "magnifier.h" ]
 
-  sources = [
-    "magnifier.cc",
-  ]
+  sources = [ "magnifier.cc" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility",

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("hidtouch") {
-  sources = [
-    "main.c",
-  ]
+  sources = [ "main.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-display:c",
     "$zx/system/fidl/fuchsia-hardware-input:c",

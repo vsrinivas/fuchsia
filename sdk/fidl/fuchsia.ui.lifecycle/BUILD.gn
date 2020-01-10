@@ -7,7 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.ui.lifecycle") {
   sdk_category = "partner"
 
-  sources = [
-    "lifecycle_controller.fidl",
-  ]
+  sources = [ "lifecycle_controller.fidl" ]
 }

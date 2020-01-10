@@ -41,30 +41,22 @@ group("examples") {
 
 group("config") {
   testonly = true
-  deps = [
-    "//src/media/audio/config",
-  ]
+  deps = [ "//src/media/audio/config" ]
 }
 
 group("vim2_media_config") {
   testonly = true
-  deps = [
-    "//src/media/audio/vim2_media_config",
-  ]
+  deps = [ "//src/media/audio/vim2_media_config" ]
 }
 
 group("virtual_audio_driver") {
   testonly = true
-  public_deps = [
-    "//src/media/audio/drivers/virtual_audio",
-  ]
+  public_deps = [ "//src/media/audio/drivers/virtual_audio" ]
 }
 
 # We use this instead of :config, because an external repro removes it from a list. Using :config
 # instead would break that repo.
 group("audio_config") {
   testonly = true
-  deps = [
-    ":config",
-  ]
+  deps = [ ":config" ]
 }

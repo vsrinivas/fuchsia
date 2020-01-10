@@ -29,9 +29,7 @@ rustc_library("fidl-fuchsia-pkg-ext") {
 }
 
 test_package("fidl-fuchsia-pkg-ext-tests") {
-  deps = [
-    ":fidl-fuchsia-pkg-ext_test",
-  ]
+  deps = [ ":fidl-fuchsia-pkg-ext_test" ]
 
   tests = [
     {
@@ -44,7 +42,5 @@ test_package("fidl-fuchsia-pkg-ext-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":fidl-fuchsia-pkg-ext-tests",
-  ]
+  public_deps = [ ":fidl-fuchsia-pkg-ext-tests" ]
 }

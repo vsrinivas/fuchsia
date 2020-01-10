@@ -4,17 +4,13 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":tts_manager_tests",
-  ]
+  public_deps = [ ":tts_manager_tests" ]
 }
 
 executable("tts_manager_tests") {
   testonly = true
 
-  sources = [
-    "tts_manager_unittest.cc",
-  ]
+  sources = [ "tts_manager_unittest.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",

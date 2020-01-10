@@ -89,15 +89,11 @@ dart_test("sl4f_client_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":sl4f_client_tests($host_toolchain)",
-  ]
+  deps = [ ":sl4f_client_tests($host_toolchain)" ]
 }
 
 dart_tool("process_trace") {
   main_dart = "bin/process_trace.dart"
 
-  deps = [
-    ":client",
-  ]
+  deps = [ ":client" ]
 }

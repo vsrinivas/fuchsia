@@ -7,9 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.camera2.hal") {
   sdk_category = "partner"
 
-  sources = [
-    "hal.fidl",
-  ]
+  sources = [ "hal.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.camera2",

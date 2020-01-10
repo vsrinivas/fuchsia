@@ -8,11 +8,7 @@ source_set("gesture_util") {
     "util.h",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.input.accessibility",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.input.accessibility" ]
 
-  deps = [
-    "//src/lib/syslog/cpp",
-  ]
+  deps = [ "//src/lib/syslog/cpp" ]
 }

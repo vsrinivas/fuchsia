@@ -27,9 +27,7 @@ rustc_library("fidl-fuchsia-pkg-rewrite-ext") {
 }
 
 test_package("fidl-fuchsia-pkg-rewrite-ext-tests") {
-  deps = [
-    ":fidl-fuchsia-pkg-rewrite-ext_test",
-  ]
+  deps = [ ":fidl-fuchsia-pkg-rewrite-ext_test" ]
 
   tests = [
     {
@@ -42,7 +40,5 @@ test_package("fidl-fuchsia-pkg-rewrite-ext-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fidl-fuchsia-pkg-rewrite-ext-tests",
-  ]
+  deps = [ ":fidl-fuchsia-pkg-rewrite-ext-tests" ]
 }

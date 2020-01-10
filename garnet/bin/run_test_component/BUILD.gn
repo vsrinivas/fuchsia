@@ -49,9 +49,7 @@ executable("bin") {
   testonly = true
   output_name = "run_test_component"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -69,9 +67,7 @@ executable("bin") {
 package("run_test_component") {
   testonly = true
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -114,9 +110,7 @@ executable("test_bin") {
 }
 
 test_package("run_test_component_unittests") {
-  deps = [
-    ":test_bin",
-  ]
+  deps = [ ":test_bin" ]
 
   tests = [
     {

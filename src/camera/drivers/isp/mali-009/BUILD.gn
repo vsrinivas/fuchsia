@@ -88,9 +88,7 @@ driver_module("mali-009-driver") {
 package("mali-009") {
   deprecated_system_image = true
 
-  deps = [
-    ":mali-009-driver",
-  ]
+  deps = [ ":mali-009-driver" ]
 
   drivers = [
     {

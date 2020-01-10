@@ -13,7 +13,5 @@ source_set("public") {
     "user_id_provider.h",
   ]
 
-  deps = [
-    "//src/ledger/lib/convert",
-  ]
+  deps = [ "//src/ledger/lib/convert" ]
 }

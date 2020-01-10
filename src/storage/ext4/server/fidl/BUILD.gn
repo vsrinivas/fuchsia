@@ -7,9 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("ext4_readonly") {
   name = "fuchsia.storage.ext4"
 
-  sources = [
-    "ext4_readonly.fidl",
-  ]
+  sources = [ "ext4_readonly.fidl" ]
 
   public_deps = [
     "//zircon/system/fidl/fuchsia-io",

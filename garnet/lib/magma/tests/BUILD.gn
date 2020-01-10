@@ -19,9 +19,7 @@ group("tests") {
 }
 
 test_package("magma_nonhardware_tests") {
-  deps = [
-    "unit_tests",
-  ]
+  deps = [ "unit_tests" ]
 
   tests = [
     {
@@ -32,9 +30,7 @@ test_package("magma_nonhardware_tests") {
 }
 
 test_package("magma_abi_conformance_tests") {
-  deps = [
-    "integration",
-  ]
+  deps = [ "integration" ]
 
   tests = [
     {
@@ -46,9 +42,7 @@ test_package("magma_abi_conformance_tests") {
 
 # Run magma_info as a test to make sure it doesn't crash.
 test_package("magma_info_test") {
-  deps = [
-    "//garnet/lib/magma/src/tools:magma_info",
-  ]
+  deps = [ "//garnet/lib/magma/src/tools:magma_info" ]
 
   tests = [
     {

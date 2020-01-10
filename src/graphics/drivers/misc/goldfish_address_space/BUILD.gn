@@ -8,9 +8,7 @@ import("//build/package.gni")
 driver_module("address_space_driver") {
   output_name = "goldfish_address_space"
 
-  sources = [
-    "address_space_device.cc",
-  ]
+  sources = [ "address_space_device.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_c",
@@ -42,9 +40,7 @@ driver_module("address_space_driver") {
 package("goldfish_address_space") {
   deprecated_system_image = true
 
-  deps = [
-    ":address_space_driver",
-  ]
+  deps = [ ":address_space_driver" ]
 
   drivers = [
     {

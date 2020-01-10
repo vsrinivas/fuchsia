@@ -50,9 +50,7 @@ rustc_library("lib") {
 }
 
 package("setui_client") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "setui_client"
 
@@ -65,9 +63,7 @@ package("setui_client") {
 }
 
 unittest_package("setui_client_tests") {
-  deps = [
-    ":lib_test",
-  ]
+  deps = [ ":lib_test" ]
 
   tests = [
     {
@@ -98,9 +94,7 @@ rustc_binary("setui_client_interface_test_bin") {
 }
 
 test_package("setui_client_interface_test") {
-  deps = [
-    ":setui_client_interface_test_bin",
-  ]
+  deps = [ ":setui_client_interface_test_bin" ]
 
   tests = [
     {

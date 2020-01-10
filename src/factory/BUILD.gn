@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("factory") {
-  deps = [
-    "factory_store_providers",
-  ]
+  deps = [ "factory_store_providers" ]
 }
 
 group("tests") {

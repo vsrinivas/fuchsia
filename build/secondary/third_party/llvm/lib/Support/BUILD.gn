@@ -124,7 +124,5 @@ source_set("Support") {
 
   libs = [ "dl" ]
 
-  deps = [
-    "//third_party/zlib",
-  ]
+  deps = [ "//third_party/zlib" ]
 }

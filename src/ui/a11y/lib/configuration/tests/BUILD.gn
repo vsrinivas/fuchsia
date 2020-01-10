@@ -4,9 +4,7 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":configuration_tests",
-  ]
+  public_deps = [ ":configuration_tests" ]
 }
 
 executable("configuration_tests") {
@@ -14,9 +12,7 @@ executable("configuration_tests") {
 
   testonly = true
 
-  sources = [
-    "color_transform_manager_test.cc",
-  ]
+  sources = [ "color_transform_manager_test.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",

@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":nand-unittest",
-  ]
+  deps = [ ":nand-unittest" ]
 }
 
 zx_test("nand-unittest") {
-  sources = [
-    "nand-test.cc",
-  ]
+  sources = [ "nand-test.cc" ]
   include_dirs = [ ".." ]
   deps = [
     ":common",
@@ -35,9 +31,7 @@ zx_test("nand-unittest") {
 source_set("common") {
   defines = [ "TEST" ]
   include_dirs = [ ".." ]
-  sources = [
-    "../nand.cc",
-  ]
+  sources = [ "../nand.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/banjo/ddk.protocol.platform.device",

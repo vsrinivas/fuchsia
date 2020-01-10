@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 package("root_presenter") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -33,17 +31,13 @@ package("root_presenter") {
 group("tests") {
   testonly = true
 
-  deps = [
-    "tests",
-  ]
+  deps = [ "tests" ]
 }
 
 executable("bin") {
   output_name = "root_presenter"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -172,9 +166,7 @@ source_set("color_transform") {
     "color_transform_handler.h",
   ]
 
-  public_deps = [
-    "//sdk/lib/sys/cpp",
-  ]
+  public_deps = [ "//sdk/lib/sys/cpp" ]
 
   deps = [
     "//sdk/fidl/fuchsia.accessibility",

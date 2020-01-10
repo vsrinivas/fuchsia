@@ -5,9 +5,7 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.usb.function") {
-  sources = [
-    "usb-function.banjo",
-  ]
+  sources = [ "usb-function.banjo" ]
   public_deps = [
     "$zx/system/banjo/ddk.physiter",
     "$zx/system/banjo/ddk.protocol.usb.request",

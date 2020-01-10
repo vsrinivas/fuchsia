@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":launchpad",
-  ]
+  deps = [ ":launchpad" ]
 }
 
 zx_test("launchpad") {
-  sources = [
-    "launchpad.cc",
-  ]
+  sources = [ "launchpad.cc" ]
   deps = [
     "$zx/system/ulib/elfload",
     "$zx/system/ulib/fbl",

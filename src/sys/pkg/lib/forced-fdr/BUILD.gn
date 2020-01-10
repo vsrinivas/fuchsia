@@ -31,9 +31,7 @@ rustc_library("forced-fdr") {
 }
 
 test_package("forced-fdr-tests") {
-  deps = [
-    ":forced-fdr_test",
-  ]
+  deps = [ ":forced-fdr_test" ]
 
   tests = [
     {
@@ -45,7 +43,5 @@ test_package("forced-fdr-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":forced-fdr-tests",
-  ]
+  public_deps = [ ":forced-fdr-tests" ]
 }

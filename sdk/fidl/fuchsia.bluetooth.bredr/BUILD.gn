@@ -16,7 +16,5 @@ fidl("fuchsia.bluetooth.bredr") {
     "profile.fidl",
     "service.fidl",
   ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.bluetooth",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.bluetooth" ]
 }

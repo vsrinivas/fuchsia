@@ -7,9 +7,7 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "trace_stress"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//src/lib/fxl",
@@ -28,9 +26,7 @@ package("trace_stress") {
     },
   ]
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

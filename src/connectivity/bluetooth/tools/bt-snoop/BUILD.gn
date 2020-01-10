@@ -36,9 +36,7 @@ rustc_binary("bin") {
 }
 
 package("bt-snoop") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "bt_snoop"
 
@@ -53,9 +51,7 @@ package("bt-snoop") {
 unittest_package("tests") {
   package_name = "bt-snoop-tests"
 
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

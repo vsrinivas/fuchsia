@@ -73,10 +73,6 @@ zx_test("fs-connection") {
 }
 
 fuzzer("vmo_file-fuzzer") {
-  sources = [
-    "vmo_file-fuzzer.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/fs",
-  ]
+  sources = [ "vmo_file-fuzzer.cc" ]
+  deps = [ "$zx/system/ulib/fs" ]
 }

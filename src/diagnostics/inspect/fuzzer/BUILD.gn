@@ -6,9 +6,7 @@ import("//build/fuzzing/fuzzer.gni")
 
 group("fuzzer") {
   testonly = true
-  deps = [
-    ":inspect_fuzzers",
-  ]
+  deps = [ ":inspect_fuzzers" ]
 }
 
 fuzzers_package("inspect_fuzzers") {
@@ -16,10 +14,6 @@ fuzzers_package("inspect_fuzzers") {
 }
 
 fuzzer("inspect_reader_fuzzer") {
-  sources = [
-    "inspect_reader.cc",
-  ]
-  deps = [
-    "//zircon/public/lib/inspect",
-  ]
+  sources = [ "inspect_reader.cc" ]
+  deps = [ "//zircon/public/lib/inspect" ]
 }

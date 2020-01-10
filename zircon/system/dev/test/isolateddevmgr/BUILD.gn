@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("isolateddevmgr-test") {
-  sources = [
-    "test-driver.cc",
-  ]
+  sources = [ "test-driver.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager-test:c",
     "$zx/system/ulib/ddk",
@@ -19,9 +17,7 @@ zx_driver("isolateddevmgr-test") {
 }
 
 zx_test("isolateddevmgr") {
-  sources = [
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager-test:c",
     "$zx/system/ulib/ddk",

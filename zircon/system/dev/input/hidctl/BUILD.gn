@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("hidctl") {
-  sources = [
-    "hidctl.cc",
-  ]
+  sources = [ "hidctl.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/fidl/fuchsia-hardware-hidctl:c",

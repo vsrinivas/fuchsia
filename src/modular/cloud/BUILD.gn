@@ -4,7 +4,5 @@
 
 group("cloud") {
   testonly = true
-  deps = [
-    "go",
-  ]
+  deps = [ "go" ]
 }

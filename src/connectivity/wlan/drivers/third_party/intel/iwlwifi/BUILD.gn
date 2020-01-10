@@ -116,9 +116,7 @@ source_set("pcie") {
 driver_module("iwlwifi_driver") {
   output_name = "iwlwifi"
 
-  deps = [
-    ":pcie",
-  ]
+  deps = [ ":pcie" ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -128,21 +126,16 @@ all_fw_files = [ "iwlwifi-7265D-29.ucode" ]
 
 foreach(fw_file, all_fw_files) {
   copy("iwlwifi-firmware-copy-" + fw_file) {
-    sources = [
-      "//prebuilt/connectivity/wlan/firmware/intel/iwlwifi/" + fw_file,
-    ]
-    outputs = [
-      "$root_out_dir/firmware/iwlwifi/" + fw_file,
-    ]
+    sources =
+        [ "//prebuilt/connectivity/wlan/firmware/intel/iwlwifi/" + fw_file ]
+    outputs = [ "$root_out_dir/firmware/iwlwifi/" + fw_file ]
   }
 }
 
 package("iwlwifi") {
   deprecated_system_image = true
 
-  deps = [
-    ":iwlwifi_driver",
-  ]
+  deps = [ ":iwlwifi_driver" ]
 
   drivers = [
     {

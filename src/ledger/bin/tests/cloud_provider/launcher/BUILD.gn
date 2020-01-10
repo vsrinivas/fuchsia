@@ -18,7 +18,5 @@ source_set("launcher") {
     "//src/ledger/lib/callback",
   ]
 
-  deps = [
-    "//src/ledger/lib/logging",
-  ]
+  deps = [ "//src/ledger/lib/logging" ]
 }

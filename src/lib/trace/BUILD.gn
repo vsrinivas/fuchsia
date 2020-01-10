@@ -3,14 +3,10 @@
 # found in the LICENSE file.
 
 group("trace") {
-  deps = [
-    "rust:trace",
-  ]
+  deps = [ "rust:trace" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "rust:tests",
-  ]
+  deps = [ "rust:tests" ]
 }

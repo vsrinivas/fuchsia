@@ -24,9 +24,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "timezone"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -40,9 +38,7 @@ executable("bin") {
 }
 
 package("timezone") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "timezone"
 

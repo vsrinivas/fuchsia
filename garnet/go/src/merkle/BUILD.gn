@@ -15,15 +15,11 @@ go_library("merkle") {
 go_test("go_merkle_test") {
   gopackages = [ "fuchsia.googlesource.com/merkle" ]
 
-  deps = [
-    ":merkle",
-  ]
+  deps = [ ":merkle" ]
 }
 
 unittest_package("go_merkle_tests") {
-  deps = [
-    ":go_merkle_test",
-  ]
+  deps = [ ":go_merkle_test" ]
 
   tests = [
     {

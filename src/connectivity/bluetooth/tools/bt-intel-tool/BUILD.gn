@@ -23,8 +23,8 @@ executable("bt-intel-tool") {
   ]
 
   public_deps = [
-    "//zircon/system/fidl/fuchsia-hardware-bluetooth:fuchsia-hardware-bluetooth_c_client",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
+    "//zircon/system/fidl/fuchsia-hardware-bluetooth:fuchsia-hardware-bluetooth_c_client",
   ]
 }

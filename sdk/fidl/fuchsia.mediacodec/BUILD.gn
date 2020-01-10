@@ -14,11 +14,7 @@ fidl("fuchsia.mediacodec") {
 
   sdk_category = "partner"
 
-  sources = [
-    "codec_factory.fidl",
-  ]
+  sources = [ "codec_factory.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.media",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.media" ]
 }

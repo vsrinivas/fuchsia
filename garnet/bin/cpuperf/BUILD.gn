@@ -55,9 +55,7 @@ executable("bin") {
 }
 
 package("cpuperf") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

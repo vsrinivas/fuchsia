@@ -5,10 +5,10 @@
 zx_driver("qemu-arm64") {
   sources = [
     "qemu-bus.cc",
+    "qemu-display.cc",
     "qemu-pci.cc",
     "qemu-rtc.cc",
     "qemu-sysmem.cc",
-    "qemu-display.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
@@ -21,8 +21,6 @@ zx_driver("qemu-arm64") {
     "$zx/system/ulib/zx",
   ]
   if (current_cpu == "arm64") {
-    data_deps = [
-      "$zx/kernel/target/arm64/boot-shim:qemu",
-    ]
+    data_deps = [ "$zx/kernel/target/arm64/boot-shim:qemu" ]
   }
 }

@@ -8,9 +8,7 @@ source_set("health") {
     "health.h",
   ]
 
-  public_deps = [
-    "//src/lib/inspect_deprecated",
-  ]
+  public_deps = [ "//src/lib/inspect_deprecated" ]
 
   public_configs = [ "//garnet/public:config" ]
 }

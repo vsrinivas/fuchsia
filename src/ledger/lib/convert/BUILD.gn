@@ -24,17 +24,13 @@ source_set("convert") {
 flatbuffer("byte_storage_test") {
   testonly = true
 
-  sources = [
-    "bytes_test.fbs",
-  ]
+  sources = [ "bytes_test.fbs" ]
 }
 
 source_set("unittests") {
   testonly = true
 
-  sources = [
-    "convert_unittest.cc",
-  ]
+  sources = [ "convert_unittest.cc" ]
 
   deps = [
     ":byte_storage_test",

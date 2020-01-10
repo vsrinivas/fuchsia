@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("lockdep") {
-  sources = [
-    "lock_dep.cc",
-  ]
+  sources = [ "lock_dep.cc" ]
   deps = [
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/version",

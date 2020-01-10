@@ -6,15 +6,11 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 group("cpp") {
-  deps = [
-    ":read_visitor",
-  ]
+  deps = [ ":read_visitor" ]
 }
 
 source_set("read_visitor") {
-  sources = [
-    "read_visitor.h",
-  ]
+  sources = [ "read_visitor.h" ]
 
   public_deps = [
     "//zircon/public/lib/fit",
@@ -25,9 +21,7 @@ source_set("read_visitor") {
 executable("read_visitor_test") {
   testonly = true
   output_name = "read_visitor_test"
-  sources = [
-    "read_visitor_unittest.cc",
-  ]
+  sources = [ "read_visitor_unittest.cc" ]
   deps = [
     ":read_visitor",
     "//zircon/public/lib/zxtest",
@@ -42,7 +36,5 @@ unittest_package("inspect_contrib_cpp_tests") {
     },
   ]
 
-  deps = [
-    ":read_visitor_test",
-  ]
+  deps = [ ":read_visitor_test" ]
 }

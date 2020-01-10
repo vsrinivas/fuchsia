@@ -15,12 +15,8 @@ foreach(shader, escher_shaders_resources) {
   name = get_path_info(shader.path, "file")
   copy_name = "copy_$name"
   copy(copy_name) {
-    sources = [
-      shader.path,
-    ]
-    outputs = [
-      "$root_out_dir/test_data/escher/" + shader.dest,
-    ]
+    sources = [ shader.path ]
+    outputs = [ "$root_out_dir/test_data/escher/" + shader.dest ]
   }
   group_deps += [ ":$copy_name" ]
   test_data += get_target_outputs(":$copy_name")
@@ -30,12 +26,8 @@ foreach(shader, escher_shaders_spirv_resources) {
   name = get_path_info(shader.path, "file")
   copy_name = "copy_$name"
   copy(copy_name) {
-    sources = [
-      shader.path,
-    ]
-    outputs = [
-      "$root_out_dir/test_data/escher/" + shader.dest,
-    ]
+    sources = [ shader.path ]
+    outputs = [ "$root_out_dir/test_data/escher/" + shader.dest ]
   }
   group_deps += [ ":$copy_name" ]
   test_data += get_target_outputs(":$copy_name")

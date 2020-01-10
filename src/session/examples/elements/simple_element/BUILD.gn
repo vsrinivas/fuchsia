@@ -20,9 +20,7 @@ rustc_binary("simple_element_bin") {
 }
 
 package("simple_element") {
-  deps = [
-    ":simple_element_bin",
-  ]
+  deps = [ ":simple_element_bin" ]
 
   meta = [
     {

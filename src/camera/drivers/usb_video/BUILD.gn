@@ -48,9 +48,7 @@ driver_module("usb_video_driver") {
 package("usb_video") {
   deprecated_system_image = true
 
-  deps = [
-    ":usb_video_driver",
-  ]
+  deps = [ ":usb_video_driver" ]
 
   drivers = [
     {

@@ -25,9 +25,7 @@ config_data("web_engine_config") {
   visibility = [ ":web_engine" ]
 
   for_pkg = "sysmgr"
-  sources = [
-    rebase_path("config/web_context_provider.config"),
-  ]
+  sources = [ rebase_path("config/web_context_provider.config") ]
 }
 
 prebuilt_package("web_engine_pkg") {
@@ -47,13 +45,9 @@ group("web_runner") {
 config_data("web_runner_config") {
   visibility = [ ":web_runner" ]
   for_pkg = "appmgr"
-  sources = [
-    rebase_path("config/http_scheme_map.config"),
-  ]
+  sources = [ rebase_path("config/http_scheme_map.config") ]
 
-  outputs = [
-    "scheme_map/http.config",
-  ]
+  outputs = [ "scheme_map/http.config" ]
 }
 
 prebuilt_package("web_runner_pkg") {

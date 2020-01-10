@@ -25,9 +25,7 @@ source_set("dispatcher_checker") {
     "dispatcher_checker.h",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/async-default",
-  ]
+  public_deps = [ "//zircon/public/lib/async-default" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }
@@ -43,21 +41,15 @@ source_set("completer") {
     "//src/ledger/lib/coroutine",
   ]
 
-  deps = [
-    "//src/ledger/lib/logging",
-  ]
+  deps = [ "//src/ledger/lib/logging" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }
 
 source_set("thread_checker") {
-  sources = [
-    "thread_checker.h",
-  ]
+  sources = [ "thread_checker.h" ]
 
-  public_deps = [
-    "//src/ledger/lib/logging",
-  ]
+  public_deps = [ "//src/ledger/lib/logging" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

@@ -23,10 +23,6 @@ rustc_binary("pm_build") {
 }
 
 install_host_tools("pm_build_host") {
-  deps = [
-    ":pm_build",
-  ]
-  outputs = [
-    "pm_build",
-  ]
+  deps = [ ":pm_build" ]
+  outputs = [ "pm_build" ]
 }

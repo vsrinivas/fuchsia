@@ -29,13 +29,9 @@ source_set("gesture_manager") {
 }
 
 source_set("util") {
-  public = [
-    "util.h",
-  ]
+  public = [ "util.h" ]
 
-  sources = [
-    "util.cc",
-  ]
+  sources = [ "util.cc" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.input",

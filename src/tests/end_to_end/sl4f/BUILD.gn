@@ -39,7 +39,5 @@ dart_test("sl4f_test") {
 group("test") {
   testonly = true
 
-  deps = [
-    ":sl4f_test($host_toolchain)",
-  ]
+  deps = [ ":sl4f_test($host_toolchain)" ]
 }

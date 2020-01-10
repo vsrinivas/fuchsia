@@ -37,9 +37,7 @@ package("network-speed-test") {
     },
   ]
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "network_speed_test"
 }

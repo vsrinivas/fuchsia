@@ -9,9 +9,7 @@ import("//build/testing/environments.gni")
 
 group("outdir") {
   testonly = true
-  deps = [
-    ":appmgr_out_dir_integration_test",
-  ]
+  deps = [ ":appmgr_out_dir_integration_test" ]
 }
 
 rustc_binary("bin") {

@@ -4,8 +4,8 @@
 
 zx_library("paver") {
   sources = [
-    "abr.cc",
     "abr-client.cc",
+    "abr.cc",
     "device-partitioner.cc",
     "fvm.cc",
     "partition-client.cc",
@@ -46,9 +46,7 @@ zx_library("paver") {
     "$zx/system/ulib/zxcrypt:zxcrypt-fdio",
     "$zx/third_party/ulib/cksum",
   ]
-  public_deps = [
-    "$zx/system/ulib/svc",
-  ]
+  public_deps = [ "$zx/system/ulib/svc" ]
 }
 
 zx_test("paver-test") {

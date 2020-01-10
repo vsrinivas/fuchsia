@@ -6,10 +6,6 @@ import("//build/config.gni")
 
 config_data("config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "audio.config",
-  ]
-  sources = [
-    "audio.config",
-  ]
+  outputs = [ "audio.config" ]
+  sources = [ "audio.config" ]
 }

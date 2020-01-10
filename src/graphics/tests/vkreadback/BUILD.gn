@@ -19,11 +19,7 @@ source_set("vkreadback_src") {
 executable("vkreadback") {
   testonly = true
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
-  deps = [
-    ":vkreadback_src",
-  ]
+  deps = [ ":vkreadback_src" ]
 }

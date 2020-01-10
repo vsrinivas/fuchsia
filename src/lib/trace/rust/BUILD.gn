@@ -18,9 +18,7 @@ rustc_library("trace") {
 }
 
 unittest_package("rust-trace-test") {
-  deps = [
-    ":trace_test",
-  ]
+  deps = [ ":trace_test" ]
   tests = [
     {
       name = "fuchsia_trace_lib_test"
@@ -31,9 +29,7 @@ unittest_package("rust-trace-test") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":rust-trace-test",
-  ]
+  deps = [ ":rust-trace-test" ]
 }
 
 shared_library("rust-trace-provider") {
@@ -43,9 +39,7 @@ shared_library("rust-trace-provider") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace-provider-with-fdio",
   ]
-  sources = [
-    "trace-provider/trace_provider.cc",
-  ]
+  sources = [ "trace-provider/trace_provider.cc" ]
 }
 
 rustc_library("trace-provider") {

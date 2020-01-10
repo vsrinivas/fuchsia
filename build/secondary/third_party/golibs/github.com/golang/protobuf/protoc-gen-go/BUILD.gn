@@ -9,16 +9,10 @@ assert(current_toolchain == host_toolchain)
 
 go_binary("protoc-gen-go") {
   gopackage = "github.com/golang/protobuf/protoc-gen-go"
-  deps = [
-    "//third_party/golibs:github.com/golang/protobuf",
-  ]
+  deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
 }
 
 install_host_tools("host") {
-  deps = [
-    ":protoc-gen-go",
-  ]
-  outputs = [
-    "protoc-gen-go",
-  ]
+  deps = [ ":protoc-gen-go" ]
+  outputs = [ "protoc-gen-go" ]
 }

@@ -53,12 +53,8 @@ template("trace_library") {
 trace_library("trace") {
   sdk_publishable = true
   sdk = "source"
-  public_deps = [
-    "$zx/system/ulib/trace-engine:headers",
-  ]
-  deps = [
-    "$zx/system/ulib/trace-engine",
-  ]
+  public_deps = [ "$zx/system/ulib/trace-engine:headers" ]
+  deps = [ "$zx/system/ulib/trace-engine" ]
 }
 
 # A special version for programs and shared libraries that can't use
@@ -67,12 +63,8 @@ trace_library("trace") {
 # Generally you DON'T want to use this.
 trace_library("trace-with-static-engine") {
   sdk = "static"
-  public_deps = [
-    "$zx/system/ulib/trace-engine:trace-engine-static.headers",
-  ]
-  deps = [
-    "$zx/system/ulib/trace-engine:trace-engine-static",
-  ]
+  public_deps = [ "$zx/system/ulib/trace-engine:trace-engine-static.headers" ]
+  deps = [ "$zx/system/ulib/trace-engine:trace-engine-static" ]
 }
 
 # And again, but this time for drivers.
@@ -80,10 +72,6 @@ trace_library("trace-with-static-engine") {
 # TODO(PT-196): Move to ddk.
 trace_library("trace-driver") {
   sdk = "static"
-  public_deps = [
-    "$zx/system/ulib/trace-engine:trace-engine-driver.headers",
-  ]
-  deps = [
-    "$zx/system/ulib/trace-engine:trace-engine-driver",
-  ]
+  public_deps = [ "$zx/system/ulib/trace-engine:trace-engine-driver.headers" ]
+  deps = [ "$zx/system/ulib/trace-engine:trace-engine-driver" ]
 }

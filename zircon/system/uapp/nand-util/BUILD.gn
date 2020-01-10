@@ -28,9 +28,7 @@ source_set("common") {
     "ftl_internal.cc",
     "nand-broker.cc",
   ]
-  deps = [
-    "$zx/system/ulib/pretty",
-  ]
+  deps = [ "$zx/system/ulib/pretty" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device:llcpp",
@@ -48,9 +46,7 @@ source_set("common") {
 
 zx_test("nand-util-test") {
   output_name = "nand-util-test"
-  sources = [
-    "test/ftl_internal_test.cc",
-  ]
+  sources = [ "test/ftl_internal_test.cc" ]
   include_dirs = [ "." ]
   deps = [
     ":common",

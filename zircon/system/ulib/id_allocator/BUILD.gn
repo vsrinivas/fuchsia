@@ -5,9 +5,7 @@
 zx_library("id_allocator") {
   sdk = "source"
   sdk_headers = [ "id_allocator/id_allocator.h" ]
-  sources = [
-    "id_allocator.cc",
-  ]
+  sources = [ "id_allocator.cc" ]
   public_deps = [
     # <id_allocator/id_allocator.h> has #include <bitmap/bitmap.h>.
     "$zx/system/ulib/bitmap:headers",

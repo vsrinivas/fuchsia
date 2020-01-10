@@ -37,9 +37,7 @@ rustc_library("lib") {
 }
 
 test_package("dhcp_tests") {
-  deps = [
-    ":lib_test",
-  ]
+  deps = [ ":lib_test" ]
 
   tests = [
     {
@@ -79,9 +77,7 @@ rustc_binary("bin") {
 }
 
 package("dhcpd") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   meta = [
     {
       path = rebase_path("meta/dhcpd.cmx")
@@ -110,9 +106,7 @@ package("dhcpd") {
 }
 
 test_package("dhcpd_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

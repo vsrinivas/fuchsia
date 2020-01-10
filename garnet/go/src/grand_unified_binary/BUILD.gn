@@ -19,7 +19,5 @@ go_library("lib") {
 go_binary("grand_unified_binary") {
   gopackage = "fuchsia.googlesource.com/grand_unified_binary"
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }

@@ -5,18 +5,12 @@
 zx_library("smbios") {
   kernel = true
   static = true
-  sources = [
-    "smbios.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/fbl",
-  ]
+  sources = [ "smbios.cc" ]
+  deps = [ "$zx/system/ulib/fbl" ]
 }
 
 zx_test("smbios-test") {
-  sources = [
-    "smbios-test.cc",
-  ]
+  sources = [ "smbios-test.cc" ]
   deps = [
     ":smbios",
     "$zx/system/ulib/fdio",

@@ -10,7 +10,5 @@ fidl("fuchsia.modular.storymodel") {
     "story_model.fidl",
     "story_model_mutation.fidl",
   ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.modular" ]
 }

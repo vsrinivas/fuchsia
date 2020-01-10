@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("sherlock-pdm-input") {
-  sources = [
-    "audio-stream-in.cc",
-  ]
+  sources = [ "audio-stream-in.cc" ]
 
   # TODO(32708): This driver violates the allowed shlib deps policy.
   deprecated_inhibit_driver_shlib_allowlist = true

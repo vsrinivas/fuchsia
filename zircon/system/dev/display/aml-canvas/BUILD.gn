@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("aml-canvas") {
-  sources = [
-    "aml-canvas.cc",
-  ]
+  sources = [ "aml-canvas.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",
     "$zx/system/banjo/ddk.protocol.platform.device",

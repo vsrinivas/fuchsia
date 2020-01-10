@@ -34,9 +34,7 @@ executable("bin") {
 }
 
 package("${name}") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = name
 

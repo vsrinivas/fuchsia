@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("ssd1306") {
-  sources = [
-    "ssd1306.cc",
-  ]
+  sources = [ "ssd1306.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.dotmatrixdisplay",
     "$zx/system/banjo/ddk.protocol.i2c",

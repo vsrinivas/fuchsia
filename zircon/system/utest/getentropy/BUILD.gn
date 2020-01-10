@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("getentropy") {
-  sources = [
-    "getentropy.cc",
-  ]
+  sources = [ "getentropy.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",

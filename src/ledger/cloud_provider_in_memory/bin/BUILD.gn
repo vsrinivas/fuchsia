@@ -9,9 +9,7 @@ visibility = [ "//src/ledger/*" ]
 executable("app") {
   output_name = "cloud_provider_in_memory"
 
-  sources = [
-    "app.cc",
-  ]
+  sources = [ "app.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular",
@@ -27,9 +25,7 @@ executable("app") {
 }
 
 package("bin") {
-  deps = [
-    ":app",
-  ]
+  deps = [ ":app" ]
 
   package_name = "cloud_provider_in_memory"
   binary = "cloud_provider_in_memory"
@@ -45,7 +41,5 @@ package("bin") {
 group("tests") {
   testonly = true
 
-  public_deps = [
-    "//src/ledger/cloud_provider_in_memory/bin/validation",
-  ]
+  public_deps = [ "//src/ledger/cloud_provider_in_memory/bin/validation" ]
 }

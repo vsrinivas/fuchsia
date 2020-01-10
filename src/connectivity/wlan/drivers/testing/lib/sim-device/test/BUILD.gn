@@ -8,20 +8,16 @@ import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":sim_device_test",
-  ]
+  deps = [ ":sim_device_test" ]
 }
 
 executable("sim_add_test") {
   output_name = "sim_add_test"
   testonly = true
 
-  defines = [ ]
+  defines = []
 
-  sources = [
-    "sim_add_test.cc",
-  ]
+  sources = [ "sim_add_test.cc" ]
 
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
@@ -33,9 +29,7 @@ executable("sim_add_test") {
 unittest_package("sim_device_test") {
   package_name = "sim_device_test"
 
-  deps = [
-    ":sim_add_test",
-  ]
+  deps = [ ":sim_add_test" ]
 
   tests = [
     {
@@ -44,4 +38,3 @@ unittest_package("sim_device_test") {
     },
   ]
 }
-

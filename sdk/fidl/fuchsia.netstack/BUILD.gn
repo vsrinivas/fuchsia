@@ -15,9 +15,7 @@ fidl("fuchsia.netstack") {
 
   sdk_category = "partner"
 
-  sources = [
-    "netstack.fidl",
-  ]
+  sources = [ "netstack.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.net.dhcp",

@@ -10,9 +10,7 @@ import("//build/testing/environments.gni")
 executable("bin") {
   output_name = "activity_ctl"
 
-  sources = [
-    "activity_ctl.cc",
-  ]
+  sources = [ "activity_ctl.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.ui.activity",
@@ -28,9 +26,7 @@ executable("bin") {
 }
 
 package("activity_ctl") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

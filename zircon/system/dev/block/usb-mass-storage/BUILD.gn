@@ -3,12 +3,8 @@
 # found in the LICENSE file.
 
 zx_driver("usb-mass-storage") {
-  sources = [
-    "usb-mass-storage.cc",
-  ]
-  deps = [
-    ":block",
-  ]
+  sources = [ "usb-mass-storage.cc" ]
+  deps = [ ":block" ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
   deprecated_inhibit_driver_shlib_allowlist = true
@@ -16,9 +12,7 @@ zx_driver("usb-mass-storage") {
 
 source_set("block") {
   visibility = [ ":*" ]
-  sources = [
-    "block.cc",
-  ]
+  sources = [ "block.cc" ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.usb",
@@ -48,9 +42,7 @@ group("tests") {
 }
 
 zx_test("ums-block") {
-  sources = [
-    "tests/block.cc",
-  ]
+  sources = [ "tests/block.cc" ]
   deps = [
     ":block",
     "$zx/system/dev/lib/fake-bti",

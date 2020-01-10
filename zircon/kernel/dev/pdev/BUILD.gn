@@ -4,9 +4,7 @@
 
 zx_library("pdev") {
   kernel = true
-  sources = [
-    "pdev.cc",
-  ]
+  sources = [ "pdev.cc" ]
   public_deps = [
     # <pdev/interrupt.h> has #include <dev/interrupt.h>.
     "$zx/kernel/dev/interrupt",

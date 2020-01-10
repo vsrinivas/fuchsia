@@ -7,9 +7,7 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "tiles_ctl"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.developer.tiles",
@@ -22,9 +20,7 @@ executable("bin") {
 }
 
 package("tiles_ctl") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   meta = [
     {

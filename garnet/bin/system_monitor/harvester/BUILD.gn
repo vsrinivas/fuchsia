@@ -82,9 +82,7 @@ package("system_monitor_harvester") {
   rootresource_svc = "//build"
   rootjob_svc = "//build"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -113,8 +111,8 @@ executable("system_monitor_harvester_test") {
     "gather_memory_digest_test.cc",
     "gather_memory_test.cc",
     "gather_processes_and_memory_test.cc",
-    "gather_threads_and_cpu_test.cc",
     "gather_tasks_test.cc",
+    "gather_threads_and_cpu_test.cc",
     "harvester_fake.h",
     "harvester_test.cc",
     "root_resource_test.cc",
@@ -134,9 +132,7 @@ test_package("system_monitor_harvester_tests") {
   rootresource_svc = "//build"
   rootjob_svc = "//build"
 
-  deps = [
-    ":system_monitor_harvester_test",
-  ]
+  deps = [ ":system_monitor_harvester_test" ]
 
   tests = [
     {

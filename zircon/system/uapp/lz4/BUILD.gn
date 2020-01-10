@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("lz4") {
-  sources = [
-    "main.c",
-  ]
+  sources = [ "main.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

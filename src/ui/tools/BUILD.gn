@@ -52,9 +52,7 @@ foreach(tool, component_shell_tools) {
       },
     ]
 
-    deps = [
-      tool,
-    ]
+    deps = [ tool ]
 
     binaries = [
       {
@@ -74,9 +72,7 @@ non_component_tools = [
 
 foreach(tool, non_component_tools) {
   package(tool) {
-    deps = [
-      tool,
-    ]
+    deps = [ tool ]
     binaries = [
       {
         name = tool

@@ -5,9 +5,7 @@
 executable("report_result") {
   output_name = "report_result"
 
-  sources = [
-    "report_result.cc",
-  ]
+  sources = [ "report_result.cc" ]
 
   deps = [
     "//garnet/public/lib/test_runner/cpp",

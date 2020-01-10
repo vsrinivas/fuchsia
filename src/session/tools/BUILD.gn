@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    "//src/session/tools/session_control",
-  ]
+  deps = [ "//src/session/tools/session_control" ]
 }
 
 group("tests") {
   testonly = true
 
-  deps = [
-    "//src/session/tools/session_control:session_control_tests",
-  ]
+  deps = [ "//src/session/tools/session_control:session_control_tests" ]
 }

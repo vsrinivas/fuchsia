@@ -39,9 +39,7 @@ rustc_library("spinel-rs-sys") {
 }
 
 unittest_package("spinel-rs-sys-tests") {
-  deps = [
-    ":spinel-rs-sys_test",
-  ]
+  deps = [ ":spinel-rs-sys_test" ]
   tests = [
     {
       name = "spinel_rs_sys_lib_test"

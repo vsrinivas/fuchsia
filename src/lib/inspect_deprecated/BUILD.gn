@@ -10,9 +10,7 @@ source_set("inspect_deprecated") {
     "inspect.h",
   ]
 
-  deps = [
-    "//src/lib/syslog/cpp",
-  ]
+  deps = [ "//src/lib/syslog/cpp" ]
 
   public_deps = [
     "//src/lib/inspect_deprecated/deprecated",
@@ -29,9 +27,7 @@ source_set("reader") {
     "reader.cc",
     "reader.h",
   ]
-  public_deps = [
-    ":inspect_deprecated",
-  ]
+  public_deps = [ ":inspect_deprecated" ]
 }
 
 source_set("component") {

@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":serial-unittest",
-  ]
+  deps = [ ":serial-unittest" ]
 }
 
 zx_test("serial-unittest") {
-  sources = [
-    "serial-test.cc",
-  ]
+  sources = [ "serial-test.cc" ]
   include_dirs = [ ".." ]
   deps = [
     "$zx/system/dev/lib/fake_ddk",

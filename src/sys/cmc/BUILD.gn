@@ -67,17 +67,13 @@ rustc_binary("example_bin") {
 
 deprecated_fuchsia_component("example_component") {
   manifest = rebase_path("meta/example.cml")
-  deps = [
-    ":example_bin",
-  ]
+  deps = [ ":example_bin" ]
   binary = "example"
   testonly = true
 }
 
 test_package("cmc_integration_test") {
-  deps = [
-    ":cmc_integration_test_bin",
-  ]
+  deps = [ ":cmc_integration_test_bin" ]
   components = [ ":example_component" ]
 
   resources = [
@@ -99,13 +95,9 @@ test_package("cmc_integration_test") {
 }
 
 install_host_tools("install") {
-  deps = [
-    ":cmc",
-  ]
+  deps = [ ":cmc" ]
 
-  outputs = [
-    "cmc",
-  ]
+  outputs = [ "cmc" ]
 }
 
 group("tests") {

@@ -4,9 +4,7 @@
 
 if (is_fuchsia) {
   zx_driver("usb-peripheral-test") {
-    sources = [
-      "driver.cc",
-    ]
+    sources = [ "driver.cc" ]
     deps = [
       "$zx/system/banjo/ddk.protocol.usb",
       "$zx/system/banjo/ddk.protocol.usb.function",
@@ -21,9 +19,7 @@ if (is_fuchsia) {
 } else if (current_os == "linux") {
   zx_test("usb-peripheral-test") {
     output_name = "usb-peripheral-test"
-    sources = [
-      "test.cc",
-    ]
+    sources = [ "test.cc" ]
     deps = [
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/zxtest",

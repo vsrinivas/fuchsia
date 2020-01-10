@@ -26,9 +26,7 @@ group("termina_guest") {
 
 group("network_settings_server") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/network_settings_server",
-  ]
+  public_deps = [ "//garnet/bin/network_settings_server" ]
 }
 
 group("sys") {
@@ -42,16 +40,12 @@ group("sys") {
 
 group("linux_runner") {
   testonly = true
-  public_deps = [
-    "//src/virtualization/packages/biscotti_guest/linux_runner",
-  ]
+  public_deps = [ "//src/virtualization/packages/biscotti_guest/linux_runner" ]
 }
 
 group("kms") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/kms:kms",
-  ]
+  public_deps = [ "//garnet/bin/kms:kms" ]
 }
 
 group("tennis") {

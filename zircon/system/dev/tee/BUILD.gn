@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("tee") {
-  deps = [
-    "optee",
-  ]
+  deps = [ "optee" ]
 }

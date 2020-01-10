@@ -7,9 +7,7 @@ import("//build/test/test_package.gni")
 
 executable("fidlcat_test_bin") {
   testonly = true
-  sources = [
-    "fidlcat_test.cc",
-  ]
+  sources = [ "fidlcat_test.cc" ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
@@ -18,9 +16,7 @@ executable("fidlcat_test_bin") {
 }
 
 unittest_package("fidlcat_tests") {
-  deps = [
-    ":fidlcat_test_bin",
-  ]
+  deps = [ ":fidlcat_test_bin" ]
   tests = [
     {
       name = "fidlcat_test_bin"
@@ -32,7 +28,5 @@ unittest_package("fidlcat_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":fidlcat_tests",
-  ]
+  deps = [ ":fidlcat_tests" ]
 }

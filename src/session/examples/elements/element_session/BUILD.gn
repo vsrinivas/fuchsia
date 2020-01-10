@@ -25,9 +25,7 @@ rustc_binary("element_session_bin") {
 }
 
 package("element_session") {
-  deps = [
-    ":element_session_bin",
-  ]
+  deps = [ ":element_session_bin" ]
 
   meta = [
     {

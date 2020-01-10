@@ -392,9 +392,7 @@ zx_library("c") {
 }
 
 source_set("crt1") {
-  sources = [
-    "Scrt1.cc",
-  ]
+  sources = [ "Scrt1.cc" ]
 
   # This runs before all runtime setup.
   configs += [ "$zx/public/gn/config:no_sanitizers" ]

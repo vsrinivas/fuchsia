@@ -23,9 +23,7 @@ rustc_library("fuchsia-bootfs") {
 }
 
 test_package("fuchsia-bootfs-tests") {
-  deps = [
-    ":fuchsia-bootfs_test",
-  ]
+  deps = [ ":fuchsia-bootfs_test" ]
 
   resources = [
     {

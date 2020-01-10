@@ -22,12 +22,8 @@ rustc_library("spinel-mold") {
   with_unit_tests = true
   version = "0.1.0"
   edition = "2018"
-  features = [
-    "lib",
-  ]
-  deps = [
-    "//src/graphics/lib/compute/mold",
-  ]
+  features = [ "lib" ]
+  deps = [ "//src/graphics/lib/compute/mold" ]
 }
 
 rustc_staticlib("spinel-mold-static") {
@@ -35,9 +31,7 @@ rustc_staticlib("spinel-mold-static") {
   with_unit_tests = true
   version = "0.1.0"
   edition = "2018"
-  deps = [
-    "//src/graphics/lib/compute/mold",
-  ]
+  deps = [ "//src/graphics/lib/compute/mold" ]
 }
 
 group("spinel-mold-c") {
@@ -49,9 +43,7 @@ group("spinel-mold-c") {
 }
 
 unittest_package("spinel-mold-tests") {
-  deps = [
-    ":spinel-mold_test",
-  ]
+  deps = [ ":spinel-mold_test" ]
   tests = [
     {
       name = "spinel_mold_lib_test"
@@ -61,9 +53,7 @@ unittest_package("spinel-mold-tests") {
 }
 
 unittest_package("spinel-mold-static-tests") {
-  deps = [
-    ":spinel-mold-static_test",
-  ]
+  deps = [ ":spinel-mold-static_test" ]
   tests = [
     {
       name = "spinel_mold_static_staticlib_test"
@@ -76,6 +66,6 @@ graphics_compute_unittests("mold_c_unittests") {
   sources = [ "tests/mold_c_unittests.cc" ]
   deps = [
     ":spinel-mold-c",
-    "//src/graphics/lib/compute/spinel:spinel_headers"
+    "//src/graphics/lib/compute/spinel:spinel_headers",
   ]
 }

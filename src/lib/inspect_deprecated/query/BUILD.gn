@@ -46,13 +46,9 @@ source_set("text_formatter") {
     "text_formatter.h",
   ]
 
-  deps = [
-    "//garnet/public/lib/fostr",
-  ]
+  deps = [ "//garnet/public/lib/fostr" ]
 
-  public_deps = [
-    ":formatter",
-  ]
+  public_deps = [ ":formatter" ]
 }
 
 source_set("json_formatter") {

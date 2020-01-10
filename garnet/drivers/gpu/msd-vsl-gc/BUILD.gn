@@ -48,7 +48,5 @@ magma_pdev_entry("msd_vsl_test_entry") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "tests/unit_tests:nonhardware_tests",
-  ]
+  public_deps = [ "tests/unit_tests:nonhardware_tests" ]
 }

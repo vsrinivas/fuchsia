@@ -56,9 +56,7 @@ group("zircon_test_metadata") {
 }
 
 package("zircon_fuzzers") {
-  deps = [
-    ":zircon_fuzzers_manifest",
-  ]
+  deps = [ ":zircon_fuzzers_manifest" ]
   extra = get_target_outputs(":zircon_fuzzers_manifest")
   metadata = {
     fuzz_spec = [
@@ -81,9 +79,7 @@ package("zircon_fuzzers") {
 # The schema produced here matches images.json with the addition of the
 # `success_string` key.
 generated_file("zbi_tests") {
-  outputs = [
-    "$root_build_dir/zbi_tests.json",
-  ]
+  outputs = [ "$root_build_dir/zbi_tests.json" ]
   output_conversion = "json"
 
   zbi_test_success_string =

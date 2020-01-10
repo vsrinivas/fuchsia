@@ -13,7 +13,5 @@ group("playback") {
 
 group("tests") {
   testonly = true
-  deps = [
-    "//src/media/playback/mediaplayer:tests",
-  ]
+  deps = [ "//src/media/playback/mediaplayer:tests" ]
 }

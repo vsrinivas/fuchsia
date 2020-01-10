@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("chromeos-disk-setup") {
-  sources = [
-    "chromeos-disk-setup.cc",
-  ]
+  sources = [ "chromeos-disk-setup.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/chromeos-disk-setup",

@@ -35,17 +35,15 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.net.icmp:fuchsia.net.icmp-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
+    "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
   ]
 }
 
 package("ping3") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -63,9 +61,7 @@ package("ping3") {
 }
 
 test_package("ping3_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

@@ -5,7 +5,5 @@
 executable("trivial_success") {
   testonly = true
 
-  sources = [
-    "trivial_success.cc",
-  ]
+  sources = [ "trivial_success.cc" ]
 }

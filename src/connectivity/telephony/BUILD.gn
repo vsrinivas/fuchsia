@@ -28,7 +28,5 @@ group("tests") {
 
 group("drivers") {
   testonly = true
-  public_deps = [
-    "//src/connectivity/telephony/drivers",
-  ]
+  public_deps = [ "//src/connectivity/telephony/drivers" ]
 }

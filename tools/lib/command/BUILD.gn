@@ -7,14 +7,10 @@ import("//build/go/go_test.gni")
 
 go_library("command") {
   name = "go.fuchsia.dev/fuchsia/tools/lib/command"
-  deps = [
-    "//third_party/golibs:github.com/google/subcommands",
-  ]
+  deps = [ "//third_party/golibs:github.com/google/subcommands" ]
 }
 
 go_test("command_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/command" ]
-  deps = [
-    ":command",
-  ]
+  deps = [ ":command" ]
 }

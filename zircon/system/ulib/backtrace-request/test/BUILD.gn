@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":backtrace-request",
-  ]
+  deps = [ ":backtrace-request" ]
 }
 
 zx_test("backtrace-request") {
-  sources = [
-    "backtrace-request-test.cc",
-  ]
+  sources = [ "backtrace-request-test.cc" ]
   deps = [
     "$zx/system/ulib/backtrace-request:utils",
     "$zx/system/ulib/fdio",

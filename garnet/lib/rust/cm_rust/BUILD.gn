@@ -20,9 +20,7 @@ rustc_library("cm_rust") {
 }
 
 test_package("cm_rust_tests") {
-  deps = [
-    ":cm_rust_test",
-  ]
+  deps = [ ":cm_rust_test" ]
 
   tests = [
     {

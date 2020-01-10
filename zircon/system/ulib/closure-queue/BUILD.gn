@@ -7,14 +7,10 @@ zx_library("closure-queue") {
   # in the sdk. It's just the way we export from zircon for use elsewhere.
   sdk = "source"
   sdk_headers = [ "lib/closure-queue/closure_queue.h" ]
-  sources = [
-    "closure_queue.cc",
-  ]
+  sources = [ "closure_queue.cc" ]
   deps = [
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/zx",
   ]
-  public_deps = [
-    "$zx/system/ulib/async:async.headers",
-  ]
+  public_deps = [ "$zx/system/ulib/async:async.headers" ]
 }

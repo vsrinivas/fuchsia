@@ -21,13 +21,9 @@ rustc_test("tests_bin") {
 
 executable("gtest_sample_tests") {
   testonly = true
-  sources = [
-    "sample_tests.cc",
-  ]
+  sources = [ "sample_tests.cc" ]
 
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
 test_package("gtest_adapter_integration_test") {

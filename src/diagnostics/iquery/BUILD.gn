@@ -36,9 +36,7 @@ rustc_binary("bin") {
 }
 
 package("iquery") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -49,9 +47,7 @@ package("iquery") {
 }
 
 test_package("iquery_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

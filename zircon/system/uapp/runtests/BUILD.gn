@@ -4,9 +4,7 @@
 
 zx_executable("runtests") {
   testonly = true
-  sources = [
-    "runtests.cc",
-  ]
+  sources = [ "runtests.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-logger:c",
     "$zx/system/ulib/async",

@@ -5,9 +5,7 @@
 assert(current_cpu == "x64")
 
 zx_driver("pc-ps2") {
-  sources = [
-    "i8042.c",
-  ]
+  sources = [ "i8042.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/fidl/fuchsia-hardware-input:c",

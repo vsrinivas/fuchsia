@@ -11,9 +11,7 @@ executable("msd_img_rgx_integration_tests_executable") {
   testonly = true
   output_name = "msd_img_rgx_integration_tests"
 
-  sources = [
-    "test_shutdown.cc",
-  ]
+  sources = [ "test_shutdown.cc" ]
 
   public_deps = [
     "$zircon_build_root/public/lib/fdio",

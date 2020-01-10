@@ -6,58 +6,50 @@ import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia.device.devhost.test") {
   visibility = [ ":*" ]
-  sources = [
-    "test.fidl",
-  ]
+  sources = [ "test.fidl" ]
 }
 
 if (current_toolchain != default_toolchain) {
-    zx_driver("devhost-test") {
-      sources = [
-        "test-driver.cc",
-      ]
-      deps = [
-        "$zx/system/ulib/ddk",
-        "$zx/system/ulib/ddktl",
-        "$zx/system/ulib/fdio",
-        "$zx/system/ulib/zircon",
-        ":fuchsia.device.devhost.test.llcpp",
-      ]
+  zx_driver("devhost-test") {
+    sources = [ "test-driver.cc" ]
+    deps = [
+      ":fuchsia.device.devhost.test.llcpp",
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/ddktl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/zircon",
+    ]
 
-      # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-      # Tests fail when using #"$zx/system/ulib/fdio:static",
-      deprecated_inhibit_driver_shlib_allowlist = true
-    }
+    # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+    # Tests fail when using #"$zx/system/ulib/fdio:static",
+    deprecated_inhibit_driver_shlib_allowlist = true
+  }
 
-    zx_driver("devhost-test-manual") {
-      sources = [
-        "test-driver-manual-bind.cc",
-      ]
-      deps = [
-        "$zx/system/ulib/ddk",
-        "$zx/system/ulib/ddktl",
-        "$zx/system/ulib/fdio",
-        "$zx/system/ulib/zircon",
-        ":fuchsia.device.devhost.test.llcpp",
-      ]
+  zx_driver("devhost-test-manual") {
+    sources = [ "test-driver-manual-bind.cc" ]
+    deps = [
+      ":fuchsia.device.devhost.test.llcpp",
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/ddktl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/zircon",
+    ]
 
-      # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-      # Tests fail when using #"$zx/system/ulib/fdio:static",
-      deprecated_inhibit_driver_shlib_allowlist = true
-    }
+    # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+    # Tests fail when using #"$zx/system/ulib/fdio:static",
+    deprecated_inhibit_driver_shlib_allowlist = true
+  }
 
-    zx_driver("devhost-test-child") {
-      sources = [
-        "test-driver-child.cc",
-      ]
-      deps = [
-        "$zx/system/ulib/ddk",
-        "$zx/system/ulib/ddktl",
-        "$zx/system/ulib/fdio",
-        "$zx/system/ulib/zircon",
-      ]
+  zx_driver("devhost-test-child") {
+    sources = [ "test-driver-child.cc" ]
+    deps = [
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/ddktl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/zircon",
+    ]
 
-      # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-      deprecated_inhibit_driver_shlib_allowlist = true
-    }
+    # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+    deprecated_inhibit_driver_shlib_allowlist = true
+  }
 }

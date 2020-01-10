@@ -17,7 +17,5 @@ import("../../../spinel_target.gni")
 #
 spinel_target("generate") {
   spinel_target_name = "spn_amd_gcn3"
-  public_deps = [
-    "hotsort",
-  ]
+  public_deps = [ "hotsort" ]
 }

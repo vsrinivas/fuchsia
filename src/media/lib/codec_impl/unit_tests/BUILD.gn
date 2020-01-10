@@ -27,9 +27,7 @@ executable("codec_impl_unit_tests_bin") {
 }
 
 test_package("codec_impl_unit_tests") {
-  deps = [
-    ":codec_impl_unit_tests_bin",
-  ]
+  deps = [ ":codec_impl_unit_tests_bin" ]
 
   tests = [
     {
@@ -65,9 +63,7 @@ executable("decryptor_adapter_tests_bin") {
   testonly = true
   output_name = "decryptor_adapter_tests"
 
-  sources = [
-    "test_decryptor_adapter.cc",
-  ]
+  sources = [ "test_decryptor_adapter.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration",
@@ -83,9 +79,7 @@ executable("decryptor_adapter_tests_bin") {
 }
 
 test_package("decryptor_adapter_tests") {
-  deps = [
-    ":decryptor_adapter_tests_bin",
-  ]
+  deps = [ ":decryptor_adapter_tests_bin" ]
 
   tests = [
     {

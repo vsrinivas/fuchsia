@@ -39,30 +39,18 @@ source_set("spinel_vk_test") {
 }
 
 graphics_compute_unittests("spinel_vk_api_unittests") {
-  sources = [
-    "spinel_vk_api_unittests.cc",
-  ]
-  deps = [
-    ":spinel_vk_test",
-  ]
+  sources = [ "spinel_vk_api_unittests.cc" ]
+  deps = [ ":spinel_vk_test" ]
 }
 
 graphics_compute_unittests("spinel_vk_render_unittests") {
-  sources = [
-    "spinel_vk_render_unittests.cc",
-  ]
-  deps = [
-    ":spinel_vk_test",
-  ]
+  sources = [ "spinel_vk_render_unittests.cc" ]
+  deps = [ ":spinel_vk_test" ]
 }
 
 graphics_compute_unittests("spinel_vk_svg_unittests") {
-  sources = [
-    "spinel_vk_svg_unittests.cc",
-  ]
-  deps = [
-    ":spinel_vk_test",
-  ]
+  sources = [ "spinel_vk_svg_unittests.cc" ]
+  deps = [ ":spinel_vk_test" ]
 }
 
 group("vk_unittests") {

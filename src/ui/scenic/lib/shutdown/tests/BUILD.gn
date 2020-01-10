@@ -6,9 +6,7 @@
 # separate executable.
 source_set("unittests") {
   testonly = true
-  sources = [
-    "shutdown_unittest.cc",
-  ]
+  sources = [ "shutdown_unittest.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
     "//src/ui/scenic/lib/shutdown",

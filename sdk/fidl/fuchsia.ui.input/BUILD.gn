@@ -27,7 +27,5 @@ fidl("fuchsia.ui.input") {
     "usages.fidl",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.input2",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.input2" ]
 }

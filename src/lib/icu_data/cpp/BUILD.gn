@@ -13,13 +13,9 @@ source_set("cpp") {
     "//third_party/icu",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/zx",
-  ]
+  public_deps = [ "//zircon/public/lib/zx" ]
 }
 
 shared_library("icu_data_cpp") {
-  deps = [
-    ":cpp",
-  ]
+  deps = [ ":cpp" ]
 }

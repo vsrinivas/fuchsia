@@ -25,9 +25,7 @@ source_set("mock_spinel") {
 }
 
 graphics_compute_unittests("mock_spinel_unittests") {
-  sources = [
-    "mock_spinel_unittest.cc",
-  ]
+  sources = [ "mock_spinel_unittest.cc" ]
   deps = [
     ":mock_spinel",
     ":mock_spinel_test_utils",

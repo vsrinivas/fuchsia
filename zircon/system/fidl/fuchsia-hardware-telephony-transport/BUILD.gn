@@ -5,11 +5,8 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-hardware-telephony-transport") {
-  sources = [
-    "qmi.fidl",
-  ]
+  sources = [ "qmi.fidl" ]
 
-  public_deps = [
-    "$zx/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop",
-  ]
+  public_deps =
+      [ "$zx/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop" ]
 }

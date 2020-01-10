@@ -22,9 +22,7 @@ rustc_library("selectors") {
 }
 
 test_package("selectors_tests") {
-  deps = [
-    ":selectors_test",
-  ]
+  deps = [ ":selectors_test" ]
   tests = [
     {
       name = "selectors_lib_test"
@@ -34,7 +32,5 @@ test_package("selectors_tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":selectors_tests",
-  ]
+  deps = [ ":selectors_tests" ]
 }

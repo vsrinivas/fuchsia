@@ -35,17 +35,13 @@ source_set("lib") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":activity_test",
-  ]
+  deps = [ ":activity_test" ]
 }
 
 executable("activity_bin") {
   output_name = "activity"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -54,9 +50,7 @@ executable("activity_bin") {
 }
 
 package("activity") {
-  deps = [
-    ":activity_bin",
-  ]
+  deps = [ ":activity_bin" ]
 
   binaries = [
     {
@@ -93,9 +87,7 @@ executable("activity_test_bin") {
 }
 
 test_package("activity_test") {
-  deps = [
-    ":activity_test_bin",
-  ]
+  deps = [ ":activity_test_bin" ]
   tests = [
     {
       name = "activity_test"

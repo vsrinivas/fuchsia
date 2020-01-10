@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("i2c") {
-  sources = [
-    "i2c.c",
-  ]
+  sources = [ "i2c.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-i2c:c",
     "$zx/system/ulib/fdio",

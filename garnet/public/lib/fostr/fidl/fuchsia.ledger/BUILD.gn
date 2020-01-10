@@ -7,7 +7,5 @@ import("//garnet/public/build/fostr/fostr_fidl.gni")
 fostr_fidl("fuchsia.ledger") {
   fidl_target = "//src/ledger/fidl/fuchsia.ledger"
 
-  deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.mem",
-  ]
+  deps = [ "//garnet/public/lib/fostr/fidl/fuchsia.mem" ]
 }

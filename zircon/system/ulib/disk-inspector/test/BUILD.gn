@@ -4,9 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":disk-inspector-unit",
-  ]
+  deps = [ ":disk-inspector-unit" ]
 }
 
 zx_test("disk-inspector-unit") {

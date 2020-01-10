@@ -8,9 +8,7 @@ import("//build/test.gni")
 
 executable("configs_test") {
   testonly = true
-  sources = [
-    "configs_test.cc",
-  ]
+  sources = [ "configs_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/banjo/ddk.protocol.isp",

@@ -6,9 +6,7 @@ import("//build/testing/environments.gni")
 
 group("aac") {
   testonly = true
-  deps = [
-    ":codec_runner_sw_aac",
-  ]
+  deps = [ ":codec_runner_sw_aac" ]
 }
 
 executable("codec_runner_sw_aac") {

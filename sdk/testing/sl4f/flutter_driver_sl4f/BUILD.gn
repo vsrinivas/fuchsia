@@ -9,9 +9,7 @@ dart_library("flutter_driver_sl4f") {
 
   sdk_category = "partner"
 
-  sources = [
-    "flutter_driver_sl4f.dart",
-  ]
+  sources = [ "flutter_driver_sl4f.dart" ]
 
   deps = [
     "//sdk/testing/sl4f/client",

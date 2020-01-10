@@ -18,9 +18,7 @@ rustc_binary("bin") {
 }
 
 package("tcp_file_sender") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

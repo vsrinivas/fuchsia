@@ -3,18 +3,12 @@
 # found in the LICENSE file.
 
 zx_driver("fake") {
-  sources = [
-    "bind.cc",
-  ]
-  deps = [
-    ":fake-lib",
-  ]
+  sources = [ "bind.cc" ]
+  deps = [ ":fake-lib" ]
 }
 
 static_library("fake-lib") {
-  sources = [
-    "fake-display.cc",
-  ]
+  sources = [ "fake-display.cc" ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.display.capture",

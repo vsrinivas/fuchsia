@@ -20,9 +20,7 @@ rustc_binary("bin") {
 }
 
 package("fake-channel-control") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   binaries = [
     {
       name = "fake_channel_control"

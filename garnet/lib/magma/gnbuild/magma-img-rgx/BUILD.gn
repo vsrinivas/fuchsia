@@ -14,9 +14,7 @@ have_libvulkan_img =
 group("magma-vulkan") {
   if (magma_enable_developer_build) {
     testonly = true
-    deps = [
-      "//garnet/lib/magma/tests/unit_tests:testing_firmware_file",
-    ]
+    deps = [ "//garnet/lib/magma/tests/unit_tests:testing_firmware_file" ]
   }
   public_deps = [
     ":magma-img-rgx-mt8167",
@@ -46,9 +44,7 @@ package("magma-img-rgx-mt8167-firmware") {
   if (internal_access) {
     # The firmware is treated as a library, so the copy needs to go into the
     # shared library toolchain directory instead of the main toolchain.
-    deps = [
-      ":firmware($shlib_toolchain)",
-    ]
+    deps = [ ":firmware($shlib_toolchain)" ]
     libraries = [
       {
         name = "firmware/rgx.fw.22.40.54.30"
@@ -59,9 +55,7 @@ package("magma-img-rgx-mt8167-firmware") {
 
 package("magma-img-rgx-mt8167") {
   deprecated_system_image = true
-  deps = [
-    "//garnet/drivers/gpu/msd-img-rgx/mtk:msd_img_rgx_mt8167",
-  ]
+  deps = [ "//garnet/drivers/gpu/msd-img-rgx/mtk:msd_img_rgx_mt8167" ]
 
   if (magma_enable_developer_build) {
     testonly = true
@@ -91,9 +85,8 @@ package("magma-img-rgx-mt8167") {
 
 package("magma-img-rgx-no-hardware") {
   deprecated_system_image = true
-  deps = [
-    "//garnet/drivers/gpu/msd-img-rgx/no_hardware:msd_img_rgx_no_hardware",
-  ]
+  deps =
+      [ "//garnet/drivers/gpu/msd-img-rgx/no_hardware:msd_img_rgx_no_hardware" ]
   drivers = [
     {
       name = "libmsd_img_rgx_no_hardware.so"
@@ -113,10 +106,7 @@ if (have_libvulkan_img) {
 }
 
 copy("firmware") {
-  sources = [
-    "//garnet/drivers/gpu/msd-img-rgx/mtk/firmware/rgx.fw.22.40.54.30",
-  ]
-  outputs = [
-    "$root_out_dir/firmware/rgx.fw.22.40.54.30",
-  ]
+  sources =
+      [ "//garnet/drivers/gpu/msd-img-rgx/mtk/firmware/rgx.fw.22.40.54.30" ]
+  outputs = [ "$root_out_dir/firmware/rgx.fw.22.40.54.30" ]
 }

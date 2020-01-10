@@ -42,9 +42,7 @@ source_set("constants_and_utils") {
 executable("constants_and_utils_unittest") {
   testonly = true
 
-  sources = [
-    "constants_and_utils_unittest.cc",
-  ]
+  sources = [ "constants_and_utils_unittest.cc" ]
 
   deps = [
     ":constants_and_utils",
@@ -99,9 +97,7 @@ source_set("session_storage_xdr") {
 executable("session_storage_unittest") {
   testonly = true
 
-  sources = [
-    "session_storage_unittest.cc",
-  ]
+  sources = [ "session_storage_unittest.cc" ]
 
   deps = [
     ":session_storage",
@@ -156,9 +152,7 @@ source_set("story_storage_xdr") {
 executable("story_storage_unittest") {
   testonly = true
 
-  sources = [
-    "story_storage_unittest.cc",
-  ]
+  sources = [ "story_storage_unittest.cc" ]
 
   deps = [
     ":story_storage",

@@ -24,9 +24,7 @@ rustc_binary("bin") {
 }
 
 package("inspect-rs") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "inspect_example_rs"
 
@@ -39,9 +37,7 @@ package("inspect-rs") {
 }
 
 test_package("inspect_example_rs_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

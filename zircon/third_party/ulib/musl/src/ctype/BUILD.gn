@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("ctype") {
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   sources = [
     "__ctype_b_loc.c",
     "__ctype_get_mb_cur_max.c",

@@ -21,9 +21,7 @@ executable("bin") {
   testonly = true
   output_name = "run_tests"
 
-  sources = [
-    "run_tests.cc",
-  ]
+  sources = [ "run_tests.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.sys",
@@ -44,9 +42,7 @@ executable("run_return_value_test") {
 
   output_name = "run_return_value_test"
 
-  sources = [
-    "run_return_value_test.cc",
-  ]
+  sources = [ "run_return_value_test.cc" ]
 
   libs = [ "zircon" ]
 
@@ -61,13 +57,9 @@ executable("run_return_value_test") {
 executable("exiter_bin") {
   output_name = "run_test_exiter"
 
-  sources = [
-    "exiter.cc",
-  ]
+  sources = [ "exiter.cc" ]
 
-  deps = [
-    "//zircon/public/lib/zx",
-  ]
+  deps = [ "//zircon/public/lib/zx" ]
 }
 
 # Helper program for tests
@@ -79,9 +71,7 @@ package("run_test_exiter") {
     },
   ]
 
-  deps = [
-    ":exiter_bin",
-  ]
+  deps = [ ":exiter_bin" ]
 
   binary = "run_test_exiter"
 }

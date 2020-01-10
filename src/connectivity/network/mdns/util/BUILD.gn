@@ -13,9 +13,7 @@ group("util") {
 }
 
 package("mdns-util") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

@@ -7,7 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.vulkan.loader") {
   sdk_category = "internal"
 
-  sources = [
-    "loader.fidl",
-  ]
+  sources = [ "loader.fidl" ]
 }

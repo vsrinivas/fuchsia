@@ -79,9 +79,7 @@ group("all_tests") {
     "tests:tests",
   ]
   if (_build_host_tests) {
-    data_deps = [
-      ":all_tests($host_toolchain)",
-    ]
+    data_deps = [ ":all_tests($host_toolchain)" ]
   }
 }
 
@@ -114,7 +112,5 @@ graphics_compute_unittests_package("graphics_compute_vk_unittests") {
 # A target used to group all graphics compute unit-tests that depend on
 # spinel-mold instead of Spinel and have no Vulkan dependencies.
 graphics_compute_unittests_package("graphics_compute_mold_c_unittests") {
-  deps = [
-    "spinel-mold:mold_c_unittests",
-  ]
+  deps = [ "spinel-mold:mold_c_unittests" ]
 }

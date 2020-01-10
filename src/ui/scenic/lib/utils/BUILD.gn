@@ -19,9 +19,7 @@ source_set("fence_utils") {
 
 unittest_package("tests") {
   package_name = "scenic_utils_tests"
-  deps = [
-    ":sequential_fence_signaller_unittest",
-  ]
+  deps = [ ":sequential_fence_signaller_unittest" ]
   tests = [
     {
       name = "sequential_fence_signaller_unittest"

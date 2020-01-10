@@ -9,9 +9,7 @@ import("$zx/public/gn/fidl.gni")
 # compiling targets, so don't define the actual target there.
 if (current_toolchain != default_toolchain) {
   zx_test("fidl-coding-tables") {
-    sources = [
-      "coding_tables_tests.cc",
-    ]
+    sources = [ "coding_tables_tests.cc" ]
     deps = [
       ":fidl.test.example.codingtables.c",
       "$zx/system/ulib/fbl",
@@ -26,17 +24,11 @@ if (current_toolchain != default_toolchain) {
 
 fidl_library("fidl.test.example.codingtablesdeps") {
   visibility = [ ":*" ]
-  sources = [
-    "coding_tables_deps.test.fidl",
-  ]
+  sources = [ "coding_tables_deps.test.fidl" ]
 }
 
 fidl_library("fidl.test.example.codingtables") {
   visibility = [ ":*" ]
-  sources = [
-    "coding_tables.test.fidl",
-  ]
-  public_deps = [
-    ":fidl.test.example.codingtablesdeps",
-  ]
+  sources = [ "coding_tables.test.fidl" ]
+  public_deps = [ ":fidl.test.example.codingtablesdeps" ]
 }

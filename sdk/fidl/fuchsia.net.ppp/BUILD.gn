@@ -7,10 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.net.ppp") {
   sdk_category = "internal"
   api = "fuchsia.net.ppp.api"
-  sources = [
-    "ppp.fidl",
-  ]
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-net",
-  ]
+  sources = [ "ppp.fidl" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-net" ]
 }

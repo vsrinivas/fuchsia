@@ -13,7 +13,5 @@ fidl("fuchsia.castsysteminfo") {
 
   sdk_category = "partner"
 
-  sources = [
-    "cast_system_info.fidl",
-  ]
+  sources = [ "cast_system_info.fidl" ]
 }

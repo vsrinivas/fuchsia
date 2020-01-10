@@ -4,9 +4,7 @@
 
 source_set("object-child") {
   testonly = true
-  sources = [
-    "object-child.cc",
-  ]
+  sources = [ "object-child.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

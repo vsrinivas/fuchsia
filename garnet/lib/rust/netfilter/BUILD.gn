@@ -23,9 +23,7 @@ rustc_library("netfilter") {
 }
 
 test_package("netfilter_tests") {
-  deps = [
-    ":netfilter_test",
-  ]
+  deps = [ ":netfilter_test" ]
 
   tests = [
     {

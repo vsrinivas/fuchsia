@@ -24,9 +24,7 @@ source_set("fidl") {
     "simple_stream_sink_impl.h",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.mediacodec",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.mediacodec" ]
 
   deps = [
     "//sdk/fidl/fuchsia.media",

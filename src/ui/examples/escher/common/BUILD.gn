@@ -5,18 +5,14 @@
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 
 static_library("common") {
-  sources = [
-    "demo_harness.cc",
-  ]
+  sources = [ "demo_harness.cc" ]
   deps = [
     ":demo_base",
     "//src/lib/fxl",
     "//third_party/glslang:glslang_default_resource_limits_sources",
     "//third_party/glslang:glslang_sources",
   ]
-  public_deps = [
-    ":headers",
-  ]
+  public_deps = [ ":headers" ]
   libs = [
     "dl",
     "pthread",
@@ -44,9 +40,7 @@ source_set("demo_base") {
     "demo.cc",
     "demo.h",
   ]
-  public_deps = [
-    "//src/ui/lib/escher:escher",
-  ]
+  public_deps = [ "//src/ui/lib/escher:escher" ]
 }
 
 source_set("demo_harness_fuchsia") {
@@ -76,9 +70,7 @@ source_set("demo_harness_linux") {
     "demo_harness_linux.cc",
     "demo_harness_linux.h",
   ]
-  deps = [
-    "//third_party/glfw",
-  ]
+  deps = [ "//third_party/glfw" ]
   public_deps = [
     ":demo_base",
     ":headers",
@@ -87,10 +79,6 @@ source_set("demo_harness_linux") {
 
 source_set("headers") {
   visibility = [ ":*" ]
-  sources = [
-    "demo_harness.h",
-  ]
-  public_deps = [
-    "//src/ui/lib/escher:escher",
-  ]
+  sources = [ "demo_harness.h" ]
+  public_deps = [ "//src/ui/lib/escher:escher" ]
 }

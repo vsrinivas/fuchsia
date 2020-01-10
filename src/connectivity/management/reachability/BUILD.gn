@@ -34,8 +34,8 @@ rustc_binary("bin") {
 
   test_deps = [
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
-    "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
+    "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
     "//third_party/rust_crates:pin-utils",
   ]
 }
@@ -79,9 +79,7 @@ test_package("reachability_tests") {
 }
 
 test_package("reachability_integration_tests") {
-  deps = [
-    "tests:reachability_integration_test",
-  ]
+  deps = [ "tests:reachability_integration_test" ]
 
   tests = [
     {
@@ -103,7 +101,5 @@ group("tests") {
 
 config_data("reachability_sysmgr_config") {
   for_pkg = "sysmgr"
-  sources = [
-    rebase_path("config/reachability.sysmgr_config"),
-  ]
+  sources = [ rebase_path("config/reachability.sysmgr_config") ]
 }

@@ -26,15 +26,11 @@ group("lib") {
 }
 
 group("services") {
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
-  ]
+  deps = [ "//sdk/fidl/fuchsia.modular" ]
 }
 
 group("just_fidl") {
-  deps = [
-    "//sdk/fidl/fuchsia.modular($fidl_toolchain)",
-  ]
+  deps = [ "//sdk/fidl/fuchsia.modular($fidl_toolchain)" ]
 }
 
 executable("modular_lib_unittests") {
@@ -57,7 +53,5 @@ fidl("maxwell_internal") {
 
   name = "fuchsia.maxwell.internal"
 
-  sources = [
-    "module_manifest_source/fidl/module_package_indexer.fidl",
-  ]
+  sources = [ "module_manifest_source/fidl/module_package_indexer.fidl" ]
 }

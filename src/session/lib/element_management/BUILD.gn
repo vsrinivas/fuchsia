@@ -27,9 +27,7 @@ rustc_library("element_management") {
 }
 
 test_package("element_management_tests") {
-  deps = [
-    ":element_management_test",
-  ]
+  deps = [ ":element_management_test" ]
   tests = [
     {
       name = "element_management_lib_test"

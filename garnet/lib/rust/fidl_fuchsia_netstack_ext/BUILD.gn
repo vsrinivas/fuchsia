@@ -17,9 +17,7 @@ rustc_library("fidl_fuchsia_netstack_ext") {
 }
 
 unittest_package("fidl_fuchsia_netstack_ext_tests") {
-  deps = [
-    ":fidl_fuchsia_netstack_ext_test",
-  ]
+  deps = [ ":fidl_fuchsia_netstack_ext_test" ]
   tests = [
     {
       name = "fidl_fuchsia_netstack_ext_lib_test"

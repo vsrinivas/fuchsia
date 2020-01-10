@@ -16,9 +16,7 @@ fidl("fidl") {
 
   name = "fuchsia.modular.intl.internal"
   visibility = [ ":*" ]
-  sources = [
-    "internal.fidl",
-  ]
+  sources = [ "internal.fidl" ]
   public_deps = [
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.setui",
@@ -55,9 +53,7 @@ executable("intl_property_provider_impl_test_bin") {
   testonly = true
   output_name = "intl_property_provider_impl_test"
 
-  sources = [
-    "intl_property_provider_impl_test.cc",
-  ]
+  sources = [ "intl_property_provider_impl_test.cc" ]
 
   deps = [
     ":intl_property_provider_impl",
@@ -98,9 +94,7 @@ executable("locale_util_unit_test_bin") {
   testonly = true
   output_name = "locale_util_unit_test"
 
-  sources = [
-    "locale_util_unit_test.cc",
-  ]
+  sources = [ "locale_util_unit_test.cc" ]
 
   deps = [
     ":locale_util",

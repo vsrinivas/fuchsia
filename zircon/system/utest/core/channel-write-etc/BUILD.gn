@@ -4,9 +4,7 @@
 
 source_set("channel-write-etc") {
   testonly = true
-  sources = [
-    "write_etc.cc",
-  ]
+  sources = [ "write_etc.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

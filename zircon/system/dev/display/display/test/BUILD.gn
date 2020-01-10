@@ -4,9 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":display-core-unittests",
-  ]
+  deps = [ ":display-core-unittests" ]
 }
 
 zx_test("display-core-unittests") {

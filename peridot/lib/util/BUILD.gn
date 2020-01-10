@@ -16,9 +16,7 @@ source_set("string_escape") {
     "string_escape.h",
   ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 }
 
 source_set("pseudo_dir_utils") {

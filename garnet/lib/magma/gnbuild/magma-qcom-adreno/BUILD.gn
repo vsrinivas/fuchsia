@@ -9,13 +9,9 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 group("magma-vulkan") {
   if (magma_enable_developer_build) {
     testonly = true
-    deps = [
-      "//garnet/lib/magma/tests/unit_tests:testing_firmware_file",
-    ]
+    deps = [ "//garnet/lib/magma/tests/unit_tests:testing_firmware_file" ]
   }
-  public_deps = [
-    ":magma-qcom-adreno",
-  ]
+  public_deps = [ ":magma-qcom-adreno" ]
   if (build_libvulkan_qcom_adreno != []) {
     public_deps += [ ":magma-qcom-adreno-config" ]
   }

@@ -4,35 +4,25 @@
 
 # Do not use this target directly, instead depend on //src/sys/sysmgr:network_config.
 group("network_config") {
-  public_deps = [
-    "//src/sys/sysmgr:network_config",
-  ]
+  public_deps = [ "//src/sys/sysmgr:network_config" ]
 }
 
 # Do not use this target directly, instead depend on //src/sys/sysmgr:router_config.
 group("router_config") {
-  public_deps = [
-    "//src/sys/sysmgr:router_config",
-  ]
+  public_deps = [ "//src/sys/sysmgr:router_config" ]
 }
 
 # Do not use this target directly, instead depend on //src/sys/sysmgr:sysmgr.
 group("sysmgr") {
-  public_deps = [
-    "//src/sys/sysmgr:sysmgr",
-  ]
+  public_deps = [ "//src/sys/sysmgr:sysmgr" ]
 }
 
 # Do not use this target directly, instead depend on //src/sys/sysmgr:services_config.
 group("services_config") {
-  public_deps = [
-    "//src/sys/sysmgr:services_config",
-  ]
+  public_deps = [ "//src/sys/sysmgr:services_config" ]
 }
 
 # Do not use this target directly, instead depend on //src/sys/sysmgr:lib.
 group("lib") {
-  public_deps = [
-    "//src/sys/sysmgr:lib",
-  ]
+  public_deps = [ "//src/sys/sysmgr:lib" ]
 }

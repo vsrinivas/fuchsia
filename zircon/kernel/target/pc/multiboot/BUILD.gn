@@ -87,17 +87,13 @@ if (current_toolchain == default_toolchain) {
       "$zx/system/ulib/libzbi",
     ]
     ldflags = [ "-Wl,-T," + rebase_path("multiboot.ld", root_build_dir) ]
-    inputs = [
-      "multiboot.ld",
-    ]
+    inputs = [ "multiboot.ld" ]
   }
 } else {
   # In any other toolchain, just redirect to the proper toolchain.
   environment_redirect("multiboot") {
     environment_label = ":multiboot"
     direct = true
-    deps = [
-      ":multiboot",
-    ]
+    deps = [ ":multiboot" ]
   }
 }

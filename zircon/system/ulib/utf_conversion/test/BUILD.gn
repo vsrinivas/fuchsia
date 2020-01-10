@@ -12,9 +12,7 @@ group("test") {
 }
 
 zx_test("utf_conversion") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
@@ -26,10 +24,6 @@ zx_test("utf_conversion") {
 }
 
 fuzzer("utf_conversion-fuzzer") {
-  sources = [
-    "utf_conversion-fuzzer.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/utf_conversion",
-  ]
+  sources = [ "utf_conversion-fuzzer.cc" ]
+  deps = [ "$zx/system/ulib/utf_conversion" ]
 }

@@ -39,9 +39,7 @@ rustc_binary("bin") {
 }
 
 package("device_settings_manager") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "device_settings_manager"
 
@@ -54,9 +52,7 @@ package("device_settings_manager") {
 }
 
 unittest_package("device_settings_manager_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

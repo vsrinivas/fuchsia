@@ -37,9 +37,7 @@ zx_driver("optee") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":optee-message-test",
-  ]
+  deps = [ ":optee-message-test" ]
 }
 
 zx_test("optee-message-test") {

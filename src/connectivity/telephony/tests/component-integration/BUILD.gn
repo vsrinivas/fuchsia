@@ -4,21 +4,15 @@
 
 group("fake-at-driver-test") {
   testonly = true
-  public_deps = [
-    "fake-at-driver-test",
-  ]
+  public_deps = [ "fake-at-driver-test" ]
 }
 
 group("fake-qmi-query") {
   testonly = true
-  public_deps = [
-    "fake-qmi-query",
-  ]
+  public_deps = [ "fake-qmi-query" ]
 }
 
 group("snooper") {
   testonly = true
-  public_deps = [
-    "snooper:multi-clients",
-  ]
+  public_deps = [ "snooper:multi-clients" ]
 }

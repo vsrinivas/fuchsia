@@ -5,10 +5,6 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.pci") {
-  sources = [
-    "pci.banjo",
-  ]
-  public_deps = [
-    "$zx/system/banjo/zircon.syscalls.pci",
-  ]
+  sources = [ "pci.banjo" ]
+  public_deps = [ "$zx/system/banjo/zircon.syscalls.pci" ]
 }

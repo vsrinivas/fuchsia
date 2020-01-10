@@ -11,7 +11,5 @@ group("icu_data") {
 
 group("tests") {
   testonly = true
-  deps = [
-    "rust:tests",
-  ]
+  deps = [ "rust:tests" ]
 }

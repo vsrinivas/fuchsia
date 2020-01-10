@@ -21,9 +21,7 @@ if (is_linux) {
 
     name = "fuchsia.googlesource.com/tests/limited_netsvc"
 
-    deps = [
-      "//src/testing/qemu",
-    ]
+    deps = [ "//src/testing/qemu" ]
   }
 
   group("main_zbi") {
@@ -42,15 +40,11 @@ if (is_linux) {
       "$zircon_root_build_dir/tools/netls",
       "$zircon_root_build_dir/tools/netruncmd",
     ]
-    outputs = [
-      "$root_out_dir/test_data/netsvc_tools/{{source_file_part}}",
-    ]
+    outputs = [ "$root_out_dir/test_data/netsvc_tools/{{source_file_part}}" ]
   }
 
   group("netsvc_user_tools") {
-    deps = [
-      ":copy_netsvc_tools",
-    ]
+    deps = [ ":copy_netsvc_tools" ]
 
     metadata = {
       test_runtime_deps = [

@@ -4,9 +4,7 @@
 
 zx_test("sysmem") {
   test_group = "sys"
-  sources = [
-    "sysmem_tests.cc",
-  ]
+  sources = [ "sysmem_tests.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:c",
     "$zx/system/fidl/fuchsia-sysmem:c",

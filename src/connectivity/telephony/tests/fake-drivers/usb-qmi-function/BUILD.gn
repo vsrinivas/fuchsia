@@ -9,9 +9,7 @@ package("usb-qmi-function") {
   deprecated_system_image = true
   testonly = true
 
-  deps = [
-    ":qmi_function",
-  ]
+  deps = [ ":qmi_function" ]
 
   drivers = [
     {

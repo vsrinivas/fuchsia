@@ -27,9 +27,7 @@ source_set("callback") {
 
   public_configs = [ "//garnet/public:config" ]
 
-  deps = [
-    "//zircon/public/lib/async-cpp",
-  ]
+  deps = [ "//zircon/public/lib/async-cpp" ]
 }
 
 executable("callback_unittests") {
@@ -54,9 +52,7 @@ executable("callback_unittests") {
 }
 
 unittest_package("callback_tests") {
-  deps = [
-    ":callback_unittests",
-  ]
+  deps = [ ":callback_unittests" ]
 
   tests = [
     {
@@ -69,7 +65,5 @@ unittest_package("callback_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":callback_tests",
-  ]
+  deps = [ ":callback_tests" ]
 }

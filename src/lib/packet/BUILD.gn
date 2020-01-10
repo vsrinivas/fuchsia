@@ -18,9 +18,7 @@ rustc_library("packet") {
 }
 
 unittest_package("packet_tests") {
-  deps = [
-    ":packet_test",
-  ]
+  deps = [ ":packet_test" ]
 
   tests = [
     {
@@ -33,7 +31,5 @@ unittest_package("packet_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":packet_tests",
-  ]
+  deps = [ ":packet_tests" ]
 }

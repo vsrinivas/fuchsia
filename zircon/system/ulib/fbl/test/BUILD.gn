@@ -4,9 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":fbl",
-  ]
+  deps = [ ":fbl" ]
 }
 
 zx_test("fbl") {

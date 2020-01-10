@@ -28,15 +28,11 @@ go_library("lib") {
 
 go_test("system_updater_test") {
   gopackages = [ "system_updater" ]
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 test_package("system_updater_tests") {
-  deps = [
-    ":system_updater_test",
-  ]
+  deps = [ ":system_updater_test" ]
 
   resources = [
     {
@@ -59,7 +55,5 @@ test_package("system_updater_tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":system_updater_tests",
-  ]
+  public_deps = [ ":system_updater_tests" ]
 }

@@ -10,7 +10,5 @@ fidl("fuchsia.sys.test") {
 
   sdk_category = "partner"
 
-  sources = [
-    "cache.fidl",
-  ]
+  sources = [ "cache.fidl" ]
 }

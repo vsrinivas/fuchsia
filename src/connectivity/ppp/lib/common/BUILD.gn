@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 source_set("common") {
-  sources = [
-    "ppp.h",
-  ]
+  sources = [ "ppp.h" ]
 }

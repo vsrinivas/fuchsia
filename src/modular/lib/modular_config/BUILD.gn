@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("modular_config_constants") {
-  sources = [
-    "modular_config_constants.h",
-  ]
+  sources = [ "modular_config_constants.h" ]
 }
 
 source_set("modular_config") {
@@ -37,9 +35,7 @@ source_set("json_xdr") {
     "modular_config_xdr.h",
   ]
 
-  public_deps = [
-    ":modular_config_constants",
-  ]
+  public_deps = [ ":modular_config_constants" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular",

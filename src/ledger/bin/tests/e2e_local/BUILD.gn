@@ -34,9 +34,7 @@ executable("e2e_local") {
     "//third_party/googletest:gmock",
   ]
 
-  data_deps = [
-    "//src/ledger/bin/app",
-  ]
+  data_deps = [ "//src/ledger/bin/app" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

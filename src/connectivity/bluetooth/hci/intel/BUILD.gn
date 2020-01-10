@@ -49,18 +49,14 @@ if (internal_access) {
       "firmware/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq",
       "firmware/ibt-hw-37.8.bseq",
     ]
-    outputs = [
-      "$root_out_dir/firmware/{{source_file_part}}",
-    ]
+    outputs = [ "$root_out_dir/firmware/{{source_file_part}}" ]
   }
 }
 
 package("intel") {
   deprecated_system_image = true
 
-  deps = [
-    ":driver",
-  ]
+  deps = [ ":driver" ]
 
   drivers = [
     {

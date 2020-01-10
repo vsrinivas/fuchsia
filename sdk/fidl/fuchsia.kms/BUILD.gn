@@ -12,7 +12,5 @@ fidl("fuchsia.kms") {
     "key_manager_stateless.fidl",
   ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-mem",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-mem" ]
 }

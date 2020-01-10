@@ -6,15 +6,11 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("fidl_table_validation") {
   edition = "2018"
-  deps = [
-    "fidl_table_validation_derive",
-  ]
+  deps = [ "fidl_table_validation_derive" ]
 }
 
 group("tests") {
   testonly = true
 
-  deps = [
-    "fidl_table_validation_tests",
-  ]
+  deps = [ "fidl_table_validation_tests" ]
 }

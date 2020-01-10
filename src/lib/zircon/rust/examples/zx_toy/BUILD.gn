@@ -6,7 +6,5 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("zx_toy") {
   output_name = "example_zx_toy"
-  deps = [
-    "//src/lib/zircon/rust:fuchsia-zircon",
-  ]
+  deps = [ "//src/lib/zircon/rust:fuchsia-zircon" ]
 }

@@ -4,10 +4,6 @@
 
 zx_library("xdc-host-utils") {
   host = true
-  sources = [
-    "client.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/fbl",
-  ]
+  sources = [ "client.cc" ]
+  deps = [ "$zx/system/ulib/fbl" ]
 }

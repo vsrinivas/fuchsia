@@ -11,7 +11,5 @@ rustc_test("test") {
 
 group("no_rust_tests") {
   testonly = true
-  public_deps = [
-    ":test",
-  ]
+  public_deps = [ ":test" ]
 }

@@ -55,7 +55,5 @@ test_package("component_manager_for_test_integration_test") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":component_manager_for_test_integration_test",
-  ]
+  deps = [ ":component_manager_for_test_integration_test" ]
 }

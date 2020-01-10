@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("usb-dfu") {
-  sources = [
-    "usb-dfu.cc",
-  ]
+  sources = [ "usb-dfu.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",
     "$zx/system/banjo/ddk.protocol.usb.composite",

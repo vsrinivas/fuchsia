@@ -5,10 +5,6 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.wlan.info") {
-  sources = [
-    "info.banjo",
-  ]
-  public_deps = [
-    "$zx/system/banjo/ddk.hw.wlan.ieee80211",
-  ]
+  sources = [ "info.banjo" ]
+  public_deps = [ "$zx/system/banjo/ddk.hw.wlan.ieee80211" ]
 }

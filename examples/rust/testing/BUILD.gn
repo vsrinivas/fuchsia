@@ -12,17 +12,13 @@ rustc_library("testing") {
 }
 
 rustc_binary("testing_integration_test") {
-  deps = [
-    ":testing",
-  ]
+  deps = [ ":testing" ]
   edition = "2018"
   source_root = "tests/integration_test.rs"
 }
 
 rustc_binary("testing_integration_test_two") {
-  deps = [
-    ":testing",
-  ]
+  deps = [ ":testing" ]
   edition = "2018"
   source_root = "tests/integration_test_two.rs"
 }

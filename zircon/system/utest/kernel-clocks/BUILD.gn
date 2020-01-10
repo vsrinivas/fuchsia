@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":kernel-clocks",
-  ]
+  deps = [ ":kernel-clocks" ]
 }
 
 zx_test("kernel-clocks") {
-  sources = [
-    "kernel-clocks.cc",
-  ]
+  sources = [ "kernel-clocks.cc" ]
   deps = [
     "$zx/system/ulib/affine",
     "$zx/system/ulib/fdio",

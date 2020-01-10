@@ -55,9 +55,7 @@ source_set("inflight_list") {
     "$magma_build_root:magma_src_include_config",
   ]
 
-  sources = [
-    "inflight_list.h",
-  ]
+  sources = [ "inflight_list.h" ]
 
   public_deps = [
     ":common",
@@ -71,19 +69,13 @@ source_set("thread") {
     "$magma_build_root:magma_src_include_config",
   ]
 
-  sources = [
-    "thread.h",
-  ]
+  sources = [ "thread.h" ]
 
-  deps = [
-    "platform:thread",
-  ]
+  deps = [ "platform:thread" ]
 }
 
 group("system") {
-  public_deps = [
-    ":allocator",
-  ]
+  public_deps = [ ":allocator" ]
 }
 
 source_set("allocator") {
@@ -112,9 +104,7 @@ source_set("semaphore_port") {
     "$magma_build_root:magma_src_include_config",
   ]
 
-  sources = [
-    "semaphore_port.h",
-  ]
+  sources = [ "semaphore_port.h" ]
 
   public_deps = [
     ":common",
@@ -136,9 +126,7 @@ source_set("registers") {
     "register_io.h",
   ]
 
-  public_deps = [
-    "platform:device",
-  ]
+  public_deps = [ "platform:device" ]
 }
 
 source_set("ringbuffer") {
@@ -152,7 +140,5 @@ source_set("ringbuffer") {
     "ringbuffer.h",
   ]
 
-  public_deps = [
-    ":address_space",
-  ]
+  public_deps = [ ":address_space" ]
 }

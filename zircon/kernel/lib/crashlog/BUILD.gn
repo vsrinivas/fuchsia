@@ -4,10 +4,6 @@
 
 zx_library("crashlog") {
   kernel = true
-  sources = [
-    "crashlog.cc",
-  ]
-  deps = [
-    "$zx/kernel/lib/version",
-  ]
+  sources = [ "crashlog.cc" ]
+  deps = [ "$zx/kernel/lib/version" ]
 }

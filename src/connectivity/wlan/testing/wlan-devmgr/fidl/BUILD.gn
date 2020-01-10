@@ -6,10 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("devmgr") {
   name = "fuchsia.wlan.devmgr"
-  sources = [
-    "devmgr.fidl",
-  ]
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-io",
-  ]
+  sources = [ "devmgr.fidl" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
 }

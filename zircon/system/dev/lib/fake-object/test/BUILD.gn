@@ -1,7 +1,5 @@
 zx_test("fake-object") {
-  sources = [
-    "fake-object-test.cc",
-  ]
+  sources = [ "fake-object-test.cc" ]
   deps = [
     "$zx/system/dev/lib/fake-object",
     "$zx/system/ulib/fbl",

@@ -31,17 +31,13 @@ source_set("base_view") {
     "//zircon/public/lib/fs",
   ]
 
-  deps = [
-    "//zircon/public/lib/trace",
-  ]
+  deps = [ "//zircon/public/lib/trace" ]
 }
 
 executable("base_view_unittest") {
   testonly = true
 
-  sources = [
-    "base_view_unittest.cc",
-  ]
+  sources = [ "base_view_unittest.cc" ]
 
   deps = [
     ":base_view",
@@ -55,9 +51,7 @@ executable("base_view_unittest") {
 executable("math_unittest") {
   testonly = true
 
-  sources = [
-    "math_unittest.cc",
-  ]
+  sources = [ "math_unittest.cc" ]
 
   deps = [
     ":base_view",

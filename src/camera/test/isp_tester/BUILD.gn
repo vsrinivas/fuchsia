@@ -7,9 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.camera.test") {
   sdk_category = "internal"
 
-  sources = [
-    "isp.fidl",
-  ]
+  sources = [ "isp.fidl" ]
   public_deps = [
     "//sdk/fidl/fuchsia.camera2",
     "//zircon/system/fidl/fuchsia-sysmem",

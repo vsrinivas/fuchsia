@@ -5,19 +5,13 @@
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 group("libmagma") {
-  public_deps = [
-    ":libmagma_static",
-  ]
+  public_deps = [ ":libmagma_static" ]
 }
 
 static_library("libmagma_static") {
-  public_deps = [
-    "$magma_build_root/include:magma_abi",
-  ]
+  public_deps = [ "$magma_build_root/include:magma_abi" ]
 
-  sources = [
-    "magma.cc",
-  ]
+  sources = [ "magma.cc" ]
 
   deps = [
     "$magma_build_root/src/magma_util/platform:buffer",
@@ -45,7 +39,5 @@ static_library("libmagma_static") {
 static_library("libmagma_complete") {
   complete_static_lib = true
 
-  deps = [
-    ":libmagma_static",
-  ]
+  deps = [ ":libmagma_static" ]
 }

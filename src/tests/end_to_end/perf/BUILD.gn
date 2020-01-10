@@ -21,9 +21,7 @@ test_list = [
 ]
 foreach(target_name, test_list) {
   dart_test(target_name) {
-    sources = [
-      "$target_name.dart",
-    ]
+    sources = [ "$target_name.dart" ]
 
     deps = [
       "//sdk/testing/sl4f/client",
@@ -42,21 +40,15 @@ foreach(target_name, test_list) {
 copy("runtime_deps") {
   _data_dir = "$target_gen_dir/runtime_deps"
 
-  sources = [
-    "$root_out_dir/catapult_converter",
-  ]
+  sources = [ "$root_out_dir/catapult_converter" ]
 
-  outputs = [
-    "$_data_dir/{{source_file_part}}",
-  ]
+  outputs = [ "$_data_dir/{{source_file_part}}" ]
 
   metadata = {
     test_runtime_deps = [ "$_data_dir/catapult_converter" ]
   }
 
-  deps = [
-    "//garnet/bin/catapult_converter:converter_bin",
-  ]
+  deps = [ "//garnet/bin/catapult_converter:converter_bin" ]
 }
 
 # Packages required either:

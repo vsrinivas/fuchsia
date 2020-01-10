@@ -12,7 +12,5 @@ zx_library("fs-host") {
     # <fs-host/file_size_recorder.h> has #include <lib/zircon-internal/thread_annotations.h>.
     "$zx/system/ulib/zircon-internal:headers",
   ]
-  deps = [
-    "$zx/system/ulib/fbl",
-  ]
+  deps = [ "$zx/system/ulib/fbl" ]
 }

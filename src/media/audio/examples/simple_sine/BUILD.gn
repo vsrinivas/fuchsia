@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 package("simple_sine") {
-  deps = [
-    ":simple_sine_bin",
-  ]
+  deps = [ ":simple_sine_bin" ]
 
   binaries = [
     {

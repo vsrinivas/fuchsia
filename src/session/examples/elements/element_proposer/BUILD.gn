@@ -20,9 +20,7 @@ rustc_binary("element_proposer_bin") {
 }
 
 package("element_proposer") {
-  deps = [
-    ":element_proposer_bin",
-  ]
+  deps = [ ":element_proposer_bin" ]
 
   meta = [
     {

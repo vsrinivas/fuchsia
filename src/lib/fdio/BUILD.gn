@@ -3,14 +3,10 @@
 # found in the LICENSE file.
 
 group("fdio") {
-  deps = [
-    "rust:fdio",
-  ]
+  deps = [ "rust:fdio" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "rust:tests",
-  ]
+  deps = [ "rust:tests" ]
 }

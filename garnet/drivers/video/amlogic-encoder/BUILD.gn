@@ -30,9 +30,7 @@ package("amlogic_video_encoder") {
   deprecated_system_image = true
 
   if (target_cpu == "arm64") {
-    deps = [
-      ":amlogic_encoder",
-    ]
+    deps = [ ":amlogic_encoder" ]
     drivers = [
       {
         name = "amlogic_video_encoder.so"

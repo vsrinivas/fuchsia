@@ -10,13 +10,9 @@ source_set("public") {
     "status.h",
   ]
 
-  public_deps = [
-    "//third_party/abseil-cpp",
-  ]
+  public_deps = [ "//third_party/abseil-cpp" ]
 
-  deps = [
-    "//src/ledger/lib/logging",
-  ]
+  deps = [ "//src/ledger/lib/logging" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }
@@ -24,9 +20,7 @@ source_set("public") {
 source_set("unittests") {
   testonly = true
 
-  sources = [
-    "status_unittest.cc",
-  ]
+  sources = [ "status_unittest.cc" ]
 
   deps = [
     ":public",

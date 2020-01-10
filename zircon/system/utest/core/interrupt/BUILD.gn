@@ -4,9 +4,7 @@
 
 source_set("interrupt") {
   testonly = true
-  sources = [
-    "interrupt-test.cc",
-  ]
+  sources = [ "interrupt-test.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

@@ -35,9 +35,7 @@ rustc_binary("bin") {
 }
 
 package("cs") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

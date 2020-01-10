@@ -22,9 +22,7 @@ rustc_library("fuchsia-hyper") {
 }
 
 test_package("fuchsia-hyper-tests") {
-  deps = [
-    ":fuchsia-hyper_test",
-  ]
+  deps = [ ":fuchsia-hyper_test" ]
 
   tests = [
     {

@@ -7,9 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 fidl("counter") {
   name = "fuchsia.netemul.example"
-  sources = [
-    "counter.fidl",
-  ]
+  sources = [ "counter.fidl" ]
 }
 
 rustc_binary("inheritance") {

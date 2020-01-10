@@ -28,17 +28,13 @@ source_set("grpc") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":grpc_vsock_tests",
-  ]
+  deps = [ ":grpc_vsock_tests" ]
 }
 
 proto_library("test_proto") {
   visibility = [ "*:*" ]
 
-  sources = [
-    "test_server.proto",
-  ]
+  sources = [ "test_server.proto" ]
 
   generate_python = false
   cc_generator_options = "lite"
@@ -55,9 +51,7 @@ proto_library("test_proto") {
 executable("unittest") {
   testonly = true
 
-  sources = [
-    "grpc_vsock_tests.cc",
-  ]
+  sources = [ "grpc_vsock_tests.cc" ]
 
   deps = [
     ":grpc",
@@ -71,9 +65,7 @@ executable("unittest") {
 }
 
 test_package("grpc_vsock_tests") {
-  deps = [
-    ":unittest",
-  ]
+  deps = [ ":unittest" ]
 
   tests = [
     {

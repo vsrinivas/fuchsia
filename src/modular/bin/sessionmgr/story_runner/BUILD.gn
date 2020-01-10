@@ -7,9 +7,7 @@ import("//src/modular/build/executable_package.gni")
 import("//src/modular/build/tests_package.gni")
 
 hermetic_tests_package("story_runner_unittests") {
-  deps = [
-    ":story_controller_impl_unittest",  # incomplete, for now.
-  ]
+  deps = [ ":story_controller_impl_unittest" ]  # incomplete, for now.
   environments = basic_envs
 }
 
@@ -98,9 +96,7 @@ executable_package("dev_story_shell") {
       dest = "dev_story_shell.cmx"
     },
   ]
-  sources = [
-    "dev_story_shell.cc",
-  ]
+  sources = [ "dev_story_shell.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular",
@@ -119,9 +115,7 @@ executable_package("dev_story_shell") {
 executable("story_controller_impl_unittest") {
   testonly = true
 
-  sources = [
-    "story_controller_impl_unittest.cc",
-  ]
+  sources = [ "story_controller_impl_unittest.cc" ]
 
   deps = [
     ":story_runner",

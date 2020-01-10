@@ -19,9 +19,7 @@ source_set("metrics") {
     "watcher.h",
   ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-kernel:llcpp",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-kernel:llcpp" ]
 
   deps = [
     "//src/lib/fsl",

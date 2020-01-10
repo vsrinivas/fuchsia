@@ -31,9 +31,7 @@ dart_tool("status") {
 }
 
 dart_test("status_tests") {
-  sources = [
-    "status_test.dart",
-  ]
+  sources = [ "status_test.dart" ]
 
   deps = [
     ":status_dart_library",
@@ -45,7 +43,5 @@ dart_test("status_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":status_tests($host_toolchain)",
-  ]
+  deps = [ ":status_tests($host_toolchain)" ]
 }

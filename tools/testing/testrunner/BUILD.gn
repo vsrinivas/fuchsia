@@ -8,9 +8,7 @@ import("//build/go/go_test.gni")
 
 go_library("testrunner_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
-  deps = [
-    "//tools/testing/runtests",
-  ]
+  deps = [ "//tools/testing/runtests" ]
 }
 
 go_library("outputs") {
@@ -37,16 +35,12 @@ go_library("main") {
 
 go_binary("testrunner") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/lib"
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }
 
 go_test("testrunner_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/lib" ]
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }
 
 go_test("testrunner_outputs_tests") {

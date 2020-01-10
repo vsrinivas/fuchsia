@@ -4,9 +4,7 @@
 
 zx_library("memory_limit") {
   kernel = true
-  sources = [
-    "memory_limit.cc",
-  ]
+  sources = [ "memory_limit.cc" ]
   deps = [
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/fbl",

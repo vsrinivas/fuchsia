@@ -10,17 +10,13 @@ import("//build/host.gni")
 go_library("lib") {
   name = "fuchsia.googlesource.com/fuchsia/tools/whereiscl/lib"
   source_dir = "lib"
-  deps = [
-    ":netutil",
-  ]
+  deps = [ ":netutil" ]
 }
 
 go_library("main") {
   name = "main"
   source_dir = "."
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 go_library("netutil") {
@@ -30,18 +26,12 @@ go_library("netutil") {
 
 go_binary("whereiscl") {
   gopackage = "main"
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }
 
 install_host_tools("host") {
-  deps = [
-    ":whereiscl",
-  ]
-  outputs = [
-    "whereiscl",
-  ]
+  deps = [ ":whereiscl" ]
+  outputs = [ "whereiscl" ]
 }
 
 go_library("testhelper") {
@@ -50,7 +40,7 @@ go_library("testhelper") {
 }
 
 go_test("whereiscl_test") {
-  gopackages = ["fuchsia.googlesource.com/fuchsia/tools/whereiscl/lib"]
+  gopackages = [ "fuchsia.googlesource.com/fuchsia/tools/whereiscl/lib" ]
   deps = [
     ":lib",
     ":testhelper",

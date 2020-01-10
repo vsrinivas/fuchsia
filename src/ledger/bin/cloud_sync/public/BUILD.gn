@@ -23,9 +23,7 @@ source_set("public") {
     "//third_party/abseil-cpp",
   ]
 
-  deps = [
-    "//src/ledger/fidl/fuchsia.ledger.cloud",
-  ]
+  deps = [ "//src/ledger/fidl/fuchsia.ledger.cloud" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

@@ -5,21 +5,15 @@
 import("//build/test/test_package.gni")
 
 source_set("timekeeper") {
-  sources = [
-    "clock.h",
-  ]
+  sources = [ "clock.h" ]
 
-  public_deps = [
-    "//zircon/public/lib/zx",
-  ]
+  public_deps = [ "//zircon/public/lib/zx" ]
 
   public_configs = [ "//garnet/public:config" ]
 }
 
 source_set("system") {
-  sources = [
-    "system_clock.h",
-  ]
+  sources = [ "system_clock.h" ]
 
   public_deps = [
     ":timekeeper",
@@ -69,9 +63,7 @@ executable("timekeeper_unittests") {
 }
 
 unittest_package("timekeeper_tests") {
-  deps = [
-    ":timekeeper_unittests",
-  ]
+  deps = [ ":timekeeper_unittests" ]
 
   tests = [
     {
@@ -84,7 +76,5 @@ unittest_package("timekeeper_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":timekeeper_tests",
-  ]
+  deps = [ ":timekeeper_tests" ]
 }

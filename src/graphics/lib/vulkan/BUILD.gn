@@ -15,9 +15,7 @@ group("vulkan") {
 
 # Provides only the Vulkan headers without the loader.
 group("headers") {
-  public_deps = [
-    "//third_party/Vulkan-Headers:vulkan_headers",
-  ]
+  public_deps = [ "//third_party/Vulkan-Headers:vulkan_headers" ]
 }
 
 # Vulkan validation layers are a set of loadable modules.
@@ -30,9 +28,7 @@ group("validation_layers") {
 
 # Support code for building layers without bloat.
 group("micro_layer_common") {
-  public_deps = [
-    "//third_party/Vulkan-ValidationLayers:micro_layer_common",
-  ]
+  public_deps = [ "//third_party/Vulkan-ValidationLayers:micro_layer_common" ]
 }
 
 # Tests for the Vulkan loader and validation layers.
@@ -46,7 +42,5 @@ group("loader_and_validation_tests") {
 
 # The vulkaninfo application.
 group("vulkaninfo") {
-  public_deps = [
-    "//third_party/Vulkan-Tools:vulkaninfo",
-  ]
+  public_deps = [ "//third_party/Vulkan-Tools:vulkaninfo" ]
 }

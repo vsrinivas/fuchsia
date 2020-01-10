@@ -4,7 +4,5 @@
 
 group("async") {
   testonly = true
-  deps = [
-    "cpp",
-  ]
+  deps = [ "cpp" ]
 }

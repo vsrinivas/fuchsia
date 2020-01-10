@@ -4,7 +4,5 @@
 import("../vulkan_testing.gni")
 
 vulkan_test_app("vk_swapchain_test") {
-  sources = [
-    "main.c",
-  ]
+  sources = [ "main.c" ]
 }

@@ -4,15 +4,13 @@
 
 # Do not use this target directly, instead depend on //src/sys/tools/chrealm/integration_tests:chrealm_integrationtests.
 group("chrealm_integrationtests") {
-  public_deps = [
-    "//src/sys/tools/chrealm/integration_tests:chrealm_integrationtests",
-  ]
+  public_deps =
+      [ "//src/sys/tools/chrealm/integration_tests:chrealm_integrationtests" ]
   testonly = true
 }
 
 # Do not use this target directly, instead depend on //src/sys/tools/chrealm/integration_tests:chrealm_test_get_message.
 group("chrealm_test_get_message") {
-  public_deps = [
-    "//src/sys/tools/chrealm/integration_tests:chrealm_test_get_message",
-  ]
+  public_deps =
+      [ "//src/sys/tools/chrealm/integration_tests:chrealm_test_get_message" ]
 }

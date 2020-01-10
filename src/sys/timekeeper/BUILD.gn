@@ -28,13 +28,9 @@ package("timekeeper") {
     },
   ]
 
-  public_deps = [
-    ":timekeeper_config",
-  ]
+  public_deps = [ ":timekeeper_config" ]
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -45,12 +41,8 @@ package("timekeeper") {
 
 config_data("timekeeper_config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "timekeeper.config",
-  ]
-  sources = [
-    "service.config",
-  ]
+  outputs = [ "timekeeper.config" ]
+  sources = [ "service.config" ]
 }
 
 rustc_binary("bin") {
@@ -79,9 +71,7 @@ rustc_binary("bin") {
 }
 
 test_package("timekeeper_bin_test") {
-  public_deps = [
-    ":bin_test",
-  ]
+  public_deps = [ ":bin_test" ]
 
   tests = [
     {
@@ -104,7 +94,5 @@ test_package("timekeeper_bin_test") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":timekeeper_bin_test",
-  ]
+  public_deps = [ ":timekeeper_bin_test" ]
 }

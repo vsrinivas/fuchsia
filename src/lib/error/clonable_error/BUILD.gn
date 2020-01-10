@@ -27,9 +27,7 @@ rustc_library("clonable_error") {
 }
 
 test_package("clonable_error_tests") {
-  deps = [
-    ":clonable_error_test",
-  ]
+  deps = [ ":clonable_error_test" ]
 
   tests = [
     {
@@ -41,7 +39,5 @@ test_package("clonable_error_tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":clonable_error_tests",
-  ]
+  public_deps = [ ":clonable_error_tests" ]
 }

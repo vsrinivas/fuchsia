@@ -34,9 +34,7 @@ rustc_library("cm_json") {
 }
 
 test_package("cm_json_tests") {
-  deps = [
-    ":cm_json_test",
-  ]
+  deps = [ ":cm_json_test" ]
 
   tests = [
     {

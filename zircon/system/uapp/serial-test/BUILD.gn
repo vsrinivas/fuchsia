@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("serial-test") {
-  sources = [
-    "serial-test.cc",
-  ]
+  sources = [ "serial-test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-serial:llcpp",
     "$zx/system/ulib/fdio",

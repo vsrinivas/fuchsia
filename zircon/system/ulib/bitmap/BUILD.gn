@@ -17,9 +17,7 @@ zx_library("bitmap") {
     "raw-bitmap.cc",
     "rle-bitmap.cc",
   ]
-  public_deps = [
-    "$zx/system/ulib/fbl:headers",
-  ]
+  public_deps = [ "$zx/system/ulib/fbl:headers" ]
   if (!is_kernel && !is_host) {
     public_deps += [
       # <bitmap/storage.h> has #include <lib/zx/vmo.h>.

@@ -32,9 +32,7 @@ rustc_binary("bin") {
 }
 
 package("stash") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "stash"
 
@@ -55,9 +53,7 @@ package("stash") {
 }
 
 test_package("stash_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

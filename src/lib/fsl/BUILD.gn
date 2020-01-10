@@ -47,9 +47,7 @@ executable("fsl_unittests") {
 }
 
 test_package("fsl_tests") {
-  deps = [
-    ":fsl_unittests",
-  ]
+  deps = [ ":fsl_unittests" ]
 
   tests = [
     {

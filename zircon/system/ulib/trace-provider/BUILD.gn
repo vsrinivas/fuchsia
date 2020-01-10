@@ -89,9 +89,7 @@ trace_provider_fdio_connect_headers = [ "lib/trace-provider/fdio_connect.h" ]
 trace_provider_library("trace-provider") {
   sdk = "source"
   sdk_headers = trace_provider_fdio_connect_headers
-  public_deps = [
-    "$zx/system/ulib/trace-engine:headers",
-  ]
+  public_deps = [ "$zx/system/ulib/trace-engine:headers" ]
   sources = trace_provider_fdio_sources
   deps = trace_provider_fdio_connect_source_deps
   deps += [ "$zx/system/ulib/trace-engine" ]
@@ -111,9 +109,7 @@ trace_provider_library("trace-provider-so") {
   extra_configs = [ "$zx_build/public/gn/config:static-libc++" ]
   defines = [ "SHARED_LIBRARY" ]
   sdk_headers = trace_provider_fdio_connect_headers
-  public_deps = [
-    "$zx/system/ulib/trace-engine:headers",
-  ]
+  public_deps = [ "$zx/system/ulib/trace-engine:headers" ]
   sources = trace_provider_fdio_sources
   deps = trace_provider_fdio_connect_source_deps
   deps += [ "$zx/system/ulib/trace-engine" ]
@@ -124,9 +120,7 @@ trace_provider_library("trace-provider-so") {
 trace_provider_library("trace-provider-with-fdio") {
   sdk = "source"
   sdk_headers = trace_provider_fdio_connect_headers
-  public_deps = [
-    "$zx/system/ulib/trace-engine:headers",
-  ]
+  public_deps = [ "$zx/system/ulib/trace-engine:headers" ]
   sources = trace_provider_fdio_sources
   deps = trace_provider_fdio_connect_source_deps
   deps += [ "$zx/system/ulib/trace-engine" ]
@@ -139,9 +133,7 @@ trace_provider_library("trace-provider-with-fdio") {
 trace_provider_library("trace-provider-with-static-engine") {
   sdk = "static"
   sdk_headers = trace_provider_fdio_connect_headers
-  public_deps = [
-    "$zx/system/ulib/trace-engine:trace-engine-static.headers",
-  ]
+  public_deps = [ "$zx/system/ulib/trace-engine:trace-engine-static.headers" ]
   sources = []
   deps = []
   deps += [ "$zx/system/ulib/trace-engine:trace-engine-static" ]
@@ -153,12 +145,8 @@ trace_provider_library("trace-provider-with-static-engine") {
 
 # Version for the DDK.
 trace_provider_library("trace-provider-driver") {
-  public_deps = [
-    "$zx/system/ulib/trace-engine:trace-engine-driver.headers",
-  ]
-  deps = [
-    "$zx/system/ulib/trace-engine:trace-engine-driver",
-  ]
+  public_deps = [ "$zx/system/ulib/trace-engine:trace-engine-driver.headers" ]
+  deps = [ "$zx/system/ulib/trace-engine:trace-engine-driver" ]
 }
 
 # For apps that use the trace engine, but not via a trace provider.
@@ -172,9 +160,7 @@ zx_library("trace-handler") {
     # just reference the headers here.
     "$zx/system/ulib/trace-engine:trace-engine-headers-for-handler",
   ]
-  sources = [
-    "handler.cc",
-  ]
+  sources = [ "handler.cc" ]
 }
 
 # A helper library for clients that want to use fdio to connect to
@@ -189,9 +175,7 @@ zx_library("trace-provider-fdio-connect") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":provider-test",
-  ]
+  deps = [ ":provider-test" ]
 }
 
 zx_test("provider-test") {

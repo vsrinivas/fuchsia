@@ -9,9 +9,7 @@ executable("bin") {
 
   output_name = "goldfish_benchmark"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_c",
@@ -25,9 +23,7 @@ executable("bin") {
 package("goldfish_benchmark") {
   testonly = true
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

@@ -4,7 +4,5 @@
 
 group("third_party") {
   testonly = true
-  deps = [
-    "bup",
-  ]
+  deps = [ "bup" ]
 }

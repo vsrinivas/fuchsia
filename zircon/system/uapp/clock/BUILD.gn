@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("clock") {
-  sources = [
-    "clock.c",
-  ]
+  sources = [ "clock.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-rtc:c",
     "$zx/system/ulib/fdio",
@@ -14,9 +12,7 @@ zx_executable("clock") {
 }
 
 zx_executable("clkctl") {
-  sources = [
-    "clkctl.c",
-  ]
+  sources = [ "clkctl.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-clock:c",
     "$zx/system/ulib/fdio",

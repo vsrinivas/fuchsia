@@ -9,7 +9,5 @@ zx_library("statusor") {
     "lib/statusor/status-macros.h",
   ]
   sources = []
-  public_deps = [
-    "$zx/system/ulib/zx:headers",
-  ]
+  public_deps = [ "$zx/system/ulib/zx:headers" ]
 }

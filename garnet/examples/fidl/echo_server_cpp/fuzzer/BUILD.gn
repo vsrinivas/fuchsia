@@ -7,9 +7,7 @@ import("//build/fuzzing/fuzzer.gni")
 source_set("echo_server_provider") {
   testonly = true
 
-  sources = [
-    "echo_server_provider.cc",
-  ]
+  sources = [ "echo_server_provider.cc" ]
 
   public_deps = [
     "//garnet/examples/fidl/echo_server_cpp:lib",
@@ -22,9 +20,7 @@ source_set("echo_server_provider") {
 fidl_protocol_fuzzer("echo_fuzzer") {
   fidl = "//garnet/examples/fidl/services:echo"
   protocol = "fidl.examples.echo.Echo"
-  deps = [
-    ":echo_server_provider",
-  ]
+  deps = [ ":echo_server_provider" ]
 }
 
 fuzzers_package("echo_fuzzers") {

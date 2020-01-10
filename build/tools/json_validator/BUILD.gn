@@ -5,21 +5,13 @@
 import("//build/host.gni")
 
 executable("json_validator") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
-  deps = [
-    "//third_party/rapidjson",
-  ]
+  deps = [ "//third_party/rapidjson" ]
 }
 
 install_host_tools("install") {
-  deps = [
-    ":json_validator",
-  ]
+  deps = [ ":json_validator" ]
 
-  outputs = [
-    "json_validator",
-  ]
+  outputs = [ "json_validator" ]
 }

@@ -4,9 +4,7 @@
 
 source_set("pthread-barrier") {
   testonly = true
-  sources = [
-    "barrier.cc",
-  ]
+  sources = [ "barrier.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("as370-gpio") {
-  sources = [
-    "as370-gpio.cc",
-  ]
+  sources = [ "as370-gpio.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpioimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",

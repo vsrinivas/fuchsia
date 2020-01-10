@@ -6,9 +6,7 @@ import("//build/rust/rustc_binary.gni")
 
 group("integration") {
   testonly = true
-  deps = [
-    ":bt-integration-tests",
-  ]
+  deps = [ ":bt-integration-tests" ]
 }
 
 rustc_binary("bt-integration-tests") {

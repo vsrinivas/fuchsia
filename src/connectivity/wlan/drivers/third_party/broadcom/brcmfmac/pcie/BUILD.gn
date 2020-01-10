@@ -22,9 +22,7 @@ source_set("pcie") {
     "pcie_interrupt_master.h",
     "pcie_regs.h",
   ]
-  public = [
-    "pcie_device.h",
-  ]
+  public = [ "pcie_device.h" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
@@ -46,12 +44,8 @@ source_set("pcie") {
 }
 
 source_set("pcie_driver_test") {
-  sources = [
-    "pcie_driver_test.cc",
-  ]
-  public = [
-    "pcie_driver_test.h",
-  ]
+  sources = [ "pcie_driver_test.cc" ]
+  public = [ "pcie_driver_test.h" ]
   deps = [
     ":pcie",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",

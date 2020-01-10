@@ -4,14 +4,10 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "spinel_vk_svg",
-  ]
+  public_deps = [ "spinel_vk_svg" ]
 }
 
 group("vk_unittests") {
   testonly = true
-  public_deps = [
-    "spinel_vk_test:vk_unittests",
-  ]
+  public_deps = [ "spinel_vk_test:vk_unittests" ]
 }

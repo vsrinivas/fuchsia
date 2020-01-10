@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-hardware-i2c") {
-  sources = [
-    "i2c.fidl",
-  ]
+  sources = [ "i2c.fidl" ]
 }

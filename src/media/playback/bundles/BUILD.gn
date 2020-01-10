@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("services") {
-  deps = [
-    "//src/media/playback/mediaplayer",
-  ]
+  deps = [ "//src/media/playback/mediaplayer" ]
 }
 
 group("tools") {
@@ -15,9 +13,7 @@ group("tools") {
 
 group("examples") {
   testonly = true
-  deps = [
-    "//src/media/playback/examples",
-  ]
+  deps = [ "//src/media/playback/examples" ]
 }
 
 group("config") {
@@ -26,7 +22,5 @@ group("config") {
 }
 
 group("audio_consumer_config") {
-  deps = [
-    "//src/media/playback/mediaplayer:audio_consumer_config",
-  ]
+  deps = [ "//src/media/playback/mediaplayer:audio_consumer_config" ]
 }

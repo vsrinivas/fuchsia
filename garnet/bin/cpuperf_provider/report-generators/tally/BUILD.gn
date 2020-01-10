@@ -10,25 +10,17 @@ import("//build/package.gni")
 go_library("lib") {
   name = "tally"
 
-  deps = [
-    "//third_party/golibs:github.com/dustin/go-humanize",
-  ]
+  deps = [ "//third_party/golibs:github.com/dustin/go-humanize" ]
 }
 
 go_binary("bin") {
   output_name = "traceutil-generate-tally"
   gopackage = "tally"
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 install_host_tools("tally") {
-  deps = [
-    ":bin",
-  ]
-  outputs = [
-    "traceutil-generate-tally",
-  ]
+  deps = [ ":bin" ]
+  outputs = [ "traceutil-generate-tally" ]
 }

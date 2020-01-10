@@ -8,9 +8,7 @@ import("//build/test/test_package.gni")
 executable("modular_test_harness_bin") {
   testonly = true
 
-  sources = [
-    "modular_test_harness.cc",
-  ]
+  sources = [ "modular_test_harness.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
@@ -25,9 +23,7 @@ executable("modular_test_harness_bin") {
 executable("test_base_shell_bin") {
   testonly = true
 
-  sources = [
-    "test_base_shell.cc",
-  ]
+  sources = [ "test_base_shell.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.auth",
@@ -46,9 +42,7 @@ executable("test_base_shell_bin") {
 executable("test_session_shell_bin") {
   testonly = true
 
-  sources = [
-    "test_session_shell.cc",
-  ]
+  sources = [ "test_session_shell.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular",
@@ -67,9 +61,7 @@ executable("test_session_shell_bin") {
 executable("test_story_shell_bin") {
   testonly = true
 
-  sources = [
-    "test_story_shell.cc",
-  ]
+  sources = [ "test_story_shell.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.modular",
@@ -86,9 +78,7 @@ executable("test_story_shell_bin") {
 
 executable("modular_test_harness_test") {
   testonly = true
-  sources = [
-    "modular_test_harness_test.cc",
-  ]
+  sources = [ "modular_test_harness_test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
@@ -155,7 +145,5 @@ test_package("tests") {
     },
   ]
 
-  deps = [
-    ":modular_test_harness_test",
-  ]
+  deps = [ ":modular_test_harness_test" ]
 }

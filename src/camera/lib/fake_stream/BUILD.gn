@@ -5,9 +5,7 @@
 group("fake_stream") {
   testonly = true
 
-  public_deps = [
-    ":fake_stream_lib",
-  ]
+  public_deps = [ ":fake_stream_lib" ]
 }
 
 source_set("fake_stream_lib") {
@@ -15,9 +13,7 @@ source_set("fake_stream_lib") {
 
   visibility = [ ":*" ]
 
-  public = [
-    "fake_stream.h",
-  ]
+  public = [ "fake_stream.h" ]
 
   sources = [
     "fake_stream.cc",

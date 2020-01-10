@@ -10,9 +10,7 @@ fidl("fuchsia.ledger.internal") {
     "vector-bounds-not-specified",
   ]
 
-  sources = [
-    "internal.fidl",
-  ]
+  sources = [ "internal.fidl" ]
 
   public_deps = [
     "//src/ledger/fidl/fuchsia.ledger",

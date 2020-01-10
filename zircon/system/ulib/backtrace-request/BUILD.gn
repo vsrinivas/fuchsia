@@ -12,10 +12,6 @@ zx_library("backtrace-request") {
 # Internal library to request, detect, and clean up backtrace requests.
 # This is a superset of the SDK backtrace-request library.
 zx_library("utils") {
-  sources = [
-    "backtrace-request-utils.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/zircon",
-  ]
+  sources = [ "backtrace-request-utils.cc" ]
+  deps = [ "$zx/system/ulib/zircon" ]
 }

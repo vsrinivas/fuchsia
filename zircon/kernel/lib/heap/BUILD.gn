@@ -4,9 +4,7 @@
 
 zx_library("heap") {
   kernel = true
-  sources = [
-    "heap_wrapper.cc",
-  ]
+  sources = [ "heap_wrapper.cc" ]
   deps = [
     "$zx/kernel/lib/console",
     "cmpctmalloc",

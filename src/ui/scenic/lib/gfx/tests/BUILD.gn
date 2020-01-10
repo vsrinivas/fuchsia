@@ -20,15 +20,9 @@ group("tests") {
 
 source_set("gfx_tests_main") {
   testonly = true
-  sources = [
-    "run_all_unittests.cc",
-  ]
-  deps = [
-    "//src/ui/lib/escher/test:gtest_escher",
-  ]
-  public_deps = [
-    "//third_party/googletest:gtest",
-  ]
+  sources = [ "run_all_unittests.cc" ]
+  deps = [ "//src/ui/lib/escher/test:gtest_escher" ]
+  public_deps = [ "//third_party/googletest:gtest" ]
 }
 
 source_set("testing_deps") {
@@ -84,13 +78,9 @@ source_set("testing_deps") {
 source_set("pixel_test") {
   testonly = true
 
-  public = [
-    "pixel_test.h",
-  ]
+  public = [ "pixel_test.h" ]
 
-  sources = [
-    "pixel_test.cc",
-  ]
+  sources = [ "pixel_test.cc" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -113,9 +103,7 @@ source_set("pixel_test") {
 source_set("magnification_pixeltests") {
   testonly = true
 
-  sources = [
-    "magnification_pixeltest.cc",
-  ]
+  sources = [ "magnification_pixeltest.cc" ]
   deps = [
     ":pixel_test",
     "//sdk/fidl/fuchsia.accessibility",
@@ -130,9 +118,7 @@ source_set("magnification_pixeltests") {
 source_set("scenic_pixeltests") {
   testonly = true
 
-  sources = [
-    "scenic_pixeltest.cc",
-  ]
+  sources = [ "scenic_pixeltest.cc" ]
   include_dirs = [ "//src/ui/lib/escher" ]
   deps = [
     ":gfx_tests_main",
@@ -209,9 +195,7 @@ executable("unittests") {
 executable("swapchain_tests") {
   output_name = "gfx_swapchain_tests"
   testonly = true
-  sources = [
-    "display_swapchain_test.cc",
-  ]
+  sources = [ "display_swapchain_test.cc" ]
   deps = [
     ":testing_deps",
     "//src/lib/fxl/test:gtest_main",
@@ -222,9 +206,7 @@ executable("swapchain_tests") {
 executable("delegating_frame_scheduler_integration_tests") {
   output_name = "gfx_frame_scheduler_integration_tests"
   testonly = true
-  sources = [
-    "delegating_frame_scheduler_integration_test.cc",
-  ]
+  sources = [ "delegating_frame_scheduler_integration_test.cc" ]
   deps = [
     ":testing_deps",
     "//src/lib/fxl/test:gtest_main",
@@ -236,9 +218,7 @@ executable("apptests") {
   output_name = "gfx_apptests"
 
   testonly = true
-  sources = [
-    "gfx_apptest.cc",
-  ]
+  sources = [ "gfx_apptest.cc" ]
   deps = [
     ":gfx_tests_main",
     ":testing_deps",
@@ -259,9 +239,7 @@ executable("viewstate_apptests") {
   output_name = "gfx_viewstate_apptests"
 
   testonly = true
-  sources = [
-    "gfx_viewstate_apptest.cc",
-  ]
+  sources = [ "gfx_viewstate_apptest.cc" ]
   include_dirs = [ "//src/ui/lib/escher" ]
   deps = [
     ":gfx_tests_main",
@@ -308,9 +286,7 @@ package("mock_pose_buffer_provider") {
     },
   ]
 
-  deps = [
-    ":mock_pose_buffer_provider_cc",
-  ]
+  deps = [ ":mock_pose_buffer_provider_cc" ]
 
   binary = "mock_pose_buffer_provider"
 }

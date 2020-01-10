@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("text_node") {
-  public_deps = [
-    ":text_node_lib",
-  ]
+  public_deps = [ ":text_node_lib" ]
   public_configs = [ ":text_node_config" ]
 }
 

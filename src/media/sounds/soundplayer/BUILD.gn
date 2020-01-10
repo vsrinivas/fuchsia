@@ -9,9 +9,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 package("soundplayer") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "soundplayer"
 
@@ -53,18 +51,12 @@ rustc_binary("bin") {
 
 config_data("configs") {
   for_pkg = "sysmgr"
-  outputs = [
-    "soundplayer.config",
-  ]
-  sources = [
-    "service.config",
-  ]
+  outputs = [ "soundplayer.config" ]
+  sources = [ "service.config" ]
 }
 
 test_package("soundplayer_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

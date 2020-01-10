@@ -19,9 +19,7 @@ group("ledger") {
 }
 
 group("bin") {
-  deps = [
-    "bin",
-  ]
+  deps = [ "bin" ]
 }
 
 group("tests") {
@@ -35,9 +33,7 @@ group("tests") {
 
 group("host_tests") {
   testonly = true
-  public_deps = [
-    "//src/ledger/bin:ledger_host_tests($host_toolchain)",
-  ]
+  public_deps = [ "//src/ledger/bin:ledger_host_tests($host_toolchain)" ]
 }
 
 # Private targets

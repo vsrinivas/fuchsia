@@ -29,9 +29,7 @@ if (host_toolchain == current_toolchain) {
 
 rustc_test("wayland_scanner_front_end_test") {
   edition = "2018"
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
   source_root = "tests/front_end_test.rs"
 }
 

@@ -4,9 +4,7 @@
 
 zx_driver("usb-tester") {  # TODO: test_driver?
   testonly = true
-  sources = [
-    "usb-tester.cc",
-  ]
+  sources = [ "usb-tester.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",
     "$zx/system/banjo/ddk.protocol.usb.composite",

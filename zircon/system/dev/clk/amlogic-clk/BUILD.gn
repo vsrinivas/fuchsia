@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("amlogic-clk") {
-  sources = [
-    "aml-clk.cc",
-  ]
+  sources = [ "aml-clk.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clockimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",

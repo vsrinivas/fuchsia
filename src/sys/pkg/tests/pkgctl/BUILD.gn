@@ -64,7 +64,5 @@ test_package("pkgctl-integration-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":pkgctl-integration-tests",
-  ]
+  public_deps = [ ":pkgctl-integration-tests" ]
 }

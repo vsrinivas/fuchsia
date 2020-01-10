@@ -3,30 +3,22 @@
 # found in the LICENSE file.
 
 zx_library("abs_clock") {
-  sources = [
-    "clock.cc",
-  ]
+  sources = [ "clock.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/sync",
   ]
-  public_deps = [
-    "$zx/system/ulib/zx",
-  ]
+  public_deps = [ "$zx/system/ulib/zx" ]
 }
 
 group("test") {
   testonly = true
-  deps = [
-    ":abs_clock_test",
-  ]
+  deps = [ ":abs_clock_test" ]
 }
 
 zx_test("abs_clock_test") {
   testonly = true
-  sources = [
-    "clock_test.cc",
-  ]
+  sources = [ "clock_test.cc" ]
   deps = [
     ":abs_clock",
     "$zx/system/ulib/fbl",

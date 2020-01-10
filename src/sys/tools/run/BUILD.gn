@@ -7,9 +7,7 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "run"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.sys",
@@ -24,9 +22,7 @@ executable("bin") {
 }
 
 package("run") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   meta = [
     {

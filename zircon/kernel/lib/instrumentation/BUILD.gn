@@ -5,9 +5,7 @@
 zx_library("instrumentation") {
   kernel = true
   sources = []
-  public_deps = [
-    "$zx/system/ulib/fbl:headers",
-  ]
+  public_deps = [ "$zx/system/ulib/fbl:headers" ]
   if (is_kernel) {
     sources += [ "vmo.cc" ]
     deps = [
@@ -31,9 +29,7 @@ source_set("profile") {
   _profile_config = [ "$zx/public/gn/config/instrumentation:profile" ]
   if (toolchain.configs + _profile_config - _profile_config !=
       toolchain.configs) {
-    sources = [
-      "profile.cc",
-    ]
+    sources = [ "profile.cc" ]
 
     if (current_os == "win") {
       # The LLVM header file describing the instrumentation data tests this.
@@ -46,8 +42,6 @@ source_set("sancov") {
   _sancov_config = [ "$zx/public/gn/config/instrumentation:sancov" ]
   if (configs + _sancov_config - _sancov_config != configs) {
     configs -= _sancov_config
-    sources = [
-      "sancov.cc",
-    ]
+    sources = [ "sancov.cc" ]
   }
 }

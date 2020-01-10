@@ -29,9 +29,7 @@ rustc_binary("bin") {
 }
 
 package("token_manager_factory") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "token_manager_factory"
 

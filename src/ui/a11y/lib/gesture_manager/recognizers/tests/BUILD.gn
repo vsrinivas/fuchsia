@@ -4,9 +4,7 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":gesture_recognizers_tests",
-  ]
+  public_deps = [ ":gesture_recognizers_tests" ]
 }
 
 executable("gesture_recognizers_tests") {

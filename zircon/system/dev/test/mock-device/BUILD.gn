@@ -31,7 +31,5 @@ if (current_toolchain != default_toolchain) {
 fidl_library("fuchsia.device.mock") {
   visibility = [ ":*" ]
   testonly = true
-  sources = [
-    "mock-device.fidl",
-  ]
+  sources = [ "mock-device.fidl" ]
 }

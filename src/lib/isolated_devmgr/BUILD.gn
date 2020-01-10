@@ -12,9 +12,7 @@ source_set("src") {
     "isolated_devmgr.h",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/devmgr-integration-test",
-  ]
+  public_deps = [ "//zircon/public/lib/devmgr-integration-test" ]
 
   deps = [
     "//sdk/lib/sys/cpp",
@@ -38,9 +36,7 @@ executable("isolated_devmgr") {
   testonly = true
   output_name = "isolated_devmgr"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":src",
@@ -94,9 +90,7 @@ executable("test_bin") {
 
   output_name = "isolated_devmgr_tests"
 
-  sources = [
-    "isolated_devmgr_tests.cc",
-  ]
+  sources = [ "isolated_devmgr_tests.cc" ]
 
   deps = [
     ":src",
@@ -170,7 +164,5 @@ package("isolated_devmgr_tests") {
 
 group("tests") {
   testonly = true
-  data_deps = [
-    ":isolated_devmgr_tests",
-  ]
+  data_deps = [ ":isolated_devmgr_tests" ]
 }

@@ -5,10 +5,6 @@
 zx_library("qcom") {
   sdk = "source"
   sdk_headers = [ "qcom/smc.h" ]
-  sources = [
-    "qcom-smc.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/ddk",
-  ]
+  sources = [ "qcom-smc.cc" ]
+  deps = [ "$zx/system/ulib/ddk" ]
 }

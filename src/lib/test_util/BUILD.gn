@@ -14,7 +14,5 @@ rustc_library("test_util") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":test_util_test",
-  ]
+  deps = [ ":test_util_test" ]
 }

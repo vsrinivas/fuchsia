@@ -47,11 +47,7 @@ if (!is_fuchsia) {
 }
 
 install_host_tools("host") {
-  deps = [
-    ":bin($host_toolchain)",
-  ]
+  deps = [ ":bin($host_toolchain)" ]
 
-  outputs = [
-    "ascendd",
-  ]
+  outputs = [ "ascendd" ]
 }

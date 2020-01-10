@@ -17,9 +17,7 @@ source_set("fuchsia_http_client") {
     "fuchsia_http_client.h",
   ]
 
-  deps = [
-    "//src/lib/fsl",
-  ]
+  deps = [ "//src/lib/fsl" ]
 
   public_deps = [
     "//src/lib/network_wrapper:network_wrapper",
@@ -43,13 +41,9 @@ source_set("clock") {
 }
 
 source_set("base64") {
-  sources = [
-    "base64.h",
-  ]
+  sources = [ "base64.h" ]
 
-  public_deps = [
-    "//third_party/modp_b64",
-  ]
+  public_deps = [ "//third_party/modp_b64" ]
 }
 
 executable("cobalt_utils_unittests") {

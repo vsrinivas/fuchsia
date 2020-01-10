@@ -7,19 +7,17 @@ config("wlan_protocol_config") {
 }
 
 source_set("protocol") {
-  sources = [
-    "include/wlan/protocol/mac.h",
-  ]
+  sources = [ "include/wlan/protocol/mac.h" ]
 
   public_configs = [ ":wlan_protocol_config" ]
 
   public_deps = [
+    "//zircon/public/lib/ddk",
     "//zircon/system/banjo/ddk.hw.wlan.ieee80211",
     "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
     "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/banjo/ddk.protocol.wlan.info",
     "//zircon/system/banjo/ddk.protocol.wlan.mac",
     "//zircon/system/banjo/ddk.protocol.wlanif",
-    "//zircon/public/lib/ddk",
   ]
 }

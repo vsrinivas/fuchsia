@@ -8,9 +8,7 @@ import("//build/testing/environments.gni")
 
 group("logs") {
   testonly = true
-  deps = [
-    ":appmgr_log_integration_tests",
-  ]
+  deps = [ ":appmgr_log_integration_tests" ]
 }
 
 test_package("appmgr_log_integration_tests") {

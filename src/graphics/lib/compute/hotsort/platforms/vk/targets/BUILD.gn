@@ -8,8 +8,6 @@
 
 if (current_toolchain == host_toolchain) {
   executable("hotsort_modules_to_literals") {
-    sources = [
-      "hotsort_modules_to_literals.c",
-    ]
+    sources = [ "hotsort_modules_to_literals.c" ]
   }
 }

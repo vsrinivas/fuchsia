@@ -32,9 +32,7 @@ rustc_binary("intl_property_manager_bin") {
 }
 
 package("intl_property_manager") {
-  deps = [
-    ":intl_property_manager_bin",
-  ]
+  deps = [ ":intl_property_manager_bin" ]
   binaries = [
     {
       name = "intl_property_manager"
@@ -54,9 +52,7 @@ package("intl_property_manager") {
 }
 
 test_package("intl_property_manager_tests") {
-  deps = [
-    ":intl_property_manager_bin_test",
-  ]
+  deps = [ ":intl_property_manager_bin_test" ]
 
   tests = [
     {

@@ -29,9 +29,7 @@ rustc_binary("bin") {
 }
 
 package("fake_factory_items") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

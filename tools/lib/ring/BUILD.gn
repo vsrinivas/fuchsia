@@ -12,7 +12,5 @@ go_library("ring") {
 go_test("tests") {
   output_name = "ring_tests"
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/ring" ]
-  deps = [
-    ":ring",
-  ]
+  deps = [ ":ring" ]
 }

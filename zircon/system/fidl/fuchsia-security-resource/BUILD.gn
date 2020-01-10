@@ -8,7 +8,5 @@ import("$zx_build/public/gn/fidl.gni")
 # expose this at //sdk/fidl.  But for now, since our only callers live in zircon,
 # we can keep it here in //zircon/system/fidl.
 fidl_library("fuchsia-security-resource") {
-  sources = [
-    "vmex.fidl",
-  ]
+  sources = [ "vmex.fidl" ]
 }

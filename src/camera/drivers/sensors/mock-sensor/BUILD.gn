@@ -30,9 +30,7 @@ package("mock-sensor") {
   testonly = true
   deprecated_system_image = true
 
-  deps = [
-    ":mock-sensor-driver",
-  ]
+  deps = [ ":mock-sensor-driver" ]
 
   drivers = [
     {

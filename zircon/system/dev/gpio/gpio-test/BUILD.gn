@@ -4,9 +4,7 @@
 
 zx_driver("gpio-test") {
   # TODO: testonly = true
-  sources = [
-    "gpio-test.cc",
-  ]
+  sources = [ "gpio-test.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.gpio",

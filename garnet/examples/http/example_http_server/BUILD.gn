@@ -17,9 +17,7 @@ rustc_binary("bin") {
 }
 
 package("example_http_server") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "example_http_server"
 

@@ -8,19 +8,13 @@ source_set("lib") {
     "lib.h",
   ]
 
-  deps = [
-    "//examples/rust/staticlib/rust:crust",
-  ]
+  deps = [ "//examples/rust/staticlib/rust:crust" ]
 }
 
 executable("bin") {
   output_name = "crust"
 
-  sources = [
-    "crust.c",
-  ]
+  sources = [ "crust.c" ]
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }

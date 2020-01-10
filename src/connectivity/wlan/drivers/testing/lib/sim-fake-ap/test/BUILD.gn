@@ -11,9 +11,7 @@ executable("assoc_unittests") {
 
   testonly = true
 
-  sources = [
-    "assoc_unittests.cc",
-  ]
+  sources = [ "assoc_unittests.cc" ]
 
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
@@ -27,9 +25,7 @@ executable("beacon_unittests") {
 
   testonly = true
 
-  sources = [
-    "beacon_unittests.cc",
-  ]
+  sources = [ "beacon_unittests.cc" ]
 
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
@@ -43,9 +39,7 @@ executable("probe_unittests") {
 
   testonly = true
 
-  sources = [
-    "probe_unittests.cc",
-  ]
+  sources = [ "probe_unittests.cc" ]
 
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",

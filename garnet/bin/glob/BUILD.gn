@@ -7,17 +7,13 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "glob"
 
-  sources = [
-    "glob.cc",
-  ]
+  sources = [ "glob.cc" ]
 }
 
 package("glob") {
   deprecated_shell = "//build"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "glob"
 

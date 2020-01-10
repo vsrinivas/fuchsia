@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("display") {
-  deps = [
-    ":shared",
-  ]
+  deps = [ ":shared" ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
   deprecated_inhibit_driver_shlib_allowlist = true

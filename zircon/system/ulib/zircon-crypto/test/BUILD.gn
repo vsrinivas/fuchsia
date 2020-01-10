@@ -32,9 +32,7 @@ zx_test("zircon-crypto") {
 }
 
 fuzzer("hmac-fuzzer") {
-  sources = [
-    "hmac-fuzzer.cc",
-  ]
+  sources = [ "hmac-fuzzer.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon-crypto",

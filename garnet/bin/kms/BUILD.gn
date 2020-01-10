@@ -4,29 +4,21 @@
 
 # Do not use this target directly, instead depend on //src/security/kms:kms.
 group("kms") {
-  public_deps = [
-    "//src/security/kms:kms",
-  ]
+  public_deps = [ "//src/security/kms:kms" ]
 }
 
 # Do not use this target directly, instead depend on //src/security/kms:kms_tests.
 group("kms_tests") {
   testonly = true
-  public_deps = [
-    "//src/security/kms:kms_tests",
-  ]
+  public_deps = [ "//src/security/kms:kms_tests" ]
 }
 
 # Do not use this target directly, instead depend on //src/security/kms:optee_provider_config.
 group("optee_provider_config") {
-  public_deps = [
-    "//src/security/kms:optee_provider_config",
-  ]
+  public_deps = [ "//src/security/kms:optee_provider_config" ]
 }
 
 # Do not use this target directly, instead depend on //src/security/kms:optee_provider_test_config.
 group("optee_provider_test_config") {
-  public_deps = [
-    "//src/security/kms:optee_provider_test_config",
-  ]
+  public_deps = [ "//src/security/kms:optee_provider_test_config" ]
 }

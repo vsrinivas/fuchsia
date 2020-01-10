@@ -8,7 +8,5 @@
 # WARNING: Known to topaz.
 group("integration_testing") {
   testonly = true
-  public_deps = [
-    "//src/modular/bundles:integration_testing",
-  ]
+  public_deps = [ "//src/modular/bundles:integration_testing" ]
 }

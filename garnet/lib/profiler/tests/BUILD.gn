@@ -9,9 +9,7 @@ gperftools_src_root = "//third_party/gperftools/src/tests/"
 executable("stacktrace_unittest") {
   #  testonly = true
 
-  sources = [
-    rebase_path("stacktrace_unittest.cc", ".", gperftools_src_root),
-  ]
+  sources = [ rebase_path("stacktrace_unittest.cc", ".", gperftools_src_root) ]
 
   deps = [
     "//garnet/lib/profiler:profiler_static",
@@ -21,20 +19,14 @@ executable("stacktrace_unittest") {
 }
 
 source_set("testutil") {
-  sources = [
-    rebase_path("testutil.cc", ".", gperftools_src_root),
-  ]
-  deps = [
-    "//garnet/lib/profiler:profiler_static",
-  ]
+  sources = [ rebase_path("testutil.cc", ".", gperftools_src_root) ]
+  deps = [ "//garnet/lib/profiler:profiler_static" ]
 }
 
 executable("profiler_unittest") {
   #  testonly = true
 
-  sources = [
-    rebase_path("profiler_unittest.cc", ".", gperftools_src_root),
-  ]
+  sources = [ rebase_path("profiler_unittest.cc", ".", gperftools_src_root) ]
 
   deps = [
     ":testutil",
@@ -47,9 +39,7 @@ executable("profiler_unittest") {
 executable("profiledata_unittest") {
   #  testonly = true
 
-  sources = [
-    rebase_path("profiledata_unittest.cc", ".", gperftools_src_root),
-  ]
+  sources = [ rebase_path("profiledata_unittest.cc", ".", gperftools_src_root) ]
 
   deps = [
     ":testutil",

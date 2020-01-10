@@ -6,11 +6,7 @@ import("//build/config.gni")
 
 config_data("vim2_media_config") {
   for_pkg = "audio_core"
-  sources = [
-    rebase_path(
-        "settings/default/34384e7da9d52c8062a9765baeb6053a-output.json"),
-  ]
-  outputs = [
-    "settings/default/34384e7da9d52c8062a9765baeb6053a-output.json",
-  ]
+  sources = [ rebase_path(
+          "settings/default/34384e7da9d52c8062a9765baeb6053a-output.json") ]
+  outputs = [ "settings/default/34384e7da9d52c8062a9765baeb6053a-output.json" ]
 }

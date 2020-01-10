@@ -24,9 +24,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "network_time_service"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -40,9 +38,7 @@ executable("bin") {
 }
 
 package("network_time_service") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   resources = [
     {

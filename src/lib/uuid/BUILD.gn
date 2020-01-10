@@ -11,17 +11,13 @@ source_set("uuid") {
     "uuid.h",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 }
 
 executable("uuid_unittests") {
   testonly = true
 
-  sources = [
-    "uuid_unittest.cc",
-  ]
+  sources = [ "uuid_unittest.cc" ]
 
   deps = [
     ":uuid",
@@ -31,9 +27,7 @@ executable("uuid_unittests") {
 }
 
 test_package("uuid_tests") {
-  deps = [
-    ":uuid_unittests",
-  ]
+  deps = [ ":uuid_unittests" ]
 
   tests = [
     {

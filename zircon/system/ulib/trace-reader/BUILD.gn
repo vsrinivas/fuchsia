@@ -62,7 +62,5 @@ zx_test("trace-reader-test") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":trace-reader-test",
-  ]
+  deps = [ ":trace-reader-test" ]
 }

@@ -5,9 +5,7 @@
 group("tests") {
   testonly = true
 
-  public_deps = [
-    ":unittests",
-  ]
+  public_deps = [ ":unittests" ]
 }
 
 source_set("testing_deps") {
@@ -30,9 +28,7 @@ source_set("testing_deps") {
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//third_party/googletest:gtest",
   ]
-  deps = [
-    "//sdk/lib/sys/cpp/testing:unit",
-  ]
+  deps = [ "//sdk/lib/sys/cpp/testing:unit" ]
 }
 
 source_set("dummy_system") {
@@ -50,9 +46,7 @@ source_set("dummy_system") {
 executable("unittests") {
   output_name = "scenic_unittests"
   testonly = true
-  sources = [
-    "scenic_unittest.cc",
-  ]
+  sources = [ "scenic_unittest.cc" ]
   deps = [
     ":dummy_system",
     ":testing_deps",

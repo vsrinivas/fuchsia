@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("storage-metrics") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-io:c",

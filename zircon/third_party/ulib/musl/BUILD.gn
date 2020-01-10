@@ -44,9 +44,7 @@ group("musl_internal_testing") {
     "$zx/system/utest/stdio:*",
     "$zx/third_party/ulib/$malloc:*",
   ]
-  public_deps = [
-    ":musl_internal",
-  ]
+  public_deps = [ ":musl_internal" ]
 }
 
 config("musl_internal.config") {

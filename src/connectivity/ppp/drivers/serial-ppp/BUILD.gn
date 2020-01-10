@@ -9,9 +9,7 @@ package("serial-ppp") {
   deprecated_system_image = true
   testonly = false
 
-  deps = [
-    ":serial-ppp_driver",
-  ]
+  deps = [ ":serial-ppp_driver" ]
 
   drivers = [
     {
@@ -52,9 +50,7 @@ source_set("driver") {
 source_set("driver-test") {
   testonly = true
 
-  sources = [
-    "serial-ppp-test.cc",
-  ]
+  sources = [ "serial-ppp-test.cc" ]
 
   include_dirs = [ "//src/connectivity/ppp" ]
 
@@ -71,9 +67,7 @@ driver_module("serial-ppp_driver") {
 
   include_dirs = [ "//src/connectivity/ppp" ]
 
-  deps = [
-    ":driver",
-  ]
+  deps = [ ":driver" ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]

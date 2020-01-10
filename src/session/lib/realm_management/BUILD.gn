@@ -24,9 +24,7 @@ rustc_library("realm_management") {
 }
 
 test_package("realm_management_tests") {
-  deps = [
-    ":realm_management_test",
-  ]
+  deps = [ ":realm_management_test" ]
   tests = [
     {
       name = "realm_management_lib_test"

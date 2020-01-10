@@ -34,9 +34,7 @@ rustc_binary("bin") {
 }
 
 package("overnet-echo") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "overnet_echo"
 

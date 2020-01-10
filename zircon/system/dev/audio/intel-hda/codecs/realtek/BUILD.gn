@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("realtek") {
-  deps = [
-    ":realtek-audio-codec",
-  ]
+  deps = [ ":realtek-audio-codec" ]
 }
 
 zx_driver("realtek-audio-codec") {

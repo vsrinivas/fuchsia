@@ -7,9 +7,7 @@ import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":memory_metrics_tests",
-  ]
+  deps = [ ":memory_metrics_tests" ]
 }
 
 source_set("utils") {
@@ -68,9 +66,7 @@ test_package("memory_metrics_tests") {
 executable("memory_metrics_systemtests") {
   testonly = true
   output_name = "memory_metrics_systemtests"
-  sources = [
-    "capture_systemtest.cc",
-  ]
+  sources = [ "capture_systemtest.cc" ]
 
   deps = [
     ":utils",

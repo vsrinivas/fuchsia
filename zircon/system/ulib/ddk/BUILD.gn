@@ -62,9 +62,7 @@ zx_library("ddk") {
 }
 
 zx_test("ddk-unittest") {
-  sources = [
-    "test/phys-iter-test.cc",
-  ]
+  sources = [ "test/phys-iter-test.cc" ]
   deps = [
     ":ddk",
     "$zx/system/ulib/fbl",

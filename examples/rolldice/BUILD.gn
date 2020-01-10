@@ -22,15 +22,11 @@ rustc_library("lib") {
   name = "rolldice_lib"
   edition = "2018"
   with_unit_tests = true
-  deps = [
-    "//third_party/rust_crates:rand",
-  ]
+  deps = [ "//third_party/rust_crates:rand" ]
 }
 
 package("rolldice") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -48,9 +44,7 @@ package("rolldice") {
 }
 
 unittest_package("rolldice-tests") {
-  deps = [
-    ":lib_test",
-  ]
+  deps = [ ":lib_test" ]
 
   tests = [
     {

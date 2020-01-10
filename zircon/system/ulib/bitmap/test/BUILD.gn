@@ -26,10 +26,6 @@ zx_test("bitmap") {
   ]
 }
 fuzzer("raw-bitmap-fuzzer") {
-  sources = [
-    "raw-bitmap-fuzzer.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/bitmap",
-  ]
+  sources = [ "raw-bitmap-fuzzer.cc" ]
+  deps = [ "$zx/system/ulib/bitmap" ]
 }

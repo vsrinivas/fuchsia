@@ -92,9 +92,7 @@ zx_test("journal-unit") {
 }
 
 source_set("fuzz-utils") {
-  sources = [
-    "test/fuzzer_utils.cc",
-  ]
+  sources = [ "test/fuzzer_utils.cc" ]
   public_deps = [
     ":journal",
     "$zx/system/ulib/sync",
@@ -104,21 +102,13 @@ source_set("fuzz-utils") {
 }
 
 fuzzer("journal-fuzzer") {
-  sources = [
-    "test/journal_fuzztest.cc",
-  ]
-  deps = [
-    ":fuzz-utils",
-  ]
+  sources = [ "test/journal_fuzztest.cc" ]
+  deps = [ ":fuzz-utils" ]
   include_dirs = [ "test" ]
 }
 
 fuzzer("journal-entry-fuzzer") {
-  sources = [
-    "test/entry_parse_fuzztest.cc",
-  ]
-  deps = [
-    ":fuzz-utils",
-  ]
+  sources = [ "test/entry_parse_fuzztest.cc" ]
+  deps = [ ":fuzz-utils" ]
   include_dirs = [ "test" ]
 }

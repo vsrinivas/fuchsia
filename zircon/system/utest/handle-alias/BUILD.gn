@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("handle-alias") {
-  sources = [
-    "handle-alias.c",
-  ]
+  sources = [ "handle-alias.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",

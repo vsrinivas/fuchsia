@@ -68,13 +68,9 @@ test_package("unified_reader_tests") {
 
 config_data("reader_golden_json") {
   for_pkg = "unified_reader_tests"
-  outputs = [
-    "golden.json",
-  ]
+  outputs = [ "golden.json" ]
 
-  sources = [
-    "configs/golden.json",
-  ]
+  sources = [ "configs/golden.json" ]
 }
 
 group("unified_reader_integration") {

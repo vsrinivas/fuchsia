@@ -9,13 +9,9 @@ executable("msd_img_rgx_nonhardware_tests_executable") {
   testonly = true
   output_name = "msd_img_rgx_nonhardware_tests"
 
-  sources = [
-    "mt8167-test.cc",
-  ]
+  sources = [ "mt8167-test.cc" ]
 
-  deps = [
-    "../../mtk:driver_sources",
-  ]
+  deps = [ "../../mtk:driver_sources" ]
 
   public_deps = [
     "//garnet/lib/magma/tests/helper:logger_init_helper",
@@ -26,9 +22,7 @@ executable("msd_img_rgx_nonhardware_tests_executable") {
 }
 
 test_package("msd_img_rgx_nonhardware_tests") {
-  deps = [
-    ":msd_img_rgx_nonhardware_tests_executable",
-  ]
+  deps = [ ":msd_img_rgx_nonhardware_tests_executable" ]
 
   tests = [
     {

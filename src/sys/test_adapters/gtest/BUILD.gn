@@ -61,9 +61,7 @@ test_package("gtest_adapter_tests") {
 
 group("gtest") {
   testonly = true
-  public_deps = [
-    ":bin",
-  ]
+  public_deps = [ ":bin" ]
 }
 
 group("tests") {

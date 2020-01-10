@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("surface_header") {
-  sources = [
-    "image_pipe_surface.h",
-  ]
+  sources = [ "image_pipe_surface.h" ]
   public_deps = [
     "//sdk/fidl/fuchsia.images",
     "//src/lib/vulkan:headers",
@@ -58,9 +56,7 @@ loadable_module("fb") {
     "USE_IMAGEPIPE_SURFACE_FB",
     "USE_IMAGEPIPE_LAYER_NAME=\"VK_LAYER_FUCHSIA_imagepipe_swapchain_fb\"",
   ]
-  sources = [
-    "image_pipe_swapchain_layer.cc",
-  ]
+  sources = [ "image_pipe_swapchain_layer.cc" ]
   deps = [
     ":display",
     ":surface_header",
@@ -77,9 +73,7 @@ loadable_module("fb_skip_present") {
     "USE_IMAGEPIPE_LAYER_NAME=\"VK_LAYER_FUCHSIA_imagepipe_swapchain_fb_skip_present\"",
     "SKIP_PRESENT",
   ]
-  sources = [
-    "image_pipe_swapchain_layer.cc",
-  ]
+  sources = [ "image_pipe_swapchain_layer.cc" ]
   deps = [
     ":display",
     ":surface_header",

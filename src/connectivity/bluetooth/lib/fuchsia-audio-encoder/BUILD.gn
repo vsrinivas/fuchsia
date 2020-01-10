@@ -32,16 +32,14 @@ rustc_library("fuchsia-audio-encoder") {
 
   test_deps = [
     "//src/lib/mundane",
+    "//src/media/stream_processors/test:stream_processor_test_lib",
     "//third_party/rust_crates:futures-test",
     "//third_party/rust_crates:hex",
-    "//src/media/stream_processors/test:stream_processor_test_lib",
   ]
 }
 
 test_package("fuchsia-audio-encoder-tests") {
-  deps = [
-    ":fuchsia-audio-encoder_test",
-  ]
+  deps = [ ":fuchsia-audio-encoder_test" ]
 
   tests = [
     {

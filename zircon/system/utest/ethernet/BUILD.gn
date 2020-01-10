@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("ethernet") {
-  sources = [
-    "ethernet.cc",
-  ]
+  sources = [ "ethernet.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/fidl/fuchsia-hardware-ethernet:c",

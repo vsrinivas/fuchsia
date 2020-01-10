@@ -15,7 +15,7 @@ zx_test("operation") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
   ]
 }

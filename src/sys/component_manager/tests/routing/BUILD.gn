@@ -9,9 +9,7 @@ import("//build/test/test_package.gni")
 group("tests") {
   testonly = true
 
-  deps = [
-    ":routing_integration_test",
-  ]
+  deps = [ ":routing_integration_test" ]
 }
 
 rustc_test("routing_integration_test_bin") {
@@ -30,9 +28,7 @@ rustc_test("routing_integration_test_bin") {
 }
 
 executable("expose_dirs") {
-  sources = [
-    "expose_dirs.cc",
-  ]
+  sources = [ "expose_dirs.cc" ]
 
   deps = [
     "//zircon/public/lib/async-loop-cpp",

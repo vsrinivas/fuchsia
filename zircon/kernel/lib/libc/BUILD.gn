@@ -30,17 +30,11 @@ source_set("libc") {
 }
 
 source_set("ctype") {
-  sources = [
-    "ctype.c",
-  ]
+  sources = [ "ctype.c" ]
 }
 
 source_set("tests") {
   # TODO: testonly = true
-  sources = [
-    "atomic_tests.cc",
-  ]
-  deps = [
-    "$zx/kernel/lib/unittest",
-  ]
+  sources = [ "atomic_tests.cc" ]
+  deps = [ "$zx/kernel/lib/unittest" ]
 }

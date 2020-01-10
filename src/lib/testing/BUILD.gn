@@ -5,15 +5,11 @@
 group("testing") {
   testonly = true
 
-  deps = [
-    "loop_fixture",
-  ]
+  deps = [ "loop_fixture" ]
 }
 
 group("tests") {
   testonly = true
 
-  deps = [
-    "loop_fixture:tests",
-  ]
+  deps = [ "loop_fixture:tests" ]
 }

@@ -36,13 +36,9 @@ source_set("common_gfx_config_source_set") {
 # Use build flag to determine which version of escher is used.
 source_set("escher_maybe_with_glsl") {
   if (escher_use_runtime_glsl) {
-    public_deps = [
-      "//src/ui/lib/escher",
-    ]
+    public_deps = [ "//src/ui/lib/escher" ]
   } else {
-    public_deps = [
-      "//src/ui/lib/escher:escher_no_glslang",
-    ]
+    public_deps = [ "//src/ui/lib/escher:escher_no_glslang" ]
   }
 }
 
@@ -59,9 +55,7 @@ source_set("gfx_always_optimized") {
     "-O3",
   ]
   public_configs = [ ":common_include_dirs" ]
-  public_deps = [
-    ":escher_maybe_with_glsl",
-  ]
+  public_deps = [ ":escher_maybe_with_glsl" ]
 
   deps = [
     "//sdk/lib/images/cpp",
@@ -271,9 +265,7 @@ source_set("object_linker") {
 }
 
 source_set("view_focuser_registry") {
-  sources = [
-    "engine/view_focuser_registry.h",
-  ]
+  sources = [ "engine/view_focuser_registry.h" ]
 
   deps = [
     "//sdk/fidl/fuchsia.ui.views",
@@ -288,9 +280,7 @@ source_set("ids") {
     "id.cc",
     "id.h",
   ]
-  public_deps = [
-    "//src/ui/scenic/lib/scheduling:id",
-  ]
+  public_deps = [ "//src/ui/scenic/lib/scheduling:id" ]
 }
 
 source_set("util") {
@@ -319,7 +309,5 @@ source_set("validate_eventpair") {
 }
 
 flatbuffer("snapshot_fbs") {
-  sources = [
-    "snapshot/snapshot.fbs",
-  ]
+  sources = [ "snapshot/snapshot.fbs" ]
 }

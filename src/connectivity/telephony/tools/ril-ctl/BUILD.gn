@@ -34,9 +34,7 @@ rustc_binary("bin") {
 }
 
 package("ril-ctl") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

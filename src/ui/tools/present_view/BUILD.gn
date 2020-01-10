@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 executable("present_view") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -17,9 +15,7 @@ executable("present_view") {
 group("tests") {
   testonly = true
 
-  deps = [
-    "tests",
-  ]
+  deps = [ "tests" ]
 }
 
 source_set("lib") {

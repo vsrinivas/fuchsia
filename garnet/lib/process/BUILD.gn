@@ -14,22 +14,18 @@ source_set("process") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
-    "//zircon/system/fidl/fuchsia-process",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-process",
   ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 }
 
 executable("unittests") {
   testonly = true
   output_name = "process_unittests"
 
-  sources = [
-    "process_builder_unittest.cc",
-  ]
+  sources = [ "process_builder_unittest.cc" ]
 
   deps = [
     ":process",
@@ -39,9 +35,7 @@ executable("unittests") {
 }
 
 test_package("process_unittests") {
-  deps = [
-    ":unittests",
-  ]
+  deps = [ ":unittests" ]
 
   tests = [
     {

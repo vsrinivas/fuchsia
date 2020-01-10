@@ -4,8 +4,7 @@
 
 # Do not use this target directly, instead depend on //src/lib/inspect_deprecated/query/tests:inspect_query_unittests.
 group("inspect_query_unittests") {
-  public_deps = [
-    "//src/lib/inspect_deprecated/query/tests:inspect_query_unittests",
-  ]
+  public_deps =
+      [ "//src/lib/inspect_deprecated/query/tests:inspect_query_unittests" ]
   testonly = true
 }

@@ -7,9 +7,7 @@ config("public_glm_dirs") {
 }
 
 source_set("glm_workaround") {
-  sources = [
-    "glm_workaround.h",
-  ]
+  sources = [ "glm_workaround.h" ]
 
   public_configs = [ ":public_glm_dirs" ]
 }

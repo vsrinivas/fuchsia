@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("kernel-debug") {
-  sources = [
-    "kernel-debug.cc",
-  ]
+  sources = [ "kernel-debug.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-kernel:c",
     "$zx/system/ulib/async",
@@ -15,7 +13,5 @@ zx_library("kernel-debug") {
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
-  public_deps = [
-    "$zx/system/ulib/svc:headers",
-  ]
+  public_deps = [ "$zx/system/ulib/svc:headers" ]
 }

@@ -12,9 +12,7 @@ guest_prebuilt("kernel") {
 }
 
 guest_package("biscotti_guest") {
-  deps = [
-    ":kernel",
-  ]
+  deps = [ ":kernel" ]
   cmdline = "console=hvc0 root=/dev/vda rw"
   linux = "$linux_image"
 

@@ -13,10 +13,6 @@ fidl("fuchsia.amber") {
     "vector-bounds-not-specified",
   ]
 
-  sources = [
-    "amber.fidl",
-  ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.pkg",
-  ]
+  sources = [ "amber.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.pkg" ]
 }

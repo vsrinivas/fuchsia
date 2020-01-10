@@ -25,9 +25,7 @@ rustc_library("system-health-check") {
 }
 
 test_package("system-health-check-tests") {
-  deps = [
-    ":system-health-check_test",
-  ]
+  deps = [ ":system-health-check_test" ]
 
   tests = [
     {

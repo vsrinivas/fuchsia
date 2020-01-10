@@ -22,9 +22,7 @@ rustc_library("char_collection") {
 }
 
 test_package("char_collection_tests") {
-  deps = [
-    ":char_collection_test",
-  ]
+  deps = [ ":char_collection_test" ]
 
   tests = [
     {
@@ -36,7 +34,5 @@ test_package("char_collection_tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":char_collection_tests",
-  ]
+  public_deps = [ ":char_collection_tests" ]
 }

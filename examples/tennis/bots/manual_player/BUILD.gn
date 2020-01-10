@@ -13,9 +13,7 @@ group("manual_player") {
 }
 
 package("tennis_manual_player") {
-  deps = [
-    ":tennis_manual_player_bin",
-  ]
+  deps = [ ":tennis_manual_player_bin" ]
   binary = "tennis_manual_player"
   meta = [
     {

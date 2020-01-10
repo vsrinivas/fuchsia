@@ -46,9 +46,7 @@ metrics_registry("memory_metrics_registry") {
 
 executable("bin") {
   output_name = "memory_monitor"
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
@@ -79,7 +77,5 @@ package("monitor") {
 
 config_data("config") {
   for_pkg = "sysmgr"
-  sources = [
-    "memory_monitor.config",
-  ]
+  sources = [ "memory_monitor.config" ]
 }

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("ktrace") {
-  sources = [
-    "ktrace.cc",
-  ]
+  sources = [ "ktrace.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-tracing-kernel:c",
     "$zx/system/ulib/fbl",

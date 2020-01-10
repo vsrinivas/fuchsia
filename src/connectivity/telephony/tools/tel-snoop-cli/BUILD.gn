@@ -22,9 +22,7 @@ rustc_binary("bin") {
 }
 
 package("tel-snoop-cli") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

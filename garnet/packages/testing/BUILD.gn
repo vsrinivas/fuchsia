@@ -17,21 +17,15 @@ group("all") {
 
 group("environment_delegating_runner") {
   testonly = true
-  public_deps = [
-    "//sdk/lib/sys/cpp/testing/environment_delegating_runner",
-  ]
+  public_deps = [ "//sdk/lib/sys/cpp/testing/environment_delegating_runner" ]
 }
 
 group("views") {
   testonly = true
-  public_deps = [
-    "//src/ui/testing/views:test_views",
-  ]
+  public_deps = [ "//src/ui/testing/views:test_views" ]
 }
 
 group("run_test_component") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/run_test_component",
-  ]
+  public_deps = [ "//garnet/bin/run_test_component" ]
 }

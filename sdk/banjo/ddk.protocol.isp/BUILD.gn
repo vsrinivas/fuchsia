@@ -5,9 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("ddk.protocol.isp") {
-  sources = [
-    "isp.banjo",
-  ]
+  sources = [ "isp.banjo" ]
   deps = [
     "//zircon/system/banjo/ddk.protocol.camerahwaccel",
     "//zircon/system/banjo/zircon.device.camera",

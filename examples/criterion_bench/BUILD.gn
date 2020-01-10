@@ -9,15 +9,11 @@ rustc_binary("bin") {
   version = "0.1.0"
   name = "criterion_bench"
   edition = "2018"
-  deps = [
-    "//src/developer/fuchsia-criterion",
-  ]
+  deps = [ "//src/developer/fuchsia-criterion" ]
 }
 
 package("criterion_bench") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

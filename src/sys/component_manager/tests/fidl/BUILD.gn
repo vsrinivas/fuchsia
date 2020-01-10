@@ -7,40 +7,28 @@ import("//build/fidl/fidl.gni")
 fidl("components") {
   name = "fidl.test.components"
 
-  sources = [
-    "components.fidl",
-  ]
+  sources = [ "components.fidl" ]
 }
 
 fidl("hub") {
   name = "fuchsia.test.hub"
   sdk_category = "internal"
 
-  sources = [
-    "hub.fidl",
-  ]
+  sources = [ "hub.fidl" ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-io",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
 }
 
 fidl("breakpoints") {
   name = "fuchsia.test.breakpoints"
 
-  sources = [
-    "breakpoints.fidl",
-  ]
+  sources = [ "breakpoints.fidl" ]
 }
 
 fidl("fuchsia.test.workscheduler") {
   sdk_category = "internal"
 
-  sources = [
-    "fuchsia.test.workscheduler.fidl",
-  ]
+  sources = [ "fuchsia.test.workscheduler.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.sys2",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.sys2" ]
 }

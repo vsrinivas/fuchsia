@@ -11,9 +11,7 @@ visibility = [ "//src/ledger/*" ]
 package("bin") {
   package_name = "ledger"
 
-  deps = [
-    "app",
-  ]
+  deps = [ "app" ]
 
   binary = "ledger"
 

@@ -4,7 +4,5 @@
 
 group("examples") {
   testonly = true
-  deps = [
-    "//src/media/playback/examples/audio_player",
-  ]
+  deps = [ "//src/media/playback/examples/audio_player" ]
 }

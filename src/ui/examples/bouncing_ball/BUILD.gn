@@ -5,9 +5,7 @@
 executable("bouncing_ball") {
   output_name = "bouncing_ball"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.ui.app",

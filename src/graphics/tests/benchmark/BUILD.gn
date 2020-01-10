@@ -35,19 +35,13 @@ test_package("vulkan-benchmark") {
 executable("memcpy") {
   output_name = "test_memcpy"
 
-  sources = [
-    "test_memcpy.cc",
-  ]
+  sources = [ "test_memcpy.cc" ]
 }
 
 executable("vkcopy") {
   testonly = true
 
-  sources = [
-    "test_vkcopy.cc",
-  ]
+  sources = [ "test_vkcopy.cc" ]
 
-  deps = [
-    "//src/lib/vulkan",
-  ]
+  deps = [ "//src/lib/vulkan" ]
 }

@@ -42,9 +42,7 @@ rustc_library("wlan-sme") {
 }
 
 test_package("wlan-sme-tests") {
-  deps = [
-    ":wlan-sme_test",
-  ]
+  deps = [ ":wlan-sme_test" ]
 
   tests = [
     {

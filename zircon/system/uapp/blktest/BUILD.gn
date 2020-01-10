@@ -4,9 +4,7 @@
 
 zx_executable("blktest") {
   testonly = true
-  sources = [
-    "main.c",
-  ]
+  sources = [ "main.c" ]
   deps = [
     "$zx/system/ulib/blktest",
     "$zx/system/ulib/unittest",

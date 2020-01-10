@@ -14,9 +14,7 @@ zx_library("tee-client-api") {
   }
   shared = true
   static = true
-  sources = [
-    "tee-client-api.cc",
-  ]
+  sources = [ "tee-client-api.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-tee:llcpp",
     "$zx/system/fidl/fuchsia-tee:llcpp",

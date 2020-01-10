@@ -9,9 +9,7 @@ config_data("services_config") {
   # This package must be part of the system image (of the guest) so that it
   # exists before sysmgr comes up.
   for_pkg = "sysmgr"
-  sources = [
-    "services.config",
-  ]
+  sources = [ "services.config" ]
 }
 
 guest_fvm_blk_label = "//build/images/guest:fvm.blk"

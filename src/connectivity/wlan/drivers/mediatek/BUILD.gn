@@ -4,7 +4,5 @@
 
 group("mediatek") {
   testonly = true
-  deps = [
-    "ralink",
-  ]
+  deps = [ "ralink" ]
 }

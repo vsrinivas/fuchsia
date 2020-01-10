@@ -29,16 +29,14 @@ zx_driver("hikey960") {
     "$zx/system/ulib/zircon",
   ]
   data_deps = [
-    "$zx/kernel/target/arm64/boot-shim:hikey960",
     ":hi3660-i2c-test",  # TODO: only for test configs
+    "$zx/kernel/target/arm64/boot-shim:hikey960",
   ]
 }
 
 zx_driver("hi3660-i2c-test") {
   # TODO: testonly = true
-  sources = [
-    "hikey960-i2c-test.c",
-  ]
+  sources = [ "hikey960-i2c-test.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.platform.device",

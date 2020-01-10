@@ -8,14 +8,10 @@ import("//build/go/go_library.gni")
 go_library("main") {
   name = "go.fuchsia.dev/fuchsia/tools/net/mdnstool/cmd"
   source_dir = "cmd"
-  deps = [
-    "//tools/net/mdns",
-  ]
+  deps = [ "//tools/net/mdns" ]
 }
 
 go_binary("mdnstool") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/net/mdnstool/cmd"
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }

@@ -24,9 +24,7 @@ executable("sysmem_connector_executable") {
 }
 
 package("sysmem_connector") {
-  deps = [
-    ":sysmem_connector_executable",
-  ]
+  deps = [ ":sysmem_connector_executable" ]
 
   binaries = [
     {
@@ -46,9 +44,7 @@ executable("sysmem_connector_test_executable") {
   testonly = true
   output_name = "sysmem_connector_test"
 
-  sources = [
-    "test/sysmem_connector_test.cc",
-  ]
+  sources = [ "test/sysmem_connector_test.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp",
@@ -61,9 +57,7 @@ executable("sysmem_connector_test_executable") {
 }
 
 test_package("sysmem_connector_test") {
-  deps = [
-    ":sysmem_connector_test_executable",
-  ]
+  deps = [ ":sysmem_connector_test_executable" ]
 
   tests = [
     {

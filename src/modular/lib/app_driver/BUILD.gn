@@ -4,7 +4,5 @@
 
 group("app_driver") {
   testonly = true
-  deps = [
-    "cpp",
-  ]
+  deps = [ "cpp" ]
 }

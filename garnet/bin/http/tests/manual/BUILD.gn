@@ -4,7 +4,5 @@
 
 group("manual") {
   testonly = true
-  deps = [
-    "mwget",
-  ]
+  deps = [ "mwget" ]
 }

@@ -18,9 +18,7 @@ group("lib") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":a11y_lib_tests",
-  ]
+  deps = [ ":a11y_lib_tests" ]
 }
 
 test_package("a11y_lib_tests") {

@@ -47,9 +47,7 @@ config("disable_warnings") {
 }
 
 static_library("acpica") {
-  public_deps = [
-    ":headers",
-  ]
+  public_deps = [ ":headers" ]
 
   # Local sources use #include "acpi.h", not #include <acpica/acpi.h>.
   include_dirs = [ "source/include/acpica" ]

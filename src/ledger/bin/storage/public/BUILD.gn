@@ -47,9 +47,7 @@ source_set("public") {
     "//zircon/public/lib/zx",
   ]
 
-  deps = [
-    "//src/ledger/lib/logging",
-  ]
+  deps = [ "//src/ledger/lib/logging" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

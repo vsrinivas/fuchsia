@@ -97,9 +97,7 @@ source_set("src") {
 executable("bin") {
   testonly = true
   output_name = "netemul_sandbox"
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":src",

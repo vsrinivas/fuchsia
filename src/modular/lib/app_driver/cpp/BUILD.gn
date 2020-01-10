@@ -12,13 +12,9 @@ group("cpp") {
 }
 
 source_set("app_driver") {
-  sources = [
-    "app_driver.h",
-  ]
+  sources = [ "app_driver.h" ]
 
-  public_deps = [
-    "//sdk/lib/sys/cpp",
-  ]
+  public_deps = [ "//sdk/lib/sys/cpp" ]
 
   deps = [
     "//sdk/lib/fidl/cpp",
@@ -28,9 +24,7 @@ source_set("app_driver") {
 }
 
 source_set("module_driver") {
-  sources = [
-    "module_driver.h",
-  ]
+  sources = [ "module_driver.h" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular",

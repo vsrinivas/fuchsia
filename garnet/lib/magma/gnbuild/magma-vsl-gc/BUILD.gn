@@ -10,13 +10,9 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 group("magma-vulkan") {
   if (magma_enable_developer_build) {
     testonly = true
-    deps = [
-      "//garnet/lib/magma/tests/unit_tests:testing_firmware_file",
-    ]
+    deps = [ "//garnet/lib/magma/tests/unit_tests:testing_firmware_file" ]
   }
-  public_deps = [
-    ":magma-vsl-gc",
-  ]
+  public_deps = [ ":magma-vsl-gc" ]
   if (build_libvulkan_vsl_gc != []) {
     public_deps += [ ":magma-vsl-gc-config" ]
   }
@@ -80,9 +76,7 @@ if (build_libvulkan_vsl_gc != []) {
 }
 
 test_package("msd_vsl_gc_nonhardware_tests") {
-  deps = [
-    "//garnet/drivers/gpu/msd-vsl-gc:tests",
-  ]
+  deps = [ "//garnet/drivers/gpu/msd-vsl-gc:tests" ]
 
   tests = [
     {

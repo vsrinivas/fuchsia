@@ -37,9 +37,7 @@ rustc_binary("bin") {
 }
 
 test_package("inspect_reader_integration_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   tests = [
     {

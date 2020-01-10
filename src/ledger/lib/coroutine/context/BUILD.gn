@@ -17,9 +17,7 @@ source_set("context") {
     "//src/ledger/lib/logging",
   ]
 
-  public_deps = [
-    "//zircon/public/lib/zx",
-  ]
+  public_deps = [ "//zircon/public/lib/zx" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }
@@ -27,9 +25,7 @@ source_set("context") {
 source_set("unittests") {
   testonly = true
 
-  sources = [
-    "context_unittest.cc",
-  ]
+  sources = [ "context_unittest.cc" ]
 
   deps = [
     ":context",

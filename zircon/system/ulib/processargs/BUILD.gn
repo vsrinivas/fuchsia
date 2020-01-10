@@ -3,13 +3,9 @@
 # found in the LICENSE file.
 
 zx_library("processargs") {
-  sources = [
-    "processargs.c",
-  ]
+  sources = [ "processargs.c" ]
 
-  deps = [
-    "$zx/system/ulib/zircon",
-  ]
+  deps = [ "$zx/system/ulib/zircon" ]
 
   configs += [
     # This code is used in early startup, where safe-stack is not ready yet.

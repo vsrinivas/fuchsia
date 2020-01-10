@@ -55,9 +55,7 @@ test("lib-hid-input-report-test") {
 
 unittest_package("test") {
   package_name = "lib-hid-input-report-test"
-  deps = [
-    ":lib-hid-input-report-test",
-  ]
+  deps = [ ":lib-hid-input-report-test" ]
   tests = [
     {
       name = "lib-hid-input-report-test"

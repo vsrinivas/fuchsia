@@ -4,21 +4,15 @@
 
 zx_library("cpuid") {
   kernel = true
-  sources = [
-    "cpuid.cc",
-  ]
+  sources = [ "cpuid.cc" ]
 
   # TODO: testonly
-  deps = [
-    ":test",
-  ]
+  deps = [ ":test" ]
 }
 
 source_set("test") {
   # TODO: testonly = true
-  sources = [
-    "cpuid_test.cc",
-  ]
+  sources = [ "cpuid_test.cc" ]
   deps = [
     ":cpuid.headers",
     "$zx/kernel/lib/unittest",

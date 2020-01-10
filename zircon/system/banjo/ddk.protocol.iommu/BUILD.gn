@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.iommu") {
-  sources = [
-    "iommu.banjo",
-  ]
+  sources = [ "iommu.banjo" ]
 }

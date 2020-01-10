@@ -8,9 +8,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 source_set("lib") {
-  sources = [
-    "service.cc",
-  ]
+  sources = [ "service.cc" ]
   public_deps = [
     "//garnet/lib/chrealm",
     "//src/lib/fsl",
@@ -25,9 +23,7 @@ source_set("lib") {
 executable("bin") {
   output_name = "sshd-host"
 
-  sources = [
-    "sshd-host.cc",
-  ]
+  sources = [ "sshd-host.cc" ]
 
   deps = [
     ":lib",
@@ -84,12 +80,9 @@ package("sshd-host") {
 
 config_data("config") {
   for_pkg = "sshd-host"
-  sources = [
-    rebase_path("//third_party/openssh-portable/fuchsia/sshd_config"),
-  ]
-  outputs = [
-    "sshd_config",
-  ]
+  sources =
+      [ rebase_path("//third_party/openssh-portable/fuchsia/sshd_config") ]
+  outputs = [ "sshd_config" ]
 }
 
 executable("test") {
@@ -97,9 +90,7 @@ executable("test") {
 
   output_name = "sshd-host-test"
 
-  sources = [
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
 
   deps = [
     ":lib",
@@ -112,9 +103,7 @@ executable("test") {
 }
 
 test_package("sshd-host-tests") {
-  deps = [
-    ":test",
-  ]
+  deps = [ ":test" ]
 
   tests = [
     {

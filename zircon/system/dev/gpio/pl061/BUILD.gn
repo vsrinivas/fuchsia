@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("pl061") {
-  sources = [
-    "pl061.c",
-  ]
+  sources = [ "pl061.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.gpioimpl",

@@ -15,9 +15,7 @@ source_set("event_codes") {
     "event_codes.h",
   ]
 
-  deps = [
-    ":types",
-  ]
+  deps = [ ":types" ]
 }
 
 source_set("metric_config") {

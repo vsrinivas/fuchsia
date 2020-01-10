@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("namespace") {
-  sources = [
-    "namespace-test.cc",
-  ]
+  sources = [ "namespace-test.cc" ]
   deps = [
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fdio",

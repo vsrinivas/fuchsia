@@ -16,7 +16,5 @@ fidl("fuchsia.accessibility.tts") {
     "tts_registration.fidl",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.intl",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.intl" ]
 }

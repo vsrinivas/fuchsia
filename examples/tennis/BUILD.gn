@@ -21,9 +21,7 @@ group("tennis") {
 }
 
 package("tennis_service") {
-  deps = [
-    ":tennis_service_bin",
-  ]
+  deps = [ ":tennis_service_bin" ]
 
   binary = "tennis_service"
 
@@ -55,9 +53,7 @@ rustc_binary("tennis_service_bin") {
 }
 
 package("tennis_viewer") {
-  deps = [
-    ":tennis_viewer_bin",
-  ]
+  deps = [ ":tennis_viewer_bin" ]
 
   binary = "tennis_viewer"
 
@@ -90,9 +86,7 @@ rustc_binary("tennis_viewer_bin") {
 }
 
 package("tennis_rust5_ai") {
-  deps = [
-    ":tennis_rust5_ai_bin",
-  ]
+  deps = [ ":tennis_rust5_ai_bin" ]
 
   binary = "tennis_rust5_ai"
 
@@ -125,10 +119,6 @@ rustc_binary("tennis_rust5_ai_bin") {
 
 config_data("tennis_sysmgr_config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "tennis.config",
-  ]
-  sources = [
-    "tennis_sysmgr.config",
-  ]
+  outputs = [ "tennis.config" ]
+  sources = [ "tennis_sysmgr.config" ]
 }

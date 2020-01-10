@@ -7,9 +7,7 @@ visibility = [ "//src/ledger/*" ]
 group("stories_simulation") {
   testonly = true
 
-  public_deps = [
-    ":ledger_benchmark_stories_simulation",
-  ]
+  public_deps = [ ":ledger_benchmark_stories_simulation" ]
 }
 
 executable("ledger_benchmark_stories_simulation") {
@@ -32,9 +30,7 @@ executable("ledger_benchmark_stories_simulation") {
     "//zircon/public/lib/trace-provider-so",
   ]
 
-  sources = [
-    "stories_simulation.cc",
-  ]
+  sources = [ "stories_simulation.cc" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }

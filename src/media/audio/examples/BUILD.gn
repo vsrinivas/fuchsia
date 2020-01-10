@@ -21,7 +21,5 @@ group("examples") {
 
 group("tests") {
   testonly = true
-  deps = [
-    "effects:tests",
-  ]
+  deps = [ "effects:tests" ]
 }

@@ -17,9 +17,7 @@ group("storage") {
 }
 
 sandbox_test_package("no_persistent_storage") {
-  sources = [
-    "no_persistent_storage.cc",
-  ]
+  sources = [ "no_persistent_storage.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -29,9 +27,7 @@ sandbox_test_package("no_persistent_storage") {
 }
 
 sandbox_test_package("has_isolated_persistent_storage") {
-  sources = [
-    "has_persistent_storage.cc",
-  ]
+  sources = [ "has_persistent_storage.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -41,9 +37,7 @@ sandbox_test_package("has_isolated_persistent_storage") {
 }
 
 sandbox_test_package("has_isolated_cache_storage") {
-  sources = [
-    "has_isolated_cache_storage.cc",
-  ]
+  sources = [ "has_isolated_cache_storage.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.sys.test",
@@ -58,9 +52,7 @@ executable("isolated_persistent_storage_bin") {
   testonly = true
   output_name = "isolated_persistent_storage"
 
-  sources = [
-    "isolated_persistent_storage.cc",
-  ]
+  sources = [ "isolated_persistent_storage.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",

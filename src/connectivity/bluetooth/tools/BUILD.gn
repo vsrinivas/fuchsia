@@ -76,9 +76,7 @@ package("bluetooth-tools") {
 
 group("tools") {
   testonly = true
-  deps = [
-    ":bluetooth-tools",
-  ]
+  deps = [ ":bluetooth-tools" ]
 }
 
 group("tests") {

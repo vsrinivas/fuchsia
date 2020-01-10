@@ -37,9 +37,7 @@ rustc_library("wlan-common") {
 }
 
 test_package("wlan-common-tests") {
-  deps = [
-    ":wlan-common_test",
-  ]
+  deps = [ ":wlan-common_test" ]
 
   tests = [
     {

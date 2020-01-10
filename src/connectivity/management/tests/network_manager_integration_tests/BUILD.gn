@@ -37,9 +37,7 @@ rustc_test("network_manager_integration_test") {
 }
 
 test_package("network_manager_integration_tests") {
-  deps = [
-    ":network_manager_integration_test",
-  ]
+  deps = [ ":network_manager_integration_test" ]
 
   tests = [
     {

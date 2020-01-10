@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("rndis") {
-  sources = [
-    "rndishost.cc",
-  ]
+  sources = [ "rndishost.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/banjo/ddk.protocol.usb",

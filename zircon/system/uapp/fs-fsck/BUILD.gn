@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("fs-fsck") {
-  deps = [
-    ":fsck",
-  ]
+  deps = [ ":fsck" ]
 }
 
 zx_executable("fsck") {
-  sources = [
-    "main.c",
-  ]
+  sources = [ "main.c" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs-management",

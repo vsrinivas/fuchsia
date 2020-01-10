@@ -32,9 +32,7 @@ go_library("main") {
 
 go_binary("covargs") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/debug/covargs/cmd"
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }
 
 go_test("covargs_tests") {

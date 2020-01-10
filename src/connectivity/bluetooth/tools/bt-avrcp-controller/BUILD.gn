@@ -32,9 +32,7 @@ rustc_binary("bt-avrcp-controller") {
 test_package("tests") {
   package_name = "bt-avrcp-controller-tests"
 
-  deps = [
-    ":bt-avrcp-controller_test",
-  ]
+  deps = [ ":bt-avrcp-controller_test" ]
 
   tests = [
     {

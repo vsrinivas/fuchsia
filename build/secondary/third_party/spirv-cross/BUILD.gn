@@ -52,7 +52,5 @@ source_set("spirv-cross") {
 # recent versions of spirv_cross. Note that it is never used by the Fuchsia
 # build though.
 group("spirv_cross_full_for_fuzzers") {
-  deps = [
-    ":spirv-cross",
-  ]
+  deps = [ ":spirv-cross" ]
 }

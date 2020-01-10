@@ -8,9 +8,7 @@ import("//build/package.gni")
 fidl("compatibility_test_service") {
   name = "fidl.test.compatibility"
 
-  sources = [
-    "compatibility_service.test.fidl",
-  ]
+  sources = [ "compatibility_service.test.fidl" ]
 }
 
 source_set("echo_client_app") {

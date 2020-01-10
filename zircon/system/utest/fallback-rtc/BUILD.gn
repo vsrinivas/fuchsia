@@ -5,9 +5,7 @@
 zx_test("fallback-rtc") {
   output_name = "fallback-rtc"
   test_group = "ddk"
-  sources = [
-    "fallback-rtc-test.cc",
-  ]
+  sources = [ "fallback-rtc-test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-rtc:c",
     "$zx/system/ulib/ddk",

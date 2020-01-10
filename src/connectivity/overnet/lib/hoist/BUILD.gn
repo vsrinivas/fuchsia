@@ -40,9 +40,7 @@ rustc_library("hoist") {
 }
 
 unittest_package("overnet-hoist-tests") {
-  deps = [
-    ":hoist_test",
-  ]
+  deps = [ ":hoist_test" ]
 
   tests = [
     {

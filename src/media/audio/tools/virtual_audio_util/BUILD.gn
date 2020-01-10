@@ -12,9 +12,7 @@ group("util") {
 }
 
 package("virtual_audio_util") {
-  deps = [
-    ":virtual_audio_bin",
-  ]
+  deps = [ ":virtual_audio_bin" ]
 
   binaries = [
     {

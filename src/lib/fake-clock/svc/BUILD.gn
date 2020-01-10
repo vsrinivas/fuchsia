@@ -28,9 +28,7 @@ rustc_binary("fake_clock_svc") {
 
 package("svc") {
   package_name = "fake_clock"
-  deps = [
-    ":fake_clock_svc",
-  ]
+  deps = [ ":fake_clock_svc" ]
 
   binaries = [
     {
@@ -48,9 +46,7 @@ package("svc") {
 
 unittest_package("tests") {
   package_name = "fake_clock_test"
-  deps = [
-    ":fake_clock_svc_test",
-  ]
+  deps = [ ":fake_clock_svc_test" ]
   tests = [
     {
       name = "fake_clock_svc_bin_test"

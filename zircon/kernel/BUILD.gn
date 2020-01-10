@@ -229,9 +229,15 @@ if (current_toolchain == default_toolchain) {
     defines = []
     if (current_cpu == "x64") {
       if (is_gcc) {
-        cflags += [ "-mindirect-branch=thunk-inline", "-mindirect-branch-register" ]
+        cflags += [
+          "-mindirect-branch=thunk-inline",
+          "-mindirect-branch-register",
+        ]
       } else {
-        cflags += [ "-mretpoline", "-mretpoline-external-thunk" ]
+        cflags += [
+          "-mretpoline",
+          "-mretpoline-external-thunk",
+        ]
       }
       defines += [ "KERNEL_RETPOLINE=1" ]
     }
@@ -287,9 +293,7 @@ if (current_toolchain == default_toolchain) {
       # override the relocation via linker flag.
       ldflags += [ "-Wl,-mllvm,-relocation-model=pic" ]
     }
-    inputs = [
-      "kernel.ld",
-    ]
+    inputs = [ "kernel.ld" ]
     configs += [ ":kernel_defsym" ]
 
     deps = [
@@ -306,12 +310,8 @@ if (current_toolchain == default_toolchain) {
   zircon_elf_rspfile = "$target_gen_dir/zircon.elf.rsp"
   link_output_rspfile("zircon.elf.rsp") {
     visibility = [ ":*" ]
-    deps = [
-      ":zircon",
-    ]
-    outputs = [
-      zircon_elf_rspfile,
-    ]
+    deps = [ ":zircon" ]
+    outputs = [ zircon_elf_rspfile ]
   }
 
   # These are needed only in image.S and in the linker scripts.
@@ -338,9 +338,7 @@ if (current_toolchain == default_toolchain) {
   # Extract the raw binary image (no ELF headers) of the kernel proper.
   image_binary("raw") {
     visibility = [ ":*" ]
-    deps = [
-      ":zircon",
-    ]
+    deps = [ ":zircon" ]
     output_name = "zircon"
     output_path =
         rebase_path("$target_out_dir/$output_name.bin", root_build_dir)
@@ -361,12 +359,8 @@ if (current_toolchain == default_toolchain) {
   kernel_image_h = "$target_gen_dir/kernel_image.h"
   generated_file("kernel_image.h") {
     visibility = [ ":*" ]
-    deps = [
-      ":raw",
-    ]
-    outputs = [
-      kernel_image_h,
-    ]
+    deps = [ ":raw" ]
+    outputs = [ kernel_image_h ]
     data_keys = [ "image_path_defines" ]
     walk_keys = [ "image_path_barrier" ]
     output_conversion = "list lines"
@@ -381,12 +375,8 @@ if (current_toolchain == default_toolchain) {
       ":zircon",
       ":zircon.elf.rsp",
     ]
-    sources = [
-      zircon_elf_rspfile,
-    ]
-    outputs = [
-      "$target_gen_dir/kernel-fixups.inc",
-    ]
+    sources = [ zircon_elf_rspfile ]
+    outputs = [ "$target_gen_dir/kernel-fixups.inc" ]
     depfile = "${outputs[0]}.d"
 
     # TODO(mcgrathr): Move the script to this dir as it's private to this use.
@@ -425,9 +415,7 @@ if (current_toolchain == default_toolchain) {
       ":zircon",
       ":zircon.elf.rsp",
     ]
-    sources = [
-      "arch/$zircon_cpu/image.S",
-    ]
+    sources = [ "arch/$zircon_cpu/image.S" ]
 
     # These need to be here rather than in the config() below because they
     # refer directly to inputs related to deps.
@@ -452,12 +440,8 @@ if (current_toolchain == default_toolchain) {
   # Link gdb extension script file needed for kernel debugging.
   action("gdb_extension") {
     visibility = [ ":*" ]
-    sources = [
-      "scripts/zircon.elf-gdb.py",
-    ]
-    outputs = [
-      "$target_out_dir/zircon.elf-gdb.py",
-    ]
+    sources = [ "scripts/zircon.elf-gdb.py" ]
+    outputs = [ "$target_out_dir/zircon.elf-gdb.py" ]
     script = "/bin/ln"
     args = [
       "-sf",
@@ -484,9 +468,7 @@ if (current_toolchain == default_toolchain) {
     output_extension = "zbi"
     output_path = rebase_path("$output_dir/$target_name.$output_extension",
                               root_build_dir)
-    deps = [
-      ":image",
-    ]
+    deps = [ ":image" ]
     metadata = {
       # For the //:images build_api_module().
       images = [
@@ -520,8 +502,6 @@ if (current_toolchain == default_toolchain) {
   environment_redirect("kernel") {
     environment_label = ":kernel"
     direct = true
-    deps = [
-      ":kernel",
-    ]
+    deps = [ ":kernel" ]
   }
 }

@@ -8,9 +8,7 @@ import("//third_party/flatbuffers/flatbuffer.gni")
 visibility = [ "//src/ledger/*" ]
 
 group("btree") {
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 source_set("lib") {
@@ -29,9 +27,7 @@ source_set("lib") {
     "tree_node.h",
   ]
 
-  public_deps = [
-    "//src/ledger/lib/coroutine",
-  ]
+  public_deps = [ "//src/ledger/lib/coroutine" ]
 
   deps = [
     ":internal",
@@ -51,13 +47,9 @@ source_set("lib") {
 }
 
 flatbuffer("tree_node_storage") {
-  sources = [
-    "tree_node.fbs",
-  ]
+  sources = [ "tree_node.fbs" ]
 
-  public_deps = [
-    "//src/ledger/bin/storage/impl:object_identifier",
-  ]
+  public_deps = [ "//src/ledger/bin/storage/impl:object_identifier" ]
 
   extra_configs = [ "//src/ledger:ledger_config" ]
 }
@@ -68,13 +60,9 @@ source_set("internal") {
     "internal_helper.h",
   ]
 
-  public_deps = [
-    "//src/ledger/bin/storage/public",
-  ]
+  public_deps = [ "//src/ledger/bin/storage/public" ]
 
-  deps = [
-    "//src/ledger/lib/logging",
-  ]
+  deps = [ "//src/ledger/lib/logging" ]
 
   configs += [ "//src/ledger:ledger_config" ]
 }
@@ -110,9 +98,7 @@ source_set("unittests") {
 }
 
 fuzzer("encoding_fuzzer") {
-  sources = [
-    "encoding_fuzztest.cc",
-  ]
+  sources = [ "encoding_fuzztest.cc" ]
   deps = [
     ":lib",
     "//src/ledger/bin/storage/impl:object_identifier_lib",

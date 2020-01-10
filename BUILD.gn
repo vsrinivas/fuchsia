@@ -282,9 +282,7 @@ group("binaries.zircon") {
 build_api_module("fuzzers") {
   testonly = true
   data_keys = [ "fuzz_spec" ]
-  deps = [
-    "//build/images:packages",
-  ]
+  deps = [ "//build/images:packages" ]
 }
 
 # This describes all the "image" files the build can produce.
@@ -486,29 +484,21 @@ group("additional_universe_packages") {
 
 group("build_time_checks") {
   testonly = true
-  deps = [
-    "//tools/fidlgen_llcpp_zircon:validate",
-  ]
+  deps = [ "//tools/fidlgen_llcpp_zircon:validate" ]
 }
 
 group("recovery_image") {
   # TODO(fxbug.dev/37792): Investigate use of testonly here.
   testonly = true
-  deps = [
-    "build/images/recovery",
-  ]
+  deps = [ "build/images/recovery" ]
 }
 
 group("breakpad_symbols") {
   testonly = true
-  public_deps = [
-    "//build/gn:breakpad_symbols",
-  ]
+  public_deps = [ "//build/gn:breakpad_symbols" ]
 }
 
 group("package_archive") {
   testonly = true
-  public_deps = [
-    "//build/gn:package_archive",
-  ]
+  public_deps = [ "//build/gn:package_archive" ]
 }

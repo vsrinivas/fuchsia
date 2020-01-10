@@ -30,9 +30,7 @@ rustc_binary("bin") {
 }
 
 package("sktool") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "sktool"
 

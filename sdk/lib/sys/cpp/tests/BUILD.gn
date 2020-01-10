@@ -21,9 +21,9 @@ test("component_cpp_unittests") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/fidl/fuchsia-io",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
+    "//zircon/system/fidl/fuchsia-io",
   ]
 }
 
@@ -39,8 +39,8 @@ test("component_cpp_testing_unittests") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/fidl/fuchsia-io",
     "//zircon/public/lib/fidl",
+    "//zircon/system/fidl/fuchsia-io",
   ]
 }
 
@@ -55,18 +55,16 @@ test("component_cpp_testing_tests") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fidl",
     "//zircon/system/fidl/fuchsia-debugdata",
     "//zircon/system/fidl/fuchsia-io",
-    "//zircon/public/lib/fidl",
   ]
 }
 
 executable("helper_proc") {
   testonly = true
 
-  sources = [
-    "helper.cc",
-  ]
+  sources = [ "helper.cc" ]
 
   deps = [
     "//garnet/examples/fidl/services:echo",

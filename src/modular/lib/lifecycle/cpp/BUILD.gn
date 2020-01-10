@@ -5,9 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 group("cpp") {
-  public_deps = [
-    ":lifecycle_impl",
-  ]
+  public_deps = [ ":lifecycle_impl" ]
 }
 
 source_set("lifecycle_impl") {

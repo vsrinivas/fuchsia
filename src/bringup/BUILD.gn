@@ -3,14 +3,10 @@
 # found in the LICENSE file.
 
 group("bringup") {
-  deps = [
-    "virtcon:virtual-console",
-  ]
+  deps = [ "virtcon:virtual-console" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "virtcon:test",
-  ]
+  deps = [ "virtcon:test" ]
 }

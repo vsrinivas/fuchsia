@@ -12,7 +12,5 @@ group("tests") {
 
 group("benchmarks") {
   testonly = true
-  deps = [
-    "fuchsia-inspect:benchmarks",
-  ]
+  deps = [ "fuchsia-inspect:benchmarks" ]
 }

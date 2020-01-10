@@ -151,9 +151,7 @@ build_api_module("binaries") {
 #
 build_api_module("generated_sources") {
   testonly = true
-  deps = [
-    ":everything",
-  ]
+  deps = [ ":everything" ]
   data_keys = [ "generated_sources" ]
 }
 
@@ -216,9 +214,7 @@ build_api_module("generated_sources") {
 build_api_module("images") {
   testonly = true
   data_keys = [ "images" ]
-  deps = [
-    ":everything",
-  ]
+  deps = [ ":everything" ]
 }
 
 # Packages defined in the build.
@@ -254,9 +250,7 @@ build_api_module("images") {
 build_api_module("packages") {
   testonly = true
   data_keys = [ "packages" ]
-  deps = [
-    ":everything",
-  ]
+  deps = [ ":everything" ]
 }
 
 # Tests in the build.
@@ -370,9 +364,7 @@ _everything_deps = [ "tools:all-hosts" ]
 # easily (or at all).
 group("build-tests") {
   testonly = true
-  deps = [
-    "$zx/public/gn/toolchain:noop-test",
-  ]
+  deps = [ "$zx/public/gn/toolchain:noop-test" ]
 }
 _everything_deps += [ ":build-tests" ]
 
@@ -432,17 +424,13 @@ if (current_toolchain == default_toolchain) {
       testonly = true
       data_keys = [ "legacy_sysroot" ]
       walk_keys = [ "legacy_barrier" ]
-      deps = [
-        ":all-ulib-$cpu",
-      ]
+      deps = [ ":all-ulib-$cpu" ]
     }
 
     build_api_module("legacy_fuzzers-$cpu") {
       testonly = true
       data_keys = [ "fuzzer" ]
-      deps = [
-        ":legacy-tests-$cpu",
-      ]
+      deps = [ ":legacy-tests-$cpu" ]
     }
   }
 }
@@ -453,9 +441,7 @@ foreach(cpu, standard_fuchsia_cpus) {
       output_dir = root_build_dir
       testonly = true
       cpu = cpu
-      deps = [
-        ":legacy-deps-$cpu",
-      ]
+      deps = [ ":legacy-deps-$cpu" ]
       metadata = {
         # legacy-$cpu depends on this to get all these deps built.
         # But they shouldn't contribute metadata to the build_api_module().
@@ -467,9 +453,7 @@ foreach(cpu, standard_fuchsia_cpus) {
       output_dir = root_build_dir
       testonly = true
       cpu = cpu
-      deps = [
-        ":legacy-tests-deps-$cpu",
-      ]
+      deps = [ ":legacy-tests-deps-$cpu" ]
     }
 
     # The legacy Fuchsia GN build needs to consume a manifest of libraries
@@ -520,9 +504,7 @@ foreach(cpu, standard_fuchsia_cpus) {
     environment_label = "$zx/public/gn/toolchain:user"
     cpu = cpu
     direct = true
-    deps = [
-      "$zx/system/utest",
-    ]
+    deps = [ "$zx/system/utest" ]
   }
 
   environment_redirect("all-ulib-$cpu") {
@@ -531,9 +513,7 @@ foreach(cpu, standard_fuchsia_cpus) {
     environment_label = "$zx/public/gn/toolchain:user"
     shlib = true
     exclude_variant_tags = [ "instrumented" ]
-    deps = [
-      "$zx/system/ulib",
-    ]
+    deps = [ "$zx/system/ulib" ]
   }
 
   environment_redirect("driver-deps-$cpu") {
@@ -551,9 +531,7 @@ foreach(cpu, standard_fuchsia_cpus) {
     testonly = true
     cpu = cpu
     environment_label = "$zx/public/gn/toolchain:user"
-    deps = [
-      ":instrumented-ulib-redirect",
-    ]
+    deps = [ ":instrumented-ulib-redirect" ]
   }
 }
 
@@ -580,9 +558,7 @@ if (toolchain.environment == "user") {
       testonly = true
       visibility = [ ":instrumented-ulib-redirect" ]
       variant = variant
-      deps = [
-        "$zx/system/ulib",
-      ]
+      deps = [ "$zx/system/ulib" ]
       foreach(dep, toolchain.implicit_deps) {
         if (dep == "$dep") {
           deps += [ dep ]
@@ -597,9 +573,7 @@ if (toolchain.environment == "user") {
 build_api_module("legacy_images") {
   testonly = true
   data_keys = [ "images" ]
-  deps = [
-    "tools",
-  ]
+  deps = [ "tools" ]
   foreach(cpu, standard_fuchsia_cpus) {
     deps += [ ":legacy-$cpu" ]
   }

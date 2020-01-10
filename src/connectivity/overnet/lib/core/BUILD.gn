@@ -34,9 +34,7 @@ rustc_library("core") {
 }
 
 unittest_package("overnet-core-tests") {
-  deps = [
-    ":core_test",
-  ]
+  deps = [ ":core_test" ]
 
   tests = [
     {

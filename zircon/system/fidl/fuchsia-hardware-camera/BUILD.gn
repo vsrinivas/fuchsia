@@ -6,7 +6,5 @@ import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-hardware-camera") {
   sdk = true
-  sources = [
-    "camera.fidl",
-  ]
+  sources = [ "camera.fidl" ]
 }

@@ -7,9 +7,7 @@ zx_library("scsi") {
     "scsi/scsilib.h",
     "scsi/scsilib_controller.h",
   ]
-  sources = [
-    "scsilib.cc",
-  ]
+  sources = [ "scsilib.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/ulib/ddk",
@@ -24,9 +22,7 @@ zx_library("scsi") {
 }
 
 zx_test("scsilib-disk-test") {
-  sources = [
-    "scsilib-disk-test.cc",
-  ]
+  sources = [ "scsilib-disk-test.cc" ]
   deps = [
     ":scsi",
     "$zx/system/banjo/ddk.protocol.block",

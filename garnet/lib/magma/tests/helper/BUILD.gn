@@ -21,17 +21,11 @@ source_set("platform_device_helper") {
 source_set("command_buffer_helper") {
   public_configs = [ "$magma_build_root:magma_tests_include_config" ]
 
-  public_deps = [
-    "$magma_build_root/src/magma_util/platform:device",
-  ]
+  public_deps = [ "$magma_build_root/src/magma_util/platform:device" ]
 
-  sources = [
-    "command_buffer_helper.h",
-  ]
+  sources = [ "command_buffer_helper.h" ]
 
-  deps = [
-    "$magma_build_root/src/sys_driver",
-  ]
+  deps = [ "$magma_build_root/src/sys_driver" ]
 }
 
 source_set("test_device_helper") {
@@ -46,16 +40,12 @@ source_set("test_device_helper") {
     "//zircon/system/fidl/fuchsia-device:fuchsia-device_llcpp",
   ]
 
-  sources = [
-    "test_device_helper.h",
-  ]
+  sources = [ "test_device_helper.h" ]
 }
 
 source_set("logger_init_helper") {
   testonly = true
-  sources = [
-    "logger_init_helper.cc",
-  ]
+  sources = [ "logger_init_helper.cc" ]
   deps = [
     "$magma_build_root/src/magma_util/platform:logger_impl",
     "$zircon_build_root/public/lib/fdio",

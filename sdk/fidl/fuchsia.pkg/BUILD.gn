@@ -20,7 +20,5 @@ fidl("fuchsia.pkg") {
     "resolver.fidl",
   ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-io",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
 }

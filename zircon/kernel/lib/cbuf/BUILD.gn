@@ -4,7 +4,5 @@
 
 zx_library("cbuf") {
   kernel = true
-  sources = [
-    "cbuf.cc",
-  ]
+  sources = [ "cbuf.cc" ]
 }

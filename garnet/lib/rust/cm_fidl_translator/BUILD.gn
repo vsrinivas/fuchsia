@@ -24,9 +24,7 @@ rustc_library("cm_fidl_translator") {
 }
 
 test_package("cm_fidl_translator_tests") {
-  deps = [
-    ":cm_fidl_translator_test",
-  ]
+  deps = [ ":cm_fidl_translator_test" ]
 
   tests = [
     {

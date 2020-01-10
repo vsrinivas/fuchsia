@@ -10,11 +10,7 @@ fidl("fuchsia.ui.policy.accessibility") {
 
   sdk_category = "internal"
 
-  sources = [
-    "accessibility.fidl",
-  ]
+  sources = [ "accessibility.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.input.accessibility",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.input.accessibility" ]
 }

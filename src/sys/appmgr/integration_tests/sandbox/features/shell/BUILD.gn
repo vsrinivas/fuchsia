@@ -16,9 +16,7 @@ group("shell") {
 sandbox_test_package("has_deprecated_shell") {
   deprecated_shell = "//build"
 
-  sources = [
-    "has_shell.cc",
-  ]
+  sources = [ "has_shell.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -28,9 +26,7 @@ sandbox_test_package("has_deprecated_shell") {
 }
 
 sandbox_test_package("no_shell") {
-  sources = [
-    "no_shell.cc",
-  ]
+  sources = [ "no_shell.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",

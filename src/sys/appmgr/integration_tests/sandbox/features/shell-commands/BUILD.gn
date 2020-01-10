@@ -14,9 +14,7 @@ group("shell-commands") {
 }
 
 sandbox_test_package("has_shell_commands") {
-  sources = [
-    "has_shell_commands.cc",
-  ]
+  sources = [ "has_shell_commands.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -26,9 +24,7 @@ sandbox_test_package("has_shell_commands") {
 }
 
 sandbox_test_package("no_shell_commands") {
-  sources = [
-    "no_shell_commands.cc",
-  ]
+  sources = [ "no_shell_commands.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",

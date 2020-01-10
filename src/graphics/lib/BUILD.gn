@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("lib") {
-  deps = [
-    "compute"
-  ]
+  deps = [ "compute" ]
 }

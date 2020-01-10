@@ -32,9 +32,7 @@ source_set("spinel_vk_utils") {
 }
 
 graphics_compute_unittests("unittests") {
-  sources = [
-    "spinel_vk_device_config_utils_unittest.cc",
-  ]
+  sources = [ "spinel_vk_device_config_utils_unittest.cc" ]
   deps = [
     ":spinel_vk_utils",
     "${graphics_compute_dir}/tests:common_vk",

@@ -11,25 +11,17 @@ source_set("srcs") {
     "json_merge.h",
   ]
 
-  public_deps = [
-    "//third_party/rapidjson",
-  ]
+  public_deps = [ "//third_party/rapidjson" ]
 }
 
 executable("json_merge") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
-  deps = [
-    ":srcs",
-  ]
+  deps = [ ":srcs" ]
 }
 
 test("json_merge_test") {
-  sources = [
-    "test.cc",
-  ]
+  sources = [ "test.cc" ]
 
   deps = [
     ":srcs",
@@ -38,11 +30,7 @@ test("json_merge_test") {
 }
 
 install_host_tools("install") {
-  deps = [
-    ":json_merge",
-  ]
+  deps = [ ":json_merge" ]
 
-  outputs = [
-    "json_merge",
-  ]
+  outputs = [ "json_merge" ]
 }

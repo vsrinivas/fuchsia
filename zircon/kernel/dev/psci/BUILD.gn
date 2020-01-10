@@ -4,9 +4,7 @@
 
 zx_library("psci") {
   kernel = true
-  sources = [
-    "psci.cc",
-  ]
+  sources = [ "psci.cc" ]
   deps = [
     "$zx/kernel/dev/pdev",
     "$zx/kernel/lib/console",

@@ -6,9 +6,7 @@ import("$zx/public/gn/fidl.gni")
 
 if (is_fuchsia) {
   zx_test("fidl-utils") {
-    sources = [
-      "binding_tests.cc",
-    ]
+    sources = [ "binding_tests.cc" ]
     deps = [
       ":fidl.test.fidlutils.c",
       "$zx/system/ulib/fidl-utils",
@@ -20,7 +18,5 @@ if (is_fuchsia) {
 
 fidl_library("fidl.test.fidlutils") {
   visibility = [ ":*" ]
-  sources = [
-    "binding_tests.fidl",
-  ]
+  sources = [ "binding_tests.fidl" ]
 }

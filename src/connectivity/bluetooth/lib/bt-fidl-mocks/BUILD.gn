@@ -28,9 +28,7 @@ rustc_library("bt-fidl-mocks") {
 test_package("tests") {
   package_name = "bt-fidl-mocks-tests"
 
-  deps = [
-    ":bt-fidl-mocks_test",
-  ]
+  deps = [ ":bt-fidl-mocks_test" ]
 
   tests = [
     {

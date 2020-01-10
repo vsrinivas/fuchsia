@@ -5,7 +5,5 @@
 # Do not use this target directly, instead depend on //src/security/kms_test_client:kms_test_client_pkg.
 group("kms_test_client_pkg") {
   testonly = true
-  public_deps = [
-    "//src/security/kms_test_client:kms_test_client_pkg",
-  ]
+  public_deps = [ "//src/security/kms_test_client:kms_test_client_pkg" ]
 }

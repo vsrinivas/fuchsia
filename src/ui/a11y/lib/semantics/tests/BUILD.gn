@@ -4,9 +4,7 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":semantics_manager_tests",
-  ]
+  public_deps = [ ":semantics_manager_tests" ]
 }
 
 executable("semantics_manager_tests") {
@@ -22,9 +20,7 @@ executable("semantics_manager_tests") {
     "semantics_manager_test.cc",
     "tree_unittest.cc",
   ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.accessibility.semantics",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.accessibility.semantics" ]
   deps = [
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",

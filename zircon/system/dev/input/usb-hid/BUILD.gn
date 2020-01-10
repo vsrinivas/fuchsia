@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("usb-hid") {
-  sources = [
-    "usb-hid.cc",
-  ]
+  sources = [ "usb-hid.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/banjo/ddk.protocol.usb",
@@ -22,9 +20,7 @@ zx_driver("usb-hid") {
 }
 
 zx_driver("usb-hid-fake-usb") {
-  sources = [
-    "usb-hid-function.cc",
-  ]
+  sources = [ "usb-hid-function.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/banjo/ddk.protocol.usb",

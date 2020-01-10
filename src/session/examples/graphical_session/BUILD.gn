@@ -34,9 +34,7 @@ rustc_binary("graphical_session_bin") {
 }
 
 package("graphical_session") {
-  deps = [
-    ":graphical_session_bin",
-  ]
+  deps = [ ":graphical_session_bin" ]
 
   meta = [
     {

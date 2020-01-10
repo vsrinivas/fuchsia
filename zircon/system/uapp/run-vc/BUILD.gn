@@ -3,13 +3,11 @@
 # found in the LICENSE file.
 
 zx_executable("run-vc") {
-  sources = [
-    "main.c",
-  ]
+  sources = [ "main.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-virtualconsole:c",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
   ]
 }

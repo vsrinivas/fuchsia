@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("locale") {
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   sources = [
     "__lctrans.c",
     "__mo_lookup.c",

@@ -6,9 +6,7 @@ import("$zx/public/gn/package.gni")
 import("$zx/public/gn/zbi.gni")
 
 package("bootsvc") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   data_deps = [
     # When this package() is included in a zbi(), the cmdline
     # entry to set userboot.root will be included too.
@@ -68,9 +66,7 @@ source_set("util") {
     "util.cc",
     "util.h",
   ]
-  deps = [
-    "$zx/third_party/ulib/safemath",
-  ]
+  deps = [ "$zx/third_party/ulib/safemath" ]
   public_deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fs",

@@ -54,9 +54,7 @@ package("system-update-checker") {
   deprecated_misc_storage = "//build"
   deprecated_shell = "//build"
 
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   binaries = [
     {
       name = "system_update_checker"
@@ -110,7 +108,5 @@ sysmgr_config("config") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":system-update-checker-tests",
-  ]
+  public_deps = [ ":system-update-checker-tests" ]
 }

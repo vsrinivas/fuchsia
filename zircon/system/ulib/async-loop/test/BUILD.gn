@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":async-loop",
-  ]
+  deps = [ ":async-loop" ]
 }
 
 zx_test("async-loop") {
-  sources = [
-    "loop_tests.cc",
-  ]
+  sources = [ "loop_tests.cc" ]
   deps = [
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",

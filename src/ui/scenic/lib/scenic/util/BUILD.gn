@@ -10,13 +10,9 @@ source_set("util") {
     "print_event.h",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.gfx",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.gfx" ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 }
 
 source_set("rk4_spring_simulation") {

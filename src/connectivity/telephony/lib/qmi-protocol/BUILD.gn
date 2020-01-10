@@ -20,9 +20,7 @@ compiled_action("gen_qmi_protocol_source") {
     "protocol/wda.json",
     "protocol/wds.json",
   ]
-  outputs = [
-    output,
-  ]
+  outputs = [ output ]
   args = [ "-i" ] + rebase_path(sources) + [ "-o" ] + [ rebase_path(output) ]
 }
 
@@ -43,9 +41,7 @@ rustc_library("qmi-protocol") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":qmigen_unittests($host_toolchain)",
-  ]
+  deps = [ ":qmigen_unittests($host_toolchain)" ]
 }
 
 if (host_toolchain == current_toolchain) {

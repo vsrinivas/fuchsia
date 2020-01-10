@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 source_set("ptr") {
-  sources = [
-    "ptr.h",
-  ]
+  sources = [ "ptr.h" ]
 }

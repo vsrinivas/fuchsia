@@ -101,9 +101,7 @@ zx_library("trace-engine-headers-for-reader") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":hash-table-test",
-  ]
+  deps = [ ":hash-table-test" ]
 }
 
 zx_test("hash-table-test") {

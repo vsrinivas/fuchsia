@@ -4,9 +4,7 @@
 
 group("icu") {
   testonly = true
-  deps = [
-    ":tests",
-  ]
+  deps = [ ":tests" ]
 }
 
 group("tests") {
@@ -17,7 +15,5 @@ group("tests") {
 
 group("tools") {
   testonly = true
-  deps = [
-    "tools:tools",
-  ]
+  deps = [ "tools:tools" ]
 }

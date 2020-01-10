@@ -72,7 +72,5 @@ test_package("pkgfs-ramdisk-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":pkgfs-ramdisk-tests",
-  ]
+  public_deps = [ ":pkgfs-ramdisk-tests" ]
 }

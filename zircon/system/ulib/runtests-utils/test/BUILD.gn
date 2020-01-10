@@ -7,15 +7,11 @@ import("$zx/public/gn/fidl.gni")
 if (is_fuchsia) {
   group("test") {
     testonly = true
-    deps = [
-      ":service-proxy-dir",
-    ]
+    deps = [ ":service-proxy-dir" ]
   }
 
   zx_test("service-proxy-dir") {
-    sources = [
-      "service-proxy-dir.cc",
-    ]
+    sources = [ "service-proxy-dir.cc" ]
     deps = [
       ":fidl.test.echo.c",
       "$zx/system/fidl/fuchsia-io:llcpp",
@@ -35,7 +31,5 @@ if (is_fuchsia) {
 fidl_library("fidl.test.echo") {
   testonly = true
   visibility = [ ":*" ]
-  sources = [
-    "echo.test.fidl",
-  ]
+  sources = [ "echo.test.fidl" ]
 }

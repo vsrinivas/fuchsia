@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("fidl-llcpp-driver") {
-  sources = [
-    "driver.cc",
-  ]
+  sources = [ "driver.cc" ]
 
   deps = [
     "$zx/system/dev/test/fuchsia-hardware-test:llcpp",

@@ -4,9 +4,7 @@
 
 source_set("sync-condition") {
   testonly = true
-  sources = [
-    "condition.cc",
-  ]
+  sources = [ "condition.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/sync",

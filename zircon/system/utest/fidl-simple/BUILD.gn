@@ -43,24 +43,16 @@ if (is_fuchsia) {
 
 fidl_library("fidl.test.echo") {
   visibility = [ ":*" ]
-  sources = [
-    "echo.test.fidl",
-  ]
+  sources = [ "echo.test.fidl" ]
 }
 
 fidl_library("fidl.test.spaceship") {
   visibility = [ ":*" ]
-  sources = [
-    "spaceship.test.fidl",
-  ]
+  sources = [ "spaceship.test.fidl" ]
 }
 
 fidl_library("fidl.test.ctransformer") {
   visibility = [ ":*" ]
-  sources = [
-    "ctransformer.test.fidl",
-  ]
-  public_deps = [
-    "$zx/system/utest/fidl:example",
-  ]
+  sources = [ "ctransformer.test.fidl" ]
+  public_deps = [ "$zx/system/utest/fidl:example" ]
 }

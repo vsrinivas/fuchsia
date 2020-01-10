@@ -11,22 +11,16 @@ declare_args() {
 
 group("syzkaller") {
   testonly = true
-  deps = [
-    ":tests",
-  ]
+  deps = [ ":tests" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":syz-executor-pkg",
-  ]
+  deps = [ ":syz-executor-pkg" ]
 }
 
 package("syz-executor-pkg") {
-  deps = [
-    ":syz-executor",
-  ]
+  deps = [ ":syz-executor" ]
   binaries = [
     {
       name = "syz-executor"

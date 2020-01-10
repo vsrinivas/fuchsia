@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":id_allocator",
-  ]
+  deps = [ ":id_allocator" ]
 }
 
 zx_test("id_allocator") {
-  sources = [
-    "id_allocator.cc",
-  ]
+  sources = [ "id_allocator.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("dw-i2c") {
-  sources = [
-    "dw-i2c.cc",
-  ]
+  sources = [ "dw-i2c.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.i2cimpl",

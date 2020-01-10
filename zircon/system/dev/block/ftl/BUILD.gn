@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("ftl") {
-  sources = [
-    "bind.cc",
-  ]
+  sources = [ "bind.cc" ]
   deps = [
     ":common",
     "$zx/system/ulib/ddk",

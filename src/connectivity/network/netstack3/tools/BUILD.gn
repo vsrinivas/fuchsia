@@ -7,9 +7,7 @@ import("//build/package.gni")
 package("netstack3_tools") {
   testonly = true
 
-  deps = [
-    "//src/connectivity/network/netstack3/tools/enclosed_runner",
-  ]
+  deps = [ "//src/connectivity/network/netstack3/tools/enclosed_runner" ]
 
   binaries = [
     {

@@ -7,9 +7,7 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "echo_server_c"
 
-  sources = [
-    "echo_server.c",
-  ]
+  sources = [ "echo_server.c" ]
 
   deps = [
     "//sdk/lib/svc",
@@ -20,9 +18,7 @@ executable("bin") {
 }
 
 package("echo_server_c") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
   binaries = [
     {
       name = "echo_server_c"

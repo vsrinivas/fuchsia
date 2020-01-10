@@ -13,7 +13,5 @@ source_set("rfb_server") {
     "rfb_server.h",
   ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 }

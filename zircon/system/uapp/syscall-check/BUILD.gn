@@ -6,11 +6,9 @@ import("$zx/public/gn/test/zbi_test.gni")
 
 # Prints out the status of syscalls used to confirm them being disabled.
 zx_executable("syscall-check") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
-    "$zx/system/ulib/zircon",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
   ]
 }

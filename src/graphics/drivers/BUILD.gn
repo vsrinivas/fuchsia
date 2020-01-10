@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("drivers") {
-  deps = [
-    "misc",
-  ]
+  deps = [ "misc" ]
 }

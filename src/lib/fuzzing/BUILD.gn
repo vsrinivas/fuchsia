@@ -7,7 +7,5 @@ import("//build/go/go_test.gni")
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "host:tests",
-  ]
+  public_deps = [ "host:tests" ]
 }

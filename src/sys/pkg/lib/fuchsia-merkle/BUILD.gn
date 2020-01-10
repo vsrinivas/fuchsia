@@ -22,9 +22,7 @@ rustc_library("fuchsia-merkle") {
 }
 
 unittest_package("fuchsia-merkle-tests") {
-  deps = [
-    ":fuchsia-merkle_test",
-  ]
+  deps = [ ":fuchsia-merkle_test" ]
 
   tests = [
     {
@@ -36,7 +34,5 @@ unittest_package("fuchsia-merkle-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":fuchsia-merkle-tests",
-  ]
+  public_deps = [ ":fuchsia-merkle-tests" ]
 }

@@ -5,11 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.virtualization.vmm") {
-  sources = [
-    "vmm.fidl",
-  ]
+  sources = [ "vmm.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.virtualization",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.virtualization" ]
 }

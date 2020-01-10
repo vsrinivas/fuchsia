@@ -4,9 +4,7 @@
 
 zx_host_tool("mtd-redundant-storage") {
   if (current_os == "linux") {
-    sources = [
-      "mtd-rs-tool.cc",
-    ]
+    sources = [ "mtd-rs-tool.cc" ]
   }
   deps = [
     "$zx/system/ulib/nand-redundant-storage",

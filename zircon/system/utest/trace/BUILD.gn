@@ -51,9 +51,7 @@ zx_test("trace") {
     ":common",
     "$zx/system/ulib/trace-engine",
   ]
-  data_deps = [
-    ":trace-static-engine",
-  ]
+  data_deps = [ ":trace-static-engine" ]
 }
 
 # And again using libtrace-engine.a.

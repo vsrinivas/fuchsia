@@ -3,16 +3,12 @@
 # found in the LICENSE file.
 
 zx_driver("ahci") {
-  deps = [
-    ":shared",
-  ]
+  deps = [ ":shared" ]
 }
 
 group("test") {
   testonly = true
-  deps = [
-    ":ahci-unittest",
-  ]
+  deps = [ ":ahci-unittest" ]
 }
 
 zx_test("ahci-unittest") {

@@ -16,7 +16,5 @@ fidl("fuchsia.wlan.policy") {
     "types.fidl",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.wlan.common",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.wlan.common" ]
 }

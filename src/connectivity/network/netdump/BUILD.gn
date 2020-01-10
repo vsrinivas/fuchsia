@@ -16,8 +16,8 @@ executable("bin") {
   ]
   deps = [
     ":common",
-    "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet_c_client",
     "//zircon/public/lib/pretty",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet_c_client",
   ]
 }
 
@@ -66,9 +66,7 @@ package("netdump") {
       dest = "netdump.cmx"
     },
   ]
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -79,9 +77,7 @@ package("netdump") {
 }
 
 unittest_package("netdump_unit_tests") {
-  deps = [
-    ":unit_tests",
-  ]
+  deps = [ ":unit_tests" ]
 
   tests = [
     {

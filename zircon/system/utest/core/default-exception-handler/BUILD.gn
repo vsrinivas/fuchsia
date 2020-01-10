@@ -4,9 +4,7 @@
 
 source_set("default-exception-handler") {
   testonly = true
-  sources = [
-    "default-exception-handler.cc",
-  ]
+  sources = [ "default-exception-handler.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/mini-process",

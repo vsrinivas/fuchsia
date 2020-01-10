@@ -19,8 +19,6 @@ if (current_toolchain == host_toolchain) {
       "transpose.c",
       "transpose.h",
     ]
-    deps = [
-      "${graphics_compute_dir}/common",
-    ]
+    deps = [ "${graphics_compute_dir}/common" ]
   }
 }

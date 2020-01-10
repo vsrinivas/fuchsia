@@ -3,11 +3,7 @@
 # found in the LICENSE file.
 
 source_set("gen") {
-  sources = [
-    "my_service_llcpp.h",
-  ]
+  sources = [ "my_service_llcpp.h" ]
 
-  public_deps = [
-    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
-  ]
+  public_deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp" ]
 }

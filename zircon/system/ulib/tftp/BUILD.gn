@@ -8,9 +8,7 @@ zx_library("tftp") {
   kernel = true
   host = true
   static = true
-  sources = [
-    "tftp.c",
-  ]
+  sources = [ "tftp.c" ]
   if (toolchain.environment == "efi") {
     defines = [ "TFTP_EFILIB" ]
   } else if (is_host) {
@@ -18,9 +16,7 @@ zx_library("tftp") {
   }
   if (!is_kernel && is_fuchsia) {
     defines = [ "TFTP_USERLIB" ]
-    deps = [
-      "$zx/system/ulib/zircon",
-    ]
+    deps = [ "$zx/system/ulib/zircon" ]
   }
 }
 
@@ -40,11 +36,7 @@ if (!is_kernel) {
   }
 
   zx_host_tool("tftp-example") {
-    sources = [
-      "tftp-example.c",
-    ]
-    deps = [
-      ":tftp",
-    ]
+    sources = [ "tftp-example.c" ]
+    deps = [ ":tftp" ]
   }
 }

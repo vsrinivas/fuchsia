@@ -48,9 +48,7 @@ rustc_binary("bin") {
 }
 
 package("account_handler") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "account_handler"
 

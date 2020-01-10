@@ -4,9 +4,7 @@
 
 source_set("fuzzer_test") {
   testonly = true
-  sources = [
-    "fuzzer_test.cc",
-  ]
+  sources = [ "fuzzer_test.cc" ]
   deps = [
     "//src/lib/files",
     "//third_party/googletest:gtest",

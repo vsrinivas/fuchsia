@@ -27,14 +27,12 @@ sdk_source_set("cpp") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/service/cpp",
     "//sdk/lib/vfs/cpp",
-    "//zircon/system/fidl/fuchsia-io",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-io",
   ]
 
-  deps = [
-    "//zircon/public/lib/fdio",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
 
   public_configs = [ "//sdk/config" ]
 }

@@ -4,9 +4,7 @@
 
 zx_driver("skip-block") {
   sources = []
-  deps = [
-    ":common",
-  ]
+  deps = [ ":common" ]
 }
 
 source_set("common") {

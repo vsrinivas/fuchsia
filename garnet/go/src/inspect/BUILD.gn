@@ -14,15 +14,11 @@ go_library("inspect") {
 
 go_test("go_inspect_test") {
   gopackages = [ "fuchsia.googlesource.com/inspect" ]
-  deps = [
-    ":inspect",
-  ]
+  deps = [ ":inspect" ]
 }
 
 test_package("go_inspect_tests") {
-  deps = [
-    ":go_inspect_test",
-  ]
+  deps = [ ":go_inspect_test" ]
 
   tests = [
     {

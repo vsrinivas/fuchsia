@@ -4,9 +4,7 @@
 
 zx_test("utc-procargs") {
   test_group = "sys"
-  sources = [
-    "transfer-tests.cc",
-  ]
+  sources = [ "transfer-tests.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

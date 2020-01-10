@@ -18,15 +18,11 @@ go_library("main") {
 go_binary("upload_debug_symbols") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/debug/upload_debug_symbols/cmd"
 
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }
 
 go_test("upload_debug_symbols_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/upload_debug_symbols/cmd" ]
 
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }

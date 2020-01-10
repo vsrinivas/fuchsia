@@ -7,9 +7,7 @@ import("$zx_build/public/gn/toolchain/environment_redirect.gni")
 zx_library("mini-process") {
   testonly = true
   shared = true
-  sources = [
-    "mini-process.c",
-  ]
+  sources = [ "mini-process.c" ]
   deps = [
     ":subprocess",
     "$zx/system/ulib/elf-psabi",
@@ -28,17 +26,13 @@ if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
     visibility = [ ":*" ]
     testonly = true
     exclude_variant_tags = [ "instrumented" ]
-    deps = [
-      ":subprocess",
-    ]
+    deps = [ ":subprocess" ]
   }
 } else {
   source_set("subprocess") {
     visibility = [ ":*" ]
     testonly = true
-    sources = [
-      "subprocess.c",
-    ]
+    sources = [ "subprocess.c" ]
     deps = [
       ":headers",
       "$zx/system/ulib/backtrace-request",

@@ -5,17 +5,11 @@
 import("$zx/public/gn/fuzzer.gni")
 
 fuzzer("gfx-fuzzer") {
-  sources = [
-    "gfx_fuzzer.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/gfx",
-  ]
+  sources = [ "gfx_fuzzer.cc" ]
+  deps = [ "$zx/system/ulib/gfx" ]
 }
 
 group("test") {
   testonly = true
-  deps = [
-    ":gfx-fuzzer",
-  ]
+  deps = [ ":gfx-fuzzer" ]
 }

@@ -25,9 +25,7 @@ rustc_library("fidl-fuchsia-amber-ext") {
 }
 
 test_package("fidl-fuchsia-amber-ext-tests") {
-  deps = [
-    ":fidl-fuchsia-amber-ext_test",
-  ]
+  deps = [ ":fidl-fuchsia-amber-ext_test" ]
 
   tests = [
     {
@@ -40,7 +38,5 @@ test_package("fidl-fuchsia-amber-ext-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":fidl-fuchsia-amber-ext-tests",
-  ]
+  public_deps = [ ":fidl-fuchsia-amber-ext-tests" ]
 }

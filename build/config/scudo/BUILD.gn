@@ -17,9 +17,7 @@ import("//build/toolchain/variant.gni")
 group("default_for_executable") {
   if (use_scudo && is_fuchsia) {
     public_configs = [ ":scudo" ]
-    deps = [
-      ":scudo_default_options",
-    ]
+    deps = [ ":scudo_default_options" ]
   }
 }
 
@@ -30,17 +28,13 @@ variant("scudo") {
   # The variant only works by linking Scudo in.
   # i.e., we don't support code that relies on `#if __has_feature(scudo)`.
   ldflags = [ "-fsanitize=scudo" ]
-  deps = [
-    ":scudo_default_options",
-  ]
+  deps = [ ":scudo_default_options" ]
 }
 
 source_set("scudo_default_options") {
   visibility = [ ":*" ]
   if (scudo_default_options != []) {
-    sources = [
-      "scudo_default_options.c",
-    ]
+    sources = [ "scudo_default_options.c" ]
     options_string = ""
     foreach(option, scudo_default_options) {
       options_string += ":$option"

@@ -4,15 +4,11 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":elf-search",
-  ]
+  deps = [ ":elf-search" ]
 }
 
 zx_library("elf") {
-  sources = [
-    "elf.c",
-  ]
+  sources = [ "elf.c" ]
   deps = [
     "$zx/system/ulib/elfload",
     "$zx/system/ulib/zircon",
@@ -22,17 +18,13 @@ zx_library("elf") {
 }
 
 zx_executable("elf-search-test-helper") {
-  sources = [
-    "helper.cc",
-  ]
+  sources = [ "helper.cc" ]
   testonly = true
   visibility = [ ":*" ]
 }
 
 zx_test("elf-search") {
-  sources = [
-    "elf-search-test.cc",
-  ]
+  sources = [ "elf-search-test.cc" ]
   deps = [
     ":elf",
     "$zx/system/ulib/elf-search",
@@ -43,7 +35,5 @@ zx_test("elf-search") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
-  data_deps = [
-    ":elf-search-test-helper",
-  ]
+  data_deps = [ ":elf-search-test-helper" ]
 }

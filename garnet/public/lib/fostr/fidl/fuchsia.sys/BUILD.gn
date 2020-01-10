@@ -7,7 +7,5 @@ import("//garnet/public/build/fostr/fostr_fidl.gni")
 fostr_fidl("fuchsia.sys") {
   fidl_target = "//sdk/fidl/fuchsia.sys"
 
-  deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.mem",
-  ]
+  deps = [ "//garnet/public/lib/fostr/fidl/fuchsia.mem" ]
 }

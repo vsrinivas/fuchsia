@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("trace-example") {
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",

@@ -3,10 +3,6 @@
 # found in the LICENSE file.
 
 source_set("intel_rng") {
-  sources = [
-    "intel-rng.cc",
-  ]
-  deps = [
-    "$zx/kernel/dev/hw_rng",
-  ]
+  sources = [ "intel-rng.cc" ]
+  deps = [ "$zx/kernel/dev/hw_rng" ]
 }

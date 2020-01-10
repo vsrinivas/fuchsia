@@ -35,9 +35,7 @@ rustc_library("connectivity-testing") {
 }
 
 unittest_package("connectivity-testing-tests") {
-  deps = [
-    ":connectivity-testing_test",
-  ]
+  deps = [ ":connectivity-testing_test" ]
   tests = [
     {
       name = "connectivity_testing_lib_test"

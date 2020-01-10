@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 package("tones") {
-  deps = [
-    ":tones_bin",
-  ]
+  deps = [ ":tones_bin" ]
 
   binaries = [
     {

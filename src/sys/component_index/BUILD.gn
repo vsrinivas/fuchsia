@@ -57,9 +57,7 @@ rustc_binary("component_index_bin") {
 }
 
 test_package("component_index_tests") {
-  deps = [
-    ":component_index_bin_test",
-  ]
+  deps = [ ":component_index_bin_test" ]
 
   tests = [
     {
@@ -73,7 +71,5 @@ test_package("component_index_tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":component_index_tests",
-  ]
+  deps = [ ":component_index_tests" ]
 }

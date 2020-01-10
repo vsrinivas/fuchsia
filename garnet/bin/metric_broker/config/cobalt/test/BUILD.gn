@@ -8,17 +8,13 @@ import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
-  deps = [
-    ":metric_broker_config_cobalt_tests",
-  ]
+  deps = [ ":metric_broker_config_cobalt_tests" ]
 }
 
 executable("schema_verification_test") {
   testonly = true
   output_name = "schema_verification_test"
-  sources = [
-    "schema_verification_test.cc",
-  ]
+  sources = [ "schema_verification_test.cc" ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
@@ -29,9 +25,7 @@ executable("schema_verification_test") {
 executable("event_codes_test") {
   testonly = true
   output_name = "event_codes_test"
-  sources = [
-    "event_codes_test.cc",
-  ]
+  sources = [ "event_codes_test.cc" ]
   deps = [
     "//garnet/bin/metric_broker/config/cobalt:event_codes",
     "//src/lib/fxl/test:gtest_main",
@@ -42,9 +36,7 @@ executable("event_codes_test") {
 executable("metric_config_test") {
   testonly = true
   output_name = "metric_config_test"
-  sources = [
-    "metric_config_test.cc",
-  ]
+  sources = [ "metric_config_test.cc" ]
   deps = [
     "//garnet/bin/metric_broker/config/cobalt:event_codes",
     "//garnet/bin/metric_broker/config/cobalt:metric_config",
@@ -57,9 +49,7 @@ executable("metric_config_test") {
 executable("project_config_test") {
   testonly = true
   output_name = "project_config_test"
-  sources = [
-    "project_config_test.cc",
-  ]
+  sources = [ "project_config_test.cc" ]
   deps = [
     "//garnet/bin/metric_broker/config/cobalt:event_codes",
     "//garnet/bin/metric_broker/config/cobalt:metric_config",
@@ -73,9 +63,7 @@ executable("project_config_test") {
 executable("cobalt_config_reader_test") {
   testonly = true
   output_name = "cobalt_config_reader_test"
-  sources = [
-    "cobalt_config_reader_test.cc",
-  ]
+  sources = [ "cobalt_config_reader_test.cc" ]
   deps = [
     "//garnet/bin/metric_broker/config/cobalt:cobalt_config_reader",
     "//garnet/bin/metric_broker/config/cobalt:event_codes",

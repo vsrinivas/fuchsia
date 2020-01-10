@@ -5,9 +5,7 @@
 import("$zx/system/ulib/hermetic-compute/hermetic_module.gni")
 
 zx_library("hermetic-decompressor") {
-  sources = [
-    "get-engine.cc",
-  ]
+  sources = [ "get-engine.cc" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-ldsvc:c",
     "$zx/system/ulib/hermetic-compute",
@@ -35,25 +33,15 @@ static_library("engine-libc") {
     "abort.cc",
     "allocator.cc",
   ]
-  deps = [
-    "$zx/third_party/ulib/musl/src/string:stdmem",
-  ]
+  deps = [ "$zx/third_party/ulib/musl/src/string:stdmem" ]
 }
 
 engine_module("decompress-lz4f") {
-  sources = [
-    "lz4f.cc",
-  ]
-  deps = [
-    "$zx/third_party/ulib/lz4",
-  ]
+  sources = [ "lz4f.cc" ]
+  deps = [ "$zx/third_party/ulib/lz4" ]
 }
 
 engine_module("decompress-zstd") {
-  sources = [
-    "zstd.cc",
-  ]
-  deps = [
-    "$zx/third_party/ulib/zstd",
-  ]
+  sources = [ "zstd.cc" ]
+  deps = [ "$zx/third_party/ulib/zstd" ]
 }

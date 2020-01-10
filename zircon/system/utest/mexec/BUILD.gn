@@ -20,12 +20,8 @@ group("mexec") {
 # all indicates that the system booted sufficiently to run a userspace process.
 zx_test("zbi-child") {
   test_group = "core"
-  sources = [
-    "success.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/zircon",
-  ]
+  sources = [ "success.cc" ]
+  deps = [ "$zx/system/ulib/zircon" ]
 }
 
 # The parent binary mexecs into this child image. The parent image is booted
@@ -45,25 +41,17 @@ zbi_test("zbi-child-image") {
 
 resource("zbi-child-image-resource") {
   testonly = true
-  deps = [
-    ":zbi-child-image.zbi",
-  ]
+  deps = [ ":zbi-child-image.zbi" ]
   sources = get_target_outputs(":zbi-child-image.zbi")
-  outputs = [
-    "testdata/zbi-bootfs/zbi-child-image.zbi",
-  ]
+  outputs = [ "testdata/zbi-bootfs/zbi-child-image.zbi" ]
 }
 
 # Simple binary that mexecs into the child binary.
 zx_test("zbi-parent") {
   test_group = "core"
-  sources = [
-    "parent.cc",
-  ]
+  sources = [ "parent.cc" ]
 
-  data_deps = [
-    ":zbi-child-image-resource",
-  ]
+  data_deps = [ ":zbi-child-image-resource" ]
 
   deps = [
     "$zx/system/ulib/fdio",

@@ -4,9 +4,7 @@
 
 source_set("fifo") {
   testonly = true
-  sources = [
-    "fifo.cc",
-  ]
+  sources = [ "fifo.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

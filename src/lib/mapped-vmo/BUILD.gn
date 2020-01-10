@@ -19,9 +19,7 @@ rustc_library("mapped-vmo") {
 }
 
 unittest_package("mapped-vmo-tests") {
-  deps = [
-    ":mapped-vmo_test",
-  ]
+  deps = [ ":mapped-vmo_test" ]
 
   tests = [
     {
@@ -32,7 +30,5 @@ unittest_package("mapped-vmo-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":mapped-vmo-tests",
-  ]
+  public_deps = [ ":mapped-vmo-tests" ]
 }

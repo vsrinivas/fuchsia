@@ -115,7 +115,5 @@ group("blobfs-fsck-soft") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":blobfs-fsck-soft-target-test",
-  ]
+  public_deps = [ ":blobfs-fsck-soft-target-test" ]
 }

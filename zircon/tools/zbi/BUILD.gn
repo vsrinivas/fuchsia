@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_host_tool("zbi") {
-  sources = [
-    "zbi.cc",
-  ]
+  sources = [ "zbi.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/third_party/ulib/cksum",

@@ -97,9 +97,7 @@ source_set("unittests") {
 }
 
 flatbuffer("entry_payload") {
-  sources = [
-    "entry_payload.fbs",
-  ]
+  sources = [ "entry_payload.fbs" ]
 
   extra_configs = [ "//src/ledger:ledger_config" ]
 }

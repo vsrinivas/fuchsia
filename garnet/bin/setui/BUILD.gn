@@ -115,9 +115,7 @@ rustc_binary("bin") {
 }
 
 package("setui_service") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "setui_service"
 

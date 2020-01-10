@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 package("audio_player") {
-  deps = [
-    ":audio_player_bin",
-  ]
+  deps = [ ":audio_player_bin" ]
 
   binaries = [
     {

@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("dd") {
-  sources = [
-    "main.c",
-  ]
+  sources = [ "main.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-skipblock:c",
     "$zx/system/fidl/fuchsia-io:c",

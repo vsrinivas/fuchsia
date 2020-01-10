@@ -14,9 +14,7 @@ zx_library("libzbi") {
   host = true
   kernel = true
   static = true
-  sources = [
-    "zbi.c",
-  ]
+  sources = [ "zbi.c" ]
   if (is_fuchsia && !is_kernel) {
     sources += [ "zbi-zx.cc" ]
     deps = [

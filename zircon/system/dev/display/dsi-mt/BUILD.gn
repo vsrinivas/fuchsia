@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("dsi-mt") {
-  sources = [
-    "dsi-mt.cc",
-  ]
+  sources = [ "dsi-mt.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.dsiimpl",
     "$zx/system/banjo/ddk.protocol.gpio",

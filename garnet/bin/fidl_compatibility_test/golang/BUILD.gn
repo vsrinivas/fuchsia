@@ -21,9 +21,9 @@ group("golang") {
 go_library("lib") {
   name = "compatibility_test"
   deps = [
-    "//src/lib/component/go/src/app",
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//src/lib/component/go/src/app",
   ]
 }
 
@@ -44,16 +44,12 @@ template("go_fidl_compatibility_test") {
       tags = [ invoker.build_tag ]
     }
 
-    deps = [
-      ":lib",
-    ]
+    deps = [ ":lib" ]
   }
 
   package(package_target) {
     testonly = true
-    deps = [
-      ":$binary_target",
-    ]
+    deps = [ ":$binary_target" ]
     binary = binary_output
     meta = [
       {

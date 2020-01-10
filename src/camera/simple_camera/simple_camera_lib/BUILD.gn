@@ -44,17 +44,13 @@ source_set("simple_camera_lib") {
 group("tests") {
   testonly = true
 
-  public_deps = [
-    ":simple_camera_unittests",
-  ]
+  public_deps = [ ":simple_camera_unittests" ]
 }
 
 executable("simple_camera_unittests") {
   testonly = true
 
-  sources = [
-    "tests/buffer_fence_unittest.cc",
-  ]
+  sources = [ "tests/buffer_fence_unittest.cc" ]
   deps = [
     ":simple_camera_lib",
     "//garnet/public/lib/gtest",
@@ -63,9 +59,7 @@ executable("simple_camera_unittests") {
 }
 
 test_package("simple_camera_lib_tests") {
-  deps = [
-    "//src/camera/simple_camera/simple_camera_lib:tests",
-  ]
+  deps = [ "//src/camera/simple_camera/simple_camera_lib:tests" ]
   tests = [
     {
       name = "simple_camera_unittests"

@@ -13,7 +13,5 @@ fidl("fuchsia.auth.oldtokens") {
 
   sdk_category = "partner"
   api = "fuchsia.auth.oldtokens.api"
-  sources = [
-    "credentials_producer.fidl",
-  ]
+  sources = [ "credentials_producer.fidl" ]
 }

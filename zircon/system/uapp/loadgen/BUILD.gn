@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("loadgen") {
-  sources = [
-    "loadgen.cc",
-  ]
+  sources = [ "loadgen.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

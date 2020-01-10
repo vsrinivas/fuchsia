@@ -71,14 +71,10 @@ test_package("fuchsia_inspect_tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fuchsia_inspect_tests",
-  ]
+  deps = [ ":fuchsia_inspect_tests" ]
 }
 
 group("benchmarks") {
   testonly = true
-  deps = [
-    "bench:rust_inspect_benchmarks",
-  ]
+  deps = [ "bench:rust_inspect_benchmarks" ]
 }

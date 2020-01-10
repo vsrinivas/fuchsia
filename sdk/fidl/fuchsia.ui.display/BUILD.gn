@@ -5,11 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.ui.display") {
-  sources = [
-    "display_manager.fidl",
-  ]
+  sources = [ "display_manager.fidl" ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-hardware-display",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-hardware-display" ]
 }

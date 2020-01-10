@@ -88,9 +88,7 @@ executable("fake_timekeeper") {
 }
 
 package("cobalt_fake_timekeeper") {
-  deps = [
-    ":fake_timekeeper",
-  ]
+  deps = [ ":fake_timekeeper" ]
 
   binaries = [
     {

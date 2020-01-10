@@ -5,10 +5,6 @@
 import("$zx_build/public/gn/banjo.gni")
 
 banjo_library("ddk.protocol.usb.composite") {
-  sources = [
-    "usb-composite.banjo",
-  ]
-  public_deps = [
-    "$zx/system/banjo/zircon.hw.usb",
-  ]
+  sources = [ "usb-composite.banjo" ]
+  public_deps = [ "$zx/system/banjo/zircon.hw.usb" ]
 }

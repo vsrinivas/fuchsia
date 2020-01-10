@@ -15,41 +15,29 @@ group("impl") {
 }
 
 flatbuffer("object_identifier") {
-  sources = [
-    "object_identifier.fbs",
-  ]
+  sources = [ "object_identifier.fbs" ]
 
   extra_configs = [ "//src/ledger:ledger_config" ]
 }
 
 flatbuffer("commit_storage") {
-  sources = [
-    "commit.fbs",
-  ]
+  sources = [ "commit.fbs" ]
 
-  public_deps = [
-    ":object_identifier",
-  ]
+  public_deps = [ ":object_identifier" ]
 
   extra_configs = [ "//src/ledger:ledger_config" ]
 }
 
 flatbuffer("file_index") {
-  sources = [
-    "file_index.fbs",
-  ]
+  sources = [ "file_index.fbs" ]
 
   extra_configs = [ "//src/ledger:ledger_config" ]
 }
 
 flatbuffer("clock_storage") {
-  sources = [
-    "clock.fbs",
-  ]
+  sources = [ "clock.fbs" ]
 
-  public_deps = [
-    ":commit_storage",
-  ]
+  public_deps = [ ":commit_storage" ]
 
   extra_configs = [ "//src/ledger:ledger_config" ]
 }
@@ -251,9 +239,7 @@ source_set("unittests") {
 }
 
 fuzzer("leveldb_fuzzer") {
-  sources = [
-    "leveldb_fuzztest.cc",
-  ]
+  sources = [ "leveldb_fuzztest.cc" ]
   deps = [
     ":lib",
     "//src/ledger/bin/platform:implementation",
@@ -264,19 +250,11 @@ fuzzer("leveldb_fuzzer") {
 }
 
 fuzzer("clock_serialization_fuzzer") {
-  sources = [
-    "clock_serialization_fuzztest.cc",
-  ]
-  deps = [
-    ":lib",
-  ]
+  sources = [ "clock_serialization_fuzztest.cc" ]
+  deps = [ ":lib" ]
 }
 
 fuzzer("clock_serialization_device_id_fuzzer") {
-  sources = [
-    "clock_serialization_device_id_fuzztest.cc",
-  ]
-  deps = [
-    ":lib",
-  ]
+  sources = [ "clock_serialization_device_id_fuzztest.cc" ]
+  deps = [ ":lib" ]
 }

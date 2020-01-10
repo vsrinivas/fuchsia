@@ -5,9 +5,7 @@
 zx_library("elf-search") {
   sdk = "source"
   sdk_headers = [ "elf-search.h" ]
-  sources = [
-    "elf-search.cc",
-  ]
+  sources = [ "elf-search.cc" ]
   public_deps = [
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/zx:headers",

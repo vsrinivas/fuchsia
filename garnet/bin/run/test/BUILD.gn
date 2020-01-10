@@ -4,15 +4,11 @@
 
 # Do not use this target directly, instead depend on //src/sys/tools/run/test:run_tests.
 group("run_tests") {
-  public_deps = [
-    "//src/sys/tools/run/test:run_tests",
-  ]
+  public_deps = [ "//src/sys/tools/run/test:run_tests" ]
   testonly = true
 }
 
 # Do not use this target directly, instead depend on //src/sys/tools/run/test:run_test_exiter.
 group("run_test_exiter") {
-  public_deps = [
-    "//src/sys/tools/run/test:run_test_exiter",
-  ]
+  public_deps = [ "//src/sys/tools/run/test:run_test_exiter" ]
 }

@@ -1,7 +1,5 @@
 zx_library("kms-stateless") {
-  sources = [
-    "kms-stateless.cc",
-  ]
+  sources = [ "kms-stateless.cc" ]
   sdk = "source"
   sdk_headers = [ "kms-stateless/kms-stateless.h" ]
 

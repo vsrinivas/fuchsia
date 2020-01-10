@@ -8,10 +8,6 @@ fidl("fuchsia.bluetooth.snoop") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "string-bounds-not-specified" ]
 
-  sources = [
-    "snooper.fidl",
-  ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.bluetooth",
-  ]
+  sources = [ "snooper.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.bluetooth" ]
 }

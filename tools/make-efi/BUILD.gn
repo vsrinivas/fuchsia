@@ -8,24 +8,16 @@ import("//build/host.gni")
 
 go_library("make-efi_lib") {
   name = "make-efi"
-  deps = [
-    "//garnet/go/src/thinfs:thinfs_lib",
-  ]
+  deps = [ "//garnet/go/src/thinfs:thinfs_lib" ]
 }
 
 go_binary("make-efi") {
   gopackage = "make-efi"
 
-  deps = [
-    ":make-efi_lib",
-  ]
+  deps = [ ":make-efi_lib" ]
 }
 
 install_host_tools("host") {
-  deps = [
-    ":make-efi",
-  ]
-  outputs = [
-    "make-efi",
-  ]
+  deps = [ ":make-efi" ]
+  outputs = [ "make-efi" ]
 }

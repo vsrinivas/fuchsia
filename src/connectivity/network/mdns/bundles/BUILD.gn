@@ -4,9 +4,7 @@
 
 group("services") {
   testonly = true
-  public_deps = [
-    "//src/connectivity/network/mdns/service:mdns",
-  ]
+  public_deps = [ "//src/connectivity/network/mdns/service:mdns" ]
 }
 
 group("config") {
@@ -20,9 +18,7 @@ group("config") {
 
 group("utils") {
   testonly = true
-  public_deps = [
-    "//src/connectivity/network/mdns/util:mdns-util",
-  ]
+  public_deps = [ "//src/connectivity/network/mdns/util:mdns-util" ]
 }
 
 group("tests") {

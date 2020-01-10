@@ -7,9 +7,7 @@ zx_library("fake-bti") {
   sdk_headers = [ "lib/fake-bti/bti.h" ]
   testonly = true
   shared = true
-  sources = [
-    "fake-bti.cc",
-  ]
+  sources = [ "fake-bti.cc" ]
   deps = [
     "$zx/system/dev/lib/fake-object",
     "$zx/system/ulib/fbl",

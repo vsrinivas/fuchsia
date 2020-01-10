@@ -58,9 +58,7 @@ action("js_libs") {
     "util.js",
   ]
   generated_output = "$target_gen_dir/libs.manifest"
-  outputs = [
-    "$generated_output",
-  ]
+  outputs = [ "$generated_output" ]
   args = [ rebase_path("$generated_output", root_build_dir) ] +
          rebase_path(sources, root_build_dir)
 }
@@ -77,12 +75,8 @@ compiled_js("repl_init") {
 executable("spawn_child_test_util") {
   testonly = true
 
-  sources = [
-    "spawn_child_test_util.cc",
-  ]
-  deps = [
-    "//sdk/fidl/fuchsia.sys",
-  ]
+  sources = [ "spawn_child_test_util.cc" ]
+  deps = [ "//sdk/fidl/fuchsia.sys" ]
 }
 
 source_set("tests") {

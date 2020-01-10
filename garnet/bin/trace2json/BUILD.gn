@@ -9,9 +9,7 @@ import("//build/test.gni")
 executable("bin") {
   output_name = "trace2json"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",
@@ -27,9 +25,7 @@ source_set("lib") {
     "trace_parser.h",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fxl" ]
 
   public_deps = [
     "//garnet/lib/trace_converters:chromium",
@@ -40,12 +36,8 @@ source_set("lib") {
 }
 
 install_host_tools("trace2json") {
-  deps = [
-    ":bin",
-  ]
-  outputs = [
-    "trace2json",
-  ]
+  deps = [ ":bin" ]
+  outputs = [ "trace2json" ]
 }
 
 copy("copy_test_data") {
@@ -59,9 +51,7 @@ copy("copy_test_data") {
     "test_data/simple_trace_expected.json.gz",
   ]
 
-  outputs = [
-    "$root_out_dir/test_data/trace2json/{{source_file_part}}",
-  ]
+  outputs = [ "$root_out_dir/test_data/trace2json/{{source_file_part}}" ]
 
   metadata = {
     test_runtime_deps = [
@@ -90,7 +80,5 @@ test("trace2json_tests") {
     "//third_party/googletest:gtest",
   ]
 
-  data_deps = [
-    ":copy_test_data",
-  ]
+  data_deps = [ ":copy_test_data" ]
 }

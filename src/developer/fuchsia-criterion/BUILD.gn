@@ -26,16 +26,12 @@ rustc_library("fuchsia-criterion") {
     "//third_party/rust_crates:walkdir",
   ]
   if (local_bench) {
-    features = [
-      "local_bench",
-    ]
+    features = [ "local_bench" ]
   }
 }
 
 test_package("fuchsia-criterion-tests") {
-  deps = [
-    ":fuchsia-criterion_test",
-  ]
+  deps = [ ":fuchsia-criterion_test" ]
   tests = [
     {
       name = "fuchsia_criterion_lib_test"

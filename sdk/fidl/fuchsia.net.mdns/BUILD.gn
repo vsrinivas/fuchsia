@@ -14,11 +14,7 @@ fidl("fuchsia.net.mdns") {
 
   sdk_category = "partner"
 
-  sources = [
-    "mdns.fidl",
-  ]
+  sources = [ "mdns.fidl" ]
 
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-net",
-  ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-net" ]
 }

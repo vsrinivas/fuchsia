@@ -27,9 +27,7 @@ rustc_binary("bin") {
 }
 
 package("lowpan_spinel_driver") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "lowpan_spinel_driver"
 
@@ -43,7 +41,5 @@ package("lowpan_spinel_driver") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":bin_test",
-  ]
+  public_deps = [ ":bin_test" ]
 }

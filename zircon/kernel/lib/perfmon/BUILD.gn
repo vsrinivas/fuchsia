@@ -8,10 +8,6 @@ config("config") {
 
 zx_library("perfmon") {
   kernel = true
-  sources = [
-    "perfmon.cc",
-  ]
-  deps = [
-    "$zx/kernel/vm",
-  ]
+  sources = [ "perfmon.cc" ]
+  deps = [ "$zx/kernel/vm" ]
 }

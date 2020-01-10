@@ -4,9 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":cobalt-client-unit",
-  ]
+  deps = [ ":cobalt-client-unit" ]
 }
 
 source_set("collector-test") {
@@ -57,9 +55,7 @@ source_set("metrics-test") {
 
 source_set("in-memory-logger-test") {
   testonly = true
-  sources = [
-    "in_memory_logger_test.cc",
-  ]
+  sources = [ "in_memory_logger_test.cc" ]
   include_dirs = [ "../include/" ]
   deps = [
     "$zx/system/ulib/cobalt-client:in-memory-logger",

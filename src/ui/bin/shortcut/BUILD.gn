@@ -19,9 +19,7 @@ group("tests") {
 }
 
 group("configs") {
-  deps = [
-    ":ui_sysmgr.config",
-  ]
+  deps = [ ":ui_sysmgr.config" ]
 }
 
 rustc_binary("bin") {
@@ -47,15 +45,11 @@ rustc_binary("bin") {
 
 config_data("ui_sysmgr.config") {
   for_pkg = "sysmgr"
-  sources = [
-    "config/ui_sysmgr.config",
-  ]
+  sources = [ "config/ui_sysmgr.config" ]
 }
 
 package("shortcut") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

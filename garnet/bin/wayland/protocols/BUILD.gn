@@ -6,9 +6,7 @@ import("//garnet/bin/wayland/protocol.gni")
 
 group("protocols") {
   testonly = true
-  deps = [
-    ":wayland",
-  ]
+  deps = [ ":wayland" ]
 }
 
 wayland_protocol("wayland") {

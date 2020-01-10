@@ -8,9 +8,7 @@ source_set("deprecated_service_provider") {
     "service_provider_impl.h",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.sys",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.sys" ]
 
   # This library is deprecated.
   #

@@ -6,9 +6,7 @@ import("//build/config.gni")
 import("//build/package.gni")
 
 package("virtual_audio_service") {
-  deps = [
-    ":virtual_audio_bin",
-  ]
+  deps = [ ":virtual_audio_bin" ]
 
   binaries = [
     {
@@ -55,10 +53,6 @@ executable("virtual_audio_bin") {
 
 config_data("virtual_audio_config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "virtual_audio_service.config",
-  ]
-  sources = [
-    "service.config",
-  ]
+  outputs = [ "virtual_audio_service.config" ]
+  sources = [ "service.config" ]
 }

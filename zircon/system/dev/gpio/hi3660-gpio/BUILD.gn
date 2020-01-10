@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("hi3660-gpio") {
-  sources = [
-    "hi3660-gpio.c",
-  ]
+  sources = [ "hi3660-gpio.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.gpioimpl",

@@ -66,11 +66,7 @@ zx_test("ftl-integration") {
 }
 
 fuzzer("ftl-read-write-fuzzer") {
-  sources = [
-    "ftl-fuzzer.cc",
-  ]
+  sources = [ "ftl-fuzzer.cc" ]
   include_dirs = [ "$zx/system/dev/block/ftl" ]
-  deps = [
-    ":shared",
-  ]
+  deps = [ ":shared" ]
 }

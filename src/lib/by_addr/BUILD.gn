@@ -14,9 +14,7 @@ rustc_library("by_addr") {
 }
 
 test_package("by_addr_tests") {
-  deps = [
-    ":by_addr_test",
-  ]
+  deps = [ ":by_addr_test" ]
 
   tests = [
     {
@@ -29,7 +27,5 @@ test_package("by_addr_tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":by_addr_tests",
-  ]
+  deps = [ ":by_addr_tests" ]
 }

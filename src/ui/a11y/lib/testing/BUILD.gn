@@ -14,13 +14,9 @@ group("testing") {
 source_set("formatting") {
   testonly = true
 
-  public = [
-    "formatting.h",
-  ]
+  public = [ "formatting.h" ]
 
-  sources = [
-    "formatting.cc",
-  ]
+  sources = [ "formatting.cc" ]
 
   public_deps = [
     "//src/ui/lib/glm_workaround",
@@ -31,13 +27,9 @@ source_set("formatting") {
 source_set("input") {
   testonly = true
 
-  public = [
-    "input.h",
-  ]
+  public = [ "input.h" ]
 
-  sources = [
-    "input.cc",
-  ]
+  sources = [ "input.cc" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.input",

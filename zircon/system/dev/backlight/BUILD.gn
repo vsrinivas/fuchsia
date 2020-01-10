@@ -12,9 +12,7 @@ group("backlight") {
 zx_test("backlight-test") {
   testonly = true
   output_name = "backlight-test"
-  sources = [
-    "backlight-test.cc",
-  ]
+  sources = [ "backlight-test.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-backlight:llcpp",
     "$zx/system/ulib/fdio",

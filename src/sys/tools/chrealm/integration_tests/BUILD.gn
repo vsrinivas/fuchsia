@@ -22,9 +22,7 @@ executable("tests") {
 
   output_name = "chrealm_integration_test"
 
-  sources = [
-    "chrealm_integration_test.cc",
-  ]
+  sources = [ "chrealm_integration_test.cc" ]
 
   deps = [
     "fidl/fuchsia.testing.chrealm",
@@ -41,9 +39,7 @@ executable("tests") {
 executable("get_message_client_bin") {
   output_name = "get_message_client"
 
-  sources = [
-    "get_message_client.cc",
-  ]
+  sources = [ "get_message_client.cc" ]
 
   deps = [
     "fidl/fuchsia.testing.chrealm",
@@ -57,9 +53,7 @@ executable("get_message_client_bin") {
 }
 
 package("chrealm_test_get_message") {
-  deps = [
-    ":get_message_client_bin",
-  ]
+  deps = [ ":get_message_client_bin" ]
 
   binary = "get_message_client"
 
@@ -72,9 +66,7 @@ package("chrealm_test_get_message") {
 }
 
 test_package("chrealm_integrationtests") {
-  deps = [
-    ":tests",
-  ]
+  deps = [ ":tests" ]
   tests = [
     {
       name = "chrealm_integration_test"

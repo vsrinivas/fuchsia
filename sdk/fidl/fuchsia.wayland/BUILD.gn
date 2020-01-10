@@ -5,11 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.wayland") {
-  sources = [
-    "view_producer.fidl",
-  ]
+  sources = [ "view_producer.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.app",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.app" ]
 }

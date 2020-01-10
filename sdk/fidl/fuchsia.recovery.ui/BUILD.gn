@@ -7,7 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.recovery.ui") {
   sdk_category = "partner"
   name = "fuchsia.recovery.ui"
-  sources = [
-    "countdown.fidl",
-  ]
+  sources = [ "countdown.fidl" ]
 }

@@ -21,15 +21,15 @@ all_deps = [
   "//garnet/lib/wlan/fidl",
   "//garnet/lib/wlan/protocol",
   "//sdk/fidl/fuchsia.wlan.mlme",
-  "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_c_server",
   "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_c_client",
+  "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_c_server",
   "//src/connectivity/wlan/lib/common/cpp:common",
-  "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
+  "//src/devices:driver",
   "//zircon/public/lib/async-cpp",
   "//zircon/public/lib/async-loop-cpp",
   "//zircon/public/lib/async-loop-default",
   "//zircon/public/lib/ddk",
-  "//src/devices:driver",
+  "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
 ]
 
 source_set("lib_source") {
@@ -48,9 +48,7 @@ source_set("test_source") {
 driver_module("wlanif_driver") {
   output_name = "wlanif"
 
-  deps = [
-    ":lib_source",
-  ]
+  deps = [ ":lib_source" ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
@@ -62,9 +60,7 @@ driver_module("wlanif_driver") {
 package("wlanif") {
   deprecated_system_image = true
 
-  deps = [
-    ":wlanif_driver",
-  ]
+  deps = [ ":wlanif_driver" ]
 
   drivers = [
     {

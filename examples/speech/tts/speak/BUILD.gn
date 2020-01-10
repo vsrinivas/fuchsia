@@ -5,9 +5,7 @@
 import("//build/package.gni")
 
 package("speak") {
-  deps = [
-    ":speak_bin",
-  ]
+  deps = [ ":speak_bin" ]
 
   binaries = [
     {
@@ -27,9 +25,7 @@ package("speak") {
 executable("speak_bin") {
   output_name = "speak"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     "//sdk/fidl/fuchsia.tts",

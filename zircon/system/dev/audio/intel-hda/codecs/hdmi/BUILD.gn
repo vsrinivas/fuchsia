@@ -3,15 +3,11 @@
 # found in the LICENSE file.
 
 group("hdmi") {
-  deps = [
-    ":hdmi-audio-codec",
-  ]
+  deps = [ ":hdmi-audio-codec" ]
 }
 
 zx_driver("hdmi-audio-codec") {
-  sources = [
-    "hdmi-codec.cc",
-  ]
+  sources = [ "hdmi-codec.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.intelhda.codec",
     "$zx/system/banjo/ddk.protocol.pci",

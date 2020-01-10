@@ -36,11 +36,7 @@ source_set("ldso") {
 
 source_set("dlstart") {
   visibility = [ ":*" ]
-  deps = [
-    "$zx/third_party/ulib/musl:musl_internal",
-  ]
-  sources = [
-    "dlstart.c",
-  ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
+  sources = [ "dlstart.c" ]
   configs += [ "$zx/public/gn/config:no_sanitizers" ]
 }

@@ -4,9 +4,7 @@
 
 group("psutils") {
   testonly = true
-  deps = [
-    ":ps",
-  ]
+  deps = [ ":ps" ]
 }
 
 zx_test("ps") {

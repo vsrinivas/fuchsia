@@ -9,9 +9,7 @@ import("//build/rust/rustc_library.gni")
 group("tests") {
   testonly = true
 
-  deps = [
-    "integration:tests",
-  ]
+  deps = [ "integration:tests" ]
 }
 
 rustc_binary("bin") {
@@ -39,9 +37,7 @@ package("http_client") {
       dest = "http_client.cmx"
     },
   ]
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {

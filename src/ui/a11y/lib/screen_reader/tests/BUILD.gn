@@ -4,9 +4,7 @@
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":screen_reader_tests",
-  ]
+  public_deps = [ ":screen_reader_tests" ]
 }
 
 executable("screen_reader_tests") {

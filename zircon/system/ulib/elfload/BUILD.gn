@@ -3,10 +3,6 @@
 # found in the LICENSE file.
 
 zx_library("elfload") {
-  sources = [
-    "elf-load.c",
-  ]
-  deps = [
-    "$zx/system/ulib/zircon",
-  ]
+  sources = [ "elf-load.c" ]
+  deps = [ "$zx/system/ulib/zircon" ]
 }

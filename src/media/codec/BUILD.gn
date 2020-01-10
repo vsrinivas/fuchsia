@@ -29,15 +29,11 @@ group("tests") {
 }
 
 group("services") {
-  public_deps = [
-    "//src/media/codec/factory",
-  ]
+  public_deps = [ "//src/media/codec/factory" ]
 }
 
 package("codec_factory") {
-  deps = [
-    "//src/media/codec/factory",
-  ]
+  deps = [ "//src/media/codec/factory" ]
 
   binaries = [
     {
@@ -62,9 +58,7 @@ package("codec_runner_sw_aac") {
     },
   ]
 
-  deps = [
-    "//src/media/codec/codecs/sw/aac:codec_runner_sw_aac",
-  ]
+  deps = [ "//src/media/codec/codecs/sw/aac:codec_runner_sw_aac" ]
 
   binaries = [
     {
@@ -82,9 +76,7 @@ package("codec_runner_sw_ffmpeg") {
     },
   ]
 
-  deps = [
-    "//src/media/codec/codecs/sw/ffmpeg:codec_runner_sw_ffmpeg",
-  ]
+  deps = [ "//src/media/codec/codecs/sw/ffmpeg:codec_runner_sw_ffmpeg" ]
 
   binaries = [
     {
@@ -102,9 +94,7 @@ package("codec_runner_sw_sbc") {
     },
   ]
 
-  deps = [
-    "//src/media/codec/codecs/sw/sbc:codec_runner_sw_sbc",
-  ]
+  deps = [ "//src/media/codec/codecs/sw/sbc:codec_runner_sw_sbc" ]
 
   binaries = [
     {

@@ -21,9 +21,7 @@ rustc_library("wlan-inspect") {
 }
 
 test_package("wlan-inspect-tests") {
-  deps = [
-    ":wlan-inspect_test",
-  ]
+  deps = [ ":wlan-inspect_test" ]
 
   tests = [
     {

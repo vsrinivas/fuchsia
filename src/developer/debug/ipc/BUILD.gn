@@ -40,9 +40,7 @@ static_library("shared") {
     "//zircon/system/public",
   ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fxl" ]
 }
 
 static_library("agent") {
@@ -51,9 +49,7 @@ static_library("agent") {
     "agent_protocol.h",
   ]
 
-  public_deps = [
-    ":shared",
-  ]
+  public_deps = [ ":shared" ]
 }
 
 static_library("client") {
@@ -62,9 +58,7 @@ static_library("client") {
     "client_protocol.h",
   ]
 
-  public_deps = [
-    ":shared",
-  ]
+  public_deps = [ ":shared" ]
 }
 
 # Unit tests for this directory. These are intended to be referenced by unit

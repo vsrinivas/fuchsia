@@ -24,9 +24,7 @@ if (target_cpu == "arm64") {
       ":test_support",
     ]
 
-    sources = [
-      "tests/test_support_disabled.cc",
-    ]
+    sources = [ "tests/test_support_disabled.cc" ]
 
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -59,9 +57,7 @@ if (target_cpu == "arm64") {
       "//src/devices/host:driver",
       "//zircon/public/lib/ddk",
     ]
-    sources = [
-      "tests/test_support.h",
-    ]
+    sources = [ "tests/test_support.h" ]
   }
 
   source_set("sources") {
@@ -185,9 +181,7 @@ if (target_cpu == "arm64") {
       "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9_2",
       "//garnet/test_data/media/third_party/chromium_media_test_data_downstream/bear.mpeg2",
     ]
-    outputs = [
-      "$root_out_dir/firmware/video_test_data/{{source_file_part}}",
-    ]
+    outputs = [ "$root_out_dir/firmware/video_test_data/{{source_file_part}}" ]
   }
 
   package("amlogic_video_decoder") {
@@ -274,9 +268,7 @@ if (target_cpu == "arm64") {
 
   executable("test_amlogic_codec_factory") {
     testonly = true
-    sources = [
-      "tests/manual/test_amlogic_codec_factory.cc",
-    ]
+    sources = [ "tests/manual/test_amlogic_codec_factory.cc" ]
     deps = [
       "//sdk/fidl/fuchsia.mediacodec",
       "//sdk/lib/sys/cpp",
@@ -287,9 +279,7 @@ if (target_cpu == "arm64") {
 
   test_package("test_amlogic_codec_factory_package") {
     if (target_cpu == "arm64") {
-      deps = [
-        ":test_amlogic_codec_factory",
-      ]
+      deps = [ ":test_amlogic_codec_factory" ]
       tests = [
         {
           name = "test_amlogic_codec_factory"

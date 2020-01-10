@@ -5,9 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("ddk.protocol.ge2d") {
-  sources = [
-    "ge2d.banjo",
-  ]
+  sources = [ "ge2d.banjo" ]
   deps = [
     "//zircon/system/banjo/ddk.protocol.camerahwaccel",
     "//zircon/system/banjo/zircon.device.sysmem",

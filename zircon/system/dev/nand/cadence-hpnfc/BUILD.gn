@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("cadence-hpnfc") {
-  sources = [
-    "cadence-hpnfc.cc",
-  ]
+  sources = [ "cadence-hpnfc.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.rawnand",
     "$zx/system/dev/lib/device-protocol-pdev",

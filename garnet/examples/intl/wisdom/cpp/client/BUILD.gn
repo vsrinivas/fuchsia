@@ -21,9 +21,7 @@ source_set("lib") {
 executable("intl_wisdom_client") {
   output_name = "intl_wisdom_client"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
   deps = [
     ":lib",

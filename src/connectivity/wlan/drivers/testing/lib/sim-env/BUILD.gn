@@ -9,9 +9,7 @@ static_library("sim-env") {
     "sim-sta-ifc.h",
   ]
 
-  deps = [
-    "//zircon/public/lib/ddk",
-  ]
+  deps = [ "//zircon/public/lib/ddk" ]
 
   public_deps = [
     "//garnet/lib/wlan/protocol:protocol",

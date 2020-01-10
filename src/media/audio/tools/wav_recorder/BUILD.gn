@@ -4,9 +4,7 @@
 import("//build/package.gni")
 
 package("wav_recorder") {
-  deps = [
-    ":wav_rec_bin",
-  ]
+  deps = [ ":wav_rec_bin" ]
 
   binaries = [
     {

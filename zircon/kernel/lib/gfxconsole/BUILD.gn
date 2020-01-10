@@ -4,9 +4,7 @@
 
 zx_library("gfxconsole") {
   kernel = true
-  sources = [
-    "gfxconsole.cc",
-  ]
+  sources = [ "gfxconsole.cc" ]
   deps = [
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/gfx",

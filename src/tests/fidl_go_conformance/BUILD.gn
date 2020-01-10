@@ -31,33 +31,24 @@ go_library("conformance_tests_library") {
     ":copy_test_utils",
   ]
 
-  deps = [
-    "${conformance_suite_fidl_target}(${go_toolchain})",
-  ]
+  deps = [ "${conformance_suite_fidl_target}(${go_toolchain})" ]
 }
 
 copy("copy_test_utils") {
-  sources = [
-    "//third_party/go/src/syscall/zx/fidl/fidl_test/testutil_test.go",
-  ]
-  outputs = [
-    "${generated_dir}/testutil_test.go",
-  ]
+  sources =
+      [ "//third_party/go/src/syscall/zx/fidl/fidl_test/testutil_test.go" ]
+  outputs = [ "${generated_dir}/testutil_test.go" ]
 }
 
 go_test("fidl_go_conformance_tests") {
   test = true
   gopackages = [ "conformance_tests" ]
-  deps = [
-    ":conformance_tests_library",
-  ]
+  deps = [ ":conformance_tests_library" ]
   non_go_deps = [ ":conformance_suite" ]
 }
 
 test_package("fidl_go_conformance") {
-  deps = [
-    ":fidl_go_conformance_tests",
-  ]
+  deps = [ ":fidl_go_conformance_tests" ]
   binaries = [
     {
       name = "fidl_go_conformance_tests"
@@ -72,7 +63,5 @@ test_package("fidl_go_conformance") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fidl_go_conformance",
-  ]
+  deps = [ ":fidl_go_conformance" ]
 }

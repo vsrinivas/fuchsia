@@ -8,9 +8,7 @@ zx_library("fs-pty") {
   static = true
 
   sources = []
-  deps = [
-    ":common",
-  ]
+  deps = [ ":common" ]
 }
 
 source_set("common") {

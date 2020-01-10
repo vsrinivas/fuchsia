@@ -69,7 +69,5 @@ unittest_package("audio_effects_loader_unittests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":audio_effects_loader_unittests",
-  ]
+  deps = [ ":audio_effects_loader_unittests" ]
 }

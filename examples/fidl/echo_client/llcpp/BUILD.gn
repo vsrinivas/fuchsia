@@ -6,9 +6,7 @@ import("//build/package.gni")
 
 executable("echo_client") {
   output_name = "example_fidl_llcpp_echo_client"
-  sources = [
-    "echo_client.cc",
-  ]
+  sources = [ "echo_client.cc" ]
 
   deps = [
     "//examples/fidl/echo_server/cpp:echo_server",
@@ -23,9 +21,7 @@ executable("echo_client") {
 }
 
 package("echo_service_client_llcpp") {
-  deps = [
-    ":echo_client",
-  ]
+  deps = [ ":echo_client" ]
 
   binaries = [
     {

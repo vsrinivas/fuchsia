@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("uart16550") {
-  sources = [
-    "uart16550.cc",
-  ]
+  sources = [ "uart16550.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.acpi",
     "$zx/system/banjo/ddk.protocol.serialimpl",

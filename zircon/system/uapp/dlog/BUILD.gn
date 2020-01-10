@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("dlog") {
-  sources = [
-    "dlog.c",
-  ]
+  sources = [ "dlog.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/fdio",

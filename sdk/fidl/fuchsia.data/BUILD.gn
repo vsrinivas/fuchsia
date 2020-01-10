@@ -13,7 +13,5 @@ fidl("fuchsia.data") {
 
   sdk_category = "internal"
 
-  sources = [
-    "data.fidl",
-  ]
+  sources = [ "data.fidl" ]
 }

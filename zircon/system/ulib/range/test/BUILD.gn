@@ -4,9 +4,7 @@
 
 group("test") {
   testonly = true
-  deps = [
-    ":range",
-  ]
+  deps = [ ":range" ]
 }
 
 zx_test("range") {

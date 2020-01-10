@@ -32,10 +32,6 @@ zx_test("affine") {
 }
 
 fuzzer("affine-fuzzer") {
-  sources = [
-    "affine-fuzzer.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/affine",
-  ]
+  sources = [ "affine-fuzzer.cc" ]
+  deps = [ "$zx/system/ulib/affine" ]
 }

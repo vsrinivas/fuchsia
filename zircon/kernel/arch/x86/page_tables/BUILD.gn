@@ -4,12 +4,8 @@
 
 zx_library("page_tables") {
   kernel = true
-  sources = [
-    "page_tables.cc",
-  ]
-  deps = [
-    "$zx/kernel/lib/fbl",
-  ]
+  sources = [ "page_tables.cc" ]
+  deps = [ "$zx/kernel/lib/fbl" ]
   public_deps = [
     # <arch/x86/page_tables/page_tables.h> has #include <hwreg/bitfields.h>.
     "$zx/system/ulib/hwreg:headers",

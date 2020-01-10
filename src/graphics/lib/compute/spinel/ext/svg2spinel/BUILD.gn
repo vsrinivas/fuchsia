@@ -26,9 +26,7 @@ source_set("svg2spinel") {
 }
 
 graphics_compute_unittests("svg2spinel_unittests") {
-  sources = [
-    "svg2spinel_unittest.cc",
-  ]
+  sources = [ "svg2spinel_unittest.cc" ]
   include_dirs = [ "${graphics_compute_dir}/spinel" ]
   deps = [
     ":svg2spinel",

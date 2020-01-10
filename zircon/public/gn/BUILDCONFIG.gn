@@ -257,9 +257,7 @@ template("shared_library") {
                                "visibility",
                              ])
       not_needed(invoker, "*")
-      public_deps = [
-        ":$target_name(${toolchain.shlib})",
-      ]
+      public_deps = [ ":$target_name(${toolchain.shlib})" ]
     }
   }
 }
@@ -638,9 +636,7 @@ template("library") {
           public_deps = []
         }
         public_deps += [ ":${_library_name}.headers" ]
-        deps = [
-          ":${_library_name}._sources",
-        ]
+        deps = [ ":${_library_name}._sources" ]
 
         # TODO(BLD-353): temporary hacks
         metadata = legacy_metadata
@@ -676,9 +672,7 @@ template("library") {
         # Everything that depends on the library gets the headers.
         # It also gets the explicit `public_deps`, which includes
         # any header dependencies or other targets with public_configs.
-        public_deps = [
-          ":${_library_name}.headers",
-        ]
+        public_deps = [ ":${_library_name}.headers" ]
         if (defined(invoker.public_deps)) {
           public_deps += invoker.public_deps
         }
@@ -688,9 +682,7 @@ template("library") {
         # dependencies that affect linking rather than just compilation.
         # Other dependencies are redundant since the source_set() already
         # has them, but they don't hurt.
-        deps = [
-          ":${_library_name}._sources",
-        ]
+        deps = [ ":${_library_name}._sources" ]
         if (defined(invoker.deps)) {
           deps += invoker.deps
         }
@@ -753,13 +745,9 @@ template("library") {
                                "visibility",
                              ])
       if (shared) {
-        public_deps = [
-          ":${_library_name}.shared",
-        ]
+        public_deps = [ ":${_library_name}.shared" ]
       } else {
-        public_deps = [
-          ":${_library_name}.static",
-        ]
+        public_deps = [ ":${_library_name}.static" ]
       }
     }
   }
@@ -773,9 +761,7 @@ template("library") {
                                "testonly",
                                "visibility",
                              ])
-      public_deps = [
-        ":${_library_name}.headers",
-      ]
+      public_deps = [ ":${_library_name}.headers" ]
     }
   }
 
@@ -821,9 +807,7 @@ template("library") {
                                "testonly",
                                "visibility",
                              ])
-      public_deps = [
-        ":${_library_name}.headers",
-      ]
+      public_deps = [ ":${_library_name}.headers" ]
     }
 
     # This is really only used in the $zx/kernel:kernel environment().
@@ -838,9 +822,7 @@ template("library") {
                                    "testonly",
                                    "visibility",
                                  ])
-          public_deps = [
-            ":${_library_name}.static",
-          ]
+          public_deps = [ ":${_library_name}.static" ]
         }
       }
       if (shared) {
@@ -850,9 +832,7 @@ template("library") {
                                    "testonly",
                                    "visibility",
                                  ])
-          public_deps = [
-            ":${_library_name}.shared",
-          ]
+          public_deps = [ ":${_library_name}.shared" ]
         }
       }
     }
@@ -1078,9 +1058,7 @@ template("_variant_target") {
                                    "testonly",
                                    "visibility",
                                  ])
-          public_deps = [
-            ":$other_target_name(${other.label})",
-          ]
+          public_deps = [ ":$other_target_name(${other.label})" ]
         }
       }
     }
@@ -1158,9 +1136,7 @@ template("_variant_target") {
                                  "testonly",
                                  "visibility",
                                ])
-        public_deps = [
-          ":$builder_target_name",
-        ]
+        public_deps = [ ":$builder_target_name" ]
         metadata = {
           if (defined(invoker.metadata)) {
             forward_variables_from(invoker.metadata, "*")
@@ -1180,9 +1156,7 @@ template("_variant_target") {
                                  "testonly",
                                  "visibility",
                                ])
-        public_deps = [
-          ":$main_target_name($builder_toolchain)",
-        ]
+        public_deps = [ ":$main_target_name($builder_toolchain)" ]
       }
     }
 
@@ -1198,9 +1172,7 @@ template("_variant_target") {
                                    "testonly",
                                    "visibility",
                                  ])
-          public_deps = [
-            ":$variant_target_name(${toolchain.shlib})",
-          ]
+          public_deps = [ ":$variant_target_name(${toolchain.shlib})" ]
         }
       }
 
@@ -1220,9 +1192,7 @@ template("_variant_target") {
                                    "testonly",
                                    "visibility",
                                  ])
-          public_deps = [
-            ":$builder_target_name",
-          ]
+          public_deps = [ ":$builder_target_name" ]
           metadata = {
             if (defined(invoker.metadata)) {
               forward_variables_from(invoker.metadata, "*")
@@ -1483,9 +1453,7 @@ template("test") {
         data_keys = [ "test_runtime_deps" ]
         output_conversion = "json"
         rebase = root_build_dir
-        outputs = [
-          runtime_deps_file,
-        ]
+        outputs = [ runtime_deps_file ]
         forward_variables_from(invoker,
                                [
                                  "deps",
@@ -1913,9 +1881,7 @@ template("driver") {
     data_keys = [ "driver_shlib_denylist" ]
     walk_keys = [ "driver_shlib_denylist_barrier" ]
     output_conversion = "list lines"
-    outputs = [
-      denylist_file,
-    ]
+    outputs = [ denylist_file ]
   }
 
   # GN doesn't provide a way to assert it was empty at gen time.
@@ -1928,15 +1894,9 @@ template("driver") {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":${driver_target}._build($current_toolchain)" ]
     script = "$zx/public/gn/driver-denylist-check.sh"
-    deps = [
-      ":$denylist_target",
-    ]
-    sources = [
-      denylist_file,
-    ]
-    outputs = [
-      "${denylist_file}.stamp",
-    ]
+    deps = [ ":$denylist_target" ]
+    sources = [ denylist_file ]
+    outputs = [ "${denylist_file}.stamp" ]
     args = [ driver_label ] +
            rebase_path(sources + outputs + [
                              "$prebuilt_dir/third_party/gn/$host_platform/gn",

@@ -23,9 +23,8 @@ group("network") {
 
 group("openssh_keys") {
   testonly = true
-  public_deps = [
-    "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
-  ]
+  public_deps =
+      [ "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config" ]
 }
 
 group("router") {
@@ -46,37 +45,27 @@ group("amber") {
 
 group("sl4f") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/sl4f:sl4f_sysmgr_config",
-  ]
+  public_deps = [ "//garnet/bin/sl4f:sl4f_sysmgr_config" ]
 }
 
 # WARNING: Known to infrastructure.
 group("amber_auto_ota") {
   testonly = true
-  public_deps = [
-    "//src/sys/pkg/bin/system-update-checker:auto_update",
-  ]
+  public_deps = [ "//src/sys/pkg/bin/system-update-checker:auto_update" ]
 }
 
 group("terminal") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/terminal:tiles_with_terminal_config",
-  ]
+  public_deps = [ "//garnet/bin/terminal:tiles_with_terminal_config" ]
 }
 
 group("services") {
   testonly = true
-  public_deps = [
-    "//garnet/bin/sysmgr:services_config",
-  ]
+  public_deps = [ "//garnet/bin/sysmgr:services_config" ]
 }
 
 group("shortcut") {
-  public_deps = [
-    "//src/ui/bin/shortcut:configs",
-  ]
+  public_deps = [ "//src/ui/bin/shortcut:configs" ]
 }
 
 group("factory_reset") {

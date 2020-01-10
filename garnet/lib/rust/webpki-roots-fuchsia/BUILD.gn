@@ -20,9 +20,7 @@ rustc_library("webpki-roots-fuchsia") {
 }
 
 test_package("webpki-roots-fuchsia_tests") {
-  deps = [
-    ":webpki-roots-fuchsia_test",
-  ]
+  deps = [ ":webpki-roots-fuchsia_test" ]
 
   tests = [
     {

@@ -8,9 +8,7 @@ import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":recovery_integration_test",
-  ]
+  deps = [ ":recovery_integration_test" ]
 }
 
 rustc_test("bin") {
@@ -30,9 +28,7 @@ rustc_test("bin") {
 }
 
 test_package("recovery_integration_test") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   tests = [
     {

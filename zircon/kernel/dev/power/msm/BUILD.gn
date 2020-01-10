@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("msm") {
-  sources = [
-    "power.cc",
-  ]
+  sources = [ "power.cc" ]
   deps = [
     "$zx/kernel/dev/pdev",
     "$zx/kernel/dev/pdev/power",

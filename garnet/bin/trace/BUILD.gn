@@ -7,13 +7,9 @@ import("//build/package.gni")
 executable("bin") {
   output_name = "trace"
 
-  sources = [
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
 
-  deps = [
-    ":trace_app",
-  ]
+  deps = [ ":trace_app" ]
 }
 
 source_set("trace_app") {
@@ -81,9 +77,7 @@ source_set("spec") {
 source_set("unittests") {
   testonly = true
 
-  sources = [
-    "spec_unittest.cc",
-  ]
+  sources = [ "spec_unittest.cc" ]
 
   deps = [
     ":spec",
@@ -94,9 +88,7 @@ source_set("unittests") {
 }
 
 package("trace") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
@@ -114,7 +106,5 @@ package("trace") {
 
   # If your build includes the target trace tool, your $host_tools_dir
   # contains the utilities to work with traces copied from the target.
-  data_deps = [
-    "//garnet/bin/traceutil",
-  ]
+  data_deps = [ "//garnet/bin/traceutil" ]
 }

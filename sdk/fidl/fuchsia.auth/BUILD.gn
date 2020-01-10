@@ -24,7 +24,5 @@ fidl("fuchsia.auth") {
     "token_manager.fidl",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.views",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.views" ]
 }

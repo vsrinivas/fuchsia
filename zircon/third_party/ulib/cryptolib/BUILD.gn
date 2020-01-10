@@ -4,7 +4,5 @@
 
 zx_library("cryptolib") {
   kernel = true
-  sources = [
-    "cryptolib.c",
-  ]
+  sources = [ "cryptolib.c" ]
 }

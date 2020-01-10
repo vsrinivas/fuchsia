@@ -4,9 +4,7 @@
 
 source_set("sync-completion") {
   testonly = true
-  sources = [
-    "completion.cc",
-  ]
+  sources = [ "completion.cc" ]
   deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fdio",

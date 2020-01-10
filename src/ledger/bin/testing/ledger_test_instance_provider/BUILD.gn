@@ -7,9 +7,7 @@ import("//build/package.gni")
 executable("ledger_test_instance_provider_bin") {
   testonly = true
 
-  sources = [
-    "ledger_test_instance_provider.cc",
-  ]
+  sources = [ "ledger_test_instance_provider.cc" ]
 
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
@@ -21,9 +19,7 @@ executable("ledger_test_instance_provider_bin") {
 
   configs += [ "//src/ledger:ledger_config" ]
 
-  public_deps = [
-    "//src/ledger/lib/convert",
-  ]
+  public_deps = [ "//src/ledger/lib/convert" ]
 }
 
 package("ledger_test_instance_provider") {
@@ -38,7 +34,5 @@ package("ledger_test_instance_provider") {
 
   binary = "ledger_test_instance_provider_bin"
 
-  deps = [
-    ":ledger_test_instance_provider_bin",
-  ]
+  deps = [ ":ledger_test_instance_provider_bin" ]
 }

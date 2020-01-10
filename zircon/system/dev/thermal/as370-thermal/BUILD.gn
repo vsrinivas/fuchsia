@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("as370-thermal") {
-  sources = [
-    "as370-thermal.cc",
-  ]
+  sources = [ "as370-thermal.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.composite",
@@ -33,7 +31,6 @@ zx_test("as370-thermal-test") {
     "as370-thermal.cc",
   ]
   deps = [
-    "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/banjo/ddk.protocol.clock",
     "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.platform.device",
@@ -41,6 +38,7 @@ zx_test("as370-thermal-test") {
     "$zx/system/dev/lib/as370",
     "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/fidl/fuchsia-hardware-thermal:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",

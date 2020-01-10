@@ -199,19 +199,13 @@ copy("copy_test_so") {
 
   # Use a ".targetso" extension because this isn't a library that can actually
   # loaded on the host platform.
-  outputs = [
-    "$root_out_dir/test_data/zxdb/{{source_name_part}}.targetso",
-  ]
+  outputs = [ "$root_out_dir/test_data/zxdb/{{source_name_part}}.targetso" ]
 
-  deps = [
-    "test_data:zxdb_symbol_test(${default_toolchain}-shared)",
-  ]
+  deps = [ "test_data:zxdb_symbol_test(${default_toolchain}-shared)" ]
 }
 
 copy("copy_dot_buildid") {
-  sources = [
-    "test_data/libsymbol_test_so.targetso",
-  ]
+  sources = [ "test_data/libsymbol_test_so.targetso" ]
 
   outputs = [
     "$root_out_dir/test_data/zxdb/build_id/.build-id/be/807a2ad9b56020.debug",
@@ -225,12 +219,8 @@ if (current_toolchain == host_toolchain) {
     #   int main() { return 1; }
     # on Linux with:
     #   gcc -O2 file.c
-    sources = [
-      "test_data/small_test_file.elf",
-    ]
-    outputs = [
-      "$root_out_dir/test_data/zxdb/small_test_file.elf",
-    ]
+    sources = [ "test_data/small_test_file.elf" ]
+    outputs = [ "$root_out_dir/test_data/zxdb/small_test_file.elf" ]
 
     metadata = {
       test_runtime_deps = outputs
@@ -283,8 +273,8 @@ source_set("tests") {
   ]
 
   data_deps = [
-    ":copy_test_so",
     ":copy_dot_buildid",
+    ":copy_test_so",
   ]
 
   metadata = {
@@ -296,9 +286,7 @@ source_set("tests") {
 source_set("perf_tests") {
   testonly = true
 
-  sources = [
-    "index_perftest.cc",
-  ]
+  sources = [ "index_perftest.cc" ]
 
   deps = [
     ":symbols",

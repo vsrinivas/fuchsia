@@ -64,21 +64,16 @@ source_set("vulkan") {
   public_configs = [ ":vulkan_config" ]
 
   if (is_fuchsia) {
-    public_deps = [
-      "//src/lib/vulkan",
-    ]
+    public_deps = [ "//src/lib/vulkan" ]
   } else if (escher_use_null_vulkan_config_on_host) {
     # Host build using stub Vulkan implementation.
     # Only include the Vulkan headers: since this is used for host builds, we
     # don't want to depend on the full //src/lib/vulkan impementation.
     # It which brings in Zircon dependencies which cannot be compiled.
-    public_deps = [
-      "//src/lib/vulkan:headers",
-    ]
+    public_deps = [ "//src/lib/vulkan:headers" ]
 
-    sources = [
-      "//src/ui/lib/escher/third_party/null_vulkan/escher_null_vulkan.cc",
-    ]
+    sources =
+        [ "//src/ui/lib/escher/third_party/null_vulkan/escher_null_vulkan.cc" ]
   }
 }
 
@@ -487,7 +482,5 @@ escher_library("escher_no_glslang") {
 
 group("unittests") {
   testonly = true
-  deps = [
-    "//src/ui/lib/escher/test:escher_unittests",
-  ]
+  deps = [ "//src/ui/lib/escher/test:escher_unittests" ]
 }

@@ -22,9 +22,7 @@ rustc_library("mold") {
 }
 
 unittest_package("mold-tests") {
-  deps = [
-    ":mold_test",
-  ]
+  deps = [ ":mold_test" ]
   tests = [
     {
       name = "mold_lib_test"

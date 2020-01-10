@@ -5,7 +5,5 @@
 import("$zx_build/public/gn/fidl.gni")
 
 fidl_library("fuchsia-telephony-snoop") {
-  sources = [
-    "tel-snoop.fidl",
-  ]
+  sources = [ "tel-snoop.fidl" ]
 }

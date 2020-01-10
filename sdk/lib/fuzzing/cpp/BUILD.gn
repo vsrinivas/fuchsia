@@ -18,9 +18,7 @@ source_set("cpp") {
 
 source_set("traits") {
   testonly = true
-  sources = [
-    "traits.h",
-  ]
+  sources = [ "traits.h" ]
   public_configs = [ "//sdk/config" ]
   public_deps = [
     ":cpp",
@@ -31,15 +29,11 @@ source_set("traits") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fuzzing_traits_unittests",
-  ]
+  deps = [ ":fuzzing_traits_unittests" ]
 }
 
 test("fuzzing_traits_unittests") {
-  sources = [
-    "traits_unittest.cc",
-  ]
+  sources = [ "traits_unittest.cc" ]
   deps = [
     ":traits",
     "//src/lib/fxl/test:gtest_main",
@@ -47,9 +41,7 @@ test("fuzzing_traits_unittests") {
 }
 
 test_package("fuzzing_traits_tests") {
-  deps = [
-    ":fuzzing_traits_unittests",
-  ]
+  deps = [ ":fuzzing_traits_unittests" ]
   tests = [
     {
       name = "fuzzing_traits_unittests"
@@ -58,9 +50,7 @@ test_package("fuzzing_traits_tests") {
 }
 
 test("fuzz_input_unittests") {
-  sources = [
-    "fuzz_input_unittest.cc",
-  ]
+  sources = [ "fuzz_input_unittest.cc" ]
 
   deps = [
     ":cpp",
@@ -70,10 +60,6 @@ test("fuzz_input_unittests") {
 
 install_host_tools("host_tests") {
   testonly = true
-  deps = [
-    ":fuzz_input_unittests",
-  ]
-  outputs = [
-    "fuzz_input_unittests",
-  ]
+  deps = [ ":fuzz_input_unittests" ]
+  outputs = [ "fuzz_input_unittests" ]
 }

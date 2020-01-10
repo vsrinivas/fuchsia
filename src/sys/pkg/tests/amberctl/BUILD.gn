@@ -95,7 +95,5 @@ test_package("amberctl-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":amberctl-tests",
-  ]
+  public_deps = [ ":amberctl-tests" ]
 }

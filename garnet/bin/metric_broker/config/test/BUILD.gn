@@ -8,17 +8,13 @@ import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
-  public_deps = [
-    ":metric_broker_config_tests",
-  ]
+  public_deps = [ ":metric_broker_config_tests" ]
 }
 
 executable("json_reader_test") {
   testonly = true
   output_name = "json_reader_test"
-  sources = [
-    "json_reader_test.cc",
-  ]
+  sources = [ "json_reader_test.cc" ]
   deps = [
     "//garnet/bin/metric_broker/config:json_reader",
     "//src/lib/fxl/test:gtest_main",
@@ -35,9 +31,7 @@ unittest_package("metric_broker_config_tests") {
     },
   ]
 
-  deps = [
-    ":json_reader_test",
-  ]
+  deps = [ ":json_reader_test" ]
 
   resources = [
     {

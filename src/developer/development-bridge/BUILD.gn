@@ -74,9 +74,7 @@ group("tests") {
 fidl("bridge") {
   name = "fidl.developer.bridge"
 
-  sources = [
-    "fidl/daemon.fidl",
-  ]
+  sources = [ "fidl/daemon.fidl" ]
 
   fuzzers = [
     {

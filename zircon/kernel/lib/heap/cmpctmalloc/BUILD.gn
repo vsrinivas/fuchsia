@@ -4,11 +4,7 @@
 
 zx_library("cmpctmalloc") {
   kernel = true
-  sources = [
-    "cmpctmalloc.cc",
-  ]
-  deps = [
-    "$zx/kernel/lib/counters",
-  ]
+  sources = [ "cmpctmalloc.cc" ]
+  deps = [ "$zx/kernel/lib/counters" ]
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

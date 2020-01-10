@@ -42,9 +42,7 @@ driver_module("imx227_driver") {
 package("imx227") {
   deprecated_system_image = true
 
-  deps = [
-    ":imx227_driver",
-  ]
+  deps = [ ":imx227_driver" ]
 
   drivers = [
     {

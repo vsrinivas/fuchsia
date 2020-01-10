@@ -13,9 +13,7 @@ rustc_library("shared-buffer") {
 }
 
 unittest_package("shared-buffer-tests") {
-  deps = [
-    ":shared-buffer_test",
-  ]
+  deps = [ ":shared-buffer_test" ]
 
   tests = [
     {
@@ -26,7 +24,5 @@ unittest_package("shared-buffer-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":shared-buffer-tests",
-  ]
+  public_deps = [ ":shared-buffer-tests" ]
 }

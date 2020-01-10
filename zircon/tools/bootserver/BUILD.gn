@@ -8,7 +8,5 @@ zx_host_tool("bootserver") {
     "netboot.c",
     "tftp.c",
   ]
-  deps = [
-    "$zx/system/ulib/tftp",
-  ]
+  deps = [ "$zx/system/ulib/tftp" ]
 }

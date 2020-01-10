@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("driver") {
-  public_deps = [
-    "$zx/system/core/devmgr/devhost:driver",
-  ]
+  public_deps = [ "$zx/system/core/devmgr/devhost:driver" ]
 }

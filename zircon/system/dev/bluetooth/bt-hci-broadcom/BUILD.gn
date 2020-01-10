@@ -5,9 +5,7 @@
 import("$zx/public/gn/firmware.gni")
 
 zx_driver("bt-hci-broadcom") {
-  sources = [
-    "bt-hci-broadcom.c",
-  ]
+  sources = [ "bt-hci-broadcom.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.bt.hci",
     "$zx/system/banjo/ddk.protocol.serialimpl.async",
@@ -17,22 +15,16 @@ zx_driver("bt-hci-broadcom") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
   ]
-  data_deps = [
-    ":firmware",
-  ]
+  data_deps = [ ":firmware" ]
 }
 
 firmware("firmware") {
-  sources = [
-    "$firmware_dir/bluetooth/bcm4345c4/BCM4345C5.hcd",
-  ]
+  sources = [ "$firmware_dir/bluetooth/bcm4345c4/BCM4345C5.hcd" ]
 }
 
 zx_test("bt-hci-broadcom-test") {
   output_name = "bt-hci-broadcom-test"
-  sources = [
-    "bt-hci-broadcom-test.c",
-  ]
+  sources = [ "bt-hci-broadcom-test.c" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.bt.hci",
     "$zx/system/banjo/ddk.protocol.serialimpl.async",

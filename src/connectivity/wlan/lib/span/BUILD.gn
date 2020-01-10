@@ -14,9 +14,7 @@ rustc_library("wlan-span") {
 }
 
 unittest_package("wlan-span-tests") {
-  deps = [
-    ":wlan-span_test",
-  ]
+  deps = [ ":wlan-span_test" ]
 
   tests = [
     {

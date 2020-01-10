@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 source_set("debugcommands") {
-  sources = [
-    "debugcommands.cc",
-  ]
+  sources = [ "debugcommands.cc" ]
   deps = [
     "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",

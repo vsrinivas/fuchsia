@@ -17,7 +17,5 @@ go_library("main") {
 
 go_binary("debroot") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/debroot"
-  deps = [
-    ":main",
-  ]
+  deps = [ ":main" ]
 }

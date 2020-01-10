@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("refcount") {
-  sources = [
-    "blocking_refcount.cc",
-  ]
+  sources = [ "blocking_refcount.cc" ]
   public_deps = [
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zx",
@@ -14,16 +12,12 @@ zx_library("refcount") {
 
 group("test") {
   testonly = true
-  deps = [
-    ":refcount-test",
-  ]
+  deps = [ ":refcount-test" ]
 }
 
 zx_test("refcount-test") {
   testonly = true
-  sources = [
-    "blocking_refcount_test.cc",
-  ]
+  sources = [ "blocking_refcount_test.cc" ]
   deps = [
     ":refcount",
     "$zx/system/ulib/fbl",

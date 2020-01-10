@@ -48,9 +48,7 @@ rustc_binary("bin") {
 }
 
 package("discovermgr") {
-  deps = [
-    ":bin",
-  ]
+  deps = [ ":bin" ]
 
   binary = "discovermgr"
 
@@ -63,9 +61,7 @@ package("discovermgr") {
 }
 
 test_package("discovermgr_tests") {
-  deps = [
-    ":bin_test",
-  ]
+  deps = [ ":bin_test" ]
 
   resources = [
     {

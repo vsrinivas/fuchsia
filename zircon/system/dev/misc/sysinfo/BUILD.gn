@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("sysinfo") {
-  sources = [
-    "sysinfo.c",
-  ]
+  sources = [ "sysinfo.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:c",
     "$zx/system/ulib/ddk",

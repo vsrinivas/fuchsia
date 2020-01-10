@@ -10,9 +10,7 @@ zx_driver("serial") {
 }
 
 source_set("common") {
-  sources = [
-    "serial.cc",
-  ]
+  sources = [ "serial.cc" ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.serial",
     "$zx/system/banjo/ddk.protocol.serialimpl",

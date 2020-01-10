@@ -100,12 +100,8 @@ foreach(entry, zircon_test_specs) {
             string_replace("_zircon_host_tests.$entry", "/", "_")
 
         copy(copy_dep_target_name) {
-          sources = [
-            "$zircon_root_build_dir/$entry",
-          ]
-          outputs = [
-            "$root_build_dir/$entry",
-          ]
+          sources = [ "$zircon_root_build_dir/$entry" ]
+          outputs = [ "$root_build_dir/$entry" ]
         }
         copy_deps += [ ":$copy_dep_target_name" ]
       }
@@ -116,12 +112,8 @@ foreach(entry, zircon_test_specs) {
 
     copy(copy_target_name) {
       testonly = true
-      sources = [
-        "$zircon_root_build_dir/${zircon_test.path}",
-      ]
-      outputs = [
-        "$root_build_dir/${zircon_test.path}",
-      ]
+      sources = [ "$zircon_root_build_dir/${zircon_test.path}" ]
+      outputs = [ "$root_build_dir/${zircon_test.path}" ]
       deps = copy_deps
 
       metadata = {
@@ -161,7 +153,5 @@ group("zircon_host_tests") {
 
 group("host_tests") {
   testonly = true
-  public_deps = [
-    "//src/ledger:host_tests",
-  ]
+  public_deps = [ "//src/ledger:host_tests" ]
 }

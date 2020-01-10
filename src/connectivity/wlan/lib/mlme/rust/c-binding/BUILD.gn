@@ -32,15 +32,11 @@ rustc_staticlib("wlan-mlme-c") {
     "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
   ]
 
-  public = [
-    "bindings.h",
-  ]
+  public = [ "bindings.h" ]
 }
 
 unittest_package("wlan-mlme-c-tests") {
-  deps = [
-    ":wlan-mlme-c_test",
-  ]
+  deps = [ ":wlan-mlme-c_test" ]
 
   tests = [
     {

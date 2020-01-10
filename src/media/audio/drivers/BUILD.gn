@@ -3,14 +3,10 @@
 
 group("drivers") {
   testonly = true
-  deps = [
-    "virtual_audio",
-  ]
+  deps = [ "virtual_audio" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "test",
-  ]
+  deps = [ "test" ]
 }

@@ -26,6 +26,7 @@ zx_driver("platform-bus") {
     "$zx/system/banjo/ddk.protocol.powerimpl",
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/fidl/fuchsia-boot:c",
+
     #TODO(puneetha) : remove c and keep only llcpp when sysinfo driver is removed
     "$zx/system/fidl/fuchsia-sysinfo:c",
     "$zx/system/fidl/fuchsia-sysinfo:llcpp",
@@ -43,9 +44,7 @@ zx_driver("platform-bus") {
 }
 
 zx_driver("platform-bus.proxy") {
-  sources = [
-    "platform-proxy.cc",
-  ]
+  sources = [ "platform-proxy.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/ulib/ddk",

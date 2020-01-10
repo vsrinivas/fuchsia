@@ -6,9 +6,7 @@ import("//build/fidl/fidl.gni")
 
 group("service") {
   testonly = true
-  deps = [
-    ":interface_passing",
-  ]
+  deps = [ ":interface_passing" ]
 }
 
 fidl("interface_passing") {
@@ -17,11 +15,7 @@ fidl("interface_passing") {
 
   name = "fuchsia.overnet.examples.interfacepassing"
 
-  sources = [
-    "interface_passing.fidl",
-  ]
+  sources = [ "interface_passing.fidl" ]
 
-  public_deps = [
-    "//garnet/examples/fidl/services:echo",
-  ]
+  public_deps = [ "//garnet/examples/fidl/services:echo" ]
 }

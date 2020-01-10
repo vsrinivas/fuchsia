@@ -3,7 +3,5 @@
 # found in the LICENSE file.
 
 group("sysmem") {
-  deps = [
-    "sysmem",
-  ]
+  deps = [ "sysmem" ]
 }

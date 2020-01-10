@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_test("race-tests") {
-  sources = [
-    "race-tests.cc",
-  ]
+  sources = [ "race-tests.cc" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

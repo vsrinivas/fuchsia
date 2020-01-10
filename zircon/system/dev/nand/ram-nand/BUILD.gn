@@ -24,9 +24,7 @@ zx_driver("ram-nand") {
 
 source_set("common") {
   visibility = [ ":*" ]
-  sources = [
-    "ram-nand.cc",
-  ]
+  sources = [ "ram-nand.cc" ]
   deps = [
     "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/fidl/fuchsia-hardware-nand:c",

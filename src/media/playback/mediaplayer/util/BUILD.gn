@@ -31,9 +31,7 @@ source_set("util") {
 test("tests") {
   output_name = "mediaplayer_util_tests"
 
-  sources = [
-    "test/incident_test.cc",
-  ]
+  sources = [ "test/incident_test.cc" ]
 
   deps = [
     ":util",

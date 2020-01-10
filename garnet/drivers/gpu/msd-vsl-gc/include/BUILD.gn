@@ -9,10 +9,8 @@ config("msd_include_config") {
 source_set("include") {
   public_configs = [ ":msd_include_config" ]
   sources = [
-    "magma_vsl_gc_types.h",
     "magma_vendor_queries.h",
+    "magma_vsl_gc_types.h",
   ]
-  public_deps = [
-    "//garnet/lib/magma/include:magma_abi_common",
-  ]
+  public_deps = [ "//garnet/lib/magma/include:magma_abi_common" ]
 }

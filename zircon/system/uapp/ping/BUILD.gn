@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 zx_executable("ping") {
-  sources = [
-    "ping.cc",
-  ]
+  sources = [ "ping.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/inet6",
