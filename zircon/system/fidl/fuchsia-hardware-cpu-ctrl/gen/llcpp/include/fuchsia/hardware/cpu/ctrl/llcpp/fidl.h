@@ -94,6 +94,7 @@ struct Device_GetPerformanceStateInfo_Result {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
+  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -128,6 +129,7 @@ struct CpuPerformanceStateInfo {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   // Frequency the core is operating at in hertz.
   int64_t frequency_hz = {};
@@ -143,6 +145,7 @@ struct Device_GetPerformanceStateInfo_Response {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   ::llcpp::fuchsia::hardware::cpu::ctrl::CpuPerformanceStateInfo info = {};
 };
@@ -168,6 +171,7 @@ class Device final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -184,6 +188,7 @@ class Device final {
     static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -200,6 +205,7 @@ class Device final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -216,6 +222,7 @@ class Device final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -232,6 +239,7 @@ class Device final {
     static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;

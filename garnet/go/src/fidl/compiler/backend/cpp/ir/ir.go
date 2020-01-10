@@ -124,6 +124,7 @@ type XUnion struct {
 	MaxHandles   int
 	MaxOutOfLine int
 	Result       *Result
+	HasPointer   bool
 	Kind         xunionKind
 	types.Strictness
 }
@@ -164,6 +165,7 @@ type Table struct {
 	BiggestOrdinal int
 	MaxHandles     int
 	MaxOutOfLine   int
+	HasPointer     bool
 	Kind           tableKind
 }
 
@@ -192,6 +194,7 @@ type Struct struct {
 	MaxOutOfLine  int
 	HasPadding    bool
 	IsResultValue bool
+	HasPointer    bool
 	Result        *Result
 	Kind          structKind
 }
@@ -254,6 +257,7 @@ type Method struct {
 	RequestMaxOutOfLine   int
 	RequestPadding        bool
 	RequestFlexible       bool
+	RequestHasPointer     bool
 	RequestContainsUnion  bool
 	HasResponse           bool
 	Response              []Parameter
@@ -263,6 +267,7 @@ type Method struct {
 	ResponseMaxOutOfLine  int
 	ResponsePadding       bool
 	ResponseFlexible      bool
+	ResponseHasPointer    bool
 	ResponseContainsUnion bool
 	CallbackType          string
 	ResponseHandlerType   string
@@ -285,12 +290,11 @@ type LLContextProps struct {
 
 // LLProps contain properties of a method specific to llcpp
 type LLProps struct {
-	InterfaceName      string
-	CBindingCompatible bool
-	LinearizeRequest   bool
-	LinearizeResponse  bool
-	ClientContext      LLContextProps
-	ServerContext      LLContextProps
+	InterfaceName     string
+	LinearizeRequest  bool
+	LinearizeResponse bool
+	ClientContext     LLContextProps
+	ServerContext     LLContextProps
 }
 
 type Parameter struct {
@@ -836,16 +840,13 @@ func (m Method) NewLLContextProps(context LLContext) LLContextProps {
 	}
 }
 
-func (m Method) NewLLProps(r Interface) LLProps {
+func (m Method) NewLLProps(r Interface, reqTypeShape types.TypeShape, respTypeShape types.TypeShape) LLProps {
 	return LLProps{
-		InterfaceName: r.Name,
-		// If the response is not inline, then we cannot generate an out-parameter-style binding,
-		// because the out-of-line pointers would outlive their underlying managed storage.
-		CBindingCompatible: m.ResponseMaxOutOfLine == 0,
-		LinearizeRequest:   len(m.Request) > 0 && m.RequestMaxOutOfLine > 0,
-		LinearizeResponse:  len(m.Response) > 0 && m.ResponseMaxOutOfLine > 0,
-		ClientContext:      m.NewLLContextProps(clientContext),
-		ServerContext:      m.NewLLContextProps(serverContext),
+		InterfaceName:     r.Name,
+		LinearizeRequest:  len(m.Request) > 0 && reqTypeShape.Depth > 0,
+		LinearizeResponse: len(m.Response) > 0 && respTypeShape.Depth > 0,
+		ClientContext:     m.NewLLContextProps(clientContext),
+		ServerContext:     m.NewLLContextProps(serverContext),
 	}
 }
 
@@ -902,6 +903,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			RequestMaxOutOfLine:   v.RequestTypeShapeV1.MaxOutOfLine,
 			RequestPadding:        v.RequestTypeShapeV1.HasPadding,
 			RequestFlexible:       v.RequestTypeShapeV1.HasFlexibleEnvelope,
+			RequestHasPointer:     v.RequestTypeShapeV1.Depth > 0,
 			RequestContainsUnion:  v.RequestTypeShapeV1.ContainsUnion,
 			HasResponse:           v.HasResponse,
 			Response:              c.compileParameterArray(v.Response),
@@ -911,6 +913,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			ResponseMaxOutOfLine:  v.ResponseTypeShapeV1.MaxOutOfLine,
 			ResponsePadding:       v.ResponseTypeShapeV1.HasPadding,
 			ResponseFlexible:      v.ResponseTypeShapeV1.HasFlexibleEnvelope,
+			ResponseHasPointer:    v.ResponseTypeShapeV1.Depth > 0,
 			ResponseContainsUnion: v.ResponseTypeShapeV1.ContainsUnion,
 			CallbackType:          callbackType,
 			ResponseHandlerType:   fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
@@ -919,7 +922,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			Result:                result,
 		}
 
-		m.LLProps = m.NewLLProps(r)
+		m.LLProps = m.NewLLProps(r, v.RequestTypeShapeV1, v.ResponseTypeShapeV1)
 		r.Methods = append(r.Methods, m)
 	}
 	r.HasEvents = hasEvents
@@ -980,6 +983,7 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 		MaxHandles:   val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine: val.TypeShapeV1.MaxOutOfLine,
 		HasPadding:   val.TypeShapeV1.HasPadding,
+		HasPointer:   val.TypeShapeV1.Depth > 0,
 	}
 
 	for _, v := range val.Members {
@@ -1052,6 +1056,7 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 		BiggestOrdinal: 0,
 		MaxHandles:     val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine:   val.TypeShapeV1.MaxOutOfLine,
+		HasPointer:     val.TypeShapeV1.Depth > 0,
 	}
 
 	for _, v := range val.SortedMembersNoReserved() {
@@ -1092,6 +1097,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		MaxHandles:   val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine: val.TypeShapeV1.MaxOutOfLine,
 		Strictness:   val.Strictness,
+		HasPointer:   val.TypeShapeV1.Depth > 0,
 	}
 
 	for _, v := range val.Members {

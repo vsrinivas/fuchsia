@@ -115,6 +115,7 @@ struct Union {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -199,6 +200,7 @@ struct ReverseOrdinalUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -259,6 +261,7 @@ struct FieldCollision {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -341,6 +344,7 @@ struct ExplicitUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -367,6 +371,7 @@ struct NullableUnionStruct {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr bool HasPointer = true;
 
   ::llcpp::test::name::Union the_union = {};
 };

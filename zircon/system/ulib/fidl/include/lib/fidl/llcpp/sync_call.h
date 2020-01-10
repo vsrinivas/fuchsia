@@ -198,7 +198,7 @@ class OwnedSyncCallBase : private SyncCallBase<ResponseType> {
       if (other.Super::decoded_message().is_valid()) {
         // If there are pointers, they need to be patched.
         // Otherwise, we get away with a memcpy.
-        if constexpr (NeedsEncodeDecode<ResponseType>::value && ResponseType::MaxOutOfLine > 0) {
+        if constexpr (NeedsEncodeDecode<ResponseType>::value && ResponseType::HasPointer) {
           auto result =
               fidl::Linearize(other.Super::decoded_message().message(), response_buffer());
           (void)other.Super::decoded_message().Release();

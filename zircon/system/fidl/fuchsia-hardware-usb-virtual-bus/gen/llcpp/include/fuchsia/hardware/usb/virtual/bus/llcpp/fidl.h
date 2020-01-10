@@ -50,6 +50,7 @@ class Bus final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -66,6 +67,7 @@ class Bus final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -82,6 +84,7 @@ class Bus final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -98,6 +101,7 @@ class Bus final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;

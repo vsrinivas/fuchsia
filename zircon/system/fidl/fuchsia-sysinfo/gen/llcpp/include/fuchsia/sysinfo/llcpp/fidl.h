@@ -59,6 +59,7 @@ class Device final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -76,6 +77,7 @@ class Device final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -93,6 +95,7 @@ class Device final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -110,6 +113,7 @@ class Device final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -481,6 +485,7 @@ class SysInfo final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -498,6 +503,7 @@ class SysInfo final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -515,6 +521,7 @@ class SysInfo final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -532,6 +539,7 @@ class SysInfo final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -903,6 +911,7 @@ struct InterruptControllerInfo {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   ::llcpp::fuchsia::sysinfo::InterruptControllerType type = {};
 };

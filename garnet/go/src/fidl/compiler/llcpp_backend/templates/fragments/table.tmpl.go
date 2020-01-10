@@ -51,6 +51,7 @@ struct {{ .Name }} final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t PrimarySize = {{ .InlineSize }};
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
+  static constexpr bool HasPointer = {{ .HasPointer }};
 
  private:
   {{ .Name }}(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}

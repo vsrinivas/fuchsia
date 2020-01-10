@@ -101,6 +101,7 @@ struct Device_GetStateNormalized_Result {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
+  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -184,6 +185,7 @@ struct Device_GetStateAbsolute_Result {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
+  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -267,6 +269,7 @@ struct Device_SetStateNormalized_Result {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -350,6 +353,7 @@ struct Device_SetStateAbsolute_Result {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -433,6 +437,7 @@ struct Device_GetMaxAbsoluteBrightness_Result {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -459,6 +464,7 @@ struct State {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   bool backlight_on = {};
 
@@ -480,6 +486,7 @@ struct Device_GetStateNormalized_Response {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   ::llcpp::fuchsia::hardware::backlight::State state = {};
 };
@@ -492,6 +499,7 @@ struct Device_GetStateAbsolute_Response {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   ::llcpp::fuchsia::hardware::backlight::State state = {};
 };
@@ -504,6 +512,7 @@ struct Device_SetStateNormalized_Response {
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   uint8_t __reserved = {};
 };
@@ -516,6 +525,7 @@ struct Device_SetStateAbsolute_Response {
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   uint8_t __reserved = {};
 };
@@ -528,6 +538,7 @@ struct Device_GetMaxAbsoluteBrightness_Response {
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   double max_brightness = {};
 };
@@ -557,6 +568,7 @@ class Device final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -573,6 +585,7 @@ class Device final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -589,6 +602,7 @@ class Device final {
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -605,6 +619,7 @@ class Device final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -621,6 +636,7 @@ class Device final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -637,6 +653,7 @@ class Device final {
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -653,6 +670,7 @@ class Device final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;

@@ -100,6 +100,7 @@ struct Buttons_RegisterNotify_Result {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -126,6 +127,7 @@ struct Buttons_RegisterNotify_Response {
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   uint8_t __reserved = {};
 };
@@ -154,6 +156,7 @@ class Buttons final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -170,6 +173,7 @@ class Buttons final {
     static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -186,6 +190,7 @@ class Buttons final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -202,6 +207,7 @@ class Buttons final {
     static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -219,6 +225,7 @@ class Buttons final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;

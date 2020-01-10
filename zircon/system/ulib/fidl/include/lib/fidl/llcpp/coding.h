@@ -49,6 +49,7 @@ struct AnyZeroArgMessage final {
   static constexpr uint32_t PrimarySize = sizeof(fidl_message_header_t);
   static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
   static constexpr bool ContainsUnion = false;
 };
 
@@ -190,8 +191,7 @@ template <typename FidlType>
 LinearizeResult<FidlType> Linearize(FidlType* value, BytePart bytes) {
   static_assert(IsFidlType<FidlType>::value, "FIDL type required");
   static_assert(FidlType::Type != nullptr, "FidlType should have a coding table");
-  static_assert(FidlType::MaxOutOfLine > 0,
-                "Only types with out-of-line members need linearization");
+  static_assert(FidlType::HasPointer, "Only types with out-of-line members need linearization");
   LinearizeResult<FidlType> result;
   uint32_t num_bytes_actual;
   result.status = fidl_linearize(FidlType::Type, value, bytes.data(), bytes.capacity(),

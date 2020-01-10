@@ -146,6 +146,7 @@ struct Union {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasPointer = true;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -202,6 +203,7 @@ struct Table final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 24;
+  static constexpr bool HasPointer = true;
 
  private:
   Table(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
@@ -238,6 +240,7 @@ struct Struct {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   // struct member comment #1
   //

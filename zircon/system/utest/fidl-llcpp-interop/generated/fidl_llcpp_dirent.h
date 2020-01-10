@@ -37,15 +37,12 @@ extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTable;
 
 // Fake dirent structure to exercise linearization codepaths.
 struct DirEnt {
-  static constexpr const fidl_type_t* Type = &fidl_test_llcpp_dirent_DirEntTable;
-  static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_dirent_DirEntTable;
+  static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 16;
-  static constexpr uint32_t AltPrimarySize = 32;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
+  static constexpr bool HasPointer = true;
 
   bool is_dir = {};
 
@@ -86,14 +83,15 @@ class DirEntTestInterface final {
     fidl_message_header_t _hdr;
     int64_t num_dir;
 
-    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesResponseTable;
+    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -103,14 +101,15 @@ class DirEntTestInterface final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents;
 
-    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
+    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 48000;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 48000;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -122,14 +121,15 @@ class DirEntTestInterface final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents;
 
-    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
+    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 144;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 144;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -142,14 +142,15 @@ class DirEntTestInterface final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents;
 
-    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
+    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 144;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 144;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -160,14 +161,15 @@ class DirEntTestInterface final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents;
 
-    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
+    static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
+    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 48000;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 48000;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -178,14 +180,15 @@ class DirEntTestInterface final {
     ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents;
     ::zx::eventpair ep;
 
-    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 48000;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 48000;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -209,7 +212,7 @@ class DirEntTestInterface final {
     class CountNumDirectories_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CountNumDirectories_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents);
+      CountNumDirectories_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents);
       ~CountNumDirectories_Impl() = default;
       CountNumDirectories_Impl(CountNumDirectories_Impl&& other) = default;
       CountNumDirectories_Impl& operator=(CountNumDirectories_Impl&& other) = default;
@@ -225,7 +228,7 @@ class DirEntTestInterface final {
     class ReadDir_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ReadDir_Impl(zx::unowned_channel _client_end);
+      ReadDir_Impl(::zx::unowned_channel _client_end);
       ~ReadDir_Impl() = default;
       ReadDir_Impl(ReadDir_Impl&& other) = default;
       ReadDir_Impl& operator=(ReadDir_Impl&& other) = default;
@@ -241,7 +244,7 @@ class DirEntTestInterface final {
     class ConsumeDirectories_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ConsumeDirectories_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents);
+      ConsumeDirectories_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents);
       ~ConsumeDirectories_Impl() = default;
       ConsumeDirectories_Impl(ConsumeDirectories_Impl&& other) = default;
       ConsumeDirectories_Impl& operator=(ConsumeDirectories_Impl&& other) = default;
@@ -256,7 +259,7 @@ class DirEntTestInterface final {
     class OneWayDirents_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      OneWayDirents_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::zx::eventpair ep);
+      OneWayDirents_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::zx::eventpair ep);
       ~OneWayDirents_Impl() = default;
       OneWayDirents_Impl(OneWayDirents_Impl&& other) = default;
       OneWayDirents_Impl& operator=(OneWayDirents_Impl&& other) = default;
@@ -281,7 +284,7 @@ class DirEntTestInterface final {
     class CountNumDirectories_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CountNumDirectories_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::fidl::BytePart _response_buffer);
+      CountNumDirectories_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::fidl::BytePart _response_buffer);
       ~CountNumDirectories_Impl() = default;
       CountNumDirectories_Impl(CountNumDirectories_Impl&& other) = default;
       CountNumDirectories_Impl& operator=(CountNumDirectories_Impl&& other) = default;
@@ -297,7 +300,7 @@ class DirEntTestInterface final {
     class ReadDir_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ReadDir_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ReadDir_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~ReadDir_Impl() = default;
       ReadDir_Impl(ReadDir_Impl&& other) = default;
       ReadDir_Impl& operator=(ReadDir_Impl&& other) = default;
@@ -313,7 +316,7 @@ class DirEntTestInterface final {
     class ConsumeDirectories_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ConsumeDirectories_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::fidl::BytePart _response_buffer);
+      ConsumeDirectories_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::fidl::BytePart _response_buffer);
       ~ConsumeDirectories_Impl() = default;
       ConsumeDirectories_Impl(ConsumeDirectories_Impl&& other) = default;
       ConsumeDirectories_Impl& operator=(ConsumeDirectories_Impl&& other) = default;
@@ -328,7 +331,7 @@ class DirEntTestInterface final {
     class OneWayDirents_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      OneWayDirents_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::zx::eventpair ep);
+      OneWayDirents_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::zx::eventpair ep);
       ~OneWayDirents_Impl() = default;
       OneWayDirents_Impl(OneWayDirents_Impl&& other) = default;
       OneWayDirents_Impl& operator=(OneWayDirents_Impl&& other) = default;
@@ -405,43 +408,43 @@ class DirEntTestInterface final {
 
     // Iterate over the dirents and return the number of directories within them.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::CountNumDirectories CountNumDirectories(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents);
+    static ResultOf::CountNumDirectories CountNumDirectories(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents);
 
     // Iterate over the dirents and return the number of directories within them.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CountNumDirectories CountNumDirectories(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CountNumDirectories CountNumDirectories(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::fidl::BytePart _response_buffer);
 
     // Return a vector of dirents. Empty request. Response may stack-allocate.
     // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ReadDir ReadDir(zx::unowned_channel _client_end);
+    static ResultOf::ReadDir ReadDir(::zx::unowned_channel _client_end);
 
     // Return a vector of dirents. Empty request. Response may stack-allocate.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ReadDir ReadDir(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ReadDir ReadDir(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Consume dirents. Empty response. Request may stack-allocate.
     // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ConsumeDirectories ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents);
+    static ResultOf::ConsumeDirectories ConsumeDirectories(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents);
 
     // Consume dirents. Empty response. Request may stack-allocate.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ConsumeDirectories ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ConsumeDirectories ConsumeDirectories(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::fidl::BytePart _response_buffer);
 
     // Binding will not wait for response.
     // But here we send an eventpair which the server will signal upon receipt of message.
     // Request is heap-allocated.
-    static ResultOf::OneWayDirents OneWayDirents(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::zx::eventpair ep);
+    static ResultOf::OneWayDirents OneWayDirents(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::zx::eventpair ep);
 
     // Binding will not wait for response.
     // But here we send an eventpair which the server will signal upon receipt of message.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::OneWayDirents OneWayDirents(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::zx::eventpair ep);
+    static UnownedResultOf::OneWayDirents OneWayDirents(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents, ::zx::eventpair ep);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
-    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -451,17 +454,17 @@ class DirEntTestInterface final {
    public:
 
     // Iterate over the dirents and return the number of directories within them.
-    static ::fidl::DecodeResult<CountNumDirectoriesResponse> CountNumDirectories(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CountNumDirectoriesRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CountNumDirectoriesResponse> CountNumDirectories(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CountNumDirectoriesRequest> params, ::fidl::BytePart response_buffer);
 
     // Return a vector of dirents. Empty request. Response may stack-allocate.
-    static ::fidl::DecodeResult<ReadDirResponse> ReadDir(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ReadDirResponse> ReadDir(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Consume dirents. Empty response. Request may stack-allocate.
-    static ::fidl::DecodeResult<ConsumeDirectoriesResponse> ConsumeDirectories(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeDirectoriesRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ConsumeDirectoriesResponse> ConsumeDirectories(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConsumeDirectoriesRequest> params, ::fidl::BytePart response_buffer);
 
     // Binding will not wait for response.
     // But here we send an eventpair which the server will signal upon receipt of message.
-    static ::fidl::internal::StatusAndError OneWayDirents(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OneWayDirentsRequest> params);
+    static ::fidl::internal::StatusAndError OneWayDirents(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<OneWayDirentsRequest> params);
 
   };
 

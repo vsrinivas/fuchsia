@@ -38,6 +38,7 @@ struct I2cDevice {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   uint32_t address = {};
 
@@ -58,6 +59,7 @@ struct I2cBusLayout {
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   uint32_t scl = {};
 
@@ -89,6 +91,7 @@ class Device final {
     static constexpr uint32_t AltPrimarySize = 48;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;

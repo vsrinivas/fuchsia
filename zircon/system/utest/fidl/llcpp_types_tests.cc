@@ -33,6 +33,8 @@ struct NonnullableChannelMessage {
 
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
 
+  static constexpr bool HasPointer = false;
+
   static constexpr const fidl_type_t* Type = &NonnullableChannelMessageType;
 
   static bool MakeDecodedMessageHelper(
@@ -69,6 +71,8 @@ struct InlinePODStruct {
 
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
 
+  static constexpr bool HasPointer = false;
+
   static constexpr const fidl_type_t* Type = &InlinePODStructType;
 
   static bool MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t payload,
@@ -99,6 +103,8 @@ struct OutOfLineMessage {
       FIDL_ALIGN(sizeof(fidl_message_header_t)) + FIDL_ALIGN(sizeof(InlinePODStruct*));
 
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+
+  static constexpr bool HasPointer = true;
 
   static constexpr const fidl_type_t* Type = &OutOfLineMessageType;
 
@@ -135,6 +141,8 @@ struct LargeStruct {
 
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
 
+  [[maybe_unused]] static constexpr bool HasPointer = false;
+
   static constexpr const fidl_type_t* Type = &LargeStructType;
 
   static bool MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
@@ -161,6 +169,7 @@ struct StructOf512Bytes {
   [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = FIDL_ALIGN(sizeof(payload));
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr bool HasPointer = false;
   [[maybe_unused]] static constexpr const fidl_type_t* Type = nullptr;
 };
 
@@ -170,6 +179,7 @@ struct StructOf513Bytes {
   [[maybe_unused]] static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = FIDL_ALIGN(sizeof(payload));
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  [[maybe_unused]] static constexpr bool HasPointer = false;
   [[maybe_unused]] static constexpr const fidl_type_t* Type = nullptr;
 };
 

@@ -49,6 +49,7 @@ struct ProcessStartData {
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   // The process that was created.
   ::zx::process process = {};
@@ -105,6 +106,7 @@ struct HandleInfo {
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
 
   // The handle to use for this process argument.
   ::zx::handle handle = {};
@@ -151,6 +153,7 @@ class Resolver final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -167,6 +170,7 @@ class Resolver final {
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 2048;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -386,6 +390,7 @@ struct NameInfo {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4096;
+  static constexpr bool HasPointer = true;
 
   // Path at which to install the associated directory.
   //
@@ -410,6 +415,7 @@ struct LaunchInfo {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 32;
+  static constexpr bool HasPointer = true;
 
   // The executable to run in the process.
   ::zx::vmo executable = {};
@@ -463,6 +469,7 @@ class Launcher final {
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -479,6 +486,7 @@ class Launcher final {
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 32;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -496,6 +504,7 @@ class Launcher final {
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 56;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -512,6 +521,7 @@ class Launcher final {
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 32;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -530,6 +540,7 @@ class Launcher final {
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -547,6 +558,7 @@ class Launcher final {
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -564,6 +576,7 @@ class Launcher final {
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -581,6 +594,7 @@ class Launcher final {
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
