@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 library fidl.developer.bridge;
+using fuchsia.developer.remotecontrol as rc;
 
 [Discoverable]
 protocol Daemon {
+    compose rc.FdbRemoteControl;
     /// Returns the input.
     EchoString(string:256 value) -> (string:256 response);
 };

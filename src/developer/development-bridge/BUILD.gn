@@ -42,12 +42,10 @@ if (host_toolchain == current_toolchain) {
       "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//src/connectivity/overnet/lib/hoist",
       "//src/connectivity/overnet/tools/ascendd:lib",
+      "//src/developer/remote-control/service:remote-control-rustc",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
-      "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_derive",
-      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates:tokio",
     ]
@@ -75,6 +73,8 @@ fidl("bridge") {
   name = "fidl.developer.bridge"
 
   sources = [ "fidl/daemon.fidl" ]
+
+  public_deps = [ "//src/developer/remote-control/service:remote-control" ]
 
   fuzzers = [
     {

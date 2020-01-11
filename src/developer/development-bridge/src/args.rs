@@ -28,11 +28,23 @@ pub struct EchoCommand {
 pub struct ListCommand {}
 
 #[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "run-component", description = "run component")]
+pub struct RunComponentCommand {
+    #[argh(positional)]
+    /// url of component to run
+    pub url: String,
+    #[argh(positional)]
+    /// args for the component
+    pub args: Vec<String>,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
 pub enum Subcommand {
     Start(StartCommand),
     Echo(EchoCommand),
     List(ListCommand),
+    RunComponent(RunComponentCommand),
 }
 
 #[cfg(test)]
@@ -80,5 +92,27 @@ mod tests {
         }
 
         check(&["list"]);
+    }
+
+    #[test]
+    fn test_run_component() {
+        fn check(args: &[&str], expected_url: String, expected_args: Vec<String>) {
+            assert_eq!(
+                Fdb::from_args(CMD_NAME, args),
+                Ok(Fdb {
+                    subcommand: Subcommand::RunComponent(RunComponentCommand {
+                        url: expected_url,
+                        args: expected_args,
+                    })
+                })
+            )
+        }
+
+        let test_url = "http://test.com";
+        let arg1 = "test1";
+        let arg2 = "test2";
+        let args = vec![arg1.to_string(), arg2.to_string()];
+
+        check(&["run-component", test_url, arg1, arg2], test_url.to_string(), args);
     }
 }

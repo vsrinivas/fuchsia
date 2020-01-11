@@ -21,7 +21,7 @@ table RunComponentResponse {
     3: string:MAX component_stderr;
 };
 
-[Discoverable]
+[Discoverable, FragileBase]
 protocol FdbRemoteControl {
     // Starts a component and waits for it finish.
     RunComponent(
