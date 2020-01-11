@@ -22,11 +22,13 @@ namespace {
 
 void Usage(const std::string& argv0) {
   std::cout << "usage: " << argv0
-            << " <options> <files>\n"
+            << " <options> [<files>]\n"
                "\n"
                " * `-i, --in-place` Formats file in place\n"
                "\n"
                " * `-h, --help` Prints this help, and exit immediately.\n"
+               "\n"
+               " If no files are specified it formats code from standard input.\n"
                "\n";
   std::cout.flush();
 }
@@ -97,17 +99,26 @@ int main(int argc, char* argv[]) {
     pos++;
   }
 
-  if (pos >= args.size()) {
-    // TODO: Should probably read a file from stdin, instead.
-    FailWithUsage(args[0], "No files provided\n");
-  }
-
   fidl::SourceManager source_manager;
 
+  // Is this formatting stdin to stdout?
+  bool pipe = (pos == args.size());
+
+  if (in_place && pipe) {
+    Fail("-i not accepted when formatting standard input.");
+  }
+
   // Process filenames.
-  for (size_t i = pos; i < args.size(); i++) {
-    if (!source_manager.CreateSource(args[i])) {
-      Fail("Couldn't read in source data from %s\n", args[i].c_str());
+  if (pipe) {
+    std::string input(
+        std::istreambuf_iterator<char>(std::cin >> std::noskipws),
+        std::istreambuf_iterator<char>());
+    source_manager.AddSourceFile(std::make_unique<fidl::SourceFile>("stdin", std::move(input)));
+  } else {
+    for (size_t i = pos; i < args.size(); i++) {
+      if (!source_manager.CreateSource(args[i])) {
+        Fail("Couldn't read in source data from %s\n", args[i].c_str());
+      }
     }
   }
 
@@ -115,13 +126,13 @@ int main(int argc, char* argv[]) {
   for (const auto& source_file : source_manager.sources()) {
     std::string output;
     if (!Format(*source_file, &error_reporter, output)) {
-      // In the formattter, we do not print the report if there are only
+      // In the formatter, we do not print the report if there are only
       // warnings.
       error_reporter.PrintReports();
       return 1;
     }
     FILE* out_file;
-    if (in_place) {
+    if (in_place && !pipe) {
       const char* filename = source_file->filename().data();
       out_file = fopen(filename, "w+");
       if (out_file == nullptr) {
