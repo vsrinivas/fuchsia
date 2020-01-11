@@ -10,6 +10,7 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <fbl/function.h>
@@ -280,6 +281,10 @@ class RepeatStateImpl : public RepeatState {
   uint64_t bytes_processed_per_run_ = 0;
 };
 
+bool CompareTestNames(internal::NamedTest* test1, internal::NamedTest* test2) {
+  return test1->name < test2->name;
+}
+
 }  // namespace
 
 void RegisterTest(const char* name, fbl::Function<TestFunc> test_func) {
@@ -322,10 +327,20 @@ bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
     return false;
   }
 
+  // Make a sorted copy of the test list, so that we run the tests in
+  // sorted order.  Otherwise, the ordering can depend on things like link
+  // ordering, which depends on the build system and which might change
+  // unexpectedly and influence performance results.
+  fbl::Vector<NamedTest*> test_list_copy;
+  for (internal::NamedTest& test_case : *test_list) {
+    test_list_copy.push_back(&test_case);
+  }
+  std::sort(test_list_copy.begin(), test_list_copy.end(), CompareTestNames);
+
   bool found_regex_match = false;
   bool ok = true;
-  for (const internal::NamedTest& test_case : *test_list) {
-    const char* test_name = test_case.name.c_str();
+  for (internal::NamedTest* test_case : test_list_copy) {
+    const char* test_name = test_case->name.c_str();
     bool matched_regex = regexec(&regex, test_name, 0, nullptr, 0) == 0;
     if (!matched_regex) {
       continue;
@@ -340,7 +355,7 @@ bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
     }
 
     fbl::String error_string;
-    if (!RunTest(test_suite, test_name, test_case.test_func, run_count, results_set,
+    if (!RunTest(test_suite, test_name, test_case->test_func, run_count, results_set,
                  &error_string)) {
       fprintf(log_stream, "Error: %s\n", error_string.c_str());
       fprintf(log_stream, "[  FAILED  ] %s\n", test_name);

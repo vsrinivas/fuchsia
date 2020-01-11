@@ -326,6 +326,34 @@ static bool TestBytesProcessedParameterMultistep() {
   END_TEST;
 }
 
+// Check that test cases are run in sorted order, sorted by name.
+static bool TestRunningInSortedOrder() {
+  BEGIN_TEST;
+
+  perftest::internal::TestList test_list;
+  perftest::internal::NamedTest test1{"test1", NoOpTest};
+  perftest::internal::NamedTest test2{"test2", NoOpTest};
+  perftest::internal::NamedTest test3{"test3", NoOpTest};
+  // Add tests in non-sorted order.
+  test_list.push_back(std::move(test3));
+  test_list.push_back(std::move(test1));
+  test_list.push_back(std::move(test2));
+
+  const uint32_t kRunCount = 5;
+  perftest::ResultsSet results;
+  DummyOutputStream out;
+  EXPECT_TRUE(
+      perftest::internal::RunTests("test-suite", &test_list, kRunCount, "", out.fp(), &results));
+  auto* test_cases = results.results();
+  ASSERT_EQ(test_cases->size(), 3);
+  // Check that the tests are reported as being run in sorted order.
+  EXPECT_STR_EQ((*test_cases)[0].label.c_str(), "test1");
+  EXPECT_STR_EQ((*test_cases)[1].label.c_str(), "test2");
+  EXPECT_STR_EQ((*test_cases)[2].label.c_str(), "test3");
+
+  END_TEST;
+}
+
 static bool TestParsingCommandArgs() {
   BEGIN_TEST;
 
@@ -361,6 +389,7 @@ RUN_TEST(TestNextStepCalledBeforeKeepRunning)
 RUN_TEST(TestBadNextStepCalls)
 RUN_TEST(TestBytesProcessedParameter)
 RUN_TEST(TestBytesProcessedParameterMultistep)
+RUN_TEST(TestRunningInSortedOrder)
 RUN_TEST(TestParsingCommandArgs)
 END_TEST_CASE(perftest_runner_test)
 
