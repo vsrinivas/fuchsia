@@ -556,5 +556,94 @@ TEST_F(SummaryUnitTest, TwoProcessesOneUndigested) {
   EXPECT_EQ(100U, sizes.total_bytes);
 }
 
+TEST_F(SummaryUnitTest, Pools) {
+  // One process, two vmos with same name.
+  Capture c;
+  TestUtils::CreateCapture(
+      &c, {.vmos =
+               {
+                   {.koid = 1, .name = "SysmemContiguousPool", .committed_bytes = 400},
+                   {.koid = 2, .name = "ContiguousChild", .size_bytes = 300, .parent_koid = 1},
+                   {.koid = 3, .name = "ContiguousGrandchild", .size_bytes = 100, .parent_koid = 2},
+                   {.koid = 4, .name = "ContiguousGrandchild", .size_bytes = 50, .parent_koid = 2},
+               },
+           .processes =
+               {
+                   {.koid = 10, .name = "p1", .vmos = {1, 2}},
+                   {.koid = 20, .name = "p2", .vmos = {3}},
+                   {.koid = 30, .name = "p3", .vmos = {4}},
+               },
+           .rooted_vmo_names = Capture::kDefaultRootedVmoNames});
+  Summary s(c, Summary::kNameMatches);
+  auto process_summaries = TestUtils::GetProcessSummaries(s);
+  ASSERT_EQ(4U, process_summaries.size());
+
+  // Skip kernel summary.
+  // SysmemContiguousPool will be left with 100 bytes, shared by all three processes.
+  // ContiguousChild will be left with 150 bytes, shared by all three processes.
+  // p2 will have a private ContiguousGrandchild VMO of 100 bytes.
+  // p3 will have a private ContiguousGrandchild VMO of 50 bytes.
+  ProcessSummary ps = process_summaries.at(1);
+  EXPECT_EQ(10U, ps.koid());
+  Sizes sizes = ps.sizes();
+  EXPECT_EQ(0U, sizes.private_bytes);
+  EXPECT_EQ(250U / 3, sizes.scaled_bytes);
+  EXPECT_EQ(250U, sizes.total_bytes);
+
+  sizes = ps.GetSizes("SysmemContiguousPool");
+  EXPECT_EQ(0U, sizes.private_bytes);
+  EXPECT_EQ(100U / 3, sizes.scaled_bytes);
+  EXPECT_EQ(100U, sizes.total_bytes);
+
+  sizes = ps.GetSizes("ContiguousChild");
+  EXPECT_EQ(0U, sizes.private_bytes);
+  EXPECT_EQ(150U / 3, sizes.scaled_bytes);
+  EXPECT_EQ(150U, sizes.total_bytes);
+
+  ps = process_summaries.at(2);
+  EXPECT_EQ(20U, ps.koid());
+  sizes = ps.sizes();
+  EXPECT_EQ(100U, sizes.private_bytes);
+  EXPECT_EQ(100U + 250U / 3, sizes.scaled_bytes);
+  EXPECT_EQ(100U + 250U, sizes.total_bytes);
+
+  sizes = ps.GetSizes("SysmemContiguousPool");
+  EXPECT_EQ(0U, sizes.private_bytes);
+  EXPECT_EQ(100U / 3, sizes.scaled_bytes);
+  EXPECT_EQ(100U, sizes.total_bytes);
+
+  sizes = ps.GetSizes("ContiguousChild");
+  EXPECT_EQ(0U, sizes.private_bytes);
+  EXPECT_EQ(150U / 3, sizes.scaled_bytes);
+  EXPECT_EQ(150U, sizes.total_bytes);
+
+  sizes = ps.GetSizes("ContiguousGrandchild");
+  EXPECT_EQ(100U, sizes.private_bytes);
+  EXPECT_EQ(100U, sizes.scaled_bytes);
+  EXPECT_EQ(100U, sizes.total_bytes);
+
+  ps = process_summaries.at(3);
+  EXPECT_EQ(30U, ps.koid());
+  sizes = ps.sizes();
+  EXPECT_EQ(50U, sizes.private_bytes);
+  EXPECT_EQ(50U + 250U / 3, sizes.scaled_bytes);
+  EXPECT_EQ(50U + 250U, sizes.total_bytes);
+
+  sizes = ps.GetSizes("SysmemContiguousPool");
+  EXPECT_EQ(0U, sizes.private_bytes);
+  EXPECT_EQ(100U / 3, sizes.scaled_bytes);
+  EXPECT_EQ(100U, sizes.total_bytes);
+
+  sizes = ps.GetSizes("ContiguousChild");
+  EXPECT_EQ(0U, sizes.private_bytes);
+  EXPECT_EQ(150U / 3, sizes.scaled_bytes);
+  EXPECT_EQ(150U, sizes.total_bytes);
+
+  sizes = ps.GetSizes("ContiguousGrandchild");
+  EXPECT_EQ(50U, sizes.private_bytes);
+  EXPECT_EQ(50U, sizes.scaled_bytes);
+  EXPECT_EQ(50U, sizes.total_bytes);
+}
+
 }  // namespace test
 }  // namespace memory

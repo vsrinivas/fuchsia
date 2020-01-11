@@ -112,6 +112,8 @@ class OSImpl : public OS, public TaskEnumerator {
       cb_;
 };
 
+const std::vector<std::string> Capture::kDefaultRootedVmoNames = {"SysmemContiguousPool",
+                                                                  "SysmemAmlogicProtectedPool"};
 // static.
 zx_status_t Capture::GetCaptureState(CaptureState* state) {
   OSImpl osImpl;
@@ -135,13 +137,14 @@ zx_status_t Capture::GetCaptureState(CaptureState* state, OS* os) {
 }
 
 // static.
-zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, CaptureLevel level) {
+zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, CaptureLevel level,
+                                const std::vector<std::string>& rooted_vmo_names) {
   OSImpl osImpl;
-  return GetCapture(capture, state, level, &osImpl);
+  return GetCapture(capture, state, level, &osImpl, rooted_vmo_names);
 }
 
 zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, CaptureLevel level,
-                                OS* os) {
+                                OS* os, const std::vector<std::string>& rooted_vmo_names) {
   TRACE_DURATION("memory_metrics", "Capture::GetCapture");
   capture->time_ = os->GetMonotonic();
 
@@ -188,7 +191,38 @@ zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, Cap
         capture->koid_to_process_.emplace(koid, process);
         return ZX_OK;
       });
+  capture->ReallocateDescendents(rooted_vmo_names);
   return err;
 }
 
+// Descendents of this vmo will have their allocated_bytes treated as an allocation of their
+// immediate parent. This supports a usage pattern where a potentially large allocation is done
+// and then slices are given to read / write children. In this case the children have no
+// committed_bytes of their own. For accounting purposes it gives more clarity to push the
+// committed bytes to the lowest points in the tree, where the vmo names give more specific
+// meanings.
+void Capture::ReallocateDescendents(zx_koid_t parent_koid) {
+  Vmo& parent = koid_to_vmo_.at(parent_koid);
+  for (auto& pair : koid_to_vmo_) {
+    Vmo& child = pair.second;
+    if (child.parent_koid == parent_koid) {
+      parent.committed_bytes -= child.allocated_bytes;
+      child.committed_bytes = child.allocated_bytes;
+      ReallocateDescendents(child.koid);
+    }
+  }
+}
+
+// See the above description of ReallocateDescendents(zx_koid_t) for the specific behavior for each
+// vmo that has a name listed in rooted_vmo_names.
+void Capture::ReallocateDescendents(const std::vector<std::string>& rooted_vmo_names) {
+  TRACE_DURATION("memory_metrics", "Capture::ReallocateDescendents");
+  for (const auto& vmo_name : rooted_vmo_names) {
+    for (const auto& pair : koid_to_vmo_) {
+      if (pair.second.name == vmo_name) {
+        ReallocateDescendents(pair.first);
+      }
+    }
+  }
+}
 }  // namespace memory

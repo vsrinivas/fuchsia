@@ -220,5 +220,24 @@ TEST_F(CaptureUnitTest, VMOGetBadState) {
   EXPECT_STREQ(vmo2_name, vmo.name);
 }
 
+TEST_F(CaptureUnitTest, VMORooted) {
+  Capture c;
+  TestUtils::CreateCapture(&c,
+                           {.vmos =
+                                {
+                                    {.koid = 1, .name = "R1", .committed_bytes = 100},
+                                    {.koid = 2, .name = "C1", .size_bytes = 50, .parent_koid = 1},
+                                    {.koid = 3, .name = "C2", .size_bytes = 25, .parent_koid = 2},
+                                },
+                            .processes =
+                                {
+                                    {.koid = 10, .name = "p1", .vmos = {1, 2, 3}},
+                                },
+                            .rooted_vmo_names = {"R1"}});
+  // Carve up the rooted vmo into child and grandchild.
+  EXPECT_EQ(50U, c.vmo_for_koid(1).committed_bytes);
+  EXPECT_EQ(25U, c.vmo_for_koid(2).committed_bytes);
+  EXPECT_EQ(25U, c.vmo_for_koid(3).committed_bytes);
+}
 }  // namespace test
 }  // namespace memory

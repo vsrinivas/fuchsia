@@ -17,6 +17,7 @@ struct CaptureTemplate {
   zx_info_kmem_stats_t kmem;
   std::vector<zx_info_vmo_t> vmos;
   std::vector<Process> processes;
+  std::vector<std::string> rooted_vmo_names;
 };
 
 struct GetProcessesCallback {
