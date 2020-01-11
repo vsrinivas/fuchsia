@@ -104,12 +104,12 @@ zx_status_t CheckIfAstro(const fbl::unique_fd& devfs_root) {
     return status;
   }
 
-  status = fdio_service_connect_at(caller.borrow_channel(),"misc/sysinfo", remote.release());
+  status = fdio_service_connect_at(caller.borrow_channel(), "sys/platform", remote.release());
   if (status != ZX_OK) {
     return ZX_OK;
   }
 
-  auto result = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardName(zx::unowned(local));
+  auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBoardName(zx::unowned(local));
   status = result.ok() ? result->status : result.status();
   if (status != ZX_OK) {
     return status;
@@ -128,7 +128,6 @@ zx_status_t SyncClient::Create(std::optional<SyncClient>* out) {
   if (!devfs_root) {
     return ZX_ERR_IO;
   }
-
   return Create(devfs_root, out);
 }
 

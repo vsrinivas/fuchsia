@@ -30,7 +30,7 @@ zx_status_t GetDeviceHandle(const char* path, zx::channel* handle) {
 }
 
 bool IsMt8167() {
-  constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+  constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
   zx::channel channel;
   zx_status_t status = GetDeviceHandle(kSysInfoPath, &channel);
   if (status != ZX_OK)
@@ -38,7 +38,7 @@ bool IsMt8167() {
 
   char board_name[fuchsia_sysinfo_SYSINFO_BOARD_NAME_LEN + 1];
   size_t actual_size;
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
+  zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetBoardName(channel.get(), &status, board_name,
                                                                sizeof(board_name), &actual_size);
   if (fidl_status != ZX_OK || status != ZX_OK) {
     return false;

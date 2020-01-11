@@ -65,7 +65,7 @@ class FakeNetCopy : public netsvc::NetCopyInterface {
   void AbortWrite() override {}
 };
 
-class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::Device::Interface {
+class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::SysInfo::Interface {
  public:
   FakeSysinfo(async_dispatcher_t* dispatcher) {
     zx::channel remote;

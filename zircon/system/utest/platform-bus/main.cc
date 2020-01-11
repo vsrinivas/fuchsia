@@ -136,7 +136,7 @@ TEST(PbusTest, BoardInfo) {
   EXPECT_TRUE(irq_ctrl_info.ok());
   EXPECT_NE(irq_ctrl_info->info, nullptr);
 
-  // Get interrupt controller information.
+  // Get board revision information.
   auto board_revision = client.GetBoardRevision();
   EXPECT_OK(board_revision.status());
   EXPECT_TRUE(board_revision.ok());

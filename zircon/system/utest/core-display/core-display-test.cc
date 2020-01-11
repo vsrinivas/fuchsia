@@ -69,7 +69,7 @@ class CoreDisplayTest : public zxtest::Test {
   void CaptureSetup();
 
   std::unique_ptr<fhd::Controller::SyncClient> dc_client_;
-  std::unique_ptr<sysinfo::Device::SyncClient> sysinfo_;
+  std::unique_ptr<sysinfo::SysInfo::SyncClient> sysinfo_;
   std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_allocator_;
   zx::event client_event_;
   std::unique_ptr<sysmem::BufferCollectionToken::SyncClient> token_;
@@ -138,16 +138,16 @@ void CoreDisplayTest::SetUp() {
   status = zx::channel::create(0, &sysinfo_server_channel_, &sysinfo_client_channel_);
   ASSERT_OK(status);
 
-  sysinfo_ = std::make_unique<sysinfo::Device::SyncClient>(std::move(sysinfo_client_channel_));
+  sysinfo_ = std::make_unique<sysinfo::SysInfo::SyncClient>(std::move(sysinfo_client_channel_));
 
-  constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+  constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
   fbl::unique_fd sysinfo_fd(open(kSysInfoPath, O_RDWR));
   if (!sysinfo_fd) {
     SetCaptureSupported(false);
     return;
   }
   fzl::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
-  auto result = sysinfo::Device::Call::GetBoardName(caller_sysinfo.channel());
+  auto result = sysinfo::SysInfo::Call::GetBoardName(caller_sysinfo.channel());
   if (!result.ok() || result.value().status != ZX_OK) {
     SetCaptureSupported(false);
     return;

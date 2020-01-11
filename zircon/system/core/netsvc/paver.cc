@@ -56,7 +56,6 @@ zx_status_t ClearSysconfig(const fbl::unique_fd& devfs_root) {
   return ZX_OK;
 }
 
-
 }  // namespace
 
 Paver* Paver::Get() {

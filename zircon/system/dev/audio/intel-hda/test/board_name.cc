@@ -20,7 +20,7 @@ constexpr int kMaxBoardNameSize = 128;
 // Get the name of the board we are running on.
 zx_status_t GetBoardName(fbl::String* result) {
   // Open sysinfo file.
-  constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+  constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
   fbl::unique_fd fd(open(kSysInfoPath, O_RDWR));
   if (!fd) {
     return ZX_ERR_INTERNAL;
@@ -36,7 +36,7 @@ zx_status_t GetBoardName(fbl::String* result) {
   // Fetch the board name.
   std::array<char, kMaxBoardNameSize> board_name;
   size_t actual_size;
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(
+  zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetBoardName(
       channel.get(), &status, board_name.data(), board_name.max_size(), &actual_size);
   if (fidl_status != ZX_OK) {
     return fidl_status;

@@ -286,8 +286,6 @@ class FakeDev {
     fbl::unique_fd fd;
     ASSERT_OK(
         devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
-    ASSERT_OK(
-        devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "misc/sysinfo", &fd));
   }
 
   driver_integration_test::IsolatedDevmgr devmgr_;

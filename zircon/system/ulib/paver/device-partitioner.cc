@@ -320,12 +320,12 @@ zx_status_t IsBoard(const fbl::unique_fd& devfs_root, fbl::StringPiece board_nam
     return status;
   }
 
-  status = fdio_service_connect_at(caller.borrow_channel(), "misc/sysinfo", remote.release());
+  status = fdio_service_connect_at(caller.borrow_channel(), "sys/platform", remote.release());
   if (status != ZX_OK) {
     return status;
   }
 
-  auto result = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardName(zx::unowned(local));
+  auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBoardName(zx::unowned(local));
   status = result.ok() ? result->status : result.status();
   if (status != ZX_OK) {
     return status;

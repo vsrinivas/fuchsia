@@ -32,7 +32,7 @@ FileApi::FileApi(bool is_zedboot, std::unique_ptr<NetCopyInterface> netcp, zx::c
   ZX_ASSERT(paver_ != nullptr);
 
   if (!sysinfo_) {
-    constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+    constexpr char kSysInfoPath[] = "/dev/sys/platform";
     fbl::unique_fd sysinfo_fd(open(kSysInfoPath, O_RDWR));
     if (sysinfo_fd) {
       fdio_get_service_handle(sysinfo_fd.release(), sysinfo_.reset_and_get_address());

@@ -21,9 +21,9 @@ namespace {
 // Filters out platforms where there's very little upside in running this test.
 // TODO(39752): This should be controlled with build options.
 bool RunInThisPlatform() {
-  fbl::unique_fd sysinfo(open("/dev/misc/sysinfo", O_RDONLY));
+  fbl::unique_fd sysinfo(open("/svc/fuchsia.sysinfo.SysInfo", O_RDONLY));
   fzl::FdioCaller caller(std::move(sysinfo));
-  auto result = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardName(caller.channel());
+  auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBoardName(caller.channel());
   if (result.status() != ZX_OK || result->status != ZX_OK) {
     return false;
   }
@@ -38,7 +38,7 @@ bool RunInThisPlatform() {
   return true;
 }
 
-}
+}  // namespace
 
 // The test can operate over either a ramdisk, or a real device. Initialization
 // of that device happens at the test environment level, but the test fixtures

@@ -183,7 +183,7 @@ zx_status_t make_single_participant_collection(zx::channel* collection_client_ch
 const std::string& GetBoardName() {
   static std::string s_board_name;
   if (s_board_name.empty()) {
-    constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+    constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
     fbl::unique_fd sysinfo(open(kSysInfoPath, O_RDWR));
     ZX_ASSERT(sysinfo);
     zx::channel channel;
@@ -193,7 +193,7 @@ const std::string& GetBoardName() {
 
     char board_name[fuchsia_sysinfo_SYSINFO_BOARD_NAME_LEN + 1];
     size_t actual_size;
-    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
+    zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetBoardName(channel.get(), &status, board_name,
                                                                  sizeof(board_name), &actual_size);
     ZX_ASSERT(fidl_status == ZX_OK);
     ZX_ASSERT(status == ZX_OK);

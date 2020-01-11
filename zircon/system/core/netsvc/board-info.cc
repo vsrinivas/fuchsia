@@ -130,7 +130,7 @@ static bool IsChromebook() {
 }
 
 zx_status_t GetBoardName(const zx::channel& sysinfo, char* real_board_name) {
-  auto result = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardName(zx::unowned(sysinfo));
+  auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBoardName(zx::unowned(sysinfo));
   if (!result.ok()) {
     return false;
   }
@@ -158,7 +158,7 @@ zx_status_t GetBoardName(const zx::channel& sysinfo, char* real_board_name) {
 }
 
 zx_status_t GetBoardRevision(const zx::channel& sysinfo, uint32_t* board_revision) {
-  auto result = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardRevision(zx::unowned(sysinfo));
+  auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBoardRevision(zx::unowned(sysinfo));
   if (!result.ok()) {
     return false;
   }

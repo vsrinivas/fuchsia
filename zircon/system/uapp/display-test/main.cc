@@ -591,13 +591,13 @@ Platforms GetPlatform() {
     return UNKNOWN_PLATFORM;
   }
 
-  const char* sysinfo_path = "dev/misc/sysinfo";
+  const char* sysinfo_path = "svc/fuchsia.sysinfo.SysInfo";
   fbl::unique_fd sysinfo_fd(open(sysinfo_path, O_RDWR));
   if (!sysinfo_fd) {
     return UNKNOWN_PLATFORM;
   }
   fzl::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
-  auto result = sysinfo::Device::Call::GetBoardName(caller_sysinfo.channel());
+  auto result = sysinfo::SysInfo::Call::GetBoardName(caller_sysinfo.channel());
   if (!result.ok() || result.value().status != ZX_OK) {
     return UNKNOWN_PLATFORM;
   }

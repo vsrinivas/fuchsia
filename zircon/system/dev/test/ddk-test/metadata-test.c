@@ -57,7 +57,7 @@ static bool test_publish_metadata(void) {
 
   BEGIN_TEST;
   // This should fail since the path does not match us or our potential children.
-  status = device_publish_metadata(ddk_test_dev, "/dev/misc/sysinfo", 2, TEST_STRING,
+  status = device_publish_metadata(ddk_test_dev, "/dev/misc/null", 2, TEST_STRING,
                                    strlen(TEST_STRING) + 1);
   ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED, "");
 

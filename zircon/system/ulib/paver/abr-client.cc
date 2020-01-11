@@ -213,12 +213,11 @@ zx_status_t AstroClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::
 }
 
 zx_status_t SherlockClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::Client>* out) {
-
   std::unique_ptr<paver::DevicePartitioner> partitioner;
   zx_status_t status =
       paver::SherlockPartitioner::Initialize(std::move(devfs_root), std::nullopt, &partitioner);
   if (status != ZX_OK) {
-    return ZX_OK;
+    return status;
   }
 
   std::unique_ptr<paver::PartitionClient> partition;

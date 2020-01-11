@@ -24,11 +24,12 @@ namespace {
 using devmgr_integration_test::RecursiveWaitForFile;
 
 fbl::String GetTestFilter() {
-  constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+  constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
   fbl::unique_fd sysinfo(open(kSysInfoPath, O_RDWR));
   if (!sysinfo) {
     return "Unknown";
   }
+
   zx::channel channel;
   if (fdio_get_service_handle(sysinfo.release(), channel.reset_and_get_address()) != ZX_OK) {
     return "Unknown";
@@ -37,7 +38,7 @@ fbl::String GetTestFilter() {
   char board_name[fuchsia_sysinfo_SYSINFO_BOARD_NAME_LEN + 1];
   zx_status_t status;
   size_t actual_size;
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
+  zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetBoardName(channel.get(), &status, board_name,
                                                                sizeof(board_name), &actual_size);
   if (fidl_status != ZX_OK || status != ZX_OK) {
     return "Unknown";
