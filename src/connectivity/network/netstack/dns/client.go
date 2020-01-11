@@ -37,6 +37,9 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
+// defaultDNSPort is the default port used by DNS servers.
+const defaultDNSPort = 53
+
 // Client is a DNS client.
 type Client struct {
 	stack  *stack.Stack
@@ -73,6 +76,7 @@ func NewClient(s *stack.Stack) *Client {
 		},
 	}
 	c.config.mu.resolver = newCachedResolver(newNetworkResolver(&c.config))
+	c.config.mu.expiringServers = make(map[tcpip.FullAddress]expiringDNSServerState)
 	return c
 }
 
@@ -238,41 +242,35 @@ func (c *Client) exchange(server tcpip.FullAddress, name dnsmessage.Name, qtype 
 func (c *Client) tryOneName(cfg *clientConfig, name dnsmessage.Name, qtype dnsmessage.Type) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
 	var lastErr error
 
-	for i := 0; i < cfg.attempts; i++ {
-		for _, serverLists := range [][]*[]tcpip.Address{{&cfg.mu.defaultServers}, cfg.mu.runtimeServers} {
-			for _, serverList := range serverLists {
-				for _, server := range *serverList {
-					server := tcpip.FullAddress{
-						Addr: server,
-						Port: 53,
-					}
-					msg, err := c.exchange(server, name, qtype, cfg.timeout)
-					if err != nil {
-						lastErr = &Error{
-							Err:    err.Error(),
-							Name:   name.String(),
-							Server: &server,
-						}
-						continue
-					}
-					// libresolv continues to the next server when it receives
-					// an invalid referral response. See golang.org/issue/15434.
-					if msg.RCode == dnsmessage.RCodeSuccess && !msg.Authoritative && !msg.RecursionAvailable && len(msg.Answers) == 0 && len(msg.Additionals) == 0 {
-						lastErr = &Error{Err: "lame referral", Name: name.String(), Server: &server}
-						continue
-					}
+	servers := cfg.getServersCache()
 
-					cname, rrs, err := answer(name, server, msg, qtype)
-					// If answer errored for rcodes dnsRcodeSuccess or dnsRcodeNameError,
-					// it means the response in msg was not useful and trying another
-					// server probably won't help. Return now in those cases.
-					// TODO: indicate this in a more obvious way, such as a field on Error?
-					if err == nil || msg.RCode == dnsmessage.RCodeSuccess || msg.RCode == dnsmessage.RCodeNameError {
-						return cname, rrs, msg, err
-					}
-					lastErr = err
+	for i := 0; i < cfg.attempts; i++ {
+		for _, server := range servers {
+			msg, err := c.exchange(server, name, qtype, cfg.timeout)
+			if err != nil {
+				lastErr = &Error{
+					Err:    err.Error(),
+					Name:   name.String(),
+					Server: &server,
 				}
+				continue
 			}
+			// libresolv continues to the next server when it receives
+			// an invalid referral response. See golang.org/issue/15434.
+			if msg.RCode == dnsmessage.RCodeSuccess && !msg.Authoritative && !msg.RecursionAvailable && len(msg.Answers) == 0 && len(msg.Additionals) == 0 {
+				lastErr = &Error{Err: "lame referral", Name: name.String(), Server: &server}
+				continue
+			}
+
+			cname, rrs, err := answer(name, server, msg, qtype)
+			// If answer errored for rcodes dnsRcodeSuccess or dnsRcodeNameError,
+			// it means the response in msg was not useful and trying another
+			// server probably won't help. Return now in those cases.
+			// TODO: indicate this in a more obvious way, such as a field on Error?
+			if err == nil || msg.RCode == dnsmessage.RCodeSuccess || msg.RCode == dnsmessage.RCodeNameError {
+				return cname, rrs, msg, err
+			}
+			lastErr = err
 		}
 	}
 
@@ -298,13 +296,40 @@ func addrRecordList(rrs []dnsmessage.Resource) []tcpip.Address {
 	return addrs
 }
 
+// expiringDNSServerState is the state for an expiring DNS server.
+type expiringDNSServerState struct {
+	timer tcpip.CancellableTimer
+}
+
 // A clientConfig represents a DNS stub resolver configuration.
 type clientConfig struct {
 	mu struct {
 		sync.RWMutex
-		defaultServers []tcpip.Address    // server addresses (host and port) to use
-		runtimeServers []*[]tcpip.Address // references to slices of DNS servers configured at runtime
-		resolver       Resolver           // a handler which answers DNS Questions
+
+		// Default DNS server addresses.
+		//
+		// defaultServers are assumed to use defaultDNSPort for DNS queries.
+		defaultServers []tcpip.Address
+
+		// References to slices of DNS servers configured at runtime.
+		//
+		// Unlike expiringServers, these servers do not have a set lifetime; they
+		// are valid forever until updated.
+		//
+		// runtimeServers are assumed to use defaultDNSPort for DNS queries.
+		runtimeServers []*[]tcpip.Address
+
+		// DNS server and associated port configured at runtime that may expire
+		// after some lifetime.
+		expiringServers map[tcpip.FullAddress]expiringDNSServerState
+
+		// A cache of the available DNS server addresses and associated port that
+		// may be used until invalidation.
+		//
+		// Must be cleared when defaultServers, runtimeServers or expiringServers
+		// gets updated.
+		serversCache []tcpip.FullAddress
+		resolver     Resolver // a handler which answers DNS Questions
 	}
 	search   []string      // rooted suffixes to append to local name
 	ndots    int           // number of dots in name to trigger absolute lookup
@@ -366,6 +391,58 @@ func (conf *clientConfig) nameList(name string) []string {
 	return names
 }
 
+func (cfg *clientConfig) getServersCache() []tcpip.FullAddress {
+	// If we already have a populated cache, return it.
+	cfg.mu.RLock()
+	cache := cfg.mu.serversCache
+	cfg.mu.RUnlock()
+	if cache != nil {
+		return cache
+	}
+
+	// At this point the cache may need to be generated.
+
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+
+	// We check if the cache is populated again so that the read lock is leveraged
+	// above. We need to check cfg.mu.serversCache after taking the Write lock to
+	// avoid duplicate work when multiple concurrent calls to getServersCache are
+	// made.
+	//
+	// Without this check, the following can occur (T1 and T2 are goroutines
+	// that are trying to get the servers cache):
+	//   T1: Take RLock, Drop RLock, cache == nil
+	//   T2: Take RLock  Drop RLock, cache == nil
+	//   T1: Take WLock
+	//   T2: Attempt to take WLock, block
+	//   T1: Generate cache, drop WLock
+	//   T2: Obtain WLock, generate cache, drop WLock
+	//
+	// This example can be expanded to many more goroutines like T2.
+	//
+	// Here we can see that T2 unnessessarily regenerates the cache after T1. By
+	// checking if the servers cache is populated after obtaining the WLock, this
+	// can be avoided.
+	if cache := cfg.mu.serversCache; cache != nil {
+		return cache
+	}
+
+	for _, serverLists := range [][]*[]tcpip.Address{{&cfg.mu.defaultServers}, cfg.mu.runtimeServers} {
+		for _, serverList := range serverLists {
+			for _, server := range *serverList {
+				cache = append(cache, tcpip.FullAddress{Addr: server, Port: defaultDNSPort})
+			}
+		}
+	}
+	for s := range cfg.mu.expiringServers {
+		cache = append(cache, s)
+	}
+
+	cfg.mu.serversCache = cache
+	return cache
+}
+
 func (c *Client) GetDefaultServers() []tcpip.Address {
 	c.config.mu.RLock()
 	defer c.config.mu.RUnlock()
@@ -381,6 +458,8 @@ func (c *Client) SetDefaultServers(servers []tcpip.Address) {
 	c.config.mu.Lock()
 	defer c.config.mu.Unlock()
 
+	// Clear the cache of DNS servers.
+	c.config.mu.serversCache = nil
 	c.config.mu.defaultServers = servers
 	c.config.mu.resolver = newCachedResolver(newNetworkResolver(&c.config))
 }
@@ -399,7 +478,65 @@ func (c *Client) SetRuntimeServers(runtimeServerRefs []*[]tcpip.Address) {
 	c.config.mu.Lock()
 	defer c.config.mu.Unlock()
 
+	// Clear the cache of DNS servers.
+	c.config.mu.serversCache = nil
 	c.config.mu.runtimeServers = runtimeServerRefs
+	c.config.mu.resolver = newCachedResolver(newNetworkResolver(&c.config))
+}
+
+// UpdateExpiringServers updates the list of expiring servers to query.
+//
+// If a server already known by c, its lifetime will be refreshed. If a server
+// is not known and has a non-zero lifetime, it will be stored and set to
+// expire after lifetime.
+//
+// A lifetime value of less than 0 indicates that servers are not to expire
+// (they will become valid forever until another update refreshes the lifetime).
+func (c *Client) UpdateExpiringServers(servers []tcpip.FullAddress, lifetime time.Duration) {
+	c.config.mu.Lock()
+	defer c.config.mu.Unlock()
+
+	for _, s := range servers {
+		// If s.Port is 0, then assume the default DNS port.
+		if s.Port == 0 {
+			s.Port = defaultDNSPort
+		}
+
+		state, ok := c.config.mu.expiringServers[s]
+		if lifetime != 0 {
+			if !ok {
+				// Clear the cache of DNS servers since we add a new server.
+				c.config.mu.serversCache = nil
+
+				// We do not yet have the server and it has a non-zero lifetime.
+				s := s
+				state = expiringDNSServerState{
+					timer: tcpip.MakeCancellableTimer(&c.config.mu, func() {
+						// Clear the cache of DNS servers.
+						c.config.mu.serversCache = nil
+						delete(c.config.mu.expiringServers, s)
+					}),
+				}
+			}
+
+			// Refresh s's lifetime.
+			state.timer.StopLocked()
+			if lifetime > 0 {
+				// s is valid for a finite lifetime.
+				state.timer.Reset(lifetime)
+			}
+
+			c.config.mu.expiringServers[s] = state
+		} else if ok {
+			// Clear the cache of DNS servers since we remove a server.
+			c.config.mu.serversCache = nil
+
+			// We have the server and it is no longer to be used.
+			state.timer.StopLocked()
+			delete(c.config.mu.expiringServers, s)
+		}
+	}
+
 	c.config.mu.resolver = newCachedResolver(newNetworkResolver(&c.config))
 }
 
