@@ -199,6 +199,10 @@ func (m *dnsSDFinder) resolve(ctx context.Context, f chan *fuchsiaDevice, nodena
 }
 
 func (m *dnsSDFinder) close() {
+	// Since the mDNS daemon is being polled, the longest this will wait is
+	// daemonPollTimeoutMs milliseconds (and however long it will take to
+	// complete any potential last-millisecond results processing in the
+	// worst case) past the deadline before all worker threads exit.
 	m.wg.Wait()
 }
 
