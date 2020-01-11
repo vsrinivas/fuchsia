@@ -23,41 +23,6 @@ namespace zxdb {
 
 namespace {
 
-OutputBuffer SettingValueToString(ConsoleContext* context, const SettingValue& value) {
-  switch (value.type()) {
-    case SettingType::kBoolean: {
-      return value.get_bool() ? OutputBuffer("true") : OutputBuffer("false");
-    }
-    case SettingType::kInteger: {
-      return fxl::StringPrintf("%d", value.get_int());
-    }
-    case SettingType::kString: {
-      auto string = value.get_string();
-      return string.empty() ? OutputBuffer(Syntax::kComment, "\"\"")
-                            : OutputBuffer(FormatConsoleString(string));
-    }
-    case SettingType::kList: {
-      const auto& list = value.get_list();
-      std::string result;
-      for (size_t i = 0; i < list.size(); i++) {
-        if (i > 0)
-          result += " ";
-        result += FormatConsoleString(list[i]);
-      }
-      return OutputBuffer(result);
-    }
-    case SettingType::kExecutionScope: {
-      return ExecutionScopeToString(context, value.get_execution_scope());
-    }
-    case SettingType::kInputLocations: {
-      return FormatInputLocations(value.get_input_locations());
-    }
-    case SettingType::kNull: {
-      return OutputBuffer(Syntax::kComment, "<null>");
-    }
-  }
-}
-
 std::vector<std::string> ListToBullet(const std::vector<std::string>& list) {
   std::vector<std::string> output;
   output.reserve(list.size());
@@ -79,7 +44,7 @@ void AddSettingToTable(ConsoleContext* context, const std::string& name, const S
     auto& row = rows->emplace_back();
     if (add_heading)
       row.emplace_back(Syntax::kVariable, name);
-    row.emplace_back(SettingValueToString(context, value));
+    row.emplace_back(FormatSettingValue(context, value));
   } else {
     // List get special treatment so that we can show them as bullet lists. This make reading them
     // much easier when the elements of the lists are long (eg. paths).
@@ -122,26 +87,28 @@ OutputBuffer FormatSettingStore(ConsoleContext* context, const SettingStore& sto
 
 OutputBuffer FormatSetting(ConsoleContext* context, const std::string& name,
                            const std::string& description, const SettingValue& value) {
+  // Heading, type, and help description.
   OutputBuffer out;
-  out.Append(Syntax::kVariable, name);
-  out.Append(OutputBuffer("\n\n"));
+  out.Append(Syntax::kHeading, name);
+  out.Append(Syntax::kComment, fxl::StringPrintf(" (%s)\n\n", SettingTypeToString(value.type())));
 
   out.Append(description);
   out.Append(OutputBuffer("\n\n"));
 
-  out.Append(Syntax::kHeading, "Type: ");
-  out.Append(SettingTypeToString(value.type()));
-  out.Append("\n\n");
+  out.Append(Syntax::kVariable, name);
+  out.Append(" = ");
 
-  out.Append(Syntax::kHeading, "Value(s):\n");
-  out.Append(FormatSettingShort(context, name, value));
+  // Nonempty lists are written on the following line. Everything else goes on the same line.
+  if (value.is_list() && !value.get_list().empty())
+    out.Append("\n");
+  out.Append(FormatSettingShort(context, name, value, 2));
 
-  // List have a copy-paste value for setting the value.
   if (value.is_list()) {
+    // List have a copy-paste value for setting the value.
     out.Append("\n");
     out.Append(Syntax::kComment, "See \"help set\" about using the set value for lists.\n");
     out.Append(Syntax::kComment, fxl::StringPrintf("To set, type: set %s ", name.c_str()));
-    out.Append(SettingValueToString(context, value));
+    out.Append(Syntax::kComment, FormatSettingValue(context, value).AsString().c_str());
     out.Append("\n");
   }
 
@@ -149,14 +116,52 @@ OutputBuffer FormatSetting(ConsoleContext* context, const std::string& name,
 }
 
 OutputBuffer FormatSettingShort(ConsoleContext* context, const std::string& name,
-                                const SettingValue& value) {
+                                const SettingValue& value, int list_indent) {
   FXL_DCHECK(!value.is_null());
+
+  int pad_left = value.is_list() ? list_indent : 0;
 
   OutputBuffer out;
   std::vector<std::vector<OutputBuffer>> rows;
   AddSettingToTable(context, name, value, &rows, false);
-  FormatTable(std::vector<ColSpec>{1}, std::move(rows), &out);
+  FormatTable(std::vector<ColSpec>{ColSpec(Align::kLeft, 0, std::string(), pad_left)},
+              std::move(rows), &out);
   return out;
+}
+
+OutputBuffer FormatSettingValue(ConsoleContext* context, const SettingValue& value) {
+  switch (value.type()) {
+    case SettingType::kBoolean: {
+      return value.get_bool() ? OutputBuffer("true") : OutputBuffer("false");
+    }
+    case SettingType::kInteger: {
+      return fxl::StringPrintf("%d", value.get_int());
+    }
+    case SettingType::kString: {
+      auto string = value.get_string();
+      return string.empty() ? OutputBuffer(Syntax::kComment, "\"\"")
+                            : OutputBuffer(FormatConsoleString(string));
+    }
+    case SettingType::kList: {
+      const auto& list = value.get_list();
+      std::string result;
+      for (size_t i = 0; i < list.size(); i++) {
+        if (i > 0)
+          result += " ";
+        result += FormatConsoleString(list[i]);
+      }
+      return OutputBuffer(result);
+    }
+    case SettingType::kExecutionScope: {
+      return ExecutionScopeToString(context, value.get_execution_scope());
+    }
+    case SettingType::kInputLocations: {
+      return FormatInputLocations(value.get_input_locations());
+    }
+    case SettingType::kNull: {
+      return OutputBuffer(Syntax::kComment, "<null>");
+    }
+  }
 }
 
 }  // namespace zxdb

@@ -47,26 +47,6 @@ class VerbsSettingsTest : public RemoteAPITest {
     return event.output.AsString();
   }
 
-  // "get" output returns the help text which we don't want to hardcode here. This function extracts
-  // just the values from the given output message. It will not have a newline terminator.
-  std::string ExtractValuesFromGet(const std::string& input) {
-    std::string values_heading = "Value(s):\n";
-
-    size_t heading_index = input.find(values_heading);
-    if (heading_index == std::string::npos) {
-      EXPECT_NE(heading_index, std::string::npos);
-      return std::string();
-    }
-    size_t value_index = heading_index + values_heading.size();
-
-    // The end is the next blank line.
-    size_t end_index = input.find("\n\n", value_index);
-    if (end_index == std::string::npos)
-      end_index = input.size();
-
-    return input.substr(value_index, end_index - value_index);
-  }
-
  private:
   std::unique_ptr<MockConsole> console_;
 };
@@ -153,7 +133,10 @@ TEST_F(VerbsSettingsTest, GetSet) {
   console().FlushOutputEvents();
 
   // "get" with no input.
-  EXPECT_EQ("<empty>", ExtractValuesFromGet(DoInput("get build-dirs")));
+  EXPECT_EQ("", DoInput("get --value-only build-dirs"));
+
+  // "get" with an invalid object (there is no active filter).
+  EXPECT_EQ("No current object of this type.", DoInput("filter get --value-only"));
 
   // Process qualified set.
   EXPECT_EQ(
@@ -162,8 +145,8 @@ TEST_F(VerbsSettingsTest, GetSet) {
       DoInput("pr set build-dirs prdir"));
 
   // Both the unqualified and process-qualified one should get it,
-  EXPECT_EQ("• prdir", ExtractValuesFromGet(DoInput("get build-dirs")));
-  EXPECT_EQ("• prdir", ExtractValuesFromGet(DoInput("process get build-dirs")));
+  EXPECT_EQ("prdir", DoInput("get --value-only build-dirs"));
+  EXPECT_EQ("prdir", DoInput("process get --value-only build-dirs"));
 
   // Globally qualified set.
   EXPECT_EQ(
@@ -173,9 +156,9 @@ TEST_F(VerbsSettingsTest, GetSet) {
 
   // The globally qualified one should return it, but the unqualified one should return the process
   // since it's more specific.
-  EXPECT_EQ("• prdir", ExtractValuesFromGet(DoInput("process get build-dirs")));
-  EXPECT_EQ("• gldir", ExtractValuesFromGet(DoInput("global get build-dirs")));
-  EXPECT_EQ("• prdir", ExtractValuesFromGet(DoInput("get build-dirs")));
+  EXPECT_EQ("prdir", DoInput("process get --value-only build-dirs"));
+  EXPECT_EQ("gldir", DoInput("global get --value-only build-dirs"));
+  EXPECT_EQ("prdir", DoInput("get --value-only build-dirs"));
 
   // Unqualified set.
   EXPECT_EQ(
@@ -191,12 +174,8 @@ TEST_F(VerbsSettingsTest, GetSet) {
       "• \"gldir four\"\n",
       DoInput("set build-dirs += gldir3 \"gldir four\""));
 
-  EXPECT_EQ(
-      "• gldir2\n"
-      "• gldir3\n"
-      "• \"gldir four\"",
-      ExtractValuesFromGet(DoInput("global get build-dirs")));
-  EXPECT_EQ("• prdir", ExtractValuesFromGet(DoInput("get build-dirs")));
+  EXPECT_EQ("gldir2 gldir3 \"gldir four\"", DoInput("global get --value-only build-dirs"));
+  EXPECT_EQ("prdir", DoInput("get --value-only build-dirs"));
 
   // Check invalid values.
   EXPECT_EQ("Could not find setting \"unknown-setting\".", DoInput("set unknown-setting = blah"));

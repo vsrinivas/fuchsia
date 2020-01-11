@@ -30,6 +30,15 @@ namespace zxdb {
 
 namespace {
 
+constexpr int kValueOnlySwitch = 1;
+
+// TODO(brettw) Some of this is very repetitive. The Check*() functions and the big block in
+// GetSettingContext() duplicate getting scopes and checking stuff.
+//
+// It would be nice if this was expressed in more of a table form to eliminate this code. The
+// Level enum could also be removed if the setting store description could be added to the
+// SettingContext.
+
 // Struct to represents all the context needed to correctly reason about the settings commands.
 struct SettingContext {
   enum class Level {
@@ -39,7 +48,14 @@ struct SettingContext {
     kFilter,
   };
 
+  // The SettingStore we're using. This will either be the one the user specified or the implicit
+  // one deteched for the value. It will be null if the name is empty and there was no explicitly
+  // specified one.
   SettingStore* store = nullptr;
+
+  // Set when the user has explicitly set the setting store ("thread 1 set ..."). False means the
+  // store was determined implicitly based on the name.
+  bool explicit_store = false;
 
   std::string name;
   SettingValue value;
@@ -50,6 +66,15 @@ struct SettingContext {
   // What kind of operation this is for set commands.
   ParsedSetCommand::Operation op = ParsedSetCommand::kAssign;
 };
+
+// Fixes up user typing for a setting name by lower-casing.
+std::string CanonicalizeSettingName(const std::string& input) {
+  std::string output;
+  output.reserve(input.size());
+  for (char c : input)
+    output.push_back(tolower(c));
+  return output;
+}
 
 bool CheckGlobal(ConsoleContext* context, const Command& cmd, const std::string& setting_name,
                  SettingContext* out) {
@@ -85,32 +110,41 @@ Err GetSettingContext(ConsoleContext* context, const Command& cmd, const std::st
   if (!cmd.target())
     return Err("No process found. Please file a bug with a repro.");
 
-  out->name = setting_name;
+  out->name = CanonicalizeSettingName(setting_name);
 
   // Handle noun overrides for getting/setting on specific objects.
+  // TODO(brettw) see above for TODO about reducing this duplication.
   if (cmd.HasNoun(Noun::kThread)) {
     out->store = cmd.thread() ? &cmd.thread()->settings() : nullptr;
+    out->explicit_store = true;
     out->level = SettingContext::Level::kThread;
   } else if (cmd.HasNoun(Noun::kProcess)) {
     out->store = &cmd.target()->settings();
+    out->explicit_store = true;
     out->level = SettingContext::Level::kTarget;
   } else if (cmd.HasNoun(Noun::kGlobal)) {
     out->store = &context->session()->system().settings();
+    out->explicit_store = true;
     out->level = SettingContext::Level::kGlobal;
   } else if (cmd.HasNoun(Noun::kFilter)) {
-    out->store = &cmd.filter()->settings();
+    out->store = cmd.filter() ? &cmd.filter()->settings() : nullptr;
+    out->explicit_store = true;
     out->level = SettingContext::Level::kFilter;
   }
+
+  // When no name is specified, there's no implicit setting store to look up.
+  if (out->name.empty())
+    return Err();
 
   if (out->store) {
     // Found an explicitly requested setting store.
     if (cmd.verb() == Verb::kSet) {
       // Use the generic definition from the schama (if any).
-      if (const SettingSchema::Record* record = out->store->schema()->GetSetting(setting_name))
+      if (const SettingSchema::Record* record = out->store->schema()->GetSetting(out->name))
         out->value = record->default_value;
     } else if (cmd.verb() == Verb::kGet) {
       // Use the specific value from the store.
-      out->value = out->store->GetValue(setting_name);
+      out->value = out->store->GetValue(out->name);
     }
     return Err();
   }
@@ -118,11 +152,11 @@ Err GetSettingContext(ConsoleContext* context, const Command& cmd, const std::st
   // Didn't found an explicit specified store, so lookup in the current context. Since the
   // settings can be duplicated on different levels, we need to search in the order that makes
   // sense for the command.
-  //
-  // This array encodes the order we search from the most global to most specific store.
-  //
-  // TODO(brettw) this logic should not be here. This search should be encoded in the fallback
-  // stores in each SettingStore so that the logic is guaranteed to match.
+  out->explicit_store = false;
+
+  // This array encodes the order we search from the most global to most specific store. This is
+  // not the same as the SettingStore fallback because "set" searches from global->specific ("get"
+  // does the reverse).
   using CheckFunction =
       bool (*)(ConsoleContext*, const Command&, const std::string&, SettingContext*);
   const CheckFunction kGlobalToSpecific[] = {
@@ -134,148 +168,86 @@ Err GetSettingContext(ConsoleContext* context, const Command& cmd, const std::st
   if (cmd.verb() == Verb::kSet) {
     // When setting, choose the most global context the setting can apply to.
     for (const auto cur : kGlobalToSpecific) {
-      if (cur(context, cmd, setting_name, out)) {
+      if (cur(context, cmd, out->name, out)) {
         // Just get the default value so the type is set properly.
-        out->value = out->store->schema()->GetSetting(setting_name)->default_value;
+        out->value = out->store->schema()->GetSetting(out->name)->default_value;
         return Err();
       }
     }
   } else if (cmd.verb() == Verb::kGet) {
     // When getting, choose the most specific context the setting can apply to.
     for (const auto cur : Reversed(kGlobalToSpecific)) {
-      if (cur(context, cmd, setting_name, out)) {
+      if (cur(context, cmd, out->name, out)) {
         // Getting additionally requires that the setting be non-null. We want to find the first
         // one that might apply.
-        out->value = out->store->GetValue(setting_name);
+        out->value = out->store->GetValue(out->name);
         if (!out->value.is_null())
           return Err();
       }
     }
   }
 
-  return Err("Could not find setting \"%s\".", setting_name.data());
+  return Err("Could not find setting \"%s\".", out->name.data());
 }
 
 // get ---------------------------------------------------------------------------------------------
 
-const char kGetShortHelp[] = "get: Get a setting(s) value(s).";
+const char kGetShortHelp[] = "get: Prints setting values.";
 const char kGetHelp[] =
-    R"(get [setting_name]
+    R"([ <object> ] get [ --value-only ] [ <setting-name> ]
 
-  Gets the value of all the settings or the detailed description of one.
+  Prints setting values.
 
-Arguments
+  Settings are hierarchical for processes and threads. This means that
+  thread settings will inherit from the process if they don't exist on
+  the thread, and process settings will inherit from the global settings
+  if they don't exist on the process.
 
-  [setting_name]
-      Filter for one setting. Will show detailed information, such as a
-      description and more easily copyable values.
+get
 
-Setting Types
+    By itself, "get" will show the global settings and the ones for the
+    current thread and process.
 
-  Settings have a particular type: bool, int, string or list (of strings).
-  The type is set beforehand and cannot change. Getting the detailed information
-  of a setting will show the type of setting it is, though normally it is easy
-  to tell from the list of values.
+    Example:
+      get
 
-Contexts
+get <setting-name>
 
-  Within zxdb, there is the concept of the current context. This means that at
-  any given moment, there is a current process, thread and breakpoint. This also
-  applies when handling settings. By default, get will query the settings for
-  the current thread. If you want to query the settings for the current process
-  or globally, you need to qualify at such.
+    Prints the value of the named setting. It will search the current
+    thread, followed by the current process, and then global settings.
 
-  There are currently 3 contexts where settings live:
+    Examples:
+      get build-dirs
+      get show-stdout
 
-  - Global
-  - Process
-  - Thread
+<object> get
 
-  In order to query a particular context, you need to qualify it:
+    Prints all settings from a specific object.
 
-  get foo
-      Unqualified. Queries the current thread settings.
-  p 1 get foo
-      Qualified. Queries the selected process settings.
-  p 3 t 2 get foo
-      Qualified. Queries the selectedthread settings.
+    Examples:
+      process 1 thread 1 get
+      thread get              // Uses the current thread.
+      filter 2 get
+      global get              // Explicitly requests only global values
+                              // (processes and threads may override).
 
-  For system settings, we need to override the context, so we need to explicitly
-  ask for it. Any explicit context will be ignored in this case:
+<object> get <setting-name>
 
-  get -s foo
-      Retrieves the value of "foo" for the system.
+    Prints a named setting from a specific object.
 
-Schemas
+    Examples:
+      filter 2 get pattern
+      filter get pattern     // Uses the current filter.
 
-  Each setting level (thread, global, etc.) has an associated schema.
-  This defines what settings are available for it and the default values.
-  Initially, all objects default to their schemas, but values can be overridden
-  for individual objects.
+Options
 
-Instance Overrides
+  --value-only
+      Displays only the value of the setting without any help text or
+      formatting.
+)";
 
-  Values overriding means that you can modify behaviour for a particular object.
-  If a setting has not been overridden for that object, it will fallback to the
-  settings of parent object. The fallback order is as follows:
-
-  Thread -> Process -> Global -> Schema Default
-
-  This means that if a thread has not overridden a value, it will check if the
-  owning process has overridden it, then is the system has overridden it. If
-  there are none, it will get the default value of the thread schema.
-
-  For example, if t1 has overridden "foo" but t2 has not:
-
-  t 1 foo
-      Gets the value of "foo" for t1.
-  t 2 foo
-      Queries the owning process for foo. If that process doesn't have it (no
-      override), it will query the system. If there is no override, it will
-      fallback to the schema default.
-
-  NOTE:
-  Not all settings are present in all schemas, as some settings only make sense
-  in a particular context. If the thread schema holds a setting "foo" which the
-  process schema does not define, asking for "foo" on a thread will only default
-  to the schema default, as the concept of "foo" does not makes sense to a
-  process.
-
-Examples
-
-  get
-      List the global settings for the System context.
-
-  p get foo
-      Get the value of foo for the global Process context.
-
-  p 2 t1 get
-      List the values of settings for t1 of p2.
-      This will list all the settings within the Thread schema, highlighting
-      which ones are overridden.
-
-  get -s
-      List the values of settings at the system level.
-  )";
-
-Err SettingToOutput(ConsoleContext* console_context, const Command& cmd, const std::string& key,
-                    OutputBuffer* out) {
-  SettingContext setting_context;
-  if (Err err = GetSettingContext(console_context, cmd, key, &setting_context); err.has_error())
-    return err;
-
-  if (!setting_context.value.is_null()) {
-    const SettingSchema::Record* record = setting_context.store->schema()->GetSetting(key);
-    FXL_DCHECK(record);  // Should always succeed if GetSettingContext did.
-    *out = FormatSetting(console_context, key, record->description, setting_context.value);
-    return Err();
-  }
-
-  return Err("Could not find setting %s", key.c_str());
-}
-
+// Outputs the general settings in the following order: System -> Target -> Thread
 Err CompleteSettingsToOutput(const Command& cmd, ConsoleContext* context, OutputBuffer* out) {
-  // Output in the following order: System -> Target -> Thread
   out->Append(OutputBuffer(Syntax::kHeading, "Global\n"));
   out->Append(FormatSettingStore(context, context->session()->system().settings()));
   out->Append("\n");
@@ -297,20 +269,46 @@ Err CompleteSettingsToOutput(const Command& cmd, ConsoleContext* context, Output
   return Err();
 }
 
-Err DoGet(ConsoleContext* context, const Command& cmd) {
-  std::string setting_name;
+Err DoGet(ConsoleContext* console_context, const Command& cmd) {
+  std::string input_name;
   if (!cmd.args().empty()) {
     if (cmd.args().size() > 1)
       return Err("Expected only one setting name");
-    setting_name = cmd.args()[0];
+    input_name = cmd.args()[0];
   }
 
   Err err;
+  SettingContext setting_context;
+  if (err = GetSettingContext(console_context, cmd, input_name, &setting_context); err.has_error())
+    return err;
+  // Use setting_context.name from here on down instead of input_name because it's canonicalized.
+
   OutputBuffer out;
-  if (!setting_name.empty()) {
-    err = SettingToOutput(context, cmd, setting_name, &out);
+  if (!setting_context.name.empty()) {
+    // Getting one setting.
+    if (setting_context.value.is_null()) {
+      err = Err("Could not find setting %s", setting_context.name.c_str());
+    } else if (cmd.HasSwitch(kValueOnlySwitch)) {
+      out = FormatSettingValue(console_context, setting_context.value);
+    } else {
+      const SettingSchema::Record* record =
+          setting_context.store->schema()->GetSetting(setting_context.name);
+      FXL_DCHECK(record);  // Should always succeed if GetSettingContext did.
+      out = FormatSetting(console_context, setting_context.name, record->description,
+                          setting_context.value);
+    }
+  } else if (setting_context.explicit_store) {
+    // Getting all settings on one object. The object may not be valid (e.g. "thread get" when
+    // there's no current thread).
+    if (setting_context.store) {
+      out.Append(FormatSettingStore(console_context, *setting_context.store));
+      out.Append("\n");
+    } else {
+      err = Err("No current object of this type.");
+    }
   } else {
-    err = CompleteSettingsToOutput(cmd, context, &out);
+    // Implcitly getting all settings, show the general global/process/thread ones.
+    err = CompleteSettingsToOutput(cmd, console_context, &out);
   }
 
   if (err.has_error())
@@ -323,14 +321,22 @@ Err DoGet(ConsoleContext* context, const Command& cmd) {
 
 const char kSetShortHelp[] = "set: Set a setting value.";
 const char kSetHelp[] =
-    R"(set <setting_name> [ <modification-type> ] <value>*
+    R"([ <object> ] set <setting-name> [ <modification-type> ] <value>*
 
   Sets the value of a setting.
 
+  See which settings are available, their names and current values with
+  the "get" command (see "help get").
+
 Arguments
 
+  <object>
+      The object that the setting is on. If unspecified, it will search
+      the current thread, process, and then the global settings for a
+      match to set.
+
   <setting_name>
-      The setting that will modified. Must match exactly.
+      The setting that will modified. Case-insensitive.
 
   <modification-type>
       Operator that indicates how to mutate a list. For non-lists only = (the
@@ -345,33 +351,9 @@ Arguments
       are whitespace separated. You can "quote" strings to include literal
       spaces.
 
-Contexts, Schemas and Instance Overrides
-
-  Settings have a hierarchical system of contexts where settings are defined.
-  When setting a value, if it is not qualified, it will be set the setting at
-  the highest level it can, in order to make it as general as possible.
-
-  In most cases these higher level will be system-wide, to change behavior to
-  the whole system, that can be overridden per-process or per-thread. Sometimes
-  though, the setting only makes sense on a per-object basis (eg. new process
-  filters for jobs). In this case, the unqualified set will work on the current
-  object in the context.
-
-  In order to override a setting at a job, process or thread level, the setting
-  command has to be explicitly qualified. This works for both avoiding setting
-  the value at a global context or to set the value for an object other than
-  the current one. See examples below.
-
-  There is detailed information on contexts and schemas in "help get".
-
 Setting Types
 
-  Settings have a particular type: bool, int, string or list (of strings).
-  The type is set beforehand and cannot change. Getting the detailed information
-  of a setting will show the type of setting it is, though normally it is easy
-  to tell from the list of valued.
-
-  The valid inputs for each type are:
+  Each setting has a particular type.
 
   bool
       "0", "false" -> false
@@ -592,8 +574,9 @@ Err DoSet(ConsoleContext* console_context, const Command& cmd) {
   if (!err.ok())
     return err;
 
+  // Be sure to use the canonicalized name in the setting_context for the output.
   Console::get()->Output(
-      FormatSetFeedback(console_context, setting_context, parsed.value().name, cmd, out_value));
+      FormatSetFeedback(console_context, setting_context, setting_context.name, cmd, out_value));
   return Err();
 }
 
@@ -751,6 +734,7 @@ ErrOr<ExecutionScope> ParseExecutionScope(ConsoleContext* console_context,
 
 void AppendSettingsVerbs(std::map<Verb, VerbRecord>* verbs) {
   VerbRecord get(&DoGet, {"get"}, kGetShortHelp, kGetHelp, CommandGroup::kGeneral);
+  get.switches.emplace_back(kValueOnlySwitch, false, "value-only");
   (*verbs)[Verb::kGet] = std::move(get);
 
   VerbRecord set(&DoSet, &CompleteSet, {"set"}, kSetShortHelp, kSetHelp, CommandGroup::kGeneral);

@@ -23,9 +23,14 @@ OutputBuffer FormatSettingStore(ConsoleContext* context, const SettingStore& sto
 OutputBuffer FormatSetting(ConsoleContext* context, const std::string& name,
                            const std::string& description, const SettingValue& value);
 
-// Formats the setting to just show <name>:<value>.
+// Formats the setting to just show the value. Since lists go on separate different lines,
+// list_indent can be used to insert spaces to the left of each.
 OutputBuffer FormatSettingShort(ConsoleContext* context, const std::string& name,
-                                const SettingValue& value);
+                                const SettingValue& value, int list_indent = 0);
+
+// Formats an individual setting value. This is the low-level formatting and
+// doesn't do any special handling for lists (it will be just space-separated).
+OutputBuffer FormatSettingValue(ConsoleContext* context, const SettingValue& value);
 
 }  // namespace zxdb
 

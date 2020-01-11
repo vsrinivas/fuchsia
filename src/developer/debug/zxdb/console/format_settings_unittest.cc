@@ -33,15 +33,12 @@ TEST_F(FormatSettingTest, Setting) {
                                    "  with many lines.",
                                    SettingValue("Test string"));
   EXPECT_EQ(
-      "setting-string2\n"
+      "setting-string2 (string)\n"
       "\n"
       "  Setting string description,\n"
       "  with many lines.\n"
       "\n"
-      "Type: string\n"
-      "\n"
-      "Value(s):\n"
-      "\"Test string\"\n",
+      "setting-string2 = \"Test string\"\n",
       out.AsString());
 }
 
@@ -59,41 +56,32 @@ TEST_F(FormatSettingTest, ExecutionScope) {
   // Global scope.
   OutputBuffer out = FormatSetting(&context, name, description, SettingValue(ExecutionScope()));
   EXPECT_EQ(
-      "setting-scope\n"
+      "setting-scope (scope)\n"
       "\n"
       "Scope description\n"
       "\n"
-      "Type: scope\n"
-      "\n"
-      "Value(s):\n"
-      "Global\n",
+      "setting-scope = Global\n",
       out.AsString());
 
   // Target scope.
   out = FormatSetting(&context, name, description,
                       SettingValue(ExecutionScope(process->GetTarget())));
   EXPECT_EQ(
-      "setting-scope\n"
+      "setting-scope (scope)\n"
       "\n"
       "Scope description\n"
       "\n"
-      "Type: scope\n"
-      "\n"
-      "Value(s):\n"
-      "pr 1\n",
+      "setting-scope = pr 1\n",
       out.AsString());
 
   // Thread scope.
   out = FormatSetting(&context, name, description, SettingValue(ExecutionScope(thread)));
   EXPECT_EQ(
-      "setting-scope\n"
+      "setting-scope (scope)\n"
       "\n"
       "Scope description\n"
       "\n"
-      "Type: scope\n"
-      "\n"
-      "Value(s):\n"
-      "pr 1 t 1\n",
+      "setting-scope = pr 1 t 1\n",
       out.AsString());
 }
 
@@ -108,14 +96,11 @@ TEST_F(FormatSettingTest, InputLocations) {
 
   OutputBuffer out = FormatSetting(&context, name, description, SettingValue(inputlocs));
   EXPECT_EQ(
-      "setting-inputloc\n"
+      "setting-inputloc (locations)\n"
       "\n"
       "Input location description\n"
       "\n"
-      "Type: locations\n"
-      "\n"
-      "Value(s):\n"
-      "<no location>\n",
+      "setting-inputloc = <no location>\n",
       out.AsString());
 
   // Test with some values. The InputLocation formatter has its own tests for the edge cases.
@@ -123,14 +108,11 @@ TEST_F(FormatSettingTest, InputLocations) {
   inputlocs.emplace_back(FileLine("file.cc", 23));
   out = FormatSetting(&context, name, description, SettingValue(inputlocs));
   EXPECT_EQ(
-      "setting-inputloc\n"
+      "setting-inputloc (locations)\n"
       "\n"
       "Input location description\n"
       "\n"
-      "Type: locations\n"
-      "\n"
-      "Value(s):\n"
-      "SomeFunction, file.cc:23\n",
+      "setting-inputloc = SomeFunction, file.cc:23\n",
       out.AsString());
 }
 
@@ -150,17 +132,15 @@ TEST_F(FormatSettingTest, List) {
 
   OutputBuffer out = FormatSetting(&context, name, description, SettingValue(options));
   EXPECT_EQ(
-      "setting-list2\n"
+      "setting-list2 (list)\n"
       "\n"
       "  Some very long description about how this setting is very important to the\n"
       "  company and all its customers.\n"
       "\n"
-      "Type: list\n"
-      "\n"
-      "Value(s):\n"
-      "• /some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
-      "• /another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
-      "• \"this path/needs\\tquoting\"\n"
+      "setting-list2 = \n"
+      "  • /some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
+      "  • /another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
+      "  • \"this path/needs\\tquoting\"\n"
       "\n"
       "See \"help set\" about using the set value for lists.\n"
       "To set, type: set setting-list2 "
