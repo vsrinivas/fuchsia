@@ -311,7 +311,8 @@ async fn connect_session_player(
 ) -> Result<sessions2::PlayerRequestStream, Error> {
     let (player_client, player_request_stream) = endpoints::create_request_stream()?;
 
-    let registration = sessions2::PlayerRegistration { domain };
+    let registration =
+        sessions2::PlayerRegistration { domain: domain.or(Some("Bluetooth".to_string())) };
 
     publisher.publish(player_client, registration).await.context("publishing player")?;
 
@@ -410,7 +411,7 @@ mod tests {
                 responder,
                 registration,
             })) => {
-                assert_eq!(expected_domain, registration.domain);
+                assert_eq!(expected_domain.or(Some("Bluetooth".to_string())), registration.domain);
                 responder.send(1).expect("should have been able to send session response");
                 player.into_proxy()?
             }
