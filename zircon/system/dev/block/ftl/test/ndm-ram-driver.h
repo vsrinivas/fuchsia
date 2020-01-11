@@ -16,7 +16,7 @@ struct TestOptions {
   bool use_half_size;      // Makes only half of the space visible.
   bool save_config_data;   // Save options on the partition info.
 };
-constexpr TestOptions kDefaultTestOptions = {900, 50, false, false};
+constexpr TestOptions kDefaultTestOptions = {900, 50, false, true};
 
 // Ram-backed driver for testing purposes.
 class NdmRamDriver final : public ftl::NdmBaseDriver {
@@ -31,6 +31,7 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
 
   void save_config_data(bool value) { test_options_.save_config_data = value; }
 
+  void set_options(const ftl::VolumeOptions& options) { options_ = options; }
   void set_max_bad_blocks(uint32_t value) { options_.max_bad_blocks = value; }
   uint32_t num_bad_blocks() const { return num_bad_blocks_; }
 

@@ -132,7 +132,16 @@ struct ndm {
   ui32 flags;            // option flags
 
   // Partition Information:
+  // The first variable reflects the current status of the NDM, which means either
+  // the format used to write the control header or the format of the newest control
+  // header read from NAND.
+  // On the other hand, the second variable reflects the format to be used when
+  // creating new volumes. We retain the ability to format devices using the old
+  // format only to simplify testing (upgrade ability).
+  // TODO(40208): Remove upgrading code after all devices in the field are using
+  // the new format.
   ui32 version_2;        // "Boolean" variable: FALSE for control header version 1.
+  ui32 format_with_v2;   // "Boolean" variable: FALSE to use control header version 1.
   ui32 num_partitions;
   NDMPartition* partitions;  // Points to an NDMPartitionInfo when version_2 is TRUE.
 

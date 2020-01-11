@@ -146,9 +146,9 @@ int CheckPage(uint32_t page, uint8_t* data, uint8_t* spare, int* status, void* d
 
 NdmBaseDriver::~NdmBaseDriver() { RemoveNdmVolume(); }
 
-bool NdmBaseDriver::IsNdmDataPresent(const VolumeOptions& options) {
+bool NdmBaseDriver::IsNdmDataPresent(const VolumeOptions& options, bool use_format_v2) {
   NDMDrvr driver;
-  FillNdmDriver(options, &driver);
+  FillNdmDriver(options, use_format_v2, &driver);
 
   SetFsErrCode(NDM_OK);
   ndm_ = ndmAddDev(&driver);
@@ -173,15 +173,11 @@ bool NdmBaseDriver::BadBbtReservation() const {
 const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options,
                                            bool save_volume_data) {
   if (!ndm_) {
-    IsNdmDataPresent(options);
+    IsNdmDataPresent(options, save_volume_data);
   }
 
   if (!ndm_) {
     return "ndmAddDev failed";
-  }
-
-  if (ndmSetNumPartitions(ndm_, 1) != 0) {
-    return "ndmSetNumPartitions failed";
   }
 
   PartitionInfo partition = {};
@@ -203,6 +199,7 @@ const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const Volum
     if (ndmWritePartitionInfo(ndm_, &partition.ndm) != 0) {
       return "ndmWritePartitionInfo failed";
     }
+
     if (!info && !(options.flags & kReadOnlyInit)) {
       // There was no volume information saved, save it now.
       if (ndmSavePartitionTable(ndm_) != 0) {
@@ -210,6 +207,11 @@ const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const Volum
       }
     }
   } else {
+    // This call also allocates the partition data, but old style.
+    if (ndmSetNumPartitions(ndm_, 1) != 0) {
+      return "ndmSetNumPartitions failed";
+    }
+
     if (ndmWritePartition(ndm_, &partition.ndm.basic_data, 0, "ftl") != 0) {
       return "ndmWritePartition failed";
     }
@@ -272,7 +274,8 @@ const VolumeOptions* NdmBaseDriver::GetSavedOptions() const {
   return &info->exploded.data.options;
 }
 
-void NdmBaseDriver::FillNdmDriver(const VolumeOptions& options, NDMDrvr* driver) const {
+void NdmBaseDriver::FillNdmDriver(const VolumeOptions& options, bool use_format_v2,
+                                  NDMDrvr* driver) const {
   *driver = {};
   driver->num_blocks = options.num_blocks;
   driver->max_bad_blocks = options.max_bad_blocks;
@@ -280,6 +283,7 @@ void NdmBaseDriver::FillNdmDriver(const VolumeOptions& options, NDMDrvr* driver)
   driver->page_size = options.page_size;
   driver->eb_size = options.eb_size;
   driver->flags = FSF_MULTI_ACCESS | FSF_FREE_SPARE_ECC | options.flags;
+  driver->format_version_2 = use_format_v2;
   driver->dev = const_cast<NdmBaseDriver*>(this);
   driver->type = NDM_SLC;
   driver->read_pages = ReadPages;

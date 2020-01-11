@@ -93,7 +93,9 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
   // minted (aka empty) volume.
   // This method should be called after Init(), but before CreateNdmVolume(),
   // for the result to be meaningful, but calling this is not required.
-  bool IsNdmDataPresent(const VolumeOptions& options);
+  // |use_format_v2| tells NDM to use the latest file format for the volume, if
+  // a new volume is eventually created.
+  bool IsNdmDataPresent(const VolumeOptions& options, bool use_format_v2 = true);
 
   // Returns true if the size of the bad block reservation cannot be used.
   // The size to use (options.max_bad_blocks) may be too small to hold the
@@ -110,7 +112,7 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
   // Creates the underlying NDM volume, with the provided parameters. Setting
   // |save_volume_data| to true enables writing of NDM control data version 2.
   const char* CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options,
-                              bool save_volume_data = false);
+                              bool save_volume_data = true);
 
   // Deletes the underlying NDM volume.
   bool RemoveNdmVolume();
@@ -133,7 +135,7 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
   ndm* GetNdmForTest() const { return ndm_; }
 
   // This is exposed for unit tests only.
-  void FillNdmDriver(const VolumeOptions& options, NDMDrvr* driver) const;
+  void FillNdmDriver(const VolumeOptions& options, bool use_format_v2, NDMDrvr* driver) const;
 
  private:
   ndm* ndm_ = nullptr;

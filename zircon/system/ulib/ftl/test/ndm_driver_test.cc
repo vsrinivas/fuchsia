@@ -19,7 +19,7 @@ class MockDriver final : public ftl::NdmBaseDriver {
   void set_result(int result) { result_ = result; }
   void set_empty(bool value) { empty_ = value; }
 
-  void GetNdmDriver(NDMDrvr* driver) { FillNdmDriver({}, driver); }
+  void GetNdmDriver(NDMDrvr* driver) { FillNdmDriver({}, true, driver); }
 
   // NdmDriver interface:
   const char* Init() final { return nullptr; }

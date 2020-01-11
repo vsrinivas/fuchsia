@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include <array>
+
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
@@ -521,6 +523,9 @@ TEST(FtlTest, WearCountDistribution) {
   EXPECT_GT(15, close_to_fall_of);
 }
 
+// These tests rely on internal data of the NDM and the actual behavior of the
+// code (like where each header is saved), which is not ideal, but it's required
+// to make sure things work as expected.
 using FtlUpgradeTest = FtlTestWithDriverAccess;
 
 // Verifies that the NDM header at page |page_num| matches the desired version.
@@ -537,17 +542,14 @@ void CheckNdmHeaderVersion(NdmRamDriver* driver, uint32_t page_num, uint16_t maj
   EXPECT_EQ(minor, header->minor_version);
 }
 
-// Verifies that the NDM control header can be upgraded to version 2. This test
-// relies on internal data of the NDM and the actual behavior of the code (like
-// where each header is saved), which is not ideal, but it's required to make
-// sure things work as expected.
+// Verifies that the NDM control header can be upgraded to version 2.
 TEST_F(FtlUpgradeTest, UpgradesToVersion2) {
   const TestOptions kNoEccErrors = {INT32_MAX, 50, false, false};
   auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, kNoEccErrors);
 
   // Retain a pointer. The driver's lifetime is tied to ftl_.
   NdmRamDriver* driver = driver_to_pass.get();
-  ASSERT_EQ(driver->Init(), nullptr);
+  ASSERT_NULL(driver->Init());
   ASSERT_TRUE(ftl_.InitWithDriver(std::move(driver_to_pass)));
   SetUpBaseTest();
 
@@ -582,6 +584,94 @@ TEST_F(FtlUpgradeTest, UpgradesToVersion2) {
   ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage0 + 30, 1, 1, buffer));
   ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(kControlPage0 + 31, 1, buffer, nullptr));
   ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(kControlPage1 + 1, 1, buffer, nullptr));
+}
+
+TEST_F(FtlUpgradeTest, CreateNewVolumeWithVersion2ByDefault) {
+  auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions);
+
+  // Retain a pointer. The driver's lifetime is tied to ftl_.
+  NdmRamDriver* driver = driver_to_pass.get();
+  ASSERT_NULL(driver->Init());
+  ASSERT_TRUE(ftl_.InitWithDriver(std::move(driver_to_pass)));
+  SetUpBaseTest();
+
+  // This should result in two control blocks written: on for the basic data,
+  // followed by one with the partition data.
+
+  const uint32_t kControlPage0 = 299 * 64;  // First page of last block.
+  const uint32_t kControlPage1 = 298 * 64;  // First page of previous block.
+  std::array<char, kPageSize> buffer;
+  ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage0, 2, 0, buffer.data()));
+  ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage0 + 1, 2, 0, buffer.data()));
+  ASSERT_EQ(ftl::kNdmUncorrectableEcc,
+            driver->NandRead(kControlPage0 + 2, 1, buffer.data(), nullptr));
+  ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(kControlPage1, 1, buffer.data(), nullptr));
+
+  // Verify that no new control blocks are created after restart.
+  ASSERT_TRUE(ftl_.ReAttach());
+  ASSERT_OK(volume_->Unmount());
+  ASSERT_EQ(ftl::kNdmUncorrectableEcc,
+            driver->NandRead(kControlPage0 + 2, 1, buffer.data(), nullptr));
+  ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(kControlPage1, 1, buffer.data(), nullptr));
+}
+
+// Verifies that a new control block with partition data is not automatically
+// added at this point.
+TEST_F(FtlUpgradeTest, DoesNotForceUpgrade) {
+  // Start with an old version.
+  const TestOptions kNoEccErrors = {INT32_MAX, 50, false, false};
+  auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, kNoEccErrors);
+
+  // Retain a pointer. The driver's lifetime is tied to ftl_.
+  NdmRamDriver* driver = driver_to_pass.get();
+  ASSERT_NULL(driver->Init());
+  ASSERT_TRUE(ftl_.InitWithDriver(std::move(driver_to_pass)));
+  SetUpBaseTest();
+
+  ftl::VolumeOptions options = kDefaultOptions;
+  options.flags |= ftl::kReadOnlyInit;
+
+  driver->save_config_data(true);
+  driver->set_options(options);
+  ASSERT_TRUE(ftl_.ReAttach());
+  ASSERT_OK(volume_->Unmount());
+
+  // No failure during read-only initialization means that the partition data
+  // was not saved, so there's nothing to retrieve. The current format is still
+  // the old version.
+  const uint32_t kControlPage0 = 299 * 64;  // First page of last block.
+  const uint32_t kControlPage1 = 298 * 64;  // First page of previous block.
+  std::array<char, kPageSize> buffer;
+  ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage0, 1, 1, buffer.data()));
+  ASSERT_EQ(ftl::kNdmUncorrectableEcc,
+            driver->NandRead(kControlPage0 + 1, 1, buffer.data(), nullptr));
+  ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(kControlPage1, 1, buffer.data(), nullptr));
+}
+
+TEST_F(FtlUpgradeTest, BadBlocksWriteVersion2) {
+  // Start with an old version.
+  const TestOptions kNoEccErrors = {INT32_MAX, 50, false, false};
+  auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, kNoEccErrors);
+
+  // Retain a pointer. The driver's lifetime is tied to ftl_.
+  NdmRamDriver* driver = driver_to_pass.get();
+  ASSERT_NULL(driver->Init());
+  ASSERT_TRUE(ftl_.InitWithDriver(std::move(driver_to_pass)));
+  SetUpBaseTest();
+
+  driver->save_config_data(true);
+  ASSERT_TRUE(ftl_.ReAttach());
+  ASSERT_OK(volume_->Unmount());
+
+  // Do a pass to force some bad blocks.
+  const int kWriteSize = 5;
+  ASSERT_NO_FAILURES(SingleLoop(kWriteSize));
+
+  const uint32_t kControlPage0 = 299 * 64;  // First page of last block.
+  const uint32_t kControlPage1 = 298 * 64;  // First page of previous block.
+  std::array<char, kPageSize> buffer;
+  ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage0, 1, 1, buffer.data()));
+  ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage1, 2, 0, buffer.data()));
 }
 
 }  // namespace

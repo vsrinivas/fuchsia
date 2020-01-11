@@ -33,6 +33,7 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
 
   const uint8_t* data(uint32_t page_num) const { return &volume_[page_num * kPageSize]; }
   NDM ndm() { return GetNdmForTest(); }
+  void format_using_v2(bool value) { format_using_v2_ = value; }
 
   // Goes through the normal logic to create a volume with user data info.
   const char* CreateVolume() { return CreateNdmVolume(nullptr, options_, true); }
@@ -53,6 +54,7 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
  private:
   std::vector<uint8_t> volume_;
   ftl::VolumeOptions options_;
+  bool format_using_v2_ = true;
 };
 
 const char* NdmRamDriver::Init() {
@@ -64,7 +66,7 @@ const char* NdmRamDriver::Init() {
 
 const char* NdmRamDriver::Attach(const ftl::Volume* ftl_volume) {
   if (!GetNdmForTest()) {
-    IsNdmDataPresent(options_);
+    IsNdmDataPresent(options_, format_using_v2_);
   }
   return GetNdmForTest() ? nullptr : "Failed to add device";
 }
@@ -142,7 +144,17 @@ struct HeaderV2 {
   HeaderV1 v1;
 };
 
-TEST_F(NdmTest, WritesVersion1) {
+class NdmTestOldFormat : public NdmTest {
+ public:
+  void SetUp() override {
+    ASSERT_TRUE(ftl::InitModules());
+    ASSERT_NULL(ndm_driver_.Init());
+    ndm_driver_.format_using_v2(false);
+    ASSERT_NULL(ndm_driver_.Attach(nullptr));
+  }
+};
+
+TEST_F(NdmTestOldFormat, WritesVersion1) {
   auto header = reinterpret_cast<const HeaderV1*>(ndm_driver_.data(kControlPage0));
   EXPECT_EQ(1, header->current_location);
   EXPECT_EQ(1, header->last_location);
@@ -156,6 +168,22 @@ TEST_F(NdmTest, WritesVersion1) {
   EXPECT_EQ(-1, header->transfer_to_block);
 }
 
+TEST_F(NdmTest, WritesVersion2) {
+  auto header = reinterpret_cast<const HeaderV2*>(ndm_driver_.data(kControlPage0));
+  EXPECT_EQ(2, header->major_version);
+  EXPECT_EQ(0, header->minor_version);
+  EXPECT_EQ(1, header->v1.current_location);
+  EXPECT_EQ(1, header->v1.last_location);
+  EXPECT_EQ(0, header->v1.sequence_num);
+  EXPECT_EQ(kNumBlocks, header->v1.num_blocks);
+  EXPECT_EQ(kPageSize * kPagesPerBlock, header->v1.block_size);
+  EXPECT_EQ(kNumBlocks - 1, header->v1.control_block0);
+  EXPECT_EQ(kNumBlocks - 2, header->v1.control_block1);
+  EXPECT_EQ(kNumBlocks - 4, header->v1.free_virt_block);
+  EXPECT_EQ(kNumBlocks - 3, header->v1.free_control_block);
+  EXPECT_EQ(-1, header->v1.transfer_to_block);
+}
+
 TEST_F(NdmTest, OnlyOneControlBlock) {
   auto header = reinterpret_cast<const HeaderV1*>(ndm_driver_.data(kControlPage0 + 1));
   EXPECT_EQ(0xffff, header->current_location);
@@ -164,7 +192,7 @@ TEST_F(NdmTest, OnlyOneControlBlock) {
   EXPECT_EQ(0xffff, header->current_location);
 }
 
-TEST_F(NdmTest, NoVersion2) {
+TEST_F(NdmTestOldFormat, NoVersion2) {
   NDMPartition partition = {};
   partition.num_blocks = ndmGetNumVBlocks(ndm_driver_.ndm());
   ASSERT_EQ(0, ndmWritePartition(ndm_driver_.ndm(), &partition, 0, "foo"));

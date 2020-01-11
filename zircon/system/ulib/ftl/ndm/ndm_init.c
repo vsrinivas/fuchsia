@@ -281,7 +281,7 @@ static int ndm_format(NDM ndm) {
 
   // Write initial control information and return status.
   ndm->xfr_tblk = (ui32)-1;
-  // TODO(40208): Set version_2 here to use the new format.
+  ndm->version_2 = ndm->format_with_v2;
   return ndmWrCtrl(ndm);
 }
 
@@ -1185,6 +1185,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
   ndm->xfr_tblk = ndm->xfr_fblk = ndm->xfr_bad_po = (ui32)-1;
   ndm->last_wr_vbn = ndm->last_wr_pbn = (ui32)-1;
   ndm->last_rd_vbn = ndm->last_rd_pbn = (ui32)-1;
+  ndm->format_with_v2 = dvr->format_version_2;
 
   // Install driver callback routine function pointers.
   ndm->write_page = dvr->write_data_and_spare;

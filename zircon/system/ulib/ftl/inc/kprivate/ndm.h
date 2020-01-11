@@ -82,14 +82,15 @@ typedef struct {
 
 // TargetNDM Configuration Structure
 typedef struct NDMDrvr {
-  ui32 num_blocks;      // total number of blocks on device
-  ui32 max_bad_blocks;  // maximum number of bad blocks
-  ui32 block_size;      // block size in bytes
-  ui32 page_size;       // page data area in bytes
-  ui32 eb_size;         // used spare area in bytes
-  ui32 flags;           // option flags
-  ui32 type;            // type of device
-  void* dev;            // optional value set by driver
+  ui32 num_blocks;        // Total number of blocks on device.
+  ui32 max_bad_blocks;    // Maximum number of bad blocks.
+  ui32 block_size;        // Block size in bytes.
+  ui32 page_size;         // Page data area in bytes.
+  ui32 eb_size;           // Used spare area in bytes.
+  ui32 flags;             // Option flags.
+  ui32 type;              // Type of device.
+  ui32 format_version_2;  // "Boolean" variable: FALSE for control header version 1.
+  void* dev;              // Optional value set by driver.
 
   // Driver Functions
   int (*write_data_and_spare)(ui32 pn, const ui8* data, ui8* spare, int action, void* dev);
