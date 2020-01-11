@@ -117,7 +117,7 @@ template("rustc_third_party_artifact") {
 #   with_unit_tests
 #   target_name
 #   deps
-#   non_rust_deps
+#   non_rust_deps (deprecated)
 #   test_environments
 #   source_root
 #   __unstable_recovery_netstack_only_specialization_bypass
@@ -283,12 +283,6 @@ template("rustc_artifact") {
 
   # }}} END calculate output_file, root_file
 
-  if (defined(invoker.non_rust_deps)) {
-    non_rust_deps = invoker.non_rust_deps
-  } else {
-    non_rust_deps = []
-  }
-
   group_deps = []
 
   if (only_unit_tests) {
@@ -334,7 +328,9 @@ template("rustc_artifact") {
       if (defined(invoker.deps)) {
         deps += invoker.deps
       }
-      deps += non_rust_deps
+      if (defined(invoker.non_rust_deps)) {
+        deps += invoker.non_rust_deps
+      }
       if (defined(invoker.test_environments)) {
         environments = invoker.test_environments
       }
@@ -409,6 +405,9 @@ template("rustc_artifact") {
   if (defined(invoker.deps)) {
     build_target_deps += invoker.deps
   }
+  if (defined(invoker.non_rust_deps)) {
+    build_target_deps += invoker.non_rust_deps
+  }
 
   # from build/rust/config.gni
   build_target_deps += std_deps
@@ -477,7 +476,6 @@ template("rustc_artifact") {
       # a fake output so that our target still compiles
       not_needed([
                    "root_file",
-                   "non_rust_deps",
                    "rflags",
                  ])
       generated_file(build_target_name) {
@@ -493,7 +491,6 @@ template("rustc_artifact") {
         crate_name = crate_name
         deps = build_target_deps
         output_name = output_filename
-        public_deps = non_rust_deps
         rustflags = rflags
       }
     } else if (type == "rlib") {
@@ -503,7 +500,6 @@ template("rustc_artifact") {
         crate_name = crate_name
         deps = build_target_deps
         output_name = output_filename
-        public_deps = non_rust_deps
         rustflags = rflags
       }
     } else if (type == "proc-macro") {  # or cdylib, if we used those
@@ -513,7 +509,6 @@ template("rustc_artifact") {
         crate_name = crate_name
         deps = build_target_deps
         output_name = output_filename
-        public_deps = non_rust_deps
         rustflags = rflags
       }
     } else if (type == "staticlib") {
@@ -523,7 +518,6 @@ template("rustc_artifact") {
         crate_name = crate_name
         deps = build_target_deps
         output_name = output_filename
-        public_deps = non_rust_deps
         rustflags = rflags
         complete_static_lib = true
       }
@@ -546,7 +540,6 @@ template("rustc_artifact") {
                    "rust_unstable_feature_arg",
                    "cfg_feature_args",
                    "rust_lto_args",
-                   "non_rust_deps",
                  ])
       generated_file(build_test_target_name) {
         outputs = [ test_output_file ]
@@ -570,7 +563,7 @@ template("rustc_artifact") {
                       "--crate-type",
                       type,
                     ]
-        deps = build_target_deps + test_target_deps + non_rust_deps
+        deps = build_target_deps + test_target_deps
         if (is_linux || is_mac) {
           deps += [ ":$test_spec_target_name" ]
         }
