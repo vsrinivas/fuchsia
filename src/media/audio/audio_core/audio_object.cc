@@ -70,27 +70,24 @@ void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
 
   link->Invalidate();
 
-  const fbl::RefPtr<AudioObject>& source = link->GetSource();
-  FX_DCHECK(source != nullptr);
-
-  const fbl::RefPtr<AudioObject>& dest = link->GetDest();
-  FX_DCHECK(dest != nullptr);
+  auto& source = link->GetSource();
+  auto& dest = link->GetDest();
 
   {
-    std::lock_guard<std::mutex> slock(source->links_lock_);
-    auto iter = source->dest_links_.find(link.get());
-    if (iter != source->dest_links_.end()) {
-      source->CleanupDestLink(*dest);
-      source->dest_links_.erase(iter);
+    std::lock_guard<std::mutex> slock(source.links_lock_);
+    auto iter = source.dest_links_.find(link.get());
+    if (iter != source.dest_links_.end()) {
+      source.CleanupDestLink(dest);
+      source.dest_links_.erase(iter);
     }
   }
 
   {
-    std::lock_guard<std::mutex> dlock(dest->links_lock_);
-    auto iter = dest->source_links_.find(link.get());
-    if (iter != dest->source_links_.end()) {
-      dest->CleanupSourceLink(*source, link->stream());
-      dest->source_links_.erase(iter);
+    std::lock_guard<std::mutex> dlock(dest.links_lock_);
+    auto iter = dest.source_links_.find(link.get());
+    if (iter != dest.source_links_.end()) {
+      dest.CleanupSourceLink(source, link->stream());
+      dest.source_links_.erase(iter);
     }
   }
 }

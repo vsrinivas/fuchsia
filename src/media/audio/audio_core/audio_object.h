@@ -80,8 +80,8 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
   }
 
   bool has_link_to(AudioObject* object) {
-    return ForAnyDestLink([object](auto& link) { return link.GetDest().get() == object; }) ||
-           ForAnySourceLink([object](auto& link) { return link.GetSource().get() == object; });
+    return ForAnyDestLink([object](auto& link) { return &link.GetDest() == object; }) ||
+           ForAnySourceLink([object](auto& link) { return &link.GetSource() == object; });
   }
 
  protected:

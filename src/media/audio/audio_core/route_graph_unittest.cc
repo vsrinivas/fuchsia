@@ -50,16 +50,16 @@ class FakeAudioObject : public AudioObject {
 
   std::optional<fuchsia::media::Usage> usage() const override { return {fidl::Clone(usage_)}; }
 
-  std::vector<AudioObject*> SourceLinks() {
-    std::vector<AudioObject*> source_links;
+  std::vector<const AudioObject*> SourceLinks() {
+    std::vector<const AudioObject*> source_links;
     ForEachSourceLink(
-        [&source_links](auto& link) { source_links.push_back(link.GetSource().get()); });
+        [&source_links](AudioLink& link) { source_links.push_back(&link.GetSource()); });
     return source_links;
   }
 
-  std::vector<AudioObject*> DestLinks() {
-    std::vector<AudioObject*> dest_links;
-    ForEachDestLink([&dest_links](auto& link) { dest_links.push_back(link.GetDest().get()); });
+  std::vector<const AudioObject*> DestLinks() {
+    std::vector<const AudioObject*> dest_links;
+    ForEachDestLink([&dest_links](AudioLink& link) { dest_links.push_back(&link.GetDest()); });
     return dest_links;
   }
 
@@ -82,6 +82,20 @@ class FakeAudioOutput : public AudioOutput {
   std::optional<MixStage::FrameSpan> StartMixJob(zx::time process_start) override {
     return std::nullopt;
   }
+
+  std::vector<const AudioObject*> SourceLinks() {
+    std::vector<const AudioObject*> source_links;
+    ForEachSourceLink(
+        [&source_links](AudioLink& link) { source_links.push_back(&link.GetSource()); });
+    return source_links;
+  }
+
+  std::vector<const AudioObject*> DestLinks() {
+    std::vector<const AudioObject*> dest_links;
+    ForEachDestLink([&dest_links](AudioLink& link) { dest_links.push_back(&link.GetDest()); });
+    return dest_links;
+  }
+
   void FinishMixJob(const MixStage::FrameSpan& span, float* buffer) override {}
 
  private:

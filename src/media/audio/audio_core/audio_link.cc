@@ -29,8 +29,8 @@ AudioLink::AudioLink(fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> d
       dest_(std::move(dest)),
       valid_(true),
       volume_curve_(SelectVolumeCurve(source_->GetVolumeCurve(), dest_->GetVolumeCurve())) {
-  // Only outputs and AudioCapturers may be destinations.
   FX_DCHECK(dest_ != nullptr);
+  FX_DCHECK(source_ != nullptr);
 }
 
 const VolumeCurve& AudioLink::volume_curve() const {

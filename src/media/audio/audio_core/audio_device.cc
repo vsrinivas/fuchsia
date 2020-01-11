@@ -77,7 +77,7 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
   if (is_output()) {
     std::lock_guard<std::mutex> links_lock(links_lock_);
     for (auto& link : source_links_) {
-      if (link.GetSource()->type() == AudioObject::Type::AudioRenderer) {
+      if (link.GetSource().type() == AudioObject::Type::AudioRenderer) {
         const auto muted = limited.flags & fuchsia::media::AudioGainInfoFlag_Mute;
         link.gain().SetDestGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB : limited.gain_db);
       }
@@ -87,7 +87,7 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
     FX_DCHECK(is_input());
     std::lock_guard<std::mutex> links_lock(links_lock_);
     for (auto& link : dest_links_) {
-      if (link.GetDest()->type() == AudioObject::Type::AudioCapturer) {
+      if (link.GetDest().type() == AudioObject::Type::AudioCapturer) {
         const auto muted = limited.flags & fuchsia::media::AudioGainInfoFlag_Mute;
         link.gain().SetSourceGain(muted ? fuchsia::media::audio::MUTED_GAIN_DB : limited.gain_db);
       }

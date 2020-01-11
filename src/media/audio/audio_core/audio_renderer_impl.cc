@@ -105,11 +105,11 @@ void AudioRendererImpl::RecomputeMinLeadTime() {
   TRACE_DURATION("audio", "AudioRendererImpl::RecomputeMinLeadTime");
   zx::duration cur_lead_time;
 
-  ForEachDestLink([&cur_lead_time](auto& link) {
-    if (link.GetDest()->is_output()) {
-      const auto output = fbl::RefPtr<AudioDevice>::Downcast(link.GetDest());
+  ForEachDestLink([&cur_lead_time](AudioLink& link) {
+    if (link.GetDest().is_output()) {
+      const auto& output = static_cast<const AudioDevice&>(link.GetDest());
 
-      cur_lead_time = std::max(cur_lead_time, output->min_lead_time());
+      cur_lead_time = std::max(cur_lead_time, output.min_lead_time());
     }
   });
 

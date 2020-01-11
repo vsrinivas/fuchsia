@@ -135,7 +135,7 @@ void AudioCapturerImpl::RealizeVolume(VolumeCommand volume_command) {
         << "Requested ramp of capturer; ramping for destination gains is unimplemented.";
   }
 
-  ForEachSourceLink([stream_gain_db = stream_gain_db_.load(), &volume_command](auto& link) {
+  ForEachSourceLink([stream_gain_db = stream_gain_db_.load(), &volume_command](AudioLink& link) {
     // Gain objects contain multiple stages. In capture, device gain is
     // the "source" stage and stream gain is the "dest" stage.
     float gain_db = link.volume_curve().VolumeToDb(volume_command.volume);
@@ -612,10 +612,10 @@ void AudioCapturerImpl::RecomputeMinFenceTime() {
   TRACE_DURATION("audio", "AudioCapturerImpl::RecomputeMinFenceTime");
 
   zx::duration cur_min_fence_time{0};
-  ForEachSourceLink([&cur_min_fence_time](auto& source_link) {
-    if (source_link.GetSource()->is_input()) {
-      const auto device = fbl::RefPtr<AudioDevice>::Downcast(source_link.GetSource());
-      auto fence_time = device->driver()->fifo_depth_duration();
+  ForEachSourceLink([&cur_min_fence_time](AudioLink& source_link) {
+    if (source_link.GetSource().is_input()) {
+      const auto& device = static_cast<const AudioDevice&>(source_link.GetSource());
+      auto fence_time = device.driver()->fifo_depth_duration();
 
       cur_min_fence_time = std::max(cur_min_fence_time, fence_time);
     }
@@ -999,7 +999,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   // Snapshot our source link references, but skip packet sources (we can't sample from them yet).
   FX_DCHECK(source_link_refs_.size() == 0);
 
-  ForEachSourceLink([src_link_refs = &source_link_refs_](auto& link) {
+  ForEachSourceLink([src_link_refs = &source_link_refs_](AudioLink& link) {
     src_link_refs->emplace_back(fbl::RefPtr(&link));
   });
 
@@ -1030,13 +1030,12 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
 
   bool accumulate = false;
   for (auto& link : source_link_refs_) {
-    FX_DCHECK(link->GetSource()->is_input() || link->GetSource()->is_output());
+    FX_DCHECK(link->GetSource().is_input() || link->GetSource().is_output());
 
     // Get a hold of our device source (we know it is a device because this is a
     // ring buffer source, and ring buffer sources are always currently input
     // devices) and snapshot the current state of the ring buffer.
-    FX_DCHECK(link->GetSource() != nullptr);
-    auto& device = static_cast<AudioDevice&>(*link->GetSource());
+    const auto& device = static_cast<const AudioDevice&>(link->GetSource());
 
     // TODO(MTWN-52): Right now, the only device without a driver is the throttle output. Sourcing a
     // capturer from the throttle output would be a mistake. For now if we detect this, log a

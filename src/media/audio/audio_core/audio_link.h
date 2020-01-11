@@ -47,8 +47,8 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
 
   AudioLink(fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest);
 
-  const fbl::RefPtr<AudioObject>& GetSource() const { return source_; }
-  const fbl::RefPtr<AudioObject>& GetDest() const { return dest_; }
+  AudioObject& GetSource() const { return *source_; }
+  AudioObject& GetDest() const { return *dest_; }
 
   // The VolumeCurve of the link, representing either the source or destination's mapping from
   // volume to gain. Both ends of a link cannot have mappings as this would be irreconcilable.
