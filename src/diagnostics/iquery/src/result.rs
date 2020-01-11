@@ -7,7 +7,7 @@ use {
     anyhow::{format_err, Error},
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_io::NodeInfo,
-    fuchsia_inspect::reader::{NodeHierarchy, PartialNodeHierarchy},
+    fuchsia_inspect::reader::{self, NodeHierarchy, PartialNodeHierarchy},
     inspect_fidl_load as inspect_fidl, io_util,
     std::convert::TryFrom,
 };
@@ -52,7 +52,7 @@ impl IqueryResult {
         let path = self.location.absolute_path()?;
         let (tree, server) = fidl::endpoints::create_proxy::<TreeMarker>()?;
         fdio::service_connect(&path, server.into_channel())?;
-        self.hierarchy = Some(NodeHierarchy::try_from_tree(&tree).await?);
+        self.hierarchy = Some(reader::read_from_tree(&tree).await?);
         Ok(())
     }
 

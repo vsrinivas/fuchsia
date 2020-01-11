@@ -154,13 +154,12 @@ impl Node {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryFrom;
-
-    use crate::assert_inspect_tree;
-    use crate::reader::NodeHierarchy;
-    use crate::reader::Property;
-
-    use super::*;
+    use {
+        super::*,
+        crate::assert_inspect_tree,
+        fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property},
+        std::convert::TryFrom,
+    };
 
     #[test]
     fn health_checker_lifecycle() {

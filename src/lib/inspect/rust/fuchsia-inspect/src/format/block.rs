@@ -24,6 +24,8 @@ use {
     },
 };
 
+pub use fuchsia_inspect_node_hierarchy::{ArrayFormat, LinkNodeDisposition};
+
 /// Format in which the property will be read.
 #[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum PropertyFormat {
@@ -31,41 +33,10 @@ pub enum PropertyFormat {
     Bytes = 1,
 }
 
-/// Disposition of a Link value.
-#[derive(Clone, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
-pub enum LinkNodeDisposition {
-    Child = 0,
-    Inline = 1,
-}
-
 #[derive(Debug)]
 pub struct Block<T> {
     index: u32,
     container: T,
-}
-
-/// Format in which the array will be read.
-#[derive(Clone, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
-pub enum ArrayFormat {
-    /// Regular array, it stores N values in N slots.
-    Default = 0,
-
-    /// The array is a linear histogram with N buckets and N+4 slots, which are:
-    /// - param_floor_value
-    /// - param_step_size
-    /// - underflow_bucket
-    /// - ...N buckets...
-    /// - overflow_bucket
-    LinearHistogram = 1,
-
-    /// The array is an exponential histogram with N buckets and N+5 slots, which are:
-    /// - param_floor_value
-    /// - param_initial_step
-    /// - param_step_multiplier
-    /// - underflow_bucket
-    /// - ...N buckets...
-    /// - overflow_bucket
-    ExponentialHistogram = 2,
 }
 
 pub trait ReadableBlockContainer {

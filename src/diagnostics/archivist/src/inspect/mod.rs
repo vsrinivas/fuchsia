@@ -828,7 +828,7 @@ mod tests {
         fidl::endpoints::create_proxy,
         fuchsia_async as fasync,
         fuchsia_component::server::ServiceFs,
-        fuchsia_inspect::{assert_inspect_tree, Inspector},
+        fuchsia_inspect::{assert_inspect_tree, reader, Inspector},
         fuchsia_zircon as zx,
         fuchsia_zircon::Peered,
         futures::StreamExt,
@@ -952,7 +952,7 @@ mod tests {
                 match extra.unwrap() {
                     Data::Tree(tree, vmo) => {
                         // Assert we can read the tree proxy and get the data we expected.
-                        let hierarchy = NodeHierarchy::try_from_tree(tree)
+                        let hierarchy = reader::read_from_tree(tree)
                             .await
                             .expect("failed to read hierarchy from tree");
                         assert_inspect_tree!(hierarchy, root: {

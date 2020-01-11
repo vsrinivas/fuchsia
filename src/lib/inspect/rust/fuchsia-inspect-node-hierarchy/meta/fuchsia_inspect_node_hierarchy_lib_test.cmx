@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/fuchsia_inspect_node_hierarchy_lib_test"
+    }
+}

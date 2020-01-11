@@ -17,6 +17,7 @@ rustc_library("fuchsia-inspect") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
     "//src/lib/mapped-vmo",
     "//src/lib/shared-buffer",
     "//src/lib/syslog/rust:syslog",

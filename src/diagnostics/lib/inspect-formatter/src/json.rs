@@ -6,8 +6,9 @@ use {
     crate::{HierarchyDeserializer, HierarchySerializer},
     anyhow::{bail, format_err, Error},
     base64,
-    fuchsia_inspect::format::block::ArrayFormat,
-    fuchsia_inspect::reader::{ArrayBucket, ArrayValue, NodeHierarchy, Property},
+    fuchsia_inspect_node_hierarchy::{
+        ArrayBucket, ArrayFormat, ArrayValue, NodeHierarchy, Property,
+    },
     lazy_static::lazy_static,
     paste,
     serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer},
@@ -659,7 +660,7 @@ fn parse_node_object(
 mod tests {
     use {
         super::*,
-        fuchsia_inspect::reader::{ArrayFormat, ArrayValue, Property},
+        fuchsia_inspect_node_hierarchy::{ArrayFormat, ArrayValue, Property},
     };
 
     #[test]

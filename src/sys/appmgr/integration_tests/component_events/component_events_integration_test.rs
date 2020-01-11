@@ -16,7 +16,7 @@ use {
     },
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client::{connect_to_service, launch},
-    fuchsia_inspect::{assert_inspect_tree, reader::NodeHierarchy},
+    fuchsia_inspect::{assert_inspect_tree, reader},
     fuchsia_zircon::DurationNum,
     futures::stream::{StreamExt, TryStreamExt},
     lazy_static::lazy_static,
@@ -202,8 +202,7 @@ async fn test_with_diagnostics() -> Result<(), Error> {
             server_end.into_channel(),
         )
         .expect("Connect to Tree service");
-        let hierarchy =
-            NodeHierarchy::try_from_tree(&tree).await.context("Get inspect hierarchy")?;
+        let hierarchy = reader::read_from_tree(&tree).await.context("Get inspect hierarchy")?;
         assert_inspect_tree!(hierarchy, root: {
             "fuchsia.inspect.Health": {
                 status: "OK",

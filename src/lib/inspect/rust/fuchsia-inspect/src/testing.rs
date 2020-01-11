@@ -4,10 +4,11 @@
 
 use {
     super::{
-        reader::{NodeHierarchy, PartialNodeHierarchy, Property},
+        reader::{self, PartialNodeHierarchy},
         Inspector,
     },
     anyhow::{bail, format_err, Error},
+    fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property},
     futures,
     std::{borrow::Cow, collections::HashSet},
 };
@@ -198,10 +199,8 @@ impl NodeHierarchyGetter for PartialNodeHierarchy {
 impl NodeHierarchyGetter for Inspector {
     fn get_node_hierarchy(&self) -> Cow<NodeHierarchy> {
         let hierarchy =
-            futures::executor::block_on(
-                async move { NodeHierarchy::try_from_inspector(self).await },
-            )
-            .expect("failed to get hierarchy");
+            futures::executor::block_on(async move { reader::read_from_inspector(self).await })
+                .expect("failed to get hierarchy");
         Cow::Owned(hierarchy)
     }
 }
@@ -384,10 +383,8 @@ impl PropertyAssertion for AnyProperty {
 mod tests {
     use {
         super::*,
-        crate::{
-            reader::{ArrayFormat, ArrayValue, LinkValue},
-            LinkNodeDisposition,
-        },
+        crate::LinkNodeDisposition,
+        fuchsia_inspect_node_hierarchy::{ArrayFormat, ArrayValue, LinkValue},
     };
 
     #[test]

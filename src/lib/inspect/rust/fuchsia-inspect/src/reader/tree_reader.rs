@@ -114,7 +114,7 @@ where
 mod tests {
     use {
         super::*,
-        crate::{assert_inspect_tree, Inspector},
+        crate::{assert_inspect_tree, reader, Inspector},
         fuchsia_async as fasync,
     };
 
@@ -175,7 +175,7 @@ mod tests {
             }
             .boxed()
         });
-        let hierarchy = NodeHierarchy::try_from_inspector(&inspector).await?;
+        let hierarchy = reader::read_from_inspector(&inspector).await?;
         assert_eq!(hierarchy.missing.len(), 1);
         assert_eq!(hierarchy.missing[0].reason, MissingValueReason::LinkParseFailure);
         assert_inspect_tree!(hierarchy, root: {});
@@ -189,7 +189,7 @@ mod tests {
             let mut state = state.lock();
             state.allocate_link("missing", "missing-404", LinkNodeDisposition::Child, 0).unwrap();
         });
-        let hierarchy = NodeHierarchy::try_from_inspector(&inspector).await?;
+        let hierarchy = reader::read_from_inspector(&inspector).await?;
         assert_eq!(hierarchy.missing.len(), 1);
         assert_eq!(hierarchy.missing[0].reason, MissingValueReason::LinkNotFound);
         assert_eq!(hierarchy.missing[0].name, "missing");

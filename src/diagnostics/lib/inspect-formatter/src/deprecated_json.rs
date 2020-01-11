@@ -76,7 +76,7 @@ impl Serialize for SerializableHierarchyData {
 mod tests {
     use {
         super::*,
-        fuchsia_inspect::reader::{ArrayFormat, ArrayValue, Property},
+        fuchsia_inspect_node_hierarchy::{ArrayFormat, ArrayValue, Property},
     };
 
     #[test]

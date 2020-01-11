@@ -7,6 +7,7 @@ group("tests") {
   deps = [
     "fuchsia-inspect:tests",
     "fuchsia-inspect-contrib:tests",
+    "fuchsia-inspect-node-hierarchy:tests",
   ]
 }
 

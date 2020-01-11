@@ -11,7 +11,7 @@ rustc_library("inspect-formatter") {
   with_unit_tests = true
 
   deps = [
-    "//src/lib/inspect/rust/fuchsia-inspect",
+    "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:base64",
     "//third_party/rust_crates:lazy_static",

@@ -993,7 +993,7 @@ mod tests {
             assert_inspect_tree,
             format::{block::LinkNodeDisposition, block_type::BlockType, constants},
             heap::Heap,
-            reader::NodeHierarchy,
+            reader,
         },
         anyhow::bail,
         fdio,
@@ -1596,7 +1596,7 @@ mod tests {
                 )
                 .expect("failed to connect to service");
 
-                let hierarchy = NodeHierarchy::try_from_tree(&tree).await?;
+                let hierarchy = reader::read_from_tree(&tree).await?;
                 assert_inspect_tree!(hierarchy, root: {
                     int: 3i64,
                     "lazy-node": {
