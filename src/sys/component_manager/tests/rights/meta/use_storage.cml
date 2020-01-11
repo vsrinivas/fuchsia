@@ -1,0 +1,8 @@
+{
+  "program": {
+    "binary": "bin/use_storage",
+  },
+  "use": [
+    { "storage": "data" },
+  ]
+}

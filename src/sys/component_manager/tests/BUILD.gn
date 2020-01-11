@@ -19,6 +19,7 @@ group("tests") {
     "collections:collections_integration_test",
     "destruction:destruction_integration_test",
     "hub:hub_integration_test",
+    "rights:tests",
     "routing:tests",
     "storage:storage_integration_test",
     "work_scheduler:work_scheduler_integration_test",

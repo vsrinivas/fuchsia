@@ -1,0 +1,33 @@
+// Constructs an intermediate node that attempts to increase its rights to the read only directory.
+{
+  "children": [
+    {
+      "name": "expose_dir_rights",
+      "url": "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/expose_dir_rights.cm",
+    },
+  ],
+  "expose": [
+      // This has invalidly been scoped up to RW.
+      {
+        "directory": "/read_only",
+        "from": "#expose_dir_rights",
+        "rights":["rw*"],
+      },
+      {
+        "directory": "/read_write",
+        "from": "#expose_dir_rights",
+      },
+      {
+        "directory": "/read_exec",
+        "from": "#expose_dir_rights",
+      },
+      {
+        "directory": "/read_admin",
+        "from": "#expose_dir_rights",
+      },
+      {
+        "directory": "/read_only_after_scoped",
+        "from": "#expose_dir_rights",
+      },
+  ],
+}

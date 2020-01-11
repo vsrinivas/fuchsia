@@ -4,7 +4,9 @@
 
 use {
     crate::constants::PKG_PATH,
-    crate::model::{error::ModelError, model::Model, moniker::AbsoluteMoniker, routing},
+    crate::model::{
+        error::ModelError, model::Model, moniker::AbsoluteMoniker, rights::Rights, routing,
+    },
     cm_rust::{self, ComponentDecl, UseDecl, UseStorageDecl},
     directory_broker,
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
@@ -187,6 +189,11 @@ impl IncomingNamespace {
                 panic!("not a directory or storage capability");
             }
         };
+        let flags = match use_ {
+            UseDecl::Directory(dir) => Rights::from(dir.rights).into_legacy(),
+            UseDecl::Storage(_) => fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            _ => panic!("not a directory or storage capability"),
+        };
         let use_ = use_.clone();
         let (client_end, server_end) =
             create_endpoints().expect("could not create storage proxy endpoints");
@@ -197,11 +204,6 @@ impl IncomingNamespace {
             let on_signal_fut = fasync::OnSignals::new(&server_end, zx::Signals::CHANNEL_READABLE);
             on_signal_fut.await.unwrap();
 
-            // Route this capability to the right component
-            // TODO(fxb/36541): Until directory capabilities specify rights, we always open
-            // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
-            // the same directory rights as the parent directory connection.
-            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
             let abs_moniker_clone = abs_moniker.clone();
             let res = async move {
                 let target_realm = model.look_up_realm(&abs_moniker_clone).await?;

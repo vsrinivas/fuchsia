@@ -1,0 +1,33 @@
+// Constructs an intermediate node that reduces the rights of the /read_only_after_scoped directory.
+{
+  "children": [
+    {
+      "name": "expose_dir_rights",
+      "url": "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/expose_dir_rights.cm",
+    },
+  ],
+  "expose": [
+      {
+        "directory": "/read_only",
+        "from": "#expose_dir_rights",
+      },
+      {
+        "directory": "/read_write",
+        "from": "#expose_dir_rights",
+      },
+      {
+        "directory": "/read_exec",
+        "from": "#expose_dir_rights",
+      },
+      {
+        "directory": "/read_admin",
+        "from": "#expose_dir_rights",
+      },
+      // Performs the rights scoping at the expose layer.
+      {
+        "directory": "/read_only_after_scoped",
+        "from": "#expose_dir_rights",
+        "rights":["r*"],
+      },
+  ],
+}

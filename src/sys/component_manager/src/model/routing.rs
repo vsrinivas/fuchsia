@@ -14,6 +14,7 @@ use {
             model::Model,
             moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker, RelativeMoniker},
             realm::Realm,
+            rights::{RightWalkState, Rights, READ_RIGHTS, WRITE_RIGHTS},
             storage,
         },
     },
@@ -106,8 +107,12 @@ pub(super) async fn route_expose_capability<'a>(
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
     let capability = ComponentCapability::Expose(expose_decl.clone());
-    let mut pos =
-        WalkPosition { capability, last_child_moniker: None, realm: Some(target_realm.clone()) };
+    let mut pos = WalkPosition {
+        capability,
+        last_child_moniker: None,
+        realm: Some(target_realm.clone()),
+        rights_state: RightWalkState::new(),
+    };
     let source = walk_expose_chain(&mut pos).await?;
     open_capability_at_source(
         model,
@@ -301,10 +306,13 @@ async fn route_storage_capability<'a>(
             format_err!("storage capabilities cannot come from component manager's namespace"),
         ))?;
 
+    // Storage capabilities are always require rw rights to be valid so this must be
+    // explicitly encoded into its starting walk state.
     let mut pos = WalkPosition {
         capability: ComponentCapability::Use(UseDecl::Storage(use_decl.clone())),
         last_child_moniker: target_realm.abs_moniker.path().last().map(|c| c.clone()),
         realm: Some(parent_realm),
+        rights_state: RightWalkState::at(Rights::from(*READ_RIGHTS | *WRITE_RIGHTS)),
     };
 
     let source = walk_offer_chain(&mut pos).await?;
@@ -357,7 +365,12 @@ async fn route_storage_capability<'a>(
                     )),
                 )?;
                 let capability = ComponentCapability::Storage(storage_decl);
-                WalkPosition { capability, last_child_moniker: None, realm: Some(child_realm) }
+                WalkPosition {
+                    capability,
+                    last_child_moniker: None,
+                    realm: Some(child_realm),
+                    rights_state: pos.rights_state.clone(),
+                }
             };
             match walk_expose_chain(&mut pos).await? {
                 CapabilitySource::Component { capability, source_moniker } => {
@@ -398,6 +411,8 @@ struct WalkPosition {
     /// The realm of the component we are currently looking at. `None` for component manager's
     /// realm.
     realm: Option<Arc<Realm>>,
+    /// Holds the state of the rights walk. This is used to enforce directory rights.
+    rights_state: RightWalkState,
 }
 
 impl WalkPosition {
@@ -468,6 +483,7 @@ pub async fn find_exposed_root_directory_capability(
                 )),
                 last_child_moniker: None,
                 realm: Some(model.root_realm.clone()),
+                rights_state: RightWalkState::new(),
             };
             let capability_source = walk_expose_chain(&mut wp).await?;
             match capability_source {
@@ -503,6 +519,7 @@ async fn find_capability_source<'a>(
         capability,
         last_child_moniker: target_realm.abs_moniker.path().last().map(|c| c.clone()),
         realm: starting_realm,
+        rights_state: RightWalkState::new(),
     };
     if let Some(source) = walk_offer_chain(&mut pos).await? {
         return Ok(source);
@@ -575,11 +592,18 @@ async fn walk_offer_chain<'a>(
             OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
             OfferDecl::Runner(r) => OfferSource::Runner(&r.source),
         };
+        let dir_rights = match offer {
+            OfferDecl::Directory(offer_dir) => offer_dir.rights.map(Rights::from),
+            _ => None,
+        };
         match source {
             OfferSource::Service(_) => {
                 return Err(ModelError::unsupported("Service capability"));
             }
             OfferSource::Directory(OfferDirectorySource::Framework) => {
+                // Directories offered or exposed directly from the framework are limited to
+                // read-only rights.
+                pos.rights_state = pos.rights_state.finalize(Some(Rights::from(*READ_RIGHTS)))?;
                 let capability =
                     FrameworkCapability::framework_from_offer_decl(offer).map_err(|_| {
                         ModelError::capability_discovery_error(format_err!(
@@ -594,7 +618,6 @@ async fn walk_offer_chain<'a>(
                 }));
             }
             OfferSource::ServiceProtocol(OfferServiceSource::Realm)
-            | OfferSource::Directory(OfferDirectorySource::Realm)
             | OfferSource::Storage(OfferStorageSource::Realm)
             | OfferSource::Runner(OfferRunnerSource::Realm) => {
                 // The offered capability comes from the realm, so follow the
@@ -604,10 +627,23 @@ async fn walk_offer_chain<'a>(
                 pos.realm = cur_realm.try_get_parent()?;
                 continue 'offerloop;
             }
-            OfferSource::ServiceProtocol(OfferServiceSource::Self_)
-            | OfferSource::Directory(OfferDirectorySource::Self_) => {
+            OfferSource::Directory(OfferDirectorySource::Realm) => {
+                pos.rights_state = pos.rights_state.advance(dir_rights)?;
+                pos.capability = ComponentCapability::Offer(offer.clone());
+                pos.last_child_moniker = pos.moniker().path().last().map(|c| c.clone());
+                pos.realm = cur_realm.try_get_parent()?;
+                continue 'offerloop;
+            }
+            OfferSource::ServiceProtocol(OfferServiceSource::Self_) => {
                 // The offered capability comes from the current component,
                 // return our current location in the tree.
+                return Ok(Some(CapabilitySource::Component {
+                    capability: ComponentCapability::Offer(offer.clone()),
+                    source_moniker: pos.moniker().clone(),
+                }));
+            }
+            OfferSource::Directory(OfferDirectorySource::Self_) => {
+                pos.rights_state = pos.rights_state.finalize(dir_rights)?;
                 return Ok(Some(CapabilitySource::Component {
                     capability: ComponentCapability::Offer(offer.clone()),
                     source_moniker: pos.moniker().clone(),
@@ -634,10 +670,22 @@ async fn walk_offer_chain<'a>(
                 }));
             }
             OfferSource::ServiceProtocol(OfferServiceSource::Child(child_name))
-            | OfferSource::Directory(OfferDirectorySource::Child(child_name))
             | OfferSource::Runner(OfferRunnerSource::Child(child_name)) => {
                 // The offered capability comes from a child, break the loop
                 // and begin walking the expose chain.
+                pos.capability = ComponentCapability::Offer(offer.clone());
+                let partial = PartialMoniker::new(child_name.to_string(), None);
+                pos.realm = Some(cur_realm_state.get_live_child_realm(&partial).ok_or(
+                    ModelError::capability_discovery_error(format_err!(
+                        "no child {} found from component {} for offer source",
+                        partial,
+                        pos.moniker().clone(),
+                    )),
+                )?);
+                return Ok(None);
+            }
+            OfferSource::Directory(OfferDirectorySource::Child(child_name)) => {
+                pos.rights_state = pos.rights_state.advance(dir_rights)?;
                 pos.capability = ComponentCapability::Offer(offer.clone());
                 let partial = PartialMoniker::new(child_name.to_string(), None);
                 pos.realm = Some(cur_realm_state.get_live_child_realm(&partial).ok_or(
@@ -706,11 +754,21 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                 pos.moniker()
             )));
         }
+        let dir_rights = match expose {
+            ExposeDecl::Directory(expose_dir) => expose_dir.rights.map(Rights::from),
+            _ => None,
+        };
         match source {
-            ExposeSource::ServiceProtocol(cm_rust::ExposeSource::Self_)
-            | ExposeSource::Directory(cm_rust::ExposeSource::Self_) => {
+            ExposeSource::ServiceProtocol(cm_rust::ExposeSource::Self_) => {
                 // The offered capability comes from the current component, return our
                 // current location in the tree.
+                return Ok(CapabilitySource::Component {
+                    capability: ComponentCapability::Expose(expose.clone()),
+                    source_moniker: pos.moniker().clone(),
+                });
+            }
+            ExposeSource::Directory(cm_rust::ExposeSource::Self_) => {
+                pos.rights_state = pos.rights_state.finalize(dir_rights)?;
                 return Ok(CapabilitySource::Component {
                     capability: ComponentCapability::Expose(expose.clone()),
                     source_moniker: pos.moniker().clone(),
@@ -737,7 +795,6 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                 });
             }
             ExposeSource::ServiceProtocol(cm_rust::ExposeSource::Child(child_name))
-            | ExposeSource::Directory(cm_rust::ExposeSource::Child(child_name))
             | ExposeSource::Runner(cm_rust::ExposeSource::Child(child_name)) => {
                 // The offered capability comes from a child, so follow the child.
                 pos.capability = ComponentCapability::Expose(expose.clone());
@@ -751,8 +808,38 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                 )?);
                 continue;
             }
-            ExposeSource::ServiceProtocol(cm_rust::ExposeSource::Framework)
-            | ExposeSource::Directory(cm_rust::ExposeSource::Framework) => {
+            ExposeSource::Directory(cm_rust::ExposeSource::Child(child_name)) => {
+                pos.rights_state = pos.rights_state.advance(dir_rights)?;
+                // The offered capability comes from a child, so follow the child.
+                pos.capability = ComponentCapability::Expose(expose.clone());
+                let partial = PartialMoniker::new(child_name.to_string(), None);
+                pos.realm = Some(cur_realm_state.get_live_child_realm(&partial).ok_or(
+                    ModelError::capability_discovery_error(format_err!(
+                        "no child {} found from component {} for offer source",
+                        partial,
+                        pos.moniker().clone(),
+                    )),
+                )?);
+                continue;
+            }
+            ExposeSource::ServiceProtocol(cm_rust::ExposeSource::Framework) => {
+                let capability =
+                    FrameworkCapability::framework_from_expose_decl(expose).map_err(|_| {
+                        ModelError::capability_discovery_error(format_err!(
+                            "no matching exposes found for capability {:?} from component {}",
+                            pos.capability,
+                            pos.moniker(),
+                        ))
+                    })?;
+                return Ok(CapabilitySource::Framework {
+                    capability,
+                    scope_moniker: Some(pos.moniker().clone()),
+                });
+            }
+            ExposeSource::Directory(cm_rust::ExposeSource::Framework) => {
+                // Directories offered or exposed directly from the framework are limited to
+                // read-only rights.
+                pos.rights_state = pos.rights_state.finalize(Some(Rights::from(*READ_RIGHTS)))?;
                 let capability =
                     FrameworkCapability::framework_from_expose_decl(expose).map_err(|_| {
                         ModelError::capability_discovery_error(format_err!(

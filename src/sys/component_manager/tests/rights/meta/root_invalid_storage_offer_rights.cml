@@ -1,0 +1,28 @@
+// Passes a valid read write storage capability to a child, this is valid.
+{
+  "children": [
+    {
+      "name": "use_storage",
+      "url": "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/use_storage.cm",
+      "startup": "eager",
+    },
+    {
+      "name": "expose_dir_rights",
+      "url": "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/expose_dir_rights.cm",
+    },
+  ],
+  "storage": [
+    {
+      "name": "mystorage",
+      "from": "#expose_dir_rights",
+      "path": "/read_only",
+    }
+  ],
+  "offer": [
+    {
+      "storage": "data",
+      "from": "#mystorage",
+      "to": ["#use_storage"],
+    },
+  ]
+}

@@ -663,6 +663,7 @@ mod tests {
                 binding::Binder,
                 model::{ComponentManagerConfig, Model, ModelParams},
                 resolver::ResolverRegistry,
+                rights,
                 testing::mocks,
                 testing::{
                     test_helpers::*,
@@ -915,7 +916,7 @@ mod tests {
                         source: UseSource::Framework,
                         source_path: CapabilityPath::try_from("/hub").unwrap(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
-                        rights: fio2::Operations::Connect,
+                        rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                     })],
                     ..default_component_decl()
                 },
@@ -1003,7 +1004,7 @@ mod tests {
                             source: UseSource::Framework,
                             source_path: CapabilityPath::try_from("/hub/exec").unwrap(),
                             target_path: CapabilityPath::try_from("/hub").unwrap(),
-                            rights: fio2::Operations::Connect,
+                            rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                         }),
                         UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                             source: UseSource::Realm,
@@ -1014,7 +1015,7 @@ mod tests {
                             source: UseSource::Realm,
                             source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                             target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                            rights: fio2::Operations::Connect,
+                            rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                         }),
                     ],
                     ..default_component_decl()

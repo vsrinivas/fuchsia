@@ -23,6 +23,7 @@
       "directory": "/boot",
       "from": "realm",
       "to": [ "#devcoordinator" ],
+      "rights": ["rx*"],
     },
     {
       "service_protocol": [

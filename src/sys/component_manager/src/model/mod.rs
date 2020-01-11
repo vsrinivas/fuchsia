@@ -25,6 +25,7 @@ mod addable_directory;
 mod dir_tree;
 mod exposed_dir;
 mod namespace;
+mod rights;
 mod storage;
 #[cfg(test)]
 mod tests;

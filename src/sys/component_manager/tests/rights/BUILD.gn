@@ -1,0 +1,173 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":rights_integration_test" ]
+}
+
+rustc_test("rights_integration_test_bin") {
+  name = "rights_integration_test"
+  edition = "2018"
+  source_root = "rights_integration_test.rs"
+  deps = [
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/component_manager/tests:test_utils",
+    "//third_party/rust_crates:anyhow",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+executable("expose_dir_rights") {
+  sources = [ "expose_dir_rights.cc" ]
+
+  deps = [
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/memfs",
+    "//zircon/public/lib/svc",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-io",
+  ]
+}
+
+rustc_binary("use_dir_rights") {
+  edition = "2018"
+  source_root = "use_dir_rights.rs"
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+rustc_binary("use_storage") {
+  edition = "2018"
+  source_root = "use_storage.rs"
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+test_package("rights_integration_test") {
+  deps = [
+    ":expose_dir_rights",
+    ":rights_integration_test_bin",
+    ":use_dir_rights",
+    ":use_storage",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/use_dir_rights.cml")
+      dest = "use_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/expose_dir_rights.cml")
+      dest = "expose_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/root_offer_dir_rights.cml")
+      dest = "root_offer_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/invalid_use_dir_rights.cml")
+      dest = "invalid_use_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/root_invalid_use_in_offer_dir_rights.cml")
+      dest = "root_invalid_use_in_offer_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/root_invalid_offer_dir_rights.cml")
+      dest = "root_invalid_offer_dir_rights.cm"
+    },
+    {
+      path = rebase_path(
+              "meta/root_invalid_expose_intermediate_offer_dir_rights.cml")
+      dest = "root_invalid_expose_intermediate_offer_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/invalid_intermediate_expose_dir_rights.cml")
+      dest = "invalid_intermediate_expose_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/intermediate_expose_dir_rights.cml")
+      dest = "intermediate_expose_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/root_expose_intermediate_offer_dir_rights.cml")
+      dest = "root_expose_intermediate_offer_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/intermediate_offer_dir_rights.cml")
+      dest = "intermediate_offer_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/root_offer_intermediate_offer_dir_rights.cml")
+      dest = "root_offer_intermediate_offer_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/invalid_intermediate_offer_dir_rights.cml")
+      dest = "invalid_intermediate_offer_dir_rights.cm"
+    },
+    {
+      path = rebase_path(
+              "meta/root_invalid_offer_intermediate_offer_dir_rights.cml")
+      dest = "root_invalid_offer_intermediate_offer_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/root_alias_offer_dir_rights.cml")
+      dest = "root_alias_offer_dir_rights.cm"
+    },
+    {
+      path = rebase_path("meta/root_invalid_storage_offer_rights.cml")
+      dest = "root_invalid_storage_offer_rights.cm"
+    },
+    {
+      path = rebase_path("meta/root_storage_offer_rights.cml")
+      dest = "root_storage_offer_rights.cm"
+    },
+    {
+      path = rebase_path("meta/use_storage.cml")
+      dest = "use_storage.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "use_dir_rights"
+    },
+    {
+      name = "use_storage"
+    },
+    {
+      name = "expose_dir_rights"
+    },
+  ]
+
+  tests = [
+    {
+      name = "rights_integration_test"
+    },
+  ]
+}

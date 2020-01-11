@@ -1,0 +1,14 @@
+{
+  "program": {
+    "binary": "bin/use_dir_rights",
+  },
+  "use": [
+    // This is invalid and should fail.
+    { "directory": "/read_only", "rights":["rw*"] },
+    { "directory": "/read_write", "rights":["rw*"] },
+    { "directory": "/read_write_dup", "rights":["rw*"] },
+    { "directory": "/read_exec", "rights":["rx*"] },
+    { "directory": "/read_admin", "rights":["r*", "admin"] },
+    { "directory": "/read_only_after_scoped", "rights":["r*"] },
+  ]
+}

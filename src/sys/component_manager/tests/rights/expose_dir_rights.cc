@@ -32,12 +32,21 @@ int main(int argc, char* argv[]) {
   fidl::InterfacePtr<fuchsia::io::Directory> memfs_dir;
   memfs_dir.Bind(std::move(memfs_channel));
 
-  fidl::InterfaceHandle<fuchsia::io::Node> ro_dir, rw_dir, rx_dir;
+  fidl::InterfaceHandle<fuchsia::io::Node> ro_dir;
+  fidl::InterfaceHandle<fuchsia::io::Node> rw_dir;
+  fidl::InterfaceHandle<fuchsia::io::Node> rx_dir;
+  fidl::InterfaceHandle<fuchsia::io::Node> ra_dir;
+  fidl::InterfaceHandle<fuchsia::io::Node> r_after_scoped_dir;
+
   memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE, ro_dir.NewRequest());
   memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                    rw_dir.NewRequest());
   memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE,
                    rx_dir.NewRequest());
+  memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_ADMIN,
+                   ra_dir.NewRequest());
+  memfs_dir->Clone(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                   r_after_scoped_dir.NewRequest());
 
   // TODO(fxb/37773): We can't use sys::ComponentContext/vfs::PseudoDir/vfs::RemoteDir here because
   // of a bug in how they handle OPEN_FLAG_POSIX.
@@ -48,6 +57,10 @@ int main(int argc, char* argv[]) {
                                 fbl::MakeRefCounted<fs::RemoteDir>(rw_dir.TakeChannel()));
   outgoing.root_dir()->AddEntry("read_exec",
                                 fbl::MakeRefCounted<fs::RemoteDir>(rx_dir.TakeChannel()));
+  outgoing.root_dir()->AddEntry("read_admin",
+                                fbl::MakeRefCounted<fs::RemoteDir>(ra_dir.TakeChannel()));
+  outgoing.root_dir()->AddEntry("read_only_after_scoped", fbl::MakeRefCounted<fs::RemoteDir>(
+                                                              r_after_scoped_dir.TakeChannel()));
   status = outgoing.ServeFromStartupInfo();
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to serve outgoing dir: %d\n", status);

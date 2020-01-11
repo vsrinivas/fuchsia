@@ -79,6 +79,11 @@ pub enum ModelError {
         #[source]
         err: ClonableError,
     },
+    #[error("rights error")]
+    RightsError {
+        #[source]
+        err: ClonableError,
+    },
 }
 
 impl ModelError {
@@ -134,6 +139,10 @@ impl ModelError {
         relative_path: impl Into<String>,
     ) -> ModelError {
         ModelError::OpenDirectoryError { moniker, relative_path: relative_path.into() }
+    }
+
+    pub fn rights_error(err: impl Into<Error>) -> ModelError {
+        ModelError::RightsError { err: err.into().into() }
     }
 }
 
