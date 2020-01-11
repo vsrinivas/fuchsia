@@ -107,7 +107,6 @@ class Astro : public AstroType {
   zx_status_t I2cInit();
   zx_status_t LightInit();
   zx_status_t MaliInit();
-  zx_status_t PwmInit();
   zx_status_t RawNandInit();
   zx_status_t SdioInit();
   zx_status_t Start();
