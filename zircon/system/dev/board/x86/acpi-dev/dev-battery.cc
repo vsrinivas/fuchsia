@@ -241,15 +241,17 @@ static void acpi_battery_release(void* ctx) {
   free(dev);
 }
 
-static zx_status_t acpi_battery_suspend(void* ctx, uint32_t flags) {
+static void acpi_battery_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
+                                 uint8_t suspend_reason) {
   acpi_battery_device_t* dev = static_cast<acpi_battery_device_t*>(ctx);
 
-  if (flags != DEVICE_SUSPEND_FLAG_MEXEC) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (suspend_reason != DEVICE_SUSPEND_REASON_MEXEC) {
+    device_suspend_reply(dev->zxdev, ZX_ERR_NOT_SUPPORTED, DEV_POWER_STATE_D0);
+    return;
   }
 
   atomic_store(&dev->shutdown, true);
-  return ZX_OK;
+  device_suspend_reply(dev->zxdev, ZX_OK, requested_state);
 }
 
 zx_status_t fidl_battery_get_power_info(void* ctx, fidl_txn_t* txn) {
@@ -318,7 +320,7 @@ static zx_protocol_device_t acpi_battery_device_proto = [] {
   zx_protocol_device_t ops = {};
   ops.version = DEVICE_OPS_VERSION;
   ops.release = acpi_battery_release;
-  ops.suspend = acpi_battery_suspend;
+  ops.suspend_new = acpi_battery_suspend;
   ops.message = fuchsia_battery_message_instance;
   return ops;
 }();
