@@ -52,11 +52,12 @@ class GenericTask {
     return fit::ok(addr);
   }
 
-  fzl::VmoPool::Buffer WriteLockOutputBuffer() {
+  std::optional<fzl::VmoPool::Buffer> WriteLockOutputBuffer() {
     fbl::AutoLock lock(&output_vmo_pool_lock_);
     auto buffer = output_buffers_.LockBufferForWrite();
-    ZX_ASSERT(buffer);
-    return (std::move(*buffer));
+    if (buffer)
+      return std::move(*buffer);
+    return {};
   }
 
   // Releases the write lock of the output buffer and returns back and index.

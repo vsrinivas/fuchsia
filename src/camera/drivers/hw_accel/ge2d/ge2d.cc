@@ -21,6 +21,7 @@
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 
+#include "src/camera/drivers/hw_accel/ge2d/ge2d-regs.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace ge2d {
@@ -212,47 +213,141 @@ zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buf
 void Ge2dDevice::Ge2dSetCropRect(uint32_t task_index, const rect_t* crop) {}
 
 void Ge2dDevice::ProcessTask(TaskInfo& info) {
+  switch (info.op) {
+    case GE2D_OP_SETOUTPUTRES:
+    case GE2D_OP_SETINPUTOUTPUTRES:
+      return ProcessChangeResolution(info);
+    case GE2D_OP_FRAME:
+      return ProcessFrame(info);
+  }
+}
+
+void Ge2dDevice::ProcessChangeResolution(TaskInfo& info) {
   auto task = info.task;
 
-  if (info.op == GE2D_OP_SETOUTPUTRES || info.op == GE2D_OP_SETINPUTOUTPUTRES) {
-    // This has to free and reallocate the output buffer canvas ids.
-    task->Ge2dChangeOutputRes(info.index);
-    if (info.op == GE2D_OP_SETINPUTOUTPUTRES) {
-      // This has to free and reallocate the input buffer canvas ids.
-      task->Ge2dChangeInputRes(info.index);
-    }
+  // This has to free and reallocate the output buffer canvas ids.
+  task->Ge2dChangeOutputRes(info.index);
+  if (info.op == GE2D_OP_SETINPUTOUTPUTRES) {
+    // This has to free and reallocate the input buffer canvas ids.
+    task->Ge2dChangeInputRes(info.index);
+  }
+  frame_available_info f_info;
+  f_info.frame_status = FRAME_STATUS_OK;
+  f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
+  f_info.metadata.image_format_index = task->output_format_index();
+  return task->ResolutionChangeCallback(&f_info);
+}
+
+void Ge2dDevice::ProcessFrame(TaskInfo& info) {
+  auto task = info.task;
+
+  auto input_buffer_index = info.index;
+
+  auto output_buffer = task->WriteLockOutputBuffer();
+  if (!output_buffer) {
     frame_available_info f_info;
-    f_info.frame_status = FRAME_STATUS_OK;
+    f_info.frame_status = FRAME_STATUS_ERROR_FRAME;
+    f_info.buffer_id = 0;
     f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     f_info.metadata.image_format_index = task->output_format_index();
-    return task->ResolutionChangeCallback(&f_info);
+    f_info.metadata.input_buffer_index = input_buffer_index;
+    task->FrameReadyCallback(&f_info);
+    return;
   }
-  auto input_buffer_index = info.index;
+
+  image_format_2_t input_format = task->input_format();
+  uint32_t input_x_end = input_format.coded_width - 1;
+  uint32_t input_y_end = input_format.coded_height - 1;
+
+  image_format_2_t output_format = task->output_format();
+  uint32_t output_x_end = output_format.coded_width - 1;
+  uint32_t output_y_end = output_format.coded_height - 1;
+
+  bool scaling_enabled = (input_format.coded_width != output_format.coded_width) ||
+                         (input_format.coded_height != output_format.coded_height);
+
+  // Assume NV12 input and output for now. DST1 gets Y and DST2 gets CbCr.
+  GenCtrl0::Get()
+      .FromValue(0)
+      .set_src1_separate_enable(true)
+      .set_x_yc_ratio(1)
+      .set_y_yc_ratio(1)
+      .WriteTo(&ge2d_mmio_);
+  GenCtrl2::Get()
+      .FromValue(0)
+      .set_dst_little_endian(0)  // endianness conversion happens in canvas
+      .set_dst1_color_map(0)
+      .set_dst1_format(GenCtrl2::kFormat8Bit)
+      .set_src1_little_endian(0)  // endianness conversion happens in canvas
+      .set_src1_color_map(GenCtrl2::kColorMap24NV12)
+      .set_src1_format(GenCtrl2::kFormat24Bit)
+      .WriteTo(&ge2d_mmio_);
+
+  Src1ClipXStartEnd::Get().FromValue(0).set_end(input_x_end).set_start(0).WriteTo(&ge2d_mmio_);
+  // The linux driver does Src1XStartEnd.set_start_extra(2).set_end_extra(3) but that seems to cause
+  // the first columns's chroma to be duplicated.
+  Src1XStartEnd::Get().FromValue(0).set_end(input_x_end).set_start(0).WriteTo(&ge2d_mmio_);
+  Src1ClipYStartEnd::Get().FromValue(0).set_end(input_y_end).set_start(0).WriteTo(&ge2d_mmio_);
+  // The linux driver does Src1YStartEnd.set_start_extra(2) but that seems to cause the first row's
+  // chroma to be duplicated.
+  Src1YStartEnd::Get()
+      .FromValue(0)
+      .set_end(input_y_end)
+      .set_start(0)
+      .set_end_extra(3)
+      .WriteTo(&ge2d_mmio_);
+  DstClipXStartEnd::Get().FromValue(0).set_end(output_x_end).set_start(0).WriteTo(&ge2d_mmio_);
+  DstXStartEnd::Get().FromValue(0).set_end(output_x_end).set_start(0).WriteTo(&ge2d_mmio_);
+  DstClipYStartEnd::Get().FromValue(0).set_end(output_y_end).set_start(0).WriteTo(&ge2d_mmio_);
+  DstYStartEnd::Get().FromValue(0).set_end(output_y_end).set_start(0).WriteTo(&ge2d_mmio_);
+  GenCtrl3::Get()
+      .FromValue(0)
+      .set_dst2_color_map(GenCtrl2::kColorMap16CbCr)
+      .set_dst2_format(GenCtrl2::kFormat16Bit)
+      .set_dst2_x_discard_mode(GenCtrl3::kDiscardModeOdd)
+      .set_dst2_y_discard_mode(GenCtrl3::kDiscardModeOdd)
+      .set_dst2_enable(1)
+      .set_dst1_enable(1)
+      .WriteTo(&ge2d_mmio_);
+  auto& input_ids = task->GetInputCanvasIds(input_buffer_index);
+  Src1Canvas::Get()
+      .FromValue(0)
+      .set_y(input_ids.canvas_idx[kYComponent].id())
+      .set_u(input_ids.canvas_idx[kUVComponent].id())
+      .set_v(input_ids.canvas_idx[kUVComponent].id())
+      .WriteTo(&ge2d_mmio_);
+  auto& output_canvas = task->GetOutputCanvasIds(output_buffer->vmo_handle());
+  Src2DstCanvas::Get()
+      .FromValue(0)
+      .set_dst1(output_canvas.canvas_idx[kYComponent].id())
+      .set_dst2(output_canvas.canvas_idx[kUVComponent].id())
+      .WriteTo(&ge2d_mmio_);
+
+  Src1FmtCtrl::Get()
+      .FromValue(0)
+      .set_horizontal_enable(true)
+      .set_vertical_enable(true)
+      .set_y_chroma_phase(0x4c)
+      .set_x_chroma_phase(0x8)
+      .set_horizontal_repeat(!scaling_enabled)
+      .set_vertical_repeat(!scaling_enabled)
+      .WriteTo(&ge2d_mmio_);
+  CmdCtrl::Get().FromValue(0).set_cmd_wr(1).WriteTo(&ge2d_mmio_);
+
   zx_port_packet_t packet;
   ZX_ASSERT(ZX_OK == WaitForInterrupt(&packet));
   if (packet.key == kPortKeyIrqMsg) {
     ZX_ASSERT(ge2d_irq_.ack() == ZX_OK);
   }
 
-  // First lets fetch an unused buffer from the VMO pool.
-  auto result = task->GetOutputBufferPhysAddr();
-  if (result.is_error()) {
-    frame_available_info info;
-    info.frame_status = FRAME_STATUS_ERROR_BUFFER_FULL;
-    info.metadata.input_buffer_index = input_buffer_index;
-    info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
-    info.metadata.image_format_index = task->output_format_index();
-    return task->FrameReadyCallback(&info);
-  }
-
-  __UNUSED auto output_phy_addr = result.value();
+  ZX_ASSERT(!Status0::Get().ReadFrom(&ge2d_mmio_).busy());
 
   if (packet.key == kPortKeyDebugFakeInterrupt || packet.key == kPortKeyIrqMsg) {
     // Invoke the callback function and tell about the output buffer index
     // which is ready to be used.
     frame_available_info f_info;
     f_info.frame_status = FRAME_STATUS_OK;
-    f_info.buffer_id = task->GetOutputBufferIndex();
+    f_info.buffer_id = output_buffer->ReleaseWriteLockAndGetIndex();
     f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     f_info.metadata.image_format_index = task->output_format_index();
     f_info.metadata.input_buffer_index = input_buffer_index;
@@ -364,6 +459,11 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
   amlogic_canvas_protocol_t c;
   canvas.GetProto(&c);
 
+  // TODO(fxb/43822): Initialize clock.
+  GenCtrl1::Get().FromValue(0).set_soft_reset(1).WriteTo(&*ge2d_mmio);
+  GenCtrl1::Get().FromValue(0).set_soft_reset(0).WriteTo(&*ge2d_mmio);
+  GenCtrl1::Get().FromValue(0).set_interrupt_control(1).WriteTo(&*ge2d_mmio);
+
   fbl::AllocChecker ac;
   auto ge2d_device = std::unique_ptr<Ge2dDevice>(new (&ac) Ge2dDevice(
       parent, std::move(*ge2d_mmio), std::move(ge2d_irq), std::move(bti), std::move(port), c));
@@ -388,55 +488,4 @@ void Ge2dDevice::DdkRelease() {
 
 void Ge2dDevice::ShutDown() {}
 
-zx_status_t Ge2dBind(void* ctx, zx_device_t* device) {
-  std::unique_ptr<Ge2dDevice> ge2d_device;
-  zx_status_t status = ge2d::Ge2dDevice::Setup(device, &ge2d_device);
-  if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status) << "Could not setup ge2d device";
-    return status;
-  }
-  zx_device_prop_t props[] = {
-      {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_GE2D},
-  };
-
-// Run the unit tests for this device
-// TODO(braval): CAM-44 (Run only when build flag enabled)
-// This needs to be replaced with run unittests hooks when
-// the framework is available.
-#if 0
-    status = ge2d::Ge2dDeviceTester::RunTests(ge2d_device.get());
-    if (status != ZX_OK) {
-        FX_LOG(ERROR, kTag, "Device Unit Tests Failed");
-        return status;
-    }
-#endif
-
-  status = ge2d_device->DdkAdd("ge2d", 0, props, countof(props));
-  if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status) << "Could not add ge2d device";
-    return status;
-  }
-
-  FX_LOG(INFO, kTag, "ge2d driver added");
-
-  // ge2d device intentionally leaked as it is now held by DevMgr.
-  __UNUSED auto* dev = ge2d_device.release();
-  return status;
-}
-
-static constexpr zx_driver_ops_t driver_ops = []() {
-  zx_driver_ops_t ops = {};
-  ops.version = DRIVER_OPS_VERSION;
-  ops.bind = Ge2dBind;
-  return ops;
-}();
-
 }  // namespace ge2d
-
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ge2d, ge2d::driver_ops, "ge2d", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GE2D),
-ZIRCON_DRIVER_END(ge2d)

@@ -107,6 +107,8 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   const ddk::MmioBuffer* ge2d_mmio() const { return &ge2d_mmio_; }
   zx_status_t StartThread();
   zx_status_t StopThread();
+  const zx::bti& bti() const { return bti_; }
+  amlogic_canvas_protocol_t canvas() const { return canvas_; }
 
  protected:
   enum Ge2dOp { GE2D_OP_SETOUTPUTRES, GE2D_OP_SETINPUTOUTPUTRES, GE2D_OP_FRAME };
@@ -128,6 +130,8 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
   int JoinThread() { return thrd_join(processing_thread_, nullptr); }
 
   void ProcessTask(TaskInfo& info);
+  void ProcessChangeResolution(TaskInfo& info);
+  void ProcessFrame(TaskInfo& info);
   zx_status_t WaitForInterrupt(zx_port_packet_t* packet);
 
   // Used to access the processing queue.

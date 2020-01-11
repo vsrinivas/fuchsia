@@ -8,6 +8,7 @@ import("//build/package.gni")
 driver_module("ge2d-driver") {
   output_name = "ge2d"
   sources = [
+    "bind.cc",
     "ge2d-task.cc",
     "ge2d.cc",
     "test/ge2d-on-device-test.cc",
@@ -15,6 +16,7 @@ driver_module("ge2d-driver") {
   deps = [
     "//sdk/banjo/ddk.protocol.ge2d",
     "//src/camera/drivers/hw_accel/task:camera-task",
+    "//src/camera/drivers/test_utils",
     "//src/devices:driver",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",

@@ -33,7 +33,7 @@ namespace {
 constexpr uint32_t kWidth = 1080;
 constexpr uint32_t kHeight = 768;
 constexpr uint32_t kNumberOfBuffers = 8;
-constexpr uint32_t kNumberOfMmios = 50;
+constexpr uint32_t kNumberOfMmios = 1000;
 constexpr uint32_t kImageFormatTableSize = 8;
 constexpr uint32_t kMaxTasks = 10;
 
@@ -287,7 +287,7 @@ TEST_F(TaskTest, CanvasIdTest) {
   }
   std::deque<fzl::VmoPool::Buffer> output_buffers;
   for (uint32_t i = 0; i < output_buffer_collection_.buffer_count; i++) {
-    output_buffers.push_front(task->WriteLockOutputBuffer());
+    output_buffers.push_front(*task->WriteLockOutputBuffer());
   }
   uint32_t count = 0;
   while (!output_buffers.empty()) {

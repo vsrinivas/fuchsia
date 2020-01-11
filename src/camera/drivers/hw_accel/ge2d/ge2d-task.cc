@@ -151,7 +151,7 @@ zx_status_t Ge2dTask::AllocOutputCanvasIds(
     return ZX_ERR_NO_MEMORY;
   }
   for (uint32_t i = 0; i < output_buffer_collection->buffer_count; i++) {
-    buf_canvas_ids[i].output_buffer = WriteLockOutputBuffer();
+    buf_canvas_ids[i].output_buffer = *WriteLockOutputBuffer();
     zx_handle_t vmo_handle = buf_canvas_ids[i].output_buffer.vmo_handle();
     zx_status_t status =
         AllocCanvasId(output_image_format, vmo_handle, buf_canvas_ids[i].canvas_ids,

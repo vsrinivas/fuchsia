@@ -13,14 +13,9 @@ namespace ge2d {
 // |Ge2dDeviceTester| is spawned by the driver in |ge2d.cc|
 class Ge2dDevice;
 
-class Ge2dDeviceTester : public zxtest::Test {
+class Ge2dDeviceTester {
  public:
   static zx_status_t RunTests(Ge2dDevice* ge2d);
-
- protected:
-  // Setup & TearDown
-  void SetUp() override;
-  void TearDown() override;
 };
 
 }  // namespace ge2d
