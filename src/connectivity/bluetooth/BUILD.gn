@@ -39,7 +39,6 @@ group("tests") {
   testonly = true
   deps = [
     "core/bt-gap:tests",
-    "core/bt-host:bluetooth_fuzzers_test",
     "lib/bt-avctp:tests",
     "lib/bt-avdtp:tests",
     "lib/bt-fidl-mocks:tests",

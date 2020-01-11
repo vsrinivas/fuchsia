@@ -85,9 +85,7 @@ template("fuzzer") {
                                "facets",
                              ])
     }
-    outputs = [
-      "$target_gen_dir/$target_name",
-    ]
+    outputs = [ "$target_gen_dir/$target_name" ]
     output_conversion = "json"
   }
 
@@ -126,9 +124,7 @@ template("fuzzer") {
         ]
       }
     }
-    outputs = [
-      "$target_gen_dir/$target_name",
-    ]
+    outputs = [ "$target_gen_dir/$target_name" ]
     output_conversion = "json"
   }
 
@@ -136,19 +132,13 @@ template("fuzzer") {
   output_dictionary = "${target_gen_dir}/${fuzzer_name}/dictionary"
   if (defined(invoker.dictionary)) {
     copy("${fuzzer_name}_dictionary") {
-      sources = [
-        invoker.dictionary,
-      ]
-      outputs = [
-        output_dictionary,
-      ]
+      sources = [ invoker.dictionary ]
+      outputs = [ output_dictionary ]
     }
   } else {
     generated_file("${fuzzer_name}_dictionary") {
       contents = []
-      outputs = [
-        output_dictionary,
-      ]
+      outputs = [ output_dictionary ]
     }
   }
   generated_file("${fuzzer_name}_options") {
@@ -156,9 +146,7 @@ template("fuzzer") {
     if (defined(invoker.options)) {
       contents = invoker.options
     }
-    outputs = [
-      "${target_gen_dir}/${fuzzer_name}/options",
-    ]
+    outputs = [ "${target_gen_dir}/${fuzzer_name}/options" ]
   }
 }
 
@@ -222,6 +210,7 @@ template("fuzzers_package") {
 
   pkg = {
     name = target_name
+    is_fuzzed = false
     meta = []
     binaries = []
     resources = []
@@ -257,6 +246,7 @@ template("fuzzers_package") {
              (defined(selector.output_name) &&
               selector.output_name == [ fuzzer ]))) {
           selected = true
+          pkg.is_fuzzed = true
 
           # Package details.
           pkg.meta += [
@@ -314,37 +304,39 @@ template("fuzzers_package") {
     not_needed([ "selected" ])
   }
 
-  if (pkg.host && pkg.host_deps != []) {
-    # Treat host fuzzers as tools. If we get to the point of having name
-    # collisions, we'll need to extend `install_host_tools` to allow copying to
-    # specific subdirectories of `host_tools_dir`
-    install_host_tools("host_${pkg.name}") {
-      testonly = true
-      deps = pkg.host_deps
-      outputs = pkg.host_outputs
+  if (pkg.host) {
+    if (pkg.is_fuzzed) {
+      # Fuzzed build: Treat host fuzzers as tools. If we get to the point of having name collisions,
+      # we'll need to extend `install_host_tools` to allow copying to specific subdirectories of
+      # `host_tools_dir`
+      install_host_tools("host_${pkg.name}") {
+        testonly = true
+        deps = pkg.host_deps
+        outputs = pkg.host_outputs
+      }
+      pkg.deps += [ ":host_${pkg.name}" ]
+    } else {
+      # Non-fuzzed build: just ensure the test deps build.
+      group("host_${pkg.name}") {
+        visibility = [ ":*" ]
+        testonly = true
+        deps = []
+        foreach(test_dep, pkg.test_deps) {
+          deps += [ "$test_dep($host_toolchain)" ]
+        }
+      }
+      pkg.test_deps += [ ":host_${pkg.name}" ]
     }
   }
 
-  if (pkg.deps == []) {
-    # Dummy package for non-fuzzed builds
-    group(target_name) {
-    }
-    not_needed(invoker, "*")
-  } else if (pkg.host_only) {
+  if (pkg.host_only) {
     # Simple group for host-only builds
     group(target_name) {
       testonly = true
-      deps = [
-        ":host_${pkg.name}",
-      ]
+      deps = [ ":host_${pkg.name}" ]
     }
-    not_needed(invoker, "*")
-  } else {
-    if (pkg.host) {
-      pkg.deps += [ ":host_${pkg.name}" ]
-    }
-
-    # Assemble the Fuchsia package
+  } else if (pkg.is_fuzzed) {
+    # Fuzzed build: Assemble the Fuchsia package
     package(target_name) {
       meta = []
       binaries = []
@@ -382,41 +374,17 @@ template("fuzzers_package") {
         ]
       }
     }
-  }
-
-  # TODO(aarongreen): Soft transition from the optional $generated_test_package
-  # to the required $test_package_name. Once template consumers are updated;
-  # drop support for $generated_test_package.
-  if (defined(invoker.test_package_name)) {
-    test_package_name = invoker.test_package_name
-  } else if (defined(invoker.generated_test_package)) {
-    test_package_name = invoker.generated_test_package
   } else {
-    test_package_name = "${pkg.name}_tests"
-  }
-
-  # Include host unit tests as appropriate
-  if (pkg.host) {
-    group("host_$test_package_name") {
-      visibility = [ ":*" ]
+    # Non-fuzzed build: Assemble the fuzzer test package. This uses `package` instead of
+    #`test_package`, as the latter only provides an inconvenient constraint on where the cmx file
+    # must come from.
+    package(target_name) {
+      forward_variables_from(invoker, [ "visibility" ])
       testonly = true
-      deps = []
-      foreach(test_dep, pkg.test_deps) {
-        deps += [ "$test_dep($host_toolchain)" ]
-      }
+      meta = pkg.test_meta
+      tests = pkg.tests
+      deps = pkg.test_deps
     }
-    pkg.test_deps += [ ":host_$test_package_name" ]
-  }
-
-  # Assemble the Fuchsia test package. This uses `package` instead of
-  # `test_package`, as the latter only provides an inconvenient constraint on
-  # where the cmx file must come from.
-  package(test_package_name) {
-    forward_variables_from(invoker, [ "visibility" ])
-    testonly = true
-    meta = pkg.test_meta
-    tests = pkg.tests
-    deps = pkg.test_deps
   }
 }
 
@@ -476,8 +444,8 @@ template("fidl_protocol_fuzzer") {
     fuzzer_deps = []
   }
   fuzzer_deps += [
-    "//sdk/lib/fidl/cpp/fuzzing",
     "${invoker.fidl}_libfuzzer_${protocol_suffix}",
+    "//sdk/lib/fidl/cpp/fuzzing",
   ]
 
   fuzzer(target_name) {

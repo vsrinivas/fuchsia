@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//third_party/protobuf/proto_library.gni")
@@ -22,7 +23,6 @@ test_package("cobalt_tests") {
   deps = [
     "app:app",
     "app:cobalt_app_unittests",
-    "app/fuzzer:cobalt_fuzzers",
     "system-metrics:cobalt_system_metrics_unittests",
     "testapp:cobalt_fake_timekeeper",
     "testapp:cobalt_testapp",
@@ -81,5 +81,13 @@ test_package("cobalt_tests") {
       disabled = true
       environments = basic_envs
     },
+  ]
+}
+
+fuzzers_package("cobalt_fuzzers") {
+  fuzzers = [
+    "app/fuzzer:logger_factory_fuzzer",
+    "app/fuzzer:logger_fuzzer",
+    "app/fuzzer:system_data_updater_fuzzer",
   ]
 }

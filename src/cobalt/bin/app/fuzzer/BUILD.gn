@@ -64,11 +64,3 @@ fidl_protocol_fuzzer("system_data_updater_fuzzer") {
   protocol = "fuchsia.cobalt.SystemDataUpdater"
   deps = [ ":system_data_updater_server_provider" ]
 }
-
-fuzzers_package("cobalt_fuzzers") {
-  fuzzers = [
-    ":logger_factory_fuzzer",
-    ":logger_fuzzer",
-    ":system_data_updater_fuzzer",
-  ]
-}

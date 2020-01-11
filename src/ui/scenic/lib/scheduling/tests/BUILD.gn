@@ -10,7 +10,7 @@ group("tests") {
 group("fuzztests") {
   testonly = true
   public_deps = [
-    "//src/ui/scenic/lib/scheduling/tests/fuzzers:frame_scheduling_fuzzers",
+    # TODO(43840) Renable: "fuzzers:frame_scheduling_fuzzers",
   ]
 }
 
