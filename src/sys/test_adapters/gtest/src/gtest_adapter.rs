@@ -10,7 +10,9 @@ use {
     fuchsia_zircon as zx,
     futures::prelude::*,
     serde_derive::{Deserialize, Serialize},
-    std::{ffi::CString, fs::File, io::BufReader, str::from_utf8},
+    std::{ffi::CString, fmt, fs, fs::File, io::BufReader, str::from_utf8},
+    // TODO(anmittal): don't add this dependency in runner.
+    uuid::Uuid,
 };
 
 /// Provides info about individual test cases.
@@ -103,6 +105,36 @@ struct TestOutput {
     pub testsuites: Vec<TestSuiteOutput>,
 }
 
+/// This structure will try to delete underlying file when it goes out of scope.
+/// This doesn't return error or doesn't panic if remove file operation fails.
+/// We base this object on filename because this adapter is not the one to create it,
+/// it is created by test process.
+struct FileScope {
+    file_name: String,
+}
+
+impl FileScope {
+    fn new(name: String) -> Self {
+        Self { file_name: name }
+    }
+
+    fn file_name(&self) -> &str {
+        &self.file_name
+    }
+}
+
+impl Drop for FileScope {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.file_name);
+    }
+}
+
+impl fmt::Display for FileScope {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.file_name)
+    }
+}
+
 #[derive(Debug)]
 pub struct GTestAdapter {
     c_test_path: CString,
@@ -133,7 +165,8 @@ impl GTestAdapter {
     ) -> Result<(), Error> {
         for test in &test_names {
             fx_log_info!("Running test {}", test);
-            let test_result_file = format!("/tmp/{}_test_result.json", test);
+            let test_result_file =
+                FileScope::new(format!("/tmp/test_result_{}.json", Uuid::new_v4().to_simple()));
 
             let (process, logger) = test_adapter_lib::launch_process(
                 &self.c_test_path,
@@ -172,7 +205,7 @@ impl GTestAdapter {
             fx_log_info!("open output file for {}", test);
             // Open the file in read-only mode with buffer.
             // TODO(anmittal): Convert this to async ops.
-            let output_file = if let Ok(f) = File::open(&test_result_file) {
+            let output_file = if let Ok(f) = File::open(test_result_file.file_name()) {
                 f
             } else {
                 // TODO(anmittal): Introduce Status::InternalError.
@@ -232,7 +265,8 @@ impl GTestAdapter {
     /// Launches test process and gets test list out. Returns list of tests names in the format
     /// defined by gtests, i.e FOO.Bar
     pub async fn enumerate_tests(&self) -> Result<Vec<String>, Error> {
-        let test_list_file = format!("/tmp/{}_test_list.json", self.test_file_name);
+        let test_list_file =
+            FileScope::new(format!("/tmp/test_list_{}.json", Uuid::new_v4().to_simple()));
 
         let (process, logger) = test_adapter_lib::launch_process(
             &self.c_test_path,
@@ -260,11 +294,11 @@ impl GTestAdapter {
         }
 
         // Open the file in read-only mode with buffer.
-        let open_file_result = File::open(&test_list_file);
+        let open_file_result = File::open(test_list_file.file_name());
         if let Err(e) = open_file_result {
             let logs = logger.try_concat().await?;
             let output = from_utf8(&logs)?;
-            fx_log_err!("Failed getting list of tests from {}:\n{}", test_list_file, output);
+            fx_log_err!("Failed getting list of tests from\n{}", output);
             return Err(e.into());
         }
 
@@ -297,6 +331,7 @@ mod tests {
             RunListenerRequestStream,
         },
         std::cmp::PartialEq,
+        std::path::Path,
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -464,5 +499,27 @@ mod tests {
     #[test]
     fn invalid_file() {
         GTestAdapter::new("/pkg/bin/invalid_test_file".to_owned()).expect_err("This should fail");
+    }
+
+    #[test]
+    fn file_scope_works_when_no_file_exists() {
+        let _file = FileScope::new("/tmp/file_scope_works_when_no_file_exists".to_owned());
+
+        // should not crash when there is no file with this name.
+    }
+
+    #[test]
+    fn file_scope_works() {
+        let file_name = "/tmp/file_scope_works";
+
+        {
+            let _file = FileScope::new(file_name.to_string());
+
+            File::create(file_name).expect("should not fail");
+
+            assert!(Path::new(file_name).exists());
+        }
+
+        assert!(!Path::new(file_name).exists());
     }
 }
