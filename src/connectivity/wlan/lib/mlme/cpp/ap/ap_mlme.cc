@@ -35,6 +35,9 @@ ApMlme::ApMlme(DeviceInterface* device) : device_(device), rust_ap_(nullptr, ap_
       .get_wlan_channel = [](void* mlme) -> wlan_channel_t {
         return MLME(mlme)->device_->GetState()->channel();
       },
+      .get_wlan_info = [](void* mlme) -> wlanmac_info_t {
+        return MLME(mlme)->device_->GetWlanInfo();
+      },
       .set_key = [](void* mlme, wlan_key_config_t* key) -> zx_status_t {
         return MLME(mlme)->device_->SetKey(key);
       },

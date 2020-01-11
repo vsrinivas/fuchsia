@@ -272,7 +272,7 @@ impl InfraBss {
         let mgmt_subtype = *&{ mgmt_hdr.frame_ctrl }.mgmt_subtype();
         if mgmt_subtype == mac::MgmtSubtype::PROBE_REQ {
             let driver_features = ctx.device.wlan_info().ifc_info.driver_features;
-            if (driver_features & WlanInfoDriverFeature::PROBE_RESP_OFFLOAD).0 > 0 {
+            if (driver_features & WlanInfoDriverFeature::PROBE_RESP_OFFLOAD).0 != 0 {
                 // We expected the probe response to be handled by hardware.
                 return Err(Rejection::Error(format_err!(
                     "driver indicates probe response offload but MLME received a probe response!"

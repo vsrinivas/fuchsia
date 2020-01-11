@@ -172,7 +172,6 @@ pub fn write_probe_resp_frame<B: Appendable>(
     let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&client_addr) as u16);
     mgmt_writer::write_mgmt_hdr(
         buf,
-        // The sequence control is 0 because the firmware will set it.
         mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, client_addr, bssid, seq_ctrl),
         None,
     )?;

@@ -295,9 +295,9 @@ std::unique_ptr<Packet> CreateProbeRequest() {
   BufferWriter w(*packet);
   auto mgmt_hdr = w.Write<MgmtFrameHeader>();
   mgmt_hdr->fc.set_type(FrameType::kManagement);
-  mgmt_hdr->fc.set_subtype(ManagementSubtype::kBeacon);
-  mgmt_hdr->addr1 = client;
-  mgmt_hdr->addr2 = bssid;
+  mgmt_hdr->fc.set_subtype(ManagementSubtype::kProbeRequest);
+  mgmt_hdr->addr1 = bssid;
+  mgmt_hdr->addr2 = client;
   mgmt_hdr->addr3 = bssid;
 
   w.Write<ProbeRequest>();

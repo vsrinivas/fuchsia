@@ -231,6 +231,23 @@ TEST_F(ApInfraBssTest, StartAp) {
             wlan_mlme::StartResultCodes::SUCCESS);
 }
 
+TEST_F(ApInfraBssTest, ProbeRequest_Success) {
+  ctx.StartAp();
+
+  // Send probe request frame
+  ctx.ap->HandleFramePacket(CreateProbeRequest());
+
+  ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+  auto pkt = std::move(*device.wlan_queue.begin());
+  auto frame = TypeCheckWlanFrame<MgmtFrameView<ProbeResponse>>(pkt.pkt.get());
+  EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
+  EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
+  EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
+  EXPECT_EQ(frame.body()->timestamp, 0u);
+  EXPECT_EQ(frame.body()->cap.val(), CapabilityInfo().val());
+  EXPECT_EQ(frame.body()->beacon_interval, 100);
+}
+
 TEST_F(ApInfraBssTest, Authenticate_Success) {
   ctx.StartAp();
 
