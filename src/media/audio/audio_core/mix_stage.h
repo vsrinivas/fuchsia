@@ -29,7 +29,7 @@ class MixStage : public Stream {
   // |media::audio::Stream|
   std::optional<Stream::Buffer> LockBuffer(zx::time ref_time, int64_t frame,
                                            uint32_t frame_count) override;
-  void UnlockBuffer(bool release_buffer) override {}
+  void UnlockBuffer(bool release_buffer) override;
   void Trim(zx::time ref_time) override;
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
 

@@ -54,7 +54,7 @@ void MixStage::RemoveInput(const Stream& stream) {
 
 std::optional<Stream::Buffer> MixStage::LockBuffer(zx::time now, int64_t frame,
                                                    uint32_t frame_count) {
-  TRACE_DURATION("audio", "MixStage::Mix");
+  TRACE_DURATION("audio", "MixStage::LockBuffer");
   memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
   cur_mix_job_.buf = mix_buf_.get();
@@ -77,8 +77,12 @@ std::optional<Stream::Buffer> MixStage::LockBuffer(zx::time now, int64_t frame,
   return {Stream::Buffer(FractionalFrames<int64_t>(frame), FractionalFrames<uint32_t>(frame_count),
                          cur_mix_job_.buf, true)};
 }
+void MixStage::UnlockBuffer(bool release_buffer) {
+  TRACE_DURATION("audio", "MixStage::UnlockBuffer");
+}
 
 Stream::TimelineFunctionSnapshot MixStage::ReferenceClockToFractionalFrames() const {
+  TRACE_DURATION("audio", "MixStage::ReferenceClockToFractionalFrames");
   TimelineRate fractional_frames_per_frame =
       TimelineRate(FractionalFrames<uint32_t>(1).raw_value());
   return {

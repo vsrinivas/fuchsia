@@ -44,11 +44,13 @@ OutputPipeline::OutputPipeline(const PipelineConfig& config, const Format& outpu
 
 std::shared_ptr<Mixer> OutputPipeline::AddInput(fbl::RefPtr<Stream> stream,
                                                 const fuchsia::media::Usage& usage) {
+  TRACE_DURATION("audio", "OutputPipeline::AddInput", "stream", stream.get());
   streams_.emplace_back(stream, fidl::Clone(usage));
   return LookupStageForUsage(usage).AddInput(std::move(stream));
 }
 
 void OutputPipeline::RemoveInput(const Stream& stream) {
+  TRACE_DURATION("audio", "OutputPipeline::RemoveInput", "stream", &stream);
   auto it = std::find_if(streams_.begin(), streams_.end(),
                          [&stream](auto& pair) { return pair.first.get() == &stream; });
   FX_CHECK(it != streams_.end());

@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <fbl/ref_ptr.h>
+#include <trace/event.h>
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mix_stage.h"
@@ -48,18 +49,22 @@ class OutputPipeline : public Stream {
   // |media::audio::Stream|
   std::optional<Stream::Buffer> LockBuffer(zx::time ref_time, int64_t frame,
                                            uint32_t frame_count) override {
+    TRACE_DURATION("audio", "OutputPipeline::LockBuffer");
     FX_DCHECK(stream_);
     return stream_->LockBuffer(ref_time, frame, frame_count);
   }
   void UnlockBuffer(bool release_buffer) override {
+    TRACE_DURATION("audio", "OutputPipeline::UnlockBuffer");
     FX_DCHECK(stream_);
     stream_->UnlockBuffer(release_buffer);
   }
   void Trim(zx::time trim) override {
+    TRACE_DURATION("audio", "OutputPipeline::Trim");
     FX_CHECK(stream_);
     stream_->Trim(trim);
   }
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
+    TRACE_DURATION("audio", "OutputPipeline::ReferenceClockToFractionalFrames");
     FX_DCHECK(stream_);
     return stream_->ReferenceClockToFractionalFrames();
   }
