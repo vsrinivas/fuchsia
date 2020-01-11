@@ -2,32 +2,53 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("serial-async") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("serial-async") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   deps = [
     ":common",
-    "$zx/system/ulib/driver",
+    "//src/devices:driver",
   ]
-
-  # TODO (31742): Remove this in the future when we have official libasync support in drivers.
-  deprecated_inhibit_driver_shlib_allowlist = true
 }
 
 source_set("common") {
-  sources = [ "serial.cc" ]
-  public_deps = [
-    "$zx/system/banjo/ddk.protocol.serialimpl.async",
-    "$zx/system/fidl/fuchsia-hardware-serial:llcpp",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zx",
+  sources = [
+    "serial.cc",
+    "serial.h",
   ]
+  public_deps = [
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.serialimpl.async",
+    "//zircon/system/fidl/fuchsia-hardware-serial:llcpp",
+  ]
+}
+
+migrated_manifest("serial-async-manifest") {
+  deps = [ ":serial-async" ]
 }

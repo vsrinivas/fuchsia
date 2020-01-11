@@ -283,7 +283,6 @@ aggregate_manifest("legacy-image") {
     ":driver.sdhci",
     ":driver.sdmmc",
     ":driver.serial",
-    ":driver.serial-async",
     ":driver.sg-micro",
     ":driver.sherlock-pdm-input",
     ":driver.sherlock-tdm-output",
@@ -1017,7 +1016,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.scsilib-disk-test-test",
     ":test.sys.sdhci-test",
     ":test.sys.sdmmc-test",
-    ":test.sys.serial-async-unittest-test",
     ":test.sys.serial-unittest-test",
     ":test.sys.service-llcpp-test-test",
     ":test.sys.service-proxy-dir-test",
@@ -1475,7 +1473,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.scsilib-disk-test-test",
     ":test.sys.sdhci-test",
     ":test.sys.sdmmc-test",
-    ":test.sys.serial-async-unittest-test",
     ":test.sys.serial-unittest-test",
     ":test.sys.service-llcpp-test-test",
     ":test.sys.service-proxy-dir-test",
@@ -1583,6 +1580,7 @@ aggregate_manifest("legacy-tests") {
 aggregate_manifest("migrated-image") {
   deps = [
     "//src/developer/cmd:bin-manifest",
+    "//zircon/system/dev/serial/serial-async:serial-async-manifest",
     "//zircon/system/uapp/audio:bin-manifest",
     "//zircon/system/uapp/audio:test-manifest",
     "//zircon/system/uapp/backlight:backlight-manifest",
@@ -1590,9 +1588,15 @@ aggregate_manifest("migrated-image") {
 }
 
 aggregate_manifest("migrated-aux") {
-  deps = [ "//zircon/system/uapp/audio:test-manifest" ]
+  deps = [
+    "//zircon/system/dev/serial/serial-async/test:serial-async-unittest-manifest",
+    "//zircon/system/uapp/audio:test-manifest",
+  ]
 }
 
 aggregate_manifest("migrated-tests") {
-  deps = [ "//zircon/system/uapp/audio:test-manifest" ]
+  deps = [
+    "//zircon/system/dev/serial/serial-async/test:serial-async-unittest-manifest",
+    "//zircon/system/uapp/audio:test-manifest",
+  ]
 }
