@@ -28,7 +28,9 @@ import (
 
 	"golang.org/x/net/dns/dnsmessage"
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
@@ -158,10 +160,20 @@ func roundTrip(ctx context.Context, transport tcpip.TransportProtocolNumber, ep 
 }
 
 func (c *Client) connect(ctx context.Context, transport tcpip.TransportProtocolNumber, server tcpip.FullAddress) (tcpip.Endpoint, *waiter.Queue, error) {
+	var netproto tcpip.NetworkProtocolNumber
+	switch len(server.Addr) {
+	case header.IPv4AddressSize:
+		netproto = ipv4.ProtocolNumber
+	case header.IPv6AddressSize:
+		netproto = ipv6.ProtocolNumber
+	default:
+		return nil, nil, fmt.Errorf("dns: invalid address %s", server.Addr)
+	}
+
 	var wq waiter.Queue
-	ep, err := c.stack.NewEndpoint(transport, ipv4.ProtocolNumber, &wq)
+	ep, err := c.stack.NewEndpoint(transport, netproto, &wq)
 	if err != nil {
-		return nil, nil, fmt.Errorf("dns: %v", err)
+		return nil, nil, fmt.Errorf("dns: NewEndpoint(%d, %d, _): %s", transport, netproto, err)
 	}
 
 	// Issue connect request and wait for it to complete.

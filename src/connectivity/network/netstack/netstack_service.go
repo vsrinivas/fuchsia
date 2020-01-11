@@ -436,6 +436,7 @@ func (dns *dnsImpl) SetNameServers(servers []fidlnet.IpAddress) error {
 		ss[i] = fidlconv.ToTCPIPAddress(s)
 	}
 
+	syslog.Infof("setting default name servers: %s", ss)
 	dns.ns.dnsClient.SetDefaultServers(ss)
 	return nil
 }
