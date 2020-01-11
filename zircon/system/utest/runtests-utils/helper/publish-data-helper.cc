@@ -8,14 +8,16 @@
 
 namespace {
 
-const char kTestName[] = "test";
-const char kTestData[] = "test";
+constexpr char kTestName[] = "test";
+constexpr char kTestData[] = "test";
+constexpr char kTestMessage[] = "{{{dumpfile:test:test}}}";
 
 TEST(RunTestHelper, PublishData) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
-  vmo.set_property(ZX_PROP_NAME, kTestName, sizeof(kTestName));
+  vmo.set_property(ZX_PROP_NAME, kTestName, sizeof(kTestName) - 1);
   __sanitizer_publish_data(kTestData, vmo.release());
+  __sanitizer_log_write(kTestMessage, sizeof(kTestMessage) - 1);
 }
 
 }  // anonymous namespace
