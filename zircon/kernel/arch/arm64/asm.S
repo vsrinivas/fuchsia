@@ -157,6 +157,7 @@ FUNCTION(arm64_elX_to_el1)
 
     isb
     eret
+    SPECULATION_POSTFENCE
 
 .Ltarget:
     ret

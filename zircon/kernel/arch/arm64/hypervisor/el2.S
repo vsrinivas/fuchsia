@@ -182,6 +182,7 @@ reg_xa  .req x11
 .macro exception_return literal
     mov x0, \literal
     eret
+    SPECULATION_POSTFENCE
 .endm
 
 .macro pop_stack
@@ -380,6 +381,7 @@ FUNCTION_LABEL(el2_hvc_on)
 FUNCTION_LABEL(el2_hvc_psci)
     smc 0
     eret
+    SPECULATION_POSTFENCE
 
 FUNCTION_LABEL(el2_hvc_mexec)
     br x0
@@ -503,6 +505,7 @@ FUNCTION_LABEL(el2_hvc_resume)
 
     // Return to guest.
     eret
+    SPECULATION_POSTFENCE
 
 FUNCTION_LABEL(el2_guest_exit_or_fp_resume)
     // Check ESR_EL2.EC to determine whether the exception was due to a
@@ -558,6 +561,7 @@ FUNCTION_LABEL(el2_guest_exit)
     ldr x0, [sp, 8]
     pop_stack
     eret
+    SPECULATION_POSTFENCE
 
 FUNCTION_LABEL(el2_fp_resume)
     // Save reg_xt so we have an extra register to swap floating-point state.
@@ -579,3 +583,4 @@ FUNCTION_LABEL(el2_fp_resume)
     // Return to guest.
     ldp reg_xs, reg_xt, [sp], 16
     eret
+    SPECULATION_POSTFENCE

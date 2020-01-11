@@ -6,6 +6,7 @@
 
 #include <asm.h>
 #include <arch/arm64/iframe.h>
+#include <arch/asm_macros.h>
 
 // void arm64_uspace_entry(iframe_t* iframe, vaddr_t kstack) __NO_RETURN;
 FUNCTION(arm64_uspace_entry)
@@ -39,4 +40,5 @@ FUNCTION(arm64_uspace_entry)
 
     // Lazy loading of the FPU means we don't need to zero the simd registers
     eret
+    SPECULATION_POSTFENCE
 END_FUNCTION(arm64_uspace_entry)

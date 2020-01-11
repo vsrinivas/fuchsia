@@ -134,4 +134,8 @@ movk \reg, #:abs_g3:\symbol
     .cfi_same_value x28 ; \
     .cfi_same_value x29
 
+#define SPECULATION_POSTFENCE \
+    dsb nsh; \
+    isb
+
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ASM_MACROS_H_

@@ -366,6 +366,8 @@ LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore_lower_el)
 LOCAL_FUNCTION_LABEL(arm64_exc_shared_restore)
     regrestore
     eret
+    // Prevent speculation through ERET
+    SPECULATION_POSTFENCE
 END_FUNCTION(arm64_exc_shared_restore)
 END_DATA(arm64_exc_shared_restore_lower_el)
 
