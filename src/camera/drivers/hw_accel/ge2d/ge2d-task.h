@@ -15,10 +15,33 @@
 
 namespace ge2d {
 
+// Move-only amlogic canvas ID wrappper.
+class ScopedCanvasId {
+ public:
+  ScopedCanvasId() = default;
+  ScopedCanvasId(const amlogic_canvas_protocol_t* canvas, uint8_t id) : canvas_(canvas), id_(id) {}
+  ScopedCanvasId(ScopedCanvasId&& other);
+  ScopedCanvasId(const ScopedCanvasId&) = delete;
+
+  ScopedCanvasId& operator=(ScopedCanvasId&& other);
+  ScopedCanvasId& operator=(ScopedCanvasId&) = delete;
+
+  ~ScopedCanvasId() { Reset(); }
+
+  void Reset();
+  uint8_t id() const { return id_; }
+  bool valid() const { return static_cast<bool>(canvas_); }
+
+ private:
+  const amlogic_canvas_protocol_t* canvas_ = nullptr;
+  uint8_t id_ = 0;
+};
+
 static const uint8_t kYComponent = 0;
 static const uint8_t kUVComponent = 1;
+
 typedef struct image_canvas_id {
-  uint8_t canvas_idx[2];
+  ScopedCanvasId canvas_idx[2];
 } image_canvas_id_t;
 
 typedef struct input_image_canvas_id {
@@ -71,14 +94,14 @@ class Ge2dTask : public generictask::GenericTask {
                             const hw_accel_remove_task_callback_t* remove_task_callback,
                             const zx::bti& bti, amlogic_canvas_protocol_t canvas);
 
-  image_canvas_id_t GetOutputCanvasIds(zx_handle_t vmo) {
+  const image_canvas_id_t& GetOutputCanvasIds(zx_handle_t vmo) {
     auto entry = buffer_map_.find(vmo);
     ZX_ASSERT(entry != buffer_map_.end());
 
     return entry->second;
   }
 
-  image_canvas_id_t GetInputCanvasIds(uint32_t index) {
+  const image_canvas_id_t& GetInputCanvasIds(uint32_t index) {
     return input_image_canvas_ids_[index].canvas_ids;
   }
 
@@ -117,6 +140,7 @@ class Ge2dTask : public generictask::GenericTask {
   void FreeCanvasIds();
 
   enum Ge2dTaskType task_type_;
+  amlogic_canvas_protocol_t canvas_ = {};
   std::unique_ptr<image_format_2_t[]> output_image_format_list_;
   struct watermark_info {
     fzl::PinnedVmo watermark_vmo_pinned_;
@@ -127,8 +151,8 @@ class Ge2dTask : public generictask::GenericTask {
   watermark_info wm_;
   // Canvas id for the watermark image and the blended watermark image.
   // Both are RGBA images.
-  uint8_t wm_input_canvas_id_;
-  uint8_t wm_blended_canvas_id_;
+  ScopedCanvasId wm_input_canvas_id_;
+  ScopedCanvasId wm_blended_canvas_id_;
   // Allocate a contig vmo to hold the input watermark image.
   zx::vmo watermark_input_vmo_;
   // vmo to hold blended watermark image.
@@ -137,7 +161,6 @@ class Ge2dTask : public generictask::GenericTask {
   std::unordered_map<zx_handle_t, image_canvas_id_t> buffer_map_;
   uint32_t num_input_canvas_ids_;
   std::unique_ptr<input_image_canvas_id_t[]> input_image_canvas_ids_;
-  amlogic_canvas_protocol_t canvas_ = {};
 };
 }  // namespace ge2d
 

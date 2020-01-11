@@ -280,10 +280,10 @@ TEST_F(TaskTest, CanvasIdTest) {
   EXPECT_OK(status);
   for (uint32_t i = 0; i < input_buffer_collection_.buffer_count; i++) {
     zx_handle_t vmo_handle = input_buffer_collection_.buffers[i].vmo;
-    image_canvas_id_t canvas_ids = task->GetInputCanvasIds(i);
+    const image_canvas_id_t& canvas_ids = task->GetInputCanvasIds(i);
     // We only test the UV Frame here because for the canvas id allocation of
     // the Y frame, the vmo handle is duplicated, so the vmo's won't match.
-    EXPECT_EQ(GenFakeCanvasId(vmo_handle), canvas_ids.canvas_idx[kUVComponent]);
+    EXPECT_EQ(GenFakeCanvasId(vmo_handle), canvas_ids.canvas_idx[kUVComponent].id());
   }
   std::deque<fzl::VmoPool::Buffer> output_buffers;
   for (uint32_t i = 0; i < output_buffer_collection_.buffer_count; i++) {
@@ -295,10 +295,10 @@ TEST_F(TaskTest, CanvasIdTest) {
     auto buffer = std::move(output_buffers.back());
     output_buffers.pop_back();
     zx_handle_t vmo_handle = buffer.vmo_handle();
-    image_canvas_id_t canvas_ids = task->GetOutputCanvasIds(vmo_handle);
+    const image_canvas_id_t& canvas_ids = task->GetOutputCanvasIds(vmo_handle);
     // We only test the UV Frame here because for the canvas id allocation of
     // the Y frame, the vmo handle is duplicated, so the vmo's won't match.
-    EXPECT_EQ(GenFakeCanvasId(vmo_handle), canvas_ids.canvas_idx[kUVComponent]);
+    EXPECT_EQ(GenFakeCanvasId(vmo_handle), canvas_ids.canvas_idx[kUVComponent].id());
     task->ReleaseOutputBuffer(std::move(buffer));
   }
   ZX_ASSERT(count == output_buffer_collection_.buffer_count);

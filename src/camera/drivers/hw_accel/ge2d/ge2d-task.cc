@@ -18,6 +18,43 @@ constexpr uint32_t kEndianness = 7;
 constexpr auto kTag = "ge2d";
 
 namespace ge2d {
+ScopedCanvasId::ScopedCanvasId(ScopedCanvasId&& other) {
+  canvas_ = other.canvas_;
+  id_ = other.id_;
+  other.canvas_ = nullptr;
+}
+ScopedCanvasId& ScopedCanvasId::operator=(ScopedCanvasId&& other) {
+  Reset();
+  canvas_ = other.canvas_;
+  id_ = other.id_;
+  other.canvas_ = nullptr;
+  return *this;
+}
+
+void ScopedCanvasId::Reset() {
+  if (canvas_) {
+    amlogic_canvas_free(canvas_, id_);
+  }
+  canvas_ = nullptr;
+  id_ = 0;
+}
+
+static zx_status_t CanvasConfig(const amlogic_canvas_protocol_t* canvas, zx_handle_t vmo,
+                                uint32_t offset, const canvas_info_t* info,
+                                ScopedCanvasId* canvas_id_out) {
+  uint8_t id;
+  zx_handle_t vmo_dup;
+  zx_status_t status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = amlogic_canvas_config(canvas, vmo_dup, offset, info, &id);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *canvas_id_out = ScopedCanvasId(canvas, id);
+  return ZX_OK;
+}
 
 zx_status_t Ge2dTask::AllocCanvasId(const image_format_2_t* image_format, zx_handle_t vmo_in,
                                     image_canvas_id_t& canvas_ids, uint32_t alloc_flag) {
@@ -30,26 +67,18 @@ zx_status_t Ge2dTask::AllocCanvasId(const image_format_2_t* image_format, zx_han
   info.endianness = kEndianness;
   info.flags = alloc_flag;
   zx_status_t status;
-  zx_handle_t vmo_dup;
 
-  status = zx_handle_duplicate(vmo_in, ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = amlogic_canvas_config(&canvas_, vmo_dup, 0,  // offset of plane 0 is at 0.
-                                 &info, &canvas_ids.canvas_idx[kYComponent]);
-
-  status = zx_handle_duplicate(vmo_in, ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
+  status = CanvasConfig(&canvas_, vmo_in, 0,  // offset of plane 0 is at 0.
+                        &info, &canvas_ids.canvas_idx[kYComponent]);
   if (status != ZX_OK) {
     return status;
   }
 
   info.height /= 2;  // For NV12, second plane height is 1/2 first.
-  status = amlogic_canvas_config(&canvas_, vmo_dup,
-                                 image_format->display_height * image_format->bytes_per_row, &info,
-                                 &canvas_ids.canvas_idx[kUVComponent]);
+  status =
+      CanvasConfig(&canvas_, vmo_in, image_format->display_height * image_format->bytes_per_row,
+                   &info, &canvas_ids.canvas_idx[kUVComponent]);
   if (status != ZX_OK) {
-    amlogic_canvas_free(&canvas_, canvas_ids.canvas_idx[kYComponent]);
     return ZX_ERR_NO_RESOURCES;
   }
   return ZX_OK;
@@ -76,26 +105,14 @@ zx_status_t Ge2dTask::AllocInputCanvasIds(const buffer_collection_info_2_t* inpu
     status = AllocCanvasId(input_image_format, input_buffer_collection->buffers[i].vmo,
                            input_image_canvas_ids[i].canvas_ids, CANVAS_FLAGS_READ);
     if (status != ZX_OK) {
-      for (uint32_t j = 0; j < i; j++) {
-        amlogic_canvas_free(&canvas_, input_image_canvas_ids[j].canvas_ids.canvas_idx[kYComponent]);
-        amlogic_canvas_free(&canvas_,
-                            input_image_canvas_ids[j].canvas_ids.canvas_idx[kUVComponent]);
-        input_image_canvas_ids[j].vmo.reset();
-      }
       return status;
     }
     // Canvas id allocation was successful. Dup the vmo handle and save it along with
-    // the canvas ids. We need the vmo handle when we change the input resoultion.
+    // the canvas ids. We need the vmo handle when we change the input resolution.
     zx_handle_t vmo_dup;
     status = zx_handle_duplicate(input_buffer_collection->buffers[i].vmo, ZX_RIGHT_SAME_RIGHTS,
                                  &vmo_dup);
     if (status != ZX_OK) {
-      for (uint32_t j = 0; j < i; j++) {
-        amlogic_canvas_free(&canvas_, input_image_canvas_ids[j].canvas_ids.canvas_idx[kYComponent]);
-        amlogic_canvas_free(&canvas_,
-                            input_image_canvas_ids[j].canvas_ids.canvas_idx[kUVComponent]);
-        input_image_canvas_ids[j].vmo.reset();
-      }
       return status;
     }
     input_image_canvas_ids[i].vmo = zx::vmo(vmo_dup);
@@ -141,15 +158,14 @@ zx_status_t Ge2dTask::AllocOutputCanvasIds(
                       CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE);
     if (status != ZX_OK) {
       for (uint32_t j = 0; j < i; j++) {
-        amlogic_canvas_free(&canvas_, buf_canvas_ids[j].canvas_ids.canvas_idx[kYComponent]);
-        amlogic_canvas_free(&canvas_, buf_canvas_ids[j].canvas_ids.canvas_idx[kUVComponent]);
         ReleaseOutputBuffer(std::move(buf_canvas_ids[j].output_buffer));
       }
       return status;
     }
   }
   for (uint32_t i = 0; i < output_buffer_collection->buffer_count; i++) {
-    buffer_map_[buf_canvas_ids[i].output_buffer.vmo_handle()] = buf_canvas_ids[i].canvas_ids;
+    buffer_map_[buf_canvas_ids[i].output_buffer.vmo_handle()] =
+        std::move(buf_canvas_ids[i].canvas_ids);
     ReleaseOutputBuffer(std::move(buf_canvas_ids[i].output_buffer));
   }
   return ZX_OK;
@@ -169,18 +185,18 @@ zx_status_t Ge2dTask::AllocCanvasIds(const buffer_collection_info_2_t* input_buf
 
 void Ge2dTask::FreeCanvasIds() {
   for (uint32_t j = 0; j < num_input_canvas_ids_; j++) {
-    amlogic_canvas_free(&canvas_, input_image_canvas_ids_[j].canvas_ids.canvas_idx[kYComponent]);
-    amlogic_canvas_free(&canvas_, input_image_canvas_ids_[j].canvas_ids.canvas_idx[kUVComponent]);
+    input_image_canvas_ids_[j].canvas_ids.canvas_idx[kYComponent] = ScopedCanvasId();
+    input_image_canvas_ids_[j].canvas_ids.canvas_idx[kUVComponent] = ScopedCanvasId();
     input_image_canvas_ids_[j].vmo.reset();
   }
   num_input_canvas_ids_ = 0;
-  for (auto it = buffer_map_.cbegin(); it != buffer_map_.cend(); ++it) {
-    amlogic_canvas_free(&canvas_, it->second.canvas_idx[kYComponent]);
-    amlogic_canvas_free(&canvas_, it->second.canvas_idx[kUVComponent]);
+  for (auto it = buffer_map_.begin(); it != buffer_map_.end(); ++it) {
+    it->second.canvas_idx[kYComponent] = ScopedCanvasId();
+    it->second.canvas_idx[kUVComponent] = ScopedCanvasId();
   }
   if (task_type_ == GE2D_WATERMARK) {
-    amlogic_canvas_free(&canvas_, wm_input_canvas_id_);
-    amlogic_canvas_free(&canvas_, wm_blended_canvas_id_);
+    wm_input_canvas_id_ = ScopedCanvasId();
+    wm_blended_canvas_id_ = ScopedCanvasId();
   }
 }
 
@@ -193,10 +209,7 @@ void Ge2dTask::Ge2dChangeOutputRes(uint32_t new_output_buffer_index) {
     zx_status_t status =
         AllocCanvasId(&format, it.first, canvas_ids, CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE);
     ZX_ASSERT(status == ZX_OK);
-    // Free old canvas ids.
-    amlogic_canvas_free(&canvas_, it.second.canvas_idx[kYComponent]);
-    amlogic_canvas_free(&canvas_, it.second.canvas_idx[kUVComponent]);
-    it.second = canvas_ids;
+    it.second = std::move(canvas_ids);
   }
 }
 
@@ -209,9 +222,7 @@ void Ge2dTask::Ge2dChangeInputRes(uint32_t new_input_buffer_index) {
     zx_status_t status = AllocCanvasId(&format, input_image_canvas_ids_[j].vmo.get(), canvas_ids,
                                        CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE);
     ZX_ASSERT(status == ZX_OK);
-    amlogic_canvas_free(&canvas_, input_image_canvas_ids_[j].canvas_ids.canvas_idx[kYComponent]);
-    amlogic_canvas_free(&canvas_, input_image_canvas_ids_[j].canvas_ids.canvas_idx[kUVComponent]);
-    input_image_canvas_ids_[j].canvas_ids = canvas_ids;
+    input_image_canvas_ids_[j].canvas_ids = std::move(canvas_ids);
   }
 }
 
@@ -339,13 +350,6 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
   }
   memcpy(mapped_contig_vmo.start(), mapped_watermark_input_vmo.start(), vmo_size);
 
-  zx::vmo watermark_input_dup;
-  status = watermark_input_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &watermark_input_dup);
-  if (status != ZX_OK) {
-    FX_LOG(ERROR, kTag, "Unable to dup watermark VMO");
-    return status;
-  }
-
   // Allocate input watermark canvas id.
   canvas_info_t info;
   info.height = wm_.wm_image_format.display_height;
@@ -355,8 +359,9 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
   // Do 64-bit endianness conversion.
   info.endianness = 0;
   info.flags = CANVAS_FLAGS_READ;
-  status = amlogic_canvas_config(&canvas_, watermark_input_dup.release(), 0, &info,
-                                 &wm_input_canvas_id_);
+  status = CanvasConfig(&canvas_, watermark_input_vmo_.get(), 0, &info, &wm_input_canvas_id_);
+  if (status != ZX_OK)
+    return status;
 
   // Allocate a vmo to hold the blended watermark id, then allocate a canvas id for the same.
   status = zx::vmo::create_contiguous(bti, vmo_size, 0, &watermark_blended_vmo_);
@@ -365,19 +370,11 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
     return status;
   }
 
-  zx::vmo watermark_dup;
-  status = watermark_blended_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &watermark_dup);
-  if (status != ZX_OK) {
-    FX_LOG(ERROR, kTag, "Unable to dup watermark VMO");
-    return status;
-  }
-
   info.flags |= CANVAS_FLAGS_WRITE;
-  status =
-      amlogic_canvas_config(&canvas_, watermark_dup.release(), 0, &info, &wm_blended_canvas_id_);
+  status = CanvasConfig(&canvas_, watermark_blended_vmo_.get(), 0, &info, &wm_blended_canvas_id_);
   if (status != ZX_OK) {
     FX_LOG(ERROR, kTag, "Vmo creation for blended watermark image Failed");
-    amlogic_canvas_free(&canvas_, wm_input_canvas_id_);
+    return status;
   }
   return status;
 }
