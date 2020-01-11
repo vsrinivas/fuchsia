@@ -202,7 +202,7 @@ where
 /// let broker = HangingGetBroker::new(
 ///     0u64, // Initial state
 ///     |s, o: SheepCounterWatchCountResponder| o.send(s.clone()).unwrap(), // notify function with fidl auto-generated responder
-///     HangingGetBroker::DEFAULT_CHANNEL_SIZE, // Size of channels used by Publishers and Subscribers
+///     DEFAULT_CHANNEL_SIZE, // Size of channels used by Publishers and Subscribers
 /// );
 ///
 /// // Create a new publisher that can be used to publish updates to the state
@@ -251,10 +251,6 @@ pub struct HangingGetBroker<S, O: Unpin + 'static, F: Fn(&S, O)> {
     /// assign to a `Subscriber`.
     subscriber_key_generator: subscriber_key::Generator,
     channel_size: usize,
-}
-
-impl<S, O: Unpin + 'static, F: Fn(&S, O)> HangingGetBroker<S, O, F> {
-    pub const DEFAULT_CHANNEL_SIZE: usize = 128;
 }
 
 impl<S, O, F> HangingGetBroker<S, O, F>
