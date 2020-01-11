@@ -1,0 +1,20 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.camera3") {
+  sdk_category = "partner"
+
+  sources = [
+    "device.fidl",
+    "device_watcher.fidl",
+    "stream.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.math",
+    "//zircon/system/fidl/fuchsia-sysmem",
+  ]
+}
