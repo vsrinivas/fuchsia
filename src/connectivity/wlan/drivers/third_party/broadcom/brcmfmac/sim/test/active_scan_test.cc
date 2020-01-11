@@ -33,7 +33,7 @@ class ActiveScanTest : public SimTest {
 
   // Event handlers
   void EndSimulation();
-  void StartScan();
+  void StartScan(const wlanif_scan_req_t* req);
 
   bool all_aps_seen_ = false;
 
@@ -43,6 +43,10 @@ class ActiveScanTest : public SimTest {
 
   void GetFirmwareMac();
   void GetFirwarePfnMac();
+
+  // Txn ID for the current scan
+  uint64_t scan_txn_id_ = 0;
+  wlan_scan_result_t expect_scan_result;
 
  private:
   // StationIfc methods
@@ -54,9 +58,6 @@ class ActiveScanTest : public SimTest {
 
   // All simulated APs
   std::list<std::unique_ptr<ApInfo>> aps_;
-
-  // Txn ID for the current scan
-  uint64_t scan_txn_id_ = 0;
 
   // Mac address of sim_fw
   common::MacAddr sim_fw_mac_;
@@ -93,18 +94,8 @@ void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t
 }
 
 // Tell the DUT to run a scan
-void ActiveScanTest::StartScan() {
-  wlanif_scan_req_t req = {
-      .txn_id = ++scan_txn_id_,
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
-      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
-      .num_channels = 5,
-      .channel_list = {1, 2, 3, 4, 5},
-      .min_channel_time = kDwellTimeMs,
-      .max_channel_time = kDwellTimeMs,
-      .num_ssids = 0,
-  };
-  client_ifc_->if_impl_ops_->start_scan(client_ifc_->if_impl_ctx_, &req);
+void ActiveScanTest::StartScan(const wlanif_scan_req_t* req) {
+  client_ifc_->if_impl_ops_->start_scan(client_ifc_->if_impl_ctx_, req);
 }
 
 // Called when simulation time has run out. Takes down all fake APs and the simulated DUT.
@@ -187,6 +178,8 @@ void ActiveScanTest::OnScanResult(const wlanif_scan_result_t* result) {
 }
 
 void ActiveScanTest::OnScanEnd(const wlanif_scan_end_t* end) {
+  EXPECT_EQ(expect_scan_result, end->code);
+
   for (auto ap_info = aps_.begin(); ap_info != aps_.end(); ap_info++) {
     if ((*ap_info)->probe_resp_seen_ == false) {
       // Failure
@@ -224,6 +217,7 @@ const common::MacAddr kAp3Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbe});
 
 // This test case might fail in a very low possibility because it's random.
 TEST_F(ActiveScanTest, RandomMacThreeAps) {
+  expect_scan_result = ZX_OK;
   // Start time and end time of this test case
   constexpr zx::duration kScanStartTime = zx::sec(1);
   constexpr zx::duration kDefaultTestDuration = zx::sec(10);
@@ -238,8 +232,19 @@ TEST_F(ActiveScanTest, RandomMacThreeAps) {
   // Get firmware mac address and tmp mac address for active scan
   GetFirmwareMac();
 
+  wlanif_scan_req_t req = {
+      .txn_id = ++scan_txn_id_,
+      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
+      .num_channels = 5,
+      .channel_list = {1, 2, 3, 4, 5},
+      .min_channel_time = kDwellTimeMs,
+      .max_channel_time = kDwellTimeMs,
+      .num_ssids = 0,
+  };
+
   auto scan_handler = new std::function<void()>;
-  *scan_handler = std::bind(&ActiveScanTest::StartScan, this);
+  *scan_handler = std::bind(&ActiveScanTest::StartScan, this, &req);
   env_->ScheduleNotification(this, kScanStartTime, scan_handler);
 
   // Schedule scan end in environment
@@ -253,6 +258,7 @@ TEST_F(ActiveScanTest, RandomMacThreeAps) {
 }
 
 TEST_F(ActiveScanTest, ScanTwice) {
+  expect_scan_result = ZX_OK;
   constexpr zx::duration kScanStartTime = zx::sec(1);
   constexpr zx::duration kDefaultTestDuration = zx::sec(10);
 
@@ -260,15 +266,90 @@ TEST_F(ActiveScanTest, ScanTwice) {
   // Ap is not needed here
   GetFirmwareMac();
 
+  wlanif_scan_req_t req = {
+      .txn_id = ++scan_txn_id_,
+      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
+      .num_channels = 5,
+      .channel_list = {1, 2, 3, 4, 5},
+      .min_channel_time = kDwellTimeMs,
+      .max_channel_time = kDwellTimeMs,
+      .num_ssids = 0,
+  };
+
   auto scan_handler = new std::function<void()>;
-  *scan_handler = std::bind(&ActiveScanTest::StartScan, this);
+  *scan_handler = std::bind(&ActiveScanTest::StartScan, this, &req);
   env_->ScheduleNotification(this, kScanStartTime, scan_handler);
 
   env_->Run();
 
   scan_handler = new std::function<void()>;
-  *scan_handler = std::bind(&ActiveScanTest::StartScan, this);
+  *scan_handler = std::bind(&ActiveScanTest::StartScan, this, &req);
   env_->ScheduleNotification(this, kScanStartTime, scan_handler);
+
+  auto end_handler = new std::function<void()>;
+  *end_handler = std::bind(&ActiveScanTest::EndSimulation, this);
+  env_->ScheduleNotification(this, kDefaultTestDuration, end_handler);
+
+  env_->Run();
+}
+
+// This test is to verify brcmfmac driver will return an error when an invalid ssid list
+// is indicated in active scan test request.
+TEST_F(ActiveScanTest, OverSizeSsid) {
+  expect_scan_result = WLAN_SCAN_RESULT_INTERNAL_ERROR;
+
+  constexpr zx::duration kFirstScanStartTime = zx::sec(1);
+  constexpr zx::duration kSecondScanStartTime = zx::sec(2);
+  constexpr zx::duration kDefaultTestDuration = zx::sec(10);
+
+  Init();
+
+  StartFakeAp(kAp1Bssid, kAp1Ssid, kDefaultChannel1);
+  GetFirmwareMac();
+
+  wlanif_ssid_t invalid_scan_ssid = {
+      .len = 33,
+      .data = "1234567890",
+  };
+
+  wlanif_ssid_t valid_scan_ssid = {
+      .len = 16,
+      .data = "Fuchsia Fake AP1",
+  };
+
+  // Case contains over-size ssid in ssid field of request.
+  wlanif_scan_req_t req_break_ssid = {
+      .txn_id = ++scan_txn_id_,
+      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .ssid = invalid_scan_ssid,
+      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
+      .num_channels = 5,
+      .channel_list = {1, 2, 3, 4, 5},
+      .min_channel_time = kDwellTimeMs,
+      .max_channel_time = kDwellTimeMs,
+      .num_ssids = 0,
+  };
+
+  // Case contains over-size ssid in ssid_list in request.
+  wlanif_scan_req_t req_break_ssid_list = {.txn_id = ++scan_txn_id_,
+                                           .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+                                           .scan_type = WLAN_SCAN_TYPE_ACTIVE,
+                                           .num_channels = 5,
+                                           .channel_list = {1, 2, 3, 4, 5},
+                                           .min_channel_time = kDwellTimeMs,
+                                           .max_channel_time = kDwellTimeMs,
+                                           .num_ssids = 2,
+                                           .ssid_list = {valid_scan_ssid, invalid_scan_ssid}};
+
+  // Two active scans are scheduled,
+  auto scan_handler = new std::function<void()>;
+  *scan_handler = std::bind(&ActiveScanTest::StartScan, this, &req_break_ssid);
+  env_->ScheduleNotification(this, kFirstScanStartTime, scan_handler);
+
+  scan_handler = new std::function<void()>;
+  *scan_handler = std::bind(&ActiveScanTest::StartScan, this, &req_break_ssid_list);
+  env_->ScheduleNotification(this, kSecondScanStartTime, scan_handler);
 
   auto end_handler = new std::function<void()>;
   *end_handler = std::bind(&ActiveScanTest::EndSimulation, this);

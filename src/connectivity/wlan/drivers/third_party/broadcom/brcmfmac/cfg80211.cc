@@ -292,6 +292,7 @@ static int32_t brcmf_get_prealloced_bsscfgidx(struct brcmf_pub* drvr) {
 
   return -1;
 }
+
 static zx_status_t brcmf_cfg80211_request_ap_if(struct brcmf_if* ifp) {
   struct brcmf_mbss_ssid_le mbss_ssid_le;
   int bsscfgidx;
@@ -704,9 +705,9 @@ static zx_status_t brcmf_dev_escan_set_randmac(struct brcmf_if* ifp) {
   return err;
 }
 
-static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
-                             struct brcmf_scan_params_le* params_le,
-                             const wlanif_scan_req_t* request) {
+static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
+                                    struct brcmf_scan_params_le* params_le,
+                                    const wlanif_scan_req_t* request) {
   uint32_t n_ssids;
   uint32_t n_channels;
   int32_t i;
@@ -729,13 +730,13 @@ static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
   params_le->channel_num = 0;
   params_le->nprobes = -1;
   params_le->home_time = -1;
-  params_le->ssid_le.SSID_len = request->ssid.len;
-  if (request->ssid.len <= sizeof(params_le->ssid_le.SSID)) {
-    memcpy(params_le->ssid_le.SSID, request->ssid.data, request->ssid.len);
-  } else {
-    memcpy(params_le->ssid_le.SSID, request->ssid.data, sizeof(params_le->ssid_le.SSID));
-    BRCMF_ERR("Scan request SSID size too large\n");
+
+  if (request->ssid.len > IEEE80211_MAX_SSID_LEN) {
+    BRCMF_ERR("Scan request SSID too long(no longer than %d bytes)\n", IEEE80211_MAX_SSID_LEN);
+    return ZX_ERR_INVALID_ARGS;
   }
+  params_le->ssid_le.SSID_len = request->ssid.len;
+  memcpy(params_le->ssid_le.SSID, request->ssid.data, request->ssid.len);
 
   n_ssids = request->num_ssids;
   n_channels = request->num_channels;
@@ -763,6 +764,11 @@ static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
       offset = roundup(offset, sizeof(uint32_t));
       ptr = (char*)params_le + offset;
       for (i = 0; i < (int32_t)n_ssids; i++) {
+        if (request->ssid_list[i].len > IEEE80211_MAX_SSID_LEN) {
+          BRCMF_ERR("SSID in scan request SSID list too long(no longer than %d bytes)\n",
+                    IEEE80211_MAX_SSID_LEN);
+          return ZX_ERR_INVALID_ARGS;
+        }
         memset(&ssid_le, 0, sizeof(ssid_le));
         ssid_le.SSID_len = request->ssid_list[i].len;
         memcpy(ssid_le.SSID, request->ssid_list[i].data, request->ssid_list[i].len);
@@ -779,6 +785,8 @@ static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
   /* Adding mask to channel numbers */
   params_le->channel_num =
       (n_ssids << BRCMF_SCAN_PARAMS_NSSID_SHIFT) | (n_channels & BRCMF_SCAN_PARAMS_COUNT_MASK);
+
+  return ZX_OK;
 }
 
 static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
@@ -809,7 +817,11 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
     goto exit;
   }
   ZX_ASSERT(params_size + sizeof("escan") < BRCMF_DCMD_MEDLEN);
-  brcmf_escan_prep(cfg, &params->params_le, request);
+  err = brcmf_escan_prep(cfg, &params->params_le, request);
+  if (err != ZX_OK) {
+    BRCMF_ERR("escan preparation failed\n");
+    goto exit;
+  }
   params->version = BRCMF_ESCAN_REQ_VERSION;
   params->action = WL_ESCAN_ACTION_START;
   params->sync_id = 0x1234;
@@ -3684,8 +3696,8 @@ static bool brcmf_is_linkdown(const struct brcmf_event_msg* e) {
     BRCMF_DBG(CONN, "Processing link down\n");
     // Adding this log for debugging disconnect issues.
     // TODO(karthikrish) : Move this to CONN level for production code
-    BRCMF_INFO("Link Down Event: event: %d flags: 0x%x reason: %d status: %d\n",
-              event, flags, e->reason, e->status);
+    BRCMF_INFO("Link Down Event: event: %d flags: 0x%x reason: %d status: %d\n", event, flags,
+               e->reason, e->status);
     return true;
   }
   return false;
