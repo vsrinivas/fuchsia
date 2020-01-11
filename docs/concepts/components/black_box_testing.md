@@ -225,18 +225,18 @@ causing future invocations to be ignored:
 let stop_receiver = breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).await?;
 
 {
-    // Temporarily set a breakpoint on UseCapability events
-    let use_receiver = breakpoint_system.set_breakpoints(vec![UseCapability::TYPE]).await?;
+    // Temporarily set a breakpoint on RouteCapability events
+    let use_receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
-    // Expect a UseCapability event from /bar:0
-    let invocation = route_receiver.expect_exact::<UseCapability>("/bar:0").await?;
-    println!("/bar:0 used capability -> {}", invocation.capability_path);
+    // Expect a RouteCapability event from /bar:0
+    let invocation = route_receiver.expect_exact::<RouteCapability>("/bar:0").await?;
+    println!("/bar:0 used capability -> {}", invocation.capability_id);
     invocation.resume().await?;
 }
 
-// At this point, the test does not care about UseCapability events, so the receiver
+// At this point, the test does not care about RouteCapability events, so the receiver
 // can be dropped. If the receiver were left instantiated, component manager would
-// halt on future UseCapability events.
+// halt on future RouteCapability events.
 
 // Expect a StopInstance event
 let invocation = stop_receiver.expect_type::<StopInstance>().await?;
