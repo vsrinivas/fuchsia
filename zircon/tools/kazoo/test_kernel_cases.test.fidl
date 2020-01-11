@@ -48,4 +48,7 @@ protocol KernelCases {
          vector_handle_u32size handles,
          optional_uint32 actual_bytes,
          optional_uint32 actual_handles);
+
+    [testonly]
+    compiled_out_in_non_test(int32 a, int32 b) -> (zx.status status);
 };

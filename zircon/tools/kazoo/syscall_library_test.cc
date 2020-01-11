@@ -8,6 +8,7 @@
 #include "tools/kazoo/test_ir_test_no_methods.test.h"
 #include "tools/kazoo/test_ir_test_one_protocol_one_method.test.h"
 #include "tools/kazoo/test_ir_test_pointers_and_vectors.test.h"
+#include "tools/kazoo/test_ir_test_kernelwrappers.test.h"
 
 namespace {
 
@@ -64,6 +65,56 @@ TEST(SyscallLibrary, LoaderVectors) {
   const auto& sc2 = library.syscalls()[2];
   ASSERT_EQ(sc2->num_kernel_args(), 0u);
   EXPECT_TRUE(sc2->kernel_return_type().IsVoid());
+}
+
+TEST(SyscallLibrary, AttributeBasedFilter) {
+  // CompiledOut should be included normally.
+  SyscallLibrary library1;
+  ASSERT_TRUE(
+      SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library1));
+  library1.FilterSyscalls(std::set<std::string>());
+  EXPECT_EQ(library1.name(), "zz");
+  ASSERT_EQ(library1.syscalls().size(), 8u);
+  bool debug_found = false;
+  for (const auto& sc : library1.syscalls()) {
+    if (sc->name() == "kwrap_compiled_out") {
+      debug_found = true;
+    }
+  }
+  EXPECT_TRUE(debug_found);
+
+  // CompiledOut should be excluded in when testonly are stripped.
+  SyscallLibrary library2;
+  ASSERT_TRUE(
+      SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library2));
+  std::set<std::string> exclude1{"testonly"};
+  library2.FilterSyscalls(exclude1);
+  EXPECT_EQ(library2.name(), "zz");
+  ASSERT_EQ(library2.syscalls().size(), 7u);
+  bool testonly_found = false;
+  for (const auto& sc : library2.syscalls()) {
+    if (sc->name() == "kwrap_compiled_out") {
+      testonly_found = true;
+    }
+  }
+  EXPECT_FALSE(testonly_found);
+
+  // Neither CompiledOut nor ANoRetFunc should be included when both attributes
+  // are excluded.
+  SyscallLibrary library3;
+  ASSERT_TRUE(
+      SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library3));
+  std::set<std::string> exclude2{"testonly", "noreturn"};
+  library3.FilterSyscalls(exclude2);
+  EXPECT_EQ(library3.name(), "zz");
+  ASSERT_EQ(library3.syscalls().size(), 6u);
+  bool stripped_found = false;
+  for (const auto& sc : library3.syscalls()) {
+    if (sc->name() == "kwrap_a_no_ret_func" || sc->name() == "kwrap_compiled_out") {
+      stripped_found = true;
+    }
+  }
+  EXPECT_FALSE(stripped_found);
 }
 
 }  // namespace

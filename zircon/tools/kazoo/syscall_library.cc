@@ -8,6 +8,8 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include <algorithm>
+
 #include "tools/kazoo/alias_workaround.h"
 #include "tools/kazoo/output_util.h"
 #include "tools/kazoo/string_util.h"
@@ -368,9 +370,23 @@ Type SyscallLibrary::TypeFromIdentifier(const std::string& id) const {
   return Type();
 }
 
+void SyscallLibrary::FilterSyscalls(const std::set<std::string>& attributes_to_exclude) {
+  std::vector<std::unique_ptr<Syscall>> filtered;
+  for (auto& syscall : syscalls_) {
+    if (std::any_of(
+            attributes_to_exclude.begin(), attributes_to_exclude.end(),
+            [&syscall](const std::string& x) { return syscall->HasAttribute(x.c_str()); })) {
+      continue;
+    }
+
+    filtered.push_back(std::move(syscall));
+  }
+
+  syscalls_ = std::move(filtered);
+}
+
 // static
-bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* library,
-                                    bool match_original_order) {
+bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* library) {
   rapidjson::Document document;
   document.Parse(json_ir);
 

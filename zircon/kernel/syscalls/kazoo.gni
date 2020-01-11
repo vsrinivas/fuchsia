@@ -8,6 +8,11 @@ _kazoo_label = "$zx/kernel/syscalls:generate_syscalls.kazoo($default_toolchain)"
 _kazoo_dir = get_label_info(_kazoo_label, "root_gen_dir")
 syscall_ir_json = "$_kazoo_dir/syscalls.ir.json"
 
+declare_args() {
+  # If true, excludes syscalls with the [testonly] attribute.
+  exclude_testonly_syscalls = false
+}
+
 # Generate syscall bindings/information from `//zircon/syscalls/`.
 #
 # Parameters
@@ -46,6 +51,10 @@ template("kazoo") {
     foreach(gen, invoker.gen) {
       outputs += gen.outputs
       args += gen.args + rebase_path(gen.outputs, root_build_dir)
+    }
+
+    if (exclude_testonly_syscalls) {
+      args += [ "--exclude=testonly" ]
     }
 
     args += rebase_path(sources, root_build_dir)

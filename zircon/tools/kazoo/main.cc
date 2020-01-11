@@ -5,6 +5,8 @@
 #include <lib/cmdline/args_parser.h>
 #include <stdio.h>
 
+#include <set>
+
 #include "tools/kazoo/outputs.h"
 #include "tools/kazoo/string_util.h"
 #include "tools/kazoo/syscall_library.h"
@@ -103,8 +105,12 @@ const char kHelpHelp[] = R"(  --help
   -h
     Prints all command line switches.)";
 
+const char kExcludeHelp[] = R"(  --exclude=someattrib
+    Exclude all syscalls annotated up with [someattrib], e.g. testonly. Can be repeated.)";
+
 cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
-                                 std::vector<std::string>* params) {
+                                 std::vector<std::string>* params,
+                                 std::set<std::string>* excludes) {
   cmdline::ArgsParser<CommandLineOptions> parser;
   parser.AddSwitch("arm64-asm", 0, kArm64AsmHelp, &CommandLineOptions::arm64_asm);
   parser.AddSwitch("category", 0, kCategoryHelp, &CommandLineOptions::category);
@@ -130,8 +136,15 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("vdso-header", 0, kVdsoHeaderHelp, &CommandLineOptions::vdso_header);
   parser.AddSwitch("vdso-wrappers", 0, kVdsoWrappersHelp, &CommandLineOptions::vdso_wrappers);
   parser.AddSwitch("x86-asm", 0, kX86AsmHelp, &CommandLineOptions::x86_asm);
+
   bool requested_help = false;
   parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
+
+  excludes->clear();
+  parser.AddGeneralSwitch("exclude", 0, kExcludeHelp, [&excludes](const std::string& exclude) {
+    excludes->insert(exclude);
+    return cmdline::Status::Ok();
+  });
 
   cmdline::Status status = parser.Parse(argc, argv, options, params);
   if (status.has_error()) {
@@ -150,7 +163,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
 int main(int argc, const char* argv[]) {
   CommandLineOptions options;
   std::vector<std::string> params;
-  cmdline::Status status = ParseCommandLine(argc, argv, &options, &params);
+  std::set<std::string> excludes;
+  cmdline::Status status = ParseCommandLine(argc, argv, &options, &params, &excludes);
   if (status.has_error()) {
     puts(status.error_message().c_str());
     return 1;
@@ -163,9 +177,11 @@ int main(int argc, const char* argv[]) {
   }
 
   SyscallLibrary library;
-  if (!SyscallLibraryLoader::FromJson(contents, &library, /*match_original_order=*/true)) {
+  if (!SyscallLibraryLoader::FromJson(contents, &library)) {
     return 1;
   }
+
+  library.FilterSyscalls(excludes);
 
   int output_count = 0;
 

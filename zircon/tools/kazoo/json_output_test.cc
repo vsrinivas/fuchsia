@@ -229,6 +229,34 @@ TEST(JsonOutput, KernelCases) {
         }
       ],
       "return_type": "zx_status_t"
+    },
+    {
+      "name": "kernelcases_compiled_out_in_non_test",
+      "attributes": [
+        "*",
+        "testonly"
+      ],
+      "top_description": [
+      ],
+      "requirements": [
+      ],
+      "arguments": [
+        {
+          "name": "a",
+          "type": "int32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "b",
+          "type": "int32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
     }
   ]
 }

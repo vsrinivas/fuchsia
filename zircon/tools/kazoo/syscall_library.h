@@ -9,6 +9,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <variant>
 #include <vector>
@@ -310,6 +311,8 @@ class SyscallLibrary {
 
   Type TypeFromIdentifier(const std::string& id) const;
 
+  void FilterSyscalls(const std::set<std::string>& attributes_to_exclude);
+
  private:
   friend class SyscallLibraryLoader;
 
@@ -325,11 +328,8 @@ class SyscallLibrary {
 class SyscallLibraryLoader {
  public:
   // Loads a JSON representation of syscalls into a SyscallLibrary structure.
-  // |match_original_order| can be set to true to make the syscalls be ordered
-  // in the same order as syscalls.abigen is today.
   // Returns true on success, or false with a message logged.
-  static bool FromJson(const std::string& json_ir, SyscallLibrary* library,
-                       bool match_original_order = false);
+  static bool FromJson(const std::string& json_ir, SyscallLibrary* library);
 
  private:
   static bool LoadBits(const rapidjson::Document& document, SyscallLibrary* library);

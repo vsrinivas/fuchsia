@@ -39,4 +39,7 @@ protocol Kwrap {
     // When two output handles, status and copy are verified before any bytes
     // returned.
     TwoOutputHandle() -> (zx.status status, handle<event> out0, handle<event> out1);
+
+    [testonly]
+    CompiledOut() -> (zx.status status);
 };

@@ -7,29 +7,40 @@ library zz;
 
 [Transport = "Syscall"]
 protocol syscall {
+    [testonly]
     syscall_test_0() -> (status status);
 
-    [test_category1]
+    [testonly,
+    test_category1]
     syscall_test_1(int32 a) -> (status status);
 
-    [test_category1]
+    [testonly,
+    test_category1]
     syscall_test_2(int32 a, int32 b) -> (status status);
 
-    [test_category2]
+    [testonly,
+    test_category2]
     syscall_test_3(int32 a, int32 b, int32 c) -> (status status);
 
+    [testonly]
     syscall_test_4(int32 a, int32 b, int32 c, int32 d) -> (status status);
 
+    [testonly]
     syscall_test_5(int32 a, int32 b, int32 c, int32 d, int32 e) -> (status status);
 
+    [testonly]
     syscall_test_6(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f) -> (status status);
 
+    [testonly]
     syscall_test_7(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g) -> (status status);
 
+    [testonly]
     syscall_test_8(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g, int32 h)
         -> (status status);
 
+    [testonly]
     syscall_test_wrapper(int32 a, int32 b, int32 c) -> (status status);
 
+    [testonly]
     syscall_test_handle_create(status return_value) -> (status status, handle<event> out);
 };
