@@ -6,12 +6,15 @@
 #include "src/ui/examples/escher/waterfall/waterfall_demo.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/test/test_with_vk_validation_layer.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 
 static constexpr uint32_t kFramebufferWidth = 1024;
 static constexpr uint32_t kFramebufferHeight = 1024;
 
-VK_TEST(WaterfallDemo, SmokeTest) {
+using WaterfallDemoTest = escher::test::TestWithVkValidationLayer;
+
+VK_TEST_F(WaterfallDemoTest, SmokeTest) {
   WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), 0, nullptr);
   auto escher = demo.escher();
 
@@ -24,7 +27,7 @@ VK_TEST(WaterfallDemo, SmokeTest) {
 
   frame->cmds()->ImageBarrier(
       output_image, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
-      vk::PipelineStageFlagBits::eBottomOfPipe, vk::AccessFlagBits::eColorAttachmentWrite,
+      vk::PipelineStageFlagBits::eAllCommands, vk::AccessFlagBits::eColorAttachmentWrite,
       vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 
   demo.DrawFrame(frame, output_image, escher::SemaphorePtr());
@@ -36,14 +39,14 @@ VK_TEST(WaterfallDemo, SmokeTest) {
   EXPECT_TRUE(frame_done);
 }
 
-VK_TEST(WaterfallDemo, OffscreenBenchmark) {
+VK_TEST_F(WaterfallDemoTest, OffscreenBenchmark) {
   WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), 0, nullptr);
   constexpr size_t kNumFrames = 20;
   Demo::RunOffscreenBenchmark(&demo, kFramebufferWidth, kFramebufferHeight,
                               vk::Format::eB8G8R8A8Unorm, kNumFrames);
 }
 
-VK_TEST(WaterfallDemo, KeyPresses) {
+VK_TEST_F(WaterfallDemoTest, KeyPresses) {
   WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), 0, nullptr);
   escher::PaperRenderer* renderer = demo.renderer();
 

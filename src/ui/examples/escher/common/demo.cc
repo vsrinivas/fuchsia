@@ -83,9 +83,10 @@ void Demo::RunOffscreenBenchmark(Demo* demo, uint32_t framebuffer_width,
   {
     auto image_cache = escher->image_cache();
     for (size_t i = 0; i < kSwapchainSize; ++i) {
-      auto im = image_cache->NewImage(
-          {framebuffer_format, framebuffer_width, framebuffer_height, 1,
-           vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc});
+      auto im = image_cache->NewImage({framebuffer_format, framebuffer_width, framebuffer_height, 1,
+                                       vk::ImageUsageFlagBits::eColorAttachment |
+                                           vk::ImageUsageFlagBits::eTransferSrc |
+                                           vk::ImageUsageFlagBits::eTransferDst});
       images[i] = im;
       semaphores[i] = escher::Semaphore::New(escher->vk_device());
 
@@ -93,7 +94,7 @@ void Demo::RunOffscreenBenchmark(Demo* demo, uint32_t framebuffer_width,
 
       im->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
       frame->cmds()->ImageBarrier(im, vk::ImageLayout::eUndefined, im->swapchain_layout(),
-                                  vk::PipelineStageFlagBits::eBottomOfPipe,
+                                  vk::PipelineStageFlagBits::eAllCommands,
                                   vk::AccessFlagBits::eColorAttachmentWrite,
                                   vk::PipelineStageFlagBits::eColorAttachmentOutput,
                                   vk::AccessFlagBits::eColorAttachmentWrite);
