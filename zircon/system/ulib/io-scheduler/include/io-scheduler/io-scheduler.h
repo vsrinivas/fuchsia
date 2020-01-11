@@ -142,7 +142,8 @@ class Scheduler {
   using StreamRefIdMap = Stream::WAVLTreeSortById;
 
   // Find an open stream by ID.
-  zx_status_t FindStream(uint32_t id, StreamRef* out) __TA_EXCLUDES(lock_);
+  zx_status_t FindStream(uint32_t id, StreamRef* out = nullptr) __TA_EXCLUDES(lock_);
+  zx_status_t FindLocked(uint32_t id, StreamRef* out = nullptr) __TA_REQUIRES(lock_);
 
   SchedulerClient* client_ = nullptr;  // Client-supplied callback interface.
   uint32_t options_ = 0;               // Ordering options.
@@ -155,8 +156,7 @@ class Scheduler {
   bool shutdown_initiated_ __TA_GUARDED(lock_) = true;
 
   // Map of id to stream ref.
-  StreamRefIdMap open_map_ __TA_GUARDED(lock_);
-  StreamRefIdMap closed_map_ __TA_GUARDED(lock_);
+  Stream::WAVLTreeSortById all_streams_ __TA_GUARDED(lock_);
 
   fbl::Vector<std::unique_ptr<Worker>> workers_;
 };

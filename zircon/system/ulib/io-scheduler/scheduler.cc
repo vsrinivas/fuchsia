@@ -32,7 +32,7 @@ void Scheduler::Shutdown() {
     shutdown_initiated_ = true;
 
     // Close all streams.
-    for (auto& stream : open_map_) {
+    for (auto& stream : all_streams_) {
       stream.Close();
     }
   }
@@ -46,8 +46,7 @@ void Scheduler::Shutdown() {
   {
     fbl::AutoLock lock(&lock_);
     // Delete any existing stream in the case where no worker threads were launched.
-    open_map_.clear();
-    closed_map_.clear();
+    all_streams_.clear();
   }
 
   client_ = nullptr;
@@ -59,8 +58,7 @@ zx_status_t Scheduler::StreamOpen(uint32_t id, uint32_t priority) {
   }
 
   fbl::AutoLock lock(&lock_);
-  auto iter = open_map_.find(id);
-  if (iter.IsValid()) {
+  if (FindLocked(id, nullptr) == ZX_OK) {
     return ZX_ERR_ALREADY_EXISTS;
   }
 
@@ -69,25 +67,25 @@ zx_status_t Scheduler::StreamOpen(uint32_t id, uint32_t priority) {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  open_map_.insert(std::move(stream));
+  all_streams_.insert(std::move(stream));
   return ZX_OK;
 }
 
 zx_status_t Scheduler::StreamClose(uint32_t id) {
   fbl::AutoLock lock(&lock_);
-  StreamRef stream = open_map_.erase(id);
-  if (stream == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
+  StreamRef stream;
+  zx_status_t status = FindLocked(id, &stream);
+  if (status != ZX_OK) {
+    return status;
   }
   if (stream->Close() == ZX_OK) {
     // Stream has no more ops. No more ops can be added since it is now closed.
     // Stream will be deleted when all references are released.
+    all_streams_.erase(id);
     return ZX_OK;
   }
   // Stream is closed but still active. No more ops can be added.
-  // Retain a reference to it in the closed map. Stream will call SetIdle() when it is ready
-  // for deletion.
-  closed_map_.insert(std::move(stream));
+  // Stream will be deleted by worker thread that empties it.
   return ZX_OK;
 }
 
@@ -163,19 +161,23 @@ bool Scheduler::ShutdownInitiated() {
 
 zx_status_t Scheduler::FindStream(uint32_t id, StreamRef* out) {
   fbl::AutoLock lock(&lock_);
-  auto iter = open_map_.find(id);
+  return FindLocked(id, out);
+}
+
+zx_status_t Scheduler::FindLocked(uint32_t id, StreamRef* out) {
+  auto iter = all_streams_.find(id);
   if (!iter.IsValid()) {
     return ZX_ERR_NOT_FOUND;
   }
-  *out = StreamRef(iter.CopyPointer());
+  if (out != nullptr) {
+    *out = StreamRef(iter.CopyPointer());
+  }
   return ZX_OK;
 }
 
 void Scheduler::StreamRelease(uint32_t id) {
   fbl::AutoLock lock(&lock_);
-  // Stream is already closed and should be in the closed map, pending release.
-  ZX_DEBUG_ASSERT(!closed_map_.is_empty());
-  closed_map_.erase(id);
+  all_streams_.erase(id);
 }
 
 }  // namespace ioscheduler
