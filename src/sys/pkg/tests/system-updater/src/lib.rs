@@ -16,6 +16,7 @@ use {
     fuchsia_zircon::{Status, Vmo},
     futures::prelude::*,
     parking_lot::Mutex,
+    pretty_assertions::assert_eq,
     std::{
         collections::HashMap,
         convert::TryInto,
