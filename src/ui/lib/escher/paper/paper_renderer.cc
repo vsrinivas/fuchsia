@@ -201,8 +201,7 @@ void PaperRenderer::BeginFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUp
 
   frame_data_ = std::make_unique<FrameData>(
       frame, std::move(uploader), scene, output_image,
-      std::make_pair<TexturePtr, TexturePtr>(std::move(depth_texture), std::move(msaa_texture)),
-      cameras);
+      std::pair<TexturePtr, TexturePtr>(depth_texture, msaa_texture), cameras);
 
   shape_cache_.BeginFrame(frame_data_->gpu_uploader.get(), frame->frame_number());
 

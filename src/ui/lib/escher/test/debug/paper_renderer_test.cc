@@ -20,8 +20,8 @@
 
 #include <vulkan/vulkan.hpp>
 
-namespace {
-using namespace escher;
+namespace escher {
+namespace test {
 
 // Extends ReadbackTest by providing a ready-to-use DebugFont instance.
 class PaperRendererTest : public ReadbackTest {
@@ -74,9 +74,9 @@ class PaperRendererTest : public ReadbackTest {
     return histogram[b];
   };
 
-  escher::PaperRenderer* renderer() const { return ren.get(); }
-
  public:
+  TexturePtr depth_buffer() { return ren->depth_buffers_[0]; }
+
   escher::PaperRendererPtr ren;
 
   // Frame environment variables.
@@ -223,7 +223,9 @@ VK_TEST_F(PaperRendererTest, PaperTimestampGraph) {
       auto gpu_uploader =
           std::make_shared<escher::BatchGpuUploader>(escher(), fd.frame->frame_number());
 
+      EXPECT_TRUE(depth_buffer() || i == 1);
       ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
+      EXPECT_TRUE(depth_buffer());
 
       PaperRenderer::Timestamp ts;
       ts.latch_point = 0;
@@ -264,4 +266,5 @@ VK_TEST_F(PaperRendererTest, PaperTimestampGraph) {
   ASSERT_TRUE(escher()->Cleanup());
 }
 
-}  // namespace
+}  // namespace test
+}  // namespace escher

@@ -21,6 +21,10 @@
 
 namespace escher {
 
+namespace test {
+class PaperRendererTest;
+}
+
 // |PaperRenderer| provides a convenient and flexible interface for rendering
 // shapes in a 3D space, as required by Scenic.  Clients achieve this primarily
 // by passing instances of |PaperDrawable| to the |Draw()| method, using either
@@ -184,6 +188,7 @@ class PaperRenderer final : public fxl::RefCountedThreadSafe<PaperRenderer> {
   };
 
  private:
+  friend class escher::test::PaperRendererTest;
   explicit PaperRenderer(EscherWeakPtr escher, const PaperRendererConfig& config);
 
   // Store relevant info from cameras passed to BeginFrame().
