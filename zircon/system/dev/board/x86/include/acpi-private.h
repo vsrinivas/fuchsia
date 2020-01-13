@@ -3,26 +3,51 @@
 // found in the LICENSE file.
 #ifndef ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_ACPI_PRIVATE_H_
 #define ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_ACPI_PRIVATE_H_
+#include <vector>
+
 #include <ddk/device.h>
 #include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
 
+#include "resources.h"
+
 #define MAX_NAMESPACE_DEPTH 100
 
-typedef struct acpi_device_pio_resource {
+struct AcpiDevicePioResource {
+  explicit AcpiDevicePioResource(const resource_io& io)
+      : base_address{io.minimum}, alignment{io.alignment}, address_length{io.address_length} {}
+
   uint32_t base_address;
   uint32_t alignment;
   uint32_t address_length;
-} acpi_device_pio_resource_t;
+};
 
-typedef struct acpi_device_mmio_resource {
+struct AcpiDeviceMmioResource {
+  AcpiDeviceMmioResource(bool writeable, uint32_t base_address, uint32_t alignment,
+                              uint32_t address_length)
+      : writeable{writeable},
+        base_address{base_address},
+        alignment{alignment},
+        address_length{address_length} {}
+
+  explicit AcpiDeviceMmioResource(const resource_memory_t& mem)
+      : AcpiDeviceMmioResource{mem.writeable, mem.minimum, mem.alignment, mem.address_length} {
+  }
+
   bool writeable;
   uint32_t base_address;
   uint32_t alignment;
   uint32_t address_length;
-} acpi_device_mmio_resource_t;
+};
 
-typedef struct acpi_device_irq {
+struct AcpiDeviceIrqResource {
+  AcpiDeviceIrqResource(const resource_irq irq, int pin_index)
+      : trigger{irq.trigger},
+        polarity{irq.polarity},
+        sharable{irq.sharable},
+        wake_capable{irq.wake_capable},
+        pin{static_cast<uint8_t>(irq.pins[pin_index])} {}
+
   uint8_t trigger;
 #define ACPI_IRQ_TRIGGER_LEVEL 0
 #define ACPI_IRQ_TRIGGER_EDGE 1
@@ -35,45 +60,42 @@ typedef struct acpi_device_irq {
 #define ACPI_IRQ_SHARED 1
   uint8_t wake_capable;
   uint8_t pin;
-} acpi_device_irq_t;
+};
 
-typedef struct acpi_device {
+struct acpi_device_t {
   zx_device_t* zxdev;
   zx_device_t* platform_bus;
 
-  mtx_t lock;
+  fbl::Mutex lock;
 
   bool got_resources;
 
   // port resources from _CRS
-  acpi_device_pio_resource_t* pio_resources;
-  size_t pio_resource_count;
+  std::vector<AcpiDevicePioResource> pio_resources;
 
   // memory resources from _CRS
-  acpi_device_mmio_resource_t* mmio_resources;
-  size_t mmio_resource_count;
+  std::vector<AcpiDeviceMmioResource> mmio_resources;
 
   // interrupt resources from _CRS
-  acpi_device_irq_t* irqs;
-  size_t irq_count;
+  std::vector<AcpiDeviceIrqResource> irqs;
 
   // handle to the corresponding ACPI node
   ACPI_HANDLE ns_node;
-} acpi_device_t;
+};
 
-typedef struct {
+struct publish_acpi_device_ctx_t {
   zx_device_t* sys_root;
   zx_device_t* acpi_root;
   zx_device_t* platform_bus;
   bool found_pci;
   uint8_t last_pci;  // bus number of the last PCI root seen
-} publish_acpi_device_ctx_t;
+};
 
-typedef struct {
+struct pci_child_auxdata_ctx_t {
   uint8_t max;
   uint8_t i;
   auxdata_i2c_device_t* data;
-} pci_child_auxdata_ctx_t;
+};
 
 // TODO(cja): this is here because of kpci.cc and can be removed once
 // kernel pci is out of the tree.
