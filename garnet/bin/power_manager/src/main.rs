@@ -11,6 +11,7 @@ mod types;
 // nodes
 mod cpu_control_handler;
 mod cpu_stats_handler;
+mod dev_control_handler;
 mod system_power_handler;
 mod temperature_handler;
 mod thermal_limiter;

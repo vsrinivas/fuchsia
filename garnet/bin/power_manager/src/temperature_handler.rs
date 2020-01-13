@@ -22,8 +22,8 @@ use std::rc::Rc;
 /// Sends Messages: N/A
 ///
 /// FIDL dependencies:
-///     - fidl_fuchsia_hardware_thermal: used by this node to query the thermal driver specified by
-///       "driver_path" in the TemperatureHandler constructor
+///     - fuchsia.hardware.thermal: the node uses this protocol to query the thermal driver
+///       specified by `driver_path` in the TemperatureHandler constructor
 
 pub struct TemperatureHandler {
     driver_path: String,
@@ -57,11 +57,17 @@ impl TemperatureHandler {
         // something to think about.
         let (status, temperature) =
             self.driver_proxy.get_temperature_celsius().await.map_err(|e| {
-                format_err!("{}: get_temperature_celsius IPC failed: {}", self.driver_path, e)
+                format_err!(
+                    "{} ({}): get_temperature_celsius IPC failed: {}",
+                    self.name(),
+                    self.driver_path,
+                    e
+                )
             })?;
         zx::Status::ok(status).map_err(|e| {
             format_err!(
-                "{}: get_temperature_celsius driver returned error: {}",
+                "{} ({}): get_temperature_celsius driver returned error: {}",
+                self.name(),
                 self.driver_path,
                 e
             )

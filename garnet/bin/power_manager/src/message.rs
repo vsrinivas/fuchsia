@@ -33,6 +33,14 @@ pub enum Message {
     /// Instruct a node to update its thermal load value
     /// Arg: a ThermalLoad value which represents the severity of thermal load in the system
     UpdateThermalLoad(ThermalLoad),
+
+    /// Get the current performance state
+    GetPerformanceState,
+
+    /// Set the new performance state
+    /// Arg: a value in the range [0 - x] where x is an upper bound defined in the
+    /// dev_control_handler crate. An increasing value indicates a lower performance state.
+    SetPerformanceState(u32),
 }
 
 /// Defines the return values for each of the Message types from above
@@ -57,4 +65,10 @@ pub enum MessageReturn {
 
     /// There is no arg in this MessageReturn type. It only serves as an ACK.
     UpdateThermalLoad,
+
+    /// Arg: the performance state returned from the node
+    GetPerformanceState(u32),
+
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
+    SetPerformanceState,
 }

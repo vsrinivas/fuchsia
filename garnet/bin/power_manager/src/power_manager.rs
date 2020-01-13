@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 use crate::node::Node;
-use crate::types::{Celsius, Farads, Hertz, Seconds, Volts, Watts};
+use crate::types::{Celsius, Farads, Seconds, Watts};
 use anyhow::{format_err, Error};
 use fuchsia_syslog::fx_log_info;
 use std::rc::Rc;
 
 // nodes
 use crate::{
-    cpu_control_handler, cpu_stats_handler, system_power_handler, temperature_handler,
-    thermal_limiter, thermal_policy,
+    cpu_control_handler, cpu_stats_handler, dev_control_handler, system_power_handler,
+    temperature_handler, thermal_limiter, thermal_policy,
 };
 
 pub struct PowerManager {
@@ -48,19 +48,19 @@ impl PowerManager {
         let cpu_stats_node = cpu_stats_handler::CpuStatsHandler::new()?;
         self.nodes.push(cpu_stats_node.clone());
 
-        let cpu_control_params = cpu_control_handler::CpuControlParams {
-            // TODO(claridge): Available P-states should be queried from the CPU driver once it is
-            // available.
-            p_states: vec![cpu_control_handler::PState {
-                frequency: Hertz(2.0e9),
-                voltage: Volts(1.0),
-            }],
-            // TODO(claridge): This is a dummy value for now. Should the CPU driver provide it
-            // in addition to the P-states?
-            capacitance: Farads(100.0e-12),
-        };
-        let cpu_control_node =
-            cpu_control_handler::CpuControlHandler::new(cpu_control_params, cpu_stats_node)?;
+        let cpu_path = "/dev/class/cpu-ctrl/000";
+        let cpu_dev_handler_node =
+            dev_control_handler::DeviceControlHandler::new(cpu_path.to_string())?;
+        self.nodes.push(cpu_dev_handler_node.clone());
+
+        let cpu_control_node = cpu_control_handler::CpuControlHandler::new(
+            cpu_path.to_string(),
+            // TODO(claridge): This is a dummy value for now. Should the CPU driver provide it in
+            // addition to the P-states?
+            Farads(100.0e-12),
+            cpu_stats_node,
+            cpu_dev_handler_node,
+        )?;
         self.nodes.push(cpu_control_node.clone());
 
         let sys_pwr_handler = system_power_handler::SystemPowerStateHandler::new()?;

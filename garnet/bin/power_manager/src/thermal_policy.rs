@@ -19,9 +19,9 @@ use std::rc::Rc;
 ///
 /// Summary: Implements the closed loop thermal control policy for the system
 ///
-/// Message Inputs: N/A
+/// Handles Messages: N/A
 ///
-/// Message Outputs:
+/// Sends Messages:
 ///     - ReadTemperature
 ///     - SetMaxPowerConsumption
 ///     - SystemShutdown
@@ -316,7 +316,8 @@ impl ThermalPolicy {
 
         let p_term = temperature_error * controller_params.proportional_gain;
         let i_term = error_integral * controller_params.integral_gain;
-        let power_available = controller_params.sustainable_power.0 + p_term + i_term;
+        let power_available =
+            f64::max(0.0, controller_params.sustainable_power.0 + p_term + i_term);
 
         Watts(power_available)
     }
@@ -371,7 +372,8 @@ mod tests {
     use super::*;
     use crate::types::{Farads, Hertz, Volts};
     use crate::{
-        cpu_control_handler, cpu_stats_handler, system_power_handler, temperature_handler,
+        cpu_control_handler, cpu_stats_handler, dev_control_handler, system_power_handler,
+        temperature_handler,
     };
     use cpu_control_handler::PState;
     use rkf45;
@@ -379,7 +381,7 @@ mod tests {
 
     #[derive(Clone, Debug)]
     struct SimulatedCpuParams {
-        num_cpus: usize,
+        num_cpus: u32,
         p_states: Vec<PState>,
         capacitance: Farads,
     }
@@ -446,7 +448,7 @@ mod tests {
                 environment_temperature: p.environment_temperature,
                 time: Seconds(0.0),
                 operation_rate_schedule: p.operation_rate_schedule,
-                idle_times: vec![Nanoseconds(0); p.cpu_params.num_cpus],
+                idle_times: vec![Nanoseconds(0); p.cpu_params.num_cpus as usize],
                 p_state_index: 0,
                 thermal_model_params: p.thermal_model_params,
                 cpu_params: p.cpu_params,
@@ -487,19 +489,11 @@ mod tests {
             move || s.borrow().idle_times.clone()
         }
 
-        /// Returns a closure to set the simulator's P-state, for a CPU control handler test node.
-        fn make_p_state_setter(
-            sim: &Rc<RefCell<Self>>,
-        ) -> Box<dyn cpu_control_handler::SetPStateIndex> {
-            struct PStateSetter {
-                sim: Rc<RefCell<Simulator>>,
-            }
-            impl cpu_control_handler::SetPStateIndex for PStateSetter {
-                fn set_p_state_index(&mut self, index: usize) {
-                    self.sim.borrow_mut().p_state_index = index;
-                }
-            }
-            Box::new(PStateSetter { sim: sim.clone() })
+        /// Returns a closure to set the simulator's P-state, for a device controller handler test
+        /// node.
+        fn make_p_state_setter(sim: &Rc<RefCell<Self>>) -> impl FnMut(u32) {
+            let s = sim.clone();
+            move |state| s.borrow_mut().p_state_index = state as usize
         }
 
         fn make_shutdown_function(sim: &Rc<RefCell<Self>>) -> impl FnMut() {
@@ -668,6 +662,8 @@ mod tests {
             let sys_pwr_handler = system_power_handler::tests::setup_test_node(
                 Simulator::make_shutdown_function(&sim),
             );
+            let cpu_dev_handler =
+                dev_control_handler::tests::setup_test_node(Simulator::make_p_state_setter(&sim));
 
             // Note that the model capacitance used by the control node could differ from the one
             // used by the simulator. This could be leveraged to simulate discrepancies between
@@ -676,11 +672,12 @@ mod tests {
             let cpu_control_params = cpu_control_handler::CpuControlParams {
                 p_states: cpu_params.p_states.clone(),
                 capacitance: cpu_params.capacitance,
+                num_cores: cpu_params.num_cpus,
             };
             let cpu_control_node = cpu_control_handler::tests::setup_test_node(
                 cpu_control_params,
                 cpu_stats_node.clone(),
-                Simulator::make_p_state_setter(&sim),
+                cpu_dev_handler,
             );
 
             let thermal_limiter_node = thermal_limiter::tests::setup_test_node();

@@ -23,8 +23,8 @@ use std::rc::Rc;
 /// Sends Messages: N/A
 ///
 /// FIDL dependencies:
-///     - fidl_fuchsia_device_manager: used by this node to command system power state changes to
-///                                    the service "fuchsia.device.manager.Administrator"
+///     - fuchsia.device.manager.Administrator: the node connects to this service to command system
+///       power state changes
 
 /// The device manager service that we'll be communicating with
 const DEV_MGR_SVC: &'static str = "/svc/fuchsia.device.manager.Administrator";

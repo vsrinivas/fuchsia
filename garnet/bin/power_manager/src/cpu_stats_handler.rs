@@ -26,8 +26,7 @@ use std::rc::Rc;
 /// Sends Messages: N/A
 ///
 /// FIDL dependencies:
-///     - fidl_fuchsia_kernel: used by this node to query kernel information from the service
-///                            "fuchsia.kernel.Stats"
+///     - fuchsia.kernel.Stats: the node connects to this service to query kernel information
 
 /// The Kernel Stats service that we'll be communicating with
 const CPU_STATS_SVC: &'static str = "/svc/fuchsia.kernel.Stats";
