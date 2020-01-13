@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    argh::FromArgs,
     carnelian::{
         make_app_assistant, AnimationMode, App, AppAssistant, FrameBufferPtr, Point, Size,
         ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
@@ -12,7 +13,7 @@ use {
     euclid::{Angle, Transform2D, Vector2D},
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
-    std::{cell::RefCell, collections::BTreeMap, env, f32, rc::Rc},
+    std::{cell::RefCell, collections::BTreeMap, f32, rc::Rc},
 };
 
 mod spinel_utils;
@@ -24,6 +25,15 @@ use crate::spinel_utils::{
 
 const APP_NAME: &'static [u8; 13usize] = b"clockface_rs\0";
 const BACKGROUND_COLOR: [f32; 4] = [0.922, 0.835, 0.702, 1.0];
+
+/// Clockface.
+#[derive(Debug, FromArgs)]
+#[argh(name = "clockface_rs")]
+struct Args {
+    /// use mold (software rendering back-end)
+    #[argh(switch, short = 'm')]
+    use_mold: bool,
+}
 
 #[derive(Default)]
 struct ClockfaceAppAssistant;
@@ -38,6 +48,9 @@ impl AppAssistant for ClockfaceAppAssistant {
         _: ViewKey,
         fb: FrameBufferPtr,
     ) -> Result<ViewAssistantPtr, Error> {
+        let args: Args = argh::from_env();
+        println!("back-end: {}", if args.use_mold { "mold" } else { "spinel" });
+
         let (token, token_request) =
             create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
         fb.borrow()
@@ -46,10 +59,9 @@ impl AppAssistant for ClockfaceAppAssistant {
             .unwrap()
             .duplicate(std::u32::MAX, token_request)
             .expect("duplicate");
-
         let config = &fb.borrow().get_config();
 
-        if env::args().any(|v| v == "--mold") {
+        if args.use_mold {
             Ok(Box::new(ClockfaceViewAssistant::new(MoldContext::new(token, config))))
         } else {
             const BLOCK_POOL_SIZE: u64 = 1 << 22; // 4 MB

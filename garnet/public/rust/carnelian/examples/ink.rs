@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    argh::FromArgs,
     carnelian::{
         make_app_assistant, AnimationMode, App, AppAssistant, FrameBufferPtr, Point, Rect, Size,
         ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
@@ -14,7 +15,7 @@ use {
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
     fuchsia_zircon::{self as zx, ClockId, Time},
     rand::{thread_rng, Rng},
-    std::{collections::BTreeMap, env, f32, fs},
+    std::{collections::BTreeMap, f32, fs},
 };
 
 mod spinel_utils;
@@ -198,6 +199,15 @@ impl Flower {
     }
 }
 
+/// Ink.
+#[derive(Debug, FromArgs)]
+#[argh(name = "ink_rs")]
+struct Args {
+    /// use mold (software rendering back-end)
+    #[argh(switch, short = 'm')]
+    use_mold: bool,
+}
+
 #[derive(Default)]
 struct InkAppAssistant;
 
@@ -211,6 +221,9 @@ impl AppAssistant for InkAppAssistant {
         _: ViewKey,
         fb: FrameBufferPtr,
     ) -> Result<ViewAssistantPtr, Error> {
+        let args: Args = argh::from_env();
+        println!("back-end: {}", if args.use_mold { "mold" } else { "spinel" });
+
         let (token, token_request) =
             create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
         fb.borrow()
@@ -219,10 +232,9 @@ impl AppAssistant for InkAppAssistant {
             .unwrap()
             .duplicate(std::u32::MAX, token_request)
             .expect("duplicate");
-
         let config = &fb.borrow().get_config();
 
-        if env::args().any(|v| v == "--mold") {
+        if args.use_mold {
             Ok(Box::new(InkViewAssistant::new(MoldContext::new(token, config))))
         } else {
             const BLOCK_POOL_SIZE: u64 = 1 << 26; // 64 MB

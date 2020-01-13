@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    argh::FromArgs,
     carnelian::{
         make_app_assistant, AnimationMode, App, AppAssistant, FontFace, FrameBufferPtr, Point,
         Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
@@ -24,7 +25,7 @@ use {
     std::{
         cell::RefCell,
         collections::{BTreeMap, VecDeque},
-        env, f32, fs,
+        f32, fs,
         rc::Rc,
     },
     textwrap::wrap_iter,
@@ -55,6 +56,20 @@ enum ScrollMethod {
     MotionBlur,
 }
 
+impl std::str::FromStr for ScrollMethod {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Redraw" => Ok(Self::Redraw),
+            "CopyRedraw" => Ok(Self::CopyRedraw),
+            "SlidingOffset" => Ok(Self::SlidingOffset),
+            "MotionBlur" => Ok(Self::MotionBlur),
+            _ => Err(format!("'{}' is not a valid value for ScrollMethod", s)),
+        }
+    }
+}
+
 // This font creation method isn't ideal. The correct method would be to ask the Fuchsia
 // font service for the font data.
 static FONT_DATA: &'static [u8] =
@@ -63,6 +78,39 @@ static FONT_DATA: &'static [u8] =
 lazy_static! {
     pub static ref FONT_FACE: FontFace<'static> =
         FontFace::new(&FONT_DATA).expect("Failed to create font");
+}
+
+/// Infinite scroll.
+#[derive(Debug, FromArgs)]
+#[argh(name = "infinite_scroll_rs")]
+struct Args {
+    /// use mold (software rendering back-end)
+    #[argh(switch, short = 'm')]
+    use_mold: bool,
+
+    /// contents scale (default scale is 2.0)
+    #[argh(option, default = "2.0")]
+    scale: f32,
+
+    /// scrolling method (Redraw|CopyRedraw|SlidingOffset|MotionBlur)
+    #[argh(option, default = "ScrollMethod::MotionBlur")]
+    scroll_method: ScrollMethod,
+
+    /// motion blur exposure time
+    #[argh(option, default = "1.0")]
+    exposure: f32,
+
+    /// touch sampling offset (relative to presentation time)
+    #[argh(option, default = "30")]
+    touch_sampling_offset_ms: i64,
+
+    /// maximum number of columns
+    #[argh(option, default = "std::u32::MAX")]
+    max_columns: u32,
+
+    /// disable text (improves rendering performance)
+    #[argh(switch)]
+    disable_text: bool,
 }
 
 #[derive(Default)]
@@ -78,6 +126,18 @@ impl AppAssistant for InfiniteScrollAppAssistant {
         _: ViewKey,
         fb: FrameBufferPtr,
     ) -> Result<ViewAssistantPtr, Error> {
+        let args: Args = argh::from_env();
+        println!("back-end: {}", if args.use_mold { "mold" } else { "spinel" });
+        println!("scale: {}", args.scale);
+        println!("scroll method: {:?}", args.scroll_method);
+        match args.scroll_method {
+            ScrollMethod::MotionBlur => {
+                println!("exposure: {}", args.exposure);
+            }
+            _ => {}
+        }
+        println!("touch sampling offset: {} ms", args.touch_sampling_offset_ms);
+
         let (token, token_request) =
             create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
         fb.borrow()
@@ -86,97 +146,17 @@ impl AppAssistant for InfiniteScrollAppAssistant {
             .unwrap()
             .duplicate(std::u32::MAX, token_request)
             .expect("duplicate");
-
         let config = &fb.borrow().get_config();
 
-        let mut use_mold = false;
-        // Default scale of 2.0 is appropriate for HiDPI displays.
-        let mut scale = 2.0;
-        let mut scroll_method = None;
-        // 1.0 exposure results in realistic motion blur. This may need
-        // to be lowered some on displays where ghosting will result in
-        // some additional motion blur.
-        let mut exposure = 1.0;
-        // Offset should be more than touch sensor frequency for smooth
-        // scrolling. 30 ms should be enough on most hardware but consider
-        // using a lower value as input latency is increased by this offset.
-        let mut touch_sampling_offset = zx::Duration::from_millis(30);
-        // Number of columns of contents is calculated based on available
-        // space unless limited by |max_columns|. The rendering cost be
-        // reduced by lowering scale and column count.
-        let mut max_columns = std::u32::MAX;
-        // Text is enabled by default but can be disabled for improved
-        // rendering performance.
-        let mut text_disabled = false;
-
-        for argument in env::args() {
-            if argument == "--mold" {
-                use_mold = true;
-            } else if argument.starts_with("--scroll-method=") {
-                let values: Vec<&str> = argument.split("=").collect();
-                static METHODS: &'static [ScrollMethod] = &[
-                    ScrollMethod::Redraw,
-                    ScrollMethod::CopyRedraw,
-                    ScrollMethod::SlidingOffset,
-                    ScrollMethod::MotionBlur,
-                ];
-                if let Some(method) = METHODS.iter().find(|x| format!("{:?}", x) == values[1]) {
-                    scroll_method = Some(*method);
-                }
-            } else if argument.starts_with("--scale=") {
-                let values: Vec<&str> = argument.split("=").collect();
-                if let Ok(number) = values[1].parse::<f32>() {
-                    scale = number;
-                }
-            } else if argument.starts_with("--exposure=") {
-                let values: Vec<&str> = argument.split("=").collect();
-                if let Ok(number) = values[1].parse::<f32>() {
-                    exposure = number;
-                }
-            } else if argument.starts_with("--touch-sampling-offset-ms=") {
-                let values: Vec<&str> = argument.split("=").collect();
-                if let Ok(number) = values[1].parse::<u32>() {
-                    touch_sampling_offset = zx::Duration::from_millis(number as i64);
-                }
-            } else if argument.starts_with("--max-columns=") {
-                let values: Vec<&str> = argument.split("=").collect();
-                if let Ok(number) = values[1].parse::<u32>() {
-                    max_columns = number;
-                }
-            } else if argument.starts_with("--disable-text") {
-                text_disabled = true;
-            }
-        }
-
-        // Use CopyRedraw method by default with mold.
-        let scroll_method = scroll_method.unwrap_or_else(|| {
-            if use_mold {
-                ScrollMethod::CopyRedraw
-            } else {
-                ScrollMethod::MotionBlur
-            }
-        });
-
-        println!("Backend: {}", if use_mold { "mold" } else { "spinel" });
-        println!("Scale: {}", scale);
-        println!("Scroll method: {:?}", scroll_method);
-        match scroll_method {
-            ScrollMethod::MotionBlur => {
-                println!("Exposure: {}", exposure);
-            }
-            _ => {}
-        }
-        println!("Touch sampling offset: {} ms", touch_sampling_offset.into_millis());
-
-        if use_mold {
+        if args.use_mold {
             Ok(Box::new(InfiniteScrollViewAssistant::new(
                 MoldContext::new(token, config),
-                scale,
-                scroll_method,
-                exposure,
-                touch_sampling_offset,
-                max_columns,
-                text_disabled,
+                args.scale,
+                args.scroll_method,
+                args.exposure,
+                zx::Duration::from_millis(args.touch_sampling_offset_ms),
+                args.max_columns,
+                args.disable_text,
             )))
         } else {
             const BLOCK_POOL_SIZE: u64 = 1 << 26; // 64 MB
@@ -194,12 +174,12 @@ impl AppAssistant for InfiniteScrollAppAssistant {
                     LAYERS_COUNT,
                     CMDS_COUNT,
                 ),
-                scale,
-                scroll_method,
-                exposure,
-                touch_sampling_offset,
-                max_columns,
-                text_disabled,
+                args.scale,
+                args.scroll_method,
+                args.exposure,
+                zx::Duration::from_millis(args.touch_sampling_offset_ms),
+                args.max_columns,
+                args.disable_text,
             )))
         }
     }
@@ -933,7 +913,7 @@ impl Contents {
                 // Determine area to copy and clip to render depending on scroll direction.
                 if scroll_height > 0 {
                     match scroll_distance {
-                        // Area at top expoosed.
+                        // Area at top exposed.
                         x if x > 0.0 => {
                             clip[1] = scroll_height;
                             self.exts.push(RenderExt::PreCopy((
@@ -945,7 +925,7 @@ impl Contents {
                                 },
                             )));
                         }
-                        // Area at bottom expoosed.
+                        // Area at bottom exposed.
                         x if x < 0.0 => {
                             clip[3] = height - scroll_height;
                             self.exts.push(RenderExt::PreCopy((
@@ -957,7 +937,7 @@ impl Contents {
                                 },
                             )));
                         }
-                        // No new contents expoosed.
+                        // No new contents exposed.
                         _ => {
                             clip[3] = 0;
                         }
