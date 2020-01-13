@@ -13,13 +13,11 @@ namespace activity {
 
 namespace fua = fuchsia::ui::activity;
 
-// TODO(jfsulliv): Handle other input types (e.g. lid close/open)
 const ActivityStateMachine::StateTable ActivityStateMachine::kStateTable{
     {{fua::State::IDLE, activity::Event::USER_INPUT}, fua::State::ACTIVE},
     {{fua::State::ACTIVE, activity::Event::TIMEOUT}, fua::State::IDLE},
 };
 
-// TODO(jfsulliv): Make this configurable.
 const zx::duration ActivityStateMachine::kIdleDuration = zx::min(15);
 
 void ActivityStateMachine::ReceiveEvent(Event event) {

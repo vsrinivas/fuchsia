@@ -68,7 +68,6 @@ class ActivityStateMachine {
   // Translate |activity| to an appropriate Event.
   constexpr static Event EventForDiscreteActivity(
       const fuchsia::ui::activity::DiscreteActivity& activity) {
-    // TODO(jfsulliv): Handle other input types (e.g. lid close/open)
     return Event::USER_INPUT;
   }
   // Returns an Event which should be delivered as an ongoing activity starts.

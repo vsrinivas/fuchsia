@@ -8,9 +8,6 @@ library fuchsia.ui.activity;
 xunion DiscreteActivity {
     /// Activities that require no special handling.
     1: GenericActivity generic;
-    /// An activity originating from opening or closing the lid of a
-    /// clamshell-format device.
-    2: LidActivity lid;
 };
 
 /// OngoingActivity is an activity which has a definite start and end time.
@@ -25,19 +22,4 @@ table GenericActivity {
     /// Brief human-readable label for the activity, for logging/debugging.
     /// e.g. "cursor", "key", "video"
     1: string label;
-};
-
-/// LidActivity is an event originating from a change in the state of the lid
-/// of a clamshell-like device.
-table LidActivity {
-    1: LidState state;
-};
-
-/// LidState is an enumeration of states that a clamshell-like device's lid may
-/// be in.
-enum LidState {
-    UNKNOWN = 0;
-    OPEN = 1;
-    CLOSED = 2;
-    FLIPPED = 3;
 };
