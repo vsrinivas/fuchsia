@@ -243,6 +243,13 @@ Clause scope parameters
 
 From //public/gn/toolchain/environment.gni:108
 
+### exclude_testonly_syscalls
+If true, excludes syscalls with the [testonly] attribute.
+
+**Current value (from the default):** `false`
+
+From //kernel/syscalls/kazoo.gni:13
+
 ### fidl_write_v1_wireformat
 
 **Current value (from the default):** `false`
