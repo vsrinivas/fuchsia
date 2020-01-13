@@ -17,12 +17,12 @@ namespace {
 
 class PacketQueueTest : public gtest::TestLoopFixture {
  protected:
-  fbl::RefPtr<PacketQueue> CreatePacketQueue() {
+  std::unique_ptr<PacketQueue> CreatePacketQueue() {
     // Use a simple transform of one frame per millisecond to make validations simple in the test
     // (ex: frame 1 will be consumed after 1ms).
     auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
         TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
-    return fbl::MakeRefCounted<PacketQueue>(
+    return std::make_unique<PacketQueue>(
         Format{{
             .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
             .channels = 2,

@@ -38,7 +38,8 @@ class OutputPipeline : public Stream {
 
   // Adds |stream| as an input to be mixed. The given |usage| will indicate where in the pipeline
   // this stream will be routed (based on the |PipelineConfig| this pipeline was created with).
-  std::shared_ptr<Mixer> AddInput(fbl::RefPtr<Stream> stream, const fuchsia::media::Usage& usage);
+  std::shared_ptr<Mixer> AddInput(std::shared_ptr<Stream> stream,
+                                  const fuchsia::media::Usage& usage);
 
   // Removes |stream| from the pipeline.
   //
@@ -70,18 +71,18 @@ class OutputPipeline : public Stream {
   }
 
  private:
-  fbl::RefPtr<MixStage> CreateMixStage(const PipelineConfig::MixGroup& spec,
-                                       const Format& output_format, uint32_t block_size,
-                                       TimelineFunction ref_clock_to_output_frame,
-                                       uint32_t* usage_mask);
+  std::shared_ptr<MixStage> CreateMixStage(const PipelineConfig::MixGroup& spec,
+                                           const Format& output_format, uint32_t block_size,
+                                           TimelineFunction ref_clock_to_output_frame,
+                                           uint32_t* usage_mask);
   MixStage& LookupStageForUsage(const fuchsia::media::Usage& usage);
 
-  std::vector<std::pair<fbl::RefPtr<MixStage>, std::vector<fuchsia::media::Usage>>> mix_stages_;
-  std::vector<std::pair<fbl::RefPtr<Stream>, fuchsia::media::Usage>> streams_;
+  std::vector<std::pair<std::shared_ptr<MixStage>, std::vector<fuchsia::media::Usage>>> mix_stages_;
+  std::vector<std::pair<std::shared_ptr<Stream>, fuchsia::media::Usage>> streams_;
 
   // This is the root of the mix graph. The other mix stages must be reachable from this node
   // to actually get mixed.
-  fbl::RefPtr<MixStage> stream_;
+  std::shared_ptr<MixStage> stream_;
 };
 
 }  // namespace media::audio

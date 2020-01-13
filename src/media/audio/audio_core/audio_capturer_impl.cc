@@ -220,7 +220,7 @@ void AudioCapturerImpl::RecycleObject(AudioObject* self) {
 }
 
 fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioCapturerImpl::InitializeSourceLink(
-    const AudioObject& source, fbl::RefPtr<Stream> stream) {
+    const AudioObject& source, std::shared_ptr<Stream> stream) {
   TRACE_DURATION("audio", "AudioCapturerImpl::InitializeSourceLink");
 
   // Choose a mixer
@@ -1554,7 +1554,7 @@ void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioSampleFormat sample_fo
 }
 
 fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioCapturerImpl::ChooseMixer(
-    const AudioObject& source, fbl::RefPtr<Stream> stream) {
+    const AudioObject& source, std::shared_ptr<Stream> stream) {
   TRACE_DURATION("audio", "AudioCapturerImpl::ChooseMixer");
 
   if (!source.is_input() && !source.is_output()) {
@@ -1611,7 +1611,8 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioCapturerImpl::ChooseMixer(
   return fit::ok(std::move(mixer));
 }
 
-void AudioCapturerImpl::CleanupSourceLink(const AudioObject& source, fbl::RefPtr<Stream> stream) {
+void AudioCapturerImpl::CleanupSourceLink(const AudioObject& source,
+                                          std::shared_ptr<Stream> stream) {
   auto it = std::find_if(mixers_.begin(), mixers_.end(),
                          [source = &source](auto& holder) { return holder.object == source; });
   if (it != mixers_.end()) {

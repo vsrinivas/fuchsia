@@ -12,7 +12,6 @@
 
 #include <optional>
 
-#include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
 #include "src/media/audio/audio_core/format.h"
@@ -20,7 +19,7 @@
 
 namespace media::audio {
 
-class Stream : public fbl::RefCounted<Stream> {
+class Stream {
  public:
   Stream(Format format) : format_(format) {}
   virtual ~Stream() = default;

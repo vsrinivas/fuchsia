@@ -54,8 +54,8 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   // volume to gain. Both ends of a link cannot have mappings as this would be irreconcilable.
   const VolumeCurve& volume_curve() const;
   Gain& gain() { return mixer()->bookkeeping().gain; }
-  const fbl::RefPtr<Stream>& stream() const { return stream_; }
-  void set_stream(fbl::RefPtr<Stream> stream) { stream_ = std::move(stream); }
+  const std::shared_ptr<Stream>& stream() const { return stream_; }
+  void set_stream(std::shared_ptr<Stream> stream) { stream_ = std::move(stream); }
 
   // Sources invalidate links when they change format or go away.
   void Invalidate() { valid_.store(false); }
@@ -75,7 +75,7 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   std::shared_ptr<Mixer> mixer_;
   std::atomic_bool valid_;
   const std::optional<VolumeCurve> volume_curve_;
-  fbl::RefPtr<Stream> stream_;
+  std::shared_ptr<Stream> stream_;
 };
 
 }  // namespace media::audio

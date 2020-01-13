@@ -45,7 +45,7 @@ TEST_F(MixStageTest, Trim) {
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
-  auto packet_queue = fbl::MakeRefCounted<PacketQueue>(kDefaultFormat, timeline_function);
+  auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
   mix_stage_->AddInput(packet_queue);
 
   bool packet1_released = false;
@@ -85,8 +85,8 @@ TEST_F(MixStageTest, MixUniformFormats) {
                    zx::sec(1).to_nsecs())));
 
   // Create 2 packet queues that we will mix together.
-  auto packet_queue1 = fbl::MakeRefCounted<PacketQueue>(kDefaultFormat, timeline_function);
-  auto packet_queue2 = fbl::MakeRefCounted<PacketQueue>(kDefaultFormat, timeline_function);
+  auto packet_queue1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+  auto packet_queue2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
   mix_stage_->AddInput(packet_queue1);
   mix_stage_->AddInput(packet_queue2);
 

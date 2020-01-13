@@ -140,7 +140,7 @@ class AudioRendererImpl : public AudioObject,
   void OnLinkAdded() override;
   const fbl::RefPtr<Format>& format() const final { return format_; }
   std::optional<fuchsia::media::Usage> usage() const override { return {UsageFrom(usage_)}; }
-  fit::result<fbl::RefPtr<Stream>, zx_status_t> InitializeDestLink(
+  fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;
 
@@ -182,7 +182,7 @@ class AudioRendererImpl : public AudioObject,
 
   fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames_;
 
-  std::unordered_map<const AudioObject*, fbl::RefPtr<PacketQueue>> packet_queues_;
+  std::unordered_map<const AudioObject*, std::shared_ptr<PacketQueue>> packet_queues_;
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
 };

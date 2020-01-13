@@ -74,10 +74,10 @@ TEST_F(OutputPipelineTest, Trim) {
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
-  auto stream1 = fbl::MakeRefCounted<PacketQueue>(kDefaultFormat, timeline_function);
-  auto stream2 = fbl::MakeRefCounted<PacketQueue>(kDefaultFormat, timeline_function);
-  auto stream3 = fbl::MakeRefCounted<PacketQueue>(kDefaultFormat, timeline_function);
-  auto stream4 = fbl::MakeRefCounted<PacketQueue>(kDefaultFormat, timeline_function);
+  auto stream1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+  auto stream2 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+  auto stream3 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+  auto stream4 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
 
   // Add some streams so that one is routed to each mix stage in our pipeline.
   auto pipeline = CreateOutputPipeline();

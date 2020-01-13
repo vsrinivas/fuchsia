@@ -42,7 +42,7 @@ OutputPipeline::OutputPipeline(const PipelineConfig& config, const Format& outpu
       << "Pipeline does not cover all usages (" << usage_mask << " vs " << kAllUsages << ")";
 }
 
-std::shared_ptr<Mixer> OutputPipeline::AddInput(fbl::RefPtr<Stream> stream,
+std::shared_ptr<Mixer> OutputPipeline::AddInput(std::shared_ptr<Stream> stream,
                                                 const fuchsia::media::Usage& usage) {
   TRACE_DURATION("audio", "OutputPipeline::AddInput", "stream", stream.get());
   streams_.emplace_back(stream, fidl::Clone(usage));
@@ -58,13 +58,13 @@ void OutputPipeline::RemoveInput(const Stream& stream) {
   streams_.erase(it);
 }
 
-fbl::RefPtr<MixStage> OutputPipeline::CreateMixStage(const PipelineConfig::MixGroup& spec,
-                                                     const Format& output_format,
-                                                     uint32_t max_block_size_frames,
-                                                     TimelineFunction ref_clock_to_output_frame,
-                                                     uint32_t* usage_mask) {
-  auto stage = fbl::MakeRefCounted<MixStage>(output_format, max_block_size_frames,
-                                             ref_clock_to_output_frame);
+std::shared_ptr<MixStage> OutputPipeline::CreateMixStage(const PipelineConfig::MixGroup& spec,
+                                                         const Format& output_format,
+                                                         uint32_t max_block_size_frames,
+                                                         TimelineFunction ref_clock_to_output_frame,
+                                                         uint32_t* usage_mask) {
+  auto stage =
+      std::make_shared<MixStage>(output_format, max_block_size_frames, ref_clock_to_output_frame);
   for (const auto& usage : spec.input_streams) {
     auto mask = 1 << static_cast<uint32_t>(usage);
     FX_CHECK((*usage_mask & mask) == 0);

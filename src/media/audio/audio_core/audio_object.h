@@ -111,15 +111,15 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
   //
   // Returns ZX_OK if initialization succeeded, or an appropriate error code otherwise.
   virtual fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const AudioObject& source, fbl::RefPtr<Stream> stream) {
+      const AudioObject& source, std::shared_ptr<Stream> stream) {
     return fit::ok(std::make_shared<audio::mixer::NoOp>());
   }
-  virtual fit::result<fbl::RefPtr<Stream>, zx_status_t> InitializeDestLink(
+  virtual fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) {
     return fit::ok(nullptr);
   }
 
-  virtual void CleanupSourceLink(const AudioObject& source, fbl::RefPtr<Stream> stream) {}
+  virtual void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) {}
   virtual void CleanupDestLink(const AudioObject& dest) {}
 
   // Called immediately after a new link is added to the object.

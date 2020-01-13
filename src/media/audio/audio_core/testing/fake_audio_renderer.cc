@@ -68,9 +68,9 @@ zx::duration FakeAudioRenderer::FindMinLeadTime() {
   return cur_lead_time;
 }
 
-fit::result<fbl::RefPtr<Stream>, zx_status_t> FakeAudioRenderer::InitializeDestLink(
+fit::result<std::shared_ptr<Stream>, zx_status_t> FakeAudioRenderer::InitializeDestLink(
     const AudioObject& dest) {
-  auto queue = fbl::MakeRefCounted<PacketQueue>(*format(), timeline_function_);
+  auto queue = std::make_shared<PacketQueue>(*format(), timeline_function_);
   packet_queues_.insert({&dest, queue});
   return fit::ok(std::move(queue));
 }

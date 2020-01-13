@@ -26,7 +26,7 @@ MixStage::MixStage(const Format& output_format, uint32_t block_size_frames,
   SetupMixBuffer(block_size_frames);
 }
 
-std::shared_ptr<Mixer> MixStage::AddInput(fbl::RefPtr<Stream> stream) {
+std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<Stream> stream) {
   TRACE_DURATION("audio", "MixStage::AddInput");
   FX_CHECK(stream);
   auto mixer = std::shared_ptr<Mixer>(
@@ -112,7 +112,7 @@ void MixStage::SetupMixBuffer(uint32_t max_mix_frames) {
 void MixStage::ForEachSource(TaskType task_type, zx::time ref_time) {
   TRACE_DURATION("audio", "MixStage::ForEachSource");
 
-  std::vector<std::pair<fbl::RefPtr<Stream>, std::shared_ptr<Mixer>>> streams;
+  std::vector<std::pair<std::shared_ptr<Stream>, std::shared_ptr<Mixer>>> streams;
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
     for (const auto& holder : streams_) {

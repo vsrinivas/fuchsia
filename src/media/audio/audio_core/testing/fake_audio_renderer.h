@@ -38,7 +38,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
 
   // |media::audio::AudioObject|
   const fbl::RefPtr<Format>& format() const override { return format_; }
-  fit::result<fbl::RefPtr<Stream>, zx_status_t> InitializeDestLink(
+  fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;
   std::optional<fuchsia::media::Usage> usage() const override { return {UsageFrom(usage_)}; }
@@ -73,7 +73,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   fbl::RefPtr<Format> format_ = nullptr;
   fuchsia::media::AudioRenderUsage usage_;
   PacketFactory packet_factory_;
-  std::unordered_map<const AudioObject*, fbl::RefPtr<PacketQueue>> packet_queues_;
+  std::unordered_map<const AudioObject*, std::shared_ptr<PacketQueue>> packet_queues_;
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
 };

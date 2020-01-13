@@ -72,7 +72,7 @@ void AudioOutput::Process() {
 }
 
 fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLink(
-    const AudioObject& source, fbl::RefPtr<Stream> stream) {
+    const AudioObject& source, std::shared_ptr<Stream> stream) {
   TRACE_DURATION("audio", "AudioOutput::InitializeSourceLink");
 
   auto usage = source.usage();
@@ -99,7 +99,7 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLi
   return fit::ok(std::make_shared<audio::mixer::NoOp>());
 }
 
-void AudioOutput::CleanupSourceLink(const AudioObject& source, fbl::RefPtr<Stream> stream) {
+void AudioOutput::CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) {
   if (stream) {
     pipeline_->RemoveInput(*stream);
   }

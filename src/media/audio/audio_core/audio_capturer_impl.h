@@ -63,8 +63,8 @@ class AudioCapturerImpl : public AudioObject,
   friend class fbl::RefPtr<AudioCapturerImpl>;
 
   fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const AudioObject& source, fbl::RefPtr<Stream> stream) override;
-  void CleanupSourceLink(const AudioObject& source, fbl::RefPtr<Stream> stream) override;
+      const AudioObject& source, std::shared_ptr<Stream> stream) override;
+  void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) override;
 
  private:
   // Notes about the AudioCapturerImpl state machine.
@@ -226,7 +226,7 @@ class AudioCapturerImpl : public AudioObject,
 
   // Select a mixer for the link supplied.
   fit::result<std::shared_ptr<Mixer>, zx_status_t> ChooseMixer(const AudioObject& source,
-                                                               fbl::RefPtr<Stream> stream);
+                                                               std::shared_ptr<Stream> stream);
 
   fit::promise<> Cleanup() FXL_LOCKS_EXCLUDED(mix_domain_->token());
   void CleanupFromMixThread() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
