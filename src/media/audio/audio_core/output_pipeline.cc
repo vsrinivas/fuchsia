@@ -4,9 +4,8 @@
 
 #include "src/media/audio/audio_core/output_pipeline.h"
 
+#include "src/media/audio/audio_core/effects_stage.h"
 #include "src/media/audio/audio_core/usage_settings.h"
-#include "src/media/audio/lib/effects_loader/effects_loader.h"
-#include "src/media/audio/lib/effects_loader/effects_processor.h"
 
 namespace media::audio {
 namespace {
@@ -58,17 +57,27 @@ void OutputPipeline::RemoveInput(const Stream& stream) {
   streams_.erase(it);
 }
 
-std::shared_ptr<MixStage> OutputPipeline::CreateMixStage(const PipelineConfig::MixGroup& spec,
-                                                         const Format& output_format,
-                                                         uint32_t max_block_size_frames,
-                                                         TimelineFunction ref_clock_to_output_frame,
-                                                         uint32_t* usage_mask) {
+std::shared_ptr<Stream> OutputPipeline::CreateMixStage(const PipelineConfig::MixGroup& spec,
+                                                       const Format& output_format,
+                                                       uint32_t max_block_size_frames,
+                                                       TimelineFunction ref_clock_to_output_frame,
+                                                       uint32_t* usage_mask) {
   auto stage =
       std::make_shared<MixStage>(output_format, max_block_size_frames, ref_clock_to_output_frame);
   for (const auto& usage : spec.input_streams) {
     auto mask = 1 << static_cast<uint32_t>(usage);
     FX_CHECK((*usage_mask & mask) == 0);
     *usage_mask |= mask;
+  }
+
+  // If we have effects, we should add that stage in now.
+  std::shared_ptr<Stream> root = stage;
+  if (!spec.effects.empty()) {
+    auto effects_stage = EffectsStage::Create(spec.effects, root);
+    FX_DCHECK(effects_stage);
+    if (effects_stage) {
+      root = std::move(effects_stage);
+    }
   }
 
   std::vector<fuchsia::media::Usage> usages = UsagesFromRenderUsages(spec.input_streams);
@@ -78,7 +87,7 @@ std::shared_ptr<MixStage> OutputPipeline::CreateMixStage(const PipelineConfig::M
                                    ref_clock_to_output_frame, usage_mask);
     stage->AddInput(substage);
   }
-  return stage;
+  return root;
 }
 
 MixStage& OutputPipeline::LookupStageForUsage(const fuchsia::media::Usage& usage) {

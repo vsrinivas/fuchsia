@@ -97,6 +97,8 @@ source_set("audio_core_lib") {
     "driver_output.h",
     "driver_utils.cc",
     "driver_utils.h",
+    "effects_stage.cc",
+    "effects_stage.h",
     "format.cc",
     "format.h",
     "loudness_transform.cc",
@@ -216,6 +218,7 @@ executable("unittest_bin") {
     "audio_renderer_impl_unittest.cc",
     "command_line_options_unittest.cc",
     "driver_output_unittest.cc",
+    "effects_stage_unittest.cc",
     "loudness_transform_unittest.cc",
     "mix_stage_unittest.cc",
     "output_pipeline_unittest.cc",
@@ -246,6 +249,7 @@ executable("unittest_bin") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/media/audio/audio_core/mixer",
+    "//src/media/audio/lib/effects_loader/testing",
     "//src/media/audio/lib/test:null_renderer_capturer",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -257,7 +261,16 @@ executable("unittest_bin") {
 }
 
 test_package("audio_core_unittests") {
-  deps = [ ":unittest_bin" ]
+  deps = [
+    ":unittest_bin",
+    "//src/media/audio/effects/test_effects",
+  ]
+
+  loadable_modules = [
+    {
+      name = "test_effects.so"
+    },
+  ]
 
   tests = [
     {

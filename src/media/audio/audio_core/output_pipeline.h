@@ -71,10 +71,10 @@ class OutputPipeline : public Stream {
   }
 
  private:
-  std::shared_ptr<MixStage> CreateMixStage(const PipelineConfig::MixGroup& spec,
-                                           const Format& output_format, uint32_t block_size,
-                                           TimelineFunction ref_clock_to_output_frame,
-                                           uint32_t* usage_mask);
+  std::shared_ptr<Stream> CreateMixStage(const PipelineConfig::MixGroup& spec,
+                                         const Format& output_format, uint32_t block_size,
+                                         TimelineFunction ref_clock_to_output_frame,
+                                         uint32_t* usage_mask);
   MixStage& LookupStageForUsage(const fuchsia::media::Usage& usage);
 
   std::vector<std::pair<std::shared_ptr<MixStage>, std::vector<fuchsia::media::Usage>>> mix_stages_;
@@ -82,7 +82,7 @@ class OutputPipeline : public Stream {
 
   // This is the root of the mix graph. The other mix stages must be reachable from this node
   // to actually get mixed.
-  std::shared_ptr<MixStage> stream_;
+  std::shared_ptr<Stream> stream_;
 };
 
 }  // namespace media::audio

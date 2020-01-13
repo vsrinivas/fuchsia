@@ -22,8 +22,6 @@ class EffectsProcessor {
   // Creates a new, empty effects processor.
   EffectsProcessor() = default;
 
-  // Allow move.
-
   // Disallow copy/move.
   EffectsProcessor(const EffectsProcessor&) = delete;
   EffectsProcessor& operator=(const EffectsProcessor&) = delete;
