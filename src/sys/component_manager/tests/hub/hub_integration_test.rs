@@ -61,7 +61,7 @@ impl TestRunner {
             breakpoint_system.start_component_manager().await?;
 
             // Wait for the root component to start up
-            start_receiver.expect_exact::<BeforeStartInstance>("/").await?.resume().await?;
+            start_receiver.expect_exact::<BeforeStartInstance>(".").await?.resume().await?;
 
             // Wait for all child components to start up
             for _ in 1..=(num_eager_static_components - 1) {
@@ -204,7 +204,7 @@ async fn advanced_routing() -> Result<(), Error> {
     let (test_runner, _) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/advanced_routing_echo_realm.cm",
         3,
-        "/reporter:0",
+        "./reporter:0",
         vec![],
     )
     .await?;
@@ -319,7 +319,7 @@ async fn used_service_test() -> Result<(), Error> {
     let (test_runner, _) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/used_service_echo_realm.cm",
         3,
-        "/reporter:0",
+        "./reporter:0",
         vec![],
     )
     .await?;
@@ -359,7 +359,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
     let (test_runner, receiver) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/dynamic_child_reporter.cm",
         1,
-        "/",
+        ".",
         vec![PreDestroyInstance::TYPE, StopInstance::TYPE, PostDestroyInstance::TYPE],
     )
     .await?;
@@ -405,7 +405,8 @@ async fn dynamic_child_test() -> Result<(), Error> {
         .send()?;
 
     // Wait for the dynamic child to begin deletion
-    let invocation = receiver.expect_exact::<PreDestroyInstance>("/coll:simple_instance:1").await?;
+    let invocation =
+        receiver.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1").await?;
 
     // When deletion begins, the dynamic child should be moved to the deleting directory
     test_runner.verify_directory_listing("children", vec![]).await;
@@ -421,7 +422,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
     invocation.resume().await?;
 
     // Wait for the dynamic child to stop
-    let invocation = receiver.expect_exact::<StopInstance>("/coll:simple_instance:1").await?;
+    let invocation = receiver.expect_exact::<StopInstance>("./coll:simple_instance:1").await?;
 
     // After stopping, the dynamic child should not have an exec directory
     test_runner
@@ -436,7 +437,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
 
     // Wait for the dynamic child's static child to begin deletion
     let invocation =
-        receiver.expect_exact::<PreDestroyInstance>("/coll:simple_instance:1/child:0").await?;
+        receiver.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1/child:0").await?;
 
     // When deletion begins, the dynamic child's static child should be moved to the deleting directory
     test_runner.verify_directory_listing("deleting/coll:simple_instance:1/children", vec![]).await;
@@ -455,7 +456,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
 
     // Wait for the dynamic child's static child to be destroyed
     let invocation =
-        receiver.expect_exact::<PostDestroyInstance>("/coll:simple_instance:1/child:0").await?;
+        receiver.expect_exact::<PostDestroyInstance>("./coll:simple_instance:1/child:0").await?;
 
     // The dynamic child's static child should not be visible in the hub anymore
     test_runner.verify_directory_listing("deleting/coll:simple_instance:1/deleting", vec![]).await;
@@ -465,7 +466,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
 
     // Wait for the dynamic child to be destroyed
     let invocation =
-        receiver.expect_exact::<PostDestroyInstance>("/coll:simple_instance:1").await?;
+        receiver.expect_exact::<PostDestroyInstance>("./coll:simple_instance:1").await?;
 
     // After deletion, verify that parent can no longer see the dynamic child in the Hub
     test_runner.verify_directory_listing("deleting", vec![]).await;
@@ -484,7 +485,7 @@ async fn visibility_test() -> Result<(), Error> {
     let (test_runner, _) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/visibility_reporter.cm",
         1,
-        "/",
+        ".",
         vec![],
     )
     .await?;

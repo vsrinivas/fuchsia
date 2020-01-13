@@ -10,7 +10,7 @@ use {
             breakpoints::registry::{Invocation, InvocationReceiver},
             error::ModelError,
             hooks::{EventPayload, EventType},
-            moniker::AbsoluteMoniker,
+            moniker::{AbsoluteMoniker, RelativeMoniker},
         },
     },
     async_trait::async_trait,
@@ -41,10 +41,11 @@ pub async fn serve_system(
 
                 // Set the breakpoints
                 let receiver = system.set_breakpoints(event_types).await;
+                let scope = system.scope();
 
                 // Serve the receiver over FIDL asynchronously
                 fasync::spawn(async move {
-                    serve_receiver(receiver, server_end).await;
+                    serve_receiver(receiver, scope, server_end).await;
                 });
 
                 // Unblock the component
@@ -75,6 +76,7 @@ pub async fn serve_system(
 /// Serves InvocationReceiver FIDL requests received over the provided stream.
 async fn serve_receiver(
     mut receiver: InvocationReceiver,
+    scope_moniker: AbsoluteMoniker,
     server_end: ServerEnd<fbreak::InvocationReceiverMarker>,
 ) {
     // Serve the InvocationReceiver FIDL protocol asynchronously
@@ -88,14 +90,17 @@ async fn serve_receiver(
 
         // Create the basic Invocation FIDL object.
         // This will begin serving the Handler protocol asynchronously.
-        let invocation_fidl_object = create_invocation_fidl_object(invocation);
+        let invocation_fidl_object = create_invocation_fidl_object(&scope_moniker, invocation);
 
         // Respond with the Invocation FIDL object
         responder.send(invocation_fidl_object).unwrap();
     }
 }
 
-fn maybe_create_event_payload(event_payload: EventPayload) -> Option<fbreak::EventPayload> {
+fn maybe_create_event_payload(
+    scope: &AbsoluteMoniker,
+    event_payload: EventPayload,
+) -> Option<fbreak::EventPayload> {
     match event_payload {
         EventPayload::RouteCapability { source, capability_provider, .. } => {
             let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
@@ -117,12 +122,15 @@ fn maybe_create_event_payload(event_payload: EventPayload) -> Option<fbreak::Eve
 
             let source = Some(match source {
                 CapabilitySource::Framework { scope_moniker, .. } => {
+                    let scope_moniker =
+                        scope_moniker.map(|a| RelativeMoniker::from_absolute(scope, &a));
                     fbreak::CapabilitySource::Framework(fbreak::FrameworkCapability {
                         scope_moniker: scope_moniker.map(|m| m.to_string()),
                         ..fbreak::FrameworkCapability::empty()
                     })
                 }
                 CapabilitySource::Component { source_moniker, .. } => {
+                    let source_moniker = RelativeMoniker::from_absolute(scope, &source_moniker);
                     fbreak::CapabilitySource::Component(fbreak::ComponentCapability {
                         source_moniker: Some(source_moniker.to_string()),
                         ..fbreak::ComponentCapability::empty()
@@ -141,10 +149,15 @@ fn maybe_create_event_payload(event_payload: EventPayload) -> Option<fbreak::Eve
 
 /// Creates the basic FIDL Invocation object containing the event type, target_realm
 /// and basic handler for resumption.
-fn create_invocation_fidl_object(invocation: Invocation) -> fbreak::Invocation {
+fn create_invocation_fidl_object(
+    scope_moniker: &AbsoluteMoniker,
+    invocation: Invocation,
+) -> fbreak::Invocation {
     let event_type = Some(convert_std_event_type_to_fidl(invocation.event.payload.type_()));
-    let target_moniker = Some(invocation.event.target_moniker.to_string());
-    let event_payload = maybe_create_event_payload(invocation.event.payload.clone());
+    let target_relative_moniker =
+        RelativeMoniker::from_absolute(scope_moniker, &invocation.event.target_moniker);
+    let target_moniker = Some(target_relative_moniker.to_string());
+    let event_payload = maybe_create_event_payload(scope_moniker, invocation.event.payload.clone());
     let handler = Some(serve_handler_async(invocation));
     fbreak::Invocation { event_type, target_moniker, handler, event_payload }
 }

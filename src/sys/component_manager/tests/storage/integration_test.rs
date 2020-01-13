@@ -46,7 +46,7 @@ async fn storage() -> Result<(), Error> {
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
-    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
     invocation.resume().await?;
 
     // Expect the 2 children to be bound to
@@ -84,12 +84,12 @@ async fn storage_from_collection() -> Result<(), Error> {
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be started
-    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
     invocation.resume().await?;
 
     // The root component connects to the Realm service to start the dynamic child
     let invocation = bind_receiver
-        .wait_until_framework_capability("/", "/svc/fuchsia.sys2.Realm", Some("/"))
+        .wait_until_framework_capability(".", "/svc/fuchsia.sys2.Realm", Some("."))
         .await?;
     invocation.resume().await?;
 
@@ -111,13 +111,13 @@ async fn storage_from_collection() -> Result<(), Error> {
 
     // The root component connects to the Trigger service to start the dynamic child
     let invocation = bind_receiver
-        .wait_until_framework_capability("/", "/svc/fidl.test.components.Trigger", Some("/"))
+        .wait_until_framework_capability(".", "/svc/fidl.test.components.Trigger", Some("."))
         .await?;
     invocation.inject(serve_trigger_capability_async()).await?;
     invocation.resume().await?;
 
     // Expect the dynamic child to be destroyed
-    let invocation = receiver.expect_exact::<PostDestroyInstance>("/coll:storage_user:1").await?;
+    let invocation = receiver.expect_exact::<PostDestroyInstance>("./coll:storage_user:1").await?;
 
     println!("checking that storage was destroyed");
     let memfs_proxy = io_util::open_directory_in_namespace(

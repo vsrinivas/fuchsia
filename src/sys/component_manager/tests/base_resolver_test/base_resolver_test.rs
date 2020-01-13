@@ -34,11 +34,11 @@ async fn base_resolver_test() -> Result<(), Error> {
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
-    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
     invocation.resume().await?;
 
     // Expect the echo_server component to be bound to
-    let invocation = receiver.expect_exact::<BeforeStartInstance>("/echo_server:0").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>("./echo_server:0").await?;
     invocation.resume().await?;
 
     // Connect to the echo service

@@ -37,7 +37,7 @@ async fn destruction() -> Result<(), Error> {
     breakpoint_system.start_component_manager().await?;
 
     // Wait for `coll:root` to be destroyed.
-    let invocation = receiver.wait_until_exact::<PostDestroyInstance>("/coll:root:1").await?;
+    let invocation = receiver.wait_until_exact::<PostDestroyInstance>("./coll:root:1").await?;
 
     // Assert that root component has no children.
     let child_dir_path = test.get_hub_v2_path().join("children");
@@ -54,11 +54,11 @@ async fn destruction() -> Result<(), Error> {
         vec![
             DrainedEvent {
                 event_type: StopInstance::TYPE,
-                target_moniker: "/coll:root:1/trigger_a:0".to_string(),
+                target_moniker: "./coll:root:1/trigger_a:0".to_string(),
             },
             DrainedEvent {
                 event_type: StopInstance::TYPE,
-                target_moniker: "/coll:root:1/trigger_b:0".to_string(),
+                target_moniker: "./coll:root:1/trigger_b:0".to_string(),
             },
         ],
     );
@@ -67,7 +67,7 @@ async fn destruction() -> Result<(), Error> {
         &mut events,
         vec![DrainedEvent {
             event_type: StopInstance::TYPE,
-            target_moniker: "/coll:root:1".to_string(),
+            target_moniker: "./coll:root:1".to_string(),
         }],
     );
 
@@ -76,11 +76,11 @@ async fn destruction() -> Result<(), Error> {
         vec![
             DrainedEvent {
                 event_type: PostDestroyInstance::TYPE,
-                target_moniker: "/coll:root:1/trigger_a:0".to_string(),
+                target_moniker: "./coll:root:1/trigger_a:0".to_string(),
             },
             DrainedEvent {
                 event_type: PostDestroyInstance::TYPE,
-                target_moniker: "/coll:root:1/trigger_b:0".to_string(),
+                target_moniker: "./coll:root:1/trigger_b:0".to_string(),
             },
         ],
     );
@@ -89,7 +89,7 @@ async fn destruction() -> Result<(), Error> {
         &mut events,
         vec![DrainedEvent {
             event_type: PostDestroyInstance::TYPE,
-            target_moniker: "/coll:root:1".to_string(),
+            target_moniker: "./coll:root:1".to_string(),
         }],
     );
 

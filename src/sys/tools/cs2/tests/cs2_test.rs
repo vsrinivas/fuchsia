@@ -32,7 +32,7 @@ async fn empty_component() -> Result<(), Error> {
     breakpoint_system.start_component_manager().await?;
 
     // Root must be created first
-    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
     invocation.resume().await?;
 
     let actual = launch_cs2(test.get_hub_v2_path());
@@ -63,7 +63,7 @@ async fn tree() -> Result<(), Error> {
     breakpoint_system.start_component_manager().await?;
 
     // Root must be created first
-    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
     invocation.resume().await?;
 
     // 6 descendants are created eagerly. Order is irrelevant.

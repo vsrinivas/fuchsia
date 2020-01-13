@@ -89,20 +89,21 @@ async fn main() -> Result<(), Error> {
         .expect("failed to delete child");
 
     // Wait for the dynamic child to begin deletion
-    let invocation = receiver.expect_exact::<PreDestroyInstance>("/coll:simple_instance:1").await?;
+    let invocation =
+        receiver.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1").await?;
     hub_report.report_directory_contents("/hub/children").await?;
     hub_report.report_directory_contents("/hub/deleting").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
     invocation.resume().await?;
 
     // Wait for the dynamic child to stop
-    let invocation = receiver.expect_exact::<StopInstance>("/coll:simple_instance:1").await?;
+    let invocation = receiver.expect_exact::<StopInstance>("./coll:simple_instance:1").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
     invocation.resume().await?;
 
     // Wait for the dynamic child's static child to begin deletion
     let invocation =
-        receiver.expect_exact::<PreDestroyInstance>("/coll:simple_instance:1/child:0").await?;
+        receiver.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1/child:0").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/children").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
     hub_report
@@ -112,13 +113,13 @@ async fn main() -> Result<(), Error> {
 
     // Wait for the dynamic child's static child to be destroyed
     let invocation =
-        receiver.expect_exact::<PostDestroyInstance>("/coll:simple_instance:1/child:0").await?;
+        receiver.expect_exact::<PostDestroyInstance>("./coll:simple_instance:1/child:0").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
     invocation.resume().await?;
 
     // Wait for the dynamic child to be destroyed
     let invocation =
-        receiver.expect_exact::<PostDestroyInstance>("/coll:simple_instance:1").await?;
+        receiver.expect_exact::<PostDestroyInstance>("./coll:simple_instance:1").await?;
     hub_report.report_directory_contents("/hub/deleting").await?;
     invocation.resume().await?;
 

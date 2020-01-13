@@ -162,6 +162,11 @@ impl ScopedBreakpointSystem {
             serve_system(self, stream, root_instance_resolved_receiver).await;
         });
     }
+
+    /// Returns an AbsoluteMoniker corresponding to the scope of this breakpoint system.
+    pub fn scope(&self) -> AbsoluteMoniker {
+        self.scope_moniker.clone()
+    }
 }
 
 #[async_trait]

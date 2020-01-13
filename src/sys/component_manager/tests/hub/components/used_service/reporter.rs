@@ -27,11 +27,7 @@ async fn main() -> Result<(), Error> {
 
         // Wait until the HubReport service has been routed successfully
         receiver
-            .wait_until_framework_capability(
-                "/reporter:0",
-                "/svc/fuchsia.test.hub.HubReport",
-                Some("/reporter:0"),
-            )
+            .wait_until_framework_capability(".", "/svc/fuchsia.test.hub.HubReport", Some("."))
             .await?
             .resume()
             .await?;
@@ -52,7 +48,7 @@ async fn main() -> Result<(), Error> {
         // Since connecting to the Echo capability is an asynchronous operation, we should
         // wait until the capability is actually routed.
         receiver
-            .wait_until_component_capability("/reporter:0", "/svc/fidl.examples.routing.echo.Echo")
+            .wait_until_component_capability(".", "/svc/fidl.examples.routing.echo.Echo")
             .await?
             .resume()
             .await?;
@@ -71,7 +67,7 @@ async fn main() -> Result<(), Error> {
         // Since connecting to the Echo capability is an asynchronous operation, we should
         // wait until the capability is actually routed.
         receiver
-            .wait_until_component_capability("/reporter:0", "/svc/fidl.examples.routing.echo.Echo")
+            .wait_until_component_capability(".", "/svc/fidl.examples.routing.echo.Echo")
             .await?
             .resume()
             .await?;

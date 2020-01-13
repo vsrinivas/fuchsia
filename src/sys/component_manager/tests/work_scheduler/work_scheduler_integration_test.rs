@@ -35,15 +35,15 @@ async fn basic_work_scheduler_test() -> Result<(), Error> {
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
-    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
     invocation.resume().await?;
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
 
-    // Wait until `/` connects to `WorkSchedulerDispatchReporter` and inject
+    // Wait until `.` connects to `WorkSchedulerDispatchReporter` and inject
     // the capability from here.
     let invocation = route_receiver
-        .wait_until_framework_capability("/", WORK_SCHEDULER_DISPATCH_REPORTER, Some("/"))
+        .wait_until_framework_capability(".", WORK_SCHEDULER_DISPATCH_REPORTER, Some("."))
         .await?;
     invocation.inject(work_scheduler_dispatch_reporter.serve_async()).await?;
     invocation.resume().await?;
@@ -69,7 +69,7 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
-    let invocation = receiver.expect_exact::<BeforeStartInstance>("/").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
     invocation.resume().await?;
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
@@ -77,7 +77,7 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
     let route_receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
     // `/worker_sibling:0` has started.
-    let invocation = receiver.expect_exact::<BeforeStartInstance>("/worker_sibling:0").await?;
+    let invocation = receiver.expect_exact::<BeforeStartInstance>("./worker_sibling:0").await?;
     invocation.resume().await?;
 
     // We no longer need to track `StartInstance` events.
@@ -87,9 +87,9 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
     // and inject the capability from here.
     let invocation = route_receiver
         .wait_until_framework_capability(
-            "/worker_child:0",
+            "./worker_child:0",
             WORK_SCHEDULER_DISPATCH_REPORTER,
-            Some("/worker_child:0"),
+            Some("./worker_child:0"),
         )
         .await?;
     invocation.inject(work_scheduler_dispatch_reporter.serve_async()).await?;

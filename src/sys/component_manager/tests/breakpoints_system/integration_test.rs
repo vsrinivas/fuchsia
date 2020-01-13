@@ -72,7 +72,7 @@ async fn echo_interposer_test() -> Result<(), Error> {
 
     // Wait for echo_looper to attempt to connect to the Echo service
     let invocation = receiver
-        .wait_until_component_capability("/echo_looper:0", "/svc/fidl.examples.routing.echo.Echo")
+        .wait_until_component_capability("./echo_looper:0", "/svc/fidl.examples.routing.echo.Echo")
         .await?;
 
     // Setup the interposer
@@ -109,9 +109,9 @@ async fn scoped_breakpoints_test() -> Result<(), Error> {
         // Wait for `echo_reporter` to attempt to connect to the Echo service
         let invocation = receiver
             .wait_until_framework_capability(
-                "/echo_reporter:0",
+                "./echo_reporter:0",
                 "/svc/fidl.examples.routing.echo.Echo",
-                Some("/echo_reporter:0"),
+                Some("./echo_reporter:0"),
             )
             .await?;
 
@@ -136,10 +136,11 @@ async fn scoped_breakpoints_test() -> Result<(), Error> {
     assert_eq!(stop_trigger_echo.message, "Stop trigger");
     stop_trigger_echo.resume();
 
-    // Verify that the `echo_reporter` doesn't see any events because the target
-    // of the `RouteCapability` event is outside its realm.
+    // Verify that the `echo_reporter` sees `BeforeStartInstance` but not `RouteCapability`
+    // events because the target of the `RouteCapability` event is outside its realm.
     let events_echo = echo_rx.next().await.unwrap();
-    assert_eq!(events_echo.message, "Events: [DrainedEvent { event_type: BeforeStartInstance, target_moniker: \"/echo_reporter:0/echo_server:0\" }]");
+    assert_eq!(events_echo.message, "Events: [DrainedEvent { event_type: BeforeStartInstance, target_moniker: \"./echo_server:0\" }]");
+
     events_echo.resume();
 
     Ok(())
