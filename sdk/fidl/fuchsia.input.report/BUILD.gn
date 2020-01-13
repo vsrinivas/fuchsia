@@ -9,6 +9,7 @@ fidl("fuchsia.input.report") {
     "descriptor.fidl",
     "device.fidl",
     "keyboard.fidl",
+    "led.fidl",
     "mouse.fidl",
     "report.fidl",
     "sensor.fidl",

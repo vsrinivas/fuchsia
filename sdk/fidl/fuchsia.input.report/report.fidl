@@ -22,3 +22,10 @@ table InputReport {
     /// Unique ID to connect trace async begin/end events.
     3: uint64 trace_id;
 };
+
+/// A single report containing output information for an input device.
+/// Output information typically represents device output to the user
+/// (E.g: LEDs, tactile feedback, etc).
+table OutputReport {
+    1: KeyboardOutputReport keyboard;
+};

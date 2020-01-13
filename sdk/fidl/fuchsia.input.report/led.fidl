@@ -1,0 +1,33 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.report;
+
+/// An LedType represents an LED on a device that can be turned on or off.
+/// When applicable, the definition of each LED is derived from one of the
+/// following sources albeit with a Fuchsia-specific numeric value:
+/// - USB HID usage codes for usage page 0x0008 (LED)
+enum LedType : uint32 {
+    // Keyboard LEDs.
+    // Reserved range: 0x00000001 - 0x000001ff
+
+    /// LED to indicate a Keyboard's number lock is enabled.
+    /// Corresponds to USB HID page 0x0008 usage 0x0001
+    NUM_LOCK = 0x01;
+
+    /// LED to indicate a Keyboard's capital lock is enabled.
+    /// Corresponds to USB HID page 0x0008 usage 0x0002
+    CAPS_LOCK = 0x02;
+    /// LED to indicate a Keyboard's scroll lock is enabled.
+    /// Corresponds to USB HID page 0x0008 usage 0x0003
+    SCROLL_LOCK = 0x03;
+
+    /// LED to indicate a Keyboard's composition mode is enabled.
+    /// Corresponds to USB HID page 0x0008 usage 0x0004
+    COMPOSE = 0x04;
+
+    /// LED to indicate a Keyboard's Kana mode is enabled.
+    /// Corresponds to USB HID page 0x0008 usage 0x0005
+    KANA = 0x05;
+};

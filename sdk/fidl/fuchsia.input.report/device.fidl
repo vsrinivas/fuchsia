@@ -26,4 +26,8 @@ protocol InputDevice {
 
     /// Gets the device descriptor for this device.
     GetDescriptor() -> (DeviceDescriptor descriptor);
+
+    /// Send a single output report to the device. This will throw an error
+    /// if the output report does not follow the OutputDescriptor.
+    SendOutputReport(OutputReport report) -> () error zx.status;
 };

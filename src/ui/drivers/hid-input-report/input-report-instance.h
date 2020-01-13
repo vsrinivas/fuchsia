@@ -50,6 +50,10 @@ class InputReportInstance : public InstanceDeviceType,
   void GetReportsEvent(GetReportsEventCompleter::Sync _completer);
   void GetReports(GetReportsCompleter::Sync _completer);
   void GetDescriptor(GetDescriptorCompleter::Sync _completer);
+  void SendOutputReport(::llcpp::fuchsia::input::report::OutputReport report,
+                        SendOutputReportCompleter::Sync completer) {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  };
 
  private:
   fbl::Mutex report_lock_;

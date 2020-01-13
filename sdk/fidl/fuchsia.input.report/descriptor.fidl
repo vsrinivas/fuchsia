@@ -39,3 +39,10 @@ table DeviceDescriptor {
     /// When |keyboard| is present the device has a keyboard.
     5: KeyboardDescriptor keyboard;
 };
+
+/// Describes the output reports that a physical input device will accept.
+/// Output information typically represents device output to the user
+/// (E.g: LEDs, tactile feedback, etc).
+table OutputDescriptor {
+    1: KeyboardOutputDescriptor keyboard;
+};

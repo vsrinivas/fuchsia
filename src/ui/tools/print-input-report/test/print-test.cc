@@ -88,6 +88,11 @@ class FakeDevice final : public fuchsia_input_report::InputDevice::Interface {
     completer.Reply(fidl::VectorView<fuchsia_input_report::InputReport>(&report, 1));
   }
 
+  void SendOutputReport(::llcpp::fuchsia::input::report::OutputReport report,
+                        SendOutputReportCompleter::Sync completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  };
+
   // Sets the fake's report, which will be read with |GetReports|. This also
   // triggers the |reports_events_| signal which wakes up any clients waiting
   // for report dta.

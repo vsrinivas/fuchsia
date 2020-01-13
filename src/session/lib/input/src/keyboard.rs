@@ -138,6 +138,7 @@ impl input_device::InputDeviceBinding for KeyboardBinding {
         match device.get_descriptor().await?.keyboard {
             Some(fidl_fuchsia_input_report::KeyboardDescriptor {
                 input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor { keys }),
+                output: _,
             }) => {
                 let (event_sender, event_receiver) =
                     futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);

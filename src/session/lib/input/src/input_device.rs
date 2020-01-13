@@ -448,6 +448,7 @@ mod tests {
                             input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor {
                                 keys: None,
                             }),
+                            output: None,
                         }),
                     });
                 }
@@ -511,6 +512,7 @@ mod tests {
                             input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor {
                                 keys: None,
                             }),
+                            output: None,
                         }),
                     });
                 }

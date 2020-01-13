@@ -6,13 +6,10 @@ library fuchsia.input.report;
 
 using fuchsia.ui.input2;
 
-/// A hardcoded number of max keys. This should be increased in the future
-/// if we ever see keyboards with more keys.
+/// Hardcoded max sizes for keyboard vectors. These sizes should be increased
+/// if we ever see keyboards with more objects than can be represented.
 const uint32 KEYBOARD_MAX_NUM_KEYS = 150;
-
-/// A hardcoded number of the maximum keys that can be pressed at a time.
-/// This should be increased in the future if we see keyboards that can
-/// handle more pressed keys.
+const uint32 KEYBOARD_MAX_NUM_LEDS = 10;
 const uint32 KEYBOARD_MAX_PRESSED_KEYS = 15;
 
 /// Describes the format of the input report that will be sent from the keyboard
@@ -22,13 +19,27 @@ table KeyboardInputDescriptor {
     1: vector<fuchsia.ui.input2.Key>:KEYBOARD_MAX_NUM_KEYS keys;
 };
 
+/// Describes the format of the output report that can be sent to the keyboard..
+table KeyboardOutputDescriptor {
+    /// The list of keyboard LEDs that can be toggled.
+    1: vector<LedType>:KEYBOARD_MAX_NUM_LEDS leds;
+};
+
 /// The capabilities of a keyboard device.
 table KeyboardDescriptor {
     1: KeyboardInputDescriptor input;
+    2: KeyboardOutputDescriptor output;
 };
 
 /// A single report created by a keyboard device.
 table KeyboardInputReport {
     /// The list of keys that are currently pressed down.
     1: vector<fuchsia.ui.input2.Key>:KEYBOARD_MAX_PRESSED_KEYS pressed_keys;
+};
+
+/// A single report containing output information for a keyboard.
+table KeyboardOutputReport {
+    /// Each LED in this list will be turned on. Any LED not in this list will be
+    /// turned off.
+    1: vector<LedType>:KEYBOARD_MAX_NUM_LEDS enabled_leds;
 };
