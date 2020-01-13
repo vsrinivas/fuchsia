@@ -472,6 +472,8 @@
         "nullable": false,
         "maybe_size": {
           "kind": "literal",
+          "value": "5",
+          "expression": "5",
           "literal": {
             "kind": "numeric",
             "value": "5",
@@ -518,6 +520,8 @@
         "nullable": false,
         "maybe_size": {
           "kind": "literal",
+          "value": "5",
+          "expression": "5",
           "literal": {
             "kind": "numeric",
             "value": "5",
@@ -539,6 +543,8 @@
         "nullable": false,
         "maybe_size": {
           "kind": "literal",
+          "value": "5",
+          "expression": "5",
           "literal": {
             "kind": "numeric",
             "value": "5",

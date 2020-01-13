@@ -25,6 +25,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "1",
+            "expression": "0x00000001",
             "literal": {
               "kind": "numeric",
               "value": "1",
@@ -41,6 +43,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "128",
+            "expression": "0x80",
             "literal": {
               "kind": "numeric",
               "value": "128",
@@ -57,6 +61,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "2",
+            "expression": "0x2",
             "literal": {
               "kind": "numeric",
               "value": "2",
@@ -89,6 +95,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "8",
+            "expression": "0x8",
             "literal": {
               "kind": "numeric",
               "value": "8",
@@ -114,6 +122,8 @@
       },
       "value": {
         "kind": "literal",
+        "value": "4",
+        "expression": "0b100",
         "literal": {
           "kind": "numeric",
           "value": "4",
@@ -134,6 +144,8 @@
       },
       "value": {
         "kind": "literal",
+        "value": "4",
+        "expression": "0b100",
         "literal": {
           "kind": "numeric",
           "value": "4",
@@ -154,6 +166,8 @@
       },
       "value": {
         "kind": "literal",
+        "value": "4",
+        "expression": "0b100",
         "literal": {
           "kind": "numeric",
           "value": "4",
@@ -174,6 +188,8 @@
       },
       "value": {
         "kind": "literal",
+        "value": "4",
+        "expression": "0b100",
         "literal": {
           "kind": "numeric",
           "value": "4",
@@ -194,6 +210,8 @@
       },
       "value": {
         "kind": "literal",
+        "value": "4",
+        "expression": "0b100",
         "literal": {
           "kind": "numeric",
           "value": "4",
@@ -214,6 +232,8 @@
       },
       "value": {
         "kind": "literal",
+        "value": "4",
+        "expression": "0b100",
         "literal": {
           "kind": "numeric",
           "value": "4",
@@ -234,6 +254,8 @@
       },
       "value": {
         "kind": "literal",
+        "value": "4",
+        "expression": "0b100",
         "literal": {
           "kind": "numeric",
           "value": "4",
@@ -254,6 +276,8 @@
       },
       "value": {
         "kind": "literal",
+        "value": "4",
+        "expression": "0b100",
         "literal": {
           "kind": "numeric",
           "value": "4",
@@ -274,6 +298,8 @@
       },
       "value": {
         "kind": "literal",
+        "value": "3.14159",
+        "expression": "3.14159",
         "literal": {
           "kind": "numeric",
           "value": "3.14159",
@@ -294,6 +320,8 @@
       },
       "value": {
         "kind": "literal",
+        "value": "3.14159",
+        "expression": "3.14159",
         "literal": {
           "kind": "numeric",
           "value": "3.14159",
@@ -314,6 +342,8 @@
       },
       "value": {
         "kind": "literal",
+        "value": "true",
+        "expression": "true",
         "literal": {
           "kind": "true",
           "value": "true",
@@ -334,6 +364,8 @@
       },
       "value": {
         "kind": "literal",
+        "value": "string",
+        "expression": "\"string\"",
         "literal": {
           "kind": "string",
           "value": "string",
@@ -355,6 +387,8 @@
       },
       "value": {
         "kind": "identifier",
+        "value": "1",
+        "expression": "EnumType.VALUE",
         "identifier": "values/EnumType.VALUE"
       }
     },
@@ -371,6 +405,8 @@
       },
       "value": {
         "kind": "identifier",
+        "value": "1",
+        "expression": "EnumType.VALUE",
         "identifier": "values/EnumType.VALUE"
       }
     },
@@ -388,6 +424,8 @@
       },
       "value": {
         "kind": "identifier",
+        "value": "1",
+        "expression": "BitsType.VALUE",
         "identifier": "values/BitsType.VALUE"
       }
     },
@@ -404,6 +442,8 @@
       },
       "value": {
         "kind": "identifier",
+        "value": "1",
+        "expression": "BitsType.VALUE",
         "identifier": "values/BitsType.VALUE"
       }
     },
@@ -421,23 +461,8 @@
       },
       "value": {
         "kind": "binary_operator",
-        "left_operand": {
-          "kind": "identifier",
-          "identifier": "values/BitsType.VALUE"
-        },
-        "right_operand": {
-          "kind": "binary_operator",
-          "left_operand": {
-            "kind": "identifier",
-            "identifier": "values/BitsType.SECOND_VALUE"
-          },
-          "right_operand": {
-            "kind": "identifier",
-            "identifier": "values/BitsType.THIRD_VALUE"
-          },
-          "operator": "or"
-        },
-        "operator": "or"
+        "value": "131",
+        "expression": "BitsType.VALUE | BitsType.SECOND_VALUE | BitsType.THIRD_VALUE"
       }
     },
     {
@@ -453,15 +478,8 @@
       },
       "value": {
         "kind": "binary_operator",
-        "left_operand": {
-          "kind": "identifier",
-          "identifier": "values/BitsType.VALUE"
-        },
-        "right_operand": {
-          "kind": "identifier",
-          "identifier": "values/BitsType.SECOND_VALUE"
-        },
-        "operator": "or"
+        "value": "129",
+        "expression": "BitsType.VALUE | BitsType.SECOND_VALUE"
       }
     }
   ],
@@ -484,6 +502,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "1",
+            "expression": "1",
             "literal": {
               "kind": "numeric",
               "value": "1",
@@ -512,6 +532,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "170",
+            "expression": "0b10101010",
             "literal": {
               "kind": "numeric",
               "value": "170",
@@ -548,6 +570,8 @@
           },
           "maybe_default_value": {
             "kind": "literal",
+            "value": "7",
+            "expression": "007",
             "literal": {
               "kind": "numeric",
               "value": "7",
@@ -585,6 +609,8 @@
           },
           "maybe_default_value": {
             "kind": "literal",
+            "value": "stuff",
+            "expression": "\"stuff\"",
             "literal": {
               "kind": "string",
               "value": "stuff",
@@ -622,6 +648,8 @@
           },
           "maybe_default_value": {
             "kind": "literal",
+            "value": "true",
+            "expression": "true",
             "literal": {
               "kind": "true",
               "value": "true",
@@ -660,6 +688,8 @@
           },
           "maybe_default_value": {
             "kind": "identifier",
+            "value": "170",
+            "expression": "Enum.E",
             "identifier": "values/Enum.E"
           },
           "size": 4,
@@ -694,6 +724,8 @@
           },
           "maybe_default_value": {
             "kind": "identifier",
+            "value": "8",
+            "expression": "Bits.B",
             "identifier": "values/Bits.B"
           },
           "size": 4,

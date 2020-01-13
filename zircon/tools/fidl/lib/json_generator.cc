@@ -103,64 +103,40 @@ void JSONGenerator::Generate(const raw::Identifier& value) { EmitString(value.sp
 void JSONGenerator::Generate(const flat::LiteralConstant& value) {
   GenerateObject([&]() {
     GenerateObjectMember("kind", NameRawLiteralKind(value.literal->kind), Position::kFirst);
-
-    // TODO(FIDL-486): Since some constants are not properly resolved during
-    // library compilation, we must be careful in emitting the resolved
-    // value. Currently, we fall back using the original value, despite this
-    // being problematic in the case of binary literals.
-    if (value.IsResolved()) {
-      GenerateObjectMember("value", value.Value());
-    } else {
-      switch (value.literal->kind) {
-        case raw::Literal::Kind::kString: {
-          auto string_literal = static_cast<const raw::StringLiteral*>(value.literal.get());
-          EmitObjectSeparator();
-          EmitObjectKey("value");
-          EmitLiteral(string_literal->span().data());
-          break;
-        }
-        case raw::Literal::Kind::kNumeric:
-        case raw::Literal::Kind::kTrue:
-        case raw::Literal::Kind::kFalse:
-          GenerateObjectMember("value", value.literal->span().data());
-          break;
-      }  // switch
-    }
+    GenerateObjectMember("value", value.Value());
     GenerateObjectMember("expression", value.literal->span().data());
   });
 }
 
 void JSONGenerator::Generate(const flat::Constant& value) {
   GenerateObject([&]() {
+    // TODO(pascallouis): We should explore exposing these in the JSON IR, such that the
+    // implicit bounds are made explicit by fidlc, rather than sprinkled throughout all
+    // backends.
+    //
+    // For now, do not emit synthesized constants
+    if (value.kind == flat::Constant::Kind::kSynthesized)
+      return;
+    GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::kFirst);
+    GenerateObjectMember("value", value.Value());
+    GenerateObjectMember("expression", value.span);
     switch (value.kind) {
       case flat::Constant::Kind::kIdentifier: {
-        GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::kFirst);
         auto type = static_cast<const flat::IdentifierConstant*>(&value);
         GenerateObjectMember("identifier", type->name);
         break;
       }
       case flat::Constant::Kind::kLiteral: {
-        GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::kFirst);
         auto& type = static_cast<const flat::LiteralConstant&>(value);
         GenerateObjectMember("literal", type);
         break;
       }
-      case flat::Constant::Kind::kSynthesized: {
-        // TODO(pascallouis): We should explore exposing these in the JSON IR, such that the
-        // implicit bounds are made explicit by fidlc, rather than sprinkled throughout all
-        // backends.
-        //
-        // For now, do not emit synthesized constants
-        break;
-      }
       case flat::Constant::Kind::kBinaryOperator: {
-        GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::kFirst);
-        auto& type = static_cast<const flat::BinaryOperatorConstant&>(value);
-        GenerateObjectMember("left_operand", type.left_operand);
-        GenerateObjectMember("right_operand", type.right_operand);
-        GenerateObjectMember("operator", NameFlatBinaryOperator(type.op));
+        // Avoid emitting a structure for binary operators in favor of "expression".
         break;
       }
+      case flat::Constant::Kind::kSynthesized:
+        break;
     }
   });
 }

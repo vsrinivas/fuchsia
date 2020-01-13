@@ -25,6 +25,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "1",
+            "expression": "1",
             "literal": {
               "kind": "numeric",
               "value": "1",
@@ -41,6 +43,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "9223372036854775808",
+            "expression": "0x8000000000000000",
             "literal": {
               "kind": "numeric",
               "value": "9223372036854775808",
@@ -73,6 +77,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "1",
+            "expression": "1",
             "literal": {
               "kind": "numeric",
               "value": "1",
@@ -89,6 +95,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "9223372036854775808",
+            "expression": "0x8000000000000000",
             "literal": {
               "kind": "numeric",
               "value": "9223372036854775808",

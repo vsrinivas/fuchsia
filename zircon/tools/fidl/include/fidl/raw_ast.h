@@ -177,6 +177,7 @@ class Constant : public SourceElement {
   enum class Kind { kIdentifier, kLiteral, kBinaryOperator };
 
   explicit Constant(Token token, Kind kind) : SourceElement(token, token), kind(kind) {}
+  explicit Constant(const SourceElement& element, Kind kind) : SourceElement(element), kind(kind) {}
 
   virtual ~Constant() {}
 
@@ -186,7 +187,8 @@ class Constant : public SourceElement {
 class IdentifierConstant final : public Constant {
  public:
   explicit IdentifierConstant(std::unique_ptr<CompoundIdentifier> identifier)
-      : Constant(identifier->start_, Kind::kIdentifier), identifier(std::move(identifier)) {}
+      : Constant(SourceElement(identifier->start_, identifier->end_), Kind::kIdentifier),
+        identifier(std::move(identifier)) {}
 
   std::unique_ptr<CompoundIdentifier> identifier;
 
@@ -208,7 +210,7 @@ class BinaryOperatorConstant final : public Constant {
   enum class Operator { kOr };
   explicit BinaryOperatorConstant(std::unique_ptr<Constant> left_operand,
                                   std::unique_ptr<Constant> right_operand, Operator op)
-      : Constant(left_operand->start_, Kind::kBinaryOperator),
+      : Constant(SourceElement(left_operand->start_, right_operand->end_), Kind::kBinaryOperator),
         left_operand(std::move(left_operand)),
         right_operand(std::move(right_operand)),
         op(op) {}

@@ -252,13 +252,6 @@ std::string NameFlatConstantKind(flat::Constant::Kind kind) {
   }
 }
 
-std::string NameFlatBinaryOperator(flat::BinaryOperatorConstant::Operator op) {
-  switch (op) {
-    case flat::BinaryOperatorConstant::Operator::kOr:
-      return "or";
-  }
-}
-
 std::string NameHandleZXObjType(types::HandleSubtype subtype) {
   switch (subtype) {
     case types::HandleSubtype::kHandle:

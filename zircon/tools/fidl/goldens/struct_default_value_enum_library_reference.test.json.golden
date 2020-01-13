@@ -38,6 +38,8 @@
           },
           "maybe_default_value": {
             "kind": "identifier",
+            "value": "1",
+            "expression": "dependent.MyEnum.A",
             "identifier": "dependent/MyEnum.A"
           },
           "size": 4,

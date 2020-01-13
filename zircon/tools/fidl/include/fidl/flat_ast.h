@@ -411,7 +411,7 @@ struct Constant {
 
   enum struct Kind { kIdentifier, kLiteral, kSynthesized, kBinaryOperator };
 
-  explicit Constant(Kind kind) : kind(kind), value_(nullptr) {}
+  explicit Constant(Kind kind, SourceSpan span) : kind(kind), span(span), value_(nullptr) {}
 
   bool IsResolved() const { return value_ != nullptr; }
 
@@ -427,27 +427,29 @@ struct Constant {
   }
 
   const Kind kind;
+  const SourceSpan span;
 
  protected:
   std::unique_ptr<ConstantValue> value_;
 };
 
 struct IdentifierConstant final : Constant {
-  explicit IdentifierConstant(Name name) : Constant(Kind::kIdentifier), name(std::move(name)) {}
+  explicit IdentifierConstant(Name name, SourceSpan span)
+      : Constant(Kind::kIdentifier, span), name(std::move(name)) {}
 
   const Name name;
 };
 
 struct LiteralConstant final : Constant {
   explicit LiteralConstant(std::unique_ptr<raw::Literal> literal)
-      : Constant(Kind::kLiteral), literal(std::move(literal)) {}
+      : Constant(Kind::kLiteral, literal->span()), literal(std::move(literal)) {}
 
   std::unique_ptr<raw::Literal> literal;
 };
 
 struct SynthesizedConstant final : Constant {
   explicit SynthesizedConstant(std::unique_ptr<ConstantValue> value)
-      : Constant(Kind::kSynthesized) {
+      : Constant(Kind::kSynthesized, SourceSpan()) {
     ResolveTo(std::move(value));
   }
 };
@@ -456,8 +458,9 @@ struct BinaryOperatorConstant final : Constant {
   enum struct Operator { kOr };
 
   explicit BinaryOperatorConstant(std::unique_ptr<Constant> left_operand,
-                                  std::unique_ptr<Constant> right_operand, Operator op)
-      : Constant(Kind::kBinaryOperator),
+                                  std::unique_ptr<Constant> right_operand, Operator op,
+                                  SourceSpan span)
+      : Constant(Kind::kBinaryOperator, span),
         left_operand(std::move(left_operand)),
         right_operand(std::move(right_operand)),
         op(op) {}
@@ -1444,7 +1447,7 @@ class Library {
   std::optional<Name> CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier);
   bool RegisterDecl(std::unique_ptr<Decl> decl);
 
-  bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceSpan span,
+  bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                        std::unique_ptr<Constant>* out_constant);
   bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor, SourceSpan span,
                               std::unique_ptr<TypeConstructor>* out_type);

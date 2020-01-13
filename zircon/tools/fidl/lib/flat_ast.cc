@@ -1392,7 +1392,7 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   return true;
 }
 
-bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceSpan span,
+bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                               std::unique_ptr<Constant>* out_constant) {
   switch (raw_constant->kind) {
     case raw::Constant::Kind::kIdentifier: {
@@ -1400,7 +1400,8 @@ bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, Sourc
       auto name = CompileCompoundIdentifier(identifier->identifier.get());
       if (!name)
         return false;
-      *out_constant = std::make_unique<IdentifierConstant>(std::move(name.value()));
+      *out_constant =
+          std::make_unique<IdentifierConstant>(std::move(name.value()), identifier->span());
       break;
     }
     case raw::Constant::Kind::kLiteral: {
@@ -1417,17 +1418,15 @@ bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, Sourc
           break;
       }
       std::unique_ptr<Constant> left_operand;
-      if (!ConsumeConstant(std::move(binary_operator_constant->left_operand), span,
-                           &left_operand)) {
+      if (!ConsumeConstant(std::move(binary_operator_constant->left_operand), &left_operand)) {
         return false;
       }
       std::unique_ptr<Constant> right_operand;
-      if (!ConsumeConstant(std::move(binary_operator_constant->right_operand), span,
-                           &right_operand)) {
+      if (!ConsumeConstant(std::move(binary_operator_constant->right_operand), &right_operand)) {
         return false;
       }
-      *out_constant = std::make_unique<BinaryOperatorConstant>(std::move(left_operand),
-                                                               std::move(right_operand), op);
+      *out_constant = std::make_unique<BinaryOperatorConstant>(
+          std::move(left_operand), std::move(right_operand), op, binary_operator_constant->span());
       break;
     }
   }
@@ -1450,7 +1449,7 @@ bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_t
 
   std::unique_ptr<Constant> maybe_size;
   if (raw_type_ctor->maybe_size != nullptr) {
-    if (!ConsumeConstant(std::move(raw_type_ctor->maybe_size), span, &maybe_size))
+    if (!ConsumeConstant(std::move(raw_type_ctor->maybe_size), &maybe_size))
       return false;
   }
 
@@ -1526,7 +1525,7 @@ bool Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_
   for (auto& member : bits_declaration->members) {
     auto span = member->identifier->span();
     std::unique_ptr<Constant> value;
-    if (!ConsumeConstant(std::move(member->value), span, &value))
+    if (!ConsumeConstant(std::move(member->value), &value))
       return false;
     members.emplace_back(span, std::move(value), std::move(member->attributes));
     // TODO(pascallouis): right now, members are not registered. Look into
@@ -1557,7 +1556,7 @@ bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
     return false;
 
   std::unique_ptr<Constant> constant;
-  if (!ConsumeConstant(std::move(const_declaration->constant), span, &constant))
+  if (!ConsumeConstant(std::move(const_declaration->constant), &constant))
     return false;
 
   return RegisterDecl(std::make_unique<Const>(std::move(attributes), std::move(name),
@@ -1569,7 +1568,7 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
   for (auto& member : enum_declaration->members) {
     auto span = member->identifier->span();
     std::unique_ptr<Constant> value;
-    if (!ConsumeConstant(std::move(member->value), span, &value))
+    if (!ConsumeConstant(std::move(member->value), &value))
       return false;
     members.emplace_back(span, std::move(value), std::move(member->attributes));
     // TODO(pascallouis): right now, members are not registered. Look into
@@ -1756,7 +1755,7 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
       return false;
     std::unique_ptr<Constant> maybe_default_value;
     if (member->maybe_default_value != nullptr) {
-      if (!ConsumeConstant(std::move(member->maybe_default_value), span, &maybe_default_value))
+      if (!ConsumeConstant(std::move(member->maybe_default_value), &maybe_default_value))
         return false;
     }
     auto attributes = std::move(member->attributes);
