@@ -85,6 +85,29 @@ zx_status_t HidSensorUsageToLlcppSensorType(hid::usage::Sensor usage,
   return ZX_OK;
 }
 
+zx_status_t HidLedUsageToLlcppLedType(hid::usage::LEDs usage, fuchsia_input_report::LedType* type) {
+  switch (usage) {
+    case hid::usage::LEDs::kNumLock:
+      *type = fuchsia_input_report::LedType::NUM_LOCK;
+      break;
+    case hid::usage::LEDs::kCapsLock:
+      *type = fuchsia_input_report::LedType::CAPS_LOCK;
+      break;
+    case hid::usage::LEDs::kScrollLock:
+      *type = fuchsia_input_report::LedType::SCROLL_LOCK;
+      break;
+    case hid::usage::LEDs::kCompose:
+      *type = fuchsia_input_report::LedType::COMPOSE;
+      break;
+    case hid::usage::LEDs::kKana:
+      *type = fuchsia_input_report::LedType::KANA;
+      break;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ZX_OK;
+}
+
 fuchsia_input_report::Axis LlcppAxisFromAttribute(const hid::Attributes& attrs) {
   fuchsia_input_report::Axis axis;
   axis.range.min = static_cast<int64_t>(

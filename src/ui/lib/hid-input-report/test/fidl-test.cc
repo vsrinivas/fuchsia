@@ -259,6 +259,31 @@ TEST(FidlTest, KeyboardInputDescriptor) {
   EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT, fidl_keyboard.keys()[2]);
 }
 
+TEST(FidlTest, KeyboardOutputDescriptor) {
+  hid_input_report::KeyboardDescriptor keyboard_descriptor = {};
+  keyboard_descriptor.output = hid_input_report::KeyboardOutputDescriptor();
+  keyboard_descriptor.output->num_leds = 3;
+  keyboard_descriptor.output->leds[0] = fuchsia_input_report::LedType::NUM_LOCK;
+  keyboard_descriptor.output->leds[1] = fuchsia_input_report::LedType::CAPS_LOCK;
+  keyboard_descriptor.output->leds[2] = fuchsia_input_report::LedType::SCROLL_LOCK;
+
+  hid_input_report::ReportDescriptor descriptor;
+  descriptor.descriptor = keyboard_descriptor;
+
+  hid_input_report::FidlDescriptor fidl_desc = {};
+  ASSERT_OK(SetFidlDescriptor(descriptor, &fidl_desc));
+
+  fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.view();
+  ASSERT_TRUE(fidl.has_keyboard());
+  ASSERT_TRUE(fidl.keyboard().has_output());
+  auto& fidl_keyboard = fidl.keyboard().output();
+
+  ASSERT_EQ(3, fidl_keyboard.leds().count());
+  EXPECT_EQ(fuchsia_input_report::LedType::NUM_LOCK, fidl_keyboard.leds()[0]);
+  EXPECT_EQ(fuchsia_input_report::LedType::CAPS_LOCK, fidl_keyboard.leds()[1]);
+  EXPECT_EQ(fuchsia_input_report::LedType::SCROLL_LOCK, fidl_keyboard.leds()[2]);
+}
+
 TEST(FidlTest, KeyboardInputReport) {
   hid_input_report::KeyboardInputReport keyboard_report = {};
   keyboard_report.num_pressed_keys = 3;

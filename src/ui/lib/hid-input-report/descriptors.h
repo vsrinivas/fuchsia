@@ -101,14 +101,26 @@ struct KeyboardInputDescriptor {
   size_t num_keys = 0;
 };
 
+struct KeyboardOutputDescriptor {
+  std::array<fuchsia_input_report::LedType, fuchsia_input_report::KEYBOARD_MAX_NUM_LEDS> leds;
+  size_t num_leds;
+};
+
 struct KeyboardDescriptor {
   std::optional<KeyboardInputDescriptor> input;
+  std::optional<KeyboardOutputDescriptor> output;
 };
 
 struct KeyboardInputReport {
   std::array<::llcpp::fuchsia::ui::input2::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS>
       pressed_keys;
   size_t num_pressed_keys;
+};
+
+struct KeyboardOutputReport {
+  std::array<fuchsia_input_report::LedType, fuchsia_input_report::KEYBOARD_MAX_NUM_LEDS>
+      enabled_leds;
+  size_t num_enabled_leds;
 };
 
 struct MouseDescriptor {

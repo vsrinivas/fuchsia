@@ -95,6 +95,38 @@ TEST(KeyboardTest, BootKeyboard) {
   EXPECT_EQ(keyboard_report->pressed_keys[4], llcpp::fuchsia::ui::input2::Key::UP);
 }
 
+TEST(KeyboardTest, OutputDescriptor) {
+  size_t descriptor_size;
+  const uint8_t* boot_keyboard_descriptor = get_boot_kbd_report_desc(&descriptor_size);
+
+  hid::DeviceDescriptor* dev_desc = nullptr;
+  auto parse_res = hid::ParseReportDescriptor(boot_keyboard_descriptor, descriptor_size, &dev_desc);
+  ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
+
+  hid_input_report::Keyboard keyboard;
+
+  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+            keyboard.ParseReportDescriptor(dev_desc->report[0]));
+  hid_input_report::ReportDescriptor report_descriptor = keyboard.GetDescriptor();
+
+  hid_input_report::KeyboardDescriptor* keyboard_descriptor =
+      std::get_if<hid_input_report::KeyboardDescriptor>(&report_descriptor.descriptor);
+  ASSERT_NOT_NULL(keyboard_descriptor);
+  ASSERT_TRUE(keyboard_descriptor->output);
+
+  ASSERT_EQ(keyboard_descriptor->output->num_leds, 5);
+  EXPECT_EQ(keyboard_descriptor->output->leds[0],
+            hid_input_report::fuchsia_input_report::LedType::NUM_LOCK);
+  EXPECT_EQ(keyboard_descriptor->output->leds[1],
+            hid_input_report::fuchsia_input_report::LedType::CAPS_LOCK);
+  EXPECT_EQ(keyboard_descriptor->output->leds[2],
+            hid_input_report::fuchsia_input_report::LedType::SCROLL_LOCK);
+  EXPECT_EQ(keyboard_descriptor->output->leds[3],
+            hid_input_report::fuchsia_input_report::LedType::COMPOSE);
+  EXPECT_EQ(keyboard_descriptor->output->leds[4],
+            hid_input_report::fuchsia_input_report::LedType::KANA);
+}
+
 // This test double checks that we don't double count keys that are included twice.
 TEST(KeyboardTest, DoubleCountingKeys) {
   hid::DeviceDescriptor* dev_desc = nullptr;

@@ -28,7 +28,7 @@ void PrintTouchInputReport(Printer* printer,
                            const fuchsia_input_report::TouchInputReport& touch_report);
 
 void PrintKeyboardDesc(Printer* printer,
-                       const fuchsia_input_report::KeyboardInputDescriptor& keyboard_desc);
+                       const fuchsia_input_report::KeyboardDescriptor& keyboard_desc);
 void PrintKeyboardInputReport(Printer* printer,
                               const fuchsia_input_report::KeyboardInputReport& keyboard_report);
 

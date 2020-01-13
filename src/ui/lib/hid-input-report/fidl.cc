@@ -133,6 +133,13 @@ void SetKeyboardInputDescriptor(FidlKeyboardInputDescriptor* descriptor) {
   descriptor->descriptor = descriptor->builder.view();
 }
 
+void SetKeyboardOutputDescriptor(FidlKeyboardOutputDescriptor* descriptor) {
+  descriptor->leds_view = fidl::VectorView<fuchsia_input_report::LedType>(
+      descriptor->data.leds.data(), descriptor->data.num_leds);
+  descriptor->builder.set_leds(&descriptor->leds_view);
+  descriptor->descriptor = descriptor->builder.view();
+}
+
 void SetKeyboardInputReport(FidlKeyboardInputReport* report) {
   report->pressed_keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
       report->data.pressed_keys.data(), report->data.num_pressed_keys);
@@ -181,6 +188,11 @@ zx_status_t SetFidlDescriptor(const hid_input_report::ReportDescriptor& hid_desc
       descriptor->keyboard.input.data = *hid_keyboard->input;
       SetKeyboardInputDescriptor(&descriptor->keyboard.input);
       descriptor->keyboard.builder.set_input(&descriptor->keyboard.input.descriptor);
+    }
+    if (hid_keyboard->output) {
+      descriptor->keyboard.output.data = *hid_keyboard->output;
+      SetKeyboardOutputDescriptor(&descriptor->keyboard.output);
+      descriptor->keyboard.builder.set_output(&descriptor->keyboard.output.descriptor);
     }
     descriptor->keyboard.descriptor = descriptor->keyboard.builder.view();
     descriptor->builder.set_keyboard(&descriptor->keyboard.descriptor);

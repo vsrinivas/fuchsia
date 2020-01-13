@@ -73,6 +73,16 @@ const char* const kTouchTypeStrings[] = {
     "TOUCHSCREEN",
 };
 
+static_assert(static_cast<int>(fuchsia_input_report::LedType::NUM_LOCK) == 1);
+static_assert(static_cast<int>(fuchsia_input_report::LedType::CAPS_LOCK) == 2);
+static_assert(static_cast<int>(fuchsia_input_report::LedType::SCROLL_LOCK) == 3);
+static_assert(static_cast<int>(fuchsia_input_report::LedType::COMPOSE) == 4);
+static_assert(static_cast<int>(fuchsia_input_report::LedType::KANA) == 5);
+// These strings must be ordered based on the enums in fuchsia.input.report/led.fidl.
+const char* const kLedTypeStrings[] = {
+    "ERROR", "NUM_LOCK", "CAPS_LOCK", "SCROLL_LOCK", "COMPOSE", "KANA",
+};
+
 class Printer {
  public:
   Printer() = default;
@@ -103,6 +113,14 @@ class Printer {
       return kTouchTypeStrings[0];
     }
     return kTouchTypeStrings[unit_index];
+  }
+
+  static const char* LedTypeToString(fuchsia_input_report::LedType type) {
+    uint32_t unit_index = static_cast<uint32_t>(type);
+    if (unit_index >= countof(kLedTypeStrings)) {
+      return kLedTypeStrings[0];
+    }
+    return kLedTypeStrings[unit_index];
   }
 
   void PrintAxis(fuchsia_input_report::Axis axis) {

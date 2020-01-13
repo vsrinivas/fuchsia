@@ -84,12 +84,23 @@ struct FidlKeyboardInputDescriptor {
   KeyboardInputDescriptor data;
 };
 
+struct FidlKeyboardOutputDescriptor {
+  fuchsia_input_report::KeyboardOutputDescriptor descriptor;
+  fuchsia_input_report::KeyboardOutputDescriptor::Builder builder =
+      fuchsia_input_report::KeyboardOutputDescriptor::Build();
+
+  fidl::VectorView<fuchsia_input_report::LedType> leds_view;
+
+  KeyboardOutputDescriptor data;
+};
+
 struct FidlKeyboardDescriptor {
   fuchsia_input_report::KeyboardDescriptor descriptor;
   fuchsia_input_report::KeyboardDescriptor::Builder builder =
       fuchsia_input_report::KeyboardDescriptor::Build();
 
   FidlKeyboardInputDescriptor input;
+  FidlKeyboardOutputDescriptor output;
 };
 
 struct FidlDescriptor {

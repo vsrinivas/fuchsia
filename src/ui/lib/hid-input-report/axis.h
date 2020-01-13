@@ -20,6 +20,8 @@ fuchsia_input_report::Unit HidUnitToLlcppUnit(hid::unit::UnitType unit);
 zx_status_t HidSensorUsageToLlcppSensorType(hid::usage::Sensor usage,
                                             fuchsia_input_report::SensorType* type);
 
+zx_status_t HidLedUsageToLlcppLedType(hid::usage::LEDs usage, fuchsia_input_report::LedType* type);
+
 fuchsia_input_report::Axis LlcppAxisFromAttribute(const hid::Attributes& attrs);
 
 }  // namespace hid_input_report

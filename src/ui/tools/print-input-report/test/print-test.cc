@@ -368,14 +368,19 @@ TEST_F(PrintInputReport, PrintTouchInputReport) {
   print_input_report::PrintInputReport(&printer, &client_.value(), 1);
 }
 
-TEST_F(PrintInputReport, PrintKeyboardInputDescriptor) {
+TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
   hid_input_report::KeyboardDescriptor keyboard_desc = {};
-  keyboard_desc.input = hid_input_report::KeyboardInputDescriptor();
 
+  keyboard_desc.input = hid_input_report::KeyboardInputDescriptor();
   keyboard_desc.input->num_keys = 3;
   keyboard_desc.input->keys[0] = llcpp::fuchsia::ui::input2::Key::A;
   keyboard_desc.input->keys[1] = llcpp::fuchsia::ui::input2::Key::UP;
   keyboard_desc.input->keys[2] = llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT;
+
+  keyboard_desc.output = hid_input_report::KeyboardOutputDescriptor();
+  keyboard_desc.output->num_leds = 2;
+  keyboard_desc.output->leds[0] = fuchsia_input_report::LedType::CAPS_LOCK;
+  keyboard_desc.output->leds[1] = fuchsia_input_report::LedType::SCROLL_LOCK;
 
   hid_input_report::ReportDescriptor desc;
   desc.descriptor = keyboard_desc;
@@ -385,9 +390,13 @@ TEST_F(PrintInputReport, PrintKeyboardInputDescriptor) {
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
       "Keyboard Descriptor:\n",
+      "Input Report:\n",
       "  Key:        1\n",
       "  Key:       79\n",
       "  Key:       82\n",
+      "Output Report:\n",
+      "  Led: CAPS_LOCK\n",
+      "  Led: SCROLL_LOCK\n",
   });
 
   print_input_report::PrintInputDescriptor(&printer, &client_.value());

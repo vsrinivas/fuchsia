@@ -34,9 +34,7 @@ zx_status_t PrintInputDescriptor(Printer* printer,
     PrintTouchDesc(printer, result->descriptor.touch().input());
   }
   if (result->descriptor.has_keyboard()) {
-    if (result->descriptor.keyboard().has_input()) {
-      PrintKeyboardDesc(printer, result->descriptor.keyboard().input());
-    }
+    PrintKeyboardDesc(printer, result->descriptor.keyboard());
   }
   return ZX_OK;
 }
@@ -124,15 +122,31 @@ void PrintTouchDesc(Printer* printer,
 }
 
 void PrintKeyboardDesc(Printer* printer,
-                       const fuchsia_input_report::KeyboardInputDescriptor& keyboard_desc) {
+                       const fuchsia_input_report::KeyboardDescriptor& descriptor) {
   printer->Print("Keyboard Descriptor:\n");
-  printer->IncreaseIndent();
-  if (keyboard_desc.has_keys()) {
-    for (size_t i = 0; i < keyboard_desc.keys().count(); i++) {
-      printer->Print("Key: %8ld\n", keyboard_desc.keys()[i]);
+
+  if (descriptor.has_input()) {
+    const fuchsia_input_report::KeyboardInputDescriptor& input = descriptor.input();
+    printer->Print("Input Report:\n");
+    printer->IncreaseIndent();
+    if (input.has_keys()) {
+      for (size_t i = 0; i < input.keys().count(); i++) {
+        printer->Print("Key: %8ld\n", input.keys()[i]);
+      }
     }
+    printer->DecreaseIndent();
   }
-  printer->DecreaseIndent();
+  if (descriptor.has_output()) {
+    const fuchsia_input_report::KeyboardOutputDescriptor& output = descriptor.output();
+    printer->Print("Output Report:\n");
+    printer->IncreaseIndent();
+    if (output.has_leds()) {
+      for (size_t i = 0; i < output.leds().count(); i++) {
+        printer->Print("Led: %s\n", Printer::LedTypeToString(output.leds()[i]));
+      }
+    }
+    printer->DecreaseIndent();
+  }
 }
 
 int PrintInputReport(Printer* printer, fuchsia_input_report::InputDevice::SyncClient* client,

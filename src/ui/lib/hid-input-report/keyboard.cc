@@ -20,7 +20,8 @@
 
 namespace hid_input_report {
 
-ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
+ParseResult Keyboard::ParseInputReportDescriptor(
+    const hid::ReportDescriptor& hid_report_descriptor) {
   // Use a set to make it easy to create a list of sorted and unique keys.
   std::set<uint32_t> key_values;
   std::array<hid::ReportField, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS> key_fields;
@@ -66,11 +67,58 @@ ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_rep
   num_keys_ = num_keys;
   key_fields_ = key_fields;
 
-  report_size_ = hid_report_descriptor.input_byte_sz;
-  report_id_ = hid_report_descriptor.report_id;
+  input_report_size_ = hid_report_descriptor.input_byte_sz;
+  input_report_id_ = hid_report_descriptor.report_id;
 
   return kParseOk;
 }
+
+ParseResult Keyboard::ParseOutputReportDescriptor(
+    const hid::ReportDescriptor& hid_report_descriptor) {
+  std::array<hid::ReportField, ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_LEDS> led_fields;
+  size_t num_leds = 0;
+
+  for (size_t i = 0; i < hid_report_descriptor.output_count; i++) {
+    const hid::ReportField& field = hid_report_descriptor.output_fields[i];
+    if (field.attr.usage.page == hid::usage::Page::kLEDs) {
+      if (num_leds == ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_LEDS) {
+        return ParseResult::kParseTooManyItems;
+      }
+      led_fields[num_leds++] = field;
+    }
+  }
+
+  if (num_leds == 0) {
+    return kParseOk;
+  }
+
+  // No errors, write to class memebers.
+  descriptor_.output = KeyboardOutputDescriptor();
+  for (size_t i = 0; i < num_leds; i++) {
+    zx_status_t status =
+        HidLedUsageToLlcppLedType(static_cast<hid::usage::LEDs>(led_fields[i].attr.usage.usage),
+                                  &descriptor_.output->leds[i]);
+    if (status != ZX_OK) {
+      return kParseBadReport;
+    }
+  }
+  descriptor_.output->num_leds = num_leds;
+  num_leds_ = num_leds;
+  led_fields_ = led_fields;
+
+  output_report_id_ = hid_report_descriptor.report_id;
+  output_report_size_ = hid_report_descriptor.output_byte_sz;
+
+  return kParseOk;
+}
+
+ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
+  ParseResult res = ParseInputReportDescriptor(hid_report_descriptor);
+  if (res != kParseOk) {
+    return res;
+  }
+  return ParseOutputReportDescriptor(hid_report_descriptor);
+};
 
 ReportDescriptor Keyboard::GetDescriptor() {
   ReportDescriptor report_descriptor = {};
@@ -81,7 +129,7 @@ ReportDescriptor Keyboard::GetDescriptor() {
 ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, InputReport* report) {
   KeyboardInputReport keyboard_report = {};
   size_t key_index = 0;
-  if (len != report_size_) {
+  if (len != input_report_size_) {
     return kParseReportSizeMismatch;
   }
 
