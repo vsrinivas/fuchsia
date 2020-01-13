@@ -123,6 +123,7 @@ num-bigint = { version = "0.2", features = ["rand"] }
 num-traits= "0.2.5"
 openat = "0.1.17"
 owning_ref = "0.4.0"
+pin-project = "0.4.6"
 pin-utils = "=0.1.0-alpha.4"
 pretty = "0.5.2"
 prettytable-rs = "0.8.0"

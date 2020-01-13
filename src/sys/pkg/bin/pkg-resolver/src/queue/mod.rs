@@ -16,7 +16,7 @@ use {
         task::{Context, Poll},
     },
     parking_lot::Mutex,
-    pin_utils::unsafe_pinned,
+    pin_project::pin_project,
     std::{
         collections::HashMap,
         hash::Hash,
@@ -126,6 +126,7 @@ where
 ///
 /// Items are yielded from the stream in the order that they are processed, which may differ from
 /// the order that items are enqueued, depending on which concurrent tasks complete first.
+#[pin_project]
 pub struct WorkQueue<W, K, C, O> {
     /// The work callback function.
     work_fn: W,
@@ -135,18 +136,12 @@ pub struct WorkQueue<W, K, C, O> {
     /// and by [WorkSender] to add new tasks to the queue.
     tasks: Arc<Mutex<HashMap<K, TaskVariants<C, O>>>>,
 
-    // Pinned fields. Must be kept up to date with Unpin impl and unsafe_pinned!() calls.
     /// Receiving end of the queue.
+    #[pin]
     pending: mpsc::UnboundedReceiver<K>,
     /// Tasks currently being run. Will contain [0, concurrency] futures at any given time.
+    #[pin]
     running: FuturesUnordered<RunningTask<K, O>>,
-}
-
-impl<W, K, C, O> Unpin for WorkQueue<W, K, C, O>
-where
-    FuturesUnordered<RunningTask<K, O>>: Unpin,
-    mpsc::UnboundedReceiver<K>: Unpin,
-{
 }
 
 impl<W, WF, K, C, O> WorkQueue<W, K, C, O>
@@ -157,12 +152,6 @@ where
     WF: Send + 'static,
     O: Send + 'static,
 {
-    // safe because:
-    // * WorkQueue does not implement Drop or use repr(packed)
-    // * Unpin is only implemented if all pinned fields implement Unpin
-    unsafe_pinned!(pending: mpsc::UnboundedReceiver<K>);
-    unsafe_pinned!(running: FuturesUnordered<RunningTask<K, O>>);
-
     /// Converts this stream of K into a single future that resolves when the stream is
     /// terminated.
     pub fn into_future(self) -> impl Future<Output = ()> {
@@ -174,21 +163,23 @@ where
     /// * Poll::Ready(None) if the input work queue is empty and closed.
     /// * Poll::Ready(Some(())) if new work was started.
     /// * Poll::Pending if at the concurrency limit or no work is enqueued.
-    fn find_work(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<()>> {
+    fn find_work(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<()>> {
+        let mut this = self.project();
+
         // Nothing to do if the stream of requests is EOF.
-        if self.as_mut().pending().is_terminated() {
+        if this.pending.is_terminated() {
             return Poll::Ready(None);
         }
 
         let mut found = false;
-        while self.as_mut().running().len() < self.concurrency {
-            match ready!(self.as_mut().pending().poll_next(cx)) {
+        while this.running.len() < *this.concurrency {
+            match ready!(this.pending.as_mut().poll_next(cx)) {
                 None => break,
                 Some(key) => {
                     found = true;
 
                     // Transition the work info to the running state, claiming the context.
-                    let context = self
+                    let context = this
                         .tasks
                         .lock()
                         .get_mut(&key)
@@ -198,10 +189,10 @@ where
                     // WorkSender::push_entry guarantees that key will only be pushed into pending
                     // if it created the entry in the map, so it is guaranteed here that multiple
                     // instances of the same key will not be executed concurrently.
-                    let work = (self.work_fn)(key.clone(), context);
+                    let work = (this.work_fn)(key.clone(), context);
                     let fut = async move { (key, work.await) }.boxed();
 
-                    self.as_mut().running().push(fut);
+                    this.running.push(fut);
                 }
             }
         }
@@ -212,35 +203,37 @@ where
         }
     }
 
-    fn do_work(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<K>> {
-        match self.as_mut().running().poll_next(cx) {
+    fn do_work(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<K>> {
+        let mut this = self.project();
+
+        match this.running.as_mut().poll_next(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(None) => {
-                // self.running is now terminated, but unlike the guarantees given by other
+                // this.running is now terminated, but unlike the guarantees given by other
                 // FusedStream implementations, FuturesUnordered can continue to be polled (unless
                 // new work comes in, it will continue to return Poll::Ready(None)), and new
                 // futures can be pushed into it. Pushing new work on a terminated
                 // FuturesUnordered will cause is_terminated to return false, and polling the
                 // stream will start the task.
-                if self.as_mut().pending().is_terminated() {
+                if this.pending.is_terminated() {
                     Poll::Ready(None)
                 } else {
                     Poll::Pending
                 }
             }
             Poll::Ready(Some((key, res))) => {
-                let mut tasks = self.tasks.lock();
+                let mut tasks = this.tasks.lock();
                 let infos: &mut TaskVariants<_, _> =
                     &mut tasks.get_mut(&key).expect("key to exist in map if not resolved");
 
                 if let Some(next_context) = infos.done(res) {
                     // start the next operation immediately
-                    let work = (self.work_fn)(key.clone(), next_context);
+                    let work = (this.work_fn)(key.clone(), next_context);
                     let key_clone = key.clone();
                     let fut = async move { (key_clone, work.await) }.boxed();
 
                     drop(tasks);
-                    self.as_mut().running().push(fut);
+                    this.running.push(fut);
                 } else {
                     // last pending operation with this key
                     tasks.remove(&key);

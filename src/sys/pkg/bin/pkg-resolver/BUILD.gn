@@ -51,7 +51,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:pin-project",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",

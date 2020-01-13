@@ -311,6 +311,11 @@
             "package_name": "pest_derive"
         },
         {
+            "crate_name": "pin_project",
+            "crate_type": "lib",
+            "package_name": "pin-project"
+        },
+        {
             "crate_name": "pin_utils",
             "crate_type": "lib",
             "package_name": "pin-utils"
