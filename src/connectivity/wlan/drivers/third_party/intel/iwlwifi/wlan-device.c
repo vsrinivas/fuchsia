@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// The place holder for the code to interact with the MLME.
+// The place holder for the driver code to interact with the MLME.
 //
-//          MLME
+//                                 devmgr
+//                                   |
+//                                   v
+//          MLME  === channel ===   SME
 //            |
 //            v
 //  +-------------------+
@@ -16,27 +19,31 @@
 //       v         v
 //     mvm/mac80211.c
 //
-// Note that the |*ctx| in this file is actually |*iwl_trans| passed when device_add() is called.
+// Note that the '*ctx' in this file may refer to:
 //
-// - sme_channel
+//   - 'struct iwl_trans*' for PHY ops.
+//   - 'struct iwl_mvm_vif*' for MAC ops.
 //
-// The below steps briefly describe how the 'sme_channel' is used and transferred. In short,
-// the goal is going to let SME and MLME to have a channel to communicate.
 //
-// + After the devmgr (the device manager in wlanstack) detects a PHY device, the devmgr first
-//   creates a SME instance in order to handle the MAC operation later. Then the devmgr establishes
-//   a channel and passes one end of the channel to the SME instance.
+// Sme_channel
 //
-// + The devmgr requests the PHY device to create a MAC interface. In the request, the other end
-//   of channel is passed.
+//   The steps below briefly describe how the 'sme_channel' is used and transferred. In short,
+//   the goal is to let SME and MLME have a channel to communicate with each other.
 //
-// + The driver's phy_create_iface() gets called, and saves the 'sme_channel' handle in the new
-//   created MAC context.
+//   + After the devmgr (the device manager in wlanstack) detects a PHY device, the devmgr first
+//     creates an SME instance in order to handle the MAC operation later. Then the devmgr
+//     establishes a channel and passes one end to the SME instance.
 //
-// + Once the MAC device is added, its mac_start() will be called. Then it will transfer the
-//   'sme_channel' handle back to the MLME.
+//   + The devmgr requests the PHY device to create a MAC interface. In the request, the other end
+//     of channel is passed to the driver.
 //
-// + Now, both sides of channel (SME and MLME) can talk now.
+//   + The driver's phy_create_iface() gets called, and saves the 'sme_channel' handle in the newly
+//     created MAC context.
+//
+//   + Once the MAC device is added, its mac_start() will be called. Then it will transfer the
+//     'sme_channel' handle back to the MLME.
+//
+//   + Now, both sides of channel (SME and MLME) can talk now.
 //
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
@@ -78,7 +85,7 @@ size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
 }
 
 //
-// Given a NVM data, copy the band and channel info into the 'wlan_info_band_info_t'  structure.
+// Given a NVM data, copy the band and channel info into the 'wlan_info_band_info_t' structure.
 //
 // - 'bands_count' is the number of bands in 'bands[]'.
 // - 'band_infos[]' must have at least bands_count for this function to write.
@@ -405,7 +412,7 @@ unlock:
   return ret;
 }
 
-// This function is working with a PHY context ('ctx') to delete a MAC interface.
+// This function is working with a PHY context ('ctx') to delete a MAC interface ('id').
 // The 'id' is the value assigned by phy_create_iface().
 static zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
   struct iwl_trans* iwl_trans = ctx;
