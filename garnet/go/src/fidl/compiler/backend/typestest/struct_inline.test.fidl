@@ -1,0 +1,6 @@
+library test.name;
+
+struct BasicStruct {
+    uint32 x;
+    string y;
+};
