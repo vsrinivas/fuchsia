@@ -38,6 +38,7 @@ template <typename ModuleImpl>
 EffectsModule<ModuleImpl> EffectsModule<ModuleImpl>::Open(const char* name) {
   void* lib = dlopen(name, RTLD_LAZY | RTLD_GLOBAL);
   if (lib == nullptr) {
+    FX_LOGS(ERROR) << "Failed to open '" << name << "' " << dlerror();
     return {};
   }
   ModuleImpl* module = nullptr;
