@@ -98,7 +98,7 @@ class AskSuggestionList extends StatelessWidget {
                   children: <Widget>[
                     Expanded(
                       child: Text(
-                        suggestion.displayInfo.title,
+                        suggestion.title,
                         maxLines: 1,
                         softWrap: false,
                         overflow: TextOverflow.fade,

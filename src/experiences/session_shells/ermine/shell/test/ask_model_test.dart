@@ -18,7 +18,6 @@ import 'package:ermine_library/src/utils/suggestions.dart';
 void main() {
   ValueNotifier<bool> visibility;
   MockSuggestionService suggestionService;
-  MockPuppetMaster puppetMaster = MockPuppetMaster();
   AskModel model;
   Completer suggestionsCompleter;
   Completer selectionCompleter;
@@ -34,7 +33,6 @@ void main() {
     model = AskModel(
       onDismiss: onDismiss,
       suggestionService: suggestionService,
-      puppetMaster: puppetMaster,
     );
     model.suggestions.addListener(() => suggestionsCompleter.complete());
     model.selection.addListener(() => selectionCompleter.complete());
@@ -80,8 +78,8 @@ void main() {
     // Type: 't'.
     when(suggestionService.getSuggestions('t'))
         .thenAnswer((_) => Future<Iterable<Suggestion>>.value(<Suggestion>[
-              Suggestion(id: 'one', displayInfo: DisplayInfo(title: '')),
-              Suggestion(id: 'two', displayInfo: DisplayInfo(title: '')),
+              Suggestion(id: 'one', title: ''),
+              Suggestion(id: 'two', title: ''),
             ]));
     model.query('t');
 

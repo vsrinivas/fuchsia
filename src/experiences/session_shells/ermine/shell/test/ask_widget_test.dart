@@ -16,11 +16,9 @@ import 'package:ermine_library/src/widgets/ask/ask.dart';
 void main() {
   testWidgets('Create Ask Widget', (tester) async {
     final suggestionService = MockSuggestionService();
-    final puppetMaster = MockPuppetMaster();
     final widget = TestApp(
         child: Ask(
       suggestionService: suggestionService,
-      puppetMaster: puppetMaster,
     ));
     await tester.pumpWidget(widget);
 
@@ -30,11 +28,9 @@ void main() {
 
   testWidgets('Hide hint text on typing', (tester) async {
     final suggestionService = MockSuggestionService();
-    final puppetMaster = MockPuppetMaster();
     final widget = TestApp(
         child: Ask(
       suggestionService: suggestionService,
-      puppetMaster: puppetMaster,
     ));
     await tester.pumpWidget(widget);
 
@@ -48,13 +44,11 @@ void main() {
 
   testWidgets('Displays suggestions', (tester) async {
     final suggestionService = MockSuggestionService();
-    final puppetMaster = MockPuppetMaster();
     final key = GlobalKey<AskState>();
     final widget = TestApp(
       child: Ask(
         key: key,
         suggestionService: suggestionService,
-        puppetMaster: puppetMaster,
       ),
     );
     await tester.pumpWidget(widget);
@@ -94,8 +88,8 @@ class MockSuggestionService extends Mock implements SuggestionService {
   ]) async =>
       query == 'hello'
           ? [
-              Suggestion(id: 'one', displayInfo: DisplayInfo(title: 'hi')),
-              Suggestion(id: 'two', displayInfo: DisplayInfo(title: 'there')),
+              Suggestion(id: 'one', title: 'hi'),
+              Suggestion(id: 'two', title: 'there'),
             ]
           : [];
 }

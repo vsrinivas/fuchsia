@@ -100,7 +100,6 @@ dart_library("ermine_library") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.app.discover",
     "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.memory",
@@ -117,6 +116,7 @@ dart_library("ermine_library") {
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//src/experiences/session_shells/ermine/settings",
+    "//src/sys/component_index/fidl:index",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
     "//third_party/dart-pkg/pub/flutter_svg",

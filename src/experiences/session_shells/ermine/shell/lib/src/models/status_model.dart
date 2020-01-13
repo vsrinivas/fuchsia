@@ -87,6 +87,9 @@ class StatusModel implements Inspectable {
   void onInspect(Node node) {
     if (key.currentContext != null) {
       final rect = rectFromGlobalKey(key);
+      if (rect == null) {
+        return;
+      }
       node
           .stringProperty('rect')
           .setValue('${rect.left},${rect.top},${rect.width},${rect.height}');

@@ -6,10 +6,7 @@ import 'dart:async';
 import 'dart:convert' show json;
 import 'dart:io';
 
-import 'package:fidl_fuchsia_app_discover/fidl_async.dart'
-    show SuggestionsProxy;
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
-import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
     show RegistryProxy;
@@ -34,12 +31,11 @@ import 'topbar_model.dart';
 /// Model that manages all the application state of this session shell.
 class AppModel {
   final _pointerEventsListener = PointerEventsListener();
-  final _suggestionsService = SuggestionsProxy();
-  final _puppetMaster = modular.PuppetMasterProxy();
   final _shortcutRegistry = ui_shortcut.RegistryProxy();
   final _intl = PropertyProviderProxy();
 
   SessionShell sessionShell;
+  SuggestionService _suggestionService;
 
   /// The [GlobalKey] associated with [Ask] widget.
   final GlobalKey<AskState> askKey = GlobalKey(debugLabel: 'ask');
@@ -66,16 +62,13 @@ class AppModel {
   AppModel() {
     StartupContext.fromStartupInfo()
         .incoming
-        .connectToService(_suggestionsService);
-
-    StartupContext.fromStartupInfo().incoming.connectToService(_puppetMaster);
-
-    StartupContext.fromStartupInfo()
-        .incoming
         .connectToService(_shortcutRegistry);
 
     StartupContext.fromStartupInfo().incoming.connectToService(_intl);
     _localeStream = LocaleSource(_intl).stream().asBroadcastStream();
+
+    _suggestionService =
+        SuggestionService.fromStartupContext(StartupContext.fromStartupInfo());
 
     sessionShell = SessionShell(
       startupContext: _startupContext,
@@ -97,9 +90,7 @@ class AppModel {
     status = StatusModel.fromStartupContext(_startupContext, onLogout);
   }
 
-  SuggestionService get suggestions => SuggestionService(_suggestionsService);
-
-  modular.PuppetMaster get puppetMaster => _puppetMaster;
+  SuggestionService get suggestions => _suggestionService;
 
   Stream<Locale> get localeStream => _localeStream;
 
@@ -251,9 +242,8 @@ class AppModel {
     onCancel();
     _pointerEventsListener.stop();
 
-    _suggestionsService.ctrl.close();
-    _puppetMaster.ctrl.close();
     _intl.ctrl.close();
+    _suggestionService.dispose();
     status.dispose();
     _keyboardShortcuts.dispose();
     _shortcutRegistry.ctrl.close();

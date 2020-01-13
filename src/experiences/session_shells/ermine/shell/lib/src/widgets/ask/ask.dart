@@ -5,7 +5,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:fuchsia_inspect/inspect.dart';
-import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 
 import '../../models/ask_model.dart';
 import '../../utils/styles.dart';
@@ -17,13 +16,11 @@ import 'ask_text_field.dart';
 /// Defines a widget that builds the Ask bar per Ermine UX.
 class Ask extends StatefulWidget {
   final SuggestionService suggestionService;
-  final modular.PuppetMaster puppetMaster;
   final VoidCallback onDismiss;
   final bool unbounded;
 
   const Ask({
     @required this.suggestionService,
-    @required this.puppetMaster,
     Key key,
     this.onDismiss,
     this.unbounded = false,
@@ -42,7 +39,6 @@ class AskState extends State<Ask> implements Inspectable {
 
     model = AskModel(
       suggestionService: widget.suggestionService,
-      puppetMaster: widget.puppetMaster,
       onDismiss: widget.onDismiss,
     )..query('');
   }
@@ -76,6 +72,9 @@ class AskState extends State<Ask> implements Inspectable {
   @override
   void onInspect(Node node) {
     final rect = rectFromGlobalKey(widget.key);
+    if (rect == null) {
+      return;
+    }
     node
         .stringProperty('rect')
         .setValue('${rect.left},${rect.top},${rect.width},${rect.height}');

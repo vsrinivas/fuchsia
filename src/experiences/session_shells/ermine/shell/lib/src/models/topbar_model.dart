@@ -54,6 +54,9 @@ class TopbarModel implements Inspectable {
   @override
   void onInspect(Node node) {
     Rect rect = rectFromGlobalKey(askButtonKey);
+    if (rect == null) {
+      return;
+    }
     node
         .stringProperty('askButtonRect')
         .setValue('${rect.left},${rect.top},${rect.width},${rect.height}');
