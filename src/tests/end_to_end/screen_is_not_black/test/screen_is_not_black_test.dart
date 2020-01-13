@@ -38,6 +38,13 @@ void main() {
   });
 
   test('the startup screen is not black', () async {
+    // Reboot Fuchsia so that we are testing the initial startup state.
+    //
+    // This is necessary because other tests (currently
+    // garnet_input_latency_benchmarks_test) kill Scenic, which would cause this
+    // test to fail.
+    await sl4fDriver.reboot();
+
     for (var attempt = 0; attempt < _tries; attempt++) {
       try {
         final screen = await scenicDriver.takeScreenshot(dumpName: 'screen');

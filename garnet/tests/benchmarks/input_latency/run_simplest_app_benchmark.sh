@@ -27,12 +27,16 @@ done
 
 TRACE_FILE="/tmp/trace-$(date +%Y-%m-%dT%H:%M:%S).json"
 
-echo "== $BENCHMARK_LABEL: Killing processes..."
-killall root_presenter* || true
-killall scenic* || true
-killall basemgr* || true
-killall flutter* || true
-killall present_view* || true
+kill_processes() {
+  echo "== $BENCHMARK_LABEL: Killing processes..."
+  killall root_presenter* || true
+  killall scenic* || true
+  killall basemgr* || true
+  killall flutter* || true
+  killall present_view* || true
+}
+
+kill_processes
 
 echo "== $BENCHMARK_LABEL: Starting app..."
 /bin/run -d fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx
@@ -58,3 +62,14 @@ echo "== $BENCHMARK_LABEL: Processing trace..."
 /pkgfs/packages/garnet_input_latency_benchmarks/0/bin/process_input_latency_trace  \
   -test_suite_name="${BENCHMARK_LABEL}"                                            \
   -benchmarks_out_filename="${OUT_FILE}" "${TRACE_FILE}"
+
+# Clean up by killing the processes.  There are two reasons for this:
+#  1) We want to prevent these processes from interfering with later
+#     performance tests.
+#  2) When this test is run via SSH (when using SL4F), SSH waits for
+#     end-of-file on stdout/stderr, but that EOF never occurs if one of the
+#     processes inherits stdout/stderr and is left running in the
+#     background.
+kill_processes
+
+echo "== $BENCHMARK_LABEL: Finished"

@@ -28,12 +28,17 @@ done
 TRACE_FILE="/tmp/trace-$(date +%Y-%m-%dT%H:%M:%S).json"
 
 echo "== $BENCHMARK_LABEL: Killing processes..."
-killall root_presenter* || true
-killall scenic* || true
-killall basemgr* || true
-killall view_manager* || true
-killall flutter* || true
-killall present_view* || true
+kill_processes() {
+  killall root_presenter* || true
+  killall scenic* || true
+  killall basemgr* || true
+  killall view_manager* || true
+  killall flutter* || true
+  killall present_view* || true
+  killall yuv_to_image_pipe* || true
+}
+
+kill_processes
 
 echo "== $BENCHMARK_LABEL: Starting app..."
 /bin/present_view fuchsia-pkg://fuchsia.com/yuv_to_image_pipe#meta/yuv_to_image_pipe.cmx \
@@ -61,6 +66,8 @@ echo "== $BENCHMARK_LABEL: Processing trace..."
   -test_suite_name="${BENCHMARK_LABEL}"                                            \
   -benchmarks_out_filename="${OUT_FILE}" "${TRACE_FILE}"
 
-# Kill the processes as they were backgrounded.
-killall present_view* || true
-killall yuv_to_image_pipe* || true
+# Clean up by killing the processes.  Some of these were backgrounded; we
+# want to prevent them from interfering with later performance tests.
+kill_processes
+
+echo "== $BENCHMARK_LABEL: Finished"
