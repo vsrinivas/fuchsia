@@ -1240,7 +1240,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
     file_ << kIndent << method_info.request->c_name << "* _request = ("
           << method_info.request->c_name << "*)_wr_bytes;\n";
     file_ << kIndent << "memset(_wr_bytes, 0, sizeof(_wr_bytes));\n";
-    EmitTxnHeader(&file_, "_request", method_info.ordinal_name);
+    EmitTxnHeader(&file_, "_request", method_info.generated_ordinal_name);
     EmitLinearizeMessage(&file_, "_request", "_wr_bytes", request);
     const char* handles_value = "NULL";
     if (max_hcount > 0) {
@@ -1629,7 +1629,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
     file_ << kIndent << method_info.response->c_name << "* _response = ("
           << method_info.response->c_name << "*)_wr_bytes;\n";
     file_ << kIndent << "memset(_wr_bytes, 0, sizeof(_wr_bytes));\n";
-    EmitTxnHeader(&file_, "_response", method_info.ordinal_name);
+    EmitTxnHeader(&file_, "_response", method_info.generated_ordinal_name);
     EmitLinearizeMessage(&file_, "_response", "_wr_bytes", response);
     const char* handle_value = "NULL";
     if (hcount > 0) {
