@@ -162,7 +162,12 @@ class AudioDevice : public AudioObject {
   virtual void OnDriverStopComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
 
   virtual void OnDriverPlugStateChange(bool plugged, zx::time plug_time)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {
+    TRACE_DURATION("audio", "AudioDevice::OnDriverPlugStateChange");
+    threading_model().FidlDomain().PostTask([output = fbl::RefPtr(this), plugged, plug_time]() {
+      output->device_registry().OnPlugStateChanged(std::move(output), plugged, plug_time);
+    });
+  };
 
   //////////////////////////////////////////////////////////////////////////////
   //

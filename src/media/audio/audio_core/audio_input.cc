@@ -128,11 +128,7 @@ void AudioInput::OnDriverPlugStateChange(bool plugged, zx::time plug_time) {
     driver()->Stop();
   }
 
-  // Reflect this message to the AudioDeviceManager so it can deal with the
-  // routing consequences of the plug state change.
-  threading_model().FidlDomain().PostTask([output = fbl::RefPtr(this), plugged, plug_time]() {
-    output->device_registry().OnPlugStateChanged(std::move(output), plugged, plug_time);
-  });
+  AudioDevice::OnDriverPlugStateChange(plugged, plug_time);
 }
 
 void AudioInput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {

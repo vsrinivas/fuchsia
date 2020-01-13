@@ -63,9 +63,6 @@ class DriverOutput : public AudioOutput {
 
   void OnDriverStartComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  void OnDriverPlugStateChange(bool plugged, zx::time plug_time) override
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-
   // Uses |writer| to populate the frames specified by |span|.
   //
   // Writer will be called iteratively with a |offset| frame, a |length| (also in frames), and
