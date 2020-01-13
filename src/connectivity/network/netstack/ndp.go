@@ -220,6 +220,11 @@ func (n *ndpDispatcher) OnRecursiveDNSServerOption(nicID tcpip.NICID, addrs []tc
 	n.addEvent(&ndpRecursiveDNSServerEvent{nicID: nicID, addrs: addrs, lifetime: lifetime})
 }
 
+// OnDHCPv6Configuration implements stack.NDPDispatcher.OnDHCPv6Configuration.
+func (n *ndpDispatcher) OnDHCPv6Configuration(nicID tcpip.NICID, configuration stack.DHCPv6ConfigurationFromNDPRA) {
+	syslog.Infof("ndp: OnDHCPv6Configuration(%d, %d)", nicID, configuration)
+}
+
 // addEvent adds an event to be handled by the ndpDispatcher goroutine.
 func (n *ndpDispatcher) addEvent(e ndpEvent) {
 	n.mu.Lock()

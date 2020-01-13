@@ -74,8 +74,8 @@ func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
 type stats struct {
 	tcpip.Stats
 	SocketCount      bindingSetCounterStat
-	SocketsCreated   *tcpip.StatCounter
-	SocketsDestroyed *tcpip.StatCounter
+	SocketsCreated   tcpip.StatCounter
+	SocketsDestroyed tcpip.StatCounter
 }
 
 // Map from Cobalt metric ID to metric value.

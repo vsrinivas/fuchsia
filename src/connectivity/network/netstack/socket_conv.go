@@ -49,10 +49,10 @@ const DefaultTTL = 64
 
 const sizeOfInt32 int = 4
 
-func GetSockOpt(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, level, name int16) (interface{}, *tcpip.Error) {
+func GetSockOpt(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, level, name int16) (interface{}, *tcpip.Error) {
 	switch level {
 	case C.SOL_SOCKET:
-		return getSockOptSocket(ep, netProto, transProto, name)
+		return getSockOptSocket(ep, ns, netProto, transProto, name)
 
 	case C.SOL_TCP:
 		return getSockOptTCP(ep, name)
@@ -76,7 +76,7 @@ func GetSockOpt(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, transPr
 	return nil, tcpip.ErrUnknownProtocol
 }
 
-func getSockOptSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, name int16) (interface{}, *tcpip.Error) {
+func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, name int16) (interface{}, *tcpip.Error) {
 	switch name {
 	case C.SO_TYPE:
 		switch transProto {
@@ -166,10 +166,18 @@ func getSockOptSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, t
 		if err := ep.GetSockOpt(&v); err != nil {
 			return nil, err
 		}
-		if len(v) == 0 {
+		if v == tcpip.BindToDeviceOption(0) {
 			return []byte(nil), nil
 		}
-		return append([]byte(v), 0), nil
+		ns.mu.Lock()
+		nicInfos := ns.mu.stack.NICInfo()
+		ns.mu.Unlock()
+		for id, info := range nicInfos {
+			if tcpip.BindToDeviceOption(id) == v {
+				return append([]byte(info.Name), 0), nil
+			}
+		}
+		return nil, tcpip.ErrUnknownDevice
 
 	case C.SO_BROADCAST:
 		var v tcpip.BroadcastOption
@@ -403,10 +411,10 @@ func getSockOptIP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 	return nil, tcpip.ErrUnknownProtocolOption
 }
 
-func SetSockOpt(ep tcpip.Endpoint, level, name int16, optVal []uint8) *tcpip.Error {
+func SetSockOpt(ep tcpip.Endpoint, ns *Netstack, level, name int16, optVal []uint8) *tcpip.Error {
 	switch level {
 	case C.SOL_SOCKET:
-		return setSockOptSocket(ep, name, optVal)
+		return setSockOptSocket(ep, ns, name, optVal)
 
 	case C.SOL_TCP:
 		return setSockOptTCP(ep, name, optVal)
@@ -429,7 +437,7 @@ func SetSockOpt(ep tcpip.Endpoint, level, name int16, optVal []uint8) *tcpip.Err
 	return tcpip.ErrUnknownProtocolOption
 }
 
-func setSockOptSocket(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
+func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte) *tcpip.Error {
 	switch name {
 	case C.SO_SNDBUF:
 		if len(optVal) < sizeOfInt32 {
@@ -468,7 +476,19 @@ func setSockOptSocket(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error
 		if n == -1 {
 			n = len(optVal)
 		}
-		return ep.SetSockOpt(tcpip.BindToDeviceOption(optVal[:n]))
+		if n == 0 {
+			return ep.SetSockOpt(tcpip.BindToDeviceOption(0))
+		}
+		name := string(optVal[:n])
+		ns.mu.Lock()
+		nicInfos := ns.mu.stack.NICInfo()
+		ns.mu.Unlock()
+		for id, info := range nicInfos {
+			if name == info.Name {
+				return ep.SetSockOpt(tcpip.BindToDeviceOption(id))
+			}
+		}
+		return tcpip.ErrUnknownDevice
 
 	case C.SO_BROADCAST:
 		if len(optVal) < sizeOfInt32 {

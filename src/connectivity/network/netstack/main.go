@@ -166,7 +166,7 @@ func Main() {
 	var posixSocketProviderService socket.ProviderService
 
 	socketNotifications := make(chan struct{}, 1)
-	socketProviderImpl := providerImpl{ns: ns, metadata: socketMetadata{endpoints: &ns.endpoints, newSocketNotifications: socketNotifications}}
+	socketProviderImpl := providerImpl{metadata: socketMetadata{newSocketNotifications: socketNotifications, ns: ns}}
 	ns.stats = stats{
 		Stats: stk.Stats(),
 		SocketCount: bindingSetCounterStat{bindingSets: []*fidl.BindingSet{
@@ -174,8 +174,6 @@ func Main() {
 			&socketProviderImpl.datagramSocketService.BindingSet,
 			&socketProviderImpl.streamSocketService.BindingSet,
 		}},
-		SocketsCreated:   &socketProviderImpl.metadata.socketsCreated,
-		SocketsDestroyed: &socketProviderImpl.metadata.socketsDestroyed,
 	}
 
 	var inspectService inspect.InspectService
