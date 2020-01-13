@@ -185,76 +185,84 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
   static const std::string kConfigWithEffects =
       R"JSON({
     "volume_curve": [
-      {
-          "level": 0.0,
-          "db": -160.0
-      },
-      {
-          "level": 1.0,
-          "db": 0.0
-      }
+      { "level": 0.0, "db": -160.0 },
+      { "level": 1.0, "db": 0.0 }
     ],
-    "pipeline": {
-      "_comment": "Just ignore me",
-      "output_streams": [
+    "routing_policy": {
+      "device_profiles": [
         {
-          "streams": ["media"],
-          "name": "media",
-          "effects": [
-            {
-              "lib": "libfoo.so",
-              "name": "effect1",
-              "config": {
-                "some_config": 0
+          "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+          "supported_output_stream_types": [
+            "media",
+            "interruption",
+            "background",
+            "communications",
+            "system_agent"
+          ],
+          "eligible_for_loopback": true,
+          "pipeline": {
+            "streams": ["background", "system_agent", "media", "interruption"],
+            "effects": [
+              {
+                "lib": "libbar2.so",
+                "name": "linearize_effect",
+                "_comment": "just a comment",
+                "config": {
+                  "a": 123,
+                  "b": 456
+                }
               }
-            },
-            {
-              "lib": "libbar.so",
-              "name": "effect2",
-              "config": {
-                "arg1": 55,
-                "arg2": 3.14
+            ],
+            "inputs": [
+              {
+                "streams": [],
+                "effects": [
+                  {
+                    "lib": "libfoo2.so",
+                    "name": "effect3"
+                  }
+                ],
+                "inputs": [
+                  {
+                    "streams": ["media"],
+                    "name": "media",
+                    "effects": [
+                      {
+                        "lib": "libfoo.so",
+                        "name": "effect1",
+                        "config": {
+                          "some_config": 0
+                        }
+                      },
+                      {
+                        "lib": "libbar.so",
+                        "name": "effect2",
+                        "config": {
+                          "arg1": 55,
+                          "arg2": 3.14
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "streams": ["communications"],
+                    "name": "communications",
+                    "effects": [
+                      {
+                        "lib": "libbaz.so",
+                        "_comment": "Ignore me",
+                        "config": {
+                          "string_param": "some string value"
+                        }
+                      }
+                    ]
+                  }
+                ]
               }
-            }
-          ]
-        },
-        {
-          "streams": ["communications"],
-          "name": "communications",
-          "effects": [
-            {
-              "lib": "libbaz.so",
-              "_comment": "Ignore me",
-              "config": {
-                "string_param": "some string value"
-              }
-            }
-          ]
+            ]
+          }
         }
-      ],
-      "mix": {
-        "streams": [],
-        "effects": [
-          {
-            "lib": "libfoo2.so",
-            "name": "effect3"
-          }
-        ]
-      },
-      "linearize": {
-        "streams": ["background", "system_agent", "media", "interruption"],
-        "effects": [
-          {
-            "lib": "libbar2.so",
-            "name": "linearize_effect",
-            "_comment": "just a comment",
-            "config": {
-              "a": 123,
-              "b": 456
-            }
-          }
-        ]
-      }
+      ]
     }
   })JSON";
   ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithEffects.data(),
@@ -263,7 +271,10 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
   const auto config = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
   ASSERT_TRUE(config);
 
-  const auto& root = config->pipeline().root();
+  const audio_stream_unique_id_t device_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                       0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                       0x05, 0x3a}};
+  const auto& root = config->routing_config().device_profile(device_id).pipeline_config().root();
   {  // 'linearize' mix_group
     const auto& mix_group = root;
     EXPECT_EQ("", mix_group.name);

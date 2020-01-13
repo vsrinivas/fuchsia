@@ -60,13 +60,9 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
                                        },
                                    .effects = {},
                                }}}}};
-    auto config = builder
-                      .SetDefaultVolumeCurve(
-                          VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
-                      .SetPipeline(PipelineConfig(std::move(root)))
-                      .Build();
 
-    return std::make_shared<OutputPipeline>(config.pipeline(), kDefaultFormat, 128, kOneFramePerMs);
+    auto pipeline_config = PipelineConfig(root);
+    return std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat, 128, kOneFramePerMs);
   }
 };
 

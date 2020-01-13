@@ -8,7 +8,6 @@
 #include <optional>
 
 #include "src/lib/syslog/cpp/logger.h"
-#include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/routing_config.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 
@@ -19,14 +18,12 @@ class ProcessConfig;
 class ProcessConfigBuilder {
  public:
   ProcessConfigBuilder& SetDefaultVolumeCurve(VolumeCurve curve);
-  ProcessConfigBuilder& SetPipeline(PipelineConfig pipeline);
   ProcessConfigBuilder& AddDeviceRoutingProfile(
       std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::DeviceProfile>
           keyed_profile);
   ProcessConfig Build();
 
  private:
-  PipelineConfig pipeline_ = PipelineConfig::Default();
   std::optional<VolumeCurve> default_volume_curve_;
   std::vector<std::pair<audio_stream_unique_id_t, RoutingConfig::DeviceProfile>> device_profiles_;
   std::optional<RoutingConfig::DeviceProfile> default_device_profile_;
@@ -67,20 +64,16 @@ class ProcessConfig {
   }
 
   using Builder = ProcessConfigBuilder;
-  ProcessConfig(VolumeCurve curve, PipelineConfig effects, RoutingConfig routing_config)
-      : default_volume_curve_(std::move(curve)),
-        pipeline_(std::move(effects)),
-        routing_config_(std::move(routing_config)) {}
+  ProcessConfig(VolumeCurve curve, RoutingConfig routing_config)
+      : default_volume_curve_(std::move(curve)), routing_config_(std::move(routing_config)) {}
 
   const VolumeCurve& default_volume_curve() const { return default_volume_curve_; }
-  const PipelineConfig& pipeline() const { return pipeline_; }
   const RoutingConfig& routing_config() const { return routing_config_; }
 
  private:
   static std::optional<ProcessConfig> instance_;
 
   VolumeCurve default_volume_curve_;
-  PipelineConfig pipeline_;
   RoutingConfig routing_config_;
 };
 

@@ -9,11 +9,6 @@ namespace media::audio {
 // static
 std::optional<ProcessConfig> ProcessConfig::instance_;
 
-ProcessConfigBuilder& ProcessConfigBuilder::SetPipeline(PipelineConfig pipeline) {
-  pipeline_ = std::move(pipeline);
-  return *this;
-}
-
 ProcessConfigBuilder& ProcessConfigBuilder::SetDefaultVolumeCurve(VolumeCurve curve) {
   default_volume_curve_ = {curve};
   return *this;
@@ -38,7 +33,7 @@ ProcessConfig ProcessConfigBuilder::Build() {
   std::optional<VolumeCurve> maybe_curve = std::nullopt;
   default_volume_curve_.swap(maybe_curve);
   FX_CHECK(maybe_curve) << "Missing required VolumeCurve member";
-  return {std::move(*maybe_curve), std::move(pipeline_),
+  return {std::move(*maybe_curve),
           RoutingConfig(std::move(device_profiles_), std::move(default_device_profile_))};
 }
 

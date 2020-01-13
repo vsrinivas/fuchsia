@@ -11,6 +11,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "src/media/audio/audio_core/pipeline_config.h"
+
 namespace media::audio {
 
 class RoutingConfig {
@@ -23,9 +25,11 @@ class RoutingConfig {
     DeviceProfile() = default;
 
     DeviceProfile(bool eligible_for_loopback, UsageSupportSet output_usage_support_set,
-                  bool independent_volume_control = false)
+                  bool independent_volume_control = false,
+                  PipelineConfig pipeline_config = PipelineConfig::Default())
         : eligible_for_loopback_(eligible_for_loopback),
           independent_volume_control_(independent_volume_control),
+          pipeline_config_(std::move(pipeline_config)),
           output_usage_support_set_(std::move(output_usage_support_set)) {}
 
     bool supports_usage(fuchsia::media::AudioRenderUsage usage) const {
@@ -41,9 +45,12 @@ class RoutingConfig {
     // receive routed streams at unity gain.
     bool independent_volume_control() const { return independent_volume_control_; }
 
+    const PipelineConfig& pipeline_config() const { return pipeline_config_; }
+
    private:
     bool eligible_for_loopback_ = true;
     bool independent_volume_control_ = false;
+    PipelineConfig pipeline_config_ = PipelineConfig::Default();
 
     // The set of output usages supported by the device.
     std::optional<UsageSupportSet> output_usage_support_set_;
@@ -63,6 +70,8 @@ class RoutingConfig {
 
     return it != device_profiles_.end() ? it->second : default_device_profile_;
   }
+
+  const DeviceProfile& default_device_profile() const { return default_device_profile_; }
 
  private:
   friend class ProcessConfigBuilder;

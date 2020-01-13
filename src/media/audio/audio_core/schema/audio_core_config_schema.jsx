@@ -37,6 +37,10 @@
         "effects": {
           "type": "array",
           "items": { "$ref": "#/definitions/effect" }
+        },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/mix_group" }
         }
       },
       "additionalProperties": false
@@ -57,35 +61,20 @@
 
         // Whether this device has independent volume control, and should therefore
         // receive routed streams at unity gain.
-        "independent_volume_control": "bool"
+        "independent_volume_control": "bool",
+
+        // The mix pipeline to construct for this device.
+        "pipeline": { "$ref" : "#definitions/mix_group" }
       },
       "required": [ "device_id", "supported_output_stream_types", "eligible_for_loopback" ],
       "additionalProperties": false
     }
-   },
+  },
   "type": "object",
   "properties": {
     "volume_curve": {
       "type": "array",
       "items": { "$ref": "#/definitions/volume_mapping" }
-    },
-    "pipeline": {
-      "type": "object",
-      "properties": {
-        "_comment": "string",
-        "name": "string",
-        "output_streams": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/mix_group" }
-        },
-        "mix": {
-          "$ref": "#/definitions/mix_group"
-        },
-        "linearize": {
-          "$ref": "#/definitions/mix_group"
-        }
-      },
-      "additionalProperties": false
     },
     "routing_policy": {
       "type" : "object",

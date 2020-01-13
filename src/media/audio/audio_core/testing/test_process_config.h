@@ -17,11 +17,20 @@ class TestProcessConfig {
       : config_handle_{ProcessConfig::set_instance(std::move(config))} {}
 
   TestProcessConfig()
-      : TestProcessConfig(ProcessConfig::Builder()
-                              .SetDefaultVolumeCurve(VolumeCurve::DefaultForMinGain(
-                                  VolumeCurve::kDefaultGainForMinVolume))
-                              .SetPipeline(PipelineConfig::Default())
-                              .Build()) {}
+      : TestProcessConfig(
+            ProcessConfig::Builder()
+                .AddDeviceRoutingProfile(
+                    {std::nullopt,
+                     RoutingConfig::DeviceProfile(
+                         /* eligible_for_loopback */ true,
+                         {fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND),
+                          fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA),
+                          fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION),
+                          fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT),
+                          fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION)})})
+                .SetDefaultVolumeCurve(
+                    VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
+                .Build()) {}
 
  private:
   ProcessConfig::Handle config_handle_;

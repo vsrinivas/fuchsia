@@ -10,6 +10,7 @@
 
 #include <trace/event.h>
 
+#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
@@ -102,6 +103,23 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLi
 void AudioOutput::CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) {
   if (stream) {
     pipeline_->RemoveInput(*stream);
+  }
+}
+
+void AudioOutput::SetupMixTask(const Format& format, size_t max_block_size_frames,
+                               TimelineFunction device_reference_clock_to_output_frame) {
+  FX_CHECK(format.sample_format() == fuchsia::media::AudioSampleFormat::FLOAT);
+
+  if (driver()) {
+    auto config = ProcessConfig::instance();
+    pipeline_ = std::make_unique<OutputPipeline>(
+        config.routing_config().device_profile(driver()->persistent_unique_id()).pipeline_config(),
+        format, max_block_size_frames, device_reference_clock_to_output_frame);
+  } else {
+    auto default_config = PipelineConfig::Default();
+    pipeline_ =
+        std::make_unique<OutputPipeline>(default_config, format, max_block_size_frames,
+                                         device_reference_clock_to_output_frame);
   }
 }
 

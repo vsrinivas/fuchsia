@@ -27,10 +27,8 @@ static constexpr char kJsonKeyLib[] = "lib";
 static constexpr char kJsonKeyName[] = "name";
 static constexpr char kJsonKeyConfig[] = "config";
 static constexpr char kJsonKeyStreams[] = "streams";
+static constexpr char kJsonKeyInputs[] = "inputs";
 static constexpr char kJsonKeyEffects[] = "effects";
-static constexpr char kJsonKeyOutputStreams[] = "output_streams";
-static constexpr char kJsonKeyMix[] = "mix";
-static constexpr char kJsonKeyLinearize[] = "linearize";
 static constexpr char kJsonKeyRoutingPolicy[] = "routing_policy";
 static constexpr char kJsonKeyDeviceProfiles[] = "device_profiles";
 static constexpr char kJsonKeyDeviceId[] = "device_id";
@@ -123,43 +121,15 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
       mix_group.effects.push_back(ParseEffectFromJsonObject(effect));
     }
   }
-  return mix_group;
-}
 
-void ParsePipelineConfigFromJsonObject(const rapidjson::Value& value,
-                                       ProcessConfig::Builder* config_builder) {
-  FX_CHECK(value.IsObject());
-  std::optional<PipelineConfig::MixGroup> root;
-
-  auto it = value.FindMember(kJsonKeyOutputStreams);
-  std::vector<PipelineConfig::MixGroup> output_streams;
+  it = value.FindMember(kJsonKeyInputs);
   if (it != value.MemberEnd()) {
     FX_CHECK(it->value.IsArray());
-    for (const auto& group : it->value.GetArray()) {
-      output_streams.emplace_back(ParseMixGroupFromJsonObject(group));
+    for (const auto& input : it->value.GetArray()) {
+      mix_group.inputs.push_back(ParseMixGroupFromJsonObject(input));
     }
   }
-
-  it = value.FindMember(kJsonKeyMix);
-  if (it != value.MemberEnd()) {
-    root.emplace(ParseMixGroupFromJsonObject(it->value));
-    root->inputs = std::move(output_streams);
-  }
-
-  it = value.FindMember(kJsonKeyLinearize);
-  if (it != value.MemberEnd()) {
-    auto linearize_group = ParseMixGroupFromJsonObject(it->value);
-    if (!output_streams.empty()) {
-      linearize_group.inputs = std::move(output_streams);
-    }
-    if (root) {
-      linearize_group.inputs.push_back(std::move(*root));
-    }
-    root = {std::move(linearize_group)};
-  }
-  FX_CHECK(root);
-  FX_CHECK(output_streams.empty());
-  config_builder->SetPipeline(PipelineConfig(std::move(*root)));
+  return mix_group;
 }
 
 std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::DeviceProfile>
@@ -213,9 +183,17 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
     supported_output_stream_types.insert(supported_usage);
   }
 
-  return {device_id, RoutingConfig::DeviceProfile(eligible_for_loopback,
-                                                  std::move(supported_output_stream_types),
-                                                  independent_volume_control)};
+  auto pipeline_it = value.FindMember(kJsonKeyPipeline);
+  PipelineConfig pipeline_config;
+  if (pipeline_it != value.MemberEnd()) {
+    FX_CHECK(pipeline_it->value.IsObject());
+    pipeline_config = PipelineConfig(ParseMixGroupFromJsonObject(pipeline_it->value));
+  } else {
+    pipeline_config = PipelineConfig::Default();
+  }
+  return {device_id, RoutingConfig::DeviceProfile(
+                         eligible_for_loopback, std::move(supported_output_stream_types),
+                         independent_volume_control, std::move(pipeline_config))};
 }
 
 void ParseRoutingPolicyFromJsonObject(const rapidjson::Value& value,
@@ -286,12 +264,6 @@ fit::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
 
   auto config_builder = ProcessConfig::Builder();
   config_builder.SetDefaultVolumeCurve(curve_result.take_value());
-
-  // Add in audio effects if any are present.
-  auto it = doc.FindMember(kJsonKeyPipeline);
-  if (it != doc.MemberEnd()) {
-    ParsePipelineConfigFromJsonObject(it->value, &config_builder);
-  }
 
   auto routing_policy_it = doc.FindMember(kJsonKeyRoutingPolicy);
   if (routing_policy_it != doc.MemberEnd()) {
