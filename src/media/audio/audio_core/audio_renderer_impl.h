@@ -38,13 +38,15 @@ class AudioRendererImpl : public AudioObject,
                           public fuchsia::media::audio::GainControl,
                           public StreamVolume {
  public:
-  static fbl::RefPtr<AudioRendererImpl> Create(
+  static std::unique_ptr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
       async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
       fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager);
-  static fbl::RefPtr<AudioRendererImpl> Create(
+  static std::unique_ptr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
       AudioCoreImpl* owner);
+
+  ~AudioRendererImpl() override;
 
   void Shutdown();
   void OnRenderRange(int64_t presentation_time, uint32_t duration){};
@@ -121,8 +123,6 @@ class AudioRendererImpl : public AudioObject,
   AudioRendererImpl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
                     async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
                     fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager);
-
-  ~AudioRendererImpl() override;
 
   // Recompute the minimum clock lead time based on the current set of outputs
   // we are linked to.  If this requirement is different from the previous

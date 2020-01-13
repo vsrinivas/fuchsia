@@ -65,26 +65,24 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
     EXPECT_NE(renderer_.get(), nullptr);
   }
 
-  void SetPcmStreamType() {
-    fuchsia::media::AudioStreamType stream_type{
+  fuchsia::media::AudioStreamType PcmStreamType() {
+    return fuchsia::media::AudioStreamType{
         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
         .channels = 1,
         .frames_per_second = kAudioRendererUnittestFrameRate,
     };
-
-    renderer_->SetPcmStreamType(stream_type);
   }
 
   // Creates a new payload buffer of |size| bytes and registers it with the renderer with |id|.
   //
   // A handle to the new VMO is returned.
-  zx::vmo AddPayloadBuffer(uint32_t id, size_t size) {
+  zx::vmo AddPayloadBuffer(uint32_t id, size_t size, AudioRendererImpl* renderer) {
     zx::vmo vmo;
     EXPECT_EQ(ZX_OK, zx::vmo::create(size, 0, &vmo));
 
     zx::vmo duplicate;
     EXPECT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate));
-    renderer_->AddPayloadBuffer(id, std::move(duplicate));
+    renderer->AddPayloadBuffer(id, std::move(duplicate));
     return vmo;
   }
 
@@ -110,7 +108,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
   RouteGraph route_graph_;
 
   fuchsia::media::AudioRendererPtr fidl_renderer_;
-  fbl::RefPtr<AudioRendererImpl> renderer_;
+  std::unique_ptr<AudioRendererImpl> renderer_;
 
   zx::vmo vmo_;
   fbl::RefPtr<fzl::VmarManager> vmar_;
@@ -135,15 +133,16 @@ TEST_F(AudioRendererImplTest, MinLeadTimePadding) {
 
   // Our RouteGraph links one FakeAudioOutput to the Renderer-under-test. Thus we can set our
   // output's MinLeadTime, fully expecting this value to be reflected as-is to renderer+clients.
-  route_graph_.AddRenderer(renderer_);
+  auto* renderer_raw = renderer_.get();
+  route_graph_.AddRenderer(std::move(renderer_));
   route_graph_.AddOutput(fake_output.get());
 
   // SetPcmStreamType triggers the routing preparation completion, which connects output(s) to
   // renderer. Renderers react to new outputs in `OnLinkAdded` by recalculating minimum lead time.
-  SetPcmStreamType();
+  renderer_raw->SetPcmStreamType(PcmStreamType());
 
   auto lead_time_ns = kInvalidLeadTimeNs;
-  renderer_->GetMinLeadTime(
+  renderer_raw->GetMinLeadTime(
       [&lead_time_ns](int64_t received_lead_time_ns) { lead_time_ns = received_lead_time_ns; });
 
   RunLoopUntilIdle();
@@ -154,16 +153,17 @@ TEST_F(AudioRendererImplTest, MinLeadTimePadding) {
 TEST_F(AudioRendererImplTest, AllocatePacketQueueForLinks) {
   auto fake_output = testing::FakeAudioOutput::Create(&threading_model(), &device_registry_);
 
-  route_graph_.AddRenderer(renderer_);
+  auto* renderer_raw = renderer_.get();
+  route_graph_.AddRenderer(std::move(renderer_));
   route_graph_.AddOutput(fake_output.get());
 
-  SetPcmStreamType();
-  AddPayloadBuffer(0, PAGE_SIZE);
+  renderer_raw->SetPcmStreamType(PcmStreamType());
+  AddPayloadBuffer(0, PAGE_SIZE, renderer_raw);
   fuchsia::media::StreamPacket packet;
   packet.payload_buffer_id = 0;
   packet.payload_offset = 0;
   packet.payload_offset = 128;
-  renderer_->SendPacketNoReply(std::move(packet));
+  renderer_raw->SendPacketNoReply(std::move(packet));
 
   ASSERT_EQ(1u, fake_output->source_link_count());
   fake_output->ForEachSourceLink([](auto& link) {
@@ -196,13 +196,14 @@ TEST_F(AudioRendererImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
   route_graph_.AddOutput(output.get());
   RunLoopUntilIdle();
 
-  route_graph_.AddRenderer(renderer_);
+  auto* renderer_raw = renderer_.get();
+  route_graph_.AddRenderer(std::move(renderer_));
   fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
   fidl_renderer_->SetPcmStreamType(stream_type_);
   fidl_renderer_->AddPayloadBuffer(0, std::move(duplicate));
 
   RunLoopUntilIdle();
-  EXPECT_EQ(renderer_->dest_link_count(), 1u);
+  EXPECT_EQ(renderer_raw->dest_link_count(), 1u);
 }
 
 TEST_F(AudioRendererImplTest, ReportsPlayAndPauseToPolicy) {
@@ -210,7 +211,7 @@ TEST_F(AudioRendererImplTest, ReportsPlayAndPauseToPolicy) {
   route_graph_.AddOutput(output.get());
   RunLoopUntilIdle();
 
-  route_graph_.AddRenderer(renderer_);
+  route_graph_.AddRenderer(std::move(renderer_));
   fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
   fidl_renderer_->SetPcmStreamType(stream_type_);
   fidl_renderer_->AddPayloadBuffer(0, std::move(vmo_));

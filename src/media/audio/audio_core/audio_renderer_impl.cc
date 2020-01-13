@@ -21,15 +21,15 @@ constexpr zx::duration kPaddingForUnspecifiedRefTime = zx::msec(20);
 // telling them what actual ref_time was), secretly pad by this amount.
 constexpr zx::duration kPaddingForPlayNoReplyWithRefTime = zx::msec(10);
 
-fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
+std::unique_ptr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
     async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
     fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager) {
-  return fbl::AdoptRef(new AudioRendererImpl(std::move(audio_renderer_request), dispatcher,
-                                             route_graph, admin, vmar, volume_manager));
+  return std::unique_ptr<AudioRendererImpl>(new AudioRendererImpl(
+      std::move(audio_renderer_request), dispatcher, route_graph, admin, vmar, volume_manager));
 }
 
-fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
+std::unique_ptr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
     AudioCoreImpl* owner) {
   return Create(std::move(audio_renderer_request),

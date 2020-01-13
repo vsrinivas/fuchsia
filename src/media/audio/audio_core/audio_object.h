@@ -29,6 +29,8 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
   AudioObject(AudioObject&&) = delete;
   AudioObject& operator=(AudioObject&&) = delete;
 
+  virtual ~AudioObject() {}
+
   enum class Type {
     Output,
     Input,
@@ -87,7 +89,6 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
  protected:
   friend class fbl::RefPtr<AudioObject>;
   explicit AudioObject(Type type) : type_(type) {}
-  virtual ~AudioObject() {}
 
   // This method is called when the refcount transitions from 1 to 0. It is this method's
   // responsibility to free or otherwise manage the object; it cannot be refcounted anymore.

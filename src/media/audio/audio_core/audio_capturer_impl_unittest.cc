@@ -56,12 +56,13 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
 
     route_graph_.SetThrottleOutput(&threading_model(),
                                    ThrottleOutput::Create(&threading_model(), &device_registry_));
-    capturer_ = AudioCapturerImpl::Create(
+    auto capturer = AudioCapturerImpl::Create(
         /*loopback=*/false, fidl_capturer_.NewRequest(), &threading_model(), &route_graph_, &admin_,
         &volume_manager_);
-    EXPECT_NE(capturer_.get(), nullptr);
+    capturer_ = capturer.get();
+    EXPECT_NE(capturer_, nullptr);
 
-    route_graph_.AddCapturer(capturer_);
+    route_graph_.AddCapturer(std::move(capturer));
   }
 
   void TearDown() override {
@@ -85,7 +86,7 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
   StreamVolumeManager volume_manager_;
   RouteGraph route_graph_;
 
-  fbl::RefPtr<AudioCapturerImpl> capturer_;
+  AudioCapturerImpl* capturer_;
   fuchsia::media::AudioCapturerPtr fidl_capturer_;
 
   ProcessConfig::Handle config_handle_;
@@ -148,8 +149,6 @@ TEST_F(AudioCapturerImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
 }
 
 TEST_F(AudioCapturerImplTest, CanReleasePacketWithoutDroppingConnection) {
-  capturer_ = nullptr;
-
   bool channel_dropped = false;
   fidl_capturer_.set_error_handler([&channel_dropped](auto _) { channel_dropped = true; });
   fidl_capturer_->ReleasePacket(fuchsia::media::StreamPacket{});

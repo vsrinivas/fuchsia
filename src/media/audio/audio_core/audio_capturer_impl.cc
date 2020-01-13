@@ -53,20 +53,21 @@ constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
 // static
 AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
 
-fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
+std::unique_ptr<AudioCapturerImpl> AudioCapturerImpl::Create(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
     AudioCoreImpl* owner) {
-  return fbl::AdoptRef(new AudioCapturerImpl(loopback, std::move(audio_capturer_request),
-                                             &owner->threading_model(), &owner->route_graph(),
-                                             &owner->audio_admin(), &owner->volume_manager()));
+  return std::unique_ptr<AudioCapturerImpl>(new AudioCapturerImpl(
+      loopback, std::move(audio_capturer_request), &owner->threading_model(), &owner->route_graph(),
+      &owner->audio_admin(), &owner->volume_manager()));
 }
 
-fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
+std::unique_ptr<AudioCapturerImpl> AudioCapturerImpl::Create(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
     ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
     StreamVolumeManager* volume_manager) {
-  return fbl::AdoptRef(new AudioCapturerImpl(loopback, std::move(audio_capturer_request),
-                                             threading_model, route_graph, admin, volume_manager));
+  return std::unique_ptr<AudioCapturerImpl>(
+      new AudioCapturerImpl(loopback, std::move(audio_capturer_request), threading_model,
+                            route_graph, admin, volume_manager));
 }
 
 AudioCapturerImpl::AudioCapturerImpl(

@@ -65,7 +65,7 @@ class RouteGraph {
 
   // Adds an |AudioRenderer| to the route graph. An |AudioRenderer| may be connected to
   // |AudioOutput|s.
-  void AddRenderer(fbl::RefPtr<AudioObject> renderer);
+  void AddRenderer(std::unique_ptr<AudioObject> renderer);
 
   // Sets the routing profile with which the route graph selects |AudioOutput|s for the
   // |AudioRenderer|.
@@ -75,7 +75,7 @@ class RouteGraph {
 
   // Adds an |AudioCapturer| to the route graph. An |AudioCapturer| may be connected to
   // |AudioInput|s to receive samples from them.
-  void AddCapturer(fbl::RefPtr<AudioObject> capturer);
+  void AddCapturer(std::unique_ptr<AudioObject> capturer);
 
   // Sets the routing profile with which the route graph selects |AudioInput|s for the
   // |AudioCapturer|.
@@ -85,7 +85,7 @@ class RouteGraph {
 
   // Adds an |AudioCapturer| to the route graph which will receive the output mixed for the most
   // recently added output device.
-  void AddLoopbackCapturer(fbl::RefPtr<AudioObject> loopback_capturer);
+  void AddLoopbackCapturer(std::unique_ptr<AudioObject> loopback_capturer);
 
   // Sets the routing profile with which the route graph selects |AudioOutput|s for the
   // loopback |AudioCapturer|.

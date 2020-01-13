@@ -41,10 +41,10 @@ class AudioCapturerImpl : public AudioObject,
                           public StreamVolume,
                           public fbl::Recyclable<AudioCapturerImpl> {
  public:
-  static fbl::RefPtr<AudioCapturerImpl> Create(
+  static std::unique_ptr<AudioCapturerImpl> Create(
       bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
       AudioCoreImpl* owner);
-  static fbl::RefPtr<AudioCapturerImpl> Create(
+  static std::unique_ptr<AudioCapturerImpl> Create(
       bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
       ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
       StreamVolumeManager* volume_manager);

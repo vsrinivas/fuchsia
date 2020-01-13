@@ -98,12 +98,12 @@ void RouteGraph::RemoveInput(AudioDevice* input) {
   UpdateGraphForDeviceChange();
 }
 
-void RouteGraph::AddRenderer(fbl::RefPtr<AudioObject> renderer) {
+void RouteGraph::AddRenderer(std::unique_ptr<AudioObject> renderer) {
   FX_DCHECK(throttle_output_);
   FX_DCHECK(renderer->is_audio_renderer());
   AUD_VLOG(TRACE) << "Adding renderer route graph: " << renderer.get();
 
-  renderers_.insert({renderer.get(), RoutableOwnedObject{renderer, {}}});
+  renderers_.insert({renderer.get(), RoutableOwnedObject{fbl::AdoptRef(renderer.release()), {}}});
 }
 
 void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile profile) {
@@ -147,11 +147,11 @@ void RouteGraph::RemoveRenderer(AudioObject* renderer) {
   renderers_.erase(renderer);
 }
 
-void RouteGraph::AddCapturer(fbl::RefPtr<AudioObject> capturer) {
+void RouteGraph::AddCapturer(std::unique_ptr<AudioObject> capturer) {
   FX_DCHECK(capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Adding capturer to route graph: " << capturer.get();
 
-  capturers_.insert({capturer.get(), RoutableOwnedObject{capturer, {}}});
+  capturers_.insert({capturer.get(), RoutableOwnedObject{fbl::AdoptRef(capturer.release()), {}}});
 }
 
 void RouteGraph::SetCapturerRoutingProfile(AudioObject* capturer, RoutingProfile profile) {
@@ -193,11 +193,12 @@ void RouteGraph::RemoveCapturer(AudioObject* capturer) {
 }
 
 // TODO(39627): Only accept capturers of loopback type.
-void RouteGraph::AddLoopbackCapturer(fbl::RefPtr<AudioObject> loopback_capturer) {
+void RouteGraph::AddLoopbackCapturer(std::unique_ptr<AudioObject> loopback_capturer) {
   FX_DCHECK(loopback_capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Adding loopback capturer to route graph: " << loopback_capturer.get();
 
-  loopback_capturers_.insert({loopback_capturer.get(), RoutableOwnedObject{loopback_capturer, {}}});
+  loopback_capturers_.insert({loopback_capturer.get(),
+                              RoutableOwnedObject{fbl::AdoptRef(loopback_capturer.release()), {}}});
 }
 
 // TODO(39627): Only accept capturers of loopback type.
