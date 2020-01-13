@@ -1233,13 +1233,9 @@ static void iwl_mvm_rx(struct iwl_op_mode* op_mode, struct napi_struct* napi,
 #endif
 
   if (likely(cmd == WIDE_ID(LEGACY_GROUP, REPLY_RX_MPDU_CMD))) {
-#if 0   // NEEDS_PORTING
-        iwl_mvm_rx_rx_mpdu(mvm, napi, rxb);
-#endif  // NEEDS_PORTING
+    iwl_mvm_rx_rx_mpdu(mvm, napi, rxb);
   } else if (cmd == WIDE_ID(LEGACY_GROUP, REPLY_RX_PHY_CMD)) {
-#if 0   // NEEDS_PORTING
-        iwl_mvm_rx_rx_phy_cmd(mvm, rxb);
-#endif  // NEEDS_PORTING
+    iwl_mvm_rx_rx_phy_cmd(mvm, rxb);
   } else {
     iwl_mvm_rx_common(mvm, rxb, pkt);
   }

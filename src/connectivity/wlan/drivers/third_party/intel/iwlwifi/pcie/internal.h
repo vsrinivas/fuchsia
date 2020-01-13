@@ -207,7 +207,8 @@ struct iwl_rxq {
   bool need_update;
   io_buffer_t rb_status;
   mtx_t lock;
-  struct napi_struct napi;
+  struct napi_struct napi;  // TODO(43218): replace with something like mvmvif so that when
+                            //              packet is received we know where to dispatch.
   struct iwl_rx_mem_buffer* queue[RX_QUEUE_SIZE];
 };
 

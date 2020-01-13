@@ -1519,6 +1519,11 @@ zx_status_t __iwl_mvm_mac_start(struct iwl_mvm* mvm);
 zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm);
 
 /* Utils */
+
+// Convert Mbps to 0.5 Mbps units.
+#define TO_HALF_MBPS(mbps) (mbps * 2)
+
+zx_status_t mac80211_idx_to_data_rate(wlan_info_band_t band, int mac80211_idx, uint32_t* data_rate);
 zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_info_band_t band,
                                                 int* idx);
 void iwl_mvm_hwrate_to_tx_rate(uint32_t rate_n_flags, wlan_info_band_t band,

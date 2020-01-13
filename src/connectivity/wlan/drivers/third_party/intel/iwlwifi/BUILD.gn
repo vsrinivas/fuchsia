@@ -47,6 +47,7 @@ source_set("core") {
     "mvm/ops.c",
     "mvm/phy-ctxt.c",
     "mvm/power.c",
+    "mvm/rx.c",
     "mvm/rxmq.c",
     "mvm/scan.c",
     "mvm/tof.c",

@@ -32,13 +32,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-#include <linux/etherdevice.h>
-#include <linux/skbuff.h>
 
-#include "fw-api.h"
-#include "iwl-trans.h"
-#include "mvm.h"
+#include <zircon/status.h>
 
+#include <wlan/protocol/ieee80211.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 /*
  * iwl_mvm_rx_rx_phy_cmd - REPLY_RX_PHY_CMD handler
  *
@@ -61,87 +62,41 @@ void iwl_mvm_rx_rx_phy_cmd(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
 }
 
 /*
- * iwl_mvm_pass_packet_to_mac80211 - builds the packet for mac80211
- *
- * Adds the rxb to a new skb and give it to mac80211
- */
-static void iwl_mvm_pass_packet_to_mac80211(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
-                                            struct napi_struct* napi, struct sk_buff* skb,
-                                            struct ieee80211_hdr* hdr, uint16_t len,
-                                            uint8_t crypt_len, struct iwl_rx_cmd_buffer* rxb) {
-  unsigned int hdrlen = ieee80211_hdrlen(hdr->frame_control);
-  unsigned int fraglen;
-
-  /*
-   * The 'hdrlen' (plus the 8 bytes for the SNAP and the crypt_len,
-   * but those are all multiples of 4 long) all goes away, but we
-   * want the *end* of it, which is going to be the start of the IP
-   * header, to be aligned when it gets pulled in.
-   * The beginning of the skb->data is aligned on at least a 4-byte
-   * boundary after allocation. Everything here is aligned at least
-   * on a 2-byte boundary so we can just take hdrlen & 3 and pad by
-   * the result.
-   */
-  skb_reserve(skb, hdrlen & 3);
-
-  /* If frame is small enough to fit in skb->head, pull it completely.
-   * If not, only pull ieee80211_hdr (including crypto if present, and
-   * an additional 8 bytes for SNAP/ethertype, see below) so that
-   * splice() or TCP coalesce are more efficient.
-   *
-   * Since, in addition, ieee80211_data_to_8023() always pull in at
-   * least 8 bytes (possibly more for mesh) we can do the same here
-   * to save the cost of doing it later. That still doesn't pull in
-   * the actual IP header since the typical case has a SNAP header.
-   * If the latter changes (there are efforts in the standards group
-   * to do so) we should revisit this and ieee80211_data_to_8023().
-   */
-  hdrlen = (len <= skb_tailroom(skb)) ? len : hdrlen + crypt_len + 8;
-
-  skb_put_data(skb, hdr, hdrlen);
-  fraglen = len - hdrlen;
-
-  if (fraglen) {
-    int offset = (void*)hdr + hdrlen - rxb_addr(rxb) + rxb_offset(rxb);
-
-    skb_add_rx_frag(skb, 0, rxb_steal_page(rxb), offset, fraglen, rxb->truesize);
-  }
-
-  ieee80211_rx_napi(mvm->hw, sta, skb, napi);
-}
-
-/*
  * iwl_mvm_get_signal_strength - use new rx PHY INFO API
  * values are reported by the fw as positive values - need to negate
  * to obtain their dBM.  Account for missing antennas by replacing 0
  * values by -256dBm: practically 0 power and a non-feasible 8 bit value.
+ *
+ * Args:
+ *   mvm: the MVM instance
+ *   phy_info: the PHY info received in the last packet.
+ *   rx_info: output. RSSI will be set in this structure.
  */
-static void iwl_mvm_get_signal_strength(struct iwl_mvm* mvm, struct iwl_rx_phy_info* phy_info,
-                                        struct ieee80211_rx_status* rx_status) {
+static void iwl_mvm_get_signal_strength(const struct iwl_mvm* mvm,
+                                        const struct iwl_rx_phy_info* phy_info,
+                                        wlan_rx_info_t* rx_info) {
+  const int kS8Min = -128;
   int energy_a, energy_b, energy_c, max_energy;
   uint32_t val;
 
   val = le32_to_cpu(phy_info->non_cfg_phy[IWL_RX_INFO_ENERGY_ANT_ABC_IDX]);
   energy_a = (val & IWL_RX_INFO_ENERGY_ANT_A_MSK) >> IWL_RX_INFO_ENERGY_ANT_A_POS;
-  energy_a = energy_a ? -energy_a : S8_MIN;
+  energy_a = energy_a ? -energy_a : kS8Min;
   energy_b = (val & IWL_RX_INFO_ENERGY_ANT_B_MSK) >> IWL_RX_INFO_ENERGY_ANT_B_POS;
-  energy_b = energy_b ? -energy_b : S8_MIN;
+  energy_b = energy_b ? -energy_b : kS8Min;
   energy_c = (val & IWL_RX_INFO_ENERGY_ANT_C_MSK) >> IWL_RX_INFO_ENERGY_ANT_C_POS;
-  energy_c = energy_c ? -energy_c : S8_MIN;
-  max_energy = max(energy_a, energy_b);
-  max_energy = max(max_energy, energy_c);
+  energy_c = energy_c ? -energy_c : kS8Min;
+  max_energy = MAX(energy_a, energy_b);
+  max_energy = MAX(max_energy, energy_c);
 
   IWL_DEBUG_STATS(mvm, "energy In A %d B %d C %d , and max %d\n", energy_a, energy_b, energy_c,
                   max_energy);
 
-  rx_status->signal = max_energy;
-  rx_status->chains =
-      (le16_to_cpu(phy_info->phy_flags) & RX_RES_PHY_FLAGS_ANTENNA) >> RX_RES_PHY_FLAGS_ANTENNA_POS;
-  rx_status->chain_signal[0] = energy_a;
-  rx_status->chain_signal[1] = energy_b;
-  rx_status->chain_signal[2] = energy_c;
+  rx_info->valid_fields |= WLAN_RX_INFO_VALID_RSSI;
+  rx_info->rssi_dbm = max_energy;
 }
 
+#if 0   // NEEDS_PORTING
 /*
  * iwl_mvm_set_mac80211_rx_flag - translate fw status to mac80211 format
  * @mvm: the mvm object
@@ -285,44 +240,51 @@ static void iwl_mvm_rx_csum(struct ieee80211_sta* sta, struct sk_buff* skb, uint
     skb->ip_summed = CHECKSUM_UNNECESSARY;
   }
 }
+#endif  // NEEDS_PORTING
 
 /*
  * iwl_mvm_rx_rx_mpdu - REPLY_RX_MPDU_CMD handler
  *
  * Handles the actual data of the Rx packet from the fw
+ *
+ * Below is the packet layout from the firmware.
+ *
+ *                 rx_res,
+ *   pkt           &pkt->data[]       frame
+ *    |                |                |
+ *    v                v                v
+ *    0        4        8       10       12                   12 + res_len
+ *   +--------+--------+-------+--------+--------------------+---------------+
+ *   |        |        |    *rx_res     |                    |               |
+ *   | len_n_ | cmd_   |----------------| MAC header ....    | rx_pkt_status |
+ *   |  flags | header | byte_ | assist |                    |               |
+ *   |        |        | count |        |                    |               |
+ *   +--------+--------+-------+--------+--------------------+---------------+
+ *                                       <----  res_len ---->
+ *
+ * - 'assist' contains the TCP offload info from FW. See 'enum iwl_csum_rx_assist_info'.
+ * - 'rx_pkt_status' contains the flags parsed by FW (e.g. CRC_OK). See 'enum iwl_mvm_rx_status'.
+ *
+ * TODO(43218): replace 'napi' with something else to map to mvmvif.
  */
 void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
                         struct iwl_rx_cmd_buffer* rxb) {
-  struct ieee80211_hdr* hdr;
-  struct ieee80211_rx_status* rx_status;
+  // The PHY info was received in the last MVM packet.
+  struct iwl_rx_phy_info* phy_info = &mvm->last_phy_info;
+  uint16_t phy_flags = le16_to_cpu(phy_info->phy_flags);
+
+  // Now, parse this packet.
   struct iwl_rx_packet* pkt = rxb_addr(rxb);
-  struct iwl_rx_phy_info* phy_info;
-  struct iwl_rx_mpdu_res_start* rx_res;
-  struct ieee80211_sta* sta = NULL;
-  struct sk_buff* skb;
-  uint32_t len;
-  uint32_t rate_n_flags;
-  uint32_t rx_pkt_status;
-  uint8_t crypt_len = 0;
-  bool take_ref;
+  struct iwl_rx_mpdu_res_start* rx_res = (struct iwl_rx_mpdu_res_start*)pkt->data;
+  struct ieee80211_frame_header* frame = (void*)(pkt->data + sizeof(*rx_res));
+  size_t res_len = le16_to_cpu(rx_res->byte_count);
+  uint32_t rx_pkt_status = le32_to_cpup((__le32*)(pkt->data + sizeof(*rx_res) + res_len));
 
-  phy_info = &mvm->last_phy_info;
-  rx_res = (struct iwl_rx_mpdu_res_start*)pkt->data;
-  hdr = (struct ieee80211_hdr*)(pkt->data + sizeof(*rx_res));
-  len = le16_to_cpu(rx_res->byte_count);
-  rx_pkt_status = le32_to_cpup((__le32*)(pkt->data + sizeof(*rx_res) + len));
+  // Prepare the meta info sent to MLME.
+  wlan_rx_info_t rx_info = {};
 
-  /* Dont use dev_alloc_skb(), we'll have enough headroom once
-   * ieee80211_hdr pulled.
-   */
-  skb = alloc_skb(128, GFP_ATOMIC);
-  if (!skb) {
-    IWL_ERR(mvm, "alloc_skb failed\n");
-    return;
-  }
-
-  rx_status = IEEE80211_SKB_RXCB(skb);
-
+#if 0   // NEEDS_PORTING
+  // TODO(37594): Milestone: Connect to Protected Network
   /*
    * drop the packet if it has failed being decrypted by HW
    */
@@ -331,6 +293,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
     kfree_skb(skb);
     return;
   }
+#endif  // NEEDS_PORTING
 
   /*
    * Keep packets with CRC errors (and with overrun) for monitor mode
@@ -339,25 +302,21 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
   if (!(rx_pkt_status & RX_MPDU_RES_STATUS_CRC_OK) ||
       !(rx_pkt_status & RX_MPDU_RES_STATUS_OVERRUN_OK)) {
     IWL_DEBUG_RX(mvm, "Bad CRC or FIFO: 0x%08X.\n", rx_pkt_status);
-    rx_status->flag |= RX_FLAG_FAILED_FCS_CRC;
+    rx_info.rx_flags |= WLAN_RX_INFO_FLAGS_FCS_INVALID;
   }
 
-  /* This will be used in several places later */
-  rate_n_flags = le32_to_cpu(phy_info->rate_n_flags);
+  wlan_info_band_t band =
+      phy_flags & RX_RES_PHY_FLAGS_BAND_24 ? WLAN_INFO_BAND_2GHZ : WLAN_INFO_BAND_5GHZ;
+  rx_info.chan.primary = le16_to_cpu(phy_info->channel);
 
-  /* rx_status carries information about the packet to mac80211 */
-  rx_status->mactime = le64_to_cpu(phy_info->timestamp);
-  rx_status->device_timestamp = le32_to_cpu(phy_info->system_timestamp);
-  rx_status->band = (phy_info->phy_flags & cpu_to_le16(RX_RES_PHY_FLAGS_BAND_24))
-                        ? WLAN_INFO_BAND_2GHZ
-                        : WLAN_INFO_BAND_5GHZ;
-  rx_status->freq = ieee80211_channel_to_frequency(le16_to_cpu(phy_info->channel), rx_status->band);
-
+#if 0   // NEEDS_PORTING
   /* TSF as indicated by the firmware  is at INA time */
   rx_status->flag |= RX_FLAG_MACTIME_PLCP_START;
+#endif  // NEEDS_PORTING
 
-  iwl_mvm_get_signal_strength(mvm, phy_info, rx_status);
+  iwl_mvm_get_signal_strength(mvm, phy_info, &rx_info);
 
+#if 0  // NEEDS_PORTING
   IWL_DEBUG_STATS_LIMIT(mvm, "Rssi %d, TSF %llu\n", rx_status->signal,
                         (unsigned long long)rx_status->mactime);
 
@@ -424,7 +383,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
      * In both cases an existing station.
      */
     iwl_mvm_tdls_peer_cache_pkt(mvm, hdr, len, 0);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
+#endif  /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
     if (ieee80211_is_data(hdr->frame_control)) {
       iwl_mvm_rx_csum(sta, skb, rx_pkt_status);
@@ -446,21 +405,29 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
     rx_status->flag |= RX_FLAG_AMPDU_DETAILS;
     rx_status->ampdu_reference = mvm->ampdu_ref;
   }
+#endif  // NEEDS_PORTING
 
-  /* Set up the HT phy flags */
+  // Parse rx_info fields from phy_info->rate_n_flags.
+  //
+  // See rate_n_flags bit fields definition in fw/api/rs.h.
+  uint32_t rate_n_flags = le32_to_cpu(phy_info->rate_n_flags);
+
   switch (rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) {
     case RATE_MCS_CHAN_WIDTH_20:
+      rx_info.chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;
       break;
     case RATE_MCS_CHAN_WIDTH_40:
-      rx_status->bw = RATE_INFO_BW_40;
+      rx_info.chan.cbw = WLAN_CHANNEL_BANDWIDTH__40;
       break;
     case RATE_MCS_CHAN_WIDTH_80:
-      rx_status->bw = RATE_INFO_BW_80;
+      rx_info.chan.cbw = WLAN_CHANNEL_BANDWIDTH__80;
       break;
     case RATE_MCS_CHAN_WIDTH_160:
-      rx_status->bw = RATE_INFO_BW_160;
+      rx_info.chan.cbw = WLAN_CHANNEL_BANDWIDTH__160;
       break;
   }
+
+#if 0   // NEEDS_PORTING
   if (!(rate_n_flags & RATE_MCS_CCK_MSK) && rate_n_flags & RATE_MCS_SGI_MSK) {
     rx_status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
   }
@@ -470,12 +437,23 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
   if (rate_n_flags & RATE_MCS_LDPC_MSK) {
     rx_status->enc_flags |= RX_ENC_FLAG_LDPC;
   }
+#endif  // NEEDS_PORTING
+
+  // See rate_n_flags bit fields definition in fw/api/rs.h.
   if (rate_n_flags & RATE_MCS_HT_MSK) {
-    uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
+    rx_info.phy = WLAN_INFO_PHY_TYPE_HT;
+#if 0   // NEEDS_PORTING
+    // TODO(36683): Supports HT (802.11n)
+    u8 stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >>
+        RATE_MCS_STBC_POS;
     rx_status->encoding = RX_ENC_HT;
     rx_status->rate_idx = rate_n_flags & RATE_HT_MCS_INDEX_MSK;
     rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
+#endif  // NEEDS_PORTING
   } else if (rate_n_flags & RATE_MCS_VHT_MSK) {
+    rx_info.phy = WLAN_INFO_PHY_TYPE_VHT;
+#if 0   // NEEDS_PORTING
+    // TODO(36684): Supports VHT (802.11ac)
     uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
     rx_status->nss = ((rate_n_flags & RATE_VHT_MCS_NSS_MSK) >> RATE_VHT_MCS_NSS_POS) + 1;
     rx_status->rate_idx = rate_n_flags & RATE_VHT_MCS_RATE_CODE_MSK;
@@ -484,17 +462,29 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
     if (rate_n_flags & RATE_MCS_BF_MSK) {
       rx_status->enc_flags |= RX_ENC_FLAG_BF;
     }
+#endif  // NEEDS_PORTING
   } else {
-    int rate = iwl_mvm_legacy_rate_to_mac80211_idx(rate_n_flags, rx_status->band);
+    rx_info.phy =
+        phy_flags & RX_RES_PHY_FLAGS_MOD_CCK ? WLAN_INFO_PHY_TYPE_CCK : WLAN_INFO_PHY_TYPE_OFDM;
 
-    if (WARN(rate < 0 || rate > 0xFF, "Invalid rate flags 0x%x, band %d,\n", rate_n_flags,
-             rx_status->band)) {
-      kfree_skb(skb);
+    int mac80211_idx;
+    zx_status_t status = iwl_mvm_legacy_rate_to_mac80211_idx(rate_n_flags, band, &mac80211_idx);
+    if (status != ZX_OK) {
+      IWL_ERR(mvm, "Cannot convert rate_n_flags (0x%08x, band=%d) to mac80211 index. status=%s\n",
+              rate_n_flags, band, zx_status_get_string(status));
       return;
     }
-    rx_status->rate_idx = rate;
-  }
 
+    status = mac80211_idx_to_data_rate(band, mac80211_idx, &rx_info.data_rate);
+    if (status != ZX_OK) {
+      IWL_ERR(mvm, "Cannot convert mac80211 index (%d) to data rate for MLME (band=%d)\n",
+              mac80211_idx, band);
+      return;
+    }
+  }
+  rx_info.valid_fields |= WLAN_RX_INFO_VALID_DATA_RATE;
+
+#if 0  // NEEDS_PORTING
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
   iwl_mvm_update_frame_stats(mvm, rate_n_flags, rx_status->flag & RX_FLAG_AMPDU_DETAILS);
 #endif
@@ -521,14 +511,20 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
   if (take_ref) {
     iwl_mvm_ref(mvm, IWL_MVM_REF_RX);
   }
+#endif  // NEEDS_PORTING
 
-  iwl_mvm_pass_packet_to_mac80211(mvm, sta, napi, skb, hdr, len, crypt_len, rxb);
+  // Send to MLME
+  // TODO(43218): replace rxq->napi with interface instance so that we can map to mvmvif.
+  wlanmac_ifc_recv(&mvm->mvmvif[0]->ifc, 0, frame, res_len, &rx_info);
 
+#if 0   // NEEDS_PORTING
   if (take_ref) {
     iwl_mvm_unref(mvm, IWL_MVM_REF_RX);
   }
+#endif  // NEEDS_PORTING
 }
 
+#if 0   // NEEDS_PORTING
 struct iwl_mvm_stat_data {
   struct iwl_mvm* mvm;
   __le32 mac_id;
@@ -811,3 +807,4 @@ void iwl_mvm_window_status_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* 
   }
   rcu_read_unlock();
 }
+#endif  // NEEDS_PORTING

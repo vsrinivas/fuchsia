@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fake-bti/bti.h>
 #include <lib/mock-function/mock-function.h>
+#include <lib/zx/bti.h>
 #include <stdio.h>
 
 #include <zxtest/zxtest.h>
@@ -19,11 +21,99 @@ namespace {
 
 class MvmTest : public SingleApTest {
  public:
-  MvmTest() {}
+  MvmTest() : mvm_(iwl_trans_get_mvm(sim_trans_.iwl_trans())) {}
   ~MvmTest() {}
+
+ protected:
+  void buildRxcb(struct iwl_rx_cmd_buffer* rxcb, void* pkt_data, size_t pkt_len) {
+    io_buffer_t io_buf;
+    zx::bti fake_bti;
+    fake_bti_create(fake_bti.reset_and_get_address());
+    io_buffer_init(&io_buf, fake_bti.get(), pkt_len + sizeof(struct iwl_rx_packet),
+                   IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    rxcb->_io_buf = io_buf;
+    rxcb->_offset = 0;
+
+    struct iwl_rx_packet* pkt = reinterpret_cast<struct iwl_rx_packet*>(io_buffer_virt(&io_buf));
+    // Most fields are not cared but initialized with known values.
+    pkt->len_n_flags = cpu_to_le32(0);
+    pkt->hdr.cmd = 0;
+    pkt->hdr.group_id = 0;
+    pkt->hdr.sequence = 0;
+    memcpy(pkt->data, pkt_data, pkt_len);
+  }
+
+  // This function is kind of dirty. It hijacks the wlanmac_ifc_protocol_t.recv() so that we can
+  // save the rx_info passed to MLME.
+  void MockRecv(wlan_rx_info_t* rx_info) {
+    // TODO(43218): replace rxq->napi with interface instance so that we can map to mvmvif.
+    struct iwl_mvm_vif* mvmvif =
+        reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
+    mvm_->mvmvif[0] = mvmvif;
+    wlanmac_ifc_protocol_ops_t* ops = reinterpret_cast<wlanmac_ifc_protocol_ops_t*>(
+        calloc(1, sizeof(wlanmac_ifc_protocol_ops_t)));
+    mvmvif->ifc.ops = ops;
+    mvmvif->ifc.ctx = rx_info;  // 'ctx' was used as 'wlanmac_ifc_protocol_t*', but we override it
+                                // with 'wlan_rx_info_t*'.
+    ops->recv = [](void* ctx, uint32_t flags, const void* data_buffer, size_t data_size,
+                   const wlan_rx_info_t* info) {
+      wlan_rx_info_t* rx_info = reinterpret_cast<wlan_rx_info_t*>(ctx);
+      *rx_info = *info;
+    };
+  }
+
+  struct iwl_mvm* mvm_;
 };
 
-TEST_F(MvmTest, GetMvm) { EXPECT_NE(iwl_trans_get_mvm(sim_trans_.iwl_trans()), nullptr); }
+TEST_F(MvmTest, GetMvm) { EXPECT_NE(mvm_, nullptr); }
+
+TEST_F(MvmTest, rxMpdu) {
+  const int kExpChan = 40;
+
+  // Simulate the previous PHY_INFO packet
+  struct iwl_rx_phy_info phy_info = {
+      .non_cfg_phy_cnt = IWL_RX_INFO_ENERGY_ANT_ABC_IDX + 1,
+      .phy_flags = cpu_to_le16(0),
+      .channel = cpu_to_le16(kExpChan),
+      .non_cfg_phy =
+          {
+              [IWL_RX_INFO_ENERGY_ANT_ABC_IDX] = 0x000a28,  // RSSI C:n/a B:-10, A:-40
+          },
+      .rate_n_flags = cpu_to_le32(0x7),  // IWL_RATE_18M_PLCP
+  };
+  struct iwl_rx_cmd_buffer phy_info_rxcb = {};
+  buildRxcb(&phy_info_rxcb, &phy_info, sizeof(phy_info));
+  iwl_mvm_rx_rx_phy_cmd(mvm_, &phy_info_rxcb);
+
+  // Now, it comes the MPDU packet.
+  const size_t kMacPayloadLen = 60;
+  struct {
+    struct iwl_rx_mpdu_res_start rx_res;
+    struct ieee80211_frame_header frame;
+    uint8_t mac_payload[kMacPayloadLen];
+    uint32_t rx_pkt_status;
+  } __packed mpdu = {
+      .rx_res =
+          {
+              .byte_count = kMacPayloadLen,
+              .assist = 0,
+          },
+      .frame = {},
+      .rx_pkt_status = 0x0,
+  };
+  struct iwl_rx_cmd_buffer mpdu_rxcb = {};
+  buildRxcb(&mpdu_rxcb, &mpdu, sizeof(mpdu));
+
+  wlan_rx_info_t rx_info = {};
+  MockRecv(&rx_info);
+  iwl_mvm_rx_rx_mpdu(mvm_, nullptr /* napi */, &mpdu_rxcb);
+
+  EXPECT_EQ(WLAN_RX_INFO_VALID_DATA_RATE, rx_info.valid_fields & WLAN_RX_INFO_VALID_DATA_RATE);
+  EXPECT_EQ(TO_HALF_MBPS(18), rx_info.data_rate);
+  EXPECT_EQ(kExpChan, rx_info.chan.primary);
+  EXPECT_EQ(WLAN_RX_INFO_VALID_RSSI, rx_info.valid_fields & WLAN_RX_INFO_VALID_RSSI);
+  EXPECT_EQ(static_cast<int8_t>(-10), rx_info.rssi_dbm);
+}
 
 }  // namespace
 }  // namespace testing

@@ -184,6 +184,63 @@ zx_status_t iwl_mvm_send_cmd_pdu_status(struct iwl_mvm* mvm, uint32_t id, uint16
   return iwl_mvm_send_cmd_status(mvm, &cmd, status);
 }
 
+//
+// mac80211_idx is actually an iwlwifi thing. It has different meanings in 2.4 GHz and 5 GHz, which
+// is confusing:
+//
+//   2.4 GHz:  0 ~ 11  (CCK and OFDM: 1 Mbps ~ 54 Mbps)
+//   5   GHz:  0 ~ 7   (OFDM only: 6 Mbps ~ 54 Mbps)
+//
+static const uint32_t mac80211_idx_to_data_rate_[] = {
+    //
+    //                    mac80211 idx    data rate
+    //                   2.4 Ghz | 5 Ghz
+    // CCK
+    TO_HALF_MBPS(1),   //  0                 1 Mbps
+    TO_HALF_MBPS(2),   //  1                 2 Mbps
+    TO_HALF_MBPS(5),   //  2                 5 Mbps
+    TO_HALF_MBPS(11),  //  3                11 Mbps
+    // OFDM
+    TO_HALF_MBPS(6),   //  4        0        6 Mbps
+    TO_HALF_MBPS(9),   //  5        1        9 Mbps
+    TO_HALF_MBPS(12),  //  6        2       12 Mbps
+    TO_HALF_MBPS(18),  //  7        3       18 Mbps
+    TO_HALF_MBPS(24),  //  8        4       24 Mbps
+    TO_HALF_MBPS(36),  //  9        5       36 Mbps
+    TO_HALF_MBPS(48),  // 10        6       48 Mbps
+    TO_HALF_MBPS(54),  // 11        7       54 Mbps
+};
+
+// Converts mac80211_idx to data rate (used by MLME).
+//
+// Args:
+//   band: 2.4 Ghz or 5 GHz band.
+//   mac_idx: set iwl_chan_idx above.
+//
+// Returns:
+//   data_rate: in 0.5 Mbps unit. For data_rate of 'struct wlan_rx_info'.
+//
+zx_status_t mac80211_idx_to_data_rate(wlan_info_band_t band, int mac_idx, uint32_t* data_rate) {
+  int band_offset;
+
+  if (band == WLAN_INFO_BAND_2GHZ) {
+    band_offset = 0;
+  } else if (band == WLAN_INFO_BAND_5GHZ) {
+    band_offset = IWL_FIRST_OFDM_RATE;
+  } else {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  size_t idx = band_offset + mac_idx;
+  if (idx >= ARRAY_SIZE(mac80211_idx_to_data_rate_)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  *data_rate = mac80211_idx_to_data_rate_[idx];
+
+  return ZX_OK;
+}
+
 #define IWL_DECLARE_RATE_INFO(r) [IWL_RATE_##r##M_INDEX] = IWL_RATE_##r##M_PLCP
 
 /*
@@ -196,17 +253,28 @@ static const uint8_t fw_rate_idx_to_plcp[IWL_RATE_COUNT] = {
     IWL_DECLARE_RATE_INFO(36), IWL_DECLARE_RATE_INFO(48), IWL_DECLARE_RATE_INFO(54),
 };
 
+// Converts MVM's legacy rate to iwl chan index.
+//
+// Args:
+//   rate_n_flags: see RATE_LEGACY_RATE_MSK in fw/api/rs.h
+//   band: 2.4 Ghz or 5 GHz band.
+//
+// Returns:
+//   ptr_chan_idx: iwl chan index where valid values are:
+//
+//     0~11 in 2.4 GHz band
+//     0~7  in   5 GHz band
+//
 zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_info_band_t band,
-                                                int* ptr_idx) {
+                                                int* ptr_chan_idx) {
   int rate = rate_n_flags & RATE_LEGACY_RATE_MSK;
-  int idx;
   int band_offset = 0;
 
   // Sanity-check
   if (band >= WLAN_INFO_BAND_COUNT) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  if (!ptr_idx) {
+  if (!ptr_chan_idx) {
     return ZX_ERR_INVALID_ARGS;
   }
 #if 0   // NEEDS_PORTING
@@ -219,9 +287,9 @@ zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_info
   if (band == WLAN_INFO_BAND_5GHZ) {
     band_offset = IWL_FIRST_OFDM_RATE;
   }
-  for (idx = band_offset; idx < IWL_RATE_COUNT_LEGACY; idx++) {
-    if (fw_rate_idx_to_plcp[idx] == rate) {
-      *ptr_idx = idx - band_offset;
+  for (int chan_idx = band_offset; chan_idx < IWL_RATE_COUNT_LEGACY; chan_idx++) {
+    if (fw_rate_idx_to_plcp[chan_idx] == rate) {
+      *ptr_chan_idx = chan_idx - band_offset;
       return ZX_OK;
     }
   }
