@@ -1,6 +1,6 @@
-# `dev_finder`
+# `device-finder`
 
-`dev_finder` is the command line tool for device discovery. It uses mDNS to
+`device-finder` is the command line tool for device discovery. It uses mDNS to
 find Fuchsia devices.
 
 Currently only Linux is supported. For Mac users see the "For Mac Users"
@@ -14,7 +14,7 @@ The simplest way to get all the devices on the network by their address is to
 run
 
 ```
-$ ./dev_finder list
+$ ./device-finder list
 192.168.42.156
 ```
 
@@ -28,7 +28,7 @@ If you'd like to find your device by its unique hostname (e.g.
 `lunch-feta-stool-woozy`) you can use the `resolve` command:
 
 ```
-$ ./dev_finder resolve lunch-feta-stool-woozy
+$ ./device-finder resolve lunch-feta-stool-woozy
 192.168.42.156
 ```
 
@@ -54,4 +54,4 @@ Timestamp     A/R    Flags  if Domain       Service Type   Instance Name
 ```
 
 Mac does not support the equivalent of a `local` flag as described above in the
-`dev_finder` docs.
+`device-finder` docs.

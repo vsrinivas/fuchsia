@@ -18,7 +18,7 @@ The core SDK will contain:
 
   * The tool binary itself.
 
-  * The [dev_finder](/docs/development/sdk/documentation/device_discovery.md)
+  * The [device-finder](/docs/development/sdk/documentation/device_discovery.md)
     tool which can enumerate Fuchsia devices to get their names.
 
   * A document in
@@ -29,16 +29,16 @@ The core SDK will contain:
 
 ## Environment-specific SDKs
 
-The `dev_finder` abstracts device listing and selection across all SDK
+The `device-finder` abstracts device listing and selection across all SDK
 variants. With the right tool design, the extent of integration required should
-be to run `dev_finder` to get the address and pass the address to the tool with
+be to run `device-finder` to get the address and pass the address to the tool with
 other environment-specific flags. In the case of the debugger the tool-specific
 code would:
 
   * Connect to a shell (this should be a primitive provided by the
     environment-specific SDK) on the target and run the `debug_agent`.
 
-  * Run zxdb with the address provided by `dev_finder`, passing any local
+  * Run zxdb with the address provided by `device-finder`, passing any local
     settings files and symbol paths on the command-line.
 
 ## Tool requirements
