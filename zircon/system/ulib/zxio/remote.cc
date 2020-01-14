@@ -8,6 +8,7 @@
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <zircon/syscalls.h>
 
 #include "private.h"
@@ -15,6 +16,151 @@
 namespace fio = llcpp::fuchsia::io;
 
 namespace {
+
+// Implementation of |zxio_dirent_iterator_t| for |fuchsia.io| v1.
+class DirentIteratorImpl {
+ public:
+  explicit DirentIteratorImpl(zxio_t* io)
+      : io_(reinterpret_cast<zxio_remote_t*>(io)), boxed_(std::make_unique<Boxed>()) {
+    static_assert(offsetof(DirentIteratorImpl, io_) == 0,
+                  "zxio_dirent_iterator_t requires first field of implementation to be zxio_t");
+    (void)opaque_;
+  }
+
+  ~DirentIteratorImpl() { fio::Directory::Call::Rewind(zx::unowned_channel(io_->control)); }
+
+  zx_status_t Next(zxio_dirent_t** out_entry) {
+    if (index_ >= count_) {
+      zx_status_t status = RemoteReadDirents();
+      if (status != ZX_OK) {
+        return status;
+      }
+      if (count_ == 0) {
+        return ZX_ERR_NOT_FOUND;
+      }
+      index_ = 0;
+    }
+
+    // The format of the packed dirent structure, taken from io.fidl.
+    struct dirent {
+      // Describes the inode of the entry.
+      uint64_t ino;
+      // Describes the length of the dirent name in bytes.
+      uint8_t size;
+      // Describes the type of the entry. Aligned with the
+      // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+      uint8_t type;
+      // Unterminated name of entry.
+      char name[0];
+    } __PACKED;
+
+    auto entry = reinterpret_cast<const dirent*>(&data_[index_]);
+
+    // Check if we can read the entry size.
+    if (index_ + sizeof(dirent) > count_) {
+      // Should not happen
+      return ZX_ERR_INTERNAL;
+    }
+
+    size_t entry_size = sizeof(dirent) + entry->size;
+
+    // Check if we can read the whole entry.
+    if (index_ + entry_size > count_) {
+      // Should not happen
+      return ZX_ERR_INTERNAL;
+    }
+
+    // Check that the name length is within bounds.
+    if (entry->size > fio::MAX_FILENAME) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    index_ += entry_size;
+
+    boxed_->current_entry = {};
+    boxed_->current_entry.name = boxed_->current_entry_name;
+    ZXIO_DIRENT_SET(boxed_->current_entry, protocols, DTypeToProtocols(entry->type));
+    ZXIO_DIRENT_SET(boxed_->current_entry, id, entry->ino);
+    boxed_->current_entry.name_length = entry->size;
+    memcpy(boxed_->current_entry_name, entry->name, entry->size);
+    boxed_->current_entry_name[entry->size] = '\0';
+    *out_entry = &boxed_->current_entry;
+
+    return ZX_OK;
+  }
+
+ private:
+  zx_status_t RemoteReadDirents() {
+    auto result = fio::Directory::Call::ReadDirents(zx::unowned_channel(io_->control),
+                                                    boxed_->request_buffer.view(), kBufferSize,
+                                                    boxed_->response_buffer.view());
+    if (result.status() != ZX_OK) {
+      return result.status();
+    }
+    fio::Directory::ReadDirentsResponse* response = result.Unwrap();
+    if (response->s != ZX_OK) {
+      return response->s;
+    }
+    const auto& dirents = response->dirents;
+    if (dirents.count() > kBufferSize) {
+      return ZX_ERR_IO;
+    }
+    data_ = dirents.data();
+    count_ = dirents.count();
+    return ZX_OK;
+  }
+
+  zxio_node_protocols_t DTypeToProtocols(uint8_t type) {
+    switch (type) {
+      case DT_BLK:
+        return ZXIO_NODE_PROTOCOL_DEVICE;
+      case DT_CHR:
+        return ZXIO_NODE_PROTOCOL_TTY;
+      case DT_DIR:
+        return ZXIO_NODE_PROTOCOL_DIRECTORY;
+      case DT_FIFO:
+        return ZXIO_NODE_PROTOCOL_PIPE;
+      case DT_LNK:
+        // Not supported.
+        return ZXIO_NODE_PROTOCOL_NONE;
+      case DT_REG:
+        return ZXIO_NODE_PROTOCOL_FILE;
+      case DT_SOCK:
+        return ZXIO_NODE_PROTOCOL_POSIX_SOCKET;
+      default:
+        return ZXIO_NODE_PROTOCOL_NONE;
+    }
+  }
+
+  // The maximum buffer size that is supported by |fuchsia.io/Directory.ReadDirents|.
+  static constexpr size_t kBufferSize = fio::MAX_BUF;
+
+  // This large structure is heap-allocated once, to be reused by subsequent
+  // ReadDirents calls.
+  struct Boxed {
+    Boxed() = default;
+
+    // Buffers used by the FIDL calls.
+    fidl::Buffer<fio::Directory::ReadDirentsRequest> request_buffer;
+    fidl::Buffer<fio::Directory::ReadDirentsResponse> response_buffer;
+
+    // At each |zxio_dirent_iterator_next| call, we would extract the next
+    // dirent segment from |response_buffer|, and populate |current_entry|
+    // and |current_entry_name|.
+    zxio_dirent_t current_entry;
+    char current_entry_name[fio::MAX_FILENAME + 1] = {};
+  };
+
+  zxio_remote_t* io_;
+  std::unique_ptr<Boxed> boxed_;
+  const uint8_t* data_ = nullptr;
+  uint64_t count_ = 0;
+  uint64_t index_ = 0;
+  uint64_t opaque_[3];
+};
+
+static_assert(sizeof(zxio_dirent_iterator_t) == sizeof(DirentIteratorImpl),
+              "zxio_dirent_iterator_t should match DirentIteratorImpl");
 
 // C++ wrapper around zxio_remote_t.
 class Remote {
@@ -312,7 +458,7 @@ zx_status_t zxio_common_attr_set(zxio_t* io, ToIo1ModePermissions to_io1,
                                  const zxio_node_attr_t* attr) {
   Remote rio(io);
   uint32_t flags = 0;
-  zxio_node_attr_t::has_t remaining = attr->has;
+  zxio_node_attr_t::zxio_node_attr_has_t remaining = attr->has;
   if (attr->has.creation_time) {
     flags |= fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME;
     remaining.creation_time = false;
@@ -321,7 +467,7 @@ zx_status_t zxio_common_attr_set(zxio_t* io, ToIo1ModePermissions to_io1,
     flags |= fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME;
     remaining.modification_time = false;
   }
-  zxio_node_attr_t::has_t all_absent = {};
+  zxio_node_attr_t::zxio_node_attr_has_t all_absent = {};
   if (remaining != all_absent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -588,33 +734,18 @@ zx_status_t zxio_remote_link(zxio_t* io, const char* src_path, zx_handle_t dst_t
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
-zx_status_t zxio_remote_readdir(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
-  Remote rio(io);
-  // Explicitly allocating message buffers to avoid heap allocation.
-  fidl::Buffer<fio::Directory::ReadDirentsRequest> request_buffer;
-  fidl::Buffer<fio::Directory::ReadDirentsResponse> response_buffer;
-  auto result = fio::Directory::Call::ReadDirents(rio.control(), request_buffer.view(), capacity,
-                                                  response_buffer.view());
-  if (result.status() != ZX_OK) {
-    return result.status();
-  }
-  fio::Directory::ReadDirentsResponse* response = result.Unwrap();
-  if (response->s != ZX_OK) {
-    return response->s;
-  }
-  const auto& dirents = response->dirents;
-  if (dirents.count() > capacity) {
-    return ZX_ERR_IO;
-  }
-  memcpy(buffer, dirents.data(), dirents.count());
-  *out_actual = dirents.count();
-  return response->s;
+zx_status_t zxio_remote_dirent_iterator_init(zxio_t* directory, zxio_dirent_iterator_t* iterator) {
+  new (iterator) DirentIteratorImpl(directory);
+  return ZX_OK;
 }
 
-zx_status_t zxio_remote_rewind(zxio_t* io) {
-  Remote rio(io);
-  auto result = fio::Directory::Call::Rewind(rio.control());
-  return result.ok() ? result.Unwrap()->s : result.status();
+zx_status_t zxio_remote_dirent_iterator_next(zxio_t* io, zxio_dirent_iterator_t* iterator,
+                                             zxio_dirent_t** out_entry) {
+  return reinterpret_cast<DirentIteratorImpl*>(iterator)->Next(out_entry);
+}
+
+void zxio_remote_dirent_iterator_destroy(zxio_t* io, zxio_dirent_iterator_t* iterator) {
+  reinterpret_cast<DirentIteratorImpl*>(iterator)->~DirentIteratorImpl();
 }
 
 zx_status_t zxio_remote_isatty(zxio_t* io, bool* tty) {
@@ -653,8 +784,9 @@ static constexpr zxio_ops_t zxio_remote_ops = []() {
   ops.token_get = zxio_remote_token_get;
   ops.rename = zxio_remote_rename;
   ops.link = zxio_remote_link;
-  ops.readdir = zxio_remote_readdir;
-  ops.rewind = zxio_remote_rewind;
+  ops.dirent_iterator_init = zxio_remote_dirent_iterator_init;
+  ops.dirent_iterator_next = zxio_remote_dirent_iterator_next;
+  ops.dirent_iterator_destroy = zxio_remote_dirent_iterator_destroy;
   ops.isatty = zxio_remote_isatty;
   return ops;
 }();
@@ -718,8 +850,9 @@ static constexpr zxio_ops_t zxio_dir_ops = []() {
   ops.token_get = zxio_remote_token_get;
   ops.rename = zxio_remote_rename;
   ops.link = zxio_remote_link;
-  ops.readdir = zxio_remote_readdir;
-  ops.rewind = zxio_remote_rewind;
+  ops.dirent_iterator_init = zxio_remote_dirent_iterator_init;
+  ops.dirent_iterator_next = zxio_remote_dirent_iterator_next;
+  ops.dirent_iterator_destroy = zxio_remote_dirent_iterator_destroy;
   return ops;
 }();
 

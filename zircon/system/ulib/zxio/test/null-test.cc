@@ -57,8 +57,7 @@ TEST(NullTest, Basic) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_link(&io, "one", ZX_HANDLE_INVALID, "two"));
 
   zxio_dirent_iterator_t iter = {};
-  char buffer2[ZXIO_DIRENT_ITERATOR_DEFAULT_BUFFER_SIZE];
-  ASSERT_OK(zxio_dirent_iterator_init(&iter, &io, buffer2, sizeof(buffer2)));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_init(&iter, &io));
   zxio_dirent_t* entry = nullptr;
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_next(&iter, &entry));
 

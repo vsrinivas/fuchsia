@@ -20,6 +20,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
+#include <lib/zxio/types.h>
 #include <lib/zx/channel.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
@@ -154,13 +155,15 @@ zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* s
       return ZX_ERR_INVALID_ARGS;
     }
     uint8_t name_size = static_cast<uint8_t>(name.size());
-    entry->inode = fio::INO_UNKNOWN;
-    entry->size = name_size;
-    entry->type = static_cast<uint8_t>(VTYPE_TO_DTYPE(V_TYPE_DIR));
-    if (sizeof(zxio_dirent_t) + name_size > length) {
+    *entry = {};
+    ZXIO_DIRENT_SET(*entry, protocols, ZXIO_NODE_PROTOCOL_DIRECTORY);
+    if (sizeof(zxio_dirent_t) + name_size + 1 > length) {
       return ZX_ERR_INVALID_ARGS;
     }
+    entry->name_length = name_size;
+    entry->name = reinterpret_cast<char*>(entry) + sizeof(zxio_dirent_t);
     memcpy(entry->name, name.data(), name_size);
+    entry->name[name_size] = '\0';
     return ZX_OK;
   };
 

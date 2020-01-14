@@ -61,7 +61,7 @@ typedef struct fdio_ops {
   uint32_t (*convert_to_posix_mode)(fdio_t* io, zxio_node_protocols_t protocols,
                                     zxio_abilities_t abilities);
   zx_status_t (*dirent_iterator_init)(fdio_t* io, zxio_dirent_iterator_t* iterator,
-                                      zxio_t* directory, void* buffer, size_t capacity);
+                                      zxio_t* directory);
   zx_status_t (*dirent_iterator_next)(fdio_t* io, zxio_dirent_iterator_t* iterator,
                                       zxio_dirent_t** out_entry);
   void (*dirent_iterator_destroy)(fdio_t* io, zxio_dirent_iterator_t* iterator);
@@ -309,7 +309,7 @@ zx_status_t fdio_default_set_attr(fdio_t* io, const zxio_node_attr_t* attr);
 uint32_t fdio_default_convert_to_posix_mode(fdio_t* io, zxio_node_protocols_t protocols,
                                             zxio_abilities_t abilities);
 zx_status_t fdio_default_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
-                                              zxio_t* directory, void* buffer, size_t capacity);
+                                              zxio_t* directory);
 zx_status_t fdio_default_dirent_iterator_next(fdio_t* io, zxio_dirent_iterator_t* iterator,
                                               zxio_dirent_t** out_entry);
 void fdio_default_dirent_iterator_destroy(fdio_t* io, zxio_dirent_iterator_t* iterator);

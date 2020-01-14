@@ -58,8 +58,10 @@ zx_status_t zxio_default_rename(zxio_t* io, const char* src_path, zx_handle_t ds
                                 const char* dst_path);
 zx_status_t zxio_default_link(zxio_t* io, const char* src_path, zx_handle_t dst_token,
                               const char* dst_path);
-zx_status_t zxio_default_readdir(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual);
-zx_status_t zxio_default_rewind(zxio_t* io);
+zx_status_t zxio_default_dirent_iterator_init(zxio_t* directory, zxio_dirent_iterator_t* iterator);
+zx_status_t zxio_default_dirent_iterator_next(zxio_t* io, zxio_dirent_iterator_t* iterator,
+                                              zxio_dirent_t** out_entry);
+void zxio_default_dirent_iterator_destroy(zxio_t* io, zxio_dirent_iterator_t* iterator);
 zx_status_t zxio_default_isatty(zxio_t* io, bool* tty);
 
 // An ops table filled with the default implementations.
@@ -91,8 +93,9 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .token_get = zxio_default_token_get,
     .rename = zxio_default_rename,
     .link = zxio_default_link,
-    .readdir = zxio_default_readdir,
-    .rewind = zxio_default_rewind,
+    .dirent_iterator_init = zxio_default_dirent_iterator_init,
+    .dirent_iterator_next = zxio_default_dirent_iterator_next,
+    .dirent_iterator_destroy = zxio_default_dirent_iterator_destroy,
     .isatty = zxio_default_isatty,
 };
 

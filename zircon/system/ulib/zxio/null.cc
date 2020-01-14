@@ -102,11 +102,19 @@ zx_status_t zxio_default_link(zxio_t* io, const char* src_path, zx_handle_t dst_
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_readdir(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
+zx_status_t zxio_default_dirent_iterator_init(zxio_t* directory, zxio_dirent_iterator_t* iterator) {
+  iterator->io = directory;
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_rewind(zxio_t* io) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t zxio_default_dirent_iterator_next(zxio_t* io, zxio_dirent_iterator_t* iterator,
+                                              zxio_dirent_t** out_entry) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+void zxio_default_dirent_iterator_destroy(zxio_t* io, zxio_dirent_iterator_t* iterator) {
+  iterator->io = nullptr;
+}
 
 static zx_status_t zxio_null_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
                                          zxio_flags_t flags, size_t* out_actual) {

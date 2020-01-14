@@ -167,9 +167,8 @@ static zx_status_t fdio_zxio_get_vmo(fdio_t* io, int flags, zx::vmo* out_vmo) {
 }
 
 static zx_status_t fdio_zxio_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
-                                                  zxio_t* directory, void* buffer,
-                                                  size_t capacity) {
-  return zxio_dirent_iterator_init(iterator, directory, buffer, capacity);
+                                                  zxio_t* directory) {
+  return zxio_dirent_iterator_init(iterator, directory);
 }
 
 static zx_status_t fdio_zxio_dirent_iterator_next(fdio_t* io, zxio_dirent_iterator_t* iterator,

@@ -263,40 +263,31 @@ zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, zx_handle_t d
 // An iterator for |zxio_dirent_t| objects.
 //
 // To start iterating directory entries, call |zxio_dirent_iterator_init| to
-// initialize the |opaque| contents of the iterator. Then, call
+// initialize the contents of the iterator. Then, call
 // |zxio_dirent_iterator_next| to advance the iterator.
 //
 // Typically allocated on the stack.
 typedef struct zxio_dirent_iterator {
-  uint64_t opaque[8];
+  zxio_t* io;
+  uint64_t opaque[7];
 } zxio_dirent_iterator_t;
-
-// A reasonable default capacity for |zxio_dirent_iterator_init|.
-#define ZXIO_DIRENT_ITERATOR_DEFAULT_BUFFER_SIZE ((size_t)4096)
 
 // Initializes a |zxio_dirent_iterator_t| for the given |directory|.
 //
 // At most one |zxio_dirent_iterator_t| can be active for a given |directory|
 // at a time.
 //
-// |buffer| will be used internally by the iterator to cache chunks of directory
-// entries from the remote server. The larger the buffer, the most entries can
-// be fetched from the remote server in each chunk. The caller should not
-// access or modify the contents of the buffer during iteration.
-//
-// |ZXIO_DIRENT_ITERATOR_DEFAULT_BUFFER_SIZE| is a reasonable capacity buffer to
-// use for this operation. Larger buffers might improve performance. Smaller
-// buffers are likely to degrade performance.
-zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory,
-                                      void* buffer, size_t capacity);
+// The initialized iterator should be destroyed by calling
+// |zxio_dirent_iterator_destroy| when no longer used.
+zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory);
 
 // Read a |zxio_dirent_t| from the given |iterator|.
 //
 // The |zxio_dirent_t| returned via |out_entry| is valid until either (a) the
-// next call to |zxio_dirent_iterator_next| or the |buffer| passed to
-// |zxio_dirent_iterator_init| is modified or destroyed.
+// next call to |zxio_dirent_iterator_next| or the |iterator| passed to
+// |zxio_dirent_iterator_init| is destroyed.
 //
-// This function |zxio_directory_entry_t| from the server in chunks, but this
+// This function reads |zxio_directory_entry_t| from the server in chunks, but this
 // function returns the entries one at a time. When this function crosses into
 // a new chunk, the function will block on the remote server to retrieve the
 // next chunk.

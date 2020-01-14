@@ -111,10 +111,11 @@ struct local_dir_dirent_iterator {
 };
 
 zx_status_t local_dir_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
-                                           zxio_t* directory, void* buffer, size_t capacity) {
+                                           zxio_t* directory) {
   auto dir_iterator = new (iterator) local_dir_dirent_iterator;
-  dir_iterator->buffer = buffer;
-  dir_iterator->capacity = capacity;
+  size_t capacity_of_one = sizeof(zxio_dirent_t) + fio::MAX_FILENAME + 1;
+  dir_iterator->buffer = malloc(capacity_of_one);
+  dir_iterator->capacity = capacity_of_one;
   return ZX_OK;
 }
 
@@ -131,6 +132,8 @@ zx_status_t local_dir_dirent_iterator_next(fdio_t* io, zxio_dirent_iterator_t* i
 }
 
 void local_dir_dirent_iterator_destroy(fdio_t* io, zxio_dirent_iterator_t* iterator) {
+  auto dir_iterator = reinterpret_cast<local_dir_dirent_iterator*>(iterator);
+  free(dir_iterator->buffer);
   static_assert(std::is_trivially_destructible<local_dir_dirent_iterator>::value,
                 "local_dir_dirent_iterator must have trivial destructor");
 }

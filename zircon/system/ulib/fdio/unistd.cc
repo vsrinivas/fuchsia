@@ -1705,9 +1705,6 @@ struct __dirstream {
   // The iterator object for reading directory entries.
   zxio_dirent_iterator_t iterator = {};
 
-  // Scratch space used by the iterator.
-  uint8_t data[ZXIO_DIRENT_ITERATOR_DEFAULT_BUFFER_SIZE];
-
   // A single directory entry returned to user; updated by |readdir|.
   struct dirent de = {};
 
@@ -1768,8 +1765,8 @@ struct dirent* readdir(DIR* dir) {
   fdio_t* io = fd_to_io(dir->fd);
   // Lazy initialize the iterator.
   if (!dir->is_iterator_initialized) {
-    zx_status_t status = fdio_get_ops(io)->dirent_iterator_init(
-        io, &dir->iterator, fdio_get_zxio(io), dir->data, sizeof(dir->data));
+    zx_status_t status =
+        fdio_get_ops(io)->dirent_iterator_init(io, &dir->iterator, fdio_get_zxio(io));
     if (status != ZX_OK) {
       errno = fdio_status_to_errno(status);
       return nullptr;
@@ -1786,15 +1783,41 @@ struct dirent* readdir(DIR* dir) {
     errno = fdio_status_to_errno(status);
     return nullptr;
   }
-  de->d_ino = entry->inode;
+  de->d_ino = entry->has.id ? entry->id : fio::INO_UNKNOWN;
   de->d_off = 0;
   // The d_reclen field is nonstandard, but existing code
   // may expect it to be useful as an upper bound on the
   // length of the name.
-  de->d_reclen = static_cast<unsigned short>(offsetof(struct dirent, d_name) + entry->size + 1);
-  de->d_type = entry->type;
-  memcpy(de->d_name, entry->name, entry->size);
-  de->d_name[entry->size] = '\0';
+  de->d_reclen =
+      static_cast<unsigned short>(offsetof(struct dirent, d_name) + entry->name_length + 1);
+  if (entry->has.protocols) {
+    de->d_type = ([](zxio_node_protocols_t protocols) -> unsigned char {
+      if (protocols & ZXIO_NODE_PROTOCOL_DIRECTORY)
+        return DT_DIR;
+      if (protocols & ZXIO_NODE_PROTOCOL_FILE)
+        return DT_REG;
+      if (protocols & ZXIO_NODE_PROTOCOL_MEMORY)
+        return DT_REG;
+      if (protocols & ZXIO_NODE_PROTOCOL_POSIX_SOCKET)
+        return DT_SOCK;
+      if (protocols & ZXIO_NODE_PROTOCOL_PIPE)
+        return DT_FIFO;
+      if (protocols & ZXIO_NODE_PROTOCOL_DEVICE)
+        return DT_BLK;
+      if (protocols & ZXIO_NODE_PROTOCOL_TTY)
+        return DT_CHR;
+      if (protocols & ZXIO_NODE_PROTOCOL_DEBUGLOG)
+        return DT_CHR;
+      // There is no good analogue for FIDL services in POSIX land.
+      if (protocols & ZXIO_NODE_PROTOCOL_CONNECTOR)
+        return DT_UNKNOWN;
+      return DT_UNKNOWN;
+    })(entry->protocols);
+  } else {
+    de->d_type = DT_UNKNOWN;
+  }
+  memcpy(de->d_name, entry->name, entry->name_length);
+  de->d_name[entry->name_length] = '\0';
   return de;
 }
 

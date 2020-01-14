@@ -72,8 +72,10 @@ typedef struct zxio_ops {
                         const char* dst_path);
   zx_status_t (*link)(zxio_t* io, const char* src_path, zx_handle_t dst_token,
                       const char* dst_path);
-  zx_status_t (*readdir)(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual);
-  zx_status_t (*rewind)(zxio_t* io);
+  zx_status_t (*dirent_iterator_init)(zxio_t* io, zxio_dirent_iterator_t* iterator);
+  zx_status_t (*dirent_iterator_next)(zxio_t* io, zxio_dirent_iterator_t* iterator,
+                                      zxio_dirent_t** out_entry);
+  void (*dirent_iterator_destroy)(zxio_t* io, zxio_dirent_iterator_t* iterator);
   zx_status_t (*isatty)(zxio_t* io, bool* tty);
 } zxio_ops_t;
 

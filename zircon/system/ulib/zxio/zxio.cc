@@ -20,27 +20,11 @@ typedef struct zxio_internal {
 
 static_assert(sizeof(zxio_t) == sizeof(zxio_internal_t), "zxio_t should match zxio_internal_t");
 
-typedef struct zxio_dirent_iterator_internal {
-  zxio_t* io;
-  uint8_t* buffer;
-  uint64_t capacity;
-  uint64_t count;
-  uint64_t index;
-  uint64_t opaque[3];
-} zxio_dirent_iterator_internal_t;
-
-static_assert(sizeof(zxio_dirent_iterator_t) == sizeof(zxio_dirent_iterator_internal_t),
-              "zxio_dirent_iterator_t should match zxio_dirent_iterator_internal_t");
-
 // Converters from the public (opaque) types to the internal (implementation) types.
 namespace {
 
 zxio_internal_t* to_internal(zxio_t* io) {
   return reinterpret_cast<zxio_internal_t*>(io);
-}
-
-zxio_dirent_iterator_internal_t* to_internal(zxio_dirent_iterator_t* iterator) {
-  return reinterpret_cast<zxio_dirent_iterator_internal*>(iterator);
 }
 
 }  // namespace
@@ -240,76 +224,19 @@ zx_status_t zxio_link(zxio_t* src_directory, const char* src_path, zx_handle_t d
   return zio->ops->link(src_directory, src_path, dst_directory_token, dst_path);
 }
 
-zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory,
-                                      void* buffer, size_t capacity) {
+zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory) {
   zxio_internal_t* zio = to_internal(directory);
-
-  zxio_dirent_iterator_internal_t* iter = to_internal(iterator);
-  iter->io = directory;
-  iter->buffer = reinterpret_cast<uint8_t*>(buffer);
-  iter->capacity = capacity;
-  iter->count = 0;
-  iter->index = 0;
-
-  if (!zio->ops->readdir) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  return ZX_OK;
+  return zio->ops->dirent_iterator_init(directory, iterator);
 }
 
 zx_status_t zxio_dirent_iterator_next(zxio_dirent_iterator_t* iterator, zxio_dirent_t** out_entry) {
-  zxio_dirent_iterator_internal_t* iter = to_internal(iterator);
-  zxio_internal_t* zio = to_internal(iter->io);
-
-  if (!zio->ops->readdir) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  if (iter->index >= iter->count) {
-    size_t count;
-    zx_status_t status = zio->ops->readdir(iter->io, iter->buffer, iter->capacity, &count);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    if (count == 0) {
-      return ZX_ERR_NOT_FOUND;
-    }
-
-    iter->count = count;
-    iter->index = 0;
-  }
-
-  auto entry = reinterpret_cast<zxio_dirent_t*>(&iter->buffer[iter->index]);
-
-  // Check if we can read the entry size.
-  if (iter->index + sizeof(zxio_dirent_t) > iter->count) {
-    // Should not happen
-    return ZX_ERR_INTERNAL;
-  }
-
-  size_t entry_size = sizeof(zxio_dirent_t) + entry->size;
-
-  // Check if we can read the whole entry.
-  if (iter->index + entry_size > iter->count) {
-    // Should not happen
-    return ZX_ERR_INTERNAL;
-  }
-
-  iter->index += entry_size;
-  *out_entry = entry;
-
-  return ZX_OK;
+  zxio_internal_t* zio = to_internal(iterator->io);
+  return zio->ops->dirent_iterator_next(iterator->io, iterator, out_entry);
 }
 
 void zxio_dirent_iterator_destroy(zxio_dirent_iterator_t* iterator) {
-  zxio_dirent_iterator_internal_t* iter = to_internal(iterator);
-  zxio_internal_t* zio = to_internal(iter->io);
-  if (!zio->ops->readdir) {
-    return;
-  }
-  zio->ops->rewind(iter->io);
+  zxio_internal_t* zio = to_internal(iterator->io);
+  zio->ops->dirent_iterator_destroy(iterator->io, iterator);
 }
 
 zx_status_t zxio_isatty(zxio_t* io, bool* tty) {

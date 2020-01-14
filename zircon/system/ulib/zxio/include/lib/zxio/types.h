@@ -156,7 +156,7 @@ typedef struct zxio_node_attr {
   // and the corresponding presence indicator will be false.
   // Therefore, a completely empty |zxio_node_attr_t| may be conveniently
   // obtained via value-initialization e.g. `zxio_node_attr_t a = {};`.
-  struct has_t {
+  struct zxio_node_attr_has_t {
     bool protocols;
     bool abilities;
     bool id;
@@ -167,13 +167,13 @@ typedef struct zxio_node_attr {
     bool modification_time;
 
 #ifdef __cplusplus
-    constexpr bool operator==(const has_t& other) const {
+    constexpr bool operator==(const zxio_node_attr_has_t& other) const {
       return protocols == other.protocols && abilities == other.abilities && id == other.id &&
              content_size == other.content_size && storage_size == other.storage_size &&
              link_count == other.link_count && creation_time == other.creation_time &&
              modification_time == other.modification_time;
     }
-    constexpr bool operator!=(const has_t& other) const {
+    constexpr bool operator!=(const zxio_node_attr_has_t& other) const {
       return !(*this == other);
     }
 #endif  // _cplusplus
@@ -231,23 +231,42 @@ typedef uint32_t zxio_seek_origin_t;
 
 // An entry in a directory.
 typedef struct zxio_dirent {
-  // The inode number of the entry.
-  uint64_t inode;
+  // The kinds of representations supported by the node.
+  zxio_node_protocols_t protocols;
+
+  // The kinds of operations supported by the node.
+  zxio_abilities_t abilities;
+
+  // A filesystem-unique ID.
+  zxio_node_id_t id;
+
+  // Presence indicator for the above fields. Note that the |name| field
+  // is never absent.
+  //
+  // If a particular field is absent, it should be set to zero/none,
+  // and the corresponding presence indicator will be false.
+  struct zxio_dirent_has_t {
+    bool protocols;
+    bool abilities;
+    bool id;
+  } has;
 
   // The length of the name of the entry.
-  uint8_t size;
-
-  // The type of the entry.
-  //
-  // Aligned with the POSIX d_type values.
-  uint8_t type;
+  uint8_t name_length;
 
   // The name of the entry.
   //
-  // This string is not null terminated. Instead, refer to |size| to
-  // determine the length of the string.
-  char name[0];
-} __PACKED zxio_dirent_t;
+  // This string is null terminated. Also, |name_length| is offered
+  // as a convenience.
+  char* name;
+} zxio_dirent_t;
+
+#define ZXIO_DIRENT_SET(attr, field_name, value) \
+  do {                                              \
+    zxio_dirent_t* _tmp_attr = &(attr);          \
+    _tmp_attr->field_name = value;                  \
+    _tmp_attr->has.field_name = true;               \
+  } while (0)
 
 __END_CDECLS
 

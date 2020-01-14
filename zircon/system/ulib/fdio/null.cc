@@ -26,7 +26,7 @@ uint32_t fdio_default_convert_to_posix_mode(fdio_t* io, zxio_node_protocols_t pr
 }
 
 zx_status_t fdio_default_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
-                                              zxio_t* directory, void* buffer, size_t capacity) {
+                                              zxio_t* directory) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
