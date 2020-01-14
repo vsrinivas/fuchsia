@@ -206,8 +206,13 @@ impl ClientMlme {
                         Err(Error::Status(format!("No client sta."), zx::Status::NOT_SUPPORTED))
                     }
                     Some(sta) => Ok(sta
-                        .bind(&mut self.scanner, &mut self.chan_sched, &mut self.channel_state)
-                        .handle_mlme_msg(&mut self.ctx, msg)),
+                        .bind(
+                            &mut self.ctx,
+                            &mut self.scanner,
+                            &mut self.chan_sched,
+                            &mut self.channel_state,
+                        )
+                        .handle_mlme_msg(msg)),
                 }
             }
         }
@@ -261,8 +266,13 @@ impl ClientMlme {
             _ => {
                 if let Some(sta) = sta {
                     return sta
-                        .bind(&mut self.scanner, &mut self.chan_sched, &mut self.channel_state)
-                        .handle_timed_event(&mut self.ctx, event_id, event);
+                        .bind(
+                            &mut self.ctx,
+                            &mut self.scanner,
+                            &mut self.chan_sched,
+                            &mut self.channel_state,
+                        )
+                        .handle_timed_event(event_id, event);
                 }
             }
         }
@@ -298,11 +308,12 @@ impl Client {
 
     pub fn bind<'a>(
         &'a mut self,
+        ctx: &'a mut Context,
         scanner: &'a mut Scanner,
         chan_sched: &'a mut ChannelScheduler,
         channel_state: &'a mut ChannelListenerState,
     ) -> BoundClient<'a> {
-        BoundClient { sta: self, scanner, chan_sched, channel_state }
+        BoundClient { sta: self, ctx, scanner, chan_sched, channel_state }
     }
 
     pub fn pre_switch_off_channel(&mut self, ctx: &mut Context) {
@@ -350,22 +361,23 @@ impl Client {
 
 pub struct BoundClient<'a> {
     sta: &'a mut Client,
+    // TODO(44079): pull everything out of Context and plop them here.
+    ctx: &'a mut Context,
     scanner: &'a mut Scanner,
     chan_sched: &'a mut ChannelScheduler,
     channel_state: &'a mut ChannelListenerState,
 }
 
 impl<'a> BoundClient<'a> {
-    pub fn authenticate(&mut self, ctx: &mut Context, timeout_bcn_count: u8) {
+    pub fn authenticate(&mut self, timeout_bcn_count: u8) {
         // Safe: |state| is never None and always replaced with Some(..).
-        self.sta.state =
-            Some(self.sta.state.take().unwrap().authenticate(self, ctx, timeout_bcn_count));
+        self.sta.state = Some(self.sta.state.take().unwrap().authenticate(self, timeout_bcn_count));
     }
 
     // TODO(hahnr): Take MLME-ASSOCIATE.request as parameter.
-    pub fn associate(&mut self, ctx: &mut Context) {
+    pub fn associate(&mut self) {
         // Safe: |state| is never None and always replaced with Some(..).
-        self.sta.state = Some(self.sta.state.take().unwrap().associate(self, ctx));
+        self.sta.state = Some(self.sta.state.take().unwrap().associate(self));
     }
 
     /// Extracts aggregated and non-aggregated MSDUs from the data frame.
@@ -380,7 +392,6 @@ impl<'a> BoundClient<'a> {
     // this function.
     pub fn handle_data_frame<B: ByteSlice>(
         &mut self,
-        ctx: &mut Context,
         fixed_data_fields: &mac::FixedDataHdrFields,
         addr4: Option<mac::Addr4>,
         qos_ctrl: Option<mac::QosControl>,
@@ -392,7 +403,7 @@ impl<'a> BoundClient<'a> {
         match msdus {
             // Handle NULL data frames independent of the controlled port's status.
             mac::MsduIterator::Null => {
-                if let Err(e) = self.send_keep_alive_resp_frame(ctx) {
+                if let Err(e) = self.send_keep_alive_resp_frame() {
                     error!("error sending keep alive frame: {}", e);
                 }
             }
@@ -405,7 +416,6 @@ impl<'a> BoundClient<'a> {
                         // status.
                         mac::ETHER_TYPE_EAPOL => {
                             if let Err(e) = self.send_eapol_indication(
-                                ctx,
                                 *src_addr,
                                 *dst_addr,
                                 &llc_frame.body[..],
@@ -415,7 +425,7 @@ impl<'a> BoundClient<'a> {
                         }
                         // Deliver non-EAPoL MSDUs only if the controlled port is open.
                         _ if is_controlled_port_open => {
-                            if let Err(e) = self.deliver_msdu(ctx, msdu) {
+                            if let Err(e) = self.deliver_msdu(msdu) {
                                 error!("error while handling data frame: {}", e);
                             }
                         }
@@ -430,11 +440,7 @@ impl<'a> BoundClient<'a> {
     /// Delivers a single MSDU to the STA's underlying device. The MSDU is delivered as an
     /// Ethernet II frame.
     /// Returns Err(_) if writing or delivering the Ethernet II frame failed.
-    fn deliver_msdu<B: ByteSlice>(
-        &mut self,
-        ctx: &mut Context,
-        msdu: mac::Msdu<B>,
-    ) -> Result<(), Error> {
+    fn deliver_msdu<B: ByteSlice>(&mut self, msdu: mac::Msdu<B>) -> Result<(), Error> {
         let mac::Msdu { dst_addr, src_addr, llc_frame } = msdu;
 
         let mut buf = [0u8; mac::MAX_ETH_FRAME_LEN];
@@ -446,20 +452,21 @@ impl<'a> BoundClient<'a> {
             llc_frame.hdr.protocol_id.to_native(),
             &llc_frame.body,
         )?;
-        ctx.device
+        self.ctx
+            .device
             .deliver_eth_frame(writer.into_written())
             .map_err(|s| Error::Status(format!("could not deliver Ethernet II frame"), s))
     }
 
     /// Sends an authentication frame using Open System authentication.
-    pub fn send_open_auth_frame(&mut self, ctx: &mut Context) -> Result<(), Error> {
+    pub fn send_open_auth_frame(&mut self) -> Result<(), Error> {
         const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::AuthHdr);
-        let mut buf = ctx.buf_provider.get_buffer(FRAME_LEN)?;
+        let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
         let mut w = BufferWriter::new(&mut buf[..]);
-        write_open_auth_frame(&mut w, self.sta.bssid, self.sta.iface_mac, &mut ctx.seq_mgr)?;
+        write_open_auth_frame(&mut w, self.sta.bssid, self.sta.iface_mac, &mut self.ctx.seq_mgr)?;
         let bytes_written = w.bytes_written();
         let out_buf = OutBuf::from(buf, bytes_written);
-        self.send_mgmt_or_ctrl_frame(ctx, out_buf)
+        self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending open auth frame"), s))
     }
 
@@ -467,7 +474,6 @@ impl<'a> BoundClient<'a> {
     // TODO(fxb/39148): Use an IE set instead of individual IEs.
     pub fn send_assoc_req_frame(
         &mut self,
-        ctx: &mut Context,
         cap_info: u16,
         ssid: &[u8],
         rates: &[u8],
@@ -488,7 +494,7 @@ impl<'a> BoundClient<'a> {
         let ht_cap_len = if ht_cap.is_empty() { 0 } else { IE_PREFIX_LEN + ht_cap.len() };
         let vht_cap_len = if vht_cap.is_empty() { 0 } else { IE_PREFIX_LEN + vht_cap.len() };
         let frame_len = frame_len + ssid_len + rates_len + rsne_len + ht_cap_len + vht_cap_len;
-        let mut buf = ctx.buf_provider.get_buffer(frame_len)?;
+        let mut buf = self.ctx.buf_provider.get_buffer(frame_len)?;
         let mut w = BufferWriter::new(&mut buf[..]);
 
         let rsne = if rsne.is_empty() {
@@ -509,7 +515,7 @@ impl<'a> BoundClient<'a> {
             &mut w,
             self.sta.bssid,
             self.sta.iface_mac,
-            &mut ctx.seq_mgr,
+            &mut self.ctx.seq_mgr,
             mac::CapabilityInfo(cap_info),
             ssid,
             rates,
@@ -519,7 +525,7 @@ impl<'a> BoundClient<'a> {
         )?;
         let bytes_written = w.bytes_written();
         let out_buf = OutBuf::from(buf, bytes_written);
-        self.send_mgmt_or_ctrl_frame(ctx, out_buf)
+        self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending assoc req frame"), s))
     }
 
@@ -528,44 +534,45 @@ impl<'a> BoundClient<'a> {
     // Note: This function was introduced to meet C++ MLME feature parity. However, there needs to
     // be some investigation, whether these "keep alive" frames are the right way of keeping a
     // client associated to legacy APs.
-    fn send_keep_alive_resp_frame(&mut self, ctx: &mut Context) -> Result<(), Error> {
+    fn send_keep_alive_resp_frame(&mut self) -> Result<(), Error> {
         const FRAME_LEN: usize = frame_len!(mac::FixedDataHdrFields);
-        let mut buf = ctx.buf_provider.get_buffer(FRAME_LEN)?;
+        let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
         let mut w = BufferWriter::new(&mut buf[..]);
-        write_keep_alive_resp_frame(&mut w, self.sta.bssid, self.sta.iface_mac, &mut ctx.seq_mgr)?;
+        write_keep_alive_resp_frame(
+            &mut w,
+            self.sta.bssid,
+            self.sta.iface_mac,
+            &mut self.ctx.seq_mgr,
+        )?;
         let bytes_written = w.bytes_written();
         let out_buf = OutBuf::from(buf, bytes_written);
-        ctx.device
+        self.ctx
+            .device
             .send_wlan_frame(out_buf, TxFlags::NONE)
             .map_err(|s| Error::Status(format!("error sending keep alive frame"), s))
     }
 
     /// Sends a deauthentication notification to the joined BSS with the given `reason_code`.
-    pub fn send_deauth_frame(
-        &mut self,
-        ctx: &mut Context,
-        reason_code: mac::ReasonCode,
-    ) -> Result<(), Error> {
+    pub fn send_deauth_frame(&mut self, reason_code: mac::ReasonCode) -> Result<(), Error> {
         const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::DeauthHdr);
-        let mut buf = ctx.buf_provider.get_buffer(FRAME_LEN)?;
+        let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
         let mut w = BufferWriter::new(&mut buf[..]);
         write_deauth_frame(
             &mut w,
             self.sta.bssid,
             self.sta.iface_mac,
             reason_code,
-            &mut ctx.seq_mgr,
+            &mut self.ctx.seq_mgr,
         )?;
         let bytes_written = w.bytes_written();
         let out_buf = OutBuf::from(buf, bytes_written);
-        self.send_mgmt_or_ctrl_frame(ctx, out_buf)
+        self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending deauthenticate frame"), s))
     }
 
     /// Sends the given payload as a data frame over the air.
     pub fn send_data_frame(
         &mut self,
-        ctx: &mut Context,
         src: MacAddr,
         dst: MacAddr,
         is_protected: bool,
@@ -577,11 +584,11 @@ impl<'a> BoundClient<'a> {
         let data_hdr_len =
             mac::FixedDataHdrFields::len(mac::Addr4::ABSENT, qos_presence, mac::HtControl::ABSENT);
         let frame_len = data_hdr_len + std::mem::size_of::<mac::LlcHdr>() + payload.len();
-        let mut buf = ctx.buf_provider.get_buffer(frame_len)?;
+        let mut buf = self.ctx.buf_provider.get_buffer(frame_len)?;
         let mut w = BufferWriter::new(&mut buf[..]);
         write_data_frame(
             &mut w,
-            &mut ctx.seq_mgr,
+            &mut self.ctx.seq_mgr,
             self.sta.bssid,
             src,
             dst,
@@ -596,7 +603,8 @@ impl<'a> BoundClient<'a> {
             mac::ETHER_TYPE_EAPOL => TxFlags::FAVOR_RELIABILITY,
             _ => TxFlags::NONE,
         };
-        ctx.device
+        self.ctx
+            .device
             .send_wlan_frame(out_buf, tx_flags)
             .map_err(|s| Error::Status(format!("error sending data frame"), s))
     }
@@ -605,7 +613,6 @@ impl<'a> BoundClient<'a> {
     /// Note: MLME-EAPOL.indication is a custom Fuchsia primitive and not defined in IEEE 802.11.
     fn send_eapol_indication(
         &mut self,
-        ctx: &mut Context,
         src_addr: MacAddr,
         dst_addr: MacAddr,
         eapol_frame: &[u8],
@@ -616,7 +623,7 @@ impl<'a> BoundClient<'a> {
                 eapol_frame.len()
             )));
         }
-        ctx.device.access_sme_sender(|sender| {
+        self.ctx.device.access_sme_sender(|sender| {
             sender.send_eapol_ind(&mut fidl_mlme::EapolIndication {
                 src_addr,
                 dst_addr,
@@ -629,7 +636,6 @@ impl<'a> BoundClient<'a> {
     /// MLME-EAPOL.confirm message.
     pub fn send_eapol_frame(
         &mut self,
-        ctx: &mut Context,
         src: MacAddr,
         dst: MacAddr,
         is_protected: bool,
@@ -638,7 +644,6 @@ impl<'a> BoundClient<'a> {
         // TODO(34910): EAPoL frames can be send in QoS data frames. However, Fuchsia's old C++
         // MLME never sent EAPoL frames in QoS data frames. For feature parity do the same.
         let result = self.send_data_frame(
-            ctx,
             src,
             dst,
             is_protected,
@@ -655,7 +660,7 @@ impl<'a> BoundClient<'a> {
         };
 
         // Report transmission result to SME.
-        let result = ctx.device.access_sme_sender(|sender| {
+        let result = self.ctx.device.access_sme_sender(|sender| {
             sender.send_eapol_conf(&mut fidl_mlme::EapolConfirm { result_code })
         });
         if let Err(e) = result {
@@ -663,14 +668,14 @@ impl<'a> BoundClient<'a> {
         }
     }
 
-    pub fn send_ps_poll_frame(&mut self, ctx: &mut Context, aid: Aid) -> Result<(), Error> {
+    pub fn send_ps_poll_frame(&mut self, aid: Aid) -> Result<(), Error> {
         const FRAME_LEN: usize = frame_len!(mac::PsPoll);
-        let mut buf = ctx.buf_provider.get_buffer(FRAME_LEN)?;
+        let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
         let mut w = BufferWriter::new(&mut buf[..]);
         write_ps_poll_frame(&mut w, aid, self.sta.bssid, self.sta.iface_mac)?;
         let bytes_written = w.bytes_written();
         let out_buf = OutBuf::from(buf, bytes_written);
-        self.send_mgmt_or_ctrl_frame(ctx, out_buf)
+        self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending PS-Poll frame"), s))
     }
 
@@ -681,9 +686,9 @@ impl<'a> BoundClient<'a> {
     /// # Errors
     ///
     /// Returns an error if the management frame cannot be sent to the AP.
-    pub fn send_addba_req_frame(&mut self, ctx: &mut Context) -> Result<(), Error> {
+    pub fn send_addba_req_frame(&mut self) -> Result<(), Error> {
         const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::ActionHdr, mac::AddbaReqHdr);
-        let mut buf = ctx.buf_provider.get_buffer(FRAME_LEN)?;
+        let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
         let mut w = BufferWriter::new(&mut buf[..]);
         // TODO(29887): It appears there is no particular rule to choose the
         //              value for `dialog_token`. Persist the dialog token for
@@ -695,11 +700,11 @@ impl<'a> BoundClient<'a> {
             self.sta.bssid,
             self.sta.iface_mac,
             dialog_token,
-            &mut ctx.seq_mgr,
+            &mut self.ctx.seq_mgr,
         )?;
         let bytes_written = w.bytes_written();
         let out_buf = OutBuf::from(buf, bytes_written);
-        self.send_mgmt_or_ctrl_frame(ctx, out_buf)
+        self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending addba request frame"), s))
     }
 
@@ -710,45 +715,34 @@ impl<'a> BoundClient<'a> {
     /// # Errors
     ///
     /// Returns an error if the management frame cannot be sent to the AP.
-    pub fn send_addba_resp_frame(
-        &mut self,
-        ctx: &mut Context,
-        dialog_token: u8,
-    ) -> Result<(), Error> {
+    pub fn send_addba_resp_frame(&mut self, dialog_token: u8) -> Result<(), Error> {
         const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::ActionHdr, mac::AddbaRespHdr);
-        let mut buf = ctx.buf_provider.get_buffer(FRAME_LEN)?;
+        let mut buf = self.ctx.buf_provider.get_buffer(FRAME_LEN)?;
         let mut w = BufferWriter::new(&mut buf[..]);
         write_addba_resp_frame(
             &mut w,
             self.sta.bssid,
             self.sta.iface_mac,
             dialog_token,
-            &mut ctx.seq_mgr,
+            &mut self.ctx.seq_mgr,
         )?;
         let bytes_written = w.bytes_written();
         let out_buf = OutBuf::from(buf, bytes_written);
-        self.send_mgmt_or_ctrl_frame(ctx, out_buf)
+        self.send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending addba response frame"), s))
     }
 
     /// Called when a previously scheduled `TimedEvent` fired.
-    pub fn handle_timed_event(
-        &mut self,
-        ctx: &mut Context,
-        event_id: EventId,
-        event: TimedEvent,
-    ) -> bool {
+    pub fn handle_timed_event(&mut self, event_id: EventId, event: TimedEvent) -> bool {
         match event {
             TimedEvent::LostBssCountdown => {
                 if let Some(lost_bss_counter) = self.sta.lost_bss_counter.as_mut() {
-                    let auto_deauth = lost_bss_counter.handle_timeout(&mut ctx.timer, event_id);
+                    let auto_deauth =
+                        lost_bss_counter.handle_timeout(&mut self.ctx.timer, event_id);
                     if auto_deauth {
-                        self.send_deauthenticate_ind(
-                            ctx,
-                            fidl_mlme::ReasonCode::LeavingNetworkDeauth,
-                        );
+                        self.send_deauthenticate_ind(fidl_mlme::ReasonCode::LeavingNetworkDeauth);
                         if let Err(e) =
-                            self.send_deauth_frame(ctx, mac::ReasonCode::LEAVING_NETWORK_DEAUTH)
+                            self.send_deauth_frame(mac::ReasonCode::LEAVING_NETWORK_DEAUTH)
                         {
                             warn!("Failed sending deauth frame {:?}", e);
                         }
@@ -758,41 +752,36 @@ impl<'a> BoundClient<'a> {
             }
             _ => {
                 // Safe: |state| is never None and always replaced with Some(..).
-                self.sta.state =
-                    Some(self.sta.state.take().unwrap().on_timed_event(self, ctx, event))
+                self.sta.state = Some(self.sta.state.take().unwrap().on_timed_event(self, event))
             }
         }
         false
     }
 
     /// Called when an arbitrary frame was received over the air.
-    pub fn on_mac_frame<B: ByteSlice>(&mut self, ctx: &mut Context, bytes: B, body_aligned: bool) {
+    pub fn on_mac_frame<B: ByteSlice>(&mut self, bytes: B, body_aligned: bool) {
         // Safe: |state| is never None and always replaced with Some(..).
         self.sta.state =
-            Some(self.sta.state.take().unwrap().on_mac_frame(self, ctx, bytes, body_aligned));
+            Some(self.sta.state.take().unwrap().on_mac_frame(self, bytes, body_aligned));
     }
 
-    pub fn on_eth_frame<B: ByteSlice>(&mut self, ctx: &mut Context, frame: B) -> Result<(), Error> {
-        let (state, result) = self.sta.state.take().unwrap().on_eth_frame(self, ctx, frame);
+    pub fn on_eth_frame<B: ByteSlice>(&mut self, frame: B) -> Result<(), Error> {
+        let (state, result) = self.sta.state.take().unwrap().on_eth_frame(self, frame);
         self.sta.state = Some(state);
         result
     }
 
     #[allow(deprecated)] // Allow until main message loop is in Rust.
-    pub fn handle_mlme_msg(&mut self, ctx: &mut Context, msg: fidl_mlme::MlmeRequestMessage) {
+    pub fn handle_mlme_msg(&mut self, msg: fidl_mlme::MlmeRequestMessage) {
         // Safe: |state| is never None and always replaced with Some(..).
-        let state = self.sta.state.take().unwrap().handle_mlme_msg(self, ctx, msg);
+        let state = self.sta.state.take().unwrap().handle_mlme_msg(self, msg);
         self.sta.state.replace(state);
     }
 
     /// Sends an MLME-AUTHENTICATE.confirm message to the SME with authentication type
     /// `Open System` as only open authentication is supported.
-    fn send_authenticate_conf(
-        &mut self,
-        ctx: &mut Context,
-        result_code: fidl_mlme::AuthenticateResultCodes,
-    ) {
-        let result = ctx.device.access_sme_sender(|sender| {
+    fn send_authenticate_conf(&mut self, result_code: fidl_mlme::AuthenticateResultCodes) {
+        let result = self.ctx.device.access_sme_sender(|sender| {
             sender.send_authenticate_conf(&mut fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: self.sta.bssid.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
@@ -806,11 +795,7 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Sends an MLME-ASSOCIATE.confirm message to the SME.
-    fn send_associate_conf_failure(
-        &mut self,
-        ctx: &mut Context,
-        result_code: fidl_mlme::AssociateResultCodes,
-    ) {
+    fn send_associate_conf_failure(&mut self, result_code: fidl_mlme::AssociateResultCodes) {
         // AID used for reporting failed associations to SME.
         const FAILED_ASSOCIATION_AID: mac::Aid = 0;
 
@@ -824,7 +809,7 @@ impl<'a> BoundClient<'a> {
         };
 
         let result =
-            ctx.device.access_sme_sender(|sender| sender.send_associate_conf(&mut assoc_conf));
+            self.ctx.device.access_sme_sender(|sender| sender.send_associate_conf(&mut assoc_conf));
         if let Err(e) = result {
             error!("error sending MLME-AUTHENTICATE.confirm: {}", e);
         }
@@ -832,7 +817,6 @@ impl<'a> BoundClient<'a> {
 
     fn send_associate_conf_success<B: ByteSlice>(
         &mut self,
-        ctx: &mut Context,
         association_id: mac::Aid,
         cap_info: mac::CapabilityInfo,
         elements: B,
@@ -880,15 +864,15 @@ impl<'a> BoundClient<'a> {
         }
 
         let result =
-            ctx.device.access_sme_sender(|sender| sender.send_associate_conf(&mut assoc_conf));
+            self.ctx.device.access_sme_sender(|sender| sender.send_associate_conf(&mut assoc_conf));
         if let Err(e) = result {
             error!("error sending MLME-AUTHENTICATE.confirm: {}", e);
         }
     }
 
     /// Sends an MLME-DEAUTHENTICATE.indication message to the joined BSS.
-    fn send_deauthenticate_ind(&mut self, ctx: &mut Context, reason_code: fidl_mlme::ReasonCode) {
-        let result = ctx.device.access_sme_sender(|sender| {
+    fn send_deauthenticate_ind(&mut self, reason_code: fidl_mlme::ReasonCode) {
+        let result = self.ctx.device.access_sme_sender(|sender| {
             sender.send_deauthenticate_ind(&mut fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: self.sta.bssid.0,
                 reason_code,
@@ -900,8 +884,8 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Sends an MLME-DISASSOCIATE.indication message to the joined BSS.
-    fn send_disassoc_ind(&mut self, ctx: &mut Context, reason_code: fidl_mlme::ReasonCode) {
-        let result = ctx.device.access_sme_sender(|sender| {
+    fn send_disassoc_ind(&mut self, reason_code: fidl_mlme::ReasonCode) {
+        let result = self.ctx.device.access_sme_sender(|sender| {
             sender.send_disassociate_ind(&mut fidl_mlme::DisassociateIndication {
                 peer_sta_address: self.sta.bssid.0,
                 reason_code: reason_code.into_primitive(),
@@ -912,20 +896,16 @@ impl<'a> BoundClient<'a> {
         }
     }
 
-    fn send_mgmt_or_ctrl_frame(
-        &mut self,
-        ctx: &mut Context,
-        out_buf: OutBuf,
-    ) -> Result<(), zx::Status> {
-        self.ensure_on_channel(ctx);
-        ctx.device.send_wlan_frame(out_buf, TxFlags::NONE)
+    fn send_mgmt_or_ctrl_frame(&mut self, out_buf: OutBuf) -> Result<(), zx::Status> {
+        self.ensure_on_channel();
+        self.ctx.device.send_wlan_frame(out_buf, TxFlags::NONE)
     }
 
-    fn ensure_on_channel(&mut self, ctx: &mut Context) {
+    fn ensure_on_channel(&mut self) {
         match self.channel_state.main_channel {
             Some(main_channel) => {
-                let duration = zx::Duration::from_nanos(ctx.config.ensure_on_channel_time);
-                let mut listener = self.channel_state.bind(ctx, self.scanner, Some(self.sta));
+                let duration = zx::Duration::from_nanos(self.ctx.config.ensure_on_channel_time);
+                let mut listener = self.channel_state.bind(self.ctx, self.scanner, Some(self.sta));
                 self.chan_sched
                     .bind(&mut listener, ChannelListenerSource::Others)
                     .schedule_immediate(main_channel, duration);
@@ -1061,8 +1041,8 @@ mod tests {
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
-            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
-            .send_open_auth_frame(&mut me.ctx)
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_open_auth_frame()
             .expect("error delivering WLAN frame");
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
 
@@ -1291,8 +1271,8 @@ mod tests {
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
-            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
-            .send_open_auth_frame(&mut me.ctx)
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_open_auth_frame()
             .expect("error delivering WLAN frame");
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
@@ -1322,9 +1302,8 @@ mod tests {
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
-            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
             .send_assoc_req_frame(
-                &mut me.ctx,
                 0x1234,                               // capability info
                 &[11, 22, 33, 44],                    // SSID
                 &[8, 7, 6, 5, 4, 3, 2, 1, 0],         // rates
@@ -1385,8 +1364,8 @@ mod tests {
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
-            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
-            .send_keep_alive_resp_frame(&mut me.ctx)
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_keep_alive_resp_frame()
             .expect("error delivering WLAN frame");
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
@@ -1413,8 +1392,8 @@ mod tests {
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
-            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
-            .send_data_frame(&mut me.ctx, [2; 6], [3; 6], false, false, 0x1234, &payload[..])
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_data_frame([2; 6], [3; 6], false, false, 0x1234, &payload[..])
             .expect("error delivering WLAN frame");
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
@@ -1446,8 +1425,8 @@ mod tests {
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
-            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
-            .send_deauth_frame(&mut me.ctx, mac::ReasonCode::AP_INITIATED)
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_deauth_frame(mac::ReasonCode::AP_INITIATED)
             .expect("error delivering WLAN frame");
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
@@ -1483,12 +1462,15 @@ mod tests {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         let mut client = make_client_station();
-        send_data_frame(
-            &mut client.bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state),
-            &mut me.ctx,
-            data_frame,
-            true,
-        );
+        {
+            let mut client = client.bind(
+                &mut me.ctx,
+                &mut me.scanner,
+                &mut me.chan_sched,
+                &mut me.channel_state,
+            );
+            send_data_frame(&mut client, data_frame, true);
+        }
         #[rustfmt::skip]
         assert_eq!(&m.fake_device.wlan_queue[0].0[..], &[
             // Data header:
@@ -1512,8 +1494,9 @@ mod tests {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         let mut client = make_client_station();
-        let mut client = client.bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
-        send_data_frame(&mut client, &mut me.ctx, data_frame, true);
+        let mut client =
+            client.bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
+        send_data_frame(&mut client, data_frame, true);
         #[rustfmt::skip]
         assert_eq!(m.fake_device.eth_queue[0], [
             3, 3, 3, 3, 3, 3, // dst_addr
@@ -1529,8 +1512,9 @@ mod tests {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         let mut client = make_client_station();
-        let mut client = client.bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
-        send_data_frame(&mut client, &mut me.ctx, data_frame, true);
+        let mut client =
+            client.bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
+        send_data_frame(&mut client, data_frame, true);
         let queue = &m.fake_device.eth_queue;
         assert_eq!(queue.len(), 2);
         #[rustfmt::skip]
@@ -1557,8 +1541,9 @@ mod tests {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         let mut client = make_client_station();
-        let mut client = client.bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
-        send_data_frame(&mut client, &mut me.ctx, data_frame, true);
+        let mut client =
+            client.bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
+        send_data_frame(&mut client, data_frame, true);
         let queue = &m.fake_device.eth_queue;
         assert_eq!(queue.len(), 1);
         #[rustfmt::skip]
@@ -1577,8 +1562,9 @@ mod tests {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         let mut client = make_client_station();
-        let mut client = client.bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
-        send_data_frame(&mut client, &mut me.ctx, data_frame, false);
+        let mut client =
+            client.bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
+        send_data_frame(&mut client, data_frame, false);
 
         // Verify frame was not sent to netstack.
         assert_eq!(m.fake_device.eth_queue.len(), 0);
@@ -1590,8 +1576,9 @@ mod tests {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         let mut client = make_client_station();
-        let mut client = client.bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
-        send_data_frame(&mut client, &mut me.ctx, eapol_frame, false);
+        let mut client =
+            client.bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
+        send_data_frame(&mut client, eapol_frame, false);
 
         // Verify EAPoL frame was not sent to netstack.
         assert_eq!(m.fake_device.eth_queue.len(), 0);
@@ -1613,8 +1600,9 @@ mod tests {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         let mut client = make_client_station();
-        let mut client = client.bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
-        send_data_frame(&mut client, &mut me.ctx, eapol_frame, true);
+        let mut client =
+            client.bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
+        send_data_frame(&mut client, eapol_frame, true);
 
         // Verify EAPoL frame was not sent to netstack.
         assert_eq!(m.fake_device.eth_queue.len(), 0);
@@ -1635,9 +1623,10 @@ mod tests {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         let mut client = make_client_station();
-        let mut client = client.bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
+        let mut client =
+            client.bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
         client
-            .send_eapol_indication(&mut me.ctx, [1; 6], [2; 6], &[5; 256])
+            .send_eapol_indication([1; 6], [2; 6], &[5; 256])
             .expect_err("sending too large EAPOL frame should fail");
         m.fake_device
             .next_mlme_msg::<fidl_mlme::EapolIndication>()
@@ -1649,9 +1638,10 @@ mod tests {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         let mut client = make_client_station();
-        let mut client = client.bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
+        let mut client =
+            client.bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
         client
-            .send_eapol_indication(&mut me.ctx, [1; 6], [2; 6], &[5; 200])
+            .send_eapol_indication([1; 6], [2; 6], &[5; 200])
             .expect("expected EAPOL.indication to be sent");
         let eapol_ind = m
             .fake_device
@@ -1668,8 +1658,9 @@ mod tests {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         let mut client = make_client_station();
-        let mut client = client.bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
-        client.send_eapol_frame(&mut me.ctx, IFACE_MAC, BSSID.0, false, &[5; 8]);
+        let mut client =
+            client.bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
+        client.send_eapol_frame(IFACE_MAC, BSSID.0, false, &[5; 8]);
 
         // Verify EAPOL.confirm message was sent to SME.
         let eapol_confirm = m
@@ -1706,8 +1697,9 @@ mod tests {
         let device = m.fake_device.as_device_fail_wlan_tx();
         let mut me = m.make_mlme_with_device(device);
         let mut client = make_client_station();
-        let mut client = client.bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
-        client.send_eapol_frame(&mut me.ctx, [1; 6], [2; 6], false, &[5; 200]);
+        let mut client =
+            client.bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state);
+        client.send_eapol_frame([1; 6], [2; 6], false, &[5; 200]);
 
         // Verify EAPOL.confirm message was sent to SME.
         let eapol_confirm = m
@@ -1731,8 +1723,8 @@ mod tests {
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
-            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
-            .send_ps_poll_frame(&mut me.ctx, 0xABCD)
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_ps_poll_frame(0xABCD)
             .expect("failed sending PS POLL frame");
 
         // Verify ensure_on_channel. That is, scheduling scan request would not cause channel to be
@@ -1763,8 +1755,8 @@ mod tests {
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
-            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
-            .send_addba_req_frame(&mut me.ctx)
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_addba_req_frame()
             .expect("failed sending addba frame");
         assert_eq!(
             &m.fake_device.wlan_queue[0].0[..],
@@ -1793,8 +1785,8 @@ mod tests {
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
-            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
-            .send_addba_resp_frame(&mut me.ctx, 1)
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_addba_resp_frame(1)
             .expect("failed sending addba frame");
         assert_eq!(
             &m.fake_device.wlan_queue[0].0[..],
@@ -1833,8 +1825,8 @@ mod tests {
         ie::write_vht_capabilities(&mut ies, &ie::fake_vht_capabilities()).expect("Valid VHT Cap");
 
         client
-            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
-            .send_associate_conf_success(&mut me.ctx, 42, mac::CapabilityInfo(0x1234), &ies[..]);
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_associate_conf_success(42, mac::CapabilityInfo(0x1234), &ies[..]);
         let associate_conf = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
@@ -1862,11 +1854,8 @@ mod tests {
         let mut me = m.make_mlme();
         let mut client = make_client_station();
         client
-            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
-            .send_associate_conf_failure(
-                &mut me.ctx,
-                fidl_mlme::AssociateResultCodes::RefusedExternalReason,
-            );
+            .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_associate_conf_failure(fidl_mlme::AssociateResultCodes::RefusedExternalReason);
         let associate_conf = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
@@ -1901,7 +1890,6 @@ mod tests {
 
     fn send_data_frame(
         client: &mut BoundClient<'_>,
-        ctx: &mut Context,
         data_frame: Vec<u8>,
         open_controlled_port: bool,
     ) {
@@ -1912,6 +1900,6 @@ mod tests {
             }
             _ => panic!("error parsing data frame"),
         };
-        client.handle_data_frame(ctx, &fixed, addr4, qos, body, open_controlled_port);
+        client.handle_data_frame(&fixed, addr4, qos, body, open_controlled_port);
     }
 }

@@ -18,8 +18,8 @@ use {
 };
 
 pub fn c_ensure_on_channel(sta: &mut Client, mlme: &mut ClientMlme) {
-    sta.bind(&mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
-        .ensure_on_channel(&mut mlme.ctx);
+    sta.bind(&mut mlme.ctx, &mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
+        .ensure_on_channel();
 }
 
 pub fn c_start_lost_bss_counter(sta: &mut Client, mlme: &mut ClientMlme, beacon_period: TimeUnit) {
@@ -31,8 +31,8 @@ pub fn c_reset_lost_bss_timeout(sta: &mut Client, mlme: &mut ClientMlme) {
 }
 
 pub fn c_send_open_auth_frame(sta: &mut Client, mlme: &mut ClientMlme) -> Result<(), Error> {
-    sta.bind(&mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
-        .send_open_auth_frame(&mut mlme.ctx)
+    sta.bind(&mut mlme.ctx, &mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
+        .send_open_auth_frame()
 }
 
 pub fn c_send_deauth_frame(
@@ -40,8 +40,8 @@ pub fn c_send_deauth_frame(
     mlme: &mut ClientMlme,
     reason_code: mac::ReasonCode,
 ) -> Result<(), Error> {
-    sta.bind(&mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
-        .send_deauth_frame(&mut mlme.ctx, reason_code)
+    sta.bind(&mut mlme.ctx, &mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
+        .send_deauth_frame(reason_code)
 }
 
 pub fn c_send_assoc_req_frame(
@@ -54,15 +54,8 @@ pub fn c_send_assoc_req_frame(
     ht_cap: &[u8],
     vht_cap: &[u8],
 ) -> Result<(), Error> {
-    sta.bind(&mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state).send_assoc_req_frame(
-        &mut mlme.ctx,
-        cap_info,
-        ssid,
-        rates,
-        rsne,
-        ht_cap,
-        vht_cap,
-    )
+    sta.bind(&mut mlme.ctx, &mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
+        .send_assoc_req_frame(cap_info, ssid, rates, rsne, ht_cap, vht_cap)
 }
 
 pub fn c_handle_data_frame<B: ByteSlice>(
@@ -74,14 +67,8 @@ pub fn c_handle_data_frame<B: ByteSlice>(
     body: B,
     is_controlled_port_open: bool,
 ) {
-    sta.bind(&mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state).handle_data_frame(
-        &mut mlme.ctx,
-        fixed_data_fields,
-        addr4,
-        qos_ctrl,
-        body,
-        is_controlled_port_open,
-    )
+    sta.bind(&mut mlme.ctx, &mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
+        .handle_data_frame(fixed_data_fields, addr4, qos_ctrl, body, is_controlled_port_open)
 }
 
 pub fn c_send_data_frame(
@@ -94,20 +81,13 @@ pub fn c_send_data_frame(
     ether_type: u16,
     payload: &[u8],
 ) -> Result<(), Error> {
-    sta.bind(&mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state).send_data_frame(
-        &mut mlme.ctx,
-        src,
-        dst,
-        is_protected,
-        is_qos,
-        ether_type,
-        payload,
-    )
+    sta.bind(&mut mlme.ctx, &mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
+        .send_data_frame(src, dst, is_protected, is_qos, ether_type, payload)
 }
 
 pub fn c_on_eth_frame(sta: &mut Client, mlme: &mut ClientMlme, frame: &[u8]) -> Result<(), Error> {
-    sta.bind(&mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
-        .on_eth_frame(&mut mlme.ctx, frame)
+    sta.bind(&mut mlme.ctx, &mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
+        .on_eth_frame(frame)
 }
 
 pub fn c_send_eapol_frame(
@@ -118,13 +98,8 @@ pub fn c_send_eapol_frame(
     is_protected: bool,
     eapol_frame: &[u8],
 ) {
-    sta.bind(&mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state).send_eapol_frame(
-        &mut mlme.ctx,
-        src,
-        dst,
-        is_protected,
-        eapol_frame,
-    )
+    sta.bind(&mut mlme.ctx, &mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
+        .send_eapol_frame(src, dst, is_protected, eapol_frame)
 }
 
 pub fn c_send_ps_poll_frame(
@@ -132,8 +107,8 @@ pub fn c_send_ps_poll_frame(
     mlme: &mut ClientMlme,
     aid: Aid,
 ) -> Result<(), Error> {
-    sta.bind(&mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
-        .send_ps_poll_frame(&mut mlme.ctx, aid)
+    sta.bind(&mut mlme.ctx, &mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
+        .send_ps_poll_frame(aid)
 }
 
 pub fn c_send_power_state_frame(
@@ -145,6 +120,6 @@ pub fn c_send_power_state_frame(
 }
 
 pub fn c_send_addba_req_frame(sta: &mut Client, mlme: &mut ClientMlme) -> Result<(), Error> {
-    sta.bind(&mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
-        .send_addba_req_frame(&mut mlme.ctx)
+    sta.bind(&mut mlme.ctx, &mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
+        .send_addba_req_frame()
 }

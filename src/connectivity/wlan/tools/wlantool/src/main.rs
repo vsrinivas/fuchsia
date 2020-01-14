@@ -40,7 +40,7 @@ fn main() -> Result<(), Error> {
 
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
     let wlan_svc = connect_to_service::<DeviceServiceMarker>()
-        .context("failed to connect to device service")?;
+        .context("failed to `connect` to device service")?;
 
     let fut = async {
         match opt {
