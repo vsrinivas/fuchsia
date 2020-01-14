@@ -20,6 +20,8 @@ FX = os.path.join(SCRIPTS_DIR, 'fx')
 SCRIPT_LABEL = '//' + os.path.relpath(os.path.abspath(__file__),
                                       start=FUCHSIA_ROOT)
 
+BRANCH_PREFIX = 'gn-move-'
+
 
 class Type(object):
     DRIVER = 'zx_driver'
@@ -165,6 +167,9 @@ def main():
     convert_parser.add_argument('binary',
                         help='The binary under //zircon/system to migrate, '
                              'e.g. uapp/audio, utest/fit, dev/bus/pci')
+    convert_parser.add_argument('--from-current-branch',
+                                help='use the current branch as parent rather than JIRI_HEAD',
+                                action="store_true")
     convert_parser.set_defaults(func=run_convert)
 
     list_parser = commands.add_parser('list',
@@ -201,13 +206,24 @@ def run_convert(args):
         print('User disagrees, exiting')
         return 0
 
+    # Determine what branch to start from.
+    branch_args = ['JIRI_HEAD']
+    if args.from_current_branch:
+        head = run_command(['git', 'symbolic-ref', '--short', '-q', 'HEAD']).strip()
+        if not head.startswith(BRANCH_PREFIX):
+            print('Error: should start from a migration branch (i.e. named "%sfoo").' %
+                  BRANCH_PREFIX)
+            return 1
+        branch_args = ['-t', head]
+
     # Convert the build files.
     for file in build_files:
         transform_build_file(file)
 
     # Create a commit.
     id = args.binary.replace('/', '_')
-    run_command(['git', 'checkout', '-b', 'gn-move-' + id, 'JIRI_HEAD'])
+    run_command(['git', 'checkout', '-b', BRANCH_PREFIX + id] + branch_args)
+
     run_command(['git', 'add', '.'])
     message = [
         '[unification] Move //zircon/system/' + args.binary + ' to the GN build',
