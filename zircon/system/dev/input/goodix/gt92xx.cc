@@ -10,6 +10,7 @@
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
+#include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -72,6 +73,7 @@ int Gt92xxDevice::Thread() {
     if (status != ZX_OK) {
       zxlogf(ERROR, "gt92xx: Interrupt error %d\n", status);
     }
+    TRACE_DURATION("input", "Gt92xxDevice Read");
     uint8_t touch_stat = 0;
     uint8_t retry_cnt = 0;
     // Datasheet implies that it is not guaranteed that report will be

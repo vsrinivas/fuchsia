@@ -19,8 +19,14 @@ zx_driver("goodix") {
     "$zx/system/ulib/hid",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+
+    # TODO(BLD-353): This is actually a transitive dependency of the ddk
+    # library, but the library doesn't express it properly because of
+    # legacy complications.
+    "$zx/system/ulib/trace:headers",
   ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
@@ -53,9 +59,15 @@ zx_test("gt92xx-test") {
     "$zx/system/ulib/hid",
     "$zx/system/ulib/mock-function",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
+
+    # TODO(BLD-353): This is actually a transitive dependency of the ddk
+    # library, but the library doesn't express it properly because of
+    # legacy complications.
+    "$zx/system/ulib/trace:headers",
   ]
 }

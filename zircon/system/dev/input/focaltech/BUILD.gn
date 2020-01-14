@@ -19,7 +19,13 @@ zx_driver("focaltech") {
     "$zx/system/ulib/hid",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+
+    # TODO(BLD-353): This is actually a transitive dependency of the ddk
+    # library, but the library doesn't express it properly because of
+    # legacy complications.
+    "$zx/system/ulib/trace:headers",
   ]
 }

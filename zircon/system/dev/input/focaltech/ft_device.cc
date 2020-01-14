@@ -16,6 +16,7 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
+#include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -53,6 +54,7 @@ int FtDevice::Thread() {
     if (status != ZX_OK) {
       zxlogf(ERROR, "focaltouch: Interrupt error %d\n", status);
     }
+    TRACE_DURATION("input", "FtDevice Read");
     uint8_t i2c_buf[kMaxPoints * kFingerRptSize + 1];
     status = Read(FTS_REG_CURPOINT, i2c_buf, kMaxPoints * kFingerRptSize + 1);
     if (status == ZX_OK) {
