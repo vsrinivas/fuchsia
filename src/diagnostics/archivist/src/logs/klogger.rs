@@ -23,8 +23,9 @@ pub struct KernelLogsIterator<'a> {
 
 impl KernelLogger {
     pub fn create() -> Result<KernelLogger, zx::Status> {
+        let resource = zx::Resource::from(zx::Handle::invalid());
         Ok(KernelLogger {
-            debuglogger: zx::DebugLog::create(zx::DebugLogOpts::READABLE)?,
+            debuglogger: zx::DebugLog::create(&resource, zx::DebugLogOpts::READABLE)?,
             buf: Vec::with_capacity(zx::sys::ZX_LOG_RECORD_MAX),
         })
     }
@@ -88,25 +89,22 @@ impl<'a> Iterator for KernelLogsIterator<'a> {
 pub fn listen(
     klogger: KernelLogger,
 ) -> impl Stream<Item = Result<(LogMessage, usize), zx::Status>> {
-    stream::unfold((true, klogger), move |(mut is_readable, mut klogger)| {
-        async move {
-            loop {
-                if !is_readable {
-                    if let Err(e) =
-                        fasync::OnSignals::new(&klogger.debuglogger, zx::Signals::LOG_READABLE)
-                            .await
-                    {
-                        break Some((Err(e), (is_readable, klogger)));
-                    }
+    stream::unfold((true, klogger), move |(mut is_readable, mut klogger)| async move {
+        loop {
+            if !is_readable {
+                if let Err(e) =
+                    fasync::OnSignals::new(&klogger.debuglogger, zx::Signals::LOG_READABLE).await
+                {
+                    break Some((Err(e), (is_readable, klogger)));
                 }
-                is_readable = true;
-                match klogger.read_log() {
-                    Err(zx::Status::SHOULD_WAIT) => {
-                        is_readable = false;
-                        continue;
-                    }
-                    x => break Some((x, (is_readable, klogger))),
+            }
+            is_readable = true;
+            match klogger.read_log() {
+                Err(zx::Status::SHOULD_WAIT) => {
+                    is_readable = false;
+                    continue;
                 }
+                x => break Some((x, (is_readable, klogger))),
             }
         }
     })

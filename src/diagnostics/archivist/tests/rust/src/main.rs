@@ -91,7 +91,8 @@ mod tests {
         let random = rand::random::<u64>();
         let msg = format!("logger_integration_rust test_klog {}", random);
 
-        let debuglog = zx::DebugLog::create(zx::DebugLogOpts::empty())?;
+        let resource = zx::Resource::from(zx::Handle::invalid());
+        let debuglog = zx::DebugLog::create(&resource, zx::DebugLogOpts::empty())?;
         debuglog.write(msg.as_bytes())?;
 
         let tries = 50;

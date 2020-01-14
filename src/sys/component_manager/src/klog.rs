@@ -26,7 +26,8 @@ lazy_static! {
 
 impl KernelLogger {
     fn new() -> KernelLogger {
-        let debuglog = zx::DebugLog::create(zx::DebugLogOpts::empty())
+        let resource = zx::Resource::from(zx::Handle::invalid());
+        let debuglog = zx::DebugLog::create(&resource, zx::DebugLogOpts::empty())
             .context("Failed to create debuglog object")
             .unwrap();
         KernelLogger { debuglog }
@@ -105,7 +106,8 @@ mod tests {
     // for a message that equals `sent_msg`. If found, the function returns. If the first 10,000
     // messages doesn't contain `sent_msg`, it will panic.
     fn expect_message_in_debuglog(sent_msg: String) {
-        let debuglog = zx::DebugLog::create(zx::DebugLogOpts::READABLE).unwrap();
+        let resource = zx::Resource::from(zx::Handle::invalid());
+        let debuglog = zx::DebugLog::create(&resource, zx::DebugLogOpts::READABLE).unwrap();
         let mut record = Vec::with_capacity(zx::sys::ZX_LOG_RECORD_MAX);
         for _ in 0..10000 {
             match debuglog.read(&mut record) {

@@ -5,7 +5,7 @@
 //! Type-safe bindings for Zircon resources.
 
 use crate::ok;
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Resource, Status};
 use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
 
@@ -31,12 +31,10 @@ impl DebugLog {
     /// Wraps the
     /// [zx_debuglog_create]((https://fuchsia.dev/fuchsia-src/reference/syscalls/debuglog_create.md)
     /// syscall.
-    pub fn create(opts: DebugLogOpts) -> Result<DebugLog, Status> {
-        // TODO(ZX-2184): Once the resource required for zx_debuglog_create is defined, add it as a
-        // parameter to this call.
-        let resource = sys::ZX_HANDLE_INVALID;
+    pub fn create(resource: &Resource, opts: DebugLogOpts) -> Result<DebugLog, Status> {
         let mut handle = 0;
-        let status = unsafe { sys::zx_debuglog_create(resource, opts.bits(), &mut handle) };
+        let status =
+            unsafe { sys::zx_debuglog_create(resource.raw_handle(), opts.bits(), &mut handle) };
         ok(status)?;
         unsafe { Ok(DebugLog::from(Handle::from_raw(handle))) }
     }
@@ -94,7 +92,8 @@ mod tests {
     // for a message that equals `sent_msg`. If found, the function returns. If the first 10,000
     // messages doesn't contain `sent_msg`, it will panic.
     fn expect_message_in_debuglog(sent_msg: String) {
-        let debuglog = DebugLog::create(DebugLogOpts::READABLE).unwrap();
+        let resource = Resource::from(Handle::invalid());
+        let debuglog = DebugLog::create(&resource, DebugLogOpts::READABLE).unwrap();
         let mut record = Vec::with_capacity(sys::ZX_LOG_RECORD_MAX);
         for _ in 0..10000 {
             match debuglog.read(&mut record) {
@@ -127,7 +126,8 @@ mod tests {
     #[test]
     fn read_from_nonreadable() {
         let mut data = vec![];
-        let debuglog = DebugLog::create(DebugLogOpts::empty()).unwrap();
+        let resource = Resource::from(Handle::invalid());
+        let debuglog = DebugLog::create(&resource, DebugLogOpts::empty()).unwrap();
         assert!(debuglog.read(&mut data).err() == Some(Status::ACCESS_DENIED));
     }
 
@@ -138,7 +138,8 @@ mod tests {
         let rand = u64::from_ne_bytes(bytes);
         let message = format!("log message {}", rand);
 
-        let debuglog = DebugLog::create(DebugLogOpts::empty()).unwrap();
+        let resource = Resource::from(Handle::invalid());
+        let debuglog = DebugLog::create(&resource, DebugLogOpts::empty()).unwrap();
         debuglog.write(message.as_bytes()).unwrap();
         expect_message_in_debuglog(message);
     }
