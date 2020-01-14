@@ -83,8 +83,13 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> PipelineManager::ConfigureS
   }
 
   auto output_node = output_node_result.value();
+  auto input_stream_type = info->node.input_stream_type;
+  auto stream_configured = info->stream_config->properties.stream_type();
+
   auto status =
-      output_node->Attach(stream.TakeChannel(), [this, info]() { OnClientStreamDisconnect(info); });
+      output_node->Attach(stream.TakeChannel(), [this, input_stream_type, stream_configured]() {
+        OnClientStreamDisconnect(input_stream_type, stream_configured);
+      });
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Failed to bind output stream";
     return fit::error(status);
@@ -160,10 +165,13 @@ zx_status_t PipelineManager::AppendToExistingGraph(
   }
 
   auto output_node = output_node_result.value();
-  auto status = output_node->Attach(stream.TakeChannel(), [this, info]() {
-    FX_LOGS(INFO) << "Stream client disconnected";
-    OnClientStreamDisconnect(info);
-  });
+  auto input_stream_type = info->node.input_stream_type;
+  auto stream_configured = info->stream_config->properties.stream_type();
+  auto status =
+      output_node->Attach(stream.TakeChannel(), [this, input_stream_type, stream_configured]() {
+        FX_LOGS(INFO) << "Stream client disconnected";
+        OnClientStreamDisconnect(input_stream_type, stream_configured);
+      });
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to bind output stream";
     return status;
@@ -189,6 +197,7 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
   // Here at top level we check what type of input stream do we have to deal with
   switch (info->node.input_stream_type) {
     case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
+      fbl::AutoLock lock(&full_resolution_stream_lock_);
       if (full_resolution_stream_) {
         // If the same stream is requested again, we return failure.
         if (HasStreamType(full_resolution_stream_->configured_streams(),
@@ -214,6 +223,7 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
     }
 
     case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
+      fbl::AutoLock lock(&downscaled_resolution_stream_lock_);
       if (downscaled_resolution_stream_) {
         // If the same stream is requested again, we return failure.
         if (HasStreamType(downscaled_resolution_stream_->configured_streams(),
@@ -243,27 +253,117 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
     }
   }
   return ZX_OK;
-}  // namespace camera
+}
 
-void PipelineManager::OnClientStreamDisconnect(StreamCreationData* info) {
-  ZX_ASSERT(info != nullptr);
-  // TODO(braval): When we add support N > 1 substreams of FR and DS
-  // being present at the same time, we need to ensure to only
-  // bring down the relevant part of the graph and not the entire
-  // graph.
-  switch (info->node.input_stream_type) {
+static void RemoveStreamType(std::vector<fuchsia::camera2::CameraStreamType>& streams,
+                             fuchsia::camera2::CameraStreamType stream_to_remove) {
+  auto it = std::find(streams.begin(), streams.end(), stream_to_remove);
+  if (it != streams.end()) {
+    streams.erase(it);
+  }
+}
+
+void PipelineManager::DeleteGraphForDisconnectedStream(
+    ProcessNode* graph_head, fuchsia::camera2::CameraStreamType stream_to_disconnect) {
+  // More than one stream supported by this graph.
+  // Check for this nodes children to see if we can find the |stream_to_disconnect|
+  // as part of configured_streams.
+  auto& child_nodes = graph_head->child_nodes();
+  for (auto it = child_nodes.begin(); it != child_nodes.end(); it++) {
+    if (HasStreamType(it->get()->configured_streams(), stream_to_disconnect)) {
+      if (it->get()->configured_streams().size() == 1) {
+        it = child_nodes.erase(it);
+
+        auto current_node = graph_head;
+        while (current_node) {
+          // Remove entry from configured streams.
+          RemoveStreamType(current_node->configured_streams(), stream_to_disconnect);
+
+          current_node = current_node->parent_node();
+        }
+        return;
+      }
+      return DeleteGraphForDisconnectedStream(it->get(), stream_to_disconnect);
+    }
+  }
+}
+
+void PipelineManager::DisconnectStream(ProcessNode* graph_head,
+                                       fuchsia::camera2::CameraStreamType input_stream_type,
+                                       fuchsia::camera2::CameraStreamType stream_to_disconnect) {
+  auto shutdown_callback = [this, input_stream_type, stream_to_disconnect]() {
+    ProcessNode* graph_head = nullptr;
+
+    switch (input_stream_type) {
+      case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
+        fbl::AutoLock lock(&full_resolution_stream_lock_);
+        ZX_ASSERT_MSG(full_resolution_stream_ != nullptr, "FR node is null");
+        if (full_resolution_stream_->configured_streams().size() == 1) {
+          full_resolution_stream_ = nullptr;
+          return;
+        }
+        graph_head = full_resolution_stream_.get();
+        DeleteGraphForDisconnectedStream(graph_head, stream_to_disconnect);
+        break;
+      }
+      case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
+        fbl::AutoLock lock(&downscaled_resolution_stream_lock_);
+        ZX_ASSERT_MSG(downscaled_resolution_stream_ != nullptr, "DS node is null");
+        if (downscaled_resolution_stream_->configured_streams().size() == 1) {
+          downscaled_resolution_stream_ = nullptr;
+          return;
+        }
+        graph_head = downscaled_resolution_stream_.get();
+        DeleteGraphForDisconnectedStream(graph_head, stream_to_disconnect);
+        break;
+      }
+      default: {
+        ZX_ASSERT_MSG(false, "Invalid input stream type\n");
+      }
+    }
+  };
+
+  // Only one stream supported by the graph.
+  if (graph_head->configured_streams().size() == 1 &&
+      HasStreamType(graph_head->configured_streams(), stream_to_disconnect)) {
+    graph_head->OnShutdown(shutdown_callback);
+    return;
+  }
+
+  // More than one stream supported by this graph.
+  // Check for this nodes children to see if we can find the |stream_to_disconnect|
+  // as part of configured_streams.
+  auto& child_nodes = graph_head->child_nodes();
+  for (auto& child_node : child_nodes) {
+    if (HasStreamType(child_node->configured_streams(), stream_to_disconnect)) {
+      return DisconnectStream(child_node.get(), input_stream_type, stream_to_disconnect);
+    }
+  }
+}
+
+void PipelineManager::OnClientStreamDisconnect(
+    fuchsia::camera2::CameraStreamType input_stream_type,
+    fuchsia::camera2::CameraStreamType stream_to_disconnect) {
+  ProcessNode* graph_head = nullptr;
+  switch (input_stream_type) {
     case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
-      full_resolution_stream_ = nullptr;
+      fbl::AutoLock lock(&full_resolution_stream_lock_);
+      ZX_ASSERT_MSG(full_resolution_stream_ != nullptr, "FR node is null");
+      graph_head = full_resolution_stream_.get();
       break;
     }
     case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
-      downscaled_resolution_stream_ = nullptr;
+      fbl::AutoLock lock(&downscaled_resolution_stream_lock_);
+      ZX_ASSERT_MSG(downscaled_resolution_stream_ != nullptr, "DS node is null");
+      graph_head = downscaled_resolution_stream_.get();
       break;
     }
     default: {
       ZX_ASSERT_MSG(false, "Invalid input stream type\n");
+      return;
     }
   }
+  DisconnectStream(graph_head, input_stream_type, stream_to_disconnect);
 }
 
 }  // namespace camera

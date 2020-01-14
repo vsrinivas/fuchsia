@@ -19,7 +19,7 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
   frame_available_info_t local_info = *info;
   event_queue_.emplace([this, local_info]() {
     // Free up parent's frame
-    if (type_ != kInputStream) {
+    if (type_ != kInputStream && !shutdown_requested_) {
       parent_node_->OnReleaseFrame(local_info.metadata.input_buffer_index);
     }
 

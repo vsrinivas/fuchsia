@@ -24,17 +24,11 @@ fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
     zx_device_t* device, const camera::GdcConfig& config_type);
 
 // Invoked by GDC driver when a new frame is available.
-static void OnGdcFrameAvailable(void* ctx, const frame_available_info_t* info) {
-  static_cast<ProcessNode*>(ctx)->OnFrameAvailable(info);
-}
+void OnGdcFrameAvailable(void* ctx, const frame_available_info_t* info);
 
 // Invoked by GDC on a Resolution change completion.
 // TODO(41730): Implement this.
 static void OnGdcResChange(void* ctx, const frame_available_info_t* info) {}
-
-// Invoked by GDC when a new frame is available.
-// TODO(braval): Implement OnTaskRemoved() to handle shutdown.
-static void OnGdcTaskRemoved(void* ctx, task_remove_status_t status) {}
 
 class GdcNode : public ProcessNode {
  public:
@@ -52,8 +46,6 @@ class GdcNode : public ProcessNode {
         frame_callback_{OnGdcFrameAvailable, this},
         res_callback_{OnGdcResChange, this},
         remove_task_callback_{OnGdcTaskRemoved, this} {}
-
-  ~GdcNode() { OnShutdown(); }
 
   // Creates a |GdcNode| object.
   // Args:
@@ -86,9 +78,17 @@ class GdcNode : public ProcessNode {
   void OnReleaseFrame(uint32_t buffer_index) override;
 
   // Removes the registered task with the GDC driver.
-  void OnShutdown() override;
+  void OnShutdown(fit::function<void(void)> shutdown_callback) override;
+
+  // Marks the GDC shutdown callback received.
+  void OnTaskRemoved(zx_status_t status);
 
  private:
+  // Invoked by GDC when a new frame is available.
+  static void OnGdcTaskRemoved(void* ctx, task_remove_status_t status) {
+    static_cast<GdcNode*>(ctx)->OnTaskRemoved(status);
+  }
+
   // Protocol to talk to the GDC driver.
   ddk::GdcProtocolClient gdc_;
   // Task index for this node.

@@ -57,6 +57,10 @@ fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
   return fit::ok(std::move(info));
 }
 
+void OnGdcFrameAvailable(void* ctx, const frame_available_info_t* info) {
+  static_cast<camera::GdcNode*>(ctx)->OnFrameAvailable(info);
+}
+
 fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
     ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
     zx_device_t* device, const ddk::GdcProtocolClient& gdc, StreamCreationData* info,
@@ -135,10 +139,13 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
 }
 
 void GdcNode::OnFrameAvailable(const frame_available_info_t* info) {
-  if (enabled_) {
-    ProcessNode::OnFrameAvailable(info);
-  } else {
-    gdc_.ReleaseFrame(task_index_, info->buffer_id);
+  // Once shutdown is requested no calls should be made to the driver.
+  if (!shutdown_requested_) {
+    if (enabled_) {
+      ProcessNode::OnFrameAvailable(info);
+    } else {
+      gdc_.ReleaseFrame(task_index_, info->buffer_id);
+    }
   }
 }
 
@@ -149,7 +156,9 @@ void GdcNode::OnReleaseFrame(uint32_t buffer_index) {
   if (in_use_buffer_count_[buffer_index] != 0) {
     return;
   }
-  gdc_.ReleaseFrame(task_index_, buffer_index);
+  if (!shutdown_requested_) {
+    gdc_.ReleaseFrame(task_index_, buffer_index);
+  }
 }
 
 void GdcNode::OnReadyToProcess(uint32_t buffer_index) {
@@ -157,6 +166,10 @@ void GdcNode::OnReadyToProcess(uint32_t buffer_index) {
   event_queue_.emplace([this, buffer_index]() {
     if (enabled_) {
       ZX_ASSERT(ZX_OK == gdc_.ProcessFrame(task_index_, buffer_index));
+    } else {
+      // Since streaming is disabled the incoming frame is released
+      // so it gets added back to the pool.
+      gdc_.ReleaseFrame(task_index_, buffer_index);
     }
     fbl::AutoLock guard(&event_queue_lock_);
     event_queue_.pop();
@@ -164,6 +177,38 @@ void GdcNode::OnReadyToProcess(uint32_t buffer_index) {
   event_queue_.back().Post(dispatcher_);
 }
 
-void GdcNode::OnShutdown() { gdc_.RemoveTask(task_index_); }
+void GdcNode::OnTaskRemoved(zx_status_t status) {
+  ZX_ASSERT(status == ZX_OK);
+  fbl::AutoLock guard(&event_queue_lock_);
+  event_queue_.emplace([this]() {
+    node_callback_received_ = true;
+    fbl::AutoLock guard(&event_queue_lock_);
+    event_queue_.pop();
+    OnCallbackReceived();
+  });
+  event_queue_.back().Post(dispatcher_);
+}
+
+void GdcNode::OnShutdown(fit::function<void(void)> shutdown_callback) {
+  shutdown_callback_ = std::move(shutdown_callback);
+
+  // After a shutdown request has been made,
+  // no other calls should be made to the GDC driver.
+  shutdown_requested_ = true;
+
+  // Request GDC to shutdown.
+  gdc_.RemoveTask(task_index_);
+
+  auto child_shutdown_completion_callback = [this]() {
+    child_node_callback_received_ = true;
+    OnCallbackReceived();
+  };
+
+  ZX_ASSERT_MSG(configured_streams().size() == 1,
+                "Cannot shutdown a stream which supports multiple streams");
+
+  // Forward the shutdown request to child node.
+  child_nodes().at(0)->OnShutdown(child_shutdown_completion_callback);
+}
 
 }  // namespace camera

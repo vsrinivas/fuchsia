@@ -102,7 +102,7 @@ class ProcessNode {
   virtual void OnStopStreaming();
 
   // Shut down routine.
-  virtual void OnShutdown() = 0;
+  virtual void OnShutdown(fit::function<void(void)> shutdown_callback) = 0;
 
   void set_enabled(bool enabled) { enabled_ = enabled; }
 
@@ -144,6 +144,13 @@ class ProcessNode {
 
  protected:
   bool AllChildNodesDisabled();
+
+  void OnCallbackReceived() {
+    if (node_callback_received_ && child_node_callback_received_) {
+      shutdown_callback_();
+    }
+  }
+
   // Dispatcher for the frame processng loop.
   async_dispatcher_t* dispatcher_;
   // Lock to guard |in_use_buffer_count_|
@@ -172,6 +179,12 @@ class ProcessNode {
   std::vector<uint32_t> in_use_buffer_count_ __TA_GUARDED(in_use_buffer_lock_);
   // Task queue for all the frame processing.
   std::queue<async::TaskClosure> event_queue_ __TA_GUARDED(event_queue_lock_);
+  // ISP/GDC or GE2D shutdown complete status.
+  bool node_callback_received_ = false;
+  // Child node shutdown complete status.
+  bool child_node_callback_received_ = false;
+  fit::function<void(void)> shutdown_callback_;
+  bool shutdown_requested_ = false;
 };
 
 }  // namespace camera

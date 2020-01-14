@@ -54,14 +54,40 @@ class PipelineManager {
   zx_status_t AppendToExistingGraph(StreamCreationData* info, ProcessNode* graph_node,
                                     fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
-  void OnClientStreamDisconnect(StreamCreationData* info);
+  // Disconnects the stream.
+  // This is called when the stream channel receives a ZX_ERR_PEER_CLOSE message.
+  // |stream_to_be_disconnected| : Stream type of the stream to be disconnected.
+  // |input_stream_type|         : Either FR or DS.
+  void OnClientStreamDisconnect(fuchsia::camera2::CameraStreamType input_stream_type,
+                                fuchsia::camera2::CameraStreamType stream_to_be_disconnected);
+
+  // Helper function to find out which portion of the graph
+  // needs to be disconnected and shut down.
+  void DisconnectStream(ProcessNode* graph_head,
+                        fuchsia::camera2::CameraStreamType input_stream_type,
+                        fuchsia::camera2::CameraStreamType stream_to_disconnect);
+
+  // Frees up the nodes after the stream pipeline has been shutdown
+  // when |stream_to_disconnect| stream is disconnected.
+  // After a stream has shutdown, we have to check again to see what part of the
+  // graph needs to be freed up because there is a possibility where while a portion
+  // of graph is waiting to be shut down, another request for disconnection came in for
+  // same |input_stream_type|.
+  void DeleteGraphForDisconnectedStream(ProcessNode* graph_head,
+                                        fuchsia::camera2::CameraStreamType stream_to_disconnect);
 
   fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t> FindNodeToAttachNewStream(
       StreamCreationData* info, const InternalConfigNode& current_internal_node,
       ProcessNode* graph_head);
 
-  ProcessNode* full_resolution_stream() { return full_resolution_stream_.get(); }
-  ProcessNode* downscaled_resolution_stream() { return downscaled_resolution_stream_.get(); }
+  ProcessNode* full_resolution_stream() {
+    fbl::AutoLock lock(&full_resolution_stream_lock_);
+    return full_resolution_stream_.get();
+  }
+  ProcessNode* downscaled_resolution_stream() {
+    fbl::AutoLock lock(&downscaled_resolution_stream_lock_);
+    return downscaled_resolution_stream_.get();
+  }
 
  private:
   fit::result<std::unique_ptr<InputNode>, zx_status_t> ConfigureStreamPipelineHelper(
@@ -70,13 +96,20 @@ class PipelineManager {
   // Lock to guard |event_queue_|.
   fbl::Mutex event_queue_lock_;
 
+  // Lock to guard the graph heads which are accessed in two different loops.
+  // 1. Loop servicing HAL protocol.
+  // 2. Loop servicing Stream protocol.
+  fbl::Mutex full_resolution_stream_lock_;
+  fbl::Mutex downscaled_resolution_stream_lock_;
+
   zx_device_t* device_;
   async_dispatcher_t* dispatcher_;
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;
   ControllerMemoryAllocator memory_allocator_;
-  std::unique_ptr<ProcessNode> full_resolution_stream_;
-  std::unique_ptr<ProcessNode> downscaled_resolution_stream_;
+  std::unique_ptr<ProcessNode> full_resolution_stream_ __TA_GUARDED(full_resolution_stream_lock_);
+  std::unique_ptr<ProcessNode> downscaled_resolution_stream_
+      __TA_GUARDED(downscaled_resolution_stream_lock_);
   std::queue<async::TaskClosure> event_queue_ __TA_GUARDED(event_queue_lock_);
 };
 

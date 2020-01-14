@@ -74,7 +74,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
         config_info = internal_config_info_.configs_info.at(2);
         break;
       }
-      default: { return nullptr; }
+      default: {
+        return nullptr;
+      }
     }
 
     for (auto& stream_info : config_info.streams_info) {
@@ -397,25 +399,85 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   void TestShutdownPathAfterStreamingOn() {
-    auto stream_type = kStreamTypeFR;
-    auto stream_config_node = GetStreamConfigNode(kDebugConfig, stream_type);
+    auto stream_type_fr = kStreamTypeFR | kStreamTypeML;
+    auto stream_type_ds = kStreamTypeDS | kStreamTypeML;
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type_fr);
     ASSERT_NE(nullptr, stream_config_node);
     StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(stream_type);
+    stream_config.properties.set_stream_type(stream_type_fr);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    buffer_collection.buffer_count = kNumBuffers;
+    info.output_buffers = std::move(buffer_collection);
 
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+    fuchsia::camera2::StreamPtr stream_fr;
+    auto stream_request_fr = stream_fr.NewRequest();
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream_request_fr));
+    bool stream_fr_alive = true;
+    stream_fr.set_error_handler([&](zx_status_t status) { stream_fr_alive = false; });
+
+    bool frame_received_fr = false;
+    stream_fr.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
+      frame_received_fr = true;
+    };
+
+    // Change the requested stream type.
+    stream_config.properties.set_stream_type(stream_type_ds);
+    info.stream_config = &stream_config;
+
+    fuchsia::camera2::StreamPtr stream_ds;
+    auto stream_request_ds = stream_ds.NewRequest();
+    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream_request_ds));
+    bool stream_ds_alive = true;
+    stream_ds.set_error_handler([&](zx_status_t status) { stream_ds_alive = false; });
+
+    bool frame_received_ds = false;
+    stream_ds.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
+      frame_received_ds = true;
+    };
+
+    // Start streaming.
+    stream_fr->Start();
+    stream_ds->Start();
+    RunLoopUntilIdle();
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
-    auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
+    auto fr_ml_output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
+    auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(1).get());
+    auto ds_ml_output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
 
-    // Set streaming on.
-    output_node->client_stream()->Start();
+    EXPECT_TRUE(fr_head_node->enabled());
+    EXPECT_TRUE(fr_ml_output_node->enabled());
+    EXPECT_TRUE(gdc_node->enabled());
+    EXPECT_TRUE(ds_ml_output_node->enabled());
 
-    EXPECT_NO_FATAL_FAILURE(pipeline_manager_->OnClientStreamDisconnect(&info));
+    // Stop FR|ML stream.
+    stream_fr->Stop();
+    RunLoopUntilIdle();
+
+    EXPECT_TRUE(fr_head_node->enabled());
+    EXPECT_FALSE(fr_ml_output_node->enabled());
+    EXPECT_TRUE(gdc_node->enabled());
+    EXPECT_TRUE(ds_ml_output_node->enabled());
+
+    EXPECT_EQ(fr_head_node->configured_streams().size(), 2u);
+    EXPECT_EQ(fr_head_node->child_nodes().size(), 2u);
+
+    // Disconnect FR|ML stream.
+    pipeline_manager_->OnClientStreamDisconnect(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+                                                stream_type_fr);
+    RunLoopUntilIdle();
+
+    EXPECT_EQ(fr_head_node->configured_streams().size(), 1u);
+    EXPECT_EQ(fr_head_node->configured_streams().at(0), stream_type_ds);
+    EXPECT_EQ(fr_head_node->child_nodes().size(), 1u);
+
+    // Disconnect DS|ML stream.
+    pipeline_manager_->OnClientStreamDisconnect(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+                                                stream_type_ds);
+    RunLoopUntilIdle();
   }
 
   void TestGdcConfigLoading() {

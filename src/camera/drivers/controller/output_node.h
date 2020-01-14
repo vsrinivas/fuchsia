@@ -25,8 +25,6 @@ class OutputNode : public ProcessNode {
       : ProcessNode(NodeType::kOutputStream, parent_node, current_stream_type,
                     std::move(supported_streams), dispatcher, frame_rate){};
 
-  ~OutputNode() { OnShutdown(); }
-
   // Creates an |OutputNode| object.
   // Args:
   // |dispatcher| : Dispatcher on which GDC tasks can be queued up.
@@ -55,10 +53,12 @@ class OutputNode : public ProcessNode {
   void OnReleaseFrame(uint32_t buffer_index) override;
 
   // Shut down routine.
-  void OnShutdown() override {}
+  void OnShutdown(fit::function<void(void)> shutdown_callback) override {
+    shutdown_requested_ = true;
+    shutdown_callback();
+  }
 
  private:
-  __UNUSED async_dispatcher_t* dispatcher_;
   std::unique_ptr<StreamImpl> client_stream_;
 };
 

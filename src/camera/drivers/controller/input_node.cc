@@ -42,8 +42,9 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
 
   // Create Input Node
   auto processing_node = std::make_unique<camera::InputNode>(
-      info->node.image_formats, std::move(buffers), info->stream_config->properties.stream_type(),
-      info->node.supported_streams, dispatcher, isp, info->node.output_frame_rate);
+      info->node.input_stream_type, info->node.image_formats, std::move(buffers),
+      info->stream_config->properties.stream_type(), info->node.supported_streams, dispatcher, isp,
+      info->node.output_frame_rate);
   if (!processing_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create Input node";
     return fit::error(ZX_ERR_NO_MEMORY);
@@ -75,10 +76,12 @@ void InputNode::OnReadyToProcess(uint32_t buffer_index) {
 }
 
 void InputNode::OnFrameAvailable(const frame_available_info_t* info) {
-  if (enabled_) {
-    ProcessNode::OnFrameAvailable(info);
-  } else {
-    isp_stream_protocol_->ReleaseFrame(info->buffer_id);
+  if (!shutdown_requested_) {
+    if (enabled_) {
+      ProcessNode::OnFrameAvailable(info);
+    } else {
+      isp_stream_protocol_->ReleaseFrame(info->buffer_id);
+    }
   }
 }
 
@@ -89,7 +92,9 @@ void InputNode::OnReleaseFrame(uint32_t buffer_index) {
   if (in_use_buffer_count_[buffer_index] != 0) {
     return;
   }
-  isp_stream_protocol_->ReleaseFrame(buffer_index);
+  if (!shutdown_requested_) {
+    isp_stream_protocol_->ReleaseFrame(buffer_index);
+  }
 }
 
 void InputNode::OnStartStreaming() {
@@ -106,6 +111,28 @@ void InputNode::OnStopStreaming() {
       isp_stream_protocol_->Stop();
     }
   }
+}
+
+void InputNode::OnShutdown(fit::function<void(void)> shutdown_callback) {
+  shutdown_callback_ = std::move(shutdown_callback);
+
+  // TODO(braval): Request ISP to shutdown this stream.
+  node_callback_received_ = true;
+
+  // After a shutdown request has been made,
+  // no other calls should be made to the ISP driver.
+  shutdown_requested_ = true;
+
+  auto child_shutdown_completion_callback = [this]() {
+    child_node_callback_received_ = true;
+    OnCallbackReceived();
+  };
+
+  ZX_ASSERT_MSG(configured_streams().size() == 1,
+                "Cannot shutdown a stream which supports multiple streams");
+
+  // Forward the shutdown request to child node.
+  child_nodes().at(0)->OnShutdown(child_shutdown_completion_callback);
 }
 
 }  // namespace camera

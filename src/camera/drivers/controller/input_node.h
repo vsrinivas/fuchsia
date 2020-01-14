@@ -23,7 +23,8 @@ namespace camera {
 
 class InputNode : public ProcessNode {
  public:
-  InputNode(std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats,
+  InputNode(fuchsia::camera2::CameraStreamType isp_stream_type,
+            std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats,
             fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
             fuchsia::camera2::CameraStreamType current_stream_type,
             std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
@@ -32,10 +33,9 @@ class InputNode : public ProcessNode {
       : ProcessNode(NodeType::kInputStream, output_image_formats,
                     std::move(output_buffer_collection), current_stream_type, supported_streams,
                     dispatcher, frame_rate),
+        isp_stream_type_(isp_stream_type),
         isp_frame_callback_{OnIspFrameAvailable, this},
         isp_(isp) {}
-
-  ~InputNode() { OnShutdown(); }
 
   // Creates an |InputNode| object.
   // 1. Creates the ISP stream protocol
@@ -68,7 +68,7 @@ class InputNode : public ProcessNode {
   virtual void OnFrameAvailable(const frame_available_info_t* info) override;
 
   // Shuts down the stream with ISP.
-  void OnShutdown() override{};
+  void OnShutdown(fit::function<void(void)> shutdown_callback) override;
 
   // Notifies that the client has requested to start streaming.
   void OnStartStreaming() override;
@@ -79,9 +79,11 @@ class InputNode : public ProcessNode {
  private:
   // Notifies when a new frame is available from the ISP.
   static void OnIspFrameAvailable(void* ctx, const frame_available_info_t* info) {
-    static_cast<ProcessNode*>(ctx)->OnFrameAvailable(info);
+    static_cast<InputNode*>(ctx)->OnFrameAvailable(info);
   }
 
+  // ISP stream type.
+  __UNUSED fuchsia::camera2::CameraStreamType isp_stream_type_;
   // ISP Frame callback.
   hw_accel_frame_callback_t isp_frame_callback_;
   // ISP stream protocol.
