@@ -39,10 +39,10 @@ std::atomic<uint32_t> DriverOutput::final_mix_instance_num_(0u);
 constexpr const char* kDefaultWavFilePathName = "/tmp/final_mix_";
 constexpr const char* kWavFileExtension = ".wav";
 
-fbl::RefPtr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
-                                              ThreadingModel* threading_model,
-                                              DeviceRegistry* registry) {
-  return fbl::AdoptRef(new DriverOutput(threading_model, registry, std::move(stream_channel)));
+std::shared_ptr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
+                                                  ThreadingModel* threading_model,
+                                                  DeviceRegistry* registry) {
+  return std::make_shared<DriverOutput>(threading_model, registry, std::move(stream_channel));
 }
 
 DriverOutput::DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,

@@ -34,9 +34,9 @@ class MockObjectWithCurve : public AudioObject {
 };
 
 TEST(AudioLinkTest, LinkObjectWithVolumeCurve) {
-  const auto no_curve = fbl::AdoptRef(new MockObjectNoCurve());
+  const auto no_curve = std::make_shared<MockObjectNoCurve>();
   const auto with_curve =
-      fbl::AdoptRef(new MockObjectWithCurve(VolumeCurve::DefaultForMinGain(-10.0)));
+      std::make_shared<MockObjectWithCurve>(VolumeCurve::DefaultForMinGain(-10.0));
 
   AudioLink link(no_curve, with_curve);
 
@@ -45,8 +45,8 @@ TEST(AudioLinkTest, LinkObjectWithVolumeCurve) {
 }
 
 TEST(AudioLinkTest, LinkObjectsWithNoCurves) {
-  const auto no_curve1 = fbl::AdoptRef(new MockObjectNoCurve());
-  const auto no_curve2 = fbl::AdoptRef(new MockObjectNoCurve());
+  const auto no_curve1 = std::make_shared<MockObjectNoCurve>();
+  const auto no_curve2 = std::make_shared<MockObjectNoCurve>();
   auto default_curve = VolumeCurve::DefaultForMinGain(-33.0);
   auto process_config = ProcessConfig::Builder().SetDefaultVolumeCurve(default_curve).Build();
   auto config_handle = ProcessConfig::set_instance(process_config);

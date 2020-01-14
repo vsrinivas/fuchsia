@@ -81,7 +81,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
   testing::TestProcessConfig process_config_;
   testing::StubDeviceRegistry device_registry_;
   std::unique_ptr<testing::FakeAudioDriver> driver_;
-  fbl::RefPtr<AudioOutput> output_;
+  std::shared_ptr<AudioOutput> output_;
   fzl::VmoMapper ring_buffer_mapper_;
   zx::vmo ring_buffer_;
 };

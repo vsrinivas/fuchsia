@@ -86,7 +86,7 @@ void AudioDeviceManager::AddDeviceEnumeratorClient(
   bindings_.AddBinding(this, std::move(request));
 }
 
-void AudioDeviceManager::AddDevice(const fbl::RefPtr<AudioDevice>& device) {
+void AudioDeviceManager::AddDevice(const std::shared_ptr<AudioDevice>& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDevice");
   FX_DCHECK(device != nullptr);
 
@@ -102,7 +102,7 @@ void AudioDeviceManager::AddDevice(const fbl::RefPtr<AudioDevice>& device) {
           }));
 }
 
-void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) {
+void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::ActivateDevice");
   FX_DCHECK(device != nullptr);
 
@@ -136,7 +136,7 @@ void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) 
           }));
 }
 
-void AudioDeviceManager::ActivateDeviceWithSettings(fbl::RefPtr<AudioDevice> device,
+void AudioDeviceManager::ActivateDeviceWithSettings(std::shared_ptr<AudioDevice> device,
                                                     fbl::RefPtr<AudioDeviceSettings> settings) {
   // If this device is still waiting for initialization, move it over to the set of active devices.
   // Otherwise (if not waiting for initialization), we've been removed.
@@ -186,7 +186,7 @@ void AudioDeviceManager::ActivateDeviceWithSettings(fbl::RefPtr<AudioDevice> dev
   UpdateDefaultDevice(device->is_input());
 }
 
-void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
+void AudioDeviceManager::RemoveDevice(const std::shared_ptr<AudioDevice>& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::RemoveDevice");
   FX_DCHECK(device != nullptr);
 
@@ -211,8 +211,8 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   }
 }
 
-void AudioDeviceManager::OnPlugStateChanged(const fbl::RefPtr<AudioDevice>& device, bool plugged,
-                                            zx::time plug_time) {
+void AudioDeviceManager::OnPlugStateChanged(const std::shared_ptr<AudioDevice>& device,
+                                            bool plugged, zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnPlugStateChanged");
   FX_DCHECK(device != nullptr);
 
@@ -294,11 +294,11 @@ void AudioDeviceManager::GetDefaultOutputDevice(GetDefaultOutputDeviceCallback c
   cbk(default_output_token_);
 }
 
-fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type type,
-                                                             bool allow_unplugged) {
+std::shared_ptr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type type,
+                                                                 bool allow_unplugged) {
   TRACE_DURATION("audio", "AudioDeviceManager::FindLastPlugged");
   FX_DCHECK((type == AudioObject::Type::Output) || (type == AudioObject::Type::Input));
-  AudioDevice* best = nullptr;
+  std::shared_ptr<AudioDevice> best = nullptr;
 
   // TODO(johngro): Consider tracking last-plugged times in a fbl::WAVLTree, so
   // this operation becomes O(1). N is pretty low right now, so the benefits do
@@ -310,7 +310,7 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type t
 
     if ((best == nullptr) || (!best->plugged() && device->plugged()) ||
         ((best->plugged() == device->plugged()) && (best->plug_time() < device->plug_time()))) {
-      best = &(*device);
+      best = device;
     }
   }
 
@@ -319,10 +319,10 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type t
     return nullptr;
   }
 
-  return fbl::RefPtr(best);
+  return best;
 }
 
-void AudioDeviceManager::OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device,
+void AudioDeviceManager::OnDeviceUnplugged(const std::shared_ptr<AudioDevice>& device,
                                            zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnDeviceUnplugged");
   FX_DCHECK(device);
@@ -338,7 +338,7 @@ void AudioDeviceManager::OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& devic
   UpdateDefaultDevice(device->is_input());
 }
 
-void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
+void AudioDeviceManager::OnDevicePlugged(const std::shared_ptr<AudioDevice>& device,
                                          zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnDevicePlugged");
   FX_DCHECK(device);
@@ -386,7 +386,7 @@ void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::str
   AUD_VLOG(TRACE) << " adding " << (is_input ? "input" : "output") << " '" << device_name << "'";
 
   // Hand the stream off to the proper type of class to manage.
-  fbl::RefPtr<AudioDevice> new_device;
+  std::shared_ptr<AudioDevice> new_device;
   if (is_input) {
     new_device = AudioInput::Create(std::move(device_channel), &threading_model(), this);
   } else {

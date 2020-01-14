@@ -24,7 +24,7 @@ std::optional<VolumeCurve> SelectVolumeCurve(std::optional<VolumeCurve> curve_a,
 
 }  // namespace
 
-AudioLink::AudioLink(fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest)
+AudioLink::AudioLink(std::shared_ptr<AudioObject> source, std::shared_ptr<AudioObject> dest)
     : source_(std::move(source)),
       dest_(std::move(dest)),
       valid_(true),

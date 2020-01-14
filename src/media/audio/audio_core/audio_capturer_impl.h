@@ -38,8 +38,7 @@ class AudioDeviceManager;
 class AudioCapturerImpl : public AudioObject,
                           public fuchsia::media::AudioCapturer,
                           public fuchsia::media::audio::GainControl,
-                          public StreamVolume,
-                          public fbl::Recyclable<AudioCapturerImpl> {
+                          public StreamVolume {
  public:
   static std::unique_ptr<AudioCapturerImpl> Create(
       bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
@@ -60,8 +59,6 @@ class AudioCapturerImpl : public AudioObject,
   void PartialOverflowOccurred(FractionalFrames<int64_t> source_offset, int64_t mix_offset);
 
  protected:
-  friend class fbl::RefPtr<AudioCapturerImpl>;
-
   fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
       const AudioObject& source, std::shared_ptr<Stream> stream) override;
   void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) override;
@@ -237,12 +234,6 @@ class AudioCapturerImpl : public AudioObject,
 
   // Removes the capturer from its owner, the route graph, triggering shutdown and drop.
   void BeginShutdown();
-
-  // TODO(39624): Remove
-  friend class fbl::Recyclable<AudioCapturerImpl>;
-  void fbl_recycle() { RecycleObject(this); }
-
-  virtual void RecycleObject(AudioObject* object) final;
 
   void RecomputeMinFenceTime();
 

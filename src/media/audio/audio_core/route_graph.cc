@@ -42,7 +42,7 @@ RouteGraph::~RouteGraph() {
 }
 
 void RouteGraph::SetThrottleOutput(ThreadingModel* threading_model,
-                                   fbl::RefPtr<AudioOutput> throttle_output) {
+                                   std::shared_ptr<AudioOutput> throttle_output) {
   fit::bridge<void, void> bridge;
   threading_model->FidlDomain().ScheduleTask(bridge.consumer.promise().then(
       [throttle_output](fit::result<void, void>& _) { return throttle_output->Shutdown(); }));
@@ -103,7 +103,8 @@ void RouteGraph::AddRenderer(std::unique_ptr<AudioObject> renderer) {
   FX_DCHECK(renderer->is_audio_renderer());
   AUD_VLOG(TRACE) << "Adding renderer route graph: " << renderer.get();
 
-  renderers_.insert({renderer.get(), RoutableOwnedObject{fbl::AdoptRef(renderer.release()), {}}});
+  renderers_.insert(
+      {renderer.get(), RoutableOwnedObject{std::shared_ptr<AudioObject>(renderer.release()), {}}});
 }
 
 void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile profile) {
@@ -136,7 +137,7 @@ void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile
     return;
   }
 
-  AudioObject::LinkObjects(it->second.ref, fbl::RefPtr(output));
+  AudioObject::LinkObjects(it->second.ref, output->shared_from_this());
 }
 
 void RouteGraph::RemoveRenderer(AudioObject* renderer) {
@@ -151,7 +152,8 @@ void RouteGraph::AddCapturer(std::unique_ptr<AudioObject> capturer) {
   FX_DCHECK(capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Adding capturer to route graph: " << capturer.get();
 
-  capturers_.insert({capturer.get(), RoutableOwnedObject{fbl::AdoptRef(capturer.release()), {}}});
+  capturers_.insert(
+      {capturer.get(), RoutableOwnedObject{std::shared_ptr<AudioObject>(capturer.release()), {}}});
 }
 
 void RouteGraph::SetCapturerRoutingProfile(AudioObject* capturer, RoutingProfile profile) {
@@ -181,7 +183,7 @@ void RouteGraph::SetCapturerRoutingProfile(AudioObject* capturer, RoutingProfile
     return;
   }
 
-  AudioObject::LinkObjects(fbl::RefPtr(targets_.capture), it->second.ref);
+  AudioObject::LinkObjects(targets_.capture->shared_from_this(), it->second.ref);
 }
 
 void RouteGraph::RemoveCapturer(AudioObject* capturer) {
@@ -197,8 +199,9 @@ void RouteGraph::AddLoopbackCapturer(std::unique_ptr<AudioObject> loopback_captu
   FX_DCHECK(loopback_capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Adding loopback capturer to route graph: " << loopback_capturer.get();
 
-  loopback_capturers_.insert({loopback_capturer.get(),
-                              RoutableOwnedObject{fbl::AdoptRef(loopback_capturer.release()), {}}});
+  loopback_capturers_.insert(
+      {loopback_capturer.get(),
+       RoutableOwnedObject{std::shared_ptr<AudioObject>(loopback_capturer.release()), {}}});
 }
 
 // TODO(39627): Only accept capturers of loopback type.
@@ -230,7 +233,7 @@ void RouteGraph::SetLoopbackCapturerRoutingProfile(AudioObject* loopback_capture
     return;
   }
 
-  AudioObject::LinkObjects(fbl::RefPtr(targets_.loopback), it->second.ref);
+  AudioObject::LinkObjects(targets_.loopback->shared_from_this(), it->second.ref);
 }
 
 // TODO(39627): Only accept capturers of loopback type.
@@ -257,7 +260,7 @@ void RouteGraph::UpdateGraphForDeviceChange() {
         return;
       }
 
-      AudioObject::LinkObjects(renderer.second.ref, fbl::RefPtr(output));
+      AudioObject::LinkObjects(renderer.second.ref, output->shared_from_this());
     });
   }
 
@@ -270,7 +273,8 @@ void RouteGraph::UpdateGraphForDeviceChange() {
                     }
 
                     FX_DCHECK(loopback_capturer.second.ref->source_link_count() == 0);
-                    AudioObject::LinkObjects(fbl::RefPtr(target), loopback_capturer.second.ref);
+                    AudioObject::LinkObjects(target->shared_from_this(),
+                                             loopback_capturer.second.ref);
                   });
   }
 
@@ -283,7 +287,7 @@ void RouteGraph::UpdateGraphForDeviceChange() {
                     }
 
                     FX_DCHECK(capturer.second.ref->source_link_count() == 0);
-                    AudioObject::LinkObjects(fbl::RefPtr(target), capturer.second.ref);
+                    AudioObject::LinkObjects(target->shared_from_this(), capturer.second.ref);
                   });
   }
 }

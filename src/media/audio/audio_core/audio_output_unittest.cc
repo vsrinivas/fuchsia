@@ -66,8 +66,8 @@ class AudioOutputTest : public testing::ThreadingModelFixture {
  protected:
   testing::TestProcessConfig process_config_;
   testing::StubDeviceRegistry device_registry_;
-  fbl::RefPtr<TestAudioOutput> audio_output_ =
-      fbl::MakeRefCounted<TestAudioOutput>(&threading_model(), &device_registry_);
+  std::shared_ptr<TestAudioOutput> audio_output_ =
+      std::make_shared<TestAudioOutput>(&threading_model(), &device_registry_);
 };
 
 TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {

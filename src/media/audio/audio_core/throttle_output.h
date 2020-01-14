@@ -21,14 +21,11 @@ static constexpr zx::duration TRIM_PERIOD = zx::msec(10);
 // Throttle output may only be owned on the FIDL thread.
 class ThrottleOutput : public AudioOutput {
  public:
-  static fbl::RefPtr<AudioOutput> Create(ThreadingModel* threading_model,
-                                         DeviceRegistry* registry) {
-    return fbl::AdoptRef<AudioOutput>(new ThrottleOutput(threading_model, registry));
+  static std::shared_ptr<AudioOutput> Create(ThreadingModel* threading_model,
+                                             DeviceRegistry* registry) {
+    return std::make_shared<ThrottleOutput>(threading_model, registry);
   }
 
-  ~ThrottleOutput() override = default;
-
- protected:
   ThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry)
       : AudioOutput(threading_model, registry) {
     // This is just some placeholder format that we can use to instantiate a mix
@@ -46,6 +43,9 @@ class ThrottleOutput : public AudioOutput {
     SetupMixTask(mix_format, 0, TimelineFunction());
   }
 
+  ~ThrottleOutput() override = default;
+
+ protected:
   // AudioOutput Implementation
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override {
     if (uninitialized_) {

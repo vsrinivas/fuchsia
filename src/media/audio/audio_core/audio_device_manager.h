@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 
+#include <memory>
 #include <unordered_map>
 
 #include <fbl/intrusive_double_list.h>
@@ -61,10 +62,10 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
       fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request);
 
   // |media::audio::DeviceRegistry|
-  void AddDevice(const fbl::RefPtr<AudioDevice>& device) override;
-  void ActivateDevice(const fbl::RefPtr<AudioDevice>& device) override;
-  void RemoveDevice(const fbl::RefPtr<AudioDevice>& device) override;
-  void OnPlugStateChanged(const fbl::RefPtr<AudioDevice>& device, bool plugged,
+  void AddDevice(const std::shared_ptr<AudioDevice>& device) override;
+  void ActivateDevice(const std::shared_ptr<AudioDevice>& device) override;
+  void RemoveDevice(const std::shared_ptr<AudioDevice>& device) override;
+  void OnPlugStateChanged(const std::shared_ptr<AudioDevice>& device, bool plugged,
                           zx::time plug_time) override;
 
   // |fuchsia::media::AudioDeviceEnumerator|
@@ -78,29 +79,30 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
                           bool is_input) final;
 
  private:
-  void ActivateDeviceWithSettings(fbl::RefPtr<AudioDevice> device,
+  void ActivateDeviceWithSettings(std::shared_ptr<AudioDevice> device,
                                   fbl::RefPtr<AudioDeviceSettings> settings);
   // Find the most-recently plugged device (per type: input or output) excluding throttle_output. If
   // allow_unplugged, return the most-recently UNplugged device if no plugged devices are found --
   // otherwise return nullptr.
-  fbl::RefPtr<AudioDevice> FindLastPlugged(AudioObject::Type type, bool allow_unplugged = false);
+  std::shared_ptr<AudioDevice> FindLastPlugged(AudioObject::Type type,
+                                               bool allow_unplugged = false);
 
-  fbl::RefPtr<AudioOutput> FindLastPluggedOutput(bool allow_unplugged = false) {
+  std::shared_ptr<AudioOutput> FindLastPluggedOutput(bool allow_unplugged = false) {
     auto dev = FindLastPlugged(AudioObject::Type::Output, allow_unplugged);
     FX_DCHECK(!dev || (dev->type() == AudioObject::Type::Output));
-    return fbl::RefPtr<AudioOutput>::Downcast(std::move(dev));
+    return std::static_pointer_cast<AudioOutput>(std::move(dev));
   }
 
-  fbl::RefPtr<AudioInput> FindLastPluggedInput(bool allow_unplugged = false) {
+  std::shared_ptr<AudioInput> FindLastPluggedInput(bool allow_unplugged = false) {
     auto dev = FindLastPlugged(AudioObject::Type::Input, allow_unplugged);
     FX_DCHECK(!dev || (dev->type() == AudioObject::Type::Input));
-    return fbl::RefPtr<AudioInput>::Downcast(std::move(dev));
+    return std::static_pointer_cast<AudioInput>(std::move(dev));
   }
 
   // Methods to handle routing policy -- when an existing device is unplugged or completely removed,
   // or when a new device is plugged or added to the system.
-  void OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device, zx::time plug_time);
-  void OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device, zx::time plug_time);
+  void OnDeviceUnplugged(const std::shared_ptr<AudioDevice>& device, zx::time plug_time);
+  void OnDevicePlugged(const std::shared_ptr<AudioDevice>& device, zx::time plug_time);
 
   // Send notification to users that this device's gain settings have changed.
   void NotifyDeviceGainChanged(const AudioDevice& device);
@@ -121,8 +123,8 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   // needed.
 
   // These maps are keyed on device token.
-  std::unordered_map<uint64_t, fbl::RefPtr<AudioDevice>> devices_pending_init_;
-  std::unordered_map<uint64_t, fbl::RefPtr<AudioDevice>> devices_;
+  std::unordered_map<uint64_t, std::shared_ptr<AudioDevice>> devices_pending_init_;
+  std::unordered_map<uint64_t, std::shared_ptr<AudioDevice>> devices_;
 
   // A helper class we will use to detect plug/unplug events for audio devices
   AudioPlugDetectorImpl plug_detector_;

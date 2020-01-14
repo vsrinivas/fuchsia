@@ -22,12 +22,13 @@ namespace media::audio::testing {
 
 class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRenderer {
  public:
-  static fbl::RefPtr<FakeAudioRenderer> Create(async_dispatcher_t* dispatcher,
-                                               fbl::RefPtr<Format> format,
-                                               fuchsia::media::AudioRenderUsage usage) {
-    return fbl::AdoptRef(new FakeAudioRenderer(dispatcher, std::move(format), usage));
+  static std::shared_ptr<FakeAudioRenderer> Create(async_dispatcher_t* dispatcher,
+                                                   fbl::RefPtr<Format> format,
+                                                   fuchsia::media::AudioRenderUsage usage) {
+    return std::make_shared<FakeAudioRenderer>(dispatcher, std::move(format), usage);
   }
-  static fbl::RefPtr<FakeAudioRenderer> CreateWithDefaultFormatInfo(async_dispatcher_t* dispatcher);
+  static std::shared_ptr<FakeAudioRenderer> CreateWithDefaultFormatInfo(
+      async_dispatcher_t* dispatcher);
 
   FakeAudioRenderer(async_dispatcher_t* dispatcher, fbl::RefPtr<Format> format,
                     fuchsia::media::AudioRenderUsage usage);

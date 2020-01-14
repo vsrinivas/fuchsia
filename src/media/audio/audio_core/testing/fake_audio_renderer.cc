@@ -22,7 +22,7 @@ const fuchsia::media::AudioStreamType kDefaultStreamType{
 }
 
 // static
-fbl::RefPtr<FakeAudioRenderer> FakeAudioRenderer::CreateWithDefaultFormatInfo(
+std::shared_ptr<FakeAudioRenderer> FakeAudioRenderer::CreateWithDefaultFormatInfo(
     async_dispatcher_t* dispatcher) {
   return FakeAudioRenderer::Create(dispatcher, Format::Create(kDefaultStreamType),
                                    fuchsia::media::AudioRenderUsage::MEDIA);

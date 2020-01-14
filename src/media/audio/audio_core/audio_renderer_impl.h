@@ -117,7 +117,6 @@ class AudioRendererImpl : public AudioObject,
     AudioRendererImpl* owner_;
   };
 
-  friend class fbl::RefPtr<AudioRendererImpl>;
   friend class GainControlBinding;
 
   AudioRendererImpl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
@@ -158,7 +157,6 @@ class AudioRendererImpl : public AudioObject,
   fidl::Binding<fuchsia::media::AudioRenderer> audio_renderer_binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl, std::unique_ptr<GainControlBinding>>
       gain_control_bindings_;
-  bool is_shutdown_ = false;
   std::unordered_map<uint32_t, fbl::RefPtr<RefCountedVmoMapper>> payload_buffers_;
   bool config_validated_ = false;
 

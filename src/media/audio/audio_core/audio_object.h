@@ -21,7 +21,7 @@ namespace media::audio {
 // The simple base class for 4 major types of audio objects in the mixer: Outputs, Inputs,
 // AudioRenderers and AudioCapturers. It ensures that each is intrusively ref-counted, and remembers
 // its type so that it may be safely downcast from generic object to something more specific.
-class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<AudioObject> {
+class AudioObject {
  public:
   // Disallow copy, assign, and move.
   AudioObject& operator=(AudioObject) = delete;
@@ -29,7 +29,7 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
   AudioObject(AudioObject&&) = delete;
   AudioObject& operator=(AudioObject&&) = delete;
 
-  virtual ~AudioObject() {}
+  virtual ~AudioObject() = default;
 
   enum class Type {
     Output,
@@ -38,8 +38,8 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
     AudioCapturer,
   };
 
-  static fbl::RefPtr<AudioLink> LinkObjects(const fbl::RefPtr<AudioObject>& source,
-                                            const fbl::RefPtr<AudioObject>& dest);
+  static fbl::RefPtr<AudioLink> LinkObjects(const std::shared_ptr<AudioObject>& source,
+                                            const std::shared_ptr<AudioObject>& dest);
   static void RemoveLink(const fbl::RefPtr<AudioLink>& link);
 
   void UnlinkSources();
@@ -87,13 +87,7 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
   }
 
  protected:
-  friend class fbl::RefPtr<AudioObject>;
   explicit AudioObject(Type type) : type_(type) {}
-
-  // This method is called when the refcount transitions from 1 to 0. It is this method's
-  // responsibility to free or otherwise manage the object; it cannot be refcounted anymore.
-  // TODO(39624): Remove
-  virtual void RecycleObject(AudioObject* object) { delete object; }
 
   // Initialize(Source|Dest)Link
   //
@@ -189,9 +183,6 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
  private:
   template <typename TagType>
   void UnlinkCleanup(typename AudioLink::Set<TagType>* links);
-
-  friend class fbl::Recyclable<AudioObject>;
-  void fbl_recycle() { RecycleObject(this); }
 
   const Type type_;
 };

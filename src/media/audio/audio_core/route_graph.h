@@ -46,7 +46,8 @@ class RouteGraph {
   // TODO(13339): Remove throttle_output_.
   // Sets a throttle output which is linked to all AudioRenderers to throttle the rate at which we
   // return packets to clients.
-  void SetThrottleOutput(ThreadingModel* threading_model, fbl::RefPtr<AudioOutput> throttle_output);
+  void SetThrottleOutput(ThreadingModel* threading_model,
+                         std::shared_ptr<AudioOutput> throttle_output);
 
   // Adds an |AudioOutput| to the route graph. An |AudioOutput| is allowed to receive
   // postmix samples from |AudioRenderer|s.
@@ -95,7 +96,7 @@ class RouteGraph {
 
  private:
   struct RoutableOwnedObject {
-    fbl::RefPtr<AudioObject> ref;
+    std::shared_ptr<AudioObject> ref;
     RoutingProfile profile;
   };
 
@@ -141,7 +142,7 @@ class RouteGraph {
 
   // TODO(13339): Remove throttle_output_.
   std::optional<fit::completer<void, void>> throttle_release_fence_;
-  fbl::RefPtr<AudioOutput> throttle_output_;
+  std::shared_ptr<AudioOutput> throttle_output_;
 };
 
 }  // namespace media::audio

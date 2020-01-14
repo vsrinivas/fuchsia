@@ -108,9 +108,16 @@ AudioCapturerImpl::~AudioCapturerImpl() {
   volume_manager_.RemoveStream(this);
   REP(RemovingCapturer(*this));
 
-  FX_DCHECK(!payload_buf_vmo_.is_valid());
-  FX_DCHECK(payload_buf_virt_ == nullptr);
-  FX_DCHECK(payload_buf_size_ == 0);
+  // Release our buffer resources.
+  //
+  // It's important that we don't release the buffer until the mix thread cleanup has run as
+  // the mixer could still be accessing the memory backing the buffer.
+  //
+  // TODO(mpuryear): Change AudioCapturer to use the RingBuffer utility class.
+  if (payload_buf_virt_ != nullptr) {
+    FX_DCHECK(payload_buf_size_ != 0);
+    zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_), payload_buf_size_);
+  }
 }
 
 void AudioCapturerImpl::ReportStart() { admin_.UpdateCapturerState(usage_, true, this); }
@@ -153,28 +160,6 @@ void AudioCapturerImpl::SetInitialFormat(fuchsia::media::AudioStreamType format)
   UpdateFormat(format.sample_format, format.channels, format.frames_per_second);
 }
 
-void AudioCapturerImpl::Shutdown(std::unique_ptr<AudioCapturerImpl> self) {
-  TRACE_DURATION("audio", "AudioCapturerImpl::Shutdown");
-  ReportStop();
-
-  // Release our buffer resources.
-  //
-  // It's important that we don't release the buffer until the mix thread cleanup has run as
-  // the mixer could still be accessing the memory backing the buffer.
-  //
-  // TODO(mpuryear): Change AudioCapturer to use the RingBuffer utility class.
-  if (self->payload_buf_virt_ != nullptr) {
-    FX_DCHECK(self->payload_buf_size_ != 0);
-    zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(self->payload_buf_virt_),
-                                 self->payload_buf_size_);
-    self->payload_buf_virt_ = nullptr;
-  }
-
-  self->payload_buf_size_ = 0;
-  self->payload_buf_frames_ = 0;
-  self->payload_buf_vmo_.reset();
-}
-
 fit::promise<> AudioCapturerImpl::Cleanup() {
   TRACE_DURATION("audio.debug", "AudioCapturerImpl::Cleanup");
   // We need to stop all the async operations happening on the mix dispatcher. These components
@@ -210,14 +195,6 @@ void AudioCapturerImpl::BeginShutdown() {
       route_graph_.RemoveCapturer(this);
     }
   }));
-}
-
-void AudioCapturerImpl::RecycleObject(AudioObject* self) {
-  // recycle gives us `this` to free ourselves. At this point, there are no other references to us.
-  //
-  // It is therefore safe for us to take ownership of ourselves until all our shared resources are
-  // cleaned up and shut down.
-  Shutdown(std::unique_ptr<AudioCapturerImpl>(this));
 }
 
 fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioCapturerImpl::InitializeSourceLink(

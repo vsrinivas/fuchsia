@@ -24,8 +24,12 @@ class DriverOutput : public AudioOutput {
   static constexpr zx::duration kDefaultLowWaterNsec = zx::msec(50);
   static constexpr zx::duration kDefaultHighWaterNsec = zx::msec(60);
 
-  static fbl::RefPtr<AudioOutput> Create(zx::channel channel, ThreadingModel* threading_model,
-                                         DeviceRegistry* registry);
+  static std::shared_ptr<AudioOutput> Create(zx::channel channel, ThreadingModel* threading_model,
+                                             DeviceRegistry* registry);
+
+  DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
+               zx::channel initial_stream_channel);
+
   ~DriverOutput();
 
  protected:
@@ -51,8 +55,6 @@ class DriverOutput : public AudioOutput {
     Shutdown,
   };
 
-  DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-               zx::channel initial_stream_channel);
   void ScheduleNextLowWaterWakeup();
 
   // Callbacks triggered by our driver object as it completes various

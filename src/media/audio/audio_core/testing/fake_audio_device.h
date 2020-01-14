@@ -50,9 +50,9 @@ class FakeAudioDevice : public AudioDevice {
 
 class FakeAudioInput : public FakeAudioDevice {
  public:
-  static fbl::RefPtr<FakeAudioInput> Create(ThreadingModel* threading_model,
-                                            DeviceRegistry* registry) {
-    return fbl::AdoptRef(new FakeAudioInput(threading_model, registry));
+  static std::shared_ptr<FakeAudioInput> Create(ThreadingModel* threading_model,
+                                                DeviceRegistry* registry) {
+    return std::make_shared<FakeAudioInput>(threading_model, registry);
   }
 
   FakeAudioInput(ThreadingModel* threading_model, DeviceRegistry* registry)
@@ -61,9 +61,9 @@ class FakeAudioInput : public FakeAudioDevice {
 
 class FakeAudioOutput : public FakeAudioDevice {
  public:
-  static fbl::RefPtr<FakeAudioOutput> Create(ThreadingModel* threading_model,
-                                             DeviceRegistry* registry) {
-    return fbl::AdoptRef(new FakeAudioOutput(threading_model, registry));
+  static std::shared_ptr<FakeAudioOutput> Create(ThreadingModel* threading_model,
+                                                 DeviceRegistry* registry) {
+    return std::make_shared<FakeAudioOutput>(threading_model, registry);
   }
 
   FakeAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry)

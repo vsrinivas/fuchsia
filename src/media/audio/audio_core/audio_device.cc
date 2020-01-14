@@ -103,7 +103,7 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
 zx_status_t AudioDevice::Init() {
   TRACE_DURATION("audio", "AudioDevice::Init");
   WakeupEvent::ProcessHandler process_handler(
-      [output = fbl::RefPtr(this)](WakeupEvent* event) -> zx_status_t {
+      [output = shared_from_this()](WakeupEvent* event) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &output->mix_domain());
         output->OnWakeup();
         return ZX_OK;
@@ -150,7 +150,7 @@ void AudioDevice::ActivateSelf() {
 
     // Now poke our manager.
     threading_model().FidlDomain().PostTask(
-        [self = fbl::RefPtr(this)]() { self->device_registry().ActivateDevice(std::move(self)); });
+        [self = shared_from_this()]() { self->device_registry().ActivateDevice(std::move(self)); });
   }
 }
 
@@ -162,7 +162,7 @@ void AudioDevice::ShutdownSelf() {
     shutting_down_.store(true);
 
     threading_model().FidlDomain().PostTask(
-        [self = fbl::RefPtr(this)]() { self->device_registry().RemoveDevice(self); });
+        [self = shared_from_this()]() { self->device_registry().RemoveDevice(self); });
   }
 }
 
@@ -170,7 +170,7 @@ fit::promise<void, zx_status_t> AudioDevice::Startup() {
   TRACE_DURATION("audio", "AudioDevice::Startup");
   fit::bridge<void, zx_status_t> bridge;
   mix_domain_->PostTask(
-      [self = fbl::RefPtr(this), completer = std::move(bridge.completer)]() mutable {
+      [self = shared_from_this(), completer = std::move(bridge.completer)]() mutable {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &self->mix_domain());
         zx_status_t res = self->Init();
         if (res != ZX_OK) {
@@ -198,7 +198,7 @@ fit::promise<void> AudioDevice::Shutdown() {
   // Give our derived class, and our driver, a chance to clean up resources.
   fit::bridge<void> bridge;
   mix_domain_->PostTask(
-      [self = fbl::RefPtr(this), completer = std::move(bridge.completer)]() mutable {
+      [self = shared_from_this(), completer = std::move(bridge.completer)]() mutable {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &self->mix_domain());
         self->Cleanup();
         completer.complete_ok();

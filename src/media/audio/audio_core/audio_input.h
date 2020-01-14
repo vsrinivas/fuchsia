@@ -8,8 +8,6 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/zx/channel.h>
 
-#include <fbl/ref_ptr.h>
-
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_device.h"
 
@@ -19,8 +17,12 @@ class AudioDeviceManager;
 
 class AudioInput : public AudioDevice {
  public:
-  static fbl::RefPtr<AudioInput> Create(zx::channel channel, ThreadingModel* threading_model,
-                                        DeviceRegistry* registry);
+  static std::shared_ptr<AudioInput> Create(zx::channel channel, ThreadingModel* threading_model,
+                                            DeviceRegistry* registry);
+
+  AudioInput(zx::channel channel, ThreadingModel* threading_model, DeviceRegistry* registry);
+
+  ~AudioInput() override = default;
 
  protected:
   zx_status_t Init() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
@@ -48,11 +50,6 @@ class AudioInput : public AudioDevice {
     FetchingFormats,
     Idle,
   };
-
-  friend class fbl::RefPtr<AudioInput>;
-
-  AudioInput(zx::channel channel, ThreadingModel* threading_model, DeviceRegistry* registry);
-  ~AudioInput() override{};
 
   void UpdateDriverGainState() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 

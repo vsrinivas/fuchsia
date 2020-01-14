@@ -14,10 +14,10 @@ class StubDeviceRegistry : public DeviceRegistry {
   ~StubDeviceRegistry() override = default;
 
   // |media::audio::DeviceRegistry|
-  void AddDevice(const fbl::RefPtr<AudioDevice>& device) override {}
-  void ActivateDevice(const fbl::RefPtr<AudioDevice>& device) override {}
-  void RemoveDevice(const fbl::RefPtr<AudioDevice>& device) override {}
-  void OnPlugStateChanged(const fbl::RefPtr<AudioDevice>& device, bool plugged,
+  void AddDevice(const std::shared_ptr<AudioDevice>& device) override {}
+  void ActivateDevice(const std::shared_ptr<AudioDevice>& device) override {}
+  void RemoveDevice(const std::shared_ptr<AudioDevice>& device) override {}
+  void OnPlugStateChanged(const std::shared_ptr<AudioDevice>& device, bool plugged,
                           zx::time plug_time) override {}
 };
 

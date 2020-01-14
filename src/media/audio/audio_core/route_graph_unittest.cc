@@ -71,10 +71,13 @@ class FakeAudioObject : public AudioObject {
 // TODO(39532): Remove; use a real output class with fake hardware.
 class FakeAudioOutput : public AudioOutput {
  public:
-  static fbl::RefPtr<FakeAudioOutput> Create(ThreadingModel* threading_model,
-                                             testing::StubDeviceRegistry* device_registry) {
-    return fbl::AdoptRef(new FakeAudioOutput(threading_model, device_registry));
+  static std::shared_ptr<FakeAudioOutput> Create(ThreadingModel* threading_model,
+                                                 testing::StubDeviceRegistry* device_registry) {
+    return std::make_shared<FakeAudioOutput>(threading_model, device_registry);
   }
+
+  FakeAudioOutput(ThreadingModel* threading_model, testing::StubDeviceRegistry* device_registry)
+      : AudioOutput(threading_model, device_registry) {}
 
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {}
   void OnWakeup() override {}
@@ -97,10 +100,6 @@ class FakeAudioOutput : public AudioOutput {
   }
 
   void FinishMixJob(const MixStage::FrameSpan& span, float* buffer) override {}
-
- private:
-  FakeAudioOutput(ThreadingModel* threading_model, testing::StubDeviceRegistry* device_registry)
-      : AudioOutput(threading_model, device_registry) {}
 };
 
 static const RoutingConfig kConfigNoPolicy = RoutingConfig();
@@ -117,7 +116,7 @@ class RouteGraphTest : public testing::ThreadingModelFixture {
   }
 
   struct FakeOutputAndDriver {
-    fbl::RefPtr<FakeAudioOutput> output;
+    std::shared_ptr<FakeAudioOutput> output;
     std::unique_ptr<testing::FakeAudioDriver> fake_driver;
   };
 
@@ -140,7 +139,7 @@ class RouteGraphTest : public testing::ThreadingModelFixture {
   testing::TestProcessConfig process_config_;
   testing::StubDeviceRegistry device_registry_;
   RouteGraph under_test_;
-  fbl::RefPtr<AudioOutput> throttle_output_;
+  std::shared_ptr<AudioOutput> throttle_output_;
 };
 
 TEST_F(RouteGraphTest, RenderersAreUnlinkedWhenHaveNoRoutingProfile) {

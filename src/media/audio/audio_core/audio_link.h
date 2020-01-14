@@ -36,8 +36,8 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   struct KeyTraits;
 
  public:
-  static fbl::RefPtr<AudioLink> Create(fbl::RefPtr<AudioObject> source,
-                                       fbl::RefPtr<AudioObject> dest);
+  static fbl::RefPtr<AudioLink> Create(std::shared_ptr<AudioObject> source,
+                                       std::shared_ptr<AudioObject> dest);
 
   using Source = AudioLinkSourceTag;
   using Dest = AudioLinkDestTag;
@@ -45,7 +45,7 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   template <typename TagType>
   using Set = fbl::TaggedWAVLTree<const AudioLink*, fbl::RefPtr<AudioLink>, TagType>;
 
-  AudioLink(fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest);
+  AudioLink(std::shared_ptr<AudioObject> source, std::shared_ptr<AudioObject> dest);
 
   AudioObject& GetSource() const { return *source_; }
   AudioObject& GetDest() const { return *dest_; }
@@ -70,8 +70,8 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   const AudioLink* GetKey() const { return this; }
 
  private:
-  fbl::RefPtr<AudioObject> source_;
-  fbl::RefPtr<AudioObject> dest_;
+  std::shared_ptr<AudioObject> source_;
+  std::shared_ptr<AudioObject> dest_;
   std::shared_ptr<Mixer> mixer_;
   std::atomic_bool valid_;
   const std::optional<VolumeCurve> volume_curve_;

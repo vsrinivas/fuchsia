@@ -16,9 +16,9 @@ constexpr zx::duration kMinFenceDistance = zx::msec(200);
 constexpr zx::duration kMaxFenceDistance = kMinFenceDistance + zx::msec(20);
 
 // static
-fbl::RefPtr<AudioInput> AudioInput::Create(zx::channel channel, ThreadingModel* threading_model,
-                                           DeviceRegistry* registry) {
-  return fbl::AdoptRef(new AudioInput(std::move(channel), threading_model, registry));
+std::shared_ptr<AudioInput> AudioInput::Create(zx::channel channel, ThreadingModel* threading_model,
+                                               DeviceRegistry* registry) {
+  return std::make_shared<AudioInput>(std::move(channel), threading_model, registry);
 }
 
 AudioInput::AudioInput(zx::channel channel, ThreadingModel* threading_model,

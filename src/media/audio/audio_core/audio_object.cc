@@ -14,8 +14,8 @@
 namespace media::audio {
 
 // static
-fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& source,
-                                                const fbl::RefPtr<AudioObject>& dest) {
+fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const std::shared_ptr<AudioObject>& source,
+                                                const std::shared_ptr<AudioObject>& dest) {
   TRACE_DURATION("audio", "AudioObject::LinkObjects");
   // Assert this source is valid (AudioCapturers are disallowed).
   FX_DCHECK(source != nullptr);

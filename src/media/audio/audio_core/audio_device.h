@@ -27,13 +27,15 @@ namespace media::audio {
 class AudioDriver;
 class RingBuffer;
 
-class AudioDevice : public AudioObject {
+class AudioDevice : public AudioObject, public std::enable_shared_from_this<AudioDevice> {
  public:
   // Wakeup
   //
   // Called from outside the mixing ExecutionDomain to cause an AudioDevice's::OnWakeup handler to
   // run from within the context of the mixing execution domain.
   void Wakeup();
+
+  ~AudioDevice() override;
 
   // Accessors for the current plug state of the device.
   //
@@ -82,10 +84,7 @@ class AudioDevice : public AudioObject {
   fit::promise<void> Shutdown();
 
  protected:
-  friend class fbl::RefPtr<AudioDevice>;
-
   AudioDevice(Type type, ThreadingModel* threading_model, DeviceRegistry* registry);
-  ~AudioDevice() override;
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -164,7 +163,7 @@ class AudioDevice : public AudioObject {
   virtual void OnDriverPlugStateChange(bool plugged, zx::time plug_time)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {
     TRACE_DURATION("audio", "AudioDevice::OnDriverPlugStateChange");
-    threading_model().FidlDomain().PostTask([output = fbl::RefPtr(this), plugged, plug_time]() {
+    threading_model().FidlDomain().PostTask([output = shared_from_this(), plugged, plug_time]() {
       output->device_registry().OnPlugStateChanged(std::move(output), plugged, plug_time);
     });
   };
