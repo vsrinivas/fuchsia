@@ -47,11 +47,27 @@ void usb_desc_iter_release(usb_desc_iter_t* iter);
 // resets iterator to the beginning
 void usb_desc_iter_reset(usb_desc_iter_t* iter);
 
-// returns the next descriptor
-usb_descriptor_header_t* usb_desc_iter_next(usb_desc_iter_t* iter);
+// gets the current descriptor pointed by the iterator and then increase the iterator to the next
+// iterator. This function only make sures the returned structure if not NULL is a valid
+// usb_descriptor_header_t structure. User should not try to convert the returned value to a
+// specific usb descriptor structure without checking the boundary. As a result, user is
+// recommended to use a pattern like the following to replace usb_desc_iter_next:
+//
+// auto desc = usb_desc_iter_get_structure(&iter, ...);
+// usb_desc_iter_advance(&iter);
+// if (desc != NULL) {...}
+//
+// bug: 43986
+usb_descriptor_header_t* usb_desc_iter_next(usb_desc_iter_t* iter)  __DEPRECATE;
 
 // returns the next descriptor without incrementing the iterator
 usb_descriptor_header_t* usb_desc_iter_peek(usb_desc_iter_t* iter);
+
+// increase the iterator to the next descriptor.
+bool usb_desc_iter_advance(usb_desc_iter_t* iter);
+
+// returns the expected structure with structure size currently pointed by the iterator.
+void* usb_desc_iter_get_structure(usb_desc_iter_t* iter, size_t structure_size);
 
 // returns the next interface descriptor, optionally skipping alternate interfaces
 usb_interface_descriptor_t* usb_desc_iter_next_interface(usb_desc_iter_t* iter, bool skip_alt);

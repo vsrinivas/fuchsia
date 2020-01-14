@@ -685,7 +685,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
   result = ZX_ERR_NOT_SUPPORTED;
 
   // Find the CDC descriptors and endpoints
-  usb_descriptor_header_t* desc = usb_desc_iter_next(&iter);
+  usb_descriptor_header_t* desc;
   usb_cs_header_interface_descriptor_t* cdc_header_desc = NULL;
   usb_cs_ethernet_interface_descriptor_t* cdc_eth_desc = NULL;
   usb_endpoint_descriptor_t* int_ep = NULL;
@@ -693,9 +693,13 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
   usb_endpoint_descriptor_t* rx_ep = NULL;
   usb_interface_descriptor_t* default_ifc = NULL;
   usb_interface_descriptor_t* data_ifc = NULL;
-  while (desc) {
+  while ((desc = usb_desc_iter_peek(&iter)) != NULL) {
     if (desc->bDescriptorType == USB_DT_INTERFACE) {
-      usb_interface_descriptor_t* ifc_desc = (void*)desc;
+      usb_interface_descriptor_t* ifc_desc =
+          usb_desc_iter_get_structure(&iter, sizeof(usb_interface_descriptor_t));
+      if (ifc_desc == NULL) {
+        goto fail;
+      }
       if (ifc_desc->bInterfaceClass == USB_CLASS_CDC) {
         if (ifc_desc->bNumEndpoints == 0) {
           if (default_ifc) {
@@ -712,22 +716,32 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
         }
       }
     } else if (desc->bDescriptorType == USB_DT_CS_INTERFACE) {
-      usb_cs_interface_descriptor_t* cs_ifc_desc = (void*)desc;
+      usb_cs_interface_descriptor_t* cs_ifc_desc =
+          usb_desc_iter_get_structure(&iter, sizeof(usb_cs_interface_descriptor_t));
+      if (cs_ifc_desc == NULL) {
+        goto fail;
+      }
       if (cs_ifc_desc->bDescriptorSubType == USB_CDC_DST_HEADER) {
         if (cdc_header_desc != NULL) {
           zxlogf(ERROR, "%s: multiple CDC headers\n", module_name);
           goto fail;
         }
-        cdc_header_desc = (void*)cs_ifc_desc;
+        cdc_header_desc =
+            usb_desc_iter_get_structure(&iter, sizeof(usb_cs_header_interface_descriptor_t));
       } else if (cs_ifc_desc->bDescriptorSubType == USB_CDC_DST_ETHERNET) {
         if (cdc_eth_desc != NULL) {
           zxlogf(ERROR, "%s: multiple CDC ethernet descriptors\n", module_name);
           goto fail;
         }
-        cdc_eth_desc = (void*)cs_ifc_desc;
+        cdc_eth_desc =
+            usb_desc_iter_get_structure(&iter, sizeof(usb_cs_ethernet_interface_descriptor_t));
       }
     } else if (desc->bDescriptorType == USB_DT_ENDPOINT) {
-      usb_endpoint_descriptor_t* endpoint_desc = (void*)desc;
+      usb_endpoint_descriptor_t* endpoint_desc =
+          usb_desc_iter_get_structure(&iter, sizeof(usb_endpoint_descriptor_t));
+      if (endpoint_desc == NULL) {
+        goto fail;
+      }
       if (usb_ep_direction(endpoint_desc) == USB_ENDPOINT_IN &&
           usb_ep_type(endpoint_desc) == USB_ENDPOINT_INTERRUPT) {
         if (int_ep != NULL) {
@@ -754,7 +768,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
         goto fail;
       }
     }
-    desc = usb_desc_iter_next(&iter);
+    usb_desc_iter_advance(&iter);
   }
   if (cdc_header_desc == NULL || cdc_eth_desc == NULL) {
     zxlogf(ERROR, "%s: CDC %s descriptor(s) not found", module_name,

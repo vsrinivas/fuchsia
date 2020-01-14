@@ -33,6 +33,7 @@ zx_library("usb") {
 group("usb-lib-test") {
   testonly = true
   deps = [
+    ":usb-desc-lib-test",
     ":usb-request-cpp-test",
     ":usb-wrapper-test",
   ]
@@ -72,6 +73,18 @@ zx_test("usb-wrapper-test") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+zx_test("usb-desc-lib-test") {
+  output_name = "usb-desc-lib-test"
+  sources = [ "usb-desc-lib-test.cc" ]
+  deps = [
+    ":usb",
+    "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.composite",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/zxtest",
   ]
 }
