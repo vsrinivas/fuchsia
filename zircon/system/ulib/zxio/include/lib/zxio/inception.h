@@ -41,6 +41,29 @@ zx_status_t zxio_remote_init(zxio_storage_t* remote, zx_handle_t control, zx_han
 zx_status_t zxio_dir_init(zxio_storage_t* remote, zx_handle_t control);
 zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t event);
 
+// remote v2 -------------------------------------------------------------------
+
+// A |zxio_t| backend that uses the |fuchsia.io2/Node| protocol.
+//
+// The |control| handle is a channel that implements the |fuchsia.io2/Node|. The
+// |observer| handle is an optional object used with some |fuchsia.io2/Node|
+// servers.
+//
+// Will eventually be an implementation detail of zxio once fdio completes its
+// transition to the zxio backend.
+typedef struct zxio_remote_v2 {
+  zxio_t io;
+  zx_handle_t control;
+  zx_handle_t observer;
+} zxio_remote_v2_t;
+
+static_assert(sizeof(zxio_remote_v2_t) <= sizeof(zxio_storage_t),
+              "zxio_remote_v2_t must fit inside zxio_storage_t.");
+
+zx_status_t zxio_remote_v2_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t observer);
+zx_status_t zxio_dir_v2_init(zxio_storage_t* remote, zx_handle_t control);
+zx_status_t zxio_file_v2_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t observer);
+
 // posix mode conversions ------------------------------------------------------
 
 // These are defined in zxio today because the "mode" field in

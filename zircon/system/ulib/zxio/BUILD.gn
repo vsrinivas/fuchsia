@@ -16,6 +16,7 @@ zx_library("zxio") {
     "null.cc",
     "pipe.cc",
     "remote.cc",
+    "remote_v2.cc",
     "vmo.cc",
     "vmofile.cc",
     "zxio.cc",
@@ -28,6 +29,7 @@ zx_library("zxio") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/fidl/fuchsia-io2:llcpp",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
