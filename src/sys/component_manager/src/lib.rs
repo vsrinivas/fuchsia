@@ -22,6 +22,7 @@ pub(crate) mod root_realm_stop_notifier;
 pub(crate) mod system_controller;
 pub(crate) mod work_scheduler;
 
+mod builtin_capability;
 mod constants;
 mod process_launcher;
 mod root_job;

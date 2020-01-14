@@ -4,29 +4,25 @@
 
 use {
     crate::{
+        builtin_capability::{BuiltinCapability, BuiltinCapabilityProvider},
         capability::*,
         model::{
             error::ModelError,
-            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            hooks::{Event, EventPayload, Hook},
         },
     },
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityPath,
-    fidl::endpoints::ServerEnd,
-    fidl_fuchsia_boot as fboot, fuchsia_async as fasync,
-    fuchsia_zircon::{self as zx, Handle, HandleBased, Resource},
+    fidl_fuchsia_boot as fboot,
+    fuchsia_zircon::{self as zx, HandleBased, Resource},
     futures::{future::BoxFuture, prelude::*},
     lazy_static::lazy_static,
-    log::warn,
-    std::{
-        convert::TryInto,
-        sync::{Arc, Weak},
-    },
+    std::{convert::TryInto, sync::Arc},
 };
 
 lazy_static! {
-    pub static ref ROOT_RESOURCE_CAPABILITY_PATH: CapabilityPath =
+    static ref ROOT_RESOURCE_CAPABILITY_PATH: CapabilityPath =
         "/svc/fuchsia.boot.RootResource".try_into().unwrap();
 }
 
@@ -36,22 +32,17 @@ pub struct RootResource {
 }
 
 impl RootResource {
-    pub fn new(handle: Handle) -> Arc<Self> {
-        Arc::new(Self { resource: Resource::from(handle) })
+    pub fn new(resource: Resource) -> Arc<Self> {
+        Arc::new(Self { resource })
     }
+}
 
-    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
-        vec![HooksRegistration::new(
-            "RootResource",
-            vec![EventType::RouteCapability],
-            Arc::downgrade(&self) as Weak<dyn Hook>,
-        )]
-    }
+#[async_trait]
+impl BuiltinCapability for RootResource {
+    const NAME: &'static str = "RootResource";
+    type Marker = fboot::RootResourceMarker;
 
-    /// Serves an instance of the `fuchsia.boot.RootResource` protocol given an appropriate
-    /// RequestStream. Returns when the channel backing the RequestStream is closed or an
-    /// unrecoverable error occurs.
-    pub async fn serve(
+    async fn serve(
         self: Arc<Self>,
         mut stream: fboot::RootResourceRequestStream,
     ) -> Result<(), Error> {
@@ -61,7 +52,7 @@ impl RootResource {
         Ok(())
     }
 
-    async fn on_route_framework_capability_async<'a>(
+    async fn on_route_framework_capability<'a>(
         self: &'a Arc<Self>,
         capability: &'a FrameworkCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
@@ -70,8 +61,9 @@ impl RootResource {
             FrameworkCapability::Protocol(capability_path)
                 if *capability_path == *ROOT_RESOURCE_CAPABILITY_PATH =>
             {
-                Ok(Some(Box::new(RootResourceCapabilityProvider::new(Arc::downgrade(&self)))
-                    as Box<dyn CapabilityProvider>))
+                Ok(Some(Box::new(BuiltinCapabilityProvider::<RootResource>::new(Arc::downgrade(
+                    &self,
+                )))))
             }
             _ => Ok(capability_provider),
         }
@@ -88,44 +80,10 @@ impl Hook for RootResource {
             {
                 let mut provider = capability_provider.lock().await;
                 *provider =
-                    self.on_route_framework_capability_async(&capability, provider.take()).await?;
+                    self.on_route_framework_capability(&capability, provider.take()).await?;
             };
             Ok(())
         })
-    }
-}
-
-struct RootResourceCapabilityProvider {
-    root_resource: Weak<RootResource>,
-}
-
-impl RootResourceCapabilityProvider {
-    pub fn new(root_resource: Weak<RootResource>) -> Self {
-        Self { root_resource }
-    }
-}
-
-#[async_trait]
-impl CapabilityProvider for RootResourceCapabilityProvider {
-    async fn open(
-        self: Box<Self>,
-        _flags: u32,
-        _open_mode: u32,
-        _relative_path: String,
-        server_end: zx::Channel,
-    ) -> Result<(), ModelError> {
-        let server_end = ServerEnd::<fboot::RootResourceMarker>::new(server_end);
-        let stream: fboot::RootResourceRequestStream = server_end.into_stream().unwrap();
-        fasync::spawn(async move {
-            if let Some(root_resource) = self.root_resource.upgrade() {
-                if let Err(err) = root_resource.serve(stream).await {
-                    warn!("RootResource::open failed: {}", err);
-                }
-            } else {
-                warn!("RootResource has been dropped");
-            }
-        });
-        Ok(())
     }
 }
 
@@ -141,7 +99,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn can_connect() -> Result<(), Error> {
-        let root_resource = RootResource::new(Handle::invalid());
+        let root_resource = RootResource::new(Resource::from(zx::Handle::invalid()));
         let hooks = Hooks::new(None);
         hooks.install(root_resource.hooks()).await;
 

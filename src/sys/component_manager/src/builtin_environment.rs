@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        builtin_capability::BuiltinCapability,
         framework::RealmCapabilityHost,
         model::{
             binding::Binder,
@@ -15,7 +16,7 @@ use {
             moniker::AbsoluteMoniker,
         },
         process_launcher::ProcessLauncher,
-        root_job::RootJob,
+        root_job::{RootJob, ROOT_JOB_CAPABILITY_PATH, ROOT_JOB_FOR_INSPECT_CAPABILITY_PATH},
         root_realm_stop_notifier::RootRealmStopNotifier,
         root_resource::RootResource,
         runner::BuiltinRunner,
@@ -37,7 +38,6 @@ use {
     futures::{lock::Mutex, stream::StreamExt},
     std::{
         collections::HashMap,
-        convert::TryInto,
         sync::{Arc, Weak},
     },
 };
@@ -81,13 +81,12 @@ impl BuiltinEnvironment {
         };
 
         // Set up RootJob service.
-        let root_job =
-            RootJob::new("/svc/fuchsia.boot.RootJob".try_into().unwrap(), zx::Rights::SAME_RIGHTS);
+        let root_job = RootJob::new(&ROOT_JOB_CAPABILITY_PATH, zx::Rights::SAME_RIGHTS);
         model.root_realm.hooks.install(root_job.hooks()).await;
 
         // Set up RootJobForInspect service.
         let root_job_for_inspect = RootJob::new(
-            "/svc/fuchsia.boot.RootJobForInspect".try_into().unwrap(),
+            &ROOT_JOB_FOR_INSPECT_CAPABILITY_PATH,
             zx::Rights::INSPECT
                 | zx::Rights::ENUMERATE
                 | zx::Rights::DUPLICATE
@@ -96,8 +95,11 @@ impl BuiltinEnvironment {
         );
         model.root_realm.hooks.install(root_job_for_inspect.hooks()).await;
 
+        let root_resource_handle =
+            take_startup_handle(HandleType::Resource.into()).map(zx::Resource::from);
+
         // Set up RootResource service.
-        let root_resource = take_startup_handle(HandleType::Resource.into()).map(RootResource::new);
+        let root_resource = root_resource_handle.map(RootResource::new);
         if let Some(root_resource) = root_resource.as_ref() {
             model.root_realm.hooks.install(root_resource.hooks()).await;
         }
