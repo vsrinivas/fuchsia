@@ -206,3 +206,51 @@ macro_rules! assert_input_report_sequence_generates_events {
         }
     };
 }
+
+/// Asserts that the given sequence of input events generates the provided Scenic commands when the
+/// events are processed by the given input handler.
+#[cfg(test)]
+#[macro_export]
+macro_rules! assert_input_event_sequence_generates_scenic_events {
+    (
+        // The input handler that will handle input events.
+        input_handler: $input_handler:expr,
+        // The InputEvents to handle.
+        input_events: $input_events:expr,
+        // The commands the Scenic session should receive.
+        expected_commands: $expected_commands:expr,
+        // The Scenic session request stream.
+        scenic_session_request_stream: $scenic_session_request_stream:expr,
+        // A function to validate the Scenic commands.
+        assert_command: $assert_command:expr,
+    ) => {
+        for input_event in $input_events {
+            let events: Vec<input_device::InputEvent> =
+                $input_handler.handle_input_event(input_event).await;
+            assert_eq!(events.len(), 0);
+        }
+
+        let mut expected_command_iter = $expected_commands.into_iter().peekable();
+        while let Some(request) = $scenic_session_request_stream.next().await {
+            match request {
+                Ok(fidl_ui_scenic::SessionRequest::Enqueue { cmds, control_handle: _ }) => {
+                    let mut command_iter = cmds.into_iter().peekable();
+                    while let Some(command) = command_iter.next() {
+                        let expected_command = expected_command_iter.next().unwrap();
+                        $assert_command(command, expected_command);
+
+                        // All the expected events have been received, so make sure no more events
+                        // are present before returning.
+                        if expected_command_iter.peek().is_none() {
+                            assert!(command_iter.peek().is_none());
+                            return;
+                        }
+                    }
+                }
+                _ => {
+                    assert!(false);
+                }
+            }
+        }
+    };
+}

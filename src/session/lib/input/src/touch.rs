@@ -257,6 +257,7 @@ impl input_device::InputDeviceBinding for TouchBinding {
     async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
         let device_descriptor: fidl_fuchsia_input_report::DeviceDescriptor =
             device.get_descriptor().await?;
+
         match device_descriptor.touch {
             Some(fidl_fuchsia_input_report::TouchDescriptor {
                 input:
@@ -268,18 +269,12 @@ impl input_device::InputDeviceBinding for TouchBinding {
             }) => {
                 let (event_sender, event_receiver) =
                     futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-                let device_id = match device_descriptor.device_info {
-                    Some(info) => info.product_id,
-                    None => {
-                        return Err(format_err!("Touch Descriptor doesn't contain a product id."))
-                    }
-                };
 
                 Ok(TouchBinding {
                     event_sender,
                     event_receiver,
                     device_descriptor: TouchDeviceDescriptor {
-                        device_id,
+                        device_id: 0,
                         contacts: contact_descriptors
                             .iter()
                             .map(TouchBinding::parse_contact_descriptor)
@@ -439,15 +434,19 @@ mod tests {
         let expected_events = vec![
             create_touch_event(
                 hashmap! {
-                    fidl_ui_input::PointerEventPhase::Add => vec![create_touch_contact(TOUCH_ID, 0, 0)],
-                    fidl_ui_input::PointerEventPhase::Down => vec![create_touch_contact(TOUCH_ID, 0, 0)],
+                    fidl_ui_input::PointerEventPhase::Add
+                        => vec![create_touch_contact(TOUCH_ID, 0, 0)],
+                    fidl_ui_input::PointerEventPhase::Down
+                        => vec![create_touch_contact(TOUCH_ID, 0, 0)],
                 },
                 &descriptor,
             ),
             create_touch_event(
                 hashmap! {
-                    fidl_ui_input::PointerEventPhase::Up => vec![create_touch_contact(TOUCH_ID, 0, 0)],
-                    fidl_ui_input::PointerEventPhase::Remove => vec![create_touch_contact(TOUCH_ID, 0, 0)],
+                    fidl_ui_input::PointerEventPhase::Up
+                        => vec![create_touch_contact(TOUCH_ID, 0, 0)],
+                    fidl_ui_input::PointerEventPhase::Remove
+                        => vec![create_touch_contact(TOUCH_ID, 0, 0)],
                 },
                 &descriptor,
             ),
@@ -498,14 +497,17 @@ mod tests {
         let expected_events = vec![
             create_touch_event(
                 hashmap! {
-                    fidl_ui_input::PointerEventPhase::Add => vec![create_touch_contact(TOUCH_ID, FIRST_X, FIRST_Y)],
-                    fidl_ui_input::PointerEventPhase::Down => vec![create_touch_contact(TOUCH_ID, FIRST_X, FIRST_Y)],
+                    fidl_ui_input::PointerEventPhase::Add
+                        => vec![create_touch_contact(TOUCH_ID, FIRST_X, FIRST_Y)],
+                    fidl_ui_input::PointerEventPhase::Down
+                        => vec![create_touch_contact(TOUCH_ID, FIRST_X, FIRST_Y)],
                 },
                 &descriptor,
             ),
             create_touch_event(
                 hashmap! {
-                    fidl_ui_input::PointerEventPhase::Move => vec![create_touch_contact(TOUCH_ID, FIRST_X*2, FIRST_Y*2)],
+                    fidl_ui_input::PointerEventPhase::Move
+                        => vec![create_touch_contact(TOUCH_ID, FIRST_X*2, FIRST_Y*2)],
                 },
                 &descriptor,
             ),

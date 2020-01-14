@@ -12,3 +12,4 @@ pub mod touch;
 
 pub mod ime_handler;
 pub mod input_handler;
+pub mod touch_handler;
