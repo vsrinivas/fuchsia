@@ -6,9 +6,11 @@ mod rust_test_adapter;
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_test as ftest, fuchsia_async as fasync,
+    fidl_fuchsia_test as ftest,
+    fsyslog::fx_log_info,
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::fx_log_info,
+    fuchsia_syslog as fsyslog,
     futures::prelude::*,
     rust_test_adapter::{RustTestAdapter, TestInfo},
     std::env,
@@ -27,7 +29,7 @@ fn consume_args(args: Vec<String>) -> Result<TestInfo, Error> {
 }
 
 fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["rust_test_adapter"])?;
+    fsyslog::init_with_tags(&["rust_test_adapter"])?;
     fx_log_info!("adapter started");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;

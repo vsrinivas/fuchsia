@@ -5,10 +5,9 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_test as ftest,
+    fsyslog::{fx_log_err, fx_log_info},
     ftest::RunListenerProxy,
-    fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_syslog as fsyslog, fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
     regex::Regex,
@@ -40,16 +39,25 @@ pub struct TestInfo {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum ResultEvent {
+    /// A test or a suite of tests has started
     Started,
+    /// A test or a suite of tests has failed
     Failed,
+    /// A test or a suite of tests has passed
     Ok,
+    /// A test was marked as `#[ignore]` and didn't run`
+    Ignored,
+    /// A test was not run due to the filter that was passed in
+    Filtered,
 }
 
-/// Marks a message from the rust test as relating to a test suite or an individial test.
+/// Marks a message from the rust test as relating to a test suite or an individual test.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum ResultType {
+    /// The message pertains to a test suite
     Suite,
+    /// This message is about an individual test
     Test,
 }
 
@@ -95,15 +103,23 @@ impl RustTestAdapter {
         })
     }
 
+    /// Implements the fuchsia.test.Suite protocol to enumerate and run tests
     pub async fn run_test_suite(&self, mut stream: ftest::SuiteRequestStream) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
+        while let Some(event) =
+            stream.try_next().await.context("Failed to get next test suite event")?
+        {
             match event {
                 ftest::SuiteRequest::GetTests { responder } => {
                     fx_log_info!("gathering tests");
-                    let test_cases = self.enumerate_tests().await?;
-                    responder.send(
-                        &mut test_cases.into_iter().map(|name| ftest::Case { name: Some(name) }),
-                    )?;
+                    let test_cases =
+                        self.enumerate_tests().await.context("Failed to enumerate test cases")?;
+                    responder
+                        .send(
+                            &mut test_cases
+                                .into_iter()
+                                .map(|name| ftest::Case { name: Some(name) }),
+                        )
+                        .context("Failed to send test cases to fuchsia.test.Suite")?;
                 }
                 ftest::SuiteRequest::Run { tests, run_listener, .. } => {
                     let proxy = run_listener
@@ -118,13 +134,14 @@ impl RustTestAdapter {
                         })
                         .collect();
 
-                    self.run_tests(test_names, proxy).await?;
+                    self.run_tests(test_names, proxy).await.context("Failed to run tests")?;
                 }
             }
         }
         Ok(())
     }
 
+    /// Runs each of the tests passed in by name
     async fn run_tests(
         &self,
         test_names: Vec<String>,
@@ -133,7 +150,7 @@ impl RustTestAdapter {
         fx_log_info!("running tests");
         for name in test_names {
             let (log_end, _logger) =
-                zx::Socket::create(zx::SocketOpts::empty()).context("cannot create socket.")?;
+                zx::Socket::create(zx::SocketOpts::empty()).context("Failed to create socket")?;
 
             proxy.on_test_case_started(&name, log_end).context("on_test_case_started failed")?;
 
@@ -181,16 +198,18 @@ impl RustTestAdapter {
         let process_info = process.info().context("Error getting info from process")?;
 
         if process_info.return_code != 0 {
-            let logs = logger.try_concat().await?;
-            let output = from_utf8(&logs)?;
+            let logs = logger.try_concat().await.context("Failed to concatenate log output")?;
+            let output = from_utf8(&logs).context("Failed to convert logs from utf-8")?;
             // TODO(anmittal): Add a error logger to API before porting this to runner so that we
             // can display test stdout logs.
             fx_log_err!("Failed getting list of tests:\n{}", output);
             return Err(format_err!("Can't get list of tests. check logs"));
         }
 
-        let output = logger.try_concat().await?;
-        let test_list = from_utf8(&output)?.to_string();
+        let output =
+            logger.try_concat().await.context("Failed to concatenate the enumerated tests")?;
+        let test_list =
+            from_utf8(&output).context("Failed to convert logs from utf-8")?.to_string();
 
         let mut test_names = vec![];
         let regex = Regex::new(r"tests::(.*): test").unwrap();
@@ -217,7 +236,8 @@ impl RustTestAdapter {
         args.extend_from_slice(&[&DASH_Z, &USTABLE_OPTIONS, &JSON_FORMAT, &NO_CAPTURE]);
 
         let (process, logger) =
-            test_adapter_lib::launch_process(&self.c_test_path, &self.c_test_file_name, &args[..])?;
+            test_adapter_lib::launch_process(&self.c_test_path, &self.c_test_file_name, &args[..])
+                .context("Failed to launch test process")?;
 
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
             .await
@@ -229,8 +249,8 @@ impl RustTestAdapter {
         // parse the json. If we can then it's a passing or failing test. If we can't, then it's an
         // error and can be reported as such. Tracking bug: https://github.com/rust-lang/rust/issues/67210
 
-        let results = logger.try_concat().await?;
-        let json = from_utf8(&results)?.to_string();
+        let results = logger.try_concat().await.context("Failed to concatenate the test output")?;
+        let json = from_utf8(&results).context("Failed to convert logs from utf-8")?.to_string();
         let json = json.trim();
 
         for line in json.split("\n") {
@@ -245,9 +265,9 @@ impl RustTestAdapter {
                                 }
                                 return Ok(ftest::Outcome { status: Some(ftest::Status::Failed) });
                             }
-                            // TODO(casbor): There isn't a "Ignored" status so for now just return
-                            // that it passed.
-                            ResultEvent::Ok => {
+                            // TODO(b/43756): There isn't an "Ignored" or "Filtered" status yet, so
+                            // for now just return that the passed.
+                            ResultEvent::Ok | ResultEvent::Ignored | ResultEvent::Filtered => {
                                 return Ok(ftest::Outcome { status: Some(ftest::Status::Passed) })
                             }
                             _ => (),
