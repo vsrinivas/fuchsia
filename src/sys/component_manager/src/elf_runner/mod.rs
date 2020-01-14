@@ -435,7 +435,7 @@ impl ProcessLauncherConnector {
 mod tests {
     use {
         super::*,
-        fidl::endpoints::{create_endpoints, ClientEnd, Proxy},
+        fidl::endpoints::{create_proxy, ClientEnd, Proxy},
         fidl_fuchsia_data as fdata, fuchsia_async as fasync, io_util,
         runner::component::Killable,
     };
@@ -520,15 +520,14 @@ mod tests {
         };
         let launcher_connector = ProcessLauncherConnector::new(&args);
         let runner = ElfRunner::new(launcher_connector);
-        let (_client_endpoint, server_endpoint) =
-            create_endpoints::<fsys::ComponentControllerMarker>()
-                .expect("could not create component controller endpoints");
+        let (controller, server_controller) = create_proxy::<fsys::ComponentControllerMarker>()
+            .expect("could not create component controller endpoints");
 
         // TODO: This test currently results in a bunch of log spew when this test process exits
         // because this does not stop the component, which means its loader service suddenly goes
         // away. Stop the component when the Runner trait provides a way to do so.
         runner
-            .start_async(start_info, server_endpoint)
+            .start_async(start_info, server_controller)
             .await
             .expect("hello_world_test start failed");
 
@@ -546,6 +545,12 @@ mod tests {
         assert!(job_id > 0);
         assert_ne!(process_id, job_id);
 
+        // Kill the process before finishing the test so that it doesn't pagefault due to an
+        // invalid stdout handle.
+        controller.kill().expect("kill failed");
+        fasync::OnSignals::new(&controller.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
+            .await
+            .expect("failed waiting for channel to close");
         Ok(())
     }
 
@@ -564,11 +569,10 @@ mod tests {
         };
         let launcher_connector = ProcessLauncherConnector::new(&args);
         let runner = ElfRunner::new(launcher_connector);
-        let (_client_endpoint, server_endpoint) =
-            create_endpoints::<fsys::ComponentControllerMarker>()
-                .expect("could not create component controller endpoints");
+        let (_controller, server_controller) = create_proxy::<fsys::ComponentControllerMarker>()
+            .expect("could not create component controller endpoints");
 
-        match runner.start_async(start_info, server_endpoint).await {
+        match runner.start_async(start_info, server_controller).await {
             Ok(_) => Err(format_err!("hello_world_fail_test succeeded unexpectedly")),
             Err(_) => Ok(()),
         }
