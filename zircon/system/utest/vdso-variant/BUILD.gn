@@ -2,22 +2,47 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("vdso-variant") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("vdso-variant") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vdso-variant.c" ]
-  deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
   data_deps = [ ":vdso-variant-helper" ]
+  libs = [ "zircon" ]
 }
 
-zx_executable("vdso-variant-helper") {
+executable("vdso-variant-helper") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
   visibility = [ ":*" ]
-  testonly = true
   sources = [ "helper/vdso-variant-helper.c" ]
   deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/unittest",
   ]
+}
+
+migrated_manifest("vdso-variant-manifest") {
+  deps = [ ":vdso-variant" ]
+}
+
+migrated_manifest("vdso-variant-helper-manifest") {
+  deps = [ ":vdso-variant-helper" ]
 }
