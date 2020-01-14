@@ -5,7 +5,7 @@
 import("//build/go/go_binary.gni")
 import("//build/host.gni")
 
-assert(current_toolchain == host_toolchain)
+assert(is_host)
 
 go_binary("protoc-gen-go") {
   gopackage = "github.com/golang/protobuf/protoc-gen-go"

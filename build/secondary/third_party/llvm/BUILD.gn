@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-assert(current_toolchain == host_toolchain,
-       "LLVM should only be referenced from host tools.")
+assert(is_host, "LLVM should only be referenced from host tools.")
 
 config("include") {
   include_dirs = [

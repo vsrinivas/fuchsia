@@ -5,7 +5,7 @@
 import("//build/host.gni")
 import("//build/test.gni")
 
-if (current_toolchain == host_toolchain) {
+if (is_host) {
   test("dockyard_host_test") {
     sources = [
       "dockyard_fake.cc",

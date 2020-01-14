@@ -340,7 +340,7 @@ template("go_build") {
 
         # Record metadata for the //:tool_paths build API for all non-test,
         # host binaries.
-        if (is_host && !is_test) {
+        if (!is_fuchsia && !is_test) {
           tool_paths = [
             {
               cpu = current_cpu

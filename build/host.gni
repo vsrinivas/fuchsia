@@ -46,8 +46,7 @@ template("install_host_tools") {
   # There is more than one host_toolchain when variants are involved,
   # but all those copy their executables to the base host_toolchain
   # (which toolchain_variant.base points to in every host_toolchain).
-  if (current_toolchain == host_toolchain &&
-      current_toolchain == toolchain_variant.base) {
+  if (is_host && current_toolchain == toolchain_variant.base) {
     copy(target_name) {
       forward_variables_from(invoker,
                              [
@@ -58,9 +57,7 @@ template("install_host_tools") {
       if (defined(visibility)) {
         visibility += [ ":$target_name" ]
       }
-      outputs = [
-        "$host_tools_dir/{{source_file_part}}",
-      ]
+      outputs = [ "$host_tools_dir/{{source_file_part}}" ]
       sources = []
       foreach(output_name, invoker.outputs) {
         sources += [ "$root_out_dir/$output_name" ]
@@ -71,14 +68,12 @@ template("install_host_tools") {
     # In a variant host_toolchain context, toolchain_variant.base points
     # there, while host_toolchain always matches current_toolchain.
     group(target_name) {
-      if (current_toolchain == host_toolchain) {
+      if (is_host) {
         toolchain = toolchain_variant.base
       } else {
         toolchain = host_toolchain
       }
-      deps = [
-        ":$target_name($toolchain)",
-      ]
+      deps = [ ":$target_name($toolchain)" ]
       forward_variables_from(invoker,
                              [
                                "testonly",

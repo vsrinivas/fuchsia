@@ -6,7 +6,7 @@
 # post-process SPIR-V modules and convert to C literals
 #
 
-if (current_toolchain == host_toolchain) {
+if (is_host) {
   executable("spinel_modules_to_literals") {
     sources = [ "spinel_modules_to_literals.c" ]
   }

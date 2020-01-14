@@ -57,8 +57,6 @@ if (host_os == "linux" || host_os == "mac") {
   assert(false, "Host OS not supported")
 }
 
-is_host = current_os == "linux" || current_os == "mac"
-
 host_x64_toolchain = "//build/toolchain:host_x64"
 host_arm64_toolchain = "//build/toolchain:host_arm64"
 linux_x64_toolchain = "//build/toolchain:linux_x64"
@@ -121,6 +119,7 @@ is_android = false
 is_chromeos = false
 is_fuchsia = false
 is_fuchsia_host = false
+is_host = false
 is_ios = false
 is_linux = false
 is_mac = false
@@ -154,7 +153,7 @@ if (is_fuchsia) {
 }
 
 # When we are in a variant of host_toolchain, change the value of
-# host_toolchain so that `if (current_toolchain == host_toolchain)` tests
+# host_toolchain so that `if (is_host)` tests
 # still match, since that is the conventional way to detect being in host
 # context.  This means that any "...($host_toolchain)" label references
 # from inside a variant of host_toolchain will refer to the variant
@@ -163,6 +162,7 @@ if (is_fuchsia) {
 # toolchains as a copy of the real executable.
 if (toolchain_variant.base == host_toolchain) {
   is_fuchsia_host = true
+  is_host = true
   host_toolchain += toolchain_variant.suffix
 }
 
@@ -1089,7 +1089,7 @@ template("executable") {
     #
     # TODO(ZX-4798): This will likely no longer be needed at some point.  See
     # the bug for more info/discussion.
-    if (current_toolchain == host_toolchain) {
+    if (is_host) {
       deps += [ "//zircon/public/lib/zx-panic-libc" ]
     }
 

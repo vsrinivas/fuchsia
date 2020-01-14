@@ -4,7 +4,7 @@
 
 import("//build/host.gni")
 
-if (current_toolchain == host_toolchain) {
+if (is_host) {
   source_set("lib") {
     sources = [
       "dockyard_host.cc",

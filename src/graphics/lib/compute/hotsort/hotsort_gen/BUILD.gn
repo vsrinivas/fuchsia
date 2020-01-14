@@ -4,7 +4,7 @@
 
 import("../../gn/build_rules.gni")
 
-if (current_toolchain == host_toolchain) {
+if (is_host) {
   executable("hotsort_gen") {
     sources = [
       "gen.h",

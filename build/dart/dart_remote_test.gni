@@ -62,7 +62,7 @@ template("dart_remote_test") {
 
   dot_packages_file = "$dart_target_gen_dir/$library_target_name.packages"
 
-  if (current_toolchain == host_toolchain) {
+  if (is_host) {
     invocation_file = "$root_out_dir/$target_name"
   } else {
     invocation_file = "$target_gen_dir/$target_name"
@@ -73,9 +73,7 @@ template("dart_remote_test") {
 
     testonly = true
 
-    outputs = [
-      invocation_file,
-    ]
+    outputs = [ invocation_file ]
 
     args = [
              "--out",
@@ -89,8 +87,6 @@ template("dart_remote_test") {
              rebase_path(prebuilt_dart),
            ]
 
-    deps = [
-      ":$library_target_name",
-    ]
+    deps = [ ":$library_target_name" ]
   }
 }

@@ -27,7 +27,7 @@ static_library("line_input") {
   }
 }
 
-if (current_toolchain == host_toolchain) {
+if (is_host) {
   test("line_input_tests") {
     sources = [
       "line_input_unittest.cc",

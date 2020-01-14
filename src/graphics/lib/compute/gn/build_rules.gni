@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-_host_build = current_toolchain == host_toolchain
+_host_build = is_host
 if (_host_build) {
   import("build_rules_for_host.gni")
 } else {

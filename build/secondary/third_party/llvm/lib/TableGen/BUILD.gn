@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-assert(current_toolchain == host_toolchain,
+assert(is_host,
        "LLVM TableGen should only be referenced from the host toolchain.")
 
 static_library("TableGen") {

@@ -68,7 +68,7 @@ template("rustc_macro") {
   proc_macro_host_target = ":${proc_macro_target}($host_toolchain)"
 
   # The actual host-target build of the proc macro crate.
-  if (current_toolchain == host_toolchain) {
+  if (is_host) {
     if (defined(invoker.name)) {
       rustc_artifact_name = invoker.name
     } else {
@@ -100,40 +100,28 @@ template("rustc_macro") {
   copy(copy_cargo_toml_target) {
     visibility = [ ":${target_name}" ]
     forward_variables_from(invoker, [ "testonly" ])
-    deps = [
-      proc_macro_host_target,
-    ]
-    sources = [
-      "$proc_macro_target_gen_dir/$proc_macro_target/Cargo.toml",
-    ]
-    outputs = [
-      "$target_gen_dir/$target_name/Cargo.toml",
-    ]
+    deps = [ proc_macro_host_target ]
+    sources = [ "$proc_macro_target_gen_dir/$proc_macro_target/Cargo.toml" ]
+    outputs = [ "$target_gen_dir/$target_name/Cargo.toml" ]
   }
 
   # Copy the generated _info.json which provides data about the target that
   # was built.
   copy_build_info_target = "${target_name}_info"
   copy(copy_build_info_target) {
-    deps = [
-      ":${proc_macro_target}_info($host_toolchain)",
-    ]
+    deps = [ ":${proc_macro_target}_info($host_toolchain)" ]
     proc_macro_target_out_dir =
         get_label_info(proc_macro_host_target, "target_out_dir")
-    sources = [
-      "$proc_macro_target_out_dir/${proc_macro_target}_info.json",
-    ]
-    outputs = [
-      "$target_out_dir/${copy_build_info_target}.json",
-    ]
+    sources = [ "$proc_macro_target_out_dir/${proc_macro_target}_info.json" ]
+    outputs = [ "$target_out_dir/${copy_build_info_target}.json" ]
   }
 
   # Group all of the `copy` targets into one group which is publicly exposed.
   group(target_name) {
     public_deps = [
-      proc_macro_host_target,
       ":$copy_build_info_target",
       ":$copy_cargo_toml_target",
+      proc_macro_host_target,
     ]
   }
 }

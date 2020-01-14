@@ -20,7 +20,7 @@ source_set("e2e_test_headers") {
 }
 
 # ZXDB currently only compiles for the host.
-if (current_toolchain == host_toolchain) {
+if (is_host) {
   sdk_executable("zxdb") {
     category = "partner"
 

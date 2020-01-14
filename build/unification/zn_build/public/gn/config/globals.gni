@@ -11,5 +11,4 @@ toolchain = {
 }
 
 is_gcc = false
-is_host = !is_fuchsia
 is_kernel = false

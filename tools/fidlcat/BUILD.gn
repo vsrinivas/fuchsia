@@ -8,7 +8,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-if (current_toolchain == host_toolchain) {
+if (is_host) {
   sdk_executable("fidlcat") {
     category = "partner"
 

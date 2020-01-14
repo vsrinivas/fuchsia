@@ -59,7 +59,7 @@ static_library("vk") {
     "vk_target_requirements.c",
     "vk_target_requirements.h",
   ]
-  if (current_toolchain == host_toolchain) {
+  if (is_host) {
     defines = [ "SPN_VK_SHADER_INFO_AMD_STATISTICS" ]
   }
   deps = [

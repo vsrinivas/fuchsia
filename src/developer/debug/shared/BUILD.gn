@@ -37,7 +37,7 @@ static_library("shared") {
     "//zircon/public/lib/fit",
   ]
 
-  if (current_toolchain == host_toolchain) {
+  if (is_host) {
     # Host toolchain.
     sources += [
       "message_loop_poll.cc",
