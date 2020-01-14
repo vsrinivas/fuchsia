@@ -225,7 +225,6 @@ static std::string ParamToString(testing::TestParamInfo<StreamProvider::Source> 
 }
 
 INSTANTIATE_TEST_SUITE_P(StreamProviderTestSuite, StreamProviderTest,
-                         testing::Values(StreamProvider::Source::ISP,
-                                         StreamProvider::Source::CONTROLLER,
+                         testing::Values(StreamProvider::Source::CONTROLLER,
                                          StreamProvider::Source::MANAGER),
                          ParamToString);
