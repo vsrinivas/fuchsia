@@ -26,8 +26,7 @@ use {
     fuchsia_inspect::reader::{NodeHierarchy, PartialNodeHierarchy},
     fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder},
     fuchsia_zircon::{self as zx, Status},
-    futures::{compat::Stream01CompatExt, prelude::*},
-    hyper::Body,
+    futures::prelude::*,
     pkgfs_ramdisk::PkgfsRamdisk,
     serde_derive::Serialize,
     std::{convert::TryFrom, fs::File, io::BufWriter},
@@ -408,8 +407,4 @@ fn resolve_package(
         Status::ok(status)?;
         Ok(package)
     }
-}
-
-async fn body_to_bytes(body: Body) -> Vec<u8> {
-    body.compat().try_concat().await.expect("body stream to complete").to_vec()
 }

@@ -9,13 +9,11 @@ use {
     super::*,
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{
-        serve::{handler, AtomicToggle, UriPathHandler},
+        serve::{handler, UriPathHandler},
         RepositoryBuilder,
     },
-    futures::future::BoxFuture,
-    hyper::{header::CONTENT_LENGTH, Body, Response},
     matches::assert_matches,
-    std::{path::Path, sync::Arc},
+    std::sync::Arc,
 };
 
 async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
@@ -34,7 +32,7 @@ async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
     );
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
 
-    let should_fail = AtomicToggle::new(true);
+    let should_fail = handler::AtomicToggle::new(true);
     let served_repository = repo
         .server()
         .uri_path_override_handler(handler::Toggleable::new(&should_fail, handler))
@@ -86,30 +84,6 @@ async fn second_resolve_succeeds_when_blob_404() {
     .await
 }
 
-struct OneByteShortThenErrorUriPathHandler;
-impl UriPathHandler for OneByteShortThenErrorUriPathHandler {
-    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
-        async {
-            let mut bytes = body_to_bytes(response.into_body()).await;
-            if let None = bytes.pop() {
-                panic!("can't short 0 bytes");
-            }
-            Response::builder()
-                .status(hyper::StatusCode::OK)
-                .header(CONTENT_LENGTH, bytes.len() + 1)
-                .body(Body::wrap_stream(
-                    futures::stream::iter(vec![
-                        Ok(bytes),
-                        Err("all_but_one_byte_then_eror has sent all but one bytes".to_string()),
-                    ])
-                    .compat(),
-                ))
-                .expect("valid response")
-        }
-        .boxed()
-    }
-}
-
 // If the body of an https response is not large enough, hyper will download the body
 // along with the header in the initial fuchsia_hyper::HttpsClient.request(). This means
 // that even if the body is implemented with a stream that fails before the transfer is
@@ -131,7 +105,7 @@ async fn second_resolve_succeeds_when_far_errors_mid_download() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, OneByteShortThenErrorUriPathHandler),
+        handler::ForPath::new(path_to_override, handler::OneByteShortThenError),
         Status::UNAVAILABLE,
     )
     .await
@@ -152,30 +126,10 @@ async fn second_resolve_succeeds_when_blob_errors_mid_download() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, OneByteShortThenErrorUriPathHandler),
+        handler::ForPath::new(path_to_override, handler::OneByteShortThenError),
         Status::UNAVAILABLE,
     )
     .await
-}
-
-struct OneByteShortThenDisconnectUriPathHandler;
-impl UriPathHandler for OneByteShortThenDisconnectUriPathHandler {
-    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
-        async {
-            let mut bytes = body_to_bytes(response.into_body()).await;
-            if let None = bytes.pop() {
-                panic!("can't short 0 bytes");
-            }
-            Response::builder()
-                .status(hyper::StatusCode::OK)
-                .header(CONTENT_LENGTH, bytes.len() + 1)
-                .body(Body::wrap_stream(
-                    futures::stream::iter(vec![Result::<Vec<u8>, String>::Ok(bytes)]).compat(),
-                ))
-                .expect("valid response")
-        }
-        .boxed()
-    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -192,7 +146,7 @@ async fn second_resolve_succeeds_disconnect_before_far_complete() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, OneByteShortThenDisconnectUriPathHandler),
+        handler::ForPath::new(path_to_override, handler::OneByteShortThenDisconnect),
         Status::UNAVAILABLE,
     )
     .await
@@ -213,28 +167,10 @@ async fn second_resolve_succeeds_disconnect_before_blob_complete() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, OneByteShortThenDisconnectUriPathHandler),
+        handler::ForPath::new(path_to_override, handler::OneByteShortThenDisconnect),
         Status::UNAVAILABLE,
     )
     .await
-}
-
-struct OneByteFlippedUriPathHandler;
-impl UriPathHandler for OneByteFlippedUriPathHandler {
-    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
-        async {
-            let mut bytes = body_to_bytes(response.into_body()).await;
-            if bytes.is_empty() {
-                panic!("can't flip 0 bytes");
-            }
-            bytes[0] = !bytes[0];
-            Response::builder()
-                .status(hyper::StatusCode::OK)
-                .body(bytes.into())
-                .expect("valid response")
-        }
-        .boxed()
-    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -244,7 +180,7 @@ async fn second_resolve_succeeds_when_far_corrupted() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, OneByteFlippedUriPathHandler),
+        handler::ForPath::new(path_to_override, handler::OneByteFlipped),
         Status::IO,
     )
     .await
@@ -261,7 +197,7 @@ async fn second_resolve_succeeds_when_blob_corrupted() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, OneByteFlippedUriPathHandler),
+        handler::ForPath::new(path_to_override, handler::OneByteFlipped),
         Status::IO,
     )
     .await

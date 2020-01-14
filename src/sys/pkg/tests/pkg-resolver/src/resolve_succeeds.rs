@@ -11,23 +11,14 @@ use {
     fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
     fuchsia_inspect::assert_inspect_tree,
     fuchsia_merkle::{Hash, MerkleTree},
-    fuchsia_pkg_testing::{
-        serve::{handler, AtomicToggle, UriPathHandler},
-        RepositoryBuilder,
-    },
-    futures::{
-        channel::{mpsc, oneshot},
-        future::{ready, BoxFuture},
-        join,
-    },
-    hyper::{Body, Response},
+    fuchsia_pkg_testing::{serve::handler, RepositoryBuilder},
+    futures::join,
     matches::assert_matches,
-    parking_lot::Mutex,
     std::{
         collections::HashSet,
         fs::File,
         io::{self, Read},
-        path::{Path, PathBuf},
+        path::Path,
         sync::Arc,
     },
 };
@@ -512,7 +503,7 @@ async fn use_cached_package() {
             .await
             .unwrap(),
     );
-    let fail_requests = AtomicToggle::new(true);
+    let fail_requests = handler::AtomicToggle::new(true);
     let served_repository = repo
         .server()
         .uri_path_override_handler(handler::Toggleable::new(
@@ -637,71 +628,6 @@ async fn meta_far_installed_one_blob_partially_installed() {
     .await
 }
 
-struct OneShotSenderWrapper {
-    sender: Mutex<Option<oneshot::Sender<Box<dyn FnOnce() + Send>>>>,
-}
-
-impl OneShotSenderWrapper {
-    fn send(&self, unblocking_closure: Box<dyn FnOnce() + Send>) {
-        self.sender
-            .lock()
-            .take()
-            .expect("a single request for this path")
-            .send(unblocking_closure)
-            .map_err(|_err| ())
-            .expect("receiver is present");
-    }
-}
-
-/// Blocks sending a response body (but not headers) for a single path once until unblocked by a test.
-struct BlockResponseBodyOnceUriPathHandler {
-    unblocking_closure_sender: OneShotSenderWrapper,
-    path_to_block: String,
-}
-
-impl BlockResponseBodyOnceUriPathHandler {
-    pub fn new_path_handler_and_channels(
-        path_to_block: String,
-    ) -> (Self, oneshot::Receiver<Box<dyn FnOnce() + Send>>) {
-        let (unblocking_closure_sender, unblocking_closure_receiver) = oneshot::channel();
-        let blocking_uri_path_handler = BlockResponseBodyOnceUriPathHandler {
-            unblocking_closure_sender: OneShotSenderWrapper {
-                sender: Mutex::new(Some(unblocking_closure_sender)),
-            },
-            path_to_block,
-        };
-        (blocking_uri_path_handler, unblocking_closure_receiver)
-    }
-}
-
-impl UriPathHandler for BlockResponseBodyOnceUriPathHandler {
-    fn handle(
-        &self,
-        uri_path: &Path,
-        mut response: Response<Body>,
-    ) -> BoxFuture<'_, Response<Body>> {
-        // Only block requests for the duplicate blob
-        let duplicate_blob_uri = Path::new(&self.path_to_block);
-        if uri_path != duplicate_blob_uri {
-            return ready(response).boxed();
-        }
-
-        async move {
-            // By only sending the content length header, this will guarantee the
-            // duplicate blob remains open and truncated until the content is sent
-            let (mut sender, new_body) = Body::channel();
-            let old_body = std::mem::replace(response.body_mut(), new_body);
-            let contents = body_to_bytes(old_body).await;
-
-            // Send a closure to the test that will unblock when executed
-            self.unblocking_closure_sender
-                .send(Box::new(move || sender.send_data(contents.into()).expect("sending body")));
-            response
-        }
-        .boxed()
-    }
-}
-
 #[fasync::run_singlethreaded(test)]
 async fn test_concurrent_blob_writes() {
     // Create our test packages and find out the merkle of the duplicate blob
@@ -727,10 +653,11 @@ async fn test_concurrent_blob_writes() {
 
     // Create the path handler and the channel to communicate with it
     let (blocking_uri_path_handler, unblocking_closure_receiver) =
-        BlockResponseBodyOnceUriPathHandler::new_path_handler_and_channels(format!(
-            "/blobs/{}",
-            duplicate_blob_merkle
-        ));
+        handler::BlockResponseBodyOnce::new();
+    let blocking_uri_path_handler = handler::ForPath::new(
+        format!("/blobs/{}", duplicate_blob_merkle),
+        blocking_uri_path_handler,
+    );
 
     // Construct the repo
     let env = TestEnvBuilder::new().build();
@@ -796,60 +723,6 @@ async fn test_concurrent_blob_writes() {
     env.stop().await;
 }
 
-/// A response that is waiting to be sent.
-struct BlockedResponse {
-    path: PathBuf,
-    unblocker: oneshot::Sender<()>,
-}
-
-impl BlockedResponse {
-    fn path(&self) -> &Path {
-        &self.path
-    }
-
-    fn unblock(self) {
-        self.unblocker.send(()).expect("request to still be pending")
-    }
-}
-
-/// Blocks sending response headers and bodies for a set of paths until unblocked by a test.
-struct BlockResponseUriPathHandler {
-    paths_to_block: HashSet<PathBuf>,
-    blocked_responses: mpsc::UnboundedSender<BlockedResponse>,
-}
-
-impl BlockResponseUriPathHandler {
-    fn new(paths_to_block: HashSet<PathBuf>) -> (Self, mpsc::UnboundedReceiver<BlockedResponse>) {
-        let (sender, receiver) = mpsc::unbounded();
-
-        (Self { paths_to_block, blocked_responses: sender }, receiver)
-    }
-}
-
-impl UriPathHandler for BlockResponseUriPathHandler {
-    fn handle(&self, path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
-        // Only block paths that were requested to be blocked
-        if !self.paths_to_block.contains(path) {
-            return async move { response }.boxed();
-        }
-
-        // Return a future that notifies the test that the request was blocked and wait for it to
-        // unblock the response
-        let path = path.to_owned();
-        let mut blocked_responses = self.blocked_responses.clone();
-        async move {
-            let (unblocker, waiter) = oneshot::channel();
-            blocked_responses
-                .send(BlockedResponse { path, unblocker })
-                .await
-                .expect("receiver to still exist");
-            waiter.await.expect("request to be unblocked");
-            response
-        }
-        .boxed()
-    }
-}
-
 #[fasync::run_singlethreaded(test)]
 async fn dedup_concurrent_content_blob_fetches() {
     let env = TestEnvBuilder::new().build();
@@ -889,8 +762,9 @@ async fn dedup_concurrent_content_blob_fetches() {
             .map(|blob| format!("/blobs/{}", blob).into())
             .collect::<HashSet<_>>()
     };
-    let (request_handler, mut incoming_requests) =
-        BlockResponseUriPathHandler::new(content_blob_paths.iter().cloned().collect());
+    let (request_handler, mut incoming_requests) = handler::BlockResponseHeaders::new();
+    let request_handler =
+        handler::ForPaths::new(content_blob_paths.iter().cloned().collect(), request_handler);
 
     // Serve and register the repo with our request handler that blocks headers for content blobs.
     let repo = Arc::new(
