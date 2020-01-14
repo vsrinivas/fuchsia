@@ -1,0 +1,10 @@
+[
+  {
+    "contents": {
+      "root": {
+        "lazy-double": 3.14
+      }
+    },
+    "path": "iquery_example_component.cmx"
+  }
+]

@@ -30,6 +30,7 @@ use {
     parking_lot::{Mutex, RwLock},
     regex::{Regex, RegexSet},
     selectors,
+    std::collections::HashMap,
     std::convert::{TryFrom, TryInto},
     std::path::{Path, PathBuf},
     std::sync::Arc,
@@ -268,6 +269,42 @@ pub struct InspectHierarchyMatcher {
     node_property_selectors: Vec<Regex>,
 }
 
+impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
+    type Error = anyhow::Error;
+
+    fn try_from(selectors: &Vec<Arc<Selector>>) -> Result<Self, Error> {
+        let node_path_regexes = selectors
+            .iter()
+            .map(|selector| match &selector.tree_selector.node_path {
+                Some(node_path) => selectors::convert_path_selector_to_regex(node_path),
+                None => unreachable!("Selectors are required to specify a node path."),
+            })
+            .collect::<Result<Vec<Regex>, Error>>()?;
+
+        let node_path_regex_set = RegexSet::new(
+            &node_path_regexes
+                .iter()
+                .map(|selector_regex| selector_regex.as_str())
+                .collect::<Vec<&str>>(),
+        )?;
+
+        let property_regexes = selectors
+            .iter()
+            .map(|selector| match &selector.tree_selector.target_properties {
+                Some(target_property) => {
+                    selectors::convert_property_selector_to_regex(target_property)
+                }
+                None => unreachable!("Selectors are required to specify a node path."),
+            })
+            .collect::<Result<Vec<Regex>, Error>>()?;
+
+        Ok(InspectHierarchyMatcher {
+            component_node_selector: node_path_regex_set,
+            node_property_selectors: property_regexes,
+        })
+    }
+}
+
 /// PopulatedInspectDataContainer is the container that
 /// holds the actual Inspect data for a given component,
 /// along with all information needed to transform that data
@@ -275,10 +312,10 @@ pub struct InspectHierarchyMatcher {
 pub struct PopulatedInspectDataContainer {
     /// Relative moniker of the component that this populated
     /// data packet has gathered data for.
-    component_moniker: String,
+    relative_moniker: Vec<String>,
     /// Vector of all the snapshots of inspect hierarchies under
     /// the diagnostics directory of the component identified by
-    /// component_moniker.
+    /// relative_moniker.
     snapshots: Vec<ReadSnapshot>,
     /// Optional hierarchy matcher. If unset, the reader is running
     /// in all-access mode, meaning no matching or filtering is required.
@@ -332,13 +369,13 @@ impl PopulatedInspectDataContainer {
                 }
                 match snapshots {
                     Some(snapshots) => Ok(PopulatedInspectDataContainer {
-                        component_moniker: unpopulated.component_moniker,
+                        relative_moniker: unpopulated.relative_moniker,
                         snapshots: snapshots,
                         inspect_matcher: unpopulated.inspect_matcher,
                     }),
                     None => Err(format_err!(
                         "Failed to parse snapshots for: {:?}.",
-                        unpopulated.component_moniker
+                        unpopulated.relative_moniker
                     )),
                 }
             }
@@ -353,7 +390,7 @@ impl PopulatedInspectDataContainer {
 pub struct UnpopulatedInspectDataContainer {
     /// Relative moniker of the component that this data container
     /// is representing.
-    component_moniker: String,
+    relative_moniker: Vec<String>,
     /// DirectoryProxy for the out directory that this
     /// data packet is configured for.
     component_out_proxy: DirectoryProxy,
@@ -403,48 +440,16 @@ impl InspectDataRepository {
             )?),
             None => None,
         };
-        let sanitized_moniker = relative_moniker
-            .iter()
-            .map(|s| selectors::sanitize_string_for_selectors(s))
-            .collect::<Vec<String>>()
-            .join("/");
+
         match matched_selectors {
             Some(selectors) => {
                 if !selectors.is_empty() {
-                    let node_path_regexes = selectors
-                        .iter()
-                        .map(|selector| match &selector.tree_selector.node_path {
-                            Some(node_path) => selectors::convert_path_selector_to_regex(node_path),
-                            None => unreachable!("Selectors are required to specify a node path."),
-                        })
-                        .collect::<Result<Vec<Regex>, Error>>()?;
-
-                    let node_path_regex_set = RegexSet::new(
-                        &node_path_regexes
-                            .iter()
-                            .map(|selector_regex| selector_regex.as_str())
-                            .collect::<Vec<&str>>(),
-                    )?;
-
-                    let property_regexes = selectors
-                        .iter()
-                        .map(|selector| match &selector.tree_selector.target_properties {
-                            Some(target_property) => {
-                                selectors::convert_property_selector_to_regex(target_property)
-                            }
-                            None => unreachable!("Selectors are required to specify a node path."),
-                        })
-                        .collect::<Result<Vec<Regex>, Error>>()?;
-
                     self.data_directories.insert(
                         component_name.chars().collect(),
                         UnpopulatedInspectDataContainer {
-                            component_moniker: sanitized_moniker,
+                            relative_moniker: relative_moniker,
                             component_out_proxy: directory_proxy,
-                            inspect_matcher: Some(InspectHierarchyMatcher {
-                                component_node_selector: node_path_regex_set,
-                                node_property_selectors: property_regexes,
-                            }),
+                            inspect_matcher: Some((&selectors).try_into()?),
                         },
                     );
                 }
@@ -454,7 +459,7 @@ impl InspectDataRepository {
                 self.data_directories.insert(
                     component_name.chars().collect(),
                     UnpopulatedInspectDataContainer {
-                        component_moniker: sanitized_moniker,
+                        relative_moniker: relative_moniker,
                         component_out_proxy: directory_proxy,
                         inspect_matcher: None,
                     },
@@ -478,7 +483,7 @@ impl InspectDataRepository {
                 )
                 .ok()
                 .map(|directory| UnpopulatedInspectDataContainer {
-                    component_moniker: unpopulated_data_container.component_moniker.clone(),
+                    relative_moniker: unpopulated_data_container.relative_moniker.clone(),
                     component_out_proxy: directory,
                     inspect_matcher: unpopulated_data_container.inspect_matcher.clone(),
                 })
@@ -499,7 +504,15 @@ impl InspectDataRepository {
 #[derive(Clone)]
 pub struct ReaderServer {
     pub inspect_repo: Arc<RwLock<InspectDataRepository>>,
-    pub configured_selectors: Arc<Vec<fidl_fuchsia_diagnostics::Selector>>,
+    pub configured_selectors: Vec<Arc<fidl_fuchsia_diagnostics::Selector>>,
+}
+
+fn convert_snapshot_to_node_hierarchy(snapshot: ReadSnapshot) -> Result<NodeHierarchy, Error> {
+    match snapshot {
+        ReadSnapshot::Single(snapshot) => Ok(PartialNodeHierarchy::try_from(snapshot)?.into()),
+        ReadSnapshot::Tree(snapshot_tree) => snapshot_tree.try_into(),
+        ReadSnapshot::Finished(hierarchy) => Ok(hierarchy),
+    }
 }
 
 impl ReaderServer {
@@ -507,22 +520,25 @@ impl ReaderServer {
         inspect_repo: Arc<RwLock<InspectDataRepository>>,
         configured_selectors: Vec<fidl_fuchsia_diagnostics::Selector>,
     ) -> Self {
-        ReaderServer { inspect_repo, configured_selectors: Arc::new(configured_selectors) }
+        ReaderServer {
+            inspect_repo,
+            configured_selectors: configured_selectors
+                .into_iter()
+                .map(|selector| Arc::new(selector))
+                .collect(),
+        }
     }
 
     /// Parses an inspect Snapshot into a node hierarchy, and iterates over the
     /// hierarchy creating a copy with selector filters applied.
     fn filter_inspect_snapshot(
-        inspect_snapshot: ReadSnapshot,
+        root_node: NodeHierarchy,
         path_selectors: &RegexSet,
         property_selectors: &Vec<Regex>,
-    ) -> Result<NodeHierarchy, Error> {
-        let root_node: NodeHierarchy = match inspect_snapshot {
-            ReadSnapshot::Single(snapshot) => PartialNodeHierarchy::try_from(snapshot)?.into(),
-            ReadSnapshot::Tree(snapshot_tree) => snapshot_tree.try_into()?,
-            ReadSnapshot::Finished(hierarchy) => hierarchy,
-        };
+    ) -> Result<Option<NodeHierarchy>, Error> {
         let mut new_root = NodeHierarchy::new_root();
+        let mut properties_selected = 0;
+
         for (node_path, property) in root_node.property_iter() {
             let mut formatted_node_path = node_path
                 .iter()
@@ -551,10 +567,99 @@ impl ReaderServer {
                 // brought us to a new node higher up the hierarchy. Right now, we
                 // insert from root for every new property.
                 new_root.add(node_path, property.clone());
+                properties_selected = properties_selected + 1;
             }
         }
 
-        Ok(new_root)
+        if properties_selected > 0 {
+            Ok(Some(new_root))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn filter_single_components_snapshots(
+        sanitized_moniker: String,
+        snapshots: Vec<ReadSnapshot>,
+        static_matcher: Option<InspectHierarchyMatcher>,
+        client_matcher_container: &HashMap<String, Option<InspectHierarchyMatcher>>,
+    ) -> Vec<HierarchyData> {
+        let statically_filtered_hierarchies: Vec<NodeHierarchy> = match static_matcher {
+            Some(static_matcher) => snapshots
+                .into_iter()
+                .filter_map(|snapshot| match convert_snapshot_to_node_hierarchy(snapshot) {
+                    Ok(node_hierarchy) => ReaderServer::filter_inspect_snapshot(
+                        node_hierarchy,
+                        &static_matcher.component_node_selector,
+                        &static_matcher.node_property_selectors,
+                    )
+                    .unwrap_or(None),
+                    Err(e) => {
+                        eprintln!("Archivist failed to convert snapshot to hierarchy: {:?}", e);
+                        None
+                    }
+                })
+                .collect(),
+            // The only way we have a None value for the PopulatedDataContainer is
+            // if there were no provided static selectors, which is only valid in
+            // the AllAccess pipeline. For all other pipelines, if no static selectors
+            // matched, the data wouldn't have ended up in the repository to begin
+            // with.
+            None => snapshots
+                .into_iter()
+                .filter_map(|snapshot| {
+                    match snapshot {
+                        ReadSnapshot::Single(snapshot) => {
+                            PartialNodeHierarchy::try_from(snapshot).map(|partial| partial.into())
+                        }
+                        ReadSnapshot::Tree(snapshot_tree) => snapshot_tree.try_into(),
+                        ReadSnapshot::Finished(hierarchy) => Ok(hierarchy),
+                    }
+                    .ok()
+                })
+                .collect(),
+        };
+
+        let dynamically_filtered_hierarchies: Vec<NodeHierarchy> =
+            match client_matcher_container.get(&sanitized_moniker) {
+                // If the moniker key was present, and there was an InspectHierarchyMatcher,
+                // then this means the client provided their own selectors, and a subset of
+                // them matched this component. So we need to filter each of the snapshots from
+                // this component with the dynamically provided components.
+                Some(Some(dynamic_matcher)) => statically_filtered_hierarchies
+                    .into_iter()
+                    .filter_map(|hierarchy| {
+                        ReaderServer::filter_inspect_snapshot(
+                            hierarchy,
+                            &dynamic_matcher.component_node_selector,
+                            &dynamic_matcher.node_property_selectors,
+                        )
+                        .unwrap_or(None)
+                    })
+                    .collect(),
+                // If the moniker key was present, but the InspectHierarchyMatcher option was
+                // None, this means that the client provided their own selectors, and none of
+                // them matched this particular component, so no values are to be returned.
+                Some(None) => Vec::new(),
+                // If the moniker key was absent, then the entire client_matcher_container should
+                // be empty since the implication is that the client provided none of their own
+                // selectors. Either every moniker is present or none are. And, if no dynamically
+                // provided selectors exist, then the statically filtered snapshots are all that
+                // we need.
+                None => {
+                    assert!(client_matcher_container.is_empty());
+                    statically_filtered_hierarchies
+                }
+            };
+
+        dynamically_filtered_hierarchies
+            .into_iter()
+            .map(|filtered_hierarchy| HierarchyData {
+                hierarchy: filtered_hierarchy,
+                file_path: sanitized_moniker.clone(),
+                fields: vec![],
+            })
+            .collect()
     }
 
     /// Takes a batch of unpopulated inspect data containers, traverses their diagnostics
@@ -582,8 +687,14 @@ impl ReaderServer {
     // TODO(4601): Error entries should still be included, but with a custom hierarchy
     //             that makes it clear to clients that snapshotting failed.
     pub fn filter_snapshots(
+        configured_selectors: &Vec<Arc<Selector>>,
         pumped_inspect_data_results: Vec<Result<PopulatedInspectDataContainer, Error>>,
     ) -> Vec<HierarchyData> {
+        // In case we encounter multiple PopulatedDataContainers with the same moniker we don't
+        // want to do the component selector filtering again, so store the results in a map.
+        let mut client_selector_matches: HashMap<String, Option<InspectHierarchyMatcher>> =
+            HashMap::new();
+
         // We iterate the vector of pumped inspect data packets, consuming each inspect vmo
         // and filtering it using the provided selector regular expressions. Each filtered
         // inspect hierarchy is then added to an accumulator as a HierarchyData to be converted
@@ -591,56 +702,58 @@ impl ReaderServer {
         pumped_inspect_data_results.into_iter().fold(Vec::new(), |mut acc, pumped_data| {
             match pumped_data {
                 Ok(PopulatedInspectDataContainer {
-                    component_moniker,
+                    relative_moniker,
                     snapshots,
                     inspect_matcher,
                 }) => {
-                    match inspect_matcher {
-                        Some(matchers) => {
-                            snapshots.into_iter().for_each(|snapshot| {
-                                match ReaderServer::filter_inspect_snapshot(
-                                    snapshot,
-                                    &matchers.component_node_selector,
-                                    &matchers.node_property_selectors,
-                                ) {
-                                    Ok(filtered_hierarchy) => {
-                                        acc.push(HierarchyData {
-                                            hierarchy: filtered_hierarchy,
-                                            file_path: component_moniker.clone(),
-                                            fields: vec![],
-                                        });
-                                    }
-                                    // TODO(4601): Failing to parse a node hierarchy
-                                    // might be worth more than a silent failure.
-                                    Err(_) => {}
-                                }
-                            });
-                        }
-                        None => {
-                            snapshots.into_iter().for_each(|snapshot| {
-                                let root_node_result: Result<NodeHierarchy, Error> = match snapshot
-                                {
-                                    ReadSnapshot::Single(snapshot) => {
-                                        PartialNodeHierarchy::try_from(snapshot)
-                                            .map(|partial| partial.into())
-                                    }
-                                    ReadSnapshot::Tree(snapshot_tree) => snapshot_tree.try_into(),
-                                    ReadSnapshot::Finished(hierarchy) => Ok(hierarchy),
-                                };
-                                match root_node_result {
-                                    Ok(node_hierarchy) => {
-                                        acc.push(HierarchyData {
-                                            hierarchy: node_hierarchy,
-                                            file_path: component_moniker.clone(),
-                                            fields: vec![],
-                                        });
-                                    }
-                                    Err(_) => {}
-                                }
-                            });
-                        }
-                    }
+                    let sanitized_moniker = relative_moniker
+                        .iter()
+                        .map(|s| selectors::sanitize_string_for_selectors(s))
+                        .collect::<Vec<String>>()
+                        .join("/");
 
+                    if !configured_selectors.is_empty() {
+                        let configured_matchers = client_selector_matches
+                            .entry(sanitized_moniker.clone())
+                            .or_insert_with(|| {
+                                let matching_selectors =
+                                    selectors::match_component_moniker_against_selectors(
+                                        &relative_moniker,
+                                        configured_selectors,
+                                    )
+                                    .unwrap_or_else(|err| {
+                                        eprintln!(
+                                        "Failed to evaluate client selectors for: {:?} Error: {:?}",
+                                        relative_moniker, err
+                                    );
+                                        Vec::new()
+                                    });
+                                match (&matching_selectors).try_into() {
+                                    Ok(hierarchy_matcher) => Some(hierarchy_matcher),
+                                    Err(e) => {
+                                        eprintln!("Failed to create hierarchy matcher: {:?}", e);
+                                        None
+                                    }
+                                }
+                            });
+
+                        // If there were configured matchers and none of them matched
+                        // this component, then we should return early since there is no data to
+                        // extract.
+                        if configured_matchers.is_none() {
+                            return acc;
+                        }
+                    };
+
+                    let mut fully_filtered_hierarchy_data =
+                        ReaderServer::filter_single_components_snapshots(
+                            sanitized_moniker.clone(),
+                            snapshots,
+                            inspect_matcher,
+                            &client_selector_matches,
+                        );
+
+                    acc.append(&mut fully_filtered_hierarchy_data);
                     acc
                 }
                 // TODO(36761): What does it mean for IO to fail on a
@@ -724,6 +837,7 @@ impl ReaderServer {
         // We must fetch the repositories in a closure to prevent the
         // repository mutex-guard from leaking into futures.
         let inspect_repo_data = self.inspect_repo.read().fetch_data();
+        let configured_selectors = self.configured_selectors;
         let mut stream = fidl_fuchsia_diagnostics::BatchIteratorRequestStream::from_channel(
             batch_iterator_channel,
         );
@@ -746,8 +860,10 @@ impl ReaderServer {
                             ReaderServer::pump_inspect_data(snapshot_batch).await;
 
                         // Apply selector filtering to all snapshot inspect hierarchies in the batch.
-                        let batch_hierarchy_data =
-                            ReaderServer::filter_snapshots(pumped_inspect_data_results);
+                        let batch_hierarchy_data = ReaderServer::filter_snapshots(
+                            &configured_selectors,
+                            pumped_inspect_data_results,
+                        );
 
                         let formatted_content: Vec<
                             Result<fidl_fuchsia_diagnostics::FormattedContent, Error>,

@@ -25,7 +25,9 @@ const ARCHIVIST_CONFIG: &[u8] = include_bytes!("../configs/archivist_config.json
 const SERVICE_URL: &str =
     "fuchsia-pkg://fuchsia.com/unified_reader_tests#meta/iquery_example_component.cmx";
 
-const GOLDEN_JSON: &[u8] = include_bytes!("../configs/golden.json");
+const ALL_GOLDEN_JSON: &[u8] = include_bytes!("../configs/all_golden.json");
+const SINGLE_VALUE_CLIENT_SELECTOR_JSON: &[u8] =
+    include_bytes!("../configs/single_value_client_selector.json");
 
 // Number of seconds to wait before timing out polling the reader for pumped results.
 static READ_TIMEOUT_SECONDS: i64 = 10;
@@ -36,7 +38,9 @@ static TEST_ARCHIVIST: &str = "unified_reader_test_archivist.cmx";
 lazy_static! {
     static ref CONFIG_PATH: PathBuf = Path::new("/tmp/config/data").to_path_buf();
     static ref ARCHIVIST_CONFIGURATION_PATH: PathBuf = CONFIG_PATH.join("archivist_config.json");
-    static ref GOLDEN_JSON_PATH: PathBuf = CONFIG_PATH.join("golden.json");
+    static ref ALL_GOLDEN_JSON_PATH: PathBuf = CONFIG_PATH.join("all_golden.json");
+    static ref SINGLE_VALUE_CLIENT_SELECTOR_JSON_PATH: PathBuf =
+        CONFIG_PATH.join("single_value_client_selector.json");
     static ref SELECTORS_PATH: PathBuf = CONFIG_PATH.join("pipelines/all/all_selectors.txt");
     static ref ARCHIVE_PATH: &'static str = "/tmp/archive";
     static ref TEST_DATA_PATH: &'static str = "/tmp/test_data";
@@ -49,7 +53,8 @@ async fn setup_environment() -> Result<(App, App), Error> {
 
     write(&*ARCHIVIST_CONFIGURATION_PATH, ARCHIVIST_CONFIG)?;
 
-    write(&*GOLDEN_JSON_PATH, GOLDEN_JSON)?;
+    write(&*ALL_GOLDEN_JSON_PATH, ALL_GOLDEN_JSON)?;
+    write(&*SINGLE_VALUE_CLIENT_SELECTOR_JSON_PATH, SINGLE_VALUE_CLIENT_SELECTOR_JSON)?;
 
     let to_write = vec!["first", "second", "third/fourth", "third/fifth"];
     for filename in &to_write {
@@ -90,19 +95,24 @@ async fn setup_environment() -> Result<(App, App), Error> {
 // Loop indefinitely snapshotting the archive until we get the expected number of
 // hierarchies, and then validate that the ordered json represetionation of these hierarchies
 // matches the golden file.
-async fn retrieve_and_validate_results(archivist: App) {
+async fn retrieve_and_validate_results(
+    archivist: &App,
+    custom_selectors: Vec<&mut SelectorArgument>,
+    golden_file: &PathBuf,
+    expected_results_count: usize,
+) {
     let archive_accessor = archivist.connect_to_service::<ArchiveMarker>().unwrap();
 
+    let (reader_consumer, reader_server) = create_proxy().unwrap();
+
+    archive_accessor
+        .read_inspect(reader_server, &mut custom_selectors.into_iter())
+        .await
+        .context("setting up the reader server")
+        .expect("fidl channels should be fine")
+        .expect("setting up the server shouldn't have any issues.");
+
     loop {
-        let (reader_consumer, reader_server) = create_proxy().unwrap();
-
-        archive_accessor
-            .read_inspect(reader_server, &mut Vec::<&mut SelectorArgument>::new().into_iter())
-            .await
-            .context("setting up the reader server")
-            .expect("fidl channels should be fine")
-            .expect("setting up the server shouldn't have any issues.");
-
         let (batch_consumer, batch_server) = create_proxy().unwrap();
         reader_consumer
             .get_snapshot(fidl_fuchsia_diagnostics::Format::Json, batch_server)
@@ -118,7 +128,7 @@ async fn retrieve_and_validate_results(archivist: App) {
             .expect("fidl should be fine")
             .expect("expect batches to be retrieved without error");
 
-        if first_result.len() < 4 {
+        if first_result.len() < expected_results_count {
             continue;
         }
 
@@ -196,7 +206,7 @@ async fn retrieve_and_validate_results(archivist: App) {
             .expect("should be able to format the the results as valid json.");
 
         let mut expected_string: String =
-            fs::read_to_string(&*GOLDEN_JSON_PATH).expect("Reading golden json failed.");
+            fs::read_to_string(golden_file).expect("Reading golden json failed.");
 
         // Remove whitespace from both strings because text editors will do things like
         // requiring json files end in a newline, while the result string is unbounded by
@@ -218,10 +228,26 @@ async fn main() -> Result<(), Error> {
     // of the test.
     let (archivist_app, _example_app) = setup_environment().await?;
 
-    retrieve_and_validate_results(archivist_app)
+    // First, retrieve all of the information in our realm to make sure that everything
+    // we expect is present.
+    retrieve_and_validate_results(&archivist_app, Vec::new(), &*ALL_GOLDEN_JSON_PATH, 4)
         .on_timeout(READ_TIMEOUT_SECONDS.seconds().after_now(), || {
             panic!("failed to get meaningful results from reader service.")
         })
         .await;
+
+    // Then verify that from the expected data, we can retrieve one specific value.
+    retrieve_and_validate_results(
+        &archivist_app,
+        vec![&mut SelectorArgument::RawSelector(
+            "iquery_example_component.cmx:*:lazy-*".to_string(),
+        )],
+        &*SINGLE_VALUE_CLIENT_SELECTOR_JSON_PATH,
+        1,
+    )
+    .on_timeout(READ_TIMEOUT_SECONDS.seconds().after_now(), || {
+        panic!("failed to get meaningful results from reader service.")
+    })
+    .await;
     Ok(())
 }
