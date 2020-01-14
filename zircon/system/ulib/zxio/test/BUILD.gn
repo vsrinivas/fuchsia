@@ -13,6 +13,7 @@ zx_test("zxio") {
     "debuglog-test.cc",
     "dirent-test.cc",
     "file-test.cc",
+    "file_v2-test.cc",
     "null-test.cc",
     "posix-mode-test.cc",
     "remote_v2-test.cc",

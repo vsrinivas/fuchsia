@@ -259,6 +259,97 @@ zx_status_t zxio_remote_v2_close(zxio_t* io) {
   return control.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
 }
 
+zx_status_t zxio_remote_v2_release(zxio_t* io, zx_handle_t* out_handle) {
+  Remote rio(io);
+  *out_handle = rio.Release().release();
+  return ZX_OK;
+}
+
+zx_status_t zxio_remote_v2_clone(zxio_t* io, zx_handle_t* out_handle) {
+  Remote rio(io);
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto result = fio2::Node::Call::Reopen(rio.control(), fio2::ConnectionOptions::Build().view(),
+                                         std::move(remote));
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  *out_handle = local.release();
+  return ZX_OK;
+}
+
+void zxio_remote_v2_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
+                               zx_signals_t* out_zx_signals) {
+  Remote rio(io);
+  *out_handle = rio.observer()->get();
+  auto device_signal_part = fio2::DeviceSignal();
+  if (zxio_signals & ZXIO_SIGNAL_READABLE) {
+    device_signal_part |= fio2::DeviceSignal::READABLE;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_OUT_OF_BAND) {
+    device_signal_part |= fio2::DeviceSignal::OOB;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
+    device_signal_part |= fio2::DeviceSignal::WRITABLE;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_ERROR) {
+    device_signal_part |= fio2::DeviceSignal::ERROR;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_PEER_CLOSED) {
+    device_signal_part |= fio2::DeviceSignal::HANGUP;
+  }
+  // static_cast is a-okay, because |fio2::DeviceSignal| values are defined
+  // using Zircon ZX_USER_* signals.
+  auto zx_signals = static_cast<zx_signals_t>(device_signal_part);
+  if (zxio_signals & ZXIO_SIGNAL_READ_DISABLED) {
+    zx_signals |= ZX_CHANNEL_PEER_CLOSED;
+  }
+  *out_zx_signals = zx_signals;
+}
+
+void zxio_remote_v2_wait_end(zxio_t* io, zx_signals_t zx_signals,
+                             zxio_signals_t* out_zxio_signals) {
+  zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
+  // static_cast is a-okay, because |fio2::DeviceSignal| values are defined
+  // using Zircon ZX_USER_* signals.
+  auto device_signal_part =
+      fio2::DeviceSignal(zx_signals & static_cast<zx_signals_t>(fio2::DeviceSignal::mask));
+  if (device_signal_part & fio2::DeviceSignal::READABLE) {
+    zxio_signals |= ZXIO_SIGNAL_READABLE;
+  }
+  if (device_signal_part & fio2::DeviceSignal::OOB) {
+    zxio_signals |= ZXIO_SIGNAL_OUT_OF_BAND;
+  }
+  if (device_signal_part & fio2::DeviceSignal::WRITABLE) {
+    zxio_signals |= ZXIO_SIGNAL_WRITABLE;
+  }
+  if (device_signal_part & fio2::DeviceSignal::ERROR) {
+    zxio_signals |= ZXIO_SIGNAL_ERROR;
+  }
+  if (device_signal_part & fio2::DeviceSignal::HANGUP) {
+    zxio_signals |= ZXIO_SIGNAL_PEER_CLOSED;
+  }
+  if (zx_signals & ZX_CHANNEL_PEER_CLOSED) {
+    zxio_signals |= ZXIO_SIGNAL_READ_DISABLED;
+  }
+  *out_zxio_signals = zxio_signals;
+}
+
+zx_status_t zxio_remote_sync(zxio_t* io) {
+  Remote rio(io);
+  auto result = fio2::Node::Call::Sync(rio.control());
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  if (result->result.is_err()) {
+    return result->result.err();
+  }
+  return ZX_OK;
+}
+
 zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
   Remote rio(io);
   auto result = fio2::Node::Call::GetAttributes(rio.control(), fio2::NodeAttributesQuery::mask);
@@ -292,6 +383,11 @@ zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attr_t* attr) {
 static constexpr zxio_ops_t zxio_remote_v2_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_v2_close;
+  ops.release = zxio_remote_v2_release;
+  ops.clone = zxio_remote_v2_clone;
+  ops.wait_begin = zxio_remote_v2_wait_begin;
+  ops.wait_end = zxio_remote_v2_wait_end;
+  ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_remote_v2_attr_get;
   ops.attr_set = zxio_remote_v2_attr_set;
   return ops;
@@ -309,6 +405,9 @@ zx_status_t zxio_remote_v2_init(zxio_storage_t* storage, zx_handle_t control,
 static constexpr zxio_ops_t zxio_dir_v2_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_v2_close;
+  ops.release = zxio_remote_v2_release;
+  ops.clone = zxio_remote_v2_clone;
+  ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_remote_v2_attr_get;
   ops.attr_set = zxio_remote_v2_attr_set;
   return ops;
@@ -321,9 +420,46 @@ zx_status_t zxio_dir_v2_init(zxio_storage_t* storage, zx_handle_t control) {
   return ZX_OK;
 }
 
+namespace {
+
+void zxio_file_v2_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
+                             zx_signals_t* out_zx_signals) {
+  Remote rio(io);
+  *out_handle = rio.observer()->get();
+  auto file_signal_part = fio2::FileSignal();
+  if (zxio_signals & ZXIO_SIGNAL_READABLE) {
+    file_signal_part |= fio2::FileSignal::READABLE;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
+    file_signal_part |= fio2::FileSignal::WRITABLE;
+  }
+  auto zx_signals = static_cast<zx_signals_t>(file_signal_part);
+  *out_zx_signals = zx_signals;
+}
+
+void zxio_file_v2_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals) {
+  zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
+  auto file_signal_part =
+      fio2::FileSignal(zx_signals & static_cast<zx_signals_t>(fio2::FileSignal::mask));
+  if (file_signal_part & fio2::FileSignal::READABLE) {
+    zxio_signals |= ZXIO_SIGNAL_READABLE;
+  }
+  if (file_signal_part & fio2::FileSignal::WRITABLE) {
+    zxio_signals |= ZXIO_SIGNAL_WRITABLE;
+  }
+  *out_zxio_signals = zxio_signals;
+}
+
+}  // namespace
+
 static constexpr zxio_ops_t zxio_file_v2_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_v2_close;
+  ops.release = zxio_remote_v2_release;
+  ops.clone = zxio_remote_v2_clone;
+  ops.wait_begin = zxio_file_v2_wait_begin;
+  ops.wait_end = zxio_file_v2_wait_end;
+  ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_remote_v2_attr_get;
   ops.attr_set = zxio_remote_v2_attr_set;
   return ops;

@@ -65,7 +65,9 @@ class RemoteV2 : public zxtest::Test {
  public:
   void SetUp() final {
     ASSERT_OK(zx::channel::create(0, &control_client_end_, &control_server_end_));
-    ASSERT_OK(zxio_remote_v2_init(&remote_, control_client_end_.release(), ZX_HANDLE_INVALID));
+    ASSERT_OK(zx::eventpair::create(0, &eventpair_to_client_, &eventpair_on_server_));
+    ASSERT_OK(zxio_remote_v2_init(&remote_, control_client_end_.release(),
+                                  eventpair_to_client_.release()));
   }
 
   template <typename ServerImpl>
@@ -94,6 +96,8 @@ class RemoteV2 : public zxtest::Test {
   zxio_storage_t remote_;
   zx::channel control_client_end_;
   zx::channel control_server_end_;
+  zx::eventpair eventpair_on_server_;
+  zx::eventpair eventpair_to_client_;
   std::unique_ptr<TestServerBase> server_;
   std::unique_ptr<async::Loop> loop_;
 };
@@ -188,6 +192,32 @@ TEST_F(RemoteV2, SetAttributesError) {
 
   zxio_node_attr_t attr = {};
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, zxio_attr_set(&remote_.io, &attr));
+}
+
+TEST_F(RemoteV2, WaitTimeOut) {
+  ASSERT_NO_FAILURES(StartServer<TestServerBase>());
+  zxio_signals_t observed = ZX_SIGNAL_NONE;
+  ASSERT_STATUS(ZX_ERR_TIMED_OUT,
+                zxio_wait_one(&remote_.io, ZXIO_SIGNAL_ALL, ZX_TIME_INFINITE_PAST, &observed));
+  EXPECT_EQ(ZXIO_SIGNAL_NONE, observed);
+}
+
+TEST_F(RemoteV2, WaitForReadable) {
+  ASSERT_NO_FAILURES(StartServer<TestServerBase>());
+  zxio_signals_t observed = ZX_SIGNAL_NONE;
+  ASSERT_OK(eventpair_on_server_.signal_peer(
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::DeviceSignal::READABLE)));
+  ASSERT_OK(zxio_wait_one(&remote_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
+  EXPECT_EQ(ZXIO_SIGNAL_READABLE, observed);
+}
+
+TEST_F(RemoteV2, WaitForWritable) {
+  ASSERT_NO_FAILURES(StartServer<TestServerBase>());
+  zxio_signals_t observed = ZX_SIGNAL_NONE;
+  ASSERT_OK(eventpair_on_server_.signal_peer(
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::DeviceSignal::WRITABLE)));
+  ASSERT_OK(zxio_wait_one(&remote_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
+  EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }
 
 }  // namespace
