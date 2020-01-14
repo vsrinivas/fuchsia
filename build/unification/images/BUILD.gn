@@ -52,7 +52,6 @@ aggregate_manifest("legacy-image") {
     ":bin.console",
     ":bin.cpuctl",
     ":bin.crasher",
-    ":bin.dd",
     ":bin.ddk-schedule-work-perf",
     ":bin.device-name-provider",
     ":bin.df",
@@ -1585,6 +1584,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/audio:bin-manifest",
     "//zircon/system/uapp/audio:test-manifest",
     "//zircon/system/uapp/backlight:backlight-manifest",
+    "//zircon/system/uapp/dd:dd-manifest",
   ]
 }
 

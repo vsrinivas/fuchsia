@@ -2,12 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("dd") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("dd") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-skipblock:c",
-    "$zx/system/fidl/fuchsia-io:c",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/system/fidl/fuchsia-hardware-skipblock:c",
+    "//zircon/system/fidl/fuchsia-io:c",
   ]
+}
+
+migrated_manifest("dd-manifest") {
+  deps = [ ":dd" ]
 }
