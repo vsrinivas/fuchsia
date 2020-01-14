@@ -15,6 +15,7 @@ group("tests") {
     "//tools/lib/retry:retry_tests",
     "//tools/lib/ring:tests",
     "//tools/lib/runner:runner_tests",
+    "//tools/lib/syslog:tests",
     "//tools/lib/tarutil:tarutil_tests",
   ]
 }

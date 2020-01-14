@@ -17,16 +17,14 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
-	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
+	"go.fuchsia.dev/fuchsia/tools/lib/syslog"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"github.com/google/subcommands"
-	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -205,14 +203,6 @@ type logWriter struct {
 	target Target
 }
 
-func createSyslogger(ctx context.Context, nodename string, config *ssh.ClientConfig) (*botanist.Syslogger, error) {
-	client, err := sshutil.ConnectToNode(ctx, nodename, config)
-	if err != nil {
-		return nil, err
-	}
-	return botanist.NewSyslogger(client)
-}
-
 func (r *RunCommand) setupTargets(ctx context.Context, imgs []bootserver.Image, targets []Target) *targetSetup {
 	var syslogs, serialLogs []*logWriter
 	errs := make(chan error, len(targets))
@@ -220,21 +210,21 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []bootserver.Image, 
 	var setupErr error
 
 	for i, t := range targets {
-		var syslog *os.File
+		var s *os.File
 		var err error
 		if r.syslogFile != "" {
 			syslogFile := r.syslogFile
 			if len(targets) > 1 {
 				syslogFile = getIndexedFilename(r.syslogFile, i)
 			}
-			syslog, err = os.Create(syslogFile)
+			s, err = os.Create(syslogFile)
 			if err != nil {
 				setupErr = err
 				break
 			}
 			syslogs = append(syslogs, &logWriter{
 				name:   syslogFile,
-				file:   syslog,
+				file:   s,
 				target: t,
 			})
 		}
@@ -281,7 +271,7 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []bootserver.Image, 
 		}
 
 		wg.Add(1)
-		go func(t Target, syslog *os.File, zirconArgs []string) {
+		go func(t Target, s *os.File, zirconArgs []string) {
 			defer wg.Done()
 			if err := t.Start(ctx, imgs, zirconArgs); err != nil {
 				errs <- err
@@ -289,13 +279,13 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []bootserver.Image, 
 			}
 			nodename := t.Nodename()
 
-			if r.syslogFile != "" && syslog == nil {
+			if r.syslogFile != "" && s == nil {
 				errs <- fmt.Errorf("syslog is nil.")
 				return
 			}
 
 			// If having paved, SSH in and stream syslogs back to a file sink.
-			if !r.netboot && syslog != nil {
+			if !r.netboot && s != nil {
 				p, err := ioutil.ReadFile(t.SSHKey())
 				if err != nil {
 					errs <- err
@@ -306,29 +296,20 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []bootserver.Image, 
 					errs <- err
 					return
 				}
-				syslogger, err := createSyslogger(ctx, nodename, config)
+				client, err := sshutil.ConnectToNode(ctx, nodename, config)
 				if err != nil {
 					errs <- err
 					return
 				}
+				syslogger := syslog.NewSyslogger(client, config)
 				go func() {
-					var err error
-					for osmisc.FileIsOpen(syslog) {
-						err = syslogger.Stream(ctx, syslog)
-						syslogger.Close()
-						if err == nil {
-							break
-						}
-						logger.Debugf(ctx, "syslog interrupted: %v", err)
-						syslogger, err = createSyslogger(ctx, nodename, config)
-						if err != nil {
-							logger.Errorf(ctx, "failed to create new syslog session: %v", err)
-							break
-						}
+					defer syslogger.Close()
+					if err := syslogger.Stream(ctx, s, false); err != nil {
+						errs <- err
 					}
 				}()
 			}
-		}(t, syslog, zirconArgs)
+		}(t, s, zirconArgs)
 	}
 	// Wait for all targets to finish starting.
 	wg.Wait()

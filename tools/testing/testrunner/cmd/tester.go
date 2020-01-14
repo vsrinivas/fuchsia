@@ -25,10 +25,6 @@ const (
 	// The test output directory to create on the Fuchsia device.
 	fuchsiaOutputDir = "/data/infra/testrunner"
 
-	// A conventionally used global request name for checking the status of a client
-	// connection to an OpenSSH server.
-	keepAliveOpenSSH = "keepalive@openssh.com"
-
 	// Various tools for running tests.
 	runtestsName         = "runtests"
 	runTestComponentName = "run-test-component"
@@ -71,70 +67,54 @@ func (t *SubprocessTester) Test(ctx context.Context, test build.Test, stdout io.
 // contains the command line to execute on the remote machine. The caller should Close() the
 // tester when finished. Once closed, this object can no longer be used.
 type SSHTester struct {
-	client          *ssh.Client
-	newClient       func(ctx context.Context) (*ssh.Client, error)
+	r               *runner.SSHRunner
 	remoteOutputDir string
 	copier          *runtests.DataSinkCopier
 }
 
-func NewSSHTester(newClient func(context.Context) (*ssh.Client, error)) (*SSHTester, error) {
-	client, err := newClient(context.Background())
-	if err != nil {
-		return nil, err
-	}
+func NewSSHTester(client *ssh.Client, config *ssh.ClientConfig) (*SSHTester, error) {
+	r := runner.NewSSHRunner(client, config)
 	copier, err := runtests.NewDataSinkCopier(client)
 	if err != nil {
 		return nil, err
 	}
 	return &SSHTester{
-		client:          client,
-		newClient:       newClient,
+		r:               r,
 		remoteOutputDir: fuchsiaOutputDir,
 		copier:          copier,
 	}, nil
 }
 
 func (t *SSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkMap, error) {
-	if _, _, err := t.client.Conn.SendRequest(keepAliveOpenSSH, true, nil); err != nil {
-		logger.Errorf(ctx, "SSH client not responsive: %v", err)
-		client, err := t.newClient(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create new SSH client: %v", err)
-		}
-		t.client.Close()
-		t.client = client
+	if err := t.r.ReconnectIfNecessary(ctx); err != nil {
+		return nil, fmt.Errorf("failed to restablish SSH connection: %v", err)
 	}
 
-	session, err := t.client.NewSession()
-	if err != nil {
-		return nil, err
-	}
-	defer session.Close()
+	testErr := t.r.Run(ctx, test.Command, stdout, stderr)
 
-	runner := &runner.SSHRunner{Session: session}
-	if err = runner.Run(ctx, test.Command, stdout, stderr); err != nil {
-		return nil, err
-	}
-
+	var copyErr error
+	var sinks runtests.DataSinkMap
 	if test.Command[0] == runtestsName {
-		localOutputDir, err := ioutil.TempDir("", "sinks")
-		if err != nil {
-			return nil, err
+		var localOutputDir string
+		if localOutputDir, copyErr = ioutil.TempDir("", "sinks"); copyErr == nil {
+			sinks, copyErr = t.copier.Copy(t.remoteOutputDir, localOutputDir)
 		}
-		copier, err := runtests.NewDataSinkCopier(t.client)
-		if err != nil {
-			return nil, err
-		}
-		return copier.Copy(t.remoteOutputDir, localOutputDir)
 	}
-	return nil, nil
+	if copyErr != nil {
+		logger.Errorf(ctx, "failed to copy data sinks off target for test %q: %v", test.Name, copyErr)
+	}
+
+	if testErr == nil {
+		return sinks, copyErr
+	}
+	return sinks, testErr
 }
 
 // Close stops this SSHTester. The underlying SSH connection is terminated. The
 // object is no longer usable after calling this method.
 func (t *SSHTester) Close() error {
-	t.copier.Close()
-	return t.client.Close()
+	// Note that t.copier's underlying connection is owned by the SSH runner.
+	return t.r.Close()
 }
 
 // FuchsiaTester executes tests on remote Fuchsia devices. The caller should Close() the
@@ -152,19 +132,16 @@ type FuchsiaTester struct {
 // NewFuchsiaTester creates a FuchsiaTester object and starts a log_listener process on
 // the remote device. The log_listener output can be read from SysLogOutput().
 func NewFuchsiaTester(nodename string, sshKey []byte, useRuntests bool) (*FuchsiaTester, error) {
-	newClient := func(ctx context.Context) (*ssh.Client, error) {
-		config, err := sshutil.DefaultSSHConfig(sshKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create an SSH client config: %v", err)
-		}
-		client, err := sshutil.ConnectToNode(ctx, nodename, config)
-		if err != nil {
-			return nil, fmt.Errorf("failed to connect to node %q: %v", nodename, err)
-		}
-		return client, nil
+	config, err := sshutil.DefaultSSHConfig(sshKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create an SSH client config: %v", err)
+	}
+	client, err := sshutil.ConnectToNode(context.Background(), nodename, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to node %q: %v", nodename, err)
 	}
 
-	delegate, err := NewSSHTester(newClient)
+	delegate, err := NewSSHTester(client, config)
 	if err != nil {
 		return nil, err
 	}

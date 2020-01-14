@@ -14,6 +14,7 @@ go_library("botanist_lib") {
     "//tools/lib/logger",
     "//tools/lib/retry",
     "//tools/lib/runner",
+    "//tools/lib/syslog",
     "//tools/net/mdns",
     "//tools/net/netboot",
     "//tools/net/tftp",
