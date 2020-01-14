@@ -1816,7 +1816,7 @@ mod tests {
 
         let mut ies = vec![];
         let rates = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-        let rates_writer = crate::RatesWriter::try_new(&rates[..]).expect("Valid rates");
+        let rates_writer = ie::RatesWriter::try_new(&rates[..]).expect("Valid rates");
         // It should work even if ext_supp_rates shows up before supp_rates
         rates_writer.write_ext_supported_rates(&mut ies);
         rates_writer.write_supported_rates(&mut ies);

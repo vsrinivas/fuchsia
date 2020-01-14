@@ -11,13 +11,15 @@ mod fake_ies;
 mod fields;
 mod id;
 mod parse;
+mod rates_writer;
 mod reader;
 mod write;
 
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 pub use {
-    constants::*, fake_ies::*, fields::*, id::*, intersect::*, parse::*, reader::Reader, write::*,
+    constants::*, fake_ies::*, fields::*, id::*, intersect::*, parse::*, rates_writer::*,
+    reader::Reader, write::*,
 };
 
 #[repr(C, packed)]

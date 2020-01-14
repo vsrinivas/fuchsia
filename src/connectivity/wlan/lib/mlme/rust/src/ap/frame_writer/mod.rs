@@ -5,12 +5,12 @@
 mod beacon;
 
 use {
-    crate::{error::Error, RatesWriter},
+    crate::error::Error,
     anyhow::format_err,
     wlan_common::{
         appendable::Appendable,
         data_writer,
-        ie::*,
+        ie::{self, *},
         mac::{self, Aid, Bssid, MacAddr, StatusCode},
         mgmt_writer,
         sequence::SequenceManager,
@@ -68,7 +68,7 @@ pub fn write_assoc_resp_frame<B: Appendable>(
     // Order of association response frame body IEs is according to IEEE Std 802.11-2016,
     // Table 9-30, numbered below.
 
-    let rates_writer = RatesWriter::try_new(&rates[..])?;
+    let rates_writer = ie::RatesWriter::try_new(&rates[..])?;
 
     // 4: Supported Rates and BSS Membership Selectors
     rates_writer.write_supported_rates(buf);

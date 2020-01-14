@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    wlan_common::{
+    crate::{
         appendable::Appendable,
         error::FrameWriteError,
         ie::{

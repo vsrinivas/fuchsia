@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{error::Error, RatesWriter},
+    crate::error::Error,
     wlan_common::{
         appendable::Appendable,
         ie::{self, *},
@@ -39,7 +39,7 @@ pub fn write_beacon_frame<B: Appendable>(
         None,
     )?;
     buf.append_value(&mac::BeaconHdr { timestamp, beacon_interval, capabilities })?;
-    let rates_writer = RatesWriter::try_new(rates)?;
+    let rates_writer = ie::RatesWriter::try_new(rates)?;
 
     // Order of beacon frame body IEs is according to IEEE Std 802.11-2016, Table 9-27, numbered
     // below.
@@ -63,12 +63,14 @@ pub fn write_beacon_frame<B: Appendable>(
     // as a single octet equal to 0, the Bitmap Offset subfield is 0, and the Length field is 4.)
     let tim_ele_offset = buf.bytes_written();
     buf.append_value(&ie::Header { id: Id::TIM, body_len: 4 })?;
-    buf.append_bytes(&[
-        0,  // DTIM Count
-        0,  // DTIM Period
-        0,  // Bitmap Control
-        0,  // Partial Virtual Bitmap
-    ][..])?;
+    buf.append_bytes(
+        &[
+            0, // DTIM Count
+            0, // DTIM Period
+            0, // Bitmap Control
+            0, // Partial Virtual Bitmap
+        ][..],
+    )?;
 
     // 17. Extended Supported Rates and BSS Membership Selectors
     rates_writer.write_ext_supported_rates(buf);

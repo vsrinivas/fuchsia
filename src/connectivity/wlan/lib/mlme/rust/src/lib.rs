@@ -13,8 +13,7 @@ mod eth_writer;
 mod frame_writer;
 pub mod key;
 mod logger;
-mod rates_writer;
 pub mod timer;
 
 use frame_writer::*;
-pub use {ddk_converter::*, eth_writer::*, rates_writer::*, wlan_common as common};
+pub use {ddk_converter::*, eth_writer::*, wlan_common as common};

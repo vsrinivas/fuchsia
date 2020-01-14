@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{auth, error::Error, RatesWriter},
+    crate::{auth, error::Error},
     anyhow::format_err,
     wlan_common::{
         appendable::Appendable,
