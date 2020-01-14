@@ -4,6 +4,10 @@
 
 pub trait MacFmt {
     fn to_mac_str(&self) -> String;
+    /// Produce string of the OUI (not hashed), followed by the hash of the last three bytes
+    fn to_mac_str_partial_hashed<H>(&self, hash: H) -> String
+    where
+        H: FnOnce(&[u8]) -> String;
     fn to_oui_uppercase(&self, delim: &str) -> String;
 }
 
@@ -13,6 +17,13 @@ impl MacFmt for [u8; 6] {
             "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
             self[0], self[1], self[2], self[3], self[4], self[5]
         )
+    }
+
+    fn to_mac_str_partial_hashed<H>(&self, hash: H) -> String
+    where
+        H: FnOnce(&[u8]) -> String,
+    {
+        format!("{:02x}:{:02x}:{:02x}:{}", self[0], self[1], self[2], hash(&self[3..]))
     }
 
     fn to_oui_uppercase(&self, sep: &str) -> String {
@@ -28,6 +39,15 @@ mod tests {
     fn format_mac_str() {
         let mac: [u8; 6] = [0x00, 0x12, 0x48, 0x9a, 0xbc, 0xdf];
         assert_eq!(mac.to_mac_str(), "00:12:48:9a:bc:df");
+    }
+
+    #[test]
+    fn format_mac_str_partial_hashed() {
+        let mac: [u8; 6] = [0x00, 0x12, 0x48, 0x9a, 0xbc, 0xdf];
+        let result = mac.to_mac_str_partial_hashed(|bytes| {
+            format!("{:02x}{:02x}{:02x}", bytes[0], bytes[1], bytes[2])
+        });
+        assert_eq!(result, "00:12:48:9abcdf");
     }
 
     #[test]

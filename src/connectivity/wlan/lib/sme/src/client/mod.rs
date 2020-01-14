@@ -58,12 +58,21 @@ pub use self::{
 // even though the module itself is private and will never be exported.
 // As a workaround, we add another private module with public types.
 mod internal {
-    use std::sync::Arc;
-
-    use crate::client::{event::Event, info::InfoReporter, inspect, ConnectionAttemptId};
-    use crate::sink::MlmeSink;
-    use crate::timer::Timer;
-    use crate::DeviceInfo;
+    use {
+        crate::{
+            client::{event::Event, info::InfoReporter, inspect, ConnectionAttemptId},
+            sink::MlmeSink,
+            timer::Timer,
+            DeviceInfo,
+        },
+        hex,
+        mundane::{
+            hash::{Digest, Sha256},
+            hmac::hmac,
+        },
+        std::sync::Arc,
+        wlan_common::{format::MacFmt, mac::MacAddr},
+    };
 
     pub struct Context {
         pub device_info: Arc<DeviceInfo>,
@@ -71,8 +80,21 @@ mod internal {
         pub(crate) timer: Timer<Event>,
         pub att_id: ConnectionAttemptId,
         pub(crate) inspect: Arc<inspect::SmeTree>,
+        pub(crate) inspect_hash_key: [u8; 8],
         pub(crate) info: InfoReporter,
         pub(crate) is_softmac: bool,
+    }
+
+    impl Context {
+        pub(crate) fn inspect_hash(&self, bytes: &[u8]) -> String {
+            hex::encode(hmac::<Sha256>(&self.inspect_hash_key, bytes).bytes())
+        }
+
+        pub(crate) fn inspect_hash_mac_addr(&self, addr: MacAddr) -> String {
+            addr.to_mac_str_partial_hashed(|bytes| {
+                hex::encode(hmac::<Sha256>(&self.inspect_hash_key, bytes).bytes())
+            })
+        }
     }
 }
 
@@ -187,6 +209,7 @@ impl ClientSme {
         cfg: ClientConfig,
         info: DeviceInfo,
         iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
+        inspect_hash_key: [u8; 8],
         is_softmac: bool,
     ) -> (Self, MlmeStream, InfoStream, TimeStream) {
         let device_info = Arc::new(info);
@@ -208,6 +231,7 @@ impl ClientSme {
                     timer,
                     att_id: 0,
                     inspect,
+                    inspect_hash_key,
                     info: InfoReporter::new(InfoSink::new(info_sink)),
                     is_softmac,
                 },
@@ -443,7 +467,9 @@ fn inspect_log_join_scan(
         let ssid = String::from_utf8_lossy(&bss.ssid[..]);
         inspect_insert!(node_writer, var key: {
             bssid: bss.bssid.to_mac_str(),
+            bssid_hash: ctx.inspect_hash_mac_addr(bss.bssid),
             ssid: ssid.as_ref(),
+            ssid_hash: ctx.inspect_hash(ssid.as_bytes()),
             channel: InspectWlanChan(&bss.chan),
             rcpi_dbm: bss.rcpi_dbmh / 2,
             rsni_db: bss.rsni_dbh / 2,
@@ -520,6 +546,7 @@ mod tests {
     use crate::Station;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
+    const DUMMY_HASH_KEY: [u8; 8] = [88, 77, 66, 55, 44, 33, 22, 11];
 
     fn report_fake_scan_result(sme: &mut ClientSme, bss: fidl_mlme::BssDescription) {
         sme.on_mlme_event(MlmeEvent::OnScanResult {
@@ -635,6 +662,7 @@ mod tests {
             ClientConfig::from_config(SmeConfig::default().with_wep()),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
+            DUMMY_HASH_KEY,
             true, // is_softmac
         );
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
@@ -1214,6 +1242,7 @@ mod tests {
             ClientConfig::default(),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
+            DUMMY_HASH_KEY,
             true, // is_softmac
         )
     }

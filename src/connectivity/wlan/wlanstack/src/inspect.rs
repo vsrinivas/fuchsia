@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_inspect::Inspector;
-use fuchsia_inspect_contrib::nodes::BoundedListNode;
-use parking_lot::Mutex;
-use std::sync::Arc;
-use wlan_inspect::iface_mgr::{IfaceTreeHolder, IfacesTrees};
+use {
+    fuchsia_inspect::Inspector,
+    fuchsia_inspect_contrib::nodes::BoundedListNode,
+    parking_lot::Mutex,
+    rand,
+    std::sync::Arc,
+    wlan_inspect::iface_mgr::{IfaceTreeHolder, IfacesTrees},
+};
 
 pub const VMO_SIZE_BYTES: usize = 1000 * 1024;
 const MAX_DEAD_IFACE_NODES: usize = 2;
@@ -16,8 +19,13 @@ const MAX_DEAD_IFACE_NODES: usize = 2;
 const DEVICE_EVENTS_LIMIT: usize = 20;
 
 pub struct WlanstackTree {
+    /// Root of the tree
     pub inspector: Inspector,
+    /// Key used to hash privacy-sensitive values in the tree
+    pub hash_key: [u8; 8],
+    /// "device_events" subtree
     pub device_events: Mutex<BoundedListNode>,
+    /// "iface-<n>" subtrees, where n is the iface ID.
     ifaces_trees: Mutex<IfacesTrees>,
 }
 
@@ -27,6 +35,9 @@ impl WlanstackTree {
         let ifaces_trees = IfacesTrees::new(MAX_DEAD_IFACE_NODES);
         Self {
             inspector,
+            // According to doc, `rand::random` uses ThreadRng, which is cryptographically secure:
+            // https://docs.rs/rand/0.5.0/rand/rngs/struct.ThreadRng.html
+            hash_key: rand::random::<u64>().to_le_bytes(),
             device_events: Mutex::new(BoundedListNode::new(device_events, DEVICE_EVENTS_LIMIT)),
             ifaces_trees: Mutex::new(ifaces_trees),
         }

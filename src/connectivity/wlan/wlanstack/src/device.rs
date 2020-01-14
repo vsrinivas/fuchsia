@@ -153,6 +153,7 @@ pub async fn query_and_serve_iface(
         stats_reqs,
         cobalt_sender,
         iface_tree_holder,
+        inspect_tree.hash_key.clone(),
     )
     .map_err(|e| format_err!("failed to creating SME: {}", e))?;
 
@@ -186,6 +187,7 @@ fn create_sme<S>(
     stats_requests: S,
     cobalt_sender: CobaltSender,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
+    inspect_hash_key: [u8; 8],
 ) -> Result<(SmeServer, impl Future<Output = Result<(), Error>>), Error>
 where
     S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static,
@@ -209,6 +211,7 @@ where
                 stats_requests,
                 cobalt_sender,
                 iface_tree_holder,
+                inspect_hash_key,
             );
             Ok((SmeServer::Client(sender), FutureObj::new(Box::new(fut))))
         }

@@ -416,7 +416,9 @@ impl Associated {
             inspect_log!(context.inspect.rsn_events.lock(), {
                 rx_eapol_frame: InspectBytes(&eapol_pdu),
                 foreign_bssid: ind.src_addr.to_mac_str(),
+                foreign_bssid_hash: context.inspect_hash_mac_addr(ind.src_addr),
                 current_bssid: self.bss.bssid.to_mac_str(),
+                current_bssid_hash: context.inspect_hash_mac_addr(self.bss.bssid),
                 status: "rejected (foreign BSS)",
             });
             return Ok(self);
@@ -629,10 +631,18 @@ impl ClientState {
         context.info.report_join_started(context.att_id);
 
         let msg = connect_cmd_inspect_summary(&cmd);
+        let ssid = match String::from_utf8(cmd.bss.ssid.clone()) {
+            Ok(ssid) => ssid,
+            Err(_) => format!("{:?}", cmd.bss.ssid),
+        };
         inspect_log!(context.inspect.state_events.lock(), {
             from: start_state,
             to: JOINING_STATE,
             ctx: msg,
+            bssid: cmd.bss.bssid.to_mac_str(),
+            bssid_hash: context.inspect_hash_mac_addr(cmd.bss.bssid),
+            ssid: ssid,
+            ssid_hash: context.inspect_hash(ssid.as_bytes()),
         });
         let state = Self::new(cfg.clone());
         match state {
@@ -770,18 +780,12 @@ fn install_wep_key(context: &mut Context, bssid: [u8; 6], key: &wep_deprecated::
 /// to anonymize information like BSSID and SSID.
 fn connect_cmd_inspect_summary(cmd: &ConnectCommand) -> String {
     let bss = &cmd.bss;
-    let ssid = match String::from_utf8(bss.ssid.clone()) {
-        Ok(ssid) => ssid,
-        Err(_) => format!("{:?}", bss.ssid),
-    };
     format!(
         "ConnectCmd {{ \
-         bssid: {bssid}, ssid: {ssid:?}, cap: {cap:?}, rates: {rates:?}, \
+         cap: {cap:?}, rates: {rates:?}, \
          protected: {protected:?}, chan: {chan:?}, \
          rcpi: {rcpi:?}, rsni: {rsni:?}, rssi: {rssi:?}, ht_cap: {ht_cap:?}, ht_op: {ht_op:?}, \
          vht_cap: {vht_cap:?}, vht_op: {vht_op:?} }}",
-        bssid = bss.bssid.to_mac_str(),
-        ssid = ssid,
         cap = bss.cap,
         rates = bss.rates,
         protected = bss.rsne.is_some(),
@@ -1783,6 +1787,7 @@ mod tests {
                 timer,
                 att_id: 0,
                 inspect: Arc::new(inspect::SmeTree::new(inspector.root())),
+                inspect_hash_key: [88, 77, 66, 55, 44, 33, 22, 11],
                 info: InfoReporter::new(InfoSink::new(info_sink)),
                 is_softmac: true,
             };
