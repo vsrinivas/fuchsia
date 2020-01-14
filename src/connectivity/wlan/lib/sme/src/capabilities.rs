@@ -23,8 +23,7 @@ use {
 /// They are stored in the form of IEs because at some point they will be transmitted in
 /// (Re)Association Request and (Re)Association Response frames.
 #[derive(Debug, PartialEq)]
-pub struct JoinCapabilities {
-    pub channel: Channel,
+pub struct StaCapabilities {
     pub cap_info: CapabilityInfo,
     pub rates: Vec<SupportedRate>,
     pub ht_cap: Option<HtCapabilities>,
@@ -32,39 +31,38 @@ pub struct JoinCapabilities {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct PeerCapabilities {
-    pub cap_info: CapabilityInfo,
-    pub rates: Vec<SupportedRate>,
-    pub ht_cap: Option<HtCapabilities>,
-    pub vht_cap: Option<VhtCapabilities>,
+pub struct ClientCapabilities(pub StaCapabilities);
+#[derive(Debug, PartialEq)]
+pub struct ApCapabilities(pub StaCapabilities);
+
+/// Performs capability negotiation with an AP assuming the Fuchsia device is a client.
+pub fn intersect_with_ap_as_client(
+    client: &ClientCapabilities,
+    ap: &ApCapabilities,
+) -> StaCapabilities {
+    let rates = intersect_rates(ApRates(&ap.0.rates[..]), ClientRates(&client.0.rates[..]))
+        .unwrap_or(vec![]);
+    let (cap_info, ht_cap, vht_cap) = intersect(&client.0, &ap.0);
+    StaCapabilities { rates, cap_info, ht_cap, vht_cap }
 }
 
-// Performs capability negotiation between us as a client and an AP.
-pub fn intersect_with_ap(
-    client: &JoinCapabilities,
-    ap: PeerCapabilities,
-) -> Option<JoinCapabilities> {
-    // Safe to unwrap. intersect_rates must have succeeded before we initiate the association.
-    // TODO(eyw): This will be changed to return an Error in a later patch where we handle
-    // Association Response frames in Rust instead of C++
-    let rates =
-        intersect_rates(ApRates(&ap.rates[..]), ClientRates(&client.rates[..])).unwrap_or(vec![]);
-    Some(JoinCapabilities { rates, ..intersect(client, &ap) })
-}
-
-// Performs capability negotiation between us as an AP and a remote client.
+/// Performs capability negotiation with a remote client assuming the Fuchsia device is an AP.
 #[allow(unused)]
-pub fn intersect_with_remote_client(
-    ap: &JoinCapabilities,
-    remote_client: PeerCapabilities,
-) -> Option<JoinCapabilities> {
+pub fn intersect_with_remote_client_as_ap(
+    ap: &ApCapabilities,
+    remote_client: &ClientCapabilities,
+) -> StaCapabilities {
     // Safe to unwrap. Otherwise we would have rejected the association from this remote client.
-    let rates =
-        intersect_rates(ApRates(&ap.rates[..]), ClientRates(&remote_client.rates[..])).ok()?;
-    Some(JoinCapabilities { rates, ..intersect(ap, &remote_client) })
+    let rates = intersect_rates(ApRates(&ap.0.rates[..]), ClientRates(&remote_client.0.rates[..]))
+        .unwrap_or(vec![]);
+    let (cap_info, ht_cap, vht_cap) = intersect(&ap.0, &remote_client.0);
+    StaCapabilities { rates, cap_info, ht_cap, vht_cap }
 }
 
-fn intersect(ours: &JoinCapabilities, theirs: &PeerCapabilities) -> JoinCapabilities {
+fn intersect(
+    ours: &StaCapabilities,
+    theirs: &StaCapabilities,
+) -> (CapabilityInfo, Option<HtCapabilities>, Option<VhtCapabilities>) {
     // Every bit is a boolean so bit-wise and is sufficient
     let cap_info = CapabilityInfo(ours.cap_info.raw() & theirs.cap_info.raw());
     let ht_cap = match (ours.ht_cap, theirs.ht_cap) {
@@ -77,10 +75,10 @@ fn intersect(ours: &JoinCapabilities, theirs: &PeerCapabilities) -> JoinCapabili
         (Some(ours), Some(theirs)) => Some(ours.intersect(&theirs)),
         _ => None,
     };
-    JoinCapabilities { channel: ours.channel, cap_info, rates: vec![], ht_cap, vht_cap }
+    (cap_info, ht_cap, vht_cap)
 }
 
-impl From<fidl_mlme::AssociateConfirm> for PeerCapabilities {
+impl From<fidl_mlme::AssociateConfirm> for ApCapabilities {
     fn from(ac: fidl_mlme::AssociateConfirm) -> Self {
         type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
         type VhtCapArray = [u8; fidl_mlme::VHT_CAP_LEN as usize];
@@ -100,29 +98,32 @@ impl From<fidl_mlme::AssociateConfirm> for PeerCapabilities {
             let vht_caps: VhtCapabilities = *parse_vht_capabilities(&bytes[..]).unwrap();
             vht_caps
         });
-        PeerCapabilities { cap_info, rates, ht_cap, vht_cap }
+        Self(StaCapabilities { cap_info, rates, ht_cap, vht_cap })
     }
 }
 
-impl From<JoinCapabilities> for fidl_mlme::NegotiatedCapabilities {
-    fn from(jc: JoinCapabilities) -> Self {
+impl StaCapabilities {
+    pub fn to_fidl_negotiated_capabilities(
+        &self,
+        channel: &Channel,
+    ) -> fidl_mlme::NegotiatedCapabilities {
         type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
         type VhtCapArray = [u8; fidl_mlme::VHT_CAP_LEN as usize];
 
-        let ht_cap = jc.ht_cap.map(|ht_cap| {
+        let ht_cap = self.ht_cap.map(|ht_cap| {
             assert_eq_size!(HtCapabilities, HtCapArray);
             let bytes: HtCapArray = ht_cap.as_bytes().try_into().unwrap();
             fidl_mlme::HtCapabilities { bytes }
         });
-        let vht_cap = jc.vht_cap.map(|vht_cap| {
+        let vht_cap = self.vht_cap.map(|vht_cap| {
             assert_eq_size!(VhtCapabilities, VhtCapArray);
             let bytes: VhtCapArray = vht_cap.as_bytes().try_into().unwrap();
             fidl_mlme::VhtCapabilities { bytes }
         });
-        Self {
-            channel: jc.channel.to_fidl(),
-            cap_info: jc.cap_info.raw(),
-            rates: jc.rates.as_bytes().to_vec(),
+        fidl_mlme::NegotiatedCapabilities {
+            channel: channel.to_fidl(),
+            cap_info: self.cap_info.raw(),
+            rates: self.rates.as_bytes().to_vec(),
             ht_cap: ht_cap.map(Box::new),
             vht_cap: vht_cap.map(Box::new),
         }
@@ -137,19 +138,8 @@ mod tests {
         wlan_common::{ie, mac},
     };
 
-    impl From<JoinCapabilities> for PeerCapabilities {
-        fn from(join_cap: JoinCapabilities) -> Self {
-            let JoinCapabilities { channel: _, cap_info, rates, ht_cap, vht_cap } = join_cap;
-            Self { cap_info, rates, ht_cap, vht_cap }
-        }
-    }
-
-    fn fake_client_join_cap() -> JoinCapabilities {
-        JoinCapabilities {
-            channel: Channel {
-                primary: 42,
-                cbw: wlan_common::channel::Cbw::Cbw80P80 { secondary80: 52 },
-            },
+    fn fake_client_join_cap() -> ClientCapabilities {
+        ClientCapabilities(StaCapabilities {
             cap_info: mac::CapabilityInfo(0x1234),
             rates: [101, 102, 103, 104].iter().cloned().map(SupportedRate).collect(),
             ht_cap: Some(HtCapabilities {
@@ -157,12 +147,11 @@ mod tests {
                 ..ie::fake_ht_capabilities()
             }),
             vht_cap: Some(ie::fake_vht_capabilities()),
-        }
+        })
     }
 
-    fn fake_ap_join_cap() -> JoinCapabilities {
-        JoinCapabilities {
-            channel: Channel { primary: 24, cbw: wlan_common::channel::Cbw::Cbw40 },
+    fn fake_ap_join_cap() -> ApCapabilities {
+        ApCapabilities(StaCapabilities {
             cap_info: mac::CapabilityInfo(0x4321),
             // 101 + 128 turns it into a basic rate
             rates: [101 + 128, 102, 9].iter().cloned().map(SupportedRate).collect(),
@@ -171,22 +160,21 @@ mod tests {
                 ..ie::fake_ht_capabilities()
             }),
             vht_cap: Some(ie::fake_vht_capabilities()),
-        }
+        })
     }
 
     #[test]
     fn client_intersect_with_ap() {
         assert_eq!(
-            intersect_with_ap(&fake_client_join_cap(), fake_ap_join_cap().into())
-                .expect("should be valid"),
-            JoinCapabilities {
+            intersect_with_ap_as_client(&fake_client_join_cap(), &fake_ap_join_cap()),
+            StaCapabilities {
                 cap_info: mac::CapabilityInfo(0x0220),
                 rates: [229, 102].iter().cloned().map(SupportedRate).collect(),
                 ht_cap: Some(HtCapabilities {
                     ht_cap_info: ie::HtCapabilityInfo(0).with_rx_stbc(2).with_tx_stbc(false),
                     ..ie::fake_ht_capabilities()
                 }),
-                ..fake_client_join_cap()
+                ..fake_client_join_cap().0
             }
         );
     }
@@ -194,16 +182,15 @@ mod tests {
     #[test]
     fn ap_intersect_with_remote_client() {
         assert_eq!(
-            intersect_with_remote_client(&fake_ap_join_cap(), fake_client_join_cap().into())
-                .expect("should be valid"),
-            JoinCapabilities {
+            intersect_with_remote_client_as_ap(&fake_ap_join_cap(), &fake_client_join_cap()),
+            StaCapabilities {
                 cap_info: mac::CapabilityInfo(0x0220),
                 rates: [229, 102].iter().cloned().map(SupportedRate).collect(),
                 ht_cap: Some(HtCapabilities {
                     ht_cap_info: ie::HtCapabilityInfo(0).with_rx_stbc(0).with_tx_stbc(true),
                     ..ie::fake_ht_capabilities()
                 }),
-                ..fake_ap_join_cap()
+                ..fake_ap_join_cap().0
             }
         );
     }
@@ -222,10 +209,10 @@ mod tests {
                 bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap(),
             })),
         };
-        let cap: PeerCapabilities = ac.into();
+        let cap: ApCapabilities = ac.into();
         assert_eq!(
-            cap,
-            PeerCapabilities {
+            cap.0,
+            StaCapabilities {
                 cap_info: mac::CapabilityInfo(0x1234),
                 rates: [125u8, 126, 127, 128, 129].iter().cloned().map(ie::SupportedRate).collect(),
                 ht_cap: Some(ie::fake_ht_capabilities()),
@@ -236,17 +223,16 @@ mod tests {
 
     #[test]
     fn cap_to_fidl_negotiated_cap() {
-        let cap = JoinCapabilities {
-            channel: Channel {
-                primary: 123,
-                cbw: wlan_common::channel::Cbw::Cbw80P80 { secondary80: 42 },
-            },
+        let cap = StaCapabilities {
             cap_info: mac::CapabilityInfo(0x1234),
             rates: [125u8, 126, 127, 128, 129].iter().cloned().map(ie::SupportedRate).collect(),
             ht_cap: Some(ie::fake_ht_capabilities()),
             vht_cap: Some(ie::fake_vht_capabilities()),
         };
-        let fidl_cap: fidl_mlme::NegotiatedCapabilities = cap.into();
+        let fidl_cap = cap.to_fidl_negotiated_capabilities(&Channel {
+            primary: 123,
+            cbw: wlan_common::channel::Cbw::Cbw80P80 { secondary80: 42 },
+        });
         assert_eq!(
             fidl_cap,
             fidl_mlme::NegotiatedCapabilities {

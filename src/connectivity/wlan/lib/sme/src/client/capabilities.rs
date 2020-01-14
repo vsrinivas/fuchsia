@@ -9,7 +9,10 @@
 //! If successful, the capabilities will be extracted and saved.
 
 use {
-    crate::{capabilities::JoinCapabilities, phy_selection::get_device_band_info},
+    crate::{
+        capabilities::{ClientCapabilities, StaCapabilities},
+        phy_selection::get_device_band_info,
+    },
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::warn,
@@ -67,12 +70,12 @@ fn override_capability_info(cap_info: CapabilityInfo) -> CapabilityInfo {
 /// 1. Extract the band capabilities from the iface device based on BSS channel.
 /// 2. Derive/Override capabilities based on iface capabilities, BSS requirements and
 /// user overridable channel bandwidths.
-pub(crate) fn build_join_capabilities(
+pub(crate) fn derive_join_channel_and_capabilities(
     bss_channel: Channel,
     user_cbw: Option<Cbw>,
     bss_rates: &[u8],
     device_info: &crate::DeviceInfo,
-) -> Result<JoinCapabilities, Error> {
+) -> Result<(Channel, ClientCapabilities), Error> {
     // Step 1 - Extract iface capabilities for this particular band we are joining
     let band_info = get_device_band_info(&device_info, bss_channel.primary)
         .ok_or_else(|| format_err!("iface does not support BSS channel {}", bss_channel.primary))?;
@@ -94,7 +97,7 @@ pub(crate) fn build_join_capabilities(
     let (ht_cap, vht_cap) =
         override_ht_vht(band_info.ht_cap.as_ref(), band_info.vht_cap.as_ref(), channel.cbw)?;
 
-    Ok(JoinCapabilities { channel, cap_info, rates, ht_cap, vht_cap })
+    Ok((channel, ClientCapabilities(StaCapabilities { cap_info, rates, ht_cap, vht_cap })))
 }
 
 /// Follow the Channel as announced by the AP, unless user has manually specified CBW with

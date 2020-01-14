@@ -6,10 +6,10 @@ mod link_state;
 
 use {
     crate::{
-        capabilities::{intersect_with_ap, JoinCapabilities},
+        capabilities::{intersect_with_ap_as_client, ClientCapabilities},
         client::{
             bss::ClientConfig,
-            capabilities::build_join_capabilities,
+            capabilities::derive_join_channel_and_capabilities,
             event::Event,
             internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
@@ -27,10 +27,15 @@ use {
     fuchsia_zircon as zx,
     link_state::LinkState,
     log::{error, warn},
+    static_assertions::assert_eq_size,
     std::convert::TryInto,
     wep_deprecated,
     wlan_common::{
-        bss::BssDescriptionExt, channel::Channel, format::MacFmt, ie::rsn::cipher, mac::Bssid,
+        bss::BssDescriptionExt,
+        channel::Channel,
+        format::MacFmt,
+        ie::{self, rsn::cipher},
+        mac::Bssid,
         RadioConfig,
     },
     wlan_statemachine::*,
@@ -63,7 +68,8 @@ pub struct Idle {
 pub struct Joining {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    cap: Option<JoinCapabilities>,
+    chan: Channel,
+    cap: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
 
@@ -71,7 +77,8 @@ pub struct Joining {
 pub struct Authenticating {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    cap: Option<JoinCapabilities>,
+    chan: Channel,
+    cap: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
 
@@ -79,7 +86,8 @@ pub struct Authenticating {
 pub struct Associating {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    cap: Option<JoinCapabilities>,
+    chan: Channel,
+    cap: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
 
@@ -90,7 +98,8 @@ pub struct Associated {
     last_rssi: i8,
     link_state: LinkState,
     radio_cfg: RadioConfig,
-    cap: Option<JoinCapabilities>,
+    chan: Channel,
+    cap: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
 
@@ -138,6 +147,7 @@ impl Joining {
                 Ok(Authenticating {
                     cfg: self.cfg,
                     cmd: self.cmd,
+                    chan: self.chan,
                     cap: self.cap,
                     protection_ie: self.protection_ie,
                 })
@@ -176,7 +186,9 @@ impl Authenticating {
                 Ok(Associating {
                     cfg: self.cfg,
                     cmd: self.cmd,
+                    chan: self.chan,
                     cap: self.cap,
+
                     protection_ie: self.protection_ie,
                 })
             }
@@ -229,31 +241,32 @@ impl Associating {
             fidl_mlme::AssociateResultCodes::Success => {
                 context.info.report_assoc_success(context.att_id);
                 if let Some(cap) = self.cap.as_ref() {
-                    match intersect_with_ap(cap, conf.into()) {
-                        Some(cap) => {
-                            context.mlme_sink.send(MlmeRequest::FinalizeAssociation(cap.into()))
-                        }
-                        None => {
-                            // This is unlikely to happen with any spec-compliant AP. In case the
-                            // user somehow decided to connect to a malicious AP, reject and reset.
-                            error!(
-                                "Associate terminated because AP's capabilies in association \
+                    let negotiated_cap = intersect_with_ap_as_client(cap, &conf.into());
+                    // TODO(eyw): Enable this check once we switch to Rust MLME which populates
+                    // associate confirm with IEs.
+                    if false && negotiated_cap.rates.is_empty() {
+                        // This is unlikely to happen with any spec-compliant AP. In case the
+                        // user somehow decided to connect to a malicious AP, reject and reset.
+                        error!(
+                            "Associate terminated because AP's capabilies in association \
                                  response is different from beacon"
-                            );
-                            report_connect_finished(
-                                self.cmd.responder,
-                                context,
-                                ConnectResult::Failed(ConnectFailure::AssociationFailure(
-                                    fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
-                                )),
-                            );
-                            state_change_msg.replace(format!(
-                                "failed associating; AP's capabilites changed between beacon and\
+                        );
+                        report_connect_finished(
+                            self.cmd.responder,
+                            context,
+                            ConnectResult::Failed(ConnectFailure::AssociationFailure(
+                                fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
+                            )),
+                        );
+                        state_change_msg.replace(format!(
+                            "failed associating; AP's capabilites changed between beacon and\
                                  association response"
-                            ));
-                            return Err(Idle { cfg: self.cfg });
-                        }
+                        ));
+                        return Err(Idle { cfg: self.cfg });
                     }
+                    context.mlme_sink.send(MlmeRequest::FinalizeAssociation(
+                        negotiated_cap.to_fidl_negotiated_capabilities(&self.chan),
+                    ))
                 }
                 match LinkState::new(
                     &self.cmd.bss,
@@ -286,6 +299,7 @@ impl Associating {
             bss: self.cmd.bss,
             link_state,
             radio_cfg: self.cmd.radio_cfg,
+            chan: self.chan,
             cap: self.cap,
             protection_ie: self.protection_ie,
         })
@@ -369,7 +383,13 @@ impl Associated {
             &context.mlme_sink,
         );
         state_change_msg.replace("received DisassociateInd msg".to_string());
-        Associating { cfg: self.cfg, cmd, cap: self.cap, protection_ie: self.protection_ie }
+        Associating {
+            cfg: self.cfg,
+            cmd,
+            chan: self.chan,
+            cap: self.cap,
+            protection_ie: self.protection_ie,
+        }
     }
 
     fn on_deauthenticate_ind(
@@ -587,13 +607,13 @@ impl ClientState {
     }
 
     pub fn connect(self, cmd: ConnectCommand, context: &mut Context) -> Self {
-        let cap = match build_join_capabilities(
+        let (chan, cap) = match derive_join_channel_and_capabilities(
             Channel::from_fidl(cmd.bss.chan),
             cmd.radio_cfg.cbw,
             &cmd.bss.rates[..],
             &context.device_info,
         ) {
-            Ok(cap) => cap,
+            Ok(chan_and_cap) => chan_and_cap,
             Err(e) => {
                 error!("Failed building join capabilities: {}", e);
                 return self;
@@ -647,7 +667,7 @@ impl ClientState {
         let state = Self::new(cfg.clone());
         match state {
             Self::Idle(state) => {
-                state.transition_to(Joining { cfg, cmd, cap, protection_ie }).into()
+                state.transition_to(Joining { cfg, cmd, chan, cap, protection_ie }).into()
             }
             _ => unreachable!(),
         }
@@ -809,17 +829,21 @@ fn send_deauthenticate_request(current_bss: &BssDescription, mlme_sink: &MlmeSin
 
 fn send_mlme_assoc_req(
     bssid: Bssid,
-    capabilities: Option<&JoinCapabilities>,
+    capabilities: Option<&ClientCapabilities>,
     protection_ie: &Option<ProtectionIe>,
     mlme_sink: &MlmeSink,
 ) {
-    // Both try_into().unwrap() are safe because there are tests in the CQ that guarantee the length
-    // of the slice produced by as_bytes() matches the length or the destination array in FIDL.
+    type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
+    type VhtCapArray = [u8; fidl_mlme::VHT_CAP_LEN as usize];
+
+    assert_eq_size!(ie::HtCapabilities, HtCapArray);
     let ht_cap = capabilities.map_or(None, |c| {
-        c.ht_cap.map(|h| fidl_mlme::HtCapabilities { bytes: h.as_bytes().try_into().unwrap() })
+        c.0.ht_cap.map(|h| fidl_mlme::HtCapabilities { bytes: h.as_bytes().try_into().unwrap() })
     });
+
+    assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
     let vht_cap = capabilities.map_or(None, |c| {
-        c.vht_cap.map(|v| fidl_mlme::VhtCapabilities { bytes: v.as_bytes().try_into().unwrap() })
+        c.0.vht_cap.map(|v| fidl_mlme::VhtCapabilities { bytes: v.as_bytes().try_into().unwrap() })
     });
     let (rsne, vendor_ies) = match protection_ie.as_ref() {
         Some(ProtectionIe::Rsne(vec)) => (Some(vec.to_vec()), None),
@@ -828,8 +852,8 @@ fn send_mlme_assoc_req(
     };
     let req = fidl_mlme::AssociateRequest {
         peer_sta_address: bssid.0,
-        cap_info: capabilities.map_or(0, |c| c.cap_info.raw()),
-        rates: capabilities.map_or_else(|| vec![], |c| c.rates.as_bytes().to_vec()),
+        cap_info: capabilities.map_or(0, |c| c.0.cap_info.raw()),
+        rates: capabilities.map_or_else(|| vec![], |c| c.0.rates.as_bytes().to_vec()),
         ht_cap: ht_cap.map(Box::new),
         vht_cap: vht_cap.map(Box::new),
         rsne,
@@ -859,9 +883,9 @@ mod tests {
 
     use crate::client::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, expect_info_event,
-        expect_stream_empty, fake_negotiated_join_capabilities, fake_protected_bss_description,
-        fake_unprotected_bss_description, fake_wep_bss_description, fake_wpa1_bss_description,
-        mock_supplicant, MockSupplicant, MockSupplicantController,
+        expect_stream_empty, fake_negotiated_channel_and_capabilities,
+        fake_protected_bss_description, fake_unprotected_bss_description, fake_wep_bss_description,
+        fake_wpa1_bss_description, mock_supplicant, MockSupplicant, MockSupplicantController,
     };
     use crate::client::{info::InfoReporter, inspect, rsn::Rsna, InfoEvent, InfoSink, TimeStream};
     use crate::test_utils::make_wpa1_ie;
@@ -992,7 +1016,10 @@ mod tests {
         // (mlme->sme) Send an AssociateConf
         let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
-        expect_finalize_association_req(&mut h.mlme_stream, fake_negotiated_join_capabilities());
+        expect_finalize_association_req(
+            &mut h.mlme_stream,
+            fake_negotiated_channel_and_capabilities(),
+        );
 
         assert!(suppl_mock.is_supplicant_started());
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
@@ -1057,7 +1084,10 @@ mod tests {
         // (mlme->sme) Send an AssociateConf
         let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
-        expect_finalize_association_req(&mut h.mlme_stream, fake_negotiated_join_capabilities());
+        expect_finalize_association_req(
+            &mut h.mlme_stream,
+            fake_negotiated_channel_and_capabilities(),
+        );
 
         assert!(suppl_mock.is_supplicant_started());
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
@@ -1099,6 +1129,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Joining {
             cfg: ClientConfig::default(),
             cmd,
+            chan: fake_channel(),
             cap: None,
             protection_ie: None,
         }));
@@ -1131,6 +1162,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Authenticating {
             cfg: ClientConfig::default(),
             cmd,
+            chan: fake_channel(),
             cap: None,
             protection_ie: None,
         }));
@@ -1166,6 +1198,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
+            chan: fake_channel(),
             cap: None,
             protection_ie: None,
         }));
@@ -1404,6 +1437,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd: command,
+            chan: fake_channel(),
             cap: None,
             protection_ie: None,
         }));
@@ -1583,6 +1617,7 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
+            chan: fake_channel(),
             cap: None,
             protection_ie: None,
         }));
@@ -1876,9 +1911,13 @@ mod tests {
         });
     }
 
-    fn expect_finalize_association_req(mlme_stream: &mut MlmeStream, join_cap: JoinCapabilities) {
+    fn expect_finalize_association_req(
+        mlme_stream: &mut MlmeStream,
+        chan_and_cap: (Channel, ClientCapabilities),
+    ) {
+        let (chan, join_cap) = chan_and_cap;
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::FinalizeAssociation(cap))) => {
-            assert_eq!(cap, join_cap.into());
+            assert_eq!(cap, join_cap.0.to_fidl_negotiated_capabilities(&chan));
         });
     }
 
@@ -2049,6 +2088,7 @@ mod tests {
         testing::new_state(Joining {
             cfg: ClientConfig::default(),
             cmd,
+            chan: fake_channel(),
             cap: None,
             protection_ie: None,
         })
@@ -2065,6 +2105,7 @@ mod tests {
         testing::new_state(Authenticating {
             cfg: ClientConfig::default(),
             cmd,
+            chan: fake_channel(),
             cap: None,
             protection_ie: None,
         })
@@ -2075,6 +2116,7 @@ mod tests {
         testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
+            chan: fake_channel(),
             cap: None,
             protection_ie: None,
         })
@@ -2102,6 +2144,7 @@ mod tests {
             last_rssi: 60,
             link_state,
             radio_cfg: RadioConfig::default(),
+            chan: fake_channel(),
             cap: None,
             protection_ie: None,
         })
@@ -2121,6 +2164,7 @@ mod tests {
             last_rssi: 60,
             link_state,
             radio_cfg: RadioConfig::default(),
+            chan: fake_channel(),
             cap: None,
             protection_ie: None,
         })
@@ -2147,6 +2191,7 @@ mod tests {
             last_rssi: 60,
             link_state,
             radio_cfg: RadioConfig::default(),
+            chan: fake_channel(),
             cap: None,
             protection_ie: None,
         })
@@ -2163,5 +2208,9 @@ mod tests {
 
     fn fake_device_info() -> DeviceInfo {
         test_utils::fake_device_info([0, 1, 2, 3, 4, 5])
+    }
+
+    fn fake_channel() -> Channel {
+        Channel { primary: 153, cbw: wlan_common::channel::Cbw::Cbw20 }
     }
 }
