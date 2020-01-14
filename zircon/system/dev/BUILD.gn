@@ -6,7 +6,6 @@ group("dev") {
   testonly = true
   deps = [
     "$zx/system/dev/test/bind-fail-test",
-    "$zx/system/dev/test/ddk-test",
     "$zx/system/ulib/ddktl:ddktl-test",
     "$zx/third_party/dev/ethernet/e1000",
     "audio",

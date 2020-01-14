@@ -316,7 +316,6 @@ aggregate_manifest("legacy-image") {
     ":driver.test-pwm",
     ":driver.test-spi",
     ":driver.test.bind-fail-test",
-    ":driver.test.ddk-test",
     ":driver.test.ddktl-test",
     ":driver.test.mock-device",
     ":driver.test.sysdev",
@@ -463,7 +462,6 @@ aggregate_manifest("legacy-aux") {
     ":driver.alc5663",
     ":driver.crash-device",
     ":driver.devhost-test",
-    ":driver.test.ddk-test",
     ":driver.test.mock-device",
     ":driver.test.sysdev",
     ":lib.async-default",
@@ -1179,7 +1177,6 @@ aggregate_manifest("legacy-tests") {
     ":driver.alc5663",
     ":driver.crash-device",
     ":driver.devhost-test",
-    ":driver.test.ddk-test",
     ":driver.test.mock-device",
     ":driver.test.sysdev",
     ":test.c.debugdata-test",
@@ -1582,6 +1579,7 @@ aggregate_manifest("migrated-image") {
   deps = [
     "//src/developer/cmd:bin-manifest",
     "//zircon/system/dev/serial/serial-async:serial-async-manifest",
+    "//zircon/system/dev/test/ddk-test:ddk-test-manifest",
     "//zircon/system/uapp/audio:bin-manifest",
     "//zircon/system/uapp/audio:test-manifest",
     "//zircon/system/uapp/backlight:backlight-manifest",
@@ -1591,6 +1589,7 @@ aggregate_manifest("migrated-image") {
 aggregate_manifest("migrated-aux") {
   deps = [
     "//zircon/system/dev/serial/serial-async/test:serial-async-unittest-manifest",
+    "//zircon/system/dev/test/ddk-test:ddk-test-manifest",
     "//zircon/system/uapp/audio:test-manifest",
   ]
 }
@@ -1598,6 +1597,7 @@ aggregate_manifest("migrated-aux") {
 aggregate_manifest("migrated-tests") {
   deps = [
     "//zircon/system/dev/serial/serial-async/test:serial-async-unittest-manifest",
+    "//zircon/system/dev/test/ddk-test:ddk-test-manifest",
     "//zircon/system/uapp/audio:test-manifest",
   ]
 }
