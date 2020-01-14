@@ -15,12 +15,12 @@ namespace {
 constexpr const char* kDirPath = "/data/calibration";
 constexpr uint8_t kStrLength = 17;
 
-TEST(FactoryProtocolTest, ConstructorSanity) {
+TEST(FactoryProtocolTest, DISABLED_ConstructorSanity) {
   auto factory_impl = FactoryProtocol::Create();
   ASSERT_NE(nullptr, factory_impl);
 }
 
-TEST(FactoryProtocolTest, StreamingWritesToFile) {
+TEST(FactoryProtocolTest, DISABLED_StreamingWritesToFile) {
   auto factory_impl = FactoryProtocol::Create();
   ASSERT_NE(nullptr, factory_impl);
   ASSERT_EQ(ZX_OK, factory_impl->ConnectToStream());
