@@ -64,6 +64,7 @@ group("tests") {
     "//tools/integration:tests($host_toolchain)",
     "//tools/lib:tests($host_toolchain)",
     "//tools/net:tests($host_toolchain)",
+    "//tools/serial:tests($host_toolchain)",
     "//tools/size_checker/cmd:tests",
     "//tools/testing:tests($host_toolchain)",
   ]
