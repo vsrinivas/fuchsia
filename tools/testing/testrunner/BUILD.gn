@@ -6,30 +6,24 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-go_library("testrunner_lib") {
+go_library("lib") {
   name = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
   deps = [ "//tools/testing/runtests" ]
-}
-
-go_library("outputs") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/outputs"
-  source_dir = "cmd/outputs"
-  deps = [
-    ":testrunner_lib",
-    "//third_party/golibs:golang.org/x/crypto",
-    "//tools/build",
-    "//tools/lib/runner",
-    "//tools/net/sshutil",
-    "//tools/testing/tap",
-  ]
 }
 
 go_library("main") {
   name = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/lib"
   source_dir = "cmd"
   deps = [
-    ":outputs",
-    ":testrunner_lib",
+    ":lib",
+    "//tools/build",
+    "//tools/lib/color",
+    "//tools/lib/logger",
+    "//tools/lib/runner",
+    "//tools/lib/tarutil",
+    "//tools/net/sshutil",
+    "//tools/testing/runtests",
+    "//tools/testing/tap",
   ]
 }
 
@@ -38,15 +32,12 @@ go_binary("testrunner") {
   deps = [ ":main" ]
 }
 
-go_test("testrunner_tests") {
+go_test("tests") {
+  output_name = "testrunner_tests"
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/lib" ]
-  deps = [ ":main" ]
-}
-
-go_test("testrunner_outputs_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/outputs" ]
   deps = [
-    ":outputs",
+    ":main",
     "//third_party/golibs:github.com/google/go-cmp",
   ]
 }
+

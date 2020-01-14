@@ -7,8 +7,8 @@ package tarutil
 
 import (
 	"archive/tar"
+	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -40,25 +40,34 @@ func TarDirectory(tw *tar.Writer, dir string) error {
 	})
 }
 
-// TarBuffer writes the given bytes to a given path within an archive.
-func TarBuffer(tw *tar.Writer, buf []byte, path string) error {
+// TarBytes writes the given bytes to a given path within an archive.
+func TarBytes(tw *tar.Writer, b []byte, path string) error {
+	return TarFromReader(tw, bytes.NewBuffer(b), path, int64(len(b)))
+}
+
+// TarFromReader writes data from the given Reader to the given tar.Writer.
+func TarFromReader(tw *tar.Writer, r io.Reader, path string, size int64) error {
 	hdr := &tar.Header{
 		Name: path,
-		Size: int64(len(buf)),
+		Size: size,
 		Mode: 0666,
 	}
 	if err := tw.WriteHeader(hdr); err != nil {
 		return err
 	}
-	_, err := tw.Write(buf)
+	_, err := io.Copy(tw, r)
 	return err
 }
 
-// TarReader writes data from the given Reader to the given tar.Writer.
-func TarReader(tw *tar.Writer, r io.Reader, path string) error {
-	bytes, err := ioutil.ReadAll(r)
+// TarFile writes the given file to an archive at the given path.
+func TarFile(tw *tar.Writer, src, dest string) error {
+	f, err := os.Open(src)
 	if err != nil {
 		return err
 	}
-	return TarBuffer(tw, bytes, path)
+	fi, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	return TarFromReader(tw, f, dest, fi.Size())
 }

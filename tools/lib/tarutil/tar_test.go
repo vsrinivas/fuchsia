@@ -15,7 +15,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/tarutil"
 )
 
-func TestTarBuffer(t *testing.T) {
+func TestTarBytes(t *testing.T) {
 	type entry struct {
 		name, data string
 	}
@@ -60,7 +60,7 @@ func TestTarBuffer(t *testing.T) {
 			var buf bytes.Buffer
 			tw := tar.NewWriter(&buf)
 			for _, ent := range tt.input {
-				tarutil.TarBuffer(tw, []byte(ent.data), ent.name)
+				tarutil.TarBytes(tw, []byte(ent.data), ent.name)
 			}
 			actual, err := readTar(&buf)
 			if err != nil {

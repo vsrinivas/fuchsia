@@ -14,19 +14,23 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
 )
 
+// Fuchsia-specific environment variables possibly exposed to the testrunner.
 const (
-	// Default amount of time to wait before failing to perform any IO action.
-	defaultIOTimeout = 1 * time.Minute
-
-	// The username used to authenticate with the Fuchsia device.
-	sshUser = "fuchsia"
+	nodenameEnvVar = "FUCHSIA_NODENAME"
+	sshKeyEnvVar   = "FUCHSIA_SSH_KEY"
+	// A directory that will be automatically archived on completion of a task.
+	testOutdirEnvVar = "FUCHSIA_TEST_OUTDIR"
 )
 
 // Command-line flags
@@ -46,12 +50,6 @@ var (
 
 	// Per-test timeout.
 	perTestTimeout time.Duration
-)
-
-// Fuchsia-specific environment variables possibly exposed to the testrunner.
-const (
-	nodenameEnvVar = "FUCHSIA_NODENAME"
-	sshKeyEnvVar   = "FUCHSIA_SSH_KEY"
 )
 
 func usage() {
@@ -83,31 +81,39 @@ func main() {
 		return
 	}
 
-	// Have logs output timestamps with milliseconds.
-	log.SetFlags(log.Ldate | log.Lmicroseconds)
+	l := logger.NewLogger(logger.DebugLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "testrunner ")
+	ctx := logger.WithLogger(context.Background(), l)
 
-	// Load tests.
 	testsPath := flag.Arg(0)
 	tests, err := loadTests(testsPath)
 	if err != nil {
 		log.Fatalf("failed to load tests from %q: %v", testsPath, err)
 	}
 
-	// Prepare test output drivers.
-	output := new(Output)
-	defer output.Complete()
-	output.SetupTAP(os.Stdout, len(tests))
-	output.SetupSummary()
-	if archive != "" {
-		if err := output.SetupTar(archive); err != nil {
-			log.Fatalf("failed to initialize tar output: %v", err)
+	// Configure a test outputs object, responsible for producing TAP output,
+	// recording data sinks, and archiving other test outputs.
+	testOutdir := os.Getenv(testOutdirEnvVar)
+	if testOutdir == "" {
+		var err error
+		testOutdir, err = ioutil.TempDir("", "testrunner")
+		if err != nil {
+			log.Fatalf("failed to create a test output directory")
 		}
 	}
+	logger.Debugf(ctx, "test output directory: %s", testOutdir)
 
-	// Execute.
+	tapProducer := tap.NewProducer(os.Stdout)
+	tapProducer.Plan(len(tests))
+	outputs, err := createTestOutputs(tapProducer, testOutdir, archive)
+	if err != nil {
+		log.Fatalf("failed to create test results object: %v", err)
+	}
+	defer outputs.Close()
+
 	nodename := os.Getenv(nodenameEnvVar)
 	sshKeyFile := os.Getenv(sshKeyEnvVar)
-	if err := execute(tests, output, nodename, sshKeyFile); err != nil {
+
+	if err := execute(ctx, tests, outputs, nodename, sshKeyFile); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -126,84 +132,76 @@ func loadTests(path string) ([]build.Test, error) {
 	return tests, nil
 }
 
-func execute(tests []build.Test, output *Output, nodename, sshKeyFile string) error {
-	var linux, mac, fuchsia, unknown []build.Test
+type tester interface {
+	Test(context.Context, build.Test, io.Writer, io.Writer) (runtests.DataSinkMap, error)
+	Close() error
+}
+
+func execute(ctx context.Context, tests []build.Test, outputs *testOutputs, nodename, sshKeyFile string) error {
+	var localTests, fuchsiaTests []build.Test
 	for _, test := range tests {
 		switch test.OS {
 		case "fuchsia":
-			fuchsia = append(fuchsia, test)
+			fuchsiaTests = append(fuchsiaTests, test)
 		case "linux":
-			linux = append(linux, test)
+			if runtime.GOOS != "linux" {
+				return fmt.Errorf("cannot run linux tests when GOOS = %q", runtime.GOOS)
+			}
+			localTests = append(localTests, test)
 		case "mac":
-			mac = append(mac, test)
+			if runtime.GOOS != "darwin" {
+				return fmt.Errorf("cannot run mac tests when GOOS = %q", runtime.GOOS)
+			}
+			localTests = append(localTests, test)
 		default:
-			unknown = append(unknown, test)
+			return fmt.Errorf("test %#v has unsupported OS: %q", test, test.OS)
 		}
 	}
 
-	if len(unknown) > 0 {
-		return fmt.Errorf("could not determine the runtime system for following tests %v", unknown)
-	}
-
-	localTester := &SubprocessTester{
-		dir: localWD,
-		env: os.Environ(),
-	}
-
-	if err := runTests(linux, localTester.Test, output); err != nil {
+	localTester := newSubprocessTester(localWD, os.Environ())
+	if err := runTests(ctx, localTests, localTester, outputs); err != nil {
 		return err
 	}
 
-	if err := runTests(mac, localTester.Test, output); err != nil {
-		return err
-	}
-
-	return runFuchsiaTests(fuchsia, output, nodename, sshKeyFile)
-}
-
-func runFuchsiaTests(tests []build.Test, output *Output, nodename, sshKeyFile string) error {
-	if len(tests) == 0 {
+	if len(fuchsiaTests) == 0 {
 		return nil
-	} else if nodename == "" {
-		return fmt.Errorf("%s must be set", nodenameEnvVar)
-	} else if sshKeyFile == "" {
+	}
+
+	var t tester
+	var err error
+	if sshKeyFile != "" {
+		if nodename == "" {
+			return fmt.Errorf("%s must be set", nodenameEnvVar)
+		}
+		t, err = newFuchsiaSSHTester(nodename, sshKeyFile, outputs.dataDir, useRuntests)
+	} else {
+		// TODO(fxbug.dev/41930): create a serial test runner in this case.
 		return fmt.Errorf("%s must be set", sshKeyEnvVar)
 	}
-
-	sshKey, err := ioutil.ReadFile(sshKeyFile)
-	if err != nil {
-		return err
-	}
-	tester, err := NewFuchsiaTester(nodename, sshKey, useRuntests)
 	if err != nil {
 		return fmt.Errorf("failed to initialize fuchsia tester: %v", err)
 	}
-	defer tester.Close()
-	return runTests(tests, tester.Test, output)
+	defer t.Close()
+
+	return runTests(ctx, fuchsiaTests, t, outputs)
 }
 
-func runTests(tests []build.Test, tester Tester, output *Output) error {
+func runTests(ctx context.Context, tests []build.Test, t tester, outputs *testOutputs) error {
 	for _, test := range tests {
-		result, err := runTest(context.Background(), test, tester)
-		if err != nil {
-			log.Println(err)
-		}
-		if result != nil {
-			output.Record(*result)
+		result := runTest(ctx, test, t)
+		if err := outputs.record(*result); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func runTest(ctx context.Context, test build.Test, tester Tester) (*testrunner.TestResult, error) {
+func runTest(ctx context.Context, test build.Test, t tester) *testrunner.TestResult {
 	result := runtests.TestSuccess
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
 
-	// Fork the test's stdout and stderr streams to the test runner's stderr stream to
-	// make local debugging easier.  Writing both to stderr ensures that stdout only
-	// contains the test runner's TAP output stream.
-	multistdout := io.MultiWriter(stdout, os.Stderr)
+	multistdout := io.MultiWriter(stdout, os.Stdout)
 	multistderr := io.MultiWriter(stderr, os.Stderr)
 
 	if perTestTimeout > 0 {
@@ -213,13 +211,13 @@ func runTest(ctx context.Context, test build.Test, tester Tester) (*testrunner.T
 	}
 
 	startTime := time.Now()
-	dataSinks, err := tester(ctx, test, multistdout, multistderr)
+	dataSinks, err := t.Test(ctx, test, multistdout, multistderr)
 	if err != nil {
 		result = runtests.TestFailure
 		if err == context.DeadlineExceeded {
-			log.Printf("Test killed because timeout reached (%v)", perTestTimeout)
+			logger.Errorf(ctx, "test killed because timeout reached (%v)", perTestTimeout)
 		} else {
-			log.Println(err)
+			logger.Errorf(ctx, err.Error())
 		}
 	}
 
@@ -242,5 +240,5 @@ func runTest(ctx context.Context, test build.Test, tester Tester) (*testrunner.T
 		StartTime: startTime,
 		EndTime:   endTime,
 		DataSinks: dataSinks,
-	}, nil
+	}
 }

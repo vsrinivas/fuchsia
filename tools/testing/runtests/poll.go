@@ -57,7 +57,7 @@ func PollForSummary(ctx context.Context, t tftp.Client, summaryFilename, testRes
 	tw := tar.NewWriter(outFile)
 	defer tw.Close()
 
-	if err = tarutil.TarBuffer(tw, buffer.Bytes(), summaryFilename); err != nil {
+	if err = tarutil.TarBytes(tw, buffer.Bytes(), summaryFilename); err != nil {
 		return err
 	}
 
