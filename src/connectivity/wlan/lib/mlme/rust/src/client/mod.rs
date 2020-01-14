@@ -179,35 +179,35 @@ impl ClientMlme {
         sta: Option<&mut Client>,
         msg: fidl_mlme::MlmeRequestMessage,
     ) -> Result<(), Error> {
-        // Handle non station specific MLME messages first (for example, Scan)
-        // 0x90 for now.
-        // TODO(eyw): This match is removed in a later patch because all MLME messages are handled
-        // by Rust MLME instead of the C++ one.
+        use fidl_mlme::MlmeRequestMessage as MlmeMsg;
+
         match msg {
-            fidl_mlme::MlmeRequestMessage::StartScan { req } => {
+            // Handle non station specific MLME messages first (Join, Scan, etc.)
+            MlmeMsg::StartScan { req } => {
                 self.handle_mlme_scan_req(sta, req);
                 Ok(())
             }
-            fidl_mlme::MlmeRequestMessage::FinalizeAssociationReq { .. } => {
-                let sta = match sta {
-                    Some(sta) => sta,
+            _ => {
+                // TODO(eyw): Do not use Rust MLME to handle MLME message until we are ready.
+                const DISABLE_RUST_MLME_MSG_SUPPORT: bool = true;
+
+                if DISABLE_RUST_MLME_MSG_SUPPORT {
+                    return Err(Error::Status(
+                        format!("defer MLME messages to C++ handler during Rust migration"),
+                        // Note: important to use NOT_SUPPORTED status while migrating MLME to Rust.
+                        // C++ dispatcher uses it to determine whether to handle MLME msg in C++
+                        zx::Status::NOT_SUPPORTED,
+                    ));
+                }
+                match sta {
                     None => {
-                        return Err(Error::Status(
-                            format!("Client does not exist"),
-                            zx::Status::BAD_STATE,
-                        ))
+                        Err(Error::Status(format!("No client sta."), zx::Status::NOT_SUPPORTED))
                     }
-                };
-                sta.bind(&mut self.scanner, &mut self.chan_sched, &mut self.channel_state)
-                    .handle_mlme_msg(&mut self.ctx, msg);
-                Ok(())
+                    Some(sta) => Ok(sta
+                        .bind(&mut self.scanner, &mut self.chan_sched, &mut self.channel_state)
+                        .handle_mlme_msg(&mut self.ctx, msg)),
+                }
             }
-            _ => Err(Error::Status(
-                format!("MLME messages not supported in Rust (migrating)"),
-                // Note: important to use NOT_SUPPORTED status while migrating MLME to Rust because
-                //       C++ dispatcher uses it to determine whether to handle MLME msg in C++
-                zx::Status::NOT_SUPPORTED,
-            )),
         }
     }
 
@@ -773,7 +773,8 @@ impl<'a> BoundClient<'a> {
     #[allow(deprecated)] // Allow until main message loop is in Rust.
     pub fn handle_mlme_msg(&mut self, ctx: &mut Context, msg: fidl_mlme::MlmeRequestMessage) {
         // Safe: |state| is never None and always replaced with Some(..).
-        self.sta.state = Some(self.sta.state.take().unwrap().handle_mlme_msg(self, ctx, msg));
+        let state = self.sta.state.take().unwrap().handle_mlme_msg(self, ctx, msg);
+        self.sta.state.replace(state);
     }
 
     /// Sends an MLME-AUTHENTICATE.confirm message to the SME with authentication type

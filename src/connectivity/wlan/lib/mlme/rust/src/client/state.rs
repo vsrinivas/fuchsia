@@ -17,6 +17,7 @@ use {
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, info, warn},
+    static_assertions::assert_eq_size,
     std::convert::TryInto,
     wlan_common::{
         ie,
@@ -33,8 +34,8 @@ use {
 // TODO(41609): Let upper layers set this value.
 const ASSOC_TIMEOUT_BCN_PERIODS: u16 = 10;
 
-type OptionalHtOpBytes = Option<[u8; fidl_mlme::HT_OP_LEN as usize]>;
-type OptionalVhtOpBytes = Option<[u8; fidl_mlme::VHT_OP_LEN as usize]>;
+type HtOpByteArray = [u8; fidl_mlme::HT_OP_LEN as usize];
+type VhtOpByteArray = [u8; fidl_mlme::VHT_OP_LEN as usize];
 
 /// Processes an inbound deauthentication frame by issuing an MLME-DEAUTHENTICATE.indication
 /// to the STA's SME peer.
@@ -248,21 +249,19 @@ impl Associating {
                     &elements[..],
                 );
                 let (ap_ht_op, ap_vht_op) = extract_ht_vht_op(elements);
-                let controlled_port_open = if sta.sta.is_rsn {
-                    false
-                } else {
+                let controlled_port_open = !sta.sta.is_rsn;
+                if controlled_port_open {
                     if let Err(e) = ctx.device.set_eth_link_up() {
                         error!("Cannot set ethernet to UP. Status: {}", e);
                     }
-                    true
-                };
-                let eth_qos = false; // it will be updated in finalize_assocition.
+                }
+
                 Ok(Association {
                     aid: assoc_resp_hdr.aid,
                     controlled_port_open,
                     ap_ht_op,
                     ap_vht_op,
-                    eth_qos,
+                    qos: Qos::PendingNegotiation,
                 })
             }
             status_code => {
@@ -309,33 +308,64 @@ impl Associating {
     }
 }
 
-fn extract_ht_vht_op<B: ByteSlice>(elements: B) -> (OptionalHtOpBytes, OptionalVhtOpBytes) {
-    let mut ht_op = None;
-    let mut vht_op = None;
+/// Extract HT Operation and VHT Operation IEs from the association response frame.
+/// If either IE is of an incorrect length, it will be ignored.
+fn extract_ht_vht_op<B: ByteSlice>(elements: B) -> (Option<HtOpByteArray>, Option<VhtOpByteArray>) {
+    // Note the assert_eq_size!() that guarantees these structs match at compile time.
+    let mut ht_op: Option<HtOpByteArray> = None;
+    let mut vht_op: Option<VhtOpByteArray> = None;
     for (id, body) in ie::Reader::new(elements) {
         match id {
-            ie::Id::HT_OPERATION => {
-                if body.len() != fidl_mlme::HT_OP_LEN as usize {
-                    error!("Invalid HT Operation len: {}", body.len());
+            ie::Id::HT_OPERATION => match ie::parse_ht_operation(body) {
+                Ok(h) => {
+                    assert_eq_size!(ie::HtOperation, HtOpByteArray);
+                    ht_op = Some(h.as_bytes().try_into().unwrap());
+                }
+                Err(e) => {
+                    error!("Invalid HT Operation: {}", e);
                     continue;
                 }
-                // Safe to unwrap because length has been verified.
-                ht_op = Some(body.as_bytes().try_into().unwrap());
-            }
-            ie::Id::VHT_OPERATION => {
-                if body.len() != fidl_mlme::VHT_OP_LEN as usize {
-                    error!("Invalid VHT Operation len: {}", body.len());
+            },
+            ie::Id::VHT_OPERATION => match ie::parse_vht_operation(body) {
+                Ok(v) => {
+                    assert_eq_size!(ie::VhtOperation, VhtOpByteArray);
+                    vht_op = Some(v.as_bytes().try_into().unwrap());
+                }
+                Err(e) => {
+                    error!("Invalid VHT Operation: {}", e);
                     continue;
                 }
-                // Safe to unwrap because length has been verified.
-                vht_op = Some(body.as_bytes().try_into().unwrap());
-            }
+            },
             _ => (),
         }
     }
     (ht_op, vht_op)
 }
 
+#[derive(Debug, PartialEq)]
+enum Qos {
+    Enabled,
+    Disabled,
+    // Intermediate state between when an association response frame is received from AP and
+    // when a finalize_association is received from SME.
+    PendingNegotiation,
+}
+
+impl From<bool> for Qos {
+    fn from(b: bool) -> Self {
+        if b {
+            Self::Enabled
+        } else {
+            Self::Disabled
+        }
+    }
+}
+
+impl Qos {
+    fn is_enabled(&self) -> bool {
+        *self == Self::Enabled
+    }
+}
 #[derive(Debug)]
 pub struct Association {
     aid: mac::Aid,
@@ -344,12 +374,12 @@ pub struct Association {
     // A closed controlled port only processes EAP frames while an open one processes any frames.
     controlled_port_open: bool,
 
-    ap_ht_op: OptionalHtOpBytes,
-    ap_vht_op: OptionalVhtOpBytes,
+    ap_ht_op: Option<HtOpByteArray>,
+    ap_vht_op: Option<VhtOpByteArray>,
 
-    // Whether to enable QoS bit for outgoing ethernet frames. Currently, QoS is enabled if the
-    // associated PHY is HT or VHT.
-    eth_qos: bool,
+    // Whether to set QoS bit when MLME constructs an outgoing WLAN data frame.
+    // Currently, QoS is enabled if the associated PHY is HT or VHT.
+    qos: Qos,
 }
 
 /// Client received a "successful" association response from the BSS.
@@ -456,13 +486,16 @@ impl Associated {
             hdr.sa,
             hdr.da,
             sta.sta.is_rsn,
-            self.0.eth_qos,
+            self.0.qos.is_enabled(),
             hdr.ether_type.to_native(),
             &body,
         )
     }
 
-    fn finalize_association(
+    /// Process an inbound MLME-FinalizeAssociation.request.
+    /// Derive an `AssociationContext` fromthe negotiated capabilities and
+    /// install the context in the underlying driver.
+    fn on_sme_finalize_association(
         &mut self,
         sta: &mut BoundClient<'_>,
         ctx: &mut Context,
@@ -477,7 +510,7 @@ impl Associated {
         //
         // Aruba / Ubiquiti are confirmed to be compatible with QoS field for the
         // BlockAck session, independently of 40MHz operation.
-        self.0.eth_qos = assoc_ctx.qos;
+        self.0.qos = assoc_ctx.qos.into();
 
         if let Err(status) = ctx.device.configure_assoc(assoc_ctx) {
             // Device cannot handle this association. Something is seriously wrong.
@@ -559,24 +592,6 @@ impl States {
                     ctx,
                     fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated,
                 );
-                self
-            }
-        }
-    }
-
-    pub fn handle_mlme_finalize_association(
-        self,
-        sta: &mut BoundClient<'_>,
-        ctx: &mut Context,
-        cap: fidl_mlme::NegotiatedCapabilities,
-    ) -> States {
-        match self {
-            States::Associated(mut state) => {
-                state.finalize_association(sta, ctx, cap);
-                state.into()
-            }
-            _ => {
-                error!("received MLME-FinalizeAssociationReq in invalid state");
                 self
             }
         }
@@ -776,10 +791,14 @@ impl States {
     ) -> States {
         use fidl_mlme::MlmeRequestMessage as MlmeMsg;
 
-        match msg {
-            MlmeMsg::FinalizeAssociationReq { cap } => {
-                self.handle_mlme_finalize_association(sta, ctx, cap)
-            }
+        match self {
+            States::Associated(mut state) => match msg {
+                MlmeMsg::FinalizeAssociationReq { cap } => {
+                    state.on_sme_finalize_association(sta, ctx, cap);
+                    state.into()
+                }
+                _ => state.into(),
+            },
             _ => self,
         }
     }
@@ -791,6 +810,46 @@ impl States {
             States::Authenticated(_) | States::Associating(_) => class <= mac::FrameClass::Class2,
             States::Associated(_) => class <= mac::FrameClass::Class3,
         }
+    }
+}
+
+#[cfg(test)]
+mod free_function_tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_ht_vht_op_success() {
+        let mut buf = Vec::<u8>::new();
+        ie::write_ht_operation(&mut buf, &ie::fake_ht_operation()).expect("valid HT Op");
+        ie::write_vht_operation(&mut buf, &ie::fake_vht_operation()).expect("valid VHT Op");
+        let (ht_bytes, vht_bytes) = extract_ht_vht_op(&buf[..]);
+        assert_eq!(ht_bytes.unwrap(), ie::fake_ht_op_bytes());
+        assert_eq!(vht_bytes.unwrap(), ie::fake_vht_op_bytes());
+    }
+
+    #[test]
+    fn test_extract_ht_op_too_short() {
+        let mut buf = Vec::<u8>::new();
+        ie::write_ht_operation(&mut buf, &ie::fake_ht_operation()).expect("valid HT Op");
+        buf[1] -= 1; // Make length shorter
+        buf.truncate(buf.len() - 1);
+        ie::write_vht_operation(&mut buf, &ie::fake_vht_operation()).expect("valid VHT Op");
+        let (ht_bytes, vht_bytes) = extract_ht_vht_op(&buf[..]);
+        assert_eq!(ht_bytes, None);
+        assert_eq!(vht_bytes.unwrap(), ie::fake_vht_op_bytes());
+    }
+
+    #[test]
+    fn test_extract_vht_op_too_short() {
+        let mut buf = Vec::<u8>::new();
+        ie::write_ht_operation(&mut buf, &ie::fake_ht_operation()).expect("valid HT Op");
+        let ht_end = buf.len();
+        ie::write_vht_operation(&mut buf, &ie::fake_vht_operation()).expect("valid VHT Op");
+        buf[ht_end + 1] -= 1; // Make VHT operation shorter.
+        buf.truncate(buf.len() - 1);
+        let (ht_bytes, vht_bytes) = extract_ht_vht_op(&buf[..]);
+        assert_eq!(ht_bytes.unwrap(), ie::fake_ht_op_bytes());
+        assert_eq!(vht_bytes, None);
     }
 }
 
@@ -884,7 +943,7 @@ mod tests {
             aid: 0,
             ap_ht_op: None,
             ap_vht_op: None,
-            eth_qos: false,
+            qos: Qos::Disabled,
         }
     }
 
