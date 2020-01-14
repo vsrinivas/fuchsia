@@ -54,7 +54,6 @@ aggregate_manifest("legacy-image") {
     ":bin.crasher",
     ":bin.ddk-schedule-work-perf",
     ":bin.device-name-provider",
-    ":bin.df",
     ":bin.disk-inspect",
     ":bin.display-test",
     ":bin.dlog",
@@ -1585,6 +1584,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/audio:test-manifest",
     "//zircon/system/uapp/backlight:backlight-manifest",
     "//zircon/system/uapp/dd:dd-manifest",
+    "//zircon/system/uapp/df:df-manifest",
   ]
 }
 
