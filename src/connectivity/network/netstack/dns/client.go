@@ -544,6 +544,29 @@ func (c *Client) UpdateExpiringServers(servers []tcpip.FullAddress, lifetime tim
 	}
 }
 
+// RemoveAllServersWithNIC removes all servers associated with the specified
+// NIC.
+//
+// If a NIC is not specified (nicID == 0), then RemoveAllServersWithNIC does
+// nothing.
+func (c *Client) RemoveAllServersWithNIC(nicID tcpip.NICID) {
+	if nicID == 0 {
+		return
+	}
+
+	c.config.mu.Lock()
+	defer c.config.mu.Unlock()
+
+	// Clear the cache of DNS servers.
+	c.config.mu.serversCache = nil
+
+	for k := range c.config.mu.expiringServers {
+		if k.NIC == nicID {
+			delete(c.config.mu.expiringServers, k)
+		}
+	}
+}
+
 // SetResolver is used to configure the way c looks up domain names.
 //
 // If resolver is nil, the default resolver will be used.

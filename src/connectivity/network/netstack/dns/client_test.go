@@ -47,6 +47,30 @@ var (
 		Addr: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03",
 		NIC:  5,
 	}
+	addr5 = tcpip.FullAddress{
+		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x05",
+		Port: defaultDNSPort,
+	}
+	addr6 = tcpip.FullAddress{
+		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06",
+		Port: defaultDNSPort,
+	}
+	addr7 = tcpip.FullAddress{
+		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x07",
+		Port: defaultDNSPort,
+	}
+	addr8 = tcpip.FullAddress{
+		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08",
+		Port: defaultDNSPort,
+	}
+	addr9 = tcpip.FullAddress{
+		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x09",
+		Port: defaultDNSPort,
+	}
+	addr10 = tcpip.FullAddress{
+		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0a",
+		Port: defaultDNSPort,
+	}
 )
 
 func containsFullAddress(list []tcpip.FullAddress, item tcpip.FullAddress) bool {
@@ -67,6 +91,106 @@ func containsAddress(list []tcpip.Address, item tcpip.Address) bool {
 	}
 
 	return false
+}
+
+func TestRemoveAllServersWithNIC(t *testing.T) {
+	addr3 := addr3
+	addr3.NIC = addr4.NIC
+	addr4WithPort := addr4
+	addr4WithPort.Port = defaultDNSPort
+
+	// We set stack.Stack to nil since thats not what we are testing here.
+	c := NewClient(nil)
+
+	expectAllAddresses := func() {
+		t.Helper()
+
+		servers := c.GetServersCache()
+		if !containsFullAddress(servers, addr1) {
+			t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
+		}
+		if !containsFullAddress(servers, addr2) {
+			t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
+		}
+		if !containsFullAddress(servers, addr3) {
+			t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
+		}
+		if !containsFullAddress(servers, addr4WithPort) {
+			t.Errorf("expected %+v to be in the server cache, got = %+v", addr4WithPort, servers)
+		}
+		if !containsFullAddress(servers, addr5) {
+			t.Errorf("expected %+v to be in the server cache, got = %+v", addr5, servers)
+		}
+		if !containsFullAddress(servers, addr6) {
+			t.Errorf("expected %+v to be in the server cache, got = %+v", addr6, servers)
+		}
+		if !containsFullAddress(servers, addr7) {
+			t.Errorf("expected %+v to be in the server cache, got = %+v", addr7, servers)
+		}
+		if !containsFullAddress(servers, addr8) {
+			t.Errorf("expected %+v to be in the server cache, got = %+v", addr8, servers)
+		}
+		if !containsFullAddress(servers, addr9) {
+			t.Errorf("expected %+v to be in the server cache, got = %+v", addr9, servers)
+		}
+		if !containsFullAddress(servers, addr10) {
+			t.Errorf("expected %+v to be in the server cache, got = %+v", addr10, servers)
+		}
+		if l := len(servers); l != 10 {
+			t.Errorf("got len(servers) = %d, want = 10; servers = %+v", l, servers)
+		}
+
+		if t.Failed() {
+			t.FailNow()
+		}
+	}
+
+	c.SetDefaultServers([]tcpip.Address{addr5.Addr, addr6.Addr})
+	runtimeServers1 := []tcpip.Address{addr7.Addr, addr8.Addr}
+	runtimeServers2 := []tcpip.Address{addr9.Addr, addr10.Addr}
+	c.SetRuntimeServers([]*[]tcpip.Address{&runtimeServers1, &runtimeServers2})
+	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2, addr3, addr4}, longLifetime)
+	expectAllAddresses()
+
+	// Should do nothing since a NIC is not specified.
+	c.RemoveAllServersWithNIC(0)
+	expectAllAddresses()
+
+	// Should do nothing since none of the addresses are associated with a NIC
+	// with ID 255.
+	c.RemoveAllServersWithNIC(255)
+	expectAllAddresses()
+
+	// Should remove addr3 and addr4.
+	c.RemoveAllServersWithNIC(addr4.NIC)
+	servers := c.GetServersCache()
+	if !containsFullAddress(servers, addr1) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
+	}
+	if !containsFullAddress(servers, addr2) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
+	}
+	if !containsFullAddress(servers, addr5) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr5, servers)
+	}
+	if !containsFullAddress(servers, addr6) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr6, servers)
+	}
+	if !containsFullAddress(servers, addr7) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr7, servers)
+	}
+	if !containsFullAddress(servers, addr8) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr8, servers)
+	}
+	if !containsFullAddress(servers, addr9) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr9, servers)
+	}
+	if !containsFullAddress(servers, addr10) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr10, servers)
+	}
+	if l := len(servers); l != 8 {
+		t.Errorf("got len(servers) = %d, want = 8; servers = %+v", l, servers)
+	}
 }
 
 func TestResolver(t *testing.T) {
@@ -236,30 +360,10 @@ func TestGetServersCache(t *testing.T) {
 	// We set stack.Stack to nil since thats not what we are testing here.
 	c := NewClient(nil)
 
-	addr5 := tcpip.FullAddress{
-		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x05",
-		Port: defaultDNSPort,
-	}
-	addr6 := tcpip.FullAddress{
-		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06",
-		Port: defaultDNSPort,
-	}
-	addr7 := tcpip.FullAddress{
-		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x07",
-		Port: defaultDNSPort,
-	}
-	addr8 := tcpip.FullAddress{
-		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08",
-		Port: defaultDNSPort,
-	}
-	addr9 := tcpip.FullAddress{
-		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x09",
-		Port: defaultDNSPort,
-	}
-	addr10 := tcpip.FullAddress{
-		Addr: "\x0a\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0a",
-		Port: defaultDNSPort,
-	}
+	addr3 := addr3
+	addr3.NIC = addr4.NIC
+	addr4WithPort := addr4
+	addr4WithPort.Port = defaultDNSPort
 
 	c.SetDefaultServers([]tcpip.Address{addr5.Addr, addr6.Addr})
 	servers := c.GetServersCache()
@@ -307,7 +411,7 @@ func TestGetServersCache(t *testing.T) {
 		t.FailNow()
 	}
 
-	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2, addr3}, longLifetime)
+	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2, addr3, addr4}, longLifetime)
 	servers = c.GetServersCache()
 	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
@@ -317,6 +421,9 @@ func TestGetServersCache(t *testing.T) {
 	}
 	if !containsFullAddress(servers, addr3) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
+	}
+	if !containsFullAddress(servers, addr4WithPort) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr4WithPort, servers)
 	}
 	if !containsFullAddress(servers, addr5) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr5, servers)
@@ -336,8 +443,8 @@ func TestGetServersCache(t *testing.T) {
 	if !containsFullAddress(servers, addr10) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr10, servers)
 	}
-	if l := len(servers); l != 9 {
-		t.Errorf("got len(servers) = %d, want = 9; servers = %+v", l, servers)
+	if l := len(servers); l != 10 {
+		t.Errorf("got len(servers) = %d, want = 10; servers = %+v", l, servers)
 	}
 
 	// Should get the same results since there were no updates.
@@ -360,14 +467,36 @@ func TestGetServersCache(t *testing.T) {
 	if !containsFullAddress(servers, addr3) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
 	}
+	if !containsFullAddress(servers, addr4WithPort) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr4WithPort, servers)
+	}
 	if !containsFullAddress(servers, addr5) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr5, servers)
 	}
 	if !containsFullAddress(servers, addr6) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr6, servers)
 	}
-	if l := len(servers); l != 5 {
-		t.Errorf("got len(servers) = %d, want = 5; servers = %+v", l, servers)
+	if l := len(servers); l != 6 {
+		t.Errorf("got len(servers) = %d, want = 6; servers = %+v", l, servers)
+	}
+
+	// Should remove addr3 and addr4.
+	c.RemoveAllServersWithNIC(addr4.NIC)
+	servers = c.GetServersCache()
+	if !containsFullAddress(servers, addr1) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
+	}
+	if !containsFullAddress(servers, addr2) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
+	}
+	if !containsFullAddress(servers, addr5) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr5, servers)
+	}
+	if !containsFullAddress(servers, addr6) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr6, servers)
+	}
+	if l := len(servers); l != 4 {
+		t.Errorf("got len(servers) = %d, want = 4; servers = %+v", l, servers)
 	}
 
 	if t.Failed() {
@@ -382,18 +511,15 @@ func TestGetServersCache(t *testing.T) {
 	if !containsFullAddress(servers, addr2) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
 	}
-	if !containsFullAddress(servers, addr3) {
-		t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
-	}
-	if l := len(servers); l != 3 {
-		t.Errorf("got len(servers) = %d, want = 3; servers = %+v", l, servers)
+	if l := len(servers); l != 2 {
+		t.Errorf("got len(servers) = %d, want = 2; servers = %+v", l, servers)
 	}
 
 	if t.Failed() {
 		t.FailNow()
 	}
 
-	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2, addr3}, 0)
+	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2}, 0)
 	servers = c.GetServersCache()
 	if l := len(servers); l != 0 {
 		t.Errorf("got len(servers) = %d, want = 0; servers = %+v", l, servers)

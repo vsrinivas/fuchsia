@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -95,6 +96,17 @@ type ndpGeneratedAutoGenAddrEvent struct {
 type ndpInvalidatedAutoGenAddrEvent struct {
 	ndpAutoGenAddrEventCommon
 }
+
+// ndpRecursiveDNSServerEvent holds the fields for an NDP Recursive DNS Server
+// list event.
+type ndpRecursiveDNSServerEvent struct {
+	nicID    tcpip.NICID
+	addrs    []tcpip.Address
+	lifetime time.Duration
+}
+
+// isNDPEvent implements ndpEvent.isNDPEvent.
+func (*ndpRecursiveDNSServerEvent) isNDPEvent() {}
 
 var _ stack.NDPDispatcher = (*ndpDispatcher)(nil)
 
@@ -203,8 +215,9 @@ func (n *ndpDispatcher) OnAutoGenAddressInvalidated(nicID tcpip.NICID, addrWithP
 }
 
 // OnRecursiveDNSServerOption implements stack.NDPDispatcher.OnRecursiveDNSServerOption.
-func (*ndpDispatcher) OnRecursiveDNSServerOption(nicID tcpip.NICID, addrs []tcpip.Address, lifetime time.Duration) {
-	// TODO(ghanan): pass the server list to the dns client.
+func (n *ndpDispatcher) OnRecursiveDNSServerOption(nicID tcpip.NICID, addrs []tcpip.Address, lifetime time.Duration) {
+	syslog.Infof("ndp: OnRecursiveDNSServerOption(%d, %s, %s)", nicID, addrs, lifetime)
+	n.addEvent(&ndpRecursiveDNSServerEvent{nicID: nicID, addrs: addrs, lifetime: lifetime})
 }
 
 // addEvent adds an event to be handled by the ndpDispatcher goroutine.
@@ -332,6 +345,29 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				if err := n.ns.forgetSLAACAddress(nicID, addrWithPrefix); err != nil {
 					syslog.Errorf("ndp: failed to forget auto-generated address (%s) on nicID (%d): %s", addrWithPrefix, nicID, err)
 				}
+
+			case *ndpRecursiveDNSServerEvent:
+				nicID, addrs, lifetime := event.nicID, event.addrs, event.lifetime
+				syslog.Infof("ndp: updating expiring DNS servers (%s) on nicID (%d) with lifetime (%s)...", addrs, nicID, lifetime)
+				servers := make([]tcpip.FullAddress, 0, len(addrs))
+				for _, a := range addrs {
+					// The default DNS port will be used since the Port field is
+					// unspecified here.
+					servers = append(servers, tcpip.FullAddress{Addr: a, NIC: nicID})
+				}
+
+				// lifetime should never be greater than header.NDPInfiniteLifetime.
+				if lifetime > header.NDPInfiniteLifetime {
+					panic(fmt.Sprintf("ndp: got recursive DNS server event with lifetime (%s) greater than infinite lifetime (%s) on nicID (%d) with addrs (%s)", lifetime, header.NDPInfiniteLifetime, nicID, addrs))
+				}
+
+				if lifetime == header.NDPInfiniteLifetime {
+					// A lifetime value less than 0 implies infinite lifetime to the DNS
+					// client.
+					lifetime = -1
+				}
+
+				n.ns.dnsClient.UpdateExpiringServers(servers, lifetime)
 
 			default:
 				panic(fmt.Sprintf("unrecognized event type: %T", event))

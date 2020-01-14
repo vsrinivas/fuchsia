@@ -718,6 +718,9 @@ func (ifs *ifState) stateChange(s link.State) {
 		}
 		ifs.mu.slaacAddrs = nil
 
+		// Remove DNS servers through ifs.
+		ifs.ns.dnsClient.RemoveAllServersWithNIC(ifs.nicid)
+
 		// TODO(crawshaw): more cleanup to be done here:
 		// 	- remove link endpoint
 		//	- reclaim NICID?
