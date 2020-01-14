@@ -60,6 +60,16 @@ impl HierarchyDeserializer for JsonNodeHierarchySerializer {
     }
 }
 
+/// Implements deserialization of a `NodeHierarchy` from a Serde JSON Value.
+impl HierarchyDeserializer for RawJsonNodeHierarchySerializer {
+    // The Json Formatter deserializes JSON Strings encoding a single node hierarchy.
+    type Object = serde_json::Value;
+
+    fn deserialize(data: serde_json::Value) -> Result<NodeHierarchy, Error> {
+        deserialize_json(data)
+    }
+}
+
 /// A wrapper of a Node hierarchy that allows to serialize it as JSON.
 struct JsonSerializableNodeHierarchy {
     /// The hierarchy that will be serialized.
@@ -676,6 +686,18 @@ mod tests {
     fn deserialize_json() -> Result<(), Error> {
         let json_string = get_single_json_hierarchy();
         let mut parsed_hierarchy = JsonNodeHierarchySerializer::deserialize(json_string)?;
+        let mut expected_hierarchy = get_unambigious_deserializable_hierarchy();
+        parsed_hierarchy.sort();
+        expected_hierarchy.sort();
+        assert_eq!(expected_hierarchy, parsed_hierarchy);
+        Ok(())
+    }
+
+    #[test]
+    fn deserialize_json_raw() -> Result<(), Error> {
+        let json_string = get_single_json_hierarchy();
+        let json_value: serde_json::Value = serde_json::from_str(&json_string)?;
+        let mut parsed_hierarchy = RawJsonNodeHierarchySerializer::deserialize(json_value)?;
         let mut expected_hierarchy = get_unambigious_deserializable_hierarchy();
         parsed_hierarchy.sort();
         expected_hierarchy.sort();
