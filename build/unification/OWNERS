@@ -1,6 +1,9 @@
-dgilhooley@google.com
+# Reviewers for new additions to the images/BUILD.gn file.
 phosek@google.com
-puneetha@google.com
 pylaligand@google.com
+
+# Userspace migration squad.
+dgilhooley@google.com
+puneetha@google.com
 scottmg@google.com
 surajmalhotra@google.com
