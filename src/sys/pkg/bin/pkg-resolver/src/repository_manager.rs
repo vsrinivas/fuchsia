@@ -290,7 +290,7 @@ impl<A: AmberConnect> RepositoryManager<A> {
             crate::cache::cache_package_using_rust_tuf(repo, &config, url, cache, blob_fetcher)
                 .await
                 .map_err(|e| {
-                    fx_log_err!("while fetching package using rust tuf: {}", e);
+                    fx_log_err!("while fetching package {} using rust tuf: {}", url, e);
                     e.to_resolve_status()
                 })
         }
@@ -410,7 +410,7 @@ async fn connect_to_rust_tuf_client(
     // another thread.
     let mut repo = Arc::new(futures::lock::Mutex::new(
         Repository::new(&config, inspect_node.create_child(url.host())).await.map_err(|e| {
-            fx_log_err!("Could not create Repository: {:?}", e);
+            fx_log_err!("Could not create Repository for {}: {:?}", config.repo_url(), e);
             Err(Status::INTERNAL)
         })?,
     ));
