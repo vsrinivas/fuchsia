@@ -14,6 +14,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+	"sync"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
@@ -78,13 +80,10 @@ type QEMUConfig struct {
 
 // QEMUTarget is a QEMU target.
 type QEMUTarget struct {
-	config QEMUConfig
-	opts   Options
-
-	c chan error
-
-	cmd    *exec.Cmd
-	status error
+	config  QEMUConfig
+	opts    Options
+	c       chan error
+	process *os.Process
 }
 
 // NewQEMUTarget returns a new QEMU target with a given configuration.
@@ -118,6 +117,18 @@ func (t *QEMUTarget) SSHKey() string {
 
 // Start starts the QEMU target.
 func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args []string) error {
+	if t.process != nil {
+		return fmt.Errorf("a process has already been started with PID %d", t.process.Pid)
+	}
+
+	// The QEMU command needs to be invoked within an empty directory, as QEMU
+	// will attempt to pick up files from its working directory, one notable
+	// culprit being multiboot.bin.  This can result in strange behavior.
+	workdir, err := ioutil.TempDir("", "qemu-working-dir")
+	if err != nil {
+		return err
+	}
+
 	qemuTarget, ok := qemuTargetMapping[t.config.Target]
 	if !ok {
 		return fmt.Errorf("invalid target %q", t.config.Target)
@@ -149,11 +160,15 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		return fmt.Errorf("could not find zircon-a")
 	}
 
+	if err := copyImagesToDir(workdir, &qemuKernel, &zirconA, &storageFull); err != nil {
+		return err
+	}
+
 	var drives []qemu.Drive
 	if storageFull.Reader != nil {
 		drives = append(drives, qemu.Drive{
 			ID:   "maindisk",
-			File: getImageName(storageFull),
+			File: filepath.Join(workdir, storageFull.Name),
 		})
 	}
 	if t.config.MinFS != nil {
@@ -196,8 +211,8 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		CPU:      t.config.CPU,
 		Memory:   t.config.Memory,
 		KVM:      t.config.KVM,
-		Kernel:   getImageName(qemuKernel),
-		Initrd:   getImageName(zirconA),
+		Kernel:   filepath.Join(workdir, qemuKernel.Name),
+		Initrd:   filepath.Join(workdir, zirconA.Name),
 		Drives:   drives,
 		Networks: networks,
 	}
@@ -218,53 +233,44 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		return err
 	}
 
-	// The QEMU command needs to be invoked within an empty directory, as QEMU
-	// will attempt to pick up files from its working directory, one notable
-	// culprit being multiboot.bin.  This can result in strange behavior.
-	workdir, err := ioutil.TempDir("", "qemu-working-dir")
-	if err != nil {
-		return err
-	}
-	for _, img := range []bootserver.Image{qemuKernel, zirconA, storageFull} {
-		if img.Reader != nil {
-			if err := transferToDir(workdir, img); err != nil {
-				return err
-			}
-		}
-	}
-
-	t.cmd = &exec.Cmd{
+	cmd := &exec.Cmd{
 		Path:   invocation[0],
 		Args:   invocation,
 		Dir:    workdir,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
-	log.Printf("QEMU invocation:\n%s", invocation)
+	log.Printf("QEMU invocation:\n%s", strings.Join(invocation, " "))
 
-	if err := t.cmd.Start(); err != nil {
+	if err := cmd.Start(); err != nil {
 		os.RemoveAll(workdir)
 		return fmt.Errorf("failed to start: %v", err)
 	}
+	t.process = cmd.Process
 
 	// Ensure that the working directory when QEMU finishes whether the Wait
 	// method is invoked or not.
 	go func() {
-		defer os.RemoveAll(workdir)
-		t.c <- qemu.CheckExitCode(t.cmd.Wait())
+		t.c <- qemu.CheckExitCode(cmd.Wait())
+		os.RemoveAll(workdir)
 	}()
 
 	return nil
 }
 
-// Wait waits for the QEMU target to stop.
-func (t *QEMUTarget) Restart(ctx context.Context) error {
+// Restart stops the QEMU target and starts it again.
+func (t *QEMUTarget) Restart(context.Context) error {
 	return ErrUnimplemented
 }
 
 // Stop stops the QEMU target.
-func (t *QEMUTarget) Stop(ctx context.Context) error {
-	return t.cmd.Process.Kill()
+func (t *QEMUTarget) Stop(context.Context) error {
+	if t.process == nil {
+		return fmt.Errorf("QEMU target has not yet been started")
+	}
+	err := t.process.Kill()
+	t.process = nil
+	return err
 }
 
 // Wait waits for the QEMU target to stop.
@@ -272,42 +278,55 @@ func (t *QEMUTarget) Wait(ctx context.Context) error {
 	return <-t.c
 }
 
-// getImageName returns the absolute path to the image if it exists on the filesystem, else just the image name.
-func getImageName(img bootserver.Image) string {
-	if f, ok := img.Reader.(*os.File); ok {
-		absName, err := filepath.Abs(f.Name())
-		if err != nil {
-			log.Printf("failed to get abs path: %v", err)
-		} else {
-			return absName
-		}
+func copyImagesToDir(dir string, imgs ...*bootserver.Image) error {
+	// Copy each in a goroutine for efficiency's sake.
+	errs := make(chan error, len(imgs))
+	var wg sync.WaitGroup
+	wg.Add(len(imgs))
+	for _, img := range imgs {
+		go func(img *bootserver.Image) {
+			if img.Reader != nil {
+				if err := copyImageToDir(dir, img); err != nil {
+					errs <- err
+				}
+			}
+			wg.Done()
+		}(img)
 	}
-	return img.Name
+	wg.Wait()
+	select {
+	case err := <-errs:
+		return err
+	default:
+		return nil
+	}
 }
 
-func transferToDir(dir string, img bootserver.Image) error {
-	filename := filepath.Join(dir, img.Name)
-	if filepath.IsAbs(getImageName(img)) {
-		log.Printf("img %s has path: %s\n", img.Name, getImageName(img))
-	} else {
-		tmp, err := os.Create(filename)
-		if err != nil {
-			return err
-		}
-		defer tmp.Close()
+func copyImageToDir(dir string, img *bootserver.Image) error {
+	dest := filepath.Join(dir, img.Name)
 
-		// Log progress to avoid hitting I/O timeout in case of slow transfers.
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
-		go func() {
-			for range ticker.C {
-				log.Printf("transferring %s...\n", img.Name)
-			}
-		}()
+	f, ok := img.Reader.(*os.File)
+	if ok {
+		return osmisc.CopyFile(f.Name(), dest)
+	}
 
-		if _, err := io.Copy(tmp, iomisc.ReaderAtToReader(img.Reader)); err != nil {
-			return err
+	f, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// Log progress to avoid hitting I/O timeout in case of slow transfers.
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	go func() {
+		for range ticker.C {
+			log.Printf("transferring %s...\n", img.Name)
 		}
+	}()
+
+	if _, err := io.Copy(f, iomisc.ReaderAtToReader(img.Reader)); err != nil {
+		return fmt.Errorf("failed to copy image %q to %q: %v", img.Name, dest, err)
 	}
 	return nil
 }
