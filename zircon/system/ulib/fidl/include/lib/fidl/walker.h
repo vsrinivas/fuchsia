@@ -209,9 +209,8 @@ class Walker final {
           vector_state.nullable = fidl_type->coded_vector.nullable;
           break;
         case kFidlTypePrimitive:
-          // Walker will never recurse into a primitive. Note: this branch must be
-          // implemented should we decide to support table-driven ToString in the future.
-          __builtin_unreachable();
+          state = kStatePrimitive;
+          break;
       }
     }
 
@@ -298,6 +297,7 @@ class Walker final {
       kStateString,
       kStateHandle,
       kStateVector,
+      kStatePrimitive,
 
       kStateDone,
     } state;
@@ -873,6 +873,11 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           // payload. So just continue.
           Pop();
         }
+        continue;
+      }
+      case Frame::kStatePrimitive: {
+        // Nothing to do for primitives.
+        Pop();
         continue;
       }
       case Frame::kStateDone: {

@@ -4,10 +4,11 @@
 
 #include <lib/fidl/coding.h>
 #include <stddef.h>
-#include <unittest/unittest.h>
 
 #include <limits>
 #include <memory>
+
+#include <unittest/unittest.h>
 
 #include "extra_messages.h"
 #include "fidl_coded_types.h"
@@ -1936,6 +1937,125 @@ bool validate_uint64_enum() {
   END_TEST;
 }
 
+bool validate_primitives_struct() {
+  BEGIN_TEST;
+
+  // The following coding table is equivalent to this FIDL struct definition:
+  //
+  // struct PrimitiveStruct {
+  //   bool b;
+  //   int8 i8;
+  //   int16 i16;
+  //   int32 i32;
+  //   int64 i64;
+  //   uint8 u8;
+  //   uint16 u16;
+  //   uint32 u32;
+  //   uint64 u64;
+  //   float32 f32;
+  //   float64 f64;
+  // };
+  static const fidl_type_t kBoolType = {.type_tag = kFidlTypePrimitive,
+                                        .coded_primitive = kFidlCodedPrimitive_Bool};
+  static const fidl_type_t kInt8Type = {.type_tag = kFidlTypePrimitive,
+                                        .coded_primitive = kFidlCodedPrimitive_Int8};
+  static const fidl_type_t kInt16Type = {.type_tag = kFidlTypePrimitive,
+                                         .coded_primitive = kFidlCodedPrimitive_Int16};
+  static const fidl_type_t kInt32Type = {.type_tag = kFidlTypePrimitive,
+                                         .coded_primitive = kFidlCodedPrimitive_Int32};
+  static const fidl_type_t kInt64Type = {.type_tag = kFidlTypePrimitive,
+                                         .coded_primitive = kFidlCodedPrimitive_Int64};
+  static const fidl_type_t kUint8Type = {.type_tag = kFidlTypePrimitive,
+                                         .coded_primitive = kFidlCodedPrimitive_Uint8};
+  static const fidl_type_t kUint16Type = {.type_tag = kFidlTypePrimitive,
+                                          .coded_primitive = kFidlCodedPrimitive_Uint16};
+  static const fidl_type_t kUint32Type = {.type_tag = kFidlTypePrimitive,
+                                          .coded_primitive = kFidlCodedPrimitive_Uint32};
+  static const fidl_type_t kUint64Type = {.type_tag = kFidlTypePrimitive,
+                                          .coded_primitive = kFidlCodedPrimitive_Uint64};
+  static const fidl_type_t kFloat32Type = {.type_tag = kFidlTypePrimitive,
+                                           .coded_primitive = kFidlCodedPrimitive_Float32};
+  static const fidl_type_t kFloat64Type = {.type_tag = kFidlTypePrimitive,
+                                           .coded_primitive = kFidlCodedPrimitive_Float64};
+  static const struct FidlStructField kFields[] = {
+      {
+          &kBoolType,
+          0u,
+          0u,
+      },
+      {
+          &kInt8Type,
+          1u,
+          0u,
+      },
+      {
+          &kInt16Type,
+          2u,
+          0u,
+      },
+      {
+          &kInt32Type,
+          4u,
+          0u,
+      },
+      {
+          &kInt64Type,
+          8u,
+          0u,
+      },
+      {
+          &kUint8Type,
+          16u,
+          1u,
+      },
+      {
+          &kUint16Type,
+          18u,
+          0u,
+      },
+      {
+          &kUint32Type,
+          20u,
+          0u,
+      },
+      {
+          &kUint64Type,
+          24u,
+          0u,
+      },
+      {
+          &kFloat32Type,
+          32u,
+          4u,
+      },
+      {
+          &kFloat64Type,
+          40u,
+          0u,
+      },
+  };
+  static const fidl_type_t kPrimitiveStructCodingTable = {
+      .type_tag = kFidlTypeStruct,
+      {.coded_struct = {.fields = kFields,
+                        .field_count = 11u,
+                        .size = 48u,
+                        .max_out_of_line = 0u,
+                        .contains_union = false,
+                        .name = "fidl.test.coding/PrimitiveStruct",
+                        .alt_type = &kPrimitiveStructCodingTable}}};
+
+  uint8_t data[kPrimitiveStructCodingTable.coded_struct.size];
+  memset(data, 0, sizeof(data));
+
+  const char* error = nullptr;
+  auto status = fidl_validate(&kPrimitiveStructCodingTable, data,
+                              static_cast<uint32_t>(sizeof(data)), 0, &error);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_NULL(error);
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(null_parameters)
 RUN_TEST(validate_null_validate_parameters)
 END_TEST_CASE(null_parameters)
@@ -2044,6 +2164,10 @@ RUN_TEST(validate_uint16_enum)
 RUN_TEST(validate_uint32_enum)
 RUN_TEST(validate_uint64_enum)
 END_TEST_CASE(enums)
+
+BEGIN_TEST_CASE(primitives)
+RUN_TEST(validate_primitives_struct)
+END_TEST_CASE(primitives)
 
 }  // namespace
 }  // namespace fidl
