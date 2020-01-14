@@ -37,7 +37,13 @@ zx_protocol_device_t IntelHDACodecDriverBase::CODEC_DEVICE_THUNKS = []() {
   zx_protocol_device_t ops = {};
   ops.version = DEVICE_OPS_VERSION;
   ops.release = [](void* ctx) { DEV(ctx)->DeviceRelease(); };
-  ops.suspend = [](void* ctx, uint32_t flags) -> zx_status_t { return DEV(ctx)->Suspend(flags); };
+  ops.suspend_new = [](void* ctx, uint8_t requested_state, bool enable_wake,
+                       uint8_t suspend_reason) {
+    uint8_t out_state;
+    zx_status_t status =
+        DEV(ctx)->Suspend(requested_state, enable_wake, suspend_reason, &out_state);
+    device_suspend_reply(DEV(ctx)->zxdev(), status, out_state);
+  };
   return ops;
 }();
 #undef DEV
@@ -113,7 +119,7 @@ Status IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* name) {
   args.flags = DEVICE_ADD_NON_BINDABLE;
 
   // Publish the device.
-  result = device_add(codec_dev, &args, nullptr);
+  result = device_add(codec_dev, &args, &zxdev_);
   if (result != ZX_OK) {
     LOG("Failed to add codec device for \"%s\" (result %d)\n", name, result);
 
@@ -158,7 +164,11 @@ void IntelHDACodecDriverBase::Shutdown() {
   DEBUG_LOG("Shutdown complete\n");
 }
 
-zx_status_t IntelHDACodecDriverBase::Suspend(uint32_t flags) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t IntelHDACodecDriverBase::Suspend(uint8_t requested_state, bool enable_wake,
+                                             uint8_t suspend_reason, uint8_t* out_state) {
+  *out_state = DEV_POWER_STATE_D0;
+  return ZX_ERR_NOT_SUPPORTED;
+}
 
 void IntelHDACodecDriverBase::DeviceRelease() {
   auto thiz = fbl::ImportFromRawPtr(this);

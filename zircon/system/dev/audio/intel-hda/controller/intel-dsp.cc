@@ -462,12 +462,15 @@ void IntelDsp::DeviceShutdown() {
   state_ = State::SHUT_DOWN;
 }
 
-zx_status_t IntelDsp::Suspend(uint32_t flags) {
-  switch (flags & DEVICE_SUSPEND_REASON_MASK) {
-    case DEVICE_SUSPEND_FLAG_POWEROFF:
+zx_status_t IntelDsp::Suspend(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
+                              uint8_t* out_state) {
+  switch (suspend_reason & DEVICE_MASK_SUSPEND_REASON) {
+    case DEVICE_SUSPEND_REASON_POWEROFF:
       DeviceShutdown();
+      *out_state = requested_state;
       return ZX_OK;
     default:
+      *out_state = DEV_POWER_STATE_D0;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }

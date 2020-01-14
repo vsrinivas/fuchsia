@@ -57,7 +57,8 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   Status PausePipeline(DspPipeline pipeline);
 
   void DeviceShutdown();
-  zx_status_t Suspend(uint32_t flags) override final;
+  zx_status_t Suspend(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
+               uint8_t* out_state) override final;
 
   // ZX_PROTOCOL_IHDA_CODEC Interface
   zx_status_t CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out);
