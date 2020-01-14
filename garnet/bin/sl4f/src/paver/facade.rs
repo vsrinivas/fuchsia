@@ -5,6 +5,7 @@
 use anyhow::{bail, Error};
 use fidl_fuchsia_paver::{PaverMarker, PaverProxy};
 use fuchsia_component::client::connect_to_service;
+use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::Status;
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use serde_derive::{Deserialize, Serialize};
@@ -59,6 +60,12 @@ impl PaverFacade {
             Ok(Ok(config)) => Ok(QueryActiveConfigurationResult::Success(config.into())),
             Ok(Err(err)) => bail!("unexpected failure status: {}", err),
             Err(fidl::Error::ClientChannelClosed(Status::NOT_SUPPORTED)) => {
+                Ok(QueryActiveConfigurationResult::NotSupported)
+            }
+            // FIXME(44102) The Rust fidl bindings don't seem to be handling epitaphs correctly, so
+            // also treat the channel closing as the device doesn't support ABR.
+            Err(fidl::Error::ClientChannelClosed(Status::PEER_CLOSED)) => {
+                fx_log_err!("channel to boot manager closed, assuming device does not support ABR");
                 Ok(QueryActiveConfigurationResult::NotSupported)
             }
             Err(err) => bail!("unexpected failure status: {}", err),
