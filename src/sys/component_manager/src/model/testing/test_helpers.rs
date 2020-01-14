@@ -388,6 +388,27 @@ where
     (entry, receiver)
 }
 
+pub fn new_test_model(
+    root_component: &'static str,
+    components: Vec<(&'static str, ComponentDecl)>,
+    runner: Arc<MockRunner>,
+) -> Model {
+    let mut resolver = ResolverRegistry::new();
+
+    let mut mock_resolver = MockResolver::new();
+    for (name, decl) in &components {
+        mock_resolver.add_component(name, decl.clone());
+    }
+    resolver.register("test".to_string(), Box::new(mock_resolver));
+
+    Model::new(ModelParams {
+        root_component_url: format!("test:///{}", root_component),
+        root_resolver_registry: resolver,
+        elf_runner: runner.clone(),
+        builtin_runners: vec![(TEST_RUNNER_NAME.into(), runner as _)].into_iter().collect(),
+    })
+}
+
 /// A test harness for tests that wish to register or verify actions.
 pub struct ActionsTest {
     pub model: Arc<Model>,
@@ -415,27 +436,13 @@ impl ActionsTest {
         // Ensure that kernel logging has been set up
         let _ = klog::KernelLogger::init();
 
-        let mut resolver = ResolverRegistry::new();
         let runner = Arc::new(MockRunner::new());
+        let model = Arc::new(new_test_model(root_component, components, runner.clone()));
 
-        let mut mock_resolver = MockResolver::new();
-        for (name, decl) in &components {
-            mock_resolver.add_component(name, decl.clone());
-        }
-        resolver.register("test".to_string(), Box::new(mock_resolver));
-
-        let args = Arguments { use_builtin_process_launcher: false, ..Default::default() };
-        let model = Arc::new(Model::new(ModelParams {
-            root_component_url: format!("test:///{}", root_component),
-            root_resolver_registry: resolver,
-            elf_runner: runner.clone(),
-            builtin_runners: vec![(TEST_RUNNER_NAME.into(), runner.clone() as _)]
-                .into_iter()
-                .collect(),
-        }));
         // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
         // to start and stop in a certain lifecycle ordering. In particular, some unit
         // tests will destroy component instances before binding to their parents.
+        let args = Arguments { use_builtin_process_launcher: false, ..Default::default() };
         let builtin_environment = Arc::new(
             BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default())
                 .await

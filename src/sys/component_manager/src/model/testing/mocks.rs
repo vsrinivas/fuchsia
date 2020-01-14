@@ -23,7 +23,7 @@ use {
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
         file::pcb::asynchronous::read_only_static, path::Path, pseudo_directory,
     },
-    fuchsia_zircon::{AsHandleRef, Koid},
+    fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{future::BoxFuture, lock::Mutex, prelude::*},
     std::{
         boxed::Box,
@@ -329,27 +329,65 @@ pub enum ControlMessage {
     Kill,
 }
 
+#[derive(Clone)]
+/// What the MockController should do when it receives a message.
+pub struct ControllerActionResponse {
+    pub close_channel: bool,
+    pub delay: Option<zx::Duration>,
+}
+
 pub struct MockController {
     pub messages: Arc<Mutex<HashMap<Koid, Vec<ControlMessage>>>>,
     request_stream: fsys::ComponentControllerRequestStream,
     koid: Koid,
+    stop_resp: ControllerActionResponse,
+    kill_resp: ControllerActionResponse,
 }
 
 impl MockController {
+    /// Create a `MockController` that listens to the `server_end` and inserts
+    /// `ControlMessage`'s into the Vec in the HashMap keyed under the provided
+    /// `Koid`. When either a request to stop or kill a component is received
+    /// the `MockController` will close the control channel immediately.
     pub fn new(
         server_end: ServerEnd<fsys::ComponentControllerMarker>,
         messages: Arc<Mutex<HashMap<Koid, Vec<ControlMessage>>>>,
         koid: Koid,
     ) -> MockController {
+        Self::new_with_responses(
+            server_end,
+            messages,
+            koid,
+            ControllerActionResponse { close_channel: true, delay: None },
+            ControllerActionResponse { close_channel: true, delay: None },
+        )
+    }
+
+    /// Create a MockController that listens to the `server_end` and inserts
+    /// `ControlMessage`'s into the Vec in the HashMap keyed under the provided
+    /// `Koid`. The `stop_response` controls the delay used before taking any
+    /// action on the control channel when a request to stop is received. The
+    /// `kill_respone` provides the same control when the a request to kill is
+    /// received.
+    pub fn new_with_responses(
+        server_end: ServerEnd<fsys::ComponentControllerMarker>,
+        messages: Arc<Mutex<HashMap<Koid, Vec<ControlMessage>>>>,
+        koid: Koid,
+        stop_response: ControllerActionResponse,
+        kill_response: ControllerActionResponse,
+    ) -> MockController {
         MockController {
             messages: messages,
             request_stream: server_end.into_stream().expect("stream conversion failed"),
             koid: koid,
+            stop_resp: stop_response,
+            kill_resp: kill_response,
         }
     }
     /// Spawn an async execution context which takes ownership of `server_end`
     /// and inserts `ControlMessage`s into `messages` based on events sent on
-    /// the `ComponentController` channel.
+    /// the `ComponentController` channel. This simply spawns a future which
+    /// awaits self.run().
     pub fn serve(mut self) {
         // Listen to the ComponentController server end and record the messages
         // that arrive. Exit after the first one, as this is the contract we
@@ -366,8 +404,19 @@ impl MockController {
                             .get_mut(&self.koid)
                             .expect("component channel koid key missing from mock runner map")
                             .push(ControlMessage::Stop);
-                        c.shutdown();
-                        break;
+                        if let Some(delay) = self.stop_resp.delay {
+                            let delay_copy = delay.clone();
+                            let close_channel = self.stop_resp.close_channel;
+                            fasync::spawn(async move {
+                                fasync::Timer::new(fasync::Time::after(delay_copy)).await;
+                                if close_channel {
+                                    c.shutdown();
+                                }
+                            });
+                        } else if self.stop_resp.close_channel {
+                            c.shutdown();
+                            break;
+                        }
                     }
                     fsys::ComponentControllerRequest::Kill { control_handle: c } => {
                         self.messages
@@ -376,8 +425,22 @@ impl MockController {
                             .get_mut(&self.koid)
                             .expect("component channel koid key missing from mock runner map")
                             .push(ControlMessage::Kill);
-                        c.shutdown();
-                        break;
+                        if let Some(delay) = self.kill_resp.delay {
+                            let delay_copy = delay.clone();
+                            let close_channel = self.kill_resp.close_channel;
+                            fasync::spawn(async move {
+                                fasync::Timer::new(fasync::Time::after(delay_copy)).await;
+                                if close_channel {
+                                    c.shutdown();
+                                }
+                            });
+                            if self.kill_resp.close_channel {
+                                break;
+                            }
+                        } else if self.kill_resp.close_channel {
+                            c.shutdown();
+                            break;
+                        }
                     }
                 }
             }
