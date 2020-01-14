@@ -9,7 +9,6 @@ group("interactive_minimal") {
   testonly = true
   public_deps = [
     "//garnet/packages/config:shortcut",
-    "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/products:graphical",
     "//src/fonts",
     "//src/ui/a11y",
