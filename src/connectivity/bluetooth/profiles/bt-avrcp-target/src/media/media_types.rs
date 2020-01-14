@@ -4,7 +4,7 @@
 
 use {
     fidl::encoding::Decodable as FidlDecodable,
-    fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, PlayStatus},
+    fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, MediaAttributes, PlayStatus},
     fidl_fuchsia_media::{self as fidl_media_types, Metadata, TimelineFunction},
     fidl_fuchsia_media_sessions2::{self as fidl_media},
     fidl_table_validation::ValidFidlTable,
@@ -274,26 +274,34 @@ impl From<ValidPlayerApplicationSettings> for fidl_avrcp::PlayerApplicationSetti
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Clone, Debug, Default, PartialEq, ValidFidlTable)]
+#[fidl_table_src(MediaAttributes)]
 pub struct MediaInfo {
-    title: String,
-    artist_name: String,
-    album_name: String,
-    track_number: String,
-    genre: String,
-    total_number_of_tracks: String,
-    playing_time: String,
+    #[fidl_field_type(optional)]
+    title: Option<String>,
+    #[fidl_field_type(optional)]
+    artist_name: Option<String>,
+    #[fidl_field_type(optional)]
+    album_name: Option<String>,
+    #[fidl_field_type(optional)]
+    track_number: Option<String>,
+    #[fidl_field_type(optional)]
+    genre: Option<String>,
+    #[fidl_field_type(optional)]
+    total_number_of_tracks: Option<String>,
+    #[fidl_field_type(optional)]
+    playing_time: Option<String>,
 }
 
 impl MediaInfo {
     pub fn new(
-        title: String,
-        artist_name: String,
-        album_name: String,
-        track_number: String,
-        genre: String,
-        total_number_of_tracks: String,
-        playing_time: String,
+        title: Option<String>,
+        artist_name: Option<String>,
+        album_name: Option<String>,
+        track_number: Option<String>,
+        genre: Option<String>,
+        total_number_of_tracks: Option<String>,
+        playing_time: Option<String>,
     ) -> Self {
         Self {
             title,
@@ -310,11 +318,11 @@ impl MediaInfo {
     /// Otherwise returns u64 MAX.
     /// The track ID value is defined in AVRCP 1.6.2 Section 6.7.2, Table 6.32.
     pub fn get_track_id(&self) -> u64 {
-        if !self.title.is_empty()
-            || !self.artist_name.is_empty()
-            || !self.album_name.is_empty()
-            || !self.track_number.is_empty()
-            || !self.genre.is_empty()
+        if self.title.is_some()
+            || self.artist_name.is_some()
+            || self.album_name.is_some()
+            || self.track_number.is_some()
+            || self.genre.is_some()
         {
             0
         } else {
@@ -325,7 +333,8 @@ impl MediaInfo {
     /// Updates information about currently playing media.
     /// If a metadata update is present, this implies the current media has changed.
     /// In the event that metadata is present, but duration is not, `playing_time`
-    /// will default to the empty string (""). See `update_playing_time()`.
+    /// will default to None. See `update_playing_time()`.
+    ///
     /// If no metadata is present, but a duration is present, update only `playing_time`.
     /// The rationale here is a use-case such as a live stream, where the playing time
     /// may be constantly changing, but stream metadata remains constant.
@@ -341,29 +350,28 @@ impl MediaInfo {
     }
 
     /// Take the duration of media, in nanos, and store as duration in millis as a string.
-    /// If no duration is present, default to empty string.
+    /// If no duration is present, `playing_time` will be set to None.
     fn update_playing_time(&mut self, duration: Option<i64>) {
-        self.playing_time =
-            duration.map_or("".to_string(), |d| time_nanos_to_millis(d).to_string());
+        self.playing_time = duration.map(|d| time_nanos_to_millis(d).to_string());
     }
 
     fn update_metadata(&mut self, metadata: Metadata) {
         for property in metadata.properties {
             match property.label.as_str() {
                 fidl_media_types::METADATA_LABEL_TITLE => {
-                    self.title = property.value;
+                    self.title = Some(property.value);
                 }
                 fidl_media_types::METADATA_LABEL_ARTIST => {
-                    self.artist_name = property.value;
+                    self.artist_name = Some(property.value);
                 }
                 fidl_media_types::METADATA_LABEL_ALBUM => {
-                    self.album_name = property.value;
+                    self.album_name = Some(property.value);
                 }
                 fidl_media_types::METADATA_LABEL_TRACK_NUMBER => {
-                    self.track_number = property.value;
+                    self.track_number = Some(property.value);
                 }
                 fidl_media_types::METADATA_LABEL_GENRE => {
-                    self.genre = property.value;
+                    self.genre = Some(property.value);
                 }
                 _ => {
                     fx_vlog!(tag: "avrcp-tg", 1, "Media metadata {:?} variant not supported.", property.label);
@@ -373,23 +381,7 @@ impl MediaInfo {
     }
 }
 
-impl From<MediaInfo> for fidl_avrcp::MediaAttributes {
-    fn from(src: MediaInfo) -> fidl_avrcp::MediaAttributes {
-        fidl_avrcp::MediaAttributes {
-            title: src.title,
-            artist_name: src.artist_name,
-            album_name: src.album_name,
-            track_number: src.track_number,
-            total_number_of_tracks: src.total_number_of_tracks,
-            genre: src.genre,
-            playing_time: src.playing_time,
-        }
-    }
-}
-
 #[derive(Clone, Debug, Default, PartialEq)]
-// TODO(41253): Changed to ValidFidlTable when ValidPlayerApplicationSettings
-// gets updated to support custom player application settings.
 pub(crate) struct Notification {
     pub status: Option<fidl_avrcp::PlaybackStatus>,
     pub track_id: Option<u64>,
@@ -465,7 +457,7 @@ mod tests {
         let duration = Some(12345678);
         let expected_duration = 12;
         info.update_playing_time(duration);
-        assert_eq!(expected_duration.to_string(), info.playing_time);
+        assert_eq!(Some(expected_duration.to_string()), info.playing_time);
         assert_eq!(std::u64::MAX, info.get_track_id());
     }
 
@@ -490,13 +482,13 @@ mod tests {
 
         metadata.properties = vec![property1, property2, property3];
         info.update_metadata(metadata);
-        assert_eq!(sample_title, info.title);
-        assert_eq!(sample_genre, info.genre);
+        assert_eq!(Some(sample_title), info.title);
+        assert_eq!(Some(sample_genre), info.genre);
         assert_eq!(0, info.get_track_id());
     }
 
     #[test]
-    /// Tests updating media_info with `metadata` but no `duration` defaults `duration` = "".
+    /// Tests updating media_info with `metadata` but no `duration` defaults `duration` = None.
     fn test_media_info_update_metadata_no_duration() {
         let mut info: MediaInfo = Default::default();
 
@@ -508,8 +500,8 @@ mod tests {
         metadata.properties = vec![property1];
 
         info.update_media_info(None, Some(metadata));
-        assert_eq!("".to_string(), info.playing_time);
-        assert_eq!(sample_title, info.title);
+        assert_eq!(None, info.playing_time);
+        assert_eq!(Some(sample_title), info.title);
         assert_eq!(0, info.get_track_id());
     }
 
@@ -533,16 +525,16 @@ mod tests {
 
         // Metadata should be preserved, except `playing_time`.
         info.update_media_info(None, None);
-        assert_eq!("".to_string(), info.playing_time);
-        assert_eq!(sample_title, info.title);
+        assert_eq!(None, info.playing_time);
+        assert_eq!(Some(sample_title.clone()), info.title);
 
         let info_fidl: fidl_avrcp::MediaAttributes = info.into();
-        assert_eq!(sample_title, info_fidl.title);
-        assert_eq!("".to_string(), info_fidl.artist_name);
-        assert_eq!("".to_string(), info_fidl.album_name);
-        assert_eq!("".to_string(), info_fidl.track_number);
-        assert_eq!("".to_string(), info_fidl.total_number_of_tracks);
-        assert_eq!("".to_string(), info_fidl.playing_time);
+        assert_eq!(Some(sample_title), info_fidl.title);
+        assert_eq!(None, info_fidl.artist_name);
+        assert_eq!(None, info_fidl.album_name);
+        assert_eq!(None, info_fidl.track_number);
+        assert_eq!(None, info_fidl.total_number_of_tracks);
+        assert_eq!(None, info_fidl.playing_time);
     }
 
     #[test]

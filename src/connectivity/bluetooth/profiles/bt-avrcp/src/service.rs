@@ -539,13 +539,13 @@ mod tests {
             }
             TargetHandlerRequest::GetMediaAttributes { responder } => {
                 let _ = responder.send(&mut Ok(MediaAttributes {
-                    title: "".to_string(),
-                    artist_name: "".to_string(),
-                    album_name: "".to_string(),
-                    track_number: "".to_string(),
-                    total_number_of_tracks: "".to_string(),
-                    genre: "".to_string(),
-                    playing_time: "".to_string(),
+                    title: Some("".to_string()),
+                    artist_name: Some("".to_string()),
+                    album_name: Some("".to_string()),
+                    track_number: Some("".to_string()),
+                    total_number_of_tracks: Some("".to_string()),
+                    genre: Some("".to_string()),
+                    playing_time: Some("".to_string()),
                 }))?;
             }
             TargetHandlerRequest::GetPlayStatus { responder } => {

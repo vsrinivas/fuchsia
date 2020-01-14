@@ -180,13 +180,13 @@ async fn send_get_media_attributes(target_proxy: TargetHandlerProxy) {
     let res = target_proxy.get_media_attributes().await.expect("FIDL call should work");
     assert_eq!(
         Ok(MediaAttributes {
-            title: "This is a sample title".to_string(),
-            artist_name: "".to_string(),
-            album_name: "".to_string(),
-            track_number: "".to_string(),
-            total_number_of_tracks: "".to_string(),
-            genre: "".to_string(),
-            playing_time: "123".to_string(),
+            title: Some("This is a sample title".to_string()),
+            artist_name: None,
+            album_name: None,
+            track_number: None,
+            total_number_of_tracks: None,
+            genre: None,
+            playing_time: Some("123".to_string()),
         }),
         res
     );

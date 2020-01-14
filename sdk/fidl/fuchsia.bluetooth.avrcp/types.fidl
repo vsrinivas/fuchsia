@@ -252,15 +252,26 @@ table PlayerApplicationSettings {
     5: vector<CustomPlayerApplicationSetting>:MAX_CUSTOM_ATTRIBUTES custom_settings;
 };
 
+/// The maximum length of an attribute value in the media attributes.
+/// Defined by AVRCP 1.6.2 Sec 6.6.1.
+const uint64 MAX_ATTRIBUTE_VALUE_LENGTH = 65535;
+
 /// Defined by AVRCP 1.6.2 Appendix E (media attributes).
-struct MediaAttributes {
-    string title;
-    string artist_name;
-    string album_name;
-    string track_number;
-    string total_number_of_tracks;
-    string genre;
-    string playing_time;
+table MediaAttributes {
+    /// The title, song name, or content description.
+    1: string:MAX_ATTRIBUTE_VALUE_LENGTH title;
+    /// The artist, performer, or group.
+    2: string:MAX_ATTRIBUTE_VALUE_LENGTH artist_name;
+    /// The title of the source of media.
+    3: string:MAX_ATTRIBUTE_VALUE_LENGTH album_name;
+    /// The order number of the media on its original recording.
+    4: string:MAX_ATTRIBUTE_VALUE_LENGTH track_number;
+    /// The total number of tracks in the media.
+    5: string:MAX_ATTRIBUTE_VALUE_LENGTH total_number_of_tracks;
+    /// The category of composition of the media,
+    6: string:MAX_ATTRIBUTE_VALUE_LENGTH genre;
+    /// The length of the media in milliseconds (ms).
+    7: string:MAX_ATTRIBUTE_VALUE_LENGTH playing_time;
     // TODO(BT-729): Add BIP cover art handle.
 };
 

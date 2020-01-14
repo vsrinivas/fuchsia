@@ -239,8 +239,8 @@ async fn update_attributes(
         .or_else(|e| Err(format_err!("AVRCP error: {:?}", e)))?;
     info_delta.metadata = Some(attributes_to_metadata(&attributes));
 
-    if !attributes.playing_time.is_empty() {
-        if let Ok(millis) = attributes.playing_time.parse::<i64>() {
+    if let Some(playing_time) = attributes.playing_time {
+        if let Ok(millis) = playing_time.parse::<i64>() {
             status.duration = Some(zx::Duration::from_millis(millis).into_nanos());
         }
     }
@@ -266,21 +266,25 @@ async fn update_status(
 
 macro_rules! nonempty_to_property {
     ( $source:expr, $prop_str:expr, $target:ident ) => {
-        if !($source).is_empty() {
-            $target.push(media::Property { label: $prop_str.to_string(), value: $source.clone() });
+        if let Some(value) = $source {
+            $target.push(media::Property { label: $prop_str.to_string(), value: value.clone() });
         }
     };
 }
 
 fn attributes_to_metadata(attributes: &avrcp::MediaAttributes) -> media::Metadata {
     let mut properties = Vec::new();
-    nonempty_to_property!(attributes.title, media::METADATA_LABEL_TITLE, properties);
-    nonempty_to_property!(attributes.artist_name, media::METADATA_LABEL_ARTIST, properties);
-    nonempty_to_property!(attributes.album_name, media::METADATA_LABEL_ALBUM, properties);
-    nonempty_to_property!(attributes.track_number, media::METADATA_LABEL_TRACK_NUMBER, properties);
-    nonempty_to_property!(attributes.total_number_of_tracks, "total_number_of_tracks", properties);
-    nonempty_to_property!(attributes.genre, media::METADATA_LABEL_GENRE, properties);
-    nonempty_to_property!(String::from("Bluetooth"), media::METADATA_SOURCE_TITLE, properties);
+    nonempty_to_property!(&attributes.title, media::METADATA_LABEL_TITLE, properties);
+    nonempty_to_property!(&attributes.artist_name, media::METADATA_LABEL_ARTIST, properties);
+    nonempty_to_property!(&attributes.album_name, media::METADATA_LABEL_ALBUM, properties);
+    nonempty_to_property!(&attributes.track_number, media::METADATA_LABEL_TRACK_NUMBER, properties);
+    nonempty_to_property!(&attributes.total_number_of_tracks, "total_number_of_tracks", properties);
+    nonempty_to_property!(&attributes.genre, media::METADATA_LABEL_GENRE, properties);
+    nonempty_to_property!(
+        &Some(String::from("Bluetooth")),
+        media::METADATA_SOURCE_TITLE,
+        properties
+    );
     media::Metadata { properties }
 }
 
@@ -346,13 +350,13 @@ mod tests {
         match exec.run_until_stalled(&mut controller_requests.next()) {
             Poll::Ready(Some(Ok(avrcp::ControllerRequest::GetMediaAttributes { responder }))) => {
                 responder.send(&mut Ok(avrcp::MediaAttributes {
-                    title: "Might Be Right".to_string(),
-                    artist_name: "White Reaper".to_string(),
-                    album_name: "You Deserve Love".to_string(),
-                    track_number: "7".to_string(),
-                    total_number_of_tracks: "10".to_string(),
-                    genre: "Alternative".to_string(),
-                    playing_time: "237000".to_string(),
+                    title: Some("Might Be Right".to_string()),
+                    artist_name: Some("White Reaper".to_string()),
+                    album_name: Some("You Deserve Love".to_string()),
+                    track_number: Some("7".to_string()),
+                    total_number_of_tracks: Some("10".to_string()),
+                    genre: Some("Alternative".to_string()),
+                    playing_time: Some("237000".to_string()),
                 }))
             }
             x => panic!("Expected a GetMediaAttributes request, got {:?}", x),
@@ -677,13 +681,13 @@ mod tests {
         match exec.run_until_stalled(&mut controller_request_stream.next()) {
             Poll::Ready(Some(Ok(avrcp::ControllerRequest::GetMediaAttributes { responder }))) => {
                 responder.send(&mut Ok(avrcp::MediaAttributes {
-                    title: "Moneygrabber".to_string(),
-                    artist_name: "Fitz and the Tantrums".to_string(),
-                    album_name: "Pickin' Up the Pieces".to_string(),
-                    track_number: "4".to_string(),
-                    total_number_of_tracks: "11".to_string(),
-                    genre: "Alternative".to_string(),
-                    playing_time: "189000".to_string(),
+                    title: Some("Moneygrabber".to_string()),
+                    artist_name: Some("Fitz and the Tantrums".to_string()),
+                    album_name: Some("Pickin' Up the Pieces".to_string()),
+                    track_number: Some("4".to_string()),
+                    total_number_of_tracks: Some("11".to_string()),
+                    genre: Some("Alternative".to_string()),
+                    playing_time: Some("189000".to_string()),
                 }))?;
             }
             x => panic!("Expected a GetMediaAttributes request, got {:?}", x),

@@ -375,15 +375,8 @@ pub(crate) mod tests {
             Some(fidl_avrcp::ShuffleMode::AllTrackShuffle),
             None,
         );
-        let expected_media_info = MediaInfo::new(
-            "".to_string(),
-            "".to_string(),
-            "".to_string(),
-            "".to_string(),
-            "".to_string(),
-            "".to_string(),
-            "123".to_string(),
-        );
+        let expected_media_info =
+            MediaInfo::new(None, None, None, None, None, None, Some("123".to_string()));
         assert_eq!(media_state.session_info().play_status, expected_play_status);
         assert_eq!(media_state.session_info().player_application_settings, expected_pas);
         assert_eq!(media_state.session_info().media_info, expected_media_info);
@@ -404,13 +397,13 @@ pub(crate) mod tests {
             None,
         );
         let expected_media_info = MediaInfo::new(
-            "This is a sample title".to_string(),
-            "".to_string(),
-            "".to_string(),
-            "".to_string(),
-            "".to_string(),
-            "".to_string(),
-            "123".to_string(),
+            Some("This is a sample title".to_string()),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some("123".to_string()),
         );
         assert_eq!(media_state.session_info().play_status, expected_play_status);
         assert_eq!(media_state.session_info().player_application_settings, expected_pas);

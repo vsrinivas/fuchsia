@@ -115,7 +115,7 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
          porta id velit et, egestas facilisis tellus.";
 
     // when zero, we exit the test.
-    let mut expected_commands = 0;
+    let mut expected_commands: i64 = 0;
 
     let (c_client, c_server): (PeerManagerProxy, PeerManagerRequestStream) =
         create_fidl_endpoints::<PeerManagerMarker>()?;
@@ -528,7 +528,8 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
             res = get_media_attributes_fut => {
                 expected_commands -= 1;
                 let media_attributes = res?.expect("unable to parse media attributes");
-                assert_eq!(media_attributes.genre, &LOREM_IPSUM[100..250]);
+                let expected = Some(String::from(&LOREM_IPSUM[100..250]));
+                assert_eq!(media_attributes.genre, expected);
             }
             res = get_play_status_fut => {
                 expected_commands -= 1;

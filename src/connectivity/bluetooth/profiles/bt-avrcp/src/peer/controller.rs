@@ -64,14 +64,13 @@ impl Controller {
         let response =
             GetElementAttributesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
         fx_vlog!(tag: "avrcp", 1, "get_media_attributes received response {:#?}", response);
-        media_attributes.title = response.title.unwrap_or("".to_string());
-        media_attributes.artist_name = response.artist_name.unwrap_or("".to_string());
-        media_attributes.album_name = response.album_name.unwrap_or("".to_string());
-        media_attributes.track_number = response.track_number.unwrap_or("".to_string());
-        media_attributes.total_number_of_tracks =
-            response.total_number_of_tracks.unwrap_or("".to_string());
-        media_attributes.genre = response.genre.unwrap_or("".to_string());
-        media_attributes.playing_time = response.playing_time.unwrap_or("".to_string());
+        media_attributes.title = response.title;
+        media_attributes.artist_name = response.artist_name;
+        media_attributes.album_name = response.album_name;
+        media_attributes.track_number = response.track_number;
+        media_attributes.total_number_of_tracks = response.total_number_of_tracks;
+        media_attributes.genre = response.genre;
+        media_attributes.playing_time = response.playing_time;
         Ok(media_attributes)
     }
 
