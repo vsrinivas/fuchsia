@@ -21,6 +21,8 @@ void operator delete[](void* p, size_t s) { free(p); }
 
 void operator delete(void* p, std::align_val_t align) { free(p); }
 
+void operator delete[](void* p, std::align_val_t align) { free(p); }
+
 void operator delete(void* p, std::size_t s, std::align_val_t align) { free(p); }
 
 // These are the mangled names of all the functions above.  Because these
@@ -33,4 +35,5 @@ asm(".hidden _ZdaPvm");
 asm(".hidden _ZdlPv");
 asm(".hidden _ZdlPvm");
 asm(".hidden _ZdlPvSt11align_val_t");
+asm(".hidden _ZdaPvSt11align_val_t");
 asm(".hidden _ZdlPvmSt11align_val_t");
