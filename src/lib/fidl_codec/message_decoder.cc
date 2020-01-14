@@ -113,68 +113,70 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
   }
 
   if (matched_request_ && (is_request_ || (direction_ == Direction::kUnknown))) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << colors.white_on_magenta
-       << message_direction_ << "request" << colors.reset << ' ' << colors.green
-       << method_->enclosing_interface().name() << '.' << method_->name() << colors.reset << " = ";
+    PrettyPrinter printer(os, colors, line_header, columns, tabs);
+    printer << WhiteOnMagenta << message_direction_ << "request" << ResetColor << ' ' << Green
+            << method_->enclosing_interface().name() << '.' << method_->name() << ResetColor
+            << " = ";
     if (pretty_print) {
-      decoded_request_->PrettyPrint(nullptr, os, colors, header_, line_header, tabs,
-                                    tabs * kTabSize, columns);
+      decoded_request_->PrettyPrint(nullptr, printer);
+      printer << '\n';
     } else {
       rapidjson::Document actual_request;
       if (decoded_request_ != nullptr) {
         decoded_request_->ExtractJson(actual_request.GetAllocator(), actual_request);
       }
-      os << DocumentToString(&actual_request);
+      os << DocumentToString(&actual_request) << '\n';
     }
-    os << '\n';
   }
   if (matched_response_ && (!is_request_ || (direction_ == Direction::kUnknown))) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << colors.white_on_magenta
-       << message_direction_ << "response" << colors.reset << ' ' << colors.green
-       << method_->enclosing_interface().name() << '.' << method_->name() << colors.reset << " = ";
+    PrettyPrinter printer(os, colors, line_header, columns, tabs);
+    printer << WhiteOnMagenta << message_direction_ << "response" << ResetColor << ' ' << Green
+            << method_->enclosing_interface().name() << '.' << method_->name() << ResetColor
+            << " = ";
     if (pretty_print) {
-      decoded_response_->PrettyPrint(nullptr, os, colors, header_, line_header, tabs,
-                                     tabs * kTabSize, columns);
+      decoded_response_->PrettyPrint(nullptr, printer);
+      printer << '\n';
     } else {
       rapidjson::Document actual_response;
       if (decoded_response_ != nullptr) {
         decoded_response_->ExtractJson(actual_response.GetAllocator(), actual_response);
       }
-      os << DocumentToString(&actual_response);
+      os << DocumentToString(&actual_response) << '\n';
     }
-    os << '\n';
   }
   if (matched_request_ || matched_response_) {
     return true;
   }
   std::string request_errors = request_error_stream_.str();
   if (!request_errors.empty()) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << colors.red << message_direction_
-       << "request errors" << colors.reset << ":\n"
-       << request_errors;
+    PrettyPrinter printer(os, colors, line_header, columns, tabs);
+    printer << Red << message_direction_ << "request errors" << ResetColor << ":\n";
+    {
+      Indent indent(printer);
+      printer << request_errors;
+    }
     if (decoded_request_ != nullptr) {
-      os << line_header << std::string(tabs * kTabSize, ' ') << colors.white_on_magenta
-         << message_direction_ << "request" << colors.reset << ' ' << colors.green
-         << method_->enclosing_interface().name() << '.' << method_->name() << colors.reset
-         << " = ";
-      decoded_request_->PrettyPrint(nullptr, os, colors, header_, line_header, tabs,
-                                    tabs * kTabSize, columns);
-      os << '\n';
+      printer << WhiteOnMagenta << message_direction_ << "request" << ResetColor << ' ' << Green
+              << method_->enclosing_interface().name() << '.' << method_->name() << ResetColor
+              << " = ";
+      decoded_request_->PrettyPrint(nullptr, printer);
+      printer << '\n';
     }
   }
   std::string response_errors = response_error_stream_.str();
   if (!response_errors.empty()) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << colors.red << message_direction_
-       << "response errors" << colors.reset << ":\n"
-       << response_errors;
+    PrettyPrinter printer(os, colors, line_header, columns, tabs);
+    printer << Red << message_direction_ << "response errors" << colors.reset << ":\n";
+    {
+      Indent indent(printer);
+      printer << response_errors;
+    }
     if (decoded_response_ != nullptr) {
-      os << line_header << std::string(tabs * kTabSize, ' ') << colors.white_on_magenta
-         << message_direction_ << "request" << colors.reset << ' ' << colors.green
-         << method_->enclosing_interface().name() << '.' << method_->name() << colors.reset
-         << " = ";
-      decoded_response_->PrettyPrint(nullptr, os, colors, header_, line_header, tabs,
-                                     tabs * kTabSize, columns);
-      os << '\n';
+      printer << WhiteOnMagenta << message_direction_ << "response" << ResetColor << ' ' << Green
+              << method_->enclosing_interface().name() << '.' << method_->name() << ResetColor
+              << " = ";
+      decoded_response_->PrettyPrint(nullptr, printer);
+      printer << '\n';
     }
   }
   return false;

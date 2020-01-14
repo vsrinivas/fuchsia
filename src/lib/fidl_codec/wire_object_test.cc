@@ -33,7 +33,8 @@ class WireObjectTest : public ::testing::Test {
   void TestPrintObject(const Value& value, const char* pretty_print, const char* json) {
     // Checks that we can pretty print an object (or a value).
     std::stringstream result;
-    value.PrettyPrint(nullptr, result, FakeColors, nullptr, "", 0, 100, 100);
+    PrettyPrinter printer(result, FakeColors, "", 100);
+    value.PrettyPrint(nullptr, printer);
     ASSERT_EQ(result.str(), pretty_print)
         << "expected = " << pretty_print << " actual = " << result.str();
 

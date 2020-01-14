@@ -88,7 +88,7 @@ TEST_F(DispatcherTest, TwoStringArrayIntIncorrect) {
       output.str(),
       "    Can't decode message.\n"
       "      sent request errors:\n"
-      "40: Not enough data to decode (needs 8, remains 7)\n"
+      "        40: Not enough data to decode (needs 8, remains 7)\n"
       "      sent request test.fidlcodec.examples/FidlCodecTestInterface.TwoStringArrayInt = {\n"
       "        arr: array<string> = [ \"harpo\", \"chico\" ]\n"
       "        i32: int32 = 1\n"

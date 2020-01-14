@@ -7,7 +7,7 @@
 #include <ios>
 #include <ostream>
 
-#include "src/lib/fidl_codec/colors.h"
+#include "src/lib/fidl_codec/printer.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
 
 namespace fidlcat {

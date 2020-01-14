@@ -14,7 +14,7 @@
 #include <string_view>
 #include <vector>
 
-#include "src/lib/fidl_codec/colors.h"
+#include "src/lib/fidl_codec/printer.h"
 
 namespace fidlcat {
 

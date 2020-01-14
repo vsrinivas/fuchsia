@@ -11,7 +11,6 @@ static_library("fidl_codec") {
   friend = [ ":tests" ]
 
   public = [
-    "colors.h",
     "display_handle.h",
     "display_options.h",
     "encoder.h",
@@ -19,6 +18,7 @@ static_library("fidl_codec") {
     "library_loader.h",
     "memory_helpers.h",
     "message_decoder.h",
+    "printer.h",
     "type_visitor.h",
     "visitor.h",
     "wire_object.h",
@@ -31,6 +31,7 @@ static_library("fidl_codec") {
     "encoder.cc",
     "library_loader.cc",
     "message_decoder.cc",
+    "printer.cc",
     "wire_object.cc",
     "wire_parser.cc",
     "wire_types.cc",

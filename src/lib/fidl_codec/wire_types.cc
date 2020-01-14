@@ -184,10 +184,8 @@ std::string Type::ToString(bool expand) const {
   return ret;
 }
 
-void Type::PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
-                       const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                       int remaining_size, int max_line_size) const {
-  os << colors.red << "invalid" << colors.reset;
+void Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
+  printer << Red << "invalid" << ResetColor;
 }
 
 std::string RawType::Name() const { return "unknown"; }
@@ -324,15 +322,13 @@ std::unique_ptr<Value> EnumType::Decode(MessageDecoder* decoder, uint64_t offset
   return enum_definition_.type()->Decode(decoder, offset);
 }
 
-void EnumType::PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
-                           const fidl_message_header_t* header, std::string_view line_header,
-                           int tabs, int remaining_size, int max_line_size) const {
+void EnumType::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   uint64_t absolute;
   bool negative;
   if (!value->GetIntegerValue(&absolute, &negative)) {
-    os << colors.red << "invalid" << colors.reset;
+    printer << Red << "invalid" << ResetColor;
   } else {
-    os << colors.blue << enum_definition_.GetName(absolute, negative) << colors.reset;
+    printer << Blue << enum_definition_.GetName(absolute, negative) << ResetColor;
   }
 }
 
@@ -345,15 +341,14 @@ size_t BitsType::InlineSize(bool unions_are_xunions) const { return bits_definit
 std::unique_ptr<Value> BitsType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   return bits_definition_.type()->Decode(decoder, offset);
 }
-void BitsType::PrettyPrint(const Value* value, std::ostream& os, const Colors& colors,
-                           const fidl_message_header_t* header, std::string_view line_header,
-                           int tabs, int remaining_size, int max_line_size) const {
+
+void BitsType::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   uint64_t absolute;
   bool negative;
   if (!value->GetIntegerValue(&absolute, &negative)) {
-    os << colors.red << "invalid" << colors.reset;
+    printer << Red << "invalid" << ResetColor;
   } else {
-    os << colors.blue << bits_definition_.GetName(absolute, negative) << colors.reset;
+    printer << Blue << bits_definition_.GetName(absolute, negative) << ResetColor;
   }
 }
 

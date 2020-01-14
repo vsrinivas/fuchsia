@@ -14,10 +14,10 @@
 
 #include "lib/fidl/cpp/message.h"
 #include "lib/fidl/txn_header.h"
-#include "src/lib/fidl_codec/colors.h"
 #include "src/lib/fidl_codec/display_options.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/memory_helpers.h"
+#include "src/lib/fidl_codec/printer.h"
 #include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
@@ -29,11 +29,6 @@ class Type;
 class Value;
 
 enum class Direction { kUnknown, kClient, kServer };
-
-constexpr int kTabSize = 2;
-
-extern const Colors WithoutColors;
-extern const Colors WithColors;
 
 enum class SyscallFidlType {
   kOutputMessage,  // A message (request or response which is written).

@@ -9,7 +9,7 @@
 
 #include <ostream>
 
-#include "src/lib/fidl_codec/colors.h"
+#include "src/lib/fidl_codec/printer.h"
 #include "zircon/system/public/zircon/syscalls/debug.h"
 
 namespace fidl_codec {

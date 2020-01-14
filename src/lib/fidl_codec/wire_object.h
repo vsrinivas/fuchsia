@@ -51,9 +51,7 @@ class Value {
   virtual int DisplaySize(const Type* for_type, int remaining_size) const = 0;
 
   // Pretty print of the value.
-  virtual void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                           const fidl_message_header_t* header, std::string_view line_header,
-                           int tabs, int remaining_size, int max_line_size) const = 0;
+  virtual void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const = 0;
 
   // Use a visitor on this value;
   virtual void Visit(Visitor* visitor, const Type* for_type) const = 0;
@@ -70,10 +68,8 @@ class InvalidValue : public Value {
     return kInvalidSize;  // length of "invalid"
   }
 
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override {
-    os << colors.red << "invalid" << colors.reset;
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override {
+    printer << Red << "invalid" << ResetColor;
   }
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
@@ -91,10 +87,8 @@ class NullValue : public Value {
     return kNullSize;  // length of "null"
   }
 
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override {
-    os << colors.red << "null" << colors.reset;
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override {
+    printer << Red << "null" << ResetColor;
   }
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
@@ -109,9 +103,7 @@ class RawValue : public Value {
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
@@ -128,9 +120,7 @@ class BoolValue : public Value {
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
@@ -164,9 +154,7 @@ class IntegerValue : public Value {
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
@@ -199,9 +187,7 @@ class DoubleValue : public Value {
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
@@ -218,9 +204,7 @@ class StringValue : public Value {
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
@@ -237,9 +221,7 @@ class HandleValue : public Value {
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
@@ -258,9 +240,7 @@ class UnionValue : public Value {
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
@@ -283,9 +263,7 @@ class StructValue : public Value {
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
@@ -322,9 +300,7 @@ class VectorValue : public Value {
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
@@ -354,9 +330,7 @@ class TableValue : public Value {
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
-  void PrettyPrint(const Type* for_type, std::ostream& os, const Colors& colors,
-                   const fidl_message_header_t* header, std::string_view line_header, int tabs,
-                   int remaining_size, int max_line_size) const override;
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
