@@ -147,18 +147,17 @@ impl ScopedBreakpointSystem {
         self.registry.set_breakpoints(self.scope_moniker.clone(), events.clone()).await
     }
 
-    /// Serves a `BreakpointSystem` FIDL protocol. `wait_for_root` indicates whether or not
-    /// this `ScopedBreakpointSystem` should set a `ResolveInstance` breakpoint. This is only
+    /// Serves a `BreakpointSystem` FIDL protocol. `root_instance_resolved_receiver`
+    /// is an optional reciever corresponding to a `ResolveInstance` breakpoint. This is only
     /// relevant for the root `ScopedBreakpointSystem`. The `ResolveInstance` breakpoint on the
     /// root component permits integration tests to install additional breakpoints before
     /// the root component starts to avoid races.
-    pub fn serve_async(self, stream: fbreak::BreakpointSystemRequestStream, wait_for_root: bool) {
+    pub fn serve_async(
+        self,
+        stream: fbreak::BreakpointSystemRequestStream,
+        root_instance_resolved_receiver: Option<InvocationReceiver>,
+    ) {
         fasync::spawn(async move {
-            let root_instance_resolved_receiver = if self.scope_moniker.is_root() && wait_for_root {
-                Some(self.set_breakpoints(vec![EventType::ResolveInstance]).await)
-            } else {
-                None
-            };
             serve_system(self, stream, root_instance_resolved_receiver).await;
         });
     }
@@ -181,7 +180,7 @@ impl CapabilityProvider for ScopedBreakpointSystem {
         let stream = ServerEnd::<fbreak::BreakpointSystemMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
-        self.serve_async(stream, false);
+        self.serve_async(stream, None);
         Ok(())
     }
 }

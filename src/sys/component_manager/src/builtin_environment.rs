@@ -9,6 +9,7 @@ use {
             binding::Binder,
             breakpoints::core::BreakpointSystem,
             error::ModelError,
+            hooks::EventType,
             hub::Hub,
             model::{ComponentManagerConfig, Model},
             moniker::AbsoluteMoniker,
@@ -187,13 +188,13 @@ impl BuiltinEnvironment {
             // other breakpoints before starting the root component. However, this is only
             // relevant to the first requester of the breakpoint system and so this flag
             // is reset after the first request.
-            let mut wait_for_root = true;
             let system = breakpoint_system.create_scope(AbsoluteMoniker::root());
+            let mut root_instance_resolved_receiver =
+                Some(system.set_breakpoints(vec![EventType::ResolveInstance]).await);
 
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let system = system.clone();
-                system.serve_async(stream, wait_for_root);
-                wait_for_root = false;
+                system.serve_async(stream, root_instance_resolved_receiver.take());
             });
         }
 
