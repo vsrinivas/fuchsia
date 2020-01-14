@@ -4,9 +4,16 @@
 
 use {
     crate::{
-        builtin_capability::BuiltinCapability,
+        builtin::{
+            capability::BuiltinCapability,
+            log::{ReadOnlyLog, WriteOnlyLog},
+            process_launcher::ProcessLauncher,
+            root_job::{RootJob, ROOT_JOB_CAPABILITY_PATH, ROOT_JOB_FOR_INSPECT_CAPABILITY_PATH},
+            root_resource::RootResource,
+            system_controller::SystemController,
+            vmex::VmexService,
+        },
         framework::RealmCapabilityHost,
-        log::{ReadOnlyLog, WriteOnlyLog},
         model::{
             binding::Binder,
             breakpoints::core::BreakpointSystem,
@@ -16,14 +23,9 @@ use {
             model::{ComponentManagerConfig, Model},
             moniker::AbsoluteMoniker,
         },
-        process_launcher::ProcessLauncher,
-        root_job::{RootJob, ROOT_JOB_CAPABILITY_PATH, ROOT_JOB_FOR_INSPECT_CAPABILITY_PATH},
         root_realm_stop_notifier::RootRealmStopNotifier,
-        root_resource::RootResource,
         runner::BuiltinRunner,
         startup::Arguments,
-        system_controller::SystemController,
-        vmex::VmexService,
         work_scheduler::WorkScheduler,
     },
     cm_rust::CapabilityName,
@@ -50,6 +52,7 @@ use {
 /// * If [Arguments::use_builtin_vmex] is true, a fuchsia.security.resource.Vmex service is
 ///   available.
 pub struct BuiltinEnvironment {
+    // Framework capabilities.
     pub process_launcher: Option<Arc<ProcessLauncher>>,
     pub root_job: Arc<RootJob>,
     pub root_job_for_inspect: Arc<RootJob>,

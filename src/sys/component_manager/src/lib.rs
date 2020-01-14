@@ -19,14 +19,8 @@ pub(crate) mod fuchsia_base_pkg_resolver;
 pub(crate) mod fuchsia_boot_resolver;
 pub(crate) mod fuchsia_pkg_resolver;
 pub(crate) mod root_realm_stop_notifier;
-pub(crate) mod system_controller;
 pub(crate) mod work_scheduler;
 
-mod builtin_capability;
+mod builtin;
 mod constants;
-mod log;
-mod process_launcher;
-mod root_job;
-mod root_resource;
 mod runner;
-mod vmex;

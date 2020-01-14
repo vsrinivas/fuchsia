@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        builtin_capability::{BuiltinCapability, BuiltinCapabilityProvider},
+        builtin::capability::{BuiltinCapability, BuiltinCapabilityProvider},
         capability::*,
         model::{
             error::ModelError,

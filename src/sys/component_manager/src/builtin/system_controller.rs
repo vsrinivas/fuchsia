@@ -171,7 +171,7 @@ impl CapabilityProvider for SystemControllerCapabilityProvider {
 #[cfg(test)]
 mod tests {
     use {
-        crate::capability::CapabilityProvider,
+        super::*,
         crate::model::{
             binding::Binder,
             testing::test_helpers::{
@@ -179,7 +179,6 @@ mod tests {
                 TEST_RUNNER_NAME,
             },
         },
-        crate::system_controller::SystemControllerCapabilityProvider,
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
     };
