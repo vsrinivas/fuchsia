@@ -117,9 +117,8 @@ void AudioOutput::SetupMixTask(const Format& format, size_t max_block_size_frame
         format, max_block_size_frames, device_reference_clock_to_output_frame);
   } else {
     auto default_config = PipelineConfig::Default();
-    pipeline_ =
-        std::make_unique<OutputPipeline>(default_config, format, max_block_size_frames,
-                                         device_reference_clock_to_output_frame);
+    pipeline_ = std::make_unique<OutputPipeline>(default_config, format, max_block_size_frames,
+                                                 device_reference_clock_to_output_frame);
   }
 }
 

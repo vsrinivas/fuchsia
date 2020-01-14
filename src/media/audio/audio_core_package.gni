@@ -23,22 +23,14 @@ template("audio_core_package") {
   package_name = target_name
   config_data("${target_name}_default_audio_policy") {
     for_pkg = package_name
-    sources = [
-      rebase_path(
-          "//src/media/audio/audio_core/settings/default/audio_policy.json"),
-    ]
-    outputs = [
-      "settings/default/audio_policy.json",
-    ]
+    sources = [ rebase_path(
+            "//src/media/audio/audio_core/settings/default/audio_policy.json") ]
+    outputs = [ "settings/default/audio_policy.json" ]
   }
 
   package(target_name) {
-    deps = [
-      "//src/media/audio/audio_core:audio_core_bin",
-    ]
-    data_deps = [
-      ":${target_name}_default_audio_policy",
-    ]
+    deps = [ "//src/media/audio/audio_core:audio_core_bin" ]
+    data_deps = [ ":${target_name}_default_audio_policy" ]
     if (defined(invoker.effects)) {
       forward_variables_from(invoker, [ "effects" ])
       assert(defined(effects.target))
