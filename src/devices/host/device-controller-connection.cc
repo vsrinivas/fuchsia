@@ -64,6 +64,9 @@ void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync 
   ZX_ASSERT(this->dev()->suspend_cb == nullptr);
   this->dev()->suspend_cb = [completer = completer.ToAsync()](zx_status_t status,
                                                               uint8_t out_state) mutable {
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+      status = ZX_OK;
+    }
     completer.Reply(status);
   };
   ApiAutoLock lock;

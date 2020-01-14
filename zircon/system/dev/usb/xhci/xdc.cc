@@ -2,22 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "xdc.h"
+
 #include <assert.h>
-#include <ddk/debug.h>
 #include <fuchsia/usb/debug/c/fidl.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/hw/usb.h>
+
+#include <ddk/debug.h>
+#include <fbl/alloc_checker.h>
 #include <xdc-server-utils/msg.h>
 #include <xdc-server-utils/stream.h>
-#include <zircon/hw/usb.h>
 
 #include "trb-sizes.h"
 #include "xdc-transfer.h"
-#include "xdc.h"
 #include "xhci-hw.h"
 #include "xhci-util.h"
-#include <fbl/alloc_checker.h>
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -683,15 +685,16 @@ static void xdc_free(xdc_t* xdc) {
   delete xdc;
 }
 
-static zx_status_t xdc_suspend(void* ctx, uint32_t flags) {
-  zxlogf(TRACE, "xdc_suspend %u\n", flags);
+static void xdc_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
+                        uint8_t suspend_reason) {
+  zxlogf(TRACE, "xdc_suspend %u\n", suspend_reason);
   auto* xdc = static_cast<xdc_t*>(ctx);
 
   // TODO(jocelyndang) do different things based on the flags.
   // For now we shutdown the driver in preparation for mexec.
   xdc_shutdown(xdc);
 
-  return ZX_OK;
+  device_suspend_reply(xdc->zxdev, ZX_OK, requested_state);
 }
 
 static void xdc_unbind(void* ctx) {
@@ -941,7 +944,7 @@ out:
 static zx_protocol_device_t xdc_device_ops = []() {
   zx_protocol_device_t device = {};
   device.version = DEVICE_OPS_VERSION;
-  device.open = xdc_open, device.suspend = xdc_suspend, device.unbind = xdc_unbind,
+  device.open = xdc_open, device.suspend_new = xdc_suspend, device.unbind = xdc_unbind,
   device.release = xdc_release;
   return device;
 }();

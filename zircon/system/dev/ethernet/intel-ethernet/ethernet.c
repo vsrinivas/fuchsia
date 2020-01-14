@@ -167,7 +167,8 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
     .set_param = eth_set_param,
 };
 
-static zx_status_t eth_suspend(void* ctx, uint32_t flags) {
+static void eth_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
+                        uint8_t suspend_reason) {
   ethernet_device_t* edev = ctx;
   mtx_lock(&edev->lock);
   edev->state = ETH_SUSPENDING;
@@ -193,7 +194,7 @@ tx_done:
   eth_disable_phy(&edev->eth);
   edev->state = ETH_SUSPENDED;
   mtx_unlock(&edev->lock);
-  return ZX_OK;
+  device_suspend_reply(edev->zxdev, ZX_OK, requested_state);
 }
 
 static zx_status_t eth_resume(void* ctx, uint32_t flags) {
@@ -222,7 +223,7 @@ static void eth_release(void* ctx) {
 
 static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .suspend = eth_suspend,
+    .suspend_new = eth_suspend,
     .resume = eth_resume,
     .release = eth_release,
 };
