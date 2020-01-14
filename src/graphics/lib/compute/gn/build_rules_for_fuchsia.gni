@@ -188,9 +188,7 @@ template("graphics_compute_single_component_package") {
 
   action(_component_manifest_target) {
     script = "${graphics_compute_dir}/scripts/generate_component_manifest.py"
-    outputs = [
-      _component_manifest,
-    ]
+    outputs = [ _component_manifest ]
     args = [
       "--name",
       _component_name,

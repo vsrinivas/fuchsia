@@ -131,9 +131,7 @@ template("graphics_compute_compile_glsl_shader_foreach") {
                                "public_deps",
                                "sources",
                              ])
-      outputs = [
-        "${_output_dir}/debug/{{source_name_part}}.glsl",
-      ]
+      outputs = [ "${_output_dir}/debug/{{source_name_part}}.glsl" ]
     }
   } else {
     # Make GN quiet about this variable.
@@ -150,9 +148,7 @@ template("graphics_compute_compile_glsl_shader_foreach") {
                              "sources",
                            ])
     tool = graphics_compute_glslangValidator_tool_target
-    outputs = [
-      "${_output_dir}/spv/{{source_name_part}}.spv",
-    ]
+    outputs = [ "${_output_dir}/spv/{{source_name_part}}.spv" ]
     if (graphics_compute_verbose_compile) {
       args = []
     } else {
@@ -187,18 +183,14 @@ template("graphics_compute_compile_glsl_shader_foreach") {
   compiled_action_foreach(_gen_opt_target_name) {
     tool = "//third_party/spirv-tools:spirv-opt"
     sources = get_target_outputs(":${_gen_spv_target_name}")
-    outputs = [
-      "${_output_dir}/opt/{{source_name_part}}.spv",
-    ]
+    outputs = [ "${_output_dir}/opt/{{source_name_part}}.spv" ]
     args = [
       "-O",
       "{{source}}",
       "-o",
       rebase_path(outputs[0], root_build_dir),
     ]
-    deps = [
-      ":${_gen_spv_target_name}",
-    ]
+    deps = [ ":${_gen_spv_target_name}" ]
   }
 
   #
@@ -213,18 +205,12 @@ template("graphics_compute_compile_glsl_shader_foreach") {
     tool = "//third_party/glslang:spirv-remap"
     if (graphics_compute_skip_spirv_opt) {
       sources = get_target_outputs(":${_gen_spv_target_name}")
-      deps = [
-        ":${_gen_spv_target_name}",
-      ]
+      deps = [ ":${_gen_spv_target_name}" ]
     } else {
       sources = get_target_outputs(":${_gen_opt_target_name}")
-      deps = [
-        ":${_gen_opt_target_name}",
-      ]
+      deps = [ ":${_gen_opt_target_name}" ]
     }
-    outputs = [
-      "${_output_dir}/remap/{{source_name_part}}.spv",
-    ]
+    outputs = [ "${_output_dir}/remap/{{source_name_part}}.spv" ]
     args = [
       "--do-everything",
       "--input",
