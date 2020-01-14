@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+import 'package:internationalization/strings.dart';
 import '../blocs/tabs_bloc.dart';
 import '../blocs/webpage_bloc.dart';
 import '../models/tabs_action.dart';
@@ -11,7 +12,23 @@ const _kTabBarHeight = 24.0;
 const _kMinTabWidth = 120.0;
 const _kSeparatorWidth = 1.0;
 const _kTabPadding = EdgeInsets.symmetric(horizontal: _kTabBarHeight);
-const _kScrollToMargin = _kMinTabWidth * 0.333;
+const _kScrollToMargin = _kMinTabWidth / 3;
+const _kCloseMark = '×';
+
+@visibleForTesting
+double get kTabBarHeight => _kTabBarHeight;
+
+@visibleForTesting
+double get kMinTabWidth => _kMinTabWidth;
+
+@visibleForTesting
+double get kSeparatorWidth => _kSeparatorWidth;
+
+@visibleForTesting
+double get kScrollToMargin => _kScrollToMargin;
+
+@visibleForTesting
+String get kCloseMark => _kCloseMark;
 
 class TabsWidget extends StatefulWidget {
   final TabsBloc bloc;
@@ -53,7 +70,7 @@ class _TabsWidgetState extends State<TabsWidget> {
   void _onCurrentTabChanged() {
     if (_scrollController.hasClients) {
       final viewportWidth = _scrollController.position.viewportDimension;
-      final currentTabIndex = widget.bloc.tabs.indexOf(widget.bloc.currentTab);
+      final currentTabIndex = widget.bloc.currentTabIdx;
       final currentTabPosition =
           currentTabIndex * (_kMinTabWidth + _kSeparatorWidth);
 
@@ -166,7 +183,7 @@ class _TabWidgetState extends State<_TabWidget> {
                     child: AnimatedBuilder(
                       animation: widget.bloc.pageTitleNotifier,
                       builder: (_, __) => Text(
-                        widget.bloc.pageTitle ?? 'NEW TAB',
+                        widget.bloc.pageTitle ?? Strings.newtab.toUpperCase(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -190,7 +207,7 @@ class _TabWidgetState extends State<_TabWidget> {
                         child: Container(
                           color: Colors.transparent,
                           alignment: Alignment.center,
-                          child: Text('×'),
+                          child: Text(_kCloseMark),
                         ),
                       ),
                     ),

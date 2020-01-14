@@ -38,7 +38,6 @@ flutter_app("simple_browser") {
     "//third_party/dart-pkg/pub/http",
     "//third_party/dart/third_party/pkg/intl",
     "//topaz/public/dart/fuchsia_logger",
-    "//topaz/public/dart/fuchsia_modular",
     "//topaz/public/dart/fuchsia_scenic_flutter",
     "//topaz/public/dart/fuchsia_services",
     "//topaz/public/dart/widgets:lib.widgets",
@@ -61,6 +60,11 @@ flutter_test("simple_browser_unittests") {
     "tabs_bloc_test.dart",
     "tld_checker_test.dart",
     "webpage_bloc_test.dart",
+    "widgets/error_page_test.dart",
+    "widgets/history_buttons_test.dart",
+    "widgets/navigation_bar_test.dart",
+    "widgets/navigation_field_test.dart",
+    "widgets/tabs_widget_test.dart",
   ]
 
   deps = [

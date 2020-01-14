@@ -45,4 +45,9 @@ class Strings {
         name: 'browser',
         desc: 'As in: web browser',
       );
+  static String get newtab => Intl.message(
+        'New Tab',
+        name: 'newtab',
+        desc: 'A default title for a newly created empty tab.',
+      );
 }
