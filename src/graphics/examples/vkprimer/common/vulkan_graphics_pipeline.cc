@@ -34,9 +34,9 @@ bool VulkanGraphicsPipeline::Init() {
     RTN_MSG(false, "Can't get current working directory.\n");
   }
   char vert_shader[PATH_MAX];
-  snprintf(vert_shader, PATH_MAX, "%s/host_x64/obj/garnet/lib/vulkan/tests/vkprimer/vert.spv", cwd);
+  snprintf(vert_shader, PATH_MAX, "%s/host_x64/obj/src/graphics/examples/vkprimer/vert.spv", cwd);
   char frag_shader[PATH_MAX];
-  snprintf(frag_shader, PATH_MAX, "%s/host_x64/obj/garnet/lib/vulkan/tests/vkprimer/frag.spv", cwd);
+  snprintf(frag_shader, PATH_MAX, "%s/host_x64/obj/src/graphics/examples/vkprimer/frag.spv", cwd);
 #endif
 
   if (!VulkanShader::ReadFile(vert_shader, &vert_shader_buffer)) {
