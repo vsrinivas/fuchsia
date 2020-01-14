@@ -41,6 +41,15 @@ func makeTypeAResource(hName string, ttl uint32, A [4]byte) dnsmessage.Resource 
 	}
 }
 
+func makeTypeAAAAResource(hName string, ttl uint32, AAAA [16]byte) dnsmessage.Resource {
+	return dnsmessage.Resource{
+		Header: mustMakeResourceHeader(hName, dnsmessage.TypeAAAA, ttl),
+		Body: &dnsmessage.AAAAResource{
+			AAAA,
+		},
+	}
+}
+
 func mustMakeCNAMEResource(hName, cName string, ttl uint32) dnsmessage.Resource {
 	name, err := dnsmessage.NewName(cName)
 	if err != nil {
@@ -107,7 +116,7 @@ var (
 
 // Tests a simple insert and lookup pair.
 func TestLookup(t *testing.T) {
-	cache := newCache()
+	cache := makeCache()
 	cache.insertAll(smallTestResources)
 	visited := make(map[dnsmessage.Name]struct{})
 	rrs, err := cache.lookup(exampleQuestion, visited, 0)
@@ -121,7 +130,7 @@ func TestLookup(t *testing.T) {
 
 // Tests that entries are pruned when they expire, and not before.
 func TestExpires(t *testing.T) {
-	cache := newCache()
+	cache := makeCache()
 
 	// These records expire at 5 seconds.
 	testTime := time.Now()
@@ -161,7 +170,7 @@ func TestExpires(t *testing.T) {
 
 // Tests that a Resource Record with the name of an existing CNAMERecord is inserted and the existing CNAMERecord is overwritten.
 func TestInsertWithExistingCNAMEResource(t *testing.T) {
-	cache := newCache()
+	cache := makeCache()
 	cache.insertAll(smallTestResources)
 	cache.insertAll([]dnsmessage.Resource{mustMakeCNAMEResource(fooExample, example, 5)})
 	{
@@ -209,7 +218,7 @@ func TestInsertWithExistingCNAMEResource(t *testing.T) {
 
 // Tests that a CNAMEResource with the name of existing Resources Records is inserted and the existing Resource Records are overwritten.
 func TestInsertCNAMEResourceWithExistingTypeAResources(t *testing.T) {
-	cache := newCache()
+	cache := makeCache()
 	cache.insertAll(smallTestResources)
 	{
 		visited := make(map[dnsmessage.Name]struct{})
@@ -238,7 +247,7 @@ func TestInsertCNAMEResourceWithExistingTypeAResources(t *testing.T) {
 
 // Tests that we can't insert more than maxEntries entries, but after pruning old ones, we can insert again.
 func TestMaxEntries(t *testing.T) {
-	cache := newCache()
+	cache := makeCache()
 
 	testTime := time.Now()
 	origTimeNow := timeNow
@@ -302,7 +311,7 @@ func TestMaxEntries(t *testing.T) {
 
 // Tests that we get results when looking up a domain alias.
 func TestCNAME(t *testing.T) {
-	cache := newCache()
+	cache := makeCache()
 	cache.insertAll(smallTestResources)
 
 	// One CNAME record that points at an existing record.
@@ -322,7 +331,7 @@ func TestCNAME(t *testing.T) {
 
 // Tests that there is a loop in the CNAME aliases.
 func TestCNAMELoop(t *testing.T) {
-	cache := newCache()
+	cache := makeCache()
 	cache.insertAll(smallTestResources)
 	cache.insertAll([]dnsmessage.Resource{mustMakeCNAMEResource(fooExample, example, 5)})
 	{
@@ -348,7 +357,7 @@ func TestCNAMELoop(t *testing.T) {
 
 // Tests that the level of CNAMEResource exceeds maxCNAMELevel.
 func TestCNAMELevel(t *testing.T) {
-	cache := newCache()
+	cache := makeCache()
 	name := 'z'
 	cache.insertAll(smallTestResources)
 	cache.insertAll([]dnsmessage.Resource{mustMakeCNAMEResource(string(name), example, 5)})
@@ -379,7 +388,7 @@ func TestCNAMELevel(t *testing.T) {
 
 // Tests that duplicate CNAMEResoures aren't allowed, so that no duplicate {A,AAAA}Resource will be returned.
 func TestDupeCNAME(t *testing.T) {
-	cache := newCache()
+	cache := makeCache()
 	cache.insertAll(smallTestResources)
 	{
 		visited := make(map[dnsmessage.Name]struct{})
@@ -424,7 +433,7 @@ func TestDupeCNAME(t *testing.T) {
 
 // Tests that the cache doesn't store multiple identical AResource.
 func TestDupeAResource(t *testing.T) {
-	cache := newCache()
+	cache := makeCache()
 	cache.insertAll(smallTestResources)
 	cache.insertAll(smallTestResources)
 	visited := make(map[dnsmessage.Name]struct{})
@@ -439,7 +448,7 @@ func TestDupeAResource(t *testing.T) {
 
 // Tests that we can insert and expire negative resources.
 func TestNegative(t *testing.T) {
-	cache := newCache()
+	cache := makeCache()
 
 	// The negative record expires at 12 seconds (taken from the SOA authority resource).
 	testTime := time.Now()
@@ -483,7 +492,7 @@ func TestNegative(t *testing.T) {
 
 // Tests that a negative resource is replaced when we have an actual resource for that query.
 func TestNegativeUpdate(t *testing.T) {
-	cache := newCache()
+	cache := makeCache()
 	cache.insertNegative(exampleQuestion, dnsmessage.Message{
 		Questions:   []dnsmessage.Question{exampleQuestion},
 		Authorities: []dnsmessage.Resource{soaAuthority},

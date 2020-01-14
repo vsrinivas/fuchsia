@@ -105,7 +105,7 @@ func TestLookupIp(t *testing.T) {
 	})
 	dnsClient := dns.NewClient(ns)
 	testaddr := [4]byte{192, 0, 2, 1}
-	dnsClient.SetResolver(func(c *dns.Client, question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
+	dnsClient.SetResolver(func(question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
 		r := dnsmessage.Message{
 			Header: dnsmessage.Header{
 				ID:       0,

@@ -44,10 +44,11 @@ const defaultDNSPort = 53
 type Client struct {
 	stack  *stack.Stack
 	config clientConfig
+	cache  cacheInfo
 }
 
 // A Resolver answers DNS Questions.
-type Resolver func(c *Client, question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error)
+type Resolver func(question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error)
 
 // Error represents an error while issuing a DNS query for a hostname.
 type Error struct {
@@ -64,7 +65,11 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("lookup %s: %s", e.Name, e.Err)
 }
 
-// NewClient creates a DNS client.
+// NewClient creates a DNS client with a default resolver.
+//
+// The default resolver is a Resolver that queries the client's configured DNS
+// servers if the DNS question does not already have an answer in the client's
+// DNS cache.
 func NewClient(s *stack.Stack) *Client {
 	c := &Client{
 		stack: s,
@@ -74,8 +79,9 @@ func NewClient(s *stack.Stack) *Client {
 			attempts: 3,
 			rotate:   true,
 		},
+		cache: makeCache(),
 	}
-	c.config.mu.resolver = newCachedResolver(newNetworkResolver(&c.config))
+	c.config.mu.resolver = c.defaultResolver()
 	c.config.mu.expiringServers = make(map[tcpip.FullAddress]expiringDNSServerState)
 	return c
 }
@@ -163,6 +169,14 @@ func roundTrip(ctx context.Context, transport tcpip.TransportProtocolNumber, ep 
 	}
 }
 
+// defaultResolver returns a new resolver that queries configured DNS servers
+// only if question does not have an answer in c's DNS cache.
+func (c *Client) defaultResolver() Resolver {
+	return c.cache.newResolverWithFallback(func(question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
+		return c.tryOneName(question.Name, question.Type)
+	})
+}
+
 func (c *Client) connect(ctx context.Context, transport tcpip.TransportProtocolNumber, server tcpip.FullAddress) (tcpip.Endpoint, *waiter.Queue, error) {
 	var netproto tcpip.NetworkProtocolNumber
 	switch len(server.Addr) {
@@ -239,14 +253,14 @@ func (c *Client) exchange(server tcpip.FullAddress, name dnsmessage.Name, qtype 
 
 // Do a lookup for a single name, which must be rooted
 // (otherwise answer will not find the answers).
-func (c *Client) tryOneName(cfg *clientConfig, name dnsmessage.Name, qtype dnsmessage.Type) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
+func (c *Client) tryOneName(name dnsmessage.Name, qtype dnsmessage.Type) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
 	var lastErr error
 
-	servers := cfg.getServersCache()
+	servers := c.GetServersCache()
 
-	for i := 0; i < cfg.attempts; i++ {
+	for i := 0; i < c.config.attempts; i++ {
 		for _, server := range servers {
-			msg, err := c.exchange(server, name, qtype, cfg.timeout)
+			msg, err := c.exchange(server, name, qtype, c.config.timeout)
 			if err != nil {
 				lastErr = &Error{
 					Err:    err.Error(),
@@ -338,12 +352,6 @@ type clientConfig struct {
 	rotate   bool          // round robin among servers
 }
 
-func newNetworkResolver(cfg *clientConfig) Resolver {
-	return func(c *Client, question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
-		return c.tryOneName(cfg, question.Name, question.Type)
-	}
-}
-
 // avoidDNS reports whether this is a hostname for which we should not
 // use DNS. Currently this includes only .onion, per RFC 7686. See
 // golang.org/issue/13705. Does not cover .local names (RFC 6762),
@@ -391,24 +399,24 @@ func (conf *clientConfig) nameList(name string) []string {
 	return names
 }
 
-func (cfg *clientConfig) getServersCache() []tcpip.FullAddress {
+func (c *Client) GetServersCache() []tcpip.FullAddress {
 	// If we already have a populated cache, return it.
-	cfg.mu.RLock()
-	cache := cfg.mu.serversCache
-	cfg.mu.RUnlock()
+	c.config.mu.RLock()
+	cache := c.config.mu.serversCache
+	c.config.mu.RUnlock()
 	if cache != nil {
 		return cache
 	}
 
 	// At this point the cache may need to be generated.
 
-	cfg.mu.Lock()
-	defer cfg.mu.Unlock()
+	c.config.mu.Lock()
+	defer c.config.mu.Unlock()
 
 	// We check if the cache is populated again so that the read lock is leveraged
-	// above. We need to check cfg.mu.serversCache after taking the Write lock to
-	// avoid duplicate work when multiple concurrent calls to getServersCache are
-	// made.
+	// above. We need to check c.config.mu.serversCache after taking the Write
+	// lock to avoid duplicate work when multiple concurrent calls to
+	// GetServersCache are made.
 	//
 	// Without this check, the following can occur (T1 and T2 are goroutines
 	// that are trying to get the servers cache):
@@ -424,22 +432,22 @@ func (cfg *clientConfig) getServersCache() []tcpip.FullAddress {
 	// Here we can see that T2 unnessessarily regenerates the cache after T1. By
 	// checking if the servers cache is populated after obtaining the WLock, this
 	// can be avoided.
-	if cache := cfg.mu.serversCache; cache != nil {
+	if cache := c.config.mu.serversCache; cache != nil {
 		return cache
 	}
 
-	for _, serverLists := range [][]*[]tcpip.Address{{&cfg.mu.defaultServers}, cfg.mu.runtimeServers} {
+	for _, serverLists := range [][]*[]tcpip.Address{{&c.config.mu.defaultServers}, c.config.mu.runtimeServers} {
 		for _, serverList := range serverLists {
 			for _, server := range *serverList {
 				cache = append(cache, tcpip.FullAddress{Addr: server, Port: defaultDNSPort})
 			}
 		}
 	}
-	for s := range cfg.mu.expiringServers {
+	for s := range c.config.mu.expiringServers {
 		cache = append(cache, s)
 	}
 
-	cfg.mu.serversCache = cache
+	c.config.mu.serversCache = cache
 	return cache
 }
 
@@ -461,7 +469,6 @@ func (c *Client) SetDefaultServers(servers []tcpip.Address) {
 	// Clear the cache of DNS servers.
 	c.config.mu.serversCache = nil
 	c.config.mu.defaultServers = servers
-	c.config.mu.resolver = newCachedResolver(newNetworkResolver(&c.config))
 }
 
 // SetRuntimeServers sets the list of lists of runtime servers to query (e.g.
@@ -481,7 +488,6 @@ func (c *Client) SetRuntimeServers(runtimeServerRefs []*[]tcpip.Address) {
 	// Clear the cache of DNS servers.
 	c.config.mu.serversCache = nil
 	c.config.mu.runtimeServers = runtimeServerRefs
-	c.config.mu.resolver = newCachedResolver(newNetworkResolver(&c.config))
 }
 
 // UpdateExpiringServers updates the list of expiring servers to query.
@@ -536,15 +542,21 @@ func (c *Client) UpdateExpiringServers(servers []tcpip.FullAddress, lifetime tim
 			delete(c.config.mu.expiringServers, s)
 		}
 	}
-
-	c.config.mu.resolver = newCachedResolver(newNetworkResolver(&c.config))
 }
 
+// SetResolver is used to configure the way c looks up domain names.
+//
+// If resolver is nil, the default resolver will be used.
+//
+// SetResolver is useful for tests to mock domain name resolution.
 func (c *Client) SetResolver(resolver Resolver) {
 	c.config.mu.Lock()
 	defer c.config.mu.Unlock()
 
-	c.config.mu.runtimeServers = nil
+	if resolver == nil {
+		resolver = c.defaultResolver()
+	}
+
 	c.config.mu.resolver = resolver
 }
 
@@ -570,10 +582,10 @@ func (c *Client) LookupIP(name string) (addrs []tcpip.Address, err error) {
 			if err != nil {
 				continue
 			}
-			go func(qtype dnsmessage.Type) {
-				_, rrs, _, err := resolver(c, dnsmessage.Question{Name: name, Type: qtype, Class: dnsmessage.ClassINET})
+			go func(qtype dnsmessage.Type, fqdn string) {
+				_, rrs, _, err := resolver(dnsmessage.Question{Name: name, Type: qtype, Class: dnsmessage.ClassINET})
 				lane <- racer{fqdn, rrs, err}
-			}(qtype)
+			}(qtype, fqdn)
 		}
 		for range qtypes {
 			racer := <-lane

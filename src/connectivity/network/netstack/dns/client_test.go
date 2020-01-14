@@ -9,7 +9,14 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"golang.org/x/net/dns/dnsmessage"
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
+	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
 
 const (
@@ -42,7 +49,7 @@ var (
 	}
 )
 
-func contains(list []tcpip.FullAddress, item tcpip.FullAddress) bool {
+func containsFullAddress(list []tcpip.FullAddress, item tcpip.FullAddress) bool {
 	for _, i := range list {
 		if i == item {
 			return true
@@ -50,6 +57,179 @@ func contains(list []tcpip.FullAddress, item tcpip.FullAddress) bool {
 	}
 
 	return false
+}
+
+func containsAddress(list []tcpip.Address, item tcpip.Address) bool {
+	for _, i := range list {
+		if i == item {
+			return true
+		}
+	}
+
+	return false
+}
+
+func TestResolver(t *testing.T) {
+	const nicID = 1
+	const nicIPv4Addr = tcpip.Address("\x01\x02\x03\x04")
+	const nicIPv6Addr = tcpip.Address("\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10")
+	exampleIPv4Addr1Bytes := [4]byte{192, 168, 0, 1}
+	exampleIPv4Addr2Bytes := [4]byte{192, 168, 0, 2}
+	fooExampleIPv4Addr1Bytes := [4]byte{192, 168, 0, 3}
+	fooExampleIPv4Addr2Bytes := [4]byte{192, 168, 0, 4}
+	exampleIPv6Addr1Bytes := [16]byte{192, 168, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	exampleIPv6Addr2Bytes := [16]byte{192, 168, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
+	fooExampleIPv6Addr1Bytes := [16]byte{192, 168, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3}
+	fooExampleIPv6Addr2Bytes := [16]byte{192, 168, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4}
+	exampleIPv4Addr1 := tcpip.Address(exampleIPv4Addr1Bytes[:])
+	exampleIPv4Addr2 := tcpip.Address(exampleIPv4Addr2Bytes[:])
+	fooExampleIPv4Addr1 := tcpip.Address(fooExampleIPv4Addr1Bytes[:])
+	fooExampleIPv4Addr2 := tcpip.Address(fooExampleIPv4Addr2Bytes[:])
+	exampleIPv6Addr1 := tcpip.Address(exampleIPv6Addr1Bytes[:])
+	exampleIPv6Addr2 := tcpip.Address(exampleIPv6Addr2Bytes[:])
+	fooExampleIPv6Addr1 := tcpip.Address(fooExampleIPv6Addr1Bytes[:])
+	fooExampleIPv6Addr2 := tcpip.Address(fooExampleIPv6Addr2Bytes[:])
+	fakeIPv4AddrBytes := [4]byte{1, 2, 3, 4}
+	// A simple resolver that returns 1.2.3.4 for all A record questions.
+	fakeResolver := func(question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
+		r := dnsmessage.Message{
+			Header: dnsmessage.Header{
+				ID:       0,
+				Response: true,
+			},
+			Questions: []dnsmessage.Question{question},
+		}
+
+		if question.Type == dnsmessage.TypeA {
+			r.Answers = []dnsmessage.Resource{
+				{
+					Header: dnsmessage.ResourceHeader{
+						Name:   question.Name,
+						Type:   dnsmessage.TypeA,
+						Class:  dnsmessage.ClassINET,
+						Length: 4,
+					},
+					Body: &dnsmessage.AResource{
+						A: fakeIPv4AddrBytes,
+					},
+				},
+			}
+		}
+
+		return question.Name, r.Answers, r, nil
+	}
+	fakeResolverResponse := []tcpip.Address{tcpip.Address(fakeIPv4AddrBytes[:])}
+
+	// We need a Stack because the default resolver tries to find a route to the
+	// servers to make sure a route exists. No packets are sent.
+	s := stack.New(stack.Options{
+		NetworkProtocols: []stack.NetworkProtocol{
+			arp.NewProtocol(),
+			ipv4.NewProtocol(),
+			ipv6.NewProtocol(),
+		},
+		TransportProtocols: []stack.TransportProtocol{
+			udp.NewProtocol(),
+		},
+		HandleLocal: true,
+	})
+	e := channel.New(0, 1280, "\x02\x03\x04\x05\x06\x07")
+	if err := s.CreateNIC(nicID, e); err != nil {
+		t.Fatalf("s.CreateNIC(%d, _): %s", nicID, err)
+	}
+	if err := s.AddAddress(nicID, ipv4.ProtocolNumber, nicIPv4Addr); err != nil {
+		t.Fatalf("s.AddAddress(%d, %d, %s): %s", nicID, ipv4.ProtocolNumber, nicIPv4Addr, err)
+	}
+	if err := s.AddAddress(nicID, ipv6.ProtocolNumber, nicIPv6Addr); err != nil {
+		t.Fatalf("s.AddAddress(%d, %d, %s): %s", nicID, ipv6.ProtocolNumber, nicIPv6Addr, err)
+	}
+
+	c := NewClient(s)
+
+	// Add some entries to the cache that will be returned when testing the
+	// default resolver.
+	//
+	// We need to add both A and AAAA records to the cache for each domain name
+	// to make sure we do not try to query a DNS server through s.
+	c.cache.insertAll([]dnsmessage.Resource{
+		makeTypeAResource(example, 5, exampleIPv4Addr1Bytes),
+		makeTypeAResource(example, 5, exampleIPv4Addr2Bytes),
+		makeTypeAResource(fooExample, 5, fooExampleIPv4Addr1Bytes),
+		makeTypeAResource(fooExample, 5, fooExampleIPv4Addr2Bytes),
+		makeTypeAAAAResource(example, 5, exampleIPv6Addr1Bytes),
+		makeTypeAAAAResource(example, 5, exampleIPv6Addr2Bytes),
+		makeTypeAAAAResource(fooExample, 5, fooExampleIPv6Addr1Bytes),
+		makeTypeAAAAResource(fooExample, 5, fooExampleIPv6Addr2Bytes),
+	})
+
+	// We check the default resolver by making sure the entries we populated the
+	// cache with is returned.
+	checkDefaultResolver := func() {
+		t.Helper()
+
+		if addrs, err := c.LookupIP(example); err != nil {
+			t.Fatalf("c.LookupIP(%q): %s", example, err)
+		} else {
+			if !containsAddress(addrs, exampleIPv4Addr1) {
+				t.Errorf("expected %s to bein the list of addresses for %s; got = %s", exampleIPv4Addr1, example, addrs)
+			}
+			if !containsAddress(addrs, exampleIPv4Addr2) {
+				t.Errorf("expected %s to bein the list of addresses for %s; got = %s", exampleIPv4Addr2, example, addrs)
+			}
+			if !containsAddress(addrs, exampleIPv6Addr1) {
+				t.Errorf("expected %s to bein the list of addresses for %s; got = %s", exampleIPv6Addr1, example, addrs)
+			}
+			if !containsAddress(addrs, exampleIPv6Addr2) {
+				t.Errorf("expected %s to bein the list of addresses for %s; got = %s", exampleIPv6Addr2, example, addrs)
+			}
+			if l := len(addrs); l != 4 {
+				t.Errorf("got len(addrs) = %d, want = 4; addrs = %s", l, addrs)
+			}
+		}
+		if addrs, err := c.LookupIP(fooExample); err != nil {
+			t.Fatalf("c.LookupIP(%q): %s", fooExample, err)
+		} else {
+			if !containsAddress(addrs, fooExampleIPv4Addr1) {
+				t.Errorf("expected %s to bein the list of addresses for %s; got = %s", fooExampleIPv4Addr1, fooExample, addrs)
+			}
+			if !containsAddress(addrs, fooExampleIPv4Addr2) {
+				t.Errorf("expected %s to bein the list of addresses for %s; got = %s", fooExampleIPv4Addr2, fooExample, addrs)
+			}
+			if !containsAddress(addrs, fooExampleIPv6Addr1) {
+				t.Errorf("expected %s to bein the list of addresses for %s; got = %s", fooExampleIPv6Addr1, fooExample, addrs)
+			}
+			if !containsAddress(addrs, fooExampleIPv6Addr2) {
+				t.Errorf("expected %s to bein the list of addresses for %s; got = %s", fooExampleIPv6Addr2, fooExample, addrs)
+			}
+			if l := len(addrs); l != 4 {
+				t.Errorf("got len(addrs) = %d, want = 4; addrs = %s", l, addrs)
+			}
+		}
+	}
+
+	// c should be initialized with the default resolver.
+	checkDefaultResolver()
+
+	// Update c to use fakeResolver as its resolver.
+	c.SetResolver(fakeResolver)
+	if addrs, err := c.LookupIP(example); err != nil {
+		t.Fatalf("c.LookupIP(%q): %s", example, err)
+	} else {
+		if diff := cmp.Diff(fakeResolverResponse, addrs); diff != "" {
+			t.Errorf("domain name addresses mismatch (-want +got):\n%s", diff)
+		}
+	}
+	if addrs, err := c.LookupIP(fooExample); err != nil {
+		t.Fatalf("c.LookupIP(%q): %s", fooExample, err)
+	} else {
+		if diff := cmp.Diff(fakeResolverResponse, addrs); diff != "" {
+			t.Errorf("domain name addresses mismatch (-want +got):\n%s", diff)
+		}
+	}
+
+	// A nil Resolver should update c's resolver to the default resolver.
+	c.SetResolver(nil)
+	checkDefaultResolver()
 }
 
 func TestGetServersCache(t *testing.T) {
@@ -82,11 +262,11 @@ func TestGetServersCache(t *testing.T) {
 	}
 
 	c.SetDefaultServers([]tcpip.Address{addr5.Addr, addr6.Addr})
-	servers := c.config.getServersCache()
-	if !contains(servers, addr5) {
+	servers := c.GetServersCache()
+	if !containsFullAddress(servers, addr5) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr5, servers)
 	}
-	if !contains(servers, addr6) {
+	if !containsFullAddress(servers, addr6) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr6, servers)
 	}
 	if l := len(servers); l != 2 {
@@ -100,23 +280,23 @@ func TestGetServersCache(t *testing.T) {
 	runtimeServers1 := []tcpip.Address{addr7.Addr, addr8.Addr}
 	runtimeServers2 := []tcpip.Address{addr9.Addr, addr10.Addr}
 	c.SetRuntimeServers([]*[]tcpip.Address{&runtimeServers1, &runtimeServers2})
-	servers = c.config.getServersCache()
-	if !contains(servers, addr5) {
+	servers = c.GetServersCache()
+	if !containsFullAddress(servers, addr5) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr5, servers)
 	}
-	if !contains(servers, addr6) {
+	if !containsFullAddress(servers, addr6) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr6, servers)
 	}
-	if !contains(servers, addr7) {
+	if !containsFullAddress(servers, addr7) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr7, servers)
 	}
-	if !contains(servers, addr8) {
+	if !containsFullAddress(servers, addr8) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr8, servers)
 	}
-	if !contains(servers, addr9) {
+	if !containsFullAddress(servers, addr9) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr9, servers)
 	}
-	if !contains(servers, addr10) {
+	if !containsFullAddress(servers, addr10) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr10, servers)
 	}
 	if l := len(servers); l != 6 {
@@ -128,32 +308,32 @@ func TestGetServersCache(t *testing.T) {
 	}
 
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2, addr3}, longLifetime)
-	servers = c.config.getServersCache()
-	if !contains(servers, addr1) {
+	servers = c.GetServersCache()
+	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
 	}
-	if !contains(servers, addr2) {
+	if !containsFullAddress(servers, addr2) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
 	}
-	if !contains(servers, addr3) {
+	if !containsFullAddress(servers, addr3) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
 	}
-	if !contains(servers, addr5) {
+	if !containsFullAddress(servers, addr5) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr5, servers)
 	}
-	if !contains(servers, addr6) {
+	if !containsFullAddress(servers, addr6) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr6, servers)
 	}
-	if !contains(servers, addr7) {
+	if !containsFullAddress(servers, addr7) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr7, servers)
 	}
-	if !contains(servers, addr8) {
+	if !containsFullAddress(servers, addr8) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr8, servers)
 	}
-	if !contains(servers, addr9) {
+	if !containsFullAddress(servers, addr9) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr9, servers)
 	}
-	if !contains(servers, addr10) {
+	if !containsFullAddress(servers, addr10) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr10, servers)
 	}
 	if l := len(servers); l != 9 {
@@ -161,8 +341,8 @@ func TestGetServersCache(t *testing.T) {
 	}
 
 	// Should get the same results since there were no updates.
-	if diff := cmp.Diff(servers, c.config.getServersCache()); diff != "" {
-		t.Errorf("c.config.getServersCache() mismatch (-want +got):\n%s", diff)
+	if diff := cmp.Diff(servers, c.GetServersCache()); diff != "" {
+		t.Errorf("c.GetServersCache() mismatch (-want +got):\n%s", diff)
 	}
 
 	if t.Failed() {
@@ -170,20 +350,20 @@ func TestGetServersCache(t *testing.T) {
 	}
 
 	c.SetRuntimeServers(nil)
-	servers = c.config.getServersCache()
-	if !contains(servers, addr1) {
+	servers = c.GetServersCache()
+	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
 	}
-	if !contains(servers, addr2) {
+	if !containsFullAddress(servers, addr2) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
 	}
-	if !contains(servers, addr3) {
+	if !containsFullAddress(servers, addr3) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
 	}
-	if !contains(servers, addr5) {
+	if !containsFullAddress(servers, addr5) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr5, servers)
 	}
-	if !contains(servers, addr6) {
+	if !containsFullAddress(servers, addr6) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr6, servers)
 	}
 	if l := len(servers); l != 5 {
@@ -195,14 +375,14 @@ func TestGetServersCache(t *testing.T) {
 	}
 
 	c.SetDefaultServers(nil)
-	servers = c.config.getServersCache()
-	if !contains(servers, addr1) {
+	servers = c.GetServersCache()
+	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
 	}
-	if !contains(servers, addr2) {
+	if !containsFullAddress(servers, addr2) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
 	}
-	if !contains(servers, addr3) {
+	if !containsFullAddress(servers, addr3) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
 	}
 	if l := len(servers); l != 3 {
@@ -214,7 +394,7 @@ func TestGetServersCache(t *testing.T) {
 	}
 
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2, addr3}, 0)
-	servers = c.config.getServersCache()
+	servers = c.GetServersCache()
 	if l := len(servers); l != 0 {
 		t.Errorf("got len(servers) = %d, want = 0; servers = %+v", l, servers)
 	}
@@ -228,8 +408,8 @@ func TestExpiringServersDefaultDNSPort(t *testing.T) {
 	addr4WithPort.Port = defaultDNSPort
 
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr4}, longLifetime)
-	servers := c.config.getServersCache()
-	if !contains(servers, addr4WithPort) {
+	servers := c.GetServersCache()
+	if !containsFullAddress(servers, addr4WithPort) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr4WithPort, servers)
 	}
 	if l := len(servers); l != 1 {
@@ -242,8 +422,8 @@ func TestExpiringServersUpdateWithDuplicates(t *testing.T) {
 	c := NewClient(nil)
 
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr1, addr1}, longLifetime)
-	servers := c.config.getServersCache()
-	if !contains(servers, addr1) {
+	servers := c.GetServersCache()
+	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
 	}
 	if l := len(servers); l != 1 {
@@ -256,11 +436,11 @@ func TestExpiringServersAddAndUpdate(t *testing.T) {
 	c := NewClient(nil)
 
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2}, longLifetime)
-	servers := c.config.getServersCache()
-	if !contains(servers, addr1) {
+	servers := c.GetServersCache()
+	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
 	}
-	if !contains(servers, addr2) {
+	if !containsFullAddress(servers, addr2) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
 	}
 	if l := len(servers); l != 2 {
@@ -273,14 +453,14 @@ func TestExpiringServersAddAndUpdate(t *testing.T) {
 
 	// Refresh addr1 and addr2, add addr3.
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr3, addr2}, longLifetime)
-	servers = c.config.getServersCache()
-	if !contains(servers, addr1) {
+	servers = c.GetServersCache()
+	if !containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
 	}
-	if !contains(servers, addr2) {
+	if !containsFullAddress(servers, addr2) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
 	}
-	if !contains(servers, addr3) {
+	if !containsFullAddress(servers, addr3) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
 	}
 	if l := len(servers); l != 3 {
@@ -293,17 +473,17 @@ func TestExpiringServersAddAndUpdate(t *testing.T) {
 
 	// Lifetime of 0 should remove servers if they exist.
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr4, addr1}, 0)
-	servers = c.config.getServersCache()
-	if contains(servers, addr1) {
+	servers = c.GetServersCache()
+	if containsFullAddress(servers, addr1) {
 		t.Errorf("expected %+v to not be in the server cache, got = %+v", addr1, servers)
 	}
-	if contains(servers, addr4) {
+	if containsFullAddress(servers, addr4) {
 		t.Errorf("expected %+v to not be in the server cache, got = %+v", addr4, servers)
 	}
-	if !contains(servers, addr2) {
+	if !containsFullAddress(servers, addr2) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
 	}
-	if !contains(servers, addr3) {
+	if !containsFullAddress(servers, addr3) {
 		t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
 	}
 	if l := len(servers); l != 2 {
@@ -320,7 +500,7 @@ func TestExpiringServersExpireImmediatelyTimer(t *testing.T) {
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2}, shortLifetime)
 	for elapsedTime := time.Duration(0); elapsedTime <= shortLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
-		servers := c.config.getServersCache()
+		servers := c.GetServersCache()
 		if l := len(servers); l != 0 {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
@@ -340,7 +520,7 @@ func TestExpiringServersExpireAfterUpdate(t *testing.T) {
 	c := NewClient(nil)
 
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2}, longLifetime)
-	servers := c.config.getServersCache()
+	servers := c.GetServersCache()
 	if l := len(servers); l != 2 {
 		t.Fatalf("got len(servers) = %d, want = 2; servers = %+v", l, servers)
 	}
@@ -349,22 +529,22 @@ func TestExpiringServersExpireAfterUpdate(t *testing.T) {
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr2, addr3}, shortLifetime)
 	for elapsedTime := time.Duration(0); elapsedTime <= shortLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
-		servers = c.config.getServersCache()
-		if !contains(servers, addr1) {
+		servers = c.GetServersCache()
+		if !containsFullAddress(servers, addr1) {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
 			}
 
 			t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
 		}
-		if contains(servers, addr2) {
+		if containsFullAddress(servers, addr2) {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
 			}
 
 			t.Errorf("expected %+v to not be in the server cache, got = %+v", addr3, servers)
 		}
-		if contains(servers, addr3) {
+		if containsFullAddress(servers, addr3) {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
 			}
@@ -390,7 +570,7 @@ func TestExpiringServersInfiniteLifetime(t *testing.T) {
 	c := NewClient(nil)
 
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2}, middleLifetime)
-	servers := c.config.getServersCache()
+	servers := c.GetServersCache()
 	if l := len(servers); l != 2 {
 		t.Fatalf("got len(servers) = %d, want = 2; servers = %+v", l, servers)
 	}
@@ -399,22 +579,22 @@ func TestExpiringServersInfiniteLifetime(t *testing.T) {
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr2, addr3}, -1)
 	for elapsedTime := time.Duration(0); elapsedTime < middleLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
-		servers = c.config.getServersCache()
-		if contains(servers, addr1) {
+		servers = c.GetServersCache()
+		if containsFullAddress(servers, addr1) {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
 			}
 
 			t.Errorf("expected %+v to not be in the server cache, got = %+v", addr2, servers)
 		}
-		if !contains(servers, addr2) {
+		if !containsFullAddress(servers, addr2) {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
 			}
 
 			t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
 		}
-		if !contains(servers, addr3) {
+		if !containsFullAddress(servers, addr3) {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
 			}
@@ -439,22 +619,22 @@ func TestExpiringServersInfiniteLifetime(t *testing.T) {
 	c.UpdateExpiringServers([]tcpip.FullAddress{addr2, addr3}, middleLifetime)
 	for elapsedTime := time.Duration(0); elapsedTime <= middleLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
-		servers = c.config.getServersCache()
-		if contains(servers, addr1) {
+		servers = c.GetServersCache()
+		if containsFullAddress(servers, addr1) {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
 			}
 
 			t.Errorf("expected %+v to not be in the server cache, got = %+v", addr2, servers)
 		}
-		if contains(servers, addr2) {
+		if containsFullAddress(servers, addr2) {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
 			}
 
 			t.Errorf("expected %+v to not be in the server cache, got = %+v", addr3, servers)
 		}
-		if contains(servers, addr3) {
+		if containsFullAddress(servers, addr3) {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
 			}

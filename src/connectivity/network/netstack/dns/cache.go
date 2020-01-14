@@ -42,7 +42,7 @@ type cacheEntry struct {
 func (entry *cacheEntry) isDanglingCNAME(cache *cacheInfo) bool {
 	switch rr := entry.rr.Body.(type) {
 	case *dnsmessage.CNAMEResource:
-		return cache.m[rr.CNAME] == nil
+		return cache.mu.m[rr.CNAME] == nil
 	default:
 		return false
 	}
@@ -50,16 +50,23 @@ func (entry *cacheEntry) isDanglingCNAME(cache *cacheInfo) bool {
 
 // The full cache.
 type cacheInfo struct {
-	mu         sync.Mutex
-	m          map[dnsmessage.Name][]cacheEntry
-	numEntries int
+	mu struct {
+		sync.RWMutex
+		m          map[dnsmessage.Name][]cacheEntry
+		numEntries int
+	}
 }
 
-func newCache() cacheInfo {
-	return cacheInfo{m: make(map[dnsmessage.Name][]cacheEntry)}
+func makeCache() cacheInfo {
+	c := cacheInfo{}
+	c.mu.m = make(map[dnsmessage.Name][]cacheEntry)
+	return c
 }
 
-// Returns a list of Resources that match the given Question (same class and type and matching domain name).
+// Returns a list of Resources with the same class, type and domain name as
+// question.
+//
+// c's read lock (c.mu) MUST be held.
 func (cache *cacheInfo) lookup(question dnsmessage.Question, visited map[dnsmessage.Name]struct{}, level uint8) ([]dnsmessage.Resource, error) {
 	if level > maxCNAMELevel {
 		return nil, errCNAMELevel
@@ -71,7 +78,7 @@ func (cache *cacheInfo) lookup(question dnsmessage.Question, visited map[dnsmess
 	}
 
 	visited[question.Name] = struct{}{}
-	entries := cache.m[question.Name]
+	entries := cache.mu.m[question.Name]
 
 	rrs := make([]dnsmessage.Resource, 0, len(entries))
 	for _, entry := range entries {
@@ -129,7 +136,7 @@ func (cache *cacheInfo) insert(rr dnsmessage.Resource) {
 		rr:  rr,
 	}
 
-	entries := cache.m[h.Name]
+	entries := cache.mu.m[h.Name]
 	for i := range entries {
 		existing := &entries[i]
 		// If a CNAME RR is present at a node, no other data should be present;
@@ -142,8 +149,8 @@ func (cache *cacheInfo) insert(rr dnsmessage.Resource) {
 			return
 		}
 		if h.Type == dnsmessage.TypeCNAME {
-			cache.numEntries -= (len(entries) - 1)
-			cache.m[h.Name] = []cacheEntry{newEntry}
+			cache.mu.numEntries -= len(entries) - 1
+			cache.mu.m[h.Name] = []cacheEntry{newEntry}
 			syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache overwrite: %v(%v expires %v)", h.Name, h.Type, existing.ttd)
 			return
 		}
@@ -173,10 +180,10 @@ func (cache *cacheInfo) insert(rr dnsmessage.Resource) {
 		syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache update: %v(%v) expires %v", h.Name, h.Type, existing.ttd)
 		return
 	}
-	if cache.numEntries+1 <= maxEntries {
+	if cache.mu.numEntries+1 <= maxEntries {
 		syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache insert: %v(%v) expires %v", h.Name, h.Type, newEntry.ttd)
-		cache.m[h.Name] = append(entries, newEntry)
-		cache.numEntries++
+		cache.mu.m[h.Name] = append(entries, newEntry)
+		cache.mu.numEntries++
 	} else {
 		// TODO(mpcomplete): might be better to evict the LRU entry instead.
 		// TODO(mpcomplete): RFC 1035 7.4 says that if we can't cache this RR, we
@@ -220,43 +227,42 @@ func (cache *cacheInfo) insertNegative(question dnsmessage.Question, msg dnsmess
 // Removes every expired/dangling entry from the cache.
 func (cache *cacheInfo) prune() {
 	now := timeNow()
-	for name, entries := range cache.m {
+	for name, entries := range cache.mu.m {
 		removed := false
 		for i := 0; i < len(entries); {
 			if now.After(entries[i].ttd) || entries[i].isDanglingCNAME(cache) {
 				entries[i] = entries[len(entries)-1]
 				entries = entries[:len(entries)-1]
-				cache.numEntries--
+				cache.mu.numEntries--
 				removed = true
 			} else {
 				i++
 			}
 		}
 		if len(entries) == 0 {
-			delete(cache.m, name)
+			delete(cache.mu.m, name)
 		} else if removed {
-			cache.m[name] = entries
+			cache.mu.m[name] = entries
 		}
 	}
 }
 
-var cache = newCache()
-
-func newCachedResolver(fallback Resolver) Resolver {
+func (cache *cacheInfo) newResolverWithFallback(fallback Resolver) Resolver {
 	var mu struct {
 		sync.Mutex
 		throttled map[dnsmessage.Question]struct{}
 	}
 	mu.throttled = make(map[dnsmessage.Question]struct{})
-	return func(c *Client, question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
+	return func(question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
 		if !(question.Class == dnsmessage.ClassINET && (question.Type == dnsmessage.TypeA || question.Type == dnsmessage.TypeAAAA)) {
 			panic("unexpected question type")
 		}
 
-		cache.mu.Lock()
 		visited := make(map[dnsmessage.Name]struct{})
+
+		cache.mu.RLock()
 		rrs, err := cache.lookup(question, visited, 0)
-		cache.mu.Unlock()
+		cache.mu.RUnlock()
 		if err == nil && len(rrs) != 0 {
 			syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache hit %v(%v) => %v", question.Name, question.Type, rrs)
 			return dnsmessage.Name{}, rrs, dnsmessage.Message{}, nil
@@ -266,7 +272,7 @@ func newCachedResolver(fallback Resolver) Resolver {
 		}
 
 		syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache miss for the message %v(%v)", question.Name, question.Type)
-		cname, rrs, msg, err := fallback(c, question)
+		cname, rrs, msg, err := fallback(question)
 		if err != nil {
 			mu.Lock()
 			_, throttled := mu.throttled[question]
