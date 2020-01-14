@@ -2,12 +2,12 @@
     // Route Echo service from server to client.
     "offer": [
         {
-            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+            "protocol": "/svc/fidl.examples.routing.echo.Echo",
             "from": "#echo_reporter",
             "to": [ "#echo_client" ]
         },
         {
-            "service_protocol": "/svc/fidl.test.components.Trigger",
+            "protocol": "/svc/fidl.test.components.Trigger",
             "from": "#echo_reporter",
             "to": [ "#echo_client" ]
         }

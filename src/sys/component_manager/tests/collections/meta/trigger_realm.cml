@@ -3,14 +3,14 @@
     // Expose Trigger service from child.
     "expose": [
         {
-            "service_protocol": "/svc/fidl.test.components.Trigger",
+            "protocol": "/svc/fidl.test.components.Trigger",
             "from": "#trigger",
         },
     ],
     // Route Echo service to child.
     "offer": [
         {
-            "service_protocol": [
+            "protocol": [
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fidl.examples.routing.echo.Echo",
             ],

@@ -7,10 +7,10 @@
             "directory": "/hub", "from": "framework", "rights": ["r*"]
         },
         {
-            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+            "protocol": "/svc/fidl.examples.routing.echo.Echo",
         },
         {
-            "service_protocol": [
+            "protocol": [
                 "/svc/fuchsia.test.hub.HubReport",
                 "/svc/fuchsia.test.breakpoints.BreakpointSystem",
             ],

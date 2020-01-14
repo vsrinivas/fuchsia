@@ -67,7 +67,7 @@ impl SystemControllerInner {
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            FrameworkCapability::ServiceProtocol(capability_path)
+            FrameworkCapability::Protocol(capability_path)
                 if *capability_path == *SYSTEM_CONTROLLER_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(SystemControllerCapabilityProvider::new(self.model.clone()))

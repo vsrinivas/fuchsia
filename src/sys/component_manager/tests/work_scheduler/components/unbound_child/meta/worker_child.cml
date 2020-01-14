@@ -4,15 +4,15 @@
     },
     "expose": [
         {
-            "service_protocol": "/svc/fuchsia.sys2.Worker", "from": "self", "to": "framework",
+            "protocol": "/svc/fuchsia.sys2.Worker", "from": "self", "to": "framework",
         },
         {
-            "service_protocol": "/svc/fuchsia.sys2.WorkScheduler", "from": "framework"
+            "protocol": "/svc/fuchsia.sys2.WorkScheduler", "from": "framework"
         }
     ],
     "use": [
         {
-            "service_protocol": "/svc/fuchsia.test.workscheduler.WorkSchedulerDispatchReporter",
+            "protocol": "/svc/fuchsia.test.workscheduler.WorkSchedulerDispatchReporter",
             "from": "framework",
         },
     ],

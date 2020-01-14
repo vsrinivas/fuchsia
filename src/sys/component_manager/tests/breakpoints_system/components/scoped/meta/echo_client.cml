@@ -4,10 +4,10 @@
     },
     "use": [
         {
-            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+            "protocol": "/svc/fidl.examples.routing.echo.Echo",
         },
         {
-            "service_protocol": "/svc/fidl.test.components.Trigger",
+            "protocol": "/svc/fidl.test.components.Trigger",
         }
     ],
 }

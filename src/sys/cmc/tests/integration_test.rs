@@ -4,9 +4,9 @@ use fidl_fuchsia_data as fd;
 use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability, ExposeDecl,
-    ExposeDirectoryDecl, ExposeServiceDecl, ExposeServiceProtocolDecl, FrameworkRef, OfferDecl,
-    OfferServiceDecl, OfferServiceProtocolDecl, RealmRef, Ref, SelfRef, StartupMode, UseDecl,
-    UseServiceDecl, UseServiceProtocolDecl,
+    ExposeDirectoryDecl, ExposeServiceDecl, ExposeProtocolDecl, FrameworkRef, OfferDecl,
+    OfferServiceDecl, OfferProtocolDecl, RealmRef, Ref, SelfRef, StartupMode, UseDecl,
+    UseServiceDecl, UseProtocolDecl,
 };
 use std::fs::File;
 use std::io::Read;
@@ -31,7 +31,7 @@ fn main() {
                 source_path: Some("/fonts/CoolFonts".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
             }),
-            UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+            UseDecl::Protocol(UseProtocolDecl {
                 source: Some(Ref::Realm(RealmRef {})),
                 source_path: Some("/fonts/LegacyCoolFonts".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
@@ -44,7 +44,7 @@ fn main() {
                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                 target: Some(Ref::Realm(RealmRef {})),
             }),
-            ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+            ExposeDecl::Protocol(ExposeProtocolDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
                 source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
                 target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
@@ -74,7 +74,7 @@ fn main() {
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
             }),
-            OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+            OfferDecl::Protocol(OfferProtocolDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
                 source_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),

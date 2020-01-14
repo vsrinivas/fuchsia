@@ -4,7 +4,7 @@
     },
     "expose": [
         {
-            "service_protocol": "/svc/fuchsia.test.Suite",
+            "protocol": "/svc/fuchsia.test.Suite",
             "from": "self",
         },
     ],

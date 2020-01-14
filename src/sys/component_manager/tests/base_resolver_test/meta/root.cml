@@ -9,7 +9,7 @@
   ],
   "use": [
     {
-      "service_protocol": "/svc/fuchsia.sys2.Realm",
+      "protocol": "/svc/fuchsia.sys2.Realm",
       "from": "framework",
     },
   ],

@@ -12,7 +12,7 @@
         },
         {
 
-            service_protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "/svc/fuchsia.logger.LogSink",
             from: "realm",
         },
     ],

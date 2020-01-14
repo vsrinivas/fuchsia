@@ -10,7 +10,7 @@ using fuchsia.io2;
 /// component's environment.
 xunion UseDecl {
     1: UseServiceDecl service;
-    2: UseServiceProtocolDecl service_protocol;
+    2: UseProtocolDecl protocol;
     3: UseDirectoryDecl directory;
     4: UseStorageDecl storage;
     5: UseRunnerDecl runner;
@@ -44,7 +44,7 @@ table UseServiceDecl {
 ///
 /// A legacy service is a service with a single instance, provided by a single
 /// FIDL protocol.
-table UseServiceProtocolDecl {
+table UseProtocolDecl {
     /// The provider of the legacy service relative to the component itself.
     /// Must be |realm| or |framework|.
     1: Ref source;

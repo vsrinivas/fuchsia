@@ -147,7 +147,7 @@ pub enum Use {
     /// Used service capability.
     Service(UseService),
     /// Used service protocol capability.
-    ServiceProtocol(UseServiceProtocol),
+    Protocol(UseProtocol),
     /// Used directory capability.
     Directory(UseDirectory),
     /// Used storage capability.
@@ -169,11 +169,11 @@ pub struct UseService {
     pub target_path: Path,
 }
 
-/// Used service protocol capability. See [`UseServiceProtocolDecl`].
+/// Used service protocol capability. See [`UseProtocolDecl`].
 ///
-/// [`UseServiceProtocolDecl`]: ../../fidl_fuchsia_sys2/struct.UseServiceProtocolDecl.html
+/// [`UseProtocolDecl`]: ../../fidl_fuchsia_sys2/struct.UseProtocolDecl.html
 #[derive(Serialize, Deserialize, Debug)]
-pub struct UseServiceProtocol {
+pub struct UseProtocol {
     /// Used service source.
     pub source: Ref,
     /// Used service source path.
@@ -236,7 +236,7 @@ pub enum ExposeTarget {
 #[serde(rename_all = "snake_case")]
 pub enum Expose {
     Service(ExposeService),
-    ServiceProtocol(ExposeServiceProtocol),
+    Protocol(ExposeProtocol),
     Directory(ExposeDirectory),
     Runner(ExposeRunner),
 }
@@ -252,11 +252,11 @@ pub struct ExposeService {
     pub target: ExposeTarget,
 }
 
-/// Exposed service protocol capability. See [`ExposeServiceProtocolDecl`].
+/// Exposed service protocol capability. See [`ExposeProtocolDecl`].
 ///
-/// [`ExposeServiceProtocolDecl`]: ../../fidl_fuchsia_sys2/struct.ExposeServiceProtocolDecl.html
+/// [`ExposeProtocolDecl`]: ../../fidl_fuchsia_sys2/struct.ExposeProtocolDecl.html
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ExposeServiceProtocol {
+pub struct ExposeProtocol {
     pub source: Ref,
     pub source_path: Path,
     pub target_path: Path,
@@ -294,7 +294,7 @@ pub struct ExposeRunner {
 #[serde(rename_all = "snake_case")]
 pub enum Offer {
     Service(OfferService),
-    ServiceProtocol(OfferServiceProtocol),
+    Protocol(OfferProtocol),
     Directory(OfferDirectory),
     Storage(OfferStorage),
     Runner(OfferRunner),
@@ -315,11 +315,11 @@ pub struct OfferService {
     pub target_path: Path,
 }
 
-/// Offered service protocol capability. See [`OfferServiceProtocolDecl`].
+/// Offered service protocol capability. See [`OfferProtocolDecl`].
 ///
-/// [`OfferServiceProtocolDecl`]: ../../fidl_fuchsia_sys2/struct.OfferServiceProtocolDecl.html
+/// [`OfferProtocolDecl`]: ../../fidl_fuchsia_sys2/struct.OfferProtocolDecl.html
 #[derive(Serialize, Deserialize, Debug)]
-pub struct OfferServiceProtocol {
+pub struct OfferProtocol {
     /// Offered capability source component.
     pub source: Ref,
     /// Offered capability source path.

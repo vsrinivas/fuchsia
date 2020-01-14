@@ -1,12 +1,12 @@
 {
     "offer": [
         {
-            "service_protocol": "/svc/fuchsia.sys2.WorkScheduler",
+            "protocol": "/svc/fuchsia.sys2.WorkScheduler",
              "from": "#worker_child",
              "to": [ "#worker_sibling" ],
         },
         {
-            "service_protocol": "/svc/fuchsia.sys2.WorkSchedulerControl",
+            "protocol": "/svc/fuchsia.sys2.WorkSchedulerControl",
             "from": "realm",
             "to": [ "#worker_sibling" ],
         }

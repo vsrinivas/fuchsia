@@ -4,7 +4,7 @@
     },
     use: [
         {
-            service_protocol: "/svc/fuchsia.session.Launcher",
+            protocol: "/svc/fuchsia.session.Launcher",
             from: "realm",
         },
     ],

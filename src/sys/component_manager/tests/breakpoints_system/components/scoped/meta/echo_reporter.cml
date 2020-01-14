@@ -4,21 +4,21 @@
     },
     "use": [
       {
-        "service_protocol": [ "/svc/fuchsia.test.breakpoints.BreakpointSystem" ],
+        "protocol": [ "/svc/fuchsia.test.breakpoints.BreakpointSystem" ],
         "from": "framework"
       },
       {
-          "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+          "protocol": "/svc/fidl.examples.routing.echo.Echo",
           "from": "framework",
       },
     ],
     "expose": [
         {
-            "service_protocol": "/svc/fidl.test.components.Trigger",
+            "protocol": "/svc/fidl.test.components.Trigger",
             "from": "self",
         },
         {
-            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+            "protocol": "/svc/fidl.examples.routing.echo.Echo",
             "from": "#echo_server",
         },
     ],

@@ -81,7 +81,7 @@ impl VmexServiceInner {
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            FrameworkCapability::ServiceProtocol(capability_path)
+            FrameworkCapability::Protocol(capability_path)
                 if *capability_path == *VMEX_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(VmexCapabilityProvider::new()) as Box<dyn CapabilityProvider>))
@@ -222,7 +222,7 @@ mod tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Framework {
-            capability: FrameworkCapability::ServiceProtocol(VMEX_CAPABILITY_PATH.clone()),
+            capability: FrameworkCapability::Protocol(VMEX_CAPABILITY_PATH.clone()),
             scope_moniker: None,
         };
 

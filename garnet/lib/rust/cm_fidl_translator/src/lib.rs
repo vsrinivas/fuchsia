@@ -63,7 +63,7 @@ impl CmInto<fsys::UseDecl> for cm::Use {
     fn cm_into(self) -> Result<fsys::UseDecl, Error> {
         Ok(match self {
             cm::Use::Service(s) => fsys::UseDecl::Service(s.cm_into()?),
-            cm::Use::ServiceProtocol(s) => fsys::UseDecl::ServiceProtocol(s.cm_into()?),
+            cm::Use::Protocol(s) => fsys::UseDecl::Protocol(s.cm_into()?),
             cm::Use::Directory(d) => fsys::UseDecl::Directory(d.cm_into()?),
             cm::Use::Storage(s) => fsys::UseDecl::Storage(s.cm_into()?),
             cm::Use::Runner(r) => fsys::UseDecl::Runner(r.cm_into()?),
@@ -75,7 +75,7 @@ impl CmInto<fsys::ExposeDecl> for cm::Expose {
     fn cm_into(self) -> Result<fsys::ExposeDecl, Error> {
         Ok(match self {
             cm::Expose::Service(s) => fsys::ExposeDecl::Service(s.cm_into()?),
-            cm::Expose::ServiceProtocol(s) => fsys::ExposeDecl::ServiceProtocol(s.cm_into()?),
+            cm::Expose::Protocol(s) => fsys::ExposeDecl::Protocol(s.cm_into()?),
             cm::Expose::Directory(d) => fsys::ExposeDecl::Directory(d.cm_into()?),
             cm::Expose::Runner(r) => fsys::ExposeDecl::Runner(r.cm_into()?),
         })
@@ -95,7 +95,7 @@ impl CmInto<fsys::OfferDecl> for cm::Offer {
     fn cm_into(self) -> Result<fsys::OfferDecl, Error> {
         Ok(match self {
             cm::Offer::Service(s) => fsys::OfferDecl::Service(s.cm_into()?),
-            cm::Offer::ServiceProtocol(s) => fsys::OfferDecl::ServiceProtocol(s.cm_into()?),
+            cm::Offer::Protocol(s) => fsys::OfferDecl::Protocol(s.cm_into()?),
             cm::Offer::Directory(d) => fsys::OfferDecl::Directory(d.cm_into()?),
             cm::Offer::Storage(s) => fsys::OfferDecl::Storage(s.cm_into()?),
             cm::Offer::Runner(r) => fsys::OfferDecl::Runner(r.cm_into()?),
@@ -113,9 +113,9 @@ impl CmInto<fsys::UseServiceDecl> for cm::UseService {
     }
 }
 
-impl CmInto<fsys::UseServiceProtocolDecl> for cm::UseServiceProtocol {
-    fn cm_into(self) -> Result<fsys::UseServiceProtocolDecl, Error> {
-        Ok(fsys::UseServiceProtocolDecl {
+impl CmInto<fsys::UseProtocolDecl> for cm::UseProtocol {
+    fn cm_into(self) -> Result<fsys::UseProtocolDecl, Error> {
+        Ok(fsys::UseProtocolDecl {
             source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path.into()),
             target_path: Some(self.target_path.into()),
@@ -160,9 +160,9 @@ impl CmInto<fsys::ExposeServiceDecl> for cm::ExposeService {
     }
 }
 
-impl CmInto<fsys::ExposeServiceProtocolDecl> for cm::ExposeServiceProtocol {
-    fn cm_into(self) -> Result<fsys::ExposeServiceProtocolDecl, Error> {
-        Ok(fsys::ExposeServiceProtocolDecl {
+impl CmInto<fsys::ExposeProtocolDecl> for cm::ExposeProtocol {
+    fn cm_into(self) -> Result<fsys::ExposeProtocolDecl, Error> {
+        Ok(fsys::ExposeProtocolDecl {
             source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path.into()),
             target_path: Some(self.target_path.into()),
@@ -208,9 +208,9 @@ impl CmInto<fsys::OfferServiceDecl> for cm::OfferService {
     }
 }
 
-impl CmInto<fsys::OfferServiceProtocolDecl> for cm::OfferServiceProtocol {
-    fn cm_into(self) -> Result<fsys::OfferServiceProtocolDecl, Error> {
-        Ok(fsys::OfferServiceProtocolDecl {
+impl CmInto<fsys::OfferProtocolDecl> for cm::OfferProtocol {
+    fn cm_into(self) -> Result<fsys::OfferProtocolDecl, Error> {
+        Ok(fsys::OfferProtocolDecl {
             source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path.into()),
             target: Some(self.target.cm_into()?),
@@ -606,7 +606,7 @@ mod tests {
                         }
                     },
                     {
-                        "service_protocol": {
+                        "protocol": {
                             "source": {
                                 "realm": {}
                             },
@@ -615,7 +615,7 @@ mod tests {
                         }
                     },
                     {
-                        "service_protocol": {
+                        "protocol": {
                             "source": {
                                 "framework": {}
                             },
@@ -668,12 +668,12 @@ mod tests {
                         source_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
                         target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
                     }),
-                    fsys::UseDecl::ServiceProtocol(fsys::UseServiceProtocolDecl {
+                    fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some("/fonts/CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
                     }),
-                    fsys::UseDecl::ServiceProtocol(fsys::UseServiceProtocolDecl {
+                    fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         source_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
                         target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
@@ -729,7 +729,7 @@ mod tests {
                         }
                     },
                     {
-                        "service_protocol": {
+                        "protocol": {
                             "source": {
                                 "child": {
                                     "name": "logger"
@@ -789,7 +789,7 @@ mod tests {
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                     }),
-                    fsys::ExposeDecl::ServiceProtocol(fsys::ExposeServiceProtocolDecl {
+                    fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
                         source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
@@ -905,7 +905,7 @@ mod tests {
                         }
                     },
                     {
-                        "service_protocol": {
+                        "protocol": {
                             "source": {
                                 "self": {}
                             },
@@ -919,7 +919,7 @@ mod tests {
                         }
                     },
                     {
-                        "service_protocol": {
+                        "protocol": {
                             "source": {
                                 "child": {
                                     "name": "logger"
@@ -1092,7 +1092,7 @@ mod tests {
                         )),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     }),
-                    fsys::OfferDecl::ServiceProtocol(fsys::OfferServiceProtocolDecl {
+                    fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_path: Some("/svc/fuchsia.netstack.LegacyNetstack".to_string()),
                         target: Some(fsys::Ref::Child(
@@ -1103,7 +1103,7 @@ mod tests {
                         )),
                         target_path: Some("/svc/fuchsia.netstack.LegacyNetstack".to_string()),
                     }),
-                    fsys::OfferDecl::ServiceProtocol(fsys::OfferServiceProtocolDecl {
+                    fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
                             collection: None,

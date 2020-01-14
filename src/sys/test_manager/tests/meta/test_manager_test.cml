@@ -4,22 +4,22 @@
     },
     "use": [
         {
-            "service_protocol": "/svc/fuchsia.logger.LogSink",
+            "protocol": "/svc/fuchsia.logger.LogSink",
         },
         {
-            "service_protocol": "/svc/fuchsia.sys2.Realm",
+            "protocol": "/svc/fuchsia.sys2.Realm",
             "from": "framework",
         },
     ],
     "expose": [
         {
-            "service_protocol": "/svc/fuchsia.test.Suite",
+            "protocol": "/svc/fuchsia.test.Suite",
             "from": "self",
         },
     ],
     "offer": [
         {
-            "service_protocol": "/svc/fuchsia.logger.LogSink",
+            "protocol": "/svc/fuchsia.logger.LogSink",
             "from": "realm",
             "to": [ "#tests" ]
         },

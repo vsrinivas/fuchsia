@@ -17,7 +17,7 @@
     ],
     expose: [
         {
-            service_protocol: [
+            protocol: [
                 "/svc/fuchsia.session.ElementManager",
                 "/svc/fuchsia.session.examples.ElementPing",
             ],
@@ -26,20 +26,20 @@
     ],
     use: [
         {
-            service_protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "/svc/fuchsia.sys2.Realm",
             from: "framework",
         },
     ],
     offer: [
         {
-            service_protocol: "/svc/fuchsia.session.examples.ElementPing",
+            protocol: "/svc/fuchsia.session.examples.ElementPing",
             from: "self",
             to: [
                 "#elements",
             ],
         },
         {
-            service_protocol: "/svc/fuchsia.session.ElementManager",
+            protocol: "/svc/fuchsia.session.ElementManager",
             from: "self",
             to: [
                 "#element_proposer",

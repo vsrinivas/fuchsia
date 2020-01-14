@@ -2,9 +2,9 @@
   "program": { "binary": "bin/console" },
   "use": [
     { "runner": "elf" },
-    { "service_protocol": "/svc/fuchsia.boot.RootResource" },
+    { "protocol": "/svc/fuchsia.boot.RootResource" },
   ],
   "expose": [
-    { "service_protocol": "/svc/fuchsia.hardware.pty.Device", "from": "self" },
+    { "protocol": "/svc/fuchsia.hardware.pty.Device", "from": "self" },
   ],
 }

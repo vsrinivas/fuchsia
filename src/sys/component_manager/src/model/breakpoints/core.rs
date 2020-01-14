@@ -91,7 +91,7 @@ impl BreakpointSystemInner {
         capability: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (capability, capability_decl) {
-            (None, FrameworkCapability::ServiceProtocol(source_path))
+            (None, FrameworkCapability::Protocol(source_path))
                 if *source_path == *BREAKPOINT_SYSTEM_SERVICE =>
             {
                 let system = ScopedBreakpointSystem::new(scope_moniker, self.registry.clone());

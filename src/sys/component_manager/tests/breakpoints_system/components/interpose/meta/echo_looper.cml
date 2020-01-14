@@ -6,7 +6,7 @@
     },
     "use": [
         {
-            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+            "protocol": "/svc/fidl.examples.routing.echo.Echo",
         },
     ],
 }

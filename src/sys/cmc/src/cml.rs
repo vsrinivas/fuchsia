@@ -253,7 +253,7 @@ impl<T: Clone> OneOrMany<T> {
 #[derive(Deserialize, Debug)]
 pub struct Use {
     pub service: Option<String>,
-    pub service_protocol: Option<OneOrMany<String>>,
+    pub protocol: Option<OneOrMany<String>>,
     pub directory: Option<String>,
     pub storage: Option<String>,
     pub runner: Option<String>,
@@ -265,7 +265,7 @@ pub struct Use {
 #[derive(Deserialize, Debug)]
 pub struct Expose {
     pub service: Option<String>,
-    pub service_protocol: Option<OneOrMany<String>>,
+    pub protocol: Option<OneOrMany<String>>,
     pub directory: Option<String>,
     pub runner: Option<String>,
     pub from: Ref,
@@ -277,7 +277,7 @@ pub struct Expose {
 #[derive(Deserialize, Debug)]
 pub struct Offer {
     pub service: Option<String>,
-    pub service_protocol: Option<OneOrMany<String>>,
+    pub protocol: Option<OneOrMany<String>>,
     pub directory: Option<String>,
     pub storage: Option<String>,
     pub runner: Option<String>,
@@ -320,7 +320,7 @@ pub trait FromClause {
 
 pub trait CapabilityClause {
     fn service(&self) -> &Option<String>;
-    fn service_protocol(&self) -> &Option<OneOrMany<String>>;
+    fn protocol(&self) -> &Option<OneOrMany<String>>;
     fn directory(&self) -> &Option<String>;
     fn storage(&self) -> &Option<String>;
     fn runner(&self) -> &Option<String>;
@@ -334,8 +334,8 @@ impl CapabilityClause for Use {
     fn service(&self) -> &Option<String> {
         &self.service
     }
-    fn service_protocol(&self) -> &Option<OneOrMany<String>> {
-        &self.service_protocol
+    fn protocol(&self) -> &Option<OneOrMany<String>> {
+        &self.protocol
     }
     fn directory(&self) -> &Option<String> {
         &self.directory
@@ -364,10 +364,10 @@ impl CapabilityClause for Expose {
     fn service(&self) -> &Option<String> {
         &self.service
     }
-    // TODO(340156): Only OneOrMany::One service_protocol is supported for now. Teach `expose` rules to accept
-    // `Many` service_protocols.
-    fn service_protocol(&self) -> &Option<OneOrMany<String>> {
-        &self.service_protocol
+    // TODO(340156): Only OneOrMany::One protocol is supported for now. Teach `expose` rules to accept
+    // `Many` protocols.
+    fn protocol(&self) -> &Option<OneOrMany<String>> {
+        &self.protocol
     }
     fn directory(&self) -> &Option<String> {
         &self.directory
@@ -396,8 +396,8 @@ impl CapabilityClause for Offer {
     fn service(&self) -> &Option<String> {
         &self.service
     }
-    fn service_protocol(&self) -> &Option<OneOrMany<String>> {
-        &self.service_protocol
+    fn protocol(&self) -> &Option<OneOrMany<String>> {
+        &self.protocol
     }
     fn directory(&self) -> &Option<String> {
         &self.directory

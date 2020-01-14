@@ -39,7 +39,7 @@ enum OfferSource<'a> {
     // TODO(CF-908): Enable this once unified services are implemented.
     #[allow(dead_code)]
     Service(&'a OfferServiceSource),
-    ServiceProtocol(&'a OfferServiceSource),
+    Protocol(&'a OfferServiceSource),
     Directory(&'a OfferDirectorySource),
     Storage(&'a OfferStorageSource),
     Runner(&'a OfferRunnerSource),
@@ -48,7 +48,7 @@ enum OfferSource<'a> {
 /// Describes the source of a capability, for any type of capability.
 #[derive(Debug)]
 enum ExposeSource<'a> {
-    ServiceProtocol(&'a cm_rust::ExposeSource),
+    Protocol(&'a cm_rust::ExposeSource),
     Directory(&'a cm_rust::ExposeSource),
     Runner(&'a cm_rust::ExposeSource),
 }
@@ -67,7 +67,7 @@ pub(super) async fn route_use_capability<'a>(
 ) -> Result<(), ModelError> {
     match use_decl {
         UseDecl::Service(_)
-        | UseDecl::ServiceProtocol(_)
+        | UseDecl::Protocol(_)
         | UseDecl::Directory(_)
         | UseDecl::Runner(_) => {
             let source = find_used_capability_source(use_decl, target_realm).await?;
@@ -587,7 +587,7 @@ async fn walk_offer_chain<'a>(
         )?;
         let source = match offer {
             OfferDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
-            OfferDecl::ServiceProtocol(s) => OfferSource::ServiceProtocol(&s.source),
+            OfferDecl::Protocol(s) => OfferSource::Protocol(&s.source),
             OfferDecl::Directory(d) => OfferSource::Directory(&d.source),
             OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
             OfferDecl::Runner(r) => OfferSource::Runner(&r.source),
@@ -617,7 +617,7 @@ async fn walk_offer_chain<'a>(
                     scope_moniker: Some(pos.moniker().clone()),
                 }));
             }
-            OfferSource::ServiceProtocol(OfferServiceSource::Realm)
+            OfferSource::Protocol(OfferServiceSource::Realm)
             | OfferSource::Storage(OfferStorageSource::Realm)
             | OfferSource::Runner(OfferRunnerSource::Realm) => {
                 // The offered capability comes from the realm, so follow the
@@ -634,7 +634,7 @@ async fn walk_offer_chain<'a>(
                 pos.realm = cur_realm.try_get_parent()?;
                 continue 'offerloop;
             }
-            OfferSource::ServiceProtocol(OfferServiceSource::Self_) => {
+            OfferSource::Protocol(OfferServiceSource::Self_) => {
                 // The offered capability comes from the current component,
                 // return our current location in the tree.
                 return Ok(Some(CapabilitySource::Component {
@@ -669,7 +669,7 @@ async fn walk_offer_chain<'a>(
                     source_moniker: pos.moniker().clone(),
                 }));
             }
-            OfferSource::ServiceProtocol(OfferServiceSource::Child(child_name))
+            OfferSource::Protocol(OfferServiceSource::Child(child_name))
             | OfferSource::Runner(OfferRunnerSource::Child(child_name)) => {
                 // The offered capability comes from a child, break the loop
                 // and begin walking the expose chain.
@@ -741,8 +741,8 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
             )))?;
         let (source, target) = match expose {
             ExposeDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
-            ExposeDecl::ServiceProtocol(ls) => {
-                (ExposeSource::ServiceProtocol(&ls.source), &ls.target)
+            ExposeDecl::Protocol(ls) => {
+                (ExposeSource::Protocol(&ls.source), &ls.target)
             }
             ExposeDecl::Directory(d) => (ExposeSource::Directory(&d.source), &d.target),
             ExposeDecl::Runner(r) => (ExposeSource::Runner(&r.source), &r.target),
@@ -759,7 +759,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
             _ => None,
         };
         match source {
-            ExposeSource::ServiceProtocol(cm_rust::ExposeSource::Self_) => {
+            ExposeSource::Protocol(cm_rust::ExposeSource::Self_) => {
                 // The offered capability comes from the current component, return our
                 // current location in the tree.
                 return Ok(CapabilitySource::Component {
@@ -794,7 +794,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                     source_moniker: pos.moniker().clone(),
                 });
             }
-            ExposeSource::ServiceProtocol(cm_rust::ExposeSource::Child(child_name))
+            ExposeSource::Protocol(cm_rust::ExposeSource::Child(child_name))
             | ExposeSource::Runner(cm_rust::ExposeSource::Child(child_name)) => {
                 // The offered capability comes from a child, so follow the child.
                 pos.capability = ComponentCapability::Expose(expose.clone());
@@ -822,7 +822,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                 )?);
                 continue;
             }
-            ExposeSource::ServiceProtocol(cm_rust::ExposeSource::Framework) => {
+            ExposeSource::Protocol(cm_rust::ExposeSource::Framework) => {
                 let capability =
                     FrameworkCapability::framework_from_expose_decl(expose).map_err(|_| {
                         ModelError::capability_discovery_error(format_err!(

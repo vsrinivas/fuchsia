@@ -7,20 +7,20 @@
     },
     use: [
         {
-            "service_protocol": "/svc/fuchsia.sys2.Realm",
+            "protocol": "/svc/fuchsia.sys2.Realm",
             "from": "framework",
         },
         // The last "use" statements are needed for the RustTestAdapter trampoline
         {
-            "service_protocol": "/svc/fuchsia.process.Launcher"
+            "protocol": "/svc/fuchsia.process.Launcher"
         },
         {
-            "service_protocol": "/svc/fuchsia.logger.LogSink"
+            "protocol": "/svc/fuchsia.logger.LogSink"
         },
     ],
     expose: [
         {
-            service_protocol: "/svc/fuchsia.test.Suite",
+            protocol: "/svc/fuchsia.test.Suite",
             from: "self",
         },
     ],

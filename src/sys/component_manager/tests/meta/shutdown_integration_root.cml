@@ -6,7 +6,7 @@
 {
     "offer": [
         {
-            "service_protocol": "/svc/fuchsia.sys2.SystemController",
+            "protocol": "/svc/fuchsia.sys2.SystemController",
             "from": "realm",
             "to": [ "#power_switch" ]
         },

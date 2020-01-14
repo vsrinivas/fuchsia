@@ -323,7 +323,7 @@ impl RealmCapabilityHostInner {
         // If some other capability has already been installed, then there's nothing to
         // do here.
         match (&capability_provider, capability) {
-            (None, FrameworkCapability::ServiceProtocol(capability_path))
+            (None, FrameworkCapability::Protocol(capability_path))
                 if *capability_path == *REALM_SERVICE =>
             {
                 return Ok(Some(Box::new(RealmCapabilityProvider::new(
@@ -377,7 +377,7 @@ mod tests {
             startup,
         },
         cm_rust::{
-            self, CapabilityPath, ChildDecl, ExposeDecl, ExposeServiceProtocolDecl, ExposeSource,
+            self, CapabilityPath, ChildDecl, ExposeDecl, ExposeProtocolDecl, ExposeSource,
             ExposeTarget, NativeIntoFidl,
         },
         fidl::endpoints,
@@ -783,7 +783,7 @@ mod tests {
         mock_resolver.add_component(
             "system",
             ComponentDeclBuilder::new()
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -848,7 +848,7 @@ mod tests {
         mock_resolver.add_component(
             "system",
             ComponentDeclBuilder::new()
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),

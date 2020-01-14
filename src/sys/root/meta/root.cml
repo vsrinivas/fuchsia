@@ -26,7 +26,7 @@
       "rights": ["rx*"],
     },
     {
-      "service_protocol": [
+      "protocol": [
         // These services and directories routed from "realm" at the root are provided by bootsvc
         // through component_manager's namespace.
         "/svc/fuchsia.boot.Arguments",
@@ -44,25 +44,25 @@
       "to": [ "#devcoordinator" ],
     },
     {
-      "service_protocol": "/svc/fuchsia.boot.RootResource",
+      "protocol": "/svc/fuchsia.boot.RootResource",
       "from": "realm",
       "to": [ "#devcoordinator", "#console", "#sysinfo"],
     },
     // Offer the kernel serial console to the devcoordinator
     {
-      "service_protocol": "/svc/fuchsia.hardware.pty.Device",
+      "protocol": "/svc/fuchsia.hardware.pty.Device",
       "from": "#console",
       "to": [ "#devcoordinator" ],
       "as": "/svc/console",
     },
     // Offer the pty service to devcoordinator (temporary hack to expose it to appmgr).
     {
-      "service_protocol": "/svc/fuchsia.hardware.pty.Device",
+      "protocol": "/svc/fuchsia.hardware.pty.Device",
       "from": "#ptysvc",
       "to": [ "#devcoordinator" ],
     },
      {
-      "service_protocol": "/svc/fuchsia.sysinfo.SysInfo",
+      "protocol": "/svc/fuchsia.sysinfo.SysInfo",
       "from": "#sysinfo",
       "to": [ "#devcoordinator" ],
     },

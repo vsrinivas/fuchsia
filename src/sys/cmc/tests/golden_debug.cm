@@ -13,7 +13,7 @@
             }
         },
         {
-            "service_protocol": {
+            "protocol": {
                 "source": {
                     "realm": {}
                 },
@@ -36,7 +36,7 @@
             }
         },
         {
-            "service_protocol": {
+            "protocol": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -86,7 +86,7 @@
             }
         },
         {
-            "service_protocol": {
+            "protocol": {
                 "source": {
                     "child": {
                         "name": "logger"

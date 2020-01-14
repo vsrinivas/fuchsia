@@ -54,7 +54,7 @@ impl CapabilitySource {
 #[derive(Debug, Clone)]
 pub enum FrameworkCapability {
     Service(CapabilityPath),
-    ServiceProtocol(CapabilityPath),
+    Protocol(CapabilityPath),
     Directory(CapabilityPath),
     Runner(CapabilityName),
 }
@@ -63,7 +63,7 @@ impl FrameworkCapability {
     pub fn path(&self) -> Option<&CapabilityPath> {
         match self {
             FrameworkCapability::Service(source_path) => Some(&source_path),
-            FrameworkCapability::ServiceProtocol(source_path) => Some(&source_path),
+            FrameworkCapability::Protocol(source_path) => Some(&source_path),
             FrameworkCapability::Directory(source_path) => Some(&source_path),
             _ => None,
         }
@@ -74,8 +74,8 @@ impl FrameworkCapability {
             UseDecl::Service(s) if s.source == UseSource::Realm => {
                 Ok(FrameworkCapability::Service(s.source_path.clone()))
             }
-            UseDecl::ServiceProtocol(s) if s.source == UseSource::Realm => {
-                Ok(FrameworkCapability::ServiceProtocol(s.source_path.clone()))
+            UseDecl::Protocol(s) if s.source == UseSource::Realm => {
+                Ok(FrameworkCapability::Protocol(s.source_path.clone()))
             }
             UseDecl::Directory(d) if d.source == UseSource::Realm => {
                 Ok(FrameworkCapability::Directory(d.source_path.clone()))
@@ -89,8 +89,8 @@ impl FrameworkCapability {
 
     pub fn builtin_from_offer_decl(decl: &OfferDecl) -> Result<Self, Error> {
         match decl {
-            OfferDecl::ServiceProtocol(s) if s.source == OfferServiceSource::Realm => {
-                Ok(FrameworkCapability::ServiceProtocol(s.source_path.clone()))
+            OfferDecl::Protocol(s) if s.source == OfferServiceSource::Realm => {
+                Ok(FrameworkCapability::Protocol(s.source_path.clone()))
             }
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Realm => {
                 Ok(FrameworkCapability::Directory(d.source_path.clone()))
@@ -117,8 +117,8 @@ impl FrameworkCapability {
             UseDecl::Service(s) if s.source == UseSource::Framework => {
                 Ok(FrameworkCapability::Service(s.source_path.clone()))
             }
-            UseDecl::ServiceProtocol(s) if s.source == UseSource::Framework => {
-                Ok(FrameworkCapability::ServiceProtocol(s.source_path.clone()))
+            UseDecl::Protocol(s) if s.source == UseSource::Framework => {
+                Ok(FrameworkCapability::Protocol(s.source_path.clone()))
             }
             UseDecl::Directory(d) if d.source == UseSource::Framework => {
                 Ok(FrameworkCapability::Directory(d.source_path.clone()))
@@ -131,8 +131,8 @@ impl FrameworkCapability {
 
     pub fn framework_from_offer_decl(decl: &OfferDecl) -> Result<Self, Error> {
         match decl {
-            OfferDecl::ServiceProtocol(s) if s.source == OfferServiceSource::Realm => {
-                Ok(FrameworkCapability::ServiceProtocol(s.source_path.clone()))
+            OfferDecl::Protocol(s) if s.source == OfferServiceSource::Realm => {
+                Ok(FrameworkCapability::Protocol(s.source_path.clone()))
             }
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Framework => {
                 Ok(FrameworkCapability::Directory(d.source_path.clone()))
@@ -145,8 +145,8 @@ impl FrameworkCapability {
 
     pub fn framework_from_expose_decl(decl: &ExposeDecl) -> Result<Self, Error> {
         match decl {
-            ExposeDecl::ServiceProtocol(d) if d.source == ExposeSource::Framework => {
-                Ok(FrameworkCapability::ServiceProtocol(d.source_path.clone()))
+            ExposeDecl::Protocol(d) if d.source == ExposeSource::Framework => {
+                Ok(FrameworkCapability::Protocol(d.source_path.clone()))
             }
             ExposeDecl::Directory(d) if d.source == ExposeSource::Framework => {
                 Ok(FrameworkCapability::Directory(d.source_path.clone()))
@@ -194,21 +194,21 @@ impl ComponentCapability {
     pub fn source_path(&self) -> Option<&CapabilityPath> {
         match self {
             ComponentCapability::Use(use_) => match use_ {
-                UseDecl::ServiceProtocol(UseServiceProtocolDecl { source_path, .. }) => {
+                UseDecl::Protocol(UseProtocolDecl { source_path, .. }) => {
                     Some(source_path)
                 }
                 UseDecl::Directory(UseDirectoryDecl { source_path, .. }) => Some(source_path),
                 _ => None,
             },
             ComponentCapability::Expose(expose) => match expose {
-                ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl { source_path, .. }) => {
+                ExposeDecl::Protocol(ExposeProtocolDecl { source_path, .. }) => {
                     Some(source_path)
                 }
                 ExposeDecl::Directory(ExposeDirectoryDecl { source_path, .. }) => Some(source_path),
                 _ => None,
             },
             ComponentCapability::Offer(offer) => match offer {
-                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl { source_path, .. }) => {
+                OfferDecl::Protocol(OfferProtocolDecl { source_path, .. }) => {
                     Some(source_path)
                 }
                 OfferDecl::Directory(OfferDirectoryDecl { source_path, .. }) => Some(source_path),
@@ -236,14 +236,14 @@ impl ComponentCapability {
     /// Returns the `ExposeDecl` that exposes the capability, if it exists.
     pub fn find_expose_source<'a>(&self, decl: &'a ComponentDecl) -> Option<&'a ExposeDecl> {
         decl.exposes.iter().find(|&expose| match (self, expose) {
-            // ServiceProtocol exposed to me that has a matching `expose` or `offer`.
+            // Protocol exposed to me that has a matching `expose` or `offer`.
             (
-                ComponentCapability::Offer(OfferDecl::ServiceProtocol(parent_offer)),
-                ExposeDecl::ServiceProtocol(expose),
+                ComponentCapability::Offer(OfferDecl::Protocol(parent_offer)),
+                ExposeDecl::Protocol(expose),
             ) => parent_offer.source_path == expose.target_path,
             (
-                ComponentCapability::Expose(ExposeDecl::ServiceProtocol(parent_expose)),
-                ExposeDecl::ServiceProtocol(expose),
+                ComponentCapability::Expose(ExposeDecl::Protocol(parent_expose)),
+                ExposeDecl::Protocol(expose),
             ) => parent_expose.source_path == expose.target_path,
             // Directory exposed to me that matches a directory `expose` or `offer`.
             (
@@ -303,20 +303,20 @@ impl ComponentCapability {
         child_moniker: &ChildMoniker,
     ) -> Option<&'a OfferDecl> {
         decl.offers.iter().find(|&offer| match (self, offer) {
-            // ServiceProtocol offered to me that matches a service `use` or `offer` declaration.
+            // Protocol offered to me that matches a service `use` or `offer` declaration.
             (
-                ComponentCapability::Use(UseDecl::ServiceProtocol(child_use)),
-                OfferDecl::ServiceProtocol(offer),
-            ) => Self::is_offer_service_protocol_or_directory_match(
+                ComponentCapability::Use(UseDecl::Protocol(child_use)),
+                OfferDecl::Protocol(offer),
+            ) => Self::is_offer_protocol_or_directory_match(
                 child_moniker,
                 &child_use.source_path,
                 &offer.target,
                 &offer.target_path,
             ),
             (
-                ComponentCapability::Offer(OfferDecl::ServiceProtocol(child_offer)),
-                OfferDecl::ServiceProtocol(offer),
-            ) => Self::is_offer_service_protocol_or_directory_match(
+                ComponentCapability::Offer(OfferDecl::Protocol(child_offer)),
+                OfferDecl::Protocol(offer),
+            ) => Self::is_offer_protocol_or_directory_match(
                 child_moniker,
                 &child_offer.source_path,
                 &offer.target,
@@ -326,7 +326,7 @@ impl ComponentCapability {
             (
                 ComponentCapability::Use(UseDecl::Directory(child_use)),
                 OfferDecl::Directory(offer),
-            ) => Self::is_offer_service_protocol_or_directory_match(
+            ) => Self::is_offer_protocol_or_directory_match(
                 child_moniker,
                 &child_use.source_path,
                 &offer.target,
@@ -335,7 +335,7 @@ impl ComponentCapability {
             (
                 ComponentCapability::Offer(OfferDecl::Directory(child_offer)),
                 OfferDecl::Directory(offer),
-            ) => Self::is_offer_service_protocol_or_directory_match(
+            ) => Self::is_offer_protocol_or_directory_match(
                 child_moniker,
                 &child_offer.source_path,
                 &offer.target,
@@ -343,7 +343,7 @@ impl ComponentCapability {
             ),
             // Directory offered to me that matches a `storage` declaration which consumes it.
             (ComponentCapability::Storage(child_storage), OfferDecl::Directory(offer)) => {
-                Self::is_offer_service_protocol_or_directory_match(
+                Self::is_offer_protocol_or_directory_match(
                     child_moniker,
                     &child_storage.source_path,
                     &offer.target,
@@ -439,7 +439,7 @@ impl ComponentCapability {
         paths.contains(target_path) && target_matches_moniker(target, child_moniker)
     }
 
-    fn is_offer_service_protocol_or_directory_match(
+    fn is_offer_protocol_or_directory_match(
         child_moniker: &ChildMoniker,
         path: &CapabilityPath,
         target: &OfferTarget,

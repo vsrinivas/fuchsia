@@ -262,7 +262,7 @@ impl ProcessLauncherInner {
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            FrameworkCapability::ServiceProtocol(capability_path)
+            FrameworkCapability::Protocol(capability_path)
                 if *capability_path == *PROCESS_LAUNCHER_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(ProcessLauncherCapabilityProvider::new())
@@ -381,7 +381,7 @@ mod tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Framework {
-            capability: FrameworkCapability::ServiceProtocol(
+            capability: FrameworkCapability::Protocol(
                 PROCESS_LAUNCHER_CAPABILITY_PATH.clone(),
             ),
             scope_moniker: None,

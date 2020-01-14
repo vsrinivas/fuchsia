@@ -433,7 +433,7 @@ async fn use_in_collection_from_parent() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
                     source_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
@@ -567,7 +567,7 @@ async fn use_in_collection_from_grandparent() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
                     source_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),

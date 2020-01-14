@@ -10,7 +10,7 @@ using fuchsia.io2;
 /// For example, a legacy service exposed by the component at runtime.
 xunion ExposeDecl {
     1: ExposeServiceDecl service;
-    2: ExposeServiceProtocolDecl service_protocol;
+    2: ExposeProtocolDecl protocol;
     3: ExposeDirectoryDecl directory;
     4: ExposeRunnerDecl runner;
 };
@@ -46,7 +46,7 @@ table ExposeServiceDecl {
 ///
 /// A legacy service is a service with a single instance, provided by a single
 /// FIDL protocol.
-table ExposeServiceProtocolDecl {
+table ExposeProtocolDecl {
     /// The provider of the capability relative to the component itself. Must
     /// be `self` or `child`.
     1: Ref source;

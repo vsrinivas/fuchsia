@@ -280,9 +280,9 @@ pub mod tests {
             },
         },
         cm_rust::{
-            CapabilityPath, ExposeDecl, ExposeServiceProtocolDecl, ExposeSource, ExposeTarget,
-            OfferDecl, OfferServiceProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
-            UseServiceProtocolDecl, UseSource,
+            CapabilityPath, ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget,
+            OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
+            UseProtocolDecl, UseSource,
         },
         fidl_fuchsia_sys2 as fsys,
         std::{convert::TryFrom, sync::Weak, task::Context},
@@ -728,13 +728,13 @@ pub mod tests {
                     .add_eager_child("c")
                     .add_eager_child("d")
                     .add_eager_child("e")
-                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }))
-                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -746,7 +746,7 @@ pub mod tests {
             (
                 "c",
                 ComponentDeclBuilder::new()
-                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -757,7 +757,7 @@ pub mod tests {
             (
                 "d",
                 ComponentDeclBuilder::new()
-                    .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -769,7 +769,7 @@ pub mod tests {
             (
                 "e",
                 ComponentDeclBuilder::new()
-                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -877,19 +877,19 @@ pub mod tests {
                     .add_eager_child("d")
                     .add_eager_child("e")
                     .add_eager_child("f")
-                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }))
-                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("e".to_string()),
                     }))
-                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("e".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
@@ -901,7 +901,7 @@ pub mod tests {
             (
                 "c",
                 ComponentDeclBuilder::new()
-                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -912,7 +912,7 @@ pub mod tests {
             (
                 "d",
                 ComponentDeclBuilder::new()
-                    .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -924,12 +924,12 @@ pub mod tests {
             (
                 "e",
                 ComponentDeclBuilder::new()
-                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
-                    .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
@@ -941,7 +941,7 @@ pub mod tests {
             (
                 "f",
                 ComponentDeclBuilder::new()
-                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
@@ -1078,25 +1078,25 @@ pub mod tests {
                     .add_eager_child("d")
                     .add_eager_child("e")
                     .add_eager_child("f")
-                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
                     }))
-                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("e".to_string()),
                     }))
-                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("f".to_string()),
                     }))
-                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("e".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
@@ -1108,7 +1108,7 @@ pub mod tests {
             (
                 "c",
                 ComponentDeclBuilder::new()
-                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -1119,7 +1119,7 @@ pub mod tests {
             (
                 "d",
                 ComponentDeclBuilder::new()
-                    .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -1131,12 +1131,12 @@ pub mod tests {
             (
                 "e",
                 ComponentDeclBuilder::new()
-                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
-                    .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
@@ -1148,12 +1148,12 @@ pub mod tests {
             (
                 "f",
                 ComponentDeclBuilder::new()
-                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                     }))
-                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -1281,7 +1281,7 @@ pub mod tests {
                 ComponentDeclBuilder::new()
                     .add_eager_child("c")
                     .add_eager_child("d")
-                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("c".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
@@ -1293,7 +1293,7 @@ pub mod tests {
             (
                 "c",
                 ComponentDeclBuilder::new()
-                    .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
@@ -1305,7 +1305,7 @@ pub mod tests {
             (
                 "d",
                 ComponentDeclBuilder::new()
-                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),

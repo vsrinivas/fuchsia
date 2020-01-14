@@ -190,18 +190,18 @@ impl<'a> CapabilityId<'a> {
         let alias = clause.r#as();
         if let Some(svc) = clause.service().as_ref() {
             return Ok(vec![CapabilityId::Path(alias.unwrap_or(svc))]);
-        } else if let Some(OneOrMany::One(svc_protocol)) = clause.service_protocol().as_ref() {
-            return Ok(vec![CapabilityId::Path(alias.unwrap_or(svc_protocol))]);
-        } else if let Some(OneOrMany::Many(svc_protocols)) = clause.service_protocol().as_ref() {
-            return match (alias, svc_protocols.len()) {
+        } else if let Some(OneOrMany::One(protocol)) = clause.protocol().as_ref() {
+            return Ok(vec![CapabilityId::Path(alias.unwrap_or(protocol))]);
+        } else if let Some(OneOrMany::Many(protocols)) = clause.protocol().as_ref() {
+            return match (alias, protocols.len()) {
                 (Some(valid_alias), 1) => Ok(vec![CapabilityId::Path(valid_alias)]),
 
                 (Some(_), _) => Err(Error::validate(
-                    "\"as\" field can only be specified when one `service_protocol` is supplied.",
+                    "\"as\" field can only be specified when one `protocol` is supplied.",
                 )),
 
                 (None, _) => {
-                    Ok(svc_protocols.iter().map(|svc: &String| CapabilityId::Path(svc)).collect())
+                    Ok(protocols.iter().map(|svc: &String| CapabilityId::Path(svc)).collect())
                 }
             };
         } else if let Some(p) = clause.directory().as_ref() {
@@ -704,7 +704,7 @@ mod tests {
                         }
                     },
                     {
-                        "service_protocol": {
+                        "protocol": {
                             "source": {
                                 "realm": {},
                             },
@@ -713,7 +713,7 @@ mod tests {
                         }
                     },
                     {
-                        "service_protocol": {
+                        "protocol": {
                             "source": {
                                 "framework": {},
                             },
@@ -775,7 +775,7 @@ mod tests {
                         }
                     },
                     {
-                        "service_protocol": {
+                        "protocol": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
                                 "self": {}
@@ -930,7 +930,7 @@ mod tests {
                         }
                     },
                     {
-                        "service_protocol": {
+                        "protocol": {
                             "source": {
                                 "realm": {}
                             },
@@ -944,7 +944,7 @@ mod tests {
                         }
                     },
                     {
-                        "service_protocol": {
+                        "protocol": {
                             "source": {
                                 "self": {}
                             },
@@ -958,7 +958,7 @@ mod tests {
                         }
                     },
                     {
-                        "service_protocol": {
+                        "protocol": {
                             "source": {
                                 "self": {}
                             },
@@ -1651,9 +1651,9 @@ mod tests {
                 "use": [
                   { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
                   { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
-                  { "service_protocol": "/fonts/CoolFonts", "as": "/svc/MyFonts" },
-                  { "service_protocol": "/svc/fuchsia.test.hub.HubReport", "from": "framework" },
-                  { "service_protocol": ["/svc/fuchsia.ui.scenic.Scenic", "/svc/fuchsia.net.Connectivity"] },
+                  { "protocol": "/fonts/CoolFonts", "as": "/svc/MyFonts" },
+                  { "protocol": "/svc/fuchsia.test.hub.HubReport", "from": "framework" },
+                  { "protocol": ["/svc/fuchsia.ui.scenic.Scenic", "/svc/fuchsia.net.Connectivity"] },
                   {
                     "directory": "/data/assets",
                     "rights": ["rw*"],
@@ -1707,39 +1707,39 @@ mod tests {
             input = json!({
                 "use": [
                     {
-                        "service_protocol": ["/fonts/CoolFonts", "/fonts/FunkyFonts"],
+                        "protocol": ["/fonts/CoolFonts", "/fonts/FunkyFonts"],
                         "as": "/fonts/MyFonts"
                     }
                 ]
             }),
-            result = Err(Error::validate("\"as\" field can only be specified when one `service_protocol` is supplied.")),
+            result = Err(Error::validate("\"as\" field can only be specified when one `protocol` is supplied.")),
         },
         test_cml_use_bad_duplicate_targets => {
             input = json!({
                 "use": [
                   { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
-                  { "service_protocol": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+                  { "protocol": "/svc/fuchsia.sys2.Realm", "from": "framework" },
                 ],
             }),
             result = Err(Error::validate("\"/svc/fuchsia.sys2.Realm\" is a duplicate \"use\" target path")),
         },
-        test_cml_use_bad_duplicate_service_protocol => {
+        test_cml_use_bad_duplicate_protocol => {
             input = json!({
                 "use": [
-                  { "service_protocol": ["/svc/fuchsia.sys2.Realm", "/svc/fuchsia.sys2.Realm"] },
+                  { "protocol": ["/svc/fuchsia.sys2.Realm", "/svc/fuchsia.sys2.Realm"] },
                 ],
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0/service_protocol")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0/protocol")),
         },
-        test_cml_use_empty_service_protocols => {
+        test_cml_use_empty_protocols => {
             input = json!({
                 "use": [
                     {
-                        "service_protocol": [],
+                        "protocol": [],
                     },
                 ],
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0/service_protocol")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0/protocol")),
         },
 
         // expose
@@ -1752,11 +1752,11 @@ mod tests {
                         "as": "/svc/logger"
                     },
                     {
-                        "service_protocol": "/svc/A",
+                        "protocol": "/svc/A",
                         "from": "self",
                     },
                     {
-                        "service_protocol": ["/svc/B", "/svc/C"],
+                        "protocol": ["/svc/B", "/svc/C"],
                         "from": "self",
                     },
                     { "directory": "/volumes/blobfs", "from": "self", "rights": ["r*"]},
@@ -1826,12 +1826,12 @@ mod tests {
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /expose/0/from")),
         },
-        // if "as" is specified, only 1 "service_protocol" array item is allowed.
+        // if "as" is specified, only 1 "protocol" array item is allowed.
         test_cml_expose_bad_as => {
             input = json!({
                 "expose": [
                     {
-                        "service_protocol": ["/svc/A", "/svc/B"],
+                        "protocol": ["/svc/A", "/svc/B"],
                         "from": "self",
                         "as": "/thing"
                     },
@@ -1843,34 +1843,34 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"as\" field can only be specified when one `service_protocol` is supplied.")),
+            result = Err(Error::validate("\"as\" field can only be specified when one `protocol` is supplied.")),
         },
         test_cml_expose_bad_duplicate_targets => {
             input = json!({
                 "expose": [
                     {
-                        "service_protocol": ["/svc/A", "/svc/B"],
+                        "protocol": ["/svc/A", "/svc/B"],
                         "from": "self"
                     },
                     {
-                        "service_protocol": "/svc/A",
+                        "protocol": "/svc/A",
                         "from": "self"
                     },
                 ],
             }),
             result = Err(Error::validate("\"/svc/A\" is a duplicate \"expose\" target path for \"realm\"")),
         },
-        test_cml_expose_empty_service_protocols => {
+        test_cml_expose_empty_protocols => {
             input = json!({
                 "expose": [
                     {
-                        "service_protocol": [],
+                        "protocol": [],
                         "from": "self",
                         "as": "/thing"
                     }
                 ],
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /expose/0/service_protocol")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /expose/0/protocol")),
         },
 
         // offer
@@ -1889,12 +1889,12 @@ mod tests {
                         "to": [ "#echo_server" ]
                     },
                     {
-                        "service_protocol": "/svc/fuchsia.fonts.LegacyProvider",
+                        "protocol": "/svc/fuchsia.fonts.LegacyProvider",
                         "from": "realm",
                         "to": [ "#echo_server" ]
                     },
                     {
-                        "service_protocol": [
+                        "protocol": [
                             "/svc/fuchsia.settings.Accessibility",
                             "/svc/fuchsia.ui.scenic.Scenic"
                         ],
@@ -2095,18 +2095,18 @@ mod tests {
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/to/0")),
         },
-        test_cml_offer_empty_service_protocols => {
+        test_cml_offer_empty_protocols => {
             input = json!({
                 "offer": [
                     {
-                        "service_protocol": [],
+                        "protocol": [],
                         "from": "self",
                         "to": [ "#echo_server" ],
                         "as": "/thing"
                     },
                 ],
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /offer/0/service_protocol")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /offer/0/protocol")),
         },
         test_cml_offer_target_equals_from => {
             input = json!({
@@ -2221,12 +2221,12 @@ mod tests {
             }),
             result = Err(Error::validate("\"elf\" is a duplicate \"offer\" target runner for \"#echo_server\"")),
         },
-        // if "as" is specified, only 1 "service_protocol" array item is allowed.
+        // if "as" is specified, only 1 "protocol" array item is allowed.
         test_cml_offer_bad_as => {
             input = json!({
                 "offer": [
                     {
-                        "service_protocol": ["/svc/A", "/svc/B"],
+                        "protocol": ["/svc/A", "/svc/B"],
                         "from": "self",
                         "to": [ "#echo_server" ],
                         "as": "/thing"
@@ -2239,7 +2239,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"as\" field can only be specified when one `service_protocol` is supplied.")),
+            result = Err(Error::validate("\"as\" field can only be specified when one `protocol` is supplied.")),
         },
 
         // children
@@ -3057,7 +3057,7 @@ mod tests {
     fn empty_offer() -> cml::Offer {
         cml::Offer {
             service: None,
-            service_protocol: None,
+            protocol: None,
             directory: None,
             storage: None,
             runner: None,
@@ -3080,14 +3080,14 @@ mod tests {
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
-                service_protocol: Some(OneOrMany::One("/a".to_string())),
+                protocol: Some(OneOrMany::One("/a".to_string())),
                 ..empty_offer()
             })?,
             vec![CapabilityId::Path("/a")]
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
-                service_protocol: Some(OneOrMany::Many(vec!["/a".to_string(), "/b".to_string()])),
+                protocol: Some(OneOrMany::Many(vec!["/a".to_string(), "/b".to_string()])),
                 ..empty_offer()
             })?,
             vec![CapabilityId::Path("/a"), CapabilityId::Path("/b")]

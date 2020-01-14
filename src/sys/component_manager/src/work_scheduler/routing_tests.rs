@@ -9,9 +9,9 @@ use {
         },
     },
     cm_rust::{
-        self, CapabilityPath, ExposeDecl, ExposeServiceProtocolDecl, ExposeSource, ExposeTarget,
-        OfferDecl, OfferServiceProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
-        UseServiceProtocolDecl, UseSource,
+        self, CapabilityPath, ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget,
+        OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
+        UseProtocolDecl, UseSource,
     },
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
@@ -143,13 +143,13 @@ async fn use_work_scheduler_with_expose_to_framework() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target: ExposeTarget::Framework,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
                     source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                     target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
@@ -185,7 +185,7 @@ async fn use_work_scheduler_without_expose() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
                     source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                     target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
@@ -221,13 +221,13 @@ async fn use_work_scheduler_with_expose_to_realm() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target: ExposeTarget::Realm,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
                     source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                     target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
@@ -256,7 +256,7 @@ async fn use_work_scheduler_control_routed() {
         (
             "a",
             ComponentDeclBuilder::new()
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: (*WORK_SCHEDULER_CONTROL_CAPABILITY_PATH).clone(),
                     target_path: offer_use_path.clone(),
@@ -269,7 +269,7 @@ async fn use_work_scheduler_control_routed() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: offer_use_path.clone(),
                     target_path: offer_use_path.clone(),
@@ -300,7 +300,7 @@ async fn use_work_scheduler_control_error() {
         (
             "a",
             ComponentDeclBuilder::new()
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: (*WORK_SCHEDULER_CONTROL_CAPABILITY_PATH).clone(),
                     target_path: offer_use_path.clone(),
@@ -313,7 +313,7 @@ async fn use_work_scheduler_control_error() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
                     source_path: offer_use_path.clone(),
                     target_path: offer_use_path.clone(),

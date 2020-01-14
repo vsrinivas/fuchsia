@@ -5,22 +5,22 @@
     },
     "use": [
         {
-            "service_protocol": "/svc/fuchsia.logger.LogSink",
+            "protocol": "/svc/fuchsia.logger.LogSink",
         },
         {
-            "service_protocol": "/svc/fuchsia.sys2.Realm",
+            "protocol": "/svc/fuchsia.sys2.Realm",
             "from": "framework",
         },
     ],
     // Route Echo service from server to collection.
     "offer": [
         {
-            "service_protocol": "/svc/fuchsia.logger.LogSink",
+            "protocol": "/svc/fuchsia.logger.LogSink",
             "from": "realm",
             "to": [ "#coll" ]
         },
         {
-            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+            "protocol": "/svc/fidl.examples.routing.echo.Echo",
             "from": "#echo_server",
             "to": [ "#coll" ]
         },

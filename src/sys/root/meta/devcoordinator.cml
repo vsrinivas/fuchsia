@@ -7,7 +7,7 @@
       "rights": ["rx*"]
     },
     {
-      "service_protocol": [
+      "protocol": [
         "/svc/console",
         "/svc/fuchsia.boot.Arguments",
         "/svc/fuchsia.boot.FactoryItems",

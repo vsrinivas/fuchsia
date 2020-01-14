@@ -145,7 +145,7 @@ async fn use_framework_service() {
             // If some other capability has already been installed, then there's nothing to
             // do here.
             match capability {
-                FrameworkCapability::ServiceProtocol(capability_path)
+                FrameworkCapability::Protocol(capability_path)
                     if *capability_path == *REALM_SERVICE =>
                 {
                     return Ok(Some(Box::new(MockRealmCapabilityProvider::new(
@@ -169,7 +169,7 @@ async fn use_framework_service() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
                     source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
@@ -222,13 +222,13 @@ async fn use_from_parent() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/file").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/device").unwrap(),
@@ -247,12 +247,12 @@ async fn use_from_parent() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/device").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/device").unwrap(),
@@ -269,7 +269,7 @@ async fn use_from_parent() {
     .await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
     test.check_open_file(vec!["b:0"].into(), "/svc/device".try_into().unwrap()).await
@@ -300,7 +300,7 @@ async fn use_from_grandparent() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
@@ -320,7 +320,7 @@ async fn use_from_grandparent() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
@@ -339,7 +339,7 @@ async fn use_from_grandparent() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -356,7 +356,7 @@ async fn use_from_grandparent() {
     .await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
 }
@@ -376,7 +376,7 @@ async fn use_builtin_from_grandparent() {
         (
             "a",
             ComponentDeclBuilder::new()
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
@@ -389,7 +389,7 @@ async fn use_builtin_from_grandparent() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
@@ -402,7 +402,7 @@ async fn use_builtin_from_grandparent() {
         (
             "c",
             ComponentDeclBuilder::new()
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -414,7 +414,7 @@ async fn use_builtin_from_grandparent() {
     let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
 }
@@ -448,7 +448,7 @@ async fn use_from_sibling_no_root() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("d".to_string()),
                     source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
@@ -468,7 +468,7 @@ async fn use_from_sibling_no_root() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -486,7 +486,7 @@ async fn use_from_sibling_no_root() {
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
@@ -504,7 +504,7 @@ async fn use_from_sibling_no_root() {
     .await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
 }
@@ -529,7 +529,7 @@ async fn use_from_sibling_root() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("b".to_string()),
                     source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
@@ -550,7 +550,7 @@ async fn use_from_sibling_root() {
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
@@ -568,7 +568,7 @@ async fn use_from_sibling_root() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -585,7 +585,7 @@ async fn use_from_sibling_root() {
     .await;
     test.check_use(
         vec!["c:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
 }
@@ -613,7 +613,7 @@ async fn use_from_niece() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("b".to_string()),
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
@@ -634,7 +634,7 @@ async fn use_from_niece() {
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Child("d".to_string()),
                     source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
@@ -653,7 +653,7 @@ async fn use_from_niece() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -671,7 +671,7 @@ async fn use_from_niece() {
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
@@ -689,7 +689,7 @@ async fn use_from_niece() {
     .await;
     test.check_use(
         vec!["c:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
 }
@@ -712,7 +712,7 @@ async fn use_kitchen_sink() {
         (
             "a",
             ComponentDeclBuilder::new()
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
@@ -740,7 +740,7 @@ async fn use_kitchen_sink() {
                     target: OfferTarget::Child("e".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
@@ -768,7 +768,7 @@ async fn use_kitchen_sink() {
                     target: OfferTarget::Child("f".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("g".to_string()),
                     source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
@@ -801,7 +801,7 @@ async fn use_kitchen_sink() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -818,7 +818,7 @@ async fn use_kitchen_sink() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -829,7 +829,7 @@ async fn use_kitchen_sink() {
         (
             "g",
             ComponentDeclBuilder::new_empty_component()
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Child("h".to_string()),
                     source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
@@ -842,7 +842,7 @@ async fn use_kitchen_sink() {
         (
             "h",
             ComponentDeclBuilder::new()
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
@@ -860,7 +860,7 @@ async fn use_kitchen_sink() {
     .await;
     test.check_use(
         vec!["b:0", "e:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
     test.check_use(
@@ -870,7 +870,7 @@ async fn use_kitchen_sink() {
     .await;
     test.check_use(
         vec!["c:0", "f:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
 }
@@ -892,7 +892,7 @@ async fn use_from_component_manager_namespace() {
                 target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                 rights: fio2::Operations::Connect,
             }))
-            .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+            .use_(UseDecl::Protocol(UseProtocolDecl {
                 source: UseSource::Realm,
                 source_path: CapabilityPath::try_from("/use_from_cm_namespace/svc/foo").unwrap(),
                 target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -909,7 +909,7 @@ async fn use_from_component_manager_namespace() {
     .await;
     test.check_use(
         vec![].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
 }
@@ -938,7 +938,7 @@ async fn offer_from_component_manager_namespace() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: CapabilityPath::try_from("/offer_from_cm_namespace/svc/foo")
                         .unwrap(),
@@ -958,7 +958,7 @@ async fn offer_from_component_manager_namespace() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/echo/echo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -976,7 +976,7 @@ async fn offer_from_component_manager_namespace() {
     .await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
 }
@@ -1006,7 +1006,7 @@ async fn use_not_offered() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1023,7 +1023,7 @@ async fn use_not_offered() {
     .await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
     )
     .await;
 }
@@ -1049,7 +1049,7 @@ async fn use_offer_source_not_exposed() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     source: OfferServiceSource::Child("b".to_string()),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1070,7 +1070,7 @@ async fn use_offer_source_not_exposed() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1087,7 +1087,7 @@ async fn use_offer_source_not_exposed() {
     .await;
     test.check_use(
         vec!["c:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
     )
     .await;
 }
@@ -1122,7 +1122,7 @@ async fn use_offer_source_not_offered() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     source: OfferServiceSource::Realm,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1141,7 +1141,7 @@ async fn use_offer_source_not_offered() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1158,7 +1158,7 @@ async fn use_offer_source_not_offered() {
     .await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
     )
     .await;
 }
@@ -1192,7 +1192,7 @@ async fn use_from_expose() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1211,7 +1211,7 @@ async fn use_from_expose() {
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     source: ExposeSource::Self_,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1229,7 +1229,7 @@ async fn use_from_expose() {
     .await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
     )
     .await;
 }
@@ -1254,7 +1254,7 @@ async fn use_from_expose_to_framework() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("b".to_string()),
                     source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
@@ -1275,7 +1275,7 @@ async fn use_from_expose_to_framework() {
                     target: ExposeTarget::Framework,
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
@@ -1293,7 +1293,7 @@ async fn use_from_expose_to_framework() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1310,7 +1310,7 @@ async fn use_from_expose_to_framework() {
     .await;
     test.check_use(
         vec!["c:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
     )
     .await;
 }
@@ -1336,7 +1336,7 @@ async fn offer_from_non_executable() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     source: OfferServiceSource::Self_,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1355,7 +1355,7 @@ async fn offer_from_non_executable() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1372,7 +1372,7 @@ async fn offer_from_non_executable() {
     .await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
     )
     .await;
 }
@@ -1399,7 +1399,7 @@ async fn use_in_collection() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     source: OfferServiceSource::Self_,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1412,7 +1412,7 @@ async fn use_in_collection() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
                     source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
@@ -1424,7 +1424,7 @@ async fn use_in_collection() {
                     target: OfferTarget::Collection("coll".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     source: OfferServiceSource::Realm,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1449,7 +1449,7 @@ async fn use_in_collection() {
         (
             "d",
             ComponentDeclBuilder::new()
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1487,7 +1487,7 @@ async fn use_in_collection() {
     .await;
     test.check_use(
         vec!["b:0", "coll:d:2"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
 }
@@ -1513,7 +1513,7 @@ async fn use_in_collection_not_offered() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     source: OfferServiceSource::Self_,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1526,7 +1526,7 @@ async fn use_in_collection_not_offered() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
                     source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
@@ -1544,7 +1544,7 @@ async fn use_in_collection_not_offered() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                 }))
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1572,7 +1572,7 @@ async fn use_in_collection_not_offered() {
     .await;
     test.check_use(
         vec!["b:0", "coll:c:1"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
     )
     .await;
 }
@@ -1749,7 +1749,7 @@ async fn expose_from_self_and_child() {
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Child("c".to_string()),
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/bar/hippo").unwrap(),
@@ -1769,7 +1769,7 @@ async fn expose_from_self_and_child() {
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1787,7 +1787,7 @@ async fn expose_from_self_and_child() {
     .await;
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
-        CheckUse::ServiceProtocol {
+        CheckUse::Protocol {
             path: "/svc/bar/hippo".try_into().unwrap(),
             should_succeed: true,
         },
@@ -1800,7 +1800,7 @@ async fn expose_from_self_and_child() {
     .await;
     test.check_use_exposed_dir(
         vec!["b:0", "c:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
 }
@@ -1832,7 +1832,7 @@ async fn use_not_exposed() {
                     target: ExposeTarget::Realm,
                     rights: Some(*rights::READ_RIGHTS),
                 }))
-                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1851,7 +1851,7 @@ async fn use_not_exposed() {
     .await;
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: false },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: false },
     )
     .await;
     test.check_use_exposed_dir(
@@ -1861,7 +1861,7 @@ async fn use_not_exposed() {
     .await;
     test.check_use_exposed_dir(
         vec!["b:0", "c:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
 }
@@ -1878,7 +1878,7 @@ async fn use_not_exposed() {
 /// c: uses service /svc/foo, which should fail
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_with_destroyed_parent() {
-    let use_decl = UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+    let use_decl = UseDecl::Protocol(UseProtocolDecl {
         source: UseSource::Realm,
         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1887,12 +1887,12 @@ async fn use_with_destroyed_parent() {
         (
             "a",
             ComponentDecl {
-                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                uses: vec![UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
                     source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 })],
-                offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
@@ -1908,7 +1908,7 @@ async fn use_with_destroyed_parent() {
         (
             "b",
             ComponentDecl {
-                offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
@@ -1939,7 +1939,7 @@ async fn use_with_destroyed_parent() {
     // Confirm we can use service from "c".
     test.check_use(
         vec!["coll:b:1", "c:0"].into(),
-        CheckUse::ServiceProtocol { path: default_service_capability(), should_succeed: true },
+        CheckUse::Protocol { path: default_service_capability(), should_succeed: true },
     )
     .await;
 
@@ -1978,7 +1978,7 @@ async fn invalid_use_from_component_manager() {
     let components = vec![(
         "a",
         ComponentDeclBuilder::new()
-            .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+            .use_(UseDecl::Protocol(UseProtocolDecl {
                 source: UseSource::Realm,
                 source_path: CapabilityPath::try_from("/invalid").unwrap(),
                 target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
@@ -1992,7 +1992,7 @@ async fn invalid_use_from_component_manager() {
     universe
         .check_use(
             vec![].into(),
-            CheckUse::ServiceProtocol {
+            CheckUse::Protocol {
                 path: CapabilityPath::try_from("/svc/valid").unwrap(),
                 should_succeed: false,
             },
@@ -2014,7 +2014,7 @@ async fn invalid_offer_from_component_manager() {
         (
             "a",
             ComponentDeclBuilder::new()
-                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/invalid").unwrap(),
                     source: OfferServiceSource::Realm,
                     target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
@@ -2027,7 +2027,7 @@ async fn invalid_offer_from_component_manager() {
         (
             "b",
             ComponentDeclBuilder::new()
-                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/valid").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
@@ -2042,7 +2042,7 @@ async fn invalid_offer_from_component_manager() {
     universe
         .check_use(
             vec!["b:0"].into(),
-            CheckUse::ServiceProtocol {
+            CheckUse::Protocol {
                 path: CapabilityPath::try_from("/svc/valid").unwrap(),
                 should_succeed: false,
             },

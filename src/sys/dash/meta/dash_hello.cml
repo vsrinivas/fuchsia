@@ -5,7 +5,7 @@
     },
     "use": [
       {
-        "service_protocol": "/svc/fuchsia.process.Launcher",
+        "protocol": "/svc/fuchsia.process.Launcher",
         "as": "/svc/fuchsia.process.Launcher",
       },
     ]

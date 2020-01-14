@@ -4,11 +4,11 @@
     },
     "use": [
         {
-            "service_protocol": "/svc/fuchsia.sys2.WorkScheduler",
+            "protocol": "/svc/fuchsia.sys2.WorkScheduler",
              "from": "realm",
         },
         {
-            "service_protocol": "/svc/fuchsia.sys2.WorkSchedulerControl",
+            "protocol": "/svc/fuchsia.sys2.WorkSchedulerControl",
              "from": "realm",
         },
     ],

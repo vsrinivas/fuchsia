@@ -759,7 +759,7 @@ mod connect_tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Framework {
-            capability: FrameworkCapability::ServiceProtocol(
+            capability: FrameworkCapability::Protocol(
                 WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.clone(),
             ),
             scope_moniker: None,

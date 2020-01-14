@@ -13,7 +13,7 @@
             "to": [ "#storage_user" ]
         },
         {
-            "service_protocol": "/svc/fuchsia.logger.LogSink",
+            "protocol": "/svc/fuchsia.logger.LogSink",
             "from": "realm",
             "to": [ "#storage_user", "#memfs" ]
         },

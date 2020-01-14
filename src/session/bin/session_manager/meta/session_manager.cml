@@ -4,18 +4,18 @@
     },
     expose: [
         {
-            service_protocol: "/svc/fuchsia.session.Launcher",
+            protocol: "/svc/fuchsia.session.Launcher",
             from: "self",
         },
     ],
     use: [
         {
             // The Realm service allows session_manager to start components.
-            service_protocol: "/svc/fuchsia.sys2.Realm",
+            protocol: "/svc/fuchsia.sys2.Realm",
             from: "framework",
         },
         {
-            service_protocol: [
+            protocol: [
                 "/svc/fuchsia.cobalt.LoggerFactory",
                 "/svc/fuchsia.logger.LogSink",
             ],
@@ -33,14 +33,14 @@
     offer: [
         {
             // Sessions use Scenic to display images.
-            service_protocol: "/svc/fuchsia.ui.scenic.Scenic",
+            protocol: "/svc/fuchsia.ui.scenic.Scenic",
             from: "realm",
             to: [
                 "#session",
             ],
         },
         {
-            service_protocol: "/svc/fuchsia.ui.input2.Keyboard",
+            protocol: "/svc/fuchsia.ui.input2.Keyboard",
             from: "realm",
             to: [
                 "#session",
@@ -48,14 +48,14 @@
         },
         {
             // Pass on the Launcher so that the session can launch cmx components.
-            service_protocol: "/svc/fuchsia.sys.Launcher",
+            protocol: "/svc/fuchsia.sys.Launcher",
             from: "realm",
             to: [
                 "#session",
             ],
         },
         {
-            service_protocol: "/svc/fuchsia.ui.input.ImeService",
+            protocol: "/svc/fuchsia.ui.input.ImeService",
             from: "realm",
             to: [
                 "#session",
@@ -72,7 +72,7 @@
             ],
         },
         {
-            service_protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: "/svc/fuchsia.logger.LogSink",
             from: "realm",
             to: [
                 "#session",

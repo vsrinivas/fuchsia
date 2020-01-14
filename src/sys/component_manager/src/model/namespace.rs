@@ -92,7 +92,7 @@ impl IncomingNamespace {
                         abs_moniker.clone(),
                     )?;
                 }
-                cm_rust::UseDecl::ServiceProtocol(s) => {
+                cm_rust::UseDecl::Protocol(s) => {
                     Self::add_service_use(&mut svc_dirs, s, model.clone(), abs_moniker.clone())?;
                 }
                 cm_rust::UseDecl::Service(_) => {
@@ -255,7 +255,7 @@ impl IncomingNamespace {
     /// proxied to the outgoing directory of the source component.
     fn add_service_use(
         svc_dirs: &mut HashMap<String, Directory>,
-        use_: &cm_rust::UseServiceProtocolDecl,
+        use_: &cm_rust::UseProtocolDecl,
         model: Model,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
@@ -265,7 +265,7 @@ impl IncomingNamespace {
                   mode: u32,
                   relative_path: String,
                   server_end: ServerEnd<NodeMarker>| {
-                let use_ = UseDecl::ServiceProtocol(use_clone.clone());
+                let use_ = UseDecl::Protocol(use_clone.clone());
                 let model = model.clone();
                 let abs_moniker = abs_moniker.clone();
                 fasync::spawn(async move {

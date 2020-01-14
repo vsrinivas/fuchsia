@@ -11,7 +11,7 @@
     // component_manager_for_test for testing purposes.
     expose: [
         {
-            service_protocol: "/svc/fuchsia.test.Suite",
+            protocol: "/svc/fuchsia.test.Suite",
             from: "self"
         }
     ]

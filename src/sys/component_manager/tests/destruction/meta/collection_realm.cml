@@ -5,10 +5,10 @@
     },
     "use": [
         {
-            "service_protocol": "/svc/fuchsia.logger.LogSink",
+            "protocol": "/svc/fuchsia.logger.LogSink",
         },
         {
-            "service_protocol": "/svc/fuchsia.sys2.Realm",
+            "protocol": "/svc/fuchsia.sys2.Realm",
             "from": "framework",
         },
     ],

@@ -62,7 +62,7 @@ pub fn default_directory_capability() -> CapabilityPath {
 }
 
 pub enum CheckUse {
-    ServiceProtocol {
+    Protocol {
         path: CapabilityPath,
         should_succeed: bool,
     },
@@ -338,7 +338,7 @@ impl RoutingTest {
             .expect("could not find child namespace");
         Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
         match check {
-            CheckUse::ServiceProtocol { path, should_succeed } => {
+            CheckUse::Protocol { path, should_succeed } => {
                 capability_util::call_echo_svc_from_namespace(&namespace, path, should_succeed)
                     .await;
             }
@@ -396,7 +396,7 @@ impl RoutingTest {
     /// Checks using a capability from a component's exposed directory.
     pub async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         match check {
-            CheckUse::ServiceProtocol { path, should_succeed } => {
+            CheckUse::Protocol { path, should_succeed } => {
                 capability_util::call_echo_svc_from_exposed_dir(
                     path,
                     &moniker,
@@ -462,7 +462,7 @@ impl RoutingTest {
             .filter_map(|u| match u {
                 UseDecl::Directory(d) => Some(d.target_path.to_string()),
                 UseDecl::Service(s) => Some(s.target_path.to_string()),
-                UseDecl::ServiceProtocol(s) => Some(s.target_path.dirname),
+                UseDecl::Protocol(s) => Some(s.target_path.dirname),
                 UseDecl::Storage(UseStorageDecl::Data(p)) => Some(p.to_string()),
                 UseDecl::Storage(UseStorageDecl::Cache(p)) => Some(p.to_string()),
                 UseDecl::Storage(UseStorageDecl::Meta) => None,
@@ -527,7 +527,7 @@ impl RoutingTest {
         for expose in decl.exposes.iter() {
             match expose {
                 ExposeDecl::Service(_) => panic!("service capability unsupported"),
-                ExposeDecl::ServiceProtocol(s) if s.source == ExposeSource::Self_ => {
+                ExposeDecl::Protocol(s) if s.source == ExposeSource::Self_ => {
                     Self::install_default_out_files(&mut out_dir);
                 }
                 ExposeDecl::Directory(d) if d.source == ExposeSource::Self_ => {
@@ -539,7 +539,7 @@ impl RoutingTest {
         for offer in decl.offers.iter() {
             match offer {
                 OfferDecl::Service(_) => panic!("service capability unsupported"),
-                OfferDecl::ServiceProtocol(s) if s.source == OfferServiceSource::Self_ => {
+                OfferDecl::Protocol(s) if s.source == OfferServiceSource::Self_ => {
                     Self::install_default_out_files(&mut out_dir);
                 }
                 OfferDecl::Directory(d) if d.source == OfferDirectorySource::Self_ => {

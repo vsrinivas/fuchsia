@@ -86,7 +86,7 @@ impl EchoServiceInner {
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         println!("Capability_path: {:?}", capability.path());
         match capability {
-            FrameworkCapability::ServiceProtocol(capability_path)
+            FrameworkCapability::Protocol(capability_path)
                 if *capability_path == *ECHO_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(EchoCapabilityProvider::new()) as Box<dyn CapabilityProvider>))

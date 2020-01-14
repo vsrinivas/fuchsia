@@ -171,7 +171,7 @@
             "required": [ "service" ]
           },
           {
-            "required": [ "service_protocol" ]
+            "required": [ "protocol" ]
           },
           {
             "required": [ "directory" ]
@@ -207,9 +207,9 @@
               }
             }
           },
-          "service_protocol": {
+          "protocol": {
             "type": "object",
-            "title": "Used service protocol capability",
+            "title": "Used protocol capability",
             "required": [
               "source",
               "source_path",
@@ -217,15 +217,15 @@
             ],
             "properties": {
               "source": {
-                "title": "Used service protocol source",
+                "title": "Used protocol source",
                 "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "source_path": {
-                "title": "Used service protocol source path",
+                "title": "Used protocol source path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
               },
               "target_path": {
-                "title": "Used service protocol target path",
+                "title": "Used protocol target path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
               }
             }
@@ -302,7 +302,7 @@
             "required": [ "service" ]
           },
           {
-            "required": [ "service_protocol" ]
+            "required": [ "protocol" ]
           },
           {
             "required": [ "directory" ]
@@ -340,9 +340,9 @@
               }
             }
           },
-          "service_protocol": {
+          "protocol": {
             "type": "object",
-            "title": "Exposed service protocol capability",
+            "title": "Exposed protocol capability",
             "required": [
               "source",
               "source_path",
@@ -351,20 +351,20 @@
             ],
             "properties": {
               "source": {
-                "title": "Exposed service protocol source component",
+                "title": "Exposed protocol source component",
                 "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "source_path": {
-                "title": "Exposed service protocol source path",
+                "title": "Exposed protocol source path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
               },
               "target": {
-                "title": "Exposed service protocol target component",
+                "title": "Exposed protocol target component",
                 "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "target_path": {
                 "allOf": [{ "$ref": "#/definitions/path-clause" }],
-                "title": "Exposed service protocol target path"
+                "title": "Exposed protocol target path"
               }
             }
           },
@@ -442,7 +442,7 @@
             "required": [ "service" ]
           },
           {
-            "required": [ "service_protocol" ]
+            "required": [ "protocol" ]
           },
           {
             "required": [ "directory" ]
@@ -459,8 +459,8 @@
             "title": "Offered service",
             "allOf": [{ "$ref": "#/definitions/offer-clause" }]
           },
-          "service_protocol": {
-            "title": "Offered service protocol",
+          "protocol": {
+            "title": "Offered protocol",
             "allOf": [{ "$ref": "#/definitions/offer-clause" }]
           },
         "directory": {

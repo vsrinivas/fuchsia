@@ -677,8 +677,8 @@ mod tests {
         },
         cm_rust::{
             self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
-            ExposeServiceProtocolDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
-            UseServiceProtocolDecl, UseSource,
+            ExposeProtocolDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
+            UseProtocolDecl, UseSource,
         },
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
@@ -1006,7 +1006,7 @@ mod tests {
                             target_path: CapabilityPath::try_from("/hub").unwrap(),
                             rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                         }),
-                        UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                        UseDecl::Protocol(UseProtocolDecl {
                             source: UseSource::Realm,
                             source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -1060,7 +1060,7 @@ mod tests {
                         startup: fsys::StartupMode::Lazy,
                     }],
                     exposes: vec![
-                        ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                        ExposeDecl::Protocol(ExposeProtocolDecl {
                             source: ExposeSource::Self_,
                             source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/bar").unwrap(),

@@ -6,14 +6,14 @@
     // Route Echo service from server to client.
     "offer": [
         {
-            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+            "protocol": "/svc/fidl.examples.routing.echo.Echo",
             "from": "#echo_server",
             "to": [ "#echo_test_client" ],
         },
     ],
     "expose": [
         {
-            "service_protocol": "/svc/fuchsia.test.Suite",
+            "protocol": "/svc/fuchsia.test.Suite",
             "from": "#echo_test_client",
         },
     ],

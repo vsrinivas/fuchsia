@@ -44,7 +44,7 @@ impl WorkScheduler {
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (&capability_provider, capability) {
-            (None, FrameworkCapability::ServiceProtocol(capability_path))
+            (None, FrameworkCapability::Protocol(capability_path))
                 if *capability_path == *WORK_SCHEDULER_CONTROL_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(WorkSchedulerControlCapabilityProvider::new(self.clone()))
@@ -63,7 +63,7 @@ impl WorkScheduler {
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (&capability_provider, capability) {
-            (None, FrameworkCapability::ServiceProtocol(capability_path))
+            (None, FrameworkCapability::Protocol(capability_path))
                 if *capability_path == *WORK_SCHEDULER_CAPABILITY_PATH =>
             {
                 // Only clients that expose the Worker protocol to the framework can

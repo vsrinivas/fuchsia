@@ -11,7 +11,7 @@ using fuchsia.io2;
 /// itself, or one of its other children.
 xunion OfferDecl {
     1: OfferServiceDecl service;
-    2: OfferServiceProtocolDecl service_protocol;
+    2: OfferProtocolDecl protocol;
     3: OfferDirectoryDecl directory;
     4: OfferStorageDecl storage;
     5: OfferRunnerDecl runner;
@@ -48,7 +48,7 @@ table OfferServiceDecl {
 ///
 /// A legacy service is a service with a single instance, provided by a single
 /// FIDL protocol.
-table OfferServiceProtocolDecl {
+table OfferProtocolDecl {
     /// The provider of the capability relative to the component itself. Must be
     /// `realm`, `self`, or `child`.
     1: Ref source;
