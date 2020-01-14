@@ -23,6 +23,16 @@ class Location;
 class Thread;
 
 // Abstract base class that provides the policy decisions for various types of thread stepping.
+//
+// Once installed, the thread will ask the topmost thread controller how (and whether) to continue.
+// All thread controllers installed on a thread will get notified for each exception and indicate
+// whether they want to handle the stop or continue. Each thread controller is queried for each
+// stop since completions could happen in the in any order.
+//
+// The thread may also delete thread controllers. This can happen when the thread is terminated or
+// when there is an internal error stepping. If a controller has a callback it executes on
+// completion it should be prepared to issue the callback from its destructor in such a way to
+// indicate that the step operation failed.
 class ThreadController {
  public:
   enum StopOp {
@@ -124,6 +134,12 @@ class ThreadController {
   // Notification that the thread has stopped. The return value indicates what the thread should do
   // in response.
   //
+  // At this call, the stop location will be thread().GetStack()[0]. Thread controllers will only
+  // be called when there is a valid location for the stop, so there is guaranteed to be at least
+  // one stack entry (in constrast to general thread exception observers).
+  //
+  // ARGUMENTS
+  // ---------
   // The exception type may be "kNone" if the exception type shouldn't matter to this controller.
   // Controllers should treak "kNone" as being relevant to themselves. When a controller is used as
   // a component of another controller, the exception type may have been "consumed" and a nested
@@ -136,6 +152,8 @@ class ThreadController {
   // information originally handled by another one. In this second case, "kNone" and an empty
   // breakpoint list should be sent to OnThreadStop().
   //
+  // RETURN VALUE
+  // ------------
   // If the ThreadController returns |kStop|, its assumed the controller has completed its job and
   // it will be deleted. |kContinue| doesn't necessarily mean the thread will continue, as there
   // could be multiple controllers active and any of them can report "stop". When a thread is being

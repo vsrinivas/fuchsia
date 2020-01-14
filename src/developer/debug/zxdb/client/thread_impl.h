@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_H_
 
+#include "gtest/gtest_prod.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -51,6 +52,8 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
                    const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints);
 
  private:
+  FRIEND_TEST(ThreadImplTest, StopNoStack);
+
   // Stack::Delegate implementation.
   void SyncFramesForStack(fit::callback<void(const Err&)> callback) override;
   std::unique_ptr<Frame> MakeFrameForStack(const debug_ipc::StackFrame& input,

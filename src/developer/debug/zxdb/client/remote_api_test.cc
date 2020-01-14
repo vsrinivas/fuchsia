@@ -62,15 +62,13 @@ void RemoteAPITest::InjectExceptionWithStack(const debug_ipc::NotifyException& e
       session_->ThreadImplFromKoid(exception.thread.process_koid, exception.thread.thread_koid);
   FXL_CHECK(thread);  // Tests should always pass valid KOIDs.
 
-  // Need to supply at least one stack frame.
-  FXL_CHECK(!frames.empty());
-
   // Create an exception record with a thread frame so it's valid. There must be one frame even
   // though the stack will be immediately overwritten.
   debug_ipc::NotifyException modified(exception);
   modified.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
   modified.thread.frames.clear();
-  modified.thread.frames.emplace_back(frames[0]->GetAddress(), frames[0]->GetStackPointer());
+  if (!frames.empty())
+    modified.thread.frames.emplace_back(frames[0]->GetAddress(), frames[0]->GetStackPointer());
 
   // To manually set the thread state, set the general metadata which will pick up the basic flags
   // and the first stack frame. Then re-set the stack frame with the information passed in by our
@@ -87,9 +85,6 @@ void RemoteAPITest::InjectExceptionWithStack(
     uint64_t process_koid, uint64_t thread_koid, debug_ipc::ExceptionType exception_type,
     std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames,
     const std::vector<debug_ipc::BreakpointStats>& breakpoints) {
-  // Need to supply at least one stack frame to get the address from.
-  FXL_CHECK(!frames.empty());
-
   debug_ipc::NotifyException exception;
   exception.type = exception_type;
   exception.thread.process_koid = process_koid;

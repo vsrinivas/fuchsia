@@ -24,10 +24,16 @@ class FrameFingerprint;
 // running, blocked (not in an exception), or in any other state, the stack frames are not
 // available.
 //
-// PARTIAL AND COMPLETE STACKS
-// ---------------------------
-// When a thread is suspended or blocked in an exception, it will have its top frame available (the
-// current IP and stack position) and the next (the calling frame) if possible.
+// EMPTY, PARTIAL AND COMPLETE STACKS
+// ----------------------------------
+// When a thread is suspended or blocked in an exception, it will UNUSUALLY have its top frame
+// available (the current IP and stack position) and the next (the calling frame) if possible.
+//
+// Sometimes a thread might have an empty stack (and hence no current location) from an exception.
+// This is because exceptions are delivered from the kernel asynchronously, and by the time an
+// exception is handled in the debug agent, the thread may have been killed. This will result in
+// failred register reads for the thread and no stack or location. Code should never assume there
+// are any stack frames.
 //
 // If the full backtrace is needed, SyncFrames() can be called which will compute the full backtrace
 // and issue the callback when complete. This backtrace will be cached until the thread is resumed.
@@ -78,7 +84,9 @@ class Stack {
   bool empty() const { return frames_.empty(); }
 
   // Access into the individual frames. The topmost stack frame is index 0. There may be hidden
-  // inline frames above index 0.
+  // inline frames above index 0. Callers should always check the stack size() before accessing
+  // since the stack is never guaranteed to have elements in it (even during processing an
+  // exception -- see class comment above).
   Frame* operator[](size_t index) {
     return frames_[index + hide_ambiguous_inline_frame_count_].get();
   }

@@ -7,8 +7,10 @@
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/step_thread_controller.h"
 #include "src/developer/debug/zxdb/client/test_thread_observer.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -213,6 +215,37 @@ TEST_F(ThreadImplTest, ControllersUnexpected) {
                        [](const Err& err) {});
   InjectException(notification);
   EXPECT_FALSE(thread_observer.got_stopped());
+}
+
+// Sends an exception with no stack. Any thread controllers should get deleted.
+TEST_F(ThreadImplTest, StopNoStack) {
+  constexpr uint64_t kProcessKoid = 1234;
+  InjectProcess(kProcessKoid);
+  constexpr uint64_t kThreadKoid = 5678;
+  Thread* thread = InjectThread(kProcessKoid, kThreadKoid);
+
+  TestThreadObserver thread_observer(thread);
+
+  // Normal thread stop with a location to begin stepping. Then step.
+  std::vector<std::unique_ptr<Frame>> frames;
+  frames.push_back(std::make_unique<MockFrame>(
+      &session(), thread, Location(Location::State::kAddress, 0x7890), 0x1234));
+  InjectExceptionWithStack(kProcessKoid, kThreadKoid, debug_ipc::ExceptionType::kSoftware,
+                           std::move(frames), false);
+  thread->ContinueWith(std::make_unique<StepThreadController>(StepMode::kInstruction),
+                       [](const Err& err) {});
+
+  ThreadImpl* thread_impl = static_cast<ThreadImpl*>(thread);
+  EXPECT_FALSE(thread_impl->controllers_.empty());
+
+  // Notify on thread stop with no stack.
+  thread_observer.set_got_stopped(false);
+  InjectExceptionWithStack(kProcessKoid, kThreadKoid, debug_ipc::ExceptionType::kSoftware, {},
+                           false);
+  thread_observer.set_got_stopped(false);
+
+  // The thread controllers should be gone.
+  EXPECT_TRUE(thread_impl->controllers_.empty());
 }
 
 TEST_F(ThreadImplTest, JumpTo) {

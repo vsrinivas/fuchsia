@@ -223,6 +223,14 @@ void ThreadImpl::OnException(debug_ipc::ExceptionType type,
            ThreadController::FrameFunctionNameForLog(stack_[0]).c_str());
   }
 
+  if (stack_.empty()) {
+    // Threads can stop with no stack if the thread is killed while processing an exception. If
+    // this happens (or any other error that might cause an empty stack), declare all thread
+    // controllers done since they can't meaningfully continue or process this state, and forcing
+    // them all to separately check for an empty stack is error-prone.
+    controllers_.clear();
+  }
+
   // When any controller says "stop" it takes precendence and the thread will stop no matter what
   // any other controllers say.
   bool should_stop = false;

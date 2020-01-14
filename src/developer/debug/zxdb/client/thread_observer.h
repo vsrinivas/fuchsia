@@ -22,6 +22,9 @@ class ThreadObserver {
   // up-to-date. The parameter lists any breakpoints that caused this thread stop (there can be more
   // than one at the same address). These are weak pointers because other observers could possibly
   // delete breakpoints in response to this notification.
+  //
+  // IMPORTANT: The thread's stack may be empty during this notification. See the Stack object for
+  // more information.
   virtual void OnThreadStopped(Thread* thread, debug_ipc::ExceptionType type,
                                const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {}
 

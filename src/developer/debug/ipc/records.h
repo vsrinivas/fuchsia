@@ -191,10 +191,11 @@ struct ThreadRecord {
   BlockedReason blocked_reason = BlockedReason::kNotBlocked;
   StackAmount stack_amount = StackAmount::kNone;
 
-  // The frames of the top of the stack when the thread is in suspended or
-  // blocked in an exception. See stack_amnount for how to interpret this.
-  // Note that this could still be empty in the "kMinimal" or "kFull" cases
-  // if retrieval failed.
+  // The frames of the top of the stack when the thread is in suspended or blocked in an exception
+  // (if possible). See stack_amnount for how to interpret this.
+  //
+  // This could still be empty in the "kMinimal" or "kFull" cases if retrieval failed, which can
+  // happen in some valid race conditions if the thread was killed out from under the debug agent.
   std::vector<StackFrame> frames;
 };
 

@@ -165,6 +165,8 @@ void DebuggedThread::OnException(zx::exception exception_handle,
   zx_thread_state_general_regs regs;
   zx_status_t status = arch_provider_->ReadGeneralState(handle_, &regs);
   if (status != ZX_OK) {
+    // This can happen, for example, if the thread was killed during the time the exception message
+    // was waiting to be delivered to us.
     FXL_LOG(WARNING) << "Could not read registers from thread: " << zx_status_get_string(status);
     return;
   }
@@ -426,6 +428,8 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
   return false;
 }
 
+// Note that everything in this function is racy because the thread state can change at any time,
+// even while processing an exception (an external program can kill it out from under us).
 void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
                                       const zx_thread_state_general_regs* optional_regs,
                                       debug_ipc::ThreadRecord* record) const {

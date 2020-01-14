@@ -207,6 +207,7 @@ zx_status_t UnwindStackNgUnwind(arch::ArchProvider* arch_provider, const zx::pro
   GetModulesForProcess(process, dl_debug_addr, &modules);
   std::sort(modules.begin(), modules.end(), [](auto& a, auto& b) { return a.base < b.base; });
 
+  // Any of these functions can fail if the program or thread was killed out from under us.
   unw_fuchsia_info_t* fuchsia =
       unw_create_fuchsia(process.get(), thread.get(), &modules, &LookupDso);
   if (!fuchsia)
