@@ -5,7 +5,6 @@
 source_set("unistd") {
   deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
   sources = [
-    "_exit.c",
     "acct.c",
     "alarm.c",
     "ctermid.c",

@@ -17,4 +17,11 @@ zx_test("sanitizer") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
+  data_deps = [ ":sanitizer-exit-hook-test-helper" ]
+}
+
+zx_executable("sanitizer-exit-hook-test-helper") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [ "exit-hook-test-helper.cc" ]
 }

@@ -17,6 +17,7 @@ zx_library("c") {
   sources = []
 
   deps = [
+    ":exit",
     "$zx/system/ulib/zx-panic-libc:as_source",
     "$zx/third_party/ulib/musl",
     "sanitizers",
@@ -389,6 +390,11 @@ zx_library("c") {
       ]
     }
   }
+}
+
+source_set("exit") {
+  sources = [ "_Exit.cc" ]
+  deps = [ "$zx/third_party/ulib/musl:musl_internal" ]
 }
 
 source_set("crt1") {

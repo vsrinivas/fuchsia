@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/spawn.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <lib/zx/vmar.h>
@@ -19,6 +20,8 @@
 #include <sanitizer/asan_interface.h>
 #endif
 
+#include "exit-hook-test-helper.h"
+
 namespace {
 
 #if __has_feature(address_sanitizer)
@@ -29,7 +32,7 @@ constexpr size_t kPageSize = PAGE_SIZE;
 // Touch every page in the region to make sure it's been COW'd.
 __attribute__((no_sanitize("all"))) static void PrefaultPages(uintptr_t start, uintptr_t end) {
   while (start < end) {
-    auto ptr = reinterpret_cast<volatile uintptr_t *>(start);
+    auto ptr = reinterpret_cast<volatile uintptr_t*>(start);
     *ptr = *ptr;
     start += kPageSize;
   }
@@ -40,7 +43,7 @@ static void PrefaultStackPages() {
   pthread_attr_t attr;
   ASSERT_EQ(pthread_getattr_np(pthread_self(), &attr), 0);
 
-  void *stackaddr;
+  void* stackaddr;
   size_t stacksize;
   ASSERT_EQ(pthread_attr_getstack(&attr, &stackaddr, &stacksize), 0);
 
@@ -58,7 +61,7 @@ static void PrefaultStackPages() {
                 (stackend >> shadow_scale) + shadow_offset);
 }
 
-static void GetMemoryUsage(size_t *usage) {
+static void GetMemoryUsage(size_t* usage) {
   zx_info_task_stats_t task_stats;
   ASSERT_OK(zx::process::self()->get_info(ZX_INFO_TASK_STATS, &task_stats,
                                           sizeof(zx_info_task_stats_t), nullptr, nullptr));
@@ -83,7 +86,7 @@ TEST(SanitizerUtilsTest, FillShadow) {
   EXPECT_GE(alloc_mem_use, init_mem_use, "");
 
   // ..and poison it.
-  ASAN_POISON_MEMORY_REGION((void *)addr, len);
+  ASAN_POISON_MEMORY_REGION((void*)addr, len);
 
   // Snapshot the memory use after the allocation.
   size_t memset_mem_use;
@@ -136,7 +139,7 @@ TEST(SanitizerUtilsTest, FillShadowSmall) {
       GetMemoryUsage(&init_mem_use);
 
       // Poison the shadow.
-      ASAN_POISON_MEMORY_REGION((void *)(base + offset), size);
+      ASAN_POISON_MEMORY_REGION((void*)(base + offset), size);
 
       // Unpoison it.
       __sanitizer_fill_shadow(base + offset, size, 0 /* val */, 0 /* threshold */);
@@ -173,7 +176,7 @@ TEST(SanitizerUtilsTest, FillShadowPartialPages) {
     ASSERT_OK(
         zx::vmar::root_self()->map(0, vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr));
     // ..and poison it.
-    ASAN_POISON_MEMORY_REGION((void *)addr, len);
+    ASAN_POISON_MEMORY_REGION((void*)addr, len);
     // Unpoison the shadow.
     __sanitizer_fill_shadow(addr, len, 0, 0);
     // Deallocate the memory.
@@ -189,5 +192,28 @@ TEST(SanitizerUtilsTest, FillShadowPartialPages) {
 }
 
 #endif
+
+TEST(SanitizerUtilsTest, ProcessExitHook) {
+  const char* root_dir = getenv("TEST_ROOT_DIR");
+  if (!root_dir) {
+    root_dir = "";
+  }
+  std::string file(root_dir);
+  file += "/bin/sanitizer-exit-hook-test-helper";
+
+  zx::process child;
+  const char* argv[] = {file.c_str(), nullptr};
+  ASSERT_OK(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv,
+                       child.reset_and_get_address()));
+
+  zx_signals_t signals;
+  ASSERT_OK(child.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), &signals));
+  ASSERT_TRUE(signals & ZX_PROCESS_TERMINATED);
+
+  zx_info_process_t info;
+  ASSERT_OK(child.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr));
+
+  EXPECT_EQ(info.return_code, kHookStatus);
+}
 
 }  // namespace

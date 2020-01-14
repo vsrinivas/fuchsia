@@ -4,7 +4,6 @@
 
 source_set("exit") {
   sources = [
-    "_Exit.c",
     "__cxa_thread_atexit.c",
     "abort.c",
     "assert.c",

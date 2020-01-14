@@ -144,6 +144,10 @@ __EXPORT void __sanitizer_thread_start_hook(void* hook, thrd_t self);
 // The argument is the same one passed to __sanitizer_thread_start_hook.
 __EXPORT void __sanitizer_thread_exit_hook(void* hook, thrd_t self);
 
+// This is called with the argument to _exit and its return value
+// is the actual exit status for the process.
+__EXPORT int __sanitizer_process_exit_hook(int status);
+
 __END_CDECLS
 
 #endif  // SYSROOT_ZIRCON_SANITIZER_H_
