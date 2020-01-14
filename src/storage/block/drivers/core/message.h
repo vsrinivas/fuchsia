@@ -7,8 +7,6 @@
 
 #include <zircon/device/block.h>
 
-#include <memory>
-
 #include <ddk/protocol/block.h>
 #include <fbl/intrusive_double_list.h>
 
@@ -21,7 +19,6 @@ class Server;
 class Message final : public fbl::DoublyLinkedListable<Message*> {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Message);
-  Message() = default;
 
   // Overloaded new operator allows variable-sized allocation to match block op size.
   void* operator new(size_t size) = delete;
@@ -32,23 +29,25 @@ class Message final : public fbl::DoublyLinkedListable<Message*> {
 
   // Allocate a new, uninitialized Message whose block_op begins in a memory region that
   // is block_op_size bytes long.
-  static zx_status_t Create(size_t block_op_size, std::unique_ptr<Message>* out);
-
-  // Initialize the contents of this from the supplied args. block_op op_ is cleared.
-  void Init(fbl::RefPtr<IoBuffer> iobuf, Server* server, block_fifo_request_t* req);
+  static zx_status_t Create(fbl::RefPtr<IoBuffer> iobuf, Server* server, block_fifo_request_t* req,
+                            size_t block_op_size, std::unique_ptr<Message>* out);
 
   // End the transaction specified by reqid and group, and release iobuf.
-  // Message can be reused with another call to Init().
-  void Complete(zx_status_t status);
+  void Complete();
+
+  zx_status_t result() { return result_; }
+  void set_result(zx_status_t res) { result_ = res; }
 
   block_op_t* Op() { return &op_; }
 
  private:
+  Message() = default;
+
   fbl::RefPtr<IoBuffer> iobuf_;
   Server* server_;
-  reqid_t reqid_;
-  groupid_t group_;
   size_t op_size_;
+  zx_status_t result_ = ZX_OK;
+  block_fifo_request_t req_{};
   // Must be at the end of structure.
   union {
     block_op_t op_;

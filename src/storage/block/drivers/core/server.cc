@@ -57,7 +57,9 @@ void OutOfBandRespond(const fzl::fifo<block_fifo_response_t, block_fifo_request_
 void BlockCompleteCb(void* cookie, zx_status_t status, block_op_t* bop) {
   ZX_DEBUG_ASSERT(bop != nullptr);
   std::unique_ptr<Message> msg(static_cast<Message*>(cookie));
-  msg->Complete(status);
+  msg->set_result(status);
+  msg->Complete();
+  msg.reset();
 }
 
 uint32_t OpcodeToCommand(uint32_t opcode) {
@@ -301,10 +303,11 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
   }
 
   std::unique_ptr<Message> msg;
-  if ((status = Message::Create(block_op_size_, &msg)) != ZX_OK) {
+  status = Message::Create(iobuf.CopyPointer(), this, request, block_op_size_, &msg);
+  if (status != ZX_OK) {
     return status;
   }
-  msg->Init(iobuf.CopyPointer(), this, request);
+
   msg->Op()->command = OpcodeToCommand(request->opcode);
 
   const uint32_t max_xfer = info_.max_transfer_size / bsz;
@@ -324,10 +327,10 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
     while (sub_txn_idx != sub_txns) {
       // We'll be using a new BlockMsg for each sub-component.
       if (msg == nullptr) {
-        if ((status = Message::Create(block_op_size_, &msg)) != ZX_OK) {
+        status = Message::Create(iobuf.CopyPointer(), this, request, block_op_size_, &msg);
+        if (status != ZX_OK) {
           return status;
         }
-        msg->Init(iobuf.CopyPointer(), this, request);
         msg->Op()->command = OpcodeToCommand(request->opcode);
       }
 
@@ -370,13 +373,12 @@ zx_status_t Server::ProcessCloseVmoRequest(block_fifo_request_t* request) {
 }
 
 zx_status_t Server::ProcessFlushRequest(block_fifo_request_t* request) {
-  zx_status_t status;
 
   std::unique_ptr<Message> msg;
-  if ((status = Message::Create(block_op_size_, &msg)) != ZX_OK) {
+  zx_status_t status = Message::Create(nullptr, this, request, block_op_size_, &msg);
+  if (status != ZX_OK) {
     return status;
   }
-  msg->Init(nullptr, this, request);
   msg->Op()->command = OpcodeToCommand(request->opcode);
   InQueueAdd(ZX_HANDLE_INVALID, 0, 0, 0, msg.release(), &in_queue_);
   return ZX_OK;
@@ -388,11 +390,10 @@ zx_status_t Server::ProcessTrimRequest(block_fifo_request_t* request) {
   }
 
   std::unique_ptr<Message> msg;
-  zx_status_t status = Message::Create(block_op_size_, &msg);
+  zx_status_t status = Message::Create(nullptr, this, request, block_op_size_, &msg);
   if (status != ZX_OK) {
     return status;
   }
-  msg->Init(nullptr, this, request);
   msg->Op()->command = OpcodeToCommand(request->opcode);
   msg->Op()->trim.length = request->length;
   msg->Op()->trim.offset_dev = request->dev_offset;
