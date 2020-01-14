@@ -25,9 +25,24 @@ List<TestCaseResults> memoryMetricsProcessor(
         'Trace duration (${duration.toMilliseconds()} millisecconds) is too short to provide Memory information');
     return [];
   }
-  final allEvents = getAllEvents(model);
-  final allocatedMemoryEvents = filterEventsTyped<CounterEvent>(allEvents,
-      category: 'memory_monitor', name: 'allocated');
+  final memoryMonitorEvents =
+      filterEvents(getAllEvents(model), category: 'memory_monitor');
+  if (memoryMonitorEvents.isEmpty) {
+    _log.warning(
+        'Missing category "memory_monitor" events in trace. No memory data is extracted.');
+    return [];
+  }
+  final totalMemory =
+      filterEventsTyped<CounterEvent>(memoryMonitorEvents, name: 'fixed')
+          ?.first
+          ?.args['total'];
+  if (totalMemory == null) {
+    _log.warning(
+        'Missing ("memory_monitor", "fixed") counter event in trace. No memory data is extracted.');
+    return [];
+  }
+  final allocatedMemoryEvents =
+      filterEventsTyped<CounterEvent>(memoryMonitorEvents, name: 'allocated');
   final vmoMemoryValues = getArgsFromEvents<num>(allocatedMemoryEvents, 'vmo')
       .map((v) => v.toDouble());
   final mmuMemoryValues =
@@ -35,13 +50,8 @@ List<TestCaseResults> memoryMetricsProcessor(
           .map((v) => v.toDouble());
   final ipcMemoryValues = getArgsFromEvents<num>(allocatedMemoryEvents, 'ipc')
       .map((v) => v.toDouble());
-  final totalMemory = filterEventsTyped<CounterEvent>(allEvents,
-          category: 'memory_monitor', name: 'fixed')
-      .first
-      .args['total'];
   final freeMemoryValues = getArgsFromEvents<num>(
-          filterEventsTyped<CounterEvent>(allEvents,
-              category: 'memory_monitor', name: 'free'),
+          filterEventsTyped<CounterEvent>(memoryMonitorEvents, name: 'free'),
           'free')
       .map((v) => v.toDouble());
   final usedMemoryValues = freeMemoryValues.map((freeMemory) {
