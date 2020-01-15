@@ -249,7 +249,6 @@ if (current_cpu != "") {
       "fvm",
       "hid",
       "hypervisor",
-      "int-types",
       "kcounter",
       "kernel-clocks",
       "kernel-cmdline:test",
