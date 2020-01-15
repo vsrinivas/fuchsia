@@ -41,7 +41,7 @@ zx_status_t AmlVoltageRegulator::Create(zx_device_t* parent,
   // zeroth component is pdev
   size_t actual;
   zx_device_t* components[COMPONENT_COUNT];
-  composite.GetComponents(components, fbl::count_of(components), &actual);
+  composite.GetComponents(components, countof(components), &actual);
   if (actual < 1) {
     zxlogf(ERROR, "%s: failed to get pdev component\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
@@ -60,20 +60,21 @@ zx_status_t AmlVoltageRegulator::Create(zx_device_t* parent,
     return status;
   }
 
+  pwm_AO_D_ = ddk::PwmProtocolClient(components[COMPONENT_PWM_AO_D]);
+  if (!pwm_AO_D_.is_valid()) {
+    zxlogf(ERROR, "%s: failed to get PWM_AO_D component\n", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if ((status = pwm_AO_D_.Enable()) != ZX_OK) {
+    zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
+    return status;
+  }
+
   pid_ = device_info.pid;
   switch (pid_) {
     {
       case PDEV_PID_AMLOGIC_T931: {
         // Sherlock
-        pwm_AO_D_ = ddk::PwmProtocolClient(components[COMPONENT_PWM_AO_D]);
-        if (!pwm_AO_D_.is_valid()) {
-          zxlogf(ERROR, "%s: failed to get PWM_AO_D component\n", __func__);
-          return ZX_ERR_NOT_SUPPORTED;
-        }
-        if ((status = pwm_AO_D_.Enable()) != ZX_OK) {
-          zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
-          return status;
-        }
         pwm_A_ = ddk::PwmProtocolClient(components[COMPONENT_PWM_A]);
         if (!pwm_A_.is_valid()) {
           zxlogf(ERROR, "%s: failed to get PWM_A component\n", __func__);
@@ -88,11 +89,6 @@ zx_status_t AmlVoltageRegulator::Create(zx_device_t* parent,
       case PDEV_PID_AMLOGIC_S905D2: {
         // Astro
         // Only 1 PWM used in this case.
-        status = pwm_AO_D_astro_.Create(components[COMPONENT_PDEV], AmlPwm::PWM_AO_CD);
-        if (status != ZX_OK) {
-          zxlogf(ERROR, "aml-voltage: Could not initialize PWM PWM_AO_CD: %d\n", status);
-          return status;
-        }
         break;
       }
       default:
@@ -104,11 +100,15 @@ zx_status_t AmlVoltageRegulator::Create(zx_device_t* parent,
   return Init(voltage_table_info);
 }
 
-zx_status_t AmlVoltageRegulator::Init(ddk::MmioBuffer pwm_AO_D_mmio, const pwm_protocol_t* pwm_AO_D,
-                                      const pwm_protocol_t* pwm_A, uint32_t pid,
-                                      aml_voltage_table_info_t* voltage_table_info) {
+zx_status_t AmlVoltageRegulator::Init(const pwm_protocol_t* pwm_AO_D, const pwm_protocol_t* pwm_A,
+                                      uint32_t pid, aml_voltage_table_info_t* voltage_table_info) {
   zx_status_t status = ZX_OK;
   pid_ = pid;
+  pwm_AO_D_ = ddk::PwmProtocolClient(pwm_AO_D);
+  if ((status = pwm_AO_D_.Enable()) != ZX_OK) {
+    zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
+    return status;
+  }
 
   switch (pid) {
     case PDEV_PID_AMLOGIC_T931: {
@@ -118,17 +118,11 @@ zx_status_t AmlVoltageRegulator::Init(ddk::MmioBuffer pwm_AO_D_mmio, const pwm_p
         zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
         return status;
       }
-      pwm_AO_D_ = ddk::PwmProtocolClient(pwm_AO_D);
-      if ((status = pwm_AO_D_.Enable()) != ZX_OK) {
-        zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
-        return status;
-      }
       break;
     }
     case PDEV_PID_AMLOGIC_S905D2: {
       // Astro
       // Only 1 PWM used in this case.
-      pwm_AO_D_astro_.MapMmio(std::move(pwm_AO_D_mmio));
       break;
     }
     default:
@@ -165,12 +159,6 @@ zx_status_t AmlVoltageRegulator::Init(aml_voltage_table_info_t* voltage_table_in
     }
 
     case PDEV_PID_AMLOGIC_S905D2: {
-      status = pwm_AO_D_astro_.Init(kPwmPeriodNs, 1);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "aml-voltage: Could not initialize PWM PWM_AO_CD: %d\n", status);
-        return status;
-      }
-
       status = SetBigClusterVoltage(voltage_table_info->voltage_table[4].microvolt);
       if (status != ZX_OK) {
         return status;
@@ -185,8 +173,8 @@ zx_status_t AmlVoltageRegulator::Init(aml_voltage_table_info_t* voltage_table_in
   return status;
 }
 
-template <typename T>
-zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index, T* pwm,
+zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
+                                                   const ddk::PwmProtocolClient& pwm,
                                                    uint32_t microvolt) {
   // Find the entry in the voltage-table.
   int target_index;
@@ -211,7 +199,7 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index, T
         false, kPwmPeriodNs,
         static_cast<float>(voltage_table_info_.voltage_table[target_index].duty_cycle), &on,
         sizeof(on)};
-    if ((status = pwm->SetConfig(&cfg)) != ZX_OK) {
+    if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
       zxlogf(ERROR, "%s: Could not initialize PWM\n", __func__);
       return status;
     }
@@ -243,7 +231,7 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index, T
         false, kPwmPeriodNs,
         static_cast<float>(voltage_table_info_.voltage_table[*current_voltage_index].duty_cycle),
         &on, sizeof(on)};
-    if ((status = pwm->SetConfig(&cfg)) != ZX_OK) {
+    if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
       zxlogf(ERROR, "%s: Could not initialize PWM\n", __func__);
       return status;
     }

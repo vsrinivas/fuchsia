@@ -8,7 +8,6 @@
 #include <ddk/metadata/gpio.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
@@ -92,6 +91,9 @@ static const gpio_pin_t gpio_pins[] = {
     {GPIO_MIC_PRIVACY},
     // For SDIO.
     {GPIO_SD_EMMC_RESET},
+    // For Bluetooth.
+    {GPIO_SOC_WIFI_LPO_32k768},
+    {GPIO_SOC_BT_REG_ON},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

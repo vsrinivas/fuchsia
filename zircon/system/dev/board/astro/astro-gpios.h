@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BOARD_ASTRO_ASTRO_GPIOS_H_
+#define ZIRCON_SYSTEM_DEV_BOARD_ASTRO_ASTRO_GPIOS_H_
 
 #include <soc/aml-s905d2/s905d2-gpio.h>
 
@@ -21,5 +22,9 @@ namespace astro {
 #define GPIO_VOLUME_BOTH S905D2_GPIOAO(10)
 #define GPIO_MIC_PRIVACY S905D2_GPIOZ(2)
 #define GPIO_SD_EMMC_RESET S905D2_GPIOX(6)
+#define GPIO_SOC_WIFI_LPO_32k768 S905D2_GPIOX(16)
+#define GPIO_SOC_BT_REG_ON S905D2_GPIOX(17)
 
 }  // namespace astro
+
+#endif  // ZIRCON_SYSTEM_DEV_BOARD_ASTRO_ASTRO_GPIOS_H_

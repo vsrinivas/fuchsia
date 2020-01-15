@@ -144,9 +144,13 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
 
 TEST_F(DeviceEnumerationTest, AstroTest) {
   static const char* kDevicePaths[] = {
-      "sys/platform/astro", "sys/platform/05:03:1/aml-axg-gpio", "astro-buttons/hid-buttons",
-      "sys/platform/05:00:2/aml-i2c", "sys/platform/05:03:17/aml-gpu",
-      "sys/platform/05:00:18/aml-usb-phy-v2", "sys/platform/05:03:1e/cpu",
+      "sys/platform/astro",
+      "sys/platform/05:03:1/aml-axg-gpio",
+      "astro-buttons/hid-buttons",
+      "sys/platform/05:00:2/aml-i2c",
+      "sys/platform/05:03:17/aml-gpu",
+      "sys/platform/05:00:18/aml-usb-phy-v2",
+      "sys/platform/05:03:1e/cpu",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
@@ -155,9 +159,13 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       // so we can't just test that one of them is bound. That is why the
       // following test is disabled.
       // "sys/platform/03:03:5/gt92xx HidDevice/hid-device-000",
-      "backlight/ti-lp8556", "display/astro-display/display-controller",
-      "sys/platform/05:00:10/aml-canvas", "tee/optee-tz", "aml-video/amlogic_video",
-      "sys/platform/00:00:f/fallback-rtc", "sys/platform/05:00:f/aml-raw_nand/nand/bl2/skip-block",
+      "backlight/ti-lp8556",
+      "display/astro-display/display-controller",
+      "sys/platform/05:00:10/aml-canvas",
+      "tee/optee-tz",
+      "aml-video/amlogic_video",
+      "sys/platform/00:00:f/fallback-rtc",
+      "sys/platform/05:00:f/aml-raw_nand/nand/bl2/skip-block",
       "sys/platform/05:00:f/aml-raw_nand/nand/tpl/skip-block",
       "sys/platform/05:00:f/aml-raw_nand/nand/fts/skip-block",
       "sys/platform/05:00:f/aml-raw_nand/nand/factory/skip-block",
@@ -165,14 +173,20 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "sys/platform/05:00:f/aml-raw_nand/nand/zircon-a/skip-block",
       "sys/platform/05:00:f/aml-raw_nand/nand/zircon-r/skip-block",
       "sys/platform/05:00:f/aml-raw_nand/nand/sys-config/skip-block",
-      "sys/platform/05:00:f/aml-raw_nand/nand/migration/skip-block", "aml-sdio/aml-sd-emmc/sdmmc",
+      "sys/platform/05:00:f/aml-raw_nand/nand/migration/skip-block",
+      "aml-sdio/aml-sd-emmc/sdmmc",
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/component",
-      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2/component", "wifi/brcmfmac-wlanphy",
-      "tcs3400-light/tcs-3400/hid-device-000", "sys/platform/05:03:11/clocks",
-      "aml-thermal/thermal", "AstroAudio/astro-audio-out", "sys/platform/05:03:13/astro-audio-in",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2/component",
+      "wifi/brcmfmac-wlanphy",
+      "tcs3400-light/tcs-3400/hid-device-000",
+      "sys/platform/05:03:11/clocks",
+      "aml-thermal/thermal",
+      "AstroAudio/astro-audio-out",
+      "sys/platform/05:03:13/astro-audio-in",
       "aml-secure-mem/aml-securemem",
       //"sys/platform/05:05:3/aml-uart/serial/bt-transport-uart/bcm-hci",
+      "pwm-init",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

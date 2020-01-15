@@ -7,6 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/init-step.h>
 #include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
@@ -179,12 +180,20 @@ static const zx_bind_inst_t wifi_pwren_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SD_EMMC_RESET),
 };
+constexpr zx_bind_inst_t pwm_e_match[] = {
+    BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
+};
 static const device_component_part_t wifi_pwren_gpio_component[] = {
     {countof(root_match), root_match},
     {countof(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
 };
+constexpr device_component_part_t pwm_e_component[] = {
+    {fbl::count_of(root_match), root_match},
+    {fbl::count_of(pwm_e_match), pwm_e_match},
+};
 static const device_component_t sdio_components[] = {
     {countof(wifi_pwren_gpio_component), wifi_pwren_gpio_component},
+    {fbl::count_of(pwm_e_component), pwm_e_component},
 };
 
 zx_status_t Astro::SdEmmcConfigurePortB() {
