@@ -8,9 +8,12 @@
 
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
+#include <fbl/alloc_checker.h>
 #include <kernel/dpc.h>
 #include <kernel/event.h>
+#include <ktl/array.h>
 #include <ktl/atomic.h>
+#include <ktl/unique_ptr.h>
 
 #include "tests.h"
 
@@ -36,36 +39,39 @@ static bool test_dpc_queue() {
   BEGIN_TEST;
 
   static constexpr int kNumDPCs = 72;
-  struct event_signal_from_dpc_context context[kNumDPCs];
+
+  fbl::AllocChecker ac;
+  auto context = ktl::make_unique<ktl::array<event_signal_from_dpc_context, kNumDPCs>>(&ac);
+  ASSERT_TRUE(ac.check());
 
   // Init all the DPCs and supporting context.
   for (int i = 0; i < kNumDPCs; i++) {
-    context[i].dpc = DPC_INITIAL_VALUE;
-    event_init(&context[i].event, /*initial=*/false, /*flags=*/0);
-    context[i].dpc_started = false;
+    (*context)[i].dpc = DPC_INITIAL_VALUE;
+    event_init(&(*context)[i].event, /*initial=*/false, /*flags=*/0);
+    (*context)[i].dpc_started = false;
   }
 
   // Fire off DPCs.
   for (int i = 0; i < kNumDPCs; i++) {
-    context[i].dpc.func = event_signal_from_dpc_check_cpu;
-    context[i].dpc.arg = reinterpret_cast<void*>(&context[i]);
+    (*context)[i].dpc.func = event_signal_from_dpc_check_cpu;
+    (*context)[i].dpc.arg = reinterpret_cast<void*>(&(*context)[i]);
     arch_disable_ints();
-    context[i].expected_cpu = arch_curr_cpu_num();
-    dpc_queue(&context[i].dpc, /*reschedule=*/false);
+    (*context)[i].expected_cpu = arch_curr_cpu_num();
+    dpc_queue(&(*context)[i].dpc, /*reschedule=*/false);
     arch_enable_ints();
   }
   for (int i = 0; i < kNumDPCs; i++) {
-    if (context[i].dpc_started) {
+    if ((*context)[i].dpc_started) {
       // Once the DPC has started executing, we can reclaim the submitted dpc_t. Zero it to
       // try to check this.
-      context[i].dpc = DPC_INITIAL_VALUE;
+      (*context)[i].dpc = DPC_INITIAL_VALUE;
     }
   }
   for (int i = 0; i < kNumDPCs; i++) {
-    event_wait(&context[i].event);
+    event_wait(&(*context)[i].event);
   }
   for (int i = 0; i < kNumDPCs; i++) {
-    event_destroy(&context[i].event);
+    event_destroy(&(*context)[i].event);
   }
 
   END_TEST;
