@@ -64,6 +64,13 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
+/// Handles the ping requests and prints to the terminal on success.
+///
+/// # Parameters
+/// `stream`: The input channel which receives [`Ping`] requests.
+///
+/// # Returns
+/// `Ok` if the service ran successfully, or an `Error` if execution halted unexpectedly.
 async fn handle_element_ping_requests(mut stream: ElementPingRequestStream) -> Result<(), Error> {
     while let Some(ElementPingRequest::Ping { control_handle: _ }) =
         stream.try_next().await.context("Error handling ping request stream")?
@@ -73,6 +80,13 @@ async fn handle_element_ping_requests(mut stream: ElementPingRequestStream) -> R
     Ok(())
 }
 
+/// Handles the [`ElementManager`] requests and launches the element session on success.
+///
+/// # Parameters
+/// `stream`: The input channel which receives [`ElementManager`] requests.
+///
+/// # Returns
+/// `Ok` if the element manager ran successfully, or an `ElementManagerError` if execution halted unexpectedly.
 async fn handle_element_manager_requests(
     mut stream: ElementManagerRequestStream,
 ) -> Result<(), Error> {
