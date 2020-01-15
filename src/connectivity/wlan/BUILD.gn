@@ -50,6 +50,7 @@ group("tests") {
     "//src/connectivity/wlan/lib/bitfield/wlan-bitfield-tests",
     "//src/connectivity/wlan/lib/common/rust:wlan-common-tests",
     "//src/connectivity/wlan/lib/eapol:eapol-tests",
+    "//src/connectivity/wlan/lib/frame_writer:wlan-frame-writer-tests",
     "//src/connectivity/wlan/lib/inspect:wlan-inspect-tests",
     "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_tests",
     "//src/connectivity/wlan/lib/mlme/rust:wlan-mlme-tests",

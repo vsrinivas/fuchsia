@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/wlan_frame_writer_lib_test"
+    }
+}
