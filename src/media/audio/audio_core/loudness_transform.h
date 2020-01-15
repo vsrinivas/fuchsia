@@ -28,6 +28,8 @@ struct GainDbFsValue {
 // including volume settings and gain adjustments, and applies them sequentially.
 class LoudnessTransform {
  public:
+  virtual ~LoudnessTransform() = default;
+
   using Stage = std::variant<VolumeValue, GainDbFsValue>;
 
   // Sequentially evaluates each loudness stage and returns the gain to use for
@@ -49,7 +51,7 @@ class LoudnessTransform {
 
 // Implements `LoudnessTransform` using a volume curve to map volume settings to
 // gain in dbfs.
-class MappedLoudnessTransform : public LoudnessTransform {
+class MappedLoudnessTransform final : public LoudnessTransform {
  public:
   // The `volume_curve` must live as long as this transform.
   explicit MappedLoudnessTransform(const VolumeCurve& volume_curve) : volume_curve_(volume_curve) {}
@@ -61,7 +63,7 @@ class MappedLoudnessTransform : public LoudnessTransform {
 };
 
 // A `LoudnessTransform` that always returns unity gain, no matter what loudness stages are given.
-class NoOpLoudnessTransform : public LoudnessTransform {
+class NoOpLoudnessTransform final : public LoudnessTransform {
   float EvaluateStageGain(const LoudnessTransform::Stage& stages) const final;
 };
 
