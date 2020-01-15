@@ -358,7 +358,7 @@ TEST_F(RouteGraphTest, CapturersAreRemoved) {
   under_test_.AddInput(input.get());
   EXPECT_THAT(input->DestLinks(), UnorderedElementsAreArray({capturer_raw}));
 
-  under_test_.RemoveLoopbackCapturer(capturer_raw);
+  under_test_.RemoveCapturer(capturer_raw);
   EXPECT_THAT(input->DestLinks(), IsEmpty());
 }
 
@@ -784,6 +784,40 @@ TEST_F(RouteGraphWithExternalNonLoopbackDeviceTest, LoopbackDoesNotRouteToUnsupp
   auto second_output = second_output_and_driver.output.get();
   under_test_.AddOutput(second_output);
   EXPECT_THAT(capturer_raw->SourceLinks(), UnorderedElementsAreArray({output}));
+}
+
+TEST_F(RouteGraphTest, DoesNotUnlinkRendererNotInGraph) {
+  auto renderer = std::shared_ptr<FakeAudioObject>(FakeAudioObject::FakeRenderer().release());
+  auto output = FakeAudioOutput::Create(&threading_model(), &device_registry_);
+
+  AudioObject::LinkObjects(renderer, output);
+  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({output.get()}));
+
+  under_test_.RemoveRenderer(renderer.get());
+  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({output.get()}));
+}
+
+TEST_F(RouteGraphTest, DoesNotUnlinkCapturerNotInGraph) {
+  auto capturer = std::shared_ptr<FakeAudioObject>(FakeAudioObject::FakeCapturer().release());
+  auto input = AudioInput::Create(zx::channel(), &threading_model(), &device_registry_);
+
+  AudioObject::LinkObjects(input, capturer);
+  EXPECT_THAT(capturer->SourceLinks(), UnorderedElementsAreArray({input.get()}));
+
+  under_test_.RemoveCapturer(capturer.get());
+  EXPECT_THAT(capturer->SourceLinks(), UnorderedElementsAreArray({input.get()}));
+}
+
+TEST_F(RouteGraphTest, DoesNotUnlinkLoopbackCapturerNotInGraph) {
+  auto loopback_capturer =
+      std::shared_ptr<FakeAudioObject>(FakeAudioObject::FakeCapturer().release());
+  auto output = FakeAudioOutput::Create(&threading_model(), &device_registry_);
+
+  AudioObject::LinkObjects(output, loopback_capturer);
+  EXPECT_THAT(loopback_capturer->SourceLinks(), UnorderedElementsAreArray({output.get()}));
+
+  under_test_.RemoveLoopbackCapturer(loopback_capturer.get());
+  EXPECT_THAT(loopback_capturer->SourceLinks(), UnorderedElementsAreArray({output.get()}));
 }
 
 }  // namespace
