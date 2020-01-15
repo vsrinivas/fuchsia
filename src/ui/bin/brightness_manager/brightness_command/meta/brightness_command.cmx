@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/brightness_command"
+    },
+    "sandbox": {
+        "dev": [
+            "class/backlight"
+        ],
+        "services": [
+            "fuchsia.ui.brightness.Control"
+        ]
+    }
+}

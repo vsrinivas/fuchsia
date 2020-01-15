@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/brightness_command_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
