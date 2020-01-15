@@ -6,6 +6,7 @@ use super::*;
 use crate::{packets::VendorCommand, types::StateChangeListener};
 
 use futures::{future::AbortHandle, future::Abortable};
+use std::mem::{discriminant, Discriminant};
 
 pub type RemotePeerHandle = RwLock<RemotePeer>;
 
@@ -55,9 +56,13 @@ pub struct RemotePeer {
 
     state_change_listener: StateChangeListener,
 
-    /// set after before waking the state change listener to have it valid for the next check to
+    /// Set after before waking the state change listener to have it valid for the next check to
     /// attempt an outgoing l2cap connection
     attempt_connection: bool,
+
+    /// Last received interim notification values from the peer. Used to update new controller
+    /// listeners to the current state of the peer.
+    notification_cache: HashMap<Discriminant<ControllerEvent>, ControllerEvent>,
 }
 
 impl RemotePeer {
@@ -81,11 +86,15 @@ impl RemotePeer {
             ))),
             state_change_listener: StateChangeListener::new(),
             attempt_connection: true,
+            notification_cache: HashMap::new(),
         }))
     }
 
-    /// Enumerates all listening controller_listeners queues and sends a clone of the event to each
-    fn broadcast_event(&mut self, event: ControllerEvent) {
+    /// Caches the current value of this controller notification event for future controller event
+    /// listeners and forwards the event to current controller listeners queues.
+    fn handle_new_controller_notification_event(&mut self, event: ControllerEvent) {
+        self.notification_cache.insert(discriminant(&event), event.clone());
+
         // remove all the dead listeners from the list.
         self.controller_listeners.retain(|i| !i.is_closed());
         for sender in self.controller_listeners.iter_mut() {
@@ -99,8 +108,22 @@ impl RemotePeer {
         }
     }
 
-    pub fn add_control_listener(this: &RemotePeerHandle, sender: mpsc::Sender<ControllerEvent>) {
+    /// Adds new controller listener to this remote peer. The controller listener is immediately
+    /// sent the current state of all notification values.
+    pub fn add_control_listener(
+        this: &RemotePeerHandle,
+        mut sender: mpsc::Sender<ControllerEvent>,
+    ) {
         let mut peer_guard = this.write();
+        for (_, event) in &peer_guard.notification_cache {
+            if let Err(send_error) = sender.try_send(event.clone()) {
+                fx_log_err!(
+                    "unable to send event to peer controller stream for {} {:?}",
+                    peer_guard.peer_id,
+                    send_error
+                );
+            }
+        }
         peer_guard.controller_listeners.push(sender)
     }
 
@@ -115,8 +138,10 @@ impl RemotePeer {
         this.read().connected()
     }
 
-    fn reset_command_handler(&mut self) {
-        fx_vlog!(tag: "avrcp", 2, "reset_command_handler {:?}", self.peer_id);
+    /// Reset all known state about the remote peer to default values.
+    fn reset_peer_state(&mut self) {
+        fx_vlog!(tag: "avrcp", 2, "reset_peer_state {:?}", self.peer_id);
+        self.notification_cache.clear();
         self.command_handler.lock().reset();
     }
 
@@ -124,7 +149,7 @@ impl RemotePeer {
     /// woken.
     fn reset_connection(&mut self, attempt_connection: bool) {
         fx_vlog!(tag: "avrcp", 2, "reset_connection {:?}", self.peer_id);
-        self.reset_command_handler();
+        self.reset_peer_state();
         self.control_channel = PeerChannel::Disconnected;
         self.attempt_connection = attempt_connection;
         self.wake_state_watcher();
@@ -146,7 +171,7 @@ impl RemotePeer {
 
     fn set_control_connection_internal(&mut self, peer: AvcPeer) {
         fx_vlog!(tag: "avrcp", 2, "set_control_connection {:?}", self.peer_id);
-        self.reset_command_handler();
+        self.reset_peer_state();
         self.control_channel = PeerChannel::Connected(Arc::new(peer));
         self.wake_state_watcher();
     }
@@ -196,23 +221,33 @@ impl RemotePeer {
             NotificationEventId::EventPlaybackStatusChanged => {
                 let response = PlaybackStatusChangedNotificationResponse::decode(data)
                     .map_err(|e| Error::PacketError(e))?;
-                peer.write().broadcast_event(ControllerEvent::PlaybackStatusChanged(
-                    response.playback_status(),
-                ));
+                peer.write().handle_new_controller_notification_event(
+                    ControllerEvent::PlaybackStatusChanged(response.playback_status()),
+                );
                 Ok(false)
             }
             NotificationEventId::EventTrackChanged => {
                 let response = TrackChangedNotificationResponse::decode(data)
                     .map_err(|e| Error::PacketError(e))?;
-                peer.write()
-                    .broadcast_event(ControllerEvent::TrackIdChanged(response.identifier()));
+                peer.write().handle_new_controller_notification_event(
+                    ControllerEvent::TrackIdChanged(response.identifier()),
+                );
                 Ok(false)
             }
             NotificationEventId::EventPlaybackPosChanged => {
                 let response = PlaybackPosChangedNotificationResponse::decode(data)
                     .map_err(|e| Error::PacketError(e))?;
-                peer.write()
-                    .broadcast_event(ControllerEvent::PlaybackPosChanged(response.position()));
+                peer.write().handle_new_controller_notification_event(
+                    ControllerEvent::PlaybackPosChanged(response.position()),
+                );
+                Ok(false)
+            }
+            NotificationEventId::EventVolumeChanged => {
+                let response = VolumeChangedNotificationResponse::decode(data)
+                    .map_err(|e| Error::PacketError(e))?;
+                peer.write().handle_new_controller_notification_event(
+                    ControllerEvent::VolumeChanged(response.volume()),
+                );
                 Ok(false)
             }
             _ => Ok(true),
@@ -280,10 +315,11 @@ impl RemotePeer {
 
     async fn pump_notifications(peer: Arc<RemotePeerHandle>) {
         // events we support when speaking to a peer that supports the target profile.
-        const SUPPORTED_NOTIFICATIONS: [NotificationEventId; 3] = [
+        const SUPPORTED_NOTIFICATIONS: [NotificationEventId; 4] = [
             NotificationEventId::EventPlaybackStatusChanged,
             NotificationEventId::EventTrackChanged,
             NotificationEventId::EventPlaybackPosChanged,
+            NotificationEventId::EventVolumeChanged,
         ];
 
         let supported_notifications: Vec<NotificationEventId> =
@@ -442,7 +478,7 @@ impl RemotePeer {
         }
     }
 
-    pub fn start_processing_peer_notifications(peer: Arc<RemotePeerHandle>) -> AbortHandle {
+    fn start_processing_peer_notifications(peer: Arc<RemotePeerHandle>) -> AbortHandle {
         let (handle, registration) = AbortHandle::new_pair();
         fasync::spawn(
             Abortable::new(
@@ -456,7 +492,7 @@ impl RemotePeer {
         handle
     }
 
-    pub fn start_processing_peer_channels(peer: Arc<RemotePeerHandle>) -> AbortHandle {
+    fn start_processing_peer_channels(peer: Arc<RemotePeerHandle>) -> AbortHandle {
         let (handle, registration) = AbortHandle::new_pair();
         fasync::spawn(
             Abortable::new(

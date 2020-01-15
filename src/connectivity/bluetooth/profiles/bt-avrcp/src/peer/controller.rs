@@ -11,6 +11,7 @@ pub enum ControllerEvent {
     PlaybackStatusChanged(PlaybackStatus),
     TrackIdChanged(u64),
     PlaybackPosChanged(u32),
+    VolumeChanged(u8),
 }
 
 pub type ControllerEventStream = mpsc::Receiver<ControllerEvent>;

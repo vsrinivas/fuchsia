@@ -47,12 +47,36 @@ impl From<PeerError> for ControllerError {
 
 /// FIDL wrapper for a internal PeerController.
 struct AvrcpClientController {
+    /// Handle to internal controller client for the remote peer.
     controller: Controller,
+
+    /// Incoming FIDL request stream from the FIDL client.
     fidl_stream: ControllerRequestStream,
+
+    /// List of subscribed notifications the FIDL controller client cares about.
     notification_filter: Notifications,
+
+    /// The position change interval this FIDL controller client would like position change events
+    /// delievered.
     position_change_interval: u32,
+
+    /// The current count of outgoing notifications currently outstanding an not acknowledged by the
+    /// FIDL client.
+    /// Used as part of flow control for delivery of notifications to the client.
     notification_window_counter: u32,
+
+    /// Current queue of outstanding notifications not recieved by the client. Used as part of flow
+    /// control.
+    // At some point this may change where we consolidate outgoing events if the FIDL client
+    // can't keep up and falls behind instead of keeping a queue.
     notification_queue: VecDeque<(i64, PeerControllerEvent)>,
+
+    /// Notification state cache. Current interim state for the remote target peer. Sent to the
+    /// controller FIDL client when they set their notification filter.
+    notification_state: Notification,
+
+    /// Notification state last update timestamp.
+    notification_state_timestamp: i64,
 }
 
 impl AvrcpClientController {
@@ -66,6 +90,8 @@ impl AvrcpClientController {
             position_change_interval: 0,
             notification_window_counter: 0,
             notification_queue: VecDeque::new(),
+            notification_state: Notification::new_empty(),
+            notification_state_timestamp: 0,
         }
     }
 
@@ -117,13 +143,18 @@ impl AvrcpClientController {
             } => {
                 self.notification_filter = notifications;
                 self.position_change_interval = position_change_interval;
+                self.send_notification_cache()?;
             }
             ControllerRequest::NotifyNotificationHandled { control_handle: _ } => {
                 debug_assert!(self.notification_window_counter != 0);
-                if self.notification_window_counter > 0 {
-                    self.notification_window_counter -= 1;
+                self.notification_window_counter -= 1;
+                if self.notification_window_counter < Self::EVENT_WINDOW_LIMIT {
                     match self.notification_queue.pop_front() {
                         Some((timestamp, event)) => {
+                            println!(
+                                "sending defering event. window at {}",
+                                self.notification_window_counter
+                            );
                             self.handle_controller_event(timestamp, event)?;
                         }
                         None => {}
@@ -155,6 +186,33 @@ impl AvrcpClientController {
         Ok(())
     }
 
+    fn update_notification_from_controller_event(
+        notification: &mut Notification,
+        event: &PeerControllerEvent,
+    ) {
+        match event {
+            PeerControllerEvent::PlaybackStatusChanged(playback_status) => {
+                notification.status = Some(match playback_status {
+                    PacketPlaybackStatus::Stopped => PlaybackStatus::Stopped,
+                    PacketPlaybackStatus::Playing => PlaybackStatus::Playing,
+                    PacketPlaybackStatus::Paused => PlaybackStatus::Paused,
+                    PacketPlaybackStatus::FwdSeek => PlaybackStatus::FwdSeek,
+                    PacketPlaybackStatus::RevSeek => PlaybackStatus::RevSeek,
+                    PacketPlaybackStatus::Error => PlaybackStatus::Error,
+                });
+            }
+            PeerControllerEvent::TrackIdChanged(track_id) => {
+                notification.track_id = Some(*track_id);
+            }
+            PeerControllerEvent::PlaybackPosChanged(pos) => {
+                notification.pos = Some(*pos);
+            }
+            PeerControllerEvent::VolumeChanged(volume) => {
+                notification.volume = Some(*volume);
+            }
+        }
+    }
+
     fn handle_controller_event(
         &mut self,
         timestamp: i64,
@@ -162,31 +220,44 @@ impl AvrcpClientController {
     ) -> Result<(), Error> {
         self.notification_window_counter += 1;
         let control_handle: ControllerControlHandle = self.fidl_stream.control_handle();
-        match event {
-            PeerControllerEvent::PlaybackStatusChanged(playback_status) => {
-                let status = match playback_status {
-                    PacketPlaybackStatus::Stopped => PlaybackStatus::Stopped,
-                    PacketPlaybackStatus::Playing => PlaybackStatus::Playing,
-                    PacketPlaybackStatus::Paused => PlaybackStatus::Paused,
-                    PacketPlaybackStatus::FwdSeek => PlaybackStatus::FwdSeek,
-                    PacketPlaybackStatus::RevSeek => PlaybackStatus::RevSeek,
-                    PacketPlaybackStatus::Error => PlaybackStatus::Error,
-                };
+        let mut notification = Notification::new_empty();
+        Self::update_notification_from_controller_event(&mut notification, &event);
+        control_handle.send_on_notification(timestamp, notification).map_err(Error::from)
+    }
 
-                let notification =
-                    Notification { status: Some(status), ..Notification::new_empty() };
-                control_handle.send_on_notification(timestamp, notification).map_err(Error::from)
+    fn cache_controller_notification_state(&mut self, event: &PeerControllerEvent) {
+        self.notification_state_timestamp = zx::Time::get(zx::ClockId::UTC).into_nanos();
+        Self::update_notification_from_controller_event(&mut self.notification_state, &event);
+    }
+
+    fn send_notification_cache(&mut self) -> Result<(), Error> {
+        if self.notification_state_timestamp > 0 {
+            let control_handle: ControllerControlHandle = self.fidl_stream.control_handle();
+
+            let mut notification = Notification::new_empty();
+
+            if self.notification_filter.contains(Notifications::PlaybackStatus) {
+                notification.status = self.notification_state.status;
             }
-            PeerControllerEvent::TrackIdChanged(track_id) => {
-                let notification =
-                    Notification { track_id: Some(track_id), ..Notification::new_empty() };
-                control_handle.send_on_notification(timestamp, notification).map_err(Error::from)
+
+            if self.notification_filter.contains(Notifications::Track) {
+                notification.track_id = self.notification_state.track_id;
             }
-            PeerControllerEvent::PlaybackPosChanged(pos) => {
-                let notification = Notification { pos: Some(pos), ..Notification::new_empty() };
-                control_handle.send_on_notification(timestamp, notification).map_err(Error::from)
+
+            if self.notification_filter.contains(Notifications::TrackPos) {
+                notification.pos = self.notification_state.pos;
             }
+
+            if self.notification_filter.contains(Notifications::Volume) {
+                notification.volume = self.notification_state.volume;
+            }
+
+            self.notification_window_counter += 1;
+            return control_handle
+                .send_on_notification(self.notification_state_timestamp, notification)
+                .map_err(Error::from);
         }
+        Ok(())
     }
 
     /// Returns true if the event should be dispatched.
@@ -201,6 +272,9 @@ impl AvrcpClientController {
             PeerControllerEvent::PlaybackPosChanged(_) => {
                 self.notification_filter.contains(Notifications::TrackPos)
             }
+            PeerControllerEvent::VolumeChanged(_) => {
+                self.notification_filter.contains(Notifications::Volume)
+            }
         }
     }
 
@@ -212,6 +286,7 @@ impl AvrcpClientController {
                     self.handle_fidl_request(req?).await?;
                 }
                 event = controller_events.select_next_some() => {
+                    self.cache_controller_notification_state(&event);
                     if self.filter_controller_event(&event) {
                         let timestamp = zx::Time::get(zx::ClockId::UTC).into_nanos();
                         if self.notification_window_counter > Self::EVENT_WINDOW_LIMIT {

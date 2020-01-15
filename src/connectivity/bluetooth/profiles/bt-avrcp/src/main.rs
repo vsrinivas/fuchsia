@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]
 // TODO Follow 2018 idioms
 #![allow(elided_lifetimes_in_paths)]
 

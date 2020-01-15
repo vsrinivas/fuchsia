@@ -236,7 +236,10 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
     let mut additional_packets: Vec<Vec<u8>> = vec![];
 
     // set controller event filter to ones we support.
-    let _ = controller_proxy.set_notification_filter(Notifications::TrackPos, 1)?;
+    let _ = controller_proxy
+        .set_notification_filter(Notifications::TrackPos | Notifications::Volume, 1)?;
+
+    let mut volume_value_received = false;
 
     let event_stream = controller_proxy.take_event_stream();
     pin_mut!(event_stream);
@@ -297,33 +300,50 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
                     additional_packets.remove(0);
                 }
                 PduId::RegisterNotification => {
-                    let register_notification_command =
-                        RegisterNotificationCommand::decode(body).expect("unable to packet body");
+                    let register_notification_command = RegisterNotificationCommand::decode(body)
+                        .expect("unable to decode packet body");
 
-                    assert_eq!(
-                        register_notification_command.event_id(),
-                        &NotificationEventId::EventPlaybackPosChanged
+                    assert!(
+                        register_notification_command.event_id()
+                            == &NotificationEventId::EventPlaybackPosChanged
+                            || register_notification_command.event_id()
+                                == &NotificationEventId::EventVolumeChanged
                     );
 
-                    position_changed_events += 1;
+                    match register_notification_command.event_id() {
+                        &NotificationEventId::EventPlaybackPosChanged => {
+                            position_changed_events += 1;
 
-                    let intirm_response =
-                        PlaybackPosChangedNotificationResponse::new(1000 * position_changed_events)
+                            let intirm_response = PlaybackPosChangedNotificationResponse::new(
+                                1000 * position_changed_events,
+                            )
                             .encode_packet()
-                            .expect("unable to pos response packet");
-                    let _ =
-                        avc_command.send_response(AvcResponseType::Interim, &intirm_response[..]);
+                            .expect("unable to encode pos response packet");
+                            let _ = avc_command
+                                .send_response(AvcResponseType::Interim, &intirm_response[..]);
 
-                    // we are going to hang the response and not return an changed response after the 50th call.
-                    // the last interim response should be
-                    if position_changed_events < 50 {
-                        let change_response = PlaybackPosChangedNotificationResponse::new(
-                            1000 * (position_changed_events + 1),
-                        )
-                        .encode_packet()
-                        .expect("unable to pos response packet");
-                        let _ = avc_command
-                            .send_response(AvcResponseType::Changed, &change_response[..]);
+                            // we are going to hang the response and not return an changed response after the 50th call.
+                            // the last interim response should be
+                            if position_changed_events < 50 {
+                                let change_response = PlaybackPosChangedNotificationResponse::new(
+                                    1000 * (position_changed_events + 1),
+                                )
+                                .encode_packet()
+                                .expect("unable to encode pos response packet");
+                                let _ = avc_command
+                                    .send_response(AvcResponseType::Changed, &change_response[..]);
+                            }
+                        }
+                        &NotificationEventId::EventVolumeChanged => {
+                            let intirm_response = VolumeChangedNotificationResponse::new(0x22)
+                                .encode_packet()
+                                .expect("unable to encode volume response packet");
+                            let _ = avc_command
+                                .send_response(AvcResponseType::Interim, &intirm_response[..]);
+
+                            // we do not send an change response. We just hang it as if the volume never changes.
+                        }
+                        _ => assert!(false),
                     }
                 }
                 PduId::SetAbsoluteVolume => {
@@ -343,8 +363,8 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
                         get_capabilities_command.capability_id(),
                         GetCapabilitiesCapabilityId::EventsId
                     );
-                    // only notification we pretend to have is battery status changed.
-                    let response = GetCapabilitiesResponse::new_events(&[0x05, 0x06])
+                    // only notification types we claim to have are battery status, track pos, and volume
+                    let response = GetCapabilitiesResponse::new_events(&[0x05, 0x06, 0x0d])
                         .encode_packet()
                         .expect("unable to encode response");
                     let _ = avc_command
@@ -503,7 +523,7 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
             }
             res = events_fut => {
                 expected_commands -= 1;
-                assert_eq!(res?, Ok(vec![NotificationEvent::TrackPosChanged, NotificationEvent::BattStatusChanged]));
+                assert_eq!(res?, Ok(vec![NotificationEvent::TrackPosChanged, NotificationEvent::BattStatusChanged, NotificationEvent::VolumeChanged]));
             }
             res = get_media_attributes_fut => {
                 expected_commands -= 1;
@@ -546,12 +566,18 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
                         if let Some(value) = notification.pos {
                             last_receieved_pos = value;
                         }
+
+                        if let Some(value) = notification.volume {
+                            volume_value_received = true;
+                            assert_eq!(value, 0x22);
+                        }
+
                         controller_proxy.notify_notification_handled()?;
                     }
                 }
             }
         }
-        if expected_commands <= 0 && last_receieved_pos == 50 * 1000 {
+        if expected_commands <= 0 && last_receieved_pos == 50 * 1000 && volume_value_received {
             assert!(keydown_pressed && keyup_pressed);
             return Ok(());
         }
