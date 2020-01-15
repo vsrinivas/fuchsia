@@ -1,0 +1,39 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+test_package("archivist_logger_integration_tests") {
+  deps = [
+    "cpp:logger_integration_cpp_tests",
+    "go/src:logger_integration_go_tests",
+    "rust:bin_test",
+  ]
+
+  tests = [
+    {
+      name = "logger_integration_go_tests"
+      environments = basic_envs
+    },
+    {
+      name = "logger_integration_bin_test"
+      environments = basic_envs
+    },
+    {
+      name = "logger_integration_cpp_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":archivist_logger_integration_tests",
+    "cpp",
+    "go",
+    "rust",
+  ]
+}

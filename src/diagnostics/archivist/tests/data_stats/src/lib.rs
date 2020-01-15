@@ -16,15 +16,15 @@ use {
 };
 
 const ARCHIVIST_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist_data_stats_test#meta/observer_with_data_stats.cmx";
+    "fuchsia-pkg://fuchsia.com/archivist_data_stats_tests#meta/observer_with_data_stats.cmx";
 const ALL_SELECTORS: &[u8] = include_bytes!("../config/all_selectors.txt");
 const ARCHIVIST_CONFIG: &[u8] = include_bytes!("../config/observer_config.json");
 
 // Number of seconds to wait before timing out polling the reader for pumped results.
 static READ_TIMEOUT_SECONDS: i64 = 5;
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded(test)]
+async fn data_stats() -> Result<(), Error> {
     let config_path = Path::new("/tmp/config/data");
     let selectors_path = config_path.join("pipelines/all/all_selectors.txt");
     let archivist_config_path = config_path.join("observer_config.json");

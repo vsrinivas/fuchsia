@@ -223,7 +223,7 @@ async fn retrieve_and_validate_results(
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn main() -> Result<(), Error> {
+async fn unified_reader() -> Result<(), Error> {
     // We need to keep example_app in scope so it stays running until the end
     // of the test.
     let (archivist_app, _example_app) = setup_environment().await?;

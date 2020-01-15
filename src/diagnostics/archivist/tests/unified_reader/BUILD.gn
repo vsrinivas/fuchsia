@@ -7,7 +7,6 @@ import("//build/test/test_package.gni")
 
 rustc_test("unified_reader_test") {
   edition = "2018"
-  source_root = "src/main.rs"
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
@@ -72,7 +71,7 @@ config_data("reader_golden_json") {
   sources = [ "configs/all_golden.json" ]
 }
 
-group("unified_reader_integration") {
+group("tests") {
   testonly = true
   public_deps = [
     ":reader_golden_json",

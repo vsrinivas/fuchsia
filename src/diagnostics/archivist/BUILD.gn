@@ -148,8 +148,6 @@ group("tests") {
   testonly = true
   public_deps = [
     ":archivist_tests",
-    "//src/diagnostics/archivist/tests:logger_integration_tests",
-    "//src/diagnostics/archivist/tests/data_stats",
-    "//src/diagnostics/archivist/tests/unified_reader:unified_reader_integration",
+    "tests",
   ]
 }

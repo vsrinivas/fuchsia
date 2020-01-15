@@ -1,13 +1,13 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 import("//build/config.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_binary("bin") {
-  name = "archivist_data_stats_test"
+rustc_test("archivist_data_stats_test") {
   edition = "2018"
 
   deps = [
@@ -22,9 +22,9 @@ rustc_binary("bin") {
   ]
 }
 
-test_package("archivist_data_stats_test") {
+test_package("archivist_data_stats_tests") {
   deps = [
-    ":bin",
+    ":archivist_data_stats_test",
     "//src/diagnostics/archivist:bin",
   ]
 
@@ -49,7 +49,7 @@ test_package("archivist_data_stats_test") {
   ]
 }
 
-group("data_stats") {
+group("tests") {
   testonly = true
-  public_deps = [ ":archivist_data_stats_test" ]
+  public_deps = [ ":archivist_data_stats_tests" ]
 }
