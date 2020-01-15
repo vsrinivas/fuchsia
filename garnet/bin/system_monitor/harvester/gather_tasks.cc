@@ -116,6 +116,8 @@ void SampleBundleBuilder::AddProcessStats(zx_handle_t process, zx_koid_t koid) {
   AddKoidValue(koid, "memory_shared_bytes", info.mem_shared_bytes);
   AddKoidValue(koid, "memory_scaled_shared_bytes",
                info.mem_scaled_shared_bytes);
+  AddKoidValue(koid, "memory_private_scaled_shared_bytes",
+               info.mem_private_bytes + info.mem_scaled_shared_bytes);
 }
 
 // Gather state info for a specific thread.

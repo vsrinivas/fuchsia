@@ -46,4 +46,11 @@ TEST_F(GatherTasksTest, Inspectable) {
   // changes this may need to be updated. The intent is to test for a process
   // that is running.
   EXPECT_EQ("system_monitor_harvester_test.c", test_string);
+
+  // For the moment we send both mapped_bytes and private_scaled_shared_bytes.
+  // Once the front-end no longer expects memory_mapped_bytes that value will
+  // go away (fxb/43887).
+  EXPECT_TRUE(dockyard_proxy.CheckValueSubstringSent("memory_mapped_bytes"));
+  EXPECT_TRUE(dockyard_proxy.CheckValueSubstringSent(
+      "memory_private_scaled_shared_bytes"));
 }

@@ -45,6 +45,8 @@ class DockyardProxyFake : public DockyardProxy {
   bool CheckJsonSent(const std::string& dockyard_path, std::string* json) const;
   bool CheckValueSent(const std::string& dockyard_path,
                       dockyard::SampleValue* value) const;
+  // Returns true if the substring appears in any value path.
+  bool CheckValueSubstringSent(const std::string& dockyard_path_substring) const;
   bool CheckStringSent(const std::string& dockyard_path,
                        std::string* string) const;
   bool CheckStringPrefixSent(const std::string& dockyard_path_prefix,

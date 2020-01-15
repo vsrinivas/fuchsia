@@ -95,6 +95,16 @@ bool DockyardProxyFake::CheckValueSent(const std::string& dockyard_path,
   return true;
 }
 
+bool DockyardProxyFake::CheckValueSubstringSent(
+    const std::string& dockyard_path_substring) const {
+  for (const auto& iter : sent_values_) {
+    if (iter.first.find(dockyard_path_substring) != std::string::npos) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool DockyardProxyFake::CheckStringSent(const std::string& dockyard_path,
                                         std::string* string) const {
   const auto& iter = sent_strings_.find(dockyard_path);
