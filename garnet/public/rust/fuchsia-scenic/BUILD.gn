@@ -1,29 +1,13 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_alias.gni")
 
-rustc_library("fuchsia-scenic") {
-  name = "fuchsia_scenic"
-  version = "0.1.0"
-  edition = "2018"
+# Soft transition for out-of-tree Rust
+#
+# TODO(rwt): Remove when all code is migrated away from using these paths
 
-  with_unit_tests = true
-
-  deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
-    "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
-    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
-    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
-    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
-    "//src/lib/fuchsia-async",
-    "//src/lib/mapped-vmo",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:thiserror",
-  ]
+rustc_alias("fuchsia-scenic") {
+  alias = "//src/lib/ui/fuchsia-scenic"
 }

@@ -2,8 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
 group("ui") {
   deps = [
+    "carnelian",
     "input-synthesis",
     "scenic/cpp",
   ]
@@ -12,7 +16,19 @@ group("ui") {
 group("tests") {
   testonly = true
   public_deps = [
+    ":rust-ui-crates-tests",
     "input:tests",
     "input-synthesis:input-synthesis-tests",
+  ]
+}
+
+unittest_package("rust-ui-crates-tests") {
+  deps = [ "fuchsia-scenic:fuchsia-scenic_test" ]
+
+  tests = [
+    {
+      name = "fuchsia_scenic_lib_test"
+      environments = basic_envs
+    },
   ]
 }
