@@ -267,8 +267,41 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
         }
     };
 
-    let mut buf = vec![];
     let read = async {
+        let (status, buffer) = file.get_buffer(fidl_fuchsia_io::VMO_FLAG_READ).await?;
+        let mut expect_empty_blob = false;
+
+        // First try getting a fuchsia.mem.Buffer of the file, as blobfs already has a VMO for the
+        // blob and it is faster to get the file data that way. Not all package blobs support the
+        // API, so on expected errors, fall back to reading the file over FIDL.
+        match Status::from_raw(status) {
+            Status::OK => {
+                let buffer = buffer.unwrap();
+                let mut buf = vec![0u8; buffer.size as usize];
+                buffer
+                    .vmo
+                    .read(&mut buf[..], 0)
+                    .map_err(|e| format_err!("unable to read from vmo: {}", e))?;
+                return Ok(buf);
+            }
+            Status::NOT_SUPPORTED => {
+                // meta far files do not support get_buffer, fallback to file read path.
+            }
+            Status::BAD_STATE => {
+                // may or may not be intended behavior, but the empty blob will not provide a vmo,
+                // failing with BAD_STATE. Verify in the read path below that the blob is indeed
+                // zero length if this happens.
+                expect_empty_blob = true;
+            }
+            status => {
+                return Err(VerificationError::from(format_err!(
+                    "unexpected error opening file buffer: {:?}",
+                    status
+                )));
+            }
+        }
+
+        let mut buf = vec![];
         loop {
             let (status, chunk) =
                 file.read(fidl_fuchsia_io::MAX_BUF).await.context("file read to respond")?;
@@ -276,6 +309,9 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
                 .map_err(|status| VerificationError::FileReadError { path: path.into(), status })?;
 
             if chunk.is_empty() {
+                if expect_empty_blob {
+                    assert_eq!(buf, Vec::<u8>::new());
+                }
                 return Ok(buf);
             }
 
