@@ -4,6 +4,9 @@
 
 zx_library("profile") {
   sources = [ "profile.cc" ]
+  sdk = "source"
+  sdk_headers = [ "lib/profile/profile.h" ]
+  public_deps = [ "$zx/system/ulib/svc:headers" ]
   deps = [
     "$zx/system/fidl/fuchsia-scheduler:c",
     "$zx/system/ulib/async",

@@ -109,6 +109,7 @@ group("ulib") {
     "pci",
     "perftest",
     "pretty",
+    "profile",
     "ramdevice-client",
     "refcount",
     "region-alloc",

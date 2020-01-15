@@ -278,7 +278,6 @@ if (current_cpu != "") {
       "policy",
       "posixio",
       "processor",
-      "profile",
       "property",
       "pty",
       "qsort",
