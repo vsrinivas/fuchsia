@@ -287,7 +287,6 @@ if (current_cpu != "") {
       "thread-initial-state",
       "thread-safe-deleter",
       "thread-state",
-      "time",
       "timers",
       "trace",
       "usb",
