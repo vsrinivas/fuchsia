@@ -5,6 +5,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"context"
 	"crypto/md5"
 	"flag"
@@ -18,6 +19,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/artifactory/lib"
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 
 	"cloud.google.com/go/storage"
@@ -134,6 +136,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 				failOnCollision: false,
 			},
 		},
+
 		{
 			dir: artifactory.Upload{
 				Source:      metadataDir,
@@ -158,7 +161,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		},
 		{
 			opts: uploadOptions{
-				j:               1,
+				j:               5,
 				failOnCollision: true,
 			},
 			files: artifactory.ImageUploads(m, path.Join(cmd.uuid, imageDirName)),
@@ -231,9 +234,11 @@ func (s cloudSink) objectExistsAt(ctx context.Context, name string) (bool, error
 }
 
 func (s cloudSink) write(ctx context.Context, name string, path string, expectedChecksum []byte) error {
-	w := s.bucket.Object(name).If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
+	obj := s.bucket.Object(name)
+	w := obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
 	w.ChunkSize = chunkSize
 	w.MD5 = expectedChecksum
+	w.ContentEncoding = "gzip"
 
 	fd, err := os.Open(path)
 	if err != nil {
@@ -241,7 +246,16 @@ func (s cloudSink) write(ctx context.Context, name string, path string, expected
 	}
 	defer fd.Close()
 
-	return artifactory.Copy(ctx, name, fd, w, chunkSize)
+	gzw := gzip.NewWriter(w)
+	// The following writer is effectively |gzw|, but for which |w| is also
+	// closed on Close(). Both need to be closed to finalize the write of the
+	// compressed file to GCS.
+	zw := struct {
+		io.Writer
+		io.Closer
+	}{gzw, iomisc.MultiCloser(gzw, w)}
+	defer zw.Close()
+	return artifactory.Copy(ctx, name, fd, zw, chunkSize)
 }
 
 type checksumError struct {
@@ -347,7 +361,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 
 			logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
 			if err := dest.write(ctx, upload.Destination, upload.Source, checksum); err != nil {
-				errs <- err
+				errs <- fmt.Errorf("%s: %v", upload.Destination, err)
 				return
 			}
 		}
@@ -362,15 +376,22 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 	return <-errs
 }
 
-// Determines the checksum without reading all of the contents into memory.
+// Determines the checksum of the associated gzipped file without reading all
+// of the contents into memory.
 func md5Checksum(file string) ([]byte, error) {
 	fd, err := os.Open(file)
 	if err != nil {
 		return nil, err
 	}
 	defer fd.Close()
+
 	h := md5.New()
-	if _, err := io.Copy(h, fd); err != nil {
+	gzw := gzip.NewWriter(h)
+	if _, err := io.Copy(gzw, fd); err != nil {
+		gzw.Close()
+		return nil, err
+	}
+	if err := gzw.Close(); err != nil {
 		return nil, err
 	}
 	checksum := h.Sum(nil)

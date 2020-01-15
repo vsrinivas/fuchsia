@@ -6,8 +6,10 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/md5"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -52,7 +54,7 @@ func (s *memSink) write(ctx context.Context, name string, path string, expectedC
 	if err != nil {
 		return err
 	}
-	actualChecksum := md5.Sum(content)
+	actualChecksum := md5Sum(content)
 	if bytes.Compare(expectedChecksum, actualChecksum[:]) != 0 {
 		return checksumError{
 			name:     name,
@@ -62,6 +64,21 @@ func (s *memSink) write(ctx context.Context, name string, path string, expectedC
 	}
 	s.contents[name] = content
 	return nil
+}
+
+func md5Sum(b []byte) []byte {
+	h := md5.New()
+	gzw := gzip.NewWriter(h)
+	r := bytes.NewReader(b)
+	if _, err := io.Copy(gzw, r); err != nil {
+		gzw.Close()
+		panic("failed to calcular md5 hash: " + err.Error())
+	}
+	if err := gzw.Close(); err != nil {
+		panic("failed to close gzip writer: " + err.Error())
+	}
+	checksum := h.Sum(nil)
+	return checksum[:]
 }
 
 func sinkHasContents(t *testing.T, s *memSink, contents map[string][]byte) {

@@ -29,6 +29,7 @@ go_library("main") {
     "//third_party/golibs:github.com/google/subcommands",
     "//tools/build",
     "//tools/lib/color",
+    "//tools/lib/iomisc",
     "//tools/lib/logger",
   ]
 }
