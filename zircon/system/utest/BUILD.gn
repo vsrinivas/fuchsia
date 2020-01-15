@@ -229,7 +229,6 @@ if (current_cpu != "") {
       "dlfcn",
       "dlopen-indirect-deps",
       "driver-test",
-      "dump1",
       "ethernet",
       "events",
       "evil",
