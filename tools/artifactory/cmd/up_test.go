@@ -173,52 +173,6 @@ func TestUploading(t *testing.T) {
 		}
 	})
 
-	t.Run("collision behavior is parametrized", func(t *testing.T) {
-		var err error
-		ctx := context.Background()
-		srcContents := map[string][]byte{
-			"a": []byte("one"),
-			"b": []byte("two"),
-		}
-		dir := newDirWithContents(t, srcContents)
-		defer os.RemoveAll(dir)
-		files := getUploadFiles(dir, srcContents)
-
-		sink := newMemSink()
-		sink.contents = srcContents
-		expectedFailureOpts := uploadOptions{j: 1, failOnCollision: true}
-		if err = uploadFiles(ctx, files, sink, expectedFailureOpts); err == nil {
-			t.Fatal("upload succeeded when it should have failed")
-		}
-
-		sink = newMemSink()
-		sink.contents = srcContents
-		expectedSuccessOpts := uploadOptions{j: 1, failOnCollision: false}
-		if err = uploadFiles(ctx, files, sink, expectedSuccessOpts); err != nil {
-			t.Fatal(err)
-		}
-
-		sink = newMemSink()
-		sink.contents["a"] = []byte("checksum mismatch!")
-		expectedChecksum := md5.Sum(srcContents["a"])
-		actualChecksum := md5.Sum(sink.contents["a"])
-		genericOpts := uploadOptions{j: 1}
-		err = uploadFiles(ctx, files, sink, genericOpts)
-
-		actualChecksumErr, ok := err.(checksumError)
-		if !ok {
-			t.Fatal("expected a checksum error")
-		}
-		expectedChecksumErr := checksumError{
-			name:     "a",
-			expected: expectedChecksum[:],
-			actual:   actualChecksum[:],
-		}
-		if actualChecksumErr.Error() != expectedChecksumErr.Error() {
-			t.Fatalf("differing checksum errors found:\nexpected: %q;\nactual: %q\n", expectedChecksumErr, actualChecksumErr)
-		}
-	})
-
 	t.Run("non-existent or empty sources are skipped", func(t *testing.T) {
 		dir, err := ioutil.TempDir("", "artifactory")
 		if err != nil {
