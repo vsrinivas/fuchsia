@@ -247,7 +247,6 @@ if (current_cpu != "") {
       "fs-management",
       "fs-recovery",
       "fs-test-utils",
-      "futex-ownership",
       "fvm",
       "handle-alias",
       "hid",
