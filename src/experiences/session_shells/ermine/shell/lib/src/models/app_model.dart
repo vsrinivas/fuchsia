@@ -3,19 +3,16 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:convert' show json;
 import 'dart:io';
 
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
     show RegistryProxy;
-
 import 'package:flutter/material.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
 import 'package:fuchsia_modular_flutter/session_shell.dart' show SessionShell;
-import 'package:fuchsia_modular_flutter/story_shell.dart' show StoryShell;
 
 import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
@@ -60,30 +57,21 @@ class AppModel {
   String keyboardShortcuts = 'Help Me!';
 
   AppModel() {
-    StartupContext.fromStartupInfo()
-        .incoming
-        .connectToService(_shortcutRegistry);
+    _startupContext.incoming.connectToService(_shortcutRegistry);
+    _startupContext.incoming.connectToService(_intl);
 
-    StartupContext.fromStartupInfo().incoming.connectToService(_intl);
     _localeStream = LocaleSource(_intl).stream().asBroadcastStream();
 
-    _suggestionService =
-        SuggestionService.fromStartupContext(StartupContext.fromStartupInfo());
+    _suggestionService = SuggestionService.fromStartupContext(
+      startupContext: _startupContext,
+      viewCreated: clustersModel.storyStarted,
+    );
 
+    // TODO(http://fxb/44105): Remove SessionShell needed for Presentation API.
     sessionShell = SessionShell(
       startupContext: _startupContext,
-      onStoryStarted: clustersModel.addStory,
-      onStoryDeleted: clustersModel.removeStory,
-      onStoryChanged: clustersModel.changeStory,
+      onStoryStarted: null,
     )..start();
-
-    clustersModel.useInProcessStoryShell = _useInProcessStoryShell();
-    if (clustersModel.useInProcessStoryShell) {
-      StoryShell.advertise(
-        startupContext: _startupContext,
-        onStoryAttached: clustersModel.getStory,
-      );
-    }
 
     topbarModel = TopbarModel(appModel: this);
 
@@ -152,8 +140,8 @@ class AppModel {
   void onFullscreen() {
     if (clustersModel.fullscreenStory != null) {
       clustersModel.fullscreenStory.restore();
-    } else if (sessionShell.focusedStory != null) {
-      clustersModel.maximize(sessionShell.focusedStory.id);
+    } else if (clustersModel.focusedStory != null) {
+      clustersModel.maximize(clustersModel.focusedStory.id);
       // Hide system overlays.
       onCancel();
     }
@@ -222,7 +210,7 @@ class AppModel {
 
   /// Called when the user wants to delete the story.
   void onClose() {
-    sessionShell.focusedStory?.delete();
+    clustersModel.focusedStory?.delete();
   }
 
   /// Called when the keyboard help button is tapped.
@@ -286,19 +274,6 @@ class AppModel {
         y: offset.dy,
         buttons: 0,
       );
-
-  bool _useInProcessStoryShell() {
-    File file = File('/pkg/data/modular_config.json');
-    if (file.existsSync()) {
-      final data = json.decode(file.readAsStringSync());
-      if (data is Map &&
-          data['basemgr'] != null &&
-          data['basemgr']['story_shell_url'] != null) {
-        return false;
-      }
-    }
-    return true;
-  }
 
   void _onInspect(inspect.Node node) {
     // Session.

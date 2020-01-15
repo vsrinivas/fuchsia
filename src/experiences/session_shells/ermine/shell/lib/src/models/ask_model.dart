@@ -47,15 +47,18 @@ class AskModel extends ChangeNotifier {
   // List of built-in suggestions show when ask box is empty.
   static final List<Suggestion> builtInSuggestions = <Suggestion>[
     Suggestion(
-      id: 'fuchsia-pkg://fuchsia.com/simple_browser#meta/simple_browser.cmx',
+      id: 'simple_browser:${DateTime.now().millisecondsSinceEpoch}',
+      url: 'fuchsia-pkg://fuchsia.com/simple_browser#meta/simple_browser.cmx',
       title: 'simple_browser',
     ),
     Suggestion(
-      id: 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx',
+      id: 'terminal:${DateTime.now().millisecondsSinceEpoch}',
+      url: 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx',
       title: 'terminal',
     ),
     Suggestion(
-      id: 'fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx',
+      id: 'settings:${DateTime.now().millisecondsSinceEpoch}',
+      url: 'fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx',
       title: 'settings',
     ),
   ];

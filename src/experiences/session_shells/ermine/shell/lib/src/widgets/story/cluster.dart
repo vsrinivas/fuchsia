@@ -8,7 +8,6 @@ import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
 
 import '../../models/cluster_model.dart';
 import '../../models/ermine_story.dart';
-import 'story_widget.dart';
 import 'tile_chrome.dart';
 import 'tile_sizer.dart';
 import 'tile_tab.dart';
@@ -65,24 +64,13 @@ class Cluster extends StatelessWidget {
                   name: story.name,
                   showTitle: !custom,
                   titleFieldController: titleFieldController,
-                  editing: story.editStateNotifier.value &&
-                      story.useInProcessStoryShell,
+                  editing: story.editStateNotifier.value,
                   focused: story.focused,
                   child: AnimatedBuilder(
-                    animation: story.visibilityStateNotifier,
+                    animation: story.fullscreenNotifier,
                     builder: (context, child) => story.isImmersive
                         ? Offstage()
-                        : story.useInProcessStoryShell
-                            ? StoryWidget(
-                                editing: story.editStateNotifier.value,
-                                confirmEdit: confirmEditNotifier,
-                                presenter: story.layoutManager.presenter,
-                                onTitleChange: () =>
-                                    story.title = titleFieldController.text,
-                              )
-                            : ChildView(
-                                connection: story.childViewConnection,
-                              ),
+                        : ChildView(connection: story.childViewConnection),
                   ),
                   onTap: story.focus,
                   onDelete: story.delete,

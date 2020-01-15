@@ -58,6 +58,7 @@ dart_library("ermine_library") {
     "src/models/app_model.dart",
     "src/models/ask_model.dart",
     "src/models/cluster_model.dart",
+    "src/models/ermine_shell.dart",
     "src/models/ermine_story.dart",
     "src/models/status_model.dart",
     "src/models/topbar_model.dart",

@@ -4,12 +4,10 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:fidl_fuchsia_modular/fidl_async.dart'
-    show StoryInfo, StoryController;
-import 'package:fuchsia_modular_flutter/session_shell.dart'
-    show SessionShell, Story;
+import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:tiler/tiler.dart' show TilerModel, TileModel;
 
+import 'ermine_shell.dart';
 import 'ermine_story.dart';
 
 // The minimum size of a tile we support.
@@ -17,7 +15,7 @@ const _kMinTileSize = Size(320, 240);
 
 /// Defines a collection of [ClusterModel] instances. Calls [notifyListeners] when
 /// a cluster is added or deleted.
-class ClustersModel extends ChangeNotifier {
+class ClustersModel extends ChangeNotifier implements ErmineShell {
   /// The list of [ClusterModel] initialized to one cluster.
   final List<ClusterModel> clusters = [ClusterModel()];
 
@@ -27,14 +25,17 @@ class ClustersModel extends ChangeNotifier {
 
   final _storyToCluster = <String, ClusterModel>{};
 
-  /// Flag to use in-process story shell.
-  bool useInProcessStoryShell = true;
-
   /// Change notifier when fullscreen is toggled for a story.
   ValueNotifier<ErmineStory> fullscreenStoryNotifier = ValueNotifier(null);
 
   /// Get the current story that is fullscreen.
   ErmineStory get fullscreenStory => fullscreenStoryNotifier.value;
+
+  /// Change notifier when focus is toggled for a story.
+  ValueNotifier<ErmineStory> focusedStoryNotifier = ValueNotifier(null);
+
+  /// Get the story that has focus.
+  ErmineStory get focusedStory => focusedStoryNotifier.value;
 
   /// Returns [true] if currentCluster is the first cluster.
   bool get isFirst =>
@@ -74,18 +75,21 @@ class ClustersModel extends ChangeNotifier {
 
   /// Creates and adds a [Story] to the current cluster given it's [StoryInfo],
   /// [SessionShell] and [StoryController]. Returns the created instance.
-  Story addStory({
-    StoryInfo info,
-    SessionShell sessionShell,
-    StoryController controller,
-  }) {
-    assert(!_storyToCluster.containsKey(info.id));
+  @override
+  ErmineStory storyStarted(
+    String id,
+    String name,
+    ChildViewConnection childViewConnection,
+  ) {
+    assert(!_storyToCluster.containsKey(id));
     final story = ErmineStory(
-      info: info,
-      sessionShell: sessionShell,
-      controller: controller,
-      clustersModel: this,
+      id: id,
+      name: name,
+      childViewConnection: childViewConnection,
+      onDelete: storyDeleted,
+      onChange: storyChanged,
     );
+
     // Add the story to the current cluster
     currentCluster.value ??= clusters.first;
     _storyToCluster[story.id] = currentCluster.value..add(story);
@@ -94,14 +98,17 @@ class ClustersModel extends ChangeNotifier {
     // to navigate to it.
     if (currentCluster.value == clusters.last) {
       clusters.add(ClusterModel());
-      notifyListeners();
     }
+    notifyListeners();
+
+    story.focus();
     return story;
   }
 
   /// Removes the [story] from the current cluster. If this is the last story
   /// in the cluster, the cluster is also removed unless it is the last cluster.
-  void removeStory(Story story) {
+  @override
+  void storyDeleted(ErmineStory story) {
     assert(_storyToCluster.containsKey(story.id));
     final cluster = _storyToCluster[story.id]..remove(story);
     int index = clusters.indexOf(cluster);
@@ -131,17 +138,22 @@ class ClustersModel extends ChangeNotifier {
   }
 
   /// Called when any story attribute changes.
-  void changeStory(Story story) {
+  @override
+  void storyChanged(ErmineStory story) {
     if (story != null) {
       final storyCluster = _storyToCluster[story.id];
       if (story.focused) {
+        focusedStoryNotifier.value?.focused = false;
+        focusedStoryNotifier.value = story;
         // If this story has focus, bring its cluster on screen.
         if (storyCluster != currentCluster.value) {
           currentCluster.value = storyCluster;
         }
-        // If there is another fullscreen story, restore it.
-        if (fullscreenStory != null && fullscreenStory != story) {
-          restore(fullscreenStory.id);
+        // Update fullscreen story.
+        if (story.fullscreen) {
+          maximize(story.id);
+        } else {
+          restore(story.id);
         }
       }
       notifyListeners();
@@ -183,7 +195,7 @@ class ClusterModel extends ChangeNotifier {
   ErmineStory getStory(String id) => _storyToTile[id]?.content;
 
   /// Adds a [story] to this cluster.
-  void add(Story story) {
+  void add(ErmineStory story) {
     assert(!_storyToTile.containsKey(story.id));
     final tile = tilerModel.add(content: story, minSize: _kMinTileSize);
     _storyToTile[story.id] = tile;
@@ -192,7 +204,7 @@ class ClusterModel extends ChangeNotifier {
   }
 
   /// Removes the [story] from this cluster.
-  void remove(Story story) {
+  void remove(ErmineStory story) {
     assert(_storyToTile.containsKey(story.id));
     final tile = _storyToTile[story.id];
     tilerModel.remove(tile);
