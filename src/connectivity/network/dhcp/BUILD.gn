@@ -83,10 +83,6 @@ package("dhcpd") {
       path = rebase_path("meta/dhcpd.cmx")
       dest = "dhcpd.cmx"
     },
-    {
-      path = rebase_path("meta/dhcpd_test.cmx")
-      dest = "dhcpd_test.cmx"
-    },
   ]
   resources = [
     {

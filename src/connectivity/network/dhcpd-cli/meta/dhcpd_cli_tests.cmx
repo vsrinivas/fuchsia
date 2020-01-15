@@ -2,7 +2,6 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.dhcp.Server": "fuchsia-pkg://fuchsia.com/dhcpd#meta/dhcpd_test.cmx",
                 "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx"
             }
         }
@@ -12,10 +11,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
-            "fuchsia.net.dhcp.Server",
-            "fuchsia.stash.Store",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
         ]
     }
 }
