@@ -10,6 +10,7 @@ group("bus") {
     "virtio:virtio_block",
     "virtio:virtio_console",
     "virtio:virtio_ethernet",
+    "virtio:virtio_gpu",
     "virtio:virtio_scsi",
   ]
 }

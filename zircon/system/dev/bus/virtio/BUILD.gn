@@ -38,6 +38,27 @@ zx_driver("virtio_block") {
   ]
 }
 
+zx_driver("virtio_gpu") {
+  sources = [ "gpu_driver.cc" ]
+  deps = [
+    ":common",
+    ":gpu_lib",
+    "$zx/system/ulib/ddktl",
+  ]
+}
+
+source_set("gpu_lib") {
+  sources = [ "gpu.cc" ]
+  public_deps = [
+    ":common",
+    "$zx/system/banjo/ddk.protocol.display.controller",
+    "$zx/system/banjo/ddk.protocol.sysmem",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/image-format",
+  ]
+}
+
 zx_driver("virtio_console") {
   sources = [
     "console.cc",
@@ -99,22 +120,18 @@ source_set("common") {
     "device.cc",
     "driver_utils.cc",
     "driver_utils.h",
-    "gpu.cc",
     "ring.cc",
   ]
   public_deps = [
-    "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.pci",
-    "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/device-protocol-pci",
     "$zx/system/dev/lib/mmio",
-    "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/image-format",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/virtio",
@@ -131,6 +148,7 @@ zx_test("virtio-test") {
   ]
   deps = [
     ":common",
+    ":gpu_lib",
     ":scsi_lib",
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",
