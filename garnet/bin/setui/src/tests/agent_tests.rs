@@ -6,7 +6,6 @@ use crate::agent::authority_impl::AuthorityImpl;
 use crate::agent::base::*;
 use crate::service_context::ServiceContext;
 use anyhow::{format_err, Error};
-use fuchsia_async as fasync;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::StreamExt;
@@ -23,12 +22,27 @@ use std::sync::Arc;
 /// construction is fired (in this context to inform the test of the change). At
 /// that point, the agent owner may continue the lifespan execution by calling
 /// continue_invocation.
-struct Agent {
+struct TestAgent {
     id: u32,
+    lifespan: Lifespan,
     last_invocation: Option<Invocation>,
+    callback: UnboundedSender<(u32, Invocation)>,
 }
 
-impl Agent {
+impl Agent for TestAgent {
+    fn invoke(&mut self, invocation: Invocation) -> Result<bool, Error> {
+        if invocation.lifespan != self.lifespan {
+            return Ok(false);
+        }
+
+        self.last_invocation = Some(invocation.clone());
+        self.callback.unbounded_send((self.id, invocation.clone())).ok();
+
+        return Ok(true);
+    }
+}
+
+impl TestAgent {
     // Creates an agent and spawns a listener for invocation. The agent will be
     // registered with the given authority for the lifespan specified. The
     // callback will be invoked whenever an invocation is encountered, passing a
@@ -37,25 +51,25 @@ impl Agent {
         id: u32,
         lifespan: Lifespan,
         authority: &mut dyn Authority,
-        callback: UnboundedSender<Arc<Mutex<Agent>>>,
-    ) -> Result<Arc<Mutex<Agent>>, Error> {
-        let (tx, mut rx) = futures::channel::mpsc::unbounded::<Invocation>();
-        let agent = Arc::new(Mutex::new(Agent { id: id, last_invocation: None }));
+        callback: UnboundedSender<(u32, Invocation)>,
+    ) -> Result<Arc<Mutex<TestAgent>>, Error> {
+        let agent = Arc::new(Mutex::new(TestAgent {
+            id: id,
+            last_invocation: None,
+            lifespan: lifespan,
+            callback: callback,
+        }));
 
-        if !authority.register(lifespan, tx).is_ok() {
+        if !authority.register(agent.clone()).is_ok() {
             return Err(format_err!("could not register"));
         }
 
-        let agent_clone = agent.clone();
+        return Ok(agent.clone());
+    }
 
-        fasync::spawn(async move {
-            while let Some(invocation) = rx.next().await {
-                agent_clone.lock().await.last_invocation = Some(invocation);
-                callback.unbounded_send(agent_clone.clone()).ok();
-            }
-        });
-
-        return Ok(agent);
+    /// Returns the id specified at construction time.
+    pub fn id(&self) -> u32 {
+        return self.id;
     }
 
     /// Returns the last encountered, unprocessed invocation. None will be
@@ -67,32 +81,13 @@ impl Agent {
 
         return None;
     }
-
-    /// Returns the id specified at construction time.
-    pub fn id(&self) -> u32 {
-        return self.id;
-    }
-
-    /// Consumes the last invocation and acknowledges the ack. An error will be
-    /// returned if no previous invocation is available.
-    pub async fn continue_invocation(&mut self, ack: InvocationAck) -> Result<(), Error> {
-        if self.last_invocation.is_none() {
-            return Err(format_err!("no previous invocation"));
-        }
-
-        let invocation = self.last_invocation.take().unwrap();
-
-        invocation.acknowledge(ack).await.ok();
-
-        return Ok(());
-    }
 }
 
 /// Ensures that agents are executed in sequential order and the
 /// completion ack only is sent when all agents have completed.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_sequential() {
-    let (tx, mut rx) = futures::channel::mpsc::unbounded::<Arc<Mutex<Agent>>>();
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
 
@@ -108,9 +103,18 @@ async fn test_sequential() {
     // Processing the first agent is necessary before the second can receive its
     // invocation.
     for agent_id in agent_ids {
-        let next_agent = rx.next().await;
-        assert!(rx.try_next().is_err());
-        validate_agent_and_continue(next_agent, agent_id, Lifespan::Initialization, Ok(())).await;
+        match rx.next().await {
+            Some((id, invocation)) => {
+                assert!(rx.try_next().is_err());
+
+                if agent_id == id {
+                    assert!(invocation.acknowledge(Ok(())).await.is_ok());
+                }
+            }
+            _ => {
+                panic!("couldn't get invocation");
+            }
+        }
     }
 
     // Ensure lifespan execution completes.
@@ -125,7 +129,7 @@ async fn test_sequential() {
 /// and the completion ack waits for all to complete.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_simultaneous() {
-    let (tx, mut rx) = futures::channel::mpsc::unbounded::<Arc<Mutex<Agent>>>();
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let agent_ids = create_agents(12, Lifespan::Initialization, &mut authority, tx.clone());
@@ -137,21 +141,19 @@ async fn test_simultaneous() {
     // Ensure that each agent has received the invocation. Note that we are not
     // acknowledging the invocations here. Each agent should be notified
     // regardless of order.
-    let mut agents = Vec::new();
+    let mut invocations = Vec::new();
     for agent_id in agent_ids {
-        if let Some(next_agent_lock) = rx.next().await {
-            let agent = next_agent_lock.lock().await;
-            validate_agent(&agent, agent_id, Lifespan::Initialization);
-            agents.push(next_agent_lock.clone());
+        if let Some((id, invocation)) = rx.next().await {
+            assert_eq!(id, agent_id);
+            invocations.push(invocation.clone());
         } else {
             panic!("should be able to retrieve agent");
         }
     }
 
     // Acknowledge each invocation.
-    for agent_lock in agents {
-        let mut agent = agent_lock.lock().await;
-        assert!(agent.continue_invocation(Ok(())).await.is_ok());
+    for invocation in invocations {
+        assert!(invocation.acknowledge(Ok(())).await.is_ok());
     }
 
     // Ensure lifespan execution completes.
@@ -165,29 +167,31 @@ async fn test_simultaneous() {
 /// Checks that errors returned from an agent stop execution of a lifecycle.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_err_handling() {
-    let (tx, mut rx) = futures::channel::mpsc::unbounded::<Arc<Mutex<Agent>>>();
+    let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
 
-    let agent_1_id = Agent::create(rng.gen(), Lifespan::Initialization, &mut authority, tx.clone())
-        .unwrap()
-        .lock()
-        .await
-        .id();
+    let agent_1_id =
+        TestAgent::create(rng.gen(), Lifespan::Initialization, &mut authority, tx.clone())
+            .unwrap()
+            .lock()
+            .await
+            .id();
 
     let agent2_lock =
-        Agent::create(rng.gen(), Lifespan::Initialization, &mut authority, tx.clone()).unwrap();
+        TestAgent::create(rng.gen(), Lifespan::Initialization, &mut authority, tx.clone()).unwrap();
 
     // Execute lifespan sequentially
     let completion_ack =
         authority.execute_lifespan(Lifespan::Initialization, service_context, true);
 
     // Ensure the first agent received an invocation, acknowledge with an error.
-    if let Some(agent_lock) = rx.next().await {
-        let mut agent = agent_lock.lock().await;
-        assert_eq!(agent_1_id, agent.id());
-        assert!(agent.continue_invocation(Err(format_err!("injected error"))).await.is_ok());
+    if let Some((id, invocation)) = rx.next().await {
+        assert_eq!(agent_1_id, id);
+        assert!(invocation.acknowledge(Err(format_err!("injected error"))).await.is_ok());
+    } else {
+        panic!("did not receive expected response from agent");
     }
 
     let completion_result = completion_ack.await;
@@ -209,7 +213,7 @@ fn create_agents(
     count: u32,
     lifespan: Lifespan,
     authority: &mut dyn Authority,
-    sender: UnboundedSender<Arc<Mutex<Agent>>>,
+    sender: UnboundedSender<(u32, Invocation)>,
 ) -> Vec<u32> {
     let mut return_agents = Vec::new();
     let mut rng = rand::thread_rng();
@@ -217,33 +221,8 @@ fn create_agents(
     for _i in 0..count {
         let id = rng.gen();
         return_agents.push(id);
-        assert!(Agent::create(id, lifespan, authority, sender.clone()).is_ok())
+        assert!(TestAgent::create(id, lifespan, authority, sender.clone()).is_ok())
     }
 
     return return_agents;
-}
-
-async fn validate_agent_and_continue(
-    optional_agent: Option<Arc<Mutex<Agent>>>,
-    id: u32,
-    lifespan: Lifespan,
-    ack: InvocationAck,
-) {
-    if let Some(agent_lock) = optional_agent {
-        let mut agent = agent_lock.lock().await;
-        validate_agent(&agent, id, lifespan);
-        assert!(agent.continue_invocation(ack).await.is_ok());
-    } else {
-        panic!("agent should be present");
-    }
-}
-
-fn validate_agent(agent: &Agent, id: u32, lifespan: Lifespan) {
-    assert_eq!(agent.id(), id);
-
-    if let Some(invocation) = agent.last_invocation() {
-        assert_eq!(invocation.lifespan, lifespan);
-    } else {
-        panic!("invocation should be present");
-    }
 }

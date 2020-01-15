@@ -4,15 +4,12 @@
 
 use crate::agent::base::*;
 
-use anyhow::Error;
-
 use crate::service_context::ServiceContextHandle;
+use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
-use std::collections::HashMap;
 use std::sync::Arc;
 
-type AgentMap = HashMap<Lifespan, Vec<InvocationSender>>;
 type AckReceiver = futures::channel::oneshot::Receiver<Result<(), Error>>;
 
 /// AuthorityImpl is the default implementation of the Authority trait. It
@@ -21,7 +18,7 @@ type AckReceiver = futures::channel::oneshot::Receiver<Result<(), Error>>;
 pub struct AuthorityImpl {
     // A mapping of lifespans to vectors of agents, ordered by registration
     // sequence.
-    agents: AgentMap,
+    agents: Vec<AgentHandle>,
 }
 
 /// Waits on an invocation to be acknowledged and verifies whether an error
@@ -37,7 +34,7 @@ async fn process_invocation_ack(ack_rx: AckReceiver) -> Result<(), Error> {
 
 impl AuthorityImpl {
     pub fn new() -> AuthorityImpl {
-        return AuthorityImpl { agents: HashMap::new() };
+        return AuthorityImpl { agents: Vec::new() };
     }
 
     /// Invokes each registered agent for a given lifespan. If sequential is true,
@@ -60,38 +57,40 @@ impl AuthorityImpl {
         fasync::spawn(async move {
             let mut pending_acks = Vec::new();
 
-            let optional_agents = agents.get(&lifespan);
-
-            if optional_agents.is_none() {
-                completion_tx.send(Ok(())).ok();
-                return;
-            }
-
-            for agent in optional_agents.unwrap() {
+            for agent in agents {
                 // Create ack channel.
                 let (response_tx, response_rx) =
                     futures::channel::oneshot::channel::<Result<(), Error>>();
 
-                agent
-                    .unbounded_send(Invocation {
-                        lifespan: lifespan,
-                        service_context: service_context.clone(),
-                        ack_sender: Arc::new(Mutex::new(Some(response_tx))),
-                    })
-                    .ok();
+                match agent.lock().await.invoke(Invocation {
+                    lifespan: lifespan,
+                    service_context: service_context.clone(),
+                    ack_sender: Arc::new(Mutex::new(Some(response_tx))),
+                }) {
+                    Ok(handled) => {
+                        // did not process result.
+                        if !handled {
+                            continue;
+                        }
 
-                // Wait for invocation ack is sequential, otherwise store receiver to
-                // be waited on later.
-                if sequential {
-                    let result = process_invocation_ack(response_rx).await;
-                    // This cannot be part of process_invocation_ack since completion_tx
-                    // would be moved.
-                    if result.is_err() {
-                        completion_tx.send(result).ok();
+                        // Wait for invocation ack is sequential, otherwise store receiver to
+                        // be waited on later.
+                        if sequential {
+                            let result = process_invocation_ack(response_rx).await;
+                            // This cannot be part of process_invocation_ack since completion_tx
+                            // would be moved.
+                            if result.is_err() {
+                                completion_tx.send(result).ok();
+                                return;
+                            }
+                        } else {
+                            pending_acks.push(response_rx);
+                        }
+                    }
+                    _ => {
+                        completion_tx.send(Err(format_err!("failed to invoke agent"))).ok();
                         return;
                     }
-                } else {
-                    pending_acks.push(response_rx);
                 }
             }
 
@@ -114,21 +113,8 @@ impl AuthorityImpl {
 }
 
 impl Authority for AuthorityImpl {
-    fn register(&mut self, lifespan: Lifespan, invoker: InvocationSender) -> Result<(), Error> {
-        if !self.agents.contains_key(&lifespan) {
-            self.agents.insert(lifespan, vec![]);
-        }
-
-        if let Some(agents) = self.agents.get_mut(&lifespan) {
-            for i in 0..agents.len() {
-                if agents[i].same_receiver(&invoker) {
-                    return Err(anyhow::format_err!("agent already registered"));
-                }
-            }
-
-            agents.push(invoker);
-        }
-
-        Ok(())
+    fn register(&mut self, agent: AgentHandle) -> Result<(), Error> {
+        self.agents.push(agent);
+        return Ok(());
     }
 }

@@ -15,6 +15,7 @@ use std::sync::Arc;
 /// to acknowledge the invocation has been processed.
 pub type InvocationAck = Result<(), Error>;
 pub type InvocationSender = UnboundedSender<Invocation>;
+pub type AgentHandle = Arc<Mutex<dyn Agent + Send + Sync>>;
 
 /// The scope of an agent's life. Initialization components should
 /// only run at the beginning of the service. Service components follow
@@ -47,8 +48,12 @@ impl Invocation {
     }
 }
 
+pub trait Agent {
+    fn invoke(&mut self, invocation: Invocation) -> Result<bool, Error>;
+}
+
 /// Entity for registering agents. It is responsible for signaling
 /// Stages based on the specified lifespan.
 pub trait Authority {
-    fn register(&mut self, lifespan: Lifespan, invoker: InvocationSender) -> Result<(), Error>;
+    fn register(&mut self, agent: AgentHandle) -> Result<(), Error>;
 }
