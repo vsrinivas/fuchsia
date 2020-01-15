@@ -278,7 +278,6 @@ if (current_cpu != "") {
       "property",
       "pty",
       "qsort",
-      "race-tests",
       "ramdisk",
       "register-state",
       "rtc-lib",
