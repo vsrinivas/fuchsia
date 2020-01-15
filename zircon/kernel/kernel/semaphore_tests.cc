@@ -17,19 +17,47 @@ using lockdep::Guard;
 static bool smoke_test() {
   BEGIN_TEST;
 
-  { Semaphore sema(0); }
-
-  { Semaphore sema(5); }
-
-  { Semaphore sema(-5); }
+  {
+    Semaphore sema;
+    ASSERT_EQ(0u, sema.count());
+    ASSERT_EQ(0u, sema.num_waiters());
+  }
 
   {
     Semaphore sema(0);
-    ASSERT_EQ(1, sema.Post());
-    ASSERT_EQ(2, sema.Post());
-    ASSERT_EQ(ZX_OK, sema.Wait(Deadline::infinite()));
-    ASSERT_EQ(ZX_OK, sema.Wait(Deadline::infinite()));
-    ASSERT_EQ(1, sema.Post());
+    ASSERT_EQ(0u, sema.count());
+    ASSERT_EQ(0u, sema.num_waiters());
+  }
+
+  {
+    Semaphore sema(5);
+    ASSERT_EQ(5u, sema.count());
+    ASSERT_EQ(0u, sema.num_waiters());
+  }
+
+  {
+    constexpr uint64_t kPostCount = 10;
+    Semaphore sema;
+
+    for (uint64_t i = 0; i < kPostCount; ++i) {
+      ASSERT_EQ(i, sema.count());
+      ASSERT_EQ(0u, sema.num_waiters());
+
+      sema.Post();
+
+      ASSERT_EQ(i + 1, sema.count());
+      ASSERT_EQ(0u, sema.num_waiters());
+    }
+
+    for (uint64_t i = 0; i < kPostCount; ++i) {
+      ASSERT_EQ(kPostCount - i, sema.count());
+      ASSERT_EQ(0u, sema.num_waiters());
+
+      ASSERT_EQ(ZX_OK, sema.Wait(Deadline::infinite()));
+
+      ASSERT_EQ(kPostCount - i - 1, sema.count());
+      ASSERT_EQ(0u, sema.num_waiters());
+    }
   }
 
   END_TEST;
@@ -41,8 +69,11 @@ static bool timeout_test() {
   auto dealine = Deadline::no_slack(current_time() + ZX_USEC(10));
 
   Semaphore sema;
+  ASSERT_EQ(0u, sema.count());
+  ASSERT_EQ(0u, sema.num_waiters());
   ASSERT_EQ(ZX_ERR_TIMED_OUT, sema.Wait(dealine));
-  ASSERT_EQ(1, sema.Post());
+  ASSERT_EQ(0u, sema.count());
+  ASSERT_EQ(0u, sema.num_waiters());
 
   END_TEST;
 }
@@ -58,11 +89,16 @@ static bool thread_is_blocked(const thread_t* t) {
   return (t->state == THREAD_BLOCKED);
 }
 
-template <int signal>
+enum class Signal { kPost, kKill, kSuspend };
+
+template <Signal signal>
 static bool signal_test() {
   BEGIN_TEST;
 
   Semaphore sema;
+
+  ASSERT_EQ(0u, sema.count());
+  ASSERT_EQ(0u, sema.num_waiters());
 
   auto thread = thread_create("test semaphore", wait_sema_thread, &sema, DEFAULT_PRIORITY);
 
@@ -73,20 +109,33 @@ static bool signal_test() {
     thread_sleep_relative(ZX_MSEC(1));
   }
 
-  int expected_error = 0;
-  if constexpr (signal == 1) {
-    thread_kill(thread);
-    expected_error = ZX_ERR_INTERNAL_INTR_KILLED;
-  }
-  if constexpr (signal == 2) {
-    thread_suspend(thread);
-    expected_error = ZX_ERR_INTERNAL_INTR_RETRY;
+  ASSERT_EQ(0u, sema.count());
+  ASSERT_EQ(1u, sema.num_waiters());
+
+  int expected_error;
+  switch (signal) {
+    case Signal::kPost:
+      sema.Post();
+      expected_error = ZX_OK;
+      break;
+
+    case Signal::kKill:
+      thread_kill(thread);
+      expected_error = ZX_ERR_INTERNAL_INTR_KILLED;
+      break;
+
+    case Signal::kSuspend:
+      thread_suspend(thread);
+      expected_error = ZX_ERR_INTERNAL_INTR_RETRY;
+      break;
   }
 
   int retcode = ZX_OK;
   thread_join(thread, &retcode, ZX_TIME_INFINITE);
   ASSERT_EQ(expected_error, retcode);
-  ASSERT_EQ(1, sema.Post());
+
+  ASSERT_EQ(0u, sema.count());
+  ASSERT_EQ(0u, sema.num_waiters());
 
   END_TEST;
 }
@@ -94,6 +143,7 @@ static bool signal_test() {
 UNITTEST_START_TESTCASE(semaphore_tests)
 UNITTEST("smoke_test", smoke_test)
 UNITTEST("timeout_test", timeout_test)
-UNITTEST("kill_signal_test", signal_test<1>)
-UNITTEST("suspend_signal_test", signal_test<2>)
+UNITTEST("post_signal_test", signal_test<Signal::kPost>)
+UNITTEST("kill_signal_test", signal_test<Signal::kKill>)
+UNITTEST("suspend_signal_test", signal_test<Signal::kSuspend>)
 UNITTEST_END_TESTCASE(semaphore_tests, "semaphore", "Semaphore tests")

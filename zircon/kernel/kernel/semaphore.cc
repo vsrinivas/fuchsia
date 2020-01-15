@@ -10,38 +10,39 @@
 
 #include <kernel/thread_lock.h>
 
-Semaphore::Semaphore(int64_t initial_count) : count_(initial_count) {}
-
-int64_t Semaphore::Post() {
-  // If the count is or was negative then a thread is waiting for a resource,
-  // otherwise it's safe to just increase the count available with no downsides.
+void Semaphore::Post() {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  if (likely(++count_ <= 0))
+
+  // Either the number of waiters in the wait queue, or the semaphore count,
+  // must be 0.  It should never be possible for there to be waiters, and a
+  // positive count.
+  DEBUG_ASSERT((count_ == 0) || waitq_.IsEmpty());
+
+  // If we have no waiters, increment the count.  Otherwise, release a waiter.
+  if (waitq_.IsEmpty()) {
+    ++count_;
+  } else {
     waitq_.WakeOne(true, ZX_OK);
-  return count_;
+  }
 }
 
 zx_status_t Semaphore::Wait(const Deadline& deadline) {
-  thread_t* current_thread = get_current_thread();
+  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-  // If there are no resources available then we need to sit in the
-  // wait queue until sem_post adds some or a signal gets delivered.
-  zx_status_t ret = ZX_OK;
+  DEBUG_ASSERT((count_ == 0) || waitq_.IsEmpty());
 
-  {
-    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    bool block = --count_ < 0;
-
-    if (likely(block)) {
-      current_thread->interruptable = true;
-      ret = waitq_.Block(deadline);
-      current_thread->interruptable = false;
-
-      if (ret != ZX_OK) {
-        count_++;
-      }
-    }
+  // If the count is positive, simply decrement it and get out.
+  if (count_ > 0) {
+    --count_;
+    return ZX_OK;
   }
 
+  // Wait in an interruptible state.  We will either be woken by a Post
+  // operation, or by a timeout or signal.  Whatever happens, return the reason
+  // the wait operation ended.
+  thread_t* current_thread = get_current_thread();
+  current_thread->interruptable = true;
+  zx_status_t ret = waitq_.Block(deadline);
+  current_thread->interruptable = false;
   return ret;
 }

@@ -11,31 +11,45 @@
 #include <zircon/types.h>
 
 #include <kernel/thread.h>
+#include <kernel/thread_lock.h>
+#include <kernel/wait.h>
 
 // A basic counting semaphore. It directly uses the low-level wait queue API.
 class Semaphore {
  public:
-  explicit Semaphore(int64_t initial_count = 0);
+  explicit Semaphore(uint64_t initial_count = 0) : count_(initial_count) {}
 
   Semaphore(const Semaphore&) = delete;
   Semaphore(Semaphore&&) = delete;
   Semaphore& operator=(const Semaphore&) = delete;
   ~Semaphore() = default;
 
-  // Increment the counter, possibly releasing one thread. The returned
-  // value is the new counter value which is only useful for testing.
-  int64_t Post();
+  // Release a single thread if there are any waiting, otherwise increment the
+  // internal count by one.
+  void Post();
 
-  // Interruptable wait for the counter to be > 0 or for |deadline| to pass.
-  // If the wait was satisfied by Post() the return is ZX_OK and the count is
-  // decremented by one.
-  // Otherwise the count is not decremented. The return value can be
-  // ZX_ERR_TIMED_OUT if the deadline had passed or one of ZX_ERR_INTERNAL_INTR
-  // errors if the thread had a signal delivered.
+  // If the count is positive, decrement the count by exactly one.  Otherwise,
+  // wait until some other thread wakes us, or our wait is interrupted by
+  // timeout, suspend, or thread death.
+  //
+  // The return value can be ZX_ERR_TIMED_OUT if the deadline had passed or one
+  // of ZX_ERR_INTERNAL_INTR errors if the thread had a signal delivered.
   zx_status_t Wait(const Deadline& deadline);
 
+  // Observe the current internal count of the semaphore.
+  uint64_t count() {
+    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    return count_;
+  }
+
+  // Observe the current internal count of waiters
+  uint64_t num_waiters() {
+    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+    return waitq_.Count();
+  }
+
  private:
-  int64_t count_;
+  uint64_t count_ TA_GUARDED(thread_lock);
   WaitQueue waitq_;
 };
 
