@@ -186,7 +186,17 @@ template("zircon_library") {
     # writing v1 wire-format by default.
     if (library == "fidl_base" && type == "static_library" &&
         fidl_write_v1_wireformat) {
-      defines = [ "FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT" ]
+      if (!defined(defines)) {
+        defines = []
+      }
+      defines += [ "FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT" ]
+    }
+
+    if (!is_prebuilt) {
+      if (!defined(defines)) {
+        defines = []
+      }
+      defines += [ "_ALL_SOURCE" ]
     }
 
     # Tests migrated from the Zircon build depend on libraries exposed in
