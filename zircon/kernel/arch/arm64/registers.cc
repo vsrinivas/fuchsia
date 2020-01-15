@@ -64,6 +64,8 @@ static bool arm64_validate_hw_breakpoints(arm64_debug_state_t* state,
     if (dbgbcr & ARM64_DBGBCR_E_MASK) {
       state->hw_bps[i].dbgbcr = ARM64_DBGBCR_ACTIVE_MASK;
       breakpoint_count++;
+    } else {
+      state->hw_bps[i].dbgbcr = 0;
     }
   }
 

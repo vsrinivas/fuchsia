@@ -1706,13 +1706,6 @@ static bool TestDebugRegistersValidation() {
                                  sizeof(actual_regs)),
             ZX_OK);
 
-  // Wrong amount of HW breakpoints should fail.
-  debug_regs.hw_bps_count = actual_regs.hw_bps_count;
-  debug_regs.hw_bps_count++;
-  ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                                  sizeof(debug_regs)),
-            ZX_ERR_INVALID_ARGS, "Wrong amount of bps should fail");
-
   // Writing a kernel address should fail.
   debug_regs.hw_bps_count = actual_regs.hw_bps_count;
   debug_regs.hw_bps[0].dbgbvr = (uint64_t)-1;
@@ -1738,7 +1731,7 @@ static bool TestDebugRegistersValidation() {
             ZX_OK);
 
   EXPECT_EQ(actual_regs.hw_bps_count, debug_regs.hw_bps_count);
-  EXPECT_EQ(actual_regs.hw_bps[0].dbgbcr, 0x000001e4);
+  EXPECT_EQ(actual_regs.hw_bps[0].dbgbcr, 0);
   EXPECT_EQ(actual_regs.hw_bps[0].dbgbvr, 0);
   EXPECT_EQ(actual_regs.hw_bps[1].dbgbcr, 0x000001e5);
   EXPECT_EQ(actual_regs.hw_bps[1].dbgbvr, debug_regs.hw_bps[1].dbgbvr);
