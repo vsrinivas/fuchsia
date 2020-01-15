@@ -87,6 +87,18 @@ executable("firmware_test") {
   ]
 }
 
+executable("intrusive_list_test") {
+  output_name = "intrusive_list_test"
+  testonly = true
+  sources = [ "intrusive_list_test.cc" ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/public/lib/fake_ddk",
+  ]
+}
+
 executable("netbuf_test") {
   output_name = "netbuf_test"
   testonly = true
@@ -123,6 +135,7 @@ unittest_package("brcmfmac_test") {
             "dma_pool_test",
             "dma_ring_test",
             "firmware_test",
+            "intrusive_list_test",
             "netbuf_test",
             "workqueue_test",
           ]) {

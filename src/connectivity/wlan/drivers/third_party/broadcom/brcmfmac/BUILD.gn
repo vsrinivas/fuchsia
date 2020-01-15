@@ -148,6 +148,7 @@ source_set("core") {
     "fweh.h",
     "fwil.h",
     "fwil_types.h",
+    "intrusive_list.h",
     "proto.h",
     "regs.h",
     "soc.h",
