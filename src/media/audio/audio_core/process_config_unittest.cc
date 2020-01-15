@@ -25,6 +25,16 @@ TEST(ProcessConfigTest, Build) {
               Pointwise(VolumeMappingEq(), volume_curve.mappings()));
 }
 
+TEST(ProcessConfigTest, LoudnessTransform) {
+  auto volume_curve = VolumeCurve::DefaultForMinGain(-160.0f);
+  auto config = ProcessConfig::Builder().SetDefaultVolumeCurve(volume_curve).Build();
+
+  auto transform = config.default_loudness_transform();
+  EXPECT_NE(transform, nullptr);
+  EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{0.}}), Gain::kMinGainDb);
+  EXPECT_FLOAT_EQ(transform->Evaluate<1>({VolumeValue{1.}}), Gain::kUnityGainDb);
+}
+
 TEST(ProcessConfigTest, SetInstance) {
   auto volume_curve = VolumeCurve::DefaultForMinGain(-160.0f);
   auto config = ProcessConfig::Builder().SetDefaultVolumeCurve(volume_curve).Build();

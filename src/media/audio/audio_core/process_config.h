@@ -8,6 +8,7 @@
 #include <optional>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/routing_config.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 
@@ -65,15 +66,22 @@ class ProcessConfig {
 
   using Builder = ProcessConfigBuilder;
   ProcessConfig(VolumeCurve curve, RoutingConfig routing_config)
-      : default_volume_curve_(std::move(curve)), routing_config_(std::move(routing_config)) {}
+      : default_volume_curve_(std::move(curve)),
+        default_loudness_transform_(
+            std::make_shared<MappedLoudnessTransform>(default_volume_curve_)),
+        routing_config_(std::move(routing_config)) {}
 
   const VolumeCurve& default_volume_curve() const { return default_volume_curve_; }
   const RoutingConfig& routing_config() const { return routing_config_; }
+  const std::shared_ptr<LoudnessTransform>& default_loudness_transform() const {
+    return default_loudness_transform_;
+  }
 
  private:
   static std::optional<ProcessConfig> instance_;
 
   VolumeCurve default_volume_curve_;
+  std::shared_ptr<LoudnessTransform> default_loudness_transform_;
   RoutingConfig routing_config_;
 };
 

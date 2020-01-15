@@ -33,8 +33,8 @@ ProcessConfig ProcessConfigBuilder::Build() {
   std::optional<VolumeCurve> maybe_curve = std::nullopt;
   default_volume_curve_.swap(maybe_curve);
   FX_CHECK(maybe_curve) << "Missing required VolumeCurve member";
-  return {std::move(*maybe_curve),
-          RoutingConfig(std::move(device_profiles_), std::move(default_device_profile_))};
+  return ProcessConfig(std::move(*maybe_curve), RoutingConfig(std::move(device_profiles_),
+                                                              std::move(default_device_profile_)));
 }
 
 }  // namespace media::audio
