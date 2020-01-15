@@ -18,8 +18,9 @@ use stream_processor_test::*;
 //
 // 1. If adding a new pcm input configuration, write the saw wave to file and check it in in the
 //    `test_data` directory. It should only be a few thousand PCM frames.
-// 2. Set the `output_file` field to write the encoded output into `/tmp/` so you can copy it to
-//    host.
+// 2. Set the `output_file` field to write the encoded output into
+//    `/tmp/r/sys/fuchsia.com:audio_encoder_test:0#meta:audio_encoder_test.cmx ` so you can copy
+//    it to host.
 // 3. Create an encoded stream with the same settings using another encoder (for sbc, use sbcenc or
 //    ffmpeg; for aac use faac) on the reference saw wave.
 // 4. Verify the output
