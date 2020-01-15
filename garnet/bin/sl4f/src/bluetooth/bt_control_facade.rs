@@ -4,9 +4,11 @@
 
 use anyhow::Error;
 use fidl::endpoints::RequestStream;
+use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_control::{
     ControlMarker, ControlProxy, PairingDelegateMarker, PairingDelegateRequest,
-    PairingDelegateRequestStream, PairingMethod,
+    PairingDelegateRequestStream, PairingMethod, PairingOptions, PairingSecurityLevel,
+    TechnologyType,
 };
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_component as component;
@@ -17,7 +19,7 @@ use parking_lot::RwLock;
 use std::collections::HashMap;
 
 use crate::bluetooth::types::CustomRemoteDevice;
-use crate::common_utils::common::macros::with_line;
+use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use crate::common_utils::error::Sl4fError;
 
 use futures::channel::mpsc;
@@ -78,12 +80,10 @@ impl BluetoothControlFacade {
                 let control_interface_proxy =
                     component::client::connect_to_service::<ControlMarker>();
                 if let Err(err) = control_interface_proxy {
-                    fx_log_err!(
-                        tag: &with_line!(tag),
-                        "Failed to create control interface proxy: {:?}",
-                        err
+                    fx_err_and_bail!(
+                        &with_line!(tag),
+                        format_err!("Failed to create control interface proxy: {:?}", err)
                     );
-                    return Err(format_err!("Failed to create control interface proxy: {:?}", err));
                 }
                 control_interface_proxy
             }
@@ -189,9 +189,7 @@ impl BluetoothControlFacade {
         let pairing_delegate_result = match &self.inner.read().control_interface_proxy {
             Some(p) => p.set_pairing_delegate(Some(delegate_ptr)),
             None => {
-                let err_str = "No Bluetooth Control Interface Proxy Set.";
-                fx_log_err!(tag: &with_line!(tag), "{:?}", err_str);
-                return Err(format_err!("{:?}", err_str));
+                fx_err_and_bail!(&with_line!(tag), "No Bluetooth Control Interface Proxy Set.");
             }
         };
         let delegate_request_stream = PairingDelegateRequestStream::from_channel(delegate_local);
@@ -245,9 +243,8 @@ impl BluetoothControlFacade {
         match self.inner.read().client_pin_sender.clone() {
             Some(mut sender) => sender.try_send(pin)?,
             None => {
-                let err_str = "No sender setup for pairing delegate.".to_string();
-                fx_log_err!(tag: &with_line!(tag), "{}", err_str);
-                bail!(err_str)
+                let err_msg = "No sender setup for pairing delegate.".to_string();
+                fx_err_and_bail!(&with_line!(tag), err_msg)
             }
         };
         Ok(())
@@ -262,9 +259,8 @@ impl BluetoothControlFacade {
                     None => return Err(format_err!("Error getting pin from pairing delegate.")),
                 },
                 Err(_e) => {
-                    let err_str = "No pairing pin sent from the pairing delegate.".to_string();
-                    fx_log_err!(tag: &with_line!(tag), "{}", err_str);
-                    return Err(format_err!("No pairing pin sent from the pairing delegate."));
+                    let err_msg = "No pairing pin sent from the pairing delegate.".to_string();
+                    fx_err_and_bail!(&with_line!(tag), err_msg)
                 }
             },
             None => {
@@ -287,20 +283,16 @@ impl BluetoothControlFacade {
                 let resp = proxy.set_discoverable(discoverable).await?;
                 match resp.error {
                     Some(err) => {
-                        fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
-                        bail!(Sl4fError::from(*err))
+                        let err_msg = format!("Error: {:?}", Sl4fError::from(*err));
+                        fx_err_and_bail!(&with_line!(tag), err_msg)
                     }
                     None => Ok(()),
                 }
             }
-            None => {
-                fx_log_err!(
-                    tag: &with_line!(tag),
-                    "{:?}",
-                    ERR_NO_CONTROL_PROXY_DETECTED.to_string()
-                );
-                bail!(ERR_NO_CONTROL_PROXY_DETECTED.to_string())
-            }
+            None => fx_err_and_bail!(
+                &with_line!(tag),
+                format!("{:?}", ERR_NO_CONTROL_PROXY_DETECTED.to_string())
+            ),
         }
     }
 
@@ -315,20 +307,16 @@ impl BluetoothControlFacade {
                 let resp = proxy.set_name(Some(&name)).await?;
                 match resp.error {
                     Some(err) => {
-                        fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
-                        bail!(Sl4fError::from(*err))
+                        let err_msg = format!("Error: {:?}", Sl4fError::from(*err));
+                        fx_err_and_bail!(&with_line!(tag), err_msg)
                     }
                     None => Ok(()),
                 }
             }
-            None => {
-                fx_log_err!(
-                    tag: &with_line!(tag),
-                    "{:?}",
-                    ERR_NO_CONTROL_PROXY_DETECTED.to_string()
-                );
-                bail!(ERR_NO_CONTROL_PROXY_DETECTED.to_string())
-            }
+            None => fx_err_and_bail!(
+                &with_line!(tag),
+                format!("{:?}", ERR_NO_CONTROL_PROXY_DETECTED.to_string())
+            ),
         }
     }
 
@@ -343,20 +331,16 @@ impl BluetoothControlFacade {
                 let resp = proxy.request_discovery(discovery).await?;
                 match resp.error {
                     Some(err) => {
-                        fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
-                        bail!(Sl4fError::from(*err))
+                        let err_msg = format!("Error: {:?}", Sl4fError::from(*err));
+                        fx_err_and_bail!(&with_line!(tag), err_msg)
                     }
                     None => Ok(()),
                 }
             }
-            None => {
-                fx_log_err!(
-                    tag: &with_line!(tag),
-                    "{:?}",
-                    ERR_NO_CONTROL_PROXY_DETECTED.to_string()
-                );
-                bail!(ERR_NO_CONTROL_PROXY_DETECTED.to_string())
-            }
+            None => fx_err_and_bail!(
+                &with_line!(tag),
+                format!("{:?}", ERR_NO_CONTROL_PROXY_DETECTED.to_string())
+            ),
         }
     }
 
@@ -369,14 +353,10 @@ impl BluetoothControlFacade {
 
         let discovered_devices = match &self.inner.read().control_interface_proxy {
             Some(proxy) => proxy.get_known_remote_devices().await?,
-            None => {
-                fx_log_err!(
-                    tag: &with_line!(tag),
-                    "{:?}",
-                    ERR_NO_CONTROL_PROXY_DETECTED.to_string()
-                );
-                bail!(ERR_NO_CONTROL_PROXY_DETECTED.to_string())
-            }
+            None => fx_err_and_bail!(
+                &with_line!(tag),
+                format!("{:?}", ERR_NO_CONTROL_PROXY_DETECTED.to_string())
+            ),
         };
         self.inner.write().discovered_device_list =
             discovered_devices.iter().map(|d| (d.identifier.clone(), d.into())).collect();
@@ -386,7 +366,7 @@ impl BluetoothControlFacade {
     /// Forgets (Unbonds) an input device ID.
     ///
     /// # Arguments
-    /// * 'id' - A String representing the device ID.
+    /// * `id` - A String representing the device ID.
     pub async fn forget(&self, id: String) -> Result<(), Error> {
         let tag = "BluetoothControlFacade::forget";
         match &self.inner.read().control_interface_proxy {
@@ -394,27 +374,23 @@ impl BluetoothControlFacade {
                 let resp = proxy.forget(&id).await?;
                 match resp.error {
                     Some(err) => {
-                        fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
-                        bail!(Sl4fError::from(*err))
+                        let err_msg = format!("Error: {:?}", Sl4fError::from(*err));
+                        fx_err_and_bail!(&with_line!(tag), err_msg)
                     }
                     None => Ok(()),
                 }
             }
-            None => {
-                fx_log_err!(
-                    tag: &with_line!(tag),
-                    "{:?}",
-                    ERR_NO_CONTROL_PROXY_DETECTED.to_string()
-                );
-                bail!(ERR_NO_CONTROL_PROXY_DETECTED.to_string())
-            }
+            None => fx_err_and_bail!(
+                &with_line!(tag),
+                format!("{:?}", ERR_NO_CONTROL_PROXY_DETECTED.to_string())
+            ),
         }
     }
 
     /// Connects over BR/EDR to an input device ID.
     ///
     /// # Arguments
-    /// * 'id' - A String representing the device ID.
+    /// * `id` - A String representing the device ID.
     pub async fn connect(&self, id: String) -> Result<(), Error> {
         let tag = "BluetoothControlFacade::connect";
         match &self.inner.read().control_interface_proxy {
@@ -422,27 +398,104 @@ impl BluetoothControlFacade {
                 let resp = proxy.connect(&id).await?;
                 match resp.error {
                     Some(err) => {
-                        fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
-                        bail!(Sl4fError::from(*err))
+                        let err_msg = format!("Error: {:?}", Sl4fError::from(*err));
+                        fx_err_and_bail!(&with_line!(tag), err_msg)
                     }
                     None => Ok(()),
                 }
             }
-            None => {
-                fx_log_err!(
-                    tag: &with_line!(tag),
-                    "{:?}",
-                    ERR_NO_CONTROL_PROXY_DETECTED.to_string()
-                );
-                bail!(ERR_NO_CONTROL_PROXY_DETECTED.to_string())
+            None => fx_err_and_bail!(
+                &with_line!(tag),
+                format!("{:?}", ERR_NO_CONTROL_PROXY_DETECTED.to_string())
+            ),
+        }
+    }
+
+    /// Sends an outgoing pairing request over BR/EDR or LE to an input device ID.
+    ///
+    /// # Arguments
+    /// * `id` - A String representing the device ID.
+    /// * `pairing_security_level_value` - The security level required for this pairing request
+    ///        represented as a u64. (Only for LE pairing)
+    ///        Available Values
+    ///        1 - ENCRYPTED: Encrypted without MITM protection (unauthenticated)
+    ///        2 - AUTHENTICATED: Encrypted with MITM protection (authenticated).
+    ///        None: Used for BR/EDR
+    /// * `non_bondable` - A bool representing whether the pairing mode is bondable or not. None is
+    ///        also accepted. False if bondable, True if non-bondable.
+    /// * `transport_value` - A u64 representing the transport type.
+    ///        Available Values
+    ///        1 - BREDR: Classic BR/EDR transport
+    ///        2 - LE: Bluetooth Low Energy Transport
+    pub async fn pair(
+        &self,
+        id: String,
+        pairing_security_level_value: Option<u64>,
+        non_bondable: Option<bool>,
+        transport_value: u64,
+    ) -> Result<(), Error> {
+        let tag = "BluetoothControlFacade::pair";
+
+        let peer_id = match u64::from_str_radix(&id, 16) {
+            Ok(value) => value,
+            Err(e) => fx_err_and_bail!(
+                &with_line!(tag),
+                format_err!("Unable to pair - invalid peer id: {:?}", e)
+            ),
+        };
+
+        let pairing_security_level = match pairing_security_level_value {
+            Some(value) => match value {
+                1 => Some(PairingSecurityLevel::Encrypted),
+                2 => Some(PairingSecurityLevel::Authenticated),
+                _ => fx_err_and_bail!(
+                    &with_line!(tag),
+                    format!(
+                        "Invalid pairing security level provided: {:?}",
+                        pairing_security_level_value
+                    )
+                ),
+            },
+            None => None,
+        };
+
+        let transport = match transport_value {
+            1 => TechnologyType::Classic,
+            2 => TechnologyType::LowEnergy,
+            _ => fx_err_and_bail!(
+                &with_line!(tag),
+                format!("Invalid transport provided: {:?}", transport_value)
+            ),
+        };
+
+        let pairing_options = PairingOptions {
+            le_security_level: pairing_security_level,
+            non_bondable: non_bondable,
+            transport: Some(transport),
+        };
+
+        match &self.inner.read().control_interface_proxy {
+            Some(proxy) => {
+                let resp = proxy.pair(&mut PeerId { value: peer_id }, pairing_options).await?;
+                match resp.error {
+                    Some(err) => {
+                        let err_msg = format!("Error: {:?}", Sl4fError::from(*err));
+                        fx_err_and_bail!(&with_line!(tag), err_msg)
+                    }
+                    None => Ok(()),
+                }
             }
+            None => fx_err_and_bail!(
+                &with_line!(tag),
+                format!("{:?}", ERR_NO_CONTROL_PROXY_DETECTED.to_string())
+            ),
         }
     }
 
     /// Disconnects an active BR/EDR connection by input device ID.
     ///
     /// # Arguments
-    /// * 'id' - A String representing the device ID.
+    /// * `id` - A String representing the device ID.
     pub async fn disconnect(&self, id: String) -> Result<(), Error> {
         let tag = "BluetoothControlFacade::disconnect";
         match &self.inner.read().control_interface_proxy {
@@ -450,34 +503,34 @@ impl BluetoothControlFacade {
                 let resp = proxy.disconnect(&id).await?;
                 match resp.error {
                     Some(err) => {
-                        fx_log_err!(tag: &with_line!(tag), "Error: {:?}", err);
-                        bail!(Sl4fError::from(*err))
+                        let err_msg = format!("Error: {:?}", Sl4fError::from(*err));
+                        fx_err_and_bail!(&with_line!(tag), err_msg)
                     }
                     None => Ok(()),
                 }
             }
-            None => {
-                fx_log_err!(
-                    tag: &with_line!(tag),
-                    "{:?}",
-                    ERR_NO_CONTROL_PROXY_DETECTED.to_string()
-                );
-                bail!(ERR_NO_CONTROL_PROXY_DETECTED.to_string())
-            }
+            None => fx_err_and_bail!(
+                &with_line!(tag),
+                format!("{:?}", ERR_NO_CONTROL_PROXY_DETECTED.to_string())
+            ),
         }
     }
 
     /// Returns the current Active Adapter's Address.
     pub async fn get_active_adapter_address(&self) -> Result<String, Error> {
+        let tag = "BluetoothControlFacade::get_active_adapter_address";
         let result = match &self.inner.read().control_interface_proxy {
             Some(proxy) => {
                 if let Some(adapter) = proxy.get_active_adapter_info().await? {
                     adapter.address
                 } else {
-                    return Err(format_err!("No Active Adapter"));
+                    fx_err_and_bail!(&with_line!(tag), "No active adapter.")
                 }
             }
-            None => bail!(ERR_NO_CONTROL_PROXY_DETECTED.to_string()),
+            None => fx_err_and_bail!(
+                &with_line!(tag),
+                format!("{:?}", ERR_NO_CONTROL_PROXY_DETECTED.to_string())
+            ),
         };
         Ok(result)
     }

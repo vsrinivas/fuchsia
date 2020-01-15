@@ -260,7 +260,24 @@ async fn bt_control_method_to_fidl(
             let result = facade.get_active_adapter_address().await?;
             Ok(to_value(result)?)
         }
-        _ => return Err(format_err!("Invalid Bluetooth control FIDL method: {:?}", method_name)),
+        "BluetoothPairDevice" => {
+            let identifier = parse_arg!(args, as_str, "identifier")?;
+            let pairing_security_level = match parse_arg!(args, as_u64, "pairing_security_level") {
+                Ok(v) => Some(v),
+                Err(_e) => None,
+            };
+            let non_bondable = match parse_arg!(args, as_bool, "non_bondable") {
+                Ok(v) => Some(v),
+                Err(_e) => None,
+            };
+            let transport = parse_arg!(args, as_u64, "transport")?;
+
+            let result = facade
+                .pair(identifier.to_string(), pairing_security_level, non_bondable, transport)
+                .await?;
+            Ok(to_value(result)?)
+        }
+        _ => bail!("Invalid Bluetooth control FIDL method: {:?}", method_name),
     }
 }
 
