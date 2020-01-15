@@ -46,6 +46,7 @@ group("fidl") {
     "fuchsia-hardware-mediacodec",
     "fuchsia-hardware-midi",
     "fuchsia-hardware-nand",
+    "fuchsia-hardware-network",
     "fuchsia-hardware-power",
     "fuchsia-hardware-power-statecontrol",
     "fuchsia-hardware-pty",

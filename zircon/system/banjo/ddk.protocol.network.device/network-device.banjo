@@ -1,0 +1,421 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.network.device;
+using zx;
+
+/// Generic Network Device interface.
+///
+/// The definitions herein provide the API surface to expose a hardware device as a network device
+/// interface to the system through the FIDL protocol [`fuchsia.hardware.network/Device`]. A network
+/// device interface is the data-plane contract that allows the networking stack to send and receive
+/// frames on a physical or virtual network. A device exposes this capability by implementing the
+/// `NetworkDeviceImpl` protocol, which allows a middleware implementation to bind to it and offer
+/// the FIDL protocol to applications.
+///
+/// The API contract is based on three key concepts:
+/// - Frame Types
+/// - Receive and Transmit buffers
+/// - Virtual and Physical memory buffers
+///
+/// Frame Types are the defined contract that is exposed to applications, which convey the data type
+/// contained in a tx or rx buffer. The supported frame types are defined in
+/// [`fuchsia.hardware.network/FrameType`]. Upon initialization, the middleware implementation will
+/// fetch the supported frame types from the device through the `GetInfo` call.
+///
+/// Receive and Transmit buffers are buffers that are headed to different directions: a receive
+/// buffer is a piece of data that is received from the network, and makes its way to the
+/// application layer. A transmit buffer travels in the opposite direction: it originates in the
+/// application layer and makes its way out into the network. The device implementation receives
+/// buffers from the [`ddk.protocol.network.device/NetworkDeviceIfc`], which is offered by the
+/// middleware implementation.
+///
+/// A receive buffer flows from [`ddk.protocol.network.device/NetworkDeviceIfc`] into
+/// [`ddk.protocol.network.device/NetworkDeviceImpl`] through the
+/// [`ddk.protocol.network.device/NetworkDeviceImpl.QueueRxSpace`] method, which gives access to
+/// receive buffers. The diagram below illustrates the mechanism:
+///
+///  ++++++++++++++++++++++++++++                      +++++++++++++++++++++++
+///  |                     (1)  |  => RxSpaceBuffer => |        (2)          |
+///  | NetworkDeviceIfc         |                      |  NetworkDeviceImpl  |
+///  |                     (4)  |  <=    RxBuffer   <= |        (3)          |  <= Network data
+///  ++++++++++++++++++++++++++++                      +++++++++++++++++++++++
+///
+///  (1) `NetworkDeviceIfc` pushes available rx buffer space to `NetworkDeviceImpl` through
+///  [`ddk.protocol.network.device/NetworkDeviceImpl.QueueRxSpace`].
+///  (2) `NetworkDeviceImpl` retains the available space buffers until network data comes in.
+///  (3) `NetworkDeviceImpl` receives data from the network, stores it in one of its available
+///  [`ddk.protocol.network.device/RxSpaceBuffers`], making it an
+///  [`ddk.protocol.network.device/NetworkDeviceImpl.RxBuffer`].
+///  (4) `NetworkDeviceImpl` sends the fulfilled `RxBuffer` to `NetworkDeviceIfc` through
+///  [`ddk.protocol.network.device/NetworkDeviceIfc.CompleteRx`], which, in turn, sends that data
+///  over to applications.
+///
+/// A receive buffer flows from `NetworkDeviceIfc` into `NetworkDeviceImpl` through the
+/// [`ddk.protocol.network.device/NetworkDeviceImpl.QueueTx`] method, and it's returned to
+/// `NetworkDeviceIfc` as a [`ddk.protocol.network.device/TxResult`]. The diagram below illustrates
+/// the mechanism:
+///
+///  ++++++++++++++++++++++++++++                      +++++++++++++++++++++++
+///  |                      (1) |   =>  TxBuffer =>    |        (2)          |
+///  | NetworkDeviceIfc         |                      |  NetworkDeviceImpl  |
+///  |                      (4) |  <=    TxResult   <= |        (3)          |  => Network data
+///  ++++++++++++++++++++++++++++                      +++++++++++++++++++++++
+///
+///  (1) `NetworkDeviceIfc` receives a transmit buffer from applications filled with data intended
+///  to be delivered to the network.
+///  (2) `NetworkDeviceIfc` pushes the buffer into `NetworkDeviceImpl` through the
+///  [`ddk.protocol.network.device/NetworkDeviceImpl.QueueTx`] call.
+///  (3) `NetworkDeviceImpl` sends the data contained in the buffer out into the network.
+///  (4) When the data is successfully transmitted, `NetworkDeviceImpl` marks the transmission as
+///  complete referencing the buffer's identifier to
+///  [`ddk.protocol.network.device/NetworkDeviceIfc.CompleteTx`].
+///
+/// Virtual and Physical memory buffers are different representations of the same frame data. A
+/// virtual memory buffer is software-addressable: it represents a region (possibly noncontiguous)
+/// in a VMO that a device can read from or write into. A physical memory buffer is
+/// hardware-addressable: it's a physical address representation of that same data, pinned with the
+/// BTI (a Bus Transaction Initiator that represent the DMA capability of a device) provided by the
+/// device implementation, and can be used to perform DMA operations with hardware.
+
+/// Devices with [`ddk.protocol.network.device/FEATURE_RX_PHYSICAL_MEMORY_BUFFER`] will receive
+/// [`ddk.protocol.network.device/PhysicalMemoryBuffer`] instances on Rx operations. Devices with
+/// [`ddk.protocol.network.device/FEATURE_RX_VIRTUAL_MEMORY_BUFFER`] will receive
+/// [`ddk.protocol.network.device/VirtualMemoryBuffer`] instances on Rx operations. Implementers are
+/// encouraged to only set the flags for the buffer versions they will actually access during
+/// operation. Devices that request `PhysicalMemoryBuffer` instances must provide a valid `Bti` in
+/// their [`ddk.protocol.network.device/NetworkDeviceImpl.GetBti`] implementation.
+const uint32 FEATURE_RX_PHYSICAL_MEMORY_BUFFER = 0x01;
+const uint32 FEATURE_RX_VIRTUAL_MEMORY_BUFFER = 0x02;
+
+/// Devices with [`ddk.protocol.network.device/FEATURE_TX_PHYSICAL_MEMORY_BUFFER`] will receive
+/// [`ddk.protocol.network.device/PhysicalMemoryBuffer`] instances on Tx operations. Devices with
+/// [`ddk.protocol.network.device/FEATURE_TX_VIRTUAL_MEMORY_BUFFER`] will receive
+/// [`ddk.protocol.network.device/VirtualMemoryBuffer`] instances on Tx operations. Implementers are
+/// encouraged to only set the flags for the buffer versions they'll actually access during
+/// operation. Devices that request `PhysicalMemoryBuffer` instances must provide a valid `Bti` in
+/// their [`ddk.protocol.network.device/NetworkDeviceImpl.GetBti`] implementation.
+const uint32 FEATURE_TX_PHYSICAL_MEMORY_BUFFER = 0x04;
+const uint32 FEATURE_TX_VIRTUAL_MEMORY_BUFFER = 0x08;
+
+/// Disables automatic snooping for the device. The generic NetworkDevice layer typically
+/// automatically copies all tx traffic to any snooping clients. Devices may turn off that behavior
+/// by setting the `FEATURE_NO_AUTO_SNOOP` flag.
+/// Devices that disable auto-snooping SHOULD use the
+/// [`ddk.protocol.network.device/NetworkDeviceIfc.Snoop`] interface method to expose any Tx frames
+/// they receive.
+const uint32 FEATURE_NO_AUTO_SNOOP = 0x10;
+
+/// Maximum number of [`ddk.protocol.network.device/BufferRegion`] parts in a
+/// [`ddk.protocol.network.device/VirtualMemoryBuffer`].
+// NOTE: the number 4 should cover the most common use case for split buffers: 1 contiguous buffer
+// for header, 1 contiguous buffer for data, 0 or 1 contiguous buffer for trailer. Rounded up to
+// nearest power of two.
+const uint32 MAX_VIRTUAL_PARTS = 4;
+
+/// Maximum number of [`ddk.protocol.network.device/PhysEntry`] parts in a
+/// [`ddk.protocol.network.device/PhysicalMemoryBuffer`].
+// NOTE: 16 buffer parts so that 4 pages (4KB) per virtual part will give us up to 16KB per virtual
+// part, which allows a single contiguous virtual memory buffer to hold a 9KB jumbo frame.
+const uint32 MAX_PHYSICAL_PARTS = 16;
+
+/// The maximum number of concurrent shared VMOs that may exist.
+/// Every vmo_id is guaranteed to exist in the range `[0, MAX_VMOS)`
+// NOTE: The expected number of VMOs in use is going to be between 1 and 3 with common client usage.
+// This value is chosen to be larger than that to account for possible transitions between clients
+// (there may be an overlap of one client shutting of a data session as one comes online) and also
+// not limit too harshly the number of clients.
+const uint8 MAX_VMOS = 32;
+
+/// A virtually contiguous region of a Buffer.
+struct BufferRegion {
+   /// Offset, in bytes, of data chunk in VMO.
+  uint64 offset;
+  /// Length, in bytes, of data chunk in VMO.
+  uint64 length;
+};
+
+/// A buffer representation that references the data inside a VMO.
+struct VirtualMemoryBuffer {
+  /// Identifier of VMO backing the data in this buffer.
+  /// The VMO identifier matches the one reported to devices through
+  /// [`ddk.protocol.network.device/NetworkDeviceImpl.PrepareVmo`].
+  uint8 vmo_id;
+  /// Regions of VMO holding frame data.
+  vector<BufferRegion>:MAX_VIRTUAL_PARTS parts;
+};
+
+/// A physically contiguous region in a [`ddk.protocol.network.device/PhysicalMemoryBuffer`].
+struct PhysEntry {
+  /// Physical address of data.
+  zx.paddr addr;
+  /// Total length of data in `addr`, in bytes.
+  uint64 length;
+};
+
+/// A buffer representation backed by physical memory that can be used by DMA engines.
+struct PhysicalMemoryBuffer {
+  vector<PhysEntry>:MAX_PHYSICAL_PARTS parts;
+};
+
+/// No extra frame metadata, [`ddk.protocol.network.device/FrameInfo.info_type`] must be
+/// [`fuchsia.hardware.network/InfoType.NO_INFO`].
+struct NoInfo {
+  // TODO(brunodalbo) remove this dummy field once banjo supports it. Currently banjo uses empty
+  // structs to allow forward-declaration from FIDL.
+  uint8 nothing;
+};
+
+/// Extra frame sidecar metadata stored in [`ddk.protocol.network.device/BufferMetadata`].
+union FrameInfo {
+  /// No extra frame metadata.
+  NoInfo no_info;
+};
+
+/// Metadata associated with a [`ddk.protocol.network.device/TxBuffer`] or
+/// [`ddk.protocol.network.device/RxBuffer`].
+struct BufferMetadata {
+  /// Extra frame metadata information. The type of the [`ddk.protocol.network.device/FrameInfo`]
+  /// union is defined by the value in `info_type`.
+  FrameInfo info;
+  //// Type of data in `info`, as defined in [`fuchsia.hardware.network/InfoType`].
+  uint32 info_type;
+  /// Frame TX or RX flags, as defined in [`fuchsia.hardware.network/RxFlags`],
+  /// [`fuchsia.hardware.network/txFlags`], and [`fuchsia.hardware.network/TxReturnFlags`].
+  uint32 flags;
+  /// Type of frame contained in this buffer, as defined in [`fuchsia.hardware.network/FrameType`].
+  uint8 frame_type;
+};
+
+/// A transmit buffer containing a single frame.
+struct TxBuffer {
+  /// Unique buffer identifier.
+  uint32 id;
+  /// `VirtualMemoryBuffer` description of data in buffer.
+  /// Only set for devices with [`ddk.protocol.network.device/FEATURE_TX_VIRTUAL_MEMORY_BUFFER`].
+  /// `virtual_mem` always contains the entire buffer, including `head` and `tail`.
+  VirtualMemoryBuffer virtual_mem;
+  /// `PhysicalMemoryBuffer` description of data in buffer.
+  /// Only set for devices with [`ddk.protocol.network.device/FEATURE_TX_PHYSICAL_MEMORY_BUFFER`].
+  /// `physical_mem` always contains the entire buffer, including `head` and `tail`.
+  PhysicalMemoryBuffer physical_mem;
+  /// Metadata associated with buffer.
+  BufferMetadata meta;
+  /// Length of header bytes in the data contained in this buffer. Will always be either 0 or the
+  /// requested [`ddk.protocol.network.device/DeviceInfo.tx_head_length`] value. The head bytes are
+  /// always at the beginning of the buffer.
+  uint16 head_length;
+  /// Length of tail bytes in the data contained in this buffer. Will always be either 0 or the
+  /// requested [`ddk.protocol.network.device/tx_tail_length`] value. The tail bytes are always at
+  /// the end of the buffer.
+  uint16 tail_length;
+};
+
+/// A buffer with allocated space to receive frames in. An `RxSpaceBuffer` must always be returned
+/// as an [`ddk.protocol.network.device/RxBuffer`] using
+/// [`ddk.protocol.network.device/NetworkDeviceIfc.CompleteRx`].
+struct RxSpaceBuffer {
+  /// Unique buffer identifier.
+  uint32 id;
+  /// `VirtualMemoryBuffer` description of buffer.
+  /// Only set for devices with [`ddk.protocol.network.device/FEATURE_RX_VIRTUAL_MEMORY_BUFFER`].
+  VirtualMemoryBuffer virtual_mem;
+  /// `PhysicalMemoryBuffer` description of buffer.
+  /// Only set for devices with [`ddk.protocol.network.device/FEATURE_RX_PHYSICAL_MEMORY_BUFFER`].
+  PhysicalMemoryBuffer physical_mem;
+};
+
+/// A buffer containing a single frame received by the device.
+struct RxBuffer {
+  /// The buffer identifier informed in the [`ddk.protocol.network.device/RxSpaceBuffer`] that
+  /// originated this `RxBuffer`.
+  uint32 id;
+  /// The total length of bytes written in the [`ddk.protocol.network.device/RxSpaceBuffer`]
+  /// referenced by `id`.
+  uint64 total_length;
+  /// Metadata associated with buffer.
+  BufferMetadata meta;
+};
+
+/// The result of a tx operation, reported to [`ddk.protocol.network.device/NetworkDeviceIfc`]
+/// through [`ddk.protocol.network.device/NetworkDeviceIfc.CompleteTx`].
+struct TxResult {
+  /// The buffer identifier informed in the [`ddk.protocol.network.device/TxBuffer`] that originated
+  /// this `TxResult`.
+  uint32 id;
+  /// The result status to report.
+  /// - `ZX_OK` if the frame was sent successfully.
+  /// - `ZX_ERR_NOT_SUPPORTED` if any of the frame's flags are not supported.
+  /// - `ZX_ERR_NO_RESOURCES` if the transmit failed to allocate space in its output queue for the
+  /// frame.
+  /// - `ZX_ERR_UNAVAILABLE` if the device is offline (or went offline before getting a confirmation
+  /// that the frame was sent).
+  zx.status status;
+};
+
+[Layout = "ddk-interface"]
+protocol NetworkDeviceIfc {
+  /// Notifies interface of changes to device status.
+  StatusChanged(Status new_status);
+  /// Notifies interface of incoming rx data, contained in [`ddk.protocol.network.device/RxBuffer`].
+  /// Callers should attempt to batch as many buffers as possible in a single call.
+  /// Number of buffers in a single call must be limited to the
+  /// [`ddk.protocol.network.device/DeviceInfo.rx_depth`] reported by the `NetworkDeviceImpl` that
+  /// is returning the buffers.
+  /// By calling `CompleteRx` the caller relinquishes ownership of all buffers that are being marked
+  /// as complete.
+  CompleteRx(vector<RxBuffer> rx);
+  /// Notifies interface of complete transmit buffers.
+  /// Callers should attempt to batch as many buffers as possible in a single call.
+  /// Number of buffers in a single call must be limited to the
+  /// [`ddk.protocol.network.device/DeviceInfo.tx_depth`] reported by the `NetworkDeviceImpl` that
+  /// is returning the buffers.
+  /// By calling `CompleteTx` the caller relinquishes ownership of all buffers that are being
+  /// returned.
+  CompleteTx(vector<TxResult> tx);
+  /// Notifies interface of a snooped tx frame.
+  /// Typically used by implementations that have the
+  /// [`ddk.protocol.network.device/FEATURE_NO_AUTO_SNOOP`] bit set in
+  /// [`ddk.protocol.network.device/DeviceInfo.device_features`]. Implementations that generate
+  /// transmit traffic internally should use `Snoop` regardless of `FEATURE_NO_AUTO_SNOOP` being
+  /// set.
+  /// Snooped frames are *ALWAYS* outbound frames that are being fed back into the interface for
+  /// traffic snooping.
+  /// Device implementations need to call [`ddk.protocol.network.device/NetworkDeviceIfc.Snoop`]
+  /// ONLY if [`ddk.protocol.network.device/NetworkDeviceImpl.SetSnoop`] was set to `true` by the
+  /// interface, otherwise any buffers in `Snoop` will be ignored.
+  Snoop(vector<RxBuffer> rx);
+};
+
+/// Supported tx frame types
+// NOTE(brunodalbo): TxSupport has exactly the same structure as
+// `fuchsia.hardware.network.FrameTypeSupport`, but importing FIDL types into banjo is not yet
+// supported.
+struct TxSupport {
+  /// The frame type this support entry refers to.
+  uint8 type;
+  /// The frame type-specific features supported.
+  uint32 features;
+  /// The flags supported for the given frame type.
+  uint32 supported_flags;
+};
+
+/// Static device information.
+/// `DeviceInfo` must not change for the entire lifetime of a device.
+struct DeviceInfo {
+  /// Device features
+  uint32 device_features;
+  /// Maximum depth of tx frames in device's outgoing queue.
+  uint32 tx_depth;
+  /// Maximum number of rx frames in a device's incoming queue.
+  uint32 rx_depth;
+  /// Device class, as defined in [`fuchsia.hardware.network/DeviceClass`].
+  uint8 device_class;
+  /// Supported rx frame types, as defined by [`fuchsia.hardware.network/FrameType`].
+  vector<uint8> rx_types;
+  /// Supported tx frame types.
+  vector<TxSupport> tx_types;
+  /// Maximum total length of buffers. May be set to zero for no maximum.
+  /// Devices that do not support scatter-gather DMA may set this to a value smaller than a
+  /// page size to guarantee compatibility.
+  /// Can't be larger than `MAX_PHYSICAL_PARTS` pages.
+  uint32 max_buffer_length;
+  /// The minimum RX buffer length for correct operation, in bytes.
+  uint32 min_rx_buffer_length;
+  /// Number of bytes requested as header bytes on Tx buffers. If set to zero, Tx buffers will never
+  /// contain header space. Otherwise, Tx buffers will start at the beginning of the header space,
+  /// and the header region will be informed.
+  uint16 tx_head_length;
+  /// Number of bytes requested as tail bytes on Tx buffers. If set to zero, Tx buffers will never
+  /// contain tail space. Otherwise, Tx buffers will end at the end of the tail space,
+  /// and the tail region will be informed.
+  uint16 tx_tail_length;
+  /// Available Rx acceleration flags for this device, as defined in
+  /// [`fuchsia.hardware.network/RxAcceleration`].
+  /// `rx_accel` maps the `RX_ACCEL_*` flags in the frame descriptors with semantic acceleration
+  /// features described by `RxAcceleration`. Position `n` of `rx_accel` conveys the meaning of
+  /// the `RX_ACCEL_n` flag.
+  vector<uint8> rx_accel;
+  /// Available Tx acceleration flags for this device, as defined in
+  /// [`fuchsia.hardware.network/TxAcceleration`].
+  /// `tx_accel` maps the `TX_ACCEL_*` flags in the frame descriptors with semantic acceleration
+  /// features described by `TxAcceleration`. Position `n` of `tx_accel` conveys the meaning of
+  /// the `TX_ACCEL_n` flag.
+  vector<uint8> tx_accel;
+};
+
+/// Dynamic device information.
+/// `Status` reflects the operational status of a device, changes to status are reported through
+/// `StatusChanged`.
+struct Status {
+  /// Device's maximum transmission unit.
+  uint32 mtu;
+  /// Device status flags
+  /// Status flags, as defined in [`fuchsia.hardware.network/Status`].
+  uint32 flags;
+};
+
+[Layout = "ddk-protocol"]
+protocol NetworkDeviceImpl {
+  /// Initializes the network device.
+  /// `Init` is only called once during the lifetime of the device to register `iface` as the
+  /// callback target for the Network Device implementation.
+  /// Upon initialization, the device is expected to be in a "Stopped" state, the `Start` method
+  /// will be called once the data path needs to be opened.
+  Init(NetworkDeviceIfc iface) -> (zx.status s);
+  /// Starts the device's data path.
+  /// `start` signals to the device implementation that it should bring up its data path and be
+  /// ready to receive Tx frames and `iface` will start accepting Rx frames.
+  /// The device is only considered started once `Start` returns. Until then, the contract
+  /// guarantees that no other data-path calls will be made to the device (`QueueTx`, `RxAvailable`,
+  /// `Stop`), implementers can safely assume or assert that this contract is upheld.
+  [Async]
+  Start() -> ();
+  /// Stops the network device, data-path callbacks to the NetworkDeviceIfc are no longer allowed
+  /// after `Stop` returns.
+  /// Implementation may turn off the Rx path on the underlying hardware upon receiving this call.
+  /// Upon completion, no more calls can be made to open data path sessions with `NetworkDeviceIfc`
+  /// (doing so is a logic error and may be protected by assertions) and all the data buffers that
+  /// were previously held by the implementation are automatically returned back. Pending Tx buffers
+  /// will be returned with an incomplete error, and pending Rx buffers will be reclaimed.
+  [Async]
+  Stop() -> ();
+  /// Gets information about the device. Device information must not change over the course
+  /// of the lifetime of the device.
+  GetInfo() -> (DeviceInfo info);
+  /// Gets operational status on the device.
+  /// Changes to operational status must be reported on
+  /// [`ddk.protocol.network.device/NetworkDeviceIfc.StatusChanged`]
+  GetStatus() -> (Status status);
+  /// Enqueues a list of buffers for transmission on the network device.
+  /// The driver takes ownership of the buffer and must complete the tx transaction by using
+  /// [`ddk.protocol.network.device/NetworkDeviceIfc.CompleteTx`] operations once it is done with
+  /// each buffer in `buffers`.
+  /// The total number of outstanding tx buffers given to a device will never exceed the reported
+  /// [`ddk.protocol.network.device/DeviceInfo.tx_depth`] value. Which also means that no more than
+  /// `tx_depth` buffers are going to be informed at once in a single call to `QueueTx`.
+  QueueTx(vector<TxBuffer> buffers);
+  /// Enqueues a list of rx buffer space on the network device.
+  /// The driver takes ownership of the buffer and must complete the transaction (once network data
+  /// arrives) using [`ddk.protocol.network.device/NetworkDeviceIfc.CompleteRx`].
+  /// The total number of outstanding rx buffers given to a device will never exceed the reported
+  /// [`ddk.protocol.network.device/DeviceInfo.rx_depth`] value. Which also means that no more than
+  /// `rx_depth` buffers are going to be informed at once in a single call to `QueueRxSpace`.
+  QueueRxSpace(vector<RxSpaceBuffer> buffers);
+  /// Get the BTI handle (needed to pin DMA memory) for this device.
+  /// The caller takes ownership of the BTI handle.
+  GetBti() -> (handle<bti> bti);
+  /// Informs device that a new VMO is being used to store frame data.
+  /// Implementers must store the VMO handle referenced by `vmo_id` until
+  /// [`ddk.protocol.network.device/NetworkDeviceImpl.ReleaseVmo`] is called with the same `vmo_id`.
+  PrepareVmo(uint8 vmo_id, handle<vmo> vmo);
+  /// Device may dispose of all references to the VMO referenced by vmo_id, no more buffers will
+  /// be sent with this identifier.
+  /// `ReleaseVmo` is guaranteed to only be called when the implementation holds no buffers
+  /// that reference that `vmo_id`.
+  ReleaseVmo(uint8 vmo_id);
+  /// Informs the device that it should start or stop reporting snooped transmit frames through
+  /// [`ddk.protocol.network.device/NetworkDeviceIfc.Snoop`].
+  SetSnoop(bool snoop);
+};

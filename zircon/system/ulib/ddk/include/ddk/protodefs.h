@@ -150,6 +150,9 @@ DDK_PROTOCOL_DEF(AT_TRANSPORT,            126, "at-transport", 0)
 DDK_PROTOCOL_DEF(PWM,                     127, "pwm", 0)
 DDK_PROTOCOL_DEF(PWM_IMPL,                128, "pwm-impl", 0)
 DDK_PROTOCOL_DEF(CPU_CTRL,                129, "cpu-ctrl", 0)
+DDK_PROTOCOL_DEF(NETWORK_DEVICE,          130, "network", 0)
+DDK_PROTOCOL_DEF(NETWORK_DEVICE_IMPL,     131, "network-impl", PF_NOPUB)
+DDK_PROTOCOL_DEF(MAC_ADDR_IMPL,           132, "network-mac-impl", PF_NOPUB)
 
 #undef DDK_PROTOCOL_DEF
 #endif

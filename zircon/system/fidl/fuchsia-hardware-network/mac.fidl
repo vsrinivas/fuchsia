@@ -1,0 +1,62 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.network;
+
+using zx;
+using fuchsia.net;
+
+/// The address filtering mode supported by MAC devices.
+enum MacFilterMode {
+    /// Device accepts only unicast frames addressed to its own unicast address, or multicast frames
+    /// that are part of the multicast address filter list.
+    MULTICAST_FILTER = 0;
+    /// Device accepts unicast frames addressed to its own unicast address, or any multicast frames.
+    MULTICAST_PROMISCUOUS = 1;
+    /// Device accepts all frames.
+    PROMISCUOUS = 2;
+};
+
+[Discoverable]
+protocol MacAddressing {
+    /// Gets the Device's current unicast MAC address.
+    /// Implementers of this API do not need to return a uniquely identifiable MAC; the unicast
+    /// address returned is the one that is *currently* in use to filter unicast frames, or that
+    /// identifies the device on a link it's *currently* on. Users of this API must not rely on the
+    /// stability or uniqueness of the returned value to identify or disambiguate device instances.
+    GetUnicastAddress() -> (fuchsia.net.MacAddress address);
+
+    // TODO(fxb/44065) enable an API like the one below to be notified of changes to the Unicast
+    // MAC once plumbed through the banjo protocol as well.
+    // WatchUnicastAddress() -> (Mac address);
+
+    /// Sets requested operating mode of this device to `mode`.
+    ///
+    /// The requested mode is attached to the current client connection to the device. Because
+    /// multiple clients can be attached to the same device at once, the mode with the least
+    /// restrictions will be the one actively put into effect into the underlying device
+    /// implementation.
+    ///
+    /// If the device does not support the requested mode, but supports a mode that is more open
+    /// than the requested one, `SetMode` will succeed regardless. Otherwise, if the device only
+    /// supports *more restrictive* modes than the one requested, `SetMode` returns
+    /// `ZX_ERR_NOT_SUPPORTED`.
+    ///
+    /// Clients must be aware that the resource being accessed is shared, and that the device may be
+    /// effectively operating at a more open level than the one that was requested (although never
+    /// at one more restrictive).
+    SetMode(MacFilterMode mode) -> (zx.status status);
+
+    /// Adds multicast address to the list of multicast groups.
+    ///
+    /// The list of multicast addresses kept is untouched by calls to `SetMode`. If the device's
+    /// mode is not `MULTICAST_FILTER`, the list of multicast addresses is ignored.
+    ///
+    /// Returns `ZX_ERR_INVALID_ARGS` if the provided `address` is not a multicast address.
+    AddMulticastAddress(fuchsia.net.MacAddress address) -> (zx.status status);
+    /// Removes multicast address from the list of multicast groups.
+    ///
+    /// Returns `ZX_ERR_INVALID_ARGS` if the provided `address` is not a multicast address.
+    RemoveMulticastAddress(fuchsia.net.MacAddress address) -> (zx.status status);
+};

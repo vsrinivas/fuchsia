@@ -1,0 +1,22 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.network;
+
+/// An instance of a network device that may be capable of MAC address filtering.
+// NOTE(brunodalbo) This is a temporary solution to provide the two main protocols offered by the
+// fuchsia.hardware.network library. This is the protocol exposed in devfs by devices that support
+// its inner protocols. Device and MacAddressing will be composed differently in a post-unification
+// world. The only clients for this protocol should be agents interested in enumerating networking
+// devices, and they should refrain from passing this Hub service to netstack, but rather pass along
+// fulfilled requests to the inner protocols.
+protocol DeviceInstance {
+    /// Connects to the [`fuchsia.hardware.network/Device`] implementation, giving access to
+    /// data-plane features.
+    GetDevice(request<Device> device);
+    /// Connects to the [`fuchsia.hardware.network/MacAddressing`] implementation, giving access to
+    /// MAC filtering control. `DeviceInstance`s that do not support `MacAddressing` will have the
+    /// request immediately closed.
+    GetMacAddressing(request<MacAddressing> mac);
+};

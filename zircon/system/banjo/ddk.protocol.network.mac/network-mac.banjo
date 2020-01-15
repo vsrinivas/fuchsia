@@ -1,0 +1,55 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.network.mac;
+
+/// The length of an IEEE 802 MAC Address, in bytes.
+const uint64 MAC_SIZE = 6;
+/// The maximum number of multicast MAC addresses set to filter.
+// NOTE(brunodalbo) this number derived from common defaults for maximum multicast membership
+// allowances in established OSes (20-40) rounded up for some leeway. It should be noted that
+// typical hardware implementations don't keep perfect filtering lists, but rather use a special
+// hash function to perform the filtering, where collisions are tolerated since the filtering is
+// just a performance feature.
+const uint64 MAX_MAC_FILTER = 64;
+
+/// Device MAC filtering modes supported.
+enum Mode : uint32 {
+  /// Device accepts only unicast frames addressed to its own unicast address, or multicast frames
+  /// that are part of the multicast address filter list.
+  MULTICAST_FILTER = 1;
+  /// Device accepts unicast frames addressed to its own unicast address, or any multicast frames.
+  MULTICAST_PROMISCUOUS = 2;
+  /// Device accepts all frames.
+  PROMISCUOUS = 4;
+};
+
+/// Device features reported by [`ddk.protocol.network.mac/MacAddrImpl.GetFeatures`]
+struct Features {
+  /// The maximum number of multicast filtering entries available on this device. Implementations
+  /// must set 0 if multicast filtering is not supported. Values will always be saturated to
+  /// [`ddk.protocol.network.mac/MAX_MAC_FILTER`].
+  uint32 multicast_filter_count;
+  /// The filtering operating modes supported by this device. Bitfield of possible
+  /// [`ddk.protocol.network.mac/Mode`] values that can be passed to
+  /// [`ddk.protocol.network.mac/MacAddrImpl.SetMode`].
+  uint32 supported_modes;
+};
+
+[Layout = "ddk-protocol"]
+protocol MacAddrImpl {
+  /// Gets this device's MAC address.
+  // TODO(fxb/44065) we need an address changed event (in lockstep with FIDL definition).
+  // TODO(brunodalbo) use fuchsia.net.MacAddress here and in SetMode when we can use FIDL types in
+  // Banjo.
+  GetAddress() -> (array<uint8>:MAC_SIZE mac);
+  /// Gets this device's features.
+  GetFeatures() -> (Features features);
+  /// Sets this device's operating mode.
+  /// `mode` is one of the variants in [`ddk.protocol.network.mac/Mode`], it's guaranteed to be one
+  /// of the reported modes in this device's reported features. `multicast_macs` is only provided
+  /// (though it can still be empty) when `mode` is `MULTICAST_FILTER`. `multicast_macs` is always
+  /// guaranteed to be at most `multicast_filter_count` entries.
+  SetMode(Mode mode, vector<array<uint8>:MAC_SIZE>:MAX_MAC_FILTER multicast_macs) -> ();
+};

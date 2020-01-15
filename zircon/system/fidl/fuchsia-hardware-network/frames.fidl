@@ -1,0 +1,169 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.network;
+
+/// Types of frames.
+enum FrameType : uint8 {
+    ETHERNET = 0x01;
+    IPV4 = 0x02;
+    IPV6 = 0x03;
+};
+
+/// Blanket definition for raw frames. Devices that do not perform any sort of parsing of outbound
+/// traffic should define `FRAME_FEATURES_RAW` in the [`fuchsia.hardware.network/FrameTypeSupport`]
+/// entry.
+const uint32 FRAME_FEATURES_RAW = 1;
+
+/// Ethernet frame sub-types and features.
+bits EthernetFeatures : uint32 {
+    /// Device supports any type of ethernet frame. Same as specifying all other flags. Used by
+    /// devices that do not inspect or parse outbound traffic.
+    RAW = 1;
+    /// Device supports EthernetII frames.
+    ETHERNET_II = 2;
+    /// Device supports 802.1q VLAN additions.
+    E_802_1_Q = 4;
+    /// Device supports 802.1 q-in-q Multiple VLAN tagging additions. Only meaningful if `E_802_1_Q`
+    /// is also present.
+    E_802_1_Q_IN_Q = 8;
+    /// Device supports 802.3 LLC + SNAP Ethernet frame format.
+    E_802_3_LLC_SNAP = 16;
+};
+
+/// Specifies a frame type and features and supported flags associated with that type.
+/// This is used by clients to read the supported frames on the Tx path for a given
+/// Network Device.
+/// Some Network Devices may parse outgoing frames to perform frame transformation or specific
+/// hardware support. Each frame type has an associated
+/// [`fuchsia.hardware.network/FrameTypeSupport.features`] bits enumeration that lists
+/// FrameType-specific features that may or may not be supported. Devices that do not perform
+/// parsing are encouraged to just use the [`fuchsia.hardware.network/FRAME_FEATURES_RAW`] bit in
+/// `features`, which will inform the client that all frame features are allowed.
+struct FrameTypeSupport {
+    /// The frame type this support entry refers to.
+    FrameType type;
+    /// The frame type-specific features supported.
+    uint32 features;
+    /// The flags supported for the given frame type.
+    TxFlags supported_flags;
+};
+
+/// Maximum number of chained descriptors that describe a single frame.
+const uint8 MAX_DESCRIPTOR_CHAIN = 4;
+
+/// The type of metadata information appended to a frame, included in the descriptors VMO.
+enum InfoType : uint32 {
+    /// No extra information is available.
+    NO_INFO = 0x00;
+};
+
+/// Available Rx acceleration features. Features are mapped to the `RX_ACCEL_*` bits in descriptors
+/// by the available values reported in [`fuchsia.hardware.network/Info.rx_accel`].
+enum RxAcceleration : uint8 {
+    /// Inbound Rx frame validated the Ethernet Frame Check Sequence.
+    VALIDATED_ETHERNET_FCS = 0;
+    /// Inbound Rx frame validated the IPv4 checksum.
+    VALIDATED_IPV4_CHECKSUM = 1;
+    /// Inbound Rx frame validated the TCP checksum.
+    VALIDATED_TCP_CHECKSUM = 2;
+    /// Inbound Rx frame validated the UDP checksum.
+    VALIDATED_UDP_CHECKSUM = 3;
+};
+
+/// Available Tx acceleration features. Features are mapped to the `TX_ACCEL_*` bits in descriptors
+/// by the available values reported in  [`fuchsia.hardware.network/Info.tx_accel`].
+enum TxAcceleration : uint8 {
+    /// Request that device calculate the Ethernet Frame Check Sequence and write it in place.
+    COMPUTE_ETHERNET_FCS = 0;
+    /// Request that the device calculate the IPv4 checksum and write it in place.
+    COMPUTE_IPV4_CHECKSUM = 1;
+    /// Request that the device calculate the TCP checksum and write it in place.
+    COMPUTE_TCP_CHECKSUM = 2;
+    /// Request that the device calculate the UDP checksum and write it in place.
+    COMPUTE_UDP_CHECKSUM = 3;
+    // Future expansions: TCP segmentation acceleration
+};
+
+/// Flags set by a Device when handing a buffer to a client on the Rx path. Set by devices on the
+/// `inbound_flags` field of an Rx descriptor.
+bits RxFlags : uint32 {
+    /// Acceleration flag 0. Acceleration flags are mapped to the acceleration features reported by
+    /// the [`fuchsia.hardware.network/Device`] in [`fuchsia.hardware.network/Info.rx_accel`]. The
+    /// n-th feature in `rx_accel` maps to the `RX_ACCEL_n` `RxFlag`.
+    RX_ACCEL_0 = 0x00000001;
+    RX_ACCEL_1 = 0x00000002;
+    RX_ACCEL_2 = 0x00000004;
+    RX_ACCEL_3 = 0x00000008;
+    RX_ACCEL_4 = 0x00000010;
+    RX_ACCEL_5 = 0x00000020;
+    RX_ACCEL_6 = 0x00000040;
+    RX_ACCEL_7 = 0x00000080;
+    RX_ACCEL_8 = 0x00000100;
+    RX_ACCEL_9 = 0x00000200;
+    RX_ACCEL_10 = 0x00000400;
+    RX_ACCEL_11 = 0x00000800;
+    RX_ACCEL_12 = 0x00001000;
+    RX_ACCEL_13 = 0x00002000;
+    RX_ACCEL_14 = 0x00004000;
+    RX_ACCEL_15 = 0x00008000;
+
+    // RESERVED - bits 16 to 28 reserved for future expansions
+
+    /// Device experienced a hardware Rx overrun. Rx overruns are typically set by hardware
+    /// controllers when a frame event was detected but the frame data couldn't be captured. Devices
+    /// should clear the controller flag once this is set on an inbound frame, so future overruns
+    /// can be detected and reported.
+    RX_OVERRUN = 0x20000000;
+    /// This bit is set if frame validation is performed (such as by hardware acceleration features)
+    /// and fails. It's important to note that some devices may simply discard frames for which
+    /// validation fails and never notify the client. Rx frames that failed validation are only
+    /// transmitted to the client if the `SessionFlags::REPORT_INVALID_RX` option is selected when
+    /// creating a session.
+    RX_VALIDATION_ERROR = 0x40000000;
+    /// This is an echoed Tx frame, created by a Tx request. Can only be set in sessions that have
+    /// the `LISTEN_TX` flag.
+    RX_ECHOED_TX = 0x80000000;
+};
+
+/// Flags set by a Client when handing a buffer to a client on the Tx path. Set by Clients on the
+/// `inbound_flags` field of a Tx descriptor.
+bits TxFlags : uint32 {
+    /// Acceleration flag 0. Acceleration flags are mapped to the acceleration features reported by
+    /// the [`fuchsia.hardware.network/Device`] in [`fuchsia.hardware.network/Info.tx_accel`]. The
+    /// n-th feature in `tx_accel` maps to the `TX_ACCEL_n` `TxFlag`.
+    TX_ACCEL_0 = 0x00000001;
+    TX_ACCEL_1 = 0x00000002;
+    TX_ACCEL_2 = 0x00000004;
+    TX_ACCEL_3 = 0x00000008;
+    TX_ACCEL_4 = 0x00000010;
+    TX_ACCEL_5 = 0x00000020;
+    TX_ACCEL_6 = 0x00000040;
+    TX_ACCEL_7 = 0x00000080;
+    TX_ACCEL_8 = 0x00000100;
+    TX_ACCEL_9 = 0x00000200;
+    TX_ACCEL_10 = 0x00000400;
+    TX_ACCEL_11 = 0x00000800;
+    TX_ACCEL_12 = 0x00001000;
+    TX_ACCEL_13 = 0x00002000;
+    TX_ACCEL_14 = 0x00004000;
+    TX_ACCEL_15 = 0x00008000;
+};
+
+/// Flags set by a Device when returning a Tx buffer back to a client. Set by Devices on the
+/// `return_flags` field of a Tx descriptor.
+bits TxReturnFlags : uint32 {
+    /// Requested operation in `inbound_flags` is not supported; the frame was not sent.
+    /// Always set in conjunction with `TX_RET_ERROR`.
+    TX_RET_NOT_SUPPORTED = 1;
+    /// Could not allocate resources to send frame.
+    /// Always set in conjunction with `TX_RET_ERROR`.
+    TX_RET_OUT_OF_RESOURCES = 2;
+    /// Device is not available (offline or disconnected); the frame was not sent.
+    /// Always set in conjunction with `TX_RET_ERROR`.
+    TX_RET_NOT_AVAILABLE = 4;
+
+    // An error occurred sending this frame.
+    TX_RET_ERROR = 0x80000000;
+};

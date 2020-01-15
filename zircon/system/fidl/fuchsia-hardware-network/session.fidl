@@ -1,0 +1,78 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.network;
+
+/// Represents a session with a Network device.
+/// A session has a data plane and a control plane. The `Session` protocol represents the control
+/// plane of the session and the FIFOs and VMOs exchanged during the
+/// [`fuchsia.hardware.network/Device.OpenSession`] call are the data plane. Lifetime of the session
+/// is controlled by a `Session` protocol handle. Sessions are always created in a paused state.
+protocol Session {
+    /// Pauses or unpauses reception of frames on this session.
+    SetPaused(bool paused);
+    /// Cleanly closes a session. This will cause the session to send a `ZX_ERR_CANCELLED` epitaph
+    /// and proceed to close the Session channel. Clients may only assume that they own all the
+    /// buffers that are currently owned by the session (sent over either the Rx or Tx FIFOs) once
+    /// the epitaph is received. Closing the Rx or Tx FIFO is equivalent to calling `Close`.
+    Close();
+};
+
+/// Additional session options.
+bits SessionFlags : uint16 {
+    /// Sessions marked with the `PRIMARY` bit get the following different treatment:
+    /// - If no PRIMARY sessions are attached, the device will *not* serve Rx frames to non-PRIMARY
+    ///   sessions.
+    /// - If there's only one PRIMARY session active, it may get a zero-copy data path from the
+    ///   the backing hardware, if the underlying implementation supports it.
+    PRIMARY = 0x0001;
+    /// `LISTEN_TX` sessions will receive any outgoing frames (from all sessions) on its
+    /// Rx path. Can be used for snooping traffic. Sessions marked with `LISTEN_TX` may also send
+    /// frames, but they should keep in mind that they'll ALWAYS receive those frames back on their
+    /// Rx path (no origin session filtering is performed).
+    LISTEN_TX = 0x0002;
+    /// Sessions marked with `REPORT_INVALID_RX` are interested in receiving frames that were
+    /// rejected by internal device checks or payload validation performed by hardware. Due to the
+    /// nature of some hardware platforms, sessions marked with `REPORT_INVALID_RX` may still not
+    /// receive frames that fail validation if the hardware implementation simply drops the frame
+    /// and doesn't expose it to the software stack. Sessions NOT marked with `REPORT_INVALID_RX`,
+    /// in contrast, will NEVER receive an Rx frame with the `RX_VALIDATION_ERROR` flag set.
+    REPORT_INVALID_RX = 0x0004;
+};
+
+/// Data-plane FIFOs.
+struct Fifos {
+    /// Handle for the rx FIFO.
+    /// Clients must write 16-bit descriptor indexes to this FIFO to be able to receive
+    /// frames.
+    handle<fifo> rx;
+    /// Handle for the tx FIFO.
+    /// Clients write 16-bit descriptor indexes to this FIFO to enqueue outgoing frames.
+    handle<fifo> tx;
+};
+
+/// Session configuration.
+struct SessionInfo {
+    /// VMO containing the descriptors. 16-bit indices transmitted over the FIFOs index a descriptor
+    /// in this VMO (byte offset = descriptor_length * 8 * index).
+    handle<vmo> descriptors;
+    /// VMO containing frame data. Descriptors contain byte-offsets that are used to index
+    /// arbitrary regions in `data`.
+    handle<vmo> data;
+    /// Requested descriptor version. If the network device does not support the requested
+    /// descriptor version, [`fuchsia.hardware.network/Device.OpenSession`] will fail with
+    /// `ZX_ERR_NOT_SUPPORTED`.
+    uint8 descriptor_version;
+    /// Descriptor length, in 64-bit words. The length of each descriptor in the `descriptors` VMO.
+    /// This is used as a multiplier to find byte offsets in `descriptors` given a descriptor index
+    /// passed through the Rx or Tx FIFOs.
+    uint8 descriptor_length;
+    /// Total number of descriptors that can be used by this session. Descriptor indices transferred
+    /// through either the Rx or Tx FIFO must be in the range [0, `descriptor_count`).
+    uint16 descriptor_count;
+    /// Extra options.
+    SessionFlags options;
+    /// List of frame types the client is subscribing to.
+    vector<FrameType>:MAX_FRAME_TYPES rx_frames;
+};

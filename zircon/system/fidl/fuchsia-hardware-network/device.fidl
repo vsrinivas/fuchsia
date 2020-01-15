@@ -1,0 +1,153 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.network;
+
+using zx;
+
+/// Network device class.
+/// The network device's class is part of its [`fuchsia.hardware.network/Info`] reporting and can be
+/// used by tools that enumerate network devices to present human-readable types, so it is easier
+/// for a user to identify the listed devices. The [`fuchsia.hardware.network/Info.class`] value
+/// does not imply any kind of capabilities or behavior.
+enum DeviceClass : uint16 {
+    UNKNOWN = 0x00;
+    ETHERNET = 0x01;
+    WLAN = 0x02;
+    PPP = 0x03;
+    BRIDGE = 0x04;
+};
+
+/// Device status bits, reported in [`fuchsia.hardware.network/Info`].
+bits StatusFlags : uint32 {
+    /// Device is online, i.e., data path is open and any ongoing sessions may send
+    /// and receive frames.
+    ONLINE = 0x01;
+};
+
+/// Dynamic device information.
+table Status {
+    /// Device status flags.
+    1: StatusFlags flags;
+    /// Maximum transmit unit for this device, in bytes. The reported `MTU` is the size of an ENTIRE
+    /// frame, including any header and trailer bytes for whatever protocol the
+    /// [`fuchsia.hardware.network/FrameType`]s of this device support.
+    2: uint32 mtu;
+};
+
+/// Maximum numbers of supported frame types for Rx or Tx.
+// NOTE(brunodalbo) 4 seems a sensible number for maximum number of frame types supported by a
+// single device. Most common use cases are going to use 1 or 2 types (1 if device operates at L2, 2
+// if at L3).
+const uint32 MAX_FRAME_TYPES = 4;
+
+/// Maximum length of session label.
+const uint32 MAX_SESSION_NAME = 64;
+
+/// Maximum number of acceleration flags.
+/// Each descriptor has 16 bits of space for acceleration flags
+/// ([`fuchsia.hardware.network/RxFlags`] and [`fuchsia.hardware.network/TxFlags`]) thus the maximum
+/// number of reported accelerations is 16. Each descriptor reports which accelerations were applied
+/// (`RxFlags`) or are requested (`TxFlags`) by mapping indexes in the vector of supported
+/// accelerations ([`fuchsia.hardware.network/Info.rx_accel`] and
+/// ([`fuchsia.hardware.network/Info.tx_accel`]) to bits in the respective acceleration flags
+/// bitfield.
+const uint32 MAX_ACCEL_FLAGS = 16;
+
+/// Network device information.
+struct Info {
+    /// Device's class, defined in [`fuchsia.hardware.network/DeviceClass`].
+    DeviceClass class;
+    /// Minimum descriptor length, in 64-bit words.
+    /// Expresses the minimum length that each buffer descriptor must have for correct operation
+    /// with this device. Devices that support extra frame metadata inform larger minimum descriptor
+    /// lengths that reflect the minimum space needed to be able to store frame metadata.
+    uint8 min_descriptor_length;
+    /// Accepted descriptor version.
+    uint8 descriptor_version;
+    /// Maximum number of items in Rx FIFO (per session).
+    /// `rx_depth` is calculated based on the size of the actual backing hardware rx queue.
+    uint32 rx_depth;
+    /// Maximum number of items in Tx FIFO (per session).
+    /// `tx_depth` is calculated based on the size of the actual backing hardware tx queue.
+    uint32 tx_depth;
+    /// Alignment requirement for buffers in the data VMO. All buffers in the data VMO *must* be
+    /// aligned to `buffer_alignment` relative to the start of the VMO.
+    uint32 buffer_alignment;
+    /// Maximum supported length of buffers in the data VMO, in bytes.
+    uint32 max_buffer_length;
+    /// The minimum RX buffer length for correct operation, in bytes.
+    uint32 min_rx_buffer_length;
+    /// The number of bytes the device requests be free as `head` space in a Tx buffer. Devices
+    /// may choose to reject Tx buffers that do not satisfy this constraint.
+    uint16 min_tx_buffer_head;
+    /// The amount of bytes the device requests be free as `tail` space in a Tx buffer. Devices
+    /// may choose to reject Tx buffers that to not satisfy this constraint.
+    uint16 min_tx_buffer_tail;
+    /// Supported Rx frame types on this device.
+    ///
+    /// Clients may open sessions subscribing to a subset of `rx_types` frame types on this device.
+    /// Clients will only receive the frame types they are subscribed to in this session
+    vector<FrameType>:MAX_FRAME_TYPES rx_types;
+    /// Supported Tx frame types on this device.
+    ///
+    /// A client is free to send any frame type on an open session, as long as the frame type is
+    /// part of `tx_types`. Some network devices may need to perform partial frame parsing and
+    /// serialization and, for that reason, `tx_types` is a vector of
+    /// [`fuchsia.hardware.network/FrameTypeSupport`] which includes specific features per frame
+    /// type.
+    ///
+    /// For example, a device that supports Ethernet frames but needs to convert the Ethernet header
+    /// may only support standard EthernetII frames, and not any "raw" Ethernet frame.
+    vector<FrameTypeSupport>:MAX_FRAME_TYPES tx_types;
+    /// Available Rx acceleration flags for this device. `rx_accel` maps the `RX_ACCEL_*` flags in
+    /// the frame descriptors with semantic acceleration features described by
+    /// [`fuchsia.hardware.network/RxAcceleration`]. Position `n` of `rx_accel` conveys the meaning
+    /// of the `RX_ACCEL_n` flag.
+    vector<RxAcceleration>:MAX_ACCEL_FLAGS rx_accel;
+    /// Available Tx acceleration flags for this device. `tx_accel` maps the `TX_ACCEL_*` flags in
+    /// the frame descriptors with semantic acceleration features described by
+    /// [`fuchsia.hardware.network/TxAcceleration]`. Position `n` of `tx_accel` conveys the meaning
+    /// of the `TX_ACCEL_n` flag.
+    vector<TxAcceleration>:MAX_ACCEL_FLAGS tx_accel;
+};
+
+/// The maximum number of status samples that can be buffered by a
+/// [`fuchsia.hardware.network/StatusWatcher`].
+const uint32 MAX_STATUS_BUFFER = 50;
+
+/// Provides a way to receive updates on device status changes.
+protocol StatusWatcher {
+    /// `WatchStatus` will block until the device's status has changed.
+    /// The first call to `WatchStatus` will always return immediately with the current device
+    /// status, subsequent calls will only complete when the device status differs from the last one
+    /// that was returned through this `StatusWatcher`.
+    /// If `StatusWatcher` was created with a buffer value larger than 1, `WatchStatus` may return a
+    /// queued status change, depending on how many status changed happened since the last call to
+    /// `WatchStatus`.
+    WatchStatus() -> (Status device_status);
+};
+
+/// A Network Device.
+[Discoverable]
+protocol Device {
+    /// Obtain information about device
+    GetInfo() -> (Info info);
+    /// Obtain the operating device status.
+    GetStatus() -> (Status device_status);
+    /// Connects to a [`fuchsia.hardware.network/StatusWatcher`] to observe device status changes.
+    ///
+    /// `buffer` is the number of status changes that the client requests to be stored by
+    /// `StatusWatcher`, limited to [`fuchsia.hardware.network/MAX_STATUS_BUFFER`]. A value of 0 or
+    /// 1 will cause the `StatusWatcher` to not keep any buffers on status changed. Clients that
+    /// need to observe all changes to status (as opposed to only the current state) are encouraged
+    /// to set a buffer value larger than 1, so that all edges can be observed. If `StatusWatcher`'s
+    /// internal queue is filled and new status changes occur, the oldest samples will be dropped to
+    /// make room for new ones.
+    GetStatusWatcher(request<StatusWatcher> watcher, uint32 buffer);
+    /// Opens a new session with the network device.
+    /// `session_name` is used only as a debug label.
+    /// `session_info` contains the necessary information to setup the session's data exchange.
+    OpenSession(string:MAX_SESSION_NAME session_name, SessionInfo session_info) -> (Session session, Fifos fifos) error zx.status;
+};
