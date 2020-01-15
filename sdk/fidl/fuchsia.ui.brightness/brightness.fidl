@@ -16,45 +16,46 @@ protocol Control {
     SetAutoBrightness();
 
     /// Requests the current auto-brightness mode.
-    /// This call implements the Hanging Get protocol as detailed in
-    /// https://fuchsia.dev/fuchsia-src/development/api/fidl.md#delay-responses-using-hanging-gets
+    /// This call implements the Hanging Get protocol.
     WatchAutoBrightness() -> (bool enabled);
 
     /// Turns auto-brightness mode off.
     /// Used by e.g. Settings to set manual brightness using a slider
-    /// Value is in the range 0.0 to 1.0 representing min to max.
+    /// Value is in the range 0.0 to 1.0 representing min to max and
+    /// will be clamped if out of range.
     SetManualBrightness(brightness value);
 
     /// Gets the current brightness in the range 0.0 to 1.0.
-    /// This result is valid for both manual and auto-brightness modes and is typically used
-    /// to show the current brightness on a slider.
-    /// This call implements the Hanging Get protocol as detailed in
-    /// https://fuchsia.dev/fuchsia-src/development/api/fidl.md#delay-responses-using-hanging-gets
+    /// This result is valid for both manual and auto-brightness modes
+    /// and is typically used to show the current brightness on a slider.
+    /// This call implements the Hanging Get protocol.
     WatchCurrentBrightness() -> (brightness value);
 
-    /// Sets the brightness offset.
-    /// This will change the built-in brightness curve by the factor of the offset.
-    /// The offset is in the range of -1.0 to 1.0.
-    SetAutoBrightnessOffset(float32 offset);
+    /// Sets the brightness adjustment.
+    /// This will change the brightness curve by the factor of the adjustment.
+    /// The adjustment is in the range of -1.0 to 1.0.
+    SetAutoBrightnessAdjustment(float32 adjustment);
 
-    /// Gets the current auto brightness offset.
-    /// This call implements the Hanging Get protocol as detailed in
-    /// https://fuchsia.dev/fuchsia-src/development/api/fidl.md#delay-responses-using-hanging-gets
-    WatchAutoBrightnessOffset() -> (float32 offset);
+    /// Gets the current auto brightness adjustment.
+    /// This call implements the Hanging Get protocol.
+    WatchAutoBrightnessAdjustment() -> (float32 adjustment);
 
     /// Sets the brightness curve as a set of points.
     /// This will override the built-in brightness curve.
+    /// The default brightness curve will be used if the table is empty.
+    /// The connection will be closed if table errors are detected.
     SetBrightnessTable(BrightnessTable table);
 };
 
 /// A tuple representing a point on the auto-brightness curve
+/// Ambient_lux and nits must be positive values.
 struct BrightnessPoint {
     float32 ambient_lux;
     float32 display_nits;
 };
 
 /// A set of points defining the auto-brightness curve.
-/// They should be ordered in increasing ambient_lux
+/// The ambient_lux values must be monotonically increasing.
 struct BrightnessTable {
     vector<BrightnessPoint>:50 points;
 };

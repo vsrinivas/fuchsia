@@ -7,7 +7,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use fidl_fuchsia_ui_brightness::{
     BrightnessPoint, BrightnessTable, ControlRequest as BrightnessControlRequest,
-    ControlWatchAutoBrightnessOffsetResponder, ControlWatchAutoBrightnessResponder,
+    ControlWatchAutoBrightnessAdjustmentResponder, ControlWatchAutoBrightnessResponder,
     ControlWatchCurrentBrightnessResponder,
 };
 use fuchsia_async::{self as fasync, DurationExt};
@@ -77,14 +77,14 @@ impl Sender<bool> for WatcherAutoResponder {
     }
 }
 
-pub struct WatcherOffsetResponder {
-    watcher_offset_responder: ControlWatchAutoBrightnessOffsetResponder,
+pub struct WatcherAdjustmentResponder {
+    watcher_adjustment_responder: ControlWatchAutoBrightnessAdjustmentResponder,
 }
 
-impl Sender<f32> for WatcherOffsetResponder {
+impl Sender<f32> for WatcherAdjustmentResponder {
     fn send_response(self, data: f32) {
-        if let Err(e) = self.watcher_offset_responder.send(data) {
-            fx_log_err!("Failed to reply to WatchAutoBrightnessOffset: {}", e);
+        if let Err(e) = self.watcher_adjustment_responder.send(data) {
+            fx_log_err!("Failed to reply to WatchAutoBrightnessAdjustment: {}", e);
         }
     }
 }
@@ -97,7 +97,7 @@ pub struct Control {
     spline: Spline<f32, f32>,
     current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
     auto_sender_channel: Arc<Mutex<SenderChannel<bool>>>,
-    offset_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
+    adjustment_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
 }
 
 impl Control {
@@ -106,7 +106,7 @@ impl Control {
         backlight: Arc<Mutex<dyn BacklightControl>>,
         current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
         auto_sender_channel: Arc<Mutex<SenderChannel<bool>>>,
-        offset_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
+        adjustment_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
     ) -> Control {
         fx_log_info!("New Control class");
 
@@ -134,7 +134,7 @@ impl Control {
             spline: spline_arg,
             current_sender_channel,
             auto_sender_channel,
-            offset_sender_channel,
+            adjustment_sender_channel,
         }
     }
 
@@ -143,7 +143,7 @@ impl Control {
         request: BrightnessControlRequest,
         watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>>,
         watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>>,
-        watch_offset_handler: Arc<Mutex<WatchHandler<f32, WatcherOffsetResponder>>>,
+        watch_adjustment_handler: Arc<Mutex<WatchHandler<f32, WatcherAdjustmentResponder>>>,
     ) {
         // TODO(kpt): "Consider adding additional tests against the resulting FIDL service itself so
         // that you can ensure it continues serving clients correctly."
@@ -177,16 +177,20 @@ impl Control {
                 *BRIGHTNESS_TABLE.lock().await = table;
             }
 
-            BrightnessControlRequest::SetAutoBrightnessOffset { offset, control_handle: _ } => {
-                self.set_auto_brightness_offset(offset).await;
+            BrightnessControlRequest::SetAutoBrightnessAdjustment {
+                adjustment,
+                control_handle: _,
+            } => {
+                self.set_auto_brightness_adjustment(adjustment).await;
             }
-            BrightnessControlRequest::WatchAutoBrightnessOffset { responder } => {
-                let watch_offset_result =
-                    self.watch_auto_brightness_offset(watch_offset_handler, responder).await;
-                match watch_offset_result {
+            BrightnessControlRequest::WatchAutoBrightnessAdjustment { responder } => {
+                let watch_adjustment_result = self
+                    .watch_auto_brightness_adjustment(watch_adjustment_handler, responder)
+                    .await;
+                match watch_adjustment_result {
                     Ok(_v) => fx_log_info!("Sent the current value"),
                     Err(e) => fx_log_info!(
-                        "Didn't watch auto brightness offset successfully, got err {}",
+                        "Didn't watch auto brightness adjustment successfully, got err {}",
                         e
                     ),
                 }
@@ -202,8 +206,8 @@ impl Control {
         self.auto_sender_channel.lock().await.add_sender_channel(sender).await;
     }
 
-    pub async fn add_offset_sender_channel(&mut self, sender: UnboundedSender<f32>) {
-        self.offset_sender_channel.lock().await.add_sender_channel(sender).await;
+    pub async fn add_adjustment_sender_channel(&mut self, sender: UnboundedSender<f32>) {
+        self.adjustment_sender_channel.lock().await.add_sender_channel(sender).await;
     }
 
     pub fn get_backlight_and_auto_brightness_on(
@@ -288,7 +292,7 @@ impl Control {
         }
     }
 
-    async fn set_auto_brightness_offset(&mut self, offset: f32) {
+    async fn set_auto_brightness_adjustment(&mut self, adjustment: f32) {
         let old_table = {
             let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
             BrightnessTable { points: points.to_vec() }
@@ -298,21 +302,22 @@ impl Control {
         for brightness_point in points {
             new_table.push(BrightnessPoint {
                 ambient_lux: brightness_point.ambient_lux,
-                display_nits: brightness_point.display_nits * offset,
+                display_nits: brightness_point.display_nits * adjustment,
             });
         }
         let new_table = BrightnessTable { points: new_table };
         self.set_brightness_table(&new_table).await;
-        self.offset_sender_channel.lock().await.send_value(offset);
+        self.adjustment_sender_channel.lock().await.send_value(adjustment);
     }
 
-    async fn watch_auto_brightness_offset(
+    async fn watch_auto_brightness_adjustment(
         &mut self,
-        watch_offset_handler: Arc<Mutex<WatchHandler<f32, WatcherOffsetResponder>>>,
-        responder: ControlWatchAutoBrightnessOffsetResponder,
+        watch_adjustment_handler: Arc<Mutex<WatchHandler<f32, WatcherAdjustmentResponder>>>,
+        responder: ControlWatchAutoBrightnessAdjustmentResponder,
     ) -> Result<(), Error> {
-        let mut hanging_get_lock = watch_offset_handler.lock().await;
-        hanging_get_lock.watch(WatcherOffsetResponder { watcher_offset_responder: responder })?;
+        let mut hanging_get_lock = watch_adjustment_handler.lock().await;
+        hanging_get_lock
+            .watch(WatcherAdjustmentResponder { watcher_adjustment_responder: responder })?;
         Ok(())
     }
 }
@@ -324,11 +329,11 @@ pub trait ControlTrait {
         request: BrightnessControlRequest,
         watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>>,
         watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>>,
-        watch_offset_handler: Arc<Mutex<WatchHandler<f32, WatcherOffsetResponder>>>,
+        watch_adjustment_handler: Arc<Mutex<WatchHandler<f32, WatcherAdjustmentResponder>>>,
     );
     async fn add_current_sender_channel(&mut self, sender: UnboundedSender<f32>);
     async fn add_auto_sender_channel(&mut self, sender: UnboundedSender<bool>);
-    async fn add_offset_sender_channel(&mut self, sender: UnboundedSender<f32>);
+    async fn add_adjustment_sender_channel(&mut self, sender: UnboundedSender<f32>);
     fn get_backlight_and_auto_brightness_on(&mut self) -> (Arc<Mutex<dyn BacklightControl>>, bool);
 }
 
@@ -339,13 +344,13 @@ impl ControlTrait for Control {
         request: BrightnessControlRequest,
         watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>>,
         watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>>,
-        watch_offset_handler: Arc<Mutex<WatchHandler<f32, WatcherOffsetResponder>>>,
+        watch_adjustment_handler: Arc<Mutex<WatchHandler<f32, WatcherAdjustmentResponder>>>,
     ) {
         self.handle_request(
             request,
             watch_current_handler,
             watch_auto_handler,
-            watch_offset_handler,
+            watch_adjustment_handler,
         )
         .await;
     }
@@ -358,8 +363,8 @@ impl ControlTrait for Control {
         self.add_auto_sender_channel(sender).await;
     }
 
-    async fn add_offset_sender_channel(&mut self, sender: UnboundedSender<f32>) {
-        self.add_offset_sender_channel(sender).await;
+    async fn add_adjustment_sender_channel(&mut self, sender: UnboundedSender<f32>) {
+        self.add_adjustment_sender_channel(sender).await;
     }
 
     fn get_backlight_and_auto_brightness_on(&mut self) -> (Arc<Mutex<dyn BacklightControl>>, bool) {
@@ -606,8 +611,8 @@ mod tests {
         let auto_sender_channel: SenderChannel<bool> = SenderChannel::new();
         let auto_sender_channel = Arc::new(Mutex::new(auto_sender_channel));
 
-        let offset_sender_channel: SenderChannel<f32> = SenderChannel::new();
-        let offset_sender_channel = Arc::new(Mutex::new(offset_sender_channel));
+        let adjustment_sender_channel: SenderChannel<f32> = SenderChannel::new();
+        let adjustment_sender_channel = Arc::new(Mutex::new(adjustment_sender_channel));
         Control {
             sensor,
             backlight: _backlight,
@@ -616,7 +621,7 @@ mod tests {
             spline: spline_arg,
             current_sender_channel,
             auto_sender_channel,
-            offset_sender_channel,
+            adjustment_sender_channel,
         }
     }
 
@@ -698,9 +703,9 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_brightness_table_after_set_an_offset() {
+    async fn test_brightness_table_after_set_an_adjustment() {
         let mut control = generate_control_struct().await;
-        control.set_auto_brightness_offset(0.3).await;
+        control.set_auto_brightness_adjustment(0.3).await;
 
         assert_eq!(cmp_float(0.0, brightness_curve_lux_to_nits(0, &control.spline).await), true);
         assert_eq!(cmp_float(0.099, brightness_curve_lux_to_nits(1, &control.spline).await), true);

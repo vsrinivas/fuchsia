@@ -11,7 +11,8 @@ use std::sync::Arc;
 // Include Brightness Control FIDL bindings
 use backlight::Backlight;
 use control::{
-    Control, ControlTrait, WatcherAutoResponder, WatcherCurrentResponder, WatcherOffsetResponder,
+    Control, ControlTrait, WatcherAdjustmentResponder, WatcherAutoResponder,
+    WatcherCurrentResponder,
 };
 use fidl_fuchsia_ui_brightness::ControlRequestStream;
 use fuchsia_async::{self as fasync};
@@ -29,7 +30,7 @@ mod sender_channel;
 mod sensor;
 
 const BRIGHTNESS_DELTA: f32 = 0.1;
-const OFFSET_DELTA: f32 = 0.1;
+const ADJUSTMENT_DELTA: f32 = 0.1;
 
 async fn run_brightness_server(
     mut stream: ControlRequestStream,
@@ -53,14 +54,14 @@ async fn run_brightness_server(
     let (current_channel_sender, current_channel_receiver) =
         futures::channel::mpsc::unbounded::<f32>();
 
-    let watch_offset_handler: Arc<Mutex<WatchHandler<f32, WatcherOffsetResponder>>> =
+    let watch_adjustment_handler: Arc<Mutex<WatchHandler<f32, WatcherAdjustmentResponder>>> =
         Arc::new(Mutex::new(WatchHandler::create_with_change_fn(
             Box::new(move |old_data: &f32, new_data: &f32| {
-                (*new_data - *old_data).abs() >= OFFSET_DELTA
+                (*new_data - *old_data).abs() >= ADJUSTMENT_DELTA
             }),
             0.0,
         )));
-    let (offset_channel_sender, offset_channel_receiver) =
+    let (adjustment_channel_sender, adjustment_channel_receiver) =
         futures::channel::mpsc::unbounded::<f32>();
 
     let control_clone = control.clone();
@@ -68,7 +69,7 @@ async fn run_brightness_server(
         let mut control = control_clone.lock().await;
         control.add_current_sender_channel(current_channel_sender).await;
         control.add_auto_sender_channel(auto_channel_sender).await;
-        control.add_offset_sender_channel(offset_channel_sender).await;
+        control.add_adjustment_sender_channel(adjustment_channel_sender).await;
     }
 
     let listen_current_task_abort_handle = start_listen_task(
@@ -79,9 +80,9 @@ async fn run_brightness_server(
     let listen_auto_task_abort_handle =
         start_listen_task(watch_auto_handler.clone(), Arc::new(Mutex::new(auto_channel_receiver)));
 
-    let listen_offset_task_abort_handle = start_listen_task(
-        watch_offset_handler.clone(),
-        Arc::new(Mutex::new(offset_channel_receiver)),
+    let listen_adjustment_task_abort_handle = start_listen_task(
+        watch_adjustment_handler.clone(),
+        Arc::new(Mutex::new(adjustment_channel_receiver)),
     );
 
     while let Some(request) = stream.try_next().await.context("error running brightness server")? {
@@ -91,13 +92,13 @@ async fn run_brightness_server(
                 request,
                 watch_current_handler.clone(),
                 watch_auto_handler.clone(),
-                watch_offset_handler.clone(),
+                watch_adjustment_handler.clone(),
             )
             .await;
     }
     listen_current_task_abort_handle.abort();
     listen_auto_task_abort_handle.abort();
-    listen_offset_task_abort_handle.abort();
+    listen_adjustment_task_abort_handle.abort();
     Ok(())
 }
 
@@ -171,15 +172,15 @@ async fn main() -> Result<(), Error> {
     let auto_sender_channel: SenderChannel<bool> = SenderChannel::new();
     let auto_sender_channel = Arc::new(Mutex::new(auto_sender_channel));
 
-    let offset_sender_channel: SenderChannel<f32> = SenderChannel::new();
-    let offset_sender_channel = Arc::new(Mutex::new(offset_sender_channel));
+    let adjustment_sender_channel: SenderChannel<f32> = SenderChannel::new();
+    let adjustment_sender_channel = Arc::new(Mutex::new(adjustment_sender_channel));
 
     let control = Control::new(
         sensor,
         backlight,
         current_sender_channel,
         auto_sender_channel,
-        offset_sender_channel,
+        adjustment_sender_channel,
     )
     .await;
     let control = Arc::new(Mutex::new(control));
