@@ -18,8 +18,7 @@ namespace activity {
 ActivityControlConnection::ActivityControlConnection(
     StateMachineDriver* state_machine_driver, async_dispatcher_t* dispatcher,
     fidl::InterfaceRequest<fuchsia::ui::activity::control::Control> request)
-    : state_machine_driver_(state_machine_driver),
-      binding_(this, std::move(request), dispatcher) {}
+    : state_machine_driver_(state_machine_driver), binding_(this, std::move(request), dispatcher) {}
 
 void ActivityControlConnection::SetState(fuchsia::ui::activity::State state) {
   state_machine_driver_->SetOverrideState(state);

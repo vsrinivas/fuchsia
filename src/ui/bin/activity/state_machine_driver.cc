@@ -42,57 +42,64 @@ zx_status_t StateMachineDriver::UnregisterObserver(ObserverId id) {
 }
 
 zx_status_t StateMachineDriver::ReceiveDiscreteActivity(
-    const fuchsia::ui::activity::DiscreteActivity& activity, zx::time time) {
+    const fuchsia::ui::activity::DiscreteActivity& activity, zx::time time, VoidCallback callback) {
   if (time < last_transition_time_) {
+    callback();
     return ZX_ERR_OUT_OF_RANGE;
   }
   auto event = ActivityStateMachine::EventForDiscreteActivity(activity);
   return async::PostTaskForTime(
       dispatcher_,
-      [weak = weak_factory_.GetWeakPtr(), event, time] {
+      [weak = weak_factory_.GetWeakPtr(), event, time, callback = std::move(callback)] {
         if (weak) {
           weak->ProcessEvent(event, time);
         }
+        callback();
       },
       time);
 }
 
-zx_status_t StateMachineDriver::StartOngoingActivity(OngoingActivityId id, zx::time time) {
+zx_status_t StateMachineDriver::StartOngoingActivity(OngoingActivityId id, zx::time time,
+                                                     VoidCallback callback) {
   if (time < last_transition_time_) {
+    callback();
     return ZX_ERR_OUT_OF_RANGE;
   }
   return async::PostTaskForTime(
       dispatcher_,
-      [weak = weak_factory_.GetWeakPtr(), id, time] {
+      [weak = weak_factory_.GetWeakPtr(), id, time, callback = std::move(callback)] {
         if (weak) {
           auto event = ActivityStateMachine::EventForOngoingActivityStart();
           weak->ProcessActivityStart(id);
           weak->ProcessEvent(event, time);
         }
+        callback();
       },
       time);
 }
 
-zx_status_t StateMachineDriver::EndOngoingActivity(OngoingActivityId id, zx::time time) {
+zx_status_t StateMachineDriver::EndOngoingActivity(OngoingActivityId id, zx::time time,
+                                                   VoidCallback callback) {
   if (time < last_transition_time_) {
+    callback();
     return ZX_ERR_OUT_OF_RANGE;
   }
   return async::PostTaskForTime(
       dispatcher_,
-      [weak = weak_factory_.GetWeakPtr(), id, time] {
+      [weak = weak_factory_.GetWeakPtr(), id, time, callback = std::move(callback)] {
         if (weak) {
           auto event = ActivityStateMachine::EventForOngoingActivityEnd();
           weak->ProcessActivityEnd(id);
           weak->ProcessEvent(event, time);
         }
+        callback();
       },
       time);
 }
 
 void StateMachineDriver::SetOverrideState(std::optional<fuchsia::ui::activity::State> state) {
-  bool should_notify =
-      (state.has_value() != override_state_.has_value())
-      || (override_state_ && (state != override_state_));
+  bool should_notify = (state.has_value() != override_state_.has_value()) ||
+                       (override_state_ && (state != override_state_));
   override_state_ = state;
   if (should_notify) {
     FXL_LOG(INFO) << "activity-service: entering state '" << GetState() << "'";

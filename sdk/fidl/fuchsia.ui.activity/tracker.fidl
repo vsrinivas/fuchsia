@@ -14,17 +14,17 @@ using OngoingActivityId = uint32;
 protocol Tracker {
     /// Reports a discrete activity such as a keystroke.
     /// |event_time| is in nanoseconds in the `CLOCK_MONOTONIC` time base.
-    ReportDiscreteActivity(DiscreteActivity activity, zx.time event_time);
+    ReportDiscreteActivity(DiscreteActivity activity, zx.time event_time) -> ();
 
     /// Reports the start of an ongoing activity such as media playback.
-    /// Returns a unique |activity_id| which is expected to be later passed
-    /// to EndOngoingActivity.
+    /// |activity_id| is a unique identifier which is expected to be later
+    /// passed to EndOngoingActivity.
     /// |start_time| is in nanoseconds in the `CLOCK_MONOTONIC` time base.
-    StartOngoingActivity(OngoingActivity activity, zx.time start_time)
-        -> (OngoingActivityId activity_id);
+    StartOngoingActivity(OngoingActivityId activity_id, OngoingActivity activity,
+                         zx.time start_time) -> ();
 
     /// Reports the end of an ongoing activity such as media playback.
-    /// |activity_id| is the nonce which was returned by StartOngoingActivity.
+    /// |activity_id| is the nonce which was passed into StartOngoingActivity.
     /// |end_time| is in nanoseconds in the `CLOCK_MONOTONIC` time base.
-    EndOngoingActivity(OngoingActivityId activity_id, zx.time end_time);
+    EndOngoingActivity(OngoingActivityId activity_id, zx.time end_time) -> ();
 };

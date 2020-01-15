@@ -31,8 +31,10 @@ class FakeActivityTracker : public fuchsia::ui::activity::testing::Tracker_TestB
   }
 
   void ReportDiscreteActivity(fuchsia::ui::activity::DiscreteActivity activity,
-                              zx_time_t event_time) override {
+                              zx_time_t event_time,
+                              ReportDiscreteActivityCallback callback) override {
     activities_.push_back(std::move(activity));
+    callback();
   }
 
   const std::vector<fuchsia::ui::activity::DiscreteActivity>& activities() const {

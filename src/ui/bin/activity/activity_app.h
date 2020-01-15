@@ -5,8 +5,8 @@
 #ifndef SRC_UI_BIN_ACTIVITY_ACTIVITY_APP_H_
 #define SRC_UI_BIN_ACTIVITY_ACTIVITY_APP_H_
 
-#include <fuchsia/ui/activity/cpp/fidl.h>
 #include <fuchsia/ui/activity/control/cpp/fidl.h>
+#include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 

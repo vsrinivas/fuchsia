@@ -21,6 +21,8 @@
 
 namespace activity {
 
+using VoidCallback = fit::function<void()>;
+
 using StateChangedCallback =
     fit::function<void(fuchsia::ui::activity::State state, zx::time transition_time)>;
 
@@ -53,10 +55,13 @@ class StateMachineDriver {
   // handle the given activity, scheduling the work item to run at |time|.
   // If |time| was before the last state transition, it is ignored and ZX_ERR_OUT_OF_BOUNDS is
   // returned. (Events may be interpreted differently depending on the current state.)
+  //
+  // |callback| is invoked once the work item on the async loop is executed. If an error is
+  // returned, |callback| is invoked immediately and synchronously.
   zx_status_t ReceiveDiscreteActivity(const fuchsia::ui::activity::DiscreteActivity& activity,
-                                      zx::time time);
-  zx_status_t StartOngoingActivity(OngoingActivityId id, zx::time time);
-  zx_status_t EndOngoingActivity(OngoingActivityId id, zx::time time);
+                                      zx::time time, VoidCallback callback);
+  zx_status_t StartOngoingActivity(OngoingActivityId id, zx::time time, VoidCallback callback);
+  zx_status_t EndOngoingActivity(OngoingActivityId id, zx::time time, VoidCallback callback);
 
   // Force the state machine into |state|.
   //

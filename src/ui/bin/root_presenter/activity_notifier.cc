@@ -59,12 +59,16 @@ void ActivityNotifierImpl::MaybeEnqueueActivity(fuchsia::ui::activity::DiscreteA
 void ActivityNotifierImpl::NotifyForPendingActivity() {
   if (pending_activity_ && activity_tracker_service_) {
     auto now = async::Now(dispatcher_);
-    activity_tracker_service_->ReportDiscreteActivity(std::move(*pending_activity_), now.get());
-    notify_task_.PostDelayed(dispatcher_, interval_);
+    activity_tracker_service_->ReportDiscreteActivity(
+        std::move(*pending_activity_), now.get(), [this]() {
+            notify_task_.PostDelayed(dispatcher_, interval_);
+            pending_activity_ = std::nullopt;
+        });
+  } else {
+    // |notify_task_| is intentionally not re-scheduled if no input was received recently. It
+    // will be scheduled again on the next call to |ReceiveInput|.
+    pending_activity_ = std::nullopt;
   }
-  // |notify_task_| is intentionally not re-scheduled if no input was received recently. It
-  // will be scheduled again on the next call to |ReceiveInput|.
-  pending_activity_ = std::nullopt;
 }
 
 std::optional<DiscreteActivity> ActivityNotifierImpl::ActivityForInputEvent(

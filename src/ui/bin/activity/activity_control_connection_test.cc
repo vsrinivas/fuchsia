@@ -18,8 +18,8 @@ class ActivityControlConnectionTest : public ::gtest::TestLoopFixture {
   ActivityControlConnectionTest() : driver_(dispatcher()) {}
 
   void SetUp() override {
-    conn_ = std::make_unique<ActivityControlConnection>(
-        &driver_, dispatcher(), client_.NewRequest(dispatcher()));
+    conn_ = std::make_unique<ActivityControlConnection>(&driver_, dispatcher(),
+                                                        client_.NewRequest(dispatcher()));
   }
 
  protected:

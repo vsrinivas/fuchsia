@@ -11,7 +11,6 @@
 #include <lib/zx/time.h>
 #include <zircon/types.h>
 
-#include <random>
 #include <set>
 
 #include "src/lib/fxl/macros.h"
@@ -29,8 +28,7 @@ class ActivityTrackerConnection : public fuchsia::ui::activity::Tracker {
  public:
   ActivityTrackerConnection(StateMachineDriver* state_machine_driver,
                             async_dispatcher_t* dispatcher,
-                            fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request,
-                            uint32_t random_seed);
+                            fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request);
   ~ActivityTrackerConnection();
 
   // Cleans up any resources owned by the instance, including terminating all ongoing activities.
@@ -42,21 +40,19 @@ class ActivityTrackerConnection : public fuchsia::ui::activity::Tracker {
 
   // fuchsia::ui::activity::Tracker API
   virtual void ReportDiscreteActivity(fuchsia::ui::activity::DiscreteActivity activity,
-                                      zx_time_t time);
-  virtual void StartOngoingActivity(fuchsia::ui::activity::OngoingActivity activity, zx_time_t time,
+                                      zx_time_t time, ReportDiscreteActivityCallback callback);
+  virtual void StartOngoingActivity(OngoingActivityId id,
+                                    fuchsia::ui::activity::OngoingActivity activity, zx_time_t time,
                                     StartOngoingActivityCallback callback);
-  virtual void EndOngoingActivity(OngoingActivityId id, zx_time_t time);
+  virtual void EndOngoingActivity(OngoingActivityId id, zx_time_t time,
+                                  EndOngoingActivityCallback callback);
 
  private:
-  OngoingActivityId GenerateActivityId() { return static_cast<OngoingActivityId>(random_()); }
-
   zx::time last_activity_time_;
 
   StateMachineDriver* const state_machine_driver_;
 
   async_dispatcher_t* const dispatcher_;
-
-  std::default_random_engine random_;
 
   std::set<OngoingActivityId> ongoing_activities_;
 

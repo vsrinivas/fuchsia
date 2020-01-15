@@ -58,8 +58,7 @@ void ActivityApp::AddTrackerBinding(
     fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request) {
   zx::unowned_channel unowned(request.channel());
   auto conn = std::make_unique<ActivityTrackerConnection>(state_machine_driver_.get(), dispatcher_,
-                                                          std::move(request),
-                                                          zx::clock::get_monotonic().get());
+                                                          std::move(request));
   conn->set_error_handler([this, unowned, cp = conn.get()](zx_status_t status) {
     cp->Stop();
     auto entry = tracker_bindings_.find(unowned);

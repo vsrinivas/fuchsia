@@ -46,24 +46,88 @@ TEST_F(StateMachineDriverTest, IgnoresEventsBeforeDriverInitTime) {
   auto t_past = Now() - zx::duration(zx::sec(1));
 
   // Any events at time t_past (which is < Now) should be ignored
-  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), t_past),
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), t_past, []() {}),
             ZX_ERR_OUT_OF_RANGE);
-  ASSERT_EQ(state_machine_driver_->StartOngoingActivity(kActivityId, t_past), ZX_ERR_OUT_OF_RANGE);
-  ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, t_past), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(state_machine_driver_->StartOngoingActivity(kActivityId, t_past, []() {}),
+            ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, t_past, []() {}),
+            ZX_ERR_OUT_OF_RANGE);
+}
+
+TEST_F(StateMachineDriverTest, InvokesCallbackOnSuccessfulCall) {
+  int callback_invocations = 0;
+  // Any events at time t_past (which is < Now) should be ignored
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(
+                DiscreteActivity(), Now(), [&callback_invocations]() { callback_invocations++; }),
+            ZX_OK);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(callback_invocations, 1);
+
+  ASSERT_EQ(state_machine_driver_->StartOngoingActivity(
+                kActivityId, Now(), [&callback_invocations]() { callback_invocations++; }),
+            ZX_OK);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(callback_invocations, 2);
+
+  ASSERT_EQ(state_machine_driver_->EndOngoingActivity(
+                kActivityId, Now(), [&callback_invocations]() { callback_invocations++; }),
+            ZX_OK);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(callback_invocations, 3);
+}
+
+TEST_F(StateMachineDriverTest, InvokesCallbackOnSuccessfulButIgnoredCall) {
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now(), []() {}),
+            ZX_OK);
+
+  int callback_invocations = 0;
+  // Any events at time t_past (which is < Now) should be ignored
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(
+                DiscreteActivity(), Now(), [&callback_invocations]() { callback_invocations++; }),
+            ZX_OK);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(callback_invocations, 1);
+}
+
+TEST_F(StateMachineDriverTest, InvokesCallbackOnOutOfRange) {
+  auto t_past = Now() - zx::duration(zx::sec(1));
+
+  int callback_invocations = 0;
+  // Any events at time t_past (which is < Now) should be ignored
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(
+                DiscreteActivity(), t_past, [&callback_invocations]() { callback_invocations++; }),
+            ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(state_machine_driver_->StartOngoingActivity(
+                kActivityId, t_past, [&callback_invocations]() { callback_invocations++; }),
+            ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(state_machine_driver_->EndOngoingActivity(
+                kActivityId, t_past, [&callback_invocations]() { callback_invocations++; }),
+            ZX_ERR_OUT_OF_RANGE);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(callback_invocations, 3);
 }
 
 TEST_F(StateMachineDriverTest, IgnoresOldEvents) {
   auto t_present = Now() + zx::duration(zx::sec(1));
   auto t_past = Now();
   // Advances time to t_present
-  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), t_present), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), t_present, []() {}),
+            ZX_OK);
   RunLoopUntil(t_present);
 
   // Any events at time t_past (which is < t_present) should be ignored
-  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), t_past),
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), t_past, []() {}),
             ZX_ERR_OUT_OF_RANGE);
-  ASSERT_EQ(state_machine_driver_->StartOngoingActivity(kActivityId, t_past), ZX_ERR_OUT_OF_RANGE);
-  ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, t_past), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(state_machine_driver_->StartOngoingActivity(kActivityId, t_past, []() {}),
+            ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, t_past, []() {}),
+            ZX_ERR_OUT_OF_RANGE);
 }
 
 TEST_F(StateMachineDriverTest, AllowsOldEventsIfAfterLastStateChange) {
@@ -75,30 +139,32 @@ TEST_F(StateMachineDriverTest, AllowsOldEventsIfAfterLastStateChange) {
   RunLoopUntil(t3);
 
   // Events at t2 (which is < t3 but still after the last state change t1) should still be handled
-  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), t2), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), t2, []() {}), ZX_OK);
   RunLoopUntilIdle();
 }
 
 TEST_F(StateMachineDriverTest, BecomesActiveOnDiscreteActivity) {
-  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now(), []() {}),
+            ZX_OK);
   RunLoopUntilIdle();
   EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 }
 
 TEST_F(StateMachineDriverTest, BecomesActiveOnActivityStart) {
-  ASSERT_EQ(state_machine_driver_->StartOngoingActivity(kActivityId, Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->StartOngoingActivity(kActivityId, Now(), []() {}), ZX_OK);
   RunLoopUntilIdle();
   EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 }
 
 TEST_F(StateMachineDriverTest, BecomesActiveOnSpuriousActivityEnd) {
-  ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, Now(), []() {}), ZX_OK);
   RunLoopUntilIdle();
   EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 }
 
 TEST_F(StateMachineDriverTest, BecomesIdleOnTimeout) {
-  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now(), []() {}),
+            ZX_OK);
   RunLoopUntilIdle();
   ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
@@ -109,7 +175,8 @@ TEST_F(StateMachineDriverTest, BecomesIdleOnTimeout) {
 }
 
 TEST_F(StateMachineDriverTest, RepeatedActivitiesResetTimer) {
-  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now(), []() {}),
+            ZX_OK);
   RunLoopUntilIdle();
   ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
@@ -120,7 +187,8 @@ TEST_F(StateMachineDriverTest, RepeatedActivitiesResetTimer) {
   RunLoopFor((*timeout) - zx::duration(zx::msec(1)));
   ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
-  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now(), []() {}),
+            ZX_OK);
   RunLoopUntilIdle();
   ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
@@ -131,7 +199,7 @@ TEST_F(StateMachineDriverTest, RepeatedActivitiesResetTimer) {
 }
 
 TEST_F(StateMachineDriverTest, IgnoresTimeoutsIfActivityStarted) {
-  ASSERT_EQ(state_machine_driver_->StartOngoingActivity(kActivityId, Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->StartOngoingActivity(kActivityId, Now(), []() {}), ZX_OK);
   RunLoopUntilIdle();
   ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
@@ -141,7 +209,7 @@ TEST_F(StateMachineDriverTest, IgnoresTimeoutsIfActivityStarted) {
   EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
   // Ending the activity allows the next timeout to proceed
-  ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, Now(), []() {}), ZX_OK);
   RunLoopUntilIdle();
   ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
@@ -150,7 +218,7 @@ TEST_F(StateMachineDriverTest, IgnoresTimeoutsIfActivityStarted) {
 }
 
 TEST_F(StateMachineDriverTest, HandlesTimeoutsIfActivitySpuriouslyEnded) {
-  ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->EndOngoingActivity(kActivityId, Now(), []() {}), ZX_OK);
   RunLoopUntilIdle();
   ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
@@ -170,7 +238,8 @@ TEST_F(StateMachineDriverTest, NotifiesSingleObserverOnStateChanges) {
       }};
   EXPECT_EQ(state_machine_driver_->RegisterObserver(1u, std::move(callback)), ZX_OK);
 
-  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now(), []() {}),
+            ZX_OK);
   RunLoopUntilIdle();
   EXPECT_EQ(calls, 1);
   EXPECT_EQ(observed_state, fuchsia::ui::activity::State::ACTIVE);
@@ -192,7 +261,8 @@ TEST_F(StateMachineDriverTest, NotifiesMultipleObserversOnStateChanage) {
   EXPECT_EQ(state_machine_driver_->RegisterObserver(1u, std::move(callback1)), ZX_OK);
   EXPECT_EQ(state_machine_driver_->RegisterObserver(2u, std::move(callback2)), ZX_OK);
 
-  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now(), []() {}),
+            ZX_OK);
   RunLoopUntilIdle();
   EXPECT_EQ(call1_calls, 1);
   EXPECT_EQ(call2_calls, 1);
@@ -210,7 +280,8 @@ TEST_F(StateMachineDriverTest, StopsNotifyingUnregisteredObservers) {
       [&calls](__UNUSED fuchsia::ui::activity::State state, __UNUSED zx::time time) { calls++; }};
   EXPECT_EQ(state_machine_driver_->RegisterObserver(1u, std::move(callback)), ZX_OK);
 
-  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now(), []() {}),
+            ZX_OK);
   RunLoopUntilIdle();
   EXPECT_EQ(calls, 1);
 
@@ -229,7 +300,8 @@ TEST_F(StateMachineDriverTest, TimeoutsIgnoredIfObjectDestroyedBeforeExpiry) {
       [&calls](__UNUSED fuchsia::ui::activity::State state, __UNUSED zx::time time) { calls++; }};
   {
     StateMachineDriver driver(dispatcher());
-    ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
+    ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now(), []() {}),
+              ZX_OK);
     RunLoopUntilIdle();
     ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
@@ -306,7 +378,6 @@ TEST_F(StateMachineDriverTest, StateOverride_NotifiesObserverOfRealStateWhenUnse
   EXPECT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::IDLE);
 }
 
-
 TEST_F(StateMachineDriverTest, StateOverride_PreventsNotificationsForReportedActivities) {
   int calls = 0;
   fuchsia::ui::activity::State observed_state = fuchsia::ui::activity::State::UNKNOWN;
@@ -323,7 +394,8 @@ TEST_F(StateMachineDriverTest, StateOverride_PreventsNotificationsForReportedAct
   ASSERT_EQ(observed_state, fuchsia::ui::activity::State::IDLE);
   ASSERT_EQ(state_machine_driver_->GetState(), fuchsia::ui::activity::State::IDLE);
 
-  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now()), ZX_OK);
+  ASSERT_EQ(state_machine_driver_->ReceiveDiscreteActivity(DiscreteActivity(), Now(), []() {}),
+            ZX_OK);
   RunLoopUntilIdle();
   // Still IDLE, and no additional calls to the observer
   EXPECT_EQ(calls, 1);

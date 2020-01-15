@@ -4,8 +4,8 @@
 
 #include "src/ui/bin/activity/activity_app.h"
 
-#include <fuchsia/ui/activity/cpp/fidl.h>
 #include <fuchsia/ui/activity/control/cpp/fidl.h>
+#include <fuchsia/ui/activity/cpp/fidl.h>
 
 #include <memory>
 
@@ -78,21 +78,26 @@ TEST_F(ActivityAppTest, Tracker_SendActivity) {
   app_->AddTrackerBinding(tracker.NewRequest(dispatcher()));
 
   ASSERT_EQ(driver_->GetState(), fuchsia::ui::activity::State::IDLE);
-  tracker->ReportDiscreteActivity(DiscreteActivity(), Now().get());
+  int callback_invocations = 0;
+  tracker->ReportDiscreteActivity(DiscreteActivity(), Now().get(),
+                                  [&callback_invocations]() { callback_invocations++; });
   RunLoopUntilIdle();
   EXPECT_EQ(driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(callback_invocations, 1);
 }
 
 TEST_F(ActivityAppTest, Tracker_OngoingActivity) {
   fuchsia::ui::activity::TrackerPtr tracker;
   app_->AddTrackerBinding(tracker.NewRequest(dispatcher()));
   ASSERT_EQ(driver_->GetState(), fuchsia::ui::activity::State::IDLE);
-  OngoingActivityId id;
+  OngoingActivityId id = 1234;
 
-  tracker->StartOngoingActivity(OngoingActivity(), Now().get(),
-                                [&id](OngoingActivityId returned_id) { id = returned_id; });
+  int start_callback_invocations = 0;
+  tracker->StartOngoingActivity(id, OngoingActivity(), Now().get(),
+                                [&start_callback_invocations]() { start_callback_invocations++; });
   RunLoopUntilIdle();
   EXPECT_EQ(driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(start_callback_invocations, 1);
 
   auto timeout = driver_->state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
   ASSERT_NE(timeout, std::nullopt);
@@ -100,9 +105,12 @@ TEST_F(ActivityAppTest, Tracker_OngoingActivity) {
   // No state change expected after timeout since there is an ongoing activity
   EXPECT_EQ(driver_->GetState(), fuchsia::ui::activity::State::ACTIVE);
 
-  tracker->EndOngoingActivity(id, Now().get());
+  int end_callback_invocations = 0;
+  tracker->EndOngoingActivity(id, Now().get(),
+                              [&end_callback_invocations]() { end_callback_invocations++; });
   RunLoopFor(*timeout);
   EXPECT_EQ(driver_->GetState(), fuchsia::ui::activity::State::IDLE);
+  EXPECT_EQ(end_callback_invocations, 1);
 }
 
 TEST_F(ActivityAppTest, Provider_ConnectDisconnect) {
@@ -140,11 +148,14 @@ TEST_F(ActivityAppTest, Provider_ReceivesSubsequentStates) {
   provider->WatchState(listener.NewHandle(dispatcher()));
   RunLoopUntilIdle();
 
-  tracker->ReportDiscreteActivity(DiscreteActivity(), Now().get());
+  int callback_invocations = 0;
+  tracker->ReportDiscreteActivity(DiscreteActivity(), Now().get(),
+                                  [&callback_invocations]() { callback_invocations++; });
   auto timeout = driver_->state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
   ASSERT_NE(timeout, std::nullopt);
   RunLoopFor(*timeout);
 
+  ASSERT_EQ(callback_invocations, 1);
   ASSERT_EQ(listener.StateChanges().size(), 3u);
   EXPECT_EQ(listener.StateChanges()[0].state, fuchsia::ui::activity::State::IDLE);
   EXPECT_EQ(listener.StateChanges()[1].state, fuchsia::ui::activity::State::ACTIVE);
@@ -180,11 +191,14 @@ TEST_F(ActivityAppTest, Provider_MultipleProviders_AllReceiveState) {
   provider2->WatchState(listener2.NewHandle(dispatcher()));
   RunLoopUntilIdle();
 
-  tracker->ReportDiscreteActivity(DiscreteActivity(), Now().get());
+  int callback_invocations = 0;
+  tracker->ReportDiscreteActivity(DiscreteActivity(), Now().get(),
+                                  [&callback_invocations]() { callback_invocations++; });
   auto timeout = driver_->state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
   ASSERT_NE(timeout, std::nullopt);
   RunLoopFor(*timeout);
 
+  ASSERT_EQ(callback_invocations, 1);
   ASSERT_EQ(listener1.StateChanges().size(), 3u);
   EXPECT_EQ(listener1.StateChanges()[0].state, fuchsia::ui::activity::State::IDLE);
   EXPECT_EQ(listener1.StateChanges()[1].state, fuchsia::ui::activity::State::ACTIVE);
@@ -260,11 +274,15 @@ TEST_F(ActivityAppTest, Control_OverrideState_TrackerInputsNotSentToListeners) {
   EXPECT_EQ(listener.StateChanges()[0].state, fuchsia::ui::activity::State::IDLE);
   EXPECT_EQ(listener.StateChanges()[1].state, fuchsia::ui::activity::State::ACTIVE);
 
-  tracker->ReportDiscreteActivity(DiscreteActivity(), Now().get());
+  int callback_invocations = 0;
+  tracker->ReportDiscreteActivity(DiscreteActivity(), Now().get(),
+                                  [&callback_invocations]() { callback_invocations++; });
   RunLoopUntilIdle();
 
   // No additional transitions
   EXPECT_EQ(listener.StateChanges().size(), 2u);
+  // Callback still invoked
+  EXPECT_EQ(callback_invocations, 1);
 
   auto timeout = driver_->state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
   ASSERT_NE(timeout, std::nullopt);

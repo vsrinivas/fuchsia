@@ -17,17 +17,17 @@ namespace activity {
 
 ActivityTrackerConnection::ActivityTrackerConnection(
     StateMachineDriver* state_machine_driver, async_dispatcher_t* dispatcher,
-    fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request, uint32_t random_seed)
+    fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request)
     : state_machine_driver_(state_machine_driver),
       dispatcher_(dispatcher),
-      random_(random_seed),
       binding_(this, std::move(request), dispatcher) {}
 
 ActivityTrackerConnection::~ActivityTrackerConnection() { Stop(); }
 
 void ActivityTrackerConnection::Stop() {
   for (const auto& id : ongoing_activities_) {
-    zx_status_t status = state_machine_driver_->EndOngoingActivity(id, async::Now(dispatcher_));
+    zx_status_t status =
+        state_machine_driver_->EndOngoingActivity(id, async::Now(dispatcher_), []() {});
     // Assert here since failing silently may result in a leaked activity which would stall the
     // state machine from timing out.
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to clean up activity %d: %s", id,
@@ -37,14 +37,16 @@ void ActivityTrackerConnection::Stop() {
 }
 
 void ActivityTrackerConnection::ReportDiscreteActivity(
-    fuchsia::ui::activity::DiscreteActivity activity, zx_time_t time) {
+    fuchsia::ui::activity::DiscreteActivity activity, zx_time_t time,
+    ReportDiscreteActivityCallback callback) {
   if (time < last_activity_time_.get()) {
     FXL_LOG(ERROR) << "activity-service: Received out-of-order events from client.";
     binding_.Close(ZX_ERR_OUT_OF_RANGE);
     return;
   }
   last_activity_time_ = zx::time(time);
-  zx_status_t status = state_machine_driver_->ReceiveDiscreteActivity(activity, zx::time(time));
+  zx_status_t status =
+      state_machine_driver_->ReceiveDiscreteActivity(activity, zx::time(time), std::move(callback));
   if (status != ZX_OK) {
     if (status == ZX_ERR_OUT_OF_RANGE) {
       FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp (" << time
@@ -58,19 +60,23 @@ void ActivityTrackerConnection::ReportDiscreteActivity(
 }
 
 void ActivityTrackerConnection::StartOngoingActivity(
-    fuchsia::ui::activity::OngoingActivity activity, zx_time_t time,
+    OngoingActivityId id, fuchsia::ui::activity::OngoingActivity activity, zx_time_t time,
     StartOngoingActivityCallback callback) {
+  if (ongoing_activities_.find(id) != ongoing_activities_.end()) {
+    FXL_LOG(ERROR) << "activity-service: activity already started: " << id;
+    binding_.Close(ZX_ERR_ALREADY_EXISTS);
+    return;
+  }
   if (time < last_activity_time_.get()) {
     FXL_LOG(ERROR) << "activity-service: Received out-of-order events from client.";
     binding_.Close(ZX_ERR_OUT_OF_RANGE);
     return;
   }
   last_activity_time_ = zx::time(time);
-  auto id = GenerateActivityId();
-  zx_status_t status = state_machine_driver_->StartOngoingActivity(id, zx::time(time));
+  zx_status_t status =
+      state_machine_driver_->StartOngoingActivity(id, zx::time(time), std::move(callback));
   if (status == ZX_OK) {
     ongoing_activities_.insert(id);
-    callback(id);
   } else {
     if (status == ZX_ERR_OUT_OF_RANGE) {
       FXL_LOG(WARNING) << "activity-service: Ignoring activity due to stale timestamp (" << time
@@ -84,7 +90,8 @@ void ActivityTrackerConnection::StartOngoingActivity(
   }
 }
 
-void ActivityTrackerConnection::EndOngoingActivity(OngoingActivityId id, zx_time_t time) {
+void ActivityTrackerConnection::EndOngoingActivity(OngoingActivityId id, zx_time_t time,
+                                                   EndOngoingActivityCallback callback) {
   if (time < last_activity_time_.get()) {
     FXL_LOG(ERROR) << "activity-service: Received out-of-order events from client.";
     binding_.Close(ZX_ERR_OUT_OF_RANGE);
@@ -97,7 +104,8 @@ void ActivityTrackerConnection::EndOngoingActivity(OngoingActivityId id, zx_time
     binding_.Close(ZX_ERR_NOT_FOUND);
     return;
   }
-  zx_status_t status = state_machine_driver_->EndOngoingActivity(id, zx::time(time));
+  zx_status_t status =
+      state_machine_driver_->EndOngoingActivity(id, zx::time(time), std::move(callback));
   if (status == ZX_OK) {
     ongoing_activities_.erase(iter);
   } else {

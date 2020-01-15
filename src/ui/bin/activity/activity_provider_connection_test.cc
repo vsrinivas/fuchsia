@@ -53,7 +53,7 @@ TEST_F(ActivityProviderConnectionTest, SingleStateChange) {
   testing::FakeListener listener;
   client_->WatchState(listener.NewHandle(dispatcher()));
 
-  driver_.ReceiveDiscreteActivity(DiscreteActivity(), Now());
+  driver_.ReceiveDiscreteActivity(DiscreteActivity(), Now(), []() {});
   RunLoopUntilIdle();
 
   EXPECT_EQ(listener.StateChanges().size(), 2u);
@@ -63,7 +63,7 @@ TEST_F(ActivityProviderConnectionTest, MultipleStateChanges) {
   testing::FakeListener listener;
   client_->WatchState(listener.NewHandle(dispatcher()));
 
-  driver_.ReceiveDiscreteActivity(DiscreteActivity(), Now());
+  driver_.ReceiveDiscreteActivity(DiscreteActivity(), Now(), []() {});
   auto timeout = driver_.state_machine().TimeoutFor(fuchsia::ui::activity::State::ACTIVE);
   ASSERT_NE(timeout, std::nullopt);
   RunLoopFor(*timeout);
