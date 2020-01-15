@@ -2,14 +2,29 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("crasher") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("crasher") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "cpp_specific.cc",
     "crasher.c",
   ]
   cflags = [ "-fstack-protector-all" ]
-  deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-  ]
+  deps = [ "//zircon/public/lib/fdio" ]
+  libs = [ "zircon" ]
+}
+
+migrated_manifest("crasher-manifest") {
+  deps = [ ":crasher" ]
 }

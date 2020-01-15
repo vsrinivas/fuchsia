@@ -14,7 +14,6 @@ group("uapp") {
     "clock",
     "clock:clkctl",
     "cpuctl",
-    "crasher",
     "disk-inspect",
     "disk-pave",
     "display-test",
