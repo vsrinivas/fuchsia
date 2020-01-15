@@ -228,12 +228,21 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::La
 }
 
 void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) {
-  auto debug_process = GetDebuggedProcess(request.process_koid);
+  // See first if the process is on limbo.
+  auto limbo_it = limbo_provider_->Limbo().find(request.process_koid);
+  if (limbo_it != limbo_provider_->Limbo().end()) {
+    // Release if from limbo, which will effectivelly kill it.
+    reply->status = limbo_provider_->ReleaseProcess(request.process_koid);
+    return;
+  }
 
+  // Otherwise we search locally.
+  auto debug_process = GetDebuggedProcess(request.process_koid);
   if (!debug_process || !debug_process->handle().is_valid()) {
     reply->status = ZX_ERR_NOT_FOUND;
     return;
   }
+
   debug_process->OnKill(request, reply);
   RemoveDebuggedProcess(request.process_koid);
 }
@@ -251,7 +260,7 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
       break;
     }
     case debug_ipc::TaskType::kProcess: {
-      // First check if the process is waiting on limbo. If so, we release it.
+      // First check if the process is waiting in limbo. If so, we release it.
       auto limbo_it = limbo_provider_->Limbo().find(request.koid);
       if (limbo_it != limbo_provider_->Limbo().end()) {
         reply->status = limbo_provider_->ReleaseProcess(request.koid);

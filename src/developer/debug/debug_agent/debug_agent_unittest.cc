@@ -222,9 +222,13 @@ std::unique_ptr<TestContext> CreateTestContext() {
   return context;
 }
 
+}  // namespace
+
 // Tests -------------------------------------------------------------------------------------------
 
-TEST(DebugAgent, OnGlobalStatus) {
+class DebugAgentTests : public ::testing::Test {};
+
+TEST_F(DebugAgentTests, OnGlobalStatus) {
   auto test_context = CreateTestContext();
 
   DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
@@ -327,7 +331,7 @@ TEST(DebugAgent, OnGlobalStatus) {
   // TODO(donosoc): Add exception type.
 }
 
-TEST(DebugAgent, OnProcessStatus) {
+TEST_F(DebugAgentTests, OnProcessStatus) {
   auto test_context = CreateTestContext();
   DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
@@ -389,7 +393,7 @@ TEST(DebugAgent, OnProcessStatus) {
   ASSERT_EQ(modules[0].modules[1].build_id, modules_to_send.modules[1].build_id);
 }
 
-TEST(DebugAgent, OnAttachNotFound) {
+TEST_F(DebugAgentTests, OnAttachNotFound) {
   uint32_t transaction_id = 1u;
 
   auto test_context = CreateTestContext();
@@ -434,7 +438,7 @@ TEST(DebugAgent, OnAttachNotFound) {
   }
 }
 
-TEST(DebugAgent, OnAttach) {
+TEST_F(DebugAgentTests, OnAttach) {
   uint32_t transaction_id = 1u;
 
   auto test_context = CreateTestContext();
@@ -490,7 +494,7 @@ TEST(DebugAgent, OnAttach) {
   EXPECT_ZX_EQ(reply.status, ZX_ERR_ALREADY_BOUND);
 }
 
-TEST(DebugAgent, AttachToLimbo) {
+TEST_F(DebugAgentTests, AttachToLimbo) {
   uint32_t transaction_id = 1u;
 
   auto test_context = CreateTestContext();
@@ -544,7 +548,7 @@ TEST(DebugAgent, AttachToLimbo) {
   }
 }
 
-TEST(DebugAgent, OnEnterLimbo) {
+TEST_F(DebugAgentTests, OnEnterLimbo) {
   auto test_context = CreateTestContext();
   DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
@@ -569,7 +573,7 @@ TEST(DebugAgent, OnEnterLimbo) {
   }
 }
 
-TEST(DebugAgent, DetachFromLimbo) {
+TEST_F(DebugAgentTests, DetachFromLimbo) {
   auto test_context = CreateTestContext();
   DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
   debug_agent.Connect(&test_context->stream_backend.stream());
@@ -622,5 +626,77 @@ TEST(DebugAgent, DetachFromLimbo) {
   }
 }
 
-}  // namespace
+TEST_F(DebugAgentTests, Kill) {
+  uint32_t transaction_id = 1u;
+
+  auto test_context = CreateTestContext();
+  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  debug_agent.Connect(&test_context->stream_backend.stream());
+  RemoteAPI* remote_api = &debug_agent;
+
+  auto [proc_object, thread_object] =
+      GetProcessThread(*test_context->object_provider, "job11-p1", "second-thread");
+
+  // Attempt to kill a process that's not there should fail.
+  {
+    debug_ipc::KillRequest kill_request = {};
+    kill_request.process_koid = proc_object->koid;
+
+    debug_ipc::KillReply kill_reply = {};
+    remote_api->OnKill(kill_request, &kill_reply);
+    ASSERT_ZX_EQ(kill_reply.status, ZX_ERR_NOT_FOUND);
+  }
+
+  // Attach to a process so that the debugger knows about it.
+  {
+    debug_ipc::AttachRequest attach_request = {};
+    attach_request.type = debug_ipc::TaskType::kProcess;
+    attach_request.koid = proc_object->koid;
+    remote_api->OnAttach(transaction_id++, attach_request);
+
+    // There should be a process.
+    ASSERT_EQ(debug_agent.procs_.size(), 1u);
+  }
+
+  // Killing now should work.
+  {
+    debug_ipc::KillRequest kill_request = {};
+    kill_request.process_koid = proc_object->koid;
+
+    debug_ipc::KillReply kill_reply = {};
+    remote_api->OnKill(kill_request, &kill_reply);
+
+    // There should be no more processes.
+    ASSERT_EQ(debug_agent.procs_.size(), 0u);
+
+    // Killing again should fail.
+    remote_api->OnKill(kill_request, &kill_reply);
+    ASSERT_ZX_EQ(kill_reply.status, ZX_ERR_NOT_FOUND);
+  }
+
+  // We now add the process to the limbo.
+  test_context->limbo_provider->AppendException(proc_object, thread_object,
+                                                ExceptionType::FATAL_PAGE_FAULT);
+
+  // There should be no more processes.
+  ASSERT_EQ(debug_agent.procs_.size(), 0u);
+
+  // Killing now should release it.
+  {
+    debug_ipc::KillRequest kill_request = {};
+    kill_request.process_koid = proc_object->koid;
+
+    debug_ipc::KillReply kill_reply = {};
+    remote_api->OnKill(kill_request, &kill_reply);
+    ASSERT_ZX_EQ(kill_reply.status, ZX_OK);
+
+    ASSERT_EQ(test_context->limbo_provider->release_calls().size(), 1u);
+    EXPECT_EQ(test_context->limbo_provider->release_calls()[0], proc_object->koid);
+
+    // Killing again should not find it.
+    remote_api->OnKill(kill_request, &kill_reply);
+    ASSERT_ZX_EQ(kill_reply.status, ZX_ERR_NOT_FOUND);
+  }
+}
+
 }  // namespace debug_agent

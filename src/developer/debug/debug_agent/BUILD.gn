@@ -88,6 +88,7 @@ static_library("lib") {
     "//src/developer/debug/third_party/libunwindstack",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
+    "//third_party/googletest:gtest_prod",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",

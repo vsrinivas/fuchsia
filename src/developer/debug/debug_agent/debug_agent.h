@@ -10,6 +10,7 @@
 #include <map>
 #include <memory>
 
+#include "gtest/gtest_prod.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/agent_configuration.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
@@ -79,6 +80,8 @@ class DebugAgent : public RemoteAPI,
   DebuggedThread* GetDebuggedThread(zx_koid_t process_koid, zx_koid_t thread_koid);
 
  private:
+  FRIEND_TEST(DebugAgentTests, Kill);
+
   // RemoteAPI implementation.
   void OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
                      debug_ipc::ConfigAgentReply* reply) override;
