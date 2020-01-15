@@ -51,13 +51,13 @@ class LoudnessTransform {
 // gain in dbfs.
 class MappedLoudnessTransform : public LoudnessTransform {
  public:
-  explicit MappedLoudnessTransform(VolumeCurve volume_curve)
-      : volume_curve_(std::move(volume_curve)) {}
+  // The `volume_curve` must live as long as this transform.
+  explicit MappedLoudnessTransform(const VolumeCurve& volume_curve) : volume_curve_(volume_curve) {}
 
   float EvaluateStageGain(const LoudnessTransform::Stage& stages) const override;
 
  private:
-  VolumeCurve volume_curve_;
+  const VolumeCurve& volume_curve_;
 };
 
 }  // namespace media::audio

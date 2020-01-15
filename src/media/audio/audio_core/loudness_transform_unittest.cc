@@ -17,7 +17,8 @@ class LoudnessTransformTest : public ::gtest::TestLoopFixture {
 };
 
 TEST_F(LoudnessTransformTest, VolumesMapped) {
-  auto tf = MappedLoudnessTransform(VolumeCurve::DefaultForMinGain(Gain::kMinGainDb));
+  const auto volume_curve = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
+  auto tf = MappedLoudnessTransform(volume_curve);
 
   EXPECT_FLOAT_EQ(tf.Evaluate<2>({VolumeValue{1.}, VolumeValue{1.}}), Gain::kUnityGainDb);
   EXPECT_LT(tf.Evaluate<2>({VolumeValue{1.}, VolumeValue{0.1}}), Gain::kUnityGainDb);
@@ -25,7 +26,8 @@ TEST_F(LoudnessTransformTest, VolumesMapped) {
 }
 
 TEST_F(LoudnessTransformTest, GainApplied) {
-  auto tf = MappedLoudnessTransform(VolumeCurve::DefaultForMinGain(Gain::kMinGainDb));
+  const auto volume_curve = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
+  auto tf = MappedLoudnessTransform(volume_curve);
 
   EXPECT_FLOAT_EQ(
       tf.Evaluate<2>({GainDbFsValue{Gain::kUnityGainDb}, GainDbFsValue{Gain::kUnityGainDb}}),
