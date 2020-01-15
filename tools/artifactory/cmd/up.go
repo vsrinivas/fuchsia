@@ -5,7 +5,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/md5"
 	"flag"
@@ -193,16 +192,14 @@ type uploadOptions struct {
 // cloudSink, the GCS-backed implementation below.
 type dataSink interface {
 
-	// ObjectExistsAt takes a name and a checksum, and returns whether an object
-	// of that name exists within the sink. If it does and has a checksum
-	// different than the provided, a checksumError will be returned.
-	objectExistsAt(context.Context, string, []byte) (bool, error)
+	// ObjectExistsAt returns whether an object of that name exists within the sink.
+	objectExistsAt(context.Context, string) (bool, error)
 
 	// Write writes the content of a file to a sink object at the given name.
 	// If an object at that name does not exists, it will be created; else it
 	// will be overwritten. If the written object has a checksum differing from
-	// the provided checksum, then an error will be returned (not necessarily of
-	// type checksumError, as this might derive from an opaque server-side error).
+	// the provided checksum, then an error will be returned, as this might
+	// derive from an opaque server-side error).
 	write(context.Context, string, string, []byte) error
 }
 
@@ -223,20 +220,12 @@ func newCloudSink(ctx context.Context, bucket string) (*cloudSink, error) {
 	}, nil
 }
 
-func (s cloudSink) objectExistsAt(ctx context.Context, name string, expectedChecksum []byte) (bool, error) {
-	obj := s.bucket.Object(name)
-	attrs, err := obj.Attrs(ctx)
+func (s cloudSink) objectExistsAt(ctx context.Context, name string) (bool, error) {
+	_, err := s.bucket.Object(name).Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
 		return false, nil
 	} else if err != nil {
 		return false, fmt.Errorf("object %q: possibly exists remotely, but is in an unknown state: %v", name, err)
-	}
-	if bytes.Compare(attrs.MD5, expectedChecksum) != 0 {
-		return true, checksumError{
-			name:     name,
-			expected: expectedChecksum,
-			actual:   attrs.MD5,
-		}
 	}
 	return true, nil
 }
@@ -336,13 +325,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 	upload := func() {
 		defer wg.Done()
 		for upload := range uploads {
-			checksum, err := md5Checksum(upload.Source)
-			if err != nil {
-				errs <- err
-				return
-			}
-
-			exists, err := dest.objectExistsAt(ctx, upload.Destination, checksum)
+			exists, err := dest.objectExistsAt(ctx, upload.Destination)
 			if err != nil {
 				errs <- err
 				return
@@ -354,6 +337,12 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 					return
 				}
 				continue
+			}
+
+			checksum, err := md5Checksum(upload.Source)
+			if err != nil {
+				errs <- err
+				return
 			}
 
 			logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)

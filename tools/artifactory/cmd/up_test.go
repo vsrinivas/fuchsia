@@ -36,20 +36,11 @@ func newMemSink() *memSink {
 	}
 }
 
-func (s *memSink) objectExistsAt(ctx context.Context, name string, expectedChecksum []byte) (bool, error) {
+func (s *memSink) objectExistsAt(ctx context.Context, name string) (bool, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	content, ok := s.contents[name]
-	if !ok {
+	if _, ok := s.contents[name]; !ok {
 		return false, nil
-	}
-	actualChecksum := md5.Sum(content)
-	if bytes.Compare(expectedChecksum, actualChecksum[:]) != 0 {
-		return true, checksumError{
-			name:     name,
-			expected: expectedChecksum,
-			actual:   actualChecksum[:],
-		}
 	}
 	return true, nil
 }
