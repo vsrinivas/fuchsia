@@ -243,7 +243,7 @@ async fn start_streaming(
         channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
     };
 
-    let source_stream = sources::build_stream(pcm_format.clone(), source_type)?;
+    let source_stream = sources::build_stream(&peer.key(), pcm_format.clone(), source_type)?;
 
     let mut encoded_stream = EncodedStreamSbc::build(pcm_format, &sbc_settings, source_stream)?;
 

@@ -6,6 +6,7 @@ use anyhow::{Context as _, Error};
 use fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, PcmFormat};
 use fuchsia_async as fasync;
 use fuchsia_audio_device_output::driver::SoftPcmOutput;
+use fuchsia_bluetooth::types::PeerId;
 use fuchsia_zircon::{self as zx, DurationNum};
 use futures::stream::{BoxStream, FusedStream};
 use futures::task::{Context, Poll};
@@ -75,12 +76,20 @@ impl SawWaveStream {
 
 pub struct AudioOutStream {}
 
+fn unique_id_from_peer(peer_id: &PeerId) -> [u8; 16] {
+    let mut unique_id: [u8; 16] = [2; 16];
+    unique_id[0..8].copy_from_slice(&(peer_id.0.to_be_bytes()));
+    unique_id
+}
+
 impl AudioOutStream {
     pub fn new(
+        peer_id: &PeerId,
         pcm_format: PcmFormat,
     ) -> Result<fuchsia_audio_device_output::driver::AudioFrameStream, Error> {
+        let id = unique_id_from_peer(peer_id);
         let (chan, frame_stream) =
-            SoftPcmOutput::build(&[1; 16], "Google", "Bluetooth A2DP", pcm_format, 12.millis())?;
+            SoftPcmOutput::build(&id, "Google", "Bluetooth A2DP", pcm_format, 12.millis())?;
 
         let svc = fuchsia_component::client::connect_to_service::<AudioDeviceEnumeratorMarker>()
             .context("Failed to connect to AudioDeviceEnumerator")?;
@@ -111,11 +120,27 @@ impl std::str::FromStr for AudioSourceType {
 }
 
 pub fn build_stream(
+    peer_id: &PeerId,
     pcm_format: PcmFormat,
     source_type: AudioSourceType,
 ) -> Result<BoxStream<'static, fuchsia_audio_device_output::Result<Vec<u8>>>, Error> {
     Ok(match source_type {
-        AudioSourceType::AudioOut => AudioOutStream::new(pcm_format)?.boxed(),
+        AudioSourceType::AudioOut => AudioOutStream::new(peer_id, pcm_format)?.boxed(),
         AudioSourceType::BigBen => SawWaveStream::new_big_ben(pcm_format).boxed(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unique_id_generation() {
+        let peer_id = PeerId(1);
+        let peer_id_same = PeerId(1);
+        let peer_id_different = PeerId(3);
+
+        assert_eq!(unique_id_from_peer(&peer_id_same), unique_id_from_peer(&peer_id));
+        assert_ne!(unique_id_from_peer(&peer_id_different), unique_id_from_peer(&peer_id));
+    }
 }

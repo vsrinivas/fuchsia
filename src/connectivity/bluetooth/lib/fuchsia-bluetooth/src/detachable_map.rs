@@ -35,6 +35,11 @@ impl<K: Hash + Eq, V> DetachableWeak<K, V> {
     pub fn detach(self) {
         self.parent.write().remove(&self.key);
     }
+
+    /// Get a reference to the key for this entry.
+    pub fn key(&self) -> &K {
+        &self.key
+    }
 }
 
 /// A Map with detachable entries.  After retrieval, entries can be "detached", removing them from
