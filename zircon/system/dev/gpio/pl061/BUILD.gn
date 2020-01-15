@@ -2,14 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_library("pl061") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+source_set("pl061") {
   sources = [ "pl061.c" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.gpioimpl",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/driver",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/ddk",
+    "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/banjo/ddk.protocol.gpioimpl",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
+
+  include_dirs = [ "//zircon/system/dev/gpio/pl061/include" ]
 }

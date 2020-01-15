@@ -19,7 +19,6 @@ group("dev") {
     "display",
     "ethernet",
     "fw",
-    "gpio",
     "gpu",
     "input",
     "light",
