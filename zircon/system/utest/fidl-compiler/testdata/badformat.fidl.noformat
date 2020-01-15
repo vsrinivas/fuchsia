@@ -109,15 +109,16 @@ Analyze(handle<process> process, handle<thread> thread)
 
     // Figure it out.
      -> Bar         (  int32 i,int32 k);
-     Baz(int32 j, string k     ) -> ( int32 y );
+     Baz(int32 j , string k     ) -> ( int32 y );
      Nimon(int32 j, string k     )
         -> ( int32 y );
 
-    Mandrel(int32 j, string k     )
+    Mandrel(int32 j   ,string k     )
         -> ( int32 y );
 
-    Skagra(int32 j,
+    Skagra(int32 j
 
+        ,
 
        // Weird comment in the middle
 

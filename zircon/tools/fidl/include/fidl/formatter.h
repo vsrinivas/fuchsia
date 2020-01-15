@@ -355,7 +355,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
              (ch == ':' && visitor_->blank_space_after_colon_);
     }
 
-    bool NoWSBeforeChar(char ch) { return (ch == ';'); }
+    bool NoWSBeforeChar(char ch) { return (ch == ';' || ch == ','); }
 
     bool NoWSAfterChar(char ch) {
       return (ch == ':' && !visitor_->blank_space_after_colon_) || (ch == '(');
