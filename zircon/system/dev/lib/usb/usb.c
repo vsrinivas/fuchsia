@@ -175,16 +175,20 @@ __EXPORT void* usb_desc_iter_get_structure(usb_desc_iter_t* iter, size_t structu
 // returns the next interface descriptor, optionally skipping alternate interfaces
 __EXPORT usb_interface_descriptor_t* usb_desc_iter_next_interface(usb_desc_iter_t* iter,
                                                                   bool skip_alt) {
-  usb_descriptor_header_t* header = usb_desc_iter_next(iter);
-
-  while (header) {
+  usb_descriptor_header_t* header;
+  while ((header = usb_desc_iter_peek(iter)) != NULL) {
     if (header->bDescriptorType == USB_DT_INTERFACE) {
-      usb_interface_descriptor_t* desc = (usb_interface_descriptor_t*)header;
+      usb_interface_descriptor_t* desc =
+          usb_desc_iter_get_structure(iter, sizeof(usb_interface_descriptor_t));
+      if (desc == NULL) {
+        return NULL;
+      }
       if (!skip_alt || desc->bAlternateSetting == 0) {
+        usb_desc_iter_advance(iter);
         return desc;
       }
     }
-    header = usb_desc_iter_next(iter);
+    usb_desc_iter_advance(iter);
   }
   // not found
   return NULL;
@@ -192,17 +196,22 @@ __EXPORT usb_interface_descriptor_t* usb_desc_iter_next_interface(usb_desc_iter_
 
 // returns the next endpoint descriptor within the current interface
 __EXPORT usb_endpoint_descriptor_t* usb_desc_iter_next_endpoint(usb_desc_iter_t* iter) {
-  usb_descriptor_header_t* header = usb_desc_iter_peek(iter);
-  while (header) {
+  usb_descriptor_header_t* header;
+  while ((header = usb_desc_iter_peek(iter)) != NULL) {
     if (header->bDescriptorType == USB_DT_INTERFACE) {
       // we are at end of previous interface
       return NULL;
     }
-    iter->current += header->bLength;
     if (header->bDescriptorType == USB_DT_ENDPOINT) {
-      return (usb_endpoint_descriptor_t*)header;
+      usb_endpoint_descriptor_t* desc =
+          usb_desc_iter_get_structure(iter, sizeof(usb_endpoint_descriptor_t));
+      if (desc == NULL) {
+        return NULL;
+      }
+      usb_desc_iter_advance(iter);
+      return desc;
     }
-    header = usb_desc_iter_peek(iter);
+    usb_desc_iter_advance(iter);
   }
   // not found
   return NULL;
@@ -212,18 +221,23 @@ __EXPORT usb_endpoint_descriptor_t* usb_desc_iter_next_endpoint(usb_desc_iter_t*
 // drivers may use usb_desc_iter_peek() to determine if an endpoint or ss_companion descriptor is
 // expected.
 __EXPORT usb_ss_ep_comp_descriptor_t* usb_desc_iter_next_ss_ep_comp(usb_desc_iter_t* iter) {
-  usb_descriptor_header_t* header = usb_desc_iter_peek(iter);
-  while (header) {
+  usb_descriptor_header_t* header;
+  while ((header = usb_desc_iter_peek(iter)) != NULL) {
     uint8_t desc_type = header->bDescriptorType;
     if (desc_type == USB_DT_ENDPOINT || desc_type == USB_DT_INTERFACE) {
       // we are either at next endpoint or end of previous interface
       return NULL;
     }
-    iter->current += header->bLength;
     if (header->bDescriptorType == USB_DT_SS_EP_COMPANION) {
-      return (usb_ss_ep_comp_descriptor_t*)header;
+      usb_ss_ep_comp_descriptor_t* desc =
+          usb_desc_iter_get_structure(iter, sizeof(usb_ss_ep_comp_descriptor_t));
+      if (desc == NULL) {
+        return NULL;
+      }
+      usb_desc_iter_advance(iter);
+      return desc;
     }
-    header = usb_desc_iter_peek(iter);
+    usb_desc_iter_advance(iter);
   }
   // not found
   return NULL;

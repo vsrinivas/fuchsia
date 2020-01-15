@@ -20,6 +20,23 @@ constexpr usb_interface_descriptor_t kTestUsbInterfaceDescriptor = {
     .iInterface = 0,
 };
 
+constexpr usb_endpoint_descriptor_t kTestUsbEndpointDescriptor = {
+    .bLength = sizeof(usb_endpoint_descriptor_t),
+    .bDescriptorType = USB_DT_ENDPOINT,
+    .bEndpointAddress = 0x81,
+    .bmAttributes = 2,
+    .wMaxPacketSize = 1024,
+    .bInterval = 0,
+};
+
+constexpr usb_ss_ep_comp_descriptor_t kTestUsbSsEpCompDescriptor = {
+    .bLength = sizeof(usb_ss_ep_comp_descriptor_t),
+    .bDescriptorType = USB_DT_SS_EP_COMPANION,
+    .bMaxBurst = 3,
+    .bmAttributes = 0,
+    .wBytesPerInterval = 0,
+};
+
 class UsbLibTest : public zxtest::Test {
  public:
   void SetUp() override {
@@ -176,6 +193,91 @@ TEST_F(UsbLibTest, TestUsbDescGetStructureOverflow) {
   ASSERT_OK(usb_desc_iter_init(GetUsbProto(), &iter));
   ASSERT_EQ(nullptr, usb_desc_iter_get_structure(&iter, sizeof(kTestUsbInterfaceDescriptor)));
   usb_desc_iter_release(&iter);
+}
+
+TEST_F(UsbLibTest, TestUsbDescIterNextInterface) {
+  // Layout is | Intf | Ep | SsEp | Intf | Ep | SsEp |.
+  size_t desc_length = (sizeof(kTestUsbInterfaceDescriptor) + sizeof(kTestUsbEndpointDescriptor) +
+                        sizeof(kTestUsbSsEpCompDescriptor)) *
+                       2;
+  void* desc = malloc(desc_length);
+  uint8_t* ptr = reinterpret_cast<uint8_t*>(desc);
+  usb_desc_iter_t iter;
+  for (size_t i = 0; i < 2; i++) {
+    memcpy(ptr, &kTestUsbInterfaceDescriptor, sizeof(kTestUsbInterfaceDescriptor));
+    ptr += sizeof(kTestUsbInterfaceDescriptor);
+    memcpy(ptr, &kTestUsbEndpointDescriptor, sizeof(kTestUsbEndpointDescriptor));
+    ptr += sizeof(kTestUsbEndpointDescriptor);
+    memcpy(ptr, &kTestUsbSsEpCompDescriptor, sizeof(kTestUsbSsEpCompDescriptor));
+    ptr += sizeof(kTestUsbSsEpCompDescriptor);
+  }
+  SetDescriptors(desc);
+  SetDescriptorLength(desc_length);
+  ASSERT_OK(usb_desc_iter_init(GetUsbProto(), &iter));
+  for (size_t i = 0; i < 2; i++) {
+    usb_interface_descriptor_t* interface = usb_desc_iter_next_interface(&iter, false);
+    ASSERT_NE(nullptr, interface);
+    ASSERT_EQ(memcmp(interface, &kTestUsbInterfaceDescriptor, sizeof(kTestUsbInterfaceDescriptor)),
+              0);
+  }
+  ASSERT_EQ(nullptr, usb_desc_iter_next_interface(&iter, false));
+}
+
+TEST_F(UsbLibTest, TestUsbDescIterNextEndpoint) {
+  // Layout is | Intf | Ep | Ep | Intf |.
+  size_t desc_length =
+      sizeof(kTestUsbInterfaceDescriptor) * 2 + sizeof(kTestUsbEndpointDescriptor) * 2;
+  void* desc = malloc(desc_length);
+  uint8_t* ptr = reinterpret_cast<uint8_t*>(desc);
+  usb_desc_iter_t iter;
+  memcpy(ptr, &kTestUsbInterfaceDescriptor, sizeof(kTestUsbInterfaceDescriptor));
+  ptr += sizeof(kTestUsbInterfaceDescriptor);
+  for (size_t i = 0; i < 2; i++) {
+    memcpy(ptr, &kTestUsbEndpointDescriptor, sizeof(kTestUsbEndpointDescriptor));
+    ptr += sizeof(kTestUsbEndpointDescriptor);
+  }
+  memcpy(ptr, &kTestUsbInterfaceDescriptor, sizeof(kTestUsbInterfaceDescriptor));
+  ptr += sizeof(kTestUsbInterfaceDescriptor);
+  SetDescriptors(desc);
+  SetDescriptorLength(desc_length);
+  ASSERT_OK(usb_desc_iter_init(GetUsbProto(), &iter));
+  ASSERT_NE(nullptr, usb_desc_iter_next_interface(&iter, false));
+  for (size_t i = 0; i < 2; i++) {
+    usb_endpoint_descriptor_t* ep = usb_desc_iter_next_endpoint(&iter);
+    ASSERT_NE(nullptr, ep);
+    ASSERT_EQ(memcmp(ep, &kTestUsbEndpointDescriptor, sizeof(kTestUsbEndpointDescriptor)), 0);
+  }
+  ASSERT_EQ(nullptr, usb_desc_iter_next_endpoint(&iter));
+}
+
+TEST_F(UsbLibTest, TestUsbDescIterNextSsEpComp) {
+  // Layout is | Intf | Ep | SsEp | SsEp | Intf |.
+  size_t desc_length = sizeof(kTestUsbInterfaceDescriptor) * 2 +
+                       sizeof(kTestUsbEndpointDescriptor) + sizeof(kTestUsbSsEpCompDescriptor) * 2;
+  void* desc = malloc(desc_length);
+  uint8_t* ptr = reinterpret_cast<uint8_t*>(desc);
+  usb_desc_iter_t iter;
+  memcpy(ptr, &kTestUsbInterfaceDescriptor, sizeof(kTestUsbInterfaceDescriptor));
+  ptr += sizeof(kTestUsbInterfaceDescriptor);
+  memcpy(ptr, &kTestUsbEndpointDescriptor, sizeof(kTestUsbEndpointDescriptor));
+  ptr += sizeof(kTestUsbEndpointDescriptor);
+  memcpy(ptr, &kTestUsbSsEpCompDescriptor, sizeof(kTestUsbSsEpCompDescriptor));
+  ptr += sizeof(kTestUsbSsEpCompDescriptor);
+  memcpy(ptr, &kTestUsbSsEpCompDescriptor, sizeof(kTestUsbSsEpCompDescriptor));
+  ptr += sizeof(kTestUsbSsEpCompDescriptor);
+  memcpy(ptr, &kTestUsbInterfaceDescriptor, sizeof(kTestUsbInterfaceDescriptor));
+  ptr += sizeof(kTestUsbInterfaceDescriptor);
+  SetDescriptors(desc);
+  SetDescriptorLength(desc_length);
+  ASSERT_OK(usb_desc_iter_init(GetUsbProto(), &iter));
+  ASSERT_NE(nullptr, usb_desc_iter_next_interface(&iter, false));
+  ASSERT_NE(nullptr, usb_desc_iter_next_endpoint(&iter));
+  for (size_t i = 0; i < 2; i++) {
+    usb_ss_ep_comp_descriptor_t* ss_ep = usb_desc_iter_next_ss_ep_comp(&iter);
+    ASSERT_NE(nullptr, ss_ep);
+    ASSERT_EQ(memcmp(ss_ep, &kTestUsbSsEpCompDescriptor, sizeof(kTestUsbSsEpCompDescriptor)), 0);
+  }
+  ASSERT_EQ(nullptr, usb_desc_iter_next_ss_ep_comp(&iter));
 }
 
 }  // namespace
