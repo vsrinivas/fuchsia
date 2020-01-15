@@ -23,7 +23,7 @@ source_set("common") {
   public_deps = [
     "$zx/system/banjo/ddk.protocol.badblock",
     "$zx/system/banjo/ddk.protocol.nand",
-    "$zx/system/dev/lib/operation",
+    "$zx/system/dev/lib/dev-operation",
     "$zx/system/fidl/fuchsia-hardware-skipblock:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

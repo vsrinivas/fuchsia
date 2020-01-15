@@ -49,7 +49,7 @@ zx_driver("virtio_ethernet") {
   deps = [
     ":common",
     "$zx/system/banjo/ddk.protocol.ethernet",
-    "$zx/system/dev/lib/operation",
+    "$zx/system/dev/lib/dev-operation",
     "$zx/system/ulib/ddktl",
   ]
 }

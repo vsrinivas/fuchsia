@@ -18,7 +18,7 @@ zx_library("usb") {
     "$zx/system/ulib/ddk:headers",
 
     # <usb/request-cpp.h> has  #include <lib/operation/operation.h>.
-    "$zx/system/dev/lib/operation:headers",
+    "$zx/system/dev/lib/dev-operation:headers",
     "$zx/system/ulib/fit",
   ]
   deps = [

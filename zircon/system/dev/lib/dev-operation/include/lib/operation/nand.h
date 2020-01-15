@@ -2,40 +2,44 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_BLOCK_H_
-#define ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_BLOCK_H_
+#ifndef ZIRCON_SYSTEM_DEV_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_NAND_H_
+#define ZIRCON_SYSTEM_DEV_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_NAND_H_
 
 #include <lib/operation/operation.h>
 
 #include <memory>
 
-#include <ddk/protocol/block.h>
+#include <ddk/protocol/nand.h>
 
-namespace block {
+// namespace nand is used because this library will inevitably move to
+// dev/lib/nand. In an effort to reduce dependencies (make doesn't support
+// transitive deps), it's currently in the operation lib.
+// TODO(surajmalhotra): Move to dev/lib/nand.
+namespace nand {
 
 // Usage notes:
 //
-// block::Operation is a c++ wrapper around the block_op_t object. It provides
-// capabilites to interact with a block_op buffer which is used to traverse the
-// block stack. On deletion, it will automatically free itself.
+// nand::Operation is a c++ wrapper around the nand_operation_t object. It provides
+// capabilites to interact with a nand_op buffer which is used to traverse the
+// nand stack. On deletion, it will automatically free itself.
 //
-// block::BorrowedOperation provides an unowned variant of block::Operation. It adds
+// nand::BorrowedOperation provides an unowned variant of nand::Operation. It adds
 // functionality to store and call a complete callback which isn't present in
-// block::Operation.  In addition, it will call the completion on destruction if it
+// nand::Operation.  In addition, it will call the completion on destruction if it
 // wasn't already triggered.
 //
-// block::OperationPool provides pooling functionality for block::Operation reuse.
+// nand::OperationPool provides pooling functionality for nand::Operation reuse.
 //
-// block::OperationQueue provides a queue interface for tracking block::Operation and
-// block::BorrowedOperation objects.
+// nand::OperationQueue provides a queue interface for tracking nand::Operation and
+// nand::BorrowedOperation objects.
 //
 // Available methods for both Operation and BorrowedOperation include:
 //
-//   block_op_t* operation(); // accessor for inner type.
+//   nand_operation_t* operation(); // accessor for inner type.
 //
 //   // Takes ownership of inner type. Should only be used when transferring
 //   // ownership to another driver.
-//   block_op_t* take();
+//   nand_operation_t* take();
 //
 // Available to Operation and BorrowedOperation if they templatize of Storage:
 //
@@ -52,30 +56,30 @@ namespace block {
 ///////////////////////////////////////////////////////////////////////////////
 // Example: Basic allocation with a pool:
 //
-// block::OperationPool<> pool;
+// nand::OperationPool<> pool;
 //
-// const size_t op_size = block::Operation<>::OperationSize(parent_op_size);
+// const size_t op_size = nand::Operation<>::OperationSize(parent_op_size);
 // for (int i = 0; i < kNumRequest; i++) {
-//     std::optional<block::Operation> request;
-//     request = block::Operation::Alloc(op_size, parent_op_size);
+//     std::optional<nand::Operation> request;
+//     request = nand::Operation::Alloc(op_size, parent_op_size);
 //
 //     if (!request) return ZX_ERR_NO_MEMORY;
 //     pool.add(*std::move(request));
 // }
 //
 ///////////////////////////////////////////////////////////////////////////////
-// Example: Enqueue incoming operation into a block::OperationQueue:
+// Example: Enqueue incoming operation into a nand::OperationQueue:
 //
 // class Driver {
 // public:
 //     <...>
 // private:
-//     block::BorrowedOperationQueue<> operations_;
+//     nand::BorrowedOperationQueue<> operations_;
 //     const size_t parent_op_size_;
 // };
 //
-// void Driver::BlockImplQueue(block_op_t* op, block_queue_callback completion_cb, void* cookie) {
-//     operations_.push(block::BorrowedOperation<>(op, cb, parent_req_size_));
+// void Driver::NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie) {
+//     operations_.push(nand::BorrowedOperation<>(op, cb, parent_req_size_));
 // }
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -86,18 +90,18 @@ namespace block {
 //     size_t count_metric;
 // }
 //
-// using BlockOperation = block::BorrowedOperation<PrivateStorage>;
+// using NandOperation = nand::BorrowedOperation<PrivateStorage>;
 //
-// void Driver::BlockImplQueue(block_op_t* op, block_queue_callback completion_cb, void* cookie) {
-//     BlockOperation block_op(op, cb, parent_req_size_));
-//     ZX_DEBUG_ASSERT(block_op.operation()->command == BLOCK_READ);
-//     block_op.private_storage()->valid = true;
-//     block_op.private_storage()->count_metric += 1;
+// void Driver::NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie) {
+//     NandOperation nand_op(op, cb, parent_req_size_));
+//     ZX_DEBUG_ASSERT(nand_op.operation()->command == NAND_ERASE);
+//     nand_op.private_storage()->valid = true;
+//     nand_op.private_storage()->count_metric += 1;
 //     <...>
 // }
 //
 struct OperationTraits {
-  using OperationType = block_op_t;
+  using OperationType = nand_operation_t;
 
   static OperationType* Alloc(size_t op_size) {
     fbl::AllocChecker ac;
@@ -118,9 +122,10 @@ struct OperationTraits {
 };
 
 struct CallbackTraits {
-  using CallbackType = void(void*, zx_status_t, block_op_t*);
+  using CallbackType = void(void*, zx_status_t, nand_operation_t*);
 
-  static void Callback(CallbackType* callback, void* cookie, block_op_t* op, zx_status_t status) {
+  static void Callback(CallbackType* callback, void* cookie, nand_operation_t* op,
+                       zx_status_t status) {
     callback(cookie, status, op);
   }
 };
@@ -143,9 +148,6 @@ class BorrowedOperation
 };
 
 template <typename Storage = void>
-using OperationPool = operation::OperationPool<Operation<Storage>, OperationTraits, Storage>;
-
-template <typename Storage = void>
 using OperationQueue = operation::OperationQueue<Operation<Storage>, OperationTraits, Storage>;
 
 template <typename Storage = void>
@@ -153,6 +155,6 @@ using BorrowedOperationQueue =
     operation::BorrowedOperationQueue<BorrowedOperation<Storage>, OperationTraits, CallbackTraits,
                                       Storage>;
 
-}  // namespace block
+}  // namespace nand
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_BLOCK_H_
+#endif  // ZIRCON_SYSTEM_DEV_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_NAND_H_

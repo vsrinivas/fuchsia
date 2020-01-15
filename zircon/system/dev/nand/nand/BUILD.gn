@@ -8,7 +8,7 @@ zx_driver("nand") {
     "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.rawnand",
-    "$zx/system/dev/lib/operation",
+    "$zx/system/dev/lib/dev-operation",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

@@ -45,7 +45,7 @@ source_set("shared") {
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.block.partition",
     "$zx/system/banjo/ddk.protocol.block.volume",
-    "$zx/system/dev/lib/operation",
+    "$zx/system/dev/lib/dev-operation",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",

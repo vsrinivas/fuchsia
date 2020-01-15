@@ -10,8 +10,8 @@ zx_test("operation") {
     "operation-test.cc",
   ]
   deps = [
+    "$zx/system/dev/lib/dev-operation",
     "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/dev/lib/operation",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

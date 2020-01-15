@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_OPERATION_H_
-#define ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_OPERATION_H_
+#ifndef ZIRCON_SYSTEM_DEV_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_OPERATION_H_
+#define ZIRCON_SYSTEM_DEV_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_OPERATION_H_
 
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -631,4 +631,4 @@ using OperationList = BaseList<D, OperationTraits, void, Storage>;
 
 }  // namespace operation
 
-#endif  // ZIRCON_SYSTEM_DEV_LIB_OPERATION_INCLUDE_LIB_OPERATION_OPERATION_H_
+#endif  // ZIRCON_SYSTEM_DEV_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_OPERATION_H_

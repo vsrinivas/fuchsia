@@ -34,8 +34,8 @@ zx_test("sa-unittest") {
   sources = [ "tests/sas-test.cc" ]
   deps = [
     ":simple-audio-stream",
+    "$zx/system/dev/lib/dev-operation",
     "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/dev/lib/operation",
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-audio:llcpp",
     "$zx/system/ulib/audio-driver-proto",

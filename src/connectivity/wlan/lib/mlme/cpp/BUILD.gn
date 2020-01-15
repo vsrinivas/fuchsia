@@ -89,9 +89,9 @@ source_set("mlme") {
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/rust/c-binding:wlan-mlme-c",
     "//zircon/public/lib/bitmap",
+    "//zircon/public/lib/dev-operation",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/operation",
 
     # Needed in order to link rust wlan-mlme, which depends on fuchsia-syslog, which has
     # non_rust_deps = ["//zircon/public/lib/syslog"]

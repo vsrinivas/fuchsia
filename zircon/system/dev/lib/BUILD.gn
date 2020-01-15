@@ -10,6 +10,7 @@ group("lib") {
   deps = [
     "amlogic",
     "broadcom",
+    "dev-operation",
     "device-protocol-bt-gatt-svc",
     "device-protocol-i2c",
     "device-protocol-i2c-channel",
@@ -29,7 +30,6 @@ group("lib") {
     "msm8x53",
     "mt8167",
     "mt8183",
-    "operation",
     "ot-radio",
     "pci",
     "qcom",
