@@ -11,8 +11,13 @@
 
 #include <trace/event.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
+#include "src/ui/scenic/lib/gfx/resources/nodes/scene.h"
+#include "src/ui/scenic/lib/gfx/resources/nodes/traversal.h"
+#include "src/ui/scenic/lib/gfx/resources/view.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"
 
 namespace scenic_impl {
@@ -23,6 +28,60 @@ using fuchsia::ui::focus::FocusChainListenerRegistry;
 using fuchsia::ui::views::Error;
 using fuchsia::ui::views::ViewRef;
 using ViewFocuser = fuchsia::ui::views::Focuser;
+
+namespace {
+
+//
+// Finds descendant (including self) of type |View| by |koid|.
+// Returns nullptr if matching View doesn't exist in the subtree of root.
+//
+// TODO(44170): ViewTree should contain the pointer to the View as well, so that
+// we don't need to do traversal every time when we need a ViewPtr.
+//
+ViewPtr FindViewDescendantByViewKoid(Node* const root, zx_koid_t koid) {
+  if (!root)
+    return nullptr;
+
+  if (root->IsKindOf<ViewNode>()) {
+    ViewNodePtr view_node_ptr = root->As<ViewNode>();
+    // FindOwningView() returns the View associated with the View node which
+    // is stored in the node.
+    ViewPtr view_ptr = view_node_ptr->FindOwningView();
+    if (view_ptr && view_ptr->view_ref_koid() == koid) {
+      return view_ptr;
+    }
+  }
+
+  for (const NodePtr& child : root->children()) {
+    ViewPtr child_result = FindViewDescendantByViewKoid(child.get(), koid);
+    if (child_result) {
+      return child_result;
+    }
+  }
+  return nullptr;
+}
+
+}  // namespace
+
+ViewPtr SceneGraph::LookupViewByViewRef(ViewRef view_ref) {
+  zx_koid_t view_ref_koid = fsl::GetKoid(view_ref.reference.get());
+  if (view_ref_koid == ZX_KOID_INVALID) {
+    return nullptr;
+  }
+
+  std::set<Scene*> scenes;
+  for (const auto& compositor : compositors()) {
+    compositor->CollectScenes(&scenes);
+  }
+
+  for (Scene* scene : scenes) {
+    ViewPtr scene_result = FindViewDescendantByViewKoid(scene, view_ref_koid);
+    if (scene_result) {
+      return scene_result;
+    }
+  }
+  return nullptr;
+}
 
 CompositorWeakPtr SceneGraph::GetCompositor(GlobalId compositor_id) const {
   for (const CompositorWeakPtr& compositor : compositors_) {

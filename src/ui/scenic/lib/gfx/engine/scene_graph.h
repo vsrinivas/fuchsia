@@ -25,6 +25,9 @@ namespace gfx {
 class SceneGraph;
 using SceneGraphWeakPtr = fxl::WeakPtr<SceneGraph>;
 
+class View;
+using ViewPtr = fxl::RefPtr<View>;
+
 // SceneGraph stores pointers to all the Compositors created with it as a constructor argument, but
 // it does not hold ownership of them.
 //
@@ -84,6 +87,18 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
   // |fuchsia.ui.focus.FocusChainListenerRegistry|
   void Register(
       fidl::InterfaceHandle<fuchsia::ui::focus::FocusChainListener> focus_chain_listener) override;
+
+  //
+  // View functions
+  //
+
+  // Look up the View with |view_ref| in the current scene graph; the View must
+  // already exist and attached to the scene when this function is called.
+  //
+  // Returns the ViewPtr if the View exists in scene graph; Returns nullptr,
+  // if the ViewRef doesn't refer to an existing View, or the View doesn't exist
+  // in any Scene.
+  ViewPtr LookupViewByViewRef(fuchsia::ui::views::ViewRef view_ref);
 
   //
   // Focus transfer functionality
