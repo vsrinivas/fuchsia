@@ -152,13 +152,13 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   //
   // Hooks used by encapsulated AudioDriver instances to notify AudioDevices
   // about internal state machine changes.
-  virtual void OnDriverInfoFetched() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
+  virtual void OnDriverInfoFetched() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {}
 
-  virtual void OnDriverConfigComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
+  virtual void OnDriverConfigComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {}
 
-  virtual void OnDriverStartComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
+  virtual void OnDriverStartComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {}
 
-  virtual void OnDriverStopComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()){};
+  virtual void OnDriverStopComplete() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {}
 
   virtual void OnDriverPlugStateChange(bool plugged, zx::time plug_time)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) {
@@ -166,7 +166,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
     threading_model().FidlDomain().PostTask([output = shared_from_this(), plugged, plug_time]() {
       output->device_registry().OnPlugStateChanged(std::move(output), plugged, plug_time);
     });
-  };
+  }
 
   //////////////////////////////////////////////////////////////////////////////
   //
