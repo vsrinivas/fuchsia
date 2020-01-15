@@ -230,27 +230,30 @@ std::vector<std::unique_ptr<zxdb::Frame>> InterceptionWorkflowTest::FillBreakpoi
   notification->thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification->thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
 
-  debug_ipc::StackFrame frame1(kSyscallAddress, reinterpret_cast<uint64_t>(data_.sp()));
-  debug_ipc::StackFrame frame2(kSyscallAddress, kFrame2Sp);
-  debug_ipc::StackFrame frame3(kSyscallAddress, kFrame3Sp);
-
-  data_.PopulateRegisters(process_koid, &frame1.regs);
-  notification->thread.frames.push_back(frame1);
-
-  zxdb::SymbolContext context(0);
   std::vector<std::unique_ptr<zxdb::Frame>> frames;
-  frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
-      threads_[thread_koid], frame1,
-      zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/foo.cc", kFrame1Line),
-                     kFrame1Column, context)));
-  frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
-      threads_[thread_koid], frame2,
-      zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/foo.cc", kFrame2Line),
-                     kFrame2Column, context)));
-  frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
-      threads_[thread_koid], frame2,
-      zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/main.cc", kFrame3Line),
-                     kFrame3Column, context)));
+
+  if (!bad_stack_) {
+    debug_ipc::StackFrame frame1(kSyscallAddress, reinterpret_cast<uint64_t>(data_.sp()));
+    debug_ipc::StackFrame frame2(kSyscallAddress, kFrame2Sp);
+    debug_ipc::StackFrame frame3(kSyscallAddress, kFrame3Sp);
+
+    data_.PopulateRegisters(process_koid, &frame1.regs);
+    notification->thread.frames.push_back(frame1);
+
+    zxdb::SymbolContext context(0);
+    frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
+        threads_[thread_koid], frame1,
+        zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/foo.cc", kFrame1Line),
+                       kFrame1Column, context)));
+    frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
+        threads_[thread_koid], frame2,
+        zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/foo.cc", kFrame2Line),
+                       kFrame2Column, context)));
+    frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
+        threads_[thread_koid], frame2,
+        zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/main.cc", kFrame3Line),
+                       kFrame3Column, context)));
+  }
   return frames;
 }
 
@@ -265,7 +268,7 @@ void InterceptionWorkflowTest::TriggerSyscallBreakpoint(uint64_t process_koid,
 
   InjectExceptionWithStack(notification, std::move(frames), /*has_all_frames=*/true);
 
-  if (!aborted_) {
+  if (!aborted_ && !bad_stack_) {
     debug_ipc::MessageLoop::Current()->Run();
   }
 }

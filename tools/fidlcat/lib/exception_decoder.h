@@ -5,6 +5,7 @@
 #ifndef TOOLS_FIDLCAT_LIB_EXCEPTION_DECODER_H_
 #define TOOLS_FIDLCAT_LIB_EXCEPTION_DECODER_H_
 
+#include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
@@ -32,18 +33,19 @@ class ExceptionUse {
 class ExceptionDecoder {
  public:
   ExceptionDecoder(InterceptionWorkflow* workflow, SyscallDecoderDispatcher* dispatcher,
-                   uint64_t process_id, zxdb::Thread* thread, uint64_t thread_id,
-                   std::unique_ptr<ExceptionUse> use)
+                   zxdb::Thread* thread, std::unique_ptr<ExceptionUse> use)
       : workflow_(workflow),
         dispatcher_(dispatcher),
-        process_id_(process_id),
-        thread_(thread->GetWeakPtr()),
-        thread_id_(thread_id),
-        arch_(thread->session()->arch()),
+        weak_thread_(thread->GetWeakPtr()),
+        process_name_(thread->GetProcess()->GetName()),
+        process_id_(thread->GetProcess()->GetKoid()),
+        thread_id_(thread->GetKoid()),
         use_(std::move(use)) {}
 
   SyscallDecoderDispatcher* dispatcher() const { return dispatcher_; }
-  zxdb::Thread* thread() const { return thread_.get(); }
+  zxdb::Thread* get_thread() const { return weak_thread_.get(); }
+  const std::string& process_name() const { return process_name_; }
+  uint64_t process_id() const { return process_id_; }
   uint64_t thread_id() const { return thread_id_; }
   const std::vector<zxdb::Location>& caller_locations() const { return caller_locations_; }
 
@@ -64,10 +66,10 @@ class ExceptionDecoder {
  private:
   InterceptionWorkflow* const workflow_;
   SyscallDecoderDispatcher* const dispatcher_;
+  const fxl::WeakPtr<zxdb::Thread> weak_thread_;
+  const std::string process_name_;
   const uint64_t process_id_;
-  const fxl::WeakPtr<zxdb::Thread> thread_;
   const uint64_t thread_id_;
-  const debug_ipc::Arch arch_;
   std::unique_ptr<ExceptionUse> use_;
   std::vector<zxdb::Location> caller_locations_;
   DecoderError error_;

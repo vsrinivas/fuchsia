@@ -16,6 +16,7 @@
 #include <utility>
 #include <vector>
 
+#include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
@@ -120,19 +121,20 @@ class SyscallDecoderBuffer {
 class SyscallDecoder {
  public:
   SyscallDecoder(SyscallDecoderDispatcher* dispatcher, InterceptingThreadObserver* thread_observer,
-                 zxdb::Thread* thread, uint64_t process_id, uint64_t thread_id,
-                 const Syscall* syscall, std::unique_ptr<SyscallUse> use)
+                 zxdb::Thread* thread, const Syscall* syscall, std::unique_ptr<SyscallUse> use)
       : dispatcher_(dispatcher),
         thread_observer_(thread_observer),
-        thread_(thread->GetWeakPtr()),
-        process_id_(process_id),
-        thread_id_(thread_id),
-        syscall_(syscall),
+        weak_thread_(thread->GetWeakPtr()),
+        process_name_(thread->GetProcess()->GetName()),
+        process_id_(thread->GetProcess()->GetKoid()),
+        thread_id_(thread->GetKoid()),
         arch_(thread->session()->arch()),
+        syscall_(syscall),
         use_(std::move(use)) {}
 
   SyscallDecoderDispatcher* dispatcher() const { return dispatcher_; }
-  zxdb::Thread* thread() const { return thread_.get(); }
+  zxdb::Thread* get_thread() const { return weak_thread_.get(); }
+  const std::string& process_name() const { return process_name_; }
   uint64_t process_id() const { return process_id_; }
   uint64_t thread_id() const { return thread_id_; }
   const Syscall* syscall() const { return syscall_; }
@@ -244,11 +246,12 @@ class SyscallDecoder {
  private:
   SyscallDecoderDispatcher* const dispatcher_;
   InterceptingThreadObserver* const thread_observer_;
-  const fxl::WeakPtr<zxdb::Thread> thread_;
+  const fxl::WeakPtr<zxdb::Thread> weak_thread_;
+  const std::string process_name_;
   const uint64_t process_id_;
   const uint64_t thread_id_;
-  const Syscall* const syscall_;
   const debug_ipc::Arch arch_;
+  const Syscall* const syscall_;
   std::unique_ptr<SyscallUse> use_;
   std::vector<zxdb::Location> caller_locations_;
   uint64_t entry_sp_ = 0;

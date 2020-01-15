@@ -335,6 +335,8 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   void set_with_process_info() { display_options_.with_process_info = true; }
   void set_dump_messages(bool dump_messages) { display_options_.dump_messages = dump_messages; }
 
+  void set_bad_stack() { bad_stack_ = true; }
+
   void AddThread(zxdb::Thread* thread) { threads_[thread->GetKoid()] = thread; }
 
   void PerformCheckTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall1,
@@ -386,6 +388,7 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   std::map<uint64_t, zxdb::Thread*> threads_;
   // Function which can simulate the fact that the syscall can modify some data.
   std::function<void()> update_data_;
+  bool bad_stack_ = false;
 };
 
 class InterceptionWorkflowTestX64 : public InterceptionWorkflowTest {
@@ -549,16 +552,14 @@ class SyscallDecoderDispatcherTest : public SyscallDecoderDispatcher {
       : SyscallDecoderDispatcher(decode_options), controller_(controller) {}
 
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread, uint64_t process_id,
-                                                uint64_t thread_id,
+                                                zxdb::Thread* thread,
                                                 const Syscall* syscall) override {
-    return std::make_unique<SyscallDecoder>(this, thread_observer, thread, process_id, thread_id,
-                                            syscall, std::make_unique<SyscallCheck>(controller_));
+    return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
+                                            std::make_unique<SyscallCheck>(controller_));
   }
 
   std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
-                                                  zxdb::Thread* thread,
-                                                  uint64_t thread_id) override {
+                                                  zxdb::Thread* thread) override {
     return nullptr;
   }
 

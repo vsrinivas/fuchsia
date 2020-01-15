@@ -201,8 +201,8 @@ void SyscallFidlMessageHandle::DisplayOutline(SyscallDisplayDispatcher* dispatch
     }
   }
   if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
-          decoder->thread()->GetProcess()->GetKoid(), handle_value, bytes_value, num_bytes_value,
-          handle_infos_value, num_handles_value, type(), os, line_header, tabs)) {
+          decoder->process_id(), handle_value, bytes_value, num_bytes_value, handle_infos_value,
+          num_handles_value, type(), os, line_header, tabs)) {
     DumpMessage(/*error=*/true, bytes_value, num_bytes_value, handle_infos_value, num_handles_value,
                 dispatcher, line_header, tabs, os);
   } else if (dispatcher->dump_messages()) {
@@ -222,8 +222,8 @@ void SyscallFidlMessageHandleInfo::DisplayOutline(SyscallDisplayDispatcher* disp
   const zx_handle_info_t* handle_infos_value = handles()->Content(decoder, stage);
   uint32_t num_handles_value = num_handles()->Value(decoder, stage);
   if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
-          decoder->thread()->GetProcess()->GetKoid(), handle_value, bytes_value, num_bytes_value,
-          handle_infos_value, num_handles_value, type(), os, line_header, tabs)) {
+          decoder->process_id(), handle_value, bytes_value, num_bytes_value, handle_infos_value,
+          num_handles_value, type(), os, line_header, tabs)) {
     DumpMessage(/*error=*/true, bytes_value, num_bytes_value, handle_infos_value, num_handles_value,
                 dispatcher, line_header, tabs, os);
   } else if (dispatcher->dump_messages()) {
@@ -279,8 +279,7 @@ void SyscallDecoderDispatcher::DecodeSyscall(InterceptingThreadObserver* thread_
                    << ':' << thread_id << ": Internal error: already decoding the thread";
     return;
   }
-  uint64_t process_id = thread->GetProcess()->GetKoid();
-  auto decoder = CreateDecoder(thread_observer, thread, process_id, thread_id, syscall);
+  auto decoder = CreateDecoder(thread_observer, thread, syscall);
   auto tmp = decoder.get();
   syscall_decoders_[thread_id] = std::move(decoder);
   tmp->Decode();
@@ -296,7 +295,7 @@ void SyscallDecoderDispatcher::DecodeException(InterceptionWorkflow* workflow,
                    << ": Internal error: already decoding an exception for the thread";
     return;
   }
-  auto decoder = CreateDecoder(workflow, thread, thread_id);
+  auto decoder = CreateDecoder(workflow, thread);
   auto tmp = decoder.get();
   exception_decoders_[thread_id] = std::move(decoder);
   tmp->Decode();
@@ -304,13 +303,19 @@ void SyscallDecoderDispatcher::DecodeException(InterceptionWorkflow* workflow,
 
 void SyscallDecoderDispatcher::DeleteDecoder(SyscallDecoder* decoder) {
   if (!decoder->aborted()) {
-    decoder->thread()->Continue();
+    zxdb::Thread* thread = decoder->get_thread();
+    if (thread != nullptr) {
+      thread->Continue();
+    }
   }
   syscall_decoders_.erase(decoder->thread_id());
 }
 
 void SyscallDecoderDispatcher::DeleteDecoder(ExceptionDecoder* decoder) {
-  decoder->thread()->Continue();
+  zxdb::Thread* thread = decoder->get_thread();
+  if (thread != nullptr) {
+    thread->Continue();
+  }
   exception_decoders_.erase(decoder->thread_id());
 }
 
@@ -340,16 +345,14 @@ void SyscallDecoderDispatcher::ComputeTypes() {
 }
 
 std::unique_ptr<SyscallDecoder> SyscallDisplayDispatcher::CreateDecoder(
-    InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, uint64_t process_id,
-    uint64_t thread_id, const Syscall* syscall) {
-  return std::make_unique<SyscallDecoder>(this, thread_observer, thread, process_id, thread_id,
-                                          syscall, std::make_unique<SyscallDisplay>(this, os_));
+    InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, const Syscall* syscall) {
+  return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
+                                          std::make_unique<SyscallDisplay>(this, os_));
 }
 
 std::unique_ptr<ExceptionDecoder> SyscallDisplayDispatcher::CreateDecoder(
-    InterceptionWorkflow* workflow, zxdb::Thread* thread, uint64_t thread_id) {
-  return std::make_unique<ExceptionDecoder>(workflow, this, thread->GetProcess()->GetKoid(), thread,
-                                            thread_id,
+    InterceptionWorkflow* workflow, zxdb::Thread* thread) {
+  return std::make_unique<ExceptionDecoder>(workflow, this, thread,
                                             std::make_unique<ExceptionDisplay>(this, os_));
 }
 
@@ -400,10 +403,8 @@ void SyscallDisplayDispatcher::StopMonitoring(zx_koid_t koid) {
 }
 
 std::unique_ptr<SyscallDecoder> SyscallCompareDispatcher::CreateDecoder(
-    InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, uint64_t process_id,
-    uint64_t thread_id, const Syscall* syscall) {
-  return std::make_unique<SyscallDecoder>(this, thread_observer, thread, process_id, thread_id,
-                                          syscall,
+    InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, const Syscall* syscall) {
+  return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
                                           std::make_unique<SyscallCompare>(this, comparator_, os_));
 }
 

@@ -26,20 +26,32 @@ void ExceptionUse::DecodingError(const DecoderError& error, ExceptionDecoder* de
 }
 
 void ExceptionDecoder::Decode() {
-  if (thread_->GetStack().has_all_frames()) {
+  zxdb::Thread* thread = get_thread();
+  if (thread == nullptr) {
+    Destroy();
+    return;
+  }
+  if (thread->GetStack().has_all_frames()) {
     Display();
   } else {
-    thread_->GetStack().SyncFrames([this](const zxdb::Err& /*err*/) { Display(); });
+    thread->GetStack().SyncFrames([this](const zxdb::Err& /*err*/) { Display(); });
   }
 }
 
 void ExceptionDecoder::Display() {
-  const zxdb::Stack& stack = thread_->GetStack();
-  for (size_t i = stack.size() - 1;; --i) {
-    const zxdb::Frame* caller = stack[i];
-    caller_locations_.push_back(caller->GetLocation());
-    if (i == 0) {
-      break;
+  zxdb::Thread* thread = get_thread();
+  if (thread == nullptr) {
+    Destroy();
+    return;
+  }
+  const zxdb::Stack& stack = thread->GetStack();
+  if (stack.size() > 0) {
+    for (size_t i = stack.size() - 1;; --i) {
+      const zxdb::Frame* caller = stack[i];
+      caller_locations_.push_back(caller->GetLocation());
+      if (i == 0) {
+        break;
+      }
     }
   }
   use_->ExceptionDecoded(this);
@@ -54,9 +66,9 @@ void ExceptionDecoder::Destroy() {
 
 void ExceptionDisplay::ExceptionDecoded(ExceptionDecoder* decoder) {
   const fidl_codec::Colors& colors = dispatcher_->colors();
-  line_header_ = decoder->thread()->GetProcess()->GetName() + ' ' + colors.red +
-                 std::to_string(decoder->thread()->GetProcess()->GetKoid()) + colors.reset + ':' +
-                 colors.red + std::to_string(decoder->thread_id()) + colors.reset + ' ';
+  line_header_ = decoder->process_name() + ' ' + colors.red +
+                 std::to_string(decoder->process_id()) + colors.reset + ':' + colors.red +
+                 std::to_string(decoder->thread_id()) + colors.reset + ' ';
 
   os_ << '\n';
 
@@ -75,9 +87,8 @@ void ExceptionDisplay::DecodingError(const DecoderError& error, ExceptionDecoder
   for (;;) {
     size_t end = message.find('\n', pos);
     const fidl_codec::Colors& colors = dispatcher_->colors();
-    os_ << decoder->thread()->GetProcess()->GetName() << ' ' << colors.red
-        << decoder->thread()->GetProcess()->GetKoid() << colors.reset << ':' << colors.red
-        << decoder->thread_id() << colors.reset << ": " << colors.red
+    os_ << decoder->process_name() << ' ' << colors.red << decoder->process_id() << colors.reset
+        << ':' << colors.red << decoder->thread_id() << colors.reset << ": " << colors.red
         << error.message().substr(pos, end) << colors.reset << '\n';
     if (end == std::string::npos) {
       break;

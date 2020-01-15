@@ -1553,8 +1553,7 @@ class SyscallDecoderDispatcher {
 
   // Create the object which will decode the syscall.
   virtual std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                        zxdb::Thread* thread, uint64_t process_id,
-                                                        uint64_t thread_id,
+                                                        zxdb::Thread* thread,
                                                         const Syscall* syscall) = 0;
 
   // Delete a decoder created by DecodeSyscall. Called when the syscall is
@@ -1563,8 +1562,7 @@ class SyscallDecoderDispatcher {
 
   // Create the object which will decode the exception.
   virtual std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
-                                                          zxdb::Thread* thread,
-                                                          uint64_t thread_id) = 0;
+                                                          zxdb::Thread* thread) = 0;
 
   // Delete a decoder created by DecodeException. Called when the exception is fully decoded and
   // displayed or the exception had an error.
@@ -1668,13 +1666,11 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   }
 
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread, uint64_t process_id,
-                                                uint64_t thread_id,
+                                                zxdb::Thread* thread,
                                                 const Syscall* syscall) override;
 
   std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
-                                                  zxdb::Thread* thread,
-                                                  uint64_t thread_id) override;
+                                                  zxdb::Thread* thread) override;
 
   void ProcessLaunched(const std::string& command, std::string_view error_message) override;
 
@@ -1703,8 +1699,7 @@ class SyscallCompareDispatcher : public SyscallDisplayDispatcher {
         comparator_(compare_file_name, std::cout) {}
 
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread, uint64_t process_id,
-                                                uint64_t thread_id,
+                                                zxdb::Thread* thread,
                                                 const Syscall* syscall) override;
 
  private:

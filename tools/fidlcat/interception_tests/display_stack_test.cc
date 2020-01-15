@@ -44,4 +44,18 @@ DISPLAY_STACK_TEST(
     "  -> \x1B[32mZX_OK\x1B[0m (out0:\x1B[32mhandle\x1B[0m: \x1B[31m12345678\x1B[0m, "
     "out1:\x1B[32mhandle\x1B[0m: \x1B[31m87654321\x1B[0m)\n");
 
+#define BAD_STACK_TEST_CONTENT(errno, expected)                                                \
+  set_bad_stack();                                                                             \
+  zx_handle_t out0 = 0x12345678;                                                               \
+  zx_handle_t out1 = 0x87654321;                                                               \
+  PerformAbortedTest("zx_channel_create@plt", ZxChannelCreate(errno, #errno, 0, &out0, &out1), \
+                     expected);
+
+#define BAD_STACK_TEST(name, errno, expected)                                            \
+  TEST_F(InterceptionWorkflowTestX64, name) { BAD_STACK_TEST_CONTENT(errno, expected); } \
+  TEST_F(InterceptionWorkflowTestArm, name) { BAD_STACK_TEST_CONTENT(errno, expected); }
+
+// Checks that we don't crash if zxdb doesn't provide a stack.
+BAD_STACK_TEST(BadStack, ZX_OK, "");
+
 }  // namespace fidlcat

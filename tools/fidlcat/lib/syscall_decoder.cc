@@ -93,15 +93,18 @@ void SyscallDecoder::LoadMemory(uint64_t address, size_t size, std::vector<uint8
     // Null pointer => don't load anything.
     return;
   }
+  zxdb::Thread* thread = get_thread();
+  if (thread == nullptr) {
+    aborted_ = true;
+    Destroy();
+  }
   ++pending_request_count_;
-  thread_->GetProcess()->ReadMemory(
+  thread->GetProcess()->ReadMemory(
       address, size,
       [this, address, size, destination](const zxdb::Err& err, zxdb::MemoryDump dump) {
         --pending_request_count_;
         if (aborted()) {
-          if (pending_request_count_ == 0) {
-            Destroy();
-          }
+          Destroy();
         } else {
           if (!err.ok()) {
             Error(DecoderError::Type::kCantReadMemory)
@@ -143,30 +146,34 @@ void SyscallDecoder::LoadBuffer(Stage stage, uint64_t address, size_t size) {
 }
 
 void SyscallDecoder::Decode() {
-  if (aborted_) {
+  zxdb::Thread* thread = weak_thread_.get();
+  if (aborted_ || (thread == nullptr) || (thread->GetStack().size() == 0)) {
+    aborted_ = true;
     Destroy();
     return;
   }
   if (dispatcher_->decode_options().stack_level >= kFullStack) {
-    thread_->GetStack().SyncFrames([this](const zxdb::Err& /*err*/) { DoDecode(); });
+    thread->GetStack().SyncFrames([this](const zxdb::Err& /*err*/) { DoDecode(); });
   } else {
     DoDecode();
   }
 }
 
 void SyscallDecoder::DoDecode() {
-  if (aborted_) {
+  zxdb::Thread* thread = weak_thread_.get();
+  if (aborted_ || (thread == nullptr) || (thread->GetStack().size() == 0)) {
+    aborted_ = true;
     Destroy();
     return;
   }
-  const zxdb::Stack& stack = thread_->GetStack();
+  const zxdb::Stack& stack = thread->GetStack();
   // Don't keep the inner frame which is the syscall and is not useful.
   for (size_t i = stack.size() - 1; i > 0; --i) {
     const zxdb::Frame* caller = stack[i];
     caller_locations_.push_back(caller->GetLocation());
   }
   const std::vector<debug_ipc::Register>* general_registers =
-      thread_->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
+      thread->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
   FXL_DCHECK(general_registers);  // General registers should always be available synchronously.
 
   // The order of parameters in the System V AMD64 ABI we use, according to
@@ -211,7 +218,9 @@ void SyscallDecoder::DoDecode() {
 }
 
 void SyscallDecoder::LoadStack() {
-  if (aborted_) {
+  zxdb::Thread* thread = weak_thread_.get();
+  if (aborted_ || (thread == nullptr) || (thread->GetStack().size() == 0)) {
+    aborted_ = true;
     Destroy();
     return;
   }
@@ -225,14 +234,12 @@ void SyscallDecoder::LoadStack() {
   }
   uint64_t address = entry_sp_;
   ++pending_request_count_;
-  thread_->GetProcess()->ReadMemory(
+  thread->GetProcess()->ReadMemory(
       address, stack_size,
       [this, address, stack_size](const zxdb::Err& err, zxdb::MemoryDump dump) {
         --pending_request_count_;
         if (aborted()) {
-          if (pending_request_count_ == 0) {
-            Destroy();
-          }
+          Destroy();
         } else {
           if (!err.ok()) {
             Error(DecoderError::Type::kCantReadMemory)
@@ -282,6 +289,12 @@ void SyscallDecoder::LoadInputs() {
 }
 
 void SyscallDecoder::StepToReturnAddress() {
+  zxdb::Thread* thread = weak_thread_.get();
+  if (aborted_ || (thread == nullptr) || (thread->GetStack().size() == 0)) {
+    aborted_ = true;
+    Destroy();
+    return;
+  }
   // Eventually calls the code before displaying the input (which may invalidate
   // the display).
   if ((syscall_->inputs_decoded_action() == nullptr) ||
@@ -295,17 +308,23 @@ void SyscallDecoder::StepToReturnAddress() {
     return;
   }
 
-  thread_observer_->Register(thread_->GetKoid(), this);
-  thread_observer_->AddExitBreakpoint(thread_.get(), syscall_->name(), return_address_);
+  thread_observer_->Register(thread_id(), this);
+  thread_observer_->AddExitBreakpoint(thread, syscall_->name(), return_address_);
 
   // Restarts the stopped thread. When the breakpoint will be reached (at the
   // end of the syscall), LoadSyscallReturnValue will be called.
-  thread_->Continue();
+  thread->Continue();
 }
 
 void SyscallDecoder::LoadSyscallReturnValue() {
+  zxdb::Thread* thread = weak_thread_.get();
+  if (aborted_ || (thread == nullptr) || (thread->GetStack().size() == 0)) {
+    aborted_ = true;
+    Destroy();
+    return;
+  }
   const std::vector<debug_ipc::Register>* general_registers =
-      thread_->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
+      thread->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
   FXL_DCHECK(general_registers);  // General registers should always be available synchronously.
 
   debug_ipc::RegisterID result_register = (arch_ == debug_ipc::Arch::kX64)
@@ -346,13 +365,17 @@ void SyscallDecoder::DecodeAndDisplay() {
   use_->SyscallOutputsDecoded(this);
 }
 
-void SyscallDecoder::Destroy() { dispatcher_->DeleteDecoder(this); }
+void SyscallDecoder::Destroy() {
+  if (pending_request_count_ == 0) {
+    dispatcher_->DeleteDecoder(this);
+  }
+}
 
 void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
   const fidl_codec::Colors& colors = dispatcher_->colors();
-  line_header_ = decoder->thread()->GetProcess()->GetName() + ' ' + colors.red +
-                 std::to_string(decoder->thread()->GetProcess()->GetKoid()) + colors.reset + ':' +
-                 colors.red + std::to_string(decoder->thread_id()) + colors.reset + ' ';
+  line_header_ = decoder->process_name() + ' ' + colors.red +
+                 std::to_string(decoder->process_id()) + colors.reset + ':' + colors.red +
+                 std::to_string(decoder->thread_id()) + colors.reset + ' ';
 
   if (dispatcher_->with_process_info()) {
     os_ << line_header_ << '\n';
@@ -373,11 +396,9 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
     int64_t timestamp = time(nullptr);
     const Thread* thread = dispatcher_->SearchThread(decoder->thread_id());
     if (thread == nullptr) {
-      const Process* process =
-          dispatcher_->SearchProcess(decoder->thread()->GetProcess()->GetKoid());
+      const Process* process = dispatcher_->SearchProcess(decoder->process_id());
       if (process == nullptr) {
-        process = dispatcher_->CreateProcess(decoder->thread()->GetProcess()->GetName(),
-                                             decoder->thread()->GetProcess()->GetKoid());
+        process = dispatcher_->CreateProcess(decoder->process_name(), decoder->process_id());
       }
       thread = dispatcher_->CreateThread(decoder->thread_id(), process);
     }
@@ -453,10 +474,10 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
       os_ << "\n";
       // Then always display the process info to be able able to know for which thread
       // we are displaying the output.
-      std::string first_line_header =
-          decoder->thread()->GetProcess()->GetName() + ' ' + colors.red +
-          std::to_string(decoder->thread()->GetProcess()->GetKoid()) + colors.reset + ':' +
-          colors.red + std::to_string(decoder->thread_id()) + colors.reset + ' ';
+      std::string first_line_header = decoder->process_name() + ' ' + colors.red +
+                                      std::to_string(decoder->process_id()) + colors.reset + ':' +
+                                      colors.red + std::to_string(decoder->thread_id()) +
+                                      colors.reset + ' ';
       os_ << first_line_header << "  -> ";
     } else {
       os_ << line_header_ << "  -> ";
@@ -518,10 +539,10 @@ void SyscallDisplay::SyscallDecodingError(const DecoderError& error, SyscallDeco
   for (;;) {
     size_t end = message.find('\n', pos);
     const fidl_codec::Colors& colors = dispatcher_->colors();
-    os_ << decoder->thread()->GetProcess()->GetName() << ' ' << colors.red
-        << decoder->thread()->GetProcess()->GetKoid() << colors.reset << ':' << colors.red
-        << decoder->thread_id() << colors.reset << ' ' << decoder->syscall()->name() << ": "
-        << colors.red << error.message().substr(pos, end) << colors.reset << '\n';
+    os_ << decoder->process_name() << ' ' << colors.red << decoder->process_id() << colors.reset
+        << ':' << colors.red << decoder->thread_id() << colors.reset << ' '
+        << decoder->syscall()->name() << ": " << colors.red << error.message().substr(pos, end)
+        << colors.reset << '\n';
     if (end == std::string::npos) {
       break;
     }
@@ -535,8 +556,7 @@ void SyscallCompare::SyscallInputsDecoded(SyscallDecoder* decoder) {
   os_.clear();
   os_.str("");
   SyscallDisplay::SyscallInputsDecoded(decoder);
-  comparator_.CompareInput(os_.str(), decoder->thread()->GetProcess()->GetKoid(),
-                           decoder->thread_id());
+  comparator_.CompareInput(os_.str(), decoder->process_id(), decoder->thread_id());
 }
 
 void SyscallCompare::SyscallOutputsDecoded(SyscallDecoder* decoder) {
@@ -544,8 +564,7 @@ void SyscallCompare::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   os_.str("");
   SyscallDisplay::SyscallOutputsDecoded(decoder);
   if (decoder->syscall()->return_type() != SyscallReturnType::kNoReturn) {
-    comparator_.CompareOutput(os_.str(), decoder->thread()->GetProcess()->GetKoid(),
-                              decoder->thread_id());
+    comparator_.CompareOutput(os_.str(), decoder->process_id(), decoder->thread_id());
   }
 }
 
