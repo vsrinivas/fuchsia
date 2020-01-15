@@ -34,6 +34,7 @@ kill_processes() {
   killall basemgr* || true
   killall flutter* || true
   killall present_view* || true
+  killall simplest_app* || true
 }
 
 kill_processes
