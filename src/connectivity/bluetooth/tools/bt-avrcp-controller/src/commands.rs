@@ -182,6 +182,7 @@ gen_commands! {
             "Sets player application settings with a default Equalizer=Off setting."),
         SupportedEvents = ("get-supported-events", [], "gets the supported events of the target"),
         SendRawVendorCommand = ("send-raw-vendor-command", ["pdu_id", "payload"], "send a raw vendor AVC command"),
+        SetVolume =  ("set-volume", ["volume"], "send a set absolute volume command (0-127)"),
         IsConnected = ("connection-status", [], "checks if the current device is current connected"),
         Help = ("help", [], "This message"),
         Exit = ("exit", [], "Close REPL"),
@@ -328,5 +329,6 @@ mod tests {
             .unwrap()
             .1
             .contains(&"set-player-application-settings".to_string()));
+        assert!(cmdhelper.complete("set-v", 0).unwrap().1.contains(&"set-volume".to_string()));
     }
 }

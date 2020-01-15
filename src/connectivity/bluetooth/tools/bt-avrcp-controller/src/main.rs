@@ -215,6 +215,26 @@ fn parse_raw_packet(args: &[&str]) -> Result<(u8, Vec<u8>), String> {
     Ok((pdu_id, buf))
 }
 
+async fn set_volume<'a>(
+    args: &'a [&'a str],
+    controller: &'a ControllerProxy,
+) -> Result<String, Error> {
+    let volume;
+    if let Ok(val) = args[0].parse::<u8>() {
+        if val > 127 {
+            return Ok(format!("invalid volume range {}", args[0]));
+        }
+        volume = val;
+    } else {
+        return Ok(format!("unable to parse volume {}", args[0]));
+    }
+
+    match controller.set_absolute_volume(volume).await? {
+        Ok(set_volume) => Ok(format!("Volume set to: {:?}", set_volume)),
+        Err(e) => Ok(format!("Error setting volume: {:?}", e)),
+    }
+}
+
 async fn is_connected<'a>(
     _args: &'a [&'a str],
     controller: &'a ControllerExtProxy,
@@ -247,6 +267,7 @@ async fn handle_cmd<'a>(
             }
             Ok(Cmd::SendRawVendorCommand) => send_raw_vendor(args, &test_controller).await,
             Ok(Cmd::SupportedEvents) => get_events_supported(args, &test_controller).await,
+            Ok(Cmd::SetVolume) => set_volume(args, &controller).await,
             Ok(Cmd::IsConnected) => is_connected(args, &test_controller).await,
             Ok(Cmd::Help) => Ok(Cmd::help_msg().to_string()),
             Ok(Cmd::Exit) | Ok(Cmd::Quit) => return Ok(ReplControl::Break),
@@ -325,6 +346,8 @@ async fn controller_listener(
                     println!("Status event: {:?} {:?}", timestamp, value);
                 } else if let Some(value) = notification.track_id {
                     println!("Track event: {:?} {:?}", timestamp, value);
+                } else if let Some(value) = notification.volume {
+                    println!("Volume event: {:?} {:?}", timestamp, value);
                 } else {
                     println!("Other event: {:?} {:?}", timestamp, notification);
                 }
@@ -409,7 +432,10 @@ async fn main() -> Result<(), Error> {
 
     // set controller event filter to ones we support.
     let _ = controller.set_notification_filter(
-        Notifications::PlaybackStatus | Notifications::Track | Notifications::TrackPos,
+        Notifications::PlaybackStatus
+            | Notifications::Track
+            | Notifications::TrackPos
+            | Notifications::Volume,
         1,
     )?;
 
