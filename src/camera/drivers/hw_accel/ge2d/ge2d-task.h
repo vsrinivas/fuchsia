@@ -112,6 +112,8 @@ class Ge2dTask : public generictask::GenericTask {
 
   Ge2dTaskType Ge2dTaskType() { return task_type_; }
 
+  resize_info_t resize_info() const { return res_info_; }
+
  private:
   zx_status_t Init(const buffer_collection_info_2_t* input_buffer_collection,
                    const buffer_collection_info_2_t* output_buffer_collection,

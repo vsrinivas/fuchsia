@@ -256,15 +256,28 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
   }
 
   image_format_2_t input_format = task->input_format();
-  uint32_t input_x_end = input_format.coded_width - 1;
-  uint32_t input_y_end = input_format.coded_height - 1;
 
   image_format_2_t output_format = task->output_format();
   uint32_t output_x_end = output_format.coded_width - 1;
   uint32_t output_y_end = output_format.coded_height - 1;
 
-  bool scaling_enabled = (input_format.coded_width != output_format.coded_width) ||
-                         (input_format.coded_height != output_format.coded_height);
+  resize_info_t resize_info;
+  if (task->Ge2dTaskType() == Ge2dTask::GE2D_RESIZE) {
+    resize_info = task->resize_info();
+  } else {
+    resize_info.crop.x = 0;
+    resize_info.crop.y = 0;
+    resize_info.crop.width = input_format.coded_width;
+    resize_info.crop.height = input_format.coded_height;
+  }
+
+  bool scaling_enabled = (resize_info.crop.width != output_format.coded_width) ||
+                         (resize_info.crop.height != output_format.coded_height);
+
+  uint32_t input_x_start = resize_info.crop.x;
+  uint32_t input_x_end = resize_info.crop.x + resize_info.crop.width - 1;
+  uint32_t input_y_start = resize_info.crop.y;
+  uint32_t input_y_end = resize_info.crop.y + resize_info.crop.height - 1;
 
   // Assume NV12 input and output for now. DST1 gets Y and DST2 gets CbCr.
   GenCtrl0::Get()
@@ -283,17 +296,29 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
       .set_src1_format(GenCtrl2::kFormat24Bit)
       .WriteTo(&ge2d_mmio_);
 
-  Src1ClipXStartEnd::Get().FromValue(0).set_end(input_x_end).set_start(0).WriteTo(&ge2d_mmio_);
+  Src1ClipXStartEnd::Get()
+      .FromValue(0)
+      .set_end(input_x_end)
+      .set_start(input_x_start)
+      .WriteTo(&ge2d_mmio_);
   // The linux driver does Src1XStartEnd.set_start_extra(2).set_end_extra(3) but that seems to cause
   // the first columns's chroma to be duplicated.
-  Src1XStartEnd::Get().FromValue(0).set_end(input_x_end).set_start(0).WriteTo(&ge2d_mmio_);
-  Src1ClipYStartEnd::Get().FromValue(0).set_end(input_y_end).set_start(0).WriteTo(&ge2d_mmio_);
+  Src1XStartEnd::Get()
+      .FromValue(0)
+      .set_end(input_x_end)
+      .set_start(input_x_start)
+      .WriteTo(&ge2d_mmio_);
+  Src1ClipYStartEnd::Get()
+      .FromValue(0)
+      .set_end(input_y_end)
+      .set_start(input_y_start)
+      .WriteTo(&ge2d_mmio_);
   // The linux driver does Src1YStartEnd.set_start_extra(2) but that seems to cause the first row's
   // chroma to be duplicated.
   Src1YStartEnd::Get()
       .FromValue(0)
       .set_end(input_y_end)
-      .set_start(0)
+      .set_start(input_y_start)
       .set_end_extra(3)
       .WriteTo(&ge2d_mmio_);
   DstClipXStartEnd::Get().FromValue(0).set_end(output_x_end).set_start(0).WriteTo(&ge2d_mmio_);
@@ -323,6 +348,8 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
       .set_dst2(output_canvas.canvas_idx[kUVComponent].id())
       .WriteTo(&ge2d_mmio_);
 
+  // To match the linux driver we repeat the UV planes instead of interpolating if we're not
+  // scaling the output. This is arguably incorrect, depending on chroma siting.
   Src1FmtCtrl::Get()
       .FromValue(0)
       .set_horizontal_enable(true)

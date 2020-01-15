@@ -43,10 +43,10 @@ class Ge2dDeviceTest : public zxtest::Test {
     ASSERT_OK(camera::GetImageFormat(output_image_format_table_[2],
                                      fuchsia_sysmem_PixelFormatType_NV12, kWidth / 4, kHeight / 4));
     // Set up fake Resize info
-    resize_info_.crop.x = 100;
-    resize_info_.crop.y = 100;
-    resize_info_.crop.width = 50;
-    resize_info_.crop.height = 50;
+    resize_info_.crop.x = 0;
+    resize_info_.crop.y = 0;
+    resize_info_.crop.width = kWidth;
+    resize_info_.crop.height = kHeight;
     resize_info_.output_rotation = GE2D_ROTATION_ROTATION_0;
 
     zx_status_t status = camera::CreateContiguousBufferCollectionInfo(
@@ -58,6 +58,12 @@ class Ge2dDeviceTest : public zxtest::Test {
         output_buffer_collection_, output_image_format_table_[0], g_ge2d_device->bti().get(),
         buffer_collection_count);
     ASSERT_OK(status);
+    for (uint32_t i = 0; i < output_buffer_collection_.buffer_count; i++) {
+      size_t size;
+      ASSERT_OK(zx_vmo_get_size(output_buffer_collection_.buffers[i].vmo, &size));
+      ASSERT_OK(zx_vmo_op_range(output_buffer_collection_.buffers[i].vmo, ZX_VMO_OP_CACHE_CLEAN, 0,
+                                size, nullptr, 0));
+    }
   }
 
   void SetupCallbacks() {
@@ -83,6 +89,8 @@ class Ge2dDeviceTest : public zxtest::Test {
   void RunFrameCallback(const frame_available_info* info) { client_frame_callback_(info); }
 
  protected:
+  void CompareCroppedOutput(const frame_available_info* info);
+
   hw_accel_frame_callback_t frame_callback_;
   hw_accel_res_change_callback_t res_callback_;
   hw_accel_remove_task_callback_t remove_task_callback_;
@@ -146,17 +154,36 @@ void CheckEqual(zx_handle_t vmo_a, zx_handle_t vmo_b, const image_format_2_t& fo
                      format.coded_width, format.coded_height / 2, "UV");
 }
 
+void Ge2dDeviceTest::CompareCroppedOutput(const frame_available_info* info) {
+  fprintf(stderr, "Got frame_ready, id %d\n", info->buffer_id);
+  zx_handle_t vmo_a = input_buffer_collection_.buffers[0].vmo;
+  zx_handle_t vmo_b = output_buffer_collection_.buffers[info->buffer_id].vmo;
+  image_format_2_t input_format = output_image_format_table_[0];
+  image_format_2_t output_format = output_image_format_table_[1];
+
+  CacheInvalidateVmo(vmo_a);
+  CacheInvalidateVmo(vmo_b);
+  uint32_t a_start_offset = input_format.bytes_per_row * resize_info_.crop.y + resize_info_.crop.x;
+  CheckSubPlaneEqual(vmo_a, vmo_b, a_start_offset, 0, input_format.bytes_per_row,
+                     output_format.bytes_per_row, output_format.coded_width,
+                     output_format.coded_height, "Y");
+  // When scaling is a disabled we currently repeat the input U and V data instead of
+  // interpolating, so the output UV should just be a shifted version of the input.
+  uint32_t a_uv_offset = input_format.bytes_per_row * input_format.coded_height;
+  uint32_t a_uv_start_offset = a_uv_offset +
+                               input_format.bytes_per_row * (resize_info_.crop.y / 2) +
+                               (resize_info_.crop.x / 2) * 2;
+  uint32_t b_uv_offset = output_format.bytes_per_row * output_format.coded_height;
+  CheckSubPlaneEqual(vmo_a, vmo_b, a_uv_start_offset, b_uv_offset, input_format.bytes_per_row,
+                     output_format.bytes_per_row, output_format.coded_width,
+                     output_format.coded_height / 2, "UV");
+}
+
 TEST_F(Ge2dDeviceTest, SameSize) {
   SetupCallbacks();
   SetupInput();
 
   WriteDataToVmo(input_buffer_collection_.buffers[0].vmo, output_image_format_table_[0]);
-  for (uint32_t i = 0; i < output_buffer_collection_.buffer_count; i++) {
-    size_t size;
-    ASSERT_OK(zx_vmo_get_size(output_buffer_collection_.buffers[i].vmo, &size));
-    ASSERT_OK(zx_vmo_op_range(output_buffer_collection_.buffers[i].vmo, ZX_VMO_OP_CACHE_CLEAN, 0,
-                              size, nullptr, 0));
-  }
 
   SetFrameCallback([this](const frame_available_info* info) {
     fprintf(stderr, "Got frame_ready, id %d\n", info->buffer_id);
@@ -170,6 +197,64 @@ TEST_F(Ge2dDeviceTest, SameSize) {
   zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
       &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
       &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 0,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+TEST_F(Ge2dDeviceTest, Crop) {
+  SetupCallbacks();
+  SetupInput();
+
+  WriteDataToVmo(input_buffer_collection_.buffers[0].vmo, output_image_format_table_[0]);
+
+  resize_info_.crop.x = kWidth / 2;
+  resize_info_.crop.y = kHeight / 2;
+  resize_info_.crop.width = kWidth / 2;
+  resize_info_.crop.height = kHeight / 2;
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    CompareCroppedOutput(info);
+    sync_completion_signal(&completion_);
+  });
+
+  uint32_t resize_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 1,
+      &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
+  EXPECT_OK(status);
+
+  status = g_ge2d_device->Ge2dProcessFrame(resize_task, 0);
+  EXPECT_OK(status);
+
+  EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
+}
+
+TEST_F(Ge2dDeviceTest, CropOddOffset) {
+  SetupCallbacks();
+  SetupInput();
+
+  WriteDataToVmo(input_buffer_collection_.buffers[0].vmo, output_image_format_table_[0]);
+
+  resize_info_.crop.x = 1;
+  resize_info_.crop.y = 1;
+  resize_info_.crop.width = kWidth / 2;
+  resize_info_.crop.height = kHeight / 2;
+
+  SetFrameCallback([this](const frame_available_info* info) {
+    CompareCroppedOutput(info);
+    sync_completion_signal(&completion_);
+  });
+
+  uint32_t resize_task;
+  zx_status_t status = g_ge2d_device->Ge2dInitTaskResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 1,
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
