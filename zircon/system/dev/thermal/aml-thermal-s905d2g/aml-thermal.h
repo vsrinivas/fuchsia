@@ -18,7 +18,6 @@
 #include <ddktl/protocol/empty-protocol.h>
 
 #include "aml-cpufreq.h"
-#include "aml-pwm.h"
 #include "aml-tsensor.h"
 #include "aml-voltage.h"
 

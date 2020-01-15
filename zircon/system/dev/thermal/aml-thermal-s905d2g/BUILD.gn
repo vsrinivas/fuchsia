@@ -39,7 +39,6 @@ zx_test("aml-thermal-s905d2g-test") {
   sources = [
     "aml-cpufreq.cc",
     "aml-fclk-rates.c",
-    "aml-pwm.cc",
     "aml-thermal-test.cc",
     "aml-thermal.cc",
     "aml-tsensor.cc",
