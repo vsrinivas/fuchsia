@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 
 namespace media::audio {
@@ -41,6 +42,8 @@ class RoutingConfig {
     // Whether this device is eligible to be looped back to loopback capturers.
     bool eligible_for_loopback() const { return eligible_for_loopback_; }
 
+    const std::shared_ptr<LoudnessTransform>& loudness_transform() const;
+
     // Whether this device has independent volume control, and should therefore
     // receive routed streams at unity gain.
     bool independent_volume_control() const { return independent_volume_control_; }
@@ -48,6 +51,8 @@ class RoutingConfig {
     const PipelineConfig& pipeline_config() const { return pipeline_config_; }
 
    private:
+    const static std::shared_ptr<LoudnessTransform> kNoOpTransform;
+
     bool eligible_for_loopback_ = true;
     bool independent_volume_control_ = false;
     PipelineConfig pipeline_config_ = PipelineConfig::Default();
