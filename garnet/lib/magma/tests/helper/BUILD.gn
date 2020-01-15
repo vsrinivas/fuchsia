@@ -52,3 +52,13 @@ source_set("logger_init_helper") {
     "$zircon_build_root/public/lib/zx",
   ]
 }
+
+source_set("inflight_list") {
+  testonly = true
+
+  public_configs = [ "//garnet/lib/magma:magma_tests_include_config" ]
+
+  sources = [ "inflight_list.h" ]
+
+  public_deps = [ "$magma_build_root/include:magma_abi" ]
+}

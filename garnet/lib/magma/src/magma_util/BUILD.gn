@@ -49,20 +49,6 @@ source_set("common") {
   ]
 }
 
-source_set("inflight_list") {
-  public_configs = [
-    ":magma_util_config",
-    "$magma_build_root:magma_src_include_config",
-  ]
-
-  sources = [ "inflight_list.h" ]
-
-  public_deps = [
-    ":common",
-    "$magma_build_root/include:magma_abi",
-  ]
-}
-
 source_set("thread") {
   public_configs = [
     ":magma_util_config",

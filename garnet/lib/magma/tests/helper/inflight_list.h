@@ -23,9 +23,6 @@ class InflightList {
  public:
   InflightList() {}
 
-  // Deprecated
-  InflightList(magma_connection_t connection) : connection_(connection) {}
-
   void add(uint64_t buffer_id) { buffers_.push_back(buffer_id); }
 
   void release(uint64_t buffer_id) {
@@ -38,11 +35,6 @@ class InflightList {
 
   bool is_inflight(uint64_t buffer_id) {
     return std::find(buffers_.begin(), buffers_.end(), buffer_id) != buffers_.end();
-  }
-
-  // Deprecated
-  bool WaitForCompletion(uint64_t timeout_ms) {
-    return magma_wait_notification_channel(connection_, timeout_ms * 1000000ull) == MAGMA_STATUS_OK;
   }
 
   // Wait for a completion; returns true if a completion was
@@ -73,8 +65,6 @@ class InflightList {
   }
 
  private:
-  // Deprecated
-  magma_connection_t connection_;
   std::deque<uint64_t> buffers_;
 };
 

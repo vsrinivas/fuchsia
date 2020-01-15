@@ -21,7 +21,7 @@ executable("msd_intel_gen_integration_tests") {
   deps = [
     "$magma_build_root/src/libmagma",
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/magma_util:inflight_list",
+    "$magma_build_root/tests/helper:inflight_list",
     "$magma_build_root/tests/helper:test_device_helper",
     "$zircon_build_root/public/lib/fdio",
     "../../include",

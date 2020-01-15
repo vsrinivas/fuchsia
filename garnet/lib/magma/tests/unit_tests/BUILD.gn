@@ -60,7 +60,6 @@ source_set("magma_util_tests") {
   sources = [
     "test_address_space.cc",
     "test_address_space_allocator.cc",
-    "test_inflight_list.cc",
     "test_macros.cc",
     "test_register_bitfields.cc",
     "test_ringbuffer.cc",
@@ -71,7 +70,6 @@ source_set("magma_util_tests") {
   deps = [
     "$magma_build_root/src/magma_util:address_space",
     "$magma_build_root/src/magma_util:allocator",
-    "$magma_build_root/src/magma_util:inflight_list",
     "$magma_build_root/src/magma_util:registers",
     "$magma_build_root/src/magma_util:ringbuffer",
     "$magma_build_root/src/magma_util:semaphore_port",

@@ -11,10 +11,10 @@
 #include <thread>
 
 #include "gtest/gtest.h"
+#include "helper/inflight_list.h"
 #include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_util/dlog.h"
-#include "magma_util/inflight_list.h"
 #include "magma_util/macros.h"
 #include "msd_intel_gen_query.h"
 
