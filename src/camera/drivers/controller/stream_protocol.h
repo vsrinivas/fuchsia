@@ -31,7 +31,7 @@ class StreamImpl : public fuchsia::camera2::Stream {
   //   |disconnect_handler|: called when the client on |channel| disconnects
   zx_status_t Attach(zx::channel channel, fit::function<void(void)> disconnect_handler);
 
-  void FrameReady(uint32_t buffer_index);
+  void FrameReady(const frame_available_info_t* info);
 
   // | fuchsia::camera2::Stream |
   void Start() override;

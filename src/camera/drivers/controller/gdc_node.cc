@@ -161,9 +161,9 @@ void GdcNode::OnReleaseFrame(uint32_t buffer_index) {
   }
 }
 
-void GdcNode::OnReadyToProcess(uint32_t buffer_index) {
+void GdcNode::OnReadyToProcess(const frame_available_info_t* info) {
   fbl::AutoLock guard(&event_queue_lock_);
-  event_queue_.emplace([this, buffer_index]() {
+  event_queue_.emplace([this, buffer_index = info->buffer_id]() {
     if (enabled_) {
       ZX_ASSERT(ZX_OK == gdc_.ProcessFrame(task_index_, buffer_index));
     } else {

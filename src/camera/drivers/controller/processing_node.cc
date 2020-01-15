@@ -32,7 +32,7 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
             ZX_ASSERT(local_info.buffer_id < in_use_buffer_count_.size());
             in_use_buffer_count_[local_info.buffer_id]++;
           }
-          child_node->OnReadyToProcess(local_info.buffer_id);
+          child_node->OnReadyToProcess(&local_info);
         }
       }
       return;

@@ -59,7 +59,7 @@ class InputNode : public ProcessNode {
   }
 
   // Notifies that a frame is ready to be sent to the client.
-  void OnReadyToProcess(uint32_t buffer_index) override;
+  void OnReadyToProcess(const frame_available_info_t* info) override;
 
   // Releases the frame associated with | buffer_index |.
   void OnReleaseFrame(uint32_t buffer_index) override;
@@ -79,7 +79,8 @@ class InputNode : public ProcessNode {
  private:
   // Notifies when a new frame is available from the ISP.
   static void OnIspFrameAvailable(void* ctx, const frame_available_info_t* info) {
-    static_cast<InputNode*>(ctx)->OnFrameAvailable(info);
+    frame_available_info_t local_info = *info;
+    static_cast<ProcessNode*>(ctx)->OnReadyToProcess(&local_info);
   }
 
   // ISP stream type.

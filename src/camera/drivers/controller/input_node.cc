@@ -71,8 +71,9 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
   return fit::ok(std::move(processing_node));
 }
 
-void InputNode::OnReadyToProcess(uint32_t buffer_index) {
-  ZX_ASSERT_MSG(false, "Invalid for InputNode");
+void InputNode::OnReadyToProcess(const frame_available_info_t* info) {
+  // No processing to be done here, forward it to OnFrameAvailable().
+  OnFrameAvailable(info);
 }
 
 void InputNode::OnFrameAvailable(const frame_available_info_t* info) {

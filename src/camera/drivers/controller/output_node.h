@@ -47,7 +47,7 @@ class OutputNode : public ProcessNode {
   std::unique_ptr<camera::StreamImpl>& client_stream() { return client_stream_; }
 
   // Notifies that a frame is ready to be sent to the client.
-  void OnReadyToProcess(uint32_t buffer_index) override;
+  void OnReadyToProcess(const frame_available_info_t* info) override;
 
   // Called by the client to release a frame.
   void OnReleaseFrame(uint32_t buffer_index) override;

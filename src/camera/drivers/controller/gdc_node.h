@@ -72,7 +72,7 @@ class GdcNode : public ProcessNode {
   virtual void OnFrameAvailable(const frame_available_info_t* info) override;
 
   // Notifies that a frame is ready to be sent to the client.
-  void OnReadyToProcess(uint32_t buffer_index) override;
+  void OnReadyToProcess(const frame_available_info_t* info) override;
 
   // Releases the frame |buffer_index| back to the GDC driver.
   void OnReleaseFrame(uint32_t buffer_index) override;

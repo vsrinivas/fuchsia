@@ -45,15 +45,15 @@ fit::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
   return result;
 }
 
-void OutputNode::OnReadyToProcess(uint32_t buffer_index) {
+void OutputNode::OnReadyToProcess(const frame_available_info_t* info) {
   if (enabled_) {
     ZX_ASSERT(client_stream_ != nullptr);
-    client_stream_->FrameReady(buffer_index);
+    client_stream_->FrameReady(info);
     return;
   }
   // Since streaming is disabled the incoming frame is released
   // so it gets added back to the pool.
-  OnReleaseFrame(buffer_index);
+  OnReleaseFrame(info->buffer_id);
 }
 
 void OutputNode::OnReleaseFrame(uint32_t buffer_index) {
