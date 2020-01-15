@@ -345,5 +345,63 @@ TEST_F(SemanticTreeTest, PerformHitTestingRequested) {
   EXPECT_TRUE(hit_testing_called_);
 }
 
+TEST_F(SemanticTreeTest, NextNodeExists) {
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+
+  auto next_node = tree_.GetNextNode(1u);
+  EXPECT_NE(next_node, nullptr);
+  EXPECT_EQ(next_node->node_id(), 3u);
+}
+
+TEST_F(SemanticTreeTest, NoNextNode) {
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+
+  auto next_node = tree_.GetNextNode(6u);
+  EXPECT_EQ(next_node, nullptr);
+}
+
+TEST_F(SemanticTreeTest, GetNextNodeForNonexistentId) {
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+
+  auto next_node = tree_.GetNextNode(10u);
+  EXPECT_EQ(next_node, nullptr);
+}
+
+TEST_F(SemanticTreeTest, PreviousNodeExists) {
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+
+  auto next_node = tree_.GetPreviousNode(6u);
+  EXPECT_NE(next_node, nullptr);
+  EXPECT_EQ(next_node->node_id(), 5u);
+}
+
+TEST_F(SemanticTreeTest, NoPreviousNode) {
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+
+  auto next_node = tree_.GetPreviousNode(0u);
+  EXPECT_EQ(next_node, nullptr);
+}
+
+TEST_F(SemanticTreeTest, NoPreviousLeafNode) {
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+
+  auto next_node = tree_.GetPreviousNode(3u);
+  EXPECT_EQ(next_node, nullptr);
+}
+
+TEST_F(SemanticTreeTest, GetPreviousNodeForNonexistentId) {
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+
+  auto next_node = tree_.GetPreviousNode(10u);
+  EXPECT_EQ(next_node, nullptr);
+}
+
 }  // namespace
 }  // namespace accessibility_test

@@ -7,6 +7,7 @@
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <lib/syslog/cpp/logger.h>
 
+#include <queue>
 #include <unordered_set>
 
 #include "src/lib/fxl/logging.h"
@@ -137,6 +138,83 @@ const Node* SemanticTree::GetNode(const uint32_t node_id) const {
     return nullptr;
   }
   return &it->second;
+}
+
+const Node* SemanticTree::GetNextNode(const uint32_t node_id) const {
+  if (nodes_.find(node_id) == nodes_.end()) {
+    return nullptr;
+  }
+
+  std::queue<uint32_t> nodes_to_visit;
+
+  bool found_node = false;
+
+  // Start traversal from the root node.
+  nodes_to_visit.push(kRootNodeId);
+
+  while (!nodes_to_visit.empty()) {
+    auto current_node_id = nodes_to_visit.front();
+    nodes_to_visit.pop();
+
+    FX_DCHECK(nodes_.find(current_node_id) != nodes_.end())
+        << "Nonexistent node id " << current_node_id << " encountered in tree traversal.";
+
+    auto current_node = GetNode(current_node_id);
+
+    if (current_node->has_child_ids()) {
+      for (const auto child_id : current_node->child_ids()) {
+        nodes_to_visit.push(child_id);
+      }
+    } else if (found_node) {
+      return current_node;
+    }
+
+    if (current_node_id == node_id) {
+      found_node = true;
+    }
+  }
+
+  return nullptr;
+}
+
+const Node* SemanticTree::GetPreviousNode(const uint32_t node_id) const {
+  if (nodes_.find(node_id) == nodes_.end()) {
+    return nullptr;
+  }
+
+  std::queue<uint32_t> nodes_to_visit;
+
+  // Start traversal from the root node.
+  nodes_to_visit.push(kRootNodeId);
+
+  const Node* previous_leaf_node = nullptr;
+
+  while (!nodes_to_visit.empty()) {
+    auto current_node_id = nodes_to_visit.front();
+    nodes_to_visit.pop();
+
+    if (current_node_id == node_id) {
+      return previous_leaf_node;
+    }
+
+    FX_DCHECK(nodes_.find(current_node_id) != nodes_.end())
+        << "Nonexistent node id " << current_node_id << " encountered in tree traversal.";
+
+    auto current_node = GetNode(current_node_id);
+
+    // Since we only want to return leaf nodes, only update previous_leaf_node if current_node does
+    // not have any children.
+    if (!current_node->has_child_ids()) {
+      previous_leaf_node = current_node;
+      continue;
+    }
+
+    for (const auto child_id : current_node->child_ids()) {
+      nodes_to_visit.push(child_id);
+    }
+  }
+
+  return nullptr;
 }
 
 const Node* SemanticTree::GetParentNode(const uint32_t node_id) const {
