@@ -439,6 +439,13 @@ class Library {
                                     std::string_view container_type,
                                     std::string_view container_name, const char* field_name,
                                     uint64_t size);
+  // Extract type info
+  uint64_t ExtractTypeSize(const rapidjson::Value* json_definition, std::string_view container_type,
+                           std::string_view container_name);
+  uint64_t ExtractTypeAlignment(const rapidjson::Value* json_definition,
+                                std::string_view container_type, std::string_view container_name);
+  uint64_t ExtractFieldOffset(const rapidjson::Value* json_definition,
+                              std::string_view container_type, std::string_view container_name);
   // Display an error when a field is not found.
   void FieldNotFound(std::string_view container_type, std::string_view container_name,
                      const char* field_name);

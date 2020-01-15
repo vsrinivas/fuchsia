@@ -25,30 +25,7 @@
           },
           "has_request": true,
           "maybe_request": [],
-          "maybe_request_size": 16,
-          "maybe_request_has_padding": false,
-          "experimental_maybe_request_has_flexible_envelope": false,
-          "maybe_request_type_shape_old": {
-            "inline_size": 16,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 0,
-            "max_out_of_line": 0,
-            "has_padding": false,
-            "has_flexible_envelope": false,
-            "contains_union": false
-          },
           "maybe_request_type_shape_v1": {
-            "inline_size": 16,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 0,
-            "max_out_of_line": 0,
-            "has_padding": false,
-            "has_flexible_envelope": false,
-            "contains_union": false
-          },
-          "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 16,
             "alignment": 8,
             "depth": 0,
@@ -82,30 +59,7 @@
           },
           "has_request": true,
           "maybe_request": [],
-          "maybe_request_size": 16,
-          "maybe_request_has_padding": false,
-          "experimental_maybe_request_has_flexible_envelope": false,
-          "maybe_request_type_shape_old": {
-            "inline_size": 16,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 0,
-            "max_out_of_line": 0,
-            "has_padding": false,
-            "has_flexible_envelope": false,
-            "contains_union": false
-          },
           "maybe_request_type_shape_v1": {
-            "inline_size": 16,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 0,
-            "max_out_of_line": 0,
-            "has_padding": false,
-            "has_flexible_envelope": false,
-            "contains_union": false
-          },
-          "maybe_request_type_shape_v1_no_ee": {
             "inline_size": 16,
             "alignment": 8,
             "depth": 0,

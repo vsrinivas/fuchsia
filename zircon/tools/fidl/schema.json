@@ -370,25 +370,9 @@
                         "$ref": "#/definitions/interface-method-parameter"
                     }
                 },
-                "maybe_request_size": {
-                    "description": "Size of the method's transactional message (header and optional payload), if one is present",
-                    "$ref": "#/definitions/count"
-                },
-                "maybe_request_has_padding": {
-                    "description": "Flag indicating if there could be padding bytes in the request",
-                    "type": "boolean"
-                },
-                "maybe_request_type_shape_old": {
-                    "description": "Type shape of this declaration in the old wire format",
+                "maybe_request_type_shape_v1": {
+                    "description": "Type shape of this declaration",
                     "$ref": "#/definitions/typeshape"
-                },
-                "maybe_request_type_shape_v1_no_ee": {
-                    "description": "Type shape of this declaration in the new wire format (without efficient envelopes)",
-                    "$ref": "#/definitions/typeshape"
-                },
-                "experimental_maybe_request_has_flexible_envelopes": {
-                    "description": "Flag indicating if the request contains flexible xunion or table",
-                    "type": "boolean"
                 },
                 "has_response": {
                     "description": "Flag indicating that interface method has a response component",
@@ -401,25 +385,9 @@
                         "$ref": "#/definitions/interface-method-parameter"
                     }
                 },
-                "maybe_response_size": {
-                    "description": "Size of interface method response parameters, if any present",
-                    "$ref": "#/definitions/count"
-                },
-                "maybe_response_has_padding": {
-                    "description": "Flag indicating if there could be padding bytes in the response",
-                    "type": "boolean"
-                },
-                "maybe_response_type_shape_old": {
-                    "description": "Type shape of this declaration in the old wire format",
+                "maybe_response_type_shape_v1": {
+                    "description": "Type shape of this declaration",
                     "$ref": "#/definitions/typeshape"
-                },
-                "maybe_response_type_shape_v1_no_ee": {
-                    "description": "Type shape of this declaration in the new wire format (without efficient envelopes)",
-                    "$ref": "#/definitions/typeshape"
-                },
-                "experimental_maybe_response_has_flexible_envelopes": {
-                    "description": "Flag indicating if the response contains flexible xunion or table",
-                    "type": "boolean"
                 },
                 "is_composed": {
                     "description": "Flag indicating whether method was composed into this protocol",
@@ -433,10 +401,7 @@
             "required": [
                 "type",
                 "name",
-                "size",
-                "max_out_of_line",
-                "alignment",
-                "offset"
+                "field_shape_v1"
             ],
             "properties": {
                 "type": {
@@ -451,21 +416,9 @@
                     "description": "Source location of the declaration",
                     "$ref": "#/definitions/location"
                 },
-                "size": {
-                    "description": "Size of the parameter or return",
-                    "$ref": "#/definitions/count"
-                },
-                "max_out_of_line": {
-                    "description": "Maximum size of the out-of-line payload",
-                    "$ref": "#/definitions/count"
-                },
-                "alignment": {
-                    "description": "Alignment of the parameter or return",
-                    "$ref": "#/definitions/count"
-                },
-                "offset": {
-                    "description": "Offset of the parameter or return",
-                    "$ref": "#/definitions/count"
+                "field_shape_v1": {
+                    "description": "Field shape",
+                    "$ref": "#/definitions/fieldshape"
                 }
             }
         },
@@ -532,8 +485,7 @@
             "required": [
                 "name",
                 "members",
-                "size",
-                "max_out_of_line"
+                "type_shape_v1"
             ],
             "properties": {
                 "max_handles": {
@@ -563,24 +515,8 @@
                         "$ref": "#/definitions/struct-member"
                     }
                 },
-                "size": {
-                    "description": "Size of struct",
-                    "$ref": "#/definitions/count"
-                },
-                "max_out_of_line": {
-                    "description": "Maximum size of the out-of-line struct payload",
-                    "$ref": "#/definitions/count"
-                },
-                "has_padding": {
-                    "description": "Flag indicating if there could be padding bytes in the struct. This flag is also set on the struct when it is set on any of it's fields themselves, even if the struct has no immediate padding.",
-                    "type": "boolean"
-                },
-                "type_shape_old": {
-                    "description": "Type shape of this declaration in the old wire format",
-                    "$ref": "#/definitions/typeshape"
-                },
-                "type_shape_v1_no_ee": {
-                    "description": "Type shape of this declaration in the new wire format (without efficient envelopes)",
+                "type_shape_v1": {
+                    "description": "Type shape of this declaration",
                     "$ref": "#/definitions/typeshape"
                 }
             }
@@ -591,10 +527,7 @@
             "required": [
                 "type",
                 "name",
-                "size",
-                "max_out_of_line",
-                "alignment",
-                "offset"
+                "field_shape_v1"
             ],
             "properties": {
                 "type": {
@@ -609,28 +542,8 @@
                     "description": "Source location of the declaration",
                     "$ref": "#/definitions/location"
                 },
-                "size": {
-                    "description": "Size of struct member",
-                    "$ref": "#/definitions/count"
-                },
-                "max_out_of_line": {
-                    "description": "Maximum size of the out-of-line payload",
-                    "$ref": "#/definitions/count"
-                },
-                "alignment": {
-                    "description": "Alignment of the struct member",
-                    "$ref": "#/definitions/count"
-                },
-                "offset": {
-                    "description": "Offset of the struct member",
-                    "$ref": "#/definitions/count"
-                },
-                "field_shape_old": {
-                    "description": "Field shape in the old wire format",
-                    "$ref": "#/definitions/fieldshape"
-                },
-                "field_shape_v1_no_ee": {
-                    "description": "Field shape in the new wire format (without efficient envelopes)",
+                "field_shape_v1": {
+                    "description": "Field shape",
                     "$ref": "#/definitions/fieldshape"
                 },
                 "maybe_attributes": {
@@ -649,8 +562,7 @@
             "required": [
                 "name",
                 "members",
-                "size",
-                "max_out_of_line",
+                "type_shape_v1",
                 "strict"
             ],
             "properties": {
@@ -677,24 +589,12 @@
                         "$ref": "#/definitions/table-member"
                     }
                 },
-                "size": {
-                    "description": "Size of table",
-                    "$ref": "#/definitions/count"
-                },
-                "max_out_of_line": {
-                    "description": "Maximum size of the out-of-line payload for the entire table. Note that this value is computed without considering future member additions, otherwise it would always be pegged at the maximum. Bindings should take this into consideration when using max_out_of_line.",
-                    "$ref": "#/definitions/count"
-                },
                 "strict": {
                     "description": "Strictness of table",
                     "type": "boolean"
                 },
-                "type_shape_old": {
-                    "description": "Type shape of this declaration in the old wire format",
-                    "$ref": "#/definitions/typeshape"
-                },
-                "type_shape_v1_no_ee": {
-                    "description": "Type shape of this declaration in the new wire format (without efficient envelopes)",
+                "type_shape_v1": {
+                    "description": "Type shape of this declaration",
                     "$ref": "#/definitions/typeshape"
                 }
             }
@@ -802,9 +702,7 @@
             "required": [
                 "name",
                 "members",
-                "size",
-                "max_out_of_line",
-                "alignment"
+                "type_shape_v1"
             ],
             "properties": {
                 "max_handles": {
@@ -830,24 +728,8 @@
                         "$ref": "#/definitions/union-member"
                     }
                 },
-                "size": {
-                    "description": "Size of union",
-                    "$ref": "#/definitions/count"
-                },
-                "max_out_of_line": {
-                    "description": "Maximum size of the out-of-line payload",
-                    "$ref": "#/definitions/count"
-                },
-                "alignment": {
-                    "description": "Alignment of union",
-                    "$ref": "#/definitions/count"
-                },
-                "type_shape_old": {
-                    "description": "Type shape of this declaration in the old wire format",
-                    "$ref": "#/definitions/typeshape"
-                },
-                "type_shape_v1_no_ee": {
-                    "description": "Type shape of this declaration in the new wire format (without efficient envelopes)",
+                "type_shape_v1": {
+                    "description": "Type shape of this declaration",
                     "$ref": "#/definitions/typeshape"
                 }
             }
@@ -880,22 +762,6 @@
                     "description": "Source location of the declaration",
                     "$ref": "#/definitions/location"
                 },
-                "size": {
-                    "description": "Size of union member",
-                    "$ref": "#/definitions/count"
-                },
-                "max_out_of_line": {
-                    "description": "Maximum size of the out-of-line payload",
-                    "$ref": "#/definitions/count"
-                },
-                "alignment": {
-                    "description": "Alignment of union member",
-                    "$ref": "#/definitions/count"
-                },
-                "offset": {
-                    "description": "Offset of union member",
-                    "$ref": "#/definitions/count"
-                },
                 "maybe_attributes": {
                     "description": "Optional list of union member attributes",
                     "$ref": "#/definitions/attributes-list"
@@ -908,9 +774,7 @@
             "required": [
                 "name",
                 "members",
-                "size",
-                "max_out_of_line",
-                "alignment",
+                "type_shape_v1",
                 "strict"
             ],
             "properties": {
@@ -937,28 +801,12 @@
                         "$ref": "#/definitions/xunion-member"
                     }
                 },
-                "size": {
-                    "description": "Size of extensible union",
-                    "$ref": "#/definitions/count"
-                },
-                "max_out_of_line": {
-                    "description": "Maximum size of the out-of-line payload",
-                    "$ref": "#/definitions/count"
-                },
-                "alignment": {
-                    "description": "Alignment of extensible union",
-                    "$ref": "#/definitions/count"
-                },
                 "strict": {
                     "description": "Strictness of extensible union",
                     "type": "boolean"
                 },
-                "type_shape_old": {
-                    "description": "Type shape of this declaration in the old wire format",
-                    "$ref": "#/definitions/typeshape"
-                },
-                "type_shape_v1_no_ee": {
-                    "description": "Type shape of this declaration in the new wire format (without efficient envelopes)",
+                "type_shape_v1": {
+                    "description": "Type shape of this declaration",
                     "$ref": "#/definitions/typeshape"
                 }
             }
@@ -991,16 +839,8 @@
                     "description": "Source location of the declaration",
                     "$ref": "#/definitions/location"
                 },
-                "size": {
-                    "description": "Size of extensible union member",
-                    "$ref": "#/definitions/count"
-                },
                 "max_out_of_line": {
                     "description": "Maximum size of the out-of-line payload",
-                    "$ref": "#/definitions/count"
-                },
-                "alignment": {
-                    "description": "Alignment of extensible union member",
                     "$ref": "#/definitions/count"
                 },
                 "offset": {

@@ -30,10 +30,7 @@
             "line": 4,
             "column": 14
           },
-          "size": 1,
-          "max_out_of_line": 0,
-          "alignment": 1,
-          "max_handles": 0
+          "size": 1
         },
         {
           "ordinal": 2,
@@ -48,10 +45,7 @@
             "line": 5,
             "column": 13
           },
-          "size": 1,
-          "max_out_of_line": 0,
-          "alignment": 1,
-          "max_handles": 0
+          "size": 1
         },
         {
           "ordinal": 3,
@@ -60,35 +54,12 @@
             "filename": "table.test.fidl",
             "line": 6,
             "column": 5
-          }
+          },
+          "size": 0
         }
       ],
-      "size": 16,
-      "max_out_of_line": 48,
-      "alignment": 8,
-      "max_handles": 0,
       "strict": false,
-      "type_shape_old": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 48,
-        "has_padding": true,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
       "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 48,
-        "has_padding": true,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
-      "type_shape_v1_no_ee": {
         "inline_size": 16,
         "alignment": 8,
         "depth": 2,

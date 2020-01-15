@@ -35,8 +35,6 @@
             "column": 15
           },
           "size": 16,
-          "max_out_of_line": 4294967295,
-          "alignment": 8,
           "offset": 0
         },
         {
@@ -55,37 +53,11 @@
             "column": 14
           },
           "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
           "offset": 0
         }
       ],
-      "size": 24,
-      "max_out_of_line": 4294967295,
-      "alignment": 8,
-      "max_handles": 0,
       "strict": false,
-      "type_shape_old": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 4294967295,
-        "has_padding": true,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
       "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 4294967295,
-        "has_padding": true,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
-      "type_shape_v1_no_ee": {
         "inline_size": 24,
         "alignment": 8,
         "depth": 2,
@@ -120,8 +92,6 @@
             "column": 15
           },
           "size": 16,
-          "max_out_of_line": 4294967295,
-          "alignment": 8,
           "offset": 0
         },
         {
@@ -140,37 +110,11 @@
             "column": 14
           },
           "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
           "offset": 0
         }
       ],
-      "size": 24,
-      "max_out_of_line": 4294967295,
-      "alignment": 8,
-      "max_handles": 0,
       "strict": true,
-      "type_shape_old": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 4294967295,
-        "has_padding": true,
-        "has_flexible_envelope": false,
-        "contains_union": false
-      },
       "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 4294967295,
-        "has_padding": true,
-        "has_flexible_envelope": false,
-        "contains_union": false
-      },
-      "type_shape_v1_no_ee": {
         "inline_size": 24,
         "alignment": 8,
         "depth": 2,
@@ -205,8 +149,6 @@
             "column": 15
           },
           "size": 16,
-          "max_out_of_line": 4294967295,
-          "alignment": 8,
           "offset": 0
         },
         {
@@ -225,8 +167,6 @@
             "column": 14
           },
           "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
           "offset": 0
         },
         {
@@ -240,32 +180,8 @@
           }
         }
       ],
-      "size": 24,
-      "max_out_of_line": 4294967295,
-      "alignment": 8,
-      "max_handles": 0,
       "strict": false,
-      "type_shape_old": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 4294967295,
-        "has_padding": true,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
       "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 4294967295,
-        "has_padding": true,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
-      "type_shape_v1_no_ee": {
         "inline_size": 24,
         "alignment": 8,
         "depth": 2,
@@ -310,8 +226,6 @@
             "column": 15
           },
           "size": 16,
-          "max_out_of_line": 4294967295,
-          "alignment": 8,
           "offset": 0
         },
         {
@@ -330,37 +244,11 @@
             "column": 14
           },
           "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
           "offset": 0
         }
       ],
-      "size": 24,
-      "max_out_of_line": 4294967295,
-      "alignment": 8,
-      "max_handles": 0,
       "strict": true,
-      "type_shape_old": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 4294967295,
-        "has_padding": true,
-        "has_flexible_envelope": false,
-        "contains_union": false
-      },
       "type_shape_v1": {
-        "inline_size": 24,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 4294967295,
-        "has_padding": true,
-        "has_flexible_envelope": false,
-        "contains_union": false
-      },
-      "type_shape_v1_no_ee": {
         "inline_size": 24,
         "alignment": 8,
         "depth": 2,

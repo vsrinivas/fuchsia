@@ -329,11 +329,6 @@ void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& va
 
 void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct& value) {
   GenerateObjectMember(prefix, value.members);
-  auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-  GenerateObjectMember(prefix + "_size", deprecated_type_shape.InlineSize());
-  GenerateObjectMember(prefix + "_has_padding", deprecated_type_shape.HasPadding());
-  GenerateObjectMember("experimental_" + prefix + "_has_flexible_envelope",
-                       deprecated_type_shape.HasFlexibleEnvelope());
   GenerateTypeShapes(prefix, value);
 }
 
@@ -365,12 +360,6 @@ void JSONGenerator::Generate(const flat::Struct& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
-    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
-    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
-    GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
-    GenerateObjectMember("has_padding", deprecated_type_shape.HasPadding());
     GenerateTypeShapes(value);
   });
 }
@@ -384,14 +373,11 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
       GenerateObjectMember("maybe_attributes", value.attributes);
     if (value.maybe_default_value)
       GenerateObjectMember("maybe_default_value", value.maybe_default_value);
-    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-    auto deprecated_field_shape = value.fieldshape(WireFormat::kOld);
-    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
-    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
-    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
-    GenerateObjectMember("offset", deprecated_field_shape.Offset());
-    GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
     GenerateFieldShapes(value);
+
+    // TODO(fxb/43957): this should be removed or updated
+    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
+    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
   });
 }
 
@@ -402,11 +388,6 @@ void JSONGenerator::Generate(const flat::Table& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
-    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
-    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
-    GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
     GenerateTypeShapes(value);
   });
@@ -424,16 +405,15 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
       if (value.maybe_used->attributes)
         GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
       // TODO(FIDL-609): Support defaults on tables.
-      auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-      GenerateObjectMember("size", deprecated_type_shape.InlineSize());
-      GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
-      GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
-      GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
     } else {
       assert(value.span);
       GenerateObjectMember("reserved", true);
       GenerateObjectMember("location", NameSpan(value.span.value()));
     }
+
+    // TODO(fxb/43957): this should be removed or updated
+    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
+    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
   });
 }
 
@@ -478,11 +458,6 @@ void JSONGenerator::Generate(const flat::Union& value) {
     // this by sorting members by xunion_ordinal before emitting them.
     GenerateObjectMember("members", value.MembersSortedByXUnionOrdinal());
 
-    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
-    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
-    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
-    GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
     GenerateTypeShapes(value);
   });
 }
@@ -498,11 +473,11 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
       if (value.maybe_used->attributes)
         GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
-      auto deprecated_type_shape = value.maybe_used->typeshape(WireFormat::kOld);
+
+      // TODO(fxb/43957): this should be removed or updated
+      auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
       auto deprecated_field_shape = value.maybe_used->fieldshape(WireFormat::kOld);
       GenerateObjectMember("size", deprecated_type_shape.InlineSize());
-      GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
-      GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
       GenerateObjectMember("offset", deprecated_field_shape.Offset());
     } else {
       GenerateObjectMember("reserved", true);
@@ -518,11 +493,6 @@ void JSONGenerator::Generate(const flat::XUnion& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
-    GenerateObjectMember("size", deprecated_type_shape.InlineSize());
-    GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
-    GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
-    GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
     GenerateTypeShapes(value);
   });
@@ -541,11 +511,11 @@ void JSONGenerator::Generate(const flat::XUnion::Member& value) {
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
       if (value.maybe_used->attributes)
         GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
-      auto deprecated_type_shape = value.maybe_used->typeshape(WireFormat::kOld);
+
+      // TODO(fxb/43957): this should be removed or updated
+      auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
       auto deprecated_field_shape = value.maybe_used->fieldshape(WireFormat::kOld);
       GenerateObjectMember("size", deprecated_type_shape.InlineSize());
-      GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
-      GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
       GenerateObjectMember("offset", deprecated_field_shape.Offset());
     } else {
       GenerateObjectMember("reserved", true);
@@ -635,15 +605,11 @@ void JSONGenerator::GenerateTypeShapes(std::string prefix, const flat::Object& o
     prefix.push_back('_');
   }
 
-  GenerateObjectMember(prefix + "type_shape_old", TypeShape(object, WireFormat::kOld));
   GenerateObjectMember(prefix + "type_shape_v1", TypeShape(object, WireFormat::kV1NoEe));
-  GenerateObjectMember(prefix + "type_shape_v1_no_ee", TypeShape(object, WireFormat::kV1NoEe));
 }
 
 void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_member) {
-  GenerateObjectMember("field_shape_old", FieldShape(struct_member, WireFormat::kOld));
   GenerateObjectMember("field_shape_v1", FieldShape(struct_member, WireFormat::kV1NoEe));
-  GenerateObjectMember("field_shape_v1_no_ee", FieldShape(struct_member, WireFormat::kV1NoEe));
 }
 
 void JSONGenerator::GenerateDeclarationsEntry(int count, const flat::Name& name,

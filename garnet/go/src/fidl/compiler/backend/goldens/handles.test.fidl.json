@@ -29,23 +29,11 @@
             "line": 4,
             "column": 12
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 0,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 0,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 0,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 0,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -59,23 +47,11 @@
             "line": 6,
             "column": 17
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 4,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 4,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 4,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 4,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -89,23 +65,11 @@
             "line": 7,
             "column": 21
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 8,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 8,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 8,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 8,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -119,23 +83,11 @@
             "line": 8,
             "column": 22
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 12,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 12,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 12,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 12,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -149,23 +101,11 @@
             "line": 9,
             "column": 19
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 16,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 16,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 16,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 16,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -179,23 +119,11 @@
             "line": 10,
             "column": 23
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 20,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 20,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 20,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 20,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -209,23 +137,11 @@
             "line": 11,
             "column": 23
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 24,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 24,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 24,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 24,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -239,23 +155,11 @@
             "line": 12,
             "column": 18
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 28,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 28,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 28,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 28,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -269,23 +173,11 @@
             "line": 13,
             "column": 19
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 32,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 32,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 32,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 32,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -299,23 +191,11 @@
             "line": 14,
             "column": 23
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 36,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 36,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 36,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 36,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -329,23 +209,11 @@
             "line": 15,
             "column": 19
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 40,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 40,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 40,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 40,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -359,23 +227,11 @@
             "line": 16,
             "column": 17
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 44,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 44,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 44,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 44,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -389,23 +245,11 @@
             "line": 17,
             "column": 19
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 48,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 48,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 48,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 48,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -419,23 +263,11 @@
             "line": 18,
             "column": 23
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 52,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 52,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 52,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 52,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -449,23 +281,11 @@
             "line": 19,
             "column": 17
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 56,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 56,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 56,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 56,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -479,23 +299,11 @@
             "line": 20,
             "column": 18
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 60,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 60,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 60,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 60,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -509,23 +317,11 @@
             "line": 21,
             "column": 21
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 64,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 64,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 64,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 64,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -539,23 +335,11 @@
             "line": 22,
             "column": 21
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 68,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 68,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 68,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 68,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -569,23 +353,11 @@
             "line": 23,
             "column": 22
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 72,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 72,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 72,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 72,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -599,23 +371,11 @@
             "line": 24,
             "column": 20
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 76,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 76,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 76,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 76,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -629,23 +389,11 @@
             "line": 25,
             "column": 26
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 80,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 80,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 80,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 80,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -659,23 +407,11 @@
             "line": 26,
             "column": 20
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 84,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 84,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 84,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 84,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -689,23 +425,11 @@
             "line": 27,
             "column": 19
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 88,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 88,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 88,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 88,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -719,23 +443,11 @@
             "line": 28,
             "column": 18
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 92,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 92,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 92,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 92,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -749,23 +461,11 @@
             "line": 29,
             "column": 18
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 96,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 96,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 96,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 96,
-            "padding": 0
-          }
+          "size": 4
         },
         {
           "type": {
@@ -779,51 +479,14 @@
             "line": 30,
             "column": 17
           },
-          "size": 4,
-          "max_out_of_line": 0,
-          "alignment": 4,
-          "offset": 100,
-          "max_handles": 1,
-          "field_shape_old": {
-            "offset": 100,
-            "padding": 0
-          },
           "field_shape_v1": {
             "offset": 100,
             "padding": 0
           },
-          "field_shape_v1_no_ee": {
-            "offset": 100,
-            "padding": 0
-          }
+          "size": 4
         }
       ],
-      "size": 104,
-      "max_out_of_line": 0,
-      "alignment": 4,
-      "max_handles": 26,
-      "has_padding": false,
-      "type_shape_old": {
-        "inline_size": 104,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 26,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false,
-        "contains_union": false
-      },
       "type_shape_v1": {
-        "inline_size": 104,
-        "alignment": 4,
-        "depth": 0,
-        "max_handles": 26,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": false,
-        "contains_union": false
-      },
-      "type_shape_v1_no_ee": {
         "inline_size": 104,
         "alignment": 4,
         "depth": 0,

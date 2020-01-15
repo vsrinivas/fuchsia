@@ -17,32 +17,8 @@
         "column": 7
       },
       "members": [],
-      "size": 16,
-      "max_out_of_line": 0,
-      "alignment": 8,
-      "max_handles": 0,
       "strict": false,
-      "type_shape_old": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
       "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 1,
-        "max_handles": 0,
-        "max_out_of_line": 0,
-        "has_padding": false,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
-      "type_shape_v1_no_ee": {
         "inline_size": 16,
         "alignment": 8,
         "depth": 1,
@@ -74,10 +50,7 @@
             "line": 7,
             "column": 14
           },
-          "size": 8,
-          "max_out_of_line": 0,
-          "alignment": 8,
-          "max_handles": 0
+          "size": 8
         },
         {
           "ordinal": 2,
@@ -86,7 +59,8 @@
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 8,
             "column": 5
-          }
+          },
+          "size": 0
         },
         {
           "ordinal": 3,
@@ -95,7 +69,8 @@
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 9,
             "column": 5
-          }
+          },
+          "size": 0
         },
         {
           "ordinal": 4,
@@ -104,7 +79,8 @@
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 10,
             "column": 5
-          }
+          },
+          "size": 0
         },
         {
           "ordinal": 5,
@@ -119,38 +95,11 @@
             "line": 11,
             "column": 14
           },
-          "size": 8,
-          "max_out_of_line": 0,
-          "alignment": 8,
-          "max_handles": 0
+          "size": 8
         }
       ],
-      "size": 16,
-      "max_out_of_line": 48,
-      "alignment": 8,
-      "max_handles": 0,
       "strict": false,
-      "type_shape_old": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 48,
-        "has_padding": false,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
       "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 48,
-        "has_padding": false,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
-      "type_shape_v1_no_ee": {
         "inline_size": 16,
         "alignment": 8,
         "depth": 2,
@@ -182,10 +131,7 @@
             "line": 15,
             "column": 14
           },
-          "size": 8,
-          "max_out_of_line": 0,
-          "alignment": 8,
-          "max_handles": 0
+          "size": 8
         },
         {
           "ordinal": 2,
@@ -194,35 +140,12 @@
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 16,
             "column": 5
-          }
+          },
+          "size": 0
         }
       ],
-      "size": 16,
-      "max_out_of_line": 24,
-      "alignment": 8,
-      "max_handles": 0,
       "strict": false,
-      "type_shape_old": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 24,
-        "has_padding": false,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
       "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 24,
-        "has_padding": false,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
-      "type_shape_v1_no_ee": {
         "inline_size": 16,
         "alignment": 8,
         "depth": 2,
@@ -254,10 +177,7 @@
             "line": 20,
             "column": 14
           },
-          "size": 8,
-          "max_out_of_line": 0,
-          "alignment": 8,
-          "max_handles": 0
+          "size": 8
         },
         {
           "ordinal": 2,
@@ -266,7 +186,8 @@
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 21,
             "column": 5
-          }
+          },
+          "size": 0
         },
         {
           "ordinal": 3,
@@ -275,7 +196,8 @@
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 22,
             "column": 5
-          }
+          },
+          "size": 0
         },
         {
           "ordinal": 4,
@@ -284,7 +206,8 @@
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 23,
             "column": 5
-          }
+          },
+          "size": 0
         },
         {
           "ordinal": 5,
@@ -299,10 +222,7 @@
             "line": 24,
             "column": 14
           },
-          "size": 8,
-          "max_out_of_line": 0,
-          "alignment": 8,
-          "max_handles": 0
+          "size": 8
         },
         {
           "ordinal": 6,
@@ -317,10 +237,7 @@
             "line": 25,
             "column": 14
           },
-          "size": 8,
-          "max_out_of_line": 0,
-          "alignment": 8,
-          "max_handles": 0
+          "size": 8
         },
         {
           "ordinal": 7,
@@ -329,35 +246,12 @@
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/tables.test.fidl",
             "line": 26,
             "column": 5
-          }
+          },
+          "size": 0
         }
       ],
-      "size": 16,
-      "max_out_of_line": 72,
-      "alignment": 8,
-      "max_handles": 0,
       "strict": false,
-      "type_shape_old": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 72,
-        "has_padding": false,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
       "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 72,
-        "has_padding": false,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
-      "type_shape_v1_no_ee": {
         "inline_size": 16,
         "alignment": 8,
         "depth": 2,
@@ -389,10 +283,7 @@
             "line": 30,
             "column": 14
           },
-          "size": 8,
-          "max_out_of_line": 0,
-          "alignment": 8,
-          "max_handles": 0
+          "size": 8
         },
         {
           "ordinal": 2,
@@ -407,10 +298,7 @@
             "line": 31,
             "column": 14
           },
-          "size": 8,
-          "max_out_of_line": 0,
-          "alignment": 8,
-          "max_handles": 0
+          "size": 8
         },
         {
           "ordinal": 1,
@@ -425,38 +313,11 @@
             "line": 32,
             "column": 14
           },
-          "size": 8,
-          "max_out_of_line": 0,
-          "alignment": 8,
-          "max_handles": 0
+          "size": 8
         }
       ],
-      "size": 16,
-      "max_out_of_line": 72,
-      "alignment": 8,
-      "max_handles": 0,
       "strict": false,
-      "type_shape_old": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 72,
-        "has_padding": false,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
       "type_shape_v1": {
-        "inline_size": 16,
-        "alignment": 8,
-        "depth": 2,
-        "max_handles": 0,
-        "max_out_of_line": 72,
-        "has_padding": false,
-        "has_flexible_envelope": true,
-        "contains_union": false
-      },
-      "type_shape_v1_no_ee": {
         "inline_size": 16,
         "alignment": 8,
         "depth": 2,

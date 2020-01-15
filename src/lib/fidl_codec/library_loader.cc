@@ -127,8 +127,8 @@ void Union::DecodeTypes(bool for_xunion) {
     return;
   }
   name_ = enclosing_library_->ExtractString(json_definition_, "union", "<unknown>", "name");
-  alignment_ = enclosing_library_->ExtractUint64(json_definition_, "union", name_, "alignment");
-  size_ = enclosing_library_->ExtractUint64(json_definition_, "union", name_, "size");
+  alignment_ = enclosing_library_->ExtractTypeAlignment(json_definition_, "union", name_);
+  size_ = enclosing_library_->ExtractTypeSize(json_definition_, "union", name_);
 
   if (!json_definition_->HasMember("members")) {
     enclosing_library_->FieldNotFound("union", name_, "members");
@@ -172,15 +172,9 @@ StructMember::StructMember(Library* enclosing_library, const rapidjson::Value* j
     : name_(
           enclosing_library->ExtractString(json_definition, "struct member", "<unknown>", "name")),
       size_(enclosing_library->ExtractUint64(json_definition, "struct member", name_, "size")),
+      offset_(enclosing_library->ExtractFieldOffset(json_definition, "struct member", name_)),
       type_(
-          enclosing_library->ExtractType(json_definition, "struct member", name_, "type", size_)) {
-  if (!json_definition->HasMember("field_shape_v1")) {
-    enclosing_library->FieldNotFound("struct member", name_, "field_shape_v1");
-  } else {
-    const rapidjson::Value& v1 = (*json_definition)["field_shape_v1"];
-    offset_ = enclosing_library->ExtractUint64(&v1, "struct member", name_, "offset");
-  }
-}
+          enclosing_library->ExtractType(json_definition, "struct member", name_, "type", size_)) {}
 
 StructMember::StructMember(std::string_view name, std::unique_ptr<Type> type)
     : name_(name), type_(std::move(type)) {}
@@ -275,7 +269,7 @@ void Table::DecodeTypes() {
     return;
   }
   name_ = enclosing_library_->ExtractString(json_definition_, "table", "<unknown>", "name");
-  size_ = enclosing_library_->ExtractUint64(json_definition_, "table", name_, "size");
+  size_ = enclosing_library_->ExtractTypeSize(json_definition_, "table", name_);
 
   if (!json_definition_->HasMember("members")) {
     enclosing_library_->FieldNotFound("table", name_, "members");
@@ -554,6 +548,39 @@ std::unique_ptr<Type> Library::ExtractType(const rapidjson::Value* json_definiti
     return std::make_unique<RawType>(size);
   }
   return Type::GetType(enclosing_loader(), (*json_definition)[field_name], size);
+}
+
+uint64_t Library::ExtractTypeSize(const rapidjson::Value* json_definition,
+                                  std::string_view container_type,
+                                  std::string_view container_name) {
+  if (!json_definition->HasMember("type_shape_v1")) {
+    FieldNotFound(container_type, container_name, "type_shape_v1");
+    return 0;
+  }
+  return ExtractUint64(&(*json_definition)["type_shape_v1"], container_type, container_name,
+                       "inline_size");
+}
+
+uint64_t Library::ExtractTypeAlignment(const rapidjson::Value* json_definition,
+                                       std::string_view container_type,
+                                       std::string_view container_name) {
+  if (!json_definition->HasMember("type_shape_v1")) {
+    FieldNotFound(container_type, container_name, "type_shape_v1");
+    return 0;
+  }
+  return ExtractUint64(&(*json_definition)["type_shape_v1"], container_type, container_name,
+                       "alignment");
+}
+
+uint64_t Library::ExtractFieldOffset(const rapidjson::Value* json_definition,
+                                     std::string_view container_type,
+                                     std::string_view container_name) {
+  if (!json_definition->HasMember("field_shape_v1")) {
+    FieldNotFound(container_type, container_name, "field_shape_v1");
+    return 0;
+  }
+  return ExtractUint64(&(*json_definition)["field_shape_v1"], container_type, container_name,
+                       "offset");
 }
 
 void Library::FieldNotFound(std::string_view container_type, std::string_view container_name,

@@ -366,15 +366,9 @@ type FieldShape struct {
 // Union represents the declaration of a FIDL union.
 type Union struct {
 	Attributes
-	Name            EncodedCompoundIdentifier `json:"name"`
-	Members         []UnionMember             `json:"members"`
-	Size            int                       `json:"size"`
-	Alignment       int                       `json:"alignment"`
-	MaxHandles      int                       `json:"max_handles"`
-	MaxOutOfLine    int                       `json:"max_out_of_line"`
-	TypeShapeOld    TypeShape                 `json:"type_shape_old"`
-	TypeShapeV1     TypeShape                 `json:"type_shape_v1"`
-	TypeShapeV1NoEE TypeShape                 `json:"type_shape_v1_no_ee"`
+	Name        EncodedCompoundIdentifier `json:"name"`
+	Members     []UnionMember             `json:"members"`
+	TypeShapeV1 TypeShape                 `json:"type_shape_v1"`
 }
 
 // UnionMember represents the declaration of a field in a FIDL union.
@@ -391,16 +385,10 @@ type UnionMember struct {
 // XUnion represents the declaration of a FIDL extensible union.
 type XUnion struct {
 	Attributes
-	Name            EncodedCompoundIdentifier `json:"name"`
-	Members         []XUnionMember            `json:"members"`
-	Size            int                       `json:"size"`
-	Alignment       int                       `json:"alignment"`
-	MaxHandles      int                       `json:"max_handles"`
-	MaxOutOfLine    int                       `json:"max_out_of_line"`
-	Strictness      `json:"strict"`
-	TypeShapeOld    TypeShape `json:"type_shape_old"`
-	TypeShapeV1     TypeShape `json:"type_shape_v1"`
-	TypeShapeV1NoEE TypeShape `json:"type_shape_v1_no_ee"`
+	Name        EncodedCompoundIdentifier `json:"name"`
+	Members     []XUnionMember            `json:"members"`
+	Strictness  `json:"strict"`
+	TypeShapeV1 TypeShape `json:"type_shape_v1"`
 }
 
 // XUnionMember represents the declaration of a field in a FIDL extensible
@@ -420,15 +408,9 @@ type XUnionMember struct {
 // Table represents a declaration of a FIDL table.
 type Table struct {
 	Attributes
-	Name            EncodedCompoundIdentifier `json:"name"`
-	Members         []TableMember             `json:"members"`
-	Size            int                       `json:"size"`
-	Alignment       int                       `json:"alignment"`
-	MaxHandles      int                       `json:"max_handles"`
-	MaxOutOfLine    int                       `json:"max_out_of_line"`
-	TypeShapeOld    TypeShape                 `json:"type_shape_old"`
-	TypeShapeV1     TypeShape                 `json:"type_shape_v1"`
-	TypeShapeV1NoEE TypeShape                 `json:"type_shape_v1_no_ee"`
+	Name        EncodedCompoundIdentifier `json:"name"`
+	Members     []TableMember             `json:"members"`
+	TypeShapeV1 TypeShape                 `json:"type_shape_v1"`
 }
 
 // TableMember represents the declaration of a field in a FIDL table.
@@ -473,17 +455,10 @@ func (t *Table) SortedMembersNoReserved() []TableMember {
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
 	Attributes
-	Name            EncodedCompoundIdentifier `json:"name"`
-	Anonymous       bool                      `json:"anonymous"`
-	Members         []StructMember            `json:"members"`
-	Size            int                       `json:"size"`
-	Alignment       int                       `json:"alignment"`
-	MaxHandles      int                       `json:"max_handles"`
-	MaxOutOfLine    int                       `json:"max_out_of_line"`
-	HasPadding      bool                      `json:"has_padding"`
-	TypeShapeOld    TypeShape                 `json:"type_shape_old"`
-	TypeShapeV1     TypeShape                 `json:"type_shape_v1"`
-	TypeShapeV1NoEE TypeShape                 `json:"type_shape_v1_no_ee"`
+	Name        EncodedCompoundIdentifier `json:"name"`
+	Anonymous   bool                      `json:"anonymous"`
+	Members     []StructMember            `json:"members"`
+	TypeShapeV1 TypeShape                 `json:"type_shape_v1"`
 }
 
 // StructMember represents the declaration of a field in a FIDL struct.
@@ -491,13 +466,9 @@ type StructMember struct {
 	Attributes
 	Type              Type       `json:"type"`
 	Name              Identifier `json:"name"`
-	Offset            int        `json:"offset"`
 	MaybeDefaultValue *Constant  `json:"maybe_default_value,omitempty"`
 	MaxHandles        int        `json:"max_handles"`
-	MaxOutOfLine      int        `json:"max_out_of_line"`
-	FieldShapeOld     FieldShape `json:"field_shape_old"`
 	FieldShapeV1      FieldShape `json:"field_shape_v1"`
-	FieldShapeV1NoEE  FieldShape `json:"field_shape_v1_no_ee"`
 }
 
 // EmptyStructMember returns a StructMember that's suitable as the sole member
@@ -571,25 +542,19 @@ type ServiceMember struct {
 // Method represents the declaration of a FIDL method.
 type Method struct {
 	Attributes
-	Ordinal                 uint64      `json:"ordinal"`
-	GenOrdinal              uint64      `json:"generated_ordinal"`
-	Name                    Identifier  `json:"name"`
-	HasRequest              bool        `json:"has_request"`
-	Request                 []Parameter `json:"maybe_request,omitempty"`
-	RequestSize             int         `json:"maybe_request_size,omitempty"`
-	RequestTypeShapeOld     TypeShape   `json:"maybe_request_type_shape_old,omitempty"`
-	RequestTypeShapeV1      TypeShape   `json:"maybe_request_type_shape_v1,omitempty"`
-	RequestTypeShapeV1NoEE  TypeShape   `json:"maybe_request_type_shape_v1_no_ee,omitempty"`
-	RequestPadding          bool        `json:"maybe_request_has_padding,omitempty"`
-	RequestFlexible         bool        `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
-	HasResponse             bool        `json:"has_response"`
-	Response                []Parameter `json:"maybe_response,omitempty"`
-	ResponseSize            int         `json:"maybe_response_size,omitempty"`
-	ResponseTypeShapeOld    TypeShape   `json:"maybe_response_type_shape_old,omitempty"`
-	ResponseTypeShapeV1     TypeShape   `json:"maybe_response_type_shape_v1,omitempty"`
-	ResponseTypeShapeV1NoEE TypeShape   `json:"maybe_response_type_shape_v1_no_ee,omitempty"`
-	ResponsePadding         bool        `json:"maybe_response_has_padding,omitempty"`
-	ResponseFlexible        bool        `json:"experimental_maybe_response_has_flexible_envelope,omitempty"`
+	Ordinal             uint64      `json:"ordinal"`
+	GenOrdinal          uint64      `json:"generated_ordinal"`
+	Name                Identifier  `json:"name"`
+	HasRequest          bool        `json:"has_request"`
+	Request             []Parameter `json:"maybe_request,omitempty"`
+	RequestTypeShapeV1  TypeShape   `json:"maybe_request_type_shape_v1,omitempty"`
+	RequestPadding      bool        `json:"maybe_request_has_padding,omitempty"`
+	RequestFlexible     bool        `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
+	HasResponse         bool        `json:"has_response"`
+	Response            []Parameter `json:"maybe_response,omitempty"`
+	ResponseTypeShapeV1 TypeShape   `json:"maybe_response_type_shape_v1,omitempty"`
+	ResponsePadding     bool        `json:"maybe_response_has_padding,omitempty"`
+	ResponseFlexible    bool        `json:"experimental_maybe_response_has_flexible_envelope,omitempty"`
 }
 
 // IsTransitional returns whether this method has the `Transitional` attribute.
@@ -600,14 +565,11 @@ func (m *Method) IsTransitional() bool {
 
 // Parameter represents a parameter to a FIDL method.
 type Parameter struct {
-	Type             Type       `json:"type"`
-	Name             Identifier `json:"name"`
-	Offset           int        `json:"offset"`
-	MaxHandles       int        `json:"max_handles"`
-	MaxOutOfLine     int        `json:"max_out_of_line"`
-	FieldShapeOld    FieldShape `json:"field_shape_old"`
-	FieldShapeV1     FieldShape `json:"field_shape_v1"`
-	FieldShapeV1NoEE FieldShape `json:"field_shape_v1_no_ee"`
+	Type         Type       `json:"type"`
+	Name         Identifier `json:"name"`
+	MaxHandles   int        `json:"max_handles"`
+	MaxOutOfLine int        `json:"max_out_of_line"`
+	FieldShapeV1 FieldShape `json:"field_shape_v1"`
 }
 
 // Enum represents a FIDL declaration of an enum.
