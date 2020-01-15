@@ -55,7 +55,6 @@ class TestMsdIntelDevice {
     FormattedString(const char* fmt, ...) {
       va_list args;
       va_start(args, fmt);
-      printf(": ");
       int size = std::vsnprintf(nullptr, 0, fmt, args);
       buf_ = std::vector<char>(size + 1);
       std::vsnprintf(buf_.data(), buf_.size(), fmt, args);
@@ -96,24 +95,44 @@ class TestMsdIntelDevice {
     dump_state.fault_gpu_address = 0xaabbccdd11223344;
     dump_state.global = 1;
 
-    std::string dump_string;
+    std::vector<std::string> dump_string;
     device->FormatDump(dump_state, dump_string);
-    EXPECT_NE(
-        nullptr,
-        strstr(
-            dump_string.c_str(),
-            FormattedString("sequence_number 0x%x", dump_state.render_cs.sequence_number).data()));
-    EXPECT_NE(nullptr,
-              strstr(dump_string.c_str(), FormattedString("active head pointer: 0x%llx",
-                                                          dump_state.render_cs.active_head_pointer)
-                                              .data()));
-    EXPECT_NE(
-        nullptr,
-        strstr(dump_string.c_str(),
-               FormattedString("engine 0x%x src 0x%x type 0x%x gpu_address 0x%lx global %d",
-                               dump_state.fault_engine, dump_state.fault_src, dump_state.fault_type,
-                               dump_state.fault_gpu_address, dump_state.global)
-                   .data()));
+
+    bool foundit = false;
+    for (auto& str : dump_string) {
+      if (strstr(str.c_str(),
+                 FormattedString("sequence_number 0x%x", dump_state.render_cs.sequence_number)
+                     .data())) {
+        foundit = true;
+        break;
+      }
+    }
+    EXPECT_TRUE(foundit);
+
+    foundit = false;
+    for (auto& str : dump_string) {
+      if (strstr(str.c_str(), FormattedString("active head pointer: 0x%llx",
+                                              dump_state.render_cs.active_head_pointer)
+                                  .data())) {
+        foundit = true;
+        break;
+      }
+    }
+    EXPECT_TRUE(foundit);
+
+    foundit = false;
+    for (auto& str : dump_string) {
+      if (strstr(
+              str.c_str(),
+              FormattedString("engine 0x%x src 0x%x type 0x%x gpu_address 0x%lx global %d",
+                              dump_state.fault_engine, dump_state.fault_src, dump_state.fault_type,
+                              dump_state.fault_gpu_address, dump_state.global)
+                  .data())) {
+        foundit = true;
+        break;
+      }
+    }
+    EXPECT_TRUE(foundit);
   }
 
   void MockDump() {

@@ -449,9 +449,12 @@ magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,
       bool fault =
           registers::AllEngineFault::read(register_io_.get()) & registers::AllEngineFault::kValid;
       if (fault) {
-        std::string s;
-        DumpToString(s);
-        MAGMA_LOG(WARNING, "GPU fault detected\n%s", s.c_str());
+        std::vector<std::string> dump;
+        DumpToString(dump);
+        MAGMA_LOG(WARNING, "GPU fault detected\n");
+        for (auto& str : dump) {
+          MAGMA_LOG(WARNING, "%s", str.c_str());
+        }
         RenderEngineReset();
       } else {
         ProcessCompletedCommandBuffers();
@@ -466,33 +469,40 @@ magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,
 }
 
 magma::Status MsdIntelDevice::ProcessDumpStatusToLog() {
-  std::string dump;
+  std::vector<std::string> dump;
   DumpToString(dump);
-  MAGMA_LOG(INFO, "%s", dump.c_str());
+  for (auto& str : dump) {
+    MAGMA_LOG(INFO, "%s", str.c_str());
+  }
   return MAGMA_STATUS_OK;
 }
 
 void MsdIntelDevice::HangCheckTimeout() {
-  std::string s;
-  DumpToString(s);
+  std::vector<std::string> dump;
+  DumpToString(dump);
   uint32_t master_interrupt_control = registers::MasterInterruptControl::read(register_io_.get());
   if (master_interrupt_control &
       registers::MasterInterruptControl::kRenderInterruptsPendingBitMask) {
     MAGMA_LOG(WARNING,
               "Hang check timeout while pending render interrupt; slow interrupt handler?\n"
               "last submitted sequence number 0x%x master_interrupt_control 0x%08x "
-              "last_interrupt_callback_timestamp %lu last_interrupt_timestamp %lu\n%s",
+              "last_interrupt_callback_timestamp %lu last_interrupt_timestamp %lu",
               progress_->last_submitted_sequence_number(), master_interrupt_control,
-              last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load(),
-              s.c_str());
+              last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load());
+    for (auto& str : dump) {
+      MAGMA_LOG(WARNING, "%s", str.c_str());
+    }
     return;
   }
   MAGMA_LOG(WARNING,
-            "Suspected GPU hang: last submitted sequence number "
+            "Suspected GPU hang:\nlast submitted sequence number "
             "0x%x master_interrupt_control 0x%08x last_interrupt_callback_timestamp %lu "
-            "last_interrupt_timestamp %lu\n%s",
+            "last_interrupt_timestamp %lu",
             progress_->last_submitted_sequence_number(), master_interrupt_control,
-            last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load(), s.c_str());
+            last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load());
+  for (auto& str : dump) {
+    MAGMA_LOG(WARNING, "%s", str.c_str());
+  }
   suspected_gpu_hang_count_ += 1;
   RenderEngineReset();
 }
@@ -558,14 +568,7 @@ magma::Status MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContex
 
 bool MsdIntelDevice::WaitIdle() {
   CHECK_THREAD_IS_CURRENT(device_thread_id_);
-
-  if (!render_engine_cs_->WaitIdle()) {
-    std::string s;
-    DumpToString(s);
-    printf("WaitRendering timed out!\n\n%s\n", s.c_str());
-    return false;
-  }
-  return true;
+  return render_engine_cs_->WaitIdle();
 }
 
 void MsdIntelDevice::RequestMaxFreq() {

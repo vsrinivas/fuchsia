@@ -8,6 +8,7 @@
 #include <list>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 #include "device_request.h"
 #include "engine_command_streamer.h"
@@ -76,7 +77,7 @@ class MsdIntelDevice : public msd_device_t,
   };
 
   void Dump(DumpState* dump_state);
-  void DumpToString(std::string& dump_string);
+  void DumpToString(std::vector<std::string>& dump_out);
   void DumpStatusToLog();
 
  private:
@@ -157,7 +158,7 @@ class MsdIntelDevice : public msd_device_t,
 
   static void DumpFault(DumpState* dump_out, uint32_t fault);
   static void DumpFaultAddress(DumpState* dump_out, magma::RegisterIo* register_io);
-  void FormatDump(DumpState& dump_state, std::string& dump_string);
+  void FormatDump(DumpState& dump_state, std::vector<std::string>& dump_out);
 
   int DeviceThreadLoop();
   void FrequencyMonitorDeviceThreadLoop();

@@ -316,41 +316,43 @@ void MsdIntelDevice::DumpFaultAddress(DumpState* dump_out, magma::RegisterIo* re
   dump_out->global = registers::FaultTlbReadData::is_ggtt(val);
 }
 
-void MsdIntelDevice::DumpToString(std::string& dump_out) {
+void MsdIntelDevice::DumpToString(std::vector<std::string>& dump_out) {
   DumpState dump_state;
   Dump(&dump_state);
   FormatDump(dump_state, dump_out);
 }
 
-void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out) {
+void MsdIntelDevice::FormatDump(DumpState& dump_state, std::vector<std::string>& dump_out) {
+  dump_out.clear();
+
   const char* build = magma::kDebug ? "DEBUG" : "RELEASE";
   const char* fmt =
-      "---- device dump begin ----\n"
+      "---- GPU dump begin ----\n"
       "%s build\n"
       "Device id: 0x%x Revision: 0x%x\n"
       "RENDER_COMMAND_STREAMER\n"
       "sequence_number 0x%x\n"
-      "active head pointer: 0x%llx\n";
+      "active head pointer: 0x%llx";
   int size =
       std::snprintf(nullptr, 0, fmt, build, device_id(), revision(),
                     dump_state.render_cs.sequence_number, dump_state.render_cs.active_head_pointer);
   std::vector<char> buf(size + 1);
   std::snprintf(&buf[0], buf.size(), fmt, build, device_id(), revision(),
                 dump_state.render_cs.sequence_number, dump_state.render_cs.active_head_pointer);
-  dump_out.append(&buf[0]);
+  dump_out.push_back(&buf[0]);
 
   if (dump_state.fault_present) {
     fmt =
         "ENGINE FAULT DETECTED\n"
-        "engine 0x%x src 0x%x type 0x%x gpu_address 0x%lx global %d\n";
+        "engine 0x%x src 0x%x type 0x%x gpu_address 0x%lx global %d";
     size = std::snprintf(nullptr, 0, fmt, dump_state.fault_engine, dump_state.fault_src,
                          dump_state.fault_type, dump_state.fault_gpu_address, dump_state.global);
     std::vector<char> buf(size + 1);
     std::snprintf(&buf[0], buf.size(), fmt, dump_state.fault_engine, dump_state.fault_src,
                   dump_state.fault_type, dump_state.fault_gpu_address, dump_state.global);
-    dump_out.append(&buf[0]);
+    dump_out.push_back(&buf[0]);
   } else {
-    dump_out.append("No engine faults detected.\n");
+    dump_out.push_back("No engine faults detected.");
   }
 
   bool is_mapped = false;
@@ -361,9 +363,9 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out) {
   uint64_t closest_mapping_distance = UINT64_MAX;
 
   if (!dump_state.render_cs.inflight_batches.empty()) {
-    dump_out.append("Inflight Batches:\n");
+    dump_out.push_back("Inflight Batches:");
     for (auto batch : dump_state.render_cs.inflight_batches) {
-      fmt = "  Batch %p, context %p, connection client_id %lu\n";
+      fmt = "  Batch %p, context %p, connection client_id %lu";
       auto context = batch->GetContext().lock().get();
       auto connection = context ? context->connection().lock() : nullptr;
       size =
@@ -371,7 +373,7 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out) {
       std::vector<char> buf(size + 1);
       std::snprintf(&buf[0], buf.size(), fmt, batch, context,
                     connection ? connection->client_id() : 0u);
-      dump_out.append(&buf[0]);
+      dump_out.push_back(&buf[0]);
 
       auto batch_mapping = batch->GetBatchMapping();
       if (!batch_mapping)
@@ -380,7 +382,7 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out) {
       if (dump_state.render_cs.active_head_pointer >= batch_mapping->gpu_addr() &&
           dump_state.render_cs.active_head_pointer <
               batch_mapping->gpu_addr() + batch_mapping->length()) {
-        dump_out.append("  FAULTING BATCH (active head ptr within this batch)\n");
+        dump_out.push_back("  FAULTING BATCH (active head ptr within this batch)");
         faulted_batch_mapping = batch_mapping;
       }
 
@@ -392,7 +394,7 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out) {
       for (const auto& mapping : mappings) {
         fmt =
             "    Mapping %p, buffer 0x%lx, gpu addr range [0x%lx, 0x%lx), "
-            "offset 0x%lx, mapping length 0x%lx\n";
+            "offset 0x%lx, mapping length 0x%lx";
         gpu_addr_t mapping_start = mapping->gpu_addr();
         gpu_addr_t mapping_end = mapping->gpu_addr() + mapping->length();
         size = std::snprintf(nullptr, 0, fmt, mapping, mapping->BufferId(), mapping_start,
@@ -400,7 +402,7 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out) {
         std::vector<char> buf(size + 1);
         std::snprintf(&buf[0], buf.size(), fmt, mapping, mapping->BufferId(), mapping_start,
                       mapping_end, mapping->offset(), mapping->length());
-        dump_out.append(&buf[0]);
+        dump_out.push_back(&buf[0]);
         if (dump_state.fault_gpu_address >= mapping_start &&
             dump_state.fault_gpu_address < mapping_end) {
           is_mapped = true;
@@ -415,19 +417,19 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out) {
   }
 
   if (is_mapped) {
-    fmt = "Fault address appears to be within mapping %p addr [0x%lx, 0x%lx)\n";
+    fmt = "Fault address appears to be within mapping %p addr [0x%lx, 0x%lx)";
     size = std::snprintf(nullptr, 0, fmt, fault_mapping, fault_mapping->gpu_addr(),
                          fault_mapping->gpu_addr() + fault_mapping->length());
     std::vector<char> buf(size + 1);
     std::snprintf(&buf[0], buf.size(), fmt, fault_mapping, fault_mapping->gpu_addr(),
                   fault_mapping->gpu_addr() + fault_mapping->length());
-    dump_out.append(&buf[0]);
+    dump_out.push_back(&buf[0]);
   } else {
-    dump_out.append("Fault address does not appear to be mapped for any outstanding batch\n");
+    dump_out.push_back("Fault address does not appear to be mapped for any outstanding batch");
     if (closest_mapping_distance < UINT64_MAX) {
       fmt =
           "Fault address is 0x%lx past the end of mapping %p addr [0x%08lx, 0x%08lx), size "
-          "0x%lx, buffer size 0x%lx\n";
+          "0x%lx, buffer size 0x%lx";
       size = std::snprintf(nullptr, 0, fmt, closest_mapping_distance, closest_mapping,
                            closest_mapping->gpu_addr(),
                            closest_mapping->gpu_addr() + closest_mapping->length(),
@@ -437,12 +439,12 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out) {
                     closest_mapping->gpu_addr(),
                     closest_mapping->gpu_addr() + closest_mapping->length(),
                     closest_mapping->length(), closest_mapping->BufferSize());
-      dump_out.append(&buf[0]);
+      dump_out.push_back(&buf[0]);
     }
   }
 
   if (faulted_batch_mapping) {
-    dump_out.append("Batch instructions immediately surrounding the active head:\n");
+    dump_out.push_back("Batch instructions immediately surrounding the active head:");
     std::vector<uint32_t> batch_data;
     // dont early out because we always want to print the "dump end" line
     if (faulted_batch_mapping->Copy(&batch_data)) {
@@ -462,11 +464,11 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out) {
           InstructionDecoder::Id id;
           bool decoded = InstructionDecoder::Decode(batch_data[i], &id, &dwords_remaining);
           if (decoded) {
-            fmt = "\n%s: ";
+            fmt = "%s: ";
             size = std::snprintf(nullptr, 0, fmt, InstructionDecoder::name(id));
             buf = std::vector<char>(size + 1);
             std::snprintf(&buf[0], buf.size(), fmt, InstructionDecoder::name(id));
-            dump_out.append(&buf[0]);
+            dump_out.push_back(&buf[0]);
             end_of_batch = id == InstructionDecoder::Id::MI_BATCH_BUFFER_END;
           }
         }
@@ -484,16 +486,15 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out) {
         size = std::snprintf(nullptr, 0, fmt, prefix, batch_data[i], suffix);
         std::vector<char> buf(size + 1);
         std::snprintf(&buf[0], buf.size(), fmt, prefix, batch_data[i], suffix);
-        dump_out.append(&buf[0]);
+        dump_out.push_back(&buf[0]);
 
         if (end_of_batch)
           break;
       }
-      dump_out.append("\n\n");
     } else {
-      dump_out.append("Failed to map batch data\n");
+      dump_out.push_back("Failed to map batch data");
     }
   }
 
-  dump_out.append("---- device dump end ----");
+  dump_out.push_back("---- GPU dump end ----");
 }
