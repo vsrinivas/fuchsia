@@ -41,6 +41,7 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
         case POWER_TABLE_CMD:
         case BT_CONFIG:
         case MAC_CONTEXT_CMD:
+        case SCAN_OFFLOAD_REQUEST_CMD:
           return ZX_OK;
 
         case NVM_ACCESS_CMD:

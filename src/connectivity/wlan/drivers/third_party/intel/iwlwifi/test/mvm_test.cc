@@ -115,6 +115,105 @@ TEST_F(MvmTest, rxMpdu) {
   EXPECT_EQ(static_cast<int8_t>(-10), rx_info.rssi_dbm);
 }
 
+// The antenna index will be toggled after each call.
+// The current number of antenna is 1, which is determined by the sim-default-nvm.cc file.
+TEST_F(MvmTest, toggleTxAntenna) {
+  uint8_t ant = 0;
+
+  // Since the current configuration is 1 antenna so that the 'ant' is always 0.
+  iwl_mvm_toggle_tx_ant(mvm_, &ant);
+  EXPECT_EQ(0, ant);
+  iwl_mvm_toggle_tx_ant(mvm_, &ant);
+  EXPECT_EQ(0, ant);
+}
+
+TEST_F(MvmTest, scanLmacErrorChecking) {
+  struct iwl_mvm_scan_params params = {
+      .n_scan_plans = IWL_MAX_SCHED_SCAN_PLANS + 1,
+  };
+
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_mvm_scan_lmac(mvm_, &params));
+}
+
+// This test focuses on testing the scan_cmd filling.
+TEST_F(MvmTest, scanLmacNormal) {
+  ASSERT_NE(nullptr, mvm_->scan_cmd);  // scan cmd should have been allocated during init.
+
+  struct iwl_mvm_scan_params params = {
+      .type = IWL_SCAN_TYPE_WILD,
+      .hb_type = IWL_SCAN_TYPE_NOT_SET,
+      .n_channels = 4,
+      .channels =
+          {
+              5,
+              11,
+              36,
+              165,
+          },
+      .n_ssids = 0,
+      .flags = 0,
+      .pass_all = true,
+      .n_match_sets = 0,
+      .preq =
+          {
+              // arbitrary values for memory comparison below
+              .mac_header =
+                  {
+                      .offset = cpu_to_le16(0x1234),
+                      .len = cpu_to_le16(0x5678),
+                  },
+          },
+      .n_scan_plans = 0,
+  };
+
+  EXPECT_EQ(ZX_OK, iwl_mvm_scan_lmac(mvm_, &params));
+  struct iwl_scan_req_lmac* cmd = reinterpret_cast<struct iwl_scan_req_lmac*>(mvm_->scan_cmd);
+  EXPECT_EQ(0x0001, le16_to_cpu(cmd->rx_chain_select));
+  EXPECT_EQ(1, le32_to_cpu(cmd->iter_num));
+  EXPECT_EQ(0, le32_to_cpu(cmd->delay));
+  EXPECT_EQ(4, cmd->n_channels);
+  EXPECT_EQ(PHY_BAND_24, le32_to_cpu(cmd->flags));
+  EXPECT_EQ(1, cmd->schedule[0].iterations);
+  struct iwl_scan_channel_cfg_lmac* channel_cfg =
+      reinterpret_cast<struct iwl_scan_channel_cfg_lmac*>(cmd->data);
+  EXPECT_EQ(5, le16_to_cpu(channel_cfg[0].channel_num));
+  EXPECT_EQ(165, le16_to_cpu(channel_cfg[3].channel_num));
+  // preq
+  uint8_t* preq =
+      &cmd->data[sizeof(struct iwl_scan_channel_cfg_lmac) * mvm_->fw->ucode_capa.n_scan_channels];
+  EXPECT_EQ(0x34, preq[0]);
+  EXPECT_EQ(0x12, preq[1]);
+  EXPECT_EQ(0x78, preq[2]);
+  EXPECT_EQ(0x56, preq[3]);
+}
+
+// This test focuses on testing the mvm state change for scan.
+TEST_F(MvmTest, RegScanStartPassive) {
+  ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  ASSERT_EQ(nullptr, mvm_->scan_vif);
+
+  struct iwl_mvm_vif mvmvif_sta = {
+      .mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans()),
+      .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
+  };
+  wlan_hw_scan_config_t scan_config = {
+      .scan_type = WLAN_HW_SCAN_TYPE_PASSIVE,
+      .num_channels = 4,
+      .channels =
+          {
+              7,
+              1,
+              40,
+              136,
+          },
+  };
+
+  EXPECT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta, &scan_config));
+
+  EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
+}
+
 }  // namespace
 }  // namespace testing
 }  // namespace wlan

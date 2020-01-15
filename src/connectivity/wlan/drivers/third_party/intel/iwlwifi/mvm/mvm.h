@@ -1284,6 +1284,29 @@ enum iwl_mvm_init_status {
   IWL_MVM_INIT_STATUS_TOF_INIT_COMPLETE = BIT(3),
 };
 
+// Internal struct used in scan.c. Exported here for testing only.
+struct iwl_mvm_scan_params {
+  /* For CDB this is low band scan type, for non-CDB - type. */
+  enum iwl_mvm_scan_type type;
+  enum iwl_mvm_scan_type hb_type;
+  uint32_t n_channels;
+  uint8_t channels[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS];  // ch_num. e.g. 1..14, 36..
+  uint16_t delay;
+  int n_ssids;
+  struct cfg80211_ssid* ssids;
+  uint32_t flags;
+  uint8_t* mac_addr;
+  uint8_t* mac_addr_mask;
+  bool no_cck;
+  bool pass_all;
+  int n_match_sets;
+  struct iwl_scan_probe_req preq;
+  struct cfg80211_match_set* match_sets;
+  int n_scan_plans;
+  struct cfg80211_sched_scan_plan* scan_plans;
+  uint32_t measurement_dwell;
+};
+
 static inline bool iwl_mvm_is_radio_killed(struct iwl_mvm* mvm) {
   return test_bit(IWL_MVM_STATUS_HW_RFKILL, &mvm->status) ||
          test_bit(IWL_MVM_STATUS_HW_CTKILL, &mvm->status);
@@ -1508,9 +1531,10 @@ struct iwl_rate_info {
   uint8_t ieee;       /* MAC header:  IWL_RATE_6M_IEEE, etc. */
 };
 
-void __iwl_mvm_mac_stop(struct iwl_mvm* mvm);
-zx_status_t iwl_mvm_mac_start(struct iwl_mvm* mvm);
 zx_status_t __iwl_mvm_mac_start(struct iwl_mvm* mvm);
+zx_status_t iwl_mvm_mac_start(struct iwl_mvm* mvm);
+void __iwl_mvm_mac_stop(struct iwl_mvm* mvm);
+void iwl_mvm_mac_stop(struct iwl_mvm* mvm);
 
 /******************
  * MVM Methods
@@ -1602,9 +1626,7 @@ static inline uint8_t iwl_mvm_get_valid_rx_ant(struct iwl_mvm* mvm) {
 }
 
 static inline void iwl_mvm_toggle_tx_ant(struct iwl_mvm* mvm, uint8_t* ant) {
-#if 0   // NEEDS_PORTING
-    *ant = iwl_mvm_next_antenna(mvm, iwl_mvm_get_valid_tx_ant(mvm), *ant);
-#endif  // NEEDS_PORTING
+  *ant = iwl_mvm_next_antenna(mvm, iwl_mvm_get_valid_tx_ant(mvm), *ant);
 }
 
 static inline uint32_t iwl_mvm_get_phy_config(struct iwl_mvm* mvm) {
@@ -1731,8 +1753,8 @@ ssize_t iwl_dbgfs_quota_status_read(struct file* file, char __user* user_buf, si
 #endif
 
 /* Scanning */
-int iwl_mvm_reg_scan_start(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                           struct cfg80211_scan_request* req, struct ieee80211_scan_ies* ies);
+zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
+                                   const wlan_hw_scan_config_t* scan_config);
 int iwl_mvm_scan_size(struct iwl_mvm* mvm);
 int iwl_mvm_scan_stop(struct iwl_mvm* mvm, int type, bool notify);
 int iwl_mvm_max_scan_ie_len(struct iwl_mvm* mvm);
@@ -1751,6 +1773,10 @@ void iwl_mvm_rx_scan_match_found(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* 
 int iwl_mvm_config_scan(struct iwl_mvm* mvm);
 void iwl_mvm_rx_umac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 void iwl_mvm_rx_umac_scan_iter_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
+
+/* LMAC scan - for testing */
+// 'mvm->scan_cmd' is populated after this function.
+zx_status_t iwl_mvm_scan_lmac(struct iwl_mvm* mvm, struct iwl_mvm_scan_params* params);
 
 /* MVM debugfs */
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
@@ -2085,5 +2111,7 @@ zx_status_t iwl_mvm_init(void);
 // Interfaces for mac80211.c
 zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif, struct ieee80211_vif* vif);
 zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif);
+zx_status_t iwl_mvm_mac_hw_scan(struct iwl_mvm_vif* mvmvif,
+                                const wlan_hw_scan_config_t* scan_config);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_

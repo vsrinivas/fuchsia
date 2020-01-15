@@ -151,7 +151,8 @@ static zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) 
   memcpy(info->ifc_info.mac_addr, nvm_data->hw_addr, sizeof(info->ifc_info.mac_addr));
   info->ifc_info.mac_role = mvmvif->mac_role;
   // TODO(43517): Better handling of driver features bits/flags
-  info->ifc_info.driver_features = WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
+  info->ifc_info.driver_features =
+      WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL | WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
   info->ifc_info.supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK |
                                   WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT;
   info->ifc_info.caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
@@ -191,8 +192,29 @@ static zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc,
 
   mvmvif->ifc = *ifc;
 
-  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
-  return ZX_OK;  // Temporarily returns OK to make the interface list-able.
+  // These fields are just dummy values. Will be removed soon. TODO(43559): remove 'struct
+  // ieee80211_vif'
+  struct ieee80211_vif vif = {
+      .type = WLAN_INFO_MAC_ROLE_CLIENT,
+      .addr = {},
+      .bss_conf =
+          {
+              .chandef =
+                  {
+                      .primary = 7,
+                      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+                      .secondary80 = 0,
+                  },
+          },
+  };
+
+  zx_status_t ret = iwl_mvm_mac_add_interface(mvmvif, &vif);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Cannot add MAC interface: %s\n", zx_status_get_string(ret));
+    return ret;
+  }
+
+  return ret;
 }
 
 static void mac_stop(void* ctx) {
@@ -248,8 +270,14 @@ static zx_status_t mac_clear_assoc(void* ctx, uint32_t options, const uint8_t* p
 }
 
 static zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
-  return ZX_ERR_NOT_SUPPORTED;
+  struct iwl_mvm_vif* mvmvif = ctx;
+
+  if (scan_config->scan_type != WLAN_HW_SCAN_TYPE_PASSIVE) {
+    IWL_ERR(ctx, "Unsupported scan type: %d\n", scan_config->scan_type);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  return iwl_mvm_mac_hw_scan(mvmvif, scan_config);
 }
 
 wlanmac_protocol_ops_t wlanmac_ops = {
@@ -321,7 +349,8 @@ static zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
   // TODO(fxb/36683): supports HT (802.11n): WLAN_INFO_PHY_TYPE_HT
   // TODO(fxb/36684): suuports VHT (802.11ac): WLAN_INFO_PHY_TYPE_VHT
 
-  info->wlan_info.driver_features = WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
+  info->wlan_info.driver_features =
+      WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL | WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
 
   // TODO(43517): Better handling of driver features bits/flags
   info->wlan_info.caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
@@ -404,6 +433,16 @@ static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_r
     mvmvif->sme_channel = req->sme_channel;
     mvm->mvmvif[id] = mvmvif;
     *out_iface_id = id;
+
+    // Only start FW MVM for the first device. The 'vif_count' will be increased in
+    // iwl_mvm_mac_add_interface().
+    if (mvm->vif_count == 0) {
+      ret = __iwl_mvm_mac_start(mvm);
+      if (ret != ZX_OK) {
+        IWL_ERR(ctx, "Cannot start MVM MAC: %s\n", zx_status_get_string(ret));
+        goto unlock;
+      }
+    }
   }
 
 unlock:

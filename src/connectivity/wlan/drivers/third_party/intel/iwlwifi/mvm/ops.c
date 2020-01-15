@@ -246,7 +246,7 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
     RX_HANDLER(TX_CMD, iwl_mvm_rx_tx_cmd, RX_HANDLER_SYNC),
     RX_HANDLER(BA_NOTIF, iwl_mvm_rx_ba_notif, RX_HANDLER_SYNC),
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     RX_HANDLER_GRP(DATA_PATH_GROUP, TLC_MNG_UPDATE_NOTIF, iwl_mvm_tlc_update_notif,
                    RX_HANDLER_SYNC),
 
@@ -262,7 +262,9 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
     RX_HANDLER(EOSP_NOTIFICATION, iwl_mvm_rx_eosp_notif, RX_HANDLER_SYNC),
 
     RX_HANDLER(SCAN_ITERATION_COMPLETE, iwl_mvm_rx_lmac_scan_iter_complete_notif, RX_HANDLER_SYNC),
-    RX_HANDLER(SCAN_OFFLOAD_COMPLETE, iwl_mvm_rx_lmac_scan_complete_notif, RX_HANDLER_ASYNC_LOCKED),
+#endif  // NEEDS_PORTING
+    RX_HANDLER(SCAN_OFFLOAD_COMPLETE, iwl_mvm_rx_lmac_scan_complete_notif, RX_HANDLER_SYNC),
+#if 0  // NEEDS_PORTING
     RX_HANDLER(MATCH_FOUND_NOTIFICATION, iwl_mvm_rx_scan_match_found, RX_HANDLER_SYNC),
     RX_HANDLER(SCAN_COMPLETE_UMAC, iwl_mvm_rx_umac_scan_complete_notif, RX_HANDLER_ASYNC_LOCKED),
     RX_HANDLER(SCAN_ITERATION_COMPLETE_UMAC, iwl_mvm_rx_umac_scan_iter_complete_notif,
@@ -934,6 +936,11 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
       IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", err);
       goto out_free;
     }
+  } else {
+    // Testing code doesn't have firmware TLV parsing. But the MVM driver still needs this value to
+    // initialize. Fake it with real number from a firmware image.
+    uint32_t* n_scan_channels = (uint32_t*)(&mvm->fw->ucode_capa.n_scan_channels);
+    *n_scan_channels = 40;
   }
 
   scan_size = iwl_mvm_scan_size(mvm);
@@ -1207,7 +1214,7 @@ static void iwl_mvm_rx_common(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb
     entry->fn = rx_h->fn;
     entry->context = rx_h->context;
     mtx_lock(&mvm->async_handlers_lock);
-    list_add_tail(&entry->list, &mvm->async_handlers_list);
+    list_add_tail(&mvm->async_handlers_list, &entry->list);
     mtx_unlock(&mvm->async_handlers_lock);
 #if 0   // NEEDS_PORTING
         schedule_work(&mvm->async_handlers_wk);

@@ -1101,44 +1101,50 @@ void __iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
   }
 }
 
-#if 0  // NEEDS_PORTING
-static void iwl_mvm_mac_stop(struct ieee80211_hw* hw) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-
+void iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
+#if 0   // NEEDS_PORTING
     flush_work(&mvm->d0i3_exit_work);
     flush_work(&mvm->async_handlers_wk);
     flush_work(&mvm->add_stream_wk);
+#endif  // NEEDS_PORTING
 
-    /*
-     * Lock and clear the firmware running bit here already, so that
-     * new commands coming in elsewhere, e.g. from debugfs, will not
-     * be able to proceed. This is important here because one of those
-     * debugfs files causes the firmware dump to be triggered, and if we
-     * don't stop debugfs accesses before canceling that it could be
-     * retriggered after we flush it but before we've cleared the bit.
-     */
-    clear_bit(IWL_MVM_STATUS_FIRMWARE_RUNNING, &mvm->status);
+  /*
+   * Lock and clear the firmware running bit here already, so that
+   * new commands coming in elsewhere, e.g. from debugfs, will not
+   * be able to proceed. This is important here because one of those
+   * debugfs files causes the firmware dump to be triggered, and if we
+   * don't stop debugfs accesses before canceling that it could be
+   * retriggered after we flush it but before we've cleared the bit.
+   */
+  clear_bit(IWL_MVM_STATUS_FIRMWARE_RUNNING, &mvm->status);
 
+#if 0   // NEEDS_PORTING
     iwl_fw_cancel_dump(&mvm->fwrt);
+#endif  // NEEDS_PORTING
 
+#if 0  // NEEDS_PORTING
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
     cancel_delayed_work_sync(&mvm->tx_latency_watchdog_wk);
-#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
+#endif  /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
     cancel_delayed_work_sync(&mvm->cs_tx_unblock_dwork);
     cancel_delayed_work_sync(&mvm->scan_timeout_dwork);
     iwl_fw_free_dump_desc(&mvm->fwrt);
+#endif  // NEEDS_PORTING
 
-    mutex_lock(&mvm->mutex);
-    __iwl_mvm_mac_stop(mvm);
-    mutex_unlock(&mvm->mutex);
+  mtx_lock(&mvm->mutex);
+  __iwl_mvm_mac_stop(mvm);
+  mtx_unlock(&mvm->mutex);
 
+#if 0   // NEEDS_PORTING
     /*
      * The worker might have been waiting for the mutex, let it run and
      * discover that its list is now empty.
      */
     cancel_work_sync(&mvm->async_handlers_wk);
+#endif  // NEEDS_PORTING
 }
 
+#if 0  // NEEDS_PORTING
 static struct iwl_mvm_phy_ctxt* iwl_mvm_get_free_phy_ctxt(struct iwl_mvm* mvm) {
     uint16_t i;
 
@@ -2374,24 +2380,28 @@ static void iwl_mvm_bss_info_changed(struct ieee80211_hw* hw, struct ieee80211_v
     mutex_unlock(&mvm->mutex);
     iwl_mvm_unref(mvm, IWL_MVM_REF_BSS_CHANGED);
 }
+#endif  // NEEDS_PORTING
 
-static int iwl_mvm_mac_hw_scan(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
-                               struct ieee80211_scan_request* hw_req) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-    int ret;
+zx_status_t iwl_mvm_mac_hw_scan(struct iwl_mvm_vif* mvmvif,
+                                const wlan_hw_scan_config_t* scan_config) {
+  struct iwl_mvm* mvm = mvmvif->mvm;
+  zx_status_t ret;
 
-    if (hw_req->req.n_channels == 0 ||
-        hw_req->req.n_channels > mvm->fw->ucode_capa.n_scan_channels) {
-        return -EINVAL;
-    }
+  if (scan_config->num_channels == 0 ||
+      scan_config->num_channels > mvm->fw->ucode_capa.n_scan_channels) {
+    IWL_WARN(mvmvif, "Cannot scan: invalid #channel (%d). FW's cap (%d)\n",
+             scan_config->num_channels, mvm->fw->ucode_capa.n_scan_channels);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    mutex_lock(&mvm->mutex);
-    ret = iwl_mvm_reg_scan_start(mvm, vif, &hw_req->req, &hw_req->ies);
-    mutex_unlock(&mvm->mutex);
+  mtx_lock(&mvm->mutex);
+  ret = iwl_mvm_reg_scan_start(mvmvif, scan_config);
+  mtx_unlock(&mvm->mutex);
 
-    return ret;
+  return ret;
 }
 
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_mac_cancel_hw_scan(struct ieee80211_hw* hw, struct ieee80211_vif* vif) {
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
 
