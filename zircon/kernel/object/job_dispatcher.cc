@@ -116,8 +116,9 @@ JobDispatcher::LiveRefsArray JobDispatcher::ForEachChildInLocked(T& children, zx
 fbl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
   fbl::AllocChecker ac;
   auto job = fbl::AdoptRef(new (&ac) JobDispatcher(0u, nullptr, JobPolicy::CreateRootPolicy()));
-  if (!ac.check())
-    return nullptr;
+  if (!ac.check()) {
+    panic("root-job: failed to allocate\n");
+  }
   job->set_name(kRootJobName, sizeof(kRootJobName));
   return job;
 }
@@ -294,14 +295,6 @@ void JobDispatcher::UpdateSignalsDecrementLocked() {
   if (job_count_ == 0u) {
     DEBUG_ASSERT(jobs_.is_empty());
     set |= ZX_JOB_NO_JOBS;
-  }
-
-  if (!parent_ && (job_count_ == 0) && (process_count_ == 0)) {
-    // There are no userspace process left. From here, there's
-    // no particular context as to whether this was
-    // intentional, or if a core devhost crashed due to a
-    // bug. Either way, shut down the kernel.
-    platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_RESET);
   }
 
   UpdateStateLocked(0u, set);

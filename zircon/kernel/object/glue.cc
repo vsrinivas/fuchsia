@@ -27,6 +27,47 @@ static fbl::RefPtr<JobDispatcher> root_job;
 
 fbl::RefPtr<JobDispatcher> GetRootJobDispatcher() { return root_job; }
 
+class RootJobObserver final : public StateObserver {
+ private:
+  Flags OnInitialize(zx_signals_t initial_state, const CountInfo* cinfo) final {
+    if (HasChild(initial_state)) {
+      panic("root-job: invalid initial state\n");
+    }
+    return 0;
+  }
+
+  Flags OnStateChange(zx_signals_t new_state) final { return MaybeHalt(new_state); }
+
+  Flags OnCancel(const Handle* handle) final { return 0; }
+
+  bool HasChild(zx_signals_t state) const {
+    bool no_child = (state & ZX_JOB_NO_JOBS) && (state & ZX_JOB_NO_PROCESSES);
+    return !no_child;
+  }
+
+  Flags MaybeHalt(zx_signals_t state) {
+    // If the root job has been terminated, it will have no children. We do not
+    // check for `ZX_JOB_TERMINATED`, as that may occur before all the children
+    // have been terminated.
+    if (HasChild(state)) {
+      return 0;
+    }
+    if (gCmdline.GetBool("kernel.root-job.reboot", false)) {
+      printf("root-job: Rebooting\n");
+      platform_halt(HALT_ACTION_REBOOT, HALT_REASON_SW_RESET);
+    } else if (gCmdline.GetBool("kernel.root-job.shutdown", true)) {
+      printf("root-job: Shutting down\n");
+      platform_halt(HALT_ACTION_SHUTDOWN, HALT_REASON_SW_RESET);
+    } else {
+      printf("root-job: Halting\n");
+      platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_RESET);
+    }
+    return kNeedRemoval;
+  }
+};
+
+static ktl::unique_ptr<RootJobObserver> root_job_observer;
+
 // Kernel-owned event that is used to signal userspace before taking action in OOM situation.
 static fbl::RefPtr<EventDispatcher> low_mem_event;
 // Event used for communicating lowmem state between the lowmem callback and the oom thread.
@@ -115,8 +156,15 @@ static int oom_thread(void* unused) {
 
 static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
   Handle::Init();
-  root_job = JobDispatcher::CreateRootJob();
   PortDispatcher::Init();
+
+  root_job = JobDispatcher::CreateRootJob();
+  fbl::AllocChecker ac;
+  root_job_observer = ktl::make_unique<RootJobObserver>(&ac);
+  if (!ac.check()) {
+    panic("root-job: failed to allocate observer\n");
+  }
+  root_job->AddObserver(root_job_observer.get());
 
   KernelHandle<EventDispatcher> event;
   zx_rights_t rights;

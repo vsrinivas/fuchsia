@@ -372,6 +372,20 @@ kernel thread should sleep between checks.
 The `k oom info` command will show the current value of this and other
 parameters.
 
+## kernel.root-job.reboot=\<bool>
+
+This option specifies whether the kernel should reboot the system when the root
+job is either: terminated, or has no jobs and no processes.
+
+By default, the kernel will halt the system, stopping any further execution.
+
+## kernel.root-job.shutdown=\<bool>
+
+This option specifies whether the kernel should shutdown the system when the
+root job is either: terminated, or has no jobs and no processes.
+
+By default, the kernel will halt the system, stopping any further execution.
+
 ## kernel.x86.disable_spec_mitigations=\<bool>
 
 If set, disable all speculative execution information leak mitigations.
