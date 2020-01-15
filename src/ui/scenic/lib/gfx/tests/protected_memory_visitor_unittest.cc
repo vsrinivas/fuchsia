@@ -129,13 +129,13 @@ TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForProtectedImageInAView) {
   EXPECT_TRUE(Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "test_view")));
   EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(node_id)));
   EXPECT_TRUE(Apply(scenic::NewAddChildCmd(view_id, node_id)));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
   auto shape_node = FindResource<ShapeNode>(node_id);
 
   EXPECT_TRUE(Apply(scenic::NewAddChildCmd(view_id, node_id)));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   MaterialPtr protected_material = fxl::MakeRefCounted<Material>(session(), next_id++);
   ImageBasePtr protected_image = fxl::AdoptRef(new DummyImage(session(), next_id++, true));

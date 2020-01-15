@@ -57,7 +57,7 @@ TEST_F(ObjectLinkerTest, AllowsExport) {
   TestExportObj export_obj(kExportValue);
   TestObjectLinker::ExportLink export_link =
       object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(export_link.valid());
   EXPECT_EQ(1u, object_linker_.ExportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
@@ -67,7 +67,7 @@ TEST_F(ObjectLinkerTest, CannotExportInvalidToken) {
   TestExportObj export_obj(kExportValue);
   TestObjectLinker::ExportLink export_link =
       object_linker_.CreateExport(std::move(export_obj), zx::eventpair(), error_reporter());
-  EXPECT_ERROR_COUNT(1);  // CreateExport throws an error.
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);  // CreateExport throws an error.
   EXPECT_FALSE(export_link.valid());
   EXPECT_EQ(0u, object_linker_.ExportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
@@ -85,7 +85,7 @@ TEST_F(ObjectLinkerTest, CannotExportWithDeadExportToken) {
   TestExportObj export_obj(kExportValue);
   TestObjectLinker::ExportLink export_link =
       object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(1);  // CreateExport throws an error.
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);  // CreateExport throws an error.
   EXPECT_FALSE(export_link.valid());
   EXPECT_EQ(0u, object_linker_.ExportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
@@ -103,7 +103,7 @@ TEST_F(ObjectLinkerTest, CanExportWithDeadImportToken) {
   TestExportObj export_obj(kExportValue);
   TestObjectLinker::ExportLink export_link =
       object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(export_link.valid());
   EXPECT_EQ(1u, object_linker_.ExportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
@@ -117,7 +117,7 @@ TEST_F(ObjectLinkerTest, CannotExportSameTokenTwice) {
   TestExportObj export_obj(kExportValue);
   TestObjectLinker::ExportLink export_link =
       object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(export_link.valid());
   EXPECT_EQ(1u, object_linker_.ExportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
@@ -125,7 +125,7 @@ TEST_F(ObjectLinkerTest, CannotExportSameTokenTwice) {
   TestExportObj export_obj2(kExportValue);
   TestObjectLinker::ExportLink export_link2 = object_linker_.CreateExport(
       std::move(export_obj2), std::move(export_token2), error_reporter());
-  EXPECT_ERROR_COUNT(1);  // CreateExport throws an error.
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);  // CreateExport throws an error.
   EXPECT_FALSE(export_link2.valid());
   EXPECT_EQ(1u, object_linker_.ExportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
@@ -139,7 +139,7 @@ TEST_F(ObjectLinkerTest, LinkDeathRemovesExport) {
     TestExportObj export_obj(kExportValue);
     TestObjectLinker::ExportLink export_link = object_linker_.CreateExport(
         std::move(export_obj), std::move(export_token), error_reporter());
-    EXPECT_ERROR_COUNT(0);
+    EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
     EXPECT_TRUE(export_link.valid());
     EXPECT_EQ(1u, object_linker_.ExportCount());
     EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
@@ -158,7 +158,7 @@ TEST_F(ObjectLinkerTest, AllowsImport) {
   TestImportObj import_obj(kImportValue);
   TestObjectLinker::ImportLink import_link =
       object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(import_link.valid());
   EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
@@ -170,7 +170,7 @@ TEST_F(ObjectLinkerTest, CannotImportInvalidToken) {
   TestImportObj import_obj(kImportValue);
   TestObjectLinker::ImportLink import_link =
       object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(1);  // CreateImport throws an error.
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);  // CreateImport throws an error.
   EXPECT_FALSE(import_link.valid());
   EXPECT_EQ(0u, object_linker_.ImportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
@@ -188,7 +188,7 @@ TEST_F(ObjectLinkerTest, CannotImportWithDeadImportToken) {
   TestImportObj import_obj(kImportValue);
   TestObjectLinker::ImportLink import_link =
       object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(1);  // CreateImport throws an error.
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);  // CreateImport throws an error.
   EXPECT_FALSE(import_link.valid());
   EXPECT_EQ(0u, object_linker_.ImportCount());
   EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
@@ -206,7 +206,7 @@ TEST_F(ObjectLinkerTest, CanImportWithDeadExportToken) {
   TestImportObj import_obj(kImportValue);
   TestObjectLinker::ImportLink import_link =
       object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(import_link.valid());
   EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
@@ -220,14 +220,14 @@ TEST_F(ObjectLinkerTest, CannotImportSameTokenTwice) {
   TestImportObj import_obj(kImportValue);
   TestObjectLinker::ImportLink import_link =
       object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(import_link.valid());
   EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
 
   TestObjectLinker::ImportLink import_link2 = object_linker_.CreateImport(
       std::move(import_obj), std::move(import_token2), error_reporter());
-  EXPECT_ERROR_COUNT(1);  // CreateImport throws an error.
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);  // CreateImport throws an error.
   EXPECT_FALSE(import_link2.valid());
   EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
@@ -241,7 +241,7 @@ TEST_F(ObjectLinkerTest, LinkDeathRemovesImport) {
     TestImportObj import_obj(kImportValue);
     TestObjectLinker::ImportLink import_link = object_linker_.CreateImport(
         std::move(import_obj), std::move(import_token), error_reporter());
-    EXPECT_ERROR_COUNT(0);
+    EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
     EXPECT_TRUE(import_link.valid());
     EXPECT_EQ(1u, object_linker_.ImportCount());
     EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
@@ -260,12 +260,12 @@ TEST_F(ObjectLinkerTest, DISABLED_InitializingLinkTwiceCausesDeath) {
 
   TestObjectLinker::ExportLink export_link =
       object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(export_link.valid());
 
   export_link.Initialize(ERROR_IF_CALLED("export.link_resolved"),
                          ERROR_IF_CALLED("export.link_disconnected"));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   // 2nd Initialize() attempt dies with a DCHECK.
   EXPECT_DEATH_IF_SUPPORTED(export_link.Initialize(ERROR_IF_CALLED("export.link_resolved"),
@@ -284,7 +284,7 @@ TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeersExportBeforeImport) {
 
   TestObjectLinker::ExportLink export_link =
       object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(export_link.valid());
   EXPECT_EQ(1u, object_linker_.ExportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
@@ -292,7 +292,7 @@ TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeersExportBeforeImport) {
   {
     TestObjectLinker::ImportLink import_link = object_linker_.CreateImport(
         std::move(import_obj), std::move(import_token), error_reporter());
-    EXPECT_ERROR_COUNT(0);
+    EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
     EXPECT_TRUE(import_link.valid());
     EXPECT_EQ(1u, object_linker_.ImportCount());
     EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
@@ -309,7 +309,7 @@ TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeersExportBeforeImport) {
           EXPECT_FALSE(import_disconnected);
           import_disconnected = true;
         });
-    EXPECT_ERROR_COUNT(0);
+    EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
     EXPECT_FALSE(export_linked);
     EXPECT_FALSE(import_linked);
     EXPECT_FALSE(export_disconnected);
@@ -331,7 +331,7 @@ TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeersExportBeforeImport) {
           EXPECT_FALSE(export_disconnected);
           export_disconnected = true;
         });
-    EXPECT_ERROR_COUNT(0);
+    EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
     EXPECT_TRUE(export_linked);
     EXPECT_TRUE(import_linked);
     EXPECT_FALSE(export_disconnected);
@@ -363,7 +363,7 @@ TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeersImportBeforeExport) {
 
   TestObjectLinker::ImportLink import_link =
       object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(import_link.valid());
   EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
@@ -381,7 +381,7 @@ TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeersImportBeforeExport) {
           EXPECT_FALSE(export_disconnected);
           export_disconnected = true;
         });
-    EXPECT_ERROR_COUNT(0);
+    EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
     EXPECT_FALSE(export_linked);
     EXPECT_FALSE(import_linked);
     EXPECT_FALSE(export_disconnected);
@@ -391,7 +391,7 @@ TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeersImportBeforeExport) {
 
     TestObjectLinker::ExportLink export_link = object_linker_.CreateExport(
         std::move(export_obj), std::move(export_token), error_reporter());
-    EXPECT_ERROR_COUNT(0);
+    EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
     EXPECT_TRUE(export_link.valid());
     EXPECT_FALSE(export_linked);
     EXPECT_FALSE(import_linked);
@@ -414,7 +414,7 @@ TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeersImportBeforeExport) {
           EXPECT_FALSE(import_disconnected);
           import_disconnected = true;
         });
-    EXPECT_ERROR_COUNT(0);
+    EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
     EXPECT_TRUE(export_linked);
     EXPECT_TRUE(import_linked);
     EXPECT_FALSE(export_disconnected);
@@ -448,7 +448,7 @@ TEST_F(ObjectLinkerTest, InitializeDoesNotLinkNonMatchingPeers) {
 
     TestObjectLinker::ImportLink import_link = object_linker_.CreateImport(
         std::move(import_obj), std::move(import_token), error_reporter());
-    EXPECT_ERROR_COUNT(0);
+    EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
     EXPECT_TRUE(import_link.valid());
     EXPECT_EQ(1u, object_linker_.ImportCount());
     EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
@@ -456,7 +456,7 @@ TEST_F(ObjectLinkerTest, InitializeDoesNotLinkNonMatchingPeers) {
     {
       TestObjectLinker::ExportLink export_link = object_linker_.CreateExport(
           std::move(export_obj), std::move(export_token2), error_reporter());
-      EXPECT_ERROR_COUNT(0);
+      EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
       EXPECT_TRUE(export_link.valid());
       EXPECT_EQ(1u, object_linker_.ExportCount());
       EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
@@ -469,7 +469,7 @@ TEST_F(ObjectLinkerTest, InitializeDoesNotLinkNonMatchingPeers) {
             EXPECT_FALSE(export_disconnected);
             export_disconnected = true;
           });
-      EXPECT_ERROR_COUNT(0);
+      EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
       EXPECT_EQ(1u, object_linker_.ExportCount());
       EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
       EXPECT_EQ(1u, object_linker_.ImportCount());
@@ -483,7 +483,7 @@ TEST_F(ObjectLinkerTest, InitializeDoesNotLinkNonMatchingPeers) {
             EXPECT_FALSE(import_disconnected);
             import_disconnected = true;
           });
-      EXPECT_ERROR_COUNT(0);
+      EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
       EXPECT_EQ(1u, object_linker_.ExportCount());
       EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
       EXPECT_EQ(1u, object_linker_.ImportCount());
@@ -514,7 +514,7 @@ TEST_F(ObjectLinkerTest, EarlyImportTokenDeathCausesExportDisconnection) {
 
   TestObjectLinker::ExportLink export_link =
       object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(export_link.valid());
   EXPECT_EQ(1u, object_linker_.ExportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
@@ -547,7 +547,7 @@ TEST_F(ObjectLinkerTest, ImportTokenDeathCausesExportDisconnection) {
 
   TestObjectLinker::ExportLink export_link =
       object_linker_.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(export_link.valid());
   EXPECT_EQ(1u, object_linker_.ExportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedExportCount());
@@ -579,7 +579,7 @@ TEST_F(ObjectLinkerTest, EarlyExportTokenDeathCausesImportDisconnection) {
 
   TestObjectLinker::ImportLink import_link =
       object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(import_link.valid());
   EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
@@ -612,7 +612,7 @@ TEST_F(ObjectLinkerTest, ExportTokenDeathCausesImportDisconnection) {
 
   TestObjectLinker::ImportLink import_link =
       object_linker_.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   EXPECT_TRUE(import_link.valid());
   EXPECT_EQ(1u, object_linker_.ImportCount());
   EXPECT_EQ(1u, object_linker_.UnresolvedImportCount());
@@ -772,7 +772,7 @@ TEST_F(ObjectLinkerTest, ImportLinkDeathDestroysImport) {
 
   SharedTestObjectLinker::ImportLink import_link =
       object_linker.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   import_link.Initialize(ERROR_IF_CALLED("import.link_resolved"),
                          [](bool on_link_destruction) {});
@@ -802,7 +802,7 @@ TEST_F(ObjectLinkerTest, ExportLinkDeathDestroysExport) {
 
   SharedTestObjectLinker::ExportLink export_link =
       object_linker.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   export_link.Initialize(ERROR_IF_CALLED("import.link_resolved"),
                          [](bool on_link_destruction) {});

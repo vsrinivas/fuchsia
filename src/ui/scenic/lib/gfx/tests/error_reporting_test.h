@@ -20,7 +20,7 @@ namespace test {
 
 // Use of this macro allows us to remain consistent with gtest syntax, aiding
 // readability.
-#define EXPECT_ERROR_COUNT(n) ExpectErrorCount((n))
+#define EXPECT_SCENIC_SESSION_ERROR_COUNT(n) ExpectErrorCount((n))
 
 class TestErrorReporter : public ErrorReporter {
  public:

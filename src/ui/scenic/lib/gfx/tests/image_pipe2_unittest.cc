@@ -254,7 +254,7 @@ TEST_F(ImagePipe2Test, AddMultipleImagesFromABufferCollection) {
   const uint32_t kImageId2 = 2;
   image_pipe->AddImage(kImageId2, kBufferId, 1, image_format);
 
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 // Add multiple images from an invalid buffer collection id.
@@ -395,7 +395,7 @@ TEST_F(ImagePipe2Test, PresentImagesInOrder) {
   image_pipe->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
 
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 // Call Present with an image with an odd size(possible offset) into its memory, and expect no
@@ -425,7 +425,7 @@ TEST_F(ImagePipe2Test, PresentImagesWithOddSize) {
   image_pipe->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
 
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 // Present two frames on the ImagePipe, making sure that both buffers are allocated, acquire fence
@@ -666,7 +666,7 @@ TEST_F(ImagePipe2Test, ImagePipeRemoveImageThatIsPendingPresent) {
   // The first image should have been released.
   ASSERT_TRUE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
   ASSERT_FALSE(IsEventSignalled(release_fence2, escher::kFenceSignalled));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 // Detects protected memory backed image added.
@@ -698,7 +698,7 @@ TEST_F(ImagePipe2Test, DetectsProtectedMemory) {
   image_pipe->RemoveImage(kImageId2);
   ASSERT_FALSE(image_pipe->use_protected_memory());
 
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 // Checks if NV12 and BGRAimage can be added.
@@ -727,7 +727,7 @@ TEST_F(ImagePipe2Test, AddMultipleFormatsImage) {
     image_pipe->RemoveBufferCollection(kBufferId);
   }
 
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 // Detects not supported pixel format.

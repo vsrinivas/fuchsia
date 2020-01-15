@@ -132,7 +132,7 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
   image_pipe->PresentImage(image1_id, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
 
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 // Call Present with an image with an offset into its memory, and expect no
@@ -164,7 +164,7 @@ TEST_F(ImagePipeTest, PresentImagesWithOffset) {
   image_pipe->PresentImage(image1_id, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
 
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 // Present two frames on the ImagePipe, making sure that acquire fence is
@@ -401,7 +401,7 @@ TEST_F(ImagePipeTest, ImagePipeRemoveImageThatIsPendingPresent) {
   // The first image should have been released.
   ASSERT_TRUE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
   ASSERT_FALSE(IsEventSignalled(release_fence2, escher::kFenceSignalled));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 // TODO(SCN-151): More tests.

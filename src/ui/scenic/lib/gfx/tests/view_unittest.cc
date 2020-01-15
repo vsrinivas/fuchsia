@@ -68,7 +68,7 @@ TEST_F(ViewTest, NullableDebugName) {
       scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token), fit::nullopt)));
   constexpr ResourceId kViewId = 2u;
   EXPECT_TRUE(Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), fit::nullopt)));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 TEST_F(ViewTest, ChildrenCanBeAddedToViewWithoutViewHolder) {
@@ -76,15 +76,15 @@ TEST_F(ViewTest, ChildrenCanBeAddedToViewWithoutViewHolder) {
 
   const ResourceId view_id = 1;
   EXPECT_TRUE(Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   const ResourceId node1_id = 2;
   EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node1_id)));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   const ResourceId node2_id = 3;
   EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node2_id)));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   auto view = FindResource<View>(view_id);
   auto node1 = FindResource<Node>(node1_id);
@@ -95,7 +95,7 @@ TEST_F(ViewTest, ChildrenCanBeAddedToViewWithoutViewHolder) {
 
   EXPECT_TRUE(Apply(scenic::NewAddChildCmd(view_id, node1_id)));
   EXPECT_TRUE(Apply(scenic::NewAddChildCmd(view_id, node2_id)));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
 TEST_F(ViewTest, ExportsViewHolderViaCmd) {
@@ -104,7 +104,7 @@ TEST_F(ViewTest, ExportsViewHolderViaCmd) {
   const ResourceId view_holder_id = 1;
   EXPECT_TRUE(
       Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token), "Test")));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   EXPECT_TRUE(view_holder);
@@ -121,7 +121,7 @@ TEST_F(ViewTest, ImportsViewViaCmd) {
 
   const ResourceId view_id = 1;
   EXPECT_TRUE(Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   auto view = FindResource<View>(view_id);
   EXPECT_TRUE(view);
@@ -139,7 +139,7 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
   const ResourceId view_holder_id = 1u;
   EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
                                                    "Holder [Test]")));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   EXPECT_TRUE(view_holder);
@@ -152,7 +152,7 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
 
   const ResourceId view_id = 2u;
   EXPECT_TRUE(Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   auto view = FindResource<View>(view_id);
   EXPECT_TRUE(view);
@@ -180,7 +180,7 @@ TEST_F(ViewTest, ExportViewHolderWithDeadHandleFails) {
   const ResourceId view_holder_id = 1;
   EXPECT_FALSE(Apply(
       scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token_out), "Test")));
-  EXPECT_ERROR_COUNT(1);  // Dead handles cause a session error.
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);  // Dead handles cause a session error.
 
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   EXPECT_FALSE(view_holder);
@@ -204,7 +204,7 @@ TEST_F(ViewTest, ViewHolderDestroyedBeforeView) {
   // Destroy the ViewHolder and disconnect the link.
   Apply(scenic::NewReleaseResourceCmd(view_holder_id));
 
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   const fuchsia::ui::scenic::Event& event = events()[next_event_id];
   EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected, event.gfx().Which());
 }
@@ -222,7 +222,7 @@ TEST_F(ViewTest, ViewDestroyedBeforeViewHolder) {
   // Destroy the ViewHolder and disconnect the link.
   Apply(scenic::NewReleaseResourceCmd(view_id));
 
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   const fuchsia::ui::scenic::Event& event = events()[next_event_id];
   EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewDisconnected, event.gfx().Which());
 }
@@ -235,7 +235,7 @@ TEST_F(ViewTest, ViewAndViewHolderConnectedEvents) {
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
 
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   bool view_holder_connected_event = false;
   bool view_connected_event = false;
   for (const fuchsia::ui::scenic::Event& event : events()) {
@@ -257,7 +257,7 @@ TEST_F(ViewTest, ViewHolderConnectsToScene) {
                                        "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
   uint32_t next_event_id = events().size();
@@ -282,7 +282,7 @@ TEST_F(ViewTest, ViewHolderDetachedAndReleased) {
                                        "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   auto view = FindResource<View>(view_id);
 
   // Create a Scene and connect the ViewHolder to the Scene.
@@ -299,7 +299,7 @@ TEST_F(ViewTest, ViewHolderDetachedAndReleased) {
   EXPECT_TRUE(node1);
   auto view_node = view->GetViewNode();
   EXPECT_EQ(1u, view_node->children().size());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   // Detach the ViewHolder from the scene graph.
   EXPECT_TRUE(Apply(scenic::NewDetachCmd(view_holder_id)));
@@ -320,7 +320,7 @@ TEST_F(ViewTest, ViewHolderDetachedAndReleased) {
   // Now, release the ViewHolder resource. Its link should be destroyed.
   uint32_t next_event_id = events().size();
   EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(view_holder_id)));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   bool view_holder_disconnected_event = false;
   for (uint32_t i = next_event_id; i < events().size(); ++i) {
     if (events()[i].gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected) {
@@ -342,7 +342,7 @@ TEST_F(ViewTest, ViewHolderChildrenReleasedFromSceneGraphWhenViewDestroyed) {
                                        "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
   // Create child nodes for the View.
@@ -388,7 +388,7 @@ TEST_F(ViewTest, ViewNodeChildAddedToViewHolder) {
                                        "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
 
@@ -407,11 +407,11 @@ TEST_F(ViewTest, ViewHolderCannotAddArbitraryChildNodes) {
   // Create an EntityNode.
   const ResourceId node_id = 2u;
   EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node_id)));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   // Attempt to add the node as a child of the ViewHolder.
   EXPECT_FALSE(Apply(scenic::NewAddChildCmd(view_holder_id, node_id)));
-  EXPECT_ERROR_COUNT(1);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);
 }
 
 TEST_F(ViewTest, ViewNodePairedToView) {
@@ -422,7 +422,7 @@ TEST_F(ViewTest, ViewNodePairedToView) {
                                        "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   auto view = FindResource<View>(view_id);
 
   auto view_node = view->GetViewNode();
@@ -441,13 +441,13 @@ TEST_F(ViewTest, ViewNodeNotInResourceMap) {
                                        "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
 
   EXPECT_NE(nullptr, view->GetViewNode());
   EXPECT_EQ(nullptr, FindResource<ViewNode>(view->GetViewNode()->id()).get());
-  EXPECT_ERROR_COUNT(1);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(1);
 }
 
 TEST_F(ViewTest, ViewHolderGrandchildGetsSceneRefreshed) {
@@ -467,7 +467,7 @@ TEST_F(ViewTest, ViewHolderGrandchildGetsSceneRefreshed) {
   const ResourceId kSceneId = 4u;
   Apply(scenic::NewCreateSceneCmd(kSceneId));
   auto scene = FindResource<Scene>(kSceneId);
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   // Set the ViewHolder's parent as the child of the scene.
   Apply(scenic::NewAddChildCmd(kSceneId, kEntityNodeId));
@@ -497,11 +497,11 @@ TEST_F(ViewTest, ViewLinksAfterViewHolderConnectsToScene) {
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   auto view = FindResource<View>(view_id);
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   // Verify the connect event was emitted before the scene attached event.
   EXPECT_EQ(4u, events().size());
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   const fuchsia::ui::scenic::Event& event = events()[0];
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewConnected, event.gfx().Which());
 
@@ -522,7 +522,7 @@ TEST_F(ViewTest, ViewStateChangeNotifiesViewHolder) {
                                        "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   // Verify View and ViewHolder are linked.
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
@@ -548,7 +548,7 @@ TEST_F(ViewTest, RenderStateAcrossManyFrames) {
                                        "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   // Verify View and ViewHolder are linked.
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
@@ -581,7 +581,7 @@ TEST_F(ViewTest, RenderStateFalseWhenViewDisconnects) {
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   {
     auto view = FindResource<View>(view_id);
@@ -617,7 +617,7 @@ TEST_F(ViewTest, ViewHolderRenderWaitClearedWhenViewDestroyed) {
   // Verify resources are mapped and linked.
   EXPECT_EQ(2u, session()->GetMappedResourceCount());
   uint32_t next_event_id = events().size();
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   // Destroy the view. The link between View and ViewHolder should be
   // disconnected.
@@ -647,7 +647,7 @@ TEST_F(ViewTest, RenderSignalDoesntCrashWhenViewHolderDestroyed) {
   auto view = FindResource<View>(view_id);
   view->SignalRender();
   RunLoopUntilIdle();
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 
   // No additional render state events should have been posted.
   EXPECT_EQ(event_size, events().size());
@@ -661,7 +661,7 @@ TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
                                        "Holder [Test]"));
   const ResourceId view_id = 1u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-  EXPECT_ERROR_COUNT(0);
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
 
