@@ -230,7 +230,6 @@ if (current_cpu != "") {
       "dlopen-indirect-deps",
       "driver-test",
       "dump1",
-      "errno",
       "ethernet",
       "events",
       "evil",
