@@ -111,12 +111,11 @@ fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd);
 //
 // The |verb| string is used to format error messages showing command examples.
 Err EvalCommandExpression(const Command& cmd, const char* verb,
-                          fxl::RefPtr<EvalContext> eval_context, bool follow_references,
+                          const fxl::RefPtr<EvalContext>& eval_context, bool follow_references,
                           EvalCallback cb);
 
 // Like EvalCommandExpression but attempts to convert the result to an address. This is used for
-// commands that want to support expressions to compute
-// addresses.
+// commands that want to support expressions to compute addresses.
 //
 // Some expressions may evaluate to a pointer where the intrinsic size of the pointed-to thing is
 // known. In this case, the size will be passed to the callback. Untyped results will have a null
@@ -124,7 +123,7 @@ Err EvalCommandExpression(const Command& cmd, const char* verb,
 //
 // If the command doesn't evaluate to an address, the Err will be set.
 Err EvalCommandAddressExpression(
-    const Command& cmd, const char* verb, fxl::RefPtr<EvalContext> eval_context,
+    const Command& cmd, const char* verb, const fxl::RefPtr<EvalContext>& eval_context,
     fit::callback<void(const Err& err, uint64_t address, std::optional<uint32_t> size)> cb);
 
 // Formats an argument or setting value.

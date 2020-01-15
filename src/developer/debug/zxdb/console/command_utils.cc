@@ -411,7 +411,7 @@ fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd) {
 }
 
 Err EvalCommandExpression(const Command& cmd, const char* verb,
-                          fxl::RefPtr<EvalContext> eval_context, bool follow_references,
+                          const fxl::RefPtr<EvalContext>& eval_context, bool follow_references,
                           EvalCallback cb) {
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
   if (err.has_error())
@@ -425,35 +425,17 @@ Err EvalCommandExpression(const Command& cmd, const char* verb,
 }
 
 Err EvalCommandAddressExpression(
-    const Command& cmd, const char* verb, fxl::RefPtr<EvalContext> eval_context,
+    const Command& cmd, const char* verb, const fxl::RefPtr<EvalContext>& eval_context,
     fit::callback<void(const Err& err, uint64_t address, std::optional<uint32_t> size)> cb) {
   return EvalCommandExpression(
       cmd, verb, eval_context, true, [eval_context, cb = std::move(cb)](ErrOrValue value) mutable {
-        if (value.has_error())
-          return cb(value.err(), 0, std::nullopt);
-
-        fxl::RefPtr<Type> concrete_type = value.value().GetConcreteType(eval_context.get());
-        if (concrete_type->AsCollection()) {
-          // Don't allow structs and classes that are <= 64 bits to be converted
-          // to addresses.
-          return cb(Err("Can't convert '%s' to an address.", concrete_type->GetFullName().c_str()),
-                    0, std::nullopt);
-        }
-
-        // See if there's an intrinsic size to the object being pointed to. This
-        // is true for pointers. References should have been followed and
-        // stripped before here.
-        std::optional<uint32_t> size;
-        if (auto modified = concrete_type->AsModifiedType();
-            modified && modified->tag() == DwarfTag::kPointerType) {
-          if (auto modified_type = modified->modified().Get()->AsType())
-            size = modified_type->byte_size();
-        }
-
-        // Convert anything else <= 64 bits to a number.
+        Err err = value.err_or_empty();
         uint64_t address = 0;
-        Err conversion_err = value.value().PromoteTo64(&address);
-        cb(conversion_err, address, size);
+        std::optional<uint32_t> size;
+
+        if (err.ok())
+          err = ValueToAddressAndSize(eval_context, value.value(), &address, &size);
+        cb(err, address, size);
       });
 }
 

@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_H_
 
+#include <optional>
+
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
@@ -31,6 +33,17 @@ void EvalExpression(const std::string& input, const fxl::RefPtr<EvalContext>& co
 void EvalExpressions(const std::vector<std::string>& inputs,
                      const fxl::RefPtr<EvalContext>& context, bool follow_references,
                      fit::callback<void(std::vector<ErrOrValue>)> cb);
+
+// Determines the memory location that the given value refers to. It is used by the frontend to get
+// the address of what the user meant when they typed an expression.
+//
+// If the result has a type with a known size, that size will be put into *size. Otherwise it will
+// be untouched (for example, raw numbers will be converted to pointers that have no intrinsic
+// size).
+//
+// TODO(bug 44074) support non-pointer values and take their address implicitly.
+Err ValueToAddressAndSize(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
+                          uint64_t* address, std::optional<uint32_t>* size);
 
 }  // namespace zxdb
 

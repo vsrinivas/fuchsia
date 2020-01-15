@@ -125,6 +125,7 @@ source_set("tests") {
     "expr_node_unittest.cc",
     "expr_parser_unittest.cc",
     "expr_tokenizer_unittest.cc",
+    "expr_unittest.cc",
     "expr_value_source_unittest.cc",
     "find_name_unittest.cc",
     "format_test_support.cc",

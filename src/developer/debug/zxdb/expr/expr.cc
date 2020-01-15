@@ -8,6 +8,7 @@
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -86,6 +87,28 @@ void EvalExpressions(const std::vector<std::string>& inputs,
     EvalExpression(inputs[i], context, follow_references,
                    [tracking, i](ErrOrValue value) { tracking->SetResult(i, std::move(value)); });
   }
+}
+
+// TODO(bug 44074) support non-pointer values and take their address implicitly.
+Err ValueToAddressAndSize(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& value,
+                          uint64_t* address, std::optional<uint32_t>* size) {
+  fxl::RefPtr<Type> concrete_type = value.GetConcreteType(eval_context.get());
+  if (concrete_type->AsCollection()) {
+    // Don't allow structs and classes that are <= 64 bits to be converted
+    // to addresses.
+    return Err("Can't convert '%s' to an address.", concrete_type->GetFullName().c_str());
+  }
+
+  // See if there's an intrinsic size to the object being pointed to. This is true for pointers.
+  // References should have been followed and stripped before here.
+  if (auto modified = concrete_type->AsModifiedType();
+      modified && modified->tag() == DwarfTag::kPointerType) {
+    if (auto modified_type = modified->modified().Get()->AsType())
+      *size = modified_type->byte_size();
+  }
+
+  // Convert anything else <= 64 bits to a number.
+  return value.PromoteTo64(address);
 }
 
 }  // namespace zxdb

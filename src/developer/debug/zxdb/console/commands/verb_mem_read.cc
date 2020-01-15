@@ -66,7 +66,6 @@ Examples
   x &foo->bar
   mem-read --size=16 0x8f1763a7
   process 3 mem-read 83242384560
-  process 3 mem-read main
 )";
 Err RunVerbMemRead(ConsoleContext* context, const Command& cmd) {
   // Only a process can have its memory read.
