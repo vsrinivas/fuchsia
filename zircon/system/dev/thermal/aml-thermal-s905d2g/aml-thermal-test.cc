@@ -165,7 +165,7 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo fake_thermal_config_less =
 
 // Voltage Regulator
 // Copied from sherlock-thermal.cc
-static aml_voltage_table_info_t fake_voltage_table = {
+static aml_thermal_info_t fake_thermal_info = {
     .voltage_table =
         {
             {1022000, 0},  {1011000, 3}, {1001000, 6}, {991000, 10}, {981000, 13}, {971000, 16},
@@ -389,7 +389,7 @@ class FakeAmlVoltageRegulator : public AmlVoltageRegulator {
       return nullptr;
     }
 
-    EXPECT_OK(test->Init(pwm_AO_D, pwm_A, pid, &fake_voltage_table));
+    EXPECT_OK(test->Init(pwm_AO_D, pwm_A, pid, &fake_thermal_info));
     return test;
   }
 
@@ -749,7 +749,7 @@ class FakeAmlThermal : public AmlThermal {
     if (!ac.check() || (status != ZX_OK)) {
       return nullptr;
     }
-    EXPECT_OK(voltage_regulator->Init(pwm_AO_D, pwm_A, pid, &fake_voltage_table));
+    EXPECT_OK(voltage_regulator->Init(pwm_AO_D, pwm_A, pid, &fake_thermal_info));
 
     // CPU Frequency and Scaling
     auto cpufreq_scaling = fbl::make_unique_checked<AmlCpuFrequency>(

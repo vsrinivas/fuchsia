@@ -9,6 +9,7 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <ddk/protocol/scpi.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-s912/s912-gpio.h>

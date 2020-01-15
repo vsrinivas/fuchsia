@@ -109,10 +109,10 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   // Get the voltage-table .
-  aml_voltage_table_info_t voltage_table;
-  status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &voltage_table,
-                               sizeof(voltage_table), &actual);
-  if (status != ZX_OK || actual != sizeof(voltage_table)) {
+  aml_thermal_info_t thermal_info;
+  status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &thermal_info,
+                               sizeof(thermal_info), &actual);
+  if (status != ZX_OK || actual != sizeof(thermal_info)) {
     zxlogf(ERROR, "aml-thermal: Could not get voltage-table metadata %d\n", status);
     return status;
   }
@@ -146,7 +146,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   // Initialize voltage regulator.
-  status = voltage_regulator->Create(device, &voltage_table);
+  status = voltage_regulator->Create(device, &thermal_info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-thermal: Could not initialize Voltage Regulator: %d\n", status);
     return status;

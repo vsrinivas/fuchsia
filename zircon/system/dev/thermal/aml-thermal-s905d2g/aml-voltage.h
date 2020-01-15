@@ -11,6 +11,8 @@
 
 #include <memory>
 
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/scpi.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/pwm.h>
 #include <soc/aml-common/aml-pwm-regs.h>
@@ -24,11 +26,11 @@ class AmlVoltageRegulator {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlVoltageRegulator);
   AmlVoltageRegulator() = default;
-  zx_status_t Create(zx_device_t* parent, aml_voltage_table_info_t* voltage_table_info);
+  zx_status_t Create(zx_device_t* parent, aml_thermal_info_t* thermal_info);
   // For testing
   zx_status_t Init(const pwm_protocol_t* pwm_AO_D, const pwm_protocol_t* pwm_A, uint32_t pid,
-                   aml_voltage_table_info_t* voltage_table_info);
-  zx_status_t Init(aml_voltage_table_info_t* voltage_table_info);
+                   aml_thermal_info_t* thermal_info);
+  zx_status_t Init(aml_thermal_info_t* thermal_info);
   uint32_t GetVoltage(fuchsia_hardware_thermal_PowerDomain power_domain) {
     if (power_domain == fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
       return GetBigClusterVoltage();
@@ -73,7 +75,7 @@ class AmlVoltageRegulator {
 
   ddk::PwmProtocolClient pwm_AO_D_;
   ddk::PwmProtocolClient pwm_A_;
-  aml_voltage_table_info_t voltage_table_info_;
+  aml_thermal_info_t thermal_info_;
   int current_big_cluster_voltage_index_;
   int current_little_cluster_voltage_index_;
   uint32_t pid_;

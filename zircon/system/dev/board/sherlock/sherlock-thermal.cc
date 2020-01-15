@@ -167,7 +167,7 @@ fuchsia_hardware_thermal_ThermalDeviceInfo aml_sherlock_config =
 };
 
 // clang-format on
-aml_voltage_table_info_t aml_voltage_table = {
+aml_thermal_info_t aml_thermal_info = {
     .voltage_table =
         {
             {1'022'000, 0}, {1'011'000, 3}, {1'001'000, 6}, {991'000, 10}, {981'000, 13},
@@ -188,8 +188,8 @@ const pbus_metadata_t thermal_metadata[] = {
     },
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &aml_voltage_table,
-        .data_size = sizeof(aml_voltage_table),
+        .data_buffer = &aml_thermal_info,
+        .data_size = sizeof(aml_thermal_info),
     },
 };
 

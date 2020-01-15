@@ -8,12 +8,16 @@
 #include <zircon/syscalls/port.h>
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
 #include <soc/aml-common/aml-thermal.h>
+
+#define THERMAL_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
 namespace thermal {
 namespace {
