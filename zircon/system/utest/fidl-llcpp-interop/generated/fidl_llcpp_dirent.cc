@@ -16,36 +16,31 @@ namespace {
 constexpr uint64_t kDirEntTestInterface_CountNumDirectories_Ordinal = 0x6915d08800000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_CountNumDirectories_GenOrdinal = 0x331f16100bcf01a1lu;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_ReadDir_Ordinal = 0x52407b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_ReadDir_GenOrdinal = 0x1b5e15bc80c7cf42lu;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirRequestTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_ConsumeDirectories_Ordinal = 0x19655c0700000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_ConsumeDirectories_GenOrdinal = 0x5d25ec8ecff39cd9lu;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_OnDirents_Ordinal = 0x4c81d6ba00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_OnDirents_GenOrdinal = 0x7a75e26a45782c25lu;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsRequestTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_OneWayDirents_Ordinal = 0x6beae37500000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDirEntTestInterface_OneWayDirents_GenOrdinal = 0x3b04d61f058a9043lu;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsResponseTable;
 
 }  // namespace

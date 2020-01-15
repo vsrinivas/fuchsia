@@ -32,7 +32,6 @@ constexpr uint32_t TEST_MAX_PATH = 10u;
 
 constexpr uint32_t SMALL_DIR_VECTOR_SIZE = 3u;
 
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTable;
 
 // Fake dirent structure to exercise linearization codepaths.
@@ -51,25 +50,15 @@ struct DirEnt {
   int32_t some_flags = {};
 };
 
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesResponseTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesResponseTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirRequestTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesResponseTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesResponseTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsRequestTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsResponseTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsResponseTable;
 
 // Test interface implemented by LLCPP, with a manually written server,
@@ -84,12 +73,9 @@ class DirEntTestInterface final {
     int64_t num_dir;
 
     static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesResponseTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
@@ -102,7 +88,6 @@ class DirEntTestInterface final {
     ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents;
 
     static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 48000;
@@ -122,12 +107,9 @@ class DirEntTestInterface final {
     ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents;
 
     static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 144;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 144;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
@@ -143,7 +125,6 @@ class DirEntTestInterface final {
     ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents;
 
     static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 144;
@@ -162,12 +143,9 @@ class DirEntTestInterface final {
     ::fidl::VectorView<::llcpp::fidl::test::llcpp::dirent::DirEnt> dirents;
 
     static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 48000;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 48000;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
@@ -181,7 +159,6 @@ class DirEntTestInterface final {
     ::zx::eventpair ep;
 
     static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 48000;

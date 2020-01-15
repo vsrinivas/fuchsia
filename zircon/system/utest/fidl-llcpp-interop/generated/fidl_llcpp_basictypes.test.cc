@@ -16,8 +16,7 @@ namespace {
 constexpr uint64_t kTestInterface_ConsumeSimpleStruct_Ordinal = 0x2b65368b00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestInterface_ConsumeSimpleStruct_GenOrdinal = 0x2eccc2554e6aae0elu;
-extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
+extern "C" const fidl_type_t v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
 
 }  // namespace

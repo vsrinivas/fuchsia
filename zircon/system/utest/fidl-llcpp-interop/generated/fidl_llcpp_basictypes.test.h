@@ -28,7 +28,6 @@ namespace basictypes {
 struct SimpleStruct;
 class TestInterface;
 
-extern "C" const fidl_type_t fidl_test_llcpp_basictypes_SimpleStructTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_basictypes_SimpleStructTable;
 
 struct SimpleStruct {
@@ -46,9 +45,7 @@ struct SimpleStruct {
   ::fidl::Array<::fidl::Array<::zx::eventpair, 4>, 5> arr = {};
 };
 
-extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
 extern "C" const fidl_type_t v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
 
 // Test interface implemented by both C and LLCPP
@@ -63,12 +60,9 @@ class TestInterface final {
     int32_t field;
 
     static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
     static constexpr bool ContainsUnion = false;
@@ -81,7 +75,6 @@ class TestInterface final {
     ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct arg;
 
     static constexpr const fidl_type_t* Type = &v1_fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
-    static constexpr const fidl_type_t* AltType = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
     static constexpr uint32_t MaxNumHandles = 21;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 0;
