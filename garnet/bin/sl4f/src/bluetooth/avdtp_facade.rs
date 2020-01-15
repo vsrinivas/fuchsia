@@ -145,7 +145,6 @@ impl AvdtpFacade {
     /// # Arguments
     /// * `peer_id`: The unique peer_id for the PeerController.
     fn get_peer_controller_by_id(&self, peer_id: u64) -> Option<PeerControllerProxy> {
-        //let tag = "AvdtpFacade::get_peer_controller_by_id";
         match self.inner.read().peer_map.write().get(&peer_id.to_string()) {
             Some(p) => Some(p.clone()),
             None => None,
@@ -159,8 +158,13 @@ impl AvdtpFacade {
     pub async fn set_configuration(&self, peer_id: u64) -> Result<(), Error> {
         let tag = "AvdtpFacade::set_configuration";
         if let Some(p) = self.get_peer_controller_by_id(peer_id) {
-            let _ = p.set_configuration().await;
-            Ok(())
+            match p.set_configuration().await? {
+                Err(err) => {
+                    let err_msg = format_err!("Error: {:?}", err);
+                    fx_err_and_bail!(&with_line!(tag), err_msg)
+                }
+                Ok(()) => Ok(()),
+            }
         } else {
             fx_err_and_bail!(&with_line!(tag), format!("Peer id {:?} not found.", peer_id))
         }
@@ -174,8 +178,13 @@ impl AvdtpFacade {
     pub async fn get_configuration(&self, peer_id: u64) -> Result<(), Error> {
         let tag = "AvdtpFacade::get_configuration";
         if let Some(p) = self.get_peer_controller_by_id(peer_id) {
-            let _ = p.get_configuration().await;
-            Ok(())
+            match p.get_configuration().await? {
+                Err(err) => {
+                    let err_msg = format_err!("Error: {:?}", err);
+                    fx_err_and_bail!(&with_line!(tag), err_msg)
+                }
+                Ok(()) => Ok(()),
+            }
         } else {
             fx_err_and_bail!(&with_line!(tag), format!("Peer id {:?} not found.", peer_id))
         }
@@ -231,8 +240,13 @@ impl AvdtpFacade {
     pub async fn reconfigure_stream(&self, peer_id: u64) -> Result<(), Error> {
         let tag = "AvdtpFacade::reconfigure_stream";
         if let Some(p) = self.get_peer_controller_by_id(peer_id) {
-            let _ = p.reconfigure_stream().await;
-            Ok(())
+            match p.reconfigure_stream().await? {
+                Err(err) => {
+                    let err_msg = format_err!("Error: {:?}", err);
+                    fx_err_and_bail!(&with_line!(tag), err_msg)
+                }
+                Ok(()) => Ok(()),
+            }
         } else {
             fx_err_and_bail!(&with_line!(tag), format!("Peer id {:?} not found.", peer_id))
         }
@@ -247,8 +261,13 @@ impl AvdtpFacade {
     pub async fn suspend_stream(&self, peer_id: u64) -> Result<(), Error> {
         let tag = "AvdtpFacade::suspend_stream";
         if let Some(p) = self.get_peer_controller_by_id(peer_id) {
-            let _ = p.suspend_stream().await;
-            Ok(())
+            match p.suspend_stream().await? {
+                Err(err) => {
+                    let err_msg = format_err!("Error: {:?}", err);
+                    fx_err_and_bail!(&with_line!(tag), err_msg)
+                }
+                Ok(()) => Ok(()),
+            }
         } else {
             fx_err_and_bail!(&with_line!(tag), format!("Peer id {:?} not found.", peer_id))
         }
@@ -261,8 +280,13 @@ impl AvdtpFacade {
     pub async fn suspend_and_reconfigure(&self, peer_id: u64) -> Result<(), Error> {
         let tag = "AvdtpFacade::suspend_and_reconfigure";
         if let Some(p) = self.get_peer_controller_by_id(peer_id) {
-            let _ = p.suspend_and_reconfigure().await;
-            Ok(())
+            match p.suspend_and_reconfigure().await? {
+                Err(err) => {
+                    let err_msg = format_err!("Error: {:?}", err);
+                    fx_err_and_bail!(&with_line!(tag), err_msg)
+                }
+                Ok(()) => Ok(()),
+            }
         } else {
             fx_err_and_bail!(&with_line!(tag), format!("Peer id {:?} not found.", peer_id))
         }
@@ -276,8 +300,13 @@ impl AvdtpFacade {
     pub async fn release_stream(&self, peer_id: u64) -> Result<(), Error> {
         let tag = "AvdtpFacade::release_stream";
         if let Some(p) = self.get_peer_controller_by_id(peer_id) {
-            let _ = p.release_stream().await;
-            Ok(())
+            match p.release_stream().await? {
+                Err(err) => {
+                    let err_msg = format_err!("Error: {:?}", err);
+                    fx_err_and_bail!(&with_line!(tag), err_msg)
+                }
+                Ok(()) => Ok(()),
+            }
         } else {
             fx_err_and_bail!(&with_line!(tag), format!("Peer id {:?} not found.", peer_id))
         }
@@ -290,8 +319,51 @@ impl AvdtpFacade {
     pub async fn establish_stream(&self, peer_id: u64) -> Result<(), Error> {
         let tag = "AvdtpFacade::establish_stream";
         if let Some(p) = self.get_peer_controller_by_id(peer_id) {
-            let _ = p.establish_stream().await;
-            Ok(())
+            match p.establish_stream().await? {
+                Err(err) => {
+                    let err_msg = format_err!("Error: {:?}", err);
+                    fx_err_and_bail!(&with_line!(tag), err_msg)
+                }
+                Ok(()) => Ok(()),
+            }
+        } else {
+            fx_err_and_bail!(&with_line!(tag), format!("Peer id {:?} not found.", peer_id))
+        }
+    }
+
+    /// Start stream for the input peer_id.
+    ///
+    /// # Arguments
+    /// * `peer_id`: The peer id associated with the PeerController.
+    pub async fn start_stream(&self, peer_id: u64) -> Result<(), Error> {
+        let tag = "AvdtpFacade::start_stream";
+        if let Some(p) = self.get_peer_controller_by_id(peer_id) {
+            match p.start_stream().await? {
+                Err(err) => {
+                    let err_msg = format_err!("Error: {:?}", err);
+                    fx_err_and_bail!(&with_line!(tag), err_msg)
+                }
+                Ok(()) => Ok(()),
+            }
+        } else {
+            fx_err_and_bail!(&with_line!(tag), format!("Peer id {:?} not found.", peer_id))
+        }
+    }
+
+    /// Abort stream for the input peer_id.
+    ///
+    /// # Arguments
+    /// * `peer_id`: The peer id associated with the PeerController.
+    pub async fn abort_stream(&self, peer_id: u64) -> Result<(), Error> {
+        let tag = "AvdtpFacade::abort_stream";
+        if let Some(p) = self.get_peer_controller_by_id(peer_id) {
+            match p.abort_stream().await? {
+                Err(err) => {
+                    let err_msg = format_err!("Error: {:?}", err);
+                    fx_err_and_bail!(&with_line!(tag), err_msg)
+                }
+                Ok(()) => Ok(()),
+            }
         } else {
             fx_err_and_bail!(&with_line!(tag), format!("Peer id {:?} not found.", peer_id))
         }

@@ -527,6 +527,16 @@ pub async fn avdtp_method_to_fidl(
             let result = facade.establish_stream(peer_id).await?;
             Ok(to_value(result)?)
         }
+        "AvdtpStartStream" => {
+            let peer_id = parse_u64_identifier(args)?;
+            let result = facade.start_stream(peer_id).await?;
+            Ok(to_value(result)?)
+        }
+        "AvdtpAbortStream" => {
+            let peer_id = parse_u64_identifier(args)?;
+            let result = facade.abort_stream(peer_id).await?;
+            Ok(to_value(result)?)
+        }
         "AvdtpRemoveService" => {
             let result = facade.remove_service().await;
             Ok(to_value(result)?)
