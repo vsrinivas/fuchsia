@@ -27,7 +27,6 @@
 #include "gpu.h"
 #include "input.h"
 #include "rng.h"
-#include "scsi.h"
 #include "socket.h"
 
 static bool gpu_disabled() {
@@ -71,9 +70,6 @@ static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
       return CreateAndBind<virtio::InputDevice>(ctx, bus_device);
     case VIRTIO_DEV_TYPE_SOCKET:
       return CreateAndBind<virtio::SocketDevice>(ctx, bus_device);
-    case VIRTIO_DEV_TYPE_SCSI:
-    case VIRTIO_DEV_TYPE_T_SCSI_HOST:
-      return CreateAndBind<virtio::ScsiDevice>(ctx, bus_device);
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -93,11 +89,9 @@ BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_CONSOLE),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_ENTROPY),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_NETWORK),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_SCSI),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_CONSOLE),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_ENTROPY),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_NETWORK),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_SCSI_HOST),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_GPU),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_INPUT),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_SOCKET), BI_ABORT(), ZIRCON_DRIVER_END(virtio)

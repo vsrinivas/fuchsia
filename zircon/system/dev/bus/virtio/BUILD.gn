@@ -44,6 +44,25 @@ zx_driver("virtio_block") {
   ]
 }
 
+zx_driver("virtio_scsi") {
+  sources = [ "scsi_driver.cc" ]
+  deps = [
+    ":common",
+    ":scsi_lib",
+    "$zx/system/ulib/ddktl",
+  ]
+}
+
+source_set("scsi_lib") {
+  sources = [ "scsi.cc" ]
+  public_deps = [
+    ":common",
+    "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/dev/lib/scsi",
+    "$zx/system/ulib/ddktl",
+  ]
+}
+
 source_set("common") {
   visibility = [ ":*" ]
   sources = [
@@ -55,16 +74,13 @@ source_set("common") {
     "driver_utils.h",
     "gpu.cc",
     "ring.cc",
-    "scsi.cc",
   ]
   public_deps = [
-    "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/device-protocol-pci",
     "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/scsi",
     "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
@@ -88,6 +104,7 @@ zx_test("virtio-test") {
   ]
   deps = [
     ":common",
+    ":scsi_lib",
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/ulib/async-loop:async-loop-cpp",

@@ -8,5 +8,6 @@ group("bus") {
     "platform",
     "virtio",
     "virtio:virtio_block",
+    "virtio:virtio_scsi",
   ]
 }
