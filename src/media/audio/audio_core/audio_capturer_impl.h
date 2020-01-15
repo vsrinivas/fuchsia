@@ -260,9 +260,7 @@ class AudioCapturerImpl : public AudioObject,
   bool mute_;
 
   // Shared buffer state
-  zx::vmo payload_buf_vmo_;
-  void* payload_buf_virt_ = nullptr;
-  uint64_t payload_buf_size_ = 0;
+  fzl::VmoMapper payload_buf_;
   uint32_t payload_buf_frames_ = 0;
 
   WakeupEvent mix_wakeup_;

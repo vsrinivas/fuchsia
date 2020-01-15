@@ -107,17 +107,6 @@ AudioCapturerImpl::~AudioCapturerImpl() {
 
   volume_manager_.RemoveStream(this);
   REP(RemovingCapturer(*this));
-
-  // Release our buffer resources.
-  //
-  // It's important that we don't release the buffer until the mix thread cleanup has run as
-  // the mixer could still be accessing the memory backing the buffer.
-  //
-  // TODO(mpuryear): Change AudioCapturer to use the RingBuffer utility class.
-  if (payload_buf_virt_ != nullptr) {
-    FX_DCHECK(payload_buf_size_ != 0);
-    zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_), payload_buf_size_);
-  }
 }
 
 void AudioCapturerImpl::ReportStart() { admin_.UpdateCapturerState(usage_, true, this); }
@@ -237,7 +226,6 @@ void AudioCapturerImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_
   // If our shared buffer has been assigned, we are operating and our mode can no longer be changed.
   State state = state_.load();
   if (state != State::WaitingForVmo) {
-    FX_DCHECK(payload_buf_vmo_.is_valid());
     FX_LOGS(ERROR) << "Cannot change capture mode while operating!"
                    << "(state = " << static_cast<uint32_t>(state) << ")";
     return;
@@ -296,22 +284,20 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
 
   State state = state_.load();
   if (state != State::WaitingForVmo) {
-    FX_DCHECK(payload_buf_vmo_.is_valid());
-    FX_DCHECK(payload_buf_virt_ != nullptr);
-    FX_DCHECK(payload_buf_size_ != 0);
+    FX_DCHECK(payload_buf_.start() != nullptr);
+    FX_DCHECK(payload_buf_.size() != 0);
     FX_DCHECK(payload_buf_frames_ != 0);
     FX_LOGS(ERROR) << "Bad state while assigning payload buffer "
                    << "(state = " << static_cast<uint32_t>(state) << ")";
     return;
   }
 
-  FX_DCHECK(payload_buf_virt_ == nullptr);
-  FX_DCHECK(payload_buf_size_ == 0);
+  FX_DCHECK(payload_buf_.start() == nullptr);
+  FX_DCHECK(payload_buf_.size() == 0);
   FX_DCHECK(payload_buf_frames_ == 0);
 
-  // Take ownership of the VMO, fetch and sanity check the size.
-  payload_buf_vmo_ = std::move(payload_buf_vmo);
-  res = payload_buf_vmo_.get_size(&payload_buf_size_);
+  size_t payload_buf_size;
+  res = payload_buf_vmo.get_size(&payload_buf_size);
   if (res != ZX_OK) {
     FX_PLOGS(ERROR, res) << "Failed to fetch payload buffer VMO size";
     return;
@@ -319,17 +305,17 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
 
   FX_CHECK(bytes_per_frame_ > 0);
   constexpr uint64_t max_uint32 = std::numeric_limits<uint32_t>::max();
-  if ((payload_buf_size_ < bytes_per_frame_) ||
-      (payload_buf_size_ > (max_uint32 * bytes_per_frame_))) {
-    FX_LOGS(ERROR) << "Bad payload buffer VMO size (size = " << payload_buf_size_
+  if ((payload_buf_size < bytes_per_frame_) ||
+      (payload_buf_size > (max_uint32 * bytes_per_frame_))) {
+    FX_LOGS(ERROR) << "Bad payload buffer VMO size (size = " << payload_buf_.size()
                    << ", bytes per frame = " << bytes_per_frame_ << ")";
     return;
   }
 
-  REP(AddingCapturerPayloadBuffer(*this, id, payload_buf_size_));
+  REP(AddingCapturerPayloadBuffer(*this, id, payload_buf_size));
 
-  payload_buf_frames_ = static_cast<uint32_t>(payload_buf_size_ / bytes_per_frame_);
-  AUD_VLOG_OBJ(TRACE, this) << "payload buf -- size:" << payload_buf_size_
+  payload_buf_frames_ = static_cast<uint32_t>(payload_buf_size / bytes_per_frame_);
+  AUD_VLOG_OBJ(TRACE, this) << "payload buf -- size:" << payload_buf_size
                             << ", frames:" << payload_buf_frames_
                             << ", bytes/frame:" << bytes_per_frame_;
 
@@ -339,15 +325,12 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   mix_buf_ = std::make_unique<float[]>(payload_buf_frames_);
 
   // Map the VMO into our process.
-  uintptr_t tmp;
-  res = zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_,
-                                   ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &tmp);
+  res = payload_buf_.Map(payload_buf_vmo, /*offset=*/0, payload_buf_size,
+                         /*map_flags=*/ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (res != ZX_OK) {
     FX_PLOGS(ERROR, res) << "Failed to map payload buffer VMO";
     return;
   }
-
-  payload_buf_virt_ = reinterpret_cast<void*>(tmp);
 
   // Activate the dispatcher primitives we will use to drive the mixing process. Note we must call
   // Activate on the WakeupEvent from the mix domain, but Signal can be called anytime, even before
@@ -727,13 +710,13 @@ zx_status_t AudioCapturerImpl::Process() {
         }
 
         // If we are running, there is no way our shared buffer can get stolen out from under us.
-        FX_DCHECK(payload_buf_virt_ != nullptr);
+        FX_DCHECK(payload_buf_.start() != nullptr);
 
         uint64_t offset_bytes =
             bytes_per_frame_ * static_cast<uint64_t>(p.offset_frames + p.filled_frames);
 
-        mix_target =
-            reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(payload_buf_virt_) + offset_bytes);
+        mix_target = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(payload_buf_.start()) +
+                                             offset_bytes);
         mix_frames = p.num_frames - p.filled_frames;
         buffer_sequence_number = p.sequence_number;
       } else {
