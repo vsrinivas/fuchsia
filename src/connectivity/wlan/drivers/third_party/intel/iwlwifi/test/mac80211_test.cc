@@ -31,29 +31,15 @@ class Mac80211Test : public SingleApTest {
 TEST_F(Mac80211Test, AddThenRemove) {
   struct iwl_mvm_vif mvmvif = {
       .mvm = mvm_,
-  };
-  struct ieee80211_vif vif = {
-      .type = WLAN_INFO_MAC_ROLE_CLIENT,
-      .bss_conf =
-          {
-              .chandef =
-                  {
-                      .primary = 7,
-                      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
-                      .secondary80 = 0,
-                  },
-          },
-      .addr = {},
-      .drv_priv = &mvmvif,
+      .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
   };
 
-  ASSERT_OK(iwl_mvm_mac_add_interface(&mvmvif, &vif));
+  ASSERT_OK(iwl_mvm_mac_add_interface(&mvmvif));
   // Already existing
-  ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_add_interface(&mvmvif, &vif));
+  ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_add_interface(&mvmvif));
 
   // Check internal variables
   EXPECT_EQ(1, mvm_->vif_count);
-  EXPECT_EQ(&mvmvif, vif.drv_priv);
 
   // Expect success.
   ASSERT_OK(iwl_mvm_mac_remove_interface(&mvmvif));
@@ -70,66 +56,24 @@ TEST_F(Mac80211Test, MultipleAddsRemoves) {
   struct iwl_mvm_vif mvmvif[] = {
       {
           .mvm = mvm_,
+          .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
       },
       {
           .mvm = mvm_,
+          .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
       },
       {
           .mvm = mvm_,
-      },
-  };
-  struct ieee80211_vif vif[] = {
-      {
-          .type = WLAN_INFO_MAC_ROLE_CLIENT,
-          .bss_conf =
-              {
-                  .chandef =
-                      {
-                          .primary = 7,
-                          .cbw = WLAN_CHANNEL_BANDWIDTH__20,
-                          .secondary80 = 0,
-                      },
-              },
-          .addr = {},
-          .drv_priv = &mvmvif,
-      },
-      {
-          .type = WLAN_INFO_MAC_ROLE_CLIENT,
-          .bss_conf =
-              {
-                  .chandef =
-                      {
-                          .primary = 7,
-                          .cbw = WLAN_CHANNEL_BANDWIDTH__20,
-                          .secondary80 = 0,
-                      },
-              },
-          .addr = {},
-          .drv_priv = &mvmvif,
-      },
-      {
-          .type = WLAN_INFO_MAC_ROLE_CLIENT,
-          .bss_conf =
-              {
-                  .chandef =
-                      {
-                          .primary = 7,
-                          .cbw = WLAN_CHANNEL_BANDWIDTH__20,
-                          .secondary80 = 0,
-                      },
-              },
-          .addr = {},
-          .drv_priv = &mvmvif,
+          .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
       },
   };
 
   size_t mvmvif_count = ARRAY_SIZE(mvmvif);
   for (size_t i = 0; i < mvmvif_count; ++i) {
-    ASSERT_OK(iwl_mvm_mac_add_interface(&mvmvif[i], &vif[i]));
+    ASSERT_OK(iwl_mvm_mac_add_interface(&mvmvif[i]));
 
     // Check internal variables
     EXPECT_EQ(i + 1, mvm_->vif_count);
-    EXPECT_EQ(&mvmvif[i], vif[i].drv_priv);
   }
 
   for (size_t i = 0; i < mvmvif_count; ++i) {

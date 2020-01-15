@@ -28,43 +28,30 @@ class MacContextTest : public SingleApTest {
 };
 
 TEST_F(MacContextTest, Init) {
-  struct iwl_mvm_vif mvmvif = {};
-  struct ieee80211_vif vif = {
-      .drv_priv = &mvmvif,
+  struct iwl_mvm_vif mvmvif = {
+      .mvm = mvm_,
+      .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
   };
-  ASSERT_OK(iwl_mvm_mac_ctxt_init(mvm_, &vif));
+  ASSERT_OK(iwl_mvm_mac_ctxt_init(&mvmvif));
 }
 
 TEST_F(MacContextTest, AddModifyRemove) {
   struct iwl_mvm_vif mvmvif = {
       .mvm = mvm_,
+      .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
   };
-  struct ieee80211_vif vif = {
-      .type = WLAN_INFO_MAC_ROLE_CLIENT,
-      .bss_conf =
-          {
-              .chandef =
-                  {
-                      .primary = 7,
-                      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
-                      .secondary80 = 0,
-                  },
-          },
-      .addr = {},
-      .drv_priv = &mvmvif,
-  };
-  ASSERT_OK(iwl_mvm_mac_ctxt_init(mvm_, &vif));
+  ASSERT_OK(iwl_mvm_mac_ctxt_init(&mvmvif));
 
-  ASSERT_OK(iwl_mvm_mac_ctxt_add(mvm_, &vif));
+  ASSERT_OK(iwl_mvm_mac_ctxt_add(&mvmvif));
   // Already existing
-  ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_ctxt_add(mvm_, &vif));
+  ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_ctxt_add(&mvmvif));
 
   // Expect success for modify and remove
-  ASSERT_OK(iwl_mvm_mac_ctxt_changed(mvm_, &vif, false, nullptr));
+  ASSERT_OK(iwl_mvm_mac_ctxt_changed(&mvmvif, false, nullptr));
   ASSERT_OK(iwl_mvm_mac_ctxt_remove(&mvmvif));
 
   // Removed so expect error
-  ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_ctxt_changed(mvm_, &vif, false, nullptr));
+  ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_ctxt_changed(&mvmvif, false, nullptr));
   ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_ctxt_remove(&mvmvif));
 }
 

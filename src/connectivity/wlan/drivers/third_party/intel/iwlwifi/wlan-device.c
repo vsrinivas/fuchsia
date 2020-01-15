@@ -192,23 +192,7 @@ static zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc,
 
   mvmvif->ifc = *ifc;
 
-  // These fields are just dummy values. Will be removed soon. TODO(43559): remove 'struct
-  // ieee80211_vif'
-  struct ieee80211_vif vif = {
-      .type = WLAN_INFO_MAC_ROLE_CLIENT,
-      .addr = {},
-      .bss_conf =
-          {
-              .chandef =
-                  {
-                      .primary = 7,
-                      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
-                      .secondary80 = 0,
-                  },
-          },
-  };
-
-  zx_status_t ret = iwl_mvm_mac_add_interface(mvmvif, &vif);
+  zx_status_t ret = iwl_mvm_mac_add_interface(mvmvif);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "Cannot add MAC interface: %s\n", zx_status_get_string(ret));
     return ret;

@@ -335,6 +335,7 @@ struct iwl_probe_resp_data {
  * @id: between 0 and 3
  * @color: to solve races upon MAC addition and removal
  * @ap_sta_id: the sta_id of the AP - valid only if VIF type is STA
+ * @addr: the MAC address owned by this interface.
  * @bssid: BSSID for this (client) interface
  * @associated: indicates that we're currently associated, used only for
  *  managing the firmware state in iwl_mvm_bss_info_changed_station()
@@ -365,6 +366,7 @@ struct iwl_probe_resp_data {
  * @zxdev: the placeholder for MAC device
  * @mac_role: the role of interface
  * @ifc: store callback functions of MLME
+ * @ht_enabled: indicates if HT is enabled in this interface.
  */
 struct iwl_mvm_vif {
   struct iwl_mvm* mvm;
@@ -372,6 +374,7 @@ struct iwl_mvm_vif {
   uint16_t color;
   uint8_t ap_sta_id;
 
+  uint8_t addr[ETH_ALEN];
   uint8_t bssid[ETH_ALEN];
   bool associated;
   uint8_t ap_assoc_sta_count;
@@ -473,14 +476,21 @@ struct iwl_mvm_vif {
   wlan_info_mac_role_t mac_role;
   zx_handle_t sme_channel;  // Channel passed from devmgr. Will be passed to MLME at mac_start().
   wlanmac_ifc_protocol_t ifc;
-};
 
-static inline struct iwl_mvm_vif* iwl_mvm_vif_from_mac80211(struct ieee80211_vif* vif) {
-  if (!vif) {
-    return NULL;
-  }
-  return (struct iwl_mvm_vif*)vif->drv_priv;
-}
+  // Merged from 'struct ieee80211_vif'
+  bool ht_enabled;
+  struct {
+    uint8_t dtim_period;
+    uint8_t bssid[ETH_ALEN];
+    wlan_channel_t chandef;
+
+    bool qos;
+    bool use_cts_prot;
+    bool use_short_preamble;
+    bool use_short_slot;
+    bool ht_operation_mode;
+  } bss_conf;
+};
 
 extern const uint8_t tid_to_mac80211_ac[];
 
@@ -1687,9 +1697,9 @@ uint8_t iwl_mvm_get_channel_width(wlan_channel_t* chandef);
 uint8_t iwl_mvm_get_ctrl_pos(wlan_channel_t* chandef);
 
 /* MAC (virtual interface) programming */
-zx_status_t iwl_mvm_mac_ctxt_init(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
-zx_status_t iwl_mvm_mac_ctxt_add(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
-int iwl_mvm_mac_ctxt_changed(struct iwl_mvm* mvm, struct ieee80211_vif* vif, bool force_assoc_off,
+zx_status_t iwl_mvm_mac_ctxt_init(struct iwl_mvm_vif* mvmvif);
+zx_status_t iwl_mvm_mac_ctxt_add(struct iwl_mvm_vif* mvmvif);
+int iwl_mvm_mac_ctxt_changed(struct iwl_mvm_vif* mvmvif, bool force_assoc_off,
                              const uint8_t* bssid_override);
 int iwl_mvm_mac_ctxt_remove(struct iwl_mvm_vif* mvmvif);
 int iwl_mvm_mac_ctxt_beacon_changed(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
@@ -1844,7 +1854,7 @@ static inline int iwl_mvm_wowlan_config_key_params(struct iwl_mvm* mvm, struct i
 static inline void iwl_mvm_d0i3_update_keys(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                             struct iwl_wowlan_status* status) {}
 
-static inline void iwl_mvm_set_last_nonqos_seq(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {}
+static inline void iwl_mvm_set_last_nonqos_seq(struct iwl_mvm_vif* mvmvif) {}
 #endif
 void iwl_mvm_set_wowlan_qos_seq(struct iwl_mvm_sta* mvm_ap_sta, struct iwl_wowlan_config_cmd* cmd);
 int iwl_mvm_send_proto_offload(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
@@ -2109,7 +2119,7 @@ void iwl_mvm_ax_softap_testmode_sta_add_debugfs(struct ieee80211_hw* hw, struct 
 zx_status_t iwl_mvm_init(void);
 
 // Interfaces for mac80211.c
-zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif, struct ieee80211_vif* vif);
+zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif);
 zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif);
 zx_status_t iwl_mvm_mac_hw_scan(struct iwl_mvm_vif* mvmvif,
                                 const wlan_hw_scan_config_t* scan_config);

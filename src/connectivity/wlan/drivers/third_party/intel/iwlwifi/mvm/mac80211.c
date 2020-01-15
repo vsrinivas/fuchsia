@@ -1219,9 +1219,8 @@ static void iwl_mvm_update_ctx_tx_power_limit(struct iwl_mvm* mvm, struct ieee80
 #endif
 #endif  // NEEDS_PORTING
 
-zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif, struct ieee80211_vif* vif) {
+zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif) {
   struct iwl_mvm* mvm = mvmvif->mvm;
-  vif->drv_priv = mvmvif;
   mvmvif->probe_resp_data = NULL;
 
   /*
@@ -1248,7 +1247,7 @@ zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif, struct ieee802
   }
 
   /* Allocate resources for the MAC context, and add it to the fw  */
-  ret = iwl_mvm_mac_ctxt_init(mvm, vif);
+  ret = iwl_mvm_mac_ctxt_init(mvmvif);
   if (ret != ZX_OK) {
     goto out_unlock;
   }
@@ -1293,7 +1292,7 @@ zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif, struct ieee802
 #endif  // NEEDS_PORTING
   mvm->vif_count++;
 
-  ret = iwl_mvm_mac_ctxt_add(mvm, vif);
+  ret = iwl_mvm_mac_ctxt_add(mvmvif);
   if (ret != ZX_OK) {
     goto out_release;
   }

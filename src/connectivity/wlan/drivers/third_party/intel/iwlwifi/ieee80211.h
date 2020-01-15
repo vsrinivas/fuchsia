@@ -159,23 +159,9 @@ struct ieee80211_txq {
   void* drv_priv;
 };
 
+// TODO(43559): completely remove this structure from code.
 struct ieee80211_vif {
-  wlan_info_mac_role_t type;
-  struct {
-    uint8_t dtim_period;
-    uint8_t bssid[ETH_ALEN];
-    wlan_channel_t chandef;
-
-    bool qos;
-    bool use_cts_prot;
-    bool use_short_preamble;
-    bool use_short_slot;
-    bool ht_operation_mode;
-  } bss_conf;
-  uint8_t addr[ETH_ALEN];
-
-  bool ht_enabled;
-  void* drv_priv;
+  uint8_t dummy;
 };
 
 static inline struct ieee80211_hw* ieee80211_alloc_hw(size_t priv_data_len,
