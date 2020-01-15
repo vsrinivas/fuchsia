@@ -299,7 +299,6 @@ if (current_cpu != "") {
       "vdso-base",
       "vdso-variant",
       "virtio",
-      "vmo",
       "zxcrypt",
 
       # disabled for now:
