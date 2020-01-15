@@ -70,7 +70,7 @@ _This section applies to flexible unions as well as the soon to be deprecated
 unions_
 
 For languages without union types and literals for these, it is RECOMMENDED to
-support factory methods for constructing new unions/xunions given a value for
+support factory methods for constructing new unions given a value for
 one of the possible variants. For example, in a C like language, this would
 allow replacing code like:
 

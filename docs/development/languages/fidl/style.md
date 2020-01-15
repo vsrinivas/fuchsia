@@ -78,8 +78,6 @@ struct members             | _lower snake case_ | `child_pid`
 table members              | _lower snake case_ | `num_rx`
 `union`                    | _upper camel case_ | `BufferFormat`
 union members              | _lower snake case_ | `vax_primary`
-`xunion`                   | _upper camel case_ | `ZirconHandle`
-xunion members             | _lower snake case_ | `pdp8_iot`
 `enum`                     | _upper camel case_ | `PixelFormat`
 enum members               | _upper snake case_ | `RGB_888`
 
@@ -261,15 +259,15 @@ tense.
 For example, the `AudioCapturer` protocol has an event named
 `OnPacketCaptured`.
 
-### Structs, unions, xunions, and tables
+### Structs, unions, and tables
 
-Structs, unions, xunions, and tables must be noun phrases.
+Structs, unions, and tables must be noun phrases.
 For example, `Point` is a struct that defines a location in space and
 `KeyboardEvent` is a struct that defines a keyboard-related event.
 
-### Struct, union, xunion, and table members
+### Struct, union, and table members
 
-Prefer struct, union, xunion, and table member names with a single word when
+Prefer struct, union, and table member names with a single word when
 practical (single-word names render more consistently across target languages).
 However, do not be afraid to use multiple words if a single word would be
 ambiguous or confusing.
@@ -325,7 +323,7 @@ enclosing type.
  * Never use tabs.
  * Avoid trailing whitespace.
  * Separate declarations for `bits`, `enum`, `protocol`, `struct`, `table`,
-   `table`, `union`, and `xunion` constructs from other declarations with
+   `table`, and `union` constructs from other declarations with
    one blank line (two consecutive newline characters).
  * End files with exactly one newline character.
 

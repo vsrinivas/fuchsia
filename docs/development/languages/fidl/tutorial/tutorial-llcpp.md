@@ -607,8 +607,8 @@ FIDL                                        | Low-Level C++
 *table* Table                               | (not yet supported)
 *union* Union                               | *struct* Union
 *union?* Union                              | *struct* Union*
-*xunion* Xunion                             | *struct* Xunion
-*xunion?* Xunion                            | *struct* Xunion*
+*union* Union                               | *struct* Union
+*union?* Union                              | *struct* Union*
 *enum* Foo                                  | *enum class Foo : data type*
 
 #### fidl::StringView

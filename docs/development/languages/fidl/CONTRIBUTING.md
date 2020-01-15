@@ -324,13 +324,14 @@ Tab 1> fx build && fx serve-updates
 Tab 2> fx qemu -kN
 
 Tab 3> fx run-test go_fidl_tests
+Tab 3> fx run-test fidl_go_conformance
 ```
 
 As with normal Go tests, you can pass [various flags][go-test-flags] to control
 execution, filter test cases, run benchmarks, etc. For instance:
 
 ```sh
-Tab 3> fx run-test go_fidl_tests -- -test.v -test.run 'TestAllSuccessCases/.*xunion.*'
+Tab 3> fx run-test go_fidl_tests -- -test.v -test.run 'TestAllSuccessCases/.*union.*'
 ```
 
 ### Rust runtime

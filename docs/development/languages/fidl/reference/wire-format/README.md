@@ -431,68 +431,6 @@ The structure now takes 40 bytes.
 Note: While `fidlc` could automatically pack structs, like Rust, we chose not
 to do that in order to simplify [ABI compatibility changes](../abi-compat.md).
 
-### Unions
-
-*   Tagged option type consisting of tag field and variadic contents.
-*   Tag field is represented with a **uint32 enum**.
-*   Size of union is the size of the tag field plus the size of the largest
-    union variant including padding necessary to satisfy its alignment requirements.
-*   Alignment factor of union is defined by the maximal alignment factor of the
-    tag field and any of its options.
-*   Union is padded so that its size is a multiple of its alignment factor.
-    For example:
-    1. A union with an **int32** and an **int8** option has an alignment of 4
-    bytes (due to the **int32**), and a size of 8 bytes including the 4 byte
-    tag (0 or 3 bytes of padding, depending on the option / variant).
-    2. A union with a **bool** and a **string** option has an alignment of 8
-    bytes (due to the **string**), and a size of 24 bytes (4 or 19 bytes of
-    padding, depending on the option or variant).
-*   In general, changing the definition of a union will break binary
-    compatibility. Instead it is preferred that you extend interfaces by
-    adding new methods which use new unions.
-
-Storage of a union depends on whether it is nullable at point of reference.
-
-*   Non-nullable unions:
-    *   Contents are stored in-line within their containing type, enabling very
-        efficient aggregate structures to be constructed.
-    *   The union layout does not change when inlined; its options are not
-        repacked to fill gaps in its container.
-*   Nullable unions:
-    *   Contents are stored out-of-line and accessed through an indirect
-        reference.
-    *   When encoded for transfer, stored reference indicates presence of union:
-        *   `0`: reference is `null`
-        *   `UINTPTR_MAX`: reference is non-null, union content is the next out-of-line object
-    *   When decoded for consumption, stored reference is a pointer:
-        *   `0`: reference is `null`
-        *   `<valid pointer>`: reference is non-null, union content is at indicated memory address
-
-Unions are denoted by their declared name (e.g. `Pattern`) and nullability:
-
-*   `Pattern`: non-nullable `Pattern`
-*   `Pattern?`: nullable `Pattern`
-
-The following example shows how unions are laid out according to their options.
-
-```fidl
-struct Paint {
-    Pattern fg;
-    Pattern? bg;
-};
-union Pattern {
-    Color color;
-    Texture texture;
-};
-struct Color { float32 r, g, b; };
-struct Texture { string name; };
-```
-
-When laying out `Pattern`, space is first allotted to the tag (4 bytes), then
-to the selected option.
-
-![drawing](unions.png)
-
 ### Envelopes
 
 An envelope is a container for out-of-line data, used internally by tables
@@ -533,32 +471,31 @@ table Value {
 
 ![drawing](tables.png)
 
-### Extensible Unions (xunions)
+### Unions
 
 *   Record type consisting of an ordinal and an envelope.
 *   Ordinal indicates member selection, and is represented with a **uint32**.
-*   Ordinals are calculated by hashing the concatenated library name, xunion
-    name, and member name, and retaining 31 bits.
-    See [ordinal hashing] for further details.
-*   Nullable xunions are represented with a `0` ordinal, and an empty envelope.
-*   Empty xunions are not allowed.
+*   Each element is associated with a user specified ordinal.
+*   Ordinals are sequential, gaps incur an empty envelope cost and hence are discouraged.
+*   Nullable unions are represented with a `0` ordinal, and an empty envelope.
+*   Empty unions are not allowed.
 
-xunions are denoted by their declared name (e.g. `Value`) and nullability:
+unions are denoted by their declared name (e.g. `Value`) and nullability:
 
 *   `Value`: non-nullable `Value`
 *   `Value?`: nullable `Value`
 
-The following example shows how xunions are laid out according to their fields.
+The following example shows how unions are laid out according to their fields.
 
 ```fidl
-xunion Value {
+union Value {
     1: int16 command;
     2: Circle data;
     3: float64 offset;
 };
 ```
 
-![drawing](xunion.png)
+![drawing](union.png)
 
 ### Transactional Messages
 
@@ -760,11 +697,9 @@ Type(s)                      | Size (in-line)                    | Size (out-of-
 `vector`, et al.             | 16                                | N * sizeof(T)                                                   | 8
 `struct`                     | sum(sizeof(fields)) + padding     | 0                                                               | 8
 `struct?`                    | 8                                 | sum(sizeof(fields)) + padding                                   | 8
-`union`                      | 4 + max(sizeof(fields)) + padding |  0                                                              | max(all fields)
-`union?`                     | 8                                 | 4 + max(sizeof(fields)) + padding                               | 8
 `envelope`                   | 16                                | sizeof(field)                                                   | 8
 `table`                      | 16                                | M * sizeof(envelope) + sum(aligned_to_8(sizeof(present fields)) | 8
-`xunion`, `xunion?`          | 24                                | sizeof(selected variant)                                        | 8
+`union`, `union?`            | 24                                | sizeof(selected variant)                                        | 8
 
 The `handle` entry above refers to all flavors of handles, specifically
 `handle`, `handle?`, `handle<H>`, `handle<H>?`, `Protocol`, `Protocol?`,
@@ -783,7 +718,7 @@ an error if not).
 
 #### Maximum Recursion Depth
 
-FIDL arrays, vectors, structures, tables, unions, and xunions enable the
+FIDL arrays, vectors, structures, tables, and unions enable the
 construction of recursive messages.
 Left unchecked, processing excessively deep messages could
 lead to resource exhaustion of the consumer.
@@ -792,7 +727,7 @@ For safety, the maximum recursion depth for all FIDL messages is limited to
 **32** levels of nested complex objects. The FIDL validator **must** enforce
 this by keeping track of the current nesting level during message validation.
 
-Complex objects are arrays, vectors, structures, tables, unions, or xunions
+Complex objects are arrays, vectors, structures, tables, or unions
 which contain pointers or handles which require fix-up.
 These are precisely the kinds of
 objects for which **encoding tables** must be generated. See [C
@@ -840,7 +775,7 @@ Conformant FIDL bindings must check all of the following integrity constraints:
     total size of the handle table. All handles are accounted for.
 *   The maximum recursion depth for complex objects is not exceeded.
 *   All enum values fall within their defined range.
-*   All union and xunion tag values fall within their defined range.
+*   All union tag values fall within their defined range.
 *   Encoding only:
     *   All pointers to sub-objects encountered during traversal refer precisely
         to the next buffer position where a sub-object is expected to appear. As
@@ -867,7 +802,7 @@ Conformant FIDL bindings must check all of the following integrity constraints:
 | 3       | Unused                                                                                                                                                                          |             |
 | 2       | Unused                                                                                                                                                                          |             |
 | 1       | Unused                                                                                                                                                                          |             |
-| 0 (LSB) | Indicates whether static unions should be encoded as xunions, to soft transition [FTP-015](/docs/development/languages/fidl/reference/ftp/ftp-015.md) |             |
+| 0       | Unused                                                                                                                                                                          |             |
 
 *Flags[1]*
 
@@ -908,5 +843,4 @@ Read [The Lost Art of Structure Packing][lostart] for an in-depth treatise on th
 [channel call]: /docs/reference/syscalls/channel_call.md
 [channel write]: /docs/reference/syscalls/channel_write.md
 [ftp-030]: /docs/development/languages/fidl/reference/ftp/ftp-030.md
-[ordinal hashing]: /docs/development/languages/fidl/reference/ftp/ftp-020.md
 [lostart]: http://www.catb.org/esr/structure-packing/

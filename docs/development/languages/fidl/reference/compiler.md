@@ -392,7 +392,7 @@ are two types of `Decl`s:
 * `TypeDecl`s, which declare a message type or interface and have a `typeshape` attribute that
   gets set during compilation.
 
-`TypeDecl`s representing an aggregate type (e.g. structs, tables, unions, and xunions) also
+`TypeDecl`s representing an aggregate type (e.g. structs, tables, and unions) also
 have a static `Shape()` method which contains the logic for determining the `Typeshape`
 of that given type.
 

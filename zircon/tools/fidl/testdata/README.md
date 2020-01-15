@@ -2,7 +2,7 @@
 
 Ensure `fidlc` is built, for instance
 
-    fx build host_x64/fidlc
+    fx ninja -C out/default.zircon host-x64-linux-clang/obj/tools/fidl/fidlc host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test
 
 Then run the `regen.sh` script:
 
@@ -29,3 +29,6 @@ Each "input" in `typestest/` corresponds to a single json output file in
 Currently `json_generator_tests.cc` only supports a "linked list" shaped
 dependency tree, where each fidl file depends on only the fidl file in the line
 above it (except for the first fidl file which has no dependencies)
+
+Note that you must rebuild `fidl-compiler-test` after regenerating goldens for
+the updated goldens to be used in the test.

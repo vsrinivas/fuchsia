@@ -174,7 +174,7 @@ interface Science {
 };
 ```
 
-It can also be used for `xunion` variants to keep ABI compatibility in the
+It can also be used for `union` variants to keep ABI compatibility in the
 same way.
 
 ## `[Transitional]` {#transitional}

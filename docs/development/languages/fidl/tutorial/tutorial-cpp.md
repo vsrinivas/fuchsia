@@ -348,8 +348,6 @@ FIDL                                        | High-Level C++
 *table* Table                               | *class* Table
 *union* Union                               | *class* Union
 *union?* Union                              | `std::unique_ptr<Union>`
-*xunion* Xunion                             | *class* Xunion
-*xunion?* Xunion                            | `std::unique_ptr<Xunion>`
 *enum* Foo                                  | *enum class Foo : data type*
 
 #### Mapping FIDL Identifiers to C++ Identifiers

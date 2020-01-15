@@ -216,9 +216,7 @@ produces.
 | `struct?`                                      | `struct Struct*`           |
 | `union`                                        | `struct Union`             |
 | `union?`                                       | `struct Union*`            |
-| `xunion`                                       | (not yet supported)        |
-| `xunion?`                                      | (not yet supported)        |
-| `table`                                        | (not yet supported)        |
+| `table`                                        | (not supported)            |
 | `enum`                                         | typedef to underlying type |
 
 ## zircon/fidl.h
