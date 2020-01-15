@@ -9,7 +9,6 @@ group("nand") {
     "broker",
     "cadence-hpnfc",
     "nand",
-    "nandpart",
     "ram-nand",
     "skip-block",
   ]

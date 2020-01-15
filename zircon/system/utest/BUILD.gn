@@ -96,7 +96,6 @@ if (current_cpu != "") {
       "$zx/system/dev/nand/broker/test",
       "$zx/system/dev/nand/cadence-hpnfc:cadence-hpnfc-test",
       "$zx/system/dev/nand/nand/test",
-      "$zx/system/dev/nand/nandpart:nandpart-test",
       "$zx/system/dev/nand/ram-nand:ram-nand-test",
       "$zx/system/dev/nand/skip-block:skip-block-test",
       "$zx/system/dev/power/as370-power:as370-power-test",
