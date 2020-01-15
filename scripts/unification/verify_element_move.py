@@ -16,6 +16,11 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS_DIR = os.path.dirname(SCRIPT_DIR)
 FUCHSIA_ROOT = os.path.dirname(SCRIPTS_DIR)
 
+
+sys.path.append(os.path.join(FUCHSIA_ROOT, 'build', 'images'))
+import elfinfo
+
+
 # The maximum number of size percentage points a binary is allowed to drop.
 # A greater amount will raise a flag.
 MAX_SIZE_DECREASE = 10
@@ -64,9 +69,14 @@ class CustomJSONEncoder(json.JSONEncoder):
 class FileData(object):
     '''Represents a file referred to in a manifest.'''
 
-    def __init__(self, path, size=None):
+    def __init__(self, path, size=None, libs=None):
         self.path = path
         self.size = size if size else os.path.getsize(path)
+        if libs != None:
+            self.libs = set(libs)
+        else:
+            info = elfinfo.get_elf_info(path)
+            self.libs = info.needed if info else set()
 
     def __eq__(self, other):
         return self.path == other.path
@@ -84,11 +94,12 @@ class FileData(object):
         return {
             'path': self.path,
             'size': self.size,
+            'libs': sorted(self.libs),
         }
 
     @classmethod
     def from_json(cls, input):
-        return FileData(input['path'], input['size'])
+        return FileData(input['path'], input['size'], input['libs'])
 
 
 class FileDataSet(object):
@@ -191,14 +202,10 @@ def compare_summaries(reference, current):
         # Missing and new files.
         if reference_names != current_names:
             match = False
-            removed = reference_names - current_names
-            if removed:
-                for element in removed:
-                    report(type, True, 'element removed: ' + element)
-            added = current_names - reference_names
-            if added:
-                for element in added:
-                    report(type, True, 'element removed: ' + element)
+            for element in reference_names - current_names:
+                report(type, True, 'element removed: ' + element)
+            for element in current_names - reference_names:
+                report(type, True, 'element added: ' + element)
 
         # Size changes.
         for name in reference_names & current_names:
@@ -216,6 +223,20 @@ def compare_summaries(reference, current):
             report(type, is_error, 'size change for ' + name + ': ' +
                    ('+' if is_diff_positive else '-') +
                    str(abs(diff_percentage)) + '%')
+
+        # Linking changes.
+        for name in reference_names & current_names:
+            reference_libs = reference_objects.get_file(name).libs
+            current_libs = current_objects.get_file(name).libs
+            if current_libs == reference_libs:
+                continue
+            match = False
+            for lib in reference_libs - current_libs:
+                report(type, True, 'shared library removed from ' + name +
+                       ': ' + lib)
+            for lib in current_libs - reference_libs:
+                report(type, True, 'shared library added to ' + name + ': ' +
+                       lib)
 
     return match
 
