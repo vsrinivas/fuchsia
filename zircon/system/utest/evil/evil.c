@@ -31,11 +31,13 @@
 
 static atomic_int xlock = ATOMIC_VAR_INIT(0);
 
+#if USE_SPINLOCKS
 static void _lock(atomic_int* lock) {
   while (atomic_exchange(lock, 1) != 0)
     ;
 }
 static void _unlock(atomic_int* lock) { atomic_store(lock, 0); }
+#endif
 
 static void _ftxlock(atomic_int* lock) {
   while (atomic_exchange(lock, 1) != 0) {
