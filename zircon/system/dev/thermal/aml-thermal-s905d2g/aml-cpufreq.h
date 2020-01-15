@@ -7,7 +7,6 @@
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
-#include <lib/zx/bti.h>
 #include <zircon/types.h>
 
 #include <optional>
@@ -93,8 +92,6 @@ class AmlCpuFrequency {
   ddk::ClockProtocolClient clks_[kClockCount];
   // MMIOS.
   std::optional<ddk::MmioBuffer> hiu_mmio_;
-  // BTI handle.
-  zx::bti bti_;
   // HIU Handle.
   aml_hiu_dev_t hiu_;
   // Sys PLL.

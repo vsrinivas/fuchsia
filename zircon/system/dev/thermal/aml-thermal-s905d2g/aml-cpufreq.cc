@@ -68,13 +68,6 @@ zx_status_t AmlCpuFrequency::Create(zx_device_t* parent) {
     return status;
   }
 
-  // Get BTI handle.
-  status = pdev.GetBti(0, &bti_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: could not get BTI handle: %d\n", status);
-    return status;
-  }
-
   // HIU Init.
   status = s905d2_hiu_init(&hiu_);
   if (status != ZX_OK) {

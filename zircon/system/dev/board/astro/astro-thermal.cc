@@ -42,13 +42,6 @@ static const pbus_irq_t thermal_irqs[] = {
     },
 };
 
-static const pbus_bti_t thermal_btis[] = {
-    {
-        .iommu_index = 0,
-        .bti_id = BTI_THERMAL,
-    },
-};
-
 constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c, uint16_t cpu_opp,
                                                                     uint16_t gpu_opp) {
   constexpr float kHysteresis = 2.0f;
@@ -168,8 +161,6 @@ static pbus_dev_t thermal_dev = []() {
   dev.mmio_count = countof(thermal_mmios);
   dev.irq_list = thermal_irqs;
   dev.irq_count = countof(thermal_irqs);
-  dev.bti_list = thermal_btis;
-  dev.bti_count = countof(thermal_btis);
   dev.metadata_list = thermal_metadata;
   dev.metadata_count = countof(thermal_metadata);
   return dev;
