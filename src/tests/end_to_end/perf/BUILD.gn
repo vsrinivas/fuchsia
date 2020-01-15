@@ -18,6 +18,7 @@ test_list = [
   "ledger_perf_test",
   "microbenchmarks_test",
   "rust_inspect_benchmarks_test",
+  "scenic_benchmarks_test",
   "tspec_example_test",
 ]
 foreach(target_name, test_list) {

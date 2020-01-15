@@ -102,8 +102,16 @@ RENDERER_PARAMS=$@
 DATE=`date +%Y-%m-%dT%H:%M:%S`
 TRACE_FILE="/tmp/trace-${DATE}.json"
 
-echo "== $BENCHMARK_LABEL: Killing processes..."
-killall root_presenter*; killall scenic*; killall basemgr*; killall flutter*; killall present_view*
+kill_processes() {
+  echo "== $BENCHMARK_LABEL: Killing processes..."
+  killall root_presenter*
+  killall scenic*
+  killall basemgr*
+  killall flutter*
+  killall present_view*
+}
+
+kill_processes
 
 echo "== $BENCHMARK_LABEL: Configuring scenic renderer params..."
 /pkgfs/packages/run/0/bin/run fuchsia-pkg://fuchsia.com/set_renderer_params#meta/set_renderer_params.cmx --render_continuously $RENDERER_PARAMS
@@ -145,3 +153,8 @@ echo "== $BENCHMARK_LABEL: Processing trace..."
   "${TRACE_FILE}"
 
 echo "== $BENCHMARK_LABEL: Finished processing trace."
+
+# Clean up so that we do not leave processes consuming CPU in the background.
+kill_processes
+
+echo "== $BENCHMARK_LABEL: Finished"
