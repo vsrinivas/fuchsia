@@ -39,6 +39,7 @@ FUNCTION(_start)
     mrs     cpuid, mpidr_el1
     ubfx    cpuid, cpuid, #0, #15 /* mask Aff0 and Aff1 fields */
     cbnz    cpuid, .Lno_save_bootinfo
+
     /* save x0 in zbi_paddr */
     adrp    tmp, zbi_paddr
     str     x0, [tmp, #:lo12:zbi_paddr]
@@ -49,10 +50,10 @@ FUNCTION(_start)
     adrp    tmp2, arch_boot_el
     mrs     x2, CurrentEL
     str     x2, [tmp2, #:lo12:arch_boot_el]
-.Lno_save_bootinfo:
 
+.Lno_save_bootinfo:
+    /* if we entered at a higher EL than 1, drop to EL1 */
     bl      arm64_elX_to_el1
-    bl      arm64_local_invalidate_cache_all
 
     /* enable caches so atomics and spinlocks work */
     mrs     tmp, sctlr_el1
