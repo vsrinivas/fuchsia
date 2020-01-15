@@ -337,6 +337,7 @@ aggregate_manifest("legacy-image") {
     ":driver.usb-virtual-bus",
     ":driver.vim-display",
     ":driver.virtio",
+    ":driver.virtio_block",
     ":driver.xhci",
     ":driver.zxcrypt",
     ":test.sys.usb-device-test",

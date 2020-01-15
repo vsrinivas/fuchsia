@@ -7,5 +7,6 @@ group("bus") {
     "pci",
     "platform",
     "virtio",
+    "virtio:virtio_block",
   ]
 }

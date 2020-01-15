@@ -4,7 +4,6 @@
 
 zx_driver("virtio") {
   sources = [
-    "block.cc",
     "console.cc",
     "ethernet.cc",
     "input.cc",
@@ -31,6 +30,18 @@ zx_driver("virtio") {
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
   deprecated_inhibit_driver_shlib_allowlist = true
+}
+
+zx_driver("virtio_block") {
+  sources = [
+    "block.cc",
+    "block_driver.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/ulib/ddktl",
+  ]
 }
 
 source_set("common") {
