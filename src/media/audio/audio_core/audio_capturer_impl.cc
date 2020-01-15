@@ -179,11 +179,20 @@ void AudioCapturerImpl::CleanupFromMixThread() {
 void AudioCapturerImpl::BeginShutdown() {
   threading_model_.FidlDomain().ScheduleTask(Cleanup().then([this](fit::result<>&) {
     if (loopback_) {
-      route_graph_.RemoveLoopbackCapturer(this);
+      route_graph_.RemoveLoopbackCapturer(*this);
     } else {
-      route_graph_.RemoveCapturer(this);
+      route_graph_.RemoveCapturer(*this);
     }
   }));
+}
+
+void AudioCapturerImpl::SetRoutingProfile() {
+  auto profile = RoutingProfile{.routable = StateIsRoutable(state_), .usage = GetStreamUsage()};
+  if (loopback_) {
+    route_graph_.SetLoopbackCapturerRoutingProfile(*this, std::move(profile));
+  } else {
+    route_graph_.SetCapturerRoutingProfile(*this, std::move(profile));
+  }
 }
 
 fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioCapturerImpl::InitializeSourceLink(
@@ -366,13 +375,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   FX_DCHECK(source_link_count() == 0)
       << "No links should be established before a capturer has a payload buffer";
   volume_manager_.NotifyStreamChanged(this);
-  if (loopback_) {
-    route_graph_.SetLoopbackCapturerRoutingProfile(this,
-                                                   {.routable = true, .usage = GetStreamUsage()});
-  } else {
-    route_graph_.SetCapturerRoutingProfile(this, {.routable = true, .usage = GetStreamUsage()});
-  }
-
+  SetRoutingProfile();
   cleanup.cancel();
 }
 
@@ -876,8 +879,7 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
   usage_ = usage;
   volume_manager_.NotifyStreamChanged(this);
   State state = state_.load();
-  route_graph_.SetCapturerRoutingProfile(
-      this, {.routable = StateIsRoutable(state_), .usage = GetStreamUsage()});
+  SetRoutingProfile();
   if (state == State::OperatingAsync) {
     ReportStart();
   }

@@ -235,6 +235,8 @@ class AudioCapturerImpl : public AudioObject,
   // Removes the capturer from its owner, the route graph, triggering shutdown and drop.
   void BeginShutdown();
 
+  void SetRoutingProfile();
+
   void RecomputeMinFenceTime();
 
   void Shutdown(std::unique_ptr<AudioCapturerImpl> self)

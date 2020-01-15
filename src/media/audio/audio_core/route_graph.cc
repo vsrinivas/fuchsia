@@ -107,13 +107,13 @@ void RouteGraph::AddRenderer(std::unique_ptr<AudioObject> renderer) {
       {renderer.get(), RoutableOwnedObject{std::shared_ptr<AudioObject>(renderer.release()), {}}});
 }
 
-void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile profile) {
-  FX_DCHECK(renderer->is_audio_renderer());
-  FX_DCHECK(renderer->format_valid() || !profile.routable)
+void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingProfile profile) {
+  FX_DCHECK(renderer.is_audio_renderer());
+  FX_DCHECK(renderer.format_valid() || !profile.routable)
       << "AudioRenderer without PCM format was added to route graph";
-  AUD_VLOG(TRACE) << "Setting renderer route profile: " << renderer;
+  AUD_VLOG(TRACE) << "Setting renderer route profile: " << &renderer;
 
-  auto it = renderers_.find(renderer);
+  auto it = renderers_.find(&renderer);
   if (it == renderers_.end()) {
     FX_LOGS(WARNING) << "Tried to set routing policy for an unregistered renderer.";
     return;
@@ -140,13 +140,13 @@ void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile
   AudioObject::LinkObjects(it->second.ref, output->shared_from_this());
 }
 
-void RouteGraph::RemoveRenderer(AudioObject* renderer) {
-  FX_DCHECK(renderer->is_audio_renderer());
-  AUD_VLOG(TRACE) << "Removing renderer from route graph: " << renderer;
+void RouteGraph::RemoveRenderer(const AudioObject& renderer) {
+  FX_DCHECK(renderer.is_audio_renderer());
+  AUD_VLOG(TRACE) << "Removing renderer from route graph: " << &renderer;
 
-  auto it = renderers_.find(renderer);
+  auto it = renderers_.find(&renderer);
   if (it == renderers_.end()) {
-    AUD_VLOG(TRACE) << "Renderer " << renderer << " was not present in graph.";
+    AUD_VLOG(TRACE) << "Renderer " << &renderer << " was not present in graph.";
     return;
   }
 
@@ -162,11 +162,11 @@ void RouteGraph::AddCapturer(std::unique_ptr<AudioObject> capturer) {
       {capturer.get(), RoutableOwnedObject{std::shared_ptr<AudioObject>(capturer.release()), {}}});
 }
 
-void RouteGraph::SetCapturerRoutingProfile(AudioObject* capturer, RoutingProfile profile) {
-  FX_DCHECK(capturer->is_audio_capturer());
-  AUD_VLOG(TRACE) << "Setting capturer route profile: " << capturer;
+void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingProfile profile) {
+  FX_DCHECK(capturer.is_audio_capturer());
+  AUD_VLOG(TRACE) << "Setting capturer route profile: " << &capturer;
 
-  auto it = capturers_.find(capturer);
+  auto it = capturers_.find(&capturer);
   if (it == capturers_.end()) {
     FX_LOGS(WARNING) << "Tried to set routing policy for an unregistered renderer.";
     return;
@@ -192,13 +192,13 @@ void RouteGraph::SetCapturerRoutingProfile(AudioObject* capturer, RoutingProfile
   AudioObject::LinkObjects(targets_.capture->shared_from_this(), it->second.ref);
 }
 
-void RouteGraph::RemoveCapturer(AudioObject* capturer) {
-  FX_DCHECK(capturer->is_audio_capturer());
-  AUD_VLOG(TRACE) << "Removing capturer from route graph: " << capturer;
+void RouteGraph::RemoveCapturer(const AudioObject& capturer) {
+  FX_DCHECK(capturer.is_audio_capturer());
+  AUD_VLOG(TRACE) << "Removing capturer from route graph: " << &capturer;
 
-  auto it = capturers_.find(capturer);
+  auto it = capturers_.find(&capturer);
   if (it == capturers_.end()) {
-    AUD_VLOG(TRACE) << "Capturer " << capturer << " was not present in graph.";
+    AUD_VLOG(TRACE) << "Capturer " << &capturer << " was not present in graph.";
     return;
   }
 
@@ -217,12 +217,12 @@ void RouteGraph::AddLoopbackCapturer(std::unique_ptr<AudioObject> loopback_captu
 }
 
 // TODO(39627): Only accept capturers of loopback type.
-void RouteGraph::SetLoopbackCapturerRoutingProfile(AudioObject* loopback_capturer,
+void RouteGraph::SetLoopbackCapturerRoutingProfile(const AudioObject& loopback_capturer,
                                                    RoutingProfile profile) {
-  FX_DCHECK(loopback_capturer->is_audio_capturer());
-  AUD_VLOG(TRACE) << "Setting loopback capturer route profile: " << loopback_capturer;
+  FX_DCHECK(loopback_capturer.is_audio_capturer());
+  AUD_VLOG(TRACE) << "Setting loopback capturer route profile: " << &loopback_capturer;
 
-  auto it = loopback_capturers_.find(loopback_capturer);
+  auto it = loopback_capturers_.find(&loopback_capturer);
   if (it == loopback_capturers_.end()) {
     FX_LOGS(WARNING) << "Tried to set routing policy for an unregistered renderer.";
     return;
@@ -249,13 +249,13 @@ void RouteGraph::SetLoopbackCapturerRoutingProfile(AudioObject* loopback_capture
 }
 
 // TODO(39627): Only accept capturers of loopback type.
-void RouteGraph::RemoveLoopbackCapturer(AudioObject* loopback_capturer) {
-  FX_DCHECK(loopback_capturer->is_audio_capturer());
-  AUD_VLOG(TRACE) << "Setting loopback capturer from route graph: " << loopback_capturer;
+void RouteGraph::RemoveLoopbackCapturer(const AudioObject& loopback_capturer) {
+  FX_DCHECK(loopback_capturer.is_audio_capturer());
+  AUD_VLOG(TRACE) << "Setting loopback capturer from route graph: " << &loopback_capturer;
 
-  auto it = loopback_capturers_.find(loopback_capturer);
+  auto it = loopback_capturers_.find(&loopback_capturer);
   if (it == loopback_capturers_.end()) {
-    AUD_VLOG(TRACE) << "Loopback capturer " << loopback_capturer << " was not present in graph.";
+    AUD_VLOG(TRACE) << "Loopback capturer " << &loopback_capturer << " was not present in graph.";
     return;
   }
 

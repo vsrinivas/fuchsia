@@ -70,9 +70,9 @@ class RouteGraph {
 
   // Sets the routing profile with which the route graph selects |AudioOutput|s for the
   // |AudioRenderer|.
-  void SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile profile);
+  void SetRendererRoutingProfile(const AudioObject& renderer, RoutingProfile profile);
 
-  void RemoveRenderer(AudioObject* renderer);
+  void RemoveRenderer(const AudioObject& renderer);
 
   // Adds an |AudioCapturer| to the route graph. An |AudioCapturer| may be connected to
   // |AudioInput|s to receive samples from them.
@@ -80,9 +80,9 @@ class RouteGraph {
 
   // Sets the routing profile with which the route graph selects |AudioInput|s for the
   // |AudioCapturer|.
-  void SetCapturerRoutingProfile(AudioObject* capturer, RoutingProfile profile);
+  void SetCapturerRoutingProfile(const AudioObject& capturer, RoutingProfile profile);
 
-  void RemoveCapturer(AudioObject* capturer);
+  void RemoveCapturer(const AudioObject& capturer);
 
   // Adds an |AudioCapturer| to the route graph which will receive the output mixed for the most
   // recently added output device.
@@ -90,9 +90,10 @@ class RouteGraph {
 
   // Sets the routing profile with which the route graph selects |AudioOutput|s for the
   // loopback |AudioCapturer|.
-  void SetLoopbackCapturerRoutingProfile(AudioObject* loopback_capturer, RoutingProfile profile);
+  void SetLoopbackCapturerRoutingProfile(const AudioObject& loopback_capturer,
+                                         RoutingProfile profile);
 
-  void RemoveLoopbackCapturer(AudioObject* loopback_capturer);
+  void RemoveLoopbackCapturer(const AudioObject& loopback_capturer);
 
  private:
   struct RoutableOwnedObject {
@@ -136,9 +137,9 @@ class RouteGraph {
   std::deque<AudioDevice*> inputs_;
   std::deque<AudioDevice*> outputs_;
 
-  std::unordered_map<AudioObject*, RoutableOwnedObject> capturers_;
-  std::unordered_map<AudioObject*, RoutableOwnedObject> renderers_;
-  std::unordered_map<AudioObject*, RoutableOwnedObject> loopback_capturers_;
+  std::unordered_map<const AudioObject*, RoutableOwnedObject> capturers_;
+  std::unordered_map<const AudioObject*, RoutableOwnedObject> renderers_;
+  std::unordered_map<const AudioObject*, RoutableOwnedObject> loopback_capturers_;
 
   // TODO(13339): Remove throttle_output_.
   std::optional<fit::completer<void, void>> throttle_release_fence_;

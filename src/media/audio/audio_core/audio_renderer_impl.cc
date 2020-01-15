@@ -59,7 +59,7 @@ AudioRendererImpl::AudioRendererImpl(
   volume_manager_.AddStream(this);
 
   audio_renderer_binding_.set_error_handler(
-      [this](zx_status_t status) { route_graph_.RemoveRenderer(this); });
+      [this](zx_status_t status) { route_graph_.RemoveRenderer(*this); });
 }
 
 AudioRendererImpl::~AudioRendererImpl() {
@@ -123,7 +123,7 @@ void AudioRendererImpl::RecomputeMinLeadTime() {
 void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetUsage");
   if (format_) {
-    route_graph_.RemoveRenderer(this);
+    route_graph_.RemoveRenderer(*this);
     return;
   }
   usage_ = usage;
@@ -214,7 +214,7 @@ void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
 //
 void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetPcmStreamType");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
 
   AUD_VLOG_OBJ(TRACE, this);
 
@@ -267,7 +267,7 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
   cfg.frames_per_second = format.frames_per_second;
   format_ = Format::Create(cfg);
 
-  route_graph_.SetRendererRoutingProfile(this, {.routable = true, .usage = GetStreamUsage()});
+  route_graph_.SetRendererRoutingProfile(*this, {.routable = true, .usage = GetStreamUsage()});
   volume_manager_.NotifyStreamChanged(this);
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
@@ -278,7 +278,7 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
 
 void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   TRACE_DURATION("audio", "AudioRendererImpl::AddPayloadBuffer");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (id: " << id << ")";
 
@@ -309,7 +309,7 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
 
 void AudioRendererImpl::RemovePayloadBuffer(uint32_t id) {
   TRACE_DURATION("audio", "AudioRendererImpl::RemovePayloadBuffer");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (id: " << id << ")";
 
@@ -331,7 +331,7 @@ void AudioRendererImpl::RemovePayloadBuffer(uint32_t id) {
 void AudioRendererImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
                                     uint32_t tick_per_second_denominator) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetPtsUnits");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (pts ticks per sec: " << std::dec << tick_per_second_numerator
                             << " / " << tick_per_second_denominator << ")";
@@ -357,7 +357,7 @@ void AudioRendererImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
 
 void AudioRendererImpl::SetPtsContinuityThreshold(float threshold_seconds) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetPtsContinuityThreshold");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (" << threshold_seconds << " sec)";
 
@@ -384,7 +384,7 @@ void AudioRendererImpl::SetPtsContinuityThreshold(float threshold_seconds) {
 
 void AudioRendererImpl::SetReferenceClock(zx::handle ref_clock) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetReferenceClock");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
 
   AUD_VLOG_OBJ(TRACE, this);
 
@@ -399,7 +399,7 @@ void AudioRendererImpl::SetReferenceClock(zx::handle ref_clock) {
 void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
                                    SendPacketCallback callback) {
   TRACE_DURATION("audio", "AudioRendererImpl::SendPacket");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
 
   // It is an error to attempt to send a packet before we have established at least a minimum valid
   // configuration. IOW - the format must have been configured, and we must have an established
@@ -580,7 +580,7 @@ void AudioRendererImpl::Play(int64_t _reference_time, int64_t media_time, PlayCa
       << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time) << ")";
   zx::time reference_time(_reference_time);
 
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
 
   if (!ValidateConfig()) {
     FX_LOGS(ERROR) << "Failed to validate configuration during Play";
@@ -675,7 +675,7 @@ void AudioRendererImpl::PlayNoReply(int64_t reference_time, int64_t media_time) 
 
 void AudioRendererImpl::Pause(PauseCallback callback) {
   TRACE_DURATION("audio", "AudioRendererImpl::Pause");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(this); });
+  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
 
   if (!ValidateConfig()) {
     FX_LOGS(ERROR) << "Failed to validate configuration during Pause";
@@ -763,7 +763,7 @@ void AudioRendererImpl::SetGain(float gain_db) {
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
     FX_LOGS(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
-    route_graph_.RemoveRenderer(this);
+    route_graph_.RemoveRenderer(*this);
     return;
   }
 
@@ -790,7 +790,7 @@ void AudioRendererImpl::SetGainWithRamp(float gain_db, int64_t duration_ns,
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
     FX_LOGS(ERROR) << "SetGainWithRamp(" << gain_db << " dB) out of range.";
-    route_graph_.RemoveRenderer(this);
+    route_graph_.RemoveRenderer(*this);
     return;
   }
 
