@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_inspect::*,
+    fuchsia_inspect as inspect,
     std::sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -64,16 +64,16 @@ pub struct Table {
     rows: Vec<Row>,
 
     // For the VMO
-    _node: Node,
-    _object_name: StringProperty,
-    _binary_data: BytesProperty,
+    _node: inspect::Node,
+    _object_name: inspect::StringProperty,
+    _binary_data: inspect::BytesProperty,
 
     // TODO(fxb/41953): remove when the FIDL service is deprecated
     data: TableData,
 }
 
 impl Table {
-    pub fn new(row_count: usize, col_count: usize, node_name: &str, node: Node) -> Self {
+    pub fn new(row_count: usize, col_count: usize, node_name: &str, node: inspect::Node) -> Self {
         let data = TableData {
             object_name: "Example Table".to_string(),
             binary_data: vec![0x20, 0x0, 0x11, 0x12, 0x5],
@@ -105,17 +105,23 @@ impl Table {
 }
 
 struct Cell {
-    _node: Node,
-    _name: StringProperty,
-    _value: IntProperty,
-    _double_value: DoubleProperty,
+    _node: inspect::Node,
+    _name: inspect::StringProperty,
+    _value: inspect::IntProperty,
+    _double_value: inspect::DoubleProperty,
 
     // TODO(fxb/41953): remove when the FIDL service is deprecated.
     data: CellData,
 }
 
 impl Cell {
-    fn new(name: &str, value: i64, double_value: f64, node_name: &str, node: Node) -> Self {
+    fn new(
+        name: &str,
+        value: i64,
+        double_value: f64,
+        node_name: &str,
+        node: inspect::Node,
+    ) -> Self {
         let _name = node.create_string("name", name);
         let _value = node.create_int("value", value);
         let _double_value = node.create_double("double_value", double_value);
@@ -130,7 +136,7 @@ impl Cell {
 }
 
 struct Row {
-    node: Node,
+    node: inspect::Node,
     cells: Vec<Cell>,
 
     // TODO(fxb/41953): remove when the FIDL service is deprecated.
@@ -138,7 +144,7 @@ struct Row {
 }
 
 impl Row {
-    fn new(node_name: &str, node: Node) -> Self {
+    fn new(node_name: &str, node: inspect::Node) -> Self {
         let data = RowData { node_name: node_name.to_string(), cells: vec![] };
         Self { data, node, cells: vec![] }
     }

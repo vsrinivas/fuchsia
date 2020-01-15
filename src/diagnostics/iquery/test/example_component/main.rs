@@ -7,7 +7,7 @@ use {
     anyhow::{format_err, Error},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_inspect::*,
+    fuchsia_inspect::{self as inspect, ArrayProperty},
     futures::{FutureExt, StreamExt},
     std::ops::AddAssign,
     structopt::StructOpt,
@@ -22,7 +22,7 @@ struct PopulateParams<T> {
     count: usize,
 }
 
-fn populated<H: HistogramProperty>(histogram: H, params: PopulateParams<H::Type>) -> H
+fn populated<H: inspect::HistogramProperty>(histogram: H, params: PopulateParams<H::Type>) -> H
 where
     H::Type: AddAssign + Copy,
 {
@@ -55,7 +55,7 @@ async fn main() -> Result<(), Error> {
         std::process::exit(1);
     }
 
-    let inspector = Inspector::new();
+    let inspector = inspect::Inspector::new();
     let root = inspector.root();
     assert!(inspector.is_valid());
 
@@ -83,21 +83,21 @@ async fn main() -> Result<(), Error> {
     let _int_linear_hist = populated(
         root.create_int_linear_histogram(
             unique_name("histogram"),
-            LinearHistogramParams { floor: -10, step_size: 5, buckets: 3 },
+            inspect::LinearHistogramParams { floor: -10, step_size: 5, buckets: 3 },
         ),
         PopulateParams { floor: -20, step: 1, count: 40 },
     );
     let _uint_linear_hist = populated(
         root.create_uint_linear_histogram(
             unique_name("histogram"),
-            LinearHistogramParams { floor: 5, step_size: 5, buckets: 3 },
+            inspect::LinearHistogramParams { floor: 5, step_size: 5, buckets: 3 },
         ),
         PopulateParams { floor: 0, step: 1, count: 40 },
     );
     let _double_linear_hist = populated(
         root.create_double_linear_histogram(
             unique_name("histogram"),
-            LinearHistogramParams { floor: 0.0, step_size: 0.5, buckets: 3 },
+            inspect::LinearHistogramParams { floor: 0.0, step_size: 0.5, buckets: 3 },
         ),
         PopulateParams { floor: -1.0, step: 0.1, count: 40 },
     );
@@ -105,7 +105,7 @@ async fn main() -> Result<(), Error> {
     let _int_exp_hist = populated(
         root.create_int_exponential_histogram(
             unique_name("histogram"),
-            ExponentialHistogramParams {
+            inspect::ExponentialHistogramParams {
                 floor: -10,
                 initial_step: 5,
                 step_multiplier: 2,
@@ -117,7 +117,7 @@ async fn main() -> Result<(), Error> {
     let _uint_exp_hist = populated(
         root.create_uint_exponential_histogram(
             unique_name("histogram"),
-            ExponentialHistogramParams {
+            inspect::ExponentialHistogramParams {
                 floor: 0,
                 initial_step: 1,
                 step_multiplier: 2,
@@ -129,7 +129,7 @@ async fn main() -> Result<(), Error> {
     let _double_exp_hist = populated(
         root.create_double_exponential_histogram(
             unique_name("histogram"),
-            ExponentialHistogramParams {
+            inspect::ExponentialHistogramParams {
                 floor: 0.0,
                 initial_step: 1.25,
                 step_multiplier: 3.0,
@@ -141,7 +141,7 @@ async fn main() -> Result<(), Error> {
 
     root.record_lazy_child("lazy-node", || {
         async move {
-            let inspector = Inspector::new();
+            let inspector = inspect::Inspector::new();
             inspector.root().record_uint("uint", 3);
             Ok(inspector)
         }
@@ -149,7 +149,7 @@ async fn main() -> Result<(), Error> {
     });
     root.record_lazy_values("lazy-values", || {
         async move {
-            let inspector = Inspector::new();
+            let inspector = inspect::Inspector::new();
             inspector.root().record_double("lazy-double", 3.14);
             Ok(inspector)
         }

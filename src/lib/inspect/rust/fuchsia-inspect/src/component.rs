@@ -88,10 +88,10 @@ pub fn health() -> Health {
 
 #[cfg(test)]
 mod tests {
-    use crate::assert_inspect_tree;
-    use crate::health::Reporter;
-
-    use super::*;
+    use {
+        super::*,
+        crate::{assert_inspect_tree, health::Reporter},
+    };
 
     #[test]
     fn health_checker_lifecycle() {

@@ -30,10 +30,18 @@ use {
     },
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{future::BoxFuture, prelude::*},
+    lazy_static::lazy_static,
     mapped_vmo::Mapping,
     parking_lot::Mutex,
     paste,
-    std::{cmp::max, default::Default, sync::Arc},
+    std::{
+        cmp::max,
+        default::Default,
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
+    },
 };
 
 #[cfg(test)]
@@ -53,6 +61,11 @@ mod utils;
 
 /// Directory where the diagnostics service should be added.
 pub const SERVICE_DIR: &str = "diagnostics";
+
+lazy_static! {
+  // Suffix used for unique names.
+  static ref UNIQUE_NAME_SUFFIX: AtomicUsize = AtomicUsize::new(0);
+}
 
 /// Root of the Inspect API
 #[derive(Clone)]
@@ -985,6 +998,12 @@ exponential_histogram_property!(Double, f64);
 exponential_histogram_property!(Int, i64);
 exponential_histogram_property!(Uint, u64);
 
+/// Generates a unique name that can be used in inspect nodes and properties.
+pub fn unique_name(prefix: &str) -> String {
+    let suffix = UNIQUE_NAME_SUFFIX.fetch_add(1, Ordering::Relaxed);
+    format!("{}{}", prefix, suffix)
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -1609,5 +1628,23 @@ mod tests {
                 app.kill().map_err(|e| format_err!("failed to kill component: {}", e))
             }
         }
+    }
+
+    #[test]
+    fn unique_name() {
+        let inspector = Inspector::new();
+
+        let name_1 = super::unique_name("a");
+        assert_eq!(name_1, "a0");
+        inspector.root().record_uint(name_1, 1);
+
+        let name_2 = super::unique_name("a");
+        assert_eq!(name_2, "a1");
+        inspector.root().record_uint(name_2, 1);
+
+        assert_inspect_tree!(inspector, root: {
+            a0: 1u64,
+            a1: 1u64,
+        });
     }
 }
