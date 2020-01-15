@@ -4,6 +4,11 @@
 
 zx_library("runtime") {
   sources = [ "thread.c" ]
+  sdk = "static"
+  sdk_headers = [
+    "runtime/thread.h",
+    "runtime/tls.h",
+  ]
 
   deps = [
     "$zx/system/ulib/elf-psabi",

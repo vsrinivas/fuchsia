@@ -57,6 +57,7 @@ group("ulib") {
     "edid",
     "elf-search",
     "elfload",
+    "elf-psabi",
     "explicit-memory",
     "fbl",
     "fdio",

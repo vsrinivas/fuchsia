@@ -4,6 +4,8 @@
 
 zx_library("test-utils") {
   testonly = true
+  sdk = "static"
+  sdk_headers = [ "test-utils/test-utils.h" ]
   sources = [ "test-utils.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-process:llcpp",

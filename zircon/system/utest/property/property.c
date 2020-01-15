@@ -143,43 +143,6 @@ static bool vmo_name_test(void) {
   END_TEST;
 }
 
-// Returns a job, its child job, and its grandchild job.
-#define NUM_TEST_JOBS 3
-static zx_status_t get_test_jobs(zx_handle_t jobs_out[NUM_TEST_JOBS]) {
-  static zx_handle_t test_jobs[NUM_TEST_JOBS] = {ZX_HANDLE_INVALID};
-
-  if (test_jobs[0] == ZX_HANDLE_INVALID) {
-    zx_handle_t root;
-    zx_status_t s = zx_job_create(zx_job_default(), 0, &root);
-    if (s != ZX_OK) {
-      EXPECT_EQ(s, ZX_OK, "root job");  // Poison the test
-      return s;
-    }
-    zx_handle_t child;
-    s = zx_job_create(root, 0, &child);
-    if (s != ZX_OK) {
-      EXPECT_EQ(s, ZX_OK, "child job");
-      zx_task_kill(root);
-      zx_handle_close(root);
-      return s;
-    }
-    zx_handle_t gchild;
-    s = zx_job_create(child, 0, &gchild);
-    if (s != ZX_OK) {
-      EXPECT_EQ(s, ZX_OK, "grandchild job");
-      zx_task_kill(root);  // Kills child, too
-      zx_handle_close(child);
-      zx_handle_close(root);
-      return s;
-    }
-    test_jobs[0] = root;
-    test_jobs[1] = child;
-    test_jobs[2] = gchild;
-  }
-  memcpy(jobs_out, test_jobs, sizeof(test_jobs));
-  return ZX_OK;
-}
-
 static bool socket_buffer_test(void) {
   BEGIN_TEST;
 

@@ -262,7 +262,6 @@ if (current_cpu != "") {
       "perftest",
       "platform-bus",
       "policy",
-      "property",
       "ramdisk",
       "register-state",
       "rtc-lib",

@@ -5,5 +5,7 @@
 zx_library("elf-psabi") {
   kernel = true
   static = true
+  sdk = "static"
+  sdk_headers = [ "lib/elf-psabi/sp.h" ]
   sources = []
 }
