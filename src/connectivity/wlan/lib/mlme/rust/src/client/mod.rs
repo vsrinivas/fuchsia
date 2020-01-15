@@ -9,6 +9,7 @@ mod frame_writer;
 mod lost_bss;
 mod scanner;
 mod state;
+mod stats;
 pub mod temporary_c_binding;
 
 use {
@@ -187,6 +188,7 @@ impl ClientMlme {
                 self.on_sme_scan(sta, req);
                 Ok(())
             }
+            MlmeMsg::StatsQueryReq {} => self.on_sme_stats_query(),
             _ => {
                 // TODO(eyw): Do not use Rust MLME to handle MLME message until we are ready.
                 const DISABLE_RUST_MLME_MSG_SUPPORT: bool = true;
@@ -223,6 +225,12 @@ impl ClientMlme {
 
     pub fn handle_hw_scan_complete(&mut self, status: banjo_wlan_mac::WlanHwScan) {
         self.scanner.bind(&mut self.ctx).handle_hw_scan_complete(status);
+    }
+
+    fn on_sme_stats_query(&self) -> Result<(), Error> {
+        // TODO(43456): Implement stats
+        let mut resp = stats::empty_stats_query_response();
+        self.ctx.device.access_sme_sender(|sender| sender.send_stats_query_resp(&mut resp))
     }
 
     /// Called when a previously scheduled `TimedEvent` fired.
@@ -957,7 +965,7 @@ mod tests {
     use {
         super::*,
         crate::{buffer::FakeBufferProvider, device::FakeDevice},
-        fuchsia_zircon::prelude::DurationNum,
+        fuchsia_zircon::DurationNum,
         wlan_common::{assert_variant, ie, test_utils::fake_frames::*},
     };
     const BSSID: Bssid = Bssid([6u8; 6]);
@@ -1874,6 +1882,21 @@ mod tests {
                 vht_cap: None,
             }
         );
+    }
+
+    #[test]
+    #[allow(deprecated)] // Needed for raw MLME message until main loop lives in Rust
+    fn mlme_respond_to_stats_query_with_empty_response() {
+        let mut m = MockObjects::new();
+        let mut me = m.make_mlme();
+        let stats_query_req = fidl_mlme::MlmeRequestMessage::StatsQueryReq {};
+        let result = me.handle_mlme_msg(None, stats_query_req);
+        assert_variant!(result, Ok(()));
+        let stats_query_resp = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::StatsQueryResponse>()
+            .expect("Should receive a stats query response");
+        assert_eq!(stats_query_resp, stats::empty_stats_query_response());
     }
 
     fn send_data_frame(

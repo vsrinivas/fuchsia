@@ -16,6 +16,7 @@ rustc_library("wlan-mlme") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
+    "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/statemachine:wlan-statemachine",
     "//src/lib/syslog/rust:syslog",
