@@ -334,6 +334,52 @@ TEST_F(AudioRendererTest, SendPacketNoReplyBufferOverrunCausesDisconnect) {
 
 // TODO(mpuryear): test DiscardAllPackets() -> ();
 // Also when no packets, when started
+TEST_F(AudioRendererTest, DiscardAllPacketsBeforeConfiguredDoesntComputeTimeline) {
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  audio_renderer_->DiscardAllPacketsNoReply();
+
+  int64_t play_ref_time = -1, play_media_time = -1;
+  int64_t pause_ref_time = -1, pause_media_time = -1;
+
+  audio_renderer_->Play(
+      fuchsia::media::NO_TIMESTAMP, 0,
+      CompletionCallback([&play_ref_time, &play_media_time](auto ref_time, auto media_time) {
+        play_ref_time = ref_time;
+        play_media_time = media_time;
+      }));
+
+  ExpectCallback();
+
+  // If we call Play(NO_TIMESTAMP) and then Pause immediately, it is possible for pause_ref_time <
+  // play_ref_time.  Even in the NO_TIMESTAMP case, audio_core still applies some small amount of
+  // padding in order to guarantee that we can start exactly when we said we would.
+  //
+  // If pause_ref_time IS less than play_ref_time, then the equivalent pause_media_time would be
+  // negative.  We shouldn't fail in that case, but instead let's avoid the entire problem by doing
+  // this
+  zx_nanosleep(play_ref_time);
+
+  audio_renderer_->Pause(
+      CompletionCallback([&pause_ref_time, &pause_media_time](auto ref_time, auto media_time) {
+        pause_ref_time = ref_time;
+        pause_media_time = media_time;
+      }));
+
+  ExpectCallback();
+
+  EXPECT_GE(pause_ref_time, play_ref_time);
+
+  // the media time returned from pause is calculated from the audio renderers timeline function.
+  // This ensures that calling Discard before Play/Pause doesn't prevent the timeline from making
+  // forward progress.
+  if (pause_ref_time > play_ref_time) {
+    EXPECT_GT(pause_media_time, 0);
+  } else {
+    EXPECT_EQ(pause_media_time, 0);
+  }
+}
 
 // TODO(mpuryear): test DiscardAllPacketsNoReply();
 // Also when no packets, when started

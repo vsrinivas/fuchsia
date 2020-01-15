@@ -196,6 +196,7 @@ void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
   TRACE_DURATION("audio", "AudioRendererImpl::ComputePtsToFracFrames");
   // We should not be calling this, if transformation is already valid.
   FX_DCHECK(!pts_to_frac_frames_valid_);
+
   pts_to_frac_frames_ =
       TimelineFunction(next_frac_frame_pts_.raw_value(), first_pts, frac_frames_per_pts_tick_);
   pts_to_frac_frames_valid_ = true;
@@ -543,17 +544,21 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
     packet_queue->Flush(flush_token);
   }
 
-  // Invalidate any internal state which gets reset after a flush. We set next_frac_frame_pts_
-  // (ref_time specified in fractional PTS subframes, corresponding to when the next packet should
-  // play) to be NOW plus min_lead_time plus safety factor, then define PTS 0 as that value (because
-  // PTS is reset to 0 upon DiscardAllPackets, unless we are Paused).
-  pts_to_frac_frames_valid_ = false;
-  // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
-  auto ref_time_for_reset =
-      zx::clock::get_monotonic() + min_lead_time_ + kPaddingForUnspecifiedRefTime;
-  next_frac_frame_pts_ = FractionalFrames<int64_t>::FromRaw(
-      reference_clock_to_fractional_frames_->Apply(ref_time_for_reset.get()));
-  ComputePtsToFracFrames(0);
+  if (config_validated_) {
+    // Invalidate any internal state which gets reset after a flush. We set next_frac_frame_pts_
+    // (ref_time specified in fractional PTS subframes, corresponding to when the next packet should
+    // play) to be NOW plus min_lead_time plus safety factor, then define PTS 0 as that value
+    // (because PTS is reset to 0 upon DiscardAllPackets, unless we are Paused).
+    pts_to_frac_frames_valid_ = false;
+    // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
+    auto ref_time_for_reset =
+        zx::clock::get_monotonic() + min_lead_time_ + kPaddingForUnspecifiedRefTime;
+    next_frac_frame_pts_ = FractionalFrames<int64_t>::FromRaw(
+        reference_clock_to_fractional_frames_->Apply(ref_time_for_reset.get()));
+    ComputePtsToFracFrames(0);
+  } else {
+    AUD_VLOG_OBJ(TRACE, this) << "no config validated yet, not updating timeline";
+  }
 
   // TODO(mpuryear): Validate Pause => DiscardAll => Play(..., NO_TIMESTAMP) -- specifically that we
   // resume at exactly the paused media time.
