@@ -53,13 +53,13 @@ class RootJobObserver final : public StateObserver {
       return 0;
     }
     if (gCmdline.GetBool("kernel.root-job.reboot", false)) {
-      printf("root-job: Rebooting\n");
+      printf("root-job: rebooting\n");
       platform_halt(HALT_ACTION_REBOOT, HALT_REASON_SW_RESET);
     } else if (gCmdline.GetBool("kernel.root-job.shutdown", true)) {
-      printf("root-job: Shutting down\n");
+      printf("root-job: shutting down\n");
       platform_halt(HALT_ACTION_SHUTDOWN, HALT_REASON_SW_RESET);
     } else {
-      printf("root-job: Halting\n");
+      printf("root-job: halting\n");
       platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_RESET);
     }
     return kNeedRemoval;
