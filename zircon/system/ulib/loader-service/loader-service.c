@@ -154,7 +154,7 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
 
   zx_handle_t rsp_handle = ZX_HANDLE_INVALID;
   switch (req.header.ordinal) {
-    case LDMSG_OP_CONFIG_GEN:
+    case LDMSG_OP_CONFIG_OLD:
     case LDMSG_OP_CONFIG: {
       size_t len = strlen(data);
       if (len < 2 || len >= sizeof(session_state->config_prefix) - 1 || strchr(data, '/') != NULL) {
@@ -172,7 +172,7 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
       status = ZX_OK;
       break;
     }
-    case LDMSG_OP_LOAD_OBJECT_GEN:
+    case LDMSG_OP_LOAD_OBJECT_OLD:
     case LDMSG_OP_LOAD_OBJECT:
       // If a prefix is configured, try loading with that prefix first
       if (session_state->config_prefix[0] != '\0') {
@@ -190,12 +190,12 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
       }
       status = svc->ops->load_object(svc->ctx, data, &rsp_handle);
       break;
-    case LDMSG_OP_CLONE_GEN:
+    case LDMSG_OP_CLONE_OLD:
     case LDMSG_OP_CLONE:
       status = loader_service_attach(svc, req_handle);
       req_handle = ZX_HANDLE_INVALID;
       break;
-    case LDMSG_OP_DONE_GEN:
+    case LDMSG_OP_DONE_OLD:
     case LDMSG_OP_DONE:
       zx_handle_close(req_handle);
       return ZX_ERR_PEER_CLOSED;

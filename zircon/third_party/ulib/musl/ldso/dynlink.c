@@ -2603,7 +2603,7 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
                                  &handle_count)) != ZX_OK) {
     // Do nothing.
   } else if ((reply_size != ldmsg_rsp_get_size(&rsp)) ||
-             (rsp.header.ordinal != LDMSG_OP_CLONE && rsp.header.ordinal != LDMSG_OP_CLONE_GEN)) {
+             (rsp.header.ordinal != LDMSG_OP_CLONE && rsp.header.ordinal != LDMSG_OP_CLONE_OLD)) {
     status = ZX_ERR_INVALID_ARGS;
   } else if (rsp.rv != ZX_OK) {
     status = rsp.rv;

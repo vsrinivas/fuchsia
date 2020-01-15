@@ -9,13 +9,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider fuzzed_data(data, size);
   uint64_t ordinal = fuzzed_data.PickValueInArray({
     LDMSG_OP_DONE,
-    LDMSG_OP_DONE_GEN,
+    LDMSG_OP_DONE_OLD,
     LDMSG_OP_CLONE,
-    LDMSG_OP_CLONE_GEN,
+    LDMSG_OP_CLONE_OLD,
     LDMSG_OP_LOAD_OBJECT,
     LDMSG_OP_CONFIG,
-    LDMSG_OP_LOAD_OBJECT_GEN,
-    LDMSG_OP_CONFIG_GEN,
+    LDMSG_OP_LOAD_OBJECT_OLD,
+    LDMSG_OP_CONFIG_OLD,
   });
 
   size_t req_len;

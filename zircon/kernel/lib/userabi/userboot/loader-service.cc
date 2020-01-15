@@ -80,22 +80,22 @@ bool LoaderService::HandleRequest(const zx::channel& channel) {
 
   zx::vmo vmo;
   switch (req.header.ordinal) {
-    case LDMSG_OP_DONE_GEN:
+    case LDMSG_OP_DONE_OLD:
     case LDMSG_OP_DONE:
       printl(log_->get(), "loader-service received DONE request");
       return false;
 
-    case LDMSG_OP_CONFIG_GEN:
+    case LDMSG_OP_CONFIG_OLD:
     case LDMSG_OP_CONFIG:
       Config(string, string_len);
       break;
 
-    case LDMSG_OP_LOAD_OBJECT_GEN:
+    case LDMSG_OP_LOAD_OBJECT_OLD:
     case LDMSG_OP_LOAD_OBJECT:
       vmo = LoadObject(string, string_len);
       break;
 
-    case LDMSG_OP_CLONE_GEN:
+    case LDMSG_OP_CLONE_OLD:
     case LDMSG_OP_CLONE:
       rsp.rv = ZX_ERR_NOT_SUPPORTED;
       goto error_reply;

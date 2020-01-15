@@ -292,7 +292,7 @@ std::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
     return nullptr;
   }
   fuchsia_logger_LogListenRequest req = {};
-  fidl_init_txn_header(&req.hdr, 0, fuchsia_logger_LogListenOrdinal);
+  fidl_init_txn_header(&req.hdr, 0, fuchsia_logger_LogListenGenOrdinal);
   req.log_listener = FIDL_HANDLE_PRESENT;
   zx_handle_t listener_handle = listener.release();
   status = logger.write(0, &req, sizeof(req), &listener_handle, 1);

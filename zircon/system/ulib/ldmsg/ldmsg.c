@@ -17,18 +17,18 @@ zx_status_t ldmsg_req_encode(ldmsg_req_t* req, size_t* req_len_out, const char* 
   size_t offset = 0;
   switch (req->header.ordinal) {
     case LDMSG_OP_DONE:
-    case LDMSG_OP_DONE_GEN:
+    case LDMSG_OP_DONE_OLD:
       *req_len_out = sizeof(fidl_message_header_t);
       return ZX_OK;
     case LDMSG_OP_CLONE:
-    case LDMSG_OP_CLONE_GEN:
+    case LDMSG_OP_CLONE_OLD:
       *req_len_out = sizeof(fidl_message_header_t) + sizeof(ldmsg_clone_t);
       req->clone.object = FIDL_HANDLE_PRESENT;
       return ZX_OK;
     case LDMSG_OP_LOAD_OBJECT:
     case LDMSG_OP_CONFIG:
-    case LDMSG_OP_LOAD_OBJECT_GEN:
-    case LDMSG_OP_CONFIG_GEN:
+    case LDMSG_OP_LOAD_OBJECT_OLD:
+    case LDMSG_OP_CONFIG_OLD:
       offset = sizeof(fidl_string_t);
       break;
     default:
@@ -55,14 +55,14 @@ zx_status_t ldmsg_req_decode(ldmsg_req_t* req, size_t req_len, const char** data
   size_t offset = 0;
   switch (req->header.ordinal) {
     case LDMSG_OP_DONE:
-    case LDMSG_OP_DONE_GEN:
+    case LDMSG_OP_DONE_OLD:
       if (req_len != sizeof(fidl_message_header_t))
         return ZX_ERR_INVALID_ARGS;
       *data_out = 0;
       *len_out = 0;
       return ZX_OK;
     case LDMSG_OP_CLONE:
-    case LDMSG_OP_CLONE_GEN:
+    case LDMSG_OP_CLONE_OLD:
       if (req_len != sizeof(fidl_message_header_t) + sizeof(ldmsg_clone_t) ||
           req->clone.object != FIDL_HANDLE_PRESENT)
         return ZX_ERR_INVALID_ARGS;
@@ -71,8 +71,8 @@ zx_status_t ldmsg_req_decode(ldmsg_req_t* req, size_t req_len, const char** data
       return ZX_OK;
     case LDMSG_OP_LOAD_OBJECT:
     case LDMSG_OP_CONFIG:
-    case LDMSG_OP_LOAD_OBJECT_GEN:
-    case LDMSG_OP_CONFIG_GEN:
+    case LDMSG_OP_LOAD_OBJECT_OLD:
+    case LDMSG_OP_CONFIG_OLD:
       if ((uintptr_t)req->common.string.data != FIDL_ALLOC_PRESENT)
         return ZX_ERR_INVALID_ARGS;
       offset = sizeof(fidl_string_t);
@@ -99,14 +99,14 @@ zx_status_t ldmsg_req_decode(ldmsg_req_t* req, size_t req_len, const char** data
 size_t ldmsg_rsp_get_size(ldmsg_rsp_t* rsp) {
   switch (rsp->header.ordinal) {
     case LDMSG_OP_LOAD_OBJECT:
-    case LDMSG_OP_LOAD_OBJECT_GEN:
+    case LDMSG_OP_LOAD_OBJECT_OLD:
     case LDMSG_OP_CONFIG:
-    case LDMSG_OP_CONFIG_GEN:
+    case LDMSG_OP_CONFIG_OLD:
     case LDMSG_OP_CLONE:
-    case LDMSG_OP_CLONE_GEN:
+    case LDMSG_OP_CLONE_OLD:
       return sizeof(ldmsg_rsp_t);
     case LDMSG_OP_DONE:
-    case LDMSG_OP_DONE_GEN:
+    case LDMSG_OP_DONE_OLD:
     default:
       return 0;
   }
