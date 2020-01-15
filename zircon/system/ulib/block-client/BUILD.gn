@@ -3,6 +3,15 @@
 # found in the LICENSE file.
 
 zx_library("block-client") {
+  sdk = "source"
+  sdk_headers = [
+    "block-client/client.h",
+    "block-client/cpp/block-device.h",
+    "block-client/cpp/block-group-registry.h",
+    "block-client/cpp/client.h",
+    "block-client/cpp/fake-device.h",
+    "block-client/cpp/remote-block-device.h",
+  ]
   sources = [
     "block-group-registry.cc",
     "client.c",

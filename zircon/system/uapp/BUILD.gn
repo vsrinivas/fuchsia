@@ -31,7 +31,6 @@ group("uapp") {
     "hidtouch",
     "i2c",
     "ihda",
-    "iochk",
     "iotime",
     "kcounter",
     "kstress",
