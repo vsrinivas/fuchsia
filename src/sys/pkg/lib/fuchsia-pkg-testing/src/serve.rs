@@ -81,7 +81,8 @@ impl ServedRepositoryBuilder {
             let auto_response_creator = Arc::clone(&auto_response_creator);
 
             service_fn(move |req| {
-                let path = root.clone();
+                let method = req.method().to_owned();
+                let path = req.uri().path().to_owned();
                 ServedRepository::handle_tuf_repo_request(
                     root.clone(),
                     Arc::clone(&uri_path_override_handlers),
@@ -90,8 +91,9 @@ impl ServedRepositoryBuilder {
                 )
                 .map(move |x| -> Result<Response<Body>, hyper::Error> {
                     println!(
-                        "{} [http repo] path: {:?},  response: {}",
+                        "{} [http repo] {} {} => {}",
                         Utc::now().format("%T.%6f"),
+                        method,
                         path,
                         x.status()
                     );
