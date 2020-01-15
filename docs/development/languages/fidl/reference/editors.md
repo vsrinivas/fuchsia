@@ -29,7 +29,7 @@ support.To install it, select **Settings**, then **Plugins**, and then click
 [Sublime syntax highlighting support](/garnet/public/lib/fidl/tools/sublime).
 
 To install, select **Sublime Text**, then **Preferences**, then
-**Browse Packages** and copy the files `FIDL.sublime-syntax`, and
+**Browse Packages** and copy or symlink the files `FIDL.sublime-syntax`, and
 `Comments (FIDL).tmPreferences` into the **User** package.
 
 ## Vim {#vim}

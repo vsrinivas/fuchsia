@@ -6,19 +6,22 @@ name: FIDL
 file_extensions:
   - fidl
 scope: source.fidl
+variables:
+  identifier: '[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?'
 contexts:
   main:
     - include: comments
     - include: literal
-    - match: \b(import|module)\b
+    - include: attributes
+    - match: \b(library|using|as)\b
       scope: keyword.control.fidl
     - match: \b(default|const)\b
       scope: keyword.fidl
-    - match: \b(bool|float|double|int8|int16|int32|int64|uint8|uint16|uint32|uint64|string)\b
+    - match: \b(bool|byte|bytes|int8|int16|int32|int64|uint8|uint16|uint32|uint64|float32|float64|string)\b
       scope: storage.type.basic.fidl
-    - match: \b(handle|array|map)\b
+    - match: \b(handle|array|map|vector|request)\b
       scope: storage.type.compound.fidl
-    - match: \b(struct|union)\b\s*([_A-Za-z][_A-Za-z0-9]*)\b
+    - match: \b(struct|union|xunion|table)\b\s*({{identifier}})\b
       captures:
         1: storage.type.fidl
         2: entity.name.type.fidl
@@ -32,21 +35,23 @@ contexts:
             - include: main
         - match: (?<=\})
           pop: true
-    - match: \b(interface)\b\s*([_A-Za-z][_A-Za-z0-9]*)\b
+    - match: \b(protocol)\b\s*({{identifier}})\b
       captures:
         1: storage.type.fidl
         2: entity.name.type.fidl
       push:
-        - match: \b[_A-Za-z][_A-Za-z0-9]*\b
+        - match: \b{{identifier}}\b
           scope: entity.name.function.fidl
           push:
             - match: (?<=;)
               pop: true
             - include: main
+            - match: \berror\b
+              scope: storage.type.basic.fidl
         - match: (?<=\})
           pop: true
         - include: main
-    - match: \b(enum)\b\s*([_A-Za-z][_A-Za-z0-9]*)\b
+    - match: \b(enum|bits)\b\s*({{identifier}})\b
       captures:
         1: storage.type.fidl
         2: entity.name.type.fidl
@@ -54,7 +59,7 @@ contexts:
       push:
         - match: (?<=\})
           pop: true
-        - match: '[A-Z_]+'
+        - match: '[A-Z_0-9]+'
           scope: entity.name.constant.enum.fidl
         - include: main
 
@@ -88,8 +93,23 @@ contexts:
       scope: punctuation.definition.string.begin.fidl
       push: double_quoted_string
     - match: \b(true|false)\b
-      scope: constant.bool.language.fidl
-    - match: \b(float|double)(.INFINITY|.NEGATIVE_INFINITY|.NAN)\b
-      scope: constant.float.language.fidl
-    - match: \b((0(x|X)[0-9a-fA-F]*)|(([0-9]+\.?[0-9]*)|(\.[0-9]+))((e|E)(\+|-)?[0-9]+)?)\b
-      scope: constant.numeric.c
+      scope: constant.language.fidl
+    - match: \b0(x|X)[0-9a-fA-F]*\b
+      scope: constant.numeric.integer.hexadecimal.fidl
+    - match: \b0b[0-9]+\b
+      scope: constant.numeric.integer.binary.fidl
+    - match: \b[0-9]+\.[0-9]+\b
+      scope: constant.numeric.float.fidl
+    - match: \b[0-9]+\b
+      scope: constant.numeric.integer.fidl
+
+  attributes:
+    - match: \[
+      push:
+        - match: \b[A-Z][a-z]*\b
+          scope: keyword.fidl
+        - match: '"'
+          scope: punctuation.definition.string.begin.fidl
+          push: double_quoted_string
+        - match: \]
+          pop: true
