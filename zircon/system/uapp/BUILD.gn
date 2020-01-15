@@ -48,7 +48,6 @@ group("uapp") {
     "ping",
     "psutils",
     "run-vc",
-    "runtests",
     "serial-test",
     "spawn",
     "spiutil",

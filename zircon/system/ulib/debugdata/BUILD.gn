@@ -4,6 +4,8 @@
 
 zx_library("debugdata") {
   sources = [ "debugdata.cc" ]
+  sdk = "source"
+  sdk_headers = [ "lib/debugdata/debugdata.h" ]
   deps = [
     "$zx/system/fidl/fuchsia-debugdata:llcpp",
     "$zx/system/ulib/async:async-cpp",
