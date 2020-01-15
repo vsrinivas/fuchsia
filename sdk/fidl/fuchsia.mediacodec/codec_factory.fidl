@@ -20,10 +20,10 @@ using fuchsia.media;
 //
 // Later we can add DYNAMIC, as needed.
 enum SecureMemoryMode : uint32 {
-  // Normal memory.  This is the default if a field of this type is not set.
-  OFF = 0;
-  // Secure memory.
-  ON = 1;
+    // Normal memory.  This is the default if a field of this type is not set.
+    OFF = 0;
+    // Secure memory.
+    ON = 1;
 };
 
 table CreateDecoder_Params {
@@ -35,6 +35,9 @@ table CreateDecoder_Params {
     /// audio/aac
     ///   input_details.oob_bytes must be an AudioSpecificConfig() as defined
     ///   by AAC spec.
+    /// audio/sbc
+    ///   input_details.oob_bytes must be Codec Specific Information Elements
+    ///   for SBC as defined by the A2DP spec.
     1: fuchsia.media.FormatDetails input_details;
 
     // The settings below nail down more details.

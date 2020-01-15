@@ -62,6 +62,7 @@ pub enum VideoSignificance {
 #[derive(Copy, Clone, Debug)]
 pub enum AudioSignificance {
     PcmFrames,
+    Encoded,
 }
 
 struct CappedSizeChunks<'a> {

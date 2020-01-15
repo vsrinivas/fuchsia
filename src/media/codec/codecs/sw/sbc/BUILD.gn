@@ -18,6 +18,8 @@ executable("codec_runner_sw_sbc") {
   ]
 
   sources = [
+    "codec_adapter_sbc_decoder.cc",
+    "codec_adapter_sbc_decoder.h",
     "codec_adapter_sbc_encoder.cc",
     "codec_adapter_sbc_encoder.h",
     "main.cc",
@@ -30,6 +32,7 @@ executable("codec_runner_sw_sbc") {
     "//src/media/codec/codecs/sw:codec_adapter_sw",
     "//src/media/codec/codecs/sw:codec_runner_sw",
     "//src/media/lib/codec_impl",
+    "//third_party/android/platform/system/bt/embdrv/sbc:sbc_decoder",
     "//third_party/android/platform/system/bt/embdrv/sbc:sbc_encoder",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]

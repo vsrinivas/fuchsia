@@ -9,6 +9,7 @@ use fidl_table_validation::*;
 use fuchsia_stream_processors::*;
 use hex::{decode, encode};
 use mundane::hash::{Digest, Hasher, Sha256};
+use std::io::Write;
 use std::{convert::TryInto, fmt, rc::Rc};
 
 #[derive(ValidFidlTable, Debug, PartialEq)]
@@ -103,6 +104,92 @@ impl OutputValidator for TerminatesWithValidator {
             ))
             .into())
         }
+    }
+}
+
+/// Validates that an output's format matches expected
+pub struct FormatValidator {
+    pub expected_format: FormatDetails,
+}
+
+impl OutputValidator for FormatValidator {
+    fn validate(&self, output: &[Output]) -> Result<(), Error> {
+        let packets: Vec<&OutputPacket> = output_packets(output).collect();
+        let format = &packets
+            .first()
+            .ok_or(FatalError(String::from("No packets in output")))?
+            .format
+            .format_details;
+
+        if self.expected_format != *format {
+            return Err(FatalError(format!(
+                "Expected {:?}; got {:?}",
+                self.expected_format, format
+            ))
+            .into());
+        }
+
+        Ok(())
+    }
+}
+
+/// Validates that an output's data exactly matches an expected hash, including oob_bytes
+pub struct BytesValidator {
+    pub output_file: Option<&'static str>,
+    pub expected_digest: ExpectedDigest,
+}
+
+impl BytesValidator {
+    fn write_and_hash(
+        &self,
+        mut file: impl Write,
+        oob: &[u8],
+        packets: &[&OutputPacket],
+    ) -> Result<(), Error> {
+        let mut hasher = Sha256::default();
+
+        hasher.update(oob);
+
+        for packet in packets {
+            file.write_all(&packet.data)?;
+            hasher.update(&packet.data);
+        }
+
+        let digest = hasher.finish().bytes();
+        if self.expected_digest.bytes != digest {
+            return Err(FatalError(format!(
+                "Expected {}; got {}",
+                self.expected_digest,
+                encode(digest)
+            ))
+            .into());
+        }
+
+        Ok(())
+    }
+
+    fn output_file(&self) -> Result<impl Write, Error> {
+        Ok(if let Some(file) = self.output_file {
+            Box::new(std::fs::File::create(file)?) as Box<dyn Write>
+        } else {
+            Box::new(std::io::sink()) as Box<dyn Write>
+        })
+    }
+}
+
+impl OutputValidator for BytesValidator {
+    fn validate(&self, output: &[Output]) -> Result<(), Error> {
+        let packets: Vec<&OutputPacket> = output_packets(output).collect();
+        let oob = packets
+            .first()
+            .ok_or(FatalError(String::from("No packets in output")))?
+            .format
+            .format_details
+            .oob_bytes
+            .clone()
+            .unwrap_or(vec![]);
+
+        self.write_and_hash(self.output_file()?, oob.as_slice(), &packets)
     }
 }
 

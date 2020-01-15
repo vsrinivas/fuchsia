@@ -11,8 +11,7 @@
 
 namespace {
 
-// Other types of SW isolates can exist, but at the moment we only have one,
-// which uses ffmpeg for SW decode (or potentially encode).
+// Isolates for SW encode/decode
 //
 // For HW-based codecs, we discover their "LocalCodecFactory" by watching for
 // their device and sending the server end of a (local) CodecFactory to the
@@ -56,17 +55,25 @@ const EncoderSupportSpec kAacEncoderSupportSpec = {
 
 const EncoderSupportSpec supported_encoders[] = {kSbcEncoderSupportSpec, kAacEncoderSupportSpec};
 
-const std::string kFfmpegDecoderMimeTypes[] = {"video/h264"};
-
-bool FfmpegDecoderSupportsFormat(std::string mime_type) {
-  for (auto& supported : kFfmpegDecoderMimeTypes) {
-    if (supported == mime_type) {
-      return true;
-    }
+struct DecoderSupportSpec {
+  std::string isolate_url;
+  std::vector<std::string> mime_types;
+  bool supports(const std::string& mime_type) const {
+    return std::find(mime_types.begin(), mime_types.end(), mime_type) != mime_types.end();
   }
+};
 
-  return false;
-}
+const DecoderSupportSpec kFfmpegSupportSpec = {
+    .isolate_url = kIsolateUrlFfmpeg,
+    .mime_types = {"video/h264"},
+};
+
+const DecoderSupportSpec kSbcDecoderSuportSpec = {
+    .isolate_url = kIsolateUrlSbc,
+    .mime_types = {"audio/sbc"},
+};
+
+const DecoderSupportSpec supported_decoders[] = {kFfmpegSupportSpec, kSbcDecoderSuportSpec};
 
 std::optional<std::string> FindEncoder(const std::string& mime_type,
                                        const fuchsia::media::EncoderSettings& settings) {
@@ -80,6 +87,18 @@ std::optional<std::string> FindEncoder(const std::string& mime_type,
   }
 
   return {encoder->isolate_url};
+}
+
+std::optional<std::string> FindDecoder(const std::string& mime_type) {
+  auto decoder = std::find_if(
+      std::begin(supported_decoders), std::end(supported_decoders),
+      [&mime_type](const DecoderSupportSpec& decoder) { return decoder.supports(mime_type); });
+
+  if (decoder == std::end(supported_decoders)) {
+    return std::nullopt;
+  }
+
+  return {decoder->isolate_url};
 }
 
 void ForwardToIsolate(std::string component_url, sys::ComponentContext* component_context,
@@ -215,16 +234,15 @@ void CodecFactoryImpl::CreateDecoder(
     return;
   }
 
-  std::string url;
-  if (FfmpegDecoderSupportsFormat(params.input_details().mime_type())) {
-    url = kIsolateUrlFfmpeg;
-  } else {
-    // ~decoder
+  auto maybe_decoder_isolate_url = FindDecoder(params.input_details().mime_type());
+
+  if (!maybe_decoder_isolate_url) {
+    FX_LOGS(WARNING) << "No decoder supports " << params.input_details().mime_type();
     return;
   }
 
   ForwardToIsolate(
-      url, component_context_,
+      *maybe_decoder_isolate_url, component_context_,
       [&params, &decoder](fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
         // Forward the request to the factory_delegate_ as-is. This
         // avoids conversion to command-line parameters and back,

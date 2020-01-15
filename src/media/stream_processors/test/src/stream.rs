@@ -218,7 +218,7 @@ impl<'a: 'b, 'b> Stream<'a> {
         loop {
             match input_packet_stream.next_packet()? {
                 PacketPoll::Ready(input_packet) => {
-                    vlog!(2, "Sending input packet.");
+                    vlog!(2, "Sending input packet. {:?}", input_packet.valid_length_bytes);
                     self.stream_processor.queue_input_packet(input_packet)?;
                 }
                 PacketPoll::Eos => {

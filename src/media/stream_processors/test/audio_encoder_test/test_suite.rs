@@ -3,75 +3,12 @@ use crate::timestamp_validator::*;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem::*;
 use fuchsia_zircon as zx;
-use hex::encode;
-use mundane::hash::{Digest, Hasher, Sha256};
 use rand::prelude::*;
-use std::io::Write;
 use std::rc::Rc;
 use stream_processor_encoder_factory::*;
 use stream_processor_test::*;
 
 pub const TEST_PCM_FRAME_COUNT: usize = 3000;
-
-// TODO(turnage): Generalize and promote to stream_processor_test lib.
-pub struct BytesValidator {
-    pub output_file: Option<&'static str>,
-    pub expected_digest: ExpectedDigest,
-}
-
-impl BytesValidator {
-    fn write_and_hash(
-        &self,
-        mut file: impl Write,
-        oob: &[u8],
-        packets: &[&OutputPacket],
-    ) -> Result<()> {
-        let mut hasher = Sha256::default();
-
-        hasher.update(oob);
-
-        for packet in packets {
-            file.write_all(&packet.data)?;
-            hasher.update(&packet.data);
-        }
-
-        let digest = hasher.finish().bytes();
-        if self.expected_digest.bytes != digest {
-            return Err(FatalError(format!(
-                "Expected {}; got {}",
-                self.expected_digest,
-                encode(digest)
-            ))
-            .into());
-        }
-
-        Ok(())
-    }
-
-    fn output_file(&self) -> Result<impl Write> {
-        Ok(if let Some(file) = self.output_file {
-            Box::new(std::fs::File::create(file)?) as Box<dyn Write>
-        } else {
-            Box::new(std::io::sink()) as Box<dyn Write>
-        })
-    }
-}
-
-impl OutputValidator for BytesValidator {
-    fn validate(&self, output: &[Output]) -> Result<()> {
-        let packets: Vec<&OutputPacket> = output_packets(output).collect();
-        let oob = packets
-            .first()
-            .ok_or(FatalError(String::from("No packets in output")))?
-            .format
-            .format_details
-            .oob_bytes
-            .clone()
-            .unwrap_or(vec![]);
-
-        self.write_and_hash(self.output_file()?, oob.as_slice(), &packets)
-    }
-}
 
 pub struct AudioEncoderTestCase {
     /// Encoder settings.
