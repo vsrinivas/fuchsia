@@ -286,6 +286,12 @@ fxl::RefPtr<Type> EvalContextImpl::GetConcreteType(const Type* type) const {
   return cur;
 }
 
+const ProcessSymbols* EvalContextImpl::GetProcessSymbols() const {
+  if (!process_symbols_)
+    return nullptr;
+  return process_symbols_.get();
+}
+
 fxl::RefPtr<SymbolDataProvider> EvalContextImpl::GetDataProvider() { return data_provider_; }
 
 NameLookupCallback EvalContextImpl::GetSymbolNameLookupCallback() {

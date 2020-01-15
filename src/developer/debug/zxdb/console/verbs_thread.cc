@@ -480,17 +480,15 @@ Location arguments
 
 )" LOCATION_ARG_HELP("jump");
 Err DoJump(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadCommand(context, cmd, true, "jump");
-  if (err.has_error())
+  if (Err err = AssertStoppedThreadCommand(context, cmd, true, "jump"); err.has_error())
     return err;
 
   if (cmd.args().size() != 1)
     return Err("The 'jump' command requires one argument for the location.");
 
   Location location;
-  err = ResolveUniqueInputLocation(cmd.target()->GetProcess()->GetSymbols(), cmd.frame(),
-                                   cmd.args()[0], true, &location);
-  if (err.has_error())
+  if (Err err = ResolveUniqueInputLocation(cmd.frame(), cmd.args()[0], true, &location);
+      err.has_error())
     return err;
 
   cmd.thread()->JumpTo(location.address(), [thread = cmd.thread()->GetWeakPtr()](const Err& err) {

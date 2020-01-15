@@ -67,6 +67,8 @@ fxl::RefPtr<Type> MockEvalContext::GetConcreteType(const Type* type) const {
   return ResolveForwardDefinition(type->StripCVT());
 }
 
+const ProcessSymbols* MockEvalContext::GetProcessSymbols() const { return nullptr; }
+
 fxl::RefPtr<SymbolDataProvider> MockEvalContext::GetDataProvider() { return data_provider_; }
 
 NameLookupCallback MockEvalContext::GetSymbolNameLookupCallback() {

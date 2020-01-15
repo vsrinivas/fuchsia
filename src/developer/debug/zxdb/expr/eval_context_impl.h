@@ -68,6 +68,7 @@ class EvalContextImpl : public EvalContext {
   fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const override;
   fxl::RefPtr<Type> ResolveForwardDefinition(ParsedIdentifier type_name) const override;
   fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
+  const ProcessSymbols* GetProcessSymbols() const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   NameLookupCallback GetSymbolNameLookupCallback() override;
   Location GetLocationForAddress(uint64_t address) const override;

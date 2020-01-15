@@ -90,6 +90,10 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   // type.
   virtual fxl::RefPtr<Type> GetConcreteType(const Type* type) const = 0;
 
+  // May return null (ProcessSymbols are destroyed with the process, and the EvalContext is
+  // refcounted and can outlive it).
+  virtual const ProcessSymbols* GetProcessSymbols() const = 0;
+
   virtual fxl::RefPtr<SymbolDataProvider> GetDataProvider() = 0;
 
   // Returns a callback the parser can use to lookup names.

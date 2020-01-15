@@ -52,6 +52,7 @@ class PrettyEvalContext : public EvalContext {
   fxl::RefPtr<Type> GetConcreteType(const Type* type) const override {
     return impl_->GetConcreteType(type);
   }
+  const ProcessSymbols* GetProcessSymbols() const override { return impl_->GetProcessSymbols(); }
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override { return impl_->GetDataProvider(); }
   NameLookupCallback GetSymbolNameLookupCallback() override {
     return impl_->GetSymbolNameLookupCallback();

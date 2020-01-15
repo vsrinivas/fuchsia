@@ -10,7 +10,9 @@
 #include "src/developer/debug/zxdb/client/mock_target.h"
 #include "src/developer/debug/zxdb/client/mock_thread.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/console/command.h"
+#include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/index_test_support.h"
@@ -25,9 +27,25 @@ namespace zxdb {
 
 namespace {
 
-class InputLocationParserTest : public testing::Test {
+class InputLocationParserTest : public TestWithLoop {
  public:
   void SetUp() override { mock_module_symbols_ = symbols_.InjectMockModule(); }
+
+  ErrOr<InputLocation> SyncEvalGlobalInputLocation(const fxl::RefPtr<EvalContext> eval_context,
+                                                   const Location& location,
+                                                   const std::string& input) {
+    bool called = false;
+    ErrOr<InputLocation> result(Err("<test hardness>: callback not issued>"));
+
+    EvalGlobalInputLocation(eval_context, location, input,
+                            [&called, &result](ErrOr<InputLocation> value) {
+                              called = true;
+                              result = std::move(value);
+                            });
+    loop().RunUntilNoTasks();
+    EXPECT_TRUE(called);
+    return result;
+  }
 
  protected:
   ProcessSymbolsTestSetup symbols_;
@@ -37,79 +55,61 @@ class InputLocationParserTest : public testing::Test {
 
 }  // namespace
 
-TEST_F(InputLocationParserTest, ParseGlobal) {
-  InputLocation location;
-
-  SymbolContext relative_context = SymbolContext::ForRelativeAddresses();
+TEST_F(InputLocationParserTest, EvalGlobalInputLocation) {
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+  Location existing_location;
 
   // Valid symbol (including colons).
-  Err err = ParseGlobalInputLocation(nullptr, "Foo::Bar", &location);
-  EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(InputLocation::Type::kName, location.type);
-  EXPECT_EQ(R"("Foo"; ::"Bar")", location.name.GetDebugName());
+  auto result = SyncEvalGlobalInputLocation(eval_context, existing_location, "Foo::Bar");
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(InputLocation::Type::kName, result.value().type);
+  EXPECT_EQ(R"("Foo"; ::"Bar")", result.value().name.GetDebugName());
 
   // Valid file/line.
-  location = InputLocation();
-  err = ParseGlobalInputLocation(nullptr, "foo/bar.cc:123", &location);
-  EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(InputLocation::Type::kLine, location.type);
-  EXPECT_EQ("foo/bar.cc", location.line.file());
-  EXPECT_EQ(123, location.line.line());
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location, "foo/bar.cc:123");
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(InputLocation::Type::kLine, result.value().type);
+  EXPECT_EQ("foo/bar.cc", result.value().line.file());
+  EXPECT_EQ(123, result.value().line.line());
 
   // Invalid file/line.
-  location = InputLocation();
-  err = ParseGlobalInputLocation(nullptr, "foo/bar.cc:123x", &location);
-  EXPECT_TRUE(err.has_error());
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location, "foo/bar.cc:123x");
+  EXPECT_TRUE(result.has_error());
 
   // Valid hex address with *.
-  location = InputLocation();
-  err = ParseGlobalInputLocation(nullptr, "*0x12345f", &location);
-  EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(InputLocation::Type::kAddress, location.type);
-  EXPECT_EQ(0x12345fu, location.address);
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location, "*0x12345f");
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(InputLocation::Type::kAddress, result.value().type);
+  EXPECT_EQ(0x12345fu, result.value().address);
 
   // Valid hex address without a *.
-  location = InputLocation();
-  err = ParseGlobalInputLocation(nullptr, "0x12345f", &location);
-  EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(InputLocation::Type::kAddress, location.type);
-  EXPECT_EQ(0x12345fu, location.address);
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location, "0x12345f");
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(InputLocation::Type::kAddress, result.value().type);
+  EXPECT_EQ(0x12345fu, result.value().address);
 
   // Decimal number with "*" override should be an address.
-  location = InputLocation();
-  err = ParseGlobalInputLocation(nullptr, "*21", &location);
-  EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(InputLocation::Type::kAddress, location.type);
-  EXPECT_EQ(21u, location.address);
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location, "*21");
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(InputLocation::Type::kAddress, result.value().type);
+  EXPECT_EQ(21u, result.value().address);
 
   // Invalid address.
-  location = InputLocation();
-  err = ParseGlobalInputLocation(nullptr, "*2134x", &location);
-  EXPECT_TRUE(err.has_error());
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location, "*2134x");
+  ASSERT_TRUE(result.has_error());
 
   // Line number with no Frame for context.
-  location = InputLocation();
-  err = ParseGlobalInputLocation(nullptr, "21", &location);
-  EXPECT_TRUE(err.has_error());
-
-  // Implicit file name and valid frame but the location has no file name.
-  MockFrame frame_no_file(nullptr, nullptr,
-                          Location(0x1234, FileLine(), 0, relative_context, LazySymbol()),
-                          0x12345678);
-  location = InputLocation();
-  err = ParseGlobalInputLocation(&frame_no_file, "21", &location);
-  EXPECT_TRUE(err.has_error());
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location, "21");
+  ASSERT_TRUE(result.has_error());
 
   // Valid implicit file name.
   std::string file = "foo.cc";
-  MockFrame frame_valid(nullptr, nullptr,
-                        Location(0x1234, FileLine(file, 12), 0, relative_context, LazySymbol()),
-                        0x12345678);
-  location = InputLocation();
-  err = ParseGlobalInputLocation(&frame_valid, "21", &location);
-  EXPECT_FALSE(err.has_error()) << err.msg();
-  EXPECT_EQ(file, location.line.file());
-  EXPECT_EQ(21, location.line.line());
+  Location existing_location_with_file(0x1234, FileLine(file, 12), 0,
+                                       SymbolContext::ForRelativeAddresses(), LazySymbol());
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location_with_file, "21");
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(file, result.value().line.file());
+  EXPECT_EQ(21, result.value().line.line());
 }
 
 TEST_F(InputLocationParserTest, ResolveInputLocation) {
@@ -117,7 +117,7 @@ TEST_F(InputLocationParserTest, ResolveInputLocation) {
 
   // Resolve to nothing.
   Location output;
-  Err err = ResolveUniqueInputLocation(&symbols_.process(), nullptr, "Foo", false, &output);
+  Err err = ResolveUniqueInputLocation(&symbols_.process(), Location(), "Foo", false, &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Nothing matching this name was found.", err.msg());
 
@@ -131,7 +131,7 @@ TEST_F(InputLocationParserTest, ResolveInputLocation) {
   mock_module_symbols_->AddSymbolLocations("Foo", {expected});
 
   // Resolve to one location (success) case.
-  err = ResolveUniqueInputLocation(&symbols_.process(), nullptr, "Foo", false, &output);
+  err = ResolveUniqueInputLocation(&symbols_.process(), Location(), "Foo", false, &output);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ(expected.address(), output.address());
 
@@ -147,7 +147,7 @@ TEST_F(InputLocationParserTest, ResolveInputLocation) {
 
   // Resolve to all of them.
   std::vector<Location> output_locations;
-  err = ResolveInputLocations(&symbols_.process(), nullptr, "Foo", false, &output_locations);
+  err = ResolveInputLocations(&symbols_.process(), Location(), "Foo", false, &output_locations);
   EXPECT_FALSE(err.has_error());
 
   // The result should be the same as the input but not symbolized (we
@@ -160,7 +160,7 @@ TEST_F(InputLocationParserTest, ResolveInputLocation) {
 
   // Try to resolve one of them. Since there are many this will fail. We requested no symbolization
   // but the error message should still be symbolized.
-  err = ResolveUniqueInputLocation(&symbols_.process(), nullptr, "Foo", false, &output);
+  err = ResolveUniqueInputLocation(&symbols_.process(), Location(), "Foo", false, &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ(R"(This resolves to more than one location. Could be:
  • file.cc:100 = 0x12345000
