@@ -45,13 +45,7 @@ extern const Colors WithColors;
 class PrettyPrinter {
  public:
   PrettyPrinter(std::ostream& os, const Colors& colors, std::string_view line_header,
-                int max_line_size, int tabulations = 0)
-      : os_(os),
-        colors_(colors),
-        line_header_(line_header),
-        max_line_size_(max_line_size),
-        tabulations_(tabulations),
-        remaining_size_(max_line_size - tabulations * kTabSize) {}
+                int max_line_size, bool header_on_every_line, int tabulations = 0);
 
   std::ostream& os() const { return os_; }
   const Colors& colors() const { return colors_; }
@@ -97,9 +91,11 @@ class PrettyPrinter {
   const Colors& colors_;
   const std::string_view line_header_;
   const int max_line_size_;
+  const bool header_on_every_line_ = false;
+  bool need_to_print_header_ = true;
+  int line_header_size_ = 0;
   int tabulations_;
   int remaining_size_ = 0;
-  bool need_to_print_header_ = true;
 };
 
 inline PrettyPrinter& ResetColor(PrettyPrinter& printer) {

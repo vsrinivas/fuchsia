@@ -199,7 +199,7 @@ TEST_F(WireParserTest, ParseSingleString) {
                                                                                                    \
     std::stringstream result;                                                                      \
     if (object != nullptr) {                                                                       \
-      PrettyPrinter printer(result, FakeColors, "", 80);                                           \
+      PrettyPrinter printer(result, FakeColors, "", 80, /*header_on_every_line=*/false);           \
       object->PrettyPrint(nullptr, printer);                                                       \
     }                                                                                              \
     ASSERT_EQ(result.str(), _pretty_print)                                                         \

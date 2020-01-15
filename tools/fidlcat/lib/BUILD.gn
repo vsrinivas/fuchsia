@@ -9,6 +9,7 @@ if (is_host) {
     public = [
       "comparator.h",
       "decoder.h",
+      "event.h",
       "exception_decoder.h",
       "inference.h",
       "interception_workflow.h",
@@ -20,6 +21,7 @@ if (is_host) {
     sources = [
       "comparator.cc",
       "decoder.cc",
+      "event.cc",
       "exception_decoder.cc",
       "inference.cc",
       "interception_workflow.cc",

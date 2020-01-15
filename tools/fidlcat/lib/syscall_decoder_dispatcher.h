@@ -25,9 +25,11 @@
 #include "src/lib/fidl_codec/display_handle.h"
 #include "src/lib/fidl_codec/display_options.h"
 #include "src/lib/fidl_codec/message_decoder.h"
+#include "src/lib/fidl_codec/wire_types.h"
 #include "src/lib/fxl/logging.h"
 #include "tools/fidlcat/lib/comparator.h"
 #include "tools/fidlcat/lib/decode_options.h"
+#include "tools/fidlcat/lib/event.h"
 #include "tools/fidlcat/lib/exception_decoder.h"
 #include "tools/fidlcat/lib/inference.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
@@ -442,6 +444,10 @@ class AccessBase {
   // implemented as uint32_t).
   virtual SyscallType GetSyscallType() const = 0;
 
+  // Computes the fidl codec type for this access. Currently, we are not able to compute it for all
+  // the cases. When we are not able to compute it, this method returns null.
+  std::unique_ptr<fidl_codec::Type> ComputeType() const;
+
   // For buffers, ensures that the buffer will be in memory.
   virtual void LoadArray(SyscallDecoder* decoder, Stage stage, size_t size) = 0;
 
@@ -476,6 +482,9 @@ class Access : public AccessBase {
   const uint8_t* Uint8Content(SyscallDecoder* decoder, Stage stage) const override {
     return reinterpret_cast<const uint8_t*>(Content(decoder, stage));
   }
+
+  // Generates the fidl codec value for this access.
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder, Stage stage) const;
 
   // Display the data on a stream (with name and type).
   void Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
@@ -687,7 +696,13 @@ class SyscallInputOutputBase {
   // Name of the input/output.
   const std::string& name() const { return name_; }
 
-  // Add a condition which must be true to display the input/output.
+  // Returns true if this value is displayed inline.
+  virtual bool InlineValue() const { return true; }
+
+  // Computes the fidl codec type for this input/output.
+  virtual std::unique_ptr<fidl_codec::Type> ComputeType() const;
+
+  // Adds a condition which must be true to display the input/output.
   template <typename Type>
   SyscallInputOutputBase* DisplayIfEqual(std::unique_ptr<Access<Type>> access, Type value) {
     conditions_.push_back(
@@ -695,7 +710,7 @@ class SyscallInputOutputBase {
     return this;
   }
 
-  // Define the architecture needed to display the input/output.
+  // Defines the architecture needed to display the input/output.
   SyscallInputOutputBase* DisplayIfArch(debug_ipc::Arch arch) {
     conditions_.push_back(std::make_unique<SyscallInputOutputArchCondition>(arch));
     return this;
@@ -707,6 +722,10 @@ class SyscallInputOutputBase {
       condition->Load(decoder, stage);
     }
   }
+
+  // Generates the fidl codec value for this input/output.
+  virtual std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+                                                           Stage stage) const;
 
   // Displays small inputs or outputs.
   virtual const char* DisplayInline(SyscallDisplayDispatcher* /*dispatcher*/,
@@ -748,9 +767,16 @@ class SyscallInputOutput : public SyscallInputOutputBase {
                      std::unique_ptr<Access<Type>> access)
       : SyscallInputOutputBase(error_code, name), access_(std::move(access)) {}
 
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override { return access_->ComputeType(); }
+
   void Load(SyscallDecoder* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     access_->Load(decoder, stage);
+  }
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+                                                   Stage stage) const override {
+    return access_->GenerateValue(decoder, stage);
   }
 
   const char* DisplayInline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
@@ -834,6 +860,8 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
         elem_size_(std::move(elem_size)),
         elem_count_(std::move(elem_count)) {}
 
+  bool InlineValue() const override { return false; }
+
   void Load(SyscallDecoder* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     elem_size_->Load(decoder, stage);
@@ -877,6 +905,8 @@ class SyscallInputOutputStringBuffer : public SyscallInputOutputBase {
         buffer_(std::move(buffer)),
         count_(std::move(count)),
         max_size_(max_size) {}
+
+  bool InlineValue() const override { return false; }
 
   void Load(SyscallDecoder* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
@@ -978,6 +1008,8 @@ class SyscallInputOutputObject : public SyscallInputOutputBase {
         buffer_size_(std::move(buffer_size)),
         class_definition_(class_definition) {}
 
+  bool InlineValue() const override { return false; }
+
   void Load(SyscallDecoder* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     if (buffer_size_ != nullptr) {
@@ -1015,6 +1047,8 @@ class SyscallInputOutputObjectArray : public SyscallInputOutputBase {
         buffer_(std::move(buffer)),
         buffer_size_(std::move(buffer_size)),
         class_definition_(class_definition) {}
+
+  bool InlineValue() const override { return false; }
 
   void Load(SyscallDecoder* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
@@ -1108,6 +1142,8 @@ class SyscallFidlMessageHandle : public SyscallFidlMessage<zx_handle_t> {
                                         std::move(num_bytes), std::move(handles),
                                         std::move(num_handles)) {}
 
+  bool InlineValue() const override { return false; }
+
   void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
                       std::string_view line_header, int tabs, std::ostream& os) const override;
 };
@@ -1124,6 +1160,8 @@ class SyscallFidlMessageHandleInfo : public SyscallFidlMessage<zx_handle_info_t>
       : SyscallFidlMessage<zx_handle_info_t>(error_code, name, type, std::move(handle),
                                              std::move(bytes), std::move(num_bytes),
                                              std::move(handles), std::move(num_handles)) {}
+
+  bool InlineValue() const override { return false; }
 
   void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
                       std::string_view line_header, int tabs, std::ostream& os) const override;
@@ -1164,6 +1202,20 @@ class Syscall {
   // conditionally displayed depending on the syscall error code.
   [[nodiscard]] const std::vector<std::unique_ptr<SyscallInputOutputBase>>& outputs() const {
     return outputs_;
+  }
+
+  bool fidl_codec_values_ready() const { return fidl_codec_values_ready_; }
+  const std::vector<std::unique_ptr<fidl_codec::StructMember>>& input_inline_members() const {
+    return input_inline_members_;
+  }
+  const std::vector<std::unique_ptr<fidl_codec::StructMember>>& input_outline_members() const {
+    return input_outline_members_;
+  }
+  const std::vector<std::unique_ptr<fidl_codec::StructMember>>& output_inline_members() const {
+    return output_inline_members_;
+  }
+  const std::vector<std::unique_ptr<fidl_codec::StructMember>>& output_outline_members() const {
+    return output_outline_members_;
   }
 
   // The code to execute when the input is decoded and before the input is displayed.
@@ -1411,6 +1463,9 @@ class Syscall {
         std::move(handles), std::move(num_handles)));
   }
 
+  // Computes all the fidl codec types for this syscall.
+  void ComputeTypes();
+
  private:
   const std::string name_;
   const SyscallReturnType return_type_;
@@ -1419,6 +1474,11 @@ class Syscall {
   std::vector<std::unique_ptr<SyscallArgumentBase>> arguments_;
   std::vector<std::unique_ptr<SyscallInputOutputBase>> inputs_;
   std::vector<std::unique_ptr<SyscallInputOutputBase>> outputs_;
+  bool fidl_codec_values_ready_ = false;
+  std::vector<std::unique_ptr<fidl_codec::StructMember>> input_inline_members_;
+  std::vector<std::unique_ptr<fidl_codec::StructMember>> input_outline_members_;
+  std::vector<std::unique_ptr<fidl_codec::StructMember>> output_inline_members_;
+  std::vector<std::unique_ptr<fidl_codec::StructMember>> output_outline_members_;
   bool (SyscallDecoderDispatcher::*inputs_decoded_action_)(SyscallDecoder* decoder) = nullptr;
 };
 
@@ -1430,6 +1490,7 @@ class SyscallDecoderDispatcher {
   explicit SyscallDecoderDispatcher(const DecodeOptions& decode_options)
       : decode_options_(decode_options) {
     Populate();
+    ComputeTypes();
   }
   virtual ~SyscallDecoderDispatcher() = default;
 
@@ -1437,10 +1498,45 @@ class SyscallDecoderDispatcher {
 
   const std::vector<std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
 
+  const std::map<zx_koid_t, std::unique_ptr<Process>>& processes() const { return processes_; }
+
   const Inference& inference() const { return inference_; }
 
+  const Process* SearchProcess(zx_koid_t koid) const {
+    auto process = processes_.find(koid);
+    if (process == processes_.end()) {
+      return nullptr;
+    }
+    return process->second.get();
+  }
+
+  const Process* CreateProcess(std::string_view name, zx_koid_t koid) {
+    FXL_DCHECK(processes_.find(koid) == processes_.end());
+    auto process = std::make_unique<Process>(name, koid);
+    auto returned_value = process.get();
+    processes_.emplace(std::make_pair(koid, std::move(process)));
+    return returned_value;
+  }
+
+  const Thread* SearchThread(zx_koid_t koid) const {
+    auto thread = threads_.find(koid);
+    if (thread == threads_.end()) {
+      return nullptr;
+    }
+    return thread->second.get();
+  }
+
+  const Thread* CreateThread(zx_koid_t koid, const Process* process) {
+    FXL_DCHECK(threads_.find(koid) == threads_.end());
+    auto thread = std::make_unique<Thread>(process, koid);
+    auto returned_value = thread.get();
+    threads_.emplace(std::make_pair(koid, std::move(thread)));
+    return returned_value;
+  }
+
   // Display a handle. Also display the data we have inferered for this handle (if any).
-  void DisplayHandle(zx_handle_t handle, const fidl_codec::Colors& colors, std::ostream& os);
+  void DisplayHandle(const zx_handle_info_t& handle_info, const fidl_codec::Colors& colors,
+                     std::ostream& os);
 
   // Decode an intercepted system call.
   // Called when a thread reached a breakpoint on a system call.
@@ -1481,7 +1577,7 @@ class SyscallDecoderDispatcher {
   // Called when a process is monitored. If |error_message| is not empty, we haven't been able to
   // monitor the process.
   virtual void ProcessMonitored(std::string_view name, zx_koid_t koid,
-                                std::string_view error_message) {}
+                                std::string_view error_message);
 
   // Called when a process is no longer monitored.
   virtual void StopMonitoring(zx_koid_t koid);
@@ -1489,6 +1585,9 @@ class SyscallDecoderDispatcher {
  private:
   // Feeds syscalls_ with all the syscalls we can decode.
   void Populate();
+
+  // Computes all the fidl codec types for the syscalls.
+  void ComputeTypes();
 
   // Add a function we want to put a breakpoint on. Used by Populate.
   Syscall* AddFunction(std::string_view name, SyscallReturnType return_type) {
@@ -1530,6 +1629,10 @@ class SyscallDecoderDispatcher {
   // The intercepted exceptions we are currently decoding.
   std::map<uint64_t, std::unique_ptr<ExceptionDecoder>> exception_decoders_;
 
+  std::map<zx_koid_t, std::unique_ptr<Process>> processes_;
+
+  std::map<zx_koid_t, std::unique_ptr<Thread>> threads_;
+
   // All the handles for which we have some information.
   Inference inference_;
 };
@@ -1548,6 +1651,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   }
 
   const fidl_codec::Colors& colors() const { return message_decoder_dispatcher_.colors(); }
+
+  int columns() const { return message_decoder_dispatcher_.columns(); }
 
   bool with_process_info() const { return message_decoder_dispatcher_.with_process_info(); }
 
@@ -1606,6 +1711,17 @@ class SyscallCompareDispatcher : public SyscallDisplayDispatcher {
   Comparator comparator_;
   std::ostringstream os_;
 };
+
+// Generates a fidl codec value for this syscall value.
+template <typename ValueType>
+inline std::unique_ptr<fidl_codec::Value> GenerateValue(ValueType /*value*/) {
+  return std::make_unique<fidl_codec::InvalidValue>();
+}
+
+template <>
+inline std::unique_ptr<fidl_codec::Value> GenerateValue(uint32_t value) {
+  return std::make_unique<fidl_codec::IntegerValue>(value, false);
+}
 
 // Display a value on a stream.
 template <typename ValueType>
@@ -1848,9 +1964,14 @@ inline void DisplayValue<uint32_t>(SyscallDecoderDispatcher* dispatcher,
       GuestTrapName(value, os);
       os << colors.reset;
       break;
-    case SyscallType::kHandle:
-      dispatcher->DisplayHandle(value, colors, os);
+    case SyscallType::kHandle: {
+      zx_handle_info_t handle_info;
+      handle_info.handle = value;
+      handle_info.type = ZX_OBJ_TYPE_NONE;
+      handle_info.rights = 0;
+      dispatcher->DisplayHandle(handle_info, colors, os);
       break;
+    }
     case SyscallType::kInfoMapsType:
       os << colors.red;
       InfoMapsTypeName(value, os);
@@ -2302,6 +2423,22 @@ void DynamicArrayClassField<ClassType, Type>::Display(const ClassType* object, d
     os << '\n';
   }
   os << line_header << std::string(tabs * fidl_codec::kTabSize, ' ') << "}\n";
+}
+
+template <typename Type>
+std::unique_ptr<fidl_codec::Value> Access<Type>::GenerateValue(SyscallDecoder* decoder,
+                                                               Stage stage) const {
+  if (ValueValid(decoder, stage)) {
+    if (GetSyscallType() == SyscallType::kHandle) {
+      zx_handle_info_t info;
+      info.handle = Value(decoder, stage);
+      info.type = ZX_OBJ_TYPE_NONE;
+      info.rights = 0;
+      return std::make_unique<fidl_codec::HandleValue>(info);
+    }
+    return fidlcat::GenerateValue<Type>(Value(decoder, stage));
+  }
+  return std::make_unique<fidl_codec::NullValue>();
 }
 
 template <typename Type>

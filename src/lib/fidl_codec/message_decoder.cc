@@ -113,7 +113,7 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
   }
 
   if (matched_request_ && (is_request_ || (direction_ == Direction::kUnknown))) {
-    PrettyPrinter printer(os, colors, line_header, columns, tabs);
+    PrettyPrinter printer(os, colors, line_header, columns, /*header_on_every_line=*/true, tabs);
     printer << WhiteOnMagenta << message_direction_ << "request" << ResetColor << ' ' << Green
             << method_->enclosing_interface().name() << '.' << method_->name() << ResetColor
             << " = ";
@@ -129,7 +129,7 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
     }
   }
   if (matched_response_ && (!is_request_ || (direction_ == Direction::kUnknown))) {
-    PrettyPrinter printer(os, colors, line_header, columns, tabs);
+    PrettyPrinter printer(os, colors, line_header, columns, /*header_on_every_line=*/true, tabs);
     printer << WhiteOnMagenta << message_direction_ << "response" << ResetColor << ' ' << Green
             << method_->enclosing_interface().name() << '.' << method_->name() << ResetColor
             << " = ";
@@ -149,7 +149,7 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
   }
   std::string request_errors = request_error_stream_.str();
   if (!request_errors.empty()) {
-    PrettyPrinter printer(os, colors, line_header, columns, tabs);
+    PrettyPrinter printer(os, colors, line_header, columns, /*header_on_every_line=*/true, tabs);
     printer << Red << message_direction_ << "request errors" << ResetColor << ":\n";
     {
       Indent indent(printer);
@@ -165,7 +165,7 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
   }
   std::string response_errors = response_error_stream_.str();
   if (!response_errors.empty()) {
-    PrettyPrinter printer(os, colors, line_header, columns, tabs);
+    PrettyPrinter printer(os, colors, line_header, columns, /*header_on_every_line=*/true, tabs);
     printer << Red << message_direction_ << "response errors" << colors.reset << ":\n";
     {
       Indent indent(printer);

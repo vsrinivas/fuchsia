@@ -77,6 +77,7 @@ class MessageDecoderDispatcher {
   LibraryLoader* loader() const { return loader_; }
   const DisplayOptions& display_options() const { return display_options_; }
   const Colors& colors() const { return colors_; }
+  int columns() const { return display_options_.columns; }
   bool with_process_info() const { return display_options_.with_process_info; }
   std::map<std::tuple<zx_handle_t, uint64_t>, Direction>& handle_directions() {
     return handle_directions_;

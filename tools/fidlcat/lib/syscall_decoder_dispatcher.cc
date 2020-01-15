@@ -122,6 +122,22 @@ void DisplayString(const fidl_codec::Colors& colors, const char* string, size_t 
   }
 }
 
+std::unique_ptr<fidl_codec::Type> AccessBase::ComputeType() const {
+  switch (GetSyscallType()) {
+    case SyscallType::kHandle:
+      return std::make_unique<fidl_codec::HandleType>();
+    default:
+      return nullptr;
+  }
+}
+
+std::unique_ptr<fidl_codec::Type> SyscallInputOutputBase::ComputeType() const { return nullptr; }
+
+std::unique_ptr<fidl_codec::Value> SyscallInputOutputBase::GenerateValue(SyscallDecoder* decoder,
+                                                                         Stage stage) const {
+  return std::make_unique<fidl_codec::InvalidValue>();
+}
+
 void SyscallInputOutputStringBuffer::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
                                                     SyscallDecoder* decoder, Stage stage,
                                                     std::string_view line_header, int tabs,
@@ -216,14 +232,37 @@ void SyscallFidlMessageHandleInfo::DisplayOutline(SyscallDisplayDispatcher* disp
   }
 }
 
-void SyscallDecoderDispatcher::DisplayHandle(zx_handle_t handle, const fidl_codec::Colors& colors,
-                                             std::ostream& os) {
-  zx_handle_info_t handle_info;
-  handle_info.handle = handle;
-  handle_info.type = ZX_OBJ_TYPE_NONE;
-  handle_info.rights = 0;
+bool ComputeTypes(const std::vector<std::unique_ptr<SyscallInputOutputBase>>& fields,
+                  std::vector<std::unique_ptr<fidl_codec::StructMember>>* inline_members,
+                  std::vector<std::unique_ptr<fidl_codec::StructMember>>* outline_members) {
+  for (const auto& field : fields) {
+    std::unique_ptr<fidl_codec::Type> type = field->ComputeType();
+    if (type == nullptr) {
+      return false;
+    }
+    if (field->InlineValue()) {
+      inline_members->emplace_back(
+          std::make_unique<fidl_codec::StructMember>(field->name(), std::move(type)));
+    } else {
+      outline_members->emplace_back(
+          std::make_unique<fidl_codec::StructMember>(field->name(), std::move(type)));
+    }
+  }
+  return true;
+}
+
+void Syscall::ComputeTypes() {
+  fidl_codec_values_ready_ = true;
+  if (!fidlcat::ComputeTypes(inputs_, &input_inline_members_, &input_outline_members_)) {
+    fidl_codec_values_ready_ = false;
+    return;
+  }
+}
+
+void SyscallDecoderDispatcher::DisplayHandle(const zx_handle_info_t& handle_info,
+                                             const fidl_codec::Colors& colors, std::ostream& os) {
   fidl_codec::DisplayHandle(colors, handle_info, os);
-  const HandleDescription* known_handle = inference_.GetHandleDescription(handle);
+  const HandleDescription* known_handle = inference_.GetHandleDescription(handle_info.handle);
   if (known_handle != nullptr) {
     os << '(';
     known_handle->Display(colors, os);
@@ -275,11 +314,28 @@ void SyscallDecoderDispatcher::DeleteDecoder(ExceptionDecoder* decoder) {
   exception_decoders_.erase(decoder->thread_id());
 }
 
+void SyscallDecoderDispatcher::ProcessMonitored(std::string_view name, zx_koid_t koid,
+                                                std::string_view error_message) {
+  if (!error_message.empty()) {
+    return;
+  }
+  auto process = processes_.find(koid);
+  if (process == processes_.end()) {
+    processes_.emplace(std::make_pair(koid, std::make_unique<Process>(name, koid)));
+  }
+}
+
 void SyscallDecoderDispatcher::StopMonitoring(zx_koid_t koid) {
   for (const auto& decoder : syscall_decoders_) {
     if (decoder.second->process_id() == koid) {
       decoder.second->set_aborted();
     }
+  }
+}
+
+void SyscallDecoderDispatcher::ComputeTypes() {
+  for (const auto& syscall : syscalls_) {
+    syscall->ComputeTypes();
   }
 }
 
@@ -312,7 +368,12 @@ void SyscallDisplayDispatcher::ProcessMonitored(std::string_view name, zx_koid_t
                                                 std::string_view error_message) {
   last_displayed_syscall_ = nullptr;
   if (error_message.empty()) {
-    os_ << colors().green << "\nMonitoring ";
+    auto process = processes().find(koid);
+    if (process == processes().end()) {
+      os_ << colors().green << "\nMonitoring ";
+    } else {
+      os_ << colors().red << "\nAlready monitoring ";
+    }
   } else {
     os_ << colors().red << "\nCan't monitor ";
   }
@@ -328,6 +389,7 @@ void SyscallDisplayDispatcher::ProcessMonitored(std::string_view name, zx_koid_t
     os_ << " : " << colors().red << error_message << colors().reset;
   }
   os_ << '\n';
+  SyscallDecoderDispatcher::ProcessMonitored(name, koid, error_message);
 }
 
 void SyscallDisplayDispatcher::StopMonitoring(zx_koid_t koid) {

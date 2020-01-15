@@ -19,7 +19,7 @@ class JsonVisitor : public Visitor {
  private:
   void VisitValue(const Value* node, const Type* for_type) override {
     std::stringstream ss;
-    PrettyPrinter printer(ss, WithoutColors, "", 0);
+    PrettyPrinter printer(ss, WithoutColors, "", 0, /*header_on_every_line=*/false);
     node->PrettyPrint(for_type, printer);
     result_->SetString(ss.str(), *allocator_);
   }

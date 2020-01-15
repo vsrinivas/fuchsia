@@ -207,6 +207,7 @@ class Union {
 class StructMember {
  public:
   StructMember(Library* enclosing_library, const rapidjson::Value* json_definition);
+  StructMember(std::string_view name, std::unique_ptr<Type> type);
   ~StructMember();
 
   const std::string& name() const { return name_; }
@@ -215,8 +216,8 @@ class StructMember {
 
  private:
   const std::string name_;
-  const uint64_t size_;
-  uint64_t offset_;
+  const uint64_t size_ = 0;
+  uint64_t offset_ = 0;
   std::unique_ptr<Type> type_;
 };
 
@@ -225,10 +226,14 @@ class Struct {
   friend class Library;
   friend class InterfaceMethod;
 
+  Struct(std::string_view name) : name_(name) {}
+
   Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
   uint32_t size() const { return size_; }
   const std::vector<std::unique_ptr<StructMember>>& members() const { return members_; }
+
+  void AddMember(std::string_view name, std::unique_ptr<Type> type);
 
   // Wrap this Struct in a non-nullable type and use the given visitor on it.
   void VisitAsType(TypeVisitor* visitor) const;
@@ -255,8 +260,8 @@ class Struct {
   void DecodeTypes(std::string_view container_name, const char* size_name, const char* member_name,
                    const char* v1_name);
 
-  Library* enclosing_library_;
-  const rapidjson::Value* json_definition_;
+  Library* enclosing_library_ = nullptr;
+  const rapidjson::Value* json_definition_ = nullptr;
   std::string name_;
   uint32_t size_ = 0;
   std::vector<std::unique_ptr<StructMember>> members_;

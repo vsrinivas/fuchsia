@@ -33,6 +33,22 @@ namespace fidlcat {
 
 constexpr int kBitsPerByte = 8;
 
+// Printer which allows us to print the infered data for handles.
+class FidlcatPrinter : public fidl_codec::PrettyPrinter {
+ public:
+  FidlcatPrinter(SyscallDecoderDispatcher* dispatcher, std::ostream& os,
+                 const fidl_codec::Colors& colors, std::string_view line_header, int max_line_size,
+                 bool header_on_every_line, int tabulations = 0)
+      : PrettyPrinter(os, colors, line_header, max_line_size, header_on_every_line, tabulations),
+        dispatcher_(dispatcher) {}
+  void DisplayHandle(const zx_handle_info_t& handle) override {
+    dispatcher_->DisplayHandle(handle, colors(), os());
+  }
+
+ private:
+  SyscallDecoderDispatcher* dispatcher_;
+};
+
 // Helper function to convert a vector of bytes to a T.
 template <typename T>
 T GetValueFromBytes(const std::vector<uint8_t>& bytes, size_t offset) {
@@ -349,24 +365,79 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
     DisplayStackFrame(dispatcher_->colors(), line_header_, decoder->caller_locations(), os_);
   }
 
-  // Displays the header and the inline input arguments.
-  os_ << line_header_ << decoder->syscall()->name() << '(';
-  const char* separator = "";
-  for (const auto& input : decoder->syscall()->inputs()) {
-    if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
-      separator = input->DisplayInline(dispatcher_, decoder, Stage::kEntry, separator, os_);
+  if (decoder->syscall()->fidl_codec_values_ready()) {
+    // We are able to create values from the syscall => create the values and then print them.
+    //
+    // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
+    // print the syscall.
+    int64_t timestamp = time(nullptr);
+    const Thread* thread = dispatcher_->SearchThread(decoder->thread_id());
+    if (thread == nullptr) {
+      const Process* process =
+          dispatcher_->SearchProcess(decoder->thread()->GetProcess()->GetKoid());
+      if (process == nullptr) {
+        process = dispatcher_->CreateProcess(decoder->thread()->GetProcess()->GetName(),
+                                             decoder->thread()->GetProcess()->GetKoid());
+      }
+      thread = dispatcher_->CreateThread(decoder->thread_id(), process);
     }
-  }
-  os_ << ")\n";
+    auto result = std::make_unique<InvokedEvent>(timestamp << 32, thread, decoder->syscall());
+    auto inline_member = decoder->syscall()->input_inline_members().begin();
+    auto outline_member = decoder->syscall()->input_outline_members().begin();
+    for (const auto& input : decoder->syscall()->inputs()) {
+      if (input->InlineValue()) {
+        if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
+          FXL_DCHECK(inline_member != decoder->syscall()->input_inline_members().end());
+          std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(decoder, Stage::kEntry);
+          FXL_DCHECK(value != nullptr);
+          result->AddInlineField(inline_member->get(), std::move(value));
+        }
+        ++inline_member;
+      } else {
+        if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
+          FXL_DCHECK(outline_member != decoder->syscall()->input_outline_members().end());
+          std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(decoder, Stage::kEntry);
+          FXL_DCHECK(value != nullptr);
+          result->AddOutlineField(outline_member->get(), std::move(value));
+        }
+        ++outline_member;
+      }
+    }
+    const fidl_codec::Colors& colors = dispatcher_->colors();
+    std::string line_header = result->thread()->process()->name() + ' ' + colors.red +
+                              std::to_string(result->thread()->process()->koid()) + colors.reset +
+                              ':' + colors.red + std::to_string(result->thread()->koid()) +
+                              colors.reset + ' ';
+    FidlcatPrinter printer(dispatcher_, os_, dispatcher_->colors(), line_header,
+                           dispatcher_->columns(), dispatcher_->with_process_info());
+    result->PrettyPrint(printer);
 
-  if (!dispatcher_->with_process_info()) {
-    line_header_ = "";
-  }
+    if (!dispatcher_->with_process_info()) {
+      line_header_ = "";
+    }
+  } else {
+    // This code will be deleted when we will be able to have the two step printing for all the
+    // syscalls.
+    //
+    // Displays the header and the inline input arguments.
+    os_ << line_header_ << decoder->syscall()->name() << '(';
+    const char* separator = "";
+    for (const auto& input : decoder->syscall()->inputs()) {
+      if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
+        separator = input->DisplayInline(dispatcher_, decoder, Stage::kEntry, separator, os_);
+      }
+    }
+    os_ << ")\n";
 
-  // Displays the outline input arguments.
-  for (const auto& input : decoder->syscall()->inputs()) {
-    if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
-      input->DisplayOutline(dispatcher_, decoder, Stage::kEntry, line_header_, /*tabs=*/1, os_);
+    if (!dispatcher_->with_process_info()) {
+      line_header_ = "";
+    }
+
+    // Displays the outline input arguments.
+    for (const auto& input : decoder->syscall()->inputs()) {
+      if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
+        input->DisplayOutline(dispatcher_, decoder, Stage::kEntry, line_header_, /*tabs=*/1, os_);
+      }
     }
   }
   dispatcher_->set_last_displayed_syscall(this);

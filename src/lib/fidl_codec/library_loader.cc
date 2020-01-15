@@ -182,10 +182,17 @@ StructMember::StructMember(Library* enclosing_library, const rapidjson::Value* j
   }
 }
 
+StructMember::StructMember(std::string_view name, std::unique_ptr<Type> type)
+    : name_(name), type_(std::move(type)) {}
+
 StructMember::~StructMember() = default;
 
 Struct::Struct(Library* enclosing_library, const rapidjson::Value* json_definition)
     : enclosing_library_(enclosing_library), json_definition_(json_definition) {}
+
+void Struct::AddMember(std::string_view name, std::unique_ptr<Type> type) {
+  members_.emplace_back(std::make_unique<StructMember>(name, std::move(type)));
+}
 
 void Struct::DecodeStructTypes() {
   if (json_definition_ == nullptr) {
