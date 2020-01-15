@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("elfload") {
+  sdk = "source"
+  sdk_headers = [ "elfload/elfload.h" ]
   sources = [ "elf-load.c" ]
   deps = [ "$zx/system/ulib/zircon" ]
 }

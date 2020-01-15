@@ -295,7 +295,6 @@ if (current_cpu != "") {
       "usb-virtual-bus:test",
       "utc-procargs",
       "util",
-      "vdso",
       "vdso-base",
       "vdso-variant",
       "virtio",
