@@ -927,6 +927,102 @@ TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
   PRESENT(flatland, false);
 }
 
+TEST_F(FlatlandTest, ReleaseLinkErrorCases) {
+  Flatland flatland = CreateFlatland();
+
+  // Zero is not a valid link_id.
+  flatland.ReleaseLink(0, [](ContentLinkToken token) { EXPECT_TRUE(false); });
+  PRESENT(flatland, false);
+
+  // Using a link_id that does not exist is not valid.
+  const uint64_t kLinkId1 = 1;
+  flatland.ReleaseLink(kLinkId1, [](ContentLinkToken token) { EXPECT_TRUE(false); });
+  PRESENT(flatland, false);
+}
+
+TEST_F(FlatlandTest, ReleaseLinkReturnsOriginalToken) {
+  Flatland flatland = CreateFlatland();
+
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  const zx_koid_t expected_koid = fsl::GetKoid(parent_token.value.get());
+
+  const uint64_t kLinkId1 = 1;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  LinkProperties properties;
+  flatland.CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
+                      content_link.NewRequest());
+
+  RunLoopUntilIdle();
+  PRESENT(flatland, true);
+  RunLoopUntilIdle();
+
+  ContentLinkToken content_token;
+  flatland.ReleaseLink(
+      kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
+
+  // Until Present() is called, the previous ContentLink is not unbound.
+  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_FALSE(content_token.value.is_valid());
+
+  RunLoopUntilIdle();
+  PRESENT(flatland, true);
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(content_link.is_bound());
+  EXPECT_TRUE(content_token.value.is_valid());
+  EXPECT_EQ(fsl::GetKoid(content_token.value.get()), expected_koid);
+}
+
+TEST_F(FlatlandTest, ReleaseLinkReturnsOrphanedTokenOnChildDeath) {
+  Flatland flatland = CreateFlatland();
+
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  const uint64_t kLinkId1 = 1;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  LinkProperties properties;
+  flatland.CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
+                      content_link.NewRequest());
+
+  RunLoopUntilIdle();
+  PRESENT(flatland, true);
+  RunLoopUntilIdle();
+
+  // Killing the peer token does not prevent the instance from returning a valid token.
+  child_token.value.reset();
+  RunLoopUntilIdle();
+
+  ContentLinkToken content_token;
+  flatland.ReleaseLink(
+      kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
+
+  RunLoopUntilIdle();
+  PRESENT(flatland, true);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(content_token.value.is_valid());
+
+  // But trying to link with that token will immediately fail because it is already orphaned.
+  const uint64_t kLinkId2 = 2;
+
+  fidl::InterfacePtr<ContentLink> content_link2;
+  flatland.CreateLink(kLinkId2, std::move(content_token), std::move(properties),
+                      content_link2.NewRequest());
+
+  RunLoopUntilIdle();
+  PRESENT(flatland, true);
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(content_link2.is_bound());
+}
+
 TEST_F(FlatlandTest, CreateLinkPresentedBeforeLinkToParent) {
   Flatland parent = CreateFlatland();
   Flatland child = CreateFlatland();
@@ -1112,6 +1208,56 @@ TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
   PRESENT(child2, true);
 
   EXPECT_TRUE(IsDescendantOf(parent.GetLinkOrigin(), child2.GetLinkOrigin()));
+
+  // The old instance is not re-linked.
+  EXPECT_FALSE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+}
+
+TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  const uint64_t kLinkId1 = 1;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<GraphLink> graph_link;
+  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  RunLoopUntilIdle();
+
+  const uint64_t kId1 = 1;
+  parent.CreateTransform(kId1);
+  parent.SetRootTransform(kId1);
+  parent.SetLinkOnTransform(kId1, kLinkId1);
+
+  PRESENT(parent, true);
+
+  EXPECT_TRUE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+
+  ContentLinkToken content_token;
+  parent.ReleaseLink(
+      kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
+
+  PRESENT(parent, true);
+
+  EXPECT_FALSE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+
+  // The same token can be used to create a different link to the same child with a different
+  // parent.
+  Flatland parent2 = CreateFlatland();
+
+  const uint64_t kId2 = 2;
+  parent2.CreateTransform(kId2);
+  parent2.SetRootTransform(kId2);
+
+  const uint64_t kLinkId2 = 2;
+  LinkProperties properties;
+  parent2.CreateLink(kLinkId2, std::move(content_token), std::move(properties),
+                    content_link.NewRequest());
+  parent2.SetLinkOnTransform(kId2, kLinkId2);
+
+  PRESENT(parent2, true);
+
+  EXPECT_TRUE(IsDescendantOf(parent2.GetLinkOrigin(), child.GetLinkOrigin()));
 
   // The old instance is not re-linked.
   EXPECT_FALSE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));

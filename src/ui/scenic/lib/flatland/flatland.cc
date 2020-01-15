@@ -366,6 +366,42 @@ void Flatland::ReleaseTransform(TransformId transform_id) {
   });
 }
 
+void Flatland::ReleaseLink(LinkId link_id,
+                           fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) {
+  pending_operations_.push_back([this, link_id, callback = std::move(callback)]() {
+    if (link_id == 0) {
+      FXL_LOG(ERROR) << "ReleaseLink called with link_id zero";
+      return false;
+    }
+
+    auto link_kv = child_links_.find(link_id);
+
+    if (link_kv == child_links_.end()) {
+      FXL_LOG(ERROR) << "ReleaseLink failed, link_id " << link_id << " not found";
+      return false;
+    }
+
+    ContentLinkToken return_token;
+
+    // If the link is still valid, return the original token. If not, create an orphaned
+    // zx::eventpair and return it since the ObjectLinker does not retain the orphaned token.
+    auto link_token = link_kv->second.importer.ReleaseToken();
+    if (link_token.has_value()) {
+      return_token.value = zx::eventpair(std::move(link_token.value()));
+    } else {
+      // |peer_token| immediately falls out of scope, orphaning |return_token|.
+      zx::eventpair peer_token;
+      zx::eventpair::create(0, &return_token.value, &peer_token);
+    }
+
+    child_links_.erase(link_id);
+
+    callback(std::move(return_token));
+
+    return true;
+  });
+}
+
 TransformHandle Flatland::GetLinkOrigin() const { return link_origin_; }
 
 }  // namespace flatland

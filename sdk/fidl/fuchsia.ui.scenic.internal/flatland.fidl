@@ -243,4 +243,14 @@ protocol Flatland {
     /// It is an error to call Graph functions on a released id (unless that id has been reused to
     /// construct a new object).
     ReleaseTransform(TransformId transform_id);
+
+    /// Releasing a Link removes the attached sub-Graph from the scene, even if the Link is still
+    /// connected to a Transform.
+    ///
+    /// Use SetLinkOnTransform(transform_id, 0) to clean up references to deleted Links.
+    ///
+    /// Despite having a return type, this function is still feed-forward Like LinkToParent() and
+    /// requires a call to Present() to be executed. The ContentLinkToken will be returned after the
+    /// presented operations have been executed.
+    ReleaseLink(LinkId id) -> (ContentLinkToken token);
 };

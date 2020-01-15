@@ -75,6 +75,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
                          fuchsia::ui::scenic::internal::LinkProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseTransform(TransformId transform_id) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
+  void ReleaseLink(LinkId link_id,
+                   fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) override;
 
   // For validating the transform hierarchy in tests only.
   TransformHandle GetLinkOrigin() const;
