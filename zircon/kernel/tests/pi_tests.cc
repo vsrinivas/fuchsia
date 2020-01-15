@@ -4,10 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <new>
+
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 #include <zircon/types.h>
 
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
@@ -15,9 +18,11 @@
 #include <kernel/sched.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
+#include <ktl/array.h>
 #include <ktl/atomic.h>
 #include <ktl/limits.h>
 #include <ktl/type_traits.h>
+#include <ktl/unique_ptr.h>
 
 #include "tests.h"
 
@@ -702,6 +707,7 @@ bool pi_test_chain() {
                 "TEST_HIGHEST_PRIORITY");
 
   BEGIN_TEST;
+  fbl::AllocChecker ac;
 
   enum class ReleaseOrder : uint64_t { ASCENDING = 0, DESCENDING };
 
@@ -710,7 +716,9 @@ bool pi_test_chain() {
   struct Link {
     LockedOwnedWaitQueue queue;
     bool active = false;
-  } links[CHAIN_LEN - 1];
+  };
+  auto links = ktl::make_unique<ktl::array<Link, CHAIN_LEN -1>>(&ac);
+  ASSERT_TRUE(ac.check());
 
   const DistroSpec PRIORITY_GENERATORS[] = {
       {DistroSpec::Type::ASCENDING, TEST_LOWEST_PRIORITY},
@@ -741,12 +749,12 @@ bool pi_test_chain() {
 
       // Generate the order in which we will release the links for this
       // pass
-      uint32_t release_ordering[countof(links)];
+      uint32_t release_ordering[CHAIN_LEN - 1];
       CreateDistribution(release_ordering, RELEASE_ORDERS[ro_ndx]);
 
       auto cleanup = fbl::MakeAutoCall([&]() {
         TestThread::ClearShutdownBarrier();
-        for (auto& l : links) {
+        for (auto& l : *links) {
           l.queue.ReleaseAllThreads();
         }
         for (auto& t : threads) {
@@ -783,7 +791,7 @@ bool pi_test_chain() {
           // priority of the maximum of the base priorities we have
           // traversed so far.
           ASSERT_LT(tndx, countof(prio_map));
-          if ((tndx >= countof(links)) || !links[tndx].active) {
+          if ((tndx >= links->size()) || !(*links)[tndx].active) {
             expected_prio = prio_map[tndx];
           } else {
             expected_prio = fbl::max(expected_prio, prio_map[tndx]);
@@ -819,7 +827,7 @@ bool pi_test_chain() {
       for (uint32_t tndx = 1; tndx < countof(threads); ++tndx) {
         PRINT_LOOP_ITER(tndx);
 
-        auto& link = links[tndx - 1];
+        auto& link = (*links)[tndx - 1];
         ASSERT_TRUE(threads[tndx].BlockOnOwnedQueue(&link.queue, &threads[tndx - 1]));
         link.active = true;
         ASSERT_TRUE(ValidatePriorities());
@@ -833,8 +841,8 @@ bool pi_test_chain() {
       for (auto link_ndx : release_ordering) {
         PRINT_LOOP_ITER(link_ndx);
 
-        ASSERT_LT(link_ndx, countof(links));
-        auto& link = links[link_ndx];
+        ASSERT_LT(link_ndx, links->size());
+        auto& link = (*links)[link_ndx];
         link.queue.ReleaseAllThreads();
         link.active = false;
         ASSERT_TRUE(ValidatePriorities());
@@ -857,6 +865,7 @@ bool pi_test_multi_waiter() {
   static_assert(WAITER_CNT < TEST_PRIORTY_COUNT,
                 "Multi waiter test must have fewer waiters than priority levels");
   BEGIN_TEST;
+  fbl::AllocChecker ac;
   AutoPrioBooster pboost;
 
   LockedOwnedWaitQueue blocking_queue;
@@ -865,7 +874,9 @@ bool pi_test_multi_waiter() {
     TestThread thread;
     bool is_waiting = false;
     int prio = 0;
-  } waiters[WAITER_CNT];
+  };
+  auto waiters = ktl::make_unique<ktl::array<Waiter, WAITER_CNT>>(&ac);
+  ASSERT_TRUE(ac.check());
 
   const int BLOCKING_THREAD_PRIO[] = {TEST_LOWEST_PRIORITY, TEST_DEFAULT_PRIORITY,
                                       TEST_HIGHEST_PRIORITY - 1};
@@ -890,7 +901,7 @@ bool pi_test_multi_waiter() {
         TestThread::ClearShutdownBarrier();
         blocking_queue.ReleaseAllThreads();
         blocking_thread.Reset();
-        for (auto& w : waiters) {
+        for (auto& w : *waiters) {
           w.thread.Reset();
         }
       });
@@ -899,15 +910,15 @@ bool pi_test_multi_waiter() {
       TestThread::ResetShutdownBarrier();
 
       // Generate the priority map for this pass.
-      int prio_map[countof(waiters)];
+      int prio_map[WAITER_CNT];
       CreateDistribution(prio_map, PRIORITY_GENERATORS[pgen_ndx]);
 
       // Create all of the threads.
       ASSERT_TRUE(blocking_thread.Create(bt_prio));
-      for (uint32_t waiter_ndx = 0; waiter_ndx < countof(waiters); ++waiter_ndx) {
+      for (uint32_t waiter_ndx = 0; waiter_ndx < waiters->size(); ++waiter_ndx) {
         PRINT_LOOP_ITER(waiter_ndx);
 
-        auto& w = waiters[waiter_ndx];
+        auto& w = (*waiters)[waiter_ndx];
         w.prio = prio_map[waiter_ndx];
         ASSERT_TRUE(w.thread.Create(w.prio));
 
@@ -926,10 +937,10 @@ bool pi_test_multi_waiter() {
           ASSERT_EQ(bt_prio, blocking_thread.effective_priority());
         }
 
-        for (uint32_t waiter_ndx = 0; waiter_ndx < countof(waiters); ++waiter_ndx) {
+        for (uint32_t waiter_ndx = 0; waiter_ndx < waiters->size(); ++waiter_ndx) {
           PRINT_LOOP_ITER(waiter_ndx);
 
-          auto& w = waiters[waiter_ndx];
+          auto& w = (*waiters)[waiter_ndx];
           if (&w.thread != current_owner) {
             ASSERT_EQ(prio_map[waiter_ndx], w.thread.effective_priority());
           }
@@ -941,7 +952,7 @@ bool pi_test_multi_waiter() {
         // the waiters, and its own base priority.
         ASSERT_NONNULL(current_owner);
         int expected_prio = current_owner->base_priority();
-        for (const auto& w : waiters) {
+        for (const auto& w : *waiters) {
           if (w.is_waiting && (expected_prio < w.prio)) {
             expected_prio = w.prio;
           }
@@ -959,10 +970,10 @@ bool pi_test_multi_waiter() {
       // declaring blocking_thread to be the owner as they go.  Verify that the
       // blocking thread has the priority of the highest priority thread who is
       // currently waiting.
-      for (uint32_t waiter_ndx = 0; waiter_ndx < countof(waiters); ++waiter_ndx) {
+      for (uint32_t waiter_ndx = 0; waiter_ndx < waiters->size(); ++waiter_ndx) {
         PRINT_LOOP_ITER(waiter_ndx);
 
-        auto& w = waiters[waiter_ndx];
+        auto& w = (*waiters)[waiter_ndx];
         ASSERT_TRUE(w.thread.BlockOnOwnedQueue(&blocking_queue, current_owner));
         w.is_waiting = true;
         ASSERT_TRUE(ValidatePriorities());
@@ -974,7 +985,7 @@ bool pi_test_multi_waiter() {
       // which was woken each time.  Note that we should not be assuming which
       // thread is going to be woken.  We will need to request that a thread be
       // woken, then figure out after the fact which one was.
-      for (uint32_t tndx = 0; tndx < countof(waiters); ++tndx) {
+      for (uint32_t tndx = 0; tndx < waiters->size(); ++tndx) {
         PRINT_LOOP_ITER(tndx);
 
         blocking_queue.ReleaseOneThread();
@@ -982,7 +993,7 @@ bool pi_test_multi_waiter() {
         TestThread* new_owner = nullptr;
         zx_time_t deadline = current_time() + ZX_SEC(10);
         while (current_time() < deadline) {
-          for (auto& w : waiters) {
+          for (auto& w : *waiters) {
             // If the waiter's is_waiting flag is set, but the thread has
             // reached the WAITING_FOR_SHUTDOWN state, then we know that
             // this was a thread which was just woken.
@@ -1005,7 +1016,7 @@ bool pi_test_multi_waiter() {
         // have been released but have not been recognized yet.
         ASSERT_NONNULL(new_owner);
         ASSERT_NE(new_owner, current_owner);
-        for (auto& w : waiters) {
+        for (auto& w : *waiters) {
           if (w.is_waiting) {
             ASSERT_EQ(TestThread::State::STARTED, w.thread.state());
           } else {
@@ -1034,6 +1045,7 @@ bool pi_test_multi_owned_queues() {
   static_assert(QUEUE_CNT < TEST_PRIORTY_COUNT,
                 "Multi waiter test must have fewer owned queues than priority levels");
   BEGIN_TEST;
+  fbl::AllocChecker ac;
   AutoPrioBooster pboost;
 
   TestThread blocking_thread;
@@ -1042,7 +1054,9 @@ bool pi_test_multi_owned_queues() {
     LockedOwnedWaitQueue queue;
     bool is_waiting = false;
     int prio = 0;
-  } queues[QUEUE_CNT];
+  };
+  auto queues = ktl::make_unique<ktl::array<Waiter, QUEUE_CNT>>(&ac);
+  ASSERT_TRUE(ac.check());
 
   const int BLOCKING_THREAD_PRIO[] = {TEST_LOWEST_PRIORITY, TEST_DEFAULT_PRIORITY,
                                       TEST_HIGHEST_PRIORITY - 1};
@@ -1066,10 +1080,10 @@ bool pi_test_multi_owned_queues() {
       auto cleanup = fbl::MakeAutoCall([&]() {
         TestThread::ClearShutdownBarrier();
         blocking_thread.Reset();
-        for (auto& q : queues) {
+        for (auto& q : *queues) {
           q.queue.ReleaseAllThreads();
         }
-        for (auto& q : queues) {
+        for (auto& q : *queues) {
           q.thread.Reset();
         }
       });
@@ -1078,15 +1092,15 @@ bool pi_test_multi_owned_queues() {
       TestThread::ResetShutdownBarrier();
 
       // Generate the priority map for this pass.
-      int prio_map[countof(queues)];
+      int prio_map[QUEUE_CNT];
       CreateDistribution(prio_map, PRIORITY_GENERATORS[pgen_ndx]);
 
       // Create all of the threads.
       ASSERT_TRUE(blocking_thread.Create(bt_prio));
-      for (uint32_t queue_ndx = 0; queue_ndx < countof(queues); ++queue_ndx) {
+      for (uint32_t queue_ndx = 0; queue_ndx < queues->size(); ++queue_ndx) {
         PRINT_LOOP_ITER(queue_ndx);
 
-        auto& q = queues[queue_ndx];
+        auto& q = (*queues)[queue_ndx];
         q.prio = prio_map[queue_ndx];
         ASSERT_TRUE(q.thread.Create(q.prio));
 
@@ -1103,16 +1117,16 @@ bool pi_test_multi_owned_queues() {
         // across all of the threads who are still applying pressure to
         // the blocking thread.
         int max_pressure = -1;
-        for (const auto& q : queues) {
+        for (const auto& q : *queues) {
           ASSERT_EQ(q.prio, q.thread.effective_priority());
           if (q.is_waiting) {
             max_pressure = fbl::max(max_pressure, q.prio);
           }
         }
 
-        for (uint32_t queue_ndx = 0; queue_ndx < countof(queues); ++queue_ndx) {
+        for (uint32_t queue_ndx = 0; queue_ndx < queues->size(); ++queue_ndx) {
           PRINT_LOOP_ITER(queue_ndx);
-          const auto& q = queues[queue_ndx];
+          const auto& q = (*queues)[queue_ndx];
 
           ASSERT_EQ(q.prio, q.thread.effective_priority());
           if (q.is_waiting) {
@@ -1137,10 +1151,10 @@ bool pi_test_multi_owned_queues() {
       // Start each of the threads and have them block on their associated
       // queue, declaring blocking_thread to be the owner of their queue
       // as they go.  Validate priorities at each step.
-      for (uint32_t queue_ndx = 0; queue_ndx < countof(queues); ++queue_ndx) {
+      for (uint32_t queue_ndx = 0; queue_ndx < queues->size(); ++queue_ndx) {
         PRINT_LOOP_ITER(queue_ndx);
 
-        auto& q = queues[queue_ndx];
+        auto& q = (*queues)[queue_ndx];
         ASSERT_TRUE(q.thread.BlockOnOwnedQueue(&q.queue, &blocking_thread));
         q.is_waiting = true;
         ASSERT_TRUE(ValidatePriorities());
@@ -1150,10 +1164,10 @@ bool pi_test_multi_owned_queues() {
 
       // Now wake the threads, one at a time, verifying priorities as we
       // go.
-      for (uint32_t queue_ndx = 0; queue_ndx < countof(queues); ++queue_ndx) {
+      for (uint32_t queue_ndx = 0; queue_ndx < queues->size(); ++queue_ndx) {
         PRINT_LOOP_ITER(queue_ndx);
 
-        auto& q = queues[queue_ndx];
+        auto& q = (*queues)[queue_ndx];
         q.queue.ReleaseOneThread();
         q.is_waiting = false;
         ASSERT_TRUE(ValidatePriorities());
@@ -1176,6 +1190,7 @@ bool pi_test_cycle() {
                 "Cannot create a cycle which would result in a thread being created at "
                 "TEST_HIGHEST_PRIORITY");
   BEGIN_TEST;
+  fbl::AllocChecker ac;
   AutoPrioBooster pboost;
 
   // Deliberately create a cycle and make sure that we don't hang or otherwise
@@ -1183,27 +1198,29 @@ bool pi_test_cycle() {
   struct Link {
     TestThread thread;
     LockedOwnedWaitQueue link;
-  } nodes[CYCLE_LEN];
+  };
+  auto nodes = ktl::make_unique<ktl::array<Link, CYCLE_LEN>>(&ac);
+  ASSERT_TRUE(ac.check());
 
   // At the end of the tests, success or failure, be sure to clean up.
   auto cleanup = fbl::MakeAutoCall([&]() {
     TestThread::ClearShutdownBarrier();
-    for (auto& n : nodes) {
+    for (auto& n : *nodes) {
       n.link.ReleaseAllThreads();
     }
-    for (auto& n : nodes) {
+    for (auto& n : *nodes) {
       n.thread.Reset();
     }
   });
 
   // Create the priorities we will assign to each thread.
-  int prio_map[countof(nodes)];
+  int prio_map[CYCLE_LEN];
   CreateDistribution(prio_map, {DistroSpec::Type::ASCENDING, TEST_LOWEST_PRIORITY});
 
   // Create each thread
-  for (uint32_t tndx = 0; tndx < countof(nodes); ++tndx) {
+  for (uint32_t tndx = 0; tndx < nodes->size(); ++tndx) {
     PRINT_LOOP_ITER(tndx);
-    ASSERT_TRUE(nodes[tndx].thread.Create(prio_map[tndx]));
+    ASSERT_TRUE((*nodes)[tndx].thread.Create(prio_map[tndx]));
     print_tndx.cancel();
   }
 
@@ -1213,18 +1230,18 @@ bool pi_test_cycle() {
   // we should not see any PI ripple until the final link has been made.  At
   // that point, all of the threads in the test should have the priority of
   // the final thread.
-  for (uint32_t tndx = 0; tndx < countof(nodes); ++tndx) {
+  for (uint32_t tndx = 0; tndx < nodes->size(); ++tndx) {
     PRINT_LOOP_ITER(tndx);
 
-    auto owner_thread = &nodes[(tndx + 1) % countof(nodes)].thread;
-    auto link_ptr = &nodes[tndx].link;
-    ASSERT_TRUE(nodes[tndx].thread.BlockOnOwnedQueue(link_ptr, owner_thread));
+    auto owner_thread = &(*nodes)[(tndx + 1) % nodes->size()].thread;
+    auto link_ptr = &(*nodes)[tndx].link;
+    ASSERT_TRUE((*nodes)[tndx].thread.BlockOnOwnedQueue(link_ptr, owner_thread));
 
     for (uint32_t validation_ndx = 0; validation_ndx <= tndx; ++validation_ndx) {
       PRINT_LOOP_ITER(validation_ndx);
 
-      int expected_prio = prio_map[(tndx == (countof(nodes) - 1)) ? tndx : validation_ndx];
-      ASSERT_EQ(expected_prio, nodes[validation_ndx].thread.effective_priority());
+      int expected_prio = prio_map[(tndx == (nodes->size() - 1)) ? tndx : validation_ndx];
+      ASSERT_EQ(expected_prio, (*nodes)[validation_ndx].thread.effective_priority());
 
       print_validation_ndx.cancel();
     }
