@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("fake-i2c") {
+  sdk = "source"
+  sdk_headers = [ "lib/fake-i2c/fake-i2c.h" ]
   testonly = true
   sources = []
 }

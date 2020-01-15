@@ -3,5 +3,11 @@
 # found in the LICENSE file.
 
 zx_library("hi3660") {
+  sdk = "source"
+  sdk_headers = [
+    "soc/hi3660/hi3660-regs.h",
+    "soc/hi3660/hi3660-hw.h",
+    "soc/hi3660/hi3660-pinmux.h",
+  ]
   sources = []
 }

@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("fake-hidbus-ifc") {
+  sdk = "source"
+  sdk_headers = [ "lib/fake-hidbus-ifc/fake-hidbus-ifc.h" ]
   testonly = true
   sources = []
 }

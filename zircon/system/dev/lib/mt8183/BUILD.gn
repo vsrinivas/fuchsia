@@ -3,5 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("mt8183") {
+  sdk = "source"
+  sdk_headers = [ "soc/mt8183/mt8183-hw.h" ]
   sources = [ "include/soc/mt8183/mt8183-hw.h" ]
 }

@@ -3,9 +3,10 @@
 # found in the LICENSE file.
 
 zx_library("scsi") {
+  sdk = "source"
   sdk_headers = [
-    "scsi/scsilib.h",
-    "scsi/scsilib_controller.h",
+    "lib/scsi/scsilib.h",
+    "lib/scsi/scsilib_controller.h",
   ]
   sources = [ "scsilib.cc" ]
   deps = [

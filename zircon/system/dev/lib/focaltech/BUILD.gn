@@ -3,5 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("focaltech") {
+  sdk = "source"
+  sdk_headers = [ "lib/focaltech/focaltech.h" ]
   sources = []
 }

@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("mock-i2c") {
+  sdk = "source"
+  sdk_headers = [ "lib/mock-i2c/mock-i2c.h" ]
   testonly = true
   sources = []
 }

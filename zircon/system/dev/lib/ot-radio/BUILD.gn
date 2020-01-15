@@ -3,5 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("ot-radio") {
+  sdk = "source"
+  sdk_headers = [ "lib/ot-radio/ot-radio.h" ]
   sources = []
 }
