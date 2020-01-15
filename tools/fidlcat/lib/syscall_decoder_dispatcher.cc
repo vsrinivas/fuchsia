@@ -124,6 +124,28 @@ void DisplayString(const fidl_codec::Colors& colors, const char* string, size_t 
 
 std::unique_ptr<fidl_codec::Type> AccessBase::ComputeType() const {
   switch (GetSyscallType()) {
+    case SyscallType::kBool:
+      return std::make_unique<fidl_codec::BoolType>();
+    case SyscallType::kInt32:
+      return std::make_unique<fidl_codec::Int32Type>();
+    case SyscallType::kInt64:
+      return std::make_unique<fidl_codec::Int64Type>();
+    case SyscallType::kUint8:
+      return std::make_unique<fidl_codec::Uint8Type>();
+    case SyscallType::kUint8Hexa:
+      return std::make_unique<fidl_codec::Uint8Type>(/*hexadecimal_display=*/true);
+    case SyscallType::kUint16:
+      return std::make_unique<fidl_codec::Uint16Type>();
+    case SyscallType::kUint16Hexa:
+      return std::make_unique<fidl_codec::Uint16Type>(/*hexadecimal_display=*/true);
+    case SyscallType::kUint32:
+      return std::make_unique<fidl_codec::Uint32Type>();
+    case SyscallType::kUint32Hexa:
+      return std::make_unique<fidl_codec::Uint32Type>(/*hexadecimal_display=*/true);
+    case SyscallType::kUint64:
+      return std::make_unique<fidl_codec::Uint64Type>();
+    case SyscallType::kUint64Hexa:
+      return std::make_unique<fidl_codec::Uint64Type>(/*hexadecimal_display=*/true);
     case SyscallType::kHandle:
       return std::make_unique<fidl_codec::HandleType>();
     default:

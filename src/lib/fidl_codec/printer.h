@@ -76,6 +76,13 @@ class PrettyPrinter {
     return *this;
   }
 
+  PrettyPrinter& operator<<(uint64_t data) {
+    std::streampos start = os_.tellp();
+    os_ << data;
+    remaining_size_ -= os_.tellp() - start;
+    return *this;
+  }
+
   PrettyPrinter& operator<<(std::string_view data);
 
   // Used by the color functions.
@@ -84,6 +91,12 @@ class PrettyPrinter {
       PrintHeader(' ');
     }
     return pf(*this);
+  }
+
+  // Used by std::hex, std::dec.
+  PrettyPrinter& operator<<(std::ios_base& (*pf)(std::ios_base&)) {
+    pf(os_);
+    return *this;
   }
 
  private:

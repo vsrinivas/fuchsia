@@ -69,7 +69,7 @@ IOPORTS_RELEASE_DISPLAY_TEST(ZxIoportsRelease, ZX_OK,
                              "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                              "zx_ioports_release("
                              "resource:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
-                             "io_addr:\x1B[32muint16\x1B[0m: \x1B[34m4656\x1B[0m, "
+                             "io_addr:\x1B[32muint16\x1B[0m: \x1B[34m1230\x1B[0m, "
                              "len:\x1B[32muint32\x1B[0m: \x1B[34m16\x1B[0m)\n"
                              "  -> \x1B[32mZX_OK\x1B[0m\n");
 

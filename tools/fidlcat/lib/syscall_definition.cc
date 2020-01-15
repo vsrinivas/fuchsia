@@ -4792,7 +4792,7 @@ void SyscallDecoderDispatcher::Populate() {
     Syscall* zx_ioports_release = Add("zx_ioports_release", SyscallReturnType::kStatus);
     // Arguments
     auto resource = zx_ioports_release->Argument<zx_handle_t>(SyscallType::kHandle);
-    auto io_addr = zx_ioports_release->Argument<uint16_t>(SyscallType::kUint16);
+    auto io_addr = zx_ioports_release->Argument<uint16_t>(SyscallType::kUint16Hexa);
     auto len = zx_ioports_release->Argument<uint32_t>(SyscallType::kUint32);
     // Inputs
     zx_ioports_release->Input<zx_handle_t>("resource",

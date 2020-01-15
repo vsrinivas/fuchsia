@@ -131,6 +131,8 @@ class IntegralType : public Type {
                 "IntegralType can only be used for integers");
 
  public:
+  explicit IntegralType(bool hexadecimal_display) : hexadecimal_display_(hexadecimal_display) {}
+
   size_t InlineSize() const override { return sizeof(T); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
@@ -156,63 +158,85 @@ class IntegralType : public Type {
       if (negative) {
         printer << '-';
       }
-      printer << std::to_string(absolute) << ResetColor;
+      if (hexadecimal_display_) {
+        printer << std::hex << absolute << std::dec << ResetColor;
+      } else {
+        printer << absolute << ResetColor;
+      }
     }
   }
+
+ private:
+  bool hexadecimal_display_;
 };
 
 class Int8Type : public IntegralType<int8_t> {
  public:
-  Int8Type() = default;
+  explicit Int8Type(bool hexadecimal_display = false) : IntegralType<int8_t>(hexadecimal_display) {}
+
   std::string Name() const override;
   void Visit(TypeVisitor* visitor) const override;
 };
 
 class Int16Type : public IntegralType<int16_t> {
  public:
-  Int16Type() = default;
+  explicit Int16Type(bool hexadecimal_display = false)
+      : IntegralType<int16_t>(hexadecimal_display) {}
+
   std::string Name() const override;
   void Visit(TypeVisitor* visitor) const override;
 };
 
 class Int32Type : public IntegralType<int32_t> {
  public:
-  Int32Type() = default;
+  explicit Int32Type(bool hexadecimal_display = false)
+      : IntegralType<int32_t>(hexadecimal_display) {}
+
   std::string Name() const override;
   void Visit(TypeVisitor* visitor) const override;
 };
 
 class Int64Type : public IntegralType<int64_t> {
  public:
-  Int64Type() = default;
+  explicit Int64Type(bool hexadecimal_display = false)
+      : IntegralType<int64_t>(hexadecimal_display) {}
+
   std::string Name() const override;
   void Visit(TypeVisitor* visitor) const override;
 };
 
 class Uint8Type : public IntegralType<uint8_t> {
  public:
-  Uint8Type() = default;
+  explicit Uint8Type(bool hexadecimal_display = false)
+      : IntegralType<uint8_t>(hexadecimal_display) {}
+
   std::string Name() const override;
   void Visit(TypeVisitor* visitor) const override;
 };
 
 class Uint16Type : public IntegralType<uint16_t> {
  public:
-  Uint16Type() = default;
+  explicit Uint16Type(bool hexadecimal_display = false)
+      : IntegralType<uint16_t>(hexadecimal_display) {}
+
   std::string Name() const override;
   void Visit(TypeVisitor* visitor) const override;
 };
 
 class Uint32Type : public IntegralType<uint32_t> {
  public:
-  Uint32Type() = default;
+  explicit Uint32Type(bool hexadecimal_display = false)
+      : IntegralType<uint32_t>(hexadecimal_display) {}
+
   std::string Name() const override;
   void Visit(TypeVisitor* visitor) const override;
 };
 
 class Uint64Type : public IntegralType<uint64_t> {
  public:
-  Uint64Type() = default;
+  explicit Uint64Type(bool hexadecimal_display = false)
+      : IntegralType<uint64_t>(hexadecimal_display) {}
+
   std::string Name() const override;
   void Visit(TypeVisitor* visitor) const override;
 };

@@ -252,7 +252,7 @@ void VectorValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) cons
       {
         Indent indent(printer);
         for (const auto& value : values_) {
-          printer << value->GetUint8Value();
+          printer << static_cast<char>(value->GetUint8Value());
         }
       }
       printer << '\n';
@@ -260,7 +260,7 @@ void VectorValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) cons
     } else {
       printer << '"';
       for (const auto& value : values_) {
-        printer << value->GetUint8Value();
+        printer << static_cast<char>(value->GetUint8Value());
       }
       printer << '"';
     }

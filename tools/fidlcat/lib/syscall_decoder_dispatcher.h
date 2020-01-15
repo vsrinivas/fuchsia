@@ -1714,7 +1714,43 @@ inline std::unique_ptr<fidl_codec::Value> GenerateValue(ValueType /*value*/) {
 }
 
 template <>
+inline std::unique_ptr<fidl_codec::Value> GenerateValue(bool value) {
+  return std::make_unique<fidl_codec::BoolValue>(value);
+}
+
+template <>
+inline std::unique_ptr<fidl_codec::Value> GenerateValue(int32_t value) {
+  if (value < 0) {
+    return std::make_unique<fidl_codec::IntegerValue>(-(static_cast<int64_t>(value)), true);
+  }
+  return std::make_unique<fidl_codec::IntegerValue>(value, false);
+}
+
+template <>
+inline std::unique_ptr<fidl_codec::Value> GenerateValue(int64_t value) {
+  if (value < 0) {
+    return std::make_unique<fidl_codec::IntegerValue>(-value, true);
+  }
+  return std::make_unique<fidl_codec::IntegerValue>(value, false);
+}
+
+template <>
+inline std::unique_ptr<fidl_codec::Value> GenerateValue(uint8_t value) {
+  return std::make_unique<fidl_codec::IntegerValue>(value, false);
+}
+
+template <>
+inline std::unique_ptr<fidl_codec::Value> GenerateValue(uint16_t value) {
+  return std::make_unique<fidl_codec::IntegerValue>(value, false);
+}
+
+template <>
 inline std::unique_ptr<fidl_codec::Value> GenerateValue(uint32_t value) {
+  return std::make_unique<fidl_codec::IntegerValue>(value, false);
+}
+
+template <>
+inline std::unique_ptr<fidl_codec::Value> GenerateValue(uint64_t value) {
   return std::make_unique<fidl_codec::IntegerValue>(value, false);
 }
 
