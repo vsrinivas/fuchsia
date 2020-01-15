@@ -4,6 +4,12 @@
 toc:
 - title: "Overview"
   path: /docs/development/inspect
+- title: "Inspect codelab"
+  section:
+  - title: "Overview"
+    path: /docs/development/inspect/codelab/README.md
+  - title: "C++"
+    path: /docs/development/inspect/codelab/cpp.md
 - title: "Quickstart"
   path: /docs/development/inspect/quickstart.md
 - title: "Health check"
