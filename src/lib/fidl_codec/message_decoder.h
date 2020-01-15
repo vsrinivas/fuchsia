@@ -127,8 +127,6 @@ class MessageDecoder {
 
   uint64_t next_object_offset() const { return next_object_offset_; }
 
-  bool unions_are_xunions() const { return unions_are_xunions_; }
-
   bool HasError() const { return error_count_ > 0; }
 
   // Add an error.
@@ -223,9 +221,6 @@ class MessageDecoder {
 
   // Location of the next out of line object.
   uint64_t next_object_offset_ = 0;
-
-  // True if we must decode unions as xunions.
-  const bool unions_are_xunions_;
 
   // Errors found during the message decoding.
   int error_count_ = 0;

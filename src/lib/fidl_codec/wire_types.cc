@@ -107,24 +107,6 @@ class ToStringVisitor : public TypeVisitor {
         });
   }
 
-  void VisitXUnionType(const XUnionType* type) override {
-    VisitTypeWithMembers<std::unique_ptr<UnionMember>>(
-        type, "xunion", type->union_definition().members(),
-        [this](const std::unique_ptr<UnionMember>& member) {
-          *result_ += indent_ + "  " + std::to_string(member->ordinal()) + ": ";
-          if (member->reserved()) {
-            *result_ += "reserved";
-            return true;
-          }
-
-          ToStringVisitor visitor(indent_ + "  ", NextExpandLevels(), result_);
-          member->type()->Visit(&visitor);
-
-          *result_ += " " + std::string(member->name());
-          return true;
-        });
-  }
-
   void VisitStructType(const StructType* type) override {
     VisitTypeWithMembers<std::unique_ptr<StructMember>>(
         type, "struct", type->struct_definition().members(),
@@ -190,7 +172,7 @@ void Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
 
 std::string RawType::Name() const { return "unknown"; }
 
-size_t RawType::InlineSize(bool unions_are_xunions) const { return inline_size_; }
+size_t RawType::InlineSize() const { return inline_size_; }
 
 bool RawType::Nullable() const { return true; }
 
@@ -204,7 +186,7 @@ std::unique_ptr<Value> RawType::Decode(MessageDecoder* decoder, uint64_t offset)
 
 void RawType::Visit(TypeVisitor* visitor) const { visitor->VisitRawType(this); }
 
-size_t BoolType::InlineSize(bool unions_are_xunions) const { return sizeof(uint8_t); }
+size_t BoolType::InlineSize() const { return sizeof(uint8_t); }
 
 std::unique_ptr<Value> BoolType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   auto byte = decoder->GetAddress(offset, sizeof(uint8_t));
@@ -258,9 +240,7 @@ void Float64Type::Visit(TypeVisitor* visitor) const { visitor->VisitFloat64Type(
 
 std::string StringType::Name() const { return "string"; }
 
-size_t StringType::InlineSize(bool unions_are_xunions) const {
-  return sizeof(uint64_t) + sizeof(uint64_t);
-}
+size_t StringType::InlineSize() const { return sizeof(uint64_t) + sizeof(uint64_t); }
 
 bool StringType::Nullable() const { return true; }
 
@@ -290,7 +270,7 @@ void StringType::Visit(TypeVisitor* visitor) const { visitor->VisitStringType(th
 
 std::string HandleType::Name() const { return "handle"; }
 
-size_t HandleType::InlineSize(bool unions_are_xunions) const { return sizeof(zx_handle_t); }
+size_t HandleType::InlineSize() const { return sizeof(zx_handle_t); }
 
 std::unique_ptr<Value> HandleType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   zx_handle_t handle = FIDL_HANDLE_ABSENT;
@@ -316,7 +296,7 @@ void HandleType::Visit(TypeVisitor* visitor) const { visitor->VisitHandleType(th
 
 std::string EnumType::Name() const { return enum_definition_.name(); }
 
-size_t EnumType::InlineSize(bool unions_are_xunions) const { return enum_definition_.size(); }
+size_t EnumType::InlineSize() const { return enum_definition_.size(); }
 
 std::unique_ptr<Value> EnumType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   return enum_definition_.type()->Decode(decoder, offset);
@@ -336,7 +316,7 @@ void EnumType::Visit(TypeVisitor* visitor) const { visitor->VisitEnumType(this);
 
 std::string BitsType::Name() const { return bits_definition_.name(); }
 
-size_t BitsType::InlineSize(bool unions_are_xunions) const { return bits_definition_.size(); }
+size_t BitsType::InlineSize() const { return bits_definition_.size(); }
 
 std::unique_ptr<Value> BitsType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   return bits_definition_.type()->Decode(decoder, offset);
@@ -356,7 +336,7 @@ void BitsType::Visit(TypeVisitor* visitor) const { visitor->VisitBitsType(this);
 
 std::string UnionType::Name() const { return union_definition_.name(); }
 
-size_t UnionType::InlineSize(bool unions_are_xunions) const {
+size_t UnionType::InlineSize() const {
   // In v1, unions are encoded as xunion. The inline size is the size of an envelope which
   // is always 24 bytes.
   return 24;
@@ -364,30 +344,7 @@ size_t UnionType::InlineSize(bool unions_are_xunions) const {
 
 bool UnionType::Nullable() const { return nullable_; }
 
-std::unique_ptr<Value> UnionType::DecodeUnion(MessageDecoder* decoder, uint64_t offset) const {
-  if (nullable_) {
-    bool is_null;
-    uint64_t nullable_offset;
-    if (!decoder->DecodeNullableHeader(offset, union_definition_.size(), &is_null,
-                                       &nullable_offset)) {
-      return std::make_unique<InvalidValue>();
-    }
-    if (is_null) {
-      return std::make_unique<NullValue>();
-    }
-    offset = nullable_offset;
-  }
-  uint32_t tag = 0;
-  decoder->GetValueAt(offset, &tag);
-  const UnionMember* member = union_definition_.MemberWithTag(tag);
-  if (member == nullptr) {
-    return std::make_unique<InvalidValue>();
-  }
-  return std::make_unique<UnionValue>(*member,
-                                      member->type()->Decode(decoder, offset + member->offset()));
-}
-
-std::unique_ptr<Value> UnionType::DecodeXUnion(MessageDecoder* decoder, uint64_t offset) const {
+std::unique_ptr<Value> UnionType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   Ordinal32 ordinal = 0;
   if (decoder->GetValueAt(offset, &ordinal)) {
     if ((ordinal == 0) && !nullable_) {
@@ -413,24 +370,11 @@ std::unique_ptr<Value> UnionType::DecodeXUnion(MessageDecoder* decoder, uint64_t
   return std::make_unique<UnionValue>(*member, decoder->DecodeEnvelope(offset, member->type()));
 }
 
-std::unique_ptr<Value> UnionType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return decoder->unions_are_xunions() ? DecodeXUnion(decoder, offset)
-                                       : DecodeUnion(decoder, offset);
-}
-
 void UnionType::Visit(TypeVisitor* visitor) const { visitor->VisitUnionType(this); }
-
-bool XUnionType::IsXUnion() const { return true; }
-
-std::unique_ptr<Value> XUnionType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return DecodeXUnion(decoder, offset);
-}
-
-void XUnionType::Visit(TypeVisitor* visitor) const { visitor->VisitXUnionType(this); }
 
 std::string StructType::Name() const { return struct_definition_.name(); }
 
-size_t StructType::InlineSize(bool unions_are_xunions) const {
+size_t StructType::InlineSize() const {
   return nullable_ ? sizeof(uintptr_t) : struct_definition_.size();
 }
 
@@ -466,15 +410,13 @@ std::string ArrayType::Name() const {
   return std::string("array<") + component_type_->Name() + ">";
 }
 
-size_t ArrayType::InlineSize(bool unions_are_xunions) const {
-  return component_type_->InlineSize(unions_are_xunions) * count_;
-}
+size_t ArrayType::InlineSize() const { return component_type_->InlineSize() * count_; }
 
 std::unique_ptr<Value> ArrayType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   auto result = std::make_unique<VectorValue>();
   for (uint64_t i = 0; i < count_; ++i) {
     result->AddValue(component_type_->Decode(decoder, offset));
-    offset += component_type_->InlineSize(decoder->unions_are_xunions());
+    offset += component_type_->InlineSize();
   }
   return result;
 }
@@ -485,9 +427,7 @@ std::string VectorType::Name() const {
   return std::string("vector<") + component_type_->Name() + ">";
 }
 
-size_t VectorType::InlineSize(bool unions_are_xunions) const {
-  return sizeof(uint64_t) + sizeof(uint64_t);
-}
+size_t VectorType::InlineSize() const { return sizeof(uint64_t) + sizeof(uint64_t); }
 
 bool VectorType::Nullable() const { return true; }
 
@@ -497,16 +437,15 @@ std::unique_ptr<Value> VectorType::Decode(MessageDecoder* decoder, uint64_t offs
   offset += sizeof(element_count);
   bool is_null;
   uint64_t nullable_offset;
-  if (!decoder->DecodeNullableHeader(
-          offset, element_count * component_type_->InlineSize(decoder->unions_are_xunions()),
-          &is_null, &nullable_offset)) {
+  if (!decoder->DecodeNullableHeader(offset, element_count * component_type_->InlineSize(),
+                                     &is_null, &nullable_offset)) {
     return std::make_unique<InvalidValue>();
   }
   if (is_null) {
     return std::make_unique<NullValue>();
   }
 
-  size_t component_size = component_type_->InlineSize(decoder->unions_are_xunions());
+  size_t component_size = component_type_->InlineSize();
   auto result = std::make_unique<VectorValue>();
   for (uint64_t i = 0;
        (i < element_count) && (nullable_offset + component_size <= decoder->num_bytes()); ++i) {
@@ -520,7 +459,7 @@ void VectorType::Visit(TypeVisitor* visitor) const { visitor->VisitVectorType(th
 
 std::string TableType::Name() const { return table_definition_.name(); }
 
-size_t TableType::InlineSize(bool unions_are_xunions) const { return table_definition_.size(); }
+size_t TableType::InlineSize() const { return table_definition_.size(); }
 
 std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   uint64_t member_count = 0;

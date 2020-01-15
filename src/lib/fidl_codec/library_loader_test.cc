@@ -181,7 +181,7 @@ TEST(LibraryLoader, InspectTypes) {
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
       "struct NullableXUnion {\n"
-      "  xunion test.fidlcodec.examples/IntStructXunion {\n"
+      "  union test.fidlcodec.examples/IntStructXunion {\n"
       "    857525967: int32 variant_i;\n"
       "    1873891383: struct test.fidlcodec.examples/TwoStringStruct {\n"
       "      string value1;\n"
@@ -193,7 +193,7 @@ TEST(LibraryLoader, InspectTypes) {
       found_method->request()->ToString(true));
   EXPECT_EQ(
       "struct NullableXUnion {\n"
-      "  xunion test.fidlcodec.examples/IntStructXunion isu;\n"
+      "  union test.fidlcodec.examples/IntStructXunion isu;\n"
       "  int32 i;\n"
       "}",
       found_method->request()->ToString(false));

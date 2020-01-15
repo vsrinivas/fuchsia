@@ -242,8 +242,6 @@ MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
       start_byte_pos_(bytes),
       end_handle_pos_(handles + num_handles),
       handle_pos_(handles),
-      unions_are_xunions_(fidl_should_decode_union_from_xunion(
-          reinterpret_cast<const fidl_message_header_t*>(bytes))),
       error_stream_(error_stream) {}
 
 MessageDecoder::MessageDecoder(MessageDecoder* container, uint64_t offset, uint64_t num_bytes,
@@ -253,7 +251,6 @@ MessageDecoder::MessageDecoder(MessageDecoder* container, uint64_t offset, uint6
       start_byte_pos_(container->start_byte_pos_ + offset),
       end_handle_pos_(container->handle_pos_ + num_handles),
       handle_pos_(container->handle_pos_),
-      unions_are_xunions_(container->unions_are_xunions_),
       error_stream_(container->error_stream_) {
   container->handle_pos_ += num_handles;
 }
@@ -280,7 +277,7 @@ std::unique_ptr<Value> MessageDecoder::DecodeValue(const Type* type) {
     return nullptr;
   }
   // Set the offset for the next object (just after this one).
-  SkipObject(type->InlineSize(unions_are_xunions_));
+  SkipObject(type->InlineSize());
   // Decode the envelope.
   std::unique_ptr<Value> result = type->Decode(this, 0);
   // It's an error if we didn't use all the bytes in the buffer.

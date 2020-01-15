@@ -30,7 +30,7 @@ class Encoder : public Visitor {
   }
 
  private:
-  Encoder(bool unions_are_xunions) : unions_are_xunions_(unions_are_xunions) {}
+  Encoder() = default;
 
   // Reserve space in the buffer for one object.
   size_t AllocateObject(size_t object_size);
@@ -41,13 +41,6 @@ class Encoder : public Visitor {
 
   // Encode a value in an envelope.
   void EncodeEnvelope(const Value* value, const Type* for_type);
-
-  // Visit a union which is known to be non-null and which we want encoded immediately at the
-  // current position.
-  void VisitUnionBody(const UnionValue* node);
-
-  // Visit any union and encode it as an XUnion.
-  void VisitUnionAsXUnion(const UnionValue* node);
 
   // Visit an object which is known to be non-null and which we want encoded immediately at the
   // current position. If existing_size is specified, it indicates some number of bytes which have
@@ -69,7 +62,6 @@ class Encoder : public Visitor {
   void VisitVectorValue(const VectorValue* node, const Type* for_type) override;
   void VisitTableValue(const TableValue* node, const Type* for_type) override;
 
-  const bool unions_are_xunions_;
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_info_t> handles_;
   // Offset we are currently using to write into the buffer.

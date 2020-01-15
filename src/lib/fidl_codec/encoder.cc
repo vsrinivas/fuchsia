@@ -31,11 +31,6 @@ class NullVisitor : public TypeVisitor {
   void VisitUnionType(const UnionType* type) override {
     FXL_DCHECK(type->Nullable());
     encoder_->WriteValue<uint64_t>(0);
-  }
-
-  void VisitXUnionType(const XUnionType* type) override {
-    FXL_DCHECK(type->Nullable());
-    encoder_->WriteValue<uint64_t>(0);
     encoder_->WriteValue<uint32_t>(0);
     encoder_->WriteValue<uint32_t>(0);
     encoder_->WriteValue<uint64_t>(0);
@@ -57,7 +52,7 @@ class NullVisitor : public TypeVisitor {
 
 Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, uint8_t flags[3],
                                        uint8_t magic, const StructValue& object) {
-  Encoder encoder(flags[0] & FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG);
+  Encoder encoder;
 
   size_t object_size = object.struct_definition().size();
   encoder.AllocateObject(object_size);
@@ -90,8 +85,8 @@ void Encoder::WriteData(const uint8_t* data, size_t size) {
 }
 
 void Encoder::EncodeEnvelope(const Value* value, const Type* for_type) {
-  Encoder envelope_encoder(unions_are_xunions_);
-  envelope_encoder.AllocateObject(for_type->InlineSize(unions_are_xunions_));
+  Encoder envelope_encoder;
+  envelope_encoder.AllocateObject(for_type->InlineSize());
   value->Visit(&envelope_encoder, for_type);
   WriteValue<uint32_t>(envelope_encoder.bytes_.size());
   WriteValue<uint32_t>(envelope_encoder.handles_.size());
@@ -101,16 +96,6 @@ void Encoder::EncodeEnvelope(const Value* value, const Type* for_type) {
   for (const auto handle : envelope_encoder.handles_) {
     handles_.push_back(handle);
   }
-}
-
-void Encoder::VisitUnionBody(const UnionValue* node) {
-  WriteValue<uint32_t>(node->member().ordinal());
-  node->value()->Visit(this, node->member().type());
-}
-
-void Encoder::VisitUnionAsXUnion(const UnionValue* node) {
-  WriteValue<uint64_t>(node->member().ordinal());
-  EncodeEnvelope(node->value().get(), node->member().type());
 }
 
 void Encoder::VisitStructValueBody(size_t offset, const StructValue* node) {
@@ -140,7 +125,7 @@ void Encoder::VisitBoolValue(const BoolValue* node, const Type* for_type) {
 
 void Encoder::VisitIntegerValue(const IntegerValue* node, const Type* for_type) {
   FXL_DCHECK(for_type != nullptr);
-  size_t size = for_type->InlineSize(unions_are_xunions_);
+  size_t size = for_type->InlineSize();
   uint64_t value = node->absolute_value();
   if (node->negative()) {
     value = -value;
@@ -150,7 +135,7 @@ void Encoder::VisitIntegerValue(const IntegerValue* node, const Type* for_type) 
 
 void Encoder::VisitDoubleValue(const DoubleValue* node, const Type* for_type) {
   FXL_DCHECK(for_type != nullptr);
-  size_t size = for_type->InlineSize(unions_are_xunions_);
+  size_t size = for_type->InlineSize();
   if (size == sizeof(float)) {
     float value = node->value();
     WriteData(reinterpret_cast<const uint8_t*>(&value), size);
@@ -178,15 +163,8 @@ void Encoder::VisitHandleValue(const HandleValue* node, const Type* for_type) {
 
 void Encoder::VisitUnionValue(const UnionValue* node, const Type* for_type) {
   FXL_DCHECK(for_type != nullptr);
-  if (unions_are_xunions_ || for_type->IsXUnion()) {
-    VisitUnionAsXUnion(node);
-  } else if (for_type->Nullable()) {
-    WriteValue<uint64_t>(UINTPTR_MAX);
-    current_offset_ = AllocateObject(node->member().union_definition().size());
-    VisitUnionBody(node);
-  } else {
-    VisitUnionBody(node);
-  }
+  WriteValue<uint64_t>(node->member().ordinal());
+  EncodeEnvelope(node->value().get(), node->member().type());
 }
 
 void Encoder::VisitStructValue(const StructValue* node, const Type* for_type) {
@@ -204,7 +182,7 @@ void Encoder::VisitVectorValue(const VectorValue* node, const Type* for_type) {
   FXL_DCHECK(for_type != nullptr);
   const Type* component_type = for_type->GetComponentType();
   FXL_DCHECK(component_type != nullptr);
-  size_t component_size = component_type->InlineSize(unions_are_xunions_);
+  size_t component_size = component_type->InlineSize();
   size_t offset;
   if (for_type->IsArray()) {
     offset = current_offset_;

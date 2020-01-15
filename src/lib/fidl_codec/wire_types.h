@@ -39,9 +39,6 @@ class Type {
   // Returns a detailed representation of the type.
   std::string ToString(bool expand = false) const;
 
-  // Returns true if the type is a XUnionType.
-  virtual bool IsXUnion() const { return false; }
-
   // Returns true if the type is a ArrayType.
   virtual bool IsArray() const { return false; }
 
@@ -49,7 +46,7 @@ class Type {
   virtual std::string Name() const = 0;
 
   // Returns the size of this type when embedded in another object.
-  virtual size_t InlineSize(bool unions_are_xunions) const = 0;
+  virtual size_t InlineSize() const = 0;
 
   // Whether this is a nullable type.
   virtual bool Nullable() const { return false; }
@@ -101,7 +98,7 @@ class RawType : public Type {
 
   std::string Name() const override;
 
-  size_t InlineSize(bool unions_are_xunions) const override;
+  size_t InlineSize() const override;
 
   bool Nullable() const override;
 
@@ -119,7 +116,7 @@ class BoolType : public Type {
 
   std::string Name() const override { return "bool"; }
 
-  size_t InlineSize(bool unions_are_xunions) const override;
+  size_t InlineSize() const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -134,7 +131,7 @@ class IntegralType : public Type {
                 "IntegralType can only be used for integers");
 
  public:
-  size_t InlineSize(bool unions_are_xunions) const override { return sizeof(T); }
+  size_t InlineSize() const override { return sizeof(T); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
     auto got = decoder->GetAddress(offset, sizeof(T));
@@ -228,7 +225,7 @@ class NumericType : public Type {
                 "NumericType can only be used for numerics");
 
  public:
-  size_t InlineSize(bool unions_are_xunions) const override { return sizeof(T); }
+  size_t InlineSize() const override { return sizeof(T); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
     auto got = decoder->GetAddress(offset, sizeof(T));
@@ -268,7 +265,7 @@ class StringType : public Type {
 
   std::string Name() const override;
 
-  size_t InlineSize(bool unions_are_xunions) const override;
+  size_t InlineSize() const override;
 
   bool Nullable() const override;
 
@@ -283,7 +280,7 @@ class HandleType : public Type {
 
   std::string Name() const override;
 
-  size_t InlineSize(bool unions_are_xunions) const override;
+  size_t InlineSize() const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -298,7 +295,7 @@ class EnumType : public Type {
 
   std::string Name() const override;
 
-  size_t InlineSize(bool unions_are_xunions) const override;
+  size_t InlineSize() const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -318,7 +315,7 @@ class BitsType : public Type {
 
   std::string Name() const override;
 
-  size_t InlineSize(bool unions_are_xunions) const override;
+  size_t InlineSize() const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -339,12 +336,9 @@ class UnionType : public Type {
 
   std::string Name() const override;
 
-  size_t InlineSize(bool unions_are_xunions) const override;
+  size_t InlineSize() const override;
 
   bool Nullable() const override;
-
-  std::unique_ptr<Value> DecodeUnion(MessageDecoder* decoder, uint64_t offset) const;
-  std::unique_ptr<Value> DecodeXUnion(MessageDecoder* decoder, uint64_t offset) const;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -353,18 +347,6 @@ class UnionType : public Type {
  private:
   const Union& union_definition_;
   const bool nullable_;
-};
-
-class XUnionType : public UnionType {
- public:
-  XUnionType(const Union& union_definition, bool nullable)
-      : UnionType(union_definition, nullable) {}
-
-  bool IsXUnion() const override;
-
-  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
-
-  void Visit(TypeVisitor* visitor) const override;
 };
 
 class StructType : public Type {
@@ -376,7 +358,7 @@ class StructType : public Type {
 
   std::string Name() const override;
 
-  size_t InlineSize(bool unions_are_xunions) const override;
+  size_t InlineSize() const override;
 
   bool Nullable() const override;
 
@@ -415,7 +397,7 @@ class ArrayType : public ElementSequenceType {
 
   std::string Name() const override;
 
-  size_t InlineSize(bool unions_are_xunions) const override;
+  size_t InlineSize() const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -432,7 +414,7 @@ class VectorType : public ElementSequenceType {
 
   std::string Name() const override;
 
-  size_t InlineSize(bool unions_are_xunions) const override;
+  size_t InlineSize() const override;
 
   bool Nullable() const override;
 
@@ -449,7 +431,7 @@ class TableType : public Type {
 
   std::string Name() const override;
 
-  size_t InlineSize(bool unions_are_xunions) const override;
+  size_t InlineSize() const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 

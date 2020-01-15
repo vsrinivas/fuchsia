@@ -57,7 +57,7 @@ void EnumOrBits::DecodeTypes(bool is_scalar, const std::string& supertype_name,
     }
   }
 
-  size_ = type_->InlineSize(false);
+  size_ = type_->InlineSize();
   json_definition_ = nullptr;
 }
 
@@ -469,7 +469,7 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, std::string&
   if (xuni != xunions_.end()) {
     // Note: XUnion and nullable XUnion are encoded in the same way
     xuni->second->DecodeXunionTypes();
-    return std::make_unique<XUnionType>(std::ref(*xuni->second), is_nullable);
+    return std::make_unique<UnionType>(std::ref(*xuni->second), is_nullable);
   }
   const Interface* ifc;
   if (GetInterfaceByName(identifier, &ifc)) {

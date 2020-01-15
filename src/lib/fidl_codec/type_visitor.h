@@ -33,7 +33,6 @@ class TypeVisitor {
   virtual void VisitEnumType(const EnumType* type) { VisitType(type); }
   virtual void VisitBitsType(const BitsType* type) { VisitType(type); }
   virtual void VisitUnionType(const UnionType* type) { VisitType(type); }
-  virtual void VisitXUnionType(const XUnionType* type) { VisitType(type); }
   virtual void VisitStructType(const StructType* type) { VisitType(type); }
   virtual void VisitElementSequenceType(const ElementSequenceType* type) { VisitType(type); }
   virtual void VisitArrayType(const ArrayType* type) { VisitElementSequenceType(type); }
@@ -62,7 +61,6 @@ class TypeVisitor {
   friend class EnumType;
   friend class BitsType;
   friend class UnionType;
-  friend class XUnionType;
   friend class StructType;
   friend class ElementSequenceType;
   friend class ArrayType;
