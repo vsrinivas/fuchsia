@@ -13,6 +13,32 @@
 namespace fzl {
 
 zx_status_t PinnedVmo::Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t options) {
+  if (!vmo.is_valid()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  // To pin the entire VMO, we need to get the length:
+  zx_status_t res;
+  uint64_t vmo_size;
+  res = vmo.get_size(&vmo_size);
+  if (res != ZX_OK) {
+    return res;
+  }
+  return PinInternal(0, vmo_size, vmo, bti, options);
+}
+
+zx_status_t PinnedVmo::PinRange(uint64_t offset, uint64_t len, const zx::vmo& vmo,
+                                const zx::bti& bti, uint32_t options) {
+  if ((len & (PAGE_SIZE - 1)) || (offset & (PAGE_SIZE - 1)) || len == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return PinInternal(offset, len, vmo, bti, options);
+}
+
+zx_status_t PinnedVmo::PinInternal(uint64_t offset, uint64_t len, const zx::vmo& vmo,
+                                   const zx::bti& bti, uint32_t options) {
+  zx_status_t res;
+
   // If we are holding a pinned memory token, then we are already holding a
   // pinned VMO.  It is an error to try and pin a new VMO without first
   // explicitly unpinning the old one.
@@ -28,19 +54,12 @@ zx_status_t PinnedVmo::Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t opti
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Before proceeding, we need to know how big the VMO we are pinning is.
-  zx_status_t res;
-  uint64_t vmo_size;
-  res = vmo.get_size(&vmo_size);
-  if (res != ZX_OK) {
-    return res;
-  }
-
   // Allocate storage for the results.
-  ZX_DEBUG_ASSERT((vmo_size > 0) && !(vmo_size & (PAGE_SIZE - 1)));
-  ZX_DEBUG_ASSERT((vmo_size / PAGE_SIZE) < std::numeric_limits<uint32_t>::max());
+  ZX_DEBUG_ASSERT((len > 0) && !(len & (PAGE_SIZE - 1)));
+  ZX_DEBUG_ASSERT((len / PAGE_SIZE) < std::numeric_limits<uint32_t>::max());
+  ZX_DEBUG_ASSERT(!(offset & (PAGE_SIZE - 1)));
   fbl::AllocChecker ac;
-  uint32_t page_count = static_cast<uint32_t>(vmo_size / PAGE_SIZE);
+  uint32_t page_count = static_cast<uint32_t>(len / PAGE_SIZE);
   if (options & ZX_BTI_CONTIGUOUS) {
     page_count = 1;
   }
@@ -51,7 +70,7 @@ zx_status_t PinnedVmo::Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t opti
   }
 
   // Now actually pin the region.
-  res = bti.pin(options, vmo, 0, vmo_size, addrs.get(), page_count, &pmt_);
+  res = bti.pin(options, vmo, offset, len, addrs.get(), page_count, &pmt_);
   if (res != ZX_OK) {
     return res;
   }

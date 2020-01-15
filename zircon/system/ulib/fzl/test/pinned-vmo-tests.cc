@@ -89,4 +89,28 @@ TEST(PinnedVmoTests, FailPinArgsTest) {
   EXPECT_EQ(pinned_vmo.Pin(vmo, bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE), ZX_ERR_INVALID_ARGS);
 }
 
+TEST_F(PinnedVmoTester, PinRangeTest) {
+  CheckUnpinned();
+  Init();
+  EXPECT_OK(pinned_vmo_.PinRange(ZX_PAGE_SIZE, ZX_PAGE_SIZE * 4, vmo_, *zx::unowned_bti(bti_),
+                                 ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE));
+  EXPECT_EQ(pinned_vmo_.region_count(), 4);
+  ASSERT_NO_FATAL_FAILURES(CheckPinned());
+}
+
+TEST_F(PinnedVmoTester, FailPinRangeTest) {
+  CheckUnpinned();
+  Init();
+  constexpr uint32_t options = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE;
+  // offset not page aligned:
+  EXPECT_EQ(
+      pinned_vmo_.PinRange(ZX_PAGE_SIZE + 1, ZX_PAGE_SIZE, vmo_, *zx::unowned_bti(bti_), options),
+      ZX_ERR_INVALID_ARGS);
+  // length not page aligned:
+  EXPECT_EQ(pinned_vmo_.PinRange(0, ZX_PAGE_SIZE + 1, vmo_, *zx::unowned_bti(bti_), options),
+            ZX_ERR_INVALID_ARGS);
+  // zero length:
+  EXPECT_EQ(pinned_vmo_.PinRange(0, 0, vmo_, *zx::unowned_bti(bti_), options), ZX_ERR_INVALID_ARGS);
+}
+
 }  // namespace

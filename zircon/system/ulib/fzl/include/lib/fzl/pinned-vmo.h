@@ -41,6 +41,8 @@ class PinnedVmo {
   }
 
   zx_status_t Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t options);
+  zx_status_t PinRange(uint64_t offset, uint64_t len, const zx::vmo& vmo, const zx::bti& bti,
+                       uint32_t options);
   void Unpin();
 
   uint32_t region_count() const { return region_count_; }
@@ -52,6 +54,8 @@ class PinnedVmo {
 
  private:
   void UnpinInternal();
+  zx_status_t PinInternal(uint64_t offset, uint64_t len, const zx::vmo& vmo, const zx::bti& bti,
+                          uint32_t options);
 
   zx::pmt pmt_;
   std::unique_ptr<Region[]> regions_;
