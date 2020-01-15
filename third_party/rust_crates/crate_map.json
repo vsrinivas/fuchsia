@@ -678,6 +678,11 @@
             "package_name": "anyhow"
         },
         {
+            "crate_name": "base64",
+            "crate_type": "lib",
+            "package_name": "base64"
+        },
+        {
             "crate_name": "bitfield",
             "crate_type": "lib",
             "package_name": "bitfield"
@@ -821,6 +826,16 @@
             "crate_name": "num",
             "crate_type": "lib",
             "package_name": "num"
+        },
+        {
+            "crate_name": "num_derive",
+            "crate_type": "proc-macro",
+            "package_name": "num-derive"
+        },
+        {
+            "crate_name": "num_traits",
+            "crate_type": "lib",
+            "package_name": "num-traits"
         },
         {
             "crate_name": "numtoa",

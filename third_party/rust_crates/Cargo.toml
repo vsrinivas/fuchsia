@@ -21,6 +21,7 @@ version = "0.1.0"
 [dependencies]
 # Keep this sorted alphabetically, please.
 anyhow = "1.0.25"
+base64 = "0.9"
 bitfield = "0.13"
 bitflags = "1"
 byteorder = { version = "1", features = ["i128"] }
@@ -47,6 +48,8 @@ maybe-owned = "0.3.2"
 memchr = "2.0"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
 numtoa = "0.1.0"
+num-derive = "0.2.4"
+num-traits= "0.2.5"
 once_cell = { version = "1.2.0", features = ["parking_lot"] }
 parking_lot = "0.9"
 paste = "0.1"
@@ -96,7 +99,6 @@ features = ["chrono", "tracing-log"]
 # Target-side only dependencies
 [target.'cfg(target_os = "fuchsia")'.dependencies]
 async-trait = "0.1.11"
-base64 = "0.9"
 bincode = "1"
 bytes = "0.4.7"
 crossbeam = "0.5"
@@ -118,9 +120,7 @@ id_tree = "1.5"
 itoa = "0.4"
 lipsum = "0.6.0"
 net2 = "0.2"
-num-derive = "0.2.4"
 num-bigint = { version = "0.2", features = ["rand"] }
-num-traits= "0.2.5"
 openat = "0.1.17"
 owning_ref = "0.4.0"
 pin-project = "0.4.6"
