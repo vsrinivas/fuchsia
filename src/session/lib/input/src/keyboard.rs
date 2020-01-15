@@ -21,7 +21,7 @@ use {
 
 /// A [`KeyboardEvent`] represents an input event from a keyboard device.
 ///
-/// The input event descriptor contains information about which keys are pressed, and which
+/// The keyboard event contains information about which keys are pressed, and which
 /// keys were released.
 ///
 /// Clients can expect the following sequence of events for a given key:
@@ -41,6 +41,21 @@ pub struct KeyboardEvent {
 
     /// The modifiers associated with the pressed keys.
     pub modifiers: Option<Modifiers>,
+}
+
+impl KeyboardEvent {
+    /// Returns the keys of the specified `phase`.
+    ///
+    /// # Parameters
+    /// `phase`: The phase of the keys to return.
+    pub fn get_keys(&self, phase: KeyEventPhase) -> Vec<Key> {
+        let keys: Option<&Vec<Key>> = self.keys.get(&phase);
+        if keys.is_some() {
+            return keys.unwrap().to_vec();
+        }
+
+        vec![]
+    }
 }
 
 /// A [`KeyboardDeviceDescriptor`] contains information about a specific keyboard device.
