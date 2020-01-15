@@ -65,6 +65,7 @@ class MiEnd {
 
   static void write(magma::InstructionWriter* writer) {
     writer->Write32(kCommandType);
+    writer->Write32(0);  // Keep 8-byte aligned.
   }
 };
 
@@ -79,12 +80,16 @@ class BufferWriter : public magma::InstructionWriter {
     DASSERT(offset_ + sizeof(value) <= size_);
     buf_cpu_addr_[offset_ >> 2] = value;
     offset_ += sizeof(value);
+    bytes_written_ += sizeof(value);
   }
+
+  uint64_t bytes_written() { return bytes_written_; }
 
  private:
   uint32_t* buf_cpu_addr_ = nullptr;
   uint32_t size_ = 0;
   uint32_t offset_ = 0;
+  uint64_t bytes_written_ = 0;
 };
 
 #endif  // INSTRUCTIONS_H

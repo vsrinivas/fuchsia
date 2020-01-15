@@ -10,6 +10,7 @@
 #include "magma_util/register_io.h"
 #include "platform_buffer.h"
 #include "platform_bus_mapper.h"
+#include "registers.h"
 
 class PageTableArrays {
  public:
@@ -27,6 +28,10 @@ class PageTableArrays {
   void HardwareInit(magma::RegisterIo* register_io);
   void Enable(magma::RegisterIo* register_io, bool enable);
   void AssignAddressSpace(uint32_t index, AddressSpace* address_space);
+
+  bool IsEnabled(magma::RegisterIo* register_io) {
+    return registers::MmuSecureControl::Get().ReadFrom(register_io).enable().get();
+  }
 
  private:
   static constexpr uint32_t kPageTableArraySizeInPages = 1;

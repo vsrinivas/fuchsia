@@ -32,16 +32,16 @@ MsdVslDevice::~MsdVslDevice() {
   }
 }
 
-std::unique_ptr<MsdVslDevice> MsdVslDevice::Create(void* device_handle, bool enable_mmu) {
+std::unique_ptr<MsdVslDevice> MsdVslDevice::Create(void* device_handle) {
   auto device = std::make_unique<MsdVslDevice>();
 
-  if (!device->Init(device_handle, enable_mmu))
+  if (!device->Init(device_handle))
     return DRETP(nullptr, "Failed to initialize device");
 
   return device;
 }
 
-bool MsdVslDevice::Init(void* device_handle, bool enable_mmu) {
+bool MsdVslDevice::Init(void* device_handle) {
   platform_device_ = magma::PlatformDevice::Create(device_handle);
   if (!platform_device_)
     return DRETF(false, "Failed to create platform device");
@@ -96,7 +96,7 @@ bool MsdVslDevice::Init(void* device_handle, bool enable_mmu) {
   ringbuffer_ = std::make_unique<Ringbuffer>(std::move(buffer), 0 /* start_offset */);
 
   Reset();
-  if (!HardwareInit(enable_mmu)) {
+  if (!HardwareInit()) {
     return DRETF(false, "Failed to initialize hardware");
   }
 
@@ -105,7 +105,7 @@ bool MsdVslDevice::Init(void* device_handle, bool enable_mmu) {
   return true;
 }
 
-bool MsdVslDevice::HardwareInit(bool enable_mmu) {
+bool MsdVslDevice::HardwareInit() {
   interrupt_ = platform_device_->RegisterInterrupt(kInterruptIndex);
   if (!interrupt_) {
     return DRETF(false, "Failed to register interrupt");
@@ -123,7 +123,6 @@ bool MsdVslDevice::HardwareInit(bool enable_mmu) {
   }
 
   page_table_arrays_->HardwareInit(register_io_.get());
-  page_table_arrays_->Enable(register_io(), enable_mmu);
 
   page_table_slot_allocator_ = std::make_unique<PageTableSlotAllocator>(page_table_arrays_->size());
   return true;
@@ -294,6 +293,68 @@ bool MsdVslDevice::StopRingbuffer() {
   return true;
 }
 
+bool MsdVslDevice::WaitUntilIdle(uint32_t timeout_ms) {
+  auto start = std::chrono::high_resolution_clock::now();
+  while (!IsIdle() && std::chrono::duration_cast<std::chrono::milliseconds>(
+                          std::chrono::high_resolution_clock::now() - start)
+                              .count() < timeout_ms) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  return IsIdle();
+}
+
+bool MsdVslDevice::LoadInitialAddressSpace(std::shared_ptr<AddressSpace> address_space,
+                                           uint32_t address_space_index) {
+  // Check if we have already configured an address space and enabled the MMU.
+  if (page_table_arrays_->IsEnabled(register_io())) {
+    return DRETF(false, "MMU already enabled");
+  }
+  static constexpr uint32_t kPageCount = 1;
+
+  std::unique_ptr<magma::PlatformBuffer> buffer =
+      magma::PlatformBuffer::Create(PAGE_SIZE * kPageCount, "address space config");
+  if (!buffer) {
+    return DRETF(false, "failed to create buffer");
+  }
+
+  auto bus_mapping = GetBusMapper()->MapPageRangeBus(buffer.get(), 0, kPageCount);
+  if (!bus_mapping) {
+    return DRETF(false, "failed to create bus mapping");
+  }
+
+  uint32_t* cmd_ptr;
+  if (!buffer->MapCpu(reinterpret_cast<void**>(&cmd_ptr))) {
+    return DRETF(false, "failed to map command buffer");
+  }
+
+  BufferWriter buf_writer(cmd_ptr, buffer->size(), 0);
+  auto reg = registers::MmuPageTableArrayConfig::Get().addr();
+  MiLoadState::write(&buf_writer, reg, address_space_index);
+  MiEnd::write(&buf_writer);
+
+  if (!buffer->UnmapCpu()) {
+    return DRETF(false, "failed to unmap cpu");
+  }
+  if (!buffer->CleanCache(0, PAGE_SIZE * kPageCount, false)) {
+    return DRETF(false, "failed to clean buffer cache");
+  }
+
+  auto res = SubmitCommandBufferNoMmu(bus_mapping->Get()[0], buf_writer.bytes_written());
+  if (!res) {
+    return DRETF(false, "failed to submit command buffer");
+  }
+  constexpr uint32_t kTimeoutMs = 100;
+  if (!WaitUntilIdle(kTimeoutMs)) {
+    return DRETF(false, "failed to wait for device to be idle");
+  }
+
+  page_table_arrays_->Enable(register_io(), true);
+
+  DLOG("Address space loaded, index %u", address_space_index);
+
+  return true;
+}
+
 bool MsdVslDevice::SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
                                             uint16_t* prefetch_out) {
   if (bus_addr & 0xFFFFFFFF00000000ul)
@@ -303,7 +364,10 @@ bool MsdVslDevice::SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
   if (prefetch & 0xFFFF0000)
     return DRETF(false, "Can't submit length %u (prefetch 0x%x)", length, prefetch);
 
-  *prefetch_out = prefetch & 0xFFFF;
+  prefetch &= 0xFFFF;
+  if (prefetch_out) {
+    *prefetch_out = prefetch;
+  }
 
   DLOG("Submitting buffer at bus addr 0x%lx", bus_addr);
 
@@ -312,11 +376,11 @@ bool MsdVslDevice::SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
 
   auto reg_cmd_ctrl = registers::FetchEngineCommandControl::Get().FromValue(0);
   reg_cmd_ctrl.enable().set(1);
-  reg_cmd_ctrl.prefetch().set(*prefetch_out);
+  reg_cmd_ctrl.prefetch().set(prefetch);
 
   auto reg_sec_cmd_ctrl = registers::SecureCommandControl::Get().FromValue(0);
   reg_sec_cmd_ctrl.enable().set(1);
-  reg_sec_cmd_ctrl.prefetch().set(*prefetch_out);
+  reg_sec_cmd_ctrl.prefetch().set(prefetch);
 
   reg_cmd_addr.WriteTo(register_io_.get());
   reg_cmd_ctrl.WriteTo(register_io_.get());
@@ -325,14 +389,9 @@ bool MsdVslDevice::SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
   return true;
 }
 
-bool MsdVslDevice::InitRingbuffer(std::shared_ptr<AddressSpace> address_space) {
-  auto mapped_address_space = ringbuffer_->GetMappedAddressSpace().lock();
-  if (mapped_address_space) {
-    if (mapped_address_space.get() != address_space.get()) {
-      return DRETF(false, "Switching ringbuffer contexts not yet supported");
-    }
-    // Ringbuffer is already mapped and initialized.
-    return true;
+bool MsdVslDevice::StartRingbuffer(std::shared_ptr<AddressSpace> address_space) {
+  if (!IsIdle()) {
+    return true;  // Already running and looping on WAIT-LINK.
   }
   bool res = ringbuffer_->Map(address_space);
   if (!res) {
@@ -345,7 +404,6 @@ bool MsdVslDevice::InitRingbuffer(std::shared_ptr<AddressSpace> address_space) {
   }
 
   const uint16_t kRbPrefetch = 2;
-
   // Write the initial WAIT-LINK to the ringbuffer. The LINK points back to the WAIT,
   // and will keep looping until the WAIT is replaced with a LINK on command buffer submission.
   uint32_t wait_gpu_addr = rb_gpu_addr + ringbuffer_->tail();
@@ -353,7 +411,7 @@ bool MsdVslDevice::InitRingbuffer(std::shared_ptr<AddressSpace> address_space) {
   MiLink::write(ringbuffer_.get(), kRbPrefetch, wait_gpu_addr);
 
   auto reg_cmd_addr = registers::FetchEngineCommandAddress::Get().FromValue(0);
-  reg_cmd_addr.addr().set(static_cast<uint32_t>(rb_gpu_addr) /* WAIT gpu addr */);
+  reg_cmd_addr.addr().set(static_cast<uint32_t>(wait_gpu_addr));
 
   auto reg_cmd_ctrl = registers::FetchEngineCommandControl::Get().FromValue(0);
   reg_cmd_ctrl.enable().set(1);
@@ -428,12 +486,30 @@ bool MsdVslDevice::WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,
 //  2) add an EVENT and WAIT-LINK pair to the end of the ringbuffer
 //  3) modify the penultimate WAIT in the ringbuffer to LINK to the command buffer
 bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_space,
+                                       uint32_t address_space_index,
                                        magma::PlatformBuffer* buf, uint32_t gpu_addr,
                                        uint32_t length, uint32_t event_id,
                                        std::shared_ptr<magma::PlatformSemaphore> signal,
                                        uint16_t* prefetch_out) {
-  if (!InitRingbuffer(address_space)) {
-    return DRETF(false, "Error initializing ringbuffer");
+  // Check if we have loaded an address space and enabled the MMU.
+  if (!page_table_arrays_->IsEnabled(register_io())) {
+    if (!LoadInitialAddressSpace(address_space, address_space_index)) {
+      return DRETF(false, "Failed to load initial address space");
+    }
+  }
+  // Check if we have started the ringbuffer WAIT-LINK loop.
+  if (IsIdle()) {
+    if (!StartRingbuffer(address_space)) {
+      return DRETF(false, "Failed to start ringbuffer");
+    }
+  }
+  // Check if we need to switch address spaces.
+  auto mapped_address_space = ringbuffer_->GetMappedAddressSpace().lock();
+  // TODO(fxb/43718): support switching address spaces.
+  // We will need to keep the previous address space alive until the switch is completed
+  // by the hardware.
+  if (!mapped_address_space || (mapped_address_space.get() != address_space.get())) {
+    return DRETF(false, "Switching ringbuffer contexts not yet supported");
   }
   uint64_t rb_gpu_addr;
   bool res = ringbuffer_->GetGpuAddress(&rb_gpu_addr);

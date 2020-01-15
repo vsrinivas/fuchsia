@@ -25,7 +25,7 @@
 class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
  public:
   // Creates a device for the given |device_handle| and returns ownership.
-  static std::unique_ptr<MsdVslDevice> Create(void* device_handle, bool enable_mmu);
+  static std::unique_ptr<MsdVslDevice> Create(void* device_handle);
 
   MsdVslDevice() { magic_ = kMagic; }
 
@@ -57,8 +57,8 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
     std::shared_ptr<magma::PlatformSemaphore> signal;
   };
 
-  bool Init(void* device_handle, bool enable_mmu);
-  bool HardwareInit(bool enable_mmu);
+  bool Init(void* device_handle);
+  bool HardwareInit();
   void Reset();
   void DisableInterrupts();
   // Processes the hardware interrupts.
@@ -72,9 +72,8 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   bool WriteInterruptEvent(uint32_t event_id, std::shared_ptr<magma::PlatformSemaphore> signal);
   bool CompleteInterruptEvent(uint32_t event_id);
 
-  // Returns true if initializing the ringbuffer succeeded,
-  // or the ringbuffer was already initialized.
-  bool InitRingbuffer(std::shared_ptr<AddressSpace> address_space);
+  // Returns true if starting the ringbuffer succeeded, or the ringbuffer was already running.
+  bool StartRingbuffer(std::shared_ptr<AddressSpace> address_space);
   // Adds a WAIT-LINK to the end of the ringbuffer.
   bool AddRingbufferWaitLink();
   // Modifies the last WAIT in the ringbuffer to link to |gpu_addr|.
@@ -87,9 +86,16 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   bool WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,
                         uint16_t prefetch, uint32_t link_addr);
 
-  bool SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length, uint16_t* prefetch_out);
-  bool SubmitCommandBuffer(std::shared_ptr<AddressSpace>, magma::PlatformBuffer* buf,
-                           uint32_t gpu_addr, uint32_t length,
+  // Returns whether the device became idle before |timeout_ms| elapsed.
+  bool WaitUntilIdle(uint32_t timeout_ms);
+  bool LoadInitialAddressSpace(std::shared_ptr<AddressSpace>, uint32_t address_space_index);
+
+  // If |prefetch_out| is not null, it will be populated with the prefetch that was submitted
+  // to the device.
+  bool SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
+                                uint16_t* prefetch_out = nullptr);
+  bool SubmitCommandBuffer(std::shared_ptr<AddressSpace>, uint32_t address_space_index,
+                           magma::PlatformBuffer* buf, uint32_t gpu_addr, uint32_t length,
                            uint32_t event_id, std::shared_ptr<magma::PlatformSemaphore> signal,
                            uint16_t* prefetch_out);
 

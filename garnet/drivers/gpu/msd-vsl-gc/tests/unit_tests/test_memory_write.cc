@@ -21,6 +21,8 @@ TEST(MsdVslDevice, MemoryWrite) { EXPECT_EQ(0, etnaviv_cl_test_gc7000(0, nullptr
 
 class TestMsdVslDevice : public drm_test_info {
  public:
+  static constexpr uint32_t kAddressSpaceIndex = 1;
+
   bool Init() {
     DLOG("init begin");
 
@@ -29,7 +31,7 @@ class TestMsdVslDevice : public drm_test_info {
     this->dev = &device_;
     this->stream = &command_stream_;
 
-    device_.msd_vsl_device = MsdVslDevice::Create(GetTestDeviceHandle(), false);
+    device_.msd_vsl_device = MsdVslDevice::Create(GetTestDeviceHandle());
     if (!device_.msd_vsl_device)
       return DRETF(false, "no test device");
 
@@ -42,15 +44,8 @@ class TestMsdVslDevice : public drm_test_info {
     if (!address_space_)
       return DRETF(false, "failed to create address space");
 
-    static constexpr uint32_t kAddressSpaceIndex = 1;
-
     device_.msd_vsl_device->page_table_arrays()->AssignAddressSpace(kAddressSpaceIndex,
                                                                     address_space_.get());
-
-    if (!LoadAddressSpace(device_.msd_vsl_device.get(), kAddressSpaceIndex))
-      return DRETF(false, "failed to load address space");
-
-    DLOG("address space loaded");
 
     command_stream_.etna_buffer =
         static_cast<EtnaBuffer*>(etna_bo_new(this->dev, PAGE_SIZE, DRM_ETNA_GEM_CACHE_UNCACHED));
@@ -62,59 +57,6 @@ class TestMsdVslDevice : public drm_test_info {
       return DRETF(false, "failed to map cmd_ptr");
 
     DLOG("init complete");
-
-    return true;
-  }
-
-  static bool LoadAddressSpace(MsdVslDevice* device, uint32_t index) {
-    // Switch to the address space with a command buffer.
-    static constexpr uint32_t kPageCount = 1;
-
-    std::unique_ptr<magma::PlatformBuffer> buffer =
-        magma::PlatformBuffer::Create(PAGE_SIZE * kPageCount, "test");
-    if (!buffer)
-      return DRETF(false, "Couldn't create buffer");
-
-    auto bus_mapping = device->GetBusMapper()->MapPageRangeBus(buffer.get(), 0, kPageCount);
-    if (!bus_mapping)
-      return DRETF(false, "couldn't create bus mapping");
-
-    uint32_t length = 0;
-    {
-      uint32_t* cmd_ptr;
-      if (!buffer->MapCpu(reinterpret_cast<void**>(&cmd_ptr)))
-        return DRETF(false, "failed to map command buffer");
-
-      cmd_ptr[length++] =
-          (1 << 27)                                                   // load state
-          | (1 << 16)                                                 // count
-          | (registers::MmuPageTableArrayConfig::Get().addr() >> 2);  // register to be written
-      cmd_ptr[length++] = index;
-      cmd_ptr[length++] = (2 << 27);  // end
-
-      EXPECT_TRUE(buffer->UnmapCpu());
-      EXPECT_TRUE(buffer->CleanCache(0, PAGE_SIZE * kPageCount, false));
-    }
-
-    length *= sizeof(uint32_t);
-    uint16_t prefetch = 0;
-
-    EXPECT_TRUE(device->SubmitCommandBufferNoMmu(bus_mapping->Get()[0], length, &prefetch));
-    EXPECT_EQ(magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t), prefetch);
-
-    auto start = std::chrono::high_resolution_clock::now();
-    while (!device->IsIdle() && std::chrono::duration_cast<std::chrono::milliseconds>(
-                                    std::chrono::high_resolution_clock::now() - start)
-                                        .count() < 1000) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-
-    EXPECT_TRUE(device->IsIdle());
-
-    auto dma_addr = registers::DmaAddress::Get().ReadFrom(device->register_io());
-    EXPECT_EQ(dma_addr.reg_value(), bus_mapping->Get()[0] + prefetch * sizeof(uint64_t));
-
-    device->page_table_arrays()->Enable(device->register_io(), true);
 
     return true;
   }
@@ -168,9 +110,9 @@ class TestMsdVslDevice : public drm_test_info {
   bool SubmitCommandBuffer(TestMsdVslDevice::EtnaBuffer* etna_buf, uint32_t length,
                            uint32_t event_id, std::shared_ptr<magma::PlatformSemaphore> signal,
                            uint16_t* prefetch_out) {
-    return device_.msd_vsl_device->SubmitCommandBuffer(address_space_, etna_buf->buffer.get(),
-                                                       etna_buf->gpu_addr, length,
-                                                       event_id, signal, prefetch_out);
+    return device_.msd_vsl_device->SubmitCommandBuffer(address_space_, kAddressSpaceIndex,
+                                                       etna_buf->buffer.get(), etna_buf->gpu_addr,
+                                                       length, event_id, signal, prefetch_out);
   }
 
   uint32_t next_gpu_addr(uint32_t size) {
@@ -395,7 +337,9 @@ TEST(MsdVslDevice, WriteInterruptEvents) {
   ASSERT_TRUE(test_info->Init());
 
   auto device = test_info->device();
-  ASSERT_TRUE(device->InitRingbuffer(test_info->address_space()));
+  ASSERT_TRUE(device->LoadInitialAddressSpace(test_info->address_space(),
+                                              test_info->kAddressSpaceIndex));
+  ASSERT_TRUE(device->StartRingbuffer(test_info->address_space()));
 
   auto& ringbuffer = device->ringbuffer_;
   uint64_t rb_gpu_addr;
