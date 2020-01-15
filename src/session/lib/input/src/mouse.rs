@@ -6,6 +6,7 @@ use {
     crate::input_device::{self, InputDeviceBinding},
     anyhow::{format_err, Error},
     async_trait::async_trait,
+    fidl_fuchsia_input_report as fidl_input_report,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_info,
@@ -100,7 +101,7 @@ impl input_device::InputDeviceBinding for MouseBinding {
         input_event_sender: &mut Sender<input_device::InputEvent>,
     ) -> Option<InputReport> {
         // Fail early if the new InputReport isn't a MouseInputReport
-        let mouse_report: &fidl_fuchsia_input_report::MouseInputReport = match &report.mouse {
+        let mouse_report: &fidl_input_report::MouseInputReport = match &report.mouse {
             Some(mouse) => mouse,
             None => {
                 fx_log_info!("Not processing non-mouse InputReport.");
@@ -155,21 +156,15 @@ impl input_device::InputDeviceBinding for MouseBinding {
     }
 
     async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
-        let device_descriptor: fidl_fuchsia_input_report::DeviceDescriptor =
+        let device_descriptor: fidl_input_report::DeviceDescriptor =
             device.get_descriptor().await?;
         match device_descriptor.mouse {
             Some(_) => {
                 let (event_sender, event_receiver) =
                     futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
 
-                let device_id = match device_descriptor.device_info {
-                    Some(info) => info.product_id,
-                    None => {
-                        return Err(format_err!("Mouse Descriptor doesn't contain a product id."))
-                    }
-                };
-
-                let device_descriptor: MouseDeviceDescriptor = MouseDeviceDescriptor { device_id };
+                let device_descriptor: MouseDeviceDescriptor =
+                    MouseDeviceDescriptor { device_id: 1 };
 
                 Ok(MouseBinding { event_sender, event_receiver, device_descriptor })
             }
@@ -225,7 +220,7 @@ fn send_mouse_event(
 /// Returns a u32 representation of `vector`, where each u8 of `vector` is an id of a button and
 /// indicates the position of a bit to set.
 ///
-/// This supports vectors with numbers from 1 - fidl_fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS.
+/// This supports vectors with numbers from 1 - fidl_input_report::MOUSE_MAX_NUM_BUTTONS.
 ///
 /// # Parameters
 /// - `vector`: The vector containing the position of bits to be set.
@@ -238,7 +233,7 @@ fn send_mouse_event(
 pub fn get_u32_from_buttons(buttons: &HashSet<MouseButton>) -> u32 {
     let mut bits: u32 = 0;
     for button in buttons {
-        if *button > 0 && *button <= fidl_fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS as u8 {
+        if *button > 0 && *button <= fidl_input_report::MOUSE_MAX_NUM_BUTTONS as u8 {
             bits = ((1 as u32) << *button - 1) | bits;
         }
     }
@@ -250,9 +245,7 @@ pub fn get_u32_from_buttons(buttons: &HashSet<MouseButton>) -> u32 {
 ///
 /// # Parameters
 /// - `report`: The input report to parse the mouse buttons from.
-fn buttons_from_report(
-    input_report: &fidl_fuchsia_input_report::InputReport,
-) -> HashSet<MouseButton> {
+fn buttons_from_report(input_report: &fidl_input_report::InputReport) -> HashSet<MouseButton> {
     buttons_from_optional_report(&Some(input_report))
 }
 
@@ -261,7 +254,7 @@ fn buttons_from_report(
 /// # Parameters
 /// - `report`: The input report to parse the mouse buttons from.
 fn buttons_from_optional_report(
-    input_report: &Option<&fidl_fuchsia_input_report::InputReport>,
+    input_report: &Option<&fidl_input_report::InputReport>,
 ) -> HashSet<MouseButton> {
     input_report
         .as_ref()
@@ -313,8 +306,7 @@ pub async fn all_mouse_events() -> Result<Receiver<input_device::InputEvent>, Er
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::testing_utilities;
+    use {super::*, crate::testing_utilities};
 
     // Tests that the right u32 representation is returned from a vector of digits.
     #[test]
@@ -349,7 +341,7 @@ mod tests {
     #[test]
     fn get_u32_with_max_mouse_buttons() {
         let bits = get_u32_from_buttons(&HashSet::from_iter(
-            vec![1, 3, fidl_fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS as MouseButton].into_iter(),
+            vec![1, 3, fidl_input_report::MOUSE_MAX_NUM_BUTTONS as MouseButton].into_iter(),
         ));
         assert_eq!(bits, 2147483653 /* 10...00000101 */)
     }
