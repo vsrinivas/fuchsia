@@ -47,12 +47,21 @@ impl ChannelConfigs {
 pub struct ChannelConfig {
     pub name: String,
     pub repo: String,
+    pub appid: Option<String>,
 }
 
 #[cfg(test)]
 impl ChannelConfig {
     pub fn new(name: &str) -> Self {
-        ChannelConfig { name: name.to_string(), repo: name.to_string() + "-repo" }
+        ChannelConfig { name: name.to_string(), repo: name.to_string() + "-repo", appid: None }
+    }
+
+    pub fn with_appid(name: &str, appid: &str) -> Self {
+        ChannelConfig {
+            name: name.to_string(),
+            repo: name.to_string() + "-repo",
+            appid: Some(appid.to_string()),
+        }
     }
 }
 
@@ -104,13 +113,15 @@ mod tests {
     // This test uses test data in "::omaha_client_channels_test_config"
     #[test]
     fn test_get_configs() {
-        let configs = super::get_configs().unwrap();
+        let configs = get_configs().unwrap();
 
         assert_eq!(Some("some-other-channel".to_string()), configs.default_channel);
         assert_eq!("some-channel", configs.known_channels[0].name);
         assert_eq!("some-channel-repo", configs.known_channels[0].repo);
+        assert_eq!(Some("some-channel-appid".to_string()), configs.known_channels[0].appid);
         assert_eq!("some-other-channel", configs.known_channels[1].name);
         assert_eq!("some-other-channel-repo", configs.known_channels[1].repo);
+        assert_eq!(Some("some-other-channel-appid".to_string()), configs.known_channels[1].appid);
     }
 
     #[test]

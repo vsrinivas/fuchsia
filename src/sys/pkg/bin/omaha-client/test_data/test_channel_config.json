@@ -4,11 +4,13 @@
     "channels": [
       {
         "name": "some-channel",
-        "repo": "some-channel-repo"
+        "repo": "some-channel-repo",
+        "appid": "some-channel-appid"
       },
       {
         "name": "some-other-channel",
-        "repo": "some-other-channel-repo"
+        "repo": "some-other-channel-repo",
+        "appid": "some-other-channel-appid"
       }
     ],
     "default_channel": "some-other-channel"
