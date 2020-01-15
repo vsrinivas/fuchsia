@@ -144,13 +144,16 @@ async fn main() -> Result<(), Error> {
 
     println!("display service tests");
     println!("  client calls display watch");
-    validate_display(None, None).await?;
+    validate_display(None, None, None).await?;
 
     println!("  client calls set brightness");
-    validate_display(Some(0.5), None).await?;
+    validate_display(Some(0.5), None, None).await?;
 
     println!("  client calls set auto brightness");
-    validate_display(None, Some(true)).await?;
+    validate_display(None, Some(true), None).await?;
+
+    println!("  client calls set user brightness offset");
+    validate_display(None, None, Some(0.5)).await?;
 
     println!("  client calls watch light sensor");
     validate_light_sensor().await?;
@@ -343,6 +346,7 @@ async fn validate_device() -> Result<(), Error> {
 async fn validate_display(
     expected_brightness: Option<f32>,
     expected_auto_brightness: Option<bool>,
+    expected_user_brightness_offset: Option<f32>,
 ) -> Result<(), Error> {
     let env = create_service!(
         Services::Display, DisplayRequest::Set { settings, responder, } => {
@@ -354,6 +358,10 @@ async fn validate_display(
               (settings.auto_brightness, expected_auto_brightness) {
                 assert_eq!(auto_brightness, expected_auto_brightness_value);
                 responder.send(&mut Ok(()))?;
+            } else if let (Some(user_brightness_offset), Some(expected_user_brightness_offset_value)) =
+              (settings.user_brightness_offset, expected_user_brightness_offset) {
+                assert_eq!(user_brightness_offset, expected_user_brightness_offset_value);
+                responder.send(&mut Ok(()))?;
             } else {
                 panic!("Unexpected call to set");
             }
@@ -362,6 +370,7 @@ async fn validate_display(
             responder.send(&mut Ok(DisplaySettings {
                 auto_brightness: Some(false),
                 brightness_value: Some(0.5),
+                user_brightness_offset: Some(0.5),
             }))?;
         }
     );

@@ -23,9 +23,20 @@ protocol Display {
     Set(DisplaySettings settings) -> () error Error;
 };
 
+/// DisplaySettings are used to determine the output state of the display.
+/// The display can be toggled between two modes, auto-brightness on and
+/// auto-brightness off. When auto-brightness is on a manual offset to the
+/// total output brightness can be applied by setting `user_brightness_offset`.
+/// When auto-brightness is off the display brightness is set manually by
+/// setting brightness_value. All values can be set at any time to persist
+/// settings for either mode.
 table DisplaySettings {
+    /// Auto brightness enabled
     1: bool auto_brightness;
+    /// Manually set brightness value [0.0 - 1.0]
     2: float32 brightness_value;
+    /// User defined offset to the total auto brightness output [-1.0 - 1.0]
+    3: float32 user_brightness_offset;
 };
 
 table LightSensorData {
