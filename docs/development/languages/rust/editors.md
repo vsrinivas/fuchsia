@@ -1,6 +1,8 @@
 # Rust Editor Configuration
 
-## Generating Cargo.toml files for use by editors {#generating-cargo-toml}
+## Shared setup
+
+### Generating Cargo.toml files for use by editors {#generating-cargo-toml}
 
 Many editors require Cargo.toml files in order to understand how your Rust
 project is structured. These files can be generated using the following
@@ -20,6 +22,27 @@ rustc_binary("some_label") {
    ...
 }
 ```
+
+### Generating .cargo/config files for use by editor {#generating-cargo-config}
+
+Some plugins require a `.cargo/config` file to allow cargo to operate correctly for Fuchsia
+(e.g. to run `cargo check`). To easily generate this file, use the `fargo` tool.
+
+1. [Install rustup](https://rustup.rs/)
+2. Configure `rustup` to use the Fuchsia Rust toolchain by running:
+```sh
+rustup toolchain link fuchsia $($FUCHSIA_DIR/scripts/youcompleteme/paths.py VSCODE_RUST_TOOLCHAIN)
+rustup default fuchsia
+```
+3. Clone and install the `fargo` tool within your `$FUCHSIA_DIR` by following the
+[getting started instructions](https://fuchsia.googlesource.com/fargo/) for fargo.
+4. Create your config:
+```sh
+cd $FUCHSIA_DIR && fargo write-config
+# Note the caveats about changing architecture in the fargo readme
+# https://fuchsia.googlesource.com/fargo/#creating-a-cargo_config
+```
+
 ## Intellij
 
 See instructions on [the Intellij Rust site](https://intellij-rust.github.io/).
@@ -180,3 +203,40 @@ If it runs `rustc` instead of `cargo`, that's because you didn't `fx gen-cargo`.
 Note that it might report errors on the first line of the current file.  Those are
 actually errors from a different file.  The error's comment will name the
 problematic file.
+
+## Sublime Text {#sublime-text}
+
+### Using Rust-Enhanced for syntax checking
+
+Follow the steps above to [generate a `Cargo.toml` file](#generating-cargo-toml) and also
+the steps to [generate a `cargo/config` file](#generating-cargo-config), which will also
+setup `cargo` to use the Fuchsia Rust toolchain.
+
+Then, install the [Rust Enhanced](https://packagecontrol.io/packages/Rust%20Enhanced) plugin.
+Now, you should have syntax checking on save and be able to run `cargo check` from the
+context menu / command palette. Thanks to `fargo`, some tests also appear to run OK, but this
+hasn't been thoroughly tested.
+
+### Using a language server for intellisense / hover tooltips / go-to-definition
+
+#### Setup
+
+First, install the [LSP package](https://github.com/sublimelsp/LSP) for Sublime. Then, you
+have two choices for the language server, pick one:
+
+1. rust-analyzer (recommended): Follow the [rust-analyzer setup instructions]
+(https://github.com/rust-analyzer/rust-analyzer/tree/master/docs/user) for Sublime.
+2. RLS (easy to set up): Just enable `rls` in the `LSP: Enable Language Server` options from
+the Sublime command palette.
+
+#### Usage
+
+In order for the language server to work, you need to open a folder that contains a Cargo.toml
+as the root of your Sublime project. There are two ways you can do this:
+
+1. Open a new Sublime window for the folder that contains the cargo.toml (e.g.
+`garnet/foo/path/to/target`)
+2. Or, go to the top menu bar -> Project -> Add Folder to Project. This will keep all your files
+inside one Sublime window, and works even if you have the broader `fuchsia` folder also open.
+
+You may need to restart Sublime after these steps.

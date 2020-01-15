@@ -10,3 +10,5 @@ toc:
   path: /docs/development/editors/vscode.md
 - title: "VIM"
   path: /docs/development/editors/vim.md
+- title: "Sublime Text"
+  path: /docs/development/editors/sublime.md
