@@ -92,7 +92,7 @@ impl CameraFactoryFacade {
     /// # Arguments
     /// * `mode`: One of the camera's predefined sensor modes (fpms, resolution,
     ///           etc).
-    /// * `exposure`: The camera's sensor exposure parameter.
+    /// * `integration_time`: The camera's sensor integration time parameter.
     /// * `analog_gain`: The camera's sensor analog gain parameter.
     /// * `digital_gain`: The camera's sensor digital gain parameter.
     ///
@@ -100,13 +100,13 @@ impl CameraFactoryFacade {
     pub async fn set_config(
         &self,
         mode: u32,
-        exposure: u32,
+        integration_time: i32,
         analog_gain: i32,
         digital_gain: i32,
     ) -> Result<Value, Error> {
         const TAG: &str = "CameraFactoryFacade::set_config";
         let svc = self.init_check(TAG).await?;
-        match svc.set_config(mode, exposure, analog_gain, digital_gain).await? {
+        match svc.set_config(mode, integration_time, analog_gain, digital_gain).await? {
             Ok(_) => Ok(to_value(())?),
             Err(err) => match err {
                 CameraFactoryError::NoCamera => Ok(to_value(Sl4fCameraFactoryError::NoCamera)?),

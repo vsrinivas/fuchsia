@@ -89,26 +89,18 @@ void FactoryProtocol::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info
   stream_->ReleaseFrame(info.buffer_id);
 }
 
-void FactoryProtocol::DetectCamera(DetectCameraCallback callback) {
-  FX_NOTIMPLEMENTED();
-}
+void FactoryProtocol::DetectCamera(DetectCameraCallback callback) { FX_NOTIMPLEMENTED(); }
 
-void FactoryProtocol::Start() {
-  FX_NOTIMPLEMENTED();
-}
+void FactoryProtocol::Start() { FX_NOTIMPLEMENTED(); }
 
-void FactoryProtocol::Stop() {
-  FX_NOTIMPLEMENTED();
-}
+void FactoryProtocol::Stop() { FX_NOTIMPLEMENTED(); }
 
-void FactoryProtocol::SetConfig(uint32_t mode, uint32_t exposure, int32_t analog_gain,
+void FactoryProtocol::SetConfig(uint32_t mode, int32_t integration_time, int32_t analog_gain,
                                 int32_t digital_gain, SetConfigCallback callback) {
   FX_NOTIMPLEMENTED();
 }
 
-void FactoryProtocol::CaptureImage(CaptureImageCallback callback) {
-  FX_NOTIMPLEMENTED();
-}
+void FactoryProtocol::CaptureImage(CaptureImageCallback callback) { FX_NOTIMPLEMENTED(); }
 
 void FactoryProtocol::WriteCalibrationData(fuchsia::mem::Buffer calibration_data,
                                            std::string file_path,

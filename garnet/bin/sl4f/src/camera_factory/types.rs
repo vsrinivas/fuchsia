@@ -23,7 +23,7 @@ pub struct DetectCameraResult {
 #[derive(Deserialize, Debug)]
 pub struct SetConfigRequest {
     pub mode: u32,
-    pub exposure: u32,
+    pub integration_time: i32,
     pub analog_gain: i32,
     pub digital_gain: i32,
 }

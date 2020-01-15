@@ -33,7 +33,9 @@ pub async fn camera_factory_method_to_fidl(
         "Stop" => facade.stop().await,
         "SetConfig" => {
             let req: SetConfigRequest = from_value(args)?;
-            facade.set_config(req.mode, req.exposure, req.analog_gain, req.digital_gain).await
+            facade
+                .set_config(req.mode, req.integration_time, req.analog_gain, req.digital_gain)
+                .await
         }
         "CaptureImage" => facade.capture_image().await,
         "WriteCalibrationData" => {

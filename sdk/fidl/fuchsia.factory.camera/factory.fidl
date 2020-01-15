@@ -30,9 +30,9 @@ protocol CameraFactory {
     /// it. If the device has multiple cameras, the first one listed is chosen.
     ///
     /// - response `camera_id` Identifies the camera. This should not change throughout
-    ///                        the lifetime of the camera. Is null if no camera exists.
+    ///                        the lifetime of the camera.
     /// - response `camera_info` A table providing identifying information about the
-    ///                          camera. Is null if no camera exists.
+    ///                          camera.
     /// * error A value indicating whether there is a camera.
     DetectCamera() -> (int32 camera_id, fuchsia.camera2.DeviceInfo camera_info)
         error CameraFactoryError;
@@ -47,15 +47,15 @@ protocol CameraFactory {
     ///
     /// + request `mode` One of the camera's predefined sensor modes (fpms, resolution,
     ///                  etc).
-    /// + request `exposure` The camera's sensor exposure parameter.
+    /// + request `integration_time` The camera's sensor integration time parameter.
     /// + request `analog_gain` The camera's sensor analog gain parameter.
     /// + request `digital_gain` The camera's sensor digital gain parameter.
     /// * error A value indicating the type of failure, if any. This may occur if there
     ///         is no camera or it is not streaming.
     /// * See [`camerasensor.banjo`] for more information on these params:
     ///     //zircon/system/banjo/ddk.protocol.camerasensor/camerasensor.banjo
-    SetConfig(uint32 mode, uint32 exposure, int32 analog_gain, int32 digital_gain) -> ()
-        error CameraFactoryError;
+    SetConfig(uint32 mode, int32 integration_time, int32 analog_gain, int32 digital_gain)
+        -> () error CameraFactoryError;
 
     /// Instructs the device to save a frame from the stream, and send it back to the
     /// host.

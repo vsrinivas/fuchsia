@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.factory.camera") {
+  sdk_category = "internal"
+
   sources = [ "factory.fidl" ]
 
   public_deps = [

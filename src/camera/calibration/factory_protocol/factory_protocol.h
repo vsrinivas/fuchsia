@@ -48,7 +48,7 @@ class FactoryProtocol : public fuchsia::camera2::Stream_EventSender,
   void DetectCamera(DetectCameraCallback callback) override;
   void Start() override;
   void Stop() override;
-  void SetConfig(uint32_t mode, uint32_t exposure, int32_t analog_gain, int32_t digital_gain,
+  void SetConfig(uint32_t mode, int32_t integration_time, int32_t analog_gain, int32_t digital_gain,
                  SetConfigCallback callback) override;
   void CaptureImage(CaptureImageCallback callback) override;
   void WriteCalibrationData(fuchsia::mem::Buffer calibration_data, std::string file_path,
