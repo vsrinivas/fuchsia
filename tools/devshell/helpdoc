@@ -75,11 +75,11 @@ function main {
   {
     echo "# fx - Fuchsia development commands"
     echo
-    echo "\`fx\` is the front-door to a collection of subcommands that make many tasks related to Fuchsia development easier."
+    echo "\`fx\` is the entry-point for a set of subcommands that make many tasks related to Fuchsia development easier."
     echo
-    echo "It contains a large number of subcommands, which can be discovered by running \`fx help\`."
-    echo "If you use bash or zsh as a shell, you can get some auto-completion "
-    echo "by sourcing \`scripts/fx-env.sh\` into your shell."
+    echo "It contains a large number of subcommands. Run \`fx help\` to see all the available subcommands."
+    echo "If you use bash or zsh as a shell, source \`scripts/fx-env.sh\`  "
+    echo "to get some auto-completion."
     echo
     echo "Also see the [global options and flags](fx.md) that affect all subcommands."
     echo
@@ -90,7 +90,7 @@ function main {
   {
     echo "# fx command"
     echo
-    echo "For help with specific subcommands, navigate to the [Overview page](index.md)."
+    echo "For help with specific subcommands, see [Overview page](index.md)."
     echo
     echo '```none'
     print-redacted-fx-help
@@ -119,7 +119,7 @@ function main {
       echo
       echo "## Main subcommands"
       echo
-      echo "Subcommands that are part of the supported [fx workflow](//docs/development/workflows/fx.md)."
+      echo "Subcommands that are part of the [fx workflow](//docs/development/workflows/fx.md)."
       echo
       _md_main_table_header
     } >> "${base_out}/index.md"
@@ -130,9 +130,9 @@ function main {
         echo
         echo "## Contrib subcommands"
         echo
-        echo "Subcommands that have been contributed by team members that have other levels of support and/or ownership."
+        echo "Subcommands that have been contributed by project members that have other levels of support, ownership, or both."
         echo "The [OWNERS file](https://fuchsia.googlesource.com/fuchsia/+/master/tools/devshell/contrib/OWNERS) in the"
-        echo "contrib directory provides a pointer to the individuals supporting the scripts there."
+        echo "contrib directory provides a pointer to the member that supports each script."
         echo
         _md_main_table_header
       } >> "${base_out}/index.md"

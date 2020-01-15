@@ -1,20 +1,20 @@
 # fx subcommands
 
-Sub-commands of `fx` are defined in several directories:
+Subcommands of `fx` are defined in several directories:
 
-`//tools/devshell` contains core scripts that are part of the supported [fx
-workflow](/docs/development/workflows/fx.md).
+`//tools/devshell` contains core scripts that are part of
+[fx workflow](/docs/development/workflows/fx.md).
 
 `//tools/devshell/contrib` contains scripts that have been contributed by
-team members that have other levels of support and/or ownership. The OWNERS
-file in the contrib directory provides a pointer to the individuals
+project members that have other levels of support, ownership, or both. The
+OWNERS file in the contrib directory provides a pointer to the individuals
 supporting the scripts there.
 
 `//vendor/*/scripts/devshell` contains scripts that are relevant only to the
 particular vendor and will have an ownership and support model documented
 there.
 
-Sub-commands can be implemented in a number of languages, but it is
+Subcommands can be implemented in a number of languages, but it is
 recommended to use `bash` at this time, so as to be able to consume some of
 the helpers provided by `//tools/devshell/lib/vars.sh`.
 
@@ -30,7 +30,7 @@ needs to perform any significant string manipulation or business logic, it is
 likely better authored in a language that provides more structural
 capabilities and standard library.
 
-## Consuming vars.sh / Implementing Subcommands
+## Consuming vars.sh and implementing subcommands
 
 Most subcommands start with a pre-amble of this nature (paths vary slightly):
 
@@ -81,7 +81,7 @@ considered internal and may change more often. Users can request additional
 helper functions by contacting the devshell owners, or by defining their own
 library scripts in contrib.
 
-## Environment Variables
+## Environment variables
 
 After a successful invocation of `fx-config-read` in a script, one would observe the following environment variables:
 
@@ -98,7 +98,7 @@ ZIRCON_TOOLS_DIR     - The path to the Zircon host-tools build directory.
 users should not rely on them - only the above list are to be preserved
 (unless marked deprecated).
 
-## Documenting Subcommands
+## Documenting subcommands
 
 As many `fx` subcommands delegate to sub-programs passing on flags directly
 to them, it is prohibitive to always be able to respond to the `-h` or
@@ -117,12 +117,12 @@ are defined as follows:
 ```
 
 The first line starting with `###` is consumed by `fx help` to produce a list
-of commands with one-line descriptions of what the command does. These lines
-should be kept short so as to render well under `fx help`.
+of subcommands with one-line descriptions of what the subcommand does.
+These lines should be kept short so as to render well under `fx help`.
 
 Lines starting with `##` are output when a user invokes `fx help subcommand`,
-and are used to provide full command help output. The long form output should
-document all flags and provide fuller description of the command behaviors as
+and are used to provide full subcommand help output. The long form output should
+document all flags and provide fuller description of the subcommand behaviors as
 appropriate.
 
 Lines starting with `####` contain metadata. The following metadata fields are
@@ -136,8 +136,8 @@ supported:
 * `#### DEPRECATED`: deprecated subcommands are not listed by default on
   `fx help`.
 
-Where possible, a command can use `fx-command-help` to print out the
-long-form help (defined by `##` lines). Many commands implement `-h` and
+Where possible, a subcommand can use `fx-command-help` to print out the
+long-form help (defined by `##` lines). Many subcommands implement `-h` and
 `--help` to invoke `fx-command-help` and this is recommended.
 
 ### fx metadata files

@@ -1,10 +1,9 @@
 # fx workflows
 
-`fx` is the front-door to a collection of scripts that make many tasks
-related to Fuchsia development easier. It contains a large number of
-subcommands, which can be discovered by running `fx help`. If you use `bash`
-or `zsh` as a shell, you can get some auto-completion for `fx` by sourcing
-`scripts/fx-env.sh` into your shell.
+`fx` is the entry-point for a set of subcommands that make many tasks
+related to Fuchsia development easier. Run `fx help` to see all the available
+subcommands. If you use `bash` or `zsh` as a shell, source
+`scripts/fx-env.sh` to get some auto-completion.
 
 ## Setting up fx {#setting-up-fx}
 
@@ -46,6 +45,7 @@ unpredictable behaviors (for example, that directory contains binaries with
 generic names like "bootstrap" which may unintentionally override the
 behavior of other systems).
 cco
+
 ## Common daily tools {#common-daily-tools}
 
 The first thing you will want to do after checking out a Fuchsia tree is to
