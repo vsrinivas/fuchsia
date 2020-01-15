@@ -185,7 +185,7 @@ Each protocol declaration array element contains:
 The methods array lists the defined methods in declaration order (giving details
 about the ordinal number, the name of the method, whether it has a request
 component and a response component, and indicates the sizes and alignments of
-those componenets).
+those components).
 
 The JSON output has two `bool`s, `has_request` and `has_response`,
 that indicate if the protocol defines a request and a response, respectively.
