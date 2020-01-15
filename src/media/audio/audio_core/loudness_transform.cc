@@ -19,4 +19,8 @@ float MappedLoudnessTransform::EvaluateStageGain(const LoudnessTransform::Stage&
   }
 }
 
+float NoOpLoudnessTransform::EvaluateStageGain(const LoudnessTransform::Stage& stages) const {
+  return Gain::kUnityGainDb;
+}
+
 }  // namespace media::audio

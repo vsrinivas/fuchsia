@@ -60,6 +60,11 @@ class MappedLoudnessTransform : public LoudnessTransform {
   const VolumeCurve& volume_curve_;
 };
 
+// A `LoudnessTransform` that always returns unity gain, no matter what loudness stages are given.
+class NoOpLoudnessTransform : public LoudnessTransform {
+  float EvaluateStageGain(const LoudnessTransform::Stage& stages) const final;
+};
+
 }  // namespace media::audio
 
 #endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_LOUDNESS_TRANSFORM_H_
