@@ -38,6 +38,13 @@ class StubBoard : public fuchsia::hwinfo::Board {
   bool has_been_called_ = false;
 };
 
+class StubBoardNeverReturns : public StubBoard {
+ public:
+  StubBoardNeverReturns() : StubBoard(fuchsia::hwinfo::BoardInfo()) {}
+
+  // |fuchsia.hwinfo.Board|
+  void GetInfo(GetInfoCallback callback) override;
+};
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_BOARD_H_

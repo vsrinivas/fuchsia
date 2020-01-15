@@ -18,18 +18,22 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace {
 
 using fuchsia::feedback::Annotation;
 using fuchsia::hwinfo::BoardInfo;
 
+}  // namespace
+
 BoardInfoProvider::BoardInfoProvider(const std::set<std::string>& annotations_to_get,
                                      async_dispatcher_t* dispatcher,
                                      std::shared_ptr<sys::ServiceDirectory> services,
-                                     zx::duration timeout)
+                                     zx::duration timeout, std::shared_ptr<Cobalt> cobalt)
     : annotations_to_get_(annotations_to_get),
       dispatcher_(dispatcher),
       services_(services),
-      timeout_(timeout) {
+      timeout_(timeout),
+      cobalt_(std::move(cobalt)) {
   const auto supported_annotations = GetSupportedAnnotations();
   std::vector<std::string> not_supported;
   for (const auto& annotation : annotations_to_get_) {
@@ -53,7 +57,7 @@ std::set<std::string> BoardInfoProvider::GetSupportedAnnotations() {
 
 fit::promise<std::vector<Annotation>> BoardInfoProvider::GetAnnotations() {
   std::vector<fit::promise<Annotation>> annotations;
-  auto board_info_ptr = std::make_unique<internal::BoardInfoPtr>(dispatcher_, services_);
+  auto board_info_ptr = std::make_unique<internal::BoardInfoPtr>(dispatcher_, services_, cobalt_);
 
   auto board_info = board_info_ptr->GetBoardInfo(timeout_);
 
@@ -80,10 +84,10 @@ fit::promise<std::vector<Annotation>> BoardInfoProvider::GetAnnotations() {
 }
 
 namespace internal {
-
 BoardInfoPtr::BoardInfoPtr(async_dispatcher_t* dispatcher,
-                           std::shared_ptr<sys::ServiceDirectory> services)
-    : dispatcher_(dispatcher), services_(services) {}
+                           std::shared_ptr<sys::ServiceDirectory> services,
+                           std::shared_ptr<Cobalt> cobalt)
+    : dispatcher_(dispatcher), services_(services), cobalt_(std::move(cobalt)) {}
 
 fit::promise<std::map<std::string, std::string>> BoardInfoPtr::GetBoardInfo(zx::duration timeout) {
   FXL_CHECK(!has_called_get_board_info_) << "GetBoardInfo() is not intended to be called twice";
@@ -103,6 +107,7 @@ fit::promise<std::map<std::string, std::string>> BoardInfoPtr::GetBoardInfo(zx::
     }
 
     FX_LOGS(ERROR) << "Hardware board info retrieval timed out";
+    cobalt_->LogOccurrence(TimedOutData::kBoardInfo);
     done_.completer.complete_error();
   });
 

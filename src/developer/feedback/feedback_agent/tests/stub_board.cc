@@ -22,4 +22,6 @@ void StubBoard::CloseConnection() {
   }
 }
 
+void StubBoardNeverReturns::GetInfo(GetInfoCallback callback) {}
+
 }  // namespace feedback

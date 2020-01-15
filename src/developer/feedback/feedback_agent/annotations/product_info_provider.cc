@@ -40,11 +40,12 @@ bool IsRequired(const std::string& annotation) {
 ProductInfoProvider::ProductInfoProvider(const std::set<std::string>& annotations_to_get,
                                          async_dispatcher_t* dispatcher,
                                          std::shared_ptr<sys::ServiceDirectory> services,
-                                         zx::duration timeout)
+                                         zx::duration timeout, std::shared_ptr<Cobalt> cobalt)
     : annotations_to_get_(annotations_to_get),
       dispatcher_(dispatcher),
       services_(services),
-      timeout_(timeout) {
+      timeout_(timeout),
+      cobalt_(std::move(cobalt)) {
   const auto supported_annotations = GetSupportedAnnotations();
   std::vector<std::string> not_supported;
   for (const auto& annotation : annotations_to_get_) {
@@ -73,7 +74,9 @@ std::set<std::string> ProductInfoProvider::GetSupportedAnnotations() {
 
 fit::promise<std::vector<Annotation>> ProductInfoProvider::GetAnnotations() {
   std::vector<fit::promise<Annotation>> annotations;
-  auto product_info_ptr = std::make_unique<internal::ProductInfoPtr>(dispatcher_, services_);
+  auto product_info_ptr =
+      std::make_unique<internal::ProductInfoPtr>(dispatcher_, services_, cobalt_);
+
   auto product_info = product_info_ptr->GetProductInfo(timeout_);
 
   return ExtendArgsLifetimeBeyondPromise(std::move(product_info),
@@ -132,8 +135,9 @@ std::optional<std::string> Join(const std::vector<LocaleId>& locale_list) {
 namespace internal {
 
 ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
-                               std::shared_ptr<sys::ServiceDirectory> services)
-    : dispatcher_(dispatcher), services_(services) {}
+                               std::shared_ptr<sys::ServiceDirectory> services,
+                               std::shared_ptr<Cobalt> cobalt)
+    : dispatcher_(dispatcher), services_(services), cobalt_(std::move(cobalt)) {}
 
 fit::promise<std::map<std::string, std::string>> ProductInfoPtr::GetProductInfo(
     zx::duration timeout) {
@@ -154,6 +158,7 @@ fit::promise<std::map<std::string, std::string>> ProductInfoPtr::GetProductInfo(
     }
 
     FX_LOGS(ERROR) << "Hardware product info retrieval timed out";
+    cobalt_->LogOccurrence(TimedOutData::kProductInfo);
     done_.completer.complete_error();
   });
 

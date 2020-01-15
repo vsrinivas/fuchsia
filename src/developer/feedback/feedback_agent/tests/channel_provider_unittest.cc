@@ -13,7 +13,10 @@
 #include <string>
 
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
+#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -23,10 +26,11 @@ namespace feedback {
 namespace {
 
 using fuchsia::feedback::Annotation;
+using testing::UnorderedElementsAreArray;
 
-class ChannelProviderTest : public UnitTestFixture {
+class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
  public:
-  ChannelProviderTest() : executor_(dispatcher()) {}
+  ChannelProviderTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
   void SetUpChannelProviderPtr(std::unique_ptr<StubChannelProvider> channel_provider) {
@@ -38,7 +42,8 @@ class ChannelProviderTest : public UnitTestFixture {
 
   std::optional<std::string> RetrieveCurrentChannel(const zx::duration timeout = zx::sec(1)) {
     std::optional<std::string> channel;
-    ChannelProvider provider(dispatcher(), services(), timeout);
+    ChannelProvider provider(dispatcher(), services(), timeout,
+                             std::make_shared<Cobalt>(dispatcher(), services()));
     auto promises = provider.GetAnnotations();
     executor_.schedule_task(
         std::move(promises).then([&channel](fit::result<std::vector<Annotation>>& res) {
@@ -102,17 +107,22 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrClosesConnection) {
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderPtrNeverReturns) {
   SetUpChannelProviderPtr(std::make_unique<StubChannelProviderNeverReturns>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   const auto result = RetrieveCurrentChannel();
 
   ASSERT_FALSE(result);
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(TimedOutData::kChannel),
+                                      }));
 }
 
 TEST_F(ChannelProviderTest, Fail_CallGetCurrentTwice) {
   SetUpChannelProviderPtr(std::make_unique<StubChannelProvider>());
 
   const zx::duration unused_timeout = zx::sec(1);
-  internal::ChannelProviderPtr channel_provider(dispatcher(), services());
+  internal::ChannelProviderPtr channel_provider(dispatcher(), services(),
+                                                std::make_shared<Cobalt>(dispatcher(), services()));
   executor_.schedule_task(channel_provider.GetCurrent(unused_timeout));
   ASSERT_DEATH(channel_provider.GetCurrent(unused_timeout),
                testing::HasSubstr("GetCurrent() is not intended to be called twice"));

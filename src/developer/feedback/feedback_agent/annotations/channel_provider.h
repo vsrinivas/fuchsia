@@ -12,11 +12,13 @@
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider.h"
+#include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
 
@@ -27,7 +29,7 @@ class ChannelProvider : public AnnotationProvider {
  public:
   // fuchsia.update.channel.Provider is expected to be in |services|.
   ChannelProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                  zx::duration timeout);
+                  zx::duration timeout, std::shared_ptr<Cobalt> cobalt);
 
   static std::set<std::string> GetSupportedAnnotations();
   fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() override;
@@ -36,6 +38,7 @@ class ChannelProvider : public AnnotationProvider {
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const zx::duration timeout_;
+  std::shared_ptr<Cobalt> cobalt_;
 };
 
 namespace internal {
@@ -47,13 +50,15 @@ namespace internal {
 class ChannelProviderPtr {
  public:
   ChannelProviderPtr(async_dispatcher_t* dispatcher,
-                     std::shared_ptr<sys::ServiceDirectory> services);
+                     std::shared_ptr<sys::ServiceDirectory> services,
+                     std::shared_ptr<Cobalt> cobalt);
 
   fit::promise<std::string> GetCurrent(zx::duration timeout);
 
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
+  std::shared_ptr<Cobalt> cobalt_;
   // Enforces the one-shot nature of GetChannel().
   bool has_called_get_current_ = false;
 

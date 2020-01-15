@@ -38,6 +38,14 @@ class StubProduct : public fuchsia::hwinfo::Product {
   bool has_been_called_ = false;
 };
 
+class StubProductNeverReturns : public StubProduct {
+ public:
+  StubProductNeverReturns() : StubProduct(fuchsia::hwinfo::ProductInfo()) {}
+
+  // |fuchsia.hwinfo.Product|
+  void GetInfo(GetInfoCallback callback) override;
+};
+
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_PRODUCT_H_

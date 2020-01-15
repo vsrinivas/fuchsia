@@ -18,6 +18,7 @@
 
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/ref_counted_delayed_task.h"
+#include "src/developer/feedback/utils/cobalt.h"
 
 namespace feedback {
 
@@ -50,6 +51,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   const Config config_;
   RefCountedDelayedTask after_timeout_;
   async::Executor executor_;
+  std::shared_ptr<Cobalt> cobalt_;
 
   // We run the Inspect data collection in a separate loop, thread and executor as the calling
   // component will itself be discovered and we don't want to deadlock it, cf. fxb/4632.

@@ -14,14 +14,17 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace {
 
 using fuchsia::feedback::Annotation;
 using internal::ChannelProviderPtr;
 
+}  // namespace
+
 ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
                                  std::shared_ptr<sys::ServiceDirectory> services,
-                                 zx::duration timeout)
-    : dispatcher_(dispatcher), services_(services), timeout_(timeout) {}
+                                 zx::duration timeout, std::shared_ptr<Cobalt> cobalt)
+    : dispatcher_(dispatcher), services_(services), timeout_(timeout), cobalt_(std::move(cobalt)) {}
 
 std::set<std::string> ChannelProvider::GetSupportedAnnotations() {
   return {
@@ -30,7 +33,7 @@ std::set<std::string> ChannelProvider::GetSupportedAnnotations() {
 }
 
 fit::promise<std::vector<Annotation>> ChannelProvider::GetAnnotations() {
-  auto channel_ptr = std::make_unique<ChannelProviderPtr>(dispatcher_, services_);
+  auto channel_ptr = std::make_unique<ChannelProviderPtr>(dispatcher_, services_, cobalt_);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
@@ -56,8 +59,9 @@ fit::promise<std::vector<Annotation>> ChannelProvider::GetAnnotations() {
 namespace internal {
 
 ChannelProviderPtr::ChannelProviderPtr(async_dispatcher_t* dispatcher,
-                                       std::shared_ptr<sys::ServiceDirectory> services)
-    : dispatcher_(dispatcher), services_(services) {}
+                                       std::shared_ptr<sys::ServiceDirectory> services,
+                                       std::shared_ptr<Cobalt> cobalt)
+    : dispatcher_(dispatcher), services_(services), cobalt_(std::move(cobalt)) {}
 
 fit::promise<std::string> ChannelProviderPtr::GetCurrent(zx::duration timeout) {
   FXL_CHECK(!has_called_get_current_) << "GetCurrent() is not intended to be called twice";
@@ -79,6 +83,7 @@ fit::promise<std::string> ChannelProviderPtr::GetCurrent(zx::duration timeout) {
     }
 
     FX_LOGS(ERROR) << "Current OTA channel retrieval timed out";
+    cobalt_->LogOccurrence(TimedOutData::kChannel);
     done_.completer.complete_error();
   });
   const zx_status_t post_status = async::PostDelayedTask(

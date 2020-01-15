@@ -17,7 +17,11 @@
 
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_product.h"
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
+#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/feedback/utils/cobalt.h"
+#include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -38,9 +42,11 @@ using testing::UnorderedElementsAreArray;
 
 class ProductInfoProviderTest
     : public UnitTestFixture,
+      public CobaltTestFixture,
       public testing::WithParamInterface<std::map<std::string, std::string>> {
  public:
-  ProductInfoProviderTest() : executor_(dispatcher()) {}
+  ProductInfoProviderTest()
+      : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
   void SetUpProductProvider(std::unique_ptr<StubProduct> product_provider) {
@@ -50,9 +56,11 @@ class ProductInfoProviderTest
     }
   }
 
-  std::map<std::string, std::string> GetProductInfo(const std::set<std::string>& annotations_to_get,
-                                                    const zx::duration timeout = zx::sec(1)) {
-    ProductInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout);
+  std::map<std::string, std::string> GetProductInfo(
+      const std::set<std::string>& annotations_to_get = {},
+      const zx::duration timeout = zx::sec(1)) {
+    ProductInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout,
+                                 std::make_shared<Cobalt>(dispatcher(), services()));
 
     auto promise = provider.GetAnnotations();
 
@@ -188,11 +196,24 @@ TEST_F(ProductInfoProviderTest, Succeed_ProductInfoReturnsFewerAnnotations) {
       }));
 }
 
+TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
+  SetUpProductProvider(std::make_unique<StubProductNeverReturns>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  auto board_info = GetProductInfo();
+
+  ASSERT_TRUE(board_info.empty());
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(TimedOutData::kProductInfo),
+                                      }));
+}
+
 TEST_F(ProductInfoProviderTest, Fail_CallGetProductInfoTwice) {
   SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo({})));
 
   const zx::duration unused_timeout = zx::sec(1);
-  internal::ProductInfoPtr product_info_ptr(dispatcher(), services());
+  internal::ProductInfoPtr product_info_ptr(dispatcher(), services(),
+                                            std::make_shared<Cobalt>(dispatcher(), services()));
   executor_.schedule_task(product_info_ptr.GetProductInfo(unused_timeout));
   ASSERT_DEATH(product_info_ptr.GetProductInfo(unused_timeout),
                testing::HasSubstr("GetProductInfo() is not intended to be called twice"));

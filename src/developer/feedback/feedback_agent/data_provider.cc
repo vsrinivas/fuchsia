@@ -66,6 +66,7 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
       config_(config),
       after_timeout_(dispatcher, after_timeout, timeout),
       executor_(dispatcher),
+      cobalt_(std::make_unique<Cobalt>(dispatcher_, services_)),
       inspect_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       inspect_executor_(inspect_loop_.dispatcher()) {
   if (const zx_status_t status = inspect_loop_.StartThread("inspect-thread"); status != ZX_OK) {
@@ -76,8 +77,8 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
 void DataProvider::GetData(GetDataCallback callback) {
   after_timeout_.Acquire();
   auto annotations =
-      fit::join_promise_vector(
-          GetAnnotations(dispatcher_, services_, config_.annotation_allowlist, kDataTimeout))
+      fit::join_promise_vector(GetAnnotations(dispatcher_, services_, config_.annotation_allowlist,
+                                              kDataTimeout, cobalt_))
           .and_then([](std::vector<fit::result<std::vector<Annotation>>>& annotation_promises)
                         -> fit::result<std::vector<Annotation>> {
             std::vector<Annotation> ok_annotations;

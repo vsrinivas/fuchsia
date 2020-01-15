@@ -14,13 +14,15 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider.h"
+#include "src/developer/feedback/utils/cobalt.h"
 
 namespace feedback {
 
 // Get the annotation providers that will collect the annotations in |allowlist_|.
 std::vector<std::unique_ptr<AnnotationProvider>> GetProviders(
     const std::set<std::string>& allowlist, async_dispatcher_t* dispatcher,
-    std::shared_ptr<sys::ServiceDirectory> services, zx::duration timeout);
+    std::shared_ptr<sys::ServiceDirectory> services, zx::duration timeout,
+    std::shared_ptr<Cobalt> cobalt);
 
 }  // namespace feedback
 
