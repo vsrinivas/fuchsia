@@ -108,7 +108,6 @@ bool VulkanInstance::Init(bool enable_validation) {
   }
   fprintf(stderr, "\n");
 
-  // vk::InstanceCreateInfo instance_create_info_hpp(instance_create_info);
   auto rv = vk::createInstanceUnique(create_info);
   if (vk::Result::eSuccess != rv.result) {
     RTN_MSG(false, "VK Error: 0x%x - Failed to create instance.", rv.result);

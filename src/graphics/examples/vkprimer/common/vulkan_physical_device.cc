@@ -15,7 +15,9 @@ static const std::vector<const char *> s_required_phys_device_props = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #ifdef __Fuchsia__
     VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME,
+    VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
     VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+    VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
 #endif
 };
 
