@@ -23,7 +23,6 @@
 #include "console.h"
 #include "device.h"
 #include "driver_utils.h"
-#include "ethernet.h"
 #include "gpu.h"
 #include "input.h"
 #include "rng.h"
@@ -51,9 +50,6 @@ static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
 
   // Compose a device based on the PCI device id.
   switch (info.device_id) {
-    case VIRTIO_DEV_TYPE_NETWORK:
-    case VIRTIO_DEV_TYPE_T_NETWORK:
-      return CreateAndBind<virtio::EthernetDevice>(ctx, bus_device);
     case VIRTIO_DEV_TYPE_CONSOLE:
     case VIRTIO_DEV_TYPE_T_CONSOLE:
       return CreateAndBind<virtio::ConsoleDevice>(ctx, bus_device);
@@ -88,10 +84,8 @@ BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, VIRTIO_PCI_VENDOR_ID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_CONSOLE),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_ENTROPY),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_NETWORK),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_CONSOLE),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_ENTROPY),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_NETWORK),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_GPU),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_INPUT),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_SOCKET), BI_ABORT(), ZIRCON_DRIVER_END(virtio)

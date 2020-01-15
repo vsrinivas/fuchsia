@@ -5,7 +5,6 @@
 zx_driver("virtio") {
   sources = [
     "console.cc",
-    "ethernet.cc",
     "input.cc",
     "input_kbd.cc",
     "input_touch.cc",
@@ -15,9 +14,7 @@ zx_driver("virtio") {
   ]
   deps = [
     ":common",
-    "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/banjo/ddk.protocol.hidbus",
-    "$zx/system/dev/lib/operation",
     "$zx/system/fidl/fuchsia-hardware-pty:c",
     "$zx/system/fidl/fuchsia-hardware-virtioconsole:llcpp",
     "$zx/system/fidl/fuchsia-hardware-vsock:c",
@@ -40,6 +37,19 @@ zx_driver("virtio_block") {
   deps = [
     ":common",
     "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/ulib/ddktl",
+  ]
+}
+
+zx_driver("virtio_ethernet") {
+  sources = [
+    "ethernet.cc",
+    "ethernet_driver.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/banjo/ddk.protocol.ethernet",
+    "$zx/system/dev/lib/operation",
     "$zx/system/ulib/ddktl",
   ]
 }
