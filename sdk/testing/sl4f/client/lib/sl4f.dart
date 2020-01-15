@@ -14,6 +14,7 @@ export 'src/input.dart';
 export 'src/inspect.dart';
 export 'src/modular.dart';
 export 'src/performance.dart';
+export 'src/power.dart';
 export 'src/scenic.dart';
 export 'src/setui.dart';
 export 'src/sl4f_client.dart';

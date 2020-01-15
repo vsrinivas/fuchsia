@@ -22,6 +22,7 @@ dart_library("client") {
     "src/inspect.dart",
     "src/modular.dart",
     "src/performance.dart",
+    "src/power.dart",
     "src/scenic.dart",
     "src/setui.dart",
     "src/sl4f_client.dart",
@@ -66,6 +67,7 @@ dart_test("sl4f_client_tests") {
     "inspect_test.dart",
     "modular_test.dart",
     "performance_test.dart",
+    "power_test.dart",
     "scenic_test.dart",
     "sl4f_client_test.dart",
     "ssh_test.dart",
@@ -84,6 +86,22 @@ dart_test("sl4f_client_tests") {
     "//third_party/dart-pkg/pub/quiver",
     "//third_party/dart-pkg/pub/test",
   ]
+
+  non_dart_deps = [ ":runtime_deps" ]
+}
+
+copy("runtime_deps") {
+  _data_dir = "$target_gen_dir/runtime_deps"
+
+  sources = [ "${root_out_dir}/fake_zedmon" ]
+
+  outputs = [ "$_data_dir/{{source_file_part}}" ]
+
+  deps = [ "//garnet/bin/traceutil:fake_zedmon_bin" ]
+
+  metadata = {
+    test_runtime_deps = [ "$_data_dir/fake_zedmon" ]
+  }
 }
 
 group("tests") {
