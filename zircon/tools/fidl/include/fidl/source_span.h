@@ -18,15 +18,15 @@ namespace fidl {
 
 class SourceSpan {
  public:
-  SourceSpan(std::string_view data, const SourceFile& source_file)
+  constexpr SourceSpan(std::string_view data, const SourceFile& source_file)
       : data_(data), source_file_(&source_file) {}
 
-  SourceSpan() : data_(std::string_view()), source_file_(nullptr) {}
+  constexpr SourceSpan() : data_(std::string_view()), source_file_(nullptr) {}
 
-  bool valid() const { return source_file_ != nullptr; }
+  constexpr bool valid() const { return source_file_ != nullptr; }
 
-  const std::string_view& data() const { return data_; }
-  const SourceFile& source_file() const {
+  constexpr const std::string_view& data() const { return data_; }
+  constexpr const SourceFile& source_file() const {
     assert(valid());
     return *source_file_;
   }
@@ -37,7 +37,7 @@ class SourceSpan {
   std::string position_str() const;
 
   // identity
-  inline bool operator==(const SourceSpan& rhs) const {
+  constexpr bool operator==(const SourceSpan& rhs) const {
     return data_.data() == rhs.data_.data() && data_.size() == rhs.data_.size();
   }
 
