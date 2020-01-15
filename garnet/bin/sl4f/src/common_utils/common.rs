@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Error};
+use fuchsia_component::client::connect_to_service;
+use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use serde_json::Value;
 
 pub mod macros {
@@ -83,4 +85,21 @@ pub fn parse_write_value(args_raw: Value) -> Result<Vec<u8>, Error> {
         };
     }
     Ok(vector)
+}
+
+/// Given a RwLock of an optional FIDL service proxy, returns a cached connection to the service,
+/// or try to connect and cache the connection for later.
+pub fn get_proxy_or_connect<S>(lock: &RwLock<Option<S::Proxy>>) -> Result<S::Proxy, Error>
+where
+    S: fidl::endpoints::DiscoverableService,
+    S::Proxy: Clone,
+{
+    let lock = lock.upgradable_read();
+    if let Some(proxy) = lock.as_ref() {
+        Ok(proxy.clone())
+    } else {
+        let proxy = connect_to_service::<S>()?;
+        *RwLockUpgradableReadGuard::upgrade(lock) = Some(proxy.clone());
+        Ok(proxy)
+    }
 }

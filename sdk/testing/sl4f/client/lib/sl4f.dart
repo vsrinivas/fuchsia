@@ -22,4 +22,5 @@ export 'src/ssh.dart';
 export 'src/storage.dart';
 export 'src/test.dart';
 export 'src/trace_processing/metrics_spec.dart';
+export 'src/update.dart';
 export 'src/webdriver.dart';

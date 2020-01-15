@@ -43,6 +43,7 @@ dart_library("client") {
     "src/trace_processing/time_point.dart",
     "src/trace_processing/trace_importing.dart",
     "src/trace_processing/trace_model.dart",
+    "src/update.dart",
     "src/webdriver.dart",
     "trace_processing.dart",
   ]
@@ -75,6 +76,7 @@ dart_test("sl4f_client_tests") {
     "test_test.dart",
     "trace_processing_test.dart",
     "trace_processing_test_data.dart",
+    "update_test.dart",
     "webdriver_test.dart",
   ]
 

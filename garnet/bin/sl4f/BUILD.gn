@@ -50,6 +50,8 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
+    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
     "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio-rustc",
     "//sdk/fidl/fuchsia.web:fuchsia.web-rustc",
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",

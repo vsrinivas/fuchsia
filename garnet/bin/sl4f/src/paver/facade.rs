@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::common_utils::common::get_proxy_or_connect;
 use anyhow::{bail, Error};
 use fidl_fuchsia_paver::{PaverMarker, PaverProxy};
-use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::Status;
-use parking_lot::{RwLock, RwLockUpgradableReadGuard};
+use parking_lot::RwLock;
 use serde_derive::{Deserialize, Serialize};
 
 use super::types::{Asset, Configuration, ConfigurationStatus};
@@ -32,14 +32,7 @@ impl PaverFacade {
     /// Return a cached connection to the paver service, or try to connect and cache the connection
     /// for later.
     fn proxy(&self) -> Result<PaverProxy, Error> {
-        let lock = self.proxy.upgradable_read();
-        if let Some(proxy) = lock.as_ref() {
-            Ok(proxy.clone())
-        } else {
-            let proxy = connect_to_service::<PaverMarker>()?;
-            *RwLockUpgradableReadGuard::upgrade(lock) = Some(proxy.clone());
-            Ok(proxy)
-        }
+        get_proxy_or_connect::<PaverMarker>(&self.proxy)
     }
 
     /// Queries the active boot configuration, if the current bootloader supports it.
