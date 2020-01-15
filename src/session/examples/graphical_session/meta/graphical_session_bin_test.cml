@@ -1,0 +1,25 @@
+{
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: ["/pkg/test/graphical_session_bin_test",],
+    },
+    use: [
+        {
+            // The Scenic service allows the session to display images.
+            protocol: "/svc/fuchsia.ui.scenic.Scenic",
+        },
+        // These last "use" statements is needed for the RustTestAdapter trampoline
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+        },
+        {
+            protocol: "/svc/fuchsia.process.Launcher",
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

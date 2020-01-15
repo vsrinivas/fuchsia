@@ -9,3 +9,12 @@ group("elements") {
     "//src/session/examples/elements/simple_element",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "//src/session/examples/elements/element_proposer:tests",
+    "//src/session/examples/elements/element_session:tests",
+    "//src/session/examples/elements/simple_element:tests",
+  ]
+}

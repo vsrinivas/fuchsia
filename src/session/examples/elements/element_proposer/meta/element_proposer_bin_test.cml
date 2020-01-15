@@ -1,0 +1,26 @@
+{
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: [
+            "/pkg/test/element_proposer_bin_test",
+        ],
+    },
+    use: [
+        {
+            protocol: "/svc/fuchsia.session.ElementManager",
+        },
+        // The last "use" statements are needed for the RustTestAdapter trampoline
+        {
+            protocol: "/svc/fuchsia.process.Launcher",
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

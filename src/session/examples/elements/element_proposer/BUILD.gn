@@ -5,8 +5,17 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
+group("tests") {
+  testonly = true
+  deps = [
+    ":element_proposer",
+    ":element_proposer_tests",
+  ]
+}
+
 rustc_binary("element_proposer_bin") {
   name = "element_proposer"
+  with_unit_tests = true
   edition = "2018"
 
   deps = [
@@ -32,6 +41,37 @@ package("element_proposer") {
   binaries = [
     {
       name = "element_proposer"
+    },
+  ]
+}
+
+package("element_proposer_tests") {
+  testonly = true
+  deps = [
+    ":element_proposer_bin",
+    ":element_proposer_bin_test",
+    "//src/sys/test_adapters/rust",
+  ]
+
+  meta = [
+    {
+      path = "meta/element_proposer_bin_test.cml"
+      dest = "element_proposer_bin_test.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "rust_test_adapter"
+    },
+    {
+      name = "element_proposer"
+    },
+  ]
+
+  tests = [
+    {
+      name = "element_proposer_bin_test"
     },
   ]
 }

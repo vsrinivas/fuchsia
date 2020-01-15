@@ -18,3 +18,11 @@ async fn main() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn dummy_test() {
+        println!("Don't panic!(), you've got this!");
+    }
+}

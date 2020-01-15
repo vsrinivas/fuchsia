@@ -1,0 +1,24 @@
+{
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: ["/pkg/test/simple_element_bin_test",]
+    },
+    use: [
+        {
+            protocol: "/svc/fuchsia.session.examples.ElementPing",
+        },
+        // These last "use" statements is needed for the RustTestAdapter trampoline
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+        },
+        {
+            protocol: "/svc/fuchsia.process.Launcher",
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

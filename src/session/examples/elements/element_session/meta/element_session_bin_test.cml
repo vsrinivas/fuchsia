@@ -1,0 +1,56 @@
+{
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: [
+            "/pkg/test/element_session_bin_test",
+        ],
+    },
+    children: [
+        {
+            name: "element_proposer",
+            url: "fuchsia-pkg://fuchsia.com/element_proposer#meta/element_proposer.cm",
+            startup: "eager",
+        },
+    ],
+    collections: [
+        {
+            name: "elements",
+            durability: "transient",
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+    use: [
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
+        },
+        // These last "use" statements is needed for the RustTestAdapter trampoline
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+        },
+        {
+            protocol: "/svc/fuchsia.process.Launcher",
+        },
+    ],
+    offer: [
+        {
+            protocol: "/svc/fuchsia.session.examples.ElementPing",
+            from: "self",
+            to: [
+                "#elements",
+            ],
+        },
+        {
+            protocol: "/svc/fuchsia.session.ElementManager",
+            from: "self",
+            to: [
+                "#element_proposer",
+            ],
+        },
+    ],
+}

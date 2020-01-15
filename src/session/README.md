@@ -29,11 +29,35 @@ This will be resolved by introducing a command line tool for launching sessions
 
 ## Run the tests
 
-In order to include the tests in the build run the following `fx set`:
+Running the following `fx set` command will include all of the tests in the
+build.
 ```
 fx set core.x64 --with-base=//src/session,//src/session/bin/session_manager:session_manager.config --with //src/session:tests
 ```
-The tests can then be run with:
+
+### Session Manager Tests
+
+You can run the session manager integration test using the following command.
 ```
 fx run-test session_manager_integration_tests
+```
+
+### Example Session Tests
+
+This `fx set` includes all example sessions and their associated helper
+components:
+
+* `input_session`
+* `graphical_session`
+* `element_session`
+  * `element_proposer`
+  * `simple_element`
+
+The tests for these can be run using a command that follows this pattern:
+```
+fx run-test <component_name>_tests
+```
+For example, to run the input session tests the command would be
+```
+fx run-test input_session_tests
 ```

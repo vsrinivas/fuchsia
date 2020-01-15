@@ -1,0 +1,28 @@
+{
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: ["/pkg/test/input_session_bin_test",],
+    },
+    use: [
+        {
+            directory: "/dev/class/input-report",
+            from: "realm",
+            rights: [
+                "r*",
+            ],
+        },
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+        },
+        // The last "use" statement is needed for the RustTestAdapter trampoline
+        {
+            protocol: "/svc/fuchsia.process.Launcher",
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

@@ -98,3 +98,16 @@ impl App {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn make_scenic_session_from_proxy() {
+        let mut _executor = fasync::Executor::new().expect("Failed to create executor");
+        let scenic =
+            connect_to_service::<ScenicMarker>().expect("Failed to connect to Scenic service");
+        let _ = App::make_session(&scenic).expect("Failed to make Scenic Session");
+    }
+}

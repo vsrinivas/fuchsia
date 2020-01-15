@@ -12,8 +12,17 @@ group("all") {
   ]
 }
 
+group("tests") {
+  testonly = true
+  deps = [
+    ":graphical_session",
+    ":graphical_session_tests",
+  ]
+}
+
 rustc_binary("graphical_session_bin") {
   name = "graphical_session"
+  with_unit_tests = true
   edition = "2018"
 
   deps = [
@@ -53,6 +62,37 @@ package("graphical_session") {
   binaries = [
     {
       name = "graphical_session"
+    },
+  ]
+}
+
+package("graphical_session_tests") {
+  testonly = true
+  deps = [
+    ":graphical_session_bin",
+    ":graphical_session_bin_test",
+    "//src/sys/test_adapters/rust",
+  ]
+
+  meta = [
+    {
+      path = "meta/graphical_session_bin_test.cml"
+      dest = "graphical_session_bin_test.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "rust_test_adapter"
+    },
+    {
+      name = "graphical_session"
+    },
+  ]
+
+  tests = [
+    {
+      name = "graphical_session_bin_test"
     },
   ]
 }

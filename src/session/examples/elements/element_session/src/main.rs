@@ -111,3 +111,11 @@ async fn handle_element_manager_requests(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn dummy_test() {
+        println!("Don't panic!(), you've got this!");
+    }
+}

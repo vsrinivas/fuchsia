@@ -5,8 +5,17 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
+group("tests") {
+  testonly = true
+  deps = [
+    ":simple_element",
+    ":simple_element_tests",
+  ]
+}
+
 rustc_binary("simple_element_bin") {
   name = "simple_element"
+  with_unit_tests = true
   edition = "2018"
 
   deps = [
@@ -32,6 +41,37 @@ package("simple_element") {
   binaries = [
     {
       name = "simple_element"
+    },
+  ]
+}
+
+package("simple_element_tests") {
+  testonly = true
+  deps = [
+    ":simple_element_bin",
+    ":simple_element_bin_test",
+    "//src/sys/test_adapters/rust",
+  ]
+
+  meta = [
+    {
+      path = "meta/simple_element_bin_test.cml"
+      dest = "simple_element_bin_test.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "rust_test_adapter"
+    },
+    {
+      name = "simple_element"
+    },
+  ]
+
+  tests = [
+    {
+      name = "simple_element_bin_test"
     },
   ]
 }

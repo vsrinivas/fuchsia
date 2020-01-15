@@ -5,8 +5,17 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
+group("tests") {
+  testonly = true
+  deps = [
+    ":element_session",
+    ":element_session_tests",
+  ]
+}
+
 rustc_binary("element_session_bin") {
   name = "element_session"
+  with_unit_tests = true
   edition = "2018"
 
   deps = [
@@ -37,6 +46,37 @@ package("element_session") {
   binaries = [
     {
       name = "element_session"
+    },
+  ]
+}
+
+package("element_session_tests") {
+  testonly = true
+  deps = [
+    ":element_session_bin",
+    ":element_session_bin_test",
+    "//src/sys/test_adapters/rust",
+  ]
+
+  meta = [
+    {
+      path = "meta/element_session_bin_test.cml"
+      dest = "element_session_bin_test.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "rust_test_adapter"
+    },
+    {
+      name = "element_session"
+    },
+  ]
+
+  tests = [
+    {
+      name = "element_session_bin_test"
     },
   ]
 }
