@@ -95,7 +95,7 @@ TEST(RatioTestCase, Construction) {
       affine::Ratio R{V.N, V.D};
       ASSERT_EQ(R.numerator(), V.N);
       ASSERT_EQ(R.denominator(), V.D);
-    } else {
+    } else if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
       ASSERT_DEATH(([&V]() { affine::Ratio R{V.N, V.D}; }));
     }
   }
@@ -294,7 +294,7 @@ TEST(RatioTestCase, Product) {
                     A.numerator(), A.denominator(), B.numerator(), B.denominator(), V.expected_n,
                     V.expected_d, res.numerator(), res.denominator(),
                     static_cast<uint32_t>(method));
-      } else {
+      } else if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
         ASSERT_DEATH(std::move(func), "Expected Death: %u/%u * %u/%u (method %u).", A.numerator(),
                      A.denominator(), B.numerator(), B.denominator(),
                      static_cast<uint32_t>(method));
@@ -380,7 +380,7 @@ TEST(RatioTestCase, Scale) {
                 ASSERT_TRUE(res == V.expected,
                             "Expected %ld * %u/%u to produce %ld; got %ld instead (method %u).",
                             V.val, V.n, V.d, V.expected, res, static_cast<uint32_t>(method));
-            } else {
+            } else if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
                 ASSERT_DEATH(std::move(func),
                             "Expected Death; %ld * %u/%u (method %u).",
                             V.val, V.n, V.d, static_cast<uint32_t>(method));
@@ -406,7 +406,7 @@ TEST(RatioTestCase, Inverse) {
             affine::Ratio res = R.Inverse();
             ASSERT_EQ(res.numerator(), R.denominator());
             ASSERT_EQ(res.denominator(), R.numerator());
-        } else {
+        } else if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
             ASSERT_DEATH(([&R]() { R.Inverse(); }));
         }
     }

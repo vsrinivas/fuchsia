@@ -49,7 +49,7 @@ TEST(TransformTestCase, Construction) {
       ASSERT_EQ(transform.b_offset(), 0);
       ASSERT_EQ(transform.numerator(), ratio.numerator());
       ASSERT_EQ(transform.denominator(), ratio.denominator());
-    } else {
+    } else if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
       ASSERT_DEATH(([&V]() { affine::Transform transform{affine::Ratio{V.N, V.D}}; }));
     }
 
@@ -62,7 +62,7 @@ TEST(TransformTestCase, Construction) {
       ASSERT_EQ(transform.b_offset(), V.b_offset);
       ASSERT_EQ(transform.numerator(), ratio.numerator());
       ASSERT_EQ(transform.denominator(), ratio.denominator());
-    } else {
+    } else if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
       ASSERT_DEATH(([&V]() {
         affine::Transform transform{V.a_offset, V.b_offset, affine::Ratio{V.N, V.D}};
       }));
@@ -98,7 +98,7 @@ TEST(TransformTestCase, Inverse) {
       ASSERT_EQ(transform.denominator(), res.numerator());
       ASSERT_TRUE(transform.ratio().Inverse().numerator() == res.ratio().numerator());
       ASSERT_TRUE(transform.ratio().Inverse().denominator() == res.ratio().denominator());
-    } else {
+    } else if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
       ASSERT_DEATH(([&transform]() { transform.Inverse(); }));
     }
   }
