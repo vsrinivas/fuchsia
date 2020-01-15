@@ -212,8 +212,9 @@ Err ResolveInputLocations(const ProcessSymbols* process_symbols, const Location&
                           const std::string& input, bool symbolize, std::vector<Location>* output) {
   std::vector<InputLocation> input_locations;
   if (Err err = ParseLocalInputLocation(process_symbols, location, input, &input_locations);
-      err.has_error())
+      err.has_error()) {
     return err;
+  }
   return ResolveInputLocations(process_symbols, input_locations, symbolize, output);
 }
 
@@ -316,8 +317,9 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols, const Loca
                                const std::string& input, bool symbolize, Location* output) {
   std::vector<InputLocation> input_locations;
   if (Err err = ParseLocalInputLocation(process_symbols, location, input, &input_locations);
-      err.has_error())
+      err.has_error()) {
     return err;
+  }
   return ResolveUniqueInputLocation(process_symbols, input_locations, symbolize, output);
 }
 

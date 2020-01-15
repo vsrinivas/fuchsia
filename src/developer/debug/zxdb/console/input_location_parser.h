@@ -81,7 +81,7 @@ Err ParseLocalInputLocation(const Frame* optional_frame, const std::string& inpu
 // function if the result is synchronously available.
 void EvalLocalInputLocation(const fxl::RefPtr<EvalContext>& eval_context, const Location& location,
                             const std::string& input,
-                            fit::callback<void(const Err&, std::vector<InputLocation>)> cb);
+                            fit::callback<void(ErrOr<std::vector<InputLocation>>)> cb);
 
 // Parses the input and generates a list of matches. No matches will generate an error. This can
 // take either a pre-parsed InputLocation, or can parse the input itself.
@@ -135,42 +135,42 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
 // Generates help for a command describing the parsing of locations. The parameter is a string
 // containing the name of the command.
 // clang-format off
-#define LOCATION_ARG_HELP(cmd)                                               \
-  "  <symbol>\n"                                                             \
-  "    " cmd " main\n"                                                       \
-  "    " cmd " Foo::Bar\n"                                                   \
-  "\n"                                                                       \
-  "    ▷ This will match functions in the current class if there is one.\n"  \
-  "      To override, prefix with \"::\" as in \"" cmd " ::Foo::Bar\".\n"    \
-  "\n"                                                                       \
-  "  <file>:<line>\n"                                                        \
-  "    " cmd " foo.cc:123\n"                                                 \
-  "\n"                                                                       \
-  "    ▷ To disambiguate different files with the same name, include\n"      \
-  "      directory names preceding the name (from the right).\n"             \
-  "\n"                                                                       \
-  "  <line number> (within the frame's file)\n"                              \
-  "    " cmd " 123\n"                                                        \
-  "\n"                                                                       \
-  "    ▷ All decimal integers are considered line numbers.\n"                \
-  "\n"                                                                       \
-  "  0x<address>\n"                                                          \
-  "    " cmd " 0x7d12362f0\n"                                                \
-  "\n"                                                                       \
-  "    ▷ All hexadecimal numbers are considered addresses. Precede\n"        \
-  "      decimal numbers with * to force interpretation as an address.\n"    \
+#define LOCATION_ARG_HELP(cmd)                                                 \
+  "  <symbol>\n"                                                               \
+  "      " cmd " main\n"                                                       \
+  "      " cmd " Foo::Bar\n"                                                   \
+  "\n"                                                                         \
+  "      ▷ This will match functions in the current class if there is one.\n"  \
+  "        To override, prefix with \"::\" as in \"" cmd " ::Foo::Bar\".\n"    \
+  "\n"                                                                         \
+  "  <file>:<line>\n"                                                          \
+  "      " cmd " foo.cc:123\n"                                                 \
+  "\n"                                                                         \
+  "      ▷ To disambiguate different files with the same name, include\n"      \
+  "        directory names preceding the name (from the right).\n"             \
+  "\n"                                                                         \
+  "  <line number> (within the frame's file)\n"                                \
+  "      " cmd " 123\n"                                                        \
+  "\n"                                                                         \
+  "      ▷ All decimal integers are considered line numbers.\n"                \
+  "\n"                                                                         \
+  "  0x<address>\n"                                                            \
+  "      " cmd " 0x7d12362f0\n"                                                \
+  "\n"                                                                         \
+  "      ▷ All hexadecimal numbers are considered addresses. Precede\n"        \
+  "        decimal numbers with * to force interpretation as an address.\n"    \
   "\n"
 
 // Append this to LOCATION_ARG_HELP(cmd) if the command supports expressions via
 // Eval*InputLocation().
-#define LOCATION_EXPRESSION_HELP(cmd)                                        \
-  "  \"*<expression>\"\n"                                                    \
-  "    " cmd " *0x7d12362f0\n"                                               \
-  "    " cmd " *my_thing\n"                                                  \
-  "    " cmd " \"*my_array[0]->other_thing\"\n"                              \
-  "\n"                                                                       \
-  "    ▷ An arbitrary expression can be evaluated to take its address.\n"    \
-  "      Anything with a space requires quotes.\n"                           \
+#define LOCATION_EXPRESSION_HELP(cmd)                                          \
+  "  \"*<expression>\"\n"                                                      \
+  "      " cmd " *0x7d12362f0\n"                                               \
+  "      " cmd " *my_thing\n"                                                  \
+  "      " cmd " \"*my_array[0]->other_thing\"\n"                              \
+  "\n"                                                                         \
+  "      ▷ An arbitrary expression can be evaluated to take its address.\n"    \
+  "        Anything with a space requires quotes.\n"                           \
   "\n"
 // clang-format on
 

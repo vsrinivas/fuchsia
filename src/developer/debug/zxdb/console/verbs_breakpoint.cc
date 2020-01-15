@@ -98,13 +98,12 @@ const char kBreakHelp[] =
 Location arguments
 
   Current frame's address (no input)
-    break
+      break
 
-)" LOCATION_ARG_HELP("break")
-        R"(
-  You can also specify the magic symbol "@main" to break on the process'
+)" LOCATION_ARG_HELP("break") LOCATION_EXPRESSION_HELP("break")
+        R"(  You can also specify the magic symbol "@main" to break on the process'
   entrypoint:
-    break @main
+      break @main
 
 Options
 
@@ -276,7 +275,16 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback callbac
   }
   settings.type = break_type;
 
+  // Scope.
+  settings.scope = ExecutionScopeForCommand(cmd);
+
   // Location.
+  if (cmd.args().size() > 1u) {
+    return Err(ErrType::kInput,
+               "Expecting only one arg for the location.\n"
+               "Formats: <function>, <file>:<line#>, <line#>, or *<expression>");
+  }
+
   if (cmd.args().empty()) {
     // Creating a breakpoint with no location implicitly uses the current frame's current
     // location.
@@ -293,30 +301,48 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback callbac
       settings.locations.emplace_back(frame_loc.file_line());
     else
       settings.locations.emplace_back(cmd.frame()->GetAddress());
-  } else if (cmd.args().size() == 1u) {
-    err = ParseLocalInputLocation(cmd.frame(), cmd.args()[0], &settings.locations);
-    if (err.has_error())
-      return err;
-  } else {
-    return Err(ErrType::kInput,
-               "Expecting only one arg for the location.\n"
-               "Formats: <function>, <file>:<line#>, <line#>, or *<address>");
+
+    // New breakpoint.
+    Breakpoint* breakpoint = context->session()->system().CreateNewBreakpoint();
+    context->SetActiveBreakpoint(breakpoint);
+
+    breakpoint->SetSettings(settings, [breakpoint = breakpoint->GetWeakPtr(),
+                                       callback = std::move(callback)](const Err& err) mutable {
+      CreateOrEditBreakpointComplete(std::move(breakpoint), "Created", err);
+      if (callback)
+        callback(err);
+    });
+    return Err();
   }
-  FXL_DCHECK(!settings.locations.empty());  // Should have filled something in.
 
-  // Scope.
-  settings.scope = ExecutionScopeForCommand(cmd);
+  // Parse the given input location in args[0]. This may require async evaluation.
+  Location cur_location;
+  if (cmd.frame())
+    cur_location = cmd.frame()->GetLocation();
 
-  // New breakpoint.
-  Breakpoint* breakpoint = context->session()->system().CreateNewBreakpoint();
-  context->SetActiveBreakpoint(breakpoint);
+  EvalLocalInputLocation(
+      GetEvalContextForCommand(cmd), cur_location, cmd.args()[0],
+      [settings, cb = std::move(callback)](ErrOr<std::vector<InputLocation>> locs) mutable {
+        if (locs.has_error()) {
+          Console::get()->Output(locs.err());
+          if (cb)
+            cb(locs.err());
+          return;
+        }
 
-  breakpoint->SetSettings(settings, [breakpoint = breakpoint->GetWeakPtr(),
-                                     callback = std::move(callback)](const Err& err) mutable {
-    CreateOrEditBreakpointComplete(std::move(breakpoint), "Created", err);
-    if (callback)
-      callback(err);
-  });
+        // New breakpoint.
+        ConsoleContext* context = &Console::get()->context();
+        Breakpoint* breakpoint = context->session()->system().CreateNewBreakpoint();
+        context->SetActiveBreakpoint(breakpoint);
+
+        settings.locations = locs.take_value();
+        breakpoint->SetSettings(settings, [breakpoint = breakpoint->GetWeakPtr(),
+                                           cb = std::move(cb)](const Err& err) mutable {
+          CreateOrEditBreakpointComplete(std::move(breakpoint), "Created", err);
+          if (cb)
+            cb(err);
+        });
+      });
 
   return Err();
 }
