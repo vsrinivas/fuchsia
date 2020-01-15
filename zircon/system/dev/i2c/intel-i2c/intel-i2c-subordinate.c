@@ -386,6 +386,16 @@ zx_status_t intel_serialio_i2c_subordinate_get_irq(
     }
     *out = irq;
     return ZX_OK;
+  } else if (subordinate->chip_address == 0x15) {
+    zx_handle_t irq;
+    // Please do not use get_root_resource() in new code. See ZX-1467.
+    zx_status_t status =
+        zx_interrupt_create(get_root_resource(), 0x2b, ZX_INTERRUPT_MODE_EDGE_LOW, &irq);
+    if (status != ZX_OK) {
+      return status;
+    }
+    *out = irq;
+    return ZX_OK;
   }
 
   return ZX_ERR_NOT_FOUND;
