@@ -30,8 +30,9 @@ constexpr int kPwmPeriodNs = 1250;
 
 }  // namespace
 
-zx_status_t AmlVoltageRegulator::Create(zx_device_t* parent,
-                                        aml_thermal_info_t* thermal_info) {
+zx_status_t AmlVoltageRegulator::Create(
+    zx_device_t* parent, const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+    aml_thermal_info_t* thermal_info) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
     zxlogf(ERROR, "aml-voltage: failed to get composite protocol\n");
@@ -60,80 +61,59 @@ zx_status_t AmlVoltageRegulator::Create(zx_device_t* parent,
     return status;
   }
 
-  pwm_AO_D_ = ddk::PwmProtocolClient(components[COMPONENT_PWM_AO_D]);
-  if (!pwm_AO_D_.is_valid()) {
-    zxlogf(ERROR, "%s: failed to get PWM_AO_D component\n", __func__);
+  big_cluster_pwm_ = ddk::PwmProtocolClient(components[COMPONENT_PWM_BIG_CLUSTER]);
+  if (!big_cluster_pwm_.is_valid()) {
+    zxlogf(ERROR, "%s: failed to get big cluster PWM component\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if ((status = pwm_AO_D_.Enable()) != ZX_OK) {
+  if ((status = big_cluster_pwm_.Enable()) != ZX_OK) {
     zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
     return status;
   }
 
-  pid_ = device_info.pid;
-  switch (pid_) {
-    {
-      case PDEV_PID_AMLOGIC_T931: {
-        // Sherlock
-        pwm_A_ = ddk::PwmProtocolClient(components[COMPONENT_PWM_A]);
-        if (!pwm_A_.is_valid()) {
-          zxlogf(ERROR, "%s: failed to get PWM_A component\n", __func__);
-          return ZX_ERR_NOT_SUPPORTED;
-        }
-        if ((status = pwm_A_.Enable()) != ZX_OK) {
-          zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
-          return status;
-        }
-        break;
-      }
-      case PDEV_PID_AMLOGIC_S905D2: {
-        // Astro
-        // Only 1 PWM used in this case.
-        break;
-      }
-      default:
-        zxlogf(ERROR, "aml-cpufreq: unsupported SOC PID %u\n", device_info.pid);
-        return ZX_ERR_INVALID_ARGS;
+  big_little_ = thermal_config.big_little;
+  if (big_little_) {
+    little_cluster_pwm_ = ddk::PwmProtocolClient(components[COMPONENT_PWM_LITTLE_CLUSTER]);
+    if (!little_cluster_pwm_.is_valid()) {
+      zxlogf(ERROR, "%s: failed to get little cluster PWM component\n", __func__);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    if ((status = little_cluster_pwm_.Enable()) != ZX_OK) {
+      zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
+      return status;
     }
   }
 
-  return Init(thermal_info);
+  return Init(thermal_config, thermal_info);
 }
 
-zx_status_t AmlVoltageRegulator::Init(const pwm_protocol_t* pwm_AO_D, const pwm_protocol_t* pwm_A,
-                                      uint32_t pid, aml_thermal_info_t* thermal_info) {
+zx_status_t AmlVoltageRegulator::Init(
+    const pwm_protocol_t* big_cluster_pwm, const pwm_protocol_t* little_cluster_pwm,
+    const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+    aml_thermal_info_t* thermal_info) {
   zx_status_t status = ZX_OK;
-  pid_ = pid;
-  pwm_AO_D_ = ddk::PwmProtocolClient(pwm_AO_D);
-  if ((status = pwm_AO_D_.Enable()) != ZX_OK) {
+  big_little_ = thermal_config.big_little;
+
+  big_cluster_pwm_ = ddk::PwmProtocolClient(big_cluster_pwm);
+  if ((status = big_cluster_pwm_.Enable()) != ZX_OK) {
     zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
     return status;
   }
 
-  switch (pid) {
-    case PDEV_PID_AMLOGIC_T931: {
-      // Sherlock
-      pwm_A_ = ddk::PwmProtocolClient(pwm_A);
-      if ((status = pwm_A_.Enable()) != ZX_OK) {
-        zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
-        return status;
-      }
-      break;
+  if (big_little_) {
+    little_cluster_pwm_ = ddk::PwmProtocolClient(little_cluster_pwm);
+    if ((status = little_cluster_pwm_.Enable()) != ZX_OK) {
+      zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
+      return status;
     }
-    case PDEV_PID_AMLOGIC_S905D2: {
-      // Astro
-      // Only 1 PWM used in this case.
-      break;
-    }
-    default:
-      zxlogf(ERROR, "aml-voltage-test: unsupported SOC PID %u\n", pid);
-      return ZX_ERR_INVALID_ARGS;
   }
 
-  return Init(thermal_info);
+  return Init(thermal_config, thermal_info);
 }
 
-zx_status_t AmlVoltageRegulator::Init(aml_thermal_info_t* thermal_info) {
+zx_status_t AmlVoltageRegulator::Init(
+    const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+    aml_thermal_info_t* thermal_info) {
   ZX_DEBUG_ASSERT(thermal_info);
   zx_status_t status = ZX_OK;
 
@@ -143,34 +123,33 @@ zx_status_t AmlVoltageRegulator::Init(aml_thermal_info_t* thermal_info) {
   current_big_cluster_voltage_index_ = kInvalidIndex;
   current_little_cluster_voltage_index_ = kInvalidIndex;
 
-  // Set the voltage to maximum to start with
-  // TODO(braval):  Figure out a better way to set initial voltage.
-  switch (pid_) {
-    case PDEV_PID_AMLOGIC_T931: {
-      status = SetBigClusterVoltage(thermal_info->voltage_table[13].microvolt);
-      if (status != ZX_OK) {
-        return status;
-      }
-      status = SetLittleClusterVoltage(thermal_info->voltage_table[1].microvolt);
-      if (status != ZX_OK) {
-        return status;
-      }
-      break;
-    }
+  uint32_t max_big_cluster_microvolt = 0;
+  uint32_t max_little_cluster_microvolt = 0;
 
-    case PDEV_PID_AMLOGIC_S905D2: {
-      status = SetBigClusterVoltage(thermal_info->voltage_table[4].microvolt);
-      if (status != ZX_OK) {
-        return status;
-      }
-      break;
-    }
+  const fuchsia_hardware_thermal_OperatingPoint& big_cluster_opp =
+      thermal_config.opps[fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN];
+  const fuchsia_hardware_thermal_OperatingPoint& little_cluster_opp =
+      thermal_config.opps[fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN];
 
-    default:
-      zxlogf(ERROR, "aml-voltage: unsupported SOC PID %u\n", pid_);
-      return ZX_ERR_INVALID_ARGS;
+  for (uint32_t i = 0; i < fuchsia_hardware_thermal_MAX_DVFS_OPPS; i++) {
+    if (i < big_cluster_opp.count && big_cluster_opp.opp[i].volt_uv > max_big_cluster_microvolt) {
+      max_big_cluster_microvolt = big_cluster_opp.opp[i].volt_uv;
+    }
+    if (i < little_cluster_opp.count &&
+        little_cluster_opp.opp[i].volt_uv > max_little_cluster_microvolt) {
+      max_little_cluster_microvolt = little_cluster_opp.opp[i].volt_uv;
+    }
   }
-  return status;
+
+  // Set the voltage to maximum to start with
+  if ((status = SetBigClusterVoltage(max_big_cluster_microvolt)) != ZX_OK) {
+    return status;
+  }
+  if (big_little_ && (status = SetLittleClusterVoltage(max_little_cluster_microvolt)) != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
@@ -195,10 +174,9 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
   if (*current_voltage_index < 0) {
     // Update new duty cycle.
     aml_pwm::mode_config on = {aml_pwm::ON, {}};
-    pwm_config_t cfg = {
-        false, kPwmPeriodNs,
-        static_cast<float>(thermal_info_.voltage_table[target_index].duty_cycle), &on,
-        sizeof(on)};
+    pwm_config_t cfg = {false, kPwmPeriodNs,
+                        static_cast<float>(thermal_info_.voltage_table[target_index].duty_cycle),
+                        &on, sizeof(on)};
     if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
       zxlogf(ERROR, "%s: Could not initialize PWM\n", __func__);
       return status;
@@ -229,8 +207,8 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
     aml_pwm::mode_config on = {aml_pwm::ON, {}};
     pwm_config_t cfg = {
         false, kPwmPeriodNs,
-        static_cast<float>(thermal_info_.voltage_table[*current_voltage_index].duty_cycle),
-        &on, sizeof(on)};
+        static_cast<float>(thermal_info_.voltage_table[*current_voltage_index].duty_cycle), &on,
+        sizeof(on)};
     if ((status = pwm.SetConfig(&cfg)) != ZX_OK) {
       zxlogf(ERROR, "%s: Could not initialize PWM\n", __func__);
       return status;
@@ -239,16 +217,6 @@ zx_status_t AmlVoltageRegulator::SetClusterVoltage(int* current_voltage_index,
   }
 
   return ZX_OK;
-}
-
-uint32_t AmlVoltageRegulator::GetBigClusterVoltage() {
-  ZX_DEBUG_ASSERT(current_big_cluster_voltage_index_ != kInvalidIndex);
-  return thermal_info_.voltage_table[current_big_cluster_voltage_index_].microvolt;
-}
-
-uint32_t AmlVoltageRegulator::GetLittleClusterVoltage() {
-  ZX_DEBUG_ASSERT(current_little_cluster_voltage_index_ != kInvalidIndex);
-  return thermal_info_.voltage_table[current_little_cluster_voltage_index_].microvolt;
 }
 
 }  // namespace thermal

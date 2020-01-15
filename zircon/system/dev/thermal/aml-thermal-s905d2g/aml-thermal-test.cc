@@ -50,7 +50,7 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
   };
 }
 
-static fuchsia_hardware_thermal_ThermalDeviceInfo fake_thermal_config =
+constexpr fuchsia_hardware_thermal_ThermalDeviceInfo sherlock_thermal_config =
     {
         .active_cooling = false,
         .passive_cooling = true,
@@ -107,60 +107,42 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo fake_thermal_config =
             },
 };
 
-static fuchsia_hardware_thermal_ThermalDeviceInfo fake_thermal_config_less =
-    {
-        .active_cooling = false,
-        .passive_cooling = true,
-        .gpu_throttling = true,
-        .num_trip_points = 2,
-        .big_little = true,
-        .critical_temp_celsius = 102.0f,
-        .trip_point_info =
-            {
-                TripPoint(55.0f, 9, 10, 4), TripPoint(75.0f, 8, 9, 4),
-                TripPoint(-273.15f, 0, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
-            },
-        .opps =
-            {
-                [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
-                    {
-                        .opp =
-                            {
-                                [0] = {.freq_hz = 100000000, .volt_uv = 751000},
-                                [1] = {.freq_hz = 250000000, .volt_uv = 751000},
-                                [2] = {.freq_hz = 500000000, .volt_uv = 751000},
-                                [3] = {.freq_hz = 667000000, .volt_uv = 751000},
-                                [4] = {.freq_hz = 1000000000, .volt_uv = 771000},
-                                [5] = {.freq_hz = 1200000000, .volt_uv = 771000},
-                                [6] = {.freq_hz = 1398000000, .volt_uv = 791000},
-                                [7] = {.freq_hz = 1512000000, .volt_uv = 821000},
-                                [8] = {.freq_hz = 1608000000, .volt_uv = 861000},
-                                [9] = {.freq_hz = 1704000000, .volt_uv = 891000},
-                                [10] = {.freq_hz = 1704000000, .volt_uv = 891000},
-                            },
-                        .latency = 0,
-                        .count = 11,
-                    },
-                [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
-                    {
-                        .opp =
-                            {
-                                [0] = {.freq_hz = 100000000, .volt_uv = 731000},
-                                [1] = {.freq_hz = 250000000, .volt_uv = 731000},
-                                [2] = {.freq_hz = 500000000, .volt_uv = 731000},
-                                [3] = {.freq_hz = 667000000, .volt_uv = 731000},
-                                [4] = {.freq_hz = 1000000000, .volt_uv = 731000},
-                                [5] = {.freq_hz = 1200000000, .volt_uv = 731000},
-                                [6] = {.freq_hz = 1398000000, .volt_uv = 761000},
-                                [7] = {.freq_hz = 1512000000, .volt_uv = 791000},
-                                [8] = {.freq_hz = 1608000000, .volt_uv = 831000},
-                                [9] = {.freq_hz = 1704000000, .volt_uv = 861000},
-                                [10] = {.freq_hz = 1896000000, .volt_uv = 1011000},
-                            },
-                        .latency = 0,
-                        .count = 11,
-                    },
-            },
+constexpr fuchsia_hardware_thermal_ThermalDeviceInfo astro_thermal_config = {
+    .active_cooling = false,
+    .passive_cooling = true,
+    .gpu_throttling = true,
+    .num_trip_points = 7,
+    .big_little = false,
+    .critical_temp_celsius = 102.0f,
+    .trip_point_info =
+        {
+            TripPoint(0.0f, 10, 0, 5), TripPoint(75.0f, 9, 0, 4), TripPoint(80.0f, 8, 0, 3),
+            TripPoint(85.0f, 7, 0, 3), TripPoint(90.0f, 6, 0, 2), TripPoint(95.0f, 5, 0, 1),
+            TripPoint(100.0f, 4, 0, 0),
+            TripPoint(-273.15f, 0, 0, 0),  // 0 Kelvin is impossible, marks end of TripPoints
+        },
+    .opps =
+        {
+            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] =
+                {
+                    .opp =
+                        {
+                            [0] = {.freq_hz = 100'000'000, .volt_uv = 731'000},
+                            [1] = {.freq_hz = 250'000'000, .volt_uv = 731'000},
+                            [2] = {.freq_hz = 500'000'000, .volt_uv = 731'000},
+                            [3] = {.freq_hz = 667'000'000, .volt_uv = 731'000},
+                            [4] = {.freq_hz = 1'000'000'000, .volt_uv = 731'000},
+                            [5] = {.freq_hz = 1'200'000'000, .volt_uv = 731'000},
+                            [6] = {.freq_hz = 1'398'000'000, .volt_uv = 761'000},
+                            [7] = {.freq_hz = 1'512'000'000, .volt_uv = 791'000},
+                            [8] = {.freq_hz = 1'608'000'000, .volt_uv = 831'000},
+                            [9] = {.freq_hz = 1'704'000'000, .volt_uv = 861'000},
+                            [10] = {.freq_hz = 1'896'000'000, .volt_uv = 981'000},
+                        },
+                    .latency = 0,
+                    .count = 11,
+                },
+        },
 };
 
 // Voltage Regulator
@@ -174,6 +156,11 @@ static aml_thermal_info_t fake_thermal_info = {
             {841000, 60},  {831000, 63}, {821000, 67}, {811000, 70}, {801000, 73}, {791000, 76},
             {781000, 80},  {771000, 83}, {761000, 86}, {751000, 90}, {741000, 93}, {731000, 96},
             {721000, 100},
+        },
+    .initial_cluster_frequencies =
+        {
+            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'000'000'000,
+            [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] = 1'200'000'000,
         },
 };
 
@@ -194,11 +181,13 @@ class FakeAmlTSensor : public AmlTSensor {
       return nullptr;
     }
 
+    auto config = sherlock_thermal_config;
     if (less) {
-      EXPECT_OK(test->InitSensor(fake_thermal_config_less));
-    } else {
-      EXPECT_OK(test->InitSensor(fake_thermal_config));
+      config.num_trip_points = 2;
+      config.trip_point_info[2].up_temp_celsius = -273.15f + 2.0f;
     }
+
+    EXPECT_OK(test->InitSensor(config));
     return test;
   }
 
@@ -379,8 +368,8 @@ TEST_F(AmlTSensorTest, LessTripPointsTest) { Create(true); }
 // Voltage Regulator
 class FakeAmlVoltageRegulator : public AmlVoltageRegulator {
  public:
-  static std::unique_ptr<FakeAmlVoltageRegulator> Create(const pwm_protocol_t* pwm_AO_D,
-                                                         const pwm_protocol_t* pwm_A,
+  static std::unique_ptr<FakeAmlVoltageRegulator> Create(const pwm_protocol_t* big_cluster_pwm,
+                                                         const pwm_protocol_t* little_cluster_pwm,
                                                          uint32_t pid) {
     fbl::AllocChecker ac;
 
@@ -389,7 +378,8 @@ class FakeAmlVoltageRegulator : public AmlVoltageRegulator {
       return nullptr;
     }
 
-    EXPECT_OK(test->Init(pwm_AO_D, pwm_A, pid, &fake_thermal_info));
+    const auto& config = (pid == 4 ? sherlock_thermal_config : astro_thermal_config);
+    EXPECT_OK(test->Init(big_cluster_pwm, little_cluster_pwm, config, &fake_thermal_info));
     return test;
   }
 
@@ -400,8 +390,8 @@ class AmlVoltageRegulatorTest : public zxtest::Test {
  public:
   void TearDown() override {
     // Verify
-    pwm_AO_D_.VerifyAndClear();
-    pwm_A_.VerifyAndClear();
+    big_cluster_pwm_.VerifyAndClear();
+    little_cluster_pwm_.VerifyAndClear();
   }
 
   void Create(uint32_t pid) {
@@ -410,19 +400,19 @@ class AmlVoltageRegulatorTest : public zxtest::Test {
 
     switch (pid) {
       case 4: {  // Sherlock
-        pwm_AO_D_.ExpectEnable(ZX_OK);
-        cfg.duty_cycle = 3;
-        pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
-
-        pwm_A_.ExpectEnable(ZX_OK);
+        big_cluster_pwm_.ExpectEnable(ZX_OK);
         cfg.duty_cycle = 43;
-        pwm_A_.ExpectSetConfig(ZX_OK, cfg);
+        big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
+
+        little_cluster_pwm_.ExpectEnable(ZX_OK);
+        cfg.duty_cycle = 3;
+        little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
         break;
       }
       case 3: {  // Astro
-        pwm_AO_D_.ExpectEnable(ZX_OK);
+        big_cluster_pwm_.ExpectEnable(ZX_OK);
         cfg.duty_cycle = 13;
-        pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+        big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
         break;
       }
       default:
@@ -430,9 +420,9 @@ class AmlVoltageRegulatorTest : public zxtest::Test {
         return;
     }
 
-    auto pwm_AO_D = pwm_AO_D_.GetProto();
-    auto pwm_A = pwm_A_.GetProto();
-    voltage_regulator_ = FakeAmlVoltageRegulator::Create(pwm_AO_D, pwm_A, pid);
+    auto big_cluster_pwm = big_cluster_pwm_.GetProto();
+    auto little_cluster_pwm = little_cluster_pwm_.GetProto();
+    voltage_regulator_ = FakeAmlVoltageRegulator::Create(big_cluster_pwm, little_cluster_pwm, pid);
     ASSERT_TRUE(voltage_regulator_ != nullptr);
   }
 
@@ -440,8 +430,8 @@ class AmlVoltageRegulatorTest : public zxtest::Test {
   std::unique_ptr<FakeAmlVoltageRegulator> voltage_regulator_;
 
   // Mmio Regs and Regions
-  ddk::MockPwm pwm_AO_D_;
-  ddk::MockPwm pwm_A_;
+  ddk::MockPwm big_cluster_pwm_;
+  ddk::MockPwm little_cluster_pwm_;
 };
 
 TEST_F(AmlVoltageRegulatorTest, SherlockGetVoltageTest) {
@@ -463,28 +453,28 @@ TEST_F(AmlVoltageRegulatorTest, SherlockSetVoltageTest) {
   // SetBigClusterVoltage(761000)
   aml_pwm::mode_config on = {aml_pwm::ON, {}};
   pwm_config_t cfg = {false, 1250, 53, &on, sizeof(on)};
-  pwm_A_.ExpectSetConfig(ZX_OK, cfg);
+  big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 63;
-  pwm_A_.ExpectSetConfig(ZX_OK, cfg);
+  big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 73;
-  pwm_A_.ExpectSetConfig(ZX_OK, cfg);
+  big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 83;
-  pwm_A_.ExpectSetConfig(ZX_OK, cfg);
+  big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 86;
-  pwm_A_.ExpectSetConfig(ZX_OK, cfg);
+  big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   EXPECT_OK(voltage_regulator_->SetVoltage(0, 761000));
   uint32_t val = voltage_regulator_->GetVoltage(0);
   EXPECT_EQ(val, 761000);
 
   // SetLittleClusterVoltage(911000)
   cfg.duty_cycle = 13;
-  pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+  little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 23;
-  pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+  little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 33;
-  pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+  little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 36;
-  pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+  little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   EXPECT_OK(voltage_regulator_->SetVoltage(1, 911000));
   val = voltage_regulator_->GetVoltage(1);
   EXPECT_EQ(val, 911000);
@@ -495,13 +485,13 @@ TEST_F(AmlVoltageRegulatorTest, AstroSetVoltageTest) {
   // SetBigClusterVoltage(861000)
   aml_pwm::mode_config on = {aml_pwm::ON, {}};
   pwm_config_t cfg = {false, 1250, 23, &on, sizeof(on)};
-  pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+  big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 33;
-  pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+  big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 43;
-  pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+  big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   cfg.duty_cycle = 53;
-  pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+  big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
   EXPECT_OK(voltage_regulator_->SetVoltage(0, 861000));
   uint32_t val = voltage_regulator_->GetVoltage(0);
   EXPECT_EQ(val, 861000);
@@ -513,10 +503,11 @@ class FakeAmlCpuFrequency : public AmlCpuFrequency {
   static std::unique_ptr<FakeAmlCpuFrequency> Create(ddk::MmioBuffer hiu_mmio,
                                                      mmio_buffer_t mock_hiu_internal_mmio,
                                                      uint32_t pid) {
-    fbl::AllocChecker ac;
+    const auto& config = (pid == 4 ? sherlock_thermal_config : astro_thermal_config);
 
-    auto test = fbl::make_unique_checked<FakeAmlCpuFrequency>(&ac, std::move(hiu_mmio),
-                                                              mock_hiu_internal_mmio, pid);
+    fbl::AllocChecker ac;
+    auto test = fbl::make_unique_checked<FakeAmlCpuFrequency>(
+        &ac, std::move(hiu_mmio), mock_hiu_internal_mmio, config, fake_thermal_info);
     if (!ac.check()) {
       return nullptr;
     }
@@ -525,8 +516,11 @@ class FakeAmlCpuFrequency : public AmlCpuFrequency {
     return test;
   }
 
-  FakeAmlCpuFrequency(ddk::MmioBuffer hiu_mmio, mmio_buffer_t hiu_internal_mmio, uint32_t pid)
-      : AmlCpuFrequency(std::move(hiu_mmio), std::move(hiu_internal_mmio), pid) {}
+  FakeAmlCpuFrequency(ddk::MmioBuffer hiu_mmio, mmio_buffer_t hiu_internal_mmio,
+                      const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+                      const aml_thermal_info_t& thermal_info)
+      : AmlCpuFrequency(std::move(hiu_mmio), std::move(hiu_internal_mmio), thermal_config,
+                        thermal_info) {}
 };
 
 class AmlCpuFrequencyTest : public zxtest::Test {
@@ -730,10 +724,12 @@ class FakeAmlThermal : public AmlThermal {
  public:
   static std::unique_ptr<FakeAmlThermal> Create(
       ddk::MmioBuffer tsensor_pll_mmio, ddk::MmioBuffer tsensor_ao_mmio,
-      ddk::MmioBuffer tsensor_hiu_mmio, const pwm_protocol_t* pwm_AO_D, const pwm_protocol_t* pwm_A,
-      ddk::MmioBuffer cpufreq_scaling_hiu_mmio,
+      ddk::MmioBuffer tsensor_hiu_mmio, const pwm_protocol_t* big_cluster_pwm,
+      const pwm_protocol_t* little_cluster_pwm, ddk::MmioBuffer cpufreq_scaling_hiu_mmio,
       mmio_buffer_t cpufreq_scaling_mock_hiu_internal_mmio, uint32_t pid) {
     fbl::AllocChecker ac;
+
+    const auto& config = (pid == 4 ? sherlock_thermal_config : astro_thermal_config);
 
     // Temperature Sensor
     auto tsensor = fbl::make_unique_checked<AmlTSensor>(
@@ -741,7 +737,7 @@ class FakeAmlThermal : public AmlThermal {
     if (!ac.check()) {
       return nullptr;
     }
-    EXPECT_OK(tsensor->InitSensor(fake_thermal_config));
+    EXPECT_OK(tsensor->InitSensor(config));
 
     // Voltage Regulator
     zx_status_t status = ZX_OK;
@@ -749,38 +745,30 @@ class FakeAmlThermal : public AmlThermal {
     if (!ac.check() || (status != ZX_OK)) {
       return nullptr;
     }
-    EXPECT_OK(voltage_regulator->Init(pwm_AO_D, pwm_A, pid, &fake_thermal_info));
+    EXPECT_OK(
+        voltage_regulator->Init(big_cluster_pwm, little_cluster_pwm, config, &fake_thermal_info));
 
     // CPU Frequency and Scaling
     auto cpufreq_scaling = fbl::make_unique_checked<AmlCpuFrequency>(
         &ac, std::move(cpufreq_scaling_hiu_mmio), std::move(cpufreq_scaling_mock_hiu_internal_mmio),
-        pid);
+        config, fake_thermal_info);
     if (!ac.check()) {
       return nullptr;
     }
     EXPECT_OK(cpufreq_scaling->Init());
 
     auto test = fbl::make_unique_checked<FakeAmlThermal>(
-        &ac, std::move(tsensor), std::move(voltage_regulator), std::move(cpufreq_scaling));
+        &ac, std::move(tsensor), std::move(voltage_regulator), std::move(cpufreq_scaling), config);
     if (!ac.check()) {
       return nullptr;
     }
 
     // SetTarget
-    if (pid == 4) {
-      // Sherlock
-      uint32_t big_opp_idx = fake_thermal_config.trip_point_info[0].big_cluster_dvfs_opp;
-      EXPECT_OK(test->SetTarget(big_opp_idx,
-                                fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN));
-
-      uint32_t little_opp_idx = fake_thermal_config.trip_point_info[0].little_cluster_dvfs_opp;
-      EXPECT_OK(test->SetTarget(little_opp_idx,
+    EXPECT_OK(test->SetTarget(config.trip_point_info[0].big_cluster_dvfs_opp,
+                              fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN));
+    if (config.big_little) {
+      EXPECT_OK(test->SetTarget(config.trip_point_info[0].little_cluster_dvfs_opp,
                                 fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN));
-    } else if (pid == 3) {
-      // Astro
-      uint32_t opp_idx = fake_thermal_config.trip_point_info[0].big_cluster_dvfs_opp;
-      EXPECT_OK(
-          test->SetTarget(opp_idx, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN));
     }
 
     return test;
@@ -791,9 +779,10 @@ class FakeAmlThermal : public AmlThermal {
 
   FakeAmlThermal(std::unique_ptr<thermal::AmlTSensor> tsensor,
                  std::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator,
-                 std::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling)
+                 std::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling,
+                 const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config)
       : AmlThermal(nullptr, std::move(tsensor), std::move(voltage_regulator),
-                   std::move(cpufreq_scaling), std::move(fake_thermal_config)) {}
+                   std::move(cpufreq_scaling), thermal_config) {}
 };
 
 class AmlThermalTest : public zxtest::Test {
@@ -840,31 +829,6 @@ class AmlThermalTest : public zxtest::Test {
     (*tsensor_mock_pll_mmio_)[(0x800 + (0x1 << 2))]
         .ExpectRead(0x00000000)
         .ExpectWrite(0x63B);  // sensor ctl
-    // InitTripPoints
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x5 << 2))]
-        .ExpectRead(0x00000000)  // set thresholds 4, rise
-        .ExpectWrite(0x00027E);
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x7 << 2))]
-        .ExpectRead(0x00000000)  // set thresholds 4, fall
-        .ExpectWrite(0x000272);
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x5 << 2))]
-        .ExpectRead(0x00000000)  // set thresholds 3, rise
-        .ExpectWrite(0x272000);
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x7 << 2))]
-        .ExpectRead(0x00000000)  // set thresholds 3, fall
-        .ExpectWrite(0x268000);
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x4 << 2))]
-        .ExpectRead(0x00000000)  // set thresholds 2, rise
-        .ExpectWrite(0x00025A);
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x6 << 2))]
-        .ExpectRead(0x00000000)  // set thresholds 2, fall
-        .ExpectWrite(0x000251);
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x4 << 2))]
-        .ExpectRead(0x00000000)  // set thresholds 1, rise
-        .ExpectWrite(0x250000);
-    (*tsensor_mock_pll_mmio_)[(0x800 + (0x6 << 2))]
-        .ExpectRead(0x00000000)  // set thresholds 1, fall
-        .ExpectWrite(0x245000);
     (*tsensor_mock_pll_mmio_)[(0x800 + (0x1 << 2))]
         .ExpectRead(0x00000000)  // clear IRQs
         .ExpectWrite(0x00FF0000);
@@ -905,8 +869,8 @@ class AmlThermalTest : public zxtest::Test {
     tsensor_mock_pll_mmio_->VerifyAll();
     tsensor_mock_ao_mmio_->VerifyAll();
     tsensor_mock_hiu_mmio_->VerifyAll();
-    pwm_AO_D_.VerifyAndClear();
-    pwm_A_.VerifyAndClear();
+    big_cluster_pwm_.VerifyAndClear();
+    little_cluster_pwm_.VerifyAndClear();
     cpufreq_scaling_mock_hiu_mmio_->VerifyAll();
 
     // Tear down
@@ -915,18 +879,20 @@ class AmlThermalTest : public zxtest::Test {
   }
 
   void Create(uint32_t pid) {
+    ddk_mock::MockMmioRegRegion& tsensor_mmio = *tsensor_mock_pll_mmio_;
+
     aml_pwm::mode_config on = {aml_pwm::ON, {}};
     pwm_config_t cfg = {false, 1250, 43, &on, sizeof(on)};
     switch (pid) {
       case 4: {  // Sherlock
         // Voltage Regulator
-        pwm_AO_D_.ExpectEnable(ZX_OK);
-        cfg.duty_cycle = 3;
-        pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
-
-        pwm_A_.ExpectEnable(ZX_OK);
+        big_cluster_pwm_.ExpectEnable(ZX_OK);
         cfg.duty_cycle = 43;
-        pwm_A_.ExpectSetConfig(ZX_OK, cfg);
+        big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
+
+        little_cluster_pwm_.ExpectEnable(ZX_OK);
+        cfg.duty_cycle = 3;
+        little_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
 
         // CPU Frequency and Scaling
         // Big
@@ -950,13 +916,23 @@ class AmlThermalTest : public zxtest::Test {
         (*cpufreq_scaling_mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectRead(0x00000000);
         (*cpufreq_scaling_mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00000800);
 
+        // InitTripPoints
+        tsensor_mmio[(0x800 + (0x5 << 2))].ExpectWrite(0x00027E);  // set thresholds 4, rise
+        tsensor_mmio[(0x800 + (0x7 << 2))].ExpectWrite(0x000272);  // set thresholds 4, fall
+        tsensor_mmio[(0x800 + (0x5 << 2))].ExpectWrite(0x27227E);  // set thresholds 3, rise
+        tsensor_mmio[(0x800 + (0x7 << 2))].ExpectWrite(0x268272);  // set thresholds 3, fall
+        tsensor_mmio[(0x800 + (0x4 << 2))].ExpectWrite(0x00025A);  // set thresholds 2, rise
+        tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x000251);  // set thresholds 2, fall
+        tsensor_mmio[(0x800 + (0x4 << 2))].ExpectWrite(0x25025A);  // set thresholds 1, rise
+        tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x245251);  // set thresholds 1, fall
+
         break;
       }
       case 3: {  // Astro
         // Voltage Regulator
-        pwm_AO_D_.ExpectEnable(ZX_OK);
+        big_cluster_pwm_.ExpectEnable(ZX_OK);
         cfg.duty_cycle = 13;
-        pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
+        big_cluster_pwm_.ExpectSetConfig(ZX_OK, cfg);
 
         // CPU Frequency and Scaling
         (*cpufreq_scaling_mock_hiu_mmio_)[412]
@@ -967,14 +943,18 @@ class AmlThermalTest : public zxtest::Test {
             .ExpectWrite(0x00010400);  // Dynamic mux 0 is in use
 
         // SetTarget
-        cfg.duty_cycle = 23;
-        pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
-        cfg.duty_cycle = 33;
-        pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
-        cfg.duty_cycle = 43;
-        pwm_AO_D_.ExpectSetConfig(ZX_OK, cfg);
         (*cpufreq_scaling_mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectRead(0x00000000);
         (*cpufreq_scaling_mock_hiu_mmio_)[412].ExpectRead(0x00000000).ExpectWrite(0x00000800);
+
+        // InitTripPoints
+        tsensor_mmio[(0x800 + (0x5 << 2))].ExpectWrite(0x000272);  // set thresholds 4, rise
+        tsensor_mmio[(0x800 + (0x7 << 2))].ExpectWrite(0x000268);  // set thresholds 4, fall
+        tsensor_mmio[(0x800 + (0x5 << 2))].ExpectWrite(0x266272);  // set thresholds 3, rise
+        tsensor_mmio[(0x800 + (0x7 << 2))].ExpectWrite(0x25c268);  // set thresholds 3, fall
+        tsensor_mmio[(0x800 + (0x4 << 2))].ExpectWrite(0x00025A);  // set thresholds 2, rise
+        tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x000251);  // set thresholds 2, fall
+        tsensor_mmio[(0x800 + (0x4 << 2))].ExpectWrite(0x25025A);  // set thresholds 1, rise
+        tsensor_mmio[(0x800 + (0x6 << 2))].ExpectWrite(0x245251);  // set thresholds 1, fall
         break;
       }
       default:
@@ -985,12 +965,12 @@ class AmlThermalTest : public zxtest::Test {
     ddk::MmioBuffer tsensor_pll_mmio(tsensor_mock_pll_mmio_->GetMmioBuffer());
     ddk::MmioBuffer tsensor_ao_mmio(tsensor_mock_ao_mmio_->GetMmioBuffer());
     ddk::MmioBuffer tsensor_hiu_mmio(tsensor_mock_hiu_mmio_->GetMmioBuffer());
-    auto pwm_AO_D = pwm_AO_D_.GetProto();
-    auto pwm_A = pwm_A_.GetProto();
+    auto big_cluster_pwm = big_cluster_pwm_.GetProto();
+    auto little_cluster_pwm = little_cluster_pwm_.GetProto();
     ddk::MmioBuffer cpufreq_scaling_hiu_mmio(cpufreq_scaling_mock_hiu_mmio_->GetMmioBuffer());
     thermal_device_ = FakeAmlThermal::Create(
         std::move(tsensor_pll_mmio), std::move(tsensor_ao_mmio), std::move(tsensor_hiu_mmio),
-        pwm_AO_D, pwm_A, std::move(cpufreq_scaling_hiu_mmio),
+        big_cluster_pwm, little_cluster_pwm, std::move(cpufreq_scaling_hiu_mmio),
         cpufreq_scaling_mock_hiu_internal_mmio_, pid);
     ASSERT_TRUE(thermal_device_ != nullptr);
   }
@@ -1013,8 +993,8 @@ class AmlThermalTest : public zxtest::Test {
   std::unique_ptr<ddk_mock::MockMmioRegRegion> tsensor_mock_hiu_mmio_;
 
   // Voltage Regulator
-  ddk::MockPwm pwm_AO_D_;
-  ddk::MockPwm pwm_A_;
+  ddk::MockPwm big_cluster_pwm_;
+  ddk::MockPwm little_cluster_pwm_;
 
   // CPU Frequency and Scaling
   fbl::Array<ddk_mock::MockMmioReg> cpufreq_scaling_hiu_regs_;

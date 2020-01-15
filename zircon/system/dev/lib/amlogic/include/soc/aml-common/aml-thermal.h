@@ -5,6 +5,8 @@
 #ifndef ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_THERMAL_H_
 #define ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_THERMAL_H_
 
+#include <fuchsia/hardware/thermal/c/fidl.h>
+
 #define MAX_VOLTAGE_TABLE 31
 
 typedef struct {
@@ -14,6 +16,7 @@ typedef struct {
 
 typedef struct {
   aml_voltage_table_t voltage_table[MAX_VOLTAGE_TABLE];
+  uint32_t initial_cluster_frequencies[fuchsia_hardware_thermal_MAX_DVFS_DOMAINS];
 } aml_thermal_info_t;
 
 #endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_THERMAL_H_

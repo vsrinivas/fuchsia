@@ -110,8 +110,8 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
 
   // Get the voltage-table .
   aml_thermal_info_t thermal_info;
-  status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &thermal_info,
-                               sizeof(thermal_info), &actual);
+  status = device_get_metadata(device, DEVICE_METADATA_PRIVATE, &thermal_info, sizeof(thermal_info),
+                               &actual);
   if (status != ZX_OK || actual != sizeof(thermal_info)) {
     zxlogf(ERROR, "aml-thermal: Could not get voltage-table metadata %d\n", status);
     return status;
@@ -146,7 +146,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   // Initialize voltage regulator.
-  status = voltage_regulator->Create(device, &thermal_info);
+  status = voltage_regulator->Create(device, thermal_config, &thermal_info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-thermal: Could not initialize Voltage Regulator: %d\n", status);
     return status;
@@ -159,7 +159,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   // Initialize CPU frequency scaling.
-  status = cpufreq_scaling->Create(device);
+  status = cpufreq_scaling->Create(device, thermal_config, thermal_info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-thermal: Could not initialize CPU freq. scaling: %d\n", status);
     return status;
@@ -181,28 +181,18 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   // Set the default CPU frequency.
   // We could be running Zircon only, or thermal daemon might not
   // run, so we manually set the CPU frequency here.
-  if (device_info.pid == PDEV_PID_AMLOGIC_T931) {
-    // Sherlock
-    uint32_t big_opp_idx = thermal_device->thermal_config_.trip_point_info[0].big_cluster_dvfs_opp;
-    status = thermal_device->SetTarget(
-        big_opp_idx, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN);
-    if (status != ZX_OK) {
-      return status;
-    }
+  uint32_t big_opp_idx = thermal_device->thermal_config_.trip_point_info[0].big_cluster_dvfs_opp;
+  status = thermal_device->SetTarget(big_opp_idx,
+                                     fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN);
+  if (status != ZX_OK) {
+    return status;
+  }
 
+  if (thermal_config.big_little) {
     uint32_t little_opp_idx =
         thermal_device->thermal_config_.trip_point_info[0].little_cluster_dvfs_opp;
     status = thermal_device->SetTarget(
         little_opp_idx, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-  } else if (device_info.pid == PDEV_PID_AMLOGIC_S905D2) {
-    // Astro
-    uint32_t opp_idx = thermal_device->thermal_config_.trip_point_info[0].big_cluster_dvfs_opp;
-    status = thermal_device->SetTarget(
-        opp_idx, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN);
     if (status != ZX_OK) {
       return status;
     }

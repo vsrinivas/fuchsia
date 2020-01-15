@@ -12,19 +12,63 @@
 #include "aml-fclk.h"
 #include "hiu-registers.h"
 
+namespace {
+
+constexpr uint32_t kSysCpuWaitBusyRetries = 5;
+constexpr uint32_t kSysCpuWaitBusyTimeoutUs = 10'000;
+
+// MMIO indexes.
+constexpr uint32_t kHiuMmio = 2;
+
+// 1GHz Frequency.
+constexpr uint32_t kFrequencyThreshold = 1'000'000'000;
+
+// 1.896GHz Frequency.
+constexpr uint32_t kMaxCPUFrequency = 1'896'000'000;
+constexpr uint32_t kMaxCPUBFrequency = 1'704'000'000;
+
+// Final Mux for selecting clock source.
+constexpr uint32_t kFixedPll = 0;
+constexpr uint32_t kSysPll = 1;
+
+constexpr uint32_t kPwmsPerCluster = 1;
+constexpr uint32_t kClocksPerCluster = 2;
+
+}  // namespace
+
 namespace thermal {
 
-zx_status_t AmlCpuFrequency::Create(zx_device_t* parent) {
+zx_status_t AmlCpuFrequency::Create(
+    zx_device_t* parent, const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+    const aml_thermal_info_t& thermal_info) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
     zxlogf(ERROR, "aml-cpufreq: failed to get composite protocol\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  big_little_ = thermal_config.big_little;
+  big_cluster_current_rate_ = thermal_info.initial_cluster_frequencies
+                                  [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN];
+  little_cluster_current_rate_ =
+      thermal_info.initial_cluster_frequencies
+          [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN];
+
+  constexpr size_t kMaxComponents =
+      ((kPwmsPerCluster + kClocksPerCluster) * fuchsia_hardware_thermal_MAX_DVFS_DOMAINS) + 1;
+
+  const size_t num_clocks = kClocksPerCluster * (big_little_ ? 2 : 1);
+  const size_t num_pwms = kPwmsPerCluster * (big_little_ ? 2 : 1);
+
   // zeroth component is pdev
-  zx_device_t* components[std::max(kSherlockPwmCount, kAstroPwmCount) + kClockCount + 1];
-  size_t actual;
+  zx_device_t* components[kMaxComponents];
+  size_t actual = 0;
   composite.GetComponents(components, fbl::count_of(components), &actual);
+
+  if (actual < (num_clocks + num_pwms + 1)) {
+    zxlogf(ERROR, "aml-cpufreq: not enough components\n");
+    return ZX_ERR_NO_RESOURCES;
+  }
 
   ddk::PDev pdev(components[0]);
   if (!pdev.is_valid()) {
@@ -32,37 +76,8 @@ zx_status_t AmlCpuFrequency::Create(zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  pdev_device_info_t device_info;
-  zx_status_t status = pdev.GetDeviceInfo(&device_info);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: failed to get GetDeviceInfo \n");
-    return status;
-  }
-
-  pid_ = device_info.pid;
-
-  uint8_t num_clocks, num_pwms;
-
-  if (pid_ == PDEV_PID_AMLOGIC_T931) {
-    num_clocks = kClockCount;
-    num_pwms = kSherlockPwmCount;
-  } else {
-    num_clocks = kAstroClockCount;
-    num_pwms = kAstroPwmCount;
-  }
-  // Get the clock protocols
-  for (unsigned i = 0; i < num_clocks; i++) {
-    clock_protocol_t clock;
-    auto status = device_get_protocol(components[num_pwms + i + 1], ZX_PROTOCOL_CLOCK, &clock);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
-      return status;
-    }
-    clks_[i] = &clock;
-  }
-
   // Initialized the MMIOs
-  status = pdev.MapMmio(kHiuMmio, &hiu_mmio_);
+  zx_status_t status = pdev.MapMmio(kHiuMmio, &hiu_mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-cpufreq: could not map periph mmio: %d\n", status);
     return status;
@@ -78,27 +93,16 @@ zx_status_t AmlCpuFrequency::Create(zx_device_t* parent) {
   // Enable the following clocks so we can measure them
   // and calculate what the actual CPU freq is set to at
   // any given point.
-  status = clks_[kSysPllDiv16].Enable();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: failed to enable clock, status = %d\n", status);
-    return status;
-  }
 
-  status = clks_[kSysCpuClkDiv16].Enable();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpufreq: failed to enable clock, status = %d\n", status);
-    return status;
-  }
-
-  if (pid_ == PDEV_PID_AMLOGIC_T931) {
-    // Sherlock
-    status = clks_[kSysPllBDiv16].Enable();
+  for (size_t i = 0; i < num_clocks; i++) {
+    ddk::ClockProtocolClient clock;
+    status = ddk::ClockProtocolClient::CreateFromDevice(components[num_pwms + i + 1], &clock);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: failed to enable clock, status = %d\n", status);
+      zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
       return status;
     }
 
-    status = clks_[kSysCpuBClkDiv16].Enable();
+    status = clock.Enable();
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-cpufreq: failed to enable clock, status = %d\n", status);
       return status;
@@ -113,29 +117,16 @@ zx_status_t AmlCpuFrequency::Init() {
   // Once we switch to using the MPLL, we re-initialize the SYS PLL
   // to known values and then the thermal driver can take over the dynamic
   // switching.
-  if (pid_ == PDEV_PID_AMLOGIC_T931) {
-    // Sherlock
-    big_cluster_current_rate_ = kSherlockBigFreqInit;
-    little_cluster_current_rate_ = kSherlockLittleFreqInit;
+  zx_status_t status = SetFrequency(fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN,
+                                    kFrequencyThreshold);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq, status = %d\n", status);
+    return status;
+  }
 
-    zx_status_t status = SetFrequency(fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN,
-                                      kFrequencyThreshold);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq, status = %d\n", status);
-      return status;
-    }
+  if (big_little_) {
     status = SetFrequency(fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
                           kFrequencyThreshold);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq, status = %d\n", status);
-      return status;
-    }
-  } else if (pid_ == PDEV_PID_AMLOGIC_S905D2) {
-    // Astro
-    big_cluster_current_rate_ = kSherlockBigFreqInit;
-
-    zx_status_t status = SetFrequency(fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN,
-                                      kFrequencyThreshold);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-cpufreq: failed to set CPU freq, status = %d\n", status);
       return status;
@@ -143,7 +134,7 @@ zx_status_t AmlCpuFrequency::Init() {
   }
 
   // SYS PLL Init.
-  zx_status_t status = s905d2_pll_init(&hiu_, &sys_pll_, SYS_PLL);
+  status = s905d2_pll_init(&hiu_, &sys_pll_, SYS_PLL);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-cpufreq: s905d2_pll_init failed: %d\n", status);
     return status;
@@ -163,9 +154,7 @@ zx_status_t AmlCpuFrequency::Init() {
     return status;
   }
 
-  if (pid_ == PDEV_PID_AMLOGIC_T931) {
-    // SYS1 PLL is only valid for Sherlock
-
+  if (big_little_) {
     // SYS1 PLL Init.
     status = s905d2_pll_init(&hiu_, &sys1_pll_, SYS1_PLL);
     if (status != ZX_OK) {
@@ -381,14 +370,7 @@ zx_status_t AmlCpuFrequency::SetLittleClusterFrequency(uint32_t new_rate, uint32
 zx_status_t AmlCpuFrequency::SetFrequency(fuchsia_hardware_thermal_PowerDomain power_domain,
                                           uint32_t new_rate) {
   if (power_domain == fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
-    uint32_t offset;
-    if (pid_ == PDEV_PID_AMLOGIC_S905D2) {
-      // Astro
-      offset = kSysCpuOffset;
-    } else {
-      // Sherlock
-      offset = kSysCpuBOffset;
-    }
+    const uint32_t offset = big_little_ ? kSysCpuBOffset : kSysCpuOffset;
     zx_status_t status = SetBigClusterFrequency(new_rate, offset);
     if (status != ZX_OK) {
       return status;
@@ -396,15 +378,11 @@ zx_status_t AmlCpuFrequency::SetFrequency(fuchsia_hardware_thermal_PowerDomain p
     big_cluster_current_rate_ = new_rate;
     return status;
   } else if (power_domain == fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN) {
-    uint32_t offset;
-    if (pid_ == PDEV_PID_AMLOGIC_T931) {
-      // Sherlock
-      offset = kSysCpuOffset;
-    } else {
-      // Astro
+    if (!big_little_) {
       return ZX_ERR_NOT_SUPPORTED;
     }
-    zx_status_t status = SetLittleClusterFrequency(new_rate, offset);
+
+    zx_status_t status = SetLittleClusterFrequency(new_rate, kSysCpuOffset);
     if (status != ZX_OK) {
       return status;
     }

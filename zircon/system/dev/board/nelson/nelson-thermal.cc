@@ -143,6 +143,10 @@ static aml_thermal_info_t aml_thermal_info = {
             {771'000, 83},  {761'000, 86},  {751'000, 90},  {741'000, 93}, {731'000, 96},
             {721'000, 100},
         },
+    .initial_cluster_frequencies =
+        {
+            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'200'000'000,
+        },
 };
 
 static const pbus_metadata_t thermal_metadata[] = {

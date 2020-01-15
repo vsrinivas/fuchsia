@@ -22,65 +22,37 @@
 
 namespace thermal {
 
-namespace {
-
-constexpr uint32_t kSysCpuWaitBusyRetries = 5;
-constexpr uint32_t kSysCpuWaitBusyTimeoutUs = 10'000;
-
-// Initial frequencies
-constexpr uint32_t kSherlockBigFreqInit = 1'000'000'000;
-constexpr uint32_t kSherlockLittleFreqInit = 1'200'000'000;
-constexpr uint32_t kAstroFreqInit = 1'200'000'000;
-
-// MMIO indexes.
-constexpr uint32_t kHiuMmio = 2;
-
-// 1GHz Frequency.
-constexpr uint32_t kFrequencyThreshold = 1'000'000'000;
-
-// 1.896GHz Frequency.
-constexpr uint32_t kMaxCPUFrequency = 1'896'000'000;
-constexpr uint32_t kMaxCPUBFrequency = 1'704'000'000;
-
-// Final Mux for selecting clock source.
-constexpr uint32_t kFixedPll = 0;
-constexpr uint32_t kSysPll = 1;
-
-constexpr uint8_t kAstroClockCount = 2;
-
-constexpr uint8_t kAstroPwmCount = 1;
-constexpr uint8_t kSherlockPwmCount = 2;
-
-}  // namespace
-
 // This class handles the dynamic changing of
 // CPU frequency.
 class AmlCpuFrequency {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpuFrequency);
   AmlCpuFrequency() = default;
-  AmlCpuFrequency(ddk::MmioBuffer hiu_mmio, mmio_buffer_t hiu_internal_mmio, uint32_t pid)
-      : hiu_mmio_(std::move(hiu_mmio)), pid_(pid) {
+  AmlCpuFrequency(ddk::MmioBuffer hiu_mmio, mmio_buffer_t hiu_internal_mmio,
+                  const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+                  const aml_thermal_info_t& thermal_info)
+      : hiu_mmio_(std::move(hiu_mmio)),
+        big_cluster_current_rate_(
+            thermal_info.initial_cluster_frequencies
+                [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN]),
+        little_cluster_current_rate_(
+            thermal_info.initial_cluster_frequencies
+                [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN]),
+        big_little_(thermal_config.big_little) {
     // HIU Init.
     hiu_.mmio = std::move(hiu_internal_mmio);
     hiu_.regs_vaddr = static_cast<uint8_t*>(hiu_.mmio.vaddr);
   }
   ~AmlCpuFrequency() = default;
   zx_status_t SetFrequency(fuchsia_hardware_thermal_PowerDomain power_domain, uint32_t rate);
-  zx_status_t Create(zx_device_t* parent);
+  zx_status_t Create(zx_device_t* parent,
+                     const fuchsia_hardware_thermal_ThermalDeviceInfo& thermal_config,
+                     const aml_thermal_info_t& thermal_info);
+
   zx_status_t Init();
   uint32_t GetFrequency(fuchsia_hardware_thermal_PowerDomain power_domain);
 
  private:
-  // CLK indexes.
-  enum {
-    kSysPllDiv16,
-    kSysCpuClkDiv16,
-    kSysPllBDiv16,
-    kSysCpuBClkDiv16,
-    kClockCount,
-  };
-
   zx_status_t WaitForBusyCpu(uint32_t offset);
   zx_status_t ConfigureSysPLL(uint32_t new_rate, uint32_t offset);
   zx_status_t ConfigureSys1PLL(uint32_t new_rate, uint32_t offset);
@@ -88,8 +60,6 @@ class AmlCpuFrequency {
   zx_status_t SetBigClusterFrequency(uint32_t new_rate, uint32_t offset);
   zx_status_t SetLittleClusterFrequency(uint32_t new_rate, uint32_t offset);
 
-  // Protocols.
-  ddk::ClockProtocolClient clks_[kClockCount];
   // MMIOS.
   std::optional<ddk::MmioBuffer> hiu_mmio_;
   // HIU Handle.
@@ -102,8 +72,7 @@ class AmlCpuFrequency {
   // which is set by u-boot while booting up.
   uint32_t big_cluster_current_rate_;
   uint32_t little_cluster_current_rate_;
-  // PID
-  uint32_t pid_;
+  bool big_little_ = false;
 };
 }  // namespace thermal
 

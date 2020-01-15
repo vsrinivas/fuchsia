@@ -171,6 +171,11 @@ aml_thermal_info_t aml_thermal_info = {
             {771'000, 83},  {761'000, 86},  {751'000, 90},  {741'000, 93}, {731'000, 96},
             {721'000, 100},
         },
+    .initial_cluster_frequencies =
+        {
+            [fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN] = 1'000'000'000,
+            [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] = 1'200'000'000,
+        },
 };
 
 const pbus_metadata_t thermal_metadata[] = {
@@ -253,9 +258,10 @@ const device_component_part_t clk4_component[] = {
     {countof(clk4_match), clk4_match},
 };
 const device_component_t components[] = {
-    {countof(pwm_ao_d_component), pwm_ao_d_component}, {countof(pwm_a_component), pwm_a_component},
-    {countof(clk1_component), clk1_component},         {countof(clk2_component), clk2_component},
-    {countof(clk3_component), clk3_component},         {countof(clk4_component), clk4_component},
+    // First component must be big cluster PWM, second must be little cluster PWM.
+    {countof(pwm_a_component), pwm_a_component}, {countof(pwm_ao_d_component), pwm_ao_d_component},
+    {countof(clk1_component), clk1_component},   {countof(clk2_component), clk2_component},
+    {countof(clk3_component), clk3_component},   {countof(clk4_component), clk4_component},
 };
 
 }  // namespace
