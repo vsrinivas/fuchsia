@@ -11,23 +11,23 @@ use super::*;
 #[derive(Debug)]
 pub struct ControlChannelHandler {
     /// Handle back to the remote peer. Weak to prevent a reference cycle since the remote peer owns this object.
-    pub remote_peer: Weak<RemotePeer>,
+    pub remote_peer: Weak<RwLock<RemotePeer>>,
 }
 
 impl ControlChannelHandler {
-    pub fn new(remote_peer: Weak<RemotePeer>) -> Self {
+    pub fn new(remote_peer: Weak<RwLock<RemotePeer>>) -> Self {
         Self { remote_peer }
     }
 
     fn handle_passthrough_command(
         &self,
-        remote_peer: &Arc<RemotePeer>,
+        remote_peer: &Arc<RwLock<RemotePeer>>,
         command: &AvcCommand,
     ) -> Result<AvcResponseType, Error> {
         let body = command.body();
         let command = AvcPanelCommand::from_primitive(body[0]);
 
-        fx_log_info!("Received passthrough command {:x?} {}", command, &remote_peer.peer_id);
+        fx_log_info!("Received passthrough command {:x?} {}", command, &remote_peer.read().peer_id);
 
         match command {
             Some(_) => Ok(AvcResponseType::Accepted),
@@ -156,7 +156,7 @@ impl ControlChannelHandler {
 
     fn handle_vendor_command(
         &self,
-        remote_peer: &Arc<RemotePeer>,
+        remote_peer: &Arc<RwLock<RemotePeer>>,
         command: &AvcCommand,
         pmi: &Arc<PeerManagerInner>,
     ) -> Result<(), Error> {
@@ -165,7 +165,7 @@ impl ControlChannelHandler {
             Err(e) => {
                 fx_log_info!(
                     "Unable to parse vendor dependent preamble {}: {:?}",
-                    remote_peer.peer_id,
+                    remote_peer.read().peer_id,
                     e
                 );
                 // TODO: validate this correct error code to respond in this case.
@@ -181,7 +181,7 @@ impl ControlChannelHandler {
                 fx_log_err!(
                     "Unsupported vendor dependent command pdu {} received from peer {} {:#?}: {:?}",
                     preamble.pdu_id,
-                    remote_peer.peer_id,
+                    remote_peer.read().peer_id,
                     body,
                     e
                 );
@@ -216,7 +216,7 @@ impl ControlChannelHandler {
                         if let Err(e) = command.send_response(response_type, &buf[..]) {
                             fx_log_err!(
                                 "Error sending vendor response to peer {}, {:?}",
-                                remote_peer.peer_id,
+                                remote_peer.read().peer_id,
                                 e
                             );
                             // unrecoverable
@@ -228,7 +228,7 @@ impl ControlChannelHandler {
                     Err(e) => {
                         fx_log_err!(
                             "Error parsing command packet from peer {}, {:?}",
-                            remote_peer.peer_id,
+                            remote_peer.read().peer_id,
                             e
                         );
 
@@ -244,7 +244,7 @@ impl ControlChannelHandler {
                                 {
                                     fx_log_err!(
                                         "Error sending not implemented response to peer {}, {:?}",
-                                        remote_peer.peer_id,
+                                        remote_peer.read().peer_id,
                                         e
                                     );
                                     return Err(Error::from(e));
@@ -275,7 +275,7 @@ impl ControlChannelHandler {
                             {
                                 fx_log_err!(
                                     "Error sending vendor reject response to peer {}, {:?}",
-                                    remote_peer.peer_id,
+                                    remote_peer.read().peer_id,
                                     e
                                 );
                                 return Err(Error::from(e));
@@ -321,7 +321,7 @@ impl ControlChannelHandler {
                                 if let Err(e) = command.send_response(response_type, &[]) {
                                     fx_log_err!(
                                         "Unable to send passthrough response to peer {}, {:?}",
-                                        remote_peer.peer_id,
+                                        remote_peer.read().peer_id,
                                         e
                                     );
                                     return Err(Error::from(e));
@@ -332,7 +332,7 @@ impl ControlChannelHandler {
                             Err(e) => {
                                 fx_log_err!(
                                     "Error parsing command packet from peer {}, {:?}",
-                                    remote_peer.peer_id,
+                                    remote_peer.read().peer_id,
                                     e
                                 );
 

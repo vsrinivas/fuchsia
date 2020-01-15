@@ -12,7 +12,7 @@ use super::*;
 ///
 /// The stream will terminate if an unexpected error/response is received by the peer.
 pub struct NotificationStream {
-    peer: Arc<RemotePeer>,
+    peer: Arc<RwLock<RemotePeer>>,
     event_id: NotificationEventId,
     playback_interval: u32,
     stream: Option<Pin<Box<dyn Stream<Item = Result<AvcCommandResponse, AvctpError>> + Send>>>,
@@ -21,7 +21,7 @@ pub struct NotificationStream {
 
 impl NotificationStream {
     pub fn new(
-        peer: Arc<RemotePeer>,
+        peer: Arc<RwLock<RemotePeer>>,
         event_id: NotificationEventId,
         playback_interval: u32,
     ) -> Self {
@@ -36,7 +36,8 @@ impl NotificationStream {
         } else {
             RegisterNotificationCommand::new(self.event_id)
         };
-        let conn = self.peer.control_channel.read().connection().ok_or(Error::RemoteNotFound)?;
+        let conn =
+            self.peer.read().control_channel.read().connection().ok_or(Error::RemoteNotFound)?;
         let packet = command.encode_packet().expect("unable to encode packet");
         let stream = conn
             .send_vendor_dependent_command(AvcCommandType::Notify, &packet[..])

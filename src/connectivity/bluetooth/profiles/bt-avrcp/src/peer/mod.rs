@@ -103,8 +103,8 @@ impl<'a> PeerManager<'a> {
 
     fn connect_remote_control_psm(&mut self, peer_id: &str, psm: u16) {
         let remote_peer = self.inner.get_remote_peer(peer_id);
-
-        let connection = remote_peer.control_channel.upgradable_read();
+        let peer_guard = remote_peer.read();
+        let connection = peer_guard.control_channel.upgradable_read();
         match *connection {
             PeerChannel::Disconnected => {
                 let mut conn = RwLockUpgradableReadGuard::upgrade(connection);
@@ -141,8 +141,9 @@ impl<'a> PeerManager<'a> {
         match AvcPeer::new(channel) {
             Ok(peer) => {
                 fx_vlog!(tag: "avrcp", 1, "new peer {:#?}", peer);
-                let mut connection = remote_peer.control_channel.write();
-                remote_peer.reset_command_handler();
+                let peer_guard = remote_peer.read();
+                let mut connection = peer_guard.control_channel.write();
+                peer_guard.reset_command_handler();
                 *connection = PeerChannel::Connected(Arc::new(peer));
             }
             Err(e) => {
@@ -160,8 +161,9 @@ impl<'a> PeerManager<'a> {
     fn check_peer_state(&mut self, peer_id: &PeerId) {
         fx_vlog!(tag: "avrcp", 2, "check_peer_state {:#?}", peer_id);
         let remote_peer = self.inner.get_remote_peer(peer_id);
+        let peer_guard = remote_peer.read();
 
-        let mut command_handle_guard = remote_peer.command_handler.lock();
+        let mut command_handle_guard = peer_guard.command_handler.lock();
 
         // Check if we are connected to the device and processing data
         if command_handle_guard.is_some() {
@@ -170,15 +172,15 @@ impl<'a> PeerManager<'a> {
         }
 
         // Have we received service profile data to know if the remote is a target or controller?
-        if remote_peer.target_descriptor.read().is_none()
-            && remote_peer.controller_descriptor.read().is_none()
+        if peer_guard.target_descriptor.read().is_none()
+            && peer_guard.controller_descriptor.read().is_none()
         {
             // we don't have the profile information on this steam.
             fx_vlog!(tag: "avrcp", 2, "check_peer_state, no profile descriptor yet {:?}", peer_id);
             return;
         }
 
-        let connection = remote_peer.control_channel.read();
+        let connection = peer_guard.control_channel.read();
         match connection.connection() {
             Some(peer_connection) => {
                 fx_vlog!(tag: "avrcp", 2, "check_peer_state, setting up command handler and pumping notifications {:?}", peer_id);
@@ -217,11 +219,13 @@ impl<'a> PeerManager<'a> {
                 for service in services {
                     match service {
                         AvrcpService::Target { .. } => {
-                            let mut profile_descriptor = remote_peer.target_descriptor.write();
+                            let peer_guard = remote_peer.read();
+                            let mut profile_descriptor = peer_guard.target_descriptor.write();
                             *profile_descriptor = Some(service);
                         }
                         AvrcpService::Controller { .. } => {
-                            let mut profile_descriptor = remote_peer.controller_descriptor.write();
+                            let peer_guard = remote_peer.read();
+                            let mut profile_descriptor = peer_guard.controller_descriptor.write();
                             *profile_descriptor = Some(service);
                         }
                     }
@@ -248,7 +252,7 @@ impl<'a> PeerManager<'a> {
             let peer = inner.get_remote_peer(&peer_id);
 
             // look up what notifications we support on this peer first
-            let remote_supported_notifications = match peer.get_supported_events().await {
+            let remote_supported_notifications = match RemotePeer::get_supported_events(peer.clone()).await {
                 Ok(x) => x,
                 Err(_) => return,
             };
@@ -262,7 +266,7 @@ impl<'a> PeerManager<'a> {
             // TODO(36320): move to remote peer.
             fn handle_response(
                 notif: &NotificationEventId,
-                peer: &Arc<RemotePeer>,
+                peer: &Arc<RwLock<RemotePeer>>,
                 data: &[u8],
             ) -> Result<bool, Error> {
                 fx_vlog!(tag: "avrcp", 2, "received notification for {:?} {:?}", notif, data);
@@ -280,7 +284,7 @@ impl<'a> PeerManager<'a> {
                     NotificationEventId::EventPlaybackStatusChanged => {
                         let response = PlaybackStatusChangedNotificationResponse::decode(data)
                             .map_err(|e| Error::PacketError(e))?;
-                        peer.broadcast_event(ControllerEvent::PlaybackStatusChanged(
+                        peer.read().broadcast_event(ControllerEvent::PlaybackStatusChanged(
                             response.playback_status(),
                         ));
                         Ok(false)
@@ -288,7 +292,7 @@ impl<'a> PeerManager<'a> {
                     NotificationEventId::EventTrackChanged => {
                         let response = TrackChangedNotificationResponse::decode(data)
                             .map_err(|e| Error::PacketError(e))?;
-                        peer.broadcast_event(ControllerEvent::TrackIdChanged(
+                        peer.read().broadcast_event(ControllerEvent::TrackIdChanged(
                             response.identifier(),
                         ));
                         Ok(false)
@@ -296,7 +300,7 @@ impl<'a> PeerManager<'a> {
                     NotificationEventId::EventPlaybackPosChanged => {
                         let response = PlaybackPosChangedNotificationResponse::decode(data)
                             .map_err(|e| Error::PacketError(e))?;
-                        peer.broadcast_event(ControllerEvent::PlaybackPosChanged(
+                        peer.read().broadcast_event(ControllerEvent::PlaybackPosChanged(
                             response.position(),
                         ));
                         Ok(false)
@@ -353,21 +357,17 @@ impl<'a> PeerManager<'a> {
 
         match command {
             Ok(avcommand) => {
-                {
-                    // scoped MutexGuard
-                    let cmd_handler_lock = remote_peer.command_handler.lock();
-                    match cmd_handler_lock.as_ref() {
-                        Some(cmd_handler) => {
-                            if let Err(e) =
-                                cmd_handler.handle_command(avcommand, self.inner.clone())
-                            {
-                                fx_log_err!("control channel command handler error {:?}", e);
-                                close_connection = true;
-                            }
+                let peer_guard = remote_peer.read();
+                let cmd_handler_lock = peer_guard.command_handler.lock();
+                match cmd_handler_lock.as_ref() {
+                    Some(cmd_handler) => {
+                        if let Err(e) = cmd_handler.handle_command(avcommand, self.inner.clone()) {
+                            fx_log_err!("control channel command handler error {:?}", e);
+                            close_connection = true;
                         }
-                        None => {
-                            debug_assert!(false, "pumping control channel without cmd_handler");
-                        }
+                    }
+                    None => {
+                        debug_assert!(false, "pumping control channel without cmd_handler");
                     }
                 }
             }
@@ -377,7 +377,7 @@ impl<'a> PeerManager<'a> {
             }
         }
         if close_connection {
-            remote_peer.reset_connection();
+            remote_peer.read().reset_connection();
         }
     }
 
@@ -426,8 +426,7 @@ impl<'a> PeerManager<'a> {
 #[derive(Debug)]
 pub struct PeerManagerInner {
     profile_svc: Box<dyn ProfileService + Send + Sync>,
-    remotes: RwLock<HashMap<PeerId, Arc<RemotePeer>>>,
-    // TODO(1279): implement the target handler.
+    remotes: RwLock<HashMap<PeerId, Arc<RwLock<RemotePeer>>>>,
 }
 
 impl PeerManagerInner {
@@ -438,11 +437,14 @@ impl PeerManagerInner {
     fn insert_if_needed(&self, peer_id: &str) {
         let mut r = self.remotes.write();
         if !r.contains_key(peer_id) {
-            r.insert(String::from(peer_id), Arc::new(RemotePeer::new(String::from(peer_id))));
+            r.insert(
+                String::from(peer_id),
+                Arc::new(RwLock::new(RemotePeer::new(String::from(peer_id)))),
+            );
         }
     }
 
-    pub fn get_remote_peer(&self, peer_id: &str) -> Arc<RemotePeer> {
+    pub fn get_remote_peer(&self, peer_id: &str) -> Arc<RwLock<RemotePeer>> {
         self.insert_if_needed(peer_id);
         self.remotes.read().get(peer_id).unwrap().clone()
     }

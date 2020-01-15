@@ -98,13 +98,15 @@ impl RemotePeer {
     /// This method encodes the `command` packet, awaits and decodes all responses, will issue
     /// continuation commands for incomplete responses (eg "get_element_attributes" command), and
     /// will return a result of the decoded packet or an error for any non stable response received
-    pub async fn send_vendor_dependent_command<'a>(
-        peer: &'a AvcPeer,
-        command: &'a (impl VendorDependent + VendorCommand),
+    pub async fn send_vendor_dependent_command(
+        peer: Arc<RwLock<Self>>,
+        command: &(impl VendorDependent + VendorCommand),
     ) -> Result<Vec<u8>, Error> {
+        let avc_peer = peer.read().get_control_connection()?;
         let mut buf = vec![];
         let packet = command.encode_packet().expect("unable to encode packet");
-        let mut stream = peer.send_vendor_dependent_command(command.command_type(), &packet[..])?;
+        let mut stream =
+            avc_peer.send_vendor_dependent_command(command.command_type(), &packet[..])?;
 
         loop {
             let response = loop {
@@ -145,31 +147,34 @@ impl RemotePeer {
             let command = RequestContinuingResponseCommand::new(u8::from(&command.pdu_id()));
             let packet = command.encode_packet().expect("unable to encode packet");
 
-            stream = peer.send_vendor_dependent_command(command.command_type(), &packet[..])?;
+            stream = avc_peer.send_vendor_dependent_command(command.command_type(), &packet[..])?;
         }
         Ok(buf)
     }
 
     /// Sends a single passthrough keycode over the control channel.
-    pub async fn send_avc_passthrough(&self, payload: &[u8; 2]) -> Result<(), Error> {
-        let peer = self.get_control_connection()?;
-        let response = peer.send_avc_passthrough_command(payload).await;
+    pub async fn send_avc_passthrough(
+        peer: Arc<RwLock<Self>>,
+        payload: &[u8; 2],
+    ) -> Result<(), Error> {
+        let avc_peer = peer.read().get_control_connection()?;
+        let response = avc_peer.send_avc_passthrough_command(payload).await;
         match response {
             Ok(AvcCommandResponse(AvcResponseType::Accepted, _)) => {
                 return Ok(());
             }
             Ok(AvcCommandResponse(AvcResponseType::Rejected, _)) => {
-                fx_log_info!("avrcp command rejected {}: {:?}", self.peer_id, response);
+                fx_log_info!("avrcp command rejected {}: {:?}", peer.read().peer_id, response);
                 return Err(Error::CommandNotSupported);
             }
             Err(e) => {
-                fx_log_err!("error sending avc command to {}: {:?}", self.peer_id, e);
+                fx_log_err!("error sending avc command to {}: {:?}", peer.read().peer_id, e);
                 return Err(Error::CommandFailed);
             }
             _ => {
                 fx_log_err!(
                     "error sending avc command. unhandled response {}: {:?}",
-                    self.peer_id,
+                    peer.read().peer_id,
                     response
                 );
                 return Err(Error::CommandFailed);
@@ -178,11 +183,12 @@ impl RemotePeer {
     }
 
     /// Retrieve the events supported by the peer by issuing a GetCapabilities command.
-    pub async fn get_supported_events(&self) -> Result<Vec<NotificationEventId>, Error> {
-        let peer = self.get_control_connection()?;
+    pub async fn get_supported_events(
+        peer: Arc<RwLock<Self>>,
+    ) -> Result<Vec<NotificationEventId>, Error> {
         let cmd = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::EventsId);
         fx_vlog!(tag: "avrcp", 1, "get_capabilities(events) send command {:#?}", cmd);
-        let buf = Self::send_vendor_dependent_command(&peer, &cmd).await?;
+        let buf = Self::send_vendor_dependent_command(peer.clone(), &cmd).await?;
         let capabilities =
             GetCapabilitiesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
         let mut event_ids = vec![];
