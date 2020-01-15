@@ -361,79 +361,45 @@ mod tests {
         .expect("Failed to create ImeHandler.")
     }
 
-    /// Handles InputEvents and checks that all events are consumed.
+    /// Validates the first event in `cmds` against `expected_event`.
     ///
     /// # Parameters
-    /// - `ime_handler`: The handler to call [`handle_input_event()`] on.
-    /// - `input_events`: The InputEvents to handle.
-    async fn handle_input_events(
-        ime_handler: &mut ImeHandler,
-        input_events: Vec<input_device::InputEvent>,
+    /// - `commands`: The commands received by the Scenic session.
+    /// - `expected_event`: The expected event.
+    fn verify_keyboard_event(
+        command: fidl_ui_scenic::Command,
+        expected_event: fidl_ui_input::KeyboardEvent,
     ) {
-        for input_event in input_events {
-            let events: Vec<input_device::InputEvent> =
-                ime_handler.handle_input_event(input_event).await;
-            assert_eq!(events.len(), 0);
-        }
-    }
-
-    /// Asserts that the Scenic session receives the expected commands.
-    ///
-    /// # Parameters
-    /// - `expected_commands`: The expected KeyboardEvents.
-    /// - `session_request_stream`: The stream receiving Scenic session requests.
-    ///
-    /// # Returns
-    /// Returns `true` if all `expected_commands` are received on `session_request_stream`.
-    async fn verify_session_command(
-        expected_commands: Vec<fidl_ui_input::KeyboardEvent>,
-        mut session_request_stream: fidl_ui_scenic::SessionRequestStream,
-    ) -> bool {
-        for command in expected_commands {
-            let request = session_request_stream.next().await;
-            match request {
-                Some(Ok(fidl_ui_scenic::SessionRequest::Enqueue { cmds, control_handle: _ })) => {
-                    assert_eq!(cmds.len(), 1);
-                    match cmds.first() {
-                        Some(fidl_ui_scenic::Command::Input(
-                            fidl_ui_input::Command::SendKeyboardInput(
-                                fidl_ui_input::SendKeyboardInputCmd {
-                                    compositor_id: _,
-                                    keyboard_event:
-                                        fidl_ui_input::KeyboardEvent {
-                                            event_time: _,
-                                            device_id,
-                                            phase,
-                                            hid_usage,
-                                            code_point: _,
-                                            modifiers,
-                                        },
-                                },
-                            ),
-                        )) => {
-                            assert_eq!(*device_id, command.device_id);
-                            assert_eq!(*phase, command.phase);
-                            assert_eq!(*hid_usage, command.hid_usage);
-                            assert_eq!(*modifiers, command.modifiers);
-                        }
-                        _ => {
-                            return false;
-                        }
-                    }
-                }
-                _ => {
-                    return false;
-                }
+        match command {
+            fidl_ui_scenic::Command::Input(fidl_ui_input::Command::SendKeyboardInput(
+                fidl_ui_input::SendKeyboardInputCmd {
+                    compositor_id: _,
+                    keyboard_event:
+                        fidl_ui_input::KeyboardEvent {
+                            event_time: _,
+                            device_id,
+                            phase,
+                            hid_usage,
+                            code_point: _,
+                            modifiers,
+                        },
+                },
+            )) => {
+                assert_eq!(device_id, expected_event.device_id);
+                assert_eq!(phase, expected_event.phase);
+                assert_eq!(hid_usage, expected_event.hid_usage);
+                assert_eq!(modifiers, expected_event.modifiers);
+            }
+            _ => {
+                assert!(false);
             }
         }
-
-        true
     }
 
     /// Tests that a pressed key event is dispatched.
     #[fasync::run_singlethreaded(test)]
     async fn pressed_key() {
-        let (session_proxy, session_request_stream) =
+        let (session_proxy, mut session_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
                 .expect("Failed to create ScenicProxy and stream.");
         let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
@@ -443,14 +409,12 @@ mod tests {
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
                 keys: vec![Key::A],
             });
-        let input_event = testing_utilities::create_keyboard_event(
+        let input_events = vec![testing_utilities::create_keyboard_event(
             vec![Key::A],
             vec![],
             None,
             &device_descriptor,
-        );
-        let events = ime_handler.handle_input_event(input_event).await;
-        assert_eq!(events.len(), 0);
+        )];
 
         let expected_commands = vec![fidl_ui_input::KeyboardEvent {
             event_time: Time::get(ClockId::Monotonic).into_nanos() as u64,
@@ -461,13 +425,19 @@ mod tests {
             modifiers: 0,
         }];
 
-        assert!(verify_session_command(expected_commands, session_request_stream).await);
+        assert_input_event_sequence_generates_scenic_events!(
+            input_handler: ime_handler,
+            input_events: input_events,
+            expected_commands: expected_commands,
+            scenic_session_request_stream: session_request_stream,
+            assert_command: verify_keyboard_event,
+        );
     }
 
     /// Tests that a released key event is dispatched.
     #[fasync::run_singlethreaded(test)]
     async fn released_key() {
-        let (session_proxy, session_request_stream) =
+        let (session_proxy, mut session_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
                 .expect("Failed to create ScenicProxy and stream.");
         let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
@@ -477,14 +447,12 @@ mod tests {
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
                 keys: vec![Key::A],
             });
-        let input_event = testing_utilities::create_keyboard_event(
+        let input_events = vec![testing_utilities::create_keyboard_event(
             vec![],
             vec![Key::A],
             None,
             &device_descriptor,
-        );
-        let events = ime_handler.handle_input_event(input_event).await;
-        assert_eq!(events.len(), 0);
+        )];
 
         let expected_commands = vec![fidl_ui_input::KeyboardEvent {
             event_time: Time::get(ClockId::Monotonic).into_nanos() as u64,
@@ -495,13 +463,19 @@ mod tests {
             modifiers: 0,
         }];
 
-        assert!(verify_session_command(expected_commands, session_request_stream).await);
+        assert_input_event_sequence_generates_scenic_events!(
+            input_handler: ime_handler,
+            input_events: input_events,
+            expected_commands: expected_commands,
+            scenic_session_request_stream: session_request_stream,
+            assert_command: verify_keyboard_event,
+        );
     }
 
     /// Tests that both pressed and released keys are dispatched appropriately.
     #[fasync::run_singlethreaded(test)]
     async fn pressed_and_released_key() {
-        let (session_proxy, session_request_stream) =
+        let (session_proxy, mut session_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
                 .expect("Failed to create ScenicProxy and stream.");
         let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
@@ -525,7 +499,6 @@ mod tests {
                 &device_descriptor,
             ),
         ];
-        handle_input_events(&mut ime_handler, input_events).await;
 
         let expected_commands = vec![
             fidl_ui_input::KeyboardEvent {
@@ -554,13 +527,19 @@ mod tests {
             },
         ];
 
-        assert!(verify_session_command(expected_commands, session_request_stream).await);
+        assert_input_event_sequence_generates_scenic_events!(
+            input_handler: ime_handler,
+            input_events: input_events,
+            expected_commands: expected_commands,
+            scenic_session_request_stream: session_request_stream,
+            assert_command: verify_keyboard_event,
+        );
     }
 
     /// Tests that modifier keys are dispatched appropriately.
     #[fasync::run_singlethreaded(test)]
     async fn repeated_modifier_key() {
-        let (session_proxy, session_request_stream) =
+        let (session_proxy, mut session_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
                 .expect("Failed to create ScenicProxy and stream.");
         let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
@@ -590,7 +569,6 @@ mod tests {
                 &device_descriptor,
             ),
         ];
-        handle_input_events(&mut ime_handler, input_events).await;
 
         let expected_commands = vec![
             fidl_ui_input::KeyboardEvent {
@@ -619,6 +597,12 @@ mod tests {
             },
         ];
 
-        assert!(verify_session_command(expected_commands, session_request_stream).await);
+        assert_input_event_sequence_generates_scenic_events!(
+            input_handler: ime_handler,
+            input_events: input_events,
+            expected_commands: expected_commands,
+            scenic_session_request_stream: session_request_stream,
+            assert_command: verify_keyboard_event,
+        );
     }
 }
