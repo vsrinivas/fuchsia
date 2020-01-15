@@ -14,6 +14,7 @@
 
 #[macro_use]
 extern crate log;
+
 pub mod config;
 pub mod error;
 pub mod hal;
@@ -31,7 +32,7 @@ use fidl_fuchsia_netstack as netstack;
 use fidl_fuchsia_router_config::LifProperties;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-// TODO(cgibson): Remove this when the config api supports LAN interface configuration.
+// TODO(cgibson): Remove this when we have the ability to add one port at a time the bridge.
 const NUMBER_OF_PORTS_IN_LAN: usize = 3;
 
 /// `DeviceState` holds the device state.
@@ -191,32 +192,47 @@ impl DeviceState {
         Ok(())
     }
 
-    /// Configures a WAN uplink from stored configuration.
+    /// Configures a WAN uplink from the stored configuration.
     async fn configure_wan(&mut self, pid: PortId, topological_path: &str) -> error::Result<()> {
         let wan_name = self.config.get_wan_interface_name(topological_path)?;
         let properties = self.config.create_wan_properties(topological_path)?;
         let lif = self.create_lif(LIFType::WAN, wan_name, None, &[pid]).await?;
         self.update_lif_properties(lif.id().uuid(), &properties.to_fidl_wan()).await?;
+        self.hal.set_interface_state(pid, true).await?;
         info!("WAN configured: pid: {:?}, lif: {:?}, properties: {:?} ", pid, lif, properties);
         Ok(())
     }
 
-    async fn configure_lan(&mut self, pids: &[PortId]) -> error::Result<()> {
-        let lif = self.create_lif(LIFType::LAN, "lan".to_string(), Some(2), pids).await?;
-        let properties = crate::lifmgr::LIFProperties {
-            enabled: true,
-            dhcp: false,
-            address: Some(LifIpAddr { address: "192.168.51.1".parse().unwrap(), prefix: 24 }),
-        }
-        .to_fidl_wan();
-        info!("LAN configured: lif: {:?} iproperties: {:?} ", lif, properties);
-        self.update_lif_properties(lif.id().uuid(), &properties).await?;
-        for pid in pids {
-            self.hal.set_interface_state(*pid, true).await?
-        }
+    /// Configures a bridge from the provided ports.
+    async fn configure_lan_bridge(&mut self, pids: &[PortId]) -> error::Result<()> {
+        let switched_vlans = pids.iter().map(|pid| {
+            self.port_manager
+                .topo_path(&pid)
+                .ok_or_else(|| {
+                    error::NetworkManager::CONFIG(error::Config::NotFound {
+                        msg: format!("topo_path not found in port manager map: {:?}", pid),
+                    })
+                })
+                .and_then(|t| self.config.get_switched_vlan_by_device_id(t))
+        });
+        let routed_vlan = self.config.all_ports_have_same_bridge(switched_vlans)?;
+        let bridge_name = self.config.get_bridge_name(&routed_vlan).to_string();
+        let vlan_id = routed_vlan.vlan_id;
+        let properties = self.config.create_routed_vlan_properties(&routed_vlan)?;
+        let lif = self.create_lif(LIFType::LAN, bridge_name, Some(vlan_id), pids).await?;
+        self.update_lif_properties(lif.id().uuid(), &properties.to_fidl_wan()).await?;
+        info!("Created new LAN bridge with properties: {:?}", properties);
         Ok(())
     }
 
+    /// TODO(cgibson): Implement me.
+    async fn configure_lan_port(&mut self, topological_path: &str) -> error::Result<()> {
+        Err(error::NetworkManager::CONFIG(error::Config::NotSupported {
+            msg: format!("Adding unbridged LAN ports is not supported yet: {}", topological_path),
+        }))
+    }
+
+    /// Applies configuration to the new port.
     async fn apply_configuration_on_new_port(
         &mut self,
         pid: PortId,
@@ -226,21 +242,28 @@ impl DeviceState {
             info!("Discovered a new uplink: {}", topological_path);
             return self.configure_wan(pid, topological_path).await;
         }
-        // TODO(dpradilla) Remove this temporaty code once there
-        // is a way to add to an existing bridge
-        // This code is just for testing purposes,
-        // until support for adding/removing ports from a
-        // bridge is added to netstack.
+
+        // TODO(cgibson): Refactor this when we have the ability to add one port at a time the
+        // bridge, currently we have to wait until we've discovered all the ports before creating
+        // the bridge. fxb/43251.
         self.lans.push(pid);
-        if self.lans.len() == NUMBER_OF_PORTS_IN_LAN {
-            let lans = self.lans.clone();
-            info!("LAN ports : {:?}", lans);
-            return self.configure_lan(&lans).await;
+
+        // If the configuration contains switched_vlan interfaces that matches this
+        // topological_path add it to the bridge.
+        if self.config.device_id_is_a_switched_vlan(topological_path) {
+            // TODO(cgibson): Need to do this until we can add individual bridge members.
+            if self.lans.len() == NUMBER_OF_PORTS_IN_LAN {
+                let lans = self.lans.clone();
+                info!("Creating new bridge with LAN ports: {:?}", lans);
+                return self.configure_lan_bridge(&lans).await;
+            }
+        } else {
+            self.configure_lan_port(topological_path).await?;
         }
-        self.hal.set_ip_forwarding(true).await?;
         Ok(())
     }
 
+    /// Returns a [`hal::Port`] from the topological path.
     pub async fn port_with_topopath(&self, path: &str) -> error::Result<Option<hal::Port>> {
         let port = self.hal.ports().await?.into_iter().find(|x| x.path == path);
         info!("ports {:?}", port);

@@ -79,6 +79,14 @@ impl PortManager {
         self.path_to_pid.get(path)
     }
 
+    /// Returns topo path from a port id.
+    pub fn topo_path(&self, pid: &PortId) -> Option<&str> {
+        self.path_to_pid
+            .iter()
+            .filter_map(|(k, v)| if pid == v { Some(k.as_str()) } else { None })
+            .next()
+    }
+
     /// Returns all ports known by port manager.
     pub fn ports(&self) -> impl ExactSizeIterator<Item = &Port> {
         self.ports.iter().map(|(_, (p, _))| p)
@@ -275,6 +283,19 @@ mod tests {
         let got = pm.port_id(&generate_path(5));
         assert_eq!(got, Some(&PortId::from(5)));
         let got = pm.port_id(&generate_path(6));
+        assert_eq!(got, None);
+    }
+
+    #[test]
+    fn test_topo_path() {
+        let mut pm = PortManager::new();
+        pm.add_port(Port::new(PortId::from(1), &generate_path(1), 1));
+        pm.add_port(Port::new(PortId::from(5), &generate_path(5), 1));
+        let got = pm.topo_path(&PortId::from(1));
+        assert_eq!(got, Some(generate_path(1).as_str()));
+        let got = pm.topo_path(&PortId::from(5));
+        assert_eq!(got, Some(generate_path(5).as_str()));
+        let got = pm.topo_path(&PortId::from(6));
         assert_eq!(got, None);
     }
 

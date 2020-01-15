@@ -91,7 +91,7 @@ pub enum PortSpeed {
 // TODO(cgibson): VLANs.
 // TODO(cgibson): ACLs.
 // TODO(cgibson): WLAN.
-// TODO(cgibson): Need to figure out versioning. Having "unknown" fields and "flatten"'ing themn
+// TODO(cgibson): Need to figure out versioning. Having "unknown" fields and "flatten"'ing them
 // into an `extras` field might be an interesting experiment.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -163,13 +163,13 @@ pub struct Subinterface {
     pub ipv6: Option<IpAddressConfig>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct IpAddressConfig {
     pub addresses: Vec<IpAddress>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct IpAddress {
     // If omitted, the default is to enable a DHCP client on this interface.
@@ -185,15 +185,14 @@ pub struct IpAddress {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct SwitchedVlan {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub interface_mode: Option<InterfaceMode>,
+    pub interface_mode: InterfaceMode,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub access_vlan: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trunk_vlans: Option<Vec<u16>>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct RoutedVlan {
     pub vlan_id: u16,
@@ -285,6 +284,8 @@ pub struct Config {
     startup_path: Option<PathBuf>,
     paths: DeviceConfigPaths,
 }
+
+const UNNAMED_BRIDGE: &str = "unnamed_bridge";
 
 /// Converts a Valico JSON SchemaError to a `String`.
 fn schema_error(error: schema::SchemaError) -> String {
@@ -638,16 +639,15 @@ impl Config {
     /// An "uplink" is defined by having an [`InterfaceType::IfUplink`] and having a "subinterface"
     /// definition.
     pub fn device_id_is_a_wan_uplink(&self, topo_path: &str) -> bool {
-        if let Some(intf) = self.get_interface_by_device_id(topo_path) {
-            match intf.config.interface_type {
-                InterfaceType::IfUplink => return true,
+        self.get_interface_by_device_id(topo_path)
+            .map(|intf| match intf.config.interface_type {
+                InterfaceType::IfUplink => return intf.subinterfaces.is_some(),
                 _ => return false,
-            }
-        }
-        false
+            })
+            .unwrap_or(false)
     }
 
-    /// Returns a WAN interface's name.
+    /// Returns the name of the WAN interface.
     pub fn get_wan_interface_name(&self, topo_path: &str) -> error::Result<String> {
         if self.device_id_is_a_wan_uplink(topo_path) {
             if let Some(intf) = self.get_interface_by_device_id(topo_path) {
@@ -678,36 +678,55 @@ impl Config {
                 warn!("LIFProperties does not support multiple addresses yet.")
             }
             let subif = &subifs[0];
-            let v4addr = subif.ipv4.as_ref().and_then(|c| c.addresses.iter().nth(0));
-            let v6addr = subif.ipv6.as_ref().and_then(|c| c.addresses.iter().nth(0));
+            let v4addr = subif.ipv4.as_ref().and_then(|c| c.addresses.iter().next());
+            let v6addr = subif.ipv6.as_ref().and_then(|c| c.addresses.iter().next());
             return Ok((v4addr, v6addr));
         }
-
-        // TODO(cgibson): Add support for getting IP addreses from 'routed_vlan'.
-        Err(error::NetworkManager::CONFIG(error::Config::NotSupported {
-            msg: format!("Getting IP addresses from a 'routed_vlan' is not supported yet"),
+        Err(error::NetworkManager::CONFIG(error::Config::NotFound {
+            msg: format!(
+                "Could not find an IP config defined on the provided interface: {:?}",
+                intf
+            ),
         }))
     }
 
     /// Updates [`lifmgr::LIFProperties`] with the given IP address configuration.
     ///
-    /// If `ipconfig` is `None` then this method has no effect.
+    /// In an IPv4-only network, with DHCP client disabled, and no static IP address configuration,
+    /// then there will be no address configured for this interface.
+    ///
+    /// In an IPv6-only network, we currently have no plans to support DHCPv6 and there is no
+    /// static IPv6 address configuration, we will rely on SLAAC to get a V6 address.
+    ///
+    /// Blended V4/V6 networks with IPv4 DHCP client disabled and no static IP address will rely on
+    /// SLAAC to get an IPv6 address.
+    ///
+    /// If `ipconfig` is `None` then it is the same as an IPv6-only network, we rely on SLAAC to get
+    /// an address.
     fn set_ip_address_config(
         &self,
         properties: &mut lifmgr::LIFProperties,
-        ipconfig: &Option<&IpAddress>,
+        ipconfig: Option<&IpAddress>,
     ) {
         if let Some(c) = ipconfig {
             if let Some(dhcp_client) = c.dhcp_client {
                 properties.dhcp = dhcp_client;
             }
-            // TODO(cgibson): LIFProperties doesn't support IPv6 addresses yet. fxb/42316.
+            // TODO(42315): LIFProperties doesn't support IPv6 addresses yet.
             match (c.ip, c.prefix_length) {
                 (Some(address), Some(prefix)) => {
                     properties.address = Some(lifmgr::LifIpAddr { address, prefix });
                 }
                 _ => {}
             }
+        }
+
+        // TODO(42315): LIF manager throws an error if both a DHCP client and a static IP address
+        // configuration are set. We don't want to be generating invalid LIFProperties, so favor
+        // the static IP configuration and turn off DHCP.
+        if properties.dhcp && properties.address.is_some() {
+            warn!("DHCP client and static IP cannot be configured at once: Disabling DHCP.");
+            properties.dhcp = false;
         }
     }
 
@@ -718,16 +737,16 @@ impl Config {
     /// state of the interface as well as configures the IP address.
     pub fn create_wan_properties(&self, topo_path: &str) -> error::Result<lifmgr::LIFProperties> {
         let mut properties =
-            crate::lifmgr::LIFProperties { enabled: true, dhcp: true, address: None };
+            crate::lifmgr::LIFProperties { enabled: true, dhcp: false, address: None };
         let intf = match self.get_interface_by_device_id(topo_path) {
             Some(x) => x,
             None => {
                 return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
                     msg: format!(
-                        "Cannot find an Interface matching `device_id` from topo: {}",
+                        "Cannot find an Interface matching `device_id` from topo path: {}",
                         topo_path
                     ),
-                }))
+                }));
             }
         };
         let subifs = match &intf.subinterfaces {
@@ -735,14 +754,17 @@ impl Config {
             None => {
                 return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
                     msg: format!("An uplink must have a 'subinterface' configuration"),
-                }))
+                }));
             }
         };
+
+        // TODO(42315): LIFProperties does not support multiple addresses yet.
         if subifs.len() != 1 {
             return Err(error::NetworkManager::CONFIG(error::Config::NotSupported {
                 msg: format!("Multiple subinterfaces on a single interface are not supported"),
             }));
         }
+
         if let Some(subif) = subifs.get(0) {
             match subif.admin_state {
                 Some(AdminState::Up) => {
@@ -753,7 +775,7 @@ impl Config {
                     properties.enabled = false;
                 }
                 Some(AdminState::Testing) => {
-                    warn!("Admin state 'TESTING' is not supported");
+                    warn!("Admin state 'TESTING' is not supported; defaulting to 'Up'");
                     properties.enabled = true;
                 }
                 _ => {
@@ -764,20 +786,189 @@ impl Config {
         }
 
         let (v4addr, v6addr) = self.get_ip_address(intf)?;
-        // TODO(cgibson): LIFProperties doesn't support IPv6 addresses yet. fxb/42316.
+        // TODO(42316): LIFProperties doesn't support IPv6 addresses yet.
         if v6addr.is_some() {
+            warn!("Setting IPv6 addresses is not supported yet");
+        }
+        self.set_ip_address_config(&mut properties, v4addr);
+        Ok(properties)
+    }
+
+    /// Returns a vector of [`config::Interface`]'s that contain a [`config::RoutedVlan`].
+    ///
+    /// If no `Interface`'s are defined as being a `RoutedVlan`, then this method will return an
+    /// empty Iterator.
+    ///
+    /// If there are no interfaces configured, then this method returns `None`.
+    pub fn get_routed_vlan_interfaces(&self) -> Option<impl Iterator<Item = &Interface>> {
+        self.interfaces().map(|ifs| {
+            ifs.iter().filter_map(|intfs| {
+                if intfs.interface.routed_vlan.is_some() {
+                    Some(&intfs.interface)
+                } else {
+                    None
+                }
+            })
+        })
+    }
+
+    /// Returns the [`SwitchedVlan`] that matches the device id contained in `topo_path`.
+    pub fn get_switched_vlan_by_device_id(&self, topo_path: &str) -> error::Result<&SwitchedVlan> {
+        self.get_interface_by_device_id(topo_path)
+            .and_then(|intf| intf.switched_vlan.as_ref())
+            .ok_or_else(|| {
+                error::NetworkManager::CONFIG(error::Config::NotFound {
+                    msg: format!("Failed to find interface matching: {}", topo_path),
+                })
+            })
+    }
+
+    /// Returns `true` if `topo_path` resolves to a [`config::SwitchedVlan`].
+    pub fn device_id_is_a_switched_vlan(&self, topo_path: &str) -> bool {
+        self.get_switched_vlan_by_device_id(topo_path).is_ok()
+    }
+
+    /// Resolves a [`config::SwitchedVlan`] to it's [`config::RoutedVlan`] configuration.
+    ///
+    /// # Errors
+    ///
+    /// If the switched VLAN does not resolve to a routed VLAN, then a `NotFound` error will be
+    /// returned.
+    ///
+    /// If the switched VLAN port does not have the correct configuration based on its interface
+    /// mode, then a `Malformed` error will be returned.
+    pub fn resolve_to_routed_vlans(
+        &self,
+        switched_vlan: &SwitchedVlan,
+    ) -> error::Result<&RoutedVlan> {
+        let mut switched_vlan_ids = Vec::new();
+        match switched_vlan.interface_mode {
+            InterfaceMode::Access => match switched_vlan.access_vlan {
+                Some(vid) => switched_vlan_ids.push(vid),
+                None => {
+                    return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
+                        msg: format!(
+                            "Expecting access port to have 'access_vlan': {:?}",
+                            switched_vlan
+                        ),
+                    }));
+                }
+            },
+            // TODO(cgibson): Implement trunk VLANs when netstack supports it.
+            InterfaceMode::Trunk => {
+                return Err(error::NetworkManager::CONFIG(error::Config::NotSupported {
+                    msg: format!("Trunk VLANs are not supported yet."),
+                }));
+            }
+        }
+        if let Some(it) = self.get_routed_vlan_interfaces() {
+            for intf in it {
+                // Safe to unwrap() here because `get_routed_vlan_interfaces()` checked for us
+                // already.
+                let routed_vlan = intf.routed_vlan.as_ref().unwrap();
+                if switched_vlan_ids.contains(&routed_vlan.vlan_id) {
+                    return Ok(&routed_vlan);
+                }
+            }
+        }
+        Err(error::NetworkManager::CONFIG(error::Config::NotFound {
+            msg: format!(
+                "Switched VLAN port does not resolve to a routed VLAN: {:?}",
+                switched_vlan
+            ),
+        }))
+    }
+
+    /// Checks that all `ports` resolve to a single [`config::RoutedVlan`].
+    pub fn all_ports_have_same_bridge<'a>(
+        &'a self,
+        ports: impl Iterator<Item = error::Result<&'a SwitchedVlan>>,
+    ) -> error::Result<&'a RoutedVlan> {
+        let mut ports = ports.peekable();
+        if ports.peek().is_none() {
+            warn!("Provided list of ports was empty?");
+            return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
+                msg: format!("Provided list of ports was empty?"),
+            }));
+        }
+        let mut routed_vlan = None;
+        for p in ports {
+            let r = self.resolve_to_routed_vlans(p?)?;
+            routed_vlan = match routed_vlan {
+                None => Some(r),
+                Some(v) => {
+                    if v == r {
+                        Some(r)
+                    } else {
+                        return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
+                            msg: format!(
+                                "switched_vlan ports do not resolve to the same RoutedVlan"
+                            ),
+                        }));
+                    }
+                }
+            }
+        }
+        routed_vlan.ok_or_else(|| {
+            error::NetworkManager::CONFIG(error::Config::Malformed {
+                msg: format!("switched_vlan ports do not resolve to the same RoutedVlan"),
+            })
+        })
+    }
+
+    /// Returns the name of the bridge.
+    pub fn get_bridge_name(&self, target: &RoutedVlan) -> &str {
+        self.get_routed_vlan_interfaces()
+            .and_then(|mut vlan_ifs| {
+                vlan_ifs.find_map(|intf| {
+                    intf.routed_vlan.as_ref().and_then(|vlan| {
+                        if vlan.vlan_id == target.vlan_id {
+                            Some(intf.config.name.as_str())
+                        } else {
+                            None
+                        }
+                    })
+                })
+            })
+            .unwrap_or(UNNAMED_BRIDGE)
+    }
+
+    /// Creates a new [`lifmgr::LIFProperties`] for the provided `RoutedVlan`.
+    pub fn create_routed_vlan_properties(
+        &self,
+        bridge: &RoutedVlan,
+    ) -> error::Result<lifmgr::LIFProperties> {
+        let mut properties =
+            crate::lifmgr::LIFProperties { enabled: true, dhcp: false, address: None };
+
+        // TODO(42316): LIFProperties doesn't support IPv6 addresses yet.
+        if bridge.ipv6.is_some() {
             warn!("Setting IPv6 addresses is not supported yet.");
         }
-        self.set_ip_address_config(&mut properties, &v4addr);
+        bridge.ipv4.as_ref().and_then(|c| {
+            if c.addresses.len() > 1 {
+                warn!("Configuring multiple IPv4 addresses is not supported yet");
+            }
+            Some(())
+        });
+        let v4addr = bridge.ipv4.as_ref().and_then(|c| c.addresses.iter().next());
+        self.set_ip_address_config(&mut properties, v4addr);
+
+        // TODO(42316): Until LIFProperties supports IPv6 addresses, we have the possibility of
+        // generating properties that do not have an IP configuration. Make sure that we have
+        // at least DHCP client enabled.
+        if !properties.dhcp && properties.address.is_none() {
+            properties.dhcp = true;
+        }
         Ok(properties)
     }
 
     /// Returns configured VLAN IDs for the given device that matches `topo_path`.
     ///
-    /// If the interface is a `switched_vlan` then the VLAN IDs will be depend on if the interface
-    /// mode is either a trunk or access.
+    /// If the interface is a `SwitchedVlan` then the VLAN IDs will be depend on if the interface
+    /// mode is either a `trunk` or `access` port.
     ///
-    /// If the interface is a `routed_vlan` then the VLAN ID will be a vector with a single element
+    /// If the interface is a `RoutedVlan` then the VLAN ID will be a vector of a single element
     /// containing the `routed_vlan`'s VLAN ID.
     ///
     /// If the interface is a `subinterface` then the vector will be empty.
@@ -785,24 +976,30 @@ impl Config {
         let mut vids = Vec::new();
         if let Some(intf) = self.get_interface_by_device_id(topo_path) {
             match &intf.routed_vlan {
-                Some(r) => vids.push(r.vlan_id),
+                Some(r) => {
+                    // routed_vlan's have a single VLAN ID only.
+                    return vec![r.vlan_id];
+                }
                 None => {}
             }
-            match intf.switched_vlan.as_ref().and_then(|x| x.interface_mode.as_ref()) {
-                Some(InterfaceMode::Access) => {
-                    if let Some(access_vlan) =
-                        intf.switched_vlan.as_ref().and_then(|x| x.access_vlan)
-                    {
-                        vids.push(access_vlan);
+
+            match &intf.switched_vlan {
+                Some(switched_vlan) => match switched_vlan.interface_mode {
+                    InterfaceMode::Access => {
+                        if let Some(access_vlan) =
+                            intf.switched_vlan.as_ref().and_then(|x| x.access_vlan)
+                        {
+                            vids.push(access_vlan);
+                        }
                     }
-                }
-                Some(InterfaceMode::Trunk) => {
-                    if let Some(trunk_vlans) =
-                        intf.switched_vlan.as_ref().and_then(|x| x.trunk_vlans.as_ref())
-                    {
-                        vids.extend(trunk_vlans.iter().cloned());
+                    InterfaceMode::Trunk => {
+                        if let Some(trunk_vlans) =
+                            intf.switched_vlan.as_ref().and_then(|x| x.trunk_vlans.as_ref())
+                        {
+                            vids.extend(trunk_vlans.iter().cloned());
+                        }
                     }
-                }
+                },
                 None => (),
             }
         }
@@ -882,7 +1079,7 @@ mod tests {
                     Interfaces {
                         interface: Interface {
                             config: InterfaceConfig {
-                                name: "test_wan".to_string(),
+                                name: "wan".to_string(),
                                 interface_type: InterfaceType::IfUplink,
                             },
                             oper_state: None,
@@ -895,7 +1092,7 @@ mod tests {
                                 admin_state: Some(AdminState::Up),
                                 ipv4: Some(IpAddressConfig {
                                     addresses: vec![IpAddress {
-                                        dhcp_client: Some(true),
+                                        dhcp_client: Some(false),
                                         ip: Some("127.0.0.1".parse().unwrap()),
                                         prefix_length: Some(32),
                                     }],
@@ -907,8 +1104,8 @@ mod tests {
                     Interfaces {
                         interface: Interface {
                             config: InterfaceConfig {
-                                name: "test_eth0".to_string(),
-                                interface_type: InterfaceType::IfEthernet,
+                                name: "bridge".to_string(),
+                                interface_type: InterfaceType::IfRoutedVlan,
                             },
                             oper_state: None,
                             device_id: Some("routed_vlan".to_string()),
@@ -916,7 +1113,36 @@ mod tests {
                             tcp_offload: None,
                             subinterfaces: None,
                             switched_vlan: None,
-                            routed_vlan: Some(RoutedVlan { vlan_id: 1, ipv4: None, ipv6: None }),
+                            routed_vlan: Some(RoutedVlan {
+                                vlan_id: 2,
+                                ipv4: Some(IpAddressConfig {
+                                    addresses: vec![IpAddress {
+                                        dhcp_client: Some(false),
+                                        ip: Some("192.168.0.1".parse().unwrap()),
+                                        prefix_length: Some(32),
+                                    }],
+                                }),
+                                ipv6: None,
+                            }),
+                        },
+                    },
+                    Interfaces {
+                        interface: Interface {
+                            config: InterfaceConfig {
+                                name: "test_eth".to_string(),
+                                interface_type: InterfaceType::IfEthernet,
+                            },
+                            oper_state: None,
+                            device_id: Some("switched_vlan".to_string()),
+                            ethernet: None,
+                            tcp_offload: None,
+                            subinterfaces: None,
+                            switched_vlan: Some(SwitchedVlan {
+                                interface_mode: InterfaceMode::Access,
+                                access_vlan: Some(2),
+                                trunk_vlans: None,
+                            }),
+                            routed_vlan: None,
                         },
                     },
                 ]),
@@ -1097,8 +1323,11 @@ mod tests {
         // The following should all fail for the same reason as above, exactly one configuration
         // per interface.
         let routed_vlan = Some(RoutedVlan { vlan_id: 1, ipv4: None, ipv6: None });
-        let switched_vlan =
-            Some(SwitchedVlan { interface_mode: None, access_vlan: None, trunk_vlans: None });
+        let switched_vlan = Some(SwitchedVlan {
+            interface_mode: InterfaceMode::Access,
+            access_vlan: None,
+            trunk_vlans: None,
+        });
         let subinterfaces = Subinterface { admin_state: None, ipv4: None, ipv6: None };
 
         intf.routed_vlan = routed_vlan.clone();
@@ -1389,7 +1618,7 @@ mod tests {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
         let v = test_config.get_vlans("routed_vlan");
-        assert_eq!(v, vec![1]);
+        assert_eq!(v, vec![2]);
 
         let v = test_config.get_vlans("test_device_id");
         let empty_vec: Vec<u16> = Vec::new();
@@ -1417,8 +1646,37 @@ mod tests {
     }
 
     #[test]
-    fn test_set_ip_address() {
+    fn test_set_ip_address_config() {
         let test_config = create_test_config_no_paths();
+        let ipconfig = IpAddress {
+            dhcp_client: Some(false),
+            ip: Some("127.0.0.1".parse().unwrap()),
+            prefix_length: Some(32),
+        };
+        let mut properties: lifmgr::LIFProperties =
+            lifmgr::LIFProperties { enabled: false, dhcp: false, address: None };
+        test_config.set_ip_address_config(&mut properties, Some(&ipconfig));
+        // The set_ip_address_config() function should not decide if the LIFProperties are enabled
+        // or not, that should come from the AdminState in the config. So we shouldn't alter the
+        // `enabled` field.
+        assert_eq!(properties.enabled, false);
+        assert_eq!(properties.dhcp, false);
+        assert_eq!(
+            properties.address,
+            Some(lifmgr::LifIpAddr { address: "127.0.0.1".parse().unwrap(), prefix: 32 })
+        );
+
+        // Make sure DHCP client can be enabled when no static IP configuration is present.
+        let ipconfig = IpAddress { dhcp_client: Some(true), ip: None, prefix_length: None };
+        let mut properties: lifmgr::LIFProperties =
+            lifmgr::LIFProperties { enabled: true, dhcp: false, address: None };
+        test_config.set_ip_address_config(&mut properties, Some(&ipconfig));
+        assert_eq!(properties.enabled, true);
+        assert_eq!(properties.dhcp, true);
+        assert_eq!(properties.address, None);
+
+        // Both DHCP client and static IP cannot be set simultaneously, make sure that DHCP client
+        // is turned off when both are set.
         let ipconfig = IpAddress {
             dhcp_client: Some(true),
             ip: Some("127.0.0.1".parse().unwrap()),
@@ -1426,8 +1684,9 @@ mod tests {
         };
         let mut properties: lifmgr::LIFProperties =
             lifmgr::LIFProperties { enabled: true, dhcp: false, address: None };
-        test_config.set_ip_address_config(&mut properties, &Some(&ipconfig));
-        assert_eq!(properties.dhcp, true);
+        test_config.set_ip_address_config(&mut properties, Some(&ipconfig));
+        assert_eq!(properties.enabled, true);
+        assert_eq!(properties.dhcp, false);
         assert_eq!(
             properties.address,
             Some(lifmgr::LifIpAddr { address: "127.0.0.1".parse().unwrap(), prefix: 32 })
@@ -1457,13 +1716,13 @@ mod tests {
         match test_config.create_wan_properties("test_device_id") {
             Ok(p) => {
                 assert_eq!(p.enabled, true);
-                assert_eq!(p.dhcp, true);
+                assert_eq!(p.dhcp, false);
                 assert_eq!(
                     p.address,
                     Some(lifmgr::LifIpAddr { address: "127.0.0.1".parse().unwrap(), prefix: 32 })
                 );
             }
-            Err(e) => panic!("Got unexpected result pair: {:?}", e),
+            Err(e) => panic!("Got unexpected result: {:?}", e),
         }
     }
 
@@ -1476,15 +1735,193 @@ mod tests {
             Err(e) => panic!("Got unexpected 'Err' result: {}", e),
             Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
         }
-        match test_config.get_wan_interface_name("test_eth0") {
+        match test_config.get_wan_interface_name("bridge") {
             Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
             Err(error::NetworkManager::CONFIG(error::Config::NotFound { msg: _ })) => (),
             Err(e) => panic!("Got unexpected 'Err' result: {}", e),
         }
-        let expected_name = "test_wan".to_string();
+        let expected_name = "wan".to_string();
         match test_config.get_wan_interface_name("test_device_id") {
             Ok(r) => assert_eq!(r, expected_name),
             Err(e) => panic!("Got unexpected 'Err' result: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_get_switched_vlan_by_device_id() {
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(build_full_config());
+        assert_eq!(
+            test_config.device_id_is_a_switched_vlan("/dev/foo/whatever/switched_vlan/test"),
+            true
+        );
+    }
+
+    #[test]
+    fn test_get_routed_vlan_interfaces() {
+        let mut test_config = create_test_config_no_paths();
+
+        test_config.device_config = Some(build_full_config());
+        match test_config.get_routed_vlan_interfaces() {
+            Some(it) => {
+                // Turn the iterator into a vector.
+                let v: Vec<&Interface> = it.collect();
+                // Check the length is correct.
+                assert_eq!(v.len(), 1);
+                // Check that the interface is the correct one.
+                assert_eq!(v[0].device_id, Some("routed_vlan".to_string()),);
+            }
+            None => {
+                panic!("Unexpected 'None' result: Expecting interface containing the RoutedVlan")
+            }
+        }
+
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(DeviceConfig {
+            device: Device {
+                acls: None,
+                interfaces: Some(vec![Interfaces {
+                    interface: Interface {
+                        config: InterfaceConfig {
+                            name: "its_a_wan".to_string(),
+                            interface_type: InterfaceType::IfUplink,
+                        },
+                        oper_state: None,
+                        device_id: Some("not_a_routed_vlan".to_string()),
+                        ethernet: None,
+                        tcp_offload: None,
+                        routed_vlan: None,
+                        switched_vlan: None,
+                        subinterfaces: None,
+                    },
+                }]),
+                services: None,
+            },
+        });
+        match test_config.get_routed_vlan_interfaces() {
+            // If there is no RoutedVlan configured, then return an empty iterator.
+            Some(it) => {
+                let v: Vec<&Interface> = it.collect();
+                assert_eq!(v.len(), 0);
+            }
+            None => panic!("Unexpected 'None' result: Was expecting an empty iterator"),
+        };
+
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config =
+            Some(DeviceConfig { device: Device { acls: None, interfaces: None, services: None } });
+        match test_config.get_routed_vlan_interfaces() {
+            // If there are no interfaces, then should return 'None'.
+            Some(_) => panic!("Got unexpected 'Some' result: Was expecting 'None'"),
+            None => (),
+        };
+    }
+
+    #[test]
+    fn test_resolve_to_routed_vlan() {
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(build_full_config());
+        let switched_vlan = SwitchedVlan {
+            interface_mode: InterfaceMode::Access,
+            access_vlan: Some(2),
+            trunk_vlans: None,
+        };
+
+        let expected_if = test_config.get_routed_vlan_interfaces().unwrap().nth(0).unwrap();
+        match test_config.resolve_to_routed_vlans(&switched_vlan) {
+            Ok(r) => assert_eq!(expected_if.routed_vlan.as_ref().unwrap().vlan_id, r.vlan_id),
+            Err(e) => panic!("Got unexpected 'Error' result: {}", e),
+        }
+
+        let new_sv = SwitchedVlan {
+            interface_mode: InterfaceMode::Access,
+            access_vlan: Some(4000),
+            trunk_vlans: None,
+        };
+        let new_config = Some(DeviceConfig {
+            device: Device {
+                interfaces: Some(vec![Interfaces {
+                    interface: Interface {
+                        device_id: Some("doesntmatter".to_string()),
+                        config: InterfaceConfig {
+                            name: "doesntmatter".to_string(),
+                            interface_type: InterfaceType::IfEthernet,
+                        },
+                        oper_state: None,
+                        subinterfaces: None,
+                        switched_vlan: Some(new_sv.clone()),
+                        routed_vlan: None,
+                        ethernet: None,
+                        tcp_offload: None,
+                    },
+                }]),
+                acls: None,
+                services: None,
+            },
+        });
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = new_config;
+        // Should fail because VLAN ID 4000 does not match the routed_vlan configuration.
+        match test_config.resolve_to_routed_vlans(&new_sv) {
+            Err(CONFIG(error::Config::NotFound { msg: _ })) => (),
+            Err(e) => panic!("Got unexpected 'Error' result: {}", e),
+            Ok(r) => panic!("Got unexpected 'Ok' result: {:?}", r),
+        }
+    }
+
+    #[test]
+    fn test_all_ports_have_same_bridge() {
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(build_full_config());
+        let sv = SwitchedVlan {
+            interface_mode: InterfaceMode::Access,
+            access_vlan: Some(2),
+            trunk_vlans: None,
+        };
+        let vec_of_switched_vlans = vec![&sv, &sv, &sv];
+        let routed_vlan = test_config
+            .all_ports_have_same_bridge(vec_of_switched_vlans.into_iter().map(Result::Ok))
+            .expect("got error");
+        assert_eq!(routed_vlan.vlan_id, 2);
+    }
+
+    #[test]
+    fn test_get_bridge_name() {
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(build_full_config());
+        let rvi = RoutedVlan { vlan_id: 2, ipv4: None, ipv6: None };
+        assert_eq!(test_config.get_bridge_name(&rvi), "bridge".to_string());
+
+        // bridge name should be the unnamed default.
+        let rvi = RoutedVlan { vlan_id: 440, ipv4: None, ipv6: None };
+        assert_eq!(test_config.get_bridge_name(&rvi), "unnamed_bridge".to_string());
+    }
+
+    #[test]
+    fn test_create_routed_vlan_properties() {
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(build_full_config());
+        let rvi = RoutedVlan {
+            vlan_id: 2,
+            ipv4: Some(IpAddressConfig {
+                addresses: vec![IpAddress {
+                    dhcp_client: Some(false),
+                    ip: Some("192.168.0.1".parse().unwrap()),
+                    prefix_length: Some(32),
+                }],
+            }),
+            ipv6: None,
+        };
+        match test_config.create_routed_vlan_properties(&rvi) {
+            Ok(p) => {
+                assert_eq!(p.enabled, true);
+                assert_eq!(p.dhcp, false);
+                assert_eq!(
+                    p.address,
+                    Some(lifmgr::LifIpAddr { address: "192.168.0.1".parse().unwrap(), prefix: 32 })
+                );
+            }
+            Err(e) => panic!("Got unexpected result: {:?}", e),
         }
     }
 }
