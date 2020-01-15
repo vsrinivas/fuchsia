@@ -289,7 +289,6 @@ if (current_cpu != "") {
       "runtests-utils",
       "sanitizer",
       "service:test",
-      "status",
       "stdio",
       "svchost",
       "sysconf",
