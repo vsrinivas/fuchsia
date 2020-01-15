@@ -5,10 +5,11 @@
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.stack.Stack",
             "fuchsia.netstack.Netstack",
-            "fuchsia.posix.socket.Provider",
-            "fuchsia.net.NameLookup"
+            "fuchsia.netstack.ResolverAdmin",
+            "fuchsia.posix.socket.Provider"
         ]
     }
 }
