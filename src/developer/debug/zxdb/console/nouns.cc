@@ -535,7 +535,7 @@ const char kBreakpointHelp[] =
 
   With an ID following it ("breakpoint 3"), selects that breakpoint as the
   current active breakpoint. This breakpoint will apply by default for
-  subsequent breakpoint commands (like "clear" or "edit").
+  subsequent breakpoint commands like "clear".
 
   With an ID and another command following it ("breakpoint 2 clear"), modifies
   the breakpoint context for that command only. This allows modifying

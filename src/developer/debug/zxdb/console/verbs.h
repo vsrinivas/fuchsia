@@ -50,7 +50,6 @@ enum class Verb {
   kDisassemble,
   kDisconnect,
   kDown,
-  kEdit,
   kEnable,
   kFinish,
   kGet,

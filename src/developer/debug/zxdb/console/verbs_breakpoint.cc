@@ -80,113 +80,6 @@ void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint, const c
   console->Output(out);
 }
 
-// Backend for setting attributes on a breakpoint from both creation and editing. The given
-// breakpoint is specified if this is an edit, or is null if this is a creation.
-Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd, Breakpoint* breakpoint,
-                           CommandCallback callback) {
-  // Get existing settings (or defaults for new one).
-  BreakpointSettings settings;
-  if (breakpoint)
-    settings = breakpoint->GetSettings();
-
-  // Enable flag.
-  if (cmd.HasSwitch(kEnableSwitch)) {
-    std::string enable_str = cmd.GetSwitchValue(kEnableSwitch);
-    if (enable_str == "true") {
-      settings.enabled = true;
-    } else if (enable_str == "false") {
-      settings.enabled = false;
-    } else {
-      return Err("--enabled switch requires either \"true\" or \"false\" values.");
-    }
-  }
-
-  // Stop mode.
-  if (cmd.HasSwitch(kStopSwitch)) {
-    std::string stop_str = cmd.GetSwitchValue(kStopSwitch);
-    if (stop_str == "all") {
-      settings.stop_mode = BreakpointSettings::StopMode::kAll;
-    } else if (stop_str == "process") {
-      settings.stop_mode = BreakpointSettings::StopMode::kProcess;
-    } else if (stop_str == "thread") {
-      settings.stop_mode = BreakpointSettings::StopMode::kThread;
-    } else if (stop_str == "none") {
-      settings.stop_mode = BreakpointSettings::StopMode::kNone;
-    } else {
-      return Err(
-          "--stop switch requires \"all\", \"process\", \"thread\", "
-          "or \"none\".");
-    }
-  }
-
-  // Type.
-  auto break_type = debug_ipc::BreakpointType::kSoftware;
-  if (cmd.HasSwitch(kTypeSwitch)) {
-    std::string type_str = cmd.GetSwitchValue(kTypeSwitch);
-    if (type_str == "s" || type_str == "software") {
-      break_type = debug_ipc::BreakpointType::kSoftware;
-    } else if (type_str == "h" || type_str == "hardware") {
-      break_type = debug_ipc::BreakpointType::kHardware;
-    } else if (type_str == "w" || type_str == "watchpoint") {
-      // TODO: Plumb in kRead/kReadWrite.
-      break_type = debug_ipc::BreakpointType::kWrite;
-    } else {
-      return Err(fxl::StringPrintf("Unknown breakpoint type: %s", type_str.data()));
-    }
-  }
-  settings.type = break_type;
-
-  // Location.
-  if (cmd.args().empty()) {
-    if (!breakpoint) {
-      // Creating a breakpoint with no location implicitly uses the current frame's current
-      // location.
-      if (!cmd.frame()) {
-        return Err(ErrType::kInput,
-                   "There isn't a current frame to take the breakpoint "
-                   "location from.");
-      }
-
-      // Use the file/line of the frame if available. This is what a user will generally want to see
-      // in the breakpoint list, and will persist across restarts. Fall back to an address
-      // otherwise. Sometimes the file/line might not be what they want, though.
-      const Location& frame_loc = cmd.frame()->GetLocation();
-      if (frame_loc.has_symbols())
-        settings.locations.emplace_back(frame_loc.file_line());
-      else
-        settings.locations.emplace_back(cmd.frame()->GetAddress());
-    }
-  } else if (cmd.args().size() == 1u) {
-    Err err = ParseLocalInputLocation(cmd.frame(), cmd.args()[0], &settings.locations);
-    if (err.has_error())
-      return err;
-  } else {
-    return Err(ErrType::kInput,
-               "Expecting only one arg for the location.\n"
-               "Formats: <function>, <file>:<line#>, <line#>, or *<address>");
-  }
-  FXL_DCHECK(!settings.locations.empty());  // Should have filled something in.
-
-  // Scope.
-  settings.scope = ExecutionScopeForCommand(cmd);
-
-  // Commit the changes.
-  if (!breakpoint) {
-    // New breakpoint.
-    breakpoint = context->session()->system().CreateNewBreakpoint();
-    context->SetActiveBreakpoint(breakpoint);
-  }
-  breakpoint->SetSettings(settings, [breakpoint = breakpoint->GetWeakPtr(),
-                                     callback = std::move(callback)](const Err& err) mutable {
-    CreateOrEditBreakpointComplete(std::move(breakpoint), nullptr, err);
-    if (callback) {
-      callback(err);
-    }
-  });
-
-  return Err();
-}
-
 // break -------------------------------------------------------------------------------------------
 
 const char kBreakShortHelp[] = "break / b: Create a breakpoint.";
@@ -332,7 +225,100 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback callbac
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame, Noun::kBreakpoint});
   if (err.has_error())
     return err;
-  return CreateOrEditBreakpoint(context, cmd, nullptr, std::move(callback));
+
+  // Get existing settings (or defaults for new one).
+  BreakpointSettings settings;
+
+  // Enable flag.
+  if (cmd.HasSwitch(kEnableSwitch)) {
+    std::string enable_str = cmd.GetSwitchValue(kEnableSwitch);
+    if (enable_str == "true") {
+      settings.enabled = true;
+    } else if (enable_str == "false") {
+      settings.enabled = false;
+    } else {
+      return Err("--enabled switch requires either \"true\" or \"false\" values.");
+    }
+  }
+
+  // Stop mode.
+  if (cmd.HasSwitch(kStopSwitch)) {
+    std::string stop_str = cmd.GetSwitchValue(kStopSwitch);
+    if (stop_str == "all") {
+      settings.stop_mode = BreakpointSettings::StopMode::kAll;
+    } else if (stop_str == "process") {
+      settings.stop_mode = BreakpointSettings::StopMode::kProcess;
+    } else if (stop_str == "thread") {
+      settings.stop_mode = BreakpointSettings::StopMode::kThread;
+    } else if (stop_str == "none") {
+      settings.stop_mode = BreakpointSettings::StopMode::kNone;
+    } else {
+      return Err(
+          "--stop switch requires \"all\", \"process\", \"thread\", "
+          "or \"none\".");
+    }
+  }
+
+  // Type.
+  auto break_type = debug_ipc::BreakpointType::kSoftware;
+  if (cmd.HasSwitch(kTypeSwitch)) {
+    std::string type_str = cmd.GetSwitchValue(kTypeSwitch);
+    if (type_str == "s" || type_str == "software") {
+      break_type = debug_ipc::BreakpointType::kSoftware;
+    } else if (type_str == "h" || type_str == "hardware") {
+      break_type = debug_ipc::BreakpointType::kHardware;
+    } else if (type_str == "w" || type_str == "watchpoint") {
+      // TODO: Plumb in kRead/kReadWrite.
+      break_type = debug_ipc::BreakpointType::kWrite;
+    } else {
+      return Err(fxl::StringPrintf("Unknown breakpoint type: %s", type_str.data()));
+    }
+  }
+  settings.type = break_type;
+
+  // Location.
+  if (cmd.args().empty()) {
+    // Creating a breakpoint with no location implicitly uses the current frame's current
+    // location.
+    if (!cmd.frame()) {
+      return Err(ErrType::kInput,
+                 "There isn't a current frame to take the breakpoint location from.");
+    }
+
+    // Use the file/line of the frame if available. This is what a user will generally want to see
+    // in the breakpoint list, and will persist across restarts. Fall back to an address
+    // otherwise. Sometimes the file/line might not be what they want, though.
+    const Location& frame_loc = cmd.frame()->GetLocation();
+    if (frame_loc.has_symbols())
+      settings.locations.emplace_back(frame_loc.file_line());
+    else
+      settings.locations.emplace_back(cmd.frame()->GetAddress());
+  } else if (cmd.args().size() == 1u) {
+    err = ParseLocalInputLocation(cmd.frame(), cmd.args()[0], &settings.locations);
+    if (err.has_error())
+      return err;
+  } else {
+    return Err(ErrType::kInput,
+               "Expecting only one arg for the location.\n"
+               "Formats: <function>, <file>:<line#>, <line#>, or *<address>");
+  }
+  FXL_DCHECK(!settings.locations.empty());  // Should have filled something in.
+
+  // Scope.
+  settings.scope = ExecutionScopeForCommand(cmd);
+
+  // New breakpoint.
+  Breakpoint* breakpoint = context->session()->system().CreateNewBreakpoint();
+  context->SetActiveBreakpoint(breakpoint);
+
+  breakpoint->SetSettings(settings, [breakpoint = breakpoint->GetWeakPtr(),
+                                     callback = std::move(callback)](const Err& err) mutable {
+    CreateOrEditBreakpointComplete(std::move(breakpoint), "Created", err);
+    if (callback)
+      callback(err);
+  });
+
+  return Err();
 }
 
 // hardware-breakpoint -----------------------------------------------------------------------------
@@ -477,70 +463,6 @@ Err DoDisable(ConsoleContext* context, const Command& cmd) {
       });
   return Err();
 }
-// edit --------------------------------------------------------------------------------------------
-
-const char kEditShortHelp[] = "edit / ed: Edit a breakpoint.";
-const char kEditHelp[] =
-    R"(edit
-
-  Alias: "ed"
-
-  Edits an existing breakpoint.  Edit requires an explicit context. The only
-  context currently supported is "breakpoint". Specify an explicit breakpoint
-  with the "breakpoint"/"bp" noun and its index:
-
-    bp 4 ed ...
-    breakpoint 4 edit ...
-
-  Or use the active breakpoint by omitting the index:
-
-    bp ed ...
-    breakpoint edit ...
-
-  The parameters accepted are any parameters accepted by the "break" command.
-  Specified parameters will overwrite the existing settings. If a location is
-  specified, the breakpoint will be moved, if a location is not specified, its
-  location will be unchanged.
-
-  The active breakpoint will not be changed.
-
-See also
-
-  "help break": To create breakpoints.
-  "help breakpoint": To list and select the active breakpoint.
-
-Examples
-
-  bp 2 ed --enable=false
-  breakpoint 2 edit --enable=false
-      Disable breakpoint 2.
-
-  bp ed --stop=thread
-  breakpoint edit --stop=thread
-      Make the active breakpoint stop only the thread that triggered it.
-
-  pr 1 t 6 bp 7 b 0x614a19837
-  process 1 thread 6 breakpoint 7 edit 0x614a19837
-      Modifies breakpoint 7 to only break in process 1, thread 6 at the
-      given address.
-)";
-Err DoEdit(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
-  if (!cmd.HasNoun(Noun::kBreakpoint)) {
-    // Edit requires an explicit "breakpoint" context so that in the future we can apply edit to
-    // other nouns. I'm thinking any noun that can be created can have its switches modified via an
-    // "edit" command that accepts the same settings.
-    return Err(ErrType::kInput,
-               "\"edit\" requires an explicit breakpoint context.\n"
-               "Either \"breakpoint edit\" for the active breakpoint, or "
-               "\"breakpoint <index> edit\" for an\nexplicit one.");
-  }
-
-  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kBreakpoint});
-  if (err.has_error())
-    return err;
-
-  return CreateOrEditBreakpoint(context, cmd, cmd.breakpoint(), std::move(callback));
-}
 
 }  // namespace
 
@@ -555,14 +477,6 @@ void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   break_record.switches.push_back(stop_switch);
   break_record.switches.push_back(type_switch);
   (*verbs)[Verb::kBreak] = std::move(break_record);
-
-  // Note: if "edit" becomes more general than just for breakpoints, we'll want to change the
-  // command category.
-  VerbRecord edit_record(&DoEdit, {"edit", "ed"}, kEditShortHelp, kEditHelp,
-                         CommandGroup::kBreakpoint);
-  edit_record.switches.push_back(enable_switch);
-  edit_record.switches.push_back(stop_switch);
-  (*verbs)[Verb::kEdit] = std::move(edit_record);
 
   (*verbs)[Verb::kHardwareBreakpoint] =
       VerbRecord(&DoHardwareBreakpoint, {"hardware-breakpoint", "hb"}, kHardwareBreakpointShortHelp,
