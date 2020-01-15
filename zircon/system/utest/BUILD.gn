@@ -247,7 +247,6 @@ if (current_cpu != "") {
       "fs-recovery",
       "fs-test-utils",
       "fvm",
-      "handle-alias",
       "hid",
       "hypervisor",
       "int-types",
