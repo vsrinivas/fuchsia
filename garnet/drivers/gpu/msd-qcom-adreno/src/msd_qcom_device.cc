@@ -9,6 +9,7 @@
 #include <magma_util/macros.h>
 
 #include "instructions.h"
+#include "magma_qcom_adreno.h"
 #include "msd_qcom_connection.h"
 #include "msd_qcom_platform_device.h"
 #include "registers.h"
@@ -45,15 +46,13 @@ bool MsdQcomDevice::Init(void* device_handle, std::unique_ptr<magma::RegisterIo:
   bus_mapper_ = magma::PlatformBusMapper::Create(
       qcom_platform_device_->platform_device()->GetBusTransactionInitiator());
 
-  {
-    auto iommu =
-        magma::PlatformIommu::Create(qcom_platform_device_->platform_device()->GetIommuConnector());
+  iommu_ = std::shared_ptr<magma::PlatformIommu>(
+      magma::PlatformIommu::Create(qcom_platform_device_->platform_device()->GetIommuConnector()));
 
-    address_space_ = std::make_shared<AllocatingAddressSpace>(this);
-    if (!address_space_->Init(kClientGpuAddrBase, UINT32_MAX - kClientGpuAddrBase,
-                              std::move(iommu)))
-      return DRETF(false, "Failed to initialize address space");
-  }
+  address_space_ = std::make_shared<PartialAllocatingAddressSpace>(
+      this, kSystemGpuAddrSize + kClientGpuAddrSize, iommu_);
+  if (!address_space_->Init(kSystemGpuAddrBase, kSystemGpuAddrSize))
+    return DRETF(false, "Failed to initialize address space");
 
   firmware_ = Firmware::Create(qcom_platform_device_.get());
   if (!firmware_)
@@ -176,6 +175,9 @@ bool MsdQcomDevice::InitRingbuffer() {
 }
 
 bool MsdQcomDevice::HardwareInit() {
+  if (GetGmemSize() > kGmemGpuAddrSize)
+    return DRETF(false, "Incompatible GMEM size: %u > %lu", GetGmemSize(), kGmemGpuAddrSize);
+
   registers::A6xxRbbmSecvidTsbControl::CreateFrom(0).WriteTo(register_io_.get());
 
   // Disable trusted memory
@@ -305,21 +307,58 @@ bool MsdQcomDevice::EnableClockGating(bool enable) {
   return DRETF(false, "EnableClockGating: not implemented: enable %d val 0x%x", enable, val);
 }
 
+std::unique_ptr<MsdQcomConnection> MsdQcomDevice::Open(msd_client_id_t client_id) {
+  auto address_space =
+      std::make_unique<AddressSpace>(this, kClientGpuAddrSize + kSystemGpuAddrSize, iommu_);
+
+  // TODO(fxb/44003): map firmware and ringbuffers into the client address space.
+  // Since we currently have one underlying GPU address space, those entities are visible to
+  // the GPU because they are mapped at hardware init.
+
+  return std::make_unique<MsdQcomConnection>(this, client_id, std::move(address_space));
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 msd_connection_t* msd_device_open(msd_device_t* device, msd_client_id_t client_id) {
-  auto connection = std::make_unique<MsdQcomConnection>(client_id);
+  auto connection = MsdQcomDevice::cast(device)->Open(client_id);
+  if (!connection)
+    return DRETP(nullptr, "MsdQcomDevice::Open failed");
   return new MsdQcomAbiConnection(std::move(connection));
 }
 
 void msd_device_destroy(msd_device_t* device) { delete MsdQcomDevice::cast(device); }
 
 magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out) {
-  if (id == MAGMA_QUERY_VENDOR_ID) {
-    *value_out = 0x05c6;
-    return MAGMA_STATUS_OK;
+  return MsdQcomDevice::cast(device)->Query(id, value_out);
+}
+
+magma_status_t MsdQcomDevice::Query(uint64_t id, uint64_t* value_out) const {
+  switch (id) {
+    case MAGMA_QUERY_VENDOR_ID:
+      *value_out = MAGMA_VENDOR_ID_QCOM;
+      return MAGMA_STATUS_OK;
+
+    case MAGMA_QUERY_DEVICE_ID:
+      *value_out = GetChipId();
+      return MAGMA_STATUS_OK;
+
+    case MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED:
+      *value_out = 0;
+      return MAGMA_STATUS_OK;
+
+    case kMsdQcomQueryClientGpuAddrRange: {
+      constexpr uint64_t size_in_mb = kClientGpuAddrSize / 0x1000000;
+      static_assert(size_in_mb * 0x1000000 == kClientGpuAddrSize,
+                    "kClientGpuAddrSize is not MB aligned");
+      constexpr uint64_t base_in_mb = kClientGpuAddrBase / 0x1000000;
+      static_assert(base_in_mb * 0x1000000 == kClientGpuAddrBase,
+                    "kClientGpuAddrBase is not MB aligned");
+      *value_out = static_cast<uint32_t>(base_in_mb) | (size_in_mb << 32);
+      return MAGMA_STATUS_OK;
+    }
   }
-  return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled query: %lu", id);
+  return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
 }
 
 magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id,

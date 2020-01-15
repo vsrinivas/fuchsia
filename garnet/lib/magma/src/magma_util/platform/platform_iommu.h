@@ -15,8 +15,8 @@ class PlatformIommu {
  public:
   virtual ~PlatformIommu() = default;
 
-  virtual bool Map(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) const = 0;
-  virtual bool Unmap(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) const = 0;
+  virtual bool Map(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) = 0;
+  virtual bool Unmap(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) = 0;
 
   static std::unique_ptr<PlatformIommu> Create(std::unique_ptr<PlatformHandle> iommu_connector);
 

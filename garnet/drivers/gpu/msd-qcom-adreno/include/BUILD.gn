@@ -1,0 +1,13 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("config") {
+  include_dirs = [ "." ]
+}
+
+source_set("include") {
+  public_configs = [ ":config" ]
+  sources = [ "magma_qcom_adreno.h" ]
+  public_deps = [ "//garnet/lib/magma/include:magma_abi_common" ]
+}

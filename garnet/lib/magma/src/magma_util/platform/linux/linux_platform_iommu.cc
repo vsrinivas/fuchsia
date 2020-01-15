@@ -9,7 +9,7 @@
 
 namespace magma {
 
-bool LinuxPlatformIommu::Map(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) const {
+bool LinuxPlatformIommu::Map(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) {
   if (!LinuxPlatformDevice::MagmaMapGpu(
           handle_.get(), true, gpu_addr,
           static_cast<LinuxPlatformBusMapper::BusMapping*>(bus_mapping)->token()))
@@ -17,8 +17,7 @@ bool LinuxPlatformIommu::Map(uint64_t gpu_addr, PlatformBusMapper::BusMapping* b
   return true;
 }
 
-bool LinuxPlatformIommu::Unmap(uint64_t gpu_addr,
-                               PlatformBusMapper::BusMapping* bus_mapping) const {
+bool LinuxPlatformIommu::Unmap(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) {
   if (!LinuxPlatformDevice::MagmaMapGpu(
           handle_.get(), false, gpu_addr,
           static_cast<LinuxPlatformBusMapper::BusMapping*>(bus_mapping)->token()))

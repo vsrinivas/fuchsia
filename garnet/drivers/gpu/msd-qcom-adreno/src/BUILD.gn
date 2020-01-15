@@ -43,6 +43,7 @@ source_set("src") {
     "$magma_build_root/src/magma_util/platform:barriers",
     "$magma_build_root/src/magma_util/platform:device",
     "$magma_build_root/src/magma_util/platform:iommu",
+    "../include",
   ]
 
   if (is_fuchsia) {

@@ -14,8 +14,8 @@ class LinuxPlatformIommu : public PlatformIommu {
  public:
   LinuxPlatformIommu(LinuxPlatformHandle handle) : handle_(handle.release()) {}
 
-  bool Map(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) const override;
-  bool Unmap(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) const override;
+  bool Map(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) override;
+  bool Unmap(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) override;
 
  private:
   LinuxPlatformHandle handle_;

@@ -13,6 +13,7 @@ executable("msd_qcom_adreno_unittests") {
   testonly = true
 
   sources = [
+    "test_address_space.cc",
     "test_device.cc",
     "test_instructions.cc",
     "test_register_io.cc",
@@ -20,6 +21,7 @@ executable("msd_qcom_adreno_unittests") {
 
   deps = [
     "$magma_build_root/src/magma_util:registers",
+    "$magma_build_root/src/magma_util/platform:iommu",
     "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/tests_linux:drm_test_runner",
     "//garnet/drivers/gpu/msd-qcom-adreno/src",

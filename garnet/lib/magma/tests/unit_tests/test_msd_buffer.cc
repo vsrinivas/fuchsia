@@ -84,6 +84,27 @@ TEST(MsdBuffer, ImportAndDestroy) {
   msd_buffer_destroy(msd_buffer);
 }
 
+TEST(MsdBuffer, Map) {
+  TestMsd test;
+  ASSERT_TRUE(test.Init());
+  ASSERT_TRUE(test.Connect());
+
+  constexpr uint32_t kBufferSizeInPages = 2;
+
+  msd_buffer_t* buffer;
+  ASSERT_TRUE(test.CreateBuffer(kBufferSizeInPages, &buffer));
+
+  constexpr uint64_t kGpuAddress = (1ull << 32) / 2;  // Centered in 32 bit space
+
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            msd_connection_map_buffer_gpu(test.connection(), buffer, kGpuAddress,
+                                          0,                   // page offset
+                                          kBufferSizeInPages,  // page count
+                                          MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE));
+
+  msd_buffer_destroy(buffer);
+}
+
 TEST(MsdBuffer, MapAndUnmap) {
   msd_driver_t* driver = msd_driver_create();
   ASSERT_TRUE(driver);

@@ -8,11 +8,11 @@ namespace magma {
 
 class ZirconPlatformIommu : public PlatformIommu {
  public:
-  bool Map(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) const override {
+  bool Map(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) override {
     return DRETF(false, "Map not implemented");
   }
 
-  bool Unmap(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) const override {
+  bool Unmap(uint64_t gpu_addr, PlatformBusMapper::BusMapping* bus_mapping) override {
     return DRETF(false, "Unmap not implemented");
   }
 };

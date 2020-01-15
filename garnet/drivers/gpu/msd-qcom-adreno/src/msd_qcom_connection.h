@@ -11,14 +11,30 @@
 
 #include <magma_util/macros.h>
 
+#include "address_space.h"
+#include "platform_bus_mapper.h"
+
 class MsdQcomConnection {
  public:
-  MsdQcomConnection(msd_client_id_t client_id) : client_id_(client_id) {}
+  class Owner {
+   public:
+    virtual magma::PlatformBusMapper* GetBusMapper() = 0;
+  };
+
+  MsdQcomConnection(Owner* owner, msd_client_id_t client_id,
+                    std::unique_ptr<AddressSpace> address_space)
+      : owner_(owner), client_id_(client_id), address_space_(std::move(address_space)) {}
 
   msd_client_id_t client_id() { return client_id_; }
 
+  magma::PlatformBusMapper* GetBusMapper() const { return owner_->GetBusMapper(); }
+
+  std::shared_ptr<AddressSpace> address_space() const { return address_space_; }
+
  private:
+  Owner* owner_;
   msd_client_id_t client_id_;
+  std::shared_ptr<AddressSpace> address_space_;
 };
 
 class MsdQcomAbiConnection : public msd_connection_t {

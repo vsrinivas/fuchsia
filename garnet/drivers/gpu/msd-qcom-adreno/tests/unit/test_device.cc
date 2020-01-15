@@ -33,7 +33,7 @@ class TestQcomDevice : public ::testing::Test {
     DLOG("Got gmem size: 0x%x", device->GetGmemSize());
 
     uint64_t firmware_addr = device->firmware()->gpu_addr();
-    EXPECT_EQ(firmware_addr, MsdQcomDevice::kClientGpuAddrBase);
+    EXPECT_EQ(firmware_addr, MsdQcomDevice::kSystemGpuAddrBase);
     DLOG("Got firmware addr: 0x%lx", firmware_addr);
 
     uint64_t ringbuffer_addr;
@@ -134,8 +134,8 @@ TEST_F(TestQcomDevice, MemoryWrite) { TestQcomDevice::MemoryWrite(); }
 std::vector<std::pair<uint32_t, uint32_t>> TestQcomDevice::sparse_register_dump = {
     // { offset, value }
     {0x00000040, 0x00000003}, {0x0000007c, 0x401fffff}, {0x00001400, 0x00000001},
-    {0x00002000, 0x01008000}, {0x00002004, 0x00000000}, {0x00002008, 0x0800020c},
-    {0x0000201c, 0x00000009}, {0x00002020, 0x00000001}, {0x000020c0, 0x01000000},
+    {0x00002000, 0xfe008000}, {0x00002004, 0x00000000}, {0x00002008, 0x0800020c},
+    {0x0000201c, 0x00000009}, {0x00002020, 0x00000001}, {0x000020c0, 0xfe000000},
     {0x000020c4, 0x00000000}, {0x0000213c, 0x00000003}, {0x00002140, 0x01440600},
     {0x00002144, 0x8008ae50}, {0x00002148, 0x804c9624}, {0x0000214c, 0x80208630},
     {0x00002150, 0x80049e70}, {0x00002154, 0x861c9e78}, {0x00002158, 0xa040f000},
@@ -149,8 +149,8 @@ std::vector<std::pair<uint32_t, uint32_t>> TestQcomDevice::sparse_register_dump 
     {0x0000230c, 0x00000080}, {0x00002340, 0x00000000}, {0x00002634, 0x00000001},
     {0x00003804, 0x00400000}, {0x00003814, 0xffffffc0}, {0x00003818, 0x0001ffff},
     {0x0000381c, 0xfffff000}, {0x00003820, 0x0001ffff}, {0x00003824, 0xfffff000},
-    {0x00003828, 0x0001ffff}, {0x0000382c, 0x00100000}, {0x00003830, 0x00000000},
-    {0x00003834, 0x001fffff}, {0x00003838, 0x00000000}, {0x0000385c, 0x00000004},
+    {0x00003828, 0x0001ffff}, {0x0000382c, 0xff000000}, {0x00003830, 0x00000000},
+    {0x00003834, 0xff0fffff}, {0x00003838, 0x00000000}, {0x0000385c, 0x00000004},
     {0x00003860, 0x00000804}, {0x00003864, 0x00000001}, {0x0000c0a8, 0x00000009},
     {0x00023820, 0x00000004}, {0x00027800, 0x00180000}, {0x0002b808, 0x00000004},
     {0x0002d810, 0x00000004}, {0x0003d000, 0x00000000}, {0x0003e000, 0x00000000},

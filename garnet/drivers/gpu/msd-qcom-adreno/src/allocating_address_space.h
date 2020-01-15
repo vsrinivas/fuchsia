@@ -10,25 +10,24 @@
 #include "address_space.h"
 #include "gpu_mapping.h"
 
-// Address space built from a simple allocator and a platform iommu.
-class AllocatingAddressSpace : public AddressSpace {
+// An address space built from a simple allocator and a platform iommu.
+// The region used for allocation is specified in Init; the region between
+// address 0 and the allocating base may be used as a non-allocating region.
+class PartialAllocatingAddressSpace : public AddressSpace {
  public:
-  explicit AllocatingAddressSpace(magma::AddressSpaceOwner* owner) : AddressSpace(owner) {}
+  explicit PartialAllocatingAddressSpace(magma::AddressSpaceOwner* owner, uint64_t size,
+                                         std::shared_ptr<magma::PlatformIommu> iommu)
+      : AddressSpace(owner, size, std::move(iommu)) {}
 
-  bool Init(uint64_t base, size_t size, std::unique_ptr<magma::PlatformIommu> iommu) {
+  bool Init(uint64_t base, size_t allocating_size) {
     DASSERT(!allocator_);
-    allocator_ = magma::SimpleAllocator::Create(base, size);
+    DASSERT(allocating_size <= Size());
+
+    allocator_ = magma::SimpleAllocator::Create(base, allocating_size);
     if (!allocator_)
       return DRETF(false, "SimpleAllocator::Create failed");
 
-    AddressSpace::Init(std::move(iommu));
-
     return true;
-  }
-
-  uint64_t Size() const override {
-    DASSERT(allocator_);
-    return allocator_->size();
   }
 
   bool AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out) override {

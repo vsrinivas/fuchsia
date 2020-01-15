@@ -12,18 +12,25 @@
 
 #include "allocating_address_space.h"
 #include "firmware.h"
+#include "msd_qcom_connection.h"
 #include "msd_qcom_platform_device.h"
 #include "ringbuffer.h"
 
-class MsdQcomDevice : public msd_device_t, public magma::AddressSpaceOwner {
+class MsdQcomDevice : public msd_device_t,
+                      public magma::AddressSpaceOwner,
+                      public MsdQcomConnection::Owner {
  public:
   static std::unique_ptr<MsdQcomDevice> Create(void* device_handle);
 
   MsdQcomDevice() { magic_ = kMagic; }
 
-  uint32_t GetChipId() { return qcom_platform_device_->GetChipId(); }
+  std::unique_ptr<MsdQcomConnection> Open(msd_client_id_t client_id);
 
-  uint32_t GetGmemSize() { return qcom_platform_device_->GetGmemSize(); }
+  uint32_t GetChipId() const { return qcom_platform_device_->GetChipId(); }
+
+  uint32_t GetGmemSize() const { return qcom_platform_device_->GetGmemSize(); }
+
+  magma_status_t Query(uint64_t id, uint64_t* value_out) const;
 
   static void GetCpInitPacket(std::vector<uint32_t>& packet);
 
@@ -39,13 +46,23 @@ class MsdQcomDevice : public msd_device_t, public magma::AddressSpaceOwner {
   magma::Ringbuffer<GpuMapping>* ringbuffer() { return ringbuffer_.get(); }
   Firmware* firmware() { return firmware_.get(); }
 
-  // magma::AddressSpaceOwner
+  // magma::AddressSpaceOwner, MsdQcomConnection::Owner
   magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
 
   static const uint32_t kMagic = 0x64657669;  //"devi"
 
-  static constexpr uint64_t kGmemGpuAddrBase = 0x00100000;
-  static constexpr uint64_t kClientGpuAddrBase = 0x01000000;
+  // Maximum size for GMEM.
+  static constexpr uint64_t kGmemGpuAddrSize = 0x01000000;
+  // Maximum size for system allocations (firmware, ringbuffers).
+  static constexpr uint64_t kSystemGpuAddrSize = 0x01000000;
+  // Remainder of the address space allocated to client.
+  // TODO(fxb/44002) - support for greater than 32 bits of address space.
+  static constexpr uint64_t kClientGpuAddrSize =
+      (1ull << 32) - kGmemGpuAddrSize - kSystemGpuAddrSize;
+
+  static constexpr uint64_t kClientGpuAddrBase = 0;
+  static constexpr uint64_t kSystemGpuAddrBase = kClientGpuAddrBase + kClientGpuAddrSize;
+  static constexpr uint64_t kGmemGpuAddrBase = kSystemGpuAddrBase + kGmemGpuAddrSize;
 
   bool Init(void* device_handle, std::unique_ptr<magma::RegisterIo::Hook> hook);
   bool HardwareInit();
@@ -58,7 +75,8 @@ class MsdQcomDevice : public msd_device_t, public magma::AddressSpaceOwner {
   std::unique_ptr<MsdQcomPlatformDevice> qcom_platform_device_;
   std::unique_ptr<magma::RegisterIo> register_io_;
   std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
-  std::shared_ptr<AllocatingAddressSpace> address_space_;
+  std::shared_ptr<magma::PlatformIommu> iommu_;
+  std::shared_ptr<PartialAllocatingAddressSpace> address_space_;
   std::unique_ptr<Ringbuffer> ringbuffer_;
   std::unique_ptr<Firmware> firmware_;
 
