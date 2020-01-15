@@ -25,6 +25,7 @@ LOCAL_PACKAGES = {
   'build_integration': '//third_party/dart/pkg/build_integration',
   'flutter': '//third_party/dart-pkg/git/flutter/packages/flutter',
   'flutter_test': '//third_party/dart-pkg/git/flutter/packages/flutter_test',
+  'flutter_web_plugins': '//third_party/dart-pkg/git/flutter/packages/flutter_web_plugins',
   'func': '//third_party/dart/third_party/pkg/func',
   'intl': '//third_party/dart/third_party/pkg/intl',
   'sky_engine': '//prebuilt/third_party/sky_engine',
