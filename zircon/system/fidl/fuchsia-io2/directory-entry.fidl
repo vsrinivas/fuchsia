@@ -4,17 +4,21 @@
 
 library fuchsia.io2;
 
+/// Information about an immediate child node of a directory.
+///
+/// If a particular attribute is not applicable or not supported,
+/// implementations should leave the corresponding field absent.
 table DirectoryEntry {
-    /// Name of the entry.
+    /// Name of the node. This field must be present.
     1: Name name;
 
-    /// Describes the kinds of representations supported by the entry.
+    /// Describes the kinds of representations supported by the node.
     2: NodeProtocolSet protocols;
 
-    /// Describes the kinds of operations supported by the entry.
+    /// Describes the kinds of operations supported by the node.
     3: Abilities abilities;
-};
 
-/// The maximum number of directory entires or watcher events returned
-/// in a batch by a hanging-get pattern.
-const uint64 MAX_DIRECTORY_BATCH_SIZE = 8192;
+    /// An ID for the node. See [`fuchsia.io2/Id`].
+    /// This `id` should be unique among all entries of a directory.
+    4: Id id;
+};

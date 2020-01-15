@@ -17,6 +17,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
+#include <lib/zx/eventpair.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/socket.h>
 #include <zircon/fidl.h>
@@ -278,9 +279,6 @@ constexpr inline void NodeProtocolSet::operator^=(
   this->value_ ^= other.value_;
 }
 
-struct NodeAttributes;
-struct Node_GetAttributes_Response;
-struct Node_GetAttributes_Result;
 class NodeAttributesQuery final {
 public:
   constexpr NodeAttributesQuery() : value_(0u) {}
@@ -292,6 +290,7 @@ public:
   const static NodeAttributesQuery LINK_COUNT;
   const static NodeAttributesQuery CREATION_TIME;
   const static NodeAttributesQuery MODIFICATION_TIME;
+  const static NodeAttributesQuery ID;
   const static NodeAttributesQuery mask;
 
   explicit constexpr inline operator uint64_t() const { return value_; }
@@ -316,7 +315,8 @@ constexpr const ::llcpp::fuchsia::io2::NodeAttributesQuery NodeAttributesQuery::
 constexpr const ::llcpp::fuchsia::io2::NodeAttributesQuery NodeAttributesQuery::LINK_COUNT = ::llcpp::fuchsia::io2::NodeAttributesQuery(16u);
 constexpr const ::llcpp::fuchsia::io2::NodeAttributesQuery NodeAttributesQuery::CREATION_TIME = ::llcpp::fuchsia::io2::NodeAttributesQuery(32u);
 constexpr const ::llcpp::fuchsia::io2::NodeAttributesQuery NodeAttributesQuery::MODIFICATION_TIME = ::llcpp::fuchsia::io2::NodeAttributesQuery(64u);
-constexpr const ::llcpp::fuchsia::io2::NodeAttributesQuery NodeAttributesQuery::mask = ::llcpp::fuchsia::io2::NodeAttributesQuery(127u);
+constexpr const ::llcpp::fuchsia::io2::NodeAttributesQuery NodeAttributesQuery::ID = ::llcpp::fuchsia::io2::NodeAttributesQuery(128u);
+constexpr const ::llcpp::fuchsia::io2::NodeAttributesQuery NodeAttributesQuery::mask = ::llcpp::fuchsia::io2::NodeAttributesQuery(255u);
 
 constexpr inline ::llcpp::fuchsia::io2::NodeAttributesQuery NodeAttributesQuery::operator~() const {
   return ::llcpp::fuchsia::io2::NodeAttributesQuery(static_cast<uint64_t>(~this->value_ & mask.value_));
@@ -352,13 +352,16 @@ constexpr inline void NodeAttributesQuery::operator^=(
   this->value_ ^= other.value_;
 }
 
+struct IdleEvent;
+struct NodeAttributes;
+struct Node_GetAttributes_Response;
+struct Node_GetAttributes_Result;
 struct DirectoryEntry;
+struct DirectoryWatchedEvent;
+class DirectoryWatcher;
 struct DirectoryIterator_GetNext_Response;
 struct DirectoryIterator_GetNext_Result;
 class DirectoryIterator;
-struct IdleEvent;
-struct DirectoryWatchedEvent;
-class DirectoryWatcher;
 struct File_Write_Response;
 struct File_Write_Result;
 struct File_WriteAt_Response;
@@ -502,6 +505,7 @@ constexpr inline void DirectoryWatchMask::operator^=(
 }
 
 struct DirectoryInfo;
+struct DirectoryEnumerateOptions;
 class DeviceSignal final {
 public:
   constexpr DeviceSignal() : value_(0u) {}
@@ -888,13 +892,13 @@ struct TtyInfo final : private ::fidl::VectorView<fidl_envelope_t> {
   // An optional event which transmits information about a device's state.
   //
   // The [`DeviceSignal`] values may be observed on this event.
-  const ::zx::event& event() const {
+  const ::zx::eventpair& event() const {
     ZX_ASSERT(has_event());
-    return *reinterpret_cast<const ::zx::event*>(EnvelopesView::at(1 - 1).data);
+    return *reinterpret_cast<const ::zx::eventpair*>(EnvelopesView::at(1 - 1).data);
   }
-  ::zx::event& event() {
+  ::zx::eventpair& event() {
     ZX_ASSERT(has_event());
-    return *reinterpret_cast<::zx::event*>(EnvelopesView::at(1 - 1).data);
+    return *reinterpret_cast<::zx::eventpair*>(EnvelopesView::at(1 - 1).data);
   }
   bool has_event() const {
     return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
@@ -929,7 +933,7 @@ class TtyInfo::Builder {
   // An optional event which transmits information about a device's state.
   //
   // The [`DeviceSignal`] values may be observed on this event.
-  Builder&& set_event(::zx::event* elem);
+  Builder&& set_event(::zx::eventpair* elem);
 
  private:
   Builder() = default;
@@ -1612,6 +1616,22 @@ struct NodeAttributes final : private ::fidl::VectorView<fidl_envelope_t> {
     return EnvelopesView::count() >= 7 && EnvelopesView::at(7 - 1).data != nullptr;
   }
 
+  // An ID for the node. See [`fuchsia.io2/Id`].
+  // This `id` should be unique among all entries of a directory.
+  //
+  // This attribute is read-only.
+  const uint64_t& id() const {
+    ZX_ASSERT(has_id());
+    return *reinterpret_cast<const uint64_t*>(EnvelopesView::at(8 - 1).data);
+  }
+  uint64_t& id() {
+    ZX_ASSERT(has_id());
+    return *reinterpret_cast<uint64_t*>(EnvelopesView::at(8 - 1).data);
+  }
+  bool has_id() const {
+    return EnvelopesView::count() >= 8 && EnvelopesView::at(8 - 1).data != nullptr;
+  }
+
   NodeAttributes() = default;
   ~NodeAttributes() = default;
   NodeAttributes(NodeAttributes&& other) noexcept = default;
@@ -1624,7 +1644,7 @@ struct NodeAttributes final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 168;
+  static constexpr uint32_t MaxOutOfLine = 192;
   static constexpr bool HasPointer = true;
 
  private:
@@ -1673,12 +1693,18 @@ class NodeAttributes::Builder {
   // Time of last modification in nanoseconds since the Unix epoch, UTC.
   Builder&& set_modification_time(uint64_t* elem);
 
+  // An ID for the node. See [`fuchsia.io2/Id`].
+  // This `id` should be unique among all entries of a directory.
+  //
+  // This attribute is read-only.
+  Builder&& set_id(uint64_t* elem);
+
  private:
   Builder() = default;
   friend Builder NodeAttributes::Build();
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 7> envelopes_ = {};
+  ::fidl::Array<fidl_envelope_t, 8> envelopes_ = {};
 };
 
 extern "C" const fidl_type_t v1_fuchsia_io2_Node_GetAttributes_ResultTable;
@@ -1745,7 +1771,7 @@ struct Node_GetAttributes_Result {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 184;
+  static constexpr uint32_t MaxOutOfLine = 208;
   static constexpr bool HasPointer = true;
 
  private:
@@ -1767,13 +1793,17 @@ struct Node_GetAttributes_Result {
 
 extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryEntryTable;
 
+// Information about an immediate child node of a directory.
+//
+// If a particular attribute is not applicable or not supported,
+// implementations should leave the corresponding field absent.
 struct DirectoryEntry final : private ::fidl::VectorView<fidl_envelope_t> {
   using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return EnvelopesView::empty(); }
 
-  // Name of the entry.
+  // Name of the node. This field must be present.
   const ::fidl::StringView& name() const {
     ZX_ASSERT(has_name());
     return *reinterpret_cast<const ::fidl::StringView*>(EnvelopesView::at(1 - 1).data);
@@ -1786,7 +1816,7 @@ struct DirectoryEntry final : private ::fidl::VectorView<fidl_envelope_t> {
     return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
   }
 
-  // Describes the kinds of representations supported by the entry.
+  // Describes the kinds of representations supported by the node.
   const ::llcpp::fuchsia::io2::NodeProtocolSet& protocols() const {
     ZX_ASSERT(has_protocols());
     return *reinterpret_cast<const ::llcpp::fuchsia::io2::NodeProtocolSet*>(EnvelopesView::at(2 - 1).data);
@@ -1799,7 +1829,7 @@ struct DirectoryEntry final : private ::fidl::VectorView<fidl_envelope_t> {
     return EnvelopesView::count() >= 2 && EnvelopesView::at(2 - 1).data != nullptr;
   }
 
-  // Describes the kinds of operations supported by the entry.
+  // Describes the kinds of operations supported by the node.
   const ::llcpp::fuchsia::io2::Operations& abilities() const {
     ZX_ASSERT(has_abilities());
     return *reinterpret_cast<const ::llcpp::fuchsia::io2::Operations*>(EnvelopesView::at(3 - 1).data);
@@ -1810,6 +1840,20 @@ struct DirectoryEntry final : private ::fidl::VectorView<fidl_envelope_t> {
   }
   bool has_abilities() const {
     return EnvelopesView::count() >= 3 && EnvelopesView::at(3 - 1).data != nullptr;
+  }
+
+  // An ID for the node. See [`fuchsia.io2/Id`].
+  // This `id` should be unique among all entries of a directory.
+  const uint64_t& id() const {
+    ZX_ASSERT(has_id());
+    return *reinterpret_cast<const uint64_t*>(EnvelopesView::at(4 - 1).data);
+  }
+  uint64_t& id() {
+    ZX_ASSERT(has_id());
+    return *reinterpret_cast<uint64_t*>(EnvelopesView::at(4 - 1).data);
+  }
+  bool has_id() const {
+    return EnvelopesView::count() >= 4 && EnvelopesView::at(4 - 1).data != nullptr;
   }
 
   DirectoryEntry() = default;
@@ -1824,7 +1868,7 @@ struct DirectoryEntry final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 336;
+  static constexpr uint32_t MaxOutOfLine = 360;
   static constexpr bool HasPointer = true;
 
  private:
@@ -1838,105 +1882,25 @@ class DirectoryEntry::Builder {
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
 
-  // Name of the entry.
+  // Name of the node. This field must be present.
   Builder&& set_name(::fidl::StringView* elem);
 
-  // Describes the kinds of representations supported by the entry.
+  // Describes the kinds of representations supported by the node.
   Builder&& set_protocols(::llcpp::fuchsia::io2::NodeProtocolSet* elem);
 
-  // Describes the kinds of operations supported by the entry.
+  // Describes the kinds of operations supported by the node.
   Builder&& set_abilities(::llcpp::fuchsia::io2::Operations* elem);
+
+  // An ID for the node. See [`fuchsia.io2/Id`].
+  // This `id` should be unique among all entries of a directory.
+  Builder&& set_id(uint64_t* elem);
 
  private:
   Builder() = default;
   friend Builder DirectoryEntry::Build();
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 3> envelopes_ = {};
-};
-
-extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryIterator_GetNext_ResultTable;
-
-struct DirectoryIterator_GetNext_Result {
-  DirectoryIterator_GetNext_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
-
-  enum class Tag : fidl_xunion_tag_t {
-    kResponse = 1,  // 0x1
-    kErr = 2,  // 0x2
-  };
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal() == Ordinal::kResponse; }
-
-  static DirectoryIterator_GetNext_Result WithResponse(::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response* val) {
-    DirectoryIterator_GetNext_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  void set_response(::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response* elem) {
-    ordinal_ = Ordinal::kResponse;
-    envelope_.data = static_cast<void*>(elem);
-  }
-
-  ::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response& mutable_response() {
-    ZX_ASSERT(ordinal() == Ordinal::kResponse);
-    return *static_cast<::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response*>(envelope_.data);
-  }
-  const ::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response& response() const {
-    ZX_ASSERT(ordinal() == Ordinal::kResponse);
-    return *static_cast<::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response*>(envelope_.data);
-  }
-
-  bool is_err() const { return ordinal() == Ordinal::kErr; }
-
-  static DirectoryIterator_GetNext_Result WithErr(int32_t* val) {
-    DirectoryIterator_GetNext_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  void set_err(int32_t* elem) {
-    ordinal_ = Ordinal::kErr;
-    envelope_.data = static_cast<void*>(elem);
-  }
-
-  int32_t& mutable_err() {
-    ZX_ASSERT(ordinal() == Ordinal::kErr);
-    return *static_cast<int32_t*>(envelope_.data);
-  }
-  const int32_t& err() const {
-    ZX_ASSERT(ordinal() == Ordinal::kErr);
-    return *static_cast<int32_t*>(envelope_.data);
-  }
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
-  }
-
-  static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DirectoryIterator_GetNext_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 2883600;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kResponse = 1,  // 0x1
-    kErr = 2,  // 0x2
-  };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
-
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
 };
 
 extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryWatchedEventTable;
@@ -2064,7 +2028,7 @@ struct DirectoryWatchedEvent {
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 352;
+  static constexpr uint32_t MaxOutOfLine = 376;
   static constexpr bool HasPointer = true;
 
  private:
@@ -2091,6 +2055,90 @@ struct DirectoryWatchedEvent {
       case 91294460:
         return Ordinal::kRemoved;
     }
+    return ordinal_;
+  }
+
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryIterator_GetNext_ResultTable;
+
+struct DirectoryIterator_GetNext_Result {
+  DirectoryIterator_GetNext_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal() == Ordinal::kResponse; }
+
+  static DirectoryIterator_GetNext_Result WithResponse(::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response* val) {
+    DirectoryIterator_GetNext_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response& mutable_response() {
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response& response() const {
+    ZX_ASSERT(ordinal() == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal() == Ordinal::kErr; }
+
+  static DirectoryIterator_GetNext_Result WithErr(int32_t* val) {
+    DirectoryIterator_GetNext_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal() == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal());
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DirectoryIterator_GetNext_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 3080208;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+  Ordinal ordinal() const {
     return ordinal_;
   }
 
@@ -2872,6 +2920,46 @@ class DirectoryInfo::Builder {
   friend Builder DirectoryInfo::Build();
 };
 
+extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryEnumerateOptionsTable;
+
+// Options to pass to [`fuchsia.io2/Directory.Enumerate`].
+struct DirectoryEnumerateOptions final : private ::fidl::VectorView<fidl_envelope_t> {
+  using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return EnvelopesView::empty(); }
+
+  DirectoryEnumerateOptions() = default;
+  ~DirectoryEnumerateOptions() = default;
+  DirectoryEnumerateOptions(DirectoryEnumerateOptions&& other) noexcept = default;
+  DirectoryEnumerateOptions& operator=(DirectoryEnumerateOptions&& other) noexcept = default;
+
+  class Builder;
+  friend class Builder;
+  static Builder Build();
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DirectoryEnumerateOptionsTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = true;
+
+ private:
+  DirectoryEnumerateOptions(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
+};
+
+class DirectoryEnumerateOptions::Builder {
+ public:
+  DirectoryEnumerateOptions view() { return DirectoryEnumerateOptions(0, nullptr); }
+  ~Builder() = default;
+  Builder(Builder&& other) noexcept = default;
+  Builder& operator=(Builder&& other) noexcept = default;
+
+ private:
+  Builder() = default;
+  friend Builder DirectoryEnumerateOptions::Build();
+};
+
 extern "C" const fidl_type_t v1_fuchsia_io2_DeviceInfoTable;
 
 // The object may be cast to the shared interface of devices.
@@ -2884,13 +2972,13 @@ struct DeviceInfo final : private ::fidl::VectorView<fidl_envelope_t> {
   // An optional event which transmits information about a device's state.
   //
   // The [`DeviceSignal`] values may be observed on this event.
-  const ::zx::event& event() const {
+  const ::zx::eventpair& event() const {
     ZX_ASSERT(has_event());
-    return *reinterpret_cast<const ::zx::event*>(EnvelopesView::at(1 - 1).data);
+    return *reinterpret_cast<const ::zx::eventpair*>(EnvelopesView::at(1 - 1).data);
   }
-  ::zx::event& event() {
+  ::zx::eventpair& event() {
     ZX_ASSERT(has_event());
-    return *reinterpret_cast<::zx::event*>(EnvelopesView::at(1 - 1).data);
+    return *reinterpret_cast<::zx::eventpair*>(EnvelopesView::at(1 - 1).data);
   }
   bool has_event() const {
     return EnvelopesView::count() >= 1 && EnvelopesView::at(1 - 1).data != nullptr;
@@ -2925,7 +3013,7 @@ class DeviceInfo::Builder {
   // An optional event which transmits information about a device's state.
   //
   // The [`DeviceSignal`] values may be observed on this event.
-  Builder&& set_event(::zx::event* elem);
+  Builder&& set_event(::zx::eventpair* elem);
 
  private:
   Builder() = default;
@@ -3767,272 +3855,6 @@ struct Node_Sync_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t v1_fuchsia_io2_Node_GetAttributes_ResponseTable;
-
-struct Node_GetAttributes_Response {
-  static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_Node_GetAttributes_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 168;
-  static constexpr bool HasPointer = true;
-
-  ::llcpp::fuchsia::io2::NodeAttributes attributes = {};
-};
-
-extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryIterator_GetNext_ResponseTable;
-
-struct DirectoryIterator_GetNext_Response {
-  static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DirectoryIterator_GetNext_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 2883584;
-  static constexpr bool HasPointer = true;
-
-  ::fidl::VectorView<::llcpp::fuchsia::io2::DirectoryEntry> entries = {};
-};
-
-extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryIteratorGetNextRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryIteratorGetNextResponseTable;
-
-class DirectoryIterator final {
-  DirectoryIterator() = delete;
- public:
-
-  struct GetNextResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Result result;
-
-    static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DirectoryIteratorGetNextResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 2883600;
-    static constexpr bool HasFlexibleEnvelope = true;
-    static constexpr bool HasPointer = true;
-    static constexpr bool ContainsUnion = true;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  using GetNextRequest = ::fidl::AnyZeroArgMessage;
-
-
-  // Collection of return types of FIDL calls in this interface.
-  class ResultOf final {
-    ResultOf() = delete;
-   private:
-    template <typename ResponseType>
-    class GetNext_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      GetNext_Impl(::zx::unowned_channel _client_end);
-      ~GetNext_Impl() = default;
-      GetNext_Impl(GetNext_Impl&& other) = default;
-      GetNext_Impl& operator=(GetNext_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
-   public:
-    using GetNext = GetNext_Impl<GetNextResponse>;
-  };
-
-  // Collection of return types of FIDL calls in this interface,
-  // when the caller-allocate flavor or in-place call is used.
-  class UnownedResultOf final {
-    UnownedResultOf() = delete;
-   private:
-    template <typename ResponseType>
-    class GetNext_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      GetNext_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~GetNext_Impl() = default;
-      GetNext_Impl(GetNext_Impl&& other) = default;
-      GetNext_Impl& operator=(GetNext_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
-   public:
-    using GetNext = GetNext_Impl<GetNextResponse>;
-  };
-
-  class SyncClient final {
-   public:
-    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-    ~SyncClient() = default;
-    SyncClient(SyncClient&&) = default;
-    SyncClient& operator=(SyncClient&&) = default;
-
-    const ::zx::channel& channel() const { return channel_; }
-
-    ::zx::channel* mutable_channel() { return &channel_; }
-
-    // Reads a collection of variably sized directory entries into a buffer.
-    //
-    // The number of entries in a directory may be very large: akin to
-    // calling read multiple times on a file, directories have a seek
-    // offset which is updated on subsequent calls to `Enumerate`.
-    // The caller should always use a receiving buffer size as large as the
-    // maximum channel limit.
-    //
-    // When the end of iteration is reached, the returned `entries` vector
-    // will be empty.
-    //
-    // This method does not require any rights, as the rights are checked
-    // in the [`Directory.Enumerate`] call.
-    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ResultOf::GetNext GetNext();
-
-    // Reads a collection of variably sized directory entries into a buffer.
-    //
-    // The number of entries in a directory may be very large: akin to
-    // calling read multiple times on a file, directories have a seek
-    // offset which is updated on subsequent calls to `Enumerate`.
-    // The caller should always use a receiving buffer size as large as the
-    // maximum channel limit.
-    //
-    // When the end of iteration is reached, the returned `entries` vector
-    // will be empty.
-    //
-    // This method does not require any rights, as the rights are checked
-    // in the [`Directory.Enumerate`] call.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::GetNext GetNext(::fidl::BytePart _response_buffer);
-
-   private:
-    ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
-  class Call final {
-    Call() = delete;
-   public:
-
-    // Reads a collection of variably sized directory entries into a buffer.
-    //
-    // The number of entries in a directory may be very large: akin to
-    // calling read multiple times on a file, directories have a seek
-    // offset which is updated on subsequent calls to `Enumerate`.
-    // The caller should always use a receiving buffer size as large as the
-    // maximum channel limit.
-    //
-    // When the end of iteration is reached, the returned `entries` vector
-    // will be empty.
-    //
-    // This method does not require any rights, as the rights are checked
-    // in the [`Directory.Enumerate`] call.
-    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetNext GetNext(::zx::unowned_channel _client_end);
-
-    // Reads a collection of variably sized directory entries into a buffer.
-    //
-    // The number of entries in a directory may be very large: akin to
-    // calling read multiple times on a file, directories have a seek
-    // offset which is updated on subsequent calls to `Enumerate`.
-    // The caller should always use a receiving buffer size as large as the
-    // maximum channel limit.
-    //
-    // When the end of iteration is reached, the returned `entries` vector
-    // will be empty.
-    //
-    // This method does not require any rights, as the rights are checked
-    // in the [`Directory.Enumerate`] call.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetNext GetNext(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL wire-format.
-  class InPlace final {
-    InPlace() = delete;
-   public:
-
-    // Reads a collection of variably sized directory entries into a buffer.
-    //
-    // The number of entries in a directory may be very large: akin to
-    // calling read multiple times on a file, directories have a seek
-    // offset which is updated on subsequent calls to `Enumerate`.
-    // The caller should always use a receiving buffer size as large as the
-    // maximum channel limit.
-    //
-    // When the end of iteration is reached, the returned `entries` vector
-    // will be empty.
-    //
-    // This method does not require any rights, as the rights are checked
-    // in the [`Directory.Enumerate`] call.
-    static ::fidl::DecodeResult<GetNextResponse> GetNext(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
-  };
-
-  // Pure-virtual interface to be implemented by a server.
-  class Interface {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-    using _Outer = DirectoryIterator;
-    using _Base = ::fidl::CompleterBase;
-
-    class GetNextCompleterBase : public _Base {
-     public:
-      void Reply(::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Result result);
-      void ReplySuccess(::fidl::VectorView<::llcpp::fuchsia::io2::DirectoryEntry> entries);
-      void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::io2::DirectoryEntry> entries);
-      void Reply(::fidl::DecodedMessage<GetNextResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using GetNextCompleter = ::fidl::Completer<GetNextCompleterBase>;
-
-    virtual void GetNext(GetNextCompleter::Sync _completer) = 0;
-
-  };
-
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
-
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
-    return Dispatch(static_cast<Interface*>(impl), msg, txn);
-  }
-
-
-  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
-  class SetTransactionHeaderFor final {
-    SetTransactionHeaderFor() = delete;
-   public:
-    static void GetNextRequest(const ::fidl::DecodedMessage<DirectoryIterator::GetNextRequest>& _msg);
-    static void GetNextResponse(const ::fidl::DecodedMessage<DirectoryIterator::GetNextResponse>& _msg);
-  };
-};
-
 // The maximum I/O size that is allowed for read/write operations using
 // byte vectors.
 constexpr uint64_t MAX_TRANSFER_SIZE = 8192u;
@@ -4060,6 +3882,19 @@ struct IdleEvent {
   uint8_t __reserved = {};
 };
 
+extern "C" const fidl_type_t v1_fuchsia_io2_Node_GetAttributes_ResponseTable;
+
+struct Node_GetAttributes_Response {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_Node_GetAttributes_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 192;
+  static constexpr bool HasPointer = true;
+
+  ::llcpp::fuchsia::io2::NodeAttributes attributes = {};
+};
+
 extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryWatcherGetNextRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryWatcherGetNextResponseTable;
 
@@ -4079,7 +3914,7 @@ class DirectoryWatcher final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DirectoryWatcherGetNextResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 3080192;
+    static constexpr uint32_t MaxOutOfLine = 3276800;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
@@ -4311,6 +4146,259 @@ class DirectoryWatcher final {
   };
 };
 
+extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryIterator_GetNext_ResponseTable;
+
+struct DirectoryIterator_GetNext_Response {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DirectoryIterator_GetNext_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 3080192;
+  static constexpr bool HasPointer = true;
+
+  ::fidl::VectorView<::llcpp::fuchsia::io2::DirectoryEntry> entries = {};
+};
+
+extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryIteratorGetNextRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryIteratorGetNextResponseTable;
+
+class DirectoryIterator final {
+  DirectoryIterator() = delete;
+ public:
+
+  struct GetNextResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Result result;
+
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DirectoryIteratorGetNextResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 3080208;
+    static constexpr bool HasFlexibleEnvelope = true;
+    static constexpr bool HasPointer = true;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetNextRequest = ::fidl::AnyZeroArgMessage;
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+    ResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class GetNext_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetNext_Impl(::zx::unowned_channel _client_end);
+      ~GetNext_Impl() = default;
+      GetNext_Impl(GetNext_Impl&& other) = default;
+      GetNext_Impl& operator=(GetNext_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using GetNext = GetNext_Impl<GetNextResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class GetNext_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetNext_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetNext_Impl() = default;
+      GetNext_Impl(GetNext_Impl&& other) = default;
+      GetNext_Impl& operator=(GetNext_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using GetNext = GetNext_Impl<GetNextResponse>;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Reads a collection of variably sized directory entries into a buffer.
+    //
+    // The number of entries in a directory may be very large: akin to
+    // calling read multiple times on a file, directories have a seek
+    // offset which is updated on subsequent calls to `Enumerate`.
+    // The caller should always use a receiving buffer size as large as the
+    // maximum channel limit.
+    //
+    // When the end of iteration is reached, the returned `entries` vector
+    // will be empty.
+    //
+    // This method does not require any rights, as the rights are checked
+    // in the [`Directory.Enumerate`] call.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    ResultOf::GetNext GetNext();
+
+    // Reads a collection of variably sized directory entries into a buffer.
+    //
+    // The number of entries in a directory may be very large: akin to
+    // calling read multiple times on a file, directories have a seek
+    // offset which is updated on subsequent calls to `Enumerate`.
+    // The caller should always use a receiving buffer size as large as the
+    // maximum channel limit.
+    //
+    // When the end of iteration is reached, the returned `entries` vector
+    // will be empty.
+    //
+    // This method does not require any rights, as the rights are checked
+    // in the [`Directory.Enumerate`] call.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetNext GetNext(::fidl::BytePart _response_buffer);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+
+    // Reads a collection of variably sized directory entries into a buffer.
+    //
+    // The number of entries in a directory may be very large: akin to
+    // calling read multiple times on a file, directories have a seek
+    // offset which is updated on subsequent calls to `Enumerate`.
+    // The caller should always use a receiving buffer size as large as the
+    // maximum channel limit.
+    //
+    // When the end of iteration is reached, the returned `entries` vector
+    // will be empty.
+    //
+    // This method does not require any rights, as the rights are checked
+    // in the [`Directory.Enumerate`] call.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    static ResultOf::GetNext GetNext(::zx::unowned_channel _client_end);
+
+    // Reads a collection of variably sized directory entries into a buffer.
+    //
+    // The number of entries in a directory may be very large: akin to
+    // calling read multiple times on a file, directories have a seek
+    // offset which is updated on subsequent calls to `Enumerate`.
+    // The caller should always use a receiving buffer size as large as the
+    // maximum channel limit.
+    //
+    // When the end of iteration is reached, the returned `entries` vector
+    // will be empty.
+    //
+    // This method does not require any rights, as the rights are checked
+    // in the [`Directory.Enumerate`] call.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetNext GetNext(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+    InPlace() = delete;
+   public:
+
+    // Reads a collection of variably sized directory entries into a buffer.
+    //
+    // The number of entries in a directory may be very large: akin to
+    // calling read multiple times on a file, directories have a seek
+    // offset which is updated on subsequent calls to `Enumerate`.
+    // The caller should always use a receiving buffer size as large as the
+    // maximum channel limit.
+    //
+    // When the end of iteration is reached, the returned `entries` vector
+    // will be empty.
+    //
+    // This method does not require any rights, as the rights are checked
+    // in the [`Directory.Enumerate`] call.
+    static ::fidl::DecodeResult<GetNextResponse> GetNext(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = DirectoryIterator;
+    using _Base = ::fidl::CompleterBase;
+
+    class GetNextCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Result result);
+      void ReplySuccess(::fidl::VectorView<::llcpp::fuchsia::io2::DirectoryEntry> entries);
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::io2::DirectoryEntry> entries);
+      void Reply(::fidl::DecodedMessage<GetNextResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetNextCompleter = ::fidl::Completer<GetNextCompleterBase>;
+
+    virtual void GetNext(GetNextCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void GetNextRequest(const ::fidl::DecodedMessage<DirectoryIterator::GetNextRequest>& _msg);
+    static void GetNextResponse(const ::fidl::DecodedMessage<DirectoryIterator::GetNextResponse>& _msg);
+  };
+};
+
 extern "C" const fidl_type_t v1_fuchsia_io2_File_Write_ResponseTable;
 
 struct File_Write_Response {
@@ -4520,7 +4608,7 @@ class Node final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_NodeGetAttributesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 184;
+    static constexpr uint32_t MaxOutOfLine = 208;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
@@ -4569,9 +4657,9 @@ class Node final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_NodeUpdateAttributesRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 168;
+    static constexpr uint32_t MaxOutOfLine = 192;
     static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 168;
+    static constexpr uint32_t AltMaxOutOfLine = 192;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
@@ -4985,7 +5073,7 @@ class Node final {
     // the intent to update the corresponding attribute.
     //
     // This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 272 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::UpdateAttributes UpdateAttributes(::llcpp::fuchsia::io2::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -5159,7 +5247,7 @@ class Node final {
     // the intent to update the corresponding attribute.
     //
     // This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 272 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::UpdateAttributes UpdateAttributes(::zx::unowned_channel _client_end, ::llcpp::fuchsia::io2::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -5583,7 +5671,7 @@ class Pipe final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_PipeGetAttributesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 184;
+    static constexpr uint32_t MaxOutOfLine = 208;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
@@ -5632,9 +5720,9 @@ class Pipe final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_PipeUpdateAttributesRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 168;
+    static constexpr uint32_t MaxOutOfLine = 192;
     static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 168;
+    static constexpr uint32_t AltMaxOutOfLine = 192;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
@@ -6048,7 +6136,7 @@ class Pipe final {
     // the intent to update the corresponding attribute.
     //
     // This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 272 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::UpdateAttributes UpdateAttributes(::llcpp::fuchsia::io2::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -6222,7 +6310,7 @@ class Pipe final {
     // the intent to update the corresponding attribute.
     //
     // This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 272 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::UpdateAttributes UpdateAttributes(::zx::unowned_channel _client_end, ::llcpp::fuchsia::io2::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -6646,7 +6734,7 @@ class Memory final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_MemoryGetAttributesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 184;
+    static constexpr uint32_t MaxOutOfLine = 208;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
@@ -6695,9 +6783,9 @@ class Memory final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_MemoryUpdateAttributesRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 168;
+    static constexpr uint32_t MaxOutOfLine = 192;
     static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 168;
+    static constexpr uint32_t AltMaxOutOfLine = 192;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
@@ -7111,7 +7199,7 @@ class Memory final {
     // the intent to update the corresponding attribute.
     //
     // This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 272 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::UpdateAttributes UpdateAttributes(::llcpp::fuchsia::io2::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -7285,7 +7373,7 @@ class Memory final {
     // the intent to update the corresponding attribute.
     //
     // This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 272 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::UpdateAttributes UpdateAttributes(::zx::unowned_channel _client_end, ::llcpp::fuchsia::io2::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -7721,7 +7809,7 @@ class File final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_FileGetAttributesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 184;
+    static constexpr uint32_t MaxOutOfLine = 208;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
@@ -7770,9 +7858,9 @@ class File final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_FileUpdateAttributesRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 168;
+    static constexpr uint32_t MaxOutOfLine = 192;
     static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 168;
+    static constexpr uint32_t AltMaxOutOfLine = 192;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
@@ -8665,7 +8753,7 @@ class File final {
     // the intent to update the corresponding attribute.
     //
     // This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 272 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::UpdateAttributes UpdateAttributes(::llcpp::fuchsia::io2::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -9081,7 +9169,7 @@ class File final {
     // the intent to update the corresponding attribute.
     //
     // This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 272 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::UpdateAttributes UpdateAttributes(::zx::unowned_channel _client_end, ::llcpp::fuchsia::io2::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -10003,7 +10091,7 @@ class Directory final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DirectoryGetAttributesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 184;
+    static constexpr uint32_t MaxOutOfLine = 208;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
@@ -10052,9 +10140,9 @@ class Directory final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DirectoryUpdateAttributesRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 168;
+    static constexpr uint32_t MaxOutOfLine = 192;
     static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 168;
+    static constexpr uint32_t AltMaxOutOfLine = 192;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
@@ -10138,16 +10226,17 @@ class Directory final {
   struct EnumerateRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::io2::DirectoryEnumerateOptions options;
     ::zx::channel iterator;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DirectoryEnumerateRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool HasPointer = false;
+    static constexpr bool HasFlexibleEnvelope = true;
+    static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
@@ -10399,7 +10488,7 @@ class Directory final {
     class Enumerate_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Enumerate_Impl(::zx::unowned_channel _client_end, ::zx::channel iterator);
+      Enumerate_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator);
       ~Enumerate_Impl() = default;
       Enumerate_Impl(Enumerate_Impl&& other) = default;
       Enumerate_Impl& operator=(Enumerate_Impl&& other) = default;
@@ -10604,7 +10693,7 @@ class Directory final {
     class Enumerate_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Enumerate_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel iterator);
+      Enumerate_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator);
       ~Enumerate_Impl() = default;
       Enumerate_Impl(Enumerate_Impl&& other) = default;
       Enumerate_Impl& operator=(Enumerate_Impl&& other) = default;
@@ -10807,7 +10896,7 @@ class Directory final {
     // the intent to update the corresponding attribute.
     //
     // This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 272 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::UpdateAttributes UpdateAttributes(::llcpp::fuchsia::io2::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -10968,8 +11057,8 @@ class Directory final {
     //
     // This method requires the [`Rights.ENUMERATE`] right. If this right is
     // absent, `iterator` will be closed with a `ZX_ERR_ACCESS_DENIED` epitaph.
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::Enumerate Enumerate(::zx::channel iterator);
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::Enumerate Enumerate(::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator);
 
     // Initiates a directory listing operation over the input channel,
     // starting at seek offset 0.
@@ -10977,7 +11066,7 @@ class Directory final {
     // This method requires the [`Rights.ENUMERATE`] right. If this right is
     // absent, `iterator` will be closed with a `ZX_ERR_ACCESS_DENIED` epitaph.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::Enumerate Enumerate(::fidl::BytePart _request_buffer, ::zx::channel iterator);
+    UnownedResultOf::Enumerate Enumerate(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator);
 
     // Renames a node named `src` to the name `dst`, in a directory represented
     // by `dst_parent_token`.
@@ -11207,7 +11296,7 @@ class Directory final {
     // the intent to update the corresponding attribute.
     //
     // This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 272 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::UpdateAttributes UpdateAttributes(::zx::unowned_channel _client_end, ::llcpp::fuchsia::io2::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -11368,8 +11457,8 @@ class Directory final {
     //
     // This method requires the [`Rights.ENUMERATE`] right. If this right is
     // absent, `iterator` will be closed with a `ZX_ERR_ACCESS_DENIED` epitaph.
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Enumerate Enumerate(::zx::unowned_channel _client_end, ::zx::channel iterator);
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::Enumerate Enumerate(::zx::unowned_channel _client_end, ::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator);
 
     // Initiates a directory listing operation over the input channel,
     // starting at seek offset 0.
@@ -11377,7 +11466,7 @@ class Directory final {
     // This method requires the [`Rights.ENUMERATE`] right. If this right is
     // absent, `iterator` will be closed with a `ZX_ERR_ACCESS_DENIED` epitaph.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Enumerate Enumerate(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel iterator);
+    static UnownedResultOf::Enumerate Enumerate(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator);
 
     // Renames a node named `src` to the name `dst`, in a directory represented
     // by `dst_parent_token`.
@@ -11791,7 +11880,7 @@ class Directory final {
 
     using EnumerateCompleter = ::fidl::Completer<>;
 
-    virtual void Enumerate(::zx::channel iterator, EnumerateCompleter::Sync _completer) = 0;
+    virtual void Enumerate(::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator, EnumerateCompleter::Sync _completer) = 0;
 
     class RenameCompleterBase : public _Base {
      public:
@@ -12035,7 +12124,7 @@ class Debuglog final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DebuglogGetAttributesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 184;
+    static constexpr uint32_t MaxOutOfLine = 208;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = true;
@@ -12084,9 +12173,9 @@ class Debuglog final {
     static constexpr const fidl_type_t* Type = &v1_fuchsia_io2_DebuglogUpdateAttributesRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 168;
+    static constexpr uint32_t MaxOutOfLine = 192;
     static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 168;
+    static constexpr uint32_t AltMaxOutOfLine = 192;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
     static constexpr bool ContainsUnion = false;
@@ -12500,7 +12589,7 @@ class Debuglog final {
     // the intent to update the corresponding attribute.
     //
     // This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 272 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::UpdateAttributes UpdateAttributes(::llcpp::fuchsia::io2::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -12674,7 +12763,7 @@ class Debuglog final {
     // the intent to update the corresponding attribute.
     //
     // This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 272 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::UpdateAttributes UpdateAttributes(::zx::unowned_channel _client_end, ::llcpp::fuchsia::io2::NodeAttributes attributes);
 
     // Updates information about the node.
@@ -13076,6 +13165,17 @@ static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io2::NodeProtocolSet>)
 static_assert(sizeof(::llcpp::fuchsia::io2::NodeProtocolSet) == sizeof(uint64_t));
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::io2::NodeAttributesQuery> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io2::NodeAttributesQuery>);
+static_assert(sizeof(::llcpp::fuchsia::io2::NodeAttributesQuery) == sizeof(uint64_t));
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io2::IdleEvent> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io2::IdleEvent>);
+static_assert(offsetof(::llcpp::fuchsia::io2::IdleEvent, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::io2::IdleEvent) == ::llcpp::fuchsia::io2::IdleEvent::PrimarySize);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::io2::NodeAttributes> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io2::NodeAttributes>);
 
@@ -13090,13 +13190,20 @@ struct IsFidlType<::llcpp::fuchsia::io2::Node_GetAttributes_Result> : public std
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io2::Node_GetAttributes_Result>);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::io2::NodeAttributesQuery> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io2::NodeAttributesQuery>);
-static_assert(sizeof(::llcpp::fuchsia::io2::NodeAttributesQuery) == sizeof(uint64_t));
-
-template <>
 struct IsFidlType<::llcpp::fuchsia::io2::DirectoryEntry> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io2::DirectoryEntry>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io2::DirectoryWatchedEvent> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io2::DirectoryWatchedEvent>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io2::DirectoryWatcher::GetNextResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::io2::DirectoryWatcher::GetNextResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::io2::DirectoryWatcher::GetNextResponse)
+    == ::llcpp::fuchsia::io2::DirectoryWatcher::GetNextResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::io2::DirectoryWatcher::GetNextResponse, events) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Response> : public std::true_type {};
@@ -13115,24 +13222,6 @@ struct IsFidlMessage<::llcpp::fuchsia::io2::DirectoryIterator::GetNextResponse> 
 static_assert(sizeof(::llcpp::fuchsia::io2::DirectoryIterator::GetNextResponse)
     == ::llcpp::fuchsia::io2::DirectoryIterator::GetNextResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::io2::DirectoryIterator::GetNextResponse, result) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::io2::IdleEvent> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io2::IdleEvent>);
-static_assert(offsetof(::llcpp::fuchsia::io2::IdleEvent, __reserved) == 0);
-static_assert(sizeof(::llcpp::fuchsia::io2::IdleEvent) == ::llcpp::fuchsia::io2::IdleEvent::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::io2::DirectoryWatchedEvent> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io2::DirectoryWatchedEvent>);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::io2::DirectoryWatcher::GetNextResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::io2::DirectoryWatcher::GetNextResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::io2::DirectoryWatcher::GetNextResponse)
-    == ::llcpp::fuchsia::io2::DirectoryWatcher::GetNextResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::io2::DirectoryWatcher::GetNextResponse, events) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::io2::File_Write_Response> : public std::true_type {};
@@ -13225,6 +13314,10 @@ static_assert(sizeof(::llcpp::fuchsia::io2::DirectoryWatchMask) == sizeof(uint64
 template <>
 struct IsFidlType<::llcpp::fuchsia::io2::DirectoryInfo> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io2::DirectoryInfo>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io2::DirectoryEnumerateOptions> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io2::DirectoryEnumerateOptions>);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::io2::DeviceSignal> : public std::true_type {};
@@ -13818,7 +13911,8 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::io2::Directory::EnumerateRequest> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::io2::Directory::EnumerateRequest)
     == ::llcpp::fuchsia::io2::Directory::EnumerateRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::io2::Directory::EnumerateRequest, iterator) == 16);
+static_assert(offsetof(::llcpp::fuchsia::io2::Directory::EnumerateRequest, options) == 16);
+static_assert(offsetof(::llcpp::fuchsia::io2::Directory::EnumerateRequest, iterator) == 32);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::io2::Directory::RenameRequest> : public std::true_type {};

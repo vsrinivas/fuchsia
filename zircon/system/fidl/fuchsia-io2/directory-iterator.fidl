@@ -24,3 +24,11 @@ protocol DirectoryIterator {
         -> (vector<DirectoryEntry>:MAX_DIRECTORY_BATCH_SIZE entries)
         error zx.status;
 };
+
+/// The maximum number of directory entires or watcher events returned
+/// in a batch by a hanging-get pattern.
+const uint64 MAX_DIRECTORY_BATCH_SIZE = 8192;
+
+/// Options to pass to [`fuchsia.io2/Directory.Enumerate`].
+table DirectoryEnumerateOptions {
+};

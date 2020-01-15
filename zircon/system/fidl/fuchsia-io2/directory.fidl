@@ -76,7 +76,8 @@ protocol Directory {
     ///
     /// This method requires the [`Rights.ENUMERATE`] right. If this right is
     /// absent, `iterator` will be closed with a `ZX_ERR_ACCESS_DENIED` epitaph.
-    Enumerate(request<DirectoryIterator> iterator);
+    Enumerate(DirectoryEnumerateOptions options,
+              request<DirectoryIterator> iterator);
 
     /// Renames a node named `src` to the name `dst`, in a directory represented
     /// by `dst_parent_token`.

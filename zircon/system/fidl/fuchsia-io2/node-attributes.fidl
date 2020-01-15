@@ -47,6 +47,12 @@ table NodeAttributes {
 
     /// Time of last modification in nanoseconds since the Unix epoch, UTC.
     7: uint64 modification_time;
+
+    /// An ID for the node. See [`fuchsia.io2/Id`].
+    /// This `id` should be unique among all entries of a directory.
+    ///
+    /// This attribute is read-only.
+    8: Id id;
 };
 
 /// When calling [`Node.GetAttributes`], set the corresponding bit to one
@@ -73,4 +79,7 @@ bits NodeAttributesQuery : uint64 {
 
     /// Requests [`NodeAttributes.modification_time`].
     MODIFICATION_TIME = 0x40;
+
+    /// Requests [`NodeAttributes.id`].
+    ID = 0x80;
 };

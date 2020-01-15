@@ -48,3 +48,22 @@ const uint64 MAX_PATH_LENGTH = 4095;
 /// The type to identify a connection to a node.
 /// It represents a capability: a reference to a node with associated rights.
 using Token = handle<event>;
+
+/// The type to identify a node, if the implementation supports some notion of
+/// unique node ID.
+///
+/// ## Uniqueness Guarantees
+///
+/// A client is usually presented with a directory tree that is the result
+/// of composing together multiple backing implementation instances. An ID
+/// would be unique within the corresponding instance only.
+/// Their boundaries are rather implicit on Fuchsia, as a result of
+/// transparently-forwarding directory proxies. It could be common for a client
+/// to observe identical `Id`s when traversing a directory tree, when it
+/// encounters nodes from different backing instances. Therefore, the ID is best
+/// used for debugging and informational purposes.
+///
+/// If the implementation also supports [`fuchsia.fs/Query`], the
+/// [`fuchsia.fs/FilesystemInfo.fs_id`] field may be used to disambiguate IDs
+/// from different backing instances.
+using Id = uint64;

@@ -31,7 +31,7 @@ void ::llcpp::fuchsia::io2::File_GetMemRange_Result::SizeAndOffsetAssertionHelpe
   return TtyInfo::Builder();
 }
 
-auto ::llcpp::fuchsia::io2::TtyInfo::Builder::set_event(::zx::event* elem) -> Builder&& {
+auto ::llcpp::fuchsia::io2::TtyInfo::Builder::set_event(::zx::eventpair* elem) -> Builder&& {
   ZX_ASSERT(elem);
   envelopes_[1 - 1].data = static_cast<void*>(elem);
   if (max_ordinal_ < 1) {
@@ -163,6 +163,15 @@ auto ::llcpp::fuchsia::io2::NodeAttributes::Builder::set_modification_time(uint6
   return std::move(*this);
 }
 
+auto ::llcpp::fuchsia::io2::NodeAttributes::Builder::set_id(uint64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[8 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 8) {
+    max_ordinal_ = 8;
+  }
+  return std::move(*this);
+}
+
 void ::llcpp::fuchsia::io2::Node_GetAttributes_Result::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(Node_GetAttributes_Result) == sizeof(fidl_xunion_t));
   static_assert(offsetof(Node_GetAttributes_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
@@ -198,6 +207,202 @@ auto ::llcpp::fuchsia::io2::DirectoryEntry::Builder::set_abilities(::llcpp::fuch
     max_ordinal_ = 3;
   }
   return std::move(*this);
+}
+
+auto ::llcpp::fuchsia::io2::DirectoryEntry::Builder::set_id(uint64_t* elem) -> Builder&& {
+  ZX_ASSERT(elem);
+  envelopes_[4 - 1].data = static_cast<void*>(elem);
+  if (max_ordinal_ < 4) {
+    max_ordinal_ = 4;
+  }
+  return std::move(*this);
+}
+auto ::llcpp::fuchsia::io2::DirectoryWatchedEvent::which() const -> Tag {
+  ZX_ASSERT(!has_invalid_tag());
+  switch (ordinal()) {
+  case Ordinal::kExisting:
+  case Ordinal::kIdle:
+  case Ordinal::kAdded:
+  case Ordinal::kRemoved:
+    return static_cast<Tag>(ordinal());
+  default:
+    return Tag::kUnknown;
+  }
+}
+
+void ::llcpp::fuchsia::io2::DirectoryWatchedEvent::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(DirectoryWatchedEvent) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(DirectoryWatchedEvent, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(DirectoryWatchedEvent, envelope_) == offsetof(fidl_xunion_t, envelope));
+}
+
+namespace {
+
+[[maybe_unused]]
+constexpr uint64_t kDirectoryWatcher_GetNext_Ordinal = 0x7de5be100000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDirectoryWatcher_GetNext_GenOrdinal = 0x74de3b9a6548cb77lu;
+extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryWatcherGetNextRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryWatcherGetNextResponseTable;
+
+}  // namespace
+template <>
+DirectoryWatcher::ResultOf::GetNext_Impl<DirectoryWatcher::GetNextResponse>::GetNext_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNextRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetNextRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetNextRequest));
+  ::fidl::DecodedMessage<GetNextRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      DirectoryWatcher::InPlace::GetNext(std::move(_client_end), Super::response_buffer()));
+}
+
+DirectoryWatcher::ResultOf::GetNext DirectoryWatcher::SyncClient::GetNext() {
+    return ResultOf::GetNext(::zx::unowned_channel(this->channel_));
+}
+
+DirectoryWatcher::ResultOf::GetNext DirectoryWatcher::Call::GetNext(::zx::unowned_channel _client_end) {
+  return ResultOf::GetNext(std::move(_client_end));
+}
+
+template <>
+DirectoryWatcher::UnownedResultOf::GetNext_Impl<DirectoryWatcher::GetNextResponse>::GetNext_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetNextRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetNextRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetNextRequest));
+  ::fidl::DecodedMessage<GetNextRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      DirectoryWatcher::InPlace::GetNext(std::move(_client_end), std::move(_response_buffer)));
+}
+
+DirectoryWatcher::UnownedResultOf::GetNext DirectoryWatcher::SyncClient::GetNext(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetNext(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+DirectoryWatcher::UnownedResultOf::GetNext DirectoryWatcher::Call::GetNext(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetNext(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DirectoryWatcher::GetNextResponse> DirectoryWatcher::InPlace::GetNext(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetNextRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetNextRequest> params(std::move(_request_buffer));
+  DirectoryWatcher::SetTransactionHeaderFor::GetNextRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DirectoryWatcher::GetNextResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetNextRequest, GetNextResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DirectoryWatcher::GetNextResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+bool DirectoryWatcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
+  switch (hdr->ordinal) {
+    case kDirectoryWatcher_GetNext_Ordinal:
+    case kDirectoryWatcher_GetNext_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<GetNextRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetNext(
+          Interface::GetNextCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool DirectoryWatcher::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void DirectoryWatcher::Interface::GetNextCompleterBase::Reply(::fidl::VectorView<::llcpp::fuchsia::io2::DirectoryWatchedEvent> events) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNextResponse, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  GetNextResponse _response = {};
+  DirectoryWatcher::SetTransactionHeaderFor::GetNextResponse(
+      ::fidl::DecodedMessage<GetNextResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetNextResponse::PrimarySize,
+              GetNextResponse::PrimarySize)));
+  _response.events = std::move(events);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void DirectoryWatcher::Interface::GetNextCompleterBase::Reply(::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::io2::DirectoryWatchedEvent> events) {
+  if (_buffer.capacity() < GetNextResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  GetNextResponse _response = {};
+  DirectoryWatcher::SetTransactionHeaderFor::GetNextResponse(
+      ::fidl::DecodedMessage<GetNextResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetNextResponse::PrimarySize,
+              GetNextResponse::PrimarySize)));
+  _response.events = std::move(events);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void DirectoryWatcher::Interface::GetNextCompleterBase::Reply(::fidl::DecodedMessage<GetNextResponse> params) {
+  DirectoryWatcher::SetTransactionHeaderFor::GetNextResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+
+void DirectoryWatcher::SetTransactionHeaderFor::GetNextRequest(const ::fidl::DecodedMessage<DirectoryWatcher::GetNextRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryWatcher_GetNext_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void DirectoryWatcher::SetTransactionHeaderFor::GetNextResponse(const ::fidl::DecodedMessage<DirectoryWatcher::GetNextResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryWatcher_GetNext_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ::llcpp::fuchsia::io2::DirectoryIterator_GetNext_Result::SizeAndOffsetAssertionHelper() {
@@ -389,193 +594,6 @@ void DirectoryIterator::SetTransactionHeaderFor::GetNextResponse(const ::fidl::D
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryIterator_GetNext_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
-auto ::llcpp::fuchsia::io2::DirectoryWatchedEvent::which() const -> Tag {
-  ZX_ASSERT(!has_invalid_tag());
-  switch (ordinal()) {
-  case Ordinal::kExisting:
-  case Ordinal::kIdle:
-  case Ordinal::kAdded:
-  case Ordinal::kRemoved:
-    return static_cast<Tag>(ordinal());
-  default:
-    return Tag::kUnknown;
-  }
-}
-
-void ::llcpp::fuchsia::io2::DirectoryWatchedEvent::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(DirectoryWatchedEvent) == sizeof(fidl_xunion_t));
-  static_assert(offsetof(DirectoryWatchedEvent, ordinal_) == offsetof(fidl_xunion_t, tag));
-  static_assert(offsetof(DirectoryWatchedEvent, envelope_) == offsetof(fidl_xunion_t, envelope));
-}
-
-namespace {
-
-[[maybe_unused]]
-constexpr uint64_t kDirectoryWatcher_GetNext_Ordinal = 0x7de5be100000000lu;
-[[maybe_unused]]
-constexpr uint64_t kDirectoryWatcher_GetNext_GenOrdinal = 0x74de3b9a6548cb77lu;
-extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryWatcherGetNextRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_io2_DirectoryWatcherGetNextResponseTable;
-
-}  // namespace
-template <>
-DirectoryWatcher::ResultOf::GetNext_Impl<DirectoryWatcher::GetNextResponse>::GetNext_Impl(::zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNextRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, GetNextRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetNextRequest));
-  ::fidl::DecodedMessage<GetNextRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      DirectoryWatcher::InPlace::GetNext(std::move(_client_end), Super::response_buffer()));
-}
-
-DirectoryWatcher::ResultOf::GetNext DirectoryWatcher::SyncClient::GetNext() {
-    return ResultOf::GetNext(::zx::unowned_channel(this->channel_));
-}
-
-DirectoryWatcher::ResultOf::GetNext DirectoryWatcher::Call::GetNext(::zx::unowned_channel _client_end) {
-  return ResultOf::GetNext(std::move(_client_end));
-}
-
-template <>
-DirectoryWatcher::UnownedResultOf::GetNext_Impl<DirectoryWatcher::GetNextResponse>::GetNext_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetNextRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, GetNextRequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(GetNextRequest));
-  ::fidl::DecodedMessage<GetNextRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      DirectoryWatcher::InPlace::GetNext(std::move(_client_end), std::move(_response_buffer)));
-}
-
-DirectoryWatcher::UnownedResultOf::GetNext DirectoryWatcher::SyncClient::GetNext(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetNext(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
-}
-
-DirectoryWatcher::UnownedResultOf::GetNext DirectoryWatcher::Call::GetNext(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetNext(std::move(_client_end), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<DirectoryWatcher::GetNextResponse> DirectoryWatcher::InPlace::GetNext(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(GetNextRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<GetNextRequest> params(std::move(_request_buffer));
-  DirectoryWatcher::SetTransactionHeaderFor::GetNextRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<DirectoryWatcher::GetNextResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<GetNextRequest, GetNextResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<DirectoryWatcher::GetNextResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-
-bool DirectoryWatcher::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
-  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_INVALID_ARGS);
-    return true;
-  }
-  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  zx_status_t status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    txn->Close(status);
-    return true;
-  }
-  switch (hdr->ordinal) {
-    case kDirectoryWatcher_GetNext_Ordinal:
-    case kDirectoryWatcher_GetNext_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<GetNextRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      impl->GetNext(
-          Interface::GetNextCompleter::Sync(txn));
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
-}
-
-bool DirectoryWatcher::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
-  bool found = TryDispatch(impl, msg, txn);
-  if (!found) {
-    zx_handle_close_many(msg->handles, msg->num_handles);
-    txn->Close(ZX_ERR_NOT_SUPPORTED);
-  }
-  return found;
-}
-
-
-void DirectoryWatcher::Interface::GetNextCompleterBase::Reply(::fidl::VectorView<::llcpp::fuchsia::io2::DirectoryWatchedEvent> events) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNextResponse, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
-  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
-  GetNextResponse _response = {};
-  DirectoryWatcher::SetTransactionHeaderFor::GetNextResponse(
-      ::fidl::DecodedMessage<GetNextResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              GetNextResponse::PrimarySize,
-              GetNextResponse::PrimarySize)));
-  _response.events = std::move(events);
-  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
-                                                                          _kWriteAllocSize));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void DirectoryWatcher::Interface::GetNextCompleterBase::Reply(::fidl::BytePart _buffer, ::fidl::VectorView<::llcpp::fuchsia::io2::DirectoryWatchedEvent> events) {
-  if (_buffer.capacity() < GetNextResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  GetNextResponse _response = {};
-  DirectoryWatcher::SetTransactionHeaderFor::GetNextResponse(
-      ::fidl::DecodedMessage<GetNextResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              GetNextResponse::PrimarySize,
-              GetNextResponse::PrimarySize)));
-  _response.events = std::move(events);
-  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
-}
-
-void DirectoryWatcher::Interface::GetNextCompleterBase::Reply(::fidl::DecodedMessage<GetNextResponse> params) {
-  DirectoryWatcher::SetTransactionHeaderFor::GetNextResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-
-void DirectoryWatcher::SetTransactionHeaderFor::GetNextRequest(const ::fidl::DecodedMessage<DirectoryWatcher::GetNextRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryWatcher_GetNext_GenOrdinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-}
-void DirectoryWatcher::SetTransactionHeaderFor::GetNextResponse(const ::fidl::DecodedMessage<DirectoryWatcher::GetNextResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryWatcher_GetNext_GenOrdinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-}
 
 void ::llcpp::fuchsia::io2::File_Write_Result::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(File_Write_Result) == sizeof(fidl_xunion_t));
@@ -649,11 +667,15 @@ void ::llcpp::fuchsia::io2::Directory_Link_Result::SizeAndOffsetAssertionHelper(
   return DirectoryInfo::Builder();
 }
 
+::llcpp::fuchsia::io2::DirectoryEnumerateOptions::Builder DirectoryEnumerateOptions::Build() {
+  return DirectoryEnumerateOptions::Builder();
+}
+
 ::llcpp::fuchsia::io2::DeviceInfo::Builder DeviceInfo::Build() {
   return DeviceInfo::Builder();
 }
 
-auto ::llcpp::fuchsia::io2::DeviceInfo::Builder::set_event(::zx::event* elem) -> Builder&& {
+auto ::llcpp::fuchsia::io2::DeviceInfo::Builder::set_event(::zx::eventpair* elem) -> Builder&& {
   ZX_ASSERT(elem);
   envelopes_[1 - 1].data = static_cast<void*>(elem);
   if (max_ordinal_ < 1) {
@@ -6721,50 +6743,57 @@ Directory::UnownedResultOf::Unlink Directory::Call::Unlink(::zx::unowned_channel
 }
 
 
-Directory::ResultOf::Enumerate_Impl::Enumerate_Impl(::zx::unowned_channel _client_end, ::zx::channel iterator) {
+Directory::ResultOf::Enumerate_Impl::Enumerate_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnumerateRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, EnumerateRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<EnumerateRequest*>(_write_bytes);
+  EnumerateRequest _request = {};
+  _request.options = std::move(options);
   _request.iterator = std::move(iterator);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(EnumerateRequest));
-  ::fidl::DecodedMessage<EnumerateRequest> _decoded_request(std::move(_request_bytes));
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<EnumerateRequest> _decoded_request = std::move(_linearize_result.message);
   Super::operator=(
       Directory::InPlace::Enumerate(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Directory::ResultOf::Enumerate Directory::SyncClient::Enumerate(::zx::channel iterator) {
-    return ResultOf::Enumerate(::zx::unowned_channel(this->channel_), std::move(iterator));
+Directory::ResultOf::Enumerate Directory::SyncClient::Enumerate(::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator) {
+    return ResultOf::Enumerate(::zx::unowned_channel(this->channel_), std::move(options), std::move(iterator));
 }
 
-Directory::ResultOf::Enumerate Directory::Call::Enumerate(::zx::unowned_channel _client_end, ::zx::channel iterator) {
-  return ResultOf::Enumerate(std::move(_client_end), std::move(iterator));
+Directory::ResultOf::Enumerate Directory::Call::Enumerate(::zx::unowned_channel _client_end, ::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator) {
+  return ResultOf::Enumerate(std::move(_client_end), std::move(options), std::move(iterator));
 }
 
 
-Directory::UnownedResultOf::Enumerate_Impl::Enumerate_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel iterator) {
+Directory::UnownedResultOf::Enumerate_Impl::Enumerate_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator) {
   if (_request_buffer.capacity() < EnumerateRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
     return;
   }
-  memset(_request_buffer.data(), 0, EnumerateRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<EnumerateRequest*>(_request_buffer.data());
+  EnumerateRequest _request = {};
+  _request.options = std::move(options);
   _request.iterator = std::move(iterator);
-  _request_buffer.set_actual(sizeof(EnumerateRequest));
-  ::fidl::DecodedMessage<EnumerateRequest> _decoded_request(std::move(_request_buffer));
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<EnumerateRequest> _decoded_request = std::move(_linearize_result.message);
   Super::operator=(
       Directory::InPlace::Enumerate(std::move(_client_end), std::move(_decoded_request)));
 }
 
-Directory::UnownedResultOf::Enumerate Directory::SyncClient::Enumerate(::fidl::BytePart _request_buffer, ::zx::channel iterator) {
-  return UnownedResultOf::Enumerate(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(iterator));
+Directory::UnownedResultOf::Enumerate Directory::SyncClient::Enumerate(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator) {
+  return UnownedResultOf::Enumerate(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(options), std::move(iterator));
 }
 
-Directory::UnownedResultOf::Enumerate Directory::Call::Enumerate(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel iterator) {
-  return UnownedResultOf::Enumerate(std::move(_client_end), std::move(_request_buffer), std::move(iterator));
+Directory::UnownedResultOf::Enumerate Directory::Call::Enumerate(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::io2::DirectoryEnumerateOptions options, ::zx::channel iterator) {
+  return UnownedResultOf::Enumerate(std::move(_client_end), std::move(_request_buffer), std::move(options), std::move(iterator));
 }
 
 ::fidl::internal::StatusAndError Directory::InPlace::Enumerate(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<EnumerateRequest> params) {
@@ -7211,7 +7240,7 @@ bool Directory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
         return true;
       }
       auto message = result.message.message();
-      impl->Enumerate(std::move(message->iterator),
+      impl->Enumerate(std::move(message->options), std::move(message->iterator),
           Interface::EnumerateCompleter::Sync(txn));
       return true;
     }
