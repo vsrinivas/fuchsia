@@ -16,6 +16,10 @@ pub struct Fdb {
 pub struct StartCommand {}
 
 #[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "daemon", description = "run as daemon")]
+pub struct DaemonCommand {}
+
+#[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "echo", description = "run echo test")]
 pub struct EchoCommand {
     #[argh(positional)]
@@ -41,10 +45,11 @@ pub struct RunComponentCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
 pub enum Subcommand {
-    Start(StartCommand),
+    Daemon(DaemonCommand),
     Echo(EchoCommand),
     List(ListCommand),
     RunComponent(RunComponentCommand),
+    Start(StartCommand),
 }
 
 #[cfg(test)]
@@ -80,6 +85,18 @@ mod tests {
         }
 
         check(&["start"]);
+    }
+
+    #[test]
+    fn test_daemon() {
+        fn check(args: &[&str]) {
+            assert_eq!(
+                Fdb::from_args(CMD_NAME, args),
+                Ok(Fdb { subcommand: Subcommand::Daemon(DaemonCommand {}) })
+            )
+        }
+
+        check(&["daemon"]);
     }
 
     #[test]

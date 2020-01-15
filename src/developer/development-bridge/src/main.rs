@@ -6,14 +6,16 @@
 use {
     crate::args::{Fdb, Subcommand},
     crate::config::Config,
-    crate::constants::{CONFIG_JSON_FILE, MAX_RETRY_COUNT},
+    crate::constants::{CONFIG_JSON_FILE, DAEMON, MAX_RETRY_COUNT},
     anyhow::{Context, Error},
+    fdb_daemon::start as start_daemon,
     fidl::endpoints::ServiceMarker,
     fidl_fidl_developer_bridge::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_developer_remotecontrol::RunComponentResponse,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::TryStreamExt,
+    std::env,
     std::process::{Command, Stdio},
 };
 
@@ -104,9 +106,9 @@ impl Cli {
     }
 }
 
-async fn exec_start(config: &Config) -> Result<(), Error> {
+async fn exec_start() -> Result<(), Error> {
     println!("Starting background daemon");
-    Command::new(config.get_daemon_path()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
+    Command::new(env::current_exe().unwrap()).arg(DAEMON).spawn()?;
     Ok(())
 }
 
@@ -133,7 +135,7 @@ async fn async_main() -> Result<(), Error> {
     let mut config: Config = Config::new();
     let _ = config.load_from_config_data(CONFIG_JSON_FILE);
     match app.subcommand {
-        Subcommand::Start(_) => exec_start(&config).await,
+        Subcommand::Start(_) => exec_start().await,
         Subcommand::Echo(c) => {
             match Cli::new().await.unwrap().echo(c.text).await {
                 Ok(r) => {
@@ -155,6 +157,10 @@ async fn async_main() -> Result<(), Error> {
                     println!("ERROR: {:?}", e);
                 }
             }
+            Ok(())
+        }
+        Subcommand::Daemon(_) => {
+            start_daemon().await;
             Ok(())
         }
     }

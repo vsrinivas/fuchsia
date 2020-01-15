@@ -4,6 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/test_spec.gni")
 
@@ -15,6 +16,7 @@ if (host_toolchain == current_toolchain) {
 
     deps = [
       ":bridge-rustc",
+      ":daemon",
       "//garnet/public/lib/fidl/rust/fidl",
       "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//src/connectivity/overnet/lib/hoist",
@@ -30,10 +32,9 @@ if (host_toolchain == current_toolchain) {
     non_rust_deps = [ "//third_party/boringssl" ]
   }
 
-  rustc_binary("daemon") {
+  rustc_library("daemon") {
     name = "fdb_daemon"
     edition = "2018"
-    source_root = "src/daemon.rs"
     with_unit_tests = true
 
     deps = [

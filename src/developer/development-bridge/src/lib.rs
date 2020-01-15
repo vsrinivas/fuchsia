@@ -176,18 +176,13 @@ async fn exec_server(quiet: bool) -> Result<(), Error> {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// main
+// start
 
-fn main() {
-    hoist::run(async move {
-        log::info!("Starting ascendd");
-        start_ascendd().await;
-        log::info!("Starting daemon overnet server");
-        exec_server(true)
-            .await
-            .map_err(|e| log::error!("{}", e))
-            .expect("could not start daemon server");
-    })
+pub async fn start() -> Result<(), Error> {
+    log::info!("Starting ascendd");
+    start_ascendd().await;
+    log::info!("Starting daemon overnet server");
+    exec_server(true).await
 }
 
 ////////////////////////////////////////////////////////////////////////////////
