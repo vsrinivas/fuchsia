@@ -1,0 +1,101 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.memorypressure;
+
+using zx;
+
+// Indicates the memory pressure level.
+enum Level {
+    // The memory pressure level is healthy.
+    //
+    // Registered clients are free to hold on to caches and allocate memory
+    // unrestricted.
+    //
+    // However, clients should take care to not proactively re-create caches on a
+    // transition back to the NORMAL level, causing a memory spike that immediately
+    // pushes the level over to WARNING again.
+    NORMAL = 1;
+
+    // The memory pressure level is somewhat constrained, and might cross over to
+    // the critical pressure range if left unchecked.
+    //
+    // Registered clients are expected to optimize their operation to limit memory
+    // usage, rather than for best performance, for example, by reducing cache sizes
+    // and non-essential memory allocations.
+    //
+    // Clients must take care to regulate the amount of work they undertake in
+    // order to reclaim memory, and ensure that it does not cause visible
+    // performance degradation. There exists some memory pressure, but not enough
+    // to justify trading off user responsiveness to reclaim memory.
+    WARNING = 2;
+
+    // The memory pressure level is very constrained.
+    //
+    // Registered clients are expected to drop all non-essential memory, and refrain
+    // from allocating more memory. Failing to do so might result in the job
+    // getting terminated, or the system being rebooted in the case of global
+    // memory pressure.
+    //
+    // Clients may undertake expensive work to reclaim memory if required, since
+    // failing to do so might result in termination. The client might decide that a
+    // performance hit is a fair tradeoff in this case.
+    CRITICAL = 3;
+};
+
+// Registration protocol
+[Discoverable]
+protocol Provider {
+    // Used to register for memory pressure level changes.
+    // |watcher|: memory pressure |Watcher| channel that the |Provider| will use to send
+    // level change messages to the client.
+    //
+    // The current memory pressure level is immediately sent to the watcher
+    // when this method is called.
+    //
+    // It is recommended that the root job in a component tree register for changes,
+    // rather than having individual jobs further down the tree register individually.
+    // A low client count will help minimize system churn due to a large number of
+    // memory pressure messages in transit at the same time.
+    // Also, the more context a job has, the better equipped it will be to react to
+    // memory pressure by controlling the behavior of children jobs in its tree.
+    RegisterWatcher(Watcher watcher);
+};
+
+// Watcher protocol
+// To be implemented by clients who wish to be notified on memory pressure level changes.
+protocol Watcher {
+    // Sent to the registered client when the memory pressure level changes.
+    // |level|: indicates the current memory pressure level.
+    //
+    // Will also be invoked on initial connection via |RegisterWatcher|, so that a newly
+    // registered client can discover the current memory pressure level.
+    //
+    // The watcher must immediately reply with a message to acknowledge that it has
+    // received the level change notification, and has initiated required actions as a
+    // result. It may then continue to reclaim memory asynchronously after sending
+    // the acknowledgement.
+    //
+    // Some helpful guidelines for clients:
+    // 1. The watcher will be notified of new pressure level changes only after a reply
+    // corresponding to the previous message has been received by the provider.
+    // If multiple level transitions occur during that time, the watcher will be
+    // notified of the latest pressure level.
+    //
+    // 2. The level changes are edge-triggered, and clients are expected to maintain
+    // local state to track the current pressure level, if required. For example,
+    // a job might be notified of a CRITICAL level and drop all its caches as a result.
+    // Some time after this, it might want to trigger an activity that causes a
+    // fair amount of memory to be allocated. At this point, the job is expected to
+    // remember that the last pressure level it saw was CRITICAL, and refrain from
+    // triggering the memory-intensive activity.
+    //
+    // 3. As a performance optimization, the provider may decide to skip sending
+    // messages for some pressure level changes. For example, when oscillating across
+    // the NORMAL / WARNING boundary, it might not be worth notifying clients of every
+    // single transition. The provider might rate-limit messages in this case.
+    // On a similar note, the provider may decide to send repeated messages at the
+    // same pressure level, particularly CRITICAL, to indicate that further action
+    // needs to be taken.
+    OnLevelChanged(Level level) -> ();
+};
