@@ -11,24 +11,23 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <variant>
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/lib/escher/flib/fence_set_listener.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/forward_declarations.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 
 class CommandDispatcher;
 class Scenic;
-
-using SessionId = uint64_t;
-
-using OnFramePresentedCallback =
-    fit::function<void(fuchsia::scenic::scheduling::FramePresentedInfo info)>;
 
 class Session final : public fuchsia::ui::scenic::Session {
  public:
@@ -45,7 +44,8 @@ class Session final : public fuchsia::ui::scenic::Session {
 
   // |fuchsia::ui::scenic::Session|
   void Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
-               std::vector<zx::event> release_fences, PresentCallback callback) override;
+               std::vector<zx::event> release_fences,
+               scheduling::OnPresentedCallback callback) override;
 
   // |fuchsia::ui::scenic::Session|
   void Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback callback) override;
@@ -139,6 +139,39 @@ class Session final : public fuchsia::ui::scenic::Session {
     fxl::WeakPtrFactory<EventAndErrorReporter> weak_factory_;
   };
 
+  // TODO(44000): Remove when Present1 is removed.
+  enum PresentType { UNSET = 0, PRESENT1 = 1, PRESENT2 = 2 };
+
+  // Used to store the data associated with a Present call until all its acquire fences have been
+  // reached.
+  struct PresentRequest {
+    uint64_t present_id;
+    zx::time requested_presentation_time;
+    std::vector<zx::event> acquire_fences;
+    std::vector<zx::event> release_fences;
+    std::vector<fuchsia::ui::scenic::Command> commands;
+    // Holds either Present1's |fuchsia::ui::scenic::PresentCallback| or Present2's |Present2Info|.
+    std::variant<scheduling::OnPresentedCallback, scheduling::Present2Info> present_information;
+  };
+
+  // Verifies the client is only using Present() or Present2(). It is an error for a client
+  // to use both calls in the same Session. If both are called, the session should be shut down.
+  // TODO(44000) remove check when Present() is deprecated and removed from the fidl.
+  bool VerifyPresentType(PresentType present_type);
+
+  // Helper method to schedule Present1 and Present2 calls.
+  void SchedulePresentRequest(
+      zx::time requested_presentation_time, std::vector<zx::event> acquire_fences,
+      std::vector<zx::event> release_fences,
+      std::variant<scheduling::OnPresentedCallback, scheduling::Present2Info> presentation_info);
+
+  // Waits for the acquire fences for each Present call and schedules them in turn as the fences are
+  // signalled.
+  void ProcessQueuedPresents();
+
+  // Schedules the next Present on the queue.
+  void ScheduleNextPresent();
+
   // Flush any/all events that were enqueued via EnqueueEvent(), sending them
   // to |listener_|.  If |listener_| is null but |event_callback_| isn't, then
   // invoke the callback for each event.
@@ -156,6 +189,20 @@ class Session final : public fuchsia::ui::scenic::Session {
 
   std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
 
+  // The unique ID used for a given present.
+  scheduling::PresentId next_present_id_ = 0;
+  std::deque<PresentRequest> presents_to_schedule_;
+
+  std::vector<fuchsia::ui::scenic::Command> commands_pending_present_;
+
+  zx::time last_scheduled_presentation_time_ = zx::time(0);
+
+  int64_t num_presents_allowed_ = kMaxPresentsInFlight;
+
+  // Tracks if the client is using Present1 or Present2 while the Present1 API is being deprecated.
+  // No client should use both Present commands in the same session.
+  PresentType present_type_ = PresentType::UNSET;
+
   // A flow event trace id for following |Session::Present| calls from client
   // to scenic.  This will be incremented each |Session::Present| call.  By
   // convention, the scenic implementation side will also contain its own
@@ -163,7 +210,10 @@ class Session final : public fuchsia::ui::scenic::Session {
   // call.
   uint64_t next_present_trace_id_ = 0;
 
-  int64_t num_presents_allowed_ = kMaxPresentsInFlight;
+  // Flow event trace ids for the Present acquire fence queue. Since they're handled in order they
+  // can simply be incremented as each one is handled.
+  uint64_t queue_processing_id_begin_ = 0;
+  uint64_t queue_processing_id_end_ = 0;
 
   TempSessionDelegate* GetTempSessionDelegate();
 
@@ -173,6 +223,8 @@ class Session final : public fuchsia::ui::scenic::Session {
 
   // Function to kill this session so that it is properly cleaned up.
   std::function<void()> destroy_session_func_;
+
+  std::unique_ptr<escher::FenceSetListener> fence_listener_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;
 

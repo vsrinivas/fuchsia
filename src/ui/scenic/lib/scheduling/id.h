@@ -13,6 +13,10 @@ namespace scheduling {
 // globally and temporally unique SessionId.
 using SessionId = uint64_t;
 
+// ID used to the schedule a present update within a Session. The PresentId is expected to be
+// unique, scoped to within each SessionId.
+using PresentId = uint64_t;
+
 // Value 0 reserved as invalid.
 constexpr scheduling::SessionId INVALID_SESSION_ID = 0u;
 

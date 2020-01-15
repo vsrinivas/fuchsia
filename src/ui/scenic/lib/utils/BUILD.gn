@@ -5,12 +5,15 @@
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
-source_set("fence_utils") {
+source_set("utils") {
   sources = [
+    "helpers.cc",
+    "helpers.h",
     "sequential_fence_signaller.cc",
     "sequential_fence_signaller.h",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
@@ -36,7 +39,7 @@ executable("sequential_fence_signaller_unittest") {
     "test/util.h",
   ]
   deps = [
-    ":fence_utils",
+    ":utils",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/lib/fxl",
     "//src/lib/fxl:fxl_logging",

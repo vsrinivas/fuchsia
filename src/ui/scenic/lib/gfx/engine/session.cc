@@ -193,6 +193,8 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
 
     FXL_DCHECK(last_applied_update_presentation_time_ <= update.presentation_time);
 
+    // Should no longer receive any acquire fences, therefore they should always be ready.
+    FXL_DCHECK(update.acquire_fences->ready());
     if (!update.acquire_fences->ready()) {
       TRACE_INSTANT("gfx", "Session missed frame", TRACE_SCOPE_PROCESS, "session_id", id(),
                     "session_debug_name", debug_name_, "target presentation time",

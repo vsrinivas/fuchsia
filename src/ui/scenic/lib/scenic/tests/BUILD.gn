@@ -46,7 +46,10 @@ source_set("dummy_system") {
 executable("unittests") {
   output_name = "scenic_unittests"
   testonly = true
-  sources = [ "scenic_unittest.cc" ]
+  sources = [
+    "scenic_session_unittest.cc",
+    "scenic_unittest.cc",
+  ]
   deps = [
     ":dummy_system",
     ":testing_deps",
