@@ -49,6 +49,7 @@ rustc_library("trigger_capability") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
@@ -61,6 +62,7 @@ rustc_library("echo_capability") {
   edition = "2018"
   source_root = "echo_capability.rs"
   deps = [
+    ":breakpoint_system_client",
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    component_manager_lib::model::error::ModelError,
-    fidl::{endpoints::ServerEnd, Channel},
+    async_trait::async_trait,
+    breakpoint_system_client::Injector,
     fidl_fuchsia_test_workscheduler as fws,
-    fuchsia_async::{self as fasync, Time, Timer},
-    fuchsia_zircon as zx,
+    fuchsia_async::{Time, Timer},
     futures::{
         channel::*,
         future::{select_all, BoxFuture},
@@ -19,6 +18,7 @@ use {
         convert::TryInto,
         error::Error,
         fmt::{self as fmt, Display, Formatter},
+        sync::Arc,
         time::Duration,
     },
 };
@@ -63,9 +63,9 @@ pub struct WorkSchedulerDispatchReporter {
 }
 
 impl WorkSchedulerDispatchReporter {
-    pub fn new() -> Self {
+    pub fn new() -> Arc<Self> {
         let (tx, rx) = mpsc::channel(0);
-        Self { dispatched_tx: tx, dispatched_rx: Mutex::new(rx) }
+        Arc::new(Self { dispatched_tx: tx, dispatched_rx: Mutex::new(rx) })
     }
 
     pub async fn wait_for_dispatched(&self, timeout: Duration) -> Result<DispatchedEvent, Timeout> {
@@ -90,44 +90,32 @@ impl WorkSchedulerDispatchReporter {
         let mut rx = self.dispatched_rx.lock().await;
         DispatchTimeout::Dispatched(rx.next().await.unwrap())
     }
+}
 
-    /// Serves the server end of the WorkSchedulerDispatchReporter FIDL protocol asynchronously.
-    pub fn serve_async(&self) -> Box<dyn Fn(Channel) + Send> {
-        let tx = self.dispatched_tx.clone();
-        Box::new(move |channel| {
-            let tx = tx.clone();
-            fasync::spawn(async move {
-                let _ = Self::serve(tx, channel).await;
-            })
-        })
-    }
+#[async_trait]
+impl Injector for WorkSchedulerDispatchReporter {
+    type Marker = fws::WorkSchedulerDispatchReporterMarker;
 
-    pub async fn serve(
-        mut tx: mpsc::Sender<DispatchedEvent>,
-        server_end: zx::Channel,
-    ) -> Result<(), ModelError> {
-        let mut stream = ServerEnd::<fws::WorkSchedulerDispatchReporterMarker>::new(server_end)
-            .into_stream()
-            .expect("could not convert channel into stream");
-        fasync::spawn(async move {
-            while let Some(Ok(request)) = stream.next().await {
-                match request {
-                    fws::WorkSchedulerDispatchReporterRequest::OnDoWorkCalled {
-                        work_id,
-                        responder,
-                    } => {
-                        // Complete the exchange with the client before notifying the integration
-                        // test of the report. This prevents the client from behing hung up on by
-                        // the integration test if asserting that the report has arrived is the last
-                        // step before the integration test completes.
+    async fn serve(
+        self: Arc<Self>,
+        mut request_stream: fws::WorkSchedulerDispatchReporterRequestStream,
+    ) {
+        while let Some(Ok(request)) = request_stream.next().await {
+            match request {
+                fws::WorkSchedulerDispatchReporterRequest::OnDoWorkCalled {
+                    work_id,
+                    responder,
+                } => {
+                    // Complete the exchange with the client before notifying the integration
+                    // test of the report. This prevents the client from behing hung up on by
+                    // the integration test if asserting that the report has arrived is the last
+                    // step before the integration test completes.
 
-                        // TODO(markdittmer): Do something with on_do_work_called errors.
-                        responder.send().unwrap();
-                        tx.send(DispatchedEvent::new(work_id)).await.unwrap();
-                    }
+                    // TODO(markdittmer): Do something with on_do_work_called errors.
+                    responder.send().unwrap();
+                    self.dispatched_tx.clone().send(DispatchedEvent::new(work_id)).await.unwrap();
                 }
             }
-        });
-        Ok(())
+        }
     }
 }

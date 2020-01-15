@@ -9,16 +9,18 @@ use {
     fidl_fuchsia_io::{OPEN_FLAG_DIRECTORY, OPEN_FLAG_POSIX},
     fidl_fuchsia_test_breakpoints as fbreak, fidl_fuchsia_test_hub as fhub,
     fuchsia_async as fasync,
+    futures::{channel::mpsc, StreamExt},
     hub_report_capability::*,
     io_util::*,
-    std::path::PathBuf,
+    std::{path::PathBuf, sync::Arc},
     test_utils::*,
 };
 
 pub struct TestRunner {
     pub test: BlackBoxTest,
     external_hub_v2_path: PathBuf,
-    hub_report_capability: HubReportCapability,
+    hub_report_capability: Arc<HubReportCapability>,
+    channel_close_rx: mpsc::Receiver<()>,
     _breakpoint_system: BreakpointSystemClient,
 }
 
@@ -36,7 +38,7 @@ impl TestRunner {
 
         let test = BlackBoxTest::default(root_component_url).await?;
 
-        let hub_report_capability = HubReportCapability::new();
+        let (hub_report_capability, channel_close_rx) = HubReportCapability::new();
 
         let (breakpoint_system, receiver) = {
             // Register temporary receivers for StartInstance and RouteFrameworkCapability.
@@ -77,7 +79,7 @@ impl TestRunner {
                 )
                 .await?;
 
-            invocation.inject(hub_report_capability.serve_async()).await?;
+            invocation.inject(hub_report_capability.clone()).await?;
             invocation.resume().await?;
 
             // Return the receiver to be used later
@@ -90,6 +92,7 @@ impl TestRunner {
             test,
             external_hub_v2_path,
             hub_report_capability,
+            channel_close_rx,
             _breakpoint_system: breakpoint_system,
         };
 
@@ -191,8 +194,8 @@ impl TestRunner {
         assert_eq!(expected_content, actual_content);
     }
 
-    pub async fn wait_for_component_stop(self) {
-        self.hub_report_capability.wait_for_channel_close().await;
+    pub async fn wait_for_component_stop(mut self) {
+        self.channel_close_rx.next().await.expect("component stop channel has been closed");
     }
 }
 

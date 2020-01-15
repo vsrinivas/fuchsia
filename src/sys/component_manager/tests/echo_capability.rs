@@ -4,9 +4,9 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::ServerEnd,
-    fidl::Channel,
-    fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
+    async_trait::async_trait,
+    breakpoint_system_client::Injector,
+    fidl_fidl_examples_routing_echo as fecho,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt, TryStreamExt},
     std::sync::Arc,
 };
@@ -68,36 +68,30 @@ pub struct EchoCapability {
 }
 
 impl EchoCapability {
-    pub fn new() -> (Self, EchoReceiver) {
+    pub fn new() -> (Arc<Self>, EchoReceiver) {
         let (tx, rx) = mpsc::channel(0);
         let sender = EchoSender::new(tx);
         let receiver = EchoReceiver::new(rx);
-        (Self { tx: sender }, receiver)
+        (Arc::new(Self { tx: sender }), receiver)
     }
+}
 
-    pub fn serve(&self, mut stream: fecho::EchoRequestStream) {
-        let sender = self.tx.clone();
-        fasync::spawn(async move {
-            while let Some(event) = stream.try_next().await.expect("failed to serve echo service") {
-                let fecho::EchoRequest::EchoString { value, responder } = event;
-                let echo = sender
-                    .send(value.clone().unwrap_or(String::new()))
-                    .await
-                    .expect("failed to send echo to test");
-                echo.await.expect("Failed to receive a response");
-                responder.send(value.as_deref()).expect("failed to send echo response");
-            }
-        });
-    }
+#[async_trait]
+impl Injector for EchoCapability {
+    type Marker = fecho::EchoMarker;
 
-    pub fn serve_async(&self) -> Box<dyn Fn(Channel) + Send> {
-        let this = self.clone();
-        Box::new(move |channel| {
-            let stream = ServerEnd::<fecho::EchoMarker>::new(channel)
-                .into_stream()
-                .expect("could not convert channel into stream");
-            let that = this.clone();
-            that.serve(stream);
-        })
+    async fn serve(self: Arc<Self>, mut request_stream: fecho::EchoRequestStream) {
+        while let Some(event) =
+            request_stream.try_next().await.expect("failed to serve echo service")
+        {
+            let fecho::EchoRequest::EchoString { value, responder } = event;
+            let echo = self
+                .tx
+                .send(value.clone().unwrap_or(String::new()))
+                .await
+                .expect("failed to send echo to test");
+            echo.await.expect("Failed to receive a response");
+            responder.send(value.as_deref()).expect("failed to send echo response");
+        }
     }
 }

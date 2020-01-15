@@ -4,15 +4,14 @@
 
 use {
     anyhow::{Context as _, Error},
+    async_trait::async_trait,
     breakpoint_system_client::*,
-    fidl::endpoints::ServerEnd,
-    fidl::Channel,
     fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::StreamExt,
     io_util::{self, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     lazy_static::lazy_static,
-    std::path::PathBuf,
+    std::{path::PathBuf, sync::Arc},
     test_utils::*,
 };
 
@@ -110,10 +109,11 @@ async fn storage_from_collection() -> Result<(), Error> {
     check_storage(memfs_path.clone(), data_path, "coll:storage_user:1").await?;
 
     // The root component connects to the Trigger service to start the dynamic child
+    let trigger_capability = TriggerCapability::new();
     let invocation = bind_receiver
         .wait_until_framework_capability(".", "/svc/fidl.test.components.Trigger", Some("."))
         .await?;
-    invocation.inject(serve_trigger_capability_async()).await?;
+    invocation.inject(trigger_capability).await?;
     invocation.resume().await?;
 
     // Expect the dynamic child to be destroyed
@@ -132,17 +132,23 @@ async fn storage_from_collection() -> Result<(), Error> {
     Ok(())
 }
 
-fn serve_trigger_capability_async() -> Box<dyn Fn(Channel) + Send> {
-    Box::new(|channel| {
-        let mut stream = ServerEnd::<ftest::TriggerMarker>::new(channel)
-            .into_stream()
-            .expect("could not convert channel into stream");
-        fasync::spawn(async move {
-            while let Some(Ok(ftest::TriggerRequest::Run { responder })) = stream.next().await {
-                responder.send().unwrap();
-            }
-        })
-    })
+struct TriggerCapability;
+
+impl TriggerCapability {
+    fn new() -> Arc<Self> {
+        Arc::new(Self {})
+    }
+}
+
+#[async_trait]
+impl Injector for TriggerCapability {
+    type Marker = ftest::TriggerMarker;
+
+    async fn serve(self: Arc<Self>, mut request_stream: ftest::TriggerRequestStream) {
+        while let Some(Ok(ftest::TriggerRequest::Run { responder })) = request_stream.next().await {
+            responder.send().unwrap();
+        }
+    }
 }
 
 async fn check_storage(

@@ -45,7 +45,7 @@ async fn basic_work_scheduler_test() -> Result<(), Error> {
     let invocation = route_receiver
         .wait_until_framework_capability(".", WORK_SCHEDULER_DISPATCH_REPORTER, Some("."))
         .await?;
-    invocation.inject(work_scheduler_dispatch_reporter.serve_async()).await?;
+    invocation.inject(work_scheduler_dispatch_reporter.clone()).await?;
     invocation.resume().await?;
 
     let dispatched_event = work_scheduler_dispatch_reporter
@@ -92,7 +92,7 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
             Some("./worker_child:0"),
         )
         .await?;
-    invocation.inject(work_scheduler_dispatch_reporter.serve_async()).await?;
+    invocation.inject(work_scheduler_dispatch_reporter.clone()).await?;
     invocation.resume().await?;
 
     let dispatched_event = work_scheduler_dispatch_reporter

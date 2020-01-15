@@ -57,7 +57,7 @@ fn main() {
     let mut fs = ServiceFs::new_local();
     let (capability, receiver) = TriggerCapability::new();
     fs.dir("svc").add_fidl_service(move |stream| {
-        capability.serve_async(stream);
+        capability.clone().serve_async(stream);
     });
     fs.take_and_serve_directory_handle().expect("failed to serve outgoing directory");
     let fut = async move {

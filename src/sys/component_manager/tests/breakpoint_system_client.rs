@@ -206,6 +206,22 @@ impl Handler for fbreak::Invocation {
     }
 }
 
+/// An Injector allows a test to implement a protocol to be used by a component.
+///
+/// Client <---> Injector
+#[async_trait]
+pub trait Injector: Sync + Send {
+    type Marker: ServiceMarker;
+
+    /// This function will be run in a spawned task when a client attempts
+    /// to connect to the service being injected. `request_stream` is a stream of
+    /// requests coming in from the client.
+    async fn serve(
+        self: Arc<Self>,
+        mut request_stream: <<Self as Injector>::Marker as ServiceMarker>::RequestStream,
+    );
+}
+
 /// An Interposer allows a test to sit between a service and a client
 /// and mutate or silently observe messages being passed between them.
 ///
@@ -215,12 +231,12 @@ pub trait Interposer: Sync + Send {
     type Marker: ServiceMarker;
 
     /// This function will be run asynchronously when a client attempts
-    /// to connect to the service being interposed. `from_client` is a stream of
+    /// to connect to the service being interposed. `request_stream` is a stream of
     /// requests coming in from the client and `to_service` is a proxy to the
     /// real service.
     async fn interpose(
         self: Arc<Self>,
-        mut from_client: <<Self as Interposer>::Marker as ServiceMarker>::RequestStream,
+        mut request_stream: <<Self as Interposer>::Marker as ServiceMarker>::RequestStream,
         to_service: <<Self as Interposer>::Marker as ServiceMarker>::Proxy,
     );
 }
@@ -239,38 +255,40 @@ pub trait RoutingProtocol {
         proxy.set_provider(client_end).await
     }
 
-    /// Creates a capability provider on behalf of the client.
-    /// When an Open request is received, runs the closure provided.
+    /// Set an Injector for the given capability.
     #[must_use = "futures do nothing unless you await on them!"]
-    async fn inject<F: 'static>(&self, serving_fn: F) -> Result<(), fidl::Error>
+    async fn inject<I: 'static>(&self, injector: Arc<I>) -> Result<(), fidl::Error>
     where
-        F: Fn(Channel) + Send,
+        I: Injector,
     {
         // Create the CapabilityProvider channel
-        let (client_end, mut capability_stream) =
+        let (provider_client_end, mut provider_capability_stream) =
             create_request_stream::<fbreak::CapabilityProviderMarker>()
                 .expect("Could not create request stream for CapabilityProvider");
 
-        // For an open requests, run the serving_fn
+        // Wait for an Open request on the CapabilityProvider channel
         fasync::spawn(async move {
             if let Some(Ok(fbreak::CapabilityProviderRequest::Open { server_end, responder })) =
-                capability_stream.next().await
+                provider_capability_stream.next().await
             {
-                // Begin serving the capability. It is assumed this function
-                // serves the capability asynchronously. If that is not the case,
-                // component manager will not be unblocked from the open request
-                // and the system will hang.
-                serving_fn(server_end);
-
                 // Unblock component manager from the open request
                 responder.send().expect("Could not respond to CapabilityProvider::Open");
+
+                // Create the stream for the Client <---> Interposer connection
+                let stream = ServerEnd::<I::Marker>::new(server_end)
+                    .into_stream()
+                    .expect("could not convert channel into stream");
+
+                injector.serve(stream).await;
             } else {
-                panic!("Failed to inject! CapabilityProvider was not able to invoke Open");
+                panic!(
+                    "Failed to inject capability! CapabilityProvider was not able to invoke Open"
+                );
             }
         });
 
         // Send the client end of the CapabilityProvider protocol
-        self.protocol_proxy().set_provider(client_end).await
+        self.protocol_proxy().set_provider(provider_client_end).await
     }
 
     /// Set an Interposer for the given capability.

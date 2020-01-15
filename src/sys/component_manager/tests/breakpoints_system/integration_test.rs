@@ -117,7 +117,7 @@ async fn scoped_breakpoints_test() -> Result<(), Error> {
 
         // Setup the echo capability.
         let (capability, echo_rx) = EchoCapability::new();
-        invocation.inject(capability.serve_async()).await?;
+        invocation.inject(capability).await?;
         invocation.resume().await?;
 
         echo_rx
