@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/far/manifest.h"
+#include "src/sys/pkg/lib/far/manifest.h"
 
 #include <stdio.h>
 
-#include "garnet/lib/far/archive_entry.h"
-#include "garnet/lib/far/archive_writer.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/sys/pkg/lib/far/archive_entry.h"
+#include "src/sys/pkg/lib/far/archive_writer.h"
 
 namespace archive {
 

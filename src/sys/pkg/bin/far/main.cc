@@ -9,11 +9,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "garnet/lib/far/archive_reader.h"
-#include "garnet/lib/far/archive_writer.h"
-#include "garnet/lib/far/manifest.h"
-#include "src/lib/fxl/command_line.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/sys/pkg/lib/far/archive_reader.h"
+#include "src/sys/pkg/lib/far/archive_writer.h"
+#include "src/sys/pkg/lib/far/manifest.h"
 
 namespace archive {
 
@@ -66,7 +66,7 @@ int Create(const fxl::CommandLine& command_line) {
       return -1;
   }
   fbl::unique_fd fd(open(archive_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
-                        S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH));
+                         S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH));
   if (!fd.is_valid())
     return -1;
   return writer.Write(fd.get()) ? 0 : -1;

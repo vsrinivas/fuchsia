@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/far/far.h"
+#include "src/sys/pkg/lib/far/far.h"
 
-#include "garnet/lib/far/archive_reader.h"
+#include "src/sys/pkg/lib/far/archive_reader.h"
 
 struct far_reader {
   archive::ArchiveReader* impl;

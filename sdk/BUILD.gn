@@ -162,8 +162,8 @@ sdk_molecule("core_tools") {
 
   cross_compiled = [
     "tools:symbolize_sdk",
-    "//garnet/bin/far:bin_sdk",
     "//garnet/go/src/fidl:fidlgen_sdk",
+    "//src/sys/pkg/bin/far:bin_sdk",
     "//src/sys/pkg/bin/pm:pm_bin_sdk",
     "//tools/net/dev_finder:dev_finder_sdk",
     "//tools/net/dev_finder:device-finder_sdk",

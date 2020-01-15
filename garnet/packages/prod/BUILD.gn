@@ -678,8 +678,8 @@ group("wlanphy") {
 group("far") {
   testonly = true
   public_deps = [
-    "//garnet/bin/far",
-    "//garnet/bin/far:host",
+    "//src/sys/pkg/bin/far",
+    "//src/sys/pkg/bin/far:host",
   ]
 }
 

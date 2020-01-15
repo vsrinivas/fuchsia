@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/far/file_operations.h"
+#include "src/sys/pkg/lib/far/file_operations.h"
 
 #include <fcntl.h>
 
-#include "garnet/lib/far/alignment.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/sys/pkg/lib/far/alignment.h"
 
 namespace archive {
 

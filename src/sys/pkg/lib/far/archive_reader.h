@@ -7,9 +7,9 @@
 
 #include <vector>
 
-#include "garnet/lib/far/format.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/sys/pkg/lib/far/format.h"
 
 namespace archive {
 
