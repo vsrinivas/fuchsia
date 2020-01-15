@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("test-exceptions") {
+  sdk = "shared"
+  sdk_headers = [ "lib/test-exceptions/exception-catcher.h" ]
   testonly = true
   shared = true
   sources = [ "exception-catcher.cc" ]

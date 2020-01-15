@@ -3,6 +3,11 @@
 # found in the LICENSE file.
 
 zx_library("fs-host") {
+  sdk = "source"
+  sdk_headers = [
+    "fs-host/common.h",
+    "fs-host/file_size_recorder.h",
+  ]
   host = true
   sources = [
     "common.cc",

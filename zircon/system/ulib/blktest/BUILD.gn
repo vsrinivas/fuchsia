@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("blktest") {
+  sdk = "shared"
+  sdk_headers = [ "blktest/blktest.h" ]
   shared = true
   testonly = true
   sources = [ "blktest.cc" ]

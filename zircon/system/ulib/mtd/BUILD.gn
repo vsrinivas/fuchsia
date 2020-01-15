@@ -5,6 +5,11 @@
 # This library requires an environment with mtd/mtd-user.h and MTD support.
 
 zx_library("mtd") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/mtd/mtd-interface.h",
+    "lib/mtd/nand-interface.h",
+  ]
   host = true
 
   if (current_os == "linux") {

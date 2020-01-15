@@ -7,6 +7,11 @@
 # This library requires an environment with mtd/mtd-user.h and MTD support.
 
 zx_library("nand-redundant-storage") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/nand-redundant-storage/nand-redundant-storage-interface.h",
+    "lib/nand-redundant-storage/nand-redundant-storage.h",
+  ]
   host = true
 
   if (current_os == "linux") {

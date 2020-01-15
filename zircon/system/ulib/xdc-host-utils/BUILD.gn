@@ -3,6 +3,11 @@
 # found in the LICENSE file.
 
 zx_library("xdc-host-utils") {
+  sdk = "source"
+  sdk_headers = [
+    "xdc-host-utils/client.h",
+    "xdc-host-utils/conn.h",
+  ]
   host = true
   sources = [ "client.cc" ]
   deps = [ "$zx/system/ulib/fbl" ]

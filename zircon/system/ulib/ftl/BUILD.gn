@@ -3,6 +3,11 @@
 # found in the LICENSE file.
 
 zx_library("ftl") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/ftl/ndm-driver.h",
+    "lib/ftl/volume.h",
+  ]
   host = true
 
   sources = [

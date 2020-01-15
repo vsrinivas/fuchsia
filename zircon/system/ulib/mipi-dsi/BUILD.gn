@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("mipi-dsi") {
+  sdk = "source"
+  sdk_headers = [ "lib/mipi-dsi/mipi-dsi.h" ]
   sources = [ "mipi-dsi.cc" ]
   deps = [ "$zx/system/banjo/ddk.protocol.dsiimpl" ]
 }

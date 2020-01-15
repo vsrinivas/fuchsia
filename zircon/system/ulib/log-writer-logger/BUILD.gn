@@ -3,6 +3,11 @@
 # found in the LICENSE file.
 
 zx_library("log-writer-logger") {
+  sdk = "shared"
+  sdk_headers = [
+    "lib/log-writer-logger/log-writer-logger.h",
+    "lib/log-writer-logger/wire_format.h",
+  ]
   shared = true
   host = true
   sources = [ "log-writer-logger.cc" ]

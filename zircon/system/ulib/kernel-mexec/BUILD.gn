@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("kernel-mexec") {
+  sdk = "source"
+  sdk_headers = [ "lib/kernel-mexec/kernel-mexec.h" ]
   sources = [ "kernel-mexec.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager:c",

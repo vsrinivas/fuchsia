@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("pci") {
+  sdk = "source"
+  sdk_headers = [ "pci/pio.h" ]
   sources = [ "pio.cc" ]
   deps = [
     "$zx/system/ulib/ddk",

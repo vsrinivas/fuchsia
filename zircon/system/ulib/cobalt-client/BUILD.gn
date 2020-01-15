@@ -43,6 +43,18 @@ source_set("metrics") {
 }
 
 zx_library("cobalt-client") {
+  sdk = "source"
+  sdk_headers = [
+    "cobalt-client/cpp/histogram_internal.h",
+    "cobalt-client/cpp/collector.h",
+    "cobalt-client/cpp/counter.h",
+    "cobalt-client/cpp/in_memory_logger.h",
+    "cobalt-client/cpp/collector_internal.h",
+    "cobalt-client/cpp/types_internal.h",
+    "cobalt-client/cpp/histogram.h",
+    "cobalt-client/cpp/counter_internal.h",
+    "cobalt-client/cpp/metric_options.h",
+  ]
   sources = []
   public_deps = [
     ":collector",
@@ -52,6 +64,18 @@ zx_library("cobalt-client") {
 
 # This library may only be imported from tests.
 zx_library("in-memory-logger") {
+  sdk = "source"
+  sdk_headers = [
+    "cobalt-client/cpp/histogram_internal.h",
+    "cobalt-client/cpp/collector.h",
+    "cobalt-client/cpp/counter.h",
+    "cobalt-client/cpp/in_memory_logger.h",
+    "cobalt-client/cpp/collector_internal.h",
+    "cobalt-client/cpp/types_internal.h",
+    "cobalt-client/cpp/histogram.h",
+    "cobalt-client/cpp/counter_internal.h",
+    "cobalt-client/cpp/metric_options.h",
+  ]
   testonly = true
   sources = [ "in_memory_logger.cc" ]
   public_deps = [ ":metrics" ]

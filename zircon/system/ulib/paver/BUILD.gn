@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("paver") {
+  sdk = "source"
+  sdk_headers = [ "lib/paver/provider.h" ]
   sources = [
     "abr-client.cc",
     "abr.cc",

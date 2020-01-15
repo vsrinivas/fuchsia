@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("simplehid") {
+  sdk = "source"
+  sdk_headers = [ "lib/simplehid/simplehid.h" ]
   sources = []
   public_deps = [
     # <lib/simplehid/simplehid.h> has #include <ddktl/protocol/hidbus.h>.

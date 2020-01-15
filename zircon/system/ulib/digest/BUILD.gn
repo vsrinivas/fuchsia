@@ -3,6 +3,13 @@
 # found in the LICENSE file.
 
 zx_library("digest") {
+  sdk = "source"
+  sdk_headers = [
+    "digest/hash-list.h",
+    "digest/merkle-tree.h",
+    "digest/digest.h",
+    "digest/node-digest.h",
+  ]
   host = true
 
   sources = [

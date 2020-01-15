@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("refcount") {
+  sdk = "source"
+  sdk_headers = [ "refcount/blocking_refcount.h" ]
   sources = [ "blocking_refcount.cc" ]
   public_deps = [
     "$zx/system/ulib/sync",

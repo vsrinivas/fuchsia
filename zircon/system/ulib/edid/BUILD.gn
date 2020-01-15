@@ -3,6 +3,11 @@
 # found in the LICENSE file.
 
 zx_library("edid") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/edid/edid.h",
+    "lib/edid/timings.h",
+  ]
   sources = [
     "edid.cc",
     "eisa_vid_lut.cc",

@@ -44,6 +44,15 @@ zx_library("block-client") {
 }
 
 zx_library("fake-device") {
+  sdk = "source"
+  sdk_headers = [
+    "block-client/client.h",
+    "block-client/cpp/block-device.h",
+    "block-client/cpp/remote-block-device.h",
+    "block-client/cpp/fake-device.h",
+    "block-client/cpp/block-group-registry.h",
+    "block-client/cpp/client.h",
+  ]
   testonly = true
   sources = [ "fake-device.cc" ]
   public_deps = [

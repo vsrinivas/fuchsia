@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("abs_clock") {
+  sdk = "source"
+  sdk_headers = [ "abs_clock/clock.h" ]
   sources = [ "clock.cc" ]
   deps = [
     "$zx/system/ulib/fbl",

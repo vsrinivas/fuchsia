@@ -3,6 +3,15 @@
 # found in the LICENSE file.
 
 zx_library("buffer") {
+  sdk = "source"
+  sdk_headers = [
+    "storage/buffer/block_buffer_view.h",
+    "storage/buffer/block_buffer.h",
+    "storage/buffer/blocking_ring_buffer.h",
+    "storage/buffer/ring_buffer.h",
+    "storage/buffer/vmo_buffer.h",
+    "storage/buffer/vmoid_registry.h",
+  ]
   host = true
   sources = []
   static = true

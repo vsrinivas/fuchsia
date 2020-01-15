@@ -5,6 +5,11 @@
 import("$zx_build/public/gn/package.gni")
 
 zx_library("fs-pty") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/fs-pty/tty-connection-internal.h",
+    "lib/fs-pty/service.h",
+  ]
   static = true
 
   sources = []

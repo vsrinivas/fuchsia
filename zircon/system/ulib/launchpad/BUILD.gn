@@ -3,6 +3,11 @@
 # found in the LICENSE file.
 
 zx_library("launchpad") {
+  sdk = "shared"
+  sdk_headers = [
+    "launchpad/vmo.h",
+    "launchpad/launchpad.h",
+  ]
   shared = true
   sources = [
     "elf.c",

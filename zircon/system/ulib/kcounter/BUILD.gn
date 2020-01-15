@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("kcounter") {
+  sdk = "source"
+  sdk_headers = [ "lib/kcounter/provider.h" ]
   sources = [
     "kcounter.cc",
     "provider.cc",

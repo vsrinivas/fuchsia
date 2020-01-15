@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("kernel-debug") {
+  sdk = "source"
+  sdk_headers = [ "lib/kernel-debug/kernel-debug.h" ]
   sources = [ "kernel-debug.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-kernel:c",

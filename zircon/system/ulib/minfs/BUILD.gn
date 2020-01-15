@@ -2,6 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 zx_library("minfs") {
+  sdk = "source"
+  sdk_headers = [
+    "minfs/fsck.h",
+    "minfs/bcache.h",
+    "minfs/superblock.h",
+    "minfs/inspector.h",
+    "minfs/writeback.h",
+    "minfs/transaction-limits.h",
+    "minfs/allocator-reservation.h",
+    "minfs/format.h",
+    "minfs/mutex.h",
+    "minfs/minfs.h",
+    "minfs/host.h",
+    "minfs/metrics.h",
+    "minfs/pending-work.h",
+  ]
   host = true
   static = true
   sources = [

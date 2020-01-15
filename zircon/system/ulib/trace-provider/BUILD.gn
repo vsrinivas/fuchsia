@@ -15,6 +15,15 @@
 
 template("trace_provider_library") {
   zx_library(target_name) {
+    sdk = "source"
+    sdk_headers = [
+      "lib/trace-provider/fdio_connect.h",
+      "lib/trace-provider/handler.h",
+      "lib/trace-provider/provider.h",
+      "trace-provider/fdio_connect.h",
+      "trace-provider/handler.h",
+      "trace-provider/provider.h",
+    ]
     forward_variables_from(invoker, "*")
 
     if (defined(extra_configs)) {

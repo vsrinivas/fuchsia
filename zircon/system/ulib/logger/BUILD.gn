@@ -3,6 +3,11 @@
 # found in the LICENSE file.
 
 zx_library("logger") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/logger/provider.h",
+    "lib/logger/logger.h",
+  ]
   sources = [
     "logger.cc",
     "provider.cc",

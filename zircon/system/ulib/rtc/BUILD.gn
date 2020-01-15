@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("rtc") {
+  sdk = "source"
+  sdk_headers = [ "librtc.h" ]
   sources = [ "librtc.c" ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-rtc:c",

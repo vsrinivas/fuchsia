@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("region-alloc") {
+  sdk = "source"
+  sdk_headers = [ "region-alloc/region-alloc.h" ]
   kernel = true
   static = true
   sources = [

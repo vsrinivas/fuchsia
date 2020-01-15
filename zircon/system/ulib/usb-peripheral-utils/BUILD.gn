@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("usb-peripheral-utils") {
+  sdk = "shared"
+  sdk_headers = [ "lib/usb-peripheral-utils/event-watcher.h" ]
   shared = true
   sources = [ "event-watcher.cc" ]
   public_deps = [

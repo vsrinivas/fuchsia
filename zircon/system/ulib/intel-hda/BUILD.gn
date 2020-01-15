@@ -3,6 +3,21 @@
 # found in the LICENSE file.
 
 zx_library("intel-hda") {
+  sdk = "source"
+  sdk_headers = [
+    "intel-hda/utils/status_or.h",
+    "intel-hda/utils/codec-commands.h",
+    "intel-hda/utils/codec-caps.h",
+    "intel-hda/utils/utils.h",
+    "intel-hda/utils/intel-hda-proto.h",
+    "intel-hda/utils/status.h",
+    "intel-hda/utils/intel-audio-dsp-ipc.h",
+    "intel-hda/utils/nhlt.h",
+    "intel-hda/utils/codec-state.h",
+    "intel-hda/utils/intel-hda-registers.h",
+    "intel-hda/codec-utils/stream-base.h",
+    "intel-hda/codec-utils/codec-driver-base.h",
+  ]
   sources = [
     "codec-utils/codec-driver-base.cc",
     "codec-utils/stream-base.cc",

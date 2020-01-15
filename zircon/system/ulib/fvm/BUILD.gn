@@ -3,6 +3,14 @@
 # found in the LICENSE file.
 
 zx_library("fvm") {
+  sdk = "source"
+  sdk_headers = [
+    "fvm/sparse-reader.h",
+    "fvm/client.h",
+    "fvm/format.h",
+    "fvm/fvm-sparse.h",
+    "fvm/fvm-check.h",
+  ]
   host = true
   sources = [
     "format.cc",

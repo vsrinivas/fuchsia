@@ -3,6 +3,14 @@
 # found in the LICENSE file.
 
 zx_library("fvm-host") {
+  sdk = "source"
+  sdk_headers = [
+    "fvm-host/file-wrapper.h",
+    "fvm-host/container.h",
+    "fvm-host/format.h",
+    "fvm-host/fvm-info.h",
+    "fvm-host/sparse-paver.h",
+  ]
   host = true
   sources = [
     "container/container.cc",

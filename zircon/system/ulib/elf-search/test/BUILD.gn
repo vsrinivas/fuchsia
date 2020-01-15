@@ -8,6 +8,8 @@ group("test") {
 }
 
 zx_library("elf") {
+  sdk = "source"
+  sdk_headers = [ "elf/elf.h" ]
   sources = [ "elf.c" ]
   deps = [
     "$zx/system/ulib/elfload",

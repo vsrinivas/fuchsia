@@ -3,6 +3,15 @@
 # found in the LICENSE file.
 
 zx_library("io-scheduler") {
+  sdk = "source"
+  sdk_headers = [
+    "io-scheduler/queue.h",
+    "io-scheduler/stream.h",
+    "io-scheduler/worker.h",
+    "io-scheduler/scheduler-client.h",
+    "io-scheduler/stream-op.h",
+    "io-scheduler/io-scheduler.h",
+  ]
   static = true
   sources = [
     "queue.cc",

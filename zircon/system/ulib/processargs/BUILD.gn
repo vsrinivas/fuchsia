@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("processargs") {
+  sdk = "source"
+  sdk_headers = [ "lib/processargs/processargs.h" ]
   sources = [ "processargs.c" ]
 
   deps = [ "$zx/system/ulib/zircon" ]

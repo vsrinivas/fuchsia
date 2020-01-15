@@ -3,6 +3,12 @@
 # found in the LICENSE file.
 
 zx_library("disk-inspector") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/disk-inspector/inspector-transaction-handler.h",
+    "lib/disk-inspector/common-types.h",
+    "lib/disk-inspector/disk-inspector.h",
+  ]
   static = true
   sources = [ "disk-inspector.cc" ]
   public_deps = [ "$zx/system/ulib/fbl:headers" ]

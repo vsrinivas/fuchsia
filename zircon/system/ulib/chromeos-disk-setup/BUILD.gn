@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("chromeos-disk-setup") {
+  sdk = "source"
+  sdk_headers = [ "chromeos-disk-setup/chromeos-disk-setup.h" ]
   sources = [ "chromeos-disk-setup.cc" ]
   public_deps = [ "$zx/system/fidl/fuchsia-hardware-block:c" ]
   deps = [

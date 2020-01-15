@@ -5,6 +5,8 @@
 import("$zx_build/public/gn/toolchain/environment_redirect.gni")
 
 zx_library("mini-process") {
+  sdk = "shared"
+  sdk_headers = [ "mini-process/mini-process.h" ]
   testonly = true
   shared = true
   sources = [ "mini-process.c" ]

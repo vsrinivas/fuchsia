@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("test_support") {
+  sdk = "source"
+  sdk_headers = [ "buffer/test_support/array_buffer.h" ]
   testonly = true
   sources = [ "array_buffer.cc" ]
   static = true

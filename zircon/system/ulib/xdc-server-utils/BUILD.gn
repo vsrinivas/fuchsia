@@ -3,6 +3,12 @@
 # found in the LICENSE file.
 
 zx_library("xdc-server-utils") {
+  sdk = "source"
+  sdk_headers = [
+    "xdc-server-utils/stream.h",
+    "xdc-server-utils/msg.h",
+    "xdc-server-utils/packet.h",
+  ]
   host = true
   sources = [ "packet.c" ]
 }

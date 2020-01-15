@@ -3,6 +3,11 @@
 # found in the LICENSE file.
 
 zx_library("ftl-mtd") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/ftl-mtd/nand-volume-driver.h",
+    "lib/ftl-mtd/ftl-volume-wrapper.h",
+  ]
   host = true
 
   sources = [
