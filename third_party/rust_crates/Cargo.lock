@@ -762,6 +762,7 @@ dependencies = [
  "time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "timebomb 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio-rustls 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing-futures 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing-subscriber 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",

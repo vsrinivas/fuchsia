@@ -556,6 +556,11 @@
             "package_name": "timebomb"
         },
         {
+            "crate_name": "tokio_rustls",
+            "crate_type": "lib",
+            "package_name": "tokio-rustls"
+        },
+        {
             "crate_name": "tracing",
             "crate_type": "lib",
             "package_name": "tracing"
