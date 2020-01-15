@@ -24,6 +24,7 @@ pub(crate) mod work_scheduler;
 
 mod builtin_capability;
 mod constants;
+mod log;
 mod process_launcher;
 mod root_job;
 mod root_resource;

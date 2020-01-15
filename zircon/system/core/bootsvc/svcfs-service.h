@@ -58,19 +58,6 @@ fbl::RefPtr<fs::Service> CreateFactoryItemsService(async_dispatcher_t* dispatche
 fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
                                             ItemMap map);
 
-// Create a service to provide a read-only version of the kernel log.
-// Note that the root resource is passed in here, rather than a read-only log handle to be
-// duplicated, because a fresh debuglog (LogDispatcher) object needs to be returned for each call.
-// This is because LogDispatcher holds the implicit read location for reading from the log, so if a
-// handle to the same object was duplicated, this would mistakenly share read location amongst all
-// retrievals.
-fbl::RefPtr<fs::Service> CreateReadOnlyLogService(async_dispatcher_t* dispatcher,
-                                                  const zx::resource& root_resource);
-
-// Create a service to provide a write-only version of the kernel log.
-fbl::RefPtr<fs::Service> CreateWriteOnlyLogService(async_dispatcher_t* dispatcher,
-                                                   const zx::debuglog& log);
-
 // A service that implements a fidl protocol to vend kernel statistics.
 class KernelStatsImpl : public llcpp::fuchsia::kernel::Stats::Interface {
  public:

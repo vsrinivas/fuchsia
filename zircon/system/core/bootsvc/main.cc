@@ -335,10 +335,6 @@ int main(int argc, char** argv) {
   svcfs_svc->AddService(
       fuchsia_boot_FactoryItems_Name,
       bootsvc::CreateFactoryItemsService(loop.dispatcher(), std::move(factory_item_map)));
-  svcfs_svc->AddService(fuchsia_boot_ReadOnlyLog_Name,
-                        bootsvc::CreateReadOnlyLogService(loop.dispatcher(), root_resource));
-  svcfs_svc->AddService(fuchsia_boot_WriteOnlyLog_Name,
-                        bootsvc::CreateWriteOnlyLogService(loop.dispatcher(), log));
   bootsvc::KernelStatsImpl kernel_stats(root_resource);
   svcfs_svc->AddService(llcpp::fuchsia::kernel::Stats::Name,
                         kernel_stats.CreateService(loop.dispatcher()));

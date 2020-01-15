@@ -98,44 +98,6 @@ constexpr fuchsia_boot_Items_ops kItemsOps = {
     .Get = ItemsGet,
 };
 
-zx_status_t ReadOnlyLogGet(void* ctx, fidl_txn_t* txn) {
-  auto root_resource = static_cast<const zx::resource*>(ctx);
-  zx::debuglog ret;
-  zx_status_t status = zx::debuglog::create(*root_resource, ZX_LOG_FLAG_READABLE, &ret);
-  if (status != ZX_OK) {
-    printf("bootsvc: Failed to create readable kernel log: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  // Drop write right.
-  status = ret.replace((ZX_DEFAULT_LOG_RIGHTS & (~ZX_RIGHT_WRITE)) | ZX_RIGHT_READ, &ret);
-  if (status != ZX_OK) {
-    printf("bootsvc: Failed to drop write from readable kernel log: %s\n",
-           zx_status_get_string(status));
-    return status;
-  }
-  return fuchsia_boot_ReadOnlyLogGet_reply(txn, ret.release());
-}
-
-constexpr fuchsia_boot_ReadOnlyLog_ops kReadOnlyLogOps = {
-    .Get = ReadOnlyLogGet,
-};
-
-zx_status_t WriteOnlyLogGet(void* ctx, fidl_txn_t* txn) {
-  auto log = static_cast<const zx::debuglog*>(ctx);
-  zx::debuglog dup;
-  zx_status_t status = log->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-  if (status != ZX_OK) {
-    printf("bootsvc: Failed to duplicate writable kernel log: %s\n", zx_status_get_string(status));
-    return status;
-  }
-  return fuchsia_boot_WriteOnlyLogGet_reply(txn, dup.release());
-}
-
-constexpr fuchsia_boot_WriteOnlyLog_ops kWriteOnlyLogOps = {
-    .Get = WriteOnlyLogGet,
-};
-
 }  // namespace
 
 namespace bootsvc {
@@ -182,24 +144,6 @@ fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::
         auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Items_dispatch);
         return fidl_bind(dispatcher, channel.release(), dispatch, &data, &kItemsOps);
       });
-}
-
-fbl::RefPtr<fs::Service> CreateReadOnlyLogService(async_dispatcher_t* dispatcher,
-                                                  const zx::resource& root_resource) {
-  return fbl::MakeRefCounted<fs::Service>([dispatcher, &root_resource](zx::channel channel) {
-    auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_ReadOnlyLog_dispatch);
-    return fidl_bind(dispatcher, channel.release(), dispatch,
-                     const_cast<zx::resource*>(&root_resource), &kReadOnlyLogOps);
-  });
-}
-
-fbl::RefPtr<fs::Service> CreateWriteOnlyLogService(async_dispatcher_t* dispatcher,
-                                                   const zx::debuglog& log) {
-  return fbl::MakeRefCounted<fs::Service>([dispatcher, &log](zx::channel channel) {
-    auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_WriteOnlyLog_dispatch);
-    return fidl_bind(dispatcher, channel.release(), dispatch, const_cast<zx::debuglog*>(&log),
-                     &kWriteOnlyLogOps);
-  });
 }
 
 fbl::RefPtr<fs::Service> KernelStatsImpl::CreateService(async_dispatcher_t* dispatcher) {

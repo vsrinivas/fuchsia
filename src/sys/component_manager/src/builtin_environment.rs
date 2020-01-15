@@ -6,6 +6,7 @@ use {
     crate::{
         builtin_capability::BuiltinCapability,
         framework::RealmCapabilityHost,
+        log::{ReadOnlyLog, WriteOnlyLog},
         model::{
             binding::Binder,
             breakpoints::core::BreakpointSystem,
@@ -34,7 +35,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::*,
     fuchsia_runtime::{take_startup_handle, HandleType},
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, HandleBased},
     futures::{lock::Mutex, stream::StreamExt},
     std::{
         collections::HashMap,
@@ -52,6 +53,8 @@ pub struct BuiltinEnvironment {
     pub process_launcher: Option<Arc<ProcessLauncher>>,
     pub root_job: Arc<RootJob>,
     pub root_job_for_inspect: Arc<RootJob>,
+    pub read_only_log: Option<Arc<ReadOnlyLog>>,
+    pub write_only_log: Option<Arc<WriteOnlyLog>>,
     pub root_resource: Option<Arc<RootResource>>,
     pub system_controller: Arc<SystemController>,
     pub vmex_service: Option<Arc<VmexService>>,
@@ -97,6 +100,22 @@ impl BuiltinEnvironment {
 
         let root_resource_handle =
             take_startup_handle(HandleType::Resource.into()).map(zx::Resource::from);
+
+        // Set up ReadOnlyLog service.
+        let read_only_log = root_resource_handle.as_ref().map(|handle| {
+            ReadOnlyLog::new(handle.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap())
+        });
+        if let Some(read_only_log) = read_only_log.as_ref() {
+            model.root_realm.hooks.install(read_only_log.hooks()).await;
+        }
+
+        // Set up WriteOnlyLog service.
+        let write_only_log = root_resource_handle.as_ref().map(|handle| {
+            WriteOnlyLog::new(zx::DebugLog::create(handle, zx::DebugLogOpts::empty()).unwrap())
+        });
+        if let Some(write_only_log) = write_only_log.as_ref() {
+            model.root_realm.hooks.install(write_only_log.hooks()).await;
+        }
 
         // Set up RootResource service.
         let root_resource = root_resource_handle.map(RootResource::new);
@@ -151,6 +170,8 @@ impl BuiltinEnvironment {
             process_launcher,
             root_job,
             root_job_for_inspect,
+            read_only_log,
+            write_only_log,
             root_resource,
             system_controller,
             vmex_service,

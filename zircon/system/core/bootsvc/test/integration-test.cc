@@ -39,25 +39,13 @@ static fbl::Vector<fbl::String> arguments;
 constexpr char kArgumentsPath[] = "/svc/" fuchsia_boot_Arguments_Name;
 constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
-constexpr char kReadOnlyLogPath[] = "/svc/" fuchsia_boot_ReadOnlyLog_Name;
-constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
 
 void print_test_success_string() {
   // Get the debuglog handle.
   // If any of these operations fail, there's nothing we can really do here, so
   // just move along.
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return;
-  }
-  status = fdio_service_connect(kWriteOnlyLogPath, remote.release());
-  if (status != ZX_OK) {
-    return;
-  }
-
   zx::debuglog log;
-  status = fuchsia_boot_WriteOnlyLogGet(local.get(), log.reset_and_get_address());
+  zx_status_t status = zx::debuglog::create(zx::resource(), 0, &log);
   if (status != ZX_OK) {
     return;
   }
@@ -309,60 +297,6 @@ bool TestBootItems() {
   END_TEST;
 }
 
-// Make sure the fuchsia.boot.WriteOnlyLog service works
-bool TestBootWriteOnlyLog() {
-  BEGIN_TEST;
-
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we can open the fuchsia.boot.WriteOnlyLog service.
-  status = fdio_service_connect(kWriteOnlyLogPath, remote.release());
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we received a debuglog from the service.
-  zx::debuglog log;
-  status = fuchsia_boot_WriteOnlyLogGet(local.get(), log.reset_and_get_address());
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_TRUE(log.is_valid());
-
-  // Check that the handle is writable and not readable.
-  zx_info_handle_basic_t info;
-  ASSERT_EQ(ZX_OK, log.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
-  ASSERT_TRUE(info.rights & ZX_RIGHT_WRITE);
-  ASSERT_FALSE(info.rights & ZX_RIGHT_READ);
-
-  END_TEST;
-}
-
-// Make sure the fuchsia.boot.ReadOnlyLog service works
-bool TestBootReadOnlyLog() {
-  BEGIN_TEST;
-
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we can open the fuchsia.boot.ReadOnlyLog service.
-  status = fdio_service_connect(kReadOnlyLogPath, remote.release());
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we received a debuglog from the service.
-  zx::debuglog log;
-  status = fuchsia_boot_ReadOnlyLogGet(local.get(), log.reset_and_get_address());
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_TRUE(log.is_valid());
-
-  // Check that the handle is readable and not writable.
-  zx_info_handle_basic_t info;
-  ASSERT_EQ(ZX_OK, log.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
-  ASSERT_TRUE(info.rights & ZX_RIGHT_READ);
-  ASSERT_FALSE(info.rights & ZX_RIGHT_WRITE);
-
-  END_TEST;
-}
-
 // Check that the kernel-provided VDSOs were added to /boot/kernel/vdso
 bool TestVdsosPresent() {
   BEGIN_TEST;
@@ -395,8 +329,6 @@ RUN_TEST(TestArguments)
 RUN_TEST(TestBootArguments)
 RUN_TEST(TestBootArgsFromImage)
 RUN_TEST(TestBootItems)
-RUN_TEST(TestBootReadOnlyLog)
-RUN_TEST(TestBootWriteOnlyLog)
 RUN_TEST(TestFactoryItems)
 RUN_TEST(TestVdsosPresent)
 END_TEST_CASE(bootsvc_integration_tests)
