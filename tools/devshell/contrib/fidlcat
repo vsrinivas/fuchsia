@@ -65,6 +65,10 @@
 ##    --remote-name        A set of comma-separated regexes. Fidlcat will monitor all existing
 ##                         and future processes whose names match one of the regexes.
 ##                         Can be provided multiple times for multiple regexes.
+##    --gdb                Launch fidlcat using gdb. This is only useful to be able to debug
+##                         fidlcat. When this option is used, the string you have to type within
+##                         gdb to launch fidlcat is printed and then, gdb is launched.
+##                         This option only works if you have the unstripped version of fidlcat.
 ##    run                  A token indicating that you want to invoke and trace
 ##                         the following component. The component is specified
 ##                         with either a bash regex that matches a component URL
@@ -110,20 +114,15 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../contrib/lib/debug.sh || exit $?
 
-agent_out="/dev/null"
 action=
+
+arguments=()
+
+use_gdb=0
+
+# Options for the zxdb client.
+agent_out="/dev/null"
 debug_mode=
-with_process_info=
-dump_messages=
-stack=
-syscalls=()
-verbose=
-quiet=
-log_file=
-remote_pids=()
-remote_names=()
-symbol_server=
-server_url=
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -136,42 +135,45 @@ while [[ $# -gt 0 ]]; do
       port="$1"
       ;;
     --with-symbol-server)
-      symbol_server="--symbol-server"
-      server_url="gs://fuchsia-infra-debug-symbols"
+      arguments+=("--symbol-server")
+      arguments+=("gs://fuchsia-infra-debug-symbols")
       ;;
     --debug-mode)
       agent_out="/dev/stdout"
       debug_mode="--debug-mode"
       ;;
     --with-process-info)
-      with_process_info="--with-process-info"
+      arguments+=("--with-process-info")
       ;;
     --dump-messages)
-      dump_messages="--dump-messages"
+      arguments+=("--dump-messages")
       ;;
     --stack=*)
-      stack="$1"
+      arguments+=("$1")
       ;;
     --syscalls=*)
-      syscalls+="$1 "
+      arguments+=("$1")
       ;;
     --exclude-syscalls=*)
-      syscalls+="$1 "
+      arguments+=("$1")
       ;;
     --verbose=*)
-      verbose="$1"
+      arguments+=("$1")
       ;;
     --quiet=*)
-      quiet="$1"
+      arguments+=("$1")
       ;;
     --log-file=*)
-      log_file="$1"
+      arguments+=("$1")
       ;;
     --remote-pid=*)
-      remote_pids+="$1 "
+      arguments+=("$1")
       ;;
     --remote-name=*)
-      remote_names+="$1 "
+      arguments+=("$1")
+      ;;
+    --gdb)
+      use_gdb=1
       ;;
     run)
       action="$1"
@@ -234,27 +236,22 @@ if [[ -z "${port}" ]]; then
 fi
 
 if launch_debug_agent; then
-  # We start the client with the flag that tells it to quit the agent when zxdb quits.
-  "${FUCHSIA_BUILD_DIR}/host-tools/fidlcat" \
-    "--connect" "[${target}]:${port}" \
-    "--fidl-ir-path" @"${FUCHSIA_BUILD_DIR}"/all_fidl_json.txt \
-    "-s" "${FUCHSIA_BUILD_DIR}" \
-    "-s" "${ZIRCON_BUILDROOT}" \
-    "-s" "${PREBUILT_CLANG_DIR}/lib/debug" \
-    "--symbol-cache" ~ \
-    --pretty-print \
-    ${symbol_server} \
-    ${server_url} \
-    ${with_process_info} \
-    ${dump_messages} \
-    ${stack} \
-    ${syscalls} \
-    ${verbose} \
-    ${quiet} \
-    ${log_file} \
-    ${remote_pids} \
-    ${remote_names} \
-    $@
+  arguments+=("--connect" "[${target}]:${port}")
+  arguments+=("--fidl-ir-path" @"${FUCHSIA_BUILD_DIR}"/all_fidl_json.txt)
+  arguments+=("-s" "${FUCHSIA_BUILD_DIR}")
+  arguments+=("-s" "${ZIRCON_BUILDROOT}")
+  arguments+=("-s" "${PREBUILT_CLANG_DIR}/lib/debug")
+  arguments+=("--symbol-cache" "~")
+  arguments+=("--pretty-print")
+  arguments+=("$@")
+
+  if [[ ${use_gdb} -eq 1 ]]; then
+    # Starts gdb.
+    gdb --args ${FUCHSIA_BUILD_DIR}/host_x64/exe.unstripped/fidlcat ${arguments[@]}
+  else
+    # Now that the debug agent is launched, starts fidlcat.
+    "${FUCHSIA_BUILD_DIR}/host-tools/fidlcat" ${arguments[@]}
+  fi
 else
   fx-error "Could not launch debug agent. Exiting."
   exit 1
