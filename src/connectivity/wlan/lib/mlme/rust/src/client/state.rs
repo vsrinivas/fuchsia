@@ -37,22 +37,6 @@ const ASSOC_TIMEOUT_BCN_PERIODS: u16 = 10;
 type HtOpByteArray = [u8; fidl_mlme::HT_OP_LEN as usize];
 type VhtOpByteArray = [u8; fidl_mlme::VHT_OP_LEN as usize];
 
-/// Processes an inbound deauthentication frame by issuing an MLME-DEAUTHENTICATE.indication
-/// to the STA's SME peer.
-trait DeauthenticationHandler {
-    /// Sends an MLME-DEAUTHENTICATE.indication message to MLME's SME peer.
-    fn on_deauth_frame(
-        &self,
-        sta: &mut BoundClient<'_>,
-        ctx: &mut Context,
-        deauth_hdr: &mac::DeauthHdr,
-    ) {
-        let reason_code = fidl_mlme::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
-            .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
-        sta.send_deauthenticate_ind(ctx, reason_code);
-    }
-}
-
 /// Client joined a BSS (synchronized timers and prepared its underlying hardware).
 /// At this point the Client is able to listen to frames on the BSS' channel.
 pub struct Joined;
@@ -119,20 +103,6 @@ impl Authenticating {
         }
     }
 
-    /// Invoked when the pending timeout fired. The original authentication request is now
-    /// considered to be expired and invalid - the authentication failed. As a consequence,
-    /// an MLME-AUTHENTICATION.confirm message is reported to MLME's SME peer indicating the
-    /// timeout.
-    fn on_timeout(&self, sta: &mut BoundClient<'_>, ctx: &mut Context) {
-        // At this point, the event should already be canceled by the state's owner. However,
-        // ensure the timeout is canceled in any case.
-        ctx.timer.cancel_event(self.timeout);
-
-        sta.send_authenticate_conf(ctx, fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout);
-    }
-}
-
-impl DeauthenticationHandler for Authenticating {
     /// Processes an inbound deauthentication frame.
     /// This always results in an MLME-AUTHENTICATE.confirm message to MLME's SME peer.
     /// The pending authentication timeout will be canceled in this process.
@@ -151,11 +121,26 @@ impl DeauthenticationHandler for Authenticating {
         );
         sta.send_authenticate_conf(ctx, fidl_mlme::AuthenticateResultCodes::Refused);
     }
+
+    /// Invoked when the pending timeout fired. The original authentication request is now
+    /// considered to be expired and invalid - the authentication failed. As a consequence,
+    /// an MLME-AUTHENTICATION.confirm message is reported to MLME's SME peer indicating the
+    /// timeout.
+    fn on_timeout(&self, sta: &mut BoundClient<'_>, ctx: &mut Context) {
+        // At this point, the event should already be canceled by the state's owner. However,
+        // ensure the timeout is canceled in any case.
+        ctx.timer.cancel_event(self.timeout);
+
+        sta.send_authenticate_conf(ctx, fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout);
+    }
+
+    fn on_sme_deauthenticate(&self, ctx: &mut Context) {
+        ctx.timer.cancel_event(self.timeout);
+    }
 }
 
 /// Client received a "successful" authentication response from the BSS.
 pub struct Authenticated;
-impl DeauthenticationHandler for Authenticated {}
 
 impl Authenticated {
     /// Initiates an association with the currently joined BSS.
@@ -194,35 +179,44 @@ impl Authenticated {
             }
         }
     }
-}
 
-/// Client received an MLME-ASSOCIATE.request message from SME.
-pub struct Associating {
-    timeout: EventId,
-}
-
-impl DeauthenticationHandler for Associating {
-    /// Processes an inbound deauthentication frame.
-    /// This always results in an MLME-ASSOCIATE.confirm message to MLME's SME peer.
-    /// The pending association timeout will be canceled in this process.
+    /// Sends an MLME-DEAUTHENTICATE.indication message to MLME's SME peer.
     fn on_deauth_frame(
         &self,
         sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         deauth_hdr: &mac::DeauthHdr,
     ) {
-        ctx.timer.cancel_event(self.timeout);
-
-        info!(
-            "received spurious deauthentication frame while associating with BSS (unusual); \
-             association failed: {:?}",
-            { deauth_hdr.reason_code }
-        );
-        sta.send_associate_conf_failure(
-            ctx,
-            fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
-        );
+        let reason_code = fidl_mlme::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
+            .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
+        sta.send_deauthenticate_ind(ctx, reason_code);
     }
+
+    fn on_sme_deauthenticate(
+        &self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        req: fidl_mlme::DeauthenticateRequest,
+    ) {
+        if let Err(e) =
+            sta.send_deauth_frame(ctx, mac::ReasonCode(req.reason_code.into_primitive()))
+        {
+            error!("Error sending deauthentication frame to BSS: {}", e);
+        }
+
+        if let Err(e) = ctx.device.access_sme_sender(|sender| {
+            sender.send_deauthenticate_conf(&mut fidl_mlme::DeauthenticateConfirm {
+                peer_sta_address: sta.sta.bssid.0,
+            })
+        }) {
+            error!("Error sending MLME-DEAUTHENTICATE.confirm: {}", e)
+        }
+    }
+}
+
+/// Client received an MLME-ASSOCIATE.request message from SME.
+pub struct Associating {
+    timeout: EventId,
 }
 
 impl Associating {
@@ -295,6 +289,28 @@ impl Associating {
         );
     }
 
+    /// Processes an inbound deauthentication frame.
+    /// This always results in an MLME-ASSOCIATE.confirm message to MLME's SME peer.
+    /// The pending association timeout will be canceled in this process.
+    fn on_deauth_frame(
+        &self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        deauth_hdr: &mac::DeauthHdr,
+    ) {
+        ctx.timer.cancel_event(self.timeout);
+
+        info!(
+            "received spurious deauthentication frame while associating with BSS (unusual); \
+             association failed: {:?}",
+            { deauth_hdr.reason_code }
+        );
+        sta.send_associate_conf_failure(
+            ctx,
+            fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+        );
+    }
+
     /// Invoked when the pending timeout fired. The original association request is now
     /// considered to be expired and invalid - the association failed. As a consequence,
     /// an MLME-ASSOCIATE.confirm message is reported to MLME's SME peer indicating the
@@ -305,6 +321,10 @@ impl Associating {
         ctx.timer.cancel_event(self.timeout);
 
         sta.send_associate_conf_failure(ctx, fidl_mlme::AssociateResultCodes::RefusedTemporarily);
+    }
+
+    fn on_sme_deauthenticate(&self, ctx: &mut Context) {
+        ctx.timer.cancel_event(self.timeout);
     }
 }
 
@@ -385,35 +405,33 @@ pub struct Association {
 /// Client received a "successful" association response from the BSS.
 pub struct Associated(pub Association);
 
-impl DeauthenticationHandler for Associated {}
-
 impl Associated {
-    /// Processes inbound data frames.
-    // TODO(42159): Drop frames from foreign BSS.
-    fn on_data_frame<B: ByteSlice>(
+    /// Processes an inbound diassociation frame.
+    /// This always results in an MLME-DISASSOCIATE.indication message to MLME's SME peer.
+    fn on_disassoc_frame(
         &self,
         sta: &mut BoundClient<'_>,
         ctx: &mut Context,
-        fixed_data_fields: &mac::FixedDataHdrFields,
-        addr4: Option<mac::Addr4>,
-        qos_ctrl: Option<mac::QosControl>,
-        body: B,
+        disassoc_hdr: &mac::DisassocHdr,
     ) {
-        self.request_bu_if_available(
-            sta,
-            ctx,
-            fixed_data_fields.frame_ctrl,
-            mac::data_dst_addr(fixed_data_fields),
-        );
+        let reason_code = fidl_mlme::ReasonCode::from_primitive(disassoc_hdr.reason_code.0)
+            .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
+        sta.send_disassoc_ind(ctx, reason_code);
+    }
 
-        sta.handle_data_frame(
-            ctx,
-            fixed_data_fields,
-            addr4,
-            qos_ctrl,
-            body,
-            self.0.controlled_port_open,
-        );
+    /// Sends an MLME-DEAUTHENTICATE.indication message to MLME's SME peer.
+    fn on_deauth_frame(
+        &mut self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        deauth_hdr: &mac::DeauthHdr,
+    ) {
+        if let Err(e) = self.deauth_device(ctx, sta.sta.bssid) {
+            error!("Error clearing association in device: {}", e);
+        }
+        let reason_code = fidl_mlme::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
+            .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
+        sta.send_deauthenticate_ind(ctx, reason_code);
     }
 
     /// Process every inbound management frame before its being handed off to a more specific
@@ -445,17 +463,32 @@ impl Associated {
         }
     }
 
-    /// Processes an inbound diassociation frame.
-    /// This always results in an MLME-DISASSOCIATE.indication message to MLME's SME peer.
-    fn on_disassoc_frame(
+    /// Processes inbound data frames.
+    // TODO(42159): Drop frames from foreign BSS.
+    fn on_data_frame<B: ByteSlice>(
         &self,
         sta: &mut BoundClient<'_>,
         ctx: &mut Context,
-        disassoc_hdr: &mac::DisassocHdr,
+        fixed_data_fields: &mac::FixedDataHdrFields,
+        addr4: Option<mac::Addr4>,
+        qos_ctrl: Option<mac::QosControl>,
+        body: B,
     ) {
-        let reason_code = fidl_mlme::ReasonCode::from_primitive(disassoc_hdr.reason_code.0)
-            .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
-        sta.send_disassoc_ind(ctx, reason_code);
+        self.request_bu_if_available(
+            sta,
+            ctx,
+            fixed_data_fields.frame_ctrl,
+            mac::data_dst_addr(fixed_data_fields),
+        );
+
+        sta.handle_data_frame(
+            ctx,
+            fixed_data_fields,
+            addr4,
+            qos_ctrl,
+            body,
+            self.0.controlled_port_open,
+        );
     }
 
     fn on_eth_frame<B: ByteSlice>(
@@ -517,6 +550,38 @@ impl Associated {
             // TODO(eyw): Is this allowed? Should we deauthenticate or panic instead?
             error!("device failed to configure association: {}", status);
         }
+    }
+
+    fn on_sme_deauthenticate(
+        &mut self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        req: fidl_mlme::DeauthenticateRequest,
+    ) {
+        self.0.controlled_port_open = false;
+        if let Err(e) =
+            sta.send_deauth_frame(ctx, mac::ReasonCode(req.reason_code.into_primitive()))
+        {
+            error!("Error sending deauthentication frame to BSS: {}", e);
+        }
+
+        if let Err(e) = self.deauth_device(ctx, sta.sta.bssid) {
+            error!("Error clearing association in device: {}", e);
+        }
+
+        if let Err(e) = ctx.device.access_sme_sender(|sender| {
+            sender.send_deauthenticate_conf(&mut fidl_mlme::DeauthenticateConfirm {
+                peer_sta_address: sta.sta.bssid.0,
+            })
+        }) {
+            error!("Error sending MLME-DEAUTHENTICATE.confirm: {}", e)
+        }
+    }
+
+    fn deauth_device(&self, ctx: &mut Context, bssid: mac::Bssid) -> Result<(), zx::Status> {
+        ctx.device.set_eth_link_down()?;
+        ctx.device.clear_assoc(&bssid.0)?;
+        Ok(())
     }
 }
 
@@ -711,7 +776,7 @@ impl States {
                 }
                 _ => state.into(),
             },
-            States::Associated(state) => {
+            States::Associated(mut state) => {
                 state.on_any_mgmt_frame(sta, ctx, mgmt_hdr);
                 match mgmt_body {
                     mac::MgmtBody::Deauthentication { deauth_hdr, .. } => {
@@ -792,10 +857,35 @@ impl States {
         use fidl_mlme::MlmeRequestMessage as MlmeMsg;
 
         match self {
+            States::Authenticating(state) => match msg {
+                MlmeMsg::DeauthenticateReq { req: _ } => {
+                    state.on_sme_deauthenticate(ctx);
+                    state.transition_to(Joined).into()
+                }
+                _ => state.into(),
+            },
+            States::Authenticated(state) => match msg {
+                MlmeMsg::DeauthenticateReq { req } => {
+                    state.on_sme_deauthenticate(sta, ctx, req);
+                    state.transition_to(Joined).into()
+                }
+                _ => state.into(),
+            },
+            States::Associating(state) => match msg {
+                MlmeMsg::DeauthenticateReq { req: _ } => {
+                    state.on_sme_deauthenticate(ctx);
+                    state.transition_to(Joined).into()
+                }
+                _ => state.into(),
+            },
             States::Associated(mut state) => match msg {
                 MlmeMsg::FinalizeAssociationReq { cap } => {
                     state.on_sme_finalize_association(sta, ctx, cap);
                     state.into()
+                }
+                MlmeMsg::DeauthenticateReq { req } => {
+                    state.on_sme_deauthenticate(sta, ctx, req);
+                    state.transition_to(Joined).into()
                 }
                 _ => state.into(),
             },
@@ -865,7 +955,7 @@ mod tests {
             },
             device::{Device, FakeDevice},
         },
-        fidl_fuchsia_wlan_common as fidl_common,
+        banjo_ddk_protocol_wlan_info as banjo_wlan_info, fidl_fuchsia_wlan_common as fidl_common,
         fuchsia_zircon::{self as zx, DurationNum},
         wlan_common::{
             assert_variant,
@@ -944,6 +1034,36 @@ mod tests {
             ap_ht_op: None,
             ap_vht_op: None,
             qos: Qos::Disabled,
+        }
+    }
+
+    fn fake_ddk_assoc_ctx() -> banjo_wlan_info::WlanAssocCtx {
+        ddk::build_ddk_assoc_ctx(
+            BSSID,
+            42,
+            fidl_mlme::NegotiatedCapabilities {
+                channel: fidl_common::WlanChan {
+                    primary: 149,
+                    cbw: fidl_common::Cbw::Cbw40,
+                    secondary80: 42,
+                },
+                cap_info: 0,
+                rates: vec![],
+                ht_cap: None,
+                vht_cap: None,
+            },
+            None,
+            None,
+        )
+    }
+
+    #[allow(deprecated)] // Raw MLME messages are deprecated.
+    fn fake_mlme_deauth_req() -> fidl_mlme::MlmeRequestMessage {
+        fidl_mlme::MlmeRequestMessage::DeauthenticateReq {
+            req: fidl_mlme::DeauthenticateRequest {
+                peer_sta_address: BSSID.0,
+                reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+            },
         }
     }
 
@@ -1122,7 +1242,7 @@ mod tests {
     }
 
     #[test]
-    fn authenticating_state_deauth() {
+    fn authenticating_state_deauth_frame() {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
@@ -1155,7 +1275,7 @@ mod tests {
     }
 
     #[test]
-    fn authenticated_state_deauth() {
+    fn authenticated_state_deauth_frame() {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
@@ -1335,7 +1455,7 @@ mod tests {
     }
 
     #[test]
-    fn associating_deauthentication() {
+    fn associating_deauth_frame() {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
@@ -1399,12 +1519,19 @@ mod tests {
     }
 
     #[test]
-    fn associated_deauthentication() {
+    fn associated_deauth_frame() {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = Associated(empty_association());
+        let mut state = Associated(empty_association());
+
+        // ddk_assoc_ctx will be cleared when MLME receives deauth frame.
+        ctx.device.configure_assoc(fake_ddk_assoc_ctx()).expect("valid assoc_ctx should succeed");
+        assert_eq!(1, m.fake_device.assocs.len());
+
+        ctx.device.set_eth_link_up().expect("should succeed");
+        assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::UP);
 
         state.on_deauth_frame(
             &mut sta,
@@ -1424,6 +1551,9 @@ mod tests {
                 reason_code: fidl_mlme::ReasonCode::ApInitiated,
             }
         );
+        // Verify association context is cleard and ethernet port is shut down.
+        assert_eq!(0, m.fake_device.assocs.len());
+        assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
     }
 
     #[test]
@@ -1942,7 +2072,7 @@ mod tests {
             timeout: EventId::default(),
         }));
 
-        // Failure: Associating > Associated
+        // Failure: Associating > Authenticated
         #[rustfmt::skip]
         let assoc_resp_success = vec![
             // Mgmt Header:
@@ -1954,7 +2084,7 @@ mod tests {
             0x10, 0, // Sequence Control
             // Assoc Resp Header:
             0, 0, // Capabilities
-            2, 0, // Status Code
+            2, 0, // Status Code (Failed)
             0, 0, // AID
         ];
         state = state.on_mac_frame(&mut sta, &mut ctx, &assoc_resp_success[..], false);
@@ -2216,5 +2346,121 @@ mod tests {
         assert!(assoc_ctx.has_vht_cap);
         assert!(assoc_ctx.has_ht_op);
         assert!(assoc_ctx.has_vht_op);
+    }
+
+    #[test]
+    #[allow(deprecated)] // Raw MLME messages are deprecated.
+    fn joined_sme_deauth() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let state = States::from(statemachine::testing::new_state(Joined));
+        let _state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_deauth_req());
+        // No MLME message was sent because MLME already deauthenticated.
+        m.fake_device
+            .next_mlme_msg::<fidl_mlme::DeauthenticateIndication>()
+            .expect_err("should be no outgoing message");
+    }
+
+    #[test]
+    fn authenticating_sme_deauth() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let timeout =
+            ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Authenticating);
+        let state = States::from(statemachine::testing::new_state(Authenticating { timeout }));
+
+        let state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_deauth_req());
+
+        // Verify timeout was canceled.
+        assert_variant!(ctx.timer.triggered(&timeout), None);
+        assert_variant!(state, States::Joined(_), "should transition to Joined");
+
+        // No need to notify SME since it already deauthenticated
+        m.fake_device
+            .next_mlme_msg::<fidl_mlme::DeauthenticateConfirm>()
+            .expect_err("should not see more MLME messages");
+    }
+
+    #[test]
+    fn authenticated_sme_deauth() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let state = States::from(statemachine::testing::new_state(Authenticated));
+
+        let state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_deauth_req());
+
+        assert_variant!(state, States::Joined(_), "should transition to Joined");
+
+        // Should accept the deauthentication request and send back confirm.
+        let deauth_conf = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::DeauthenticateConfirm>()
+            .expect("should see deauth conf");
+        assert_eq!(deauth_conf, fidl_mlme::DeauthenticateConfirm { peer_sta_address: BSSID.0 });
+        m.fake_device
+            .next_mlme_msg::<fidl_mlme::DeauthenticateConfirm>()
+            .expect_err("should not see more MLME messages");
+    }
+
+    #[test]
+    fn associating_sme_deauth() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let timeout =
+            ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
+        let state = States::from(statemachine::testing::new_state(Associating { timeout }));
+
+        let state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_deauth_req());
+
+        // Verify timeout was canceled.
+        assert_variant!(ctx.timer.triggered(&timeout), None);
+        assert_variant!(state, States::Joined(_), "should transition to Joined");
+
+        // No need to notify SME since it already deauthenticated
+        m.fake_device
+            .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
+            .expect_err("should not see more MLME messages");
+    }
+
+    #[test]
+    fn associated_sme_deauth() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let state = States::from(statemachine::testing::new_state(Associated(Association {
+            controlled_port_open: true,
+            ..empty_association()
+        })));
+        ctx.device.configure_assoc(fake_ddk_assoc_ctx()).expect("valid assoc ctx should not fail");
+        assert_eq!(1, m.fake_device.assocs.len());
+
+        ctx.device.set_eth_link_up().expect("should succeed");
+        assert_eq!(crate::device::LinkStatus::UP, m.fake_device.link_status);
+
+        let state = state.handle_mlme_msg(&mut sta, &mut ctx, fake_mlme_deauth_req());
+        assert_variant!(state, States::Joined(_), "should transition to Joined");
+
+        // Should accept the deauthentication request and send back confirm.
+        let deauth_conf = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::DeauthenticateConfirm>()
+            .expect("should see deauth conf");
+        assert_eq!(deauth_conf, fidl_mlme::DeauthenticateConfirm { peer_sta_address: BSSID.0 });
+        m.fake_device
+            .next_mlme_msg::<fidl_mlme::DeauthenticateConfirm>()
+            .expect_err("should not see more MLME messages");
+        // Verify association context cleared.
+        assert_eq!(0, m.fake_device.assocs.len());
+        // Verify ethernet link status is down.
+        assert_eq!(crate::device::LinkStatus::DOWN, m.fake_device.link_status);
     }
 }
