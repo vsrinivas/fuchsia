@@ -6,12 +6,15 @@
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <fbl/auto_call.h>
 
 #include "fake_gdc.h"
 #include "fake_isp.h"
+#include "lib/fit/result.h"
 #include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"
 #include "src/camera/drivers/controller/controller-protocol.h"
 #include "src/camera/drivers/controller/graph_utils.h"
@@ -184,18 +187,36 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(NodeType::kGdc, gdc_result.value()->type());
   }
 
-  void TestConfigureDebugConfig() {
-    auto stream_type = kStreamTypeFR;
-    auto stream_config_node = GetStreamConfigNode(kDebugConfig, stream_type);
-    ASSERT_NE(nullptr, stream_config_node);
+  fit::result<std::pair<fidl::InterfaceRequest<fuchsia::camera2::Stream>, StreamCreationData>,
+              zx_status_t>
+  SetupStream(uint32_t config, fuchsia::camera2::CameraStreamType stream_type,
+              fuchsia::camera2::StreamPtr& stream) {
+    auto stream_config_node = GetStreamConfigNode(config, stream_type);
+    if (stream_config_node == nullptr) {
+      return fit::error(ZX_ERR_INVALID_ARGS);
+    }
     StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(stream_type);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    buffer_collection.buffer_count = kNumBuffers;
+    info.output_buffers = std::move(buffer_collection);
+    auto stream_request = stream.NewRequest();
+    auto status = pipeline_manager_->ConfigureStreamPipeline(&info, stream_request);
+    if (status != ZX_OK) {
+      return fit::error(status);
+    }
+    auto result = std::make_pair(std::move(stream_request), std::move(info));
+    return fit::ok(std::move(result));
+  }
 
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+  void TestConfigureDebugConfig() {
+    fuchsia::camera2::StreamPtr stream;
+    auto stream_type = kStreamTypeFR;
+    auto result = SetupStream(kDebugConfig, stream_type, stream);
+    ASSERT_EQ(ZX_OK, result.error());
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     EXPECT_EQ(fr_head_node->type(), NodeType::kInputStream);
@@ -210,18 +231,11 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   void TestConfigureMonitorConfigStreamFR() {
+    fuchsia::camera2::StreamPtr stream;
     auto stream_type1 = kStreamTypeDS | kStreamTypeML;
     auto stream_type2 = kStreamTypeFR | kStreamTypeML;
-    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type2);
-    ASSERT_NE(nullptr, stream_config_node);
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(stream_type2);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
-
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+    auto result = SetupStream(kMonitorConfig, stream_type2, stream);
+    ASSERT_EQ(ZX_OK, result.error());
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
@@ -243,16 +257,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   void TestConfigureMonitorConfigStreamDS() {
     auto stream_type1 = kStreamTypeDS | kStreamTypeML;
     auto stream_type2 = kStreamTypeFR | kStreamTypeML;
-    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type1);
-    ASSERT_NE(nullptr, stream_config_node);
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(stream_type1);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
-
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+    fuchsia::camera2::StreamPtr stream;
+    auto result = SetupStream(kMonitorConfig, stream_type1, stream);
+    ASSERT_EQ(ZX_OK, result.error());
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
@@ -277,24 +284,17 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   void TestConfigure_MonitorConfig_MultiStreamFR() {
+    fuchsia::camera2::StreamPtr stream1;
+    fuchsia::camera2::StreamPtr stream2;
+
     auto stream_type1 = kStreamTypeDS | kStreamTypeML;
     auto stream_type2 = kStreamTypeFR | kStreamTypeML;
-    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type2);
-    ASSERT_NE(nullptr, stream_config_node);
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(stream_type2);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
 
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+    auto result2 = SetupStream(kMonitorConfig, stream_type2, stream2);
+    ASSERT_EQ(ZX_OK, result2.error());
 
-    // Change the requested stream type.
-    stream_config.properties.set_stream_type(stream_type1);
-    info.stream_config = &stream_config;
-
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+    auto result1 = SetupStream(kMonitorConfig, stream_type1, stream1);
+    ASSERT_EQ(ZX_OK, result1.error());
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     auto fr_ml_output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
@@ -341,36 +341,21 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   void TestConfigure_MonitorConfig_MultiStreamFR_BadOrdering() {
     auto stream_type1 = kStreamTypeDS | kStreamTypeML;
     auto stream_type2 = kStreamTypeFR | kStreamTypeML;
-    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type1);
-    ASSERT_NE(nullptr, stream_config_node);
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(stream_type1);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
+    fuchsia::camera2::StreamPtr stream1;
+    fuchsia::camera2::StreamPtr stream2;
 
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+    auto result1 = SetupStream(kMonitorConfig, stream_type1, stream1);
+    ASSERT_EQ(ZX_OK, result1.error());
 
-    // Change the requested stream type.
-    stream_config.properties.set_stream_type(stream_type2);
-    info.stream_config = &stream_config;
-
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+    auto result2 = SetupStream(kMonitorConfig, stream_type2, stream2);
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result2.error());
   }
 
   void TestConfigureVideoConfigStream1() {
     auto stream_type = kStreamTypeFR | kStreamTypeML | kStreamTypeVideo;
-    auto stream_config_node = GetStreamConfigNode(kVideoConfig, stream_type);
-    ASSERT_NE(nullptr, stream_config_node);
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(stream_type);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
-
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+    fuchsia::camera2::StreamPtr stream;
+    auto result = SetupStream(kVideoConfig, stream_type, stream);
+    ASSERT_EQ(ZX_OK, result.error());
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     auto gdc1_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(0).get());
@@ -399,42 +384,31 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   void TestShutdownPathAfterStreamingOn() {
-    auto stream_type_fr = kStreamTypeFR | kStreamTypeML;
-    auto stream_type_ds = kStreamTypeDS | kStreamTypeML;
-    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type_fr);
-    ASSERT_NE(nullptr, stream_config_node);
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(stream_type_fr);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    buffer_collection.buffer_count = kNumBuffers;
-    info.output_buffers = std::move(buffer_collection);
-
+    fuchsia::camera2::StreamPtr stream_ds;
     fuchsia::camera2::StreamPtr stream_fr;
-    auto stream_request_fr = stream_fr.NewRequest();
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream_request_fr));
+
+    auto stream_type_ds = kStreamTypeDS | kStreamTypeML;
+    auto stream_type_fr = kStreamTypeFR | kStreamTypeML;
+
+    auto result_fr = SetupStream(kMonitorConfig, stream_type_fr, stream_fr);
+    ASSERT_EQ(ZX_OK, result_fr.error());
+
+    auto result_ds = SetupStream(kMonitorConfig, stream_type_ds, stream_ds);
+    ASSERT_EQ(ZX_OK, result_ds.error());
+
     bool stream_fr_alive = true;
-    stream_fr.set_error_handler([&](zx_status_t status) { stream_fr_alive = false; });
+    stream_fr.set_error_handler([&](zx_status_t /* status*/) { stream_fr_alive = false; });
 
     bool frame_received_fr = false;
-    stream_fr.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
+    stream_fr.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo /*info*/) {
       frame_received_fr = true;
     };
 
-    // Change the requested stream type.
-    stream_config.properties.set_stream_type(stream_type_ds);
-    info.stream_config = &stream_config;
-
-    fuchsia::camera2::StreamPtr stream_ds;
-    auto stream_request_ds = stream_ds.NewRequest();
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream_request_ds));
     bool stream_ds_alive = true;
-    stream_ds.set_error_handler([&](zx_status_t status) { stream_ds_alive = false; });
+    stream_ds.set_error_handler([&](zx_status_t /*status*/) { stream_ds_alive = false; });
 
     bool frame_received_ds = false;
-    stream_ds.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
+    stream_ds.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo /*info*/) {
       frame_received_ds = true;
     };
 
@@ -534,44 +508,26 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
   void TestMultipleStartStreaming() {
     auto stream_type = kStreamTypeFR;
-    auto stream_config_node = GetStreamConfigNode(kDebugConfig, stream_type);
-    ASSERT_NE(nullptr, stream_config_node);
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(stream_type);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
-
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream));
+    fuchsia::camera2::StreamPtr stream;
+    auto result = SetupStream(kDebugConfig, stream_type, stream);
+    ASSERT_EQ(ZX_OK, result.error());
 
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
 
     // Set streaming on.
     output_node->client_stream()->Start();
-
     EXPECT_NO_FATAL_FAILURE(output_node->client_stream()->Start());
   }
 
   void TestInUseBufferCounts() {
     auto stream_type = kStreamTypeFR | kStreamTypeML;
-    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type);
-    ASSERT_NE(nullptr, stream_config_node);
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(stream_type);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    buffer_collection.buffer_count = kNumBuffers;
-    info.output_buffers = std::move(buffer_collection);
-
     fuchsia::camera2::StreamPtr stream;
-    auto stream_request = stream.NewRequest();
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream_request));
+    auto result = SetupStream(kMonitorConfig, stream_type, stream);
+    ASSERT_EQ(ZX_OK, result.error());
+
     bool stream_alive = true;
-    stream.set_error_handler([&](zx_status_t status) { stream_alive = false; });
+    stream.set_error_handler([&](zx_status_t /*status*/) { stream_alive = false; });
 
     bool frame_received = false;
     stream.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
@@ -618,20 +574,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
   void TestReleaseAfterStopStreaming() {
     auto stream_type = kStreamTypeDS | kStreamTypeML;
-    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type);
-    ASSERT_NE(nullptr, stream_config_node);
-    StreamCreationData info;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(stream_type);
-    info.stream_config = &stream_config;
-    info.node = *stream_config_node;
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    buffer_collection.buffer_count = kNumBuffers;
-    info.output_buffers = std::move(buffer_collection);
-
     fuchsia::camera2::StreamPtr stream;
-    auto stream_request = stream.NewRequest();
-    EXPECT_EQ(ZX_OK, pipeline_manager_->ConfigureStreamPipeline(&info, stream_request));
+    auto result = SetupStream(kMonitorConfig, stream_type, stream);
+    ASSERT_EQ(ZX_OK, result.error());
 
     // Start streaming.
     stream->Start();
