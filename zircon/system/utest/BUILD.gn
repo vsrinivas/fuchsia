@@ -212,7 +212,6 @@ if (current_cpu != "") {
       "$zx/third_party/ulib/lz4:test",
       "abi-type-validator",
       "backtrace-request:backtrace-request-integration",
-      "biotime",
       "blobfs-bench",
       "channel-fatal",
       "chromeos-disk-setup",
