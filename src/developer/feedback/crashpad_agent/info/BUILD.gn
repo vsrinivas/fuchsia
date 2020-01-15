@@ -25,7 +25,6 @@ source_set("info") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/developer/feedback/crashpad_agent:config",
-    "//src/developer/feedback/crashpad_agent:metrics_registry",
     "//src/developer/feedback/crashpad_agent:settings",
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/timekeeper",

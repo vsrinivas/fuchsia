@@ -20,8 +20,8 @@
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/feedback_data_provider_ptr.h"
-#include "src/developer/feedback/crashpad_agent/metrics_registry.cb.h"
 #include "src/developer/feedback/crashpad_agent/report_util.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -31,8 +31,6 @@ namespace {
 
 using fuchsia::feedback::CrashReport;
 using fuchsia::feedback::Data;
-
-using CrashState = cobalt_registry::CrashMetricDimensionState;
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 const char kOverrideConfigPath[] = "/config/data/override_config.json";
@@ -139,7 +137,7 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
   if (!report.has_program_name()) {
     FX_LOGS(ERROR) << "Invalid crash report. No program name. Won't file.";
     callback(fit::error(ZX_ERR_INVALID_ARGS));
-    info_.LogCrashState(CrashState::Dropped);
+    info_.LogCrashState(CrashState::kDropped);
     return;
   }
   FX_LOGS(INFO) << "Generating crash report for " << report.program_name();
@@ -163,11 +161,11 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
                        if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
                                         annotations)) {
                          FX_LOGS(ERROR) << "Error adding new report to the queue";
-                         info_.LogCrashState(CrashState::Dropped);
+                         info_.LogCrashState(CrashState::kDropped);
                          return fit::error();
                        }
 
-                       info_.LogCrashState(CrashState::Filed);
+                       info_.LogCrashState(CrashState::kFiled);
                        return fit::ok();
                      })
                      .then([callback = std::move(callback)](fit::result<void>& result) {

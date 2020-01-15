@@ -30,6 +30,7 @@ source_set("cobalt") {
   public = [
     "cobalt.h",
     "cobalt_event.h",
+    "cobalt_metrics.h",
   ]
 
   sources = [
@@ -40,6 +41,7 @@ source_set("cobalt") {
   ]
 
   public_deps = [
+    ":metrics_registry",
     "//sdk/lib/sys/cpp",
     "//src/lib/backoff:backoff",
     "//zircon/public/lib/fit",
@@ -47,7 +49,6 @@ source_set("cobalt") {
   ]
 
   deps = [
-    ":metrics_registry",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
   ]

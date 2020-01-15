@@ -11,7 +11,8 @@
 
 #include <vector>
 
-#include "src/developer/feedback/crashpad_agent/metrics_registry.cb.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/metrics_registry.cb.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -20,11 +21,9 @@ namespace feedback {
 namespace {
 
 using namespace fuchsia::cobalt::test;
-using cobalt_registry::kCrashMetricId;
-using cobalt_registry::kProjectId;
-using testing::UnorderedElementsAreArray;
 
-using CrashState = cobalt_registry::CrashMetricDimensionState;
+using cobalt_registry::kCrashMetricId;
+using testing::UnorderedElementsAreArray;
 
 class CrashpadAgentIntegrationTest : public testing::Test {
  public:
@@ -96,8 +95,8 @@ class CrashpadAgentIntegrationTest : public testing::Test {
 TEST_F(CrashpadAgentIntegrationTest, CrashReporter_SmokeTest) {
   FileCrashReport();
   EXPECT_THAT(GetCobaltCrashStates(), UnorderedElementsAreArray({
-                                          CrashState::Filed,
-                                          CrashState::Archived,
+                                          CrashState::kFiled,
+                                          CrashState::kArchived,
                                       }));
 }
 

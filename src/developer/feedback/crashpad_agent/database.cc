@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "src/developer/feedback/crashpad_agent/constants.h"
-#include "src/developer/feedback/crashpad_agent/metrics_registry.cb.h"
 #include "src/developer/feedback/crashpad_agent/report_util.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/fxl/logging.h"

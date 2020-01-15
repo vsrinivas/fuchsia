@@ -29,15 +29,21 @@ class Cobalt {
 
   // Log an occurrence event with fuchsia.cobalt.Logger with the provided parameters. If the service
   // is not accessible, keep the parameters to try again later.
+  template <typename EventCodeType>
   void LogOccurrence(
-      uint32_t metric_id, uint32_t event_code,
-      fit::callback<void(fuchsia::cobalt::Status)> callback = [](fuchsia::cobalt::Status) {});
+      EventCodeType event_code,
+      fit::callback<void(fuchsia::cobalt::Status)> callback = [](fuchsia::cobalt::Status) {}) {
+    LogEvent(CobaltEvent(event_code), std::move(callback));
+  }
 
   // Log a count event with fuchsia.cobalt.Logger with the provided parameters. If the service is
   // not accessible, keep the parameters to try again later.
+  template <typename EventCodeType>
   void LogCount(
-      uint32_t metric_id, uint32_t event_code, uint64_t count,
-      fit::callback<void(fuchsia::cobalt::Status)> callback = [](fuchsia::cobalt::Status) {});
+      EventCodeType event_code, uint64_t count,
+      fit::callback<void(fuchsia::cobalt::Status)> callback = [](fuchsia::cobalt::Status) {}) {
+    LogEvent(CobaltEvent(event_code, count), std::move(callback));
+  }
 
  private:
   struct PendingEvent {

@@ -4,16 +4,10 @@
 
 #include "src/developer/feedback/crashpad_agent/info/database_info.h"
 
-#include "src/developer/feedback/crashpad_agent/metrics_registry.cb.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
-
-using cobalt_registry::kCrashMetricId;
-using cobalt_registry::kCrashUploadAttemptsMetricId;
-
-using CrashState = cobalt_registry::CrashMetricDimensionState;
-using UploadAttemptState = cobalt_registry::CrashUploadAttemptsMetricDimensionState;
 
 DatabaseInfo::DatabaseInfo(std::shared_ptr<InfoContext> context) : context_(context) {
   FXL_CHECK(context);
@@ -31,40 +25,36 @@ void DatabaseInfo::LogGarbageCollection(const uint64_t num_cleaned, const uint64
 void DatabaseInfo::RecordUploadAttemptNumber(const std::string& local_report_id,
                                              const uint64_t upload_attempt) {
   context_->InspectManager().SetUploadAttempt(local_report_id, upload_attempt);
-  context_->Cobalt().LogCount(kCrashUploadAttemptsMetricId, UploadAttemptState::UploadAttempt,
-                              upload_attempt);
+  context_->Cobalt().LogCount(UploadAttemptState::kUploadAttempt, upload_attempt);
 }
 
 void DatabaseInfo::MarkReportAsUploaded(const std::string& local_report_id,
                                         const std::string& server_report_id,
                                         const uint64_t upload_attempts) {
   context_->InspectManager().MarkReportAsUploaded(local_report_id, server_report_id);
-  context_->Cobalt().LogOccurrence(kCrashMetricId, CrashState::Uploaded);
-  context_->Cobalt().LogCount(kCrashUploadAttemptsMetricId, UploadAttemptState::Uploaded,
-                              upload_attempts);
+  context_->Cobalt().LogOccurrence(CrashState::kUploaded);
+  context_->Cobalt().LogCount(UploadAttemptState::kUploaded, upload_attempts);
 }
 
 void DatabaseInfo::MarkReportAsArchived(const std::string& local_report_id,
                                         const uint64_t upload_attempts) {
   context_->InspectManager().MarkReportAsArchived(local_report_id);
-  context_->Cobalt().LogOccurrence(kCrashMetricId, CrashState::Archived);
+  context_->Cobalt().LogOccurrence(CrashState::kArchived);
 
   // We log if it was attempted at least once.
   if (upload_attempts > 0) {
-    context_->Cobalt().LogCount(kCrashUploadAttemptsMetricId, UploadAttemptState::Archived,
-                                upload_attempts);
+    context_->Cobalt().LogCount(UploadAttemptState::kArchived, upload_attempts);
   }
 }
 
 void DatabaseInfo::MarkReportAsGarbageCollected(const std::string& local_report_id,
                                                 const uint64_t upload_attempts) {
   context_->InspectManager().MarkReportAsGarbageCollected(local_report_id);
-  context_->Cobalt().LogOccurrence(kCrashMetricId, CrashState::GarbageCollected);
+  context_->Cobalt().LogOccurrence(CrashState::kGarbageCollected);
 
   // We log if it was attempted at least once.
   if (upload_attempts > 0) {
-    context_->Cobalt().LogCount(kCrashUploadAttemptsMetricId, UploadAttemptState::GarbageCollected,
-                                upload_attempts);
+    context_->Cobalt().LogCount(UploadAttemptState::kGarbageCollected, upload_attempts);
   }
 }
 

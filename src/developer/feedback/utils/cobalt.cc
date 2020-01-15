@@ -6,7 +6,7 @@
 
 #include "lib/async/cpp/task.h"
 #include "lib/zx/time.h"
-#include "src/developer/feedback/utils/metrics_registry.cb.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -14,7 +14,6 @@ namespace feedback {
 namespace {
 
 using async::PostDelayedTask;
-using cobalt_registry::kProjectId;
 using fuchsia::cobalt::LoggerFactory;
 using fuchsia::cobalt::Status;
 using fxl::StringPrintf;
@@ -94,16 +93,6 @@ void Cobalt::RetryConnectingToLogger() {
   PostDelayedTask(
       dispatcher_, [reconnect = reconnect_task_.callback()]() { reconnect(); },
       logger_reconnection_backoff_.GetNext());
-}
-
-void Cobalt::LogOccurrence(uint32_t metric_id, uint32_t event_code,
-                           fit::callback<void(fuchsia::cobalt::Status)> callback) {
-  LogEvent(CobaltEvent(metric_id, event_code), std::move(callback));
-}
-
-void Cobalt::LogCount(uint32_t metric_id, uint32_t event_code, uint64_t count,
-                      fit::callback<void(fuchsia::cobalt::Status)> callback) {
-  LogEvent(CobaltEvent(metric_id, event_code, count), std::move(callback));
 }
 
 void Cobalt::LogEvent(CobaltEvent event, fit::callback<void(fuchsia::cobalt::Status)> callback) {

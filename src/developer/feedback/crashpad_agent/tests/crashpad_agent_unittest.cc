@@ -28,7 +28,6 @@
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
-#include "src/developer/feedback/crashpad_agent/metrics_registry.cb.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
@@ -37,6 +36,7 @@
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -48,8 +48,6 @@
 namespace feedback {
 namespace {
 
-using cobalt_registry::kCrashMetricId;
-using cobalt_registry::kCrashUploadAttemptsMetricId;
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::CrashReport;
@@ -73,9 +71,6 @@ using testing::IsSupersetOf;
 using testing::Not;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
-
-using CrashState = cobalt_registry::CrashMetricDimensionState;
-using UploadAttemptState = cobalt_registry::CrashUploadAttemptsMetricDimensionState;
 
 constexpr bool kUploadSuccessful = true;
 constexpr bool kUploadFailed = false;
@@ -749,13 +744,12 @@ TEST_F(CrashpadAgentTest, Check_CobaltAfterSuccessfulUpload) {
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
-                  CobaltEvent(kCrashMetricId, CrashState::Filed),
-                  CobaltEvent(kCrashMetricId, CrashState::Uploaded),
-                  CobaltEvent(kCrashUploadAttemptsMetricId, UploadAttemptState::UploadAttempt, 1u),
-                  CobaltEvent(kCrashUploadAttemptsMetricId, UploadAttemptState::Uploaded, 1u),
-              }));
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(CrashState::kFiled),
+                                          CobaltEvent(CrashState::kUploaded),
+                                          CobaltEvent(UploadAttemptState::kUploadAttempt, 1u),
+                                          CobaltEvent(UploadAttemptState::kUploaded, 1u),
+                                      }));
 }
 
 TEST_F(CrashpadAgentTest, Check_CobaltAfterInvalidInputCrashReport) {
@@ -763,7 +757,7 @@ TEST_F(CrashpadAgentTest, Check_CobaltAfterInvalidInputCrashReport) {
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          CobaltEvent(kCrashMetricId, CrashState::Dropped),
+                                          CobaltEvent(CrashState::kDropped),
                                       }));
 }
 

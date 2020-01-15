@@ -16,6 +16,7 @@
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_event.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -25,8 +26,7 @@ namespace feedback {
 namespace {
 
 constexpr uint32_t kMaxQueueSize = 500u;
-constexpr uint32_t kMetricId = 1u;
-constexpr uint32_t kEventCode = std::numeric_limits<uint32_t>::max();
+constexpr RebootReason kEventCode = RebootReason::kOOM;
 constexpr uint64_t kCount = 2u;
 constexpr zx::duration kLoggerBackoffInitialDelay = zx::msec(100);
 
@@ -42,13 +42,13 @@ class CobaltTest : public UnitTestFixture, public CobaltTestFixture {
 
  protected:
   void LogOccurrence() {
-    cobalt_->LogOccurrence(kMetricId, kEventCode);
-    events_.emplace_back(kMetricId, kEventCode);
+    cobalt_->LogOccurrence(kEventCode);
+    events_.emplace_back(kEventCode);
   }
 
   void LogCount() {
-    cobalt_->LogCount(kMetricId, kEventCode, kCount);
-    events_.emplace_back(kMetricId, kEventCode, kCount);
+    cobalt_->LogCount(kEventCode, kCount);
+    events_.emplace_back(kEventCode, kCount);
   }
 
   const std::vector<CobaltEvent> SentCobaltEvents() { return events_; }
@@ -113,7 +113,7 @@ TEST_F(CobaltTest, Check_CallbackExecutes) {
       std::make_unique<StubCobaltLoggerFactory>(std::make_unique<StubCobaltLoggerFailsLogEvent>()));
 
   Status log_event_status = Status::OK;
-  cobalt_->LogOccurrence(kMetricId, kEventCode,
+  cobalt_->LogOccurrence(kEventCode,
                          [&log_event_status](Status status) { log_event_status = status; });
   RunLoopUntilIdle();
   EXPECT_EQ(log_event_status, Status::INVALID_ARGUMENTS);
@@ -146,12 +146,12 @@ TEST_F(CobaltTest, Check_QueueReachesMaxSize) {
 
   std::vector<CobaltEvent> events;
   for (size_t i = 0; i < kMaxQueueSize; ++i) {
-    cobalt_->LogOccurrence(kMetricId, kEventCode);
-    events.emplace_back(kMetricId, kEventCode);
+    cobalt_->LogOccurrence(kEventCode);
+    events.emplace_back(kEventCode);
   }
 
   for (size_t i = 0; i < kMaxQueueSize; ++i) {
-    cobalt_->LogOccurrence(kMetricId, kEventCode);
+    cobalt_->LogOccurrence(kEventCode);
   }
   RunLoopUntilIdle();
 

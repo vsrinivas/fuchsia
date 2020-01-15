@@ -4,7 +4,6 @@
 
 #include "src/developer/feedback/crashpad_agent/info/agent_info.h"
 
-#include "src/developer/feedback/crashpad_agent/metrics_registry.cb.h"
 #include "src/lib/fxl/logging.h"
 
 using cobalt_registry::kCrashMetricId;
@@ -25,8 +24,6 @@ void AgentInfo::ExposeSettings(feedback::Settings* settings) {
   context_->InspectManager().ExposeSettings(settings);
 }
 
-void AgentInfo::LogCrashState(CrashState state) {
-  context_->Cobalt().LogOccurrence(kCrashMetricId, state);
-}
+void AgentInfo::LogCrashState(CrashState state) { context_->Cobalt().LogOccurrence(state); }
 
 }  // namespace feedback
