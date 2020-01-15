@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::create_fidl_service,
+    crate::create_environment,
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::DeviceStorageFactory,
@@ -25,12 +25,16 @@ async fn create_test_accessibility_env(
 ) -> AccessibilityProxy {
     let mut fs = ServiceFs::new();
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::Accessibility].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(None),
         storage_factory,
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());

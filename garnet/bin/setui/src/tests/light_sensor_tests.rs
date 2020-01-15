@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::create_fidl_service, crate::display::LIGHT_SENSOR_SERVICE_NAME,
+    crate::create_environment, crate::display::LIGHT_SENSOR_SERVICE_NAME,
     crate::registry::device_storage::testing::*, crate::service_context::ServiceContext,
     crate::switchboard::base::SettingType, anyhow::format_err, fidl::endpoints::ServerEnd,
     fidl_fuchsia_settings::*, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
@@ -59,12 +59,16 @@ async fn test_light_sensor() {
 
     let mut fs = ServiceFs::new();
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::LightSensor].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(Some(Box::new(service_gen))),
         Box::new(InMemoryStorageFactory::create()),
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());

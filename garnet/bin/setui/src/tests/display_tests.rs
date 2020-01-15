@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::create_fidl_service,
+    crate::create_environment,
     crate::registry::device_storage::testing::*,
     crate::service_context::ServiceContext,
     crate::switchboard::base::SettingType,
@@ -73,12 +73,16 @@ async fn test_display() {
 
     let mut fs = ServiceFs::new();
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::Display].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(Some(Box::new(service_gen))),
         Box::new(InMemoryStorageFactory::create()),
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());
@@ -141,12 +145,16 @@ async fn test_display_failure() {
 
     let mut fs = ServiceFs::new();
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::Display, SettingType::Intl].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(Some(Box::new(service_gen))),
         Box::new(InMemoryStorageFactory::create()),
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());

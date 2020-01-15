@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::create_fidl_service, crate::registry::device_storage::testing::*,
+    crate::create_environment, crate::registry::device_storage::testing::*,
     crate::service_context::ServiceContext, crate::switchboard::base::SettingType,
     fidl_fuchsia_settings::DeviceMarker, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs, futures::prelude::*,
@@ -18,12 +18,16 @@ const ENV_NAME: &str = "settings_service_device_test_environment";
 async fn test_device() {
     let mut fs = ServiceFs::new();
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::Device].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(None),
         Box::new(InMemoryStorageFactory::create()),
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());

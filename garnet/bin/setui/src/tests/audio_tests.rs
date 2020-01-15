@@ -5,7 +5,7 @@
 #[cfg(test)]
 use {
     crate::audio::default_audio_info,
-    crate::create_fidl_service,
+    crate::create_environment,
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::{DeviceStorage, DeviceStorageFactory},
@@ -115,12 +115,16 @@ async fn test_audio() {
 
     let mut fs = ServiceFs::new();
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::Audio].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
         storage_factory,
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());
@@ -158,12 +162,16 @@ async fn test_audio_input() {
 
     let mut fs = ServiceFs::new();
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::Audio].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
         Box::new(InMemoryStorageFactory::create()),
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());
@@ -191,12 +199,16 @@ async fn test_bringup_without_input_registry() {
 
     let mut fs = ServiceFs::new();
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::Audio].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
         Box::new(InMemoryStorageFactory::create()),
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());
@@ -214,12 +226,16 @@ async fn test_bringup_without_audio_core() {
 
     let mut fs = ServiceFs::new();
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::Audio].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
         Box::new(InMemoryStorageFactory::create()),
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());
@@ -292,12 +308,16 @@ async fn test_persisted_values_applied_at_start() {
 
     let mut fs = ServiceFs::new();
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::Audio].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(ServiceRegistry::serve(service_registry.clone())),
         storage_factory,
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());

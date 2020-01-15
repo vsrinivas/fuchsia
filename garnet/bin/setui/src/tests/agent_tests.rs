@@ -4,8 +4,12 @@
 #[cfg(test)]
 use crate::agent::authority_impl::AuthorityImpl;
 use crate::agent::base::*;
+use crate::create_environment;
+use crate::registry::device_storage::testing::*;
 use crate::service_context::ServiceContext;
 use anyhow::{format_err, Error};
+use core::fmt::{Debug, Formatter};
+use fuchsia_component::server::ServiceFs;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::StreamExt;
@@ -26,7 +30,7 @@ struct TestAgent {
     id: u32,
     lifespan: Lifespan,
     last_invocation: Option<Invocation>,
-    callback: UnboundedSender<(u32, Invocation)>,
+    callback: Option<UnboundedSender<(u32, Invocation)>>,
 }
 
 impl Agent for TestAgent {
@@ -36,9 +40,17 @@ impl Agent for TestAgent {
         }
 
         self.last_invocation = Some(invocation.clone());
-        self.callback.unbounded_send((self.id, invocation.clone())).ok();
+        if let Some(callback) = &self.callback {
+            callback.unbounded_send((self.id, invocation.clone())).ok();
+        }
 
         return Ok(true);
+    }
+}
+
+impl Debug for TestAgent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Agent {{ id: {} }}", self.id)
     }
 }
 
@@ -53,18 +65,26 @@ impl TestAgent {
         authority: &mut dyn Authority,
         callback: UnboundedSender<(u32, Invocation)>,
     ) -> Result<Arc<Mutex<TestAgent>>, Error> {
-        let agent = Arc::new(Mutex::new(TestAgent {
-            id: id,
-            last_invocation: None,
-            lifespan: lifespan,
-            callback: callback,
-        }));
+        let agent = TestAgent::new(id, lifespan, Some(callback));
 
         if !authority.register(agent.clone()).is_ok() {
             return Err(format_err!("could not register"));
         }
 
         return Ok(agent.clone());
+    }
+
+    pub fn new(
+        id: u32,
+        lifespan: Lifespan,
+        callback: Option<UnboundedSender<(u32, Invocation)>>,
+    ) -> Arc<Mutex<TestAgent>> {
+        return Arc::new(Mutex::new(TestAgent {
+            id: id,
+            last_invocation: None,
+            lifespan: lifespan,
+            callback: callback,
+        }));
     }
 
     /// Returns the id specified at construction time.
@@ -80,6 +100,50 @@ impl TestAgent {
         }
 
         return None;
+    }
+}
+
+/// Ensures create_environment properly invokes the right lifespans.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_environment_startup() {
+    let mut fs = ServiceFs::new();
+
+    let startup_agent_id = 1;
+    let (startup_tx, mut startup_rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
+
+    let service_agent_id = 2;
+    let (service_tx, mut service_rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
+    let service_agent = TestAgent::new(service_agent_id, Lifespan::Service, Some(service_tx));
+
+    let completion_rx = create_environment(
+        fs.root_dir(),
+        [].iter().cloned().collect(),
+        vec![
+            TestAgent::new(startup_agent_id, Lifespan::Initialization, Some(startup_tx)),
+            service_agent.clone(),
+        ],
+        ServiceContext::create(None),
+        Box::new(InMemoryStorageFactory::create()),
+    );
+
+    // Wait for the initialization agent to receive invocation
+    if let Some((id, invocation)) = startup_rx.next().await {
+        // Verify the correct agent was invoked.
+        assert_eq!(id, startup_agent_id);
+        assert!(invocation.acknowledge(Ok(())).await.is_ok());
+        // Ensure the service agent hasn't been invoked
+        assert!(service_agent.lock().await.last_invocation.is_none());
+    }
+
+    // Wait for the environment creation to complete after initialization agents
+    assert!(completion_rx.await.unwrap().is_ok());
+
+    // Wait for service agent to receive notification
+    if let Some((id, invocation)) = service_rx.next().await {
+        // Verify the correct agent was invoked
+        assert_eq!(id, service_agent_id);
+        // Ensure acknowledging succeeds
+        assert!(invocation.acknowledge(Ok(())).await.is_ok());
     }
 }
 

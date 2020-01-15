@@ -9,7 +9,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, fx_log_info},
     futures::StreamExt,
-    settings::create_fidl_service,
+    settings::create_environment,
     settings::registry::device_storage::StashDeviceStorageFactory,
     settings::service_context::ServiceContext,
     settings::switchboard::base::get_all_setting_types,
@@ -32,14 +32,19 @@ fn main() -> Result<(), Error> {
         connect_to_service::<fidl_fuchsia_stash::StoreMarker>().unwrap(),
     );
 
-    create_fidl_service(
+    // create_environment returns a future that can be awaited for the result
+    // of the startup. Since main is a synchronous function, we cannot block
+    // here and therefore continue without waiting for the result.
+    let _ = create_environment(
         fs.dir("svc"),
         get_all_setting_types(),
+        vec![],
         service_context,
         Box::new(storage_factory),
     );
 
     fs.take_and_serve_directory_handle()?;
     let () = executor.run_singlethreaded(fs.collect());
+
     Ok(())
 }

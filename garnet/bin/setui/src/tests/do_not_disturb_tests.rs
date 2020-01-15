@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::create_fidl_service,
+    crate::create_environment,
     crate::registry::device_storage::{testing::*, DeviceStorageFactory},
     crate::service_context::ServiceContext,
     crate::switchboard::base::{DoNotDisturbInfo, SettingType},
@@ -29,12 +29,16 @@ async fn test_do_not_disturb() {
         assert!(store_lock.write(&DoNotDisturbInfo::new(true, false), false).await.is_ok());
     }
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::DoNotDisturb].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(None),
         storage_factory,
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());

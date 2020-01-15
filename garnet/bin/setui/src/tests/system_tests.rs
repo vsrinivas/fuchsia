@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::create_fidl_service,
+    crate::create_environment,
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::DeviceStorageFactory,
     crate::service_context::ServiceContext,
@@ -48,12 +48,16 @@ async fn test_system() {
     let device_admin_service_handle = Arc::new(RwLock::new(DeviceAdminService::new()));
     service_registry.write().register_service(device_admin_service_handle.clone());
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::System].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(ServiceRegistry::serve(service_registry)),
         storage_factory,
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());

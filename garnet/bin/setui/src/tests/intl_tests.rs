@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::create_fidl_service,
+    crate::create_environment,
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::DeviceStorageFactory,
     crate::service_context::ServiceContext,
@@ -57,12 +57,16 @@ async fn create_test_intl_env(storage_factory: Box<InMemoryStorageFactory>) -> I
 
     let mut fs = ServiceFs::new();
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::Intl].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(Some(Box::new(service_gen))),
         storage_factory,
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());

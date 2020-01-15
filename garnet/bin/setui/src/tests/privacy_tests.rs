@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::create_fidl_service, crate::registry::device_storage::testing::*,
+    crate::create_environment, crate::registry::device_storage::testing::*,
     crate::registry::device_storage::DeviceStorageFactory, crate::service_context::ServiceContext,
     crate::switchboard::base::PrivacyInfo, crate::switchboard::base::SettingType,
     fidl_fuchsia_settings::*, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
@@ -25,12 +25,16 @@ async fn test_privacy() {
     let factory = Box::new(InMemoryStorageFactory::create());
     let store = factory.get_store::<PrivacyInfo>();
 
-    create_fidl_service(
+    assert!(create_environment(
         fs.root_dir(),
         [SettingType::Privacy].iter().cloned().collect(),
+        vec![],
         ServiceContext::create(None),
         factory,
-    );
+    )
+    .await
+    .unwrap()
+    .is_ok());
 
     let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
     fasync::spawn(fs.collect());

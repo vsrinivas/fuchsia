@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use crate::service_context::ServiceContextHandle;
 use anyhow::{format_err, Error};
+use core::fmt::Debug;
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
 use futures::lock::Mutex;
@@ -48,7 +49,7 @@ impl Invocation {
     }
 }
 
-pub trait Agent {
+pub trait Agent: Debug {
     fn invoke(&mut self, invocation: Invocation) -> Result<bool, Error>;
 }
 

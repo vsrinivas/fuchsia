@@ -7,6 +7,7 @@ use {
     crate::accessibility::spawn_accessibility_fidl_handler,
     crate::account::spawn_account_controller,
     crate::agent::authority_impl::AuthorityImpl,
+    crate::agent::base::{AgentHandle, Authority, Lifespan},
     crate::audio::spawn_audio_controller,
     crate::audio::spawn_audio_fidl_handler,
     crate::device::spawn_device_controller,
@@ -32,10 +33,13 @@ use {
     crate::system::spawn_setui_fidl_handler,
     crate::system::spawn_system_controller,
     crate::system::spawn_system_fidl_handler,
+    anyhow::{format_err, Error},
     fidl_fuchsia_settings::*,
     fidl_fuchsia_setui::SetUiServiceRequestStream,
+    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFsDir, ServiceObj},
     fuchsia_syslog::fx_log_err,
+    futures::channel::oneshot::Receiver,
     std::collections::HashSet,
 };
 
@@ -60,17 +64,18 @@ pub mod registry;
 pub mod service_context;
 pub mod switchboard;
 
-/// Brings up the settings service fidl environment.
+/// Brings up the settings service environment.
 ///
 /// This method generates the necessary infrastructure to support the settings
 /// service (switchboard, registry, etc.) and brings up the components necessary
 /// to support the components specified in the components HashSet.
-pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
+pub fn create_environment<'a, T: DeviceStorageFactory>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     components: HashSet<switchboard::base::SettingType>,
+    agents: Vec<AgentHandle>,
     service_context_handle: ServiceContextHandle,
     storage_factory: Box<T>,
-) {
+) -> Receiver<Result<(), Error>> {
     let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
     let unboxed_storage_factory = &storage_factory;
 
@@ -78,7 +83,7 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     // to handlers.
     let (switchboard_handle, event_tx) = SwitchboardImpl::create(action_tx);
 
-    let _agent_authority = AuthorityImpl::new();
+    let mut agent_authority = AuthorityImpl::new();
 
     // Creates registry, used to register handlers for setting types.
     let registry_handle = RegistryImpl::create(event_tx, action_rx);
@@ -271,6 +276,34 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
             spawn_setup_fidl_handler(switchboard_handle_clone.clone(), stream);
         });
     }
+
+    let (response_tx, response_rx) = futures::channel::oneshot::channel::<Result<(), Error>>();
+    fasync::spawn(async move {
+        // Register agents
+        for agent in agents {
+            if agent_authority.register(agent.clone()).is_err() {
+                fx_log_err!("failed to register agent: {:?}", agent.clone().lock().await);
+            }
+        }
+
+        // Execute initialization agents sequentially
+        if let Ok(Ok(())) = agent_authority
+            .execute_lifespan(Lifespan::Initialization, service_context_handle.clone(), true)
+            .await
+        {
+            response_tx.send(Ok(())).ok();
+        } else {
+            response_tx.send(Err(format_err!("Agent initialization failed"))).ok();
+        }
+
+        // Execute service agents concurrently
+        agent_authority
+            .execute_lifespan(Lifespan::Service, service_context_handle.clone(), false)
+            .await
+            .ok();
+    });
+
+    return response_rx;
 }
 
 #[cfg(test)]
