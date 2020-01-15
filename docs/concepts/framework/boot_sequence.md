@@ -23,19 +23,18 @@ app: `bootstrap`.
 `sysmgr`'s job is to create the boot environment and create a number of
  initial components in the boot environment.
 
-The services that `sysmgr` offers in the boot environment are not provided by
-bootstrap itself. Instead, when `sysmgr` receives a request for a service for
-the first time, `sysmgr` lazily creates the appropriate app to implement that
-service and routes the request to that app. The table of which components
-implement which services is contained in the
-`/system/data/bootstrap/services.config` file. Subsequent requests for the same
-service are routed to the already running app. If the app terminates,
-`sysmgr` will start it again the next time it receives a request for a
-service implemented by that app.
+`sysmgr` provides services that are not offered in the boot environment itself.
+When `sysmgr` receives a request for a service for the first time, `sysmgr`
+creates the appropriate application to implement that service and routes the request
+to that application. Subsequent requests are routed to the already running
+application. If the application dies, it is restarted automatically
+the next time a service attempts to connect to that application.
 
-`sysmgr` also runs a number of components in the boot environment at
-startup. The list of components to run at startup is contained in the
-`/system/data/bootstrap/apps.config` file.
+By default, `sysmgr` reads all configuration files from `/config/data/sysmgr/`,
+which are [formatted as either an app or service](/src/sys/sysmgr/sysmgr-configuration.md).
+The table of which components implement which services is contained in the
+[services.config](/src/sys/sysmgr/config/services.config) file.
+
 
 # Layer 3: [basemgr](/src/modular/bin/basemgr/)
 
