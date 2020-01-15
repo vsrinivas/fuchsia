@@ -88,5 +88,6 @@ group("tests") {
     ":web_engine",
     ":web_runner",
     "web_runner_tests:tests",
+    "//src/fonts:downstream_test_deps",
   ]
 }

@@ -10,8 +10,7 @@
           "file_name": "Ephemeral.ttf",
           "location": {
             "package": {
-              "url": "fuchsia-pkg://fuchsia.com/font-package-ephemeral-ttf",
-              "set": "universe"
+              "url": "fuchsia-pkg://fuchsia.com/font-package-ephemeral-ttf"
             }
           },
           "typefaces": [
