@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/inspect_cpp_codelab_part_4_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.examples.inspect.FizzBuzz"
+        ]
+    }
+}

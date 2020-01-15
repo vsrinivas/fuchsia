@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/reverser_unittests_part_3"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

@@ -3,13 +3,17 @@
 # found in the LICENSE file.
 
 group("diagnostics") {
-  deps = [ "archivist" ]
+  deps = [
+    "archivist",
+    "examples",
+  ]
 }
 
 group("tests") {
   testonly = true
   deps = [
     "archivist:tests",
+    "examples:tests",
     "inspect_validator:tests",
     "inspect_validator/lib/cpp:tests",
     "inspect_validator/lib/rust:tests",

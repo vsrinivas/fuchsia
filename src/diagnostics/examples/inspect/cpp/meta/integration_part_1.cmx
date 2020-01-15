@@ -1,0 +1,19 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.diagnostics.Archive": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/integration_part_1"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Loader",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

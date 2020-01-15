@@ -1,0 +1,12 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.examples.inspect;
+
+// Implementation of a string reverser.
+[Discoverable]
+protocol Reverser {
+    // Returns the input string reversed character-by-character.
+    Reverse(string:1024 input) -> (string:1024 response);
+};

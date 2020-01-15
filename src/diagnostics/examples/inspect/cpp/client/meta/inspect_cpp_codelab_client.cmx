@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/inspect_cpp_codelab_client"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Loader",
+            "fuchsia.logger.LogSink",
+            "fuchsia.pkg.PackageResolver",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}
