@@ -23,6 +23,8 @@ use {
 pub mod steps;
 use steps::{LoadStep, OperationStep, RebootStep, RebootType, SetupStep, TestStep, VerifyStep};
 
+pub mod integration;
+
 fn box_message(message: String) -> String {
     let line_len = message.len() + 2;
     let line: String = std::iter::repeat('━').take(line_len).collect();
@@ -115,8 +117,7 @@ pub struct CommonOpts {
     /// will!) format this device. Don't use a main system partition!
     pub block_device: String,
     /// The target device to ssh into and execute the test on. A good way to configure this locally
-    /// is by prefixing the binary with `FUCHSIA_IPV4_ADDR=$(fx get-device-addr)`
-    #[structopt(env = "FUCHSIA_IPV4_ADDR")]
+    /// is by using `$(fx get-device-addr)`.
     pub target: String,
     /// [Optional] A seed to use for all random operations. Tests are NOT deterministic relative to
     /// the provided seed. The operations will be identical, but because of the non-deterministic

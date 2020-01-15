@@ -17,10 +17,20 @@ fn main() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::main;
+    use {
+        blackout_host::{integration, Test},
+        std::time::Duration,
+    };
 
     #[test]
     fn test() {
-        assert!(main(), Ok(()));
+        Test::new("blobfs_fsck_soft_target.cmx")
+            .add_options(integration::options())
+            .setup_step()
+            .load_step(Duration::from_secs(5))
+            .reboot_step()
+            .verify_step(10, Duration::from_secs(1))
+            .run()
+            .expect("test failure");
     }
 }

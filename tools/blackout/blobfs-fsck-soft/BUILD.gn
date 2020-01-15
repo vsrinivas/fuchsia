@@ -117,3 +117,8 @@ group("tests") {
   testonly = true
   public_deps = [ ":blobfs-fsck-soft-target-test" ]
 }
+
+group("integration") {
+  testonly = true
+  public_deps = [ ":blobfs-fsck-soft-host_test($host_toolchain)" ]
+}

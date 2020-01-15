@@ -18,3 +18,11 @@ group("tests") {
     "//tools/blackout/blackout-target:tests",
   ]
 }
+
+# the integration group enables the rust test harness version of the power failure tests. this group
+# shouldn't be included in normal test targets - they are intended to be run under specific
+# conditions in CI as opposed to for every change in CQ or being run locally.
+group("integration") {
+  testonly = true
+  public_deps = [ "blobfs-fsck-soft:integration" ]
+}
