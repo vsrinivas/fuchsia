@@ -131,6 +131,7 @@ zx_status_t GetModulesForProcess(const zx::process& process, uint64_t dl_debug_a
       process, dl_debug_addr, [modules](const zx::process& process, uint64_t base, uint64_t lmap) {
         debug_ipc::Module module;
         module.base = base;
+        module.debug_address = lmap;
 
         uint64_t str_addr;
         size_t num_read;

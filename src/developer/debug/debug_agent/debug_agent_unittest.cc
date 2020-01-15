@@ -358,8 +358,8 @@ TEST(DebugAgent, OnProcessStatus) {
 
   debug_ipc::NotifyModules modules_to_send = {};
   modules_to_send.process_koid = kProcessKoid2;
-  modules_to_send.modules.push_back({"module-1", 0x1, "build-1"});
-  modules_to_send.modules.push_back({"module-2", 0x2, "build-2"});
+  modules_to_send.modules.push_back({"module-1", 0x1, 0x5, "build-1"});
+  modules_to_send.modules.push_back({"module-2", 0x2, 0x7, "build-2"});
   process2_ptr->set_modules_to_send(modules_to_send);
 
   // Asking for an existent one should send the process and modules notification.
@@ -381,9 +381,11 @@ TEST(DebugAgent, OnProcessStatus) {
   ASSERT_EQ(modules[0].modules.size(), modules_to_send.modules.size());
   ASSERT_EQ(modules[0].modules[0].name, modules_to_send.modules[0].name);
   ASSERT_EQ(modules[0].modules[0].base, modules_to_send.modules[0].base);
+  ASSERT_EQ(modules[0].modules[0].debug_address, modules_to_send.modules[0].debug_address);
   ASSERT_EQ(modules[0].modules[0].build_id, modules_to_send.modules[0].build_id);
   ASSERT_EQ(modules[0].modules[1].name, modules_to_send.modules[1].name);
   ASSERT_EQ(modules[0].modules[1].base, modules_to_send.modules[1].base);
+  ASSERT_EQ(modules[0].modules[1].debug_address, modules_to_send.modules[1].debug_address);
   ASSERT_EQ(modules[0].modules[1].build_id, modules_to_send.modules[1].build_id);
 }
 

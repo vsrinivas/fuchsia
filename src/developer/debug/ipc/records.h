@@ -296,7 +296,8 @@ struct BreakpointStats {
 // Information on one loaded module.
 struct Module {
   std::string name;
-  uint64_t base = 0;  // Load address of this file.
+  uint64_t base = 0;           // Load address of this file.
+  uint64_t debug_address = 0;  // Link map address for this module.
   std::string build_id;
 };
 

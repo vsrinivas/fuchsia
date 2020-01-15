@@ -83,6 +83,7 @@ void Serialize(const MemoryBlock& block, MessageWriter* writer) {
 void Serialize(const Module& module, MessageWriter* writer) {
   writer->WriteString(module.name);
   writer->WriteUint64(module.base);
+  writer->WriteUint64(module.debug_address);
   writer->WriteString(module.build_id);
 }
 

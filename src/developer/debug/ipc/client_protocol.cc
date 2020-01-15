@@ -88,6 +88,8 @@ bool Deserialize(MessageReader* reader, Module* module) {
     return false;
   if (!reader->ReadUint64(&module->base))
     return false;
+  if (!reader->ReadUint64(&module->debug_address))
+    return false;
   if (!reader->ReadString(&module->build_id))
     return false;
   return true;

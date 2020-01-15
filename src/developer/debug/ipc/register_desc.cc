@@ -22,6 +22,8 @@ const RegisterInfo kRegisterInfo[] = {
     // ---------------------------------------------------------------------------------------------
 
     // General purpose.
+    // NOTE: The DWARF ID for tpidr is not in any spec. mcgrathr@ invented it for our APIs, and it
+    // may change as those get standardized.
 
     {.id = RegisterID::kARMv8_x0,  .name = "x0",  .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_x0,  .bits = 64, .dwarf_id = 0},
     {.id = RegisterID::kARMv8_x1,  .name = "x1",  .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_x1,  .bits = 64, .dwarf_id = 1},
@@ -54,7 +56,7 @@ const RegisterInfo kRegisterInfo[] = {
     {.id = RegisterID::kARMv8_x28, .name = "x28", .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_x28, .bits = 64, .dwarf_id = 28},
     {.id = RegisterID::kARMv8_x29, .name = "x29", .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_x29, .bits = 64, .dwarf_id = 29},
     {.id = RegisterID::kARMv8_lr,  .name = "lr",  .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_lr,  .bits = 64, .dwarf_id = 30},
-    {.id = RegisterID::kARMv8_tpidr,  .name = "tpidr",  .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_tpidr,  .bits = 64},
+    {.id = RegisterID::kARMv8_tpidr,  .name = "tpidr",  .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_tpidr,  .bits = 64, .dwarf_id = 128},
     {.id = RegisterID::kARMv8_sp,  .name = "sp",  .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_sp,  .bits = 64, .dwarf_id = 31},
     {.id = RegisterID::kARMv8_pc,  .name = "pc",  .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_pc,  .bits = 64},
 
