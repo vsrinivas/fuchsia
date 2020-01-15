@@ -21,6 +21,9 @@ class PipelineConfig {
     // The name of the effect to load from |lib_name|.
     std::string effect_name;
 
+    // A name for the specific effect instance. Primarily for diagnostic purposes.
+    std::string instance_name;
+
     // To be passed to the EffectLoader. This is an opaque string used to configure the effect
     // instance.
     std::string effect_config;

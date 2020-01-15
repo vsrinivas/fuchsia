@@ -18,11 +18,12 @@
       "type": "object",
       "properties": {
         "lib": "string",
+        "effect": "string",
         "name": "string",
         "config": {},
         "_comment": "string"
       },
-      "required": [ "lib" ],
+      "required": [ "lib", "effect" ],
       "additionalProperties": false
     },
     "mix_group": {

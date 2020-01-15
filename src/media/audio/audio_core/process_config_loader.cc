@@ -25,6 +25,7 @@ static constexpr char kJsonKeyVolumeCurve[] = "volume_curve";
 static constexpr char kJsonKeyPipeline[] = "pipeline";
 static constexpr char kJsonKeyLib[] = "lib";
 static constexpr char kJsonKeyName[] = "name";
+static constexpr char kJsonKeyEffect[] = "effect";
 static constexpr char kJsonKeyConfig[] = "config";
 static constexpr char kJsonKeyStreams[] = "streams";
 static constexpr char kJsonKeyInputs[] = "inputs";
@@ -79,10 +80,16 @@ PipelineConfig::Effect ParseEffectFromJsonObject(const rapidjson::Value& value) 
   FX_CHECK(it != value.MemberEnd() && it->value.IsString());
   effect.lib_name = it->value.GetString();
 
-  it = value.FindMember(kJsonKeyName);
+  it = value.FindMember(kJsonKeyEffect);
   if (it != value.MemberEnd()) {
     FX_CHECK(it->value.IsString());
     effect.effect_name = it->value.GetString();
+  }
+
+  it = value.FindMember(kJsonKeyName);
+  if (it != value.MemberEnd()) {
+    FX_CHECK(it->value.IsString());
+    effect.instance_name = it->value.GetString();
   }
 
   it = value.FindMember(kJsonKeyConfig);

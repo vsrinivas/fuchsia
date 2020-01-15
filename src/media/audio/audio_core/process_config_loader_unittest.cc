@@ -205,7 +205,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
             "effects": [
               {
                 "lib": "libbar2.so",
-                "name": "linearize_effect",
+                "effect": "linearize_effect",
+                "name": "instance_name",
                 "_comment": "just a comment",
                 "config": {
                   "a": 123,
@@ -219,7 +220,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
                 "effects": [
                   {
                     "lib": "libfoo2.so",
-                    "name": "effect3"
+                    "effect": "effect3"
                   }
                 ],
                 "inputs": [
@@ -229,14 +230,14 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
                     "effects": [
                       {
                         "lib": "libfoo.so",
-                        "name": "effect1",
+                        "effect": "effect1",
                         "config": {
                           "some_config": 0
                         }
                       },
                       {
                         "lib": "libbar.so",
-                        "name": "effect2",
+                        "effect": "effect2",
                         "config": {
                           "arg1": 55,
                           "arg2": 3.14
@@ -250,6 +251,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
                     "effects": [
                       {
                         "lib": "libbaz.so",
+                        "effect": "baz",
                         "_comment": "Ignore me",
                         "config": {
                           "string_param": "some string value"
@@ -288,6 +290,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       const auto& effect = mix_group.effects[0];
       EXPECT_EQ("libbar2.so", effect.lib_name);
       EXPECT_EQ("linearize_effect", effect.effect_name);
+      EXPECT_EQ("instance_name", effect.instance_name);
       EXPECT_EQ("{\"a\":123,\"b\":456}", effect.effect_config);
     }
     ASSERT_EQ(1u, mix_group.inputs.size());
@@ -337,7 +340,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     {
       const auto& effect = mix_group.effects[0];
       EXPECT_EQ("libbaz.so", effect.lib_name);
-      EXPECT_EQ("", effect.effect_name);
+      EXPECT_EQ("baz", effect.effect_name);
       EXPECT_EQ("{\"string_param\":\"some string value\"}", effect.effect_config);
     }
   }
