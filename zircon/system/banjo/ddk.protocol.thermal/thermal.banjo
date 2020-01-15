@@ -1,0 +1,16 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.thermal;
+
+using zx;
+
+/// This is somewhat of a dummy protocol that's only useful for
+/// connecting to the thermal driver's FIDL interface via Banjo.
+[Layout = "ddk-protocol"]
+protocol Thermal {
+    /// Pass a channel handle to the thermal driver to connect to its
+    /// FIDL interface.
+    Connect(handle<channel> chan) -> (zx.status status);
+};

@@ -2,33 +2,56 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 
 #include "astro.h"
 
-namespace astro {
+namespace {
 
-static const pbus_dev_t cpu_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "astro-cpu";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_S905D2;
-  dev.did = PDEV_DID_AMLOGIC_CPU;
-  return dev;
+constexpr pbus_dev_t cpu_dev = []() {
+  pbus_dev_t result = {};
+  result.name = "aml-cpu";
+  result.vid = PDEV_VID_AMLOGIC;
+  result.pid = PDEV_PID_AMLOGIC_S905D2;
+  result.did = PDEV_DID_AMLOGIC_CPU;
+  return result;
 }();
 
-zx_status_t Astro::CpuInit() {
+constexpr zx_bind_inst_t root_match[] = {
+  BI_MATCH(),
+};
 
-  zx_status_t st = pbus_.DeviceAdd(&cpu_dev);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, st);
-    return st;
+constexpr zx_bind_inst_t thermal_match[] ={
+  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_THERMAL),
+};
+
+constexpr device_component_part_t thermal_component[] = {
+  {countof(root_match), root_match},
+  {countof(thermal_match), thermal_match},
+};
+
+constexpr device_component_t components[] = {
+  {countof(thermal_component), thermal_component},
+};
+
+}  // namespace
+
+namespace astro {
+
+zx_status_t Astro::CpuInit() {
+  zx_status_t result = 
+    pbus_.CompositeDeviceAdd(&cpu_dev, components, countof(components), 1);
+  
+  if (result != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d\n", __func__, result);
   }
 
-  return ZX_OK;
+  return result;
 }
 
 }  // namespace astro
