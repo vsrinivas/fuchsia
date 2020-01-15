@@ -12,7 +12,7 @@ const uint16 MAX_URL_LENGTH = 2083;
 // TODO(fxb/42833): improve this API by making it async.
 table RunComponentResponse {
     // Component's exit code.
-    1: uint32 exit_code;
+    1: int64 exit_code;
     // stdout from the component.
     // This would be called just 'stdout', except for fxb/42108.
     2: string:MAX component_stdout;

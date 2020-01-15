@@ -108,26 +108,41 @@ mod tests {
         proxy
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_spawn_hello_world() -> Result<(), Error> {
+    async fn run_component_test(component_url: &str, argv: Vec<&str>) -> rcs::RunComponentResponse {
         let (rcs_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<rcs::FdbRemoteControlMarker>().unwrap();
         fasync::spawn(async move {
             RemoteControlService::new().unwrap().serve_stream(stream).await.unwrap();
         });
 
-        let argv = vec![];
-        let response = rcs_proxy
-            .run_component(
-                "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx",
-                &mut argv.iter().copied(),
-            )
-            .await
-            .unwrap();
+        return rcs_proxy.run_component(component_url, &mut argv.iter().copied()).await.unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_spawn_hello_world() -> Result<(), Error> {
+        let response = run_component_test(
+            "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx",
+            vec![],
+        )
+        .await;
 
         assert_eq!(response.component_stdout, Some(String::from("Hello, world!\n")));
         assert_eq!(response.component_stderr, Some(String::default()));
         assert_eq!(response.exit_code, Some(0));
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_spawn_non_existent_package() -> Result<(), Error> {
+        let response = run_component_test(
+            "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/this_package_doesnt_exist.cmx",
+            vec![],
+        )
+        .await;
+
+        assert_eq!(response.component_stdout, Some(String::default()));
+        assert_eq!(response.component_stderr, Some(String::default()));
+        assert_eq!(response.exit_code, Some(-1));
         Ok(())
     }
 
