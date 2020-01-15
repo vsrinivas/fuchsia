@@ -11,6 +11,9 @@
 #include <zxtest/zxtest.h>
 
 #include "keyboard-vt100.h"
+#include "src/ui/lib/hid-input-report/fidl.h"
+#include "src/ui/lib/hid-input-report/keyboard.h"
+#include "src/ui/lib/key_util/key_util.h"
 
 // Global port needed for IPC calls.
 port_t port;
@@ -45,7 +48,6 @@ void expect_keypress(uint8_t expected_keycode, int expected_modifiers, uint8_t e
     EXPECT_EQ(output[0], expected_char);
   }
 }
-void expect_no_keypress() { EXPECT_FALSE(g_got_keypress); }
 
 class KeyboardInputHelper {
  public:
@@ -53,169 +55,150 @@ class KeyboardInputHelper {
 
   ~KeyboardInputHelper() {}
 
-  void WriteReportBuf() {
-    hid_keys_t state = {};
-    hid_kbd_parse_report(report_buf_.data(), &state);
-    keyboard_.ProcessInput(state);
+  void WriteReportBuf(std::vector<uint32_t> keys) {
+    hid_input_report::KeyboardInputReport keyboard_report;
+    size_t i = 0;
+    for (auto& key : keys) {
+      fuchsia::ui::input2::Key fidl_key =
+          *key_util::hid_key_to_fuchsia_key(hid::USAGE(hid::usage::Page::kKeyboardKeypad, key));
+      keyboard_report.pressed_keys[i++] = static_cast<llcpp::fuchsia::ui::input2::Key>(fidl_key);
+    }
+    keyboard_report.num_pressed_keys = i;
+    hid_input_report::InputReport report;
+    report.report = keyboard_report;
+
+    hid_input_report::FidlInputReport fidl;
+    hid_input_report::SetFidlInputReport(report, &fidl);
+    keyboard_.ProcessInput(fidl.builder.view());
   }
 
   // Byte 0 contains one bit per modifier key.
-  void set_modifiers_byte(uint8_t value) { report_buf_[0] = value; }
+  void set_modifiers_byte(uint8_t value) {}
   // Bytes 2+ contain USB HID key codes.
-  void set_first_keycode(uint8_t value) { report_buf_[2] = value; }
-  // Rollover errors are equal to all values being set to ROLLOVER_ERROR.
-  void set_rollover_error() {
-    report_buf_[0] = HID_USAGE_KEY_ERROR_ROLLOVER;
-    report_buf_[1] = 0;
-    for (auto i = 2; i < 8; i++) {
-      report_buf_[i] = HID_USAGE_KEY_ERROR_ROLLOVER;
-    }
-  }
-  void unset_rollover_error() {
-    for (auto i = 0; i < 8; i++) {
-      report_buf_[i] = 0;
-    }
-  }
+  void set_first_keycode(uint8_t value) {}
 
  private:
-  // USB HID key state buffer.
-  std::array<uint8_t, 8> report_buf_ = {};
   Keyboard keyboard_;
 };
 
 TEST(GfxConsoleKeyboardTests, KeyboardInputThread) {
   KeyboardInputHelper helper;
+  std::vector<uint32_t> keypresses;
 
   // Test pressing keys without any modifiers.
-  helper.set_first_keycode(HID_USAGE_KEY_M);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_M, 0, 'm'));
+  keypresses = {HID_USAGE_KEY_M};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_M, 0, 'm'));
 
-  helper.set_first_keycode(HID_USAGE_KEY_6);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_6, 0, '6'));
-
-  // Simulate a rollover event appearing and disappearing — no keypress should be registered
-  helper.set_rollover_error();
-  helper.WriteReportBuf();
-  expect_no_keypress();
-
-  // Send the keycode that was pressed in the previous test before the
-  // rollover happened. No new keypress should register.
-  helper.unset_rollover_error();
-  helper.set_first_keycode(HID_USAGE_KEY_6);
-  helper.WriteReportBuf();
-  expect_no_keypress();
+  keypresses = {HID_USAGE_KEY_6};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_6, 0, '6'));
 
   // Press a modifier (but no other keys).
-  helper.set_first_keycode(0);   // Unset the earlier key
-  helper.set_modifiers_byte(2);  // Left Shift key
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_LEFT_SHIFT, MOD_LSHIFT, '\0'));
+  keypresses = {HID_USAGE_KEY_LEFT_SHIFT};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_LEFT_SHIFT, MOD_LSHIFT, '\0'));
 
   // Test keys with modifiers pressed.
   // Test Shift-N.
-  helper.set_first_keycode(HID_USAGE_KEY_N);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_N, MOD_LSHIFT, 'N'));
+  keypresses = {HID_USAGE_KEY_LEFT_SHIFT, HID_USAGE_KEY_N};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_N, MOD_LSHIFT, 'N'));
 
   // Test Shift-8.
-  helper.set_first_keycode(HID_USAGE_KEY_8);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_8, MOD_LSHIFT, '*'));
+  keypresses = {HID_USAGE_KEY_LEFT_SHIFT, HID_USAGE_KEY_8};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_8, MOD_LSHIFT, '*'));
 
-  // Test Ctrl modifier.  First send a separate report_buf event to
-  // report unsetting the Shift key state, to account for a quirk of the
-  // current implementation.
-  helper.set_modifiers_byte(0);
-  helper.WriteReportBuf();
-  helper.set_modifiers_byte(1);  // Left Ctrl key
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_LEFT_CTRL, MOD_LCTRL, '\0'));
+  // Test Ctrl modifier.
+  keypresses = {HID_USAGE_KEY_LEFT_CTRL};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_LEFT_CTRL, MOD_LCTRL, '\0'));
 
   // Test Ctrl-J.
-  helper.set_first_keycode(HID_USAGE_KEY_J);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_J, MOD_LCTRL, 10));
+  keypresses = {HID_USAGE_KEY_J, HID_USAGE_KEY_LEFT_CTRL};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_J, MOD_LCTRL, 10));
 
   // Test Ctrl-1.  The Ctrl modifier should be ignored in this case so
   // that we just get '1'.
-  helper.set_first_keycode(HID_USAGE_KEY_1);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_1, MOD_LCTRL, '1'));
+  keypresses = {HID_USAGE_KEY_1, HID_USAGE_KEY_LEFT_CTRL};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_1, MOD_LCTRL, '1'));
 
   // Try Shift and Ctrl together.
-  helper.set_first_keycode(0);
-  helper.set_modifiers_byte(1 | 2);  // Left Shift and Left Ctrl keys
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_LEFT_SHIFT, MOD_LSHIFT | MOD_LCTRL, '\0'));
+  keypresses = {HID_USAGE_KEY_LEFT_SHIFT, HID_USAGE_KEY_LEFT_CTRL};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_LEFT_SHIFT, MOD_LSHIFT | MOD_LCTRL, '\0'));
 
   // Test Shift-Ctrl-J.  This should be equivalent to Ctrl-J.
-  helper.set_first_keycode(HID_USAGE_KEY_J);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_J, MOD_LSHIFT | MOD_LCTRL, 10));
+  keypresses = {HID_USAGE_KEY_LEFT_SHIFT, HID_USAGE_KEY_LEFT_CTRL, HID_USAGE_KEY_J};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_J, MOD_LSHIFT | MOD_LCTRL, 10));
 
   // Test Shift-Ctrl-1.  This should be equivalent to Shift-1.
-  helper.set_first_keycode(HID_USAGE_KEY_1);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_1, MOD_LSHIFT | MOD_LCTRL, '!'));
+  keypresses = {HID_USAGE_KEY_LEFT_SHIFT, HID_USAGE_KEY_LEFT_CTRL, HID_USAGE_KEY_1};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_1, MOD_LSHIFT | MOD_LCTRL, '!'));
 }
 
 TEST(GfxConsoleKeyboardTests, CapsLock) {
   KeyboardInputHelper helper;
+  std::vector<uint32_t> keypresses;
 
-  helper.set_first_keycode(HID_USAGE_KEY_CAPSLOCK);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_CAPSLOCK, MOD_CAPSLOCK, '\0'));
+  keypresses = {HID_USAGE_KEY_CAPSLOCK};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_CAPSLOCK, MOD_CAPSLOCK, '\0'));
 
   // Test that letters are capitalized.
-  helper.set_first_keycode(HID_USAGE_KEY_M);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_M, MOD_CAPSLOCK, 'M'));
+  keypresses = {HID_USAGE_KEY_M};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_M, MOD_CAPSLOCK, 'M'));
 
   // Non-letter characters should not be affected.  This isn't Shift Lock.
-  helper.set_first_keycode(HID_USAGE_KEY_1);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_1, MOD_CAPSLOCK, '1'));
+  keypresses = {HID_USAGE_KEY_1};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_1, MOD_CAPSLOCK, '1'));
 
   // Test unsetting Caps Lock.
-  helper.set_first_keycode(HID_USAGE_KEY_CAPSLOCK);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_CAPSLOCK, 0, '\0'));
+  keypresses = {HID_USAGE_KEY_CAPSLOCK};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_CAPSLOCK, 0, '\0'));
 
-  helper.set_first_keycode(HID_USAGE_KEY_M);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_M, 0, 'm'));
+  keypresses = {HID_USAGE_KEY_M};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_M, 0, 'm'));
 }
 
 TEST(GfxConsoleKeyboardTests, CapsLockWithShift) {
   KeyboardInputHelper helper;
+  std::vector<uint32_t> keypresses;
 
-  helper.set_modifiers_byte(2);  // Left Shift key
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_LEFT_SHIFT, MOD_LSHIFT, '\0'));
-  helper.set_first_keycode(HID_USAGE_KEY_CAPSLOCK);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(
-      expect_keypress(HID_USAGE_KEY_CAPSLOCK, MOD_LSHIFT | MOD_CAPSLOCK, '\0'));
+  keypresses = {HID_USAGE_KEY_LEFT_SHIFT};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_LEFT_SHIFT, MOD_LSHIFT, '\0'));
+
+  keypresses = {HID_USAGE_KEY_LEFT_SHIFT, HID_USAGE_KEY_CAPSLOCK};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_CAPSLOCK, MOD_LSHIFT | MOD_CAPSLOCK, '\0'));
 
   // Shift should undo the effect of Caps Lock for letters.
-  helper.set_first_keycode(HID_USAGE_KEY_M);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_M, MOD_LSHIFT | MOD_CAPSLOCK, 'm'));
+  keypresses = {HID_USAGE_KEY_LEFT_SHIFT, HID_USAGE_KEY_M};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_M, MOD_LSHIFT | MOD_CAPSLOCK, 'm'));
 
-  helper.set_first_keycode(HID_USAGE_KEY_1);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_1, MOD_LSHIFT | MOD_CAPSLOCK, '!'));
+  keypresses = {HID_USAGE_KEY_LEFT_SHIFT, HID_USAGE_KEY_1};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_1, MOD_LSHIFT | MOD_CAPSLOCK, '!'));
 
   // Test unsetting Caps Lock.
-  helper.set_first_keycode(HID_USAGE_KEY_CAPSLOCK);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_CAPSLOCK, MOD_LSHIFT, '\0'));
+  keypresses = {HID_USAGE_KEY_LEFT_SHIFT, HID_USAGE_KEY_CAPSLOCK};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_CAPSLOCK, MOD_LSHIFT, '\0'));
 
-  helper.set_first_keycode(HID_USAGE_KEY_M);
-  helper.WriteReportBuf();
-  ASSERT_NO_FATAL_FAILURES(expect_keypress(HID_USAGE_KEY_M, MOD_LSHIFT, 'M'));
+  keypresses = {HID_USAGE_KEY_LEFT_SHIFT, HID_USAGE_KEY_M};
+  helper.WriteReportBuf(keypresses);
+  ASSERT_NO_FAILURES(expect_keypress(HID_USAGE_KEY_M, MOD_LSHIFT, 'M'));
 }
 
 }  // namespace

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_VIRTCON_KEYBOARD_H_
-#define ZIRCON_SYSTEM_CORE_VIRTCON_KEYBOARD_H_
+#ifndef SRC_BRINGUP_VIRTCON_KEYBOARD_H_
+#define SRC_BRINGUP_VIRTCON_KEYBOARD_H_
 
+#include <fuchsia/input/report/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/timer.h>
@@ -12,6 +13,7 @@
 #include <zircon/types.h>
 
 #include <array>
+#include <optional>
 
 #include "vc.h"
 
@@ -42,10 +44,10 @@ class Keyboard {
 
   // Have the keyboard start watching a given device.
   // |caller| represents the keyboard device.
-  zx_status_t Setup(fzl::FdioCaller caller);
+  zx_status_t Setup(llcpp::fuchsia::input::report::InputDevice::SyncClient keyboard_client);
 
   // Process a given set of keys and send them to the handler.
-  void ProcessInput(hid_keys_t state);
+  void ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& report);
 
  private:
   // The callback for when key-repeat is triggered.
@@ -55,20 +57,24 @@ class Keyboard {
   // Send a report to the device that enables/disables the capslock LED.
   void SetCapsLockLed(bool caps_lock);
 
-  fzl::FdioCaller caller_;
-  port_fd_handler_t input_notifier_ = {};
+  port_handler_t input_notifier_ = {};
   port_handler_t timer_notifier_ = {};
   zx::timer timer_;
 
   keypress_handler_t handler_ = {};
 
-  hid_keys_t previous_state_ = {};
-  int modifiers_ = 0;
+  zx::duration repeat_interval_ = zx::duration::infinite();
+  zx::event keyboard_event_;
+  std::optional<llcpp::fuchsia::input::report::InputDevice::SyncClient> keyboard_client_;
 
+  int modifiers_ = 0;
   bool repeat_enabled_ = true;
   bool is_repeating_ = false;
-  uint8_t repeating_key_ = 0;
-  zx::duration repeat_interval_ = zx::duration::infinite();
+  uint32_t repeating_key_;
+  std::array<llcpp::fuchsia::ui::input2::Key,
+             llcpp::fuchsia::input::report::KEYBOARD_MAX_PRESSED_KEYS>
+      last_pressed_keys_;
+  size_t last_pressed_keys_size_ = 0;
 };
 
 // A |KeyboardWatcher| opens a directory and will watch for new input devices.
@@ -94,4 +100,4 @@ class KeyboardWatcher {
   port_handler_t dir_handler_ = {};
 };
 
-#endif  // ZIRCON_SYSTEM_CORE_VIRTCON_KEYBOARD_H_
+#endif  // SRC_BRINGUP_VIRTCON_KEYBOARD_H_

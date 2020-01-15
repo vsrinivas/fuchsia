@@ -21,8 +21,11 @@ group("common") {
   visibility = [ ":*" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/bringup/virtcon/port",
     "//src/storage/deprecated-fs-fidl-handler",
+    "//src/ui/lib/hid-input-report",
+    "//src/ui/lib/key_util",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",

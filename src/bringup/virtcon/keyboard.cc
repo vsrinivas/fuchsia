@@ -23,8 +23,11 @@
 
 #include <utility>
 
+#include <ddk/device.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
+
+#include "src/ui/lib/key_util/key_util.h"
 
 namespace {
 
@@ -39,6 +42,25 @@ KeyboardWatcher main_watcher;
 
 zx_status_t keyboard_main_callback(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
   return main_watcher.DirCallback(ph, signals, evt);
+}
+
+int modifiers_from_fuchsia_key(llcpp::fuchsia::ui::input2::Key key) {
+  switch (key) {
+    case llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT:
+      return MOD_LSHIFT;
+    case llcpp::fuchsia::ui::input2::Key::RIGHT_SHIFT:
+      return MOD_RSHIFT;
+    case llcpp::fuchsia::ui::input2::Key::LEFT_ALT:
+      return MOD_LALT;
+    case llcpp::fuchsia::ui::input2::Key::RIGHT_ALT:
+      return MOD_RALT;
+    case llcpp::fuchsia::ui::input2::Key::LEFT_CTRL:
+      return MOD_LCTRL;
+    case llcpp::fuchsia::ui::input2::Key::RIGHT_CTRL:
+      return MOD_RCTRL;
+    default:
+      return 0;
+  }
 }
 
 int modifiers_from_keycode(uint8_t keycode) {
@@ -61,6 +83,16 @@ int modifiers_from_keycode(uint8_t keycode) {
 
 bool keycode_is_modifier(uint8_t keycode) { return modifiers_from_keycode(keycode) != 0; }
 
+bool is_key_in_set(llcpp::fuchsia::ui::input2::Key key,
+                   fidl::VectorView<llcpp::fuchsia::ui::input2::Key> set) {
+  for (auto s : set) {
+    if (key == s) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace
 
 zx_status_t setup_keyboard_watcher(keypress_handler_t handler, bool repeat_keys) {
@@ -81,124 +113,145 @@ zx_status_t Keyboard::TimerCallback(zx_signals_t signals, uint32_t evt) {
 }
 
 void Keyboard::SetCapsLockLed(bool caps_lock) {
-  if (!caller_) {
+  if (!keyboard_client_) {
     return;
   }
-  // The following bit to set is specified in "Device Class Definition
-  // for Human Interface Devices (HID)", Version 1.11,
-  // http://www.usb.org/developers/hidpage/HID1_11.pdf.  Zircon leaves
-  // USB keyboards in boot mode, so the relevant section is Appendix B,
-  // "Boot Interface Descriptors", "B.1 Protocol 1 (Keyboard)".
-  const uint8_t kUsbCapsLockBit = 1 << 1;
-  const uint8_t report_body[1] = {static_cast<uint8_t>(caps_lock ? kUsbCapsLockBit : 0)};
 
-  zx_status_t call_status;
-  zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
-      caller_.borrow_channel(), fuchsia_hardware_input_ReportType_OUTPUT, 0, report_body,
-      sizeof(report_body), &call_status);
-  if (status != ZX_OK || call_status != ZX_OK) {
-    printf("fuchsia.hardware.input.Device.SetReport() failed (returned %d, %d)\n", status,
-           call_status);
+  // Generate the OutputReport.
+  auto report_builder = llcpp::fuchsia::input::report::OutputReport::Build();
+  auto keyboard_report_builder = llcpp::fuchsia::input::report::KeyboardOutputReport::Build();
+  fidl::VectorView<llcpp::fuchsia::input::report::LedType> led_view;
+  llcpp::fuchsia::input::report::LedType caps_led =
+      llcpp::fuchsia::input::report::LedType::CAPS_LOCK;
+
+  if (caps_lock) {
+    led_view = fidl::VectorView<llcpp::fuchsia::input::report::LedType>(&caps_led, 1);
+  } else {
+    led_view = fidl::VectorView<llcpp::fuchsia::input::report::LedType>(nullptr, 0);
   }
+
+  keyboard_report_builder.set_enabled_leds(&led_view);
+  llcpp::fuchsia::input::report::KeyboardOutputReport keyboard_report =
+      keyboard_report_builder.view();
+  report_builder.set_keyboard(&keyboard_report);
+
+  llcpp::fuchsia::input::report::InputDevice::ResultOf::SendOutputReport result =
+      keyboard_client_->SendOutputReport(report_builder.view());
 }
 
 // returns true if key was pressed and none were released
-void Keyboard::ProcessInput(hid_keys_t state) {
-  // Process the pressed keys.
-  uint8_t keycode;
-  hid_keys_t keys;
-  hid_kbd_pressed_keys(&previous_state_, &state, &keys);
-  hid_for_every_key(&keys, keycode) {
-    if (keycode == HID_USAGE_KEY_ERROR_ROLLOVER) {
-      return;
-    }
-    modifiers_ |= modifiers_from_keycode(keycode);
-    if (keycode == HID_USAGE_KEY_CAPSLOCK) {
-      modifiers_ ^= MOD_CAPSLOCK;
-      SetCapsLockLed(modifiers_ & MOD_CAPSLOCK);
-    }
-
-    if (repeat_enabled_ && !keycode_is_modifier(keycode)) {
-      is_repeating_ = true;
-      repeating_key_ = keycode;
-      repeat_interval_ = kLowRepeatKeyFreq;
-      timer_.cancel();
-      timer_.set(zx::deadline_after(repeat_interval_), kSlackDuration);
-    }
-    handler_(keycode, modifiers_);
+void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& report) {
+  if (!report.has_keyboard()) {
+    return;
+  }
+  // Check if the keyboard FIDL table contains the pressed_keys vector. This vector should
+  // always exist. If it doesn't there's an error. If no keys are pressed this vector
+  // exists but is size 0.
+  if (!report.keyboard().has_pressed_keys()) {
+    return;
   }
 
-  // Process the released keys.
-  hid_kbd_released_keys(&previous_state_, &state, &keys);
-  hid_for_every_key(&keys, keycode) {
-    modifiers_ &= ~modifiers_from_keycode(keycode);
+  fidl::VectorView last_pressed_keys(last_pressed_keys_.data(), last_pressed_keys_size_);
 
-    if (repeat_enabled_ && is_repeating_ && (repeating_key_ == keycode)) {
-      is_repeating_ = false;
-      repeating_key_ = 0;
-      timer_.cancel();
+  // Process the released keys.
+  for (llcpp::fuchsia::ui::input2::Key prev_key : last_pressed_keys) {
+    if (!is_key_in_set(prev_key, report.keyboard().pressed_keys())) {
+      modifiers_ &= ~modifiers_from_fuchsia_key(prev_key);
+
+      uint32_t hid_prev_key =
+          *key_util::fuchsia_key_to_hid_key(static_cast<::fuchsia::ui::input2::Key>(prev_key));
+      if (repeat_enabled_ && is_repeating_ && (repeating_key_ == hid_prev_key)) {
+        is_repeating_ = false;
+        timer_.cancel();
+      }
+    }
+  }
+
+  // Process the pressed keys.
+  for (llcpp::fuchsia::ui::input2::Key key : report.keyboard().pressed_keys()) {
+    if (!is_key_in_set(key, last_pressed_keys)) {
+      modifiers_ |= modifiers_from_fuchsia_key(key);
+      if (key == llcpp::fuchsia::ui::input2::Key::CAPS_LOCK) {
+        modifiers_ ^= MOD_CAPSLOCK;
+        SetCapsLockLed(modifiers_ & MOD_CAPSLOCK);
+      }
+      uint32_t hid_key =
+          *key_util::fuchsia_key_to_hid_key(static_cast<::fuchsia::ui::input2::Key>(key));
+      if (repeat_enabled_ && !keycode_is_modifier(hid_key)) {
+        is_repeating_ = true;
+        repeat_interval_ = kLowRepeatKeyFreq;
+        timer_.cancel();
+        timer_.set(zx::deadline_after(repeat_interval_), kSlackDuration);
+        repeating_key_ = hid_key;
+      }
+      handler_(hid_key, modifiers_);
     }
   }
 
   // Store the previous state.
-  previous_state_ = state;
+  size_t i = 0;
+  for (llcpp::fuchsia::ui::input2::Key key : report.keyboard().pressed_keys()) {
+    last_pressed_keys_[i++] = key;
+  }
+  last_pressed_keys_size_ = i;
 }
 
 Keyboard::~Keyboard() {
-  if (input_notifier_.fdio_context != nullptr) {
-    port_fd_handler_done(&input_notifier_);
+  if (input_notifier_.func != nullptr) {
+    port_cancel(&port, &input_notifier_);
   }
   if (timer_notifier_.func != nullptr) {
     port_cancel(&port, &timer_notifier_);
   }
 }
 
-zx_status_t Keyboard::InputCallback(unsigned pollevt, uint32_t evt) {
-  if (!(pollevt & POLLIN)) {
+zx_status_t Keyboard::InputCallback(zx_signals_t signals, uint32_t evt) {
+  if (!(signals & DEV_STATE_READABLE)) {
     return ZX_ERR_STOP;
   }
 
-  uint8_t report[8];
-  ssize_t r = read(caller_.fd().get(), report, sizeof(report));
-  if (r <= 0) {
-    return ZX_ERR_STOP;
-  }
-  if ((size_t)(r) != sizeof(report)) {
-    repeat_interval_ = zx::duration::infinite();
-    return ZX_OK;
+  llcpp::fuchsia::input::report::InputDevice::ResultOf::GetReports result =
+      keyboard_client_->GetReports();
+  if (result.status() != ZX_OK) {
+    return result.status();
   }
 
-  hid_keys_t state = {};
-  hid_kbd_parse_report(report, &state);
-
-  ProcessInput(state);
+  for (auto& report : result->reports) {
+    ProcessInput(report);
+  }
   return ZX_OK;
 }
 
-zx_status_t Keyboard::Setup(fzl::FdioCaller caller) {
-  caller_ = std::move(caller);
+zx_status_t Keyboard::Setup(
+    llcpp::fuchsia::input::report::InputDevice::SyncClient keyboard_client) {
+  keyboard_client_ = std::move(keyboard_client);
+
+  // XXX - check for LEDS here.
 
   zx_status_t status;
   if ((status = zx::timer::create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &timer_)) != ZX_OK) {
     return status;
   }
 
-  input_notifier_.func = [](port_fd_handler* input_notifier, unsigned pollevt, uint32_t evt) {
+  llcpp::fuchsia::input::report::InputDevice::ResultOf::GetReportsEvent result =
+      keyboard_client_->GetReportsEvent();
+  if (result.status() != ZX_OK) {
+    return status;
+  }
+  keyboard_event_ = std::move(result->event);
+
+  input_notifier_.handle = keyboard_event_.get();
+  input_notifier_.waitfor = DEV_STATE_READABLE;
+  input_notifier_.func = [](port_handler* input_notifier, zx_signals_t signals, uint32_t evt) {
     Keyboard* kbd = containerof(input_notifier, Keyboard, input_notifier_);
-    zx_status_t status = kbd->InputCallback(pollevt, evt);
+    zx_status_t status = kbd->InputCallback(signals, evt);
     if (status == ZX_ERR_STOP) {
       delete kbd;
     }
     return status;
   };
 
-  if ((status = port_fd_handler_init(&input_notifier_, caller_.fd().get(),
-                                     POLLIN | POLLHUP | POLLRDHUP)) < 0) {
-    return status;
-  }
-
-  if ((status = port_wait(&port, &input_notifier_.ph)) != ZX_OK) {
-    port_fd_handler_done(&input_notifier_);
+  if ((status = port_wait(&port, &input_notifier_)) != ZX_OK) {
     return status;
   }
 
@@ -222,21 +275,29 @@ zx_status_t KeyboardWatcher::OpenFile(uint8_t evt, char* name) {
     return ZX_OK;
   }
 
-  fzl::FdioCaller caller = fzl::FdioCaller(fbl::unique_fd(fd));
-  uint32_t proto = fuchsia_hardware_input_BootProtocol_NONE;
-  zx_status_t status =
-      fuchsia_hardware_input_DeviceGetBootProtocol(caller.borrow_channel(), &proto);
-  // skip devices that aren't keyboards
-  if ((status != ZX_OK) || (proto != fuchsia_hardware_input_BootProtocol_KBD)) {
+  zx::channel chan;
+  zx_status_t status = fdio_get_service_handle(fd, chan.reset_and_get_address());
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto keyboard_client = llcpp::fuchsia::input::report::InputDevice::SyncClient(std::move(chan));
+
+  llcpp::fuchsia::input::report::InputDevice::ResultOf::GetDescriptor result =
+      keyboard_client.GetDescriptor();
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  // Skip devices that aren't keyboards.
+  if (!result->descriptor.has_keyboard()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  printf("vc: new input device /dev/class/input/%s\n", name);
+  printf("vc: new input device /dev/class/input-report/%s\n", name);
 
   // This is not a memory leak, because keyboards free themselves when their underlying
   // devices close.
   Keyboard* keyboard = new Keyboard(handler_, repeat_keys_);
-  status = keyboard->Setup(std::move(caller));
+  status = keyboard->Setup(std::move(keyboard_client));
   if (status != ZX_OK) {
     delete keyboard;
     return status;
@@ -282,7 +343,7 @@ zx_status_t KeyboardWatcher::DirCallback(port_handler_t* ph, zx_signals_t signal
 zx_status_t KeyboardWatcher::Setup(keypress_handler_t handler, bool repeat_keys) {
   repeat_keys_ = repeat_keys;
   handler_ = handler;
-  fbl::unique_fd fd(open("/dev/class/input", O_DIRECTORY | O_RDONLY));
+  fbl::unique_fd fd(open("/dev/class/input-report", O_DIRECTORY | O_RDONLY));
   if (!fd) {
     return ZX_ERR_IO;
   }
