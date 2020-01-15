@@ -6,16 +6,35 @@ use {
     super::{Closed, TryMerge},
     futures::{
         channel::oneshot,
-        future::{BoxFuture, Shared},
+        future::{Either, Ready, Shared},
         prelude::*,
     },
-    std::collections::VecDeque,
+    pin_project::pin_project,
+    std::{
+        collections::VecDeque,
+        pin::Pin,
+        task::{Context, Poll},
+    },
 };
 
 // With feature(type_alias_impl_trait), boxing the future would not be necessary, which would also
 // remove the requirements that O and E are Send + 'static.
-//type TaskFuture<O> = impl Future<Output=Result<O, Closed>>;
-pub(crate) type TaskFuture<O> = BoxFuture<'static, Result<O, Closed>>;
+#[pin_project]
+pub(crate) struct TaskFuture<O> {
+    #[pin]
+    fut: Either<oneshot::Receiver<O>, Ready<Result<O, oneshot::Canceled>>>,
+}
+
+impl<O> Future for TaskFuture<O> {
+    type Output = Result<O, Closed>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match self.project().fut.poll(cx) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(res) => Poll::Ready(res.map_err(|oneshot::Canceled| Closed)),
+        }
+    }
+}
 
 /// Shared state for a pending work item. Contains the context parameter to be provided to the task
 /// when running it and other metadata present when running the task.
@@ -40,7 +59,7 @@ pub struct TaskVariants<C, O> {
 impl<C, O> TaskVariants<C, O>
 where
     C: TryMerge,
-    O: Clone + Send + 'static,
+    O: Clone,
 {
     /// Creates a new TaskVariants with a single, pending instance of this task, returning Self and
     /// the completion future for the initial instance of the task.
@@ -120,10 +139,10 @@ impl<C, O> TaskVariants<C, O> {
 /// a [crate::TaskError].
 pub(crate) fn make_broadcast_pair<O>() -> (oneshot::Sender<O>, Shared<TaskFuture<O>>)
 where
-    O: Clone + Send + 'static,
+    O: Clone,
 {
     let (sender, receiver) = oneshot::channel();
-    let fut = receiver.map_err(|oneshot::Canceled| Closed).boxed().shared();
+    let fut = TaskFuture { fut: Either::Left(receiver) }.shared();
 
     (sender, fut)
 }
@@ -132,10 +151,9 @@ where
 /// always reports that the task was canceled.
 pub(crate) fn make_canceled_receiver<O>() -> Shared<TaskFuture<O>>
 where
-    O: Clone + Send + 'static,
+    O: Clone,
 {
-    let (_, fut) = make_broadcast_pair::<O>();
-    fut
+    TaskFuture { fut: Either::Right(futures::future::err(oneshot::Canceled)) }.shared()
 }
 
 #[cfg(test)]

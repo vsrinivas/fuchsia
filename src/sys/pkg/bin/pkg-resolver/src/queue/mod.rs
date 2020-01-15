@@ -9,11 +9,10 @@
 use {
     futures::{
         channel::mpsc,
-        future::{BoxFuture, Shared},
+        future::Shared,
         prelude::*,
         ready,
         stream::{FusedStream, FuturesUnordered},
-        task::{Context, Poll},
     },
     parking_lot::Mutex,
     pin_project::pin_project,
@@ -22,6 +21,7 @@ use {
         hash::Hash,
         pin::Pin,
         sync::{Arc, Weak},
+        task::{Context, Poll},
     },
     thiserror::Error,
 };
@@ -54,7 +54,7 @@ impl TryMerge for () {
     }
 }
 
-/// Creates an unbounded queue of work tasks that will execute up to `concurrency` `work_fn`s at once.
+/// Creates an unbounded queue of work tasks that will execute up to `concurrency` `worker`s at once.
 ///
 /// # Examples
 ///
@@ -95,16 +95,14 @@ impl TryMerge for () {
 ///     }
 /// });
 /// ```
-pub fn work_queue<W, WF, K, C, O>(
+pub fn work_queue<W, K, C>(
     concurrency: usize,
     work_fn: W,
-) -> (WorkQueue<W, K, C, O>, WorkSender<K, C, O>)
+) -> (WorkQueue<W, K, C>, WorkSender<K, C, <W::Future as Future>::Output>)
 where
-    W: Fn(K, C) -> WF,
-    WF: Future<Output = O>,
-    K: Clone + Eq + Hash + Send + 'static,
-    C: TryMerge + Send + 'static,
-    O: Send + 'static,
+    W: Work<K, C>,
+    K: Clone + Eq + Hash,
+    C: TryMerge,
 {
     let tasks = Arc::new(Mutex::new(HashMap::new()));
     let (sender, receiver) = mpsc::unbounded();
@@ -121,36 +119,57 @@ where
     )
 }
 
+/// Trait that creates a work future from a key and context.
+pub trait Work<K, C> {
+    /// The future that is executed by the WorkQueue.
+    type Future: Future;
+
+    /// Create a new `Future` to be executed by the WorkQueue.
+    fn start(&self, key: K, context: C) -> Self::Future;
+}
+
+impl<F, K, C, WF> Work<K, C> for F
+where
+    F: Fn(K, C) -> WF,
+    WF: Future,
+{
+    type Future = WF;
+
+    fn start(&self, key: K, context: C) -> Self::Future {
+        (self)(key, context)
+    }
+}
+
 /// A work queue that processes a configurable number of tasks concurrently, deduplicating work
 /// with the same key.
 ///
 /// Items are yielded from the stream in the order that they are processed, which may differ from
 /// the order that items are enqueued, depending on which concurrent tasks complete first.
 #[pin_project]
-pub struct WorkQueue<W, K, C, O> {
+pub struct WorkQueue<W, K, C>
+where
+    W: Work<K, C>,
+{
     /// The work callback function.
     work_fn: W,
     /// Maximum number of tasks to run concurrently.
     concurrency: usize,
     /// Metadata about pending and running work. Modified by the queue itself when running tasks
     /// and by [WorkSender] to add new tasks to the queue.
-    tasks: Arc<Mutex<HashMap<K, TaskVariants<C, O>>>>,
+    tasks: Arc<Mutex<HashMap<K, TaskVariants<C, <W::Future as Future>::Output>>>>,
 
     /// Receiving end of the queue.
     #[pin]
     pending: mpsc::UnboundedReceiver<K>,
     /// Tasks currently being run. Will contain [0, concurrency] futures at any given time.
     #[pin]
-    running: FuturesUnordered<RunningTask<K, O>>,
+    running: FuturesUnordered<RunningTask<K, W::Future>>,
 }
 
-impl<W, WF, K, C, O> WorkQueue<W, K, C, O>
+impl<W, K, C> WorkQueue<W, K, C>
 where
-    W: Fn(K, C) -> WF,
-    WF: Future<Output = O>,
-    K: Clone + Eq + Hash + Send + 'static,
-    WF: Send + 'static,
-    O: Send + 'static,
+    W: Work<K, C>,
+    K: Clone + Eq + Hash,
 {
     /// Converts this stream of K into a single future that resolves when the stream is
     /// terminated.
@@ -189,8 +208,8 @@ where
                     // WorkSender::push_entry guarantees that key will only be pushed into pending
                     // if it created the entry in the map, so it is guaranteed here that multiple
                     // instances of the same key will not be executed concurrently.
-                    let work = (this.work_fn)(key.clone(), context);
-                    let fut = async move { (key, work.await) }.boxed();
+                    let work = this.work_fn.start(key.clone(), context);
+                    let fut = futures::future::join(futures::future::ready(key), work);
 
                     this.running.push(fut);
                 }
@@ -228,9 +247,9 @@ where
 
                 if let Some(next_context) = infos.done(res) {
                     // start the next operation immediately
-                    let work = (this.work_fn)(key.clone(), next_context);
+                    let work = this.work_fn.start(key.clone(), next_context);
                     let key_clone = key.clone();
-                    let fut = async move { (key_clone, work.await) }.boxed();
+                    let fut = futures::future::join(futures::future::ready(key_clone), work);
 
                     drop(tasks);
                     this.running.push(fut);
@@ -247,12 +266,10 @@ where
     }
 }
 
-impl<W, WF, K, C, O> Stream for WorkQueue<W, K, C, O>
+impl<W, K, C> Stream for WorkQueue<W, K, C>
 where
-    W: Fn(K, C) -> WF,
-    WF: Future<Output = O> + Send + 'static,
-    K: Clone + Eq + Hash + Send + 'static,
-    O: Send + 'static,
+    W: Work<K, C>,
+    K: Clone + Eq + Hash,
 {
     type Item = K;
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -279,7 +296,7 @@ where
     }
 }
 
-type RunningTask<K, O> = BoxFuture<'static, (K, O)>;
+type RunningTask<K, WF> = futures::future::Join<futures::future::Ready<K>, WF>;
 
 /// A clonable handle to the work queue.  When all clones of [WorkSender] are dropped, the queue
 /// will process all remaining requests and terminate its output stream.
@@ -293,9 +310,9 @@ pub struct WorkSender<K, C, O> {
 
 impl<K, C, O> WorkSender<K, C, O>
 where
-    K: Clone + Send + Eq + Hash,
+    K: Clone + Eq + Hash,
     C: TryMerge,
-    O: Clone + Send + 'static,
+    O: Clone,
 {
     /// Enqueue the given key to be processed by a worker, or attach to an existing request to
     /// process this key.
@@ -331,7 +348,7 @@ where
                     Self::push_entry(&mut *tasks, &self.sender, key, context)
                 } else {
                     // Work queue no longer exists. Immediately cancel this request.
-                    return make_canceled_receiver();
+                    make_canceled_receiver()
                 }
             })
             .collect::<Vec<_>>()
@@ -371,7 +388,7 @@ mod tests {
         futures::{
             channel::oneshot,
             executor::{block_on, LocalSpawner},
-            task::LocalSpawnExt,
+            task::{LocalSpawnExt, SpawnExt},
         },
         std::{borrow::Borrow, fmt},
     };
@@ -526,6 +543,88 @@ mod tests {
         fn is_terminated(&self) -> bool {
             *self.terminated.lock()
         }
+    }
+
+    #[test]
+    fn check_works_with_sendable_types() {
+        struct TestWork;
+
+        impl Work<(), ()> for TestWork {
+            type Future = futures::future::Ready<()>;
+
+            fn start(&self, _key: (), _context: ()) -> Self::Future {
+                futures::future::ready(())
+            }
+        }
+
+        let (processor, enqueue) = work_queue(3, TestWork);
+
+        let tasks = FuturesUnordered::new();
+        tasks.push(enqueue.push((), ()));
+
+        drop(enqueue);
+
+        let mut executor = futures::executor::LocalPool::new();
+        let handle = executor
+            .spawner()
+            .spawn_with_handle(async move {
+                let (keys, res) =
+                    futures::future::join(processor.collect::<Vec<_>>(), tasks.collect::<Vec<_>>())
+                        .await;
+                assert_eq!(keys, vec![()]);
+                assert_eq!(res, vec![Ok(())]);
+            })
+            .expect("spawn to work");
+        assert_eq!(executor.run_until(handle), ());
+    }
+
+    #[test]
+    fn check_works_with_unsendable_types() {
+        use std::rc::Rc;
+
+        // Unfortunately `impl !Send for $Type` is unstable, so use Rc<()> to make sure WorkQueue
+        // still works.
+        struct TestWork(Rc<()>);
+        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+        struct TestKey(Rc<()>);
+        #[derive(PartialEq, Eq)]
+        struct TestContext(Rc<()>);
+        #[derive(Clone, Debug, PartialEq)]
+        struct TestOutput(Rc<()>);
+
+        impl Work<TestKey, TestContext> for TestWork {
+            type Future = futures::future::Ready<TestOutput>;
+
+            fn start(&self, _key: TestKey, _context: TestContext) -> Self::Future {
+                futures::future::ready(TestOutput(Rc::new(())))
+            }
+        }
+
+        impl TryMerge for TestContext {
+            fn try_merge(&mut self, _: Self) -> Result<(), Self> {
+                Ok(())
+            }
+        }
+
+        let (processor, enqueue) = work_queue(3, TestWork(Rc::new(())));
+
+        let tasks = FuturesUnordered::new();
+        tasks.push(enqueue.push(TestKey(Rc::new(())), TestContext(Rc::new(()))));
+
+        drop(enqueue);
+
+        let mut executor = futures::executor::LocalPool::new();
+        let handle = executor
+            .spawner()
+            .spawn_local_with_handle(async move {
+                let (keys, res) =
+                    futures::future::join(processor.collect::<Vec<_>>(), tasks.collect::<Vec<_>>())
+                        .await;
+                assert_eq!(keys, vec![TestKey(Rc::new(()))]);
+                assert_eq!(res, vec![Ok(TestOutput(Rc::new(())))]);
+            })
+            .expect("spawn to work");
+        assert_eq!(executor.run_until(handle), ());
     }
 
     fn spawn_test_work_queue<K, C, O>(
