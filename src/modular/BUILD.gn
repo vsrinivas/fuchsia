@@ -18,12 +18,31 @@ group("modular") {
 group("tests") {
   testonly = true
 
-  deps = [
+  public_deps = [
     ":modular_lib_tests",
     "tests",  # tests/ directory
+    "//garnet/packages/prod:test_runner",
+    "//garnet/packages/testing:run_test_component",
+    "//peridot/lib/sequential_futures:sequential_futures_tests",
+    "//peridot/packages/tests:modular_test_harness",
     "//sdk/lib/modular/cpp:modular_cpp_tests",
     "//sdk/lib/modular/testing/cpp:modular_testing_cpp_tests",
+    "//src/modular/bin/basemgr:auto_login_base_shell_test",
+    "//src/modular/bin/basemgr:basemgr_unittests",
+    "//src/modular/bin/basemgr/intl_property_provider_impl:intl_property_provider_impl_tests",
     "//src/modular/bin/basemgr_launcher:basemgr_launcher_tests",
+    "//src/modular/bin/module_resolver:module_resolver_unittests",
+    "//src/modular/bin/module_resolver_rs:module_resolver_rs_tests",
+    "//src/modular/bin/sessionctl:sessionctl_unittests",
+    "//src/modular/bin/sessionmgr:sessionmgr_unittests",
+    "//src/modular/bin/sessionmgr/agent_runner:agent_runner_unittests",
+    "//src/modular/bin/sessionmgr/entity_provider_runner:entity_provider_runner_unittests",
+    "//src/modular/bin/sessionmgr/puppet_master:puppet_master_unittests",
+    "//src/modular/bin/sessionmgr/storage:storage_unittests",
+    "//src/modular/bin/sessionmgr/story/model:story_model_unittests",
+    "//src/modular/bin/sessionmgr/story_runner:story_runner_unittests",
+    "//src/modular/bundles:integration_testing",
+    "//src/modular/tests/modular_config:test_config",
   ]
 }
 
