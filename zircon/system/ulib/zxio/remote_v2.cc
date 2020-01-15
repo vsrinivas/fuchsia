@@ -182,6 +182,9 @@ zxio_node_attr_t ToZxioNodeAttr(const fio2::NodeAttributes& attr) {
   if (attr.has_abilities()) {
     ZXIO_NODE_ATTR_SET(zxio_attr, protocols, ToZxioAbilities(attr.abilities()));
   }
+  if (attr.has_id()) {
+    ZXIO_NODE_ATTR_SET(zxio_attr, id, attr.id());
+  }
   if (attr.has_content_size()) {
     ZXIO_NODE_ATTR_SET(zxio_attr, content_size, attr.content_size());
   }
@@ -215,6 +218,11 @@ auto ToIo2NodeAttributes(const zxio_node_attr_t& attr, F f)
   if (attr.has.abilities) {
     abilities = ToIo2Abilities(attr.abilities);
     builder.set_abilities(&abilities);
+  }
+  uint64_t id;
+  if (attr.has.id) {
+    id = attr.id;
+    builder.set_id(&id);
   }
   uint64_t content_size;
   if (attr.has.content_size) {

@@ -104,16 +104,19 @@ class RemoteV2 : public zxtest::Test {
 
 TEST_F(RemoteV2, GetAttributes) {
   constexpr uint64_t kContentSize = 42;
+  constexpr uint64_t kId = 1;
   class TestServer : public TestServerBase {
    public:
     void GetAttributes(fio2::NodeAttributesQuery query,
                        GetAttributesCompleter::Sync completer) override {
       EXPECT_EQ(query, fio2::NodeAttributesQuery::mask);
       uint64_t content_size = kContentSize;
+      uint64_t id = kId;
       fio2::NodeProtocolSet protocols = fio2::NodeProtocolSet::FILE;
       auto builder = fio2::NodeAttributes::Build()
           .set_content_size(&content_size)
-          .set_protocols(&protocols);
+          .set_protocols(&protocols)
+          .set_id(&id);
       completer.ReplySuccess(builder.view());
     }
   };
@@ -130,7 +133,8 @@ TEST_F(RemoteV2, GetAttributes) {
   EXPECT_FALSE(attr.has.abilities);
   EXPECT_FALSE(attr.has.creation_time);
   EXPECT_FALSE(attr.has.modification_time);
-  EXPECT_FALSE(attr.has.id);
+  EXPECT_TRUE(attr.has.id);
+  EXPECT_EQ(kId, attr.id);
   EXPECT_FALSE(attr.has.link_count);
 }
 
