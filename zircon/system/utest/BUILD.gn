@@ -266,7 +266,6 @@ if (current_cpu != "") {
       "perftest",
       "platform-bus",
       "policy",
-      "processor",
       "property",
       "qsort",
       "ramdisk",
