@@ -243,7 +243,6 @@ if (current_cpu != "") {
       "fidl-simple",
       "fidl-utils",
       "fit",
-      "fpu",
       "fs",
       "fs-bench",
       "fs-management",
