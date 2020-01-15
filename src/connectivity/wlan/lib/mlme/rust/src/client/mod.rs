@@ -184,7 +184,7 @@ impl ClientMlme {
         match msg {
             // Handle non station specific MLME messages first (Join, Scan, etc.)
             MlmeMsg::StartScan { req } => {
-                self.handle_mlme_scan_req(sta, req);
+                self.on_sme_scan(sta, req);
                 Ok(())
             }
             _ => {
@@ -211,10 +211,10 @@ impl ClientMlme {
         }
     }
 
-    fn handle_mlme_scan_req(&mut self, sta: Option<&mut Client>, req: fidl_mlme::ScanRequest) {
+    fn on_sme_scan(&mut self, sta: Option<&mut Client>, req: fidl_mlme::ScanRequest) {
         let channel_state = &mut self.channel_state;
         // No need to handle result because scanner already send ScanEnd if it errors out
-        let _result = self.scanner.bind(&mut self.ctx).handle_mlme_scan_req(
+        let _result = self.scanner.bind(&mut self.ctx).on_sme_scan(
             req,
             |ctx, scanner| channel_state.bind(ctx, scanner, sta),
             &mut self.chan_sched,
@@ -1060,7 +1060,7 @@ mod tests {
 
         // Verify ensure_on_channel. That is, scheduling scan request would not cause channel to be
         // switched right away, while frame is still being sent.
-        me.handle_mlme_scan_req(Some(&mut client), scan_req());
+        me.on_sme_scan(Some(&mut client), scan_req());
         assert_eq!(me.ctx.device.channel(), MAIN_CHANNEL);
 
         // Verify that triggering scheduled timeout by channel scheduler would switch channel
@@ -1081,7 +1081,7 @@ mod tests {
             ..scan_req()
         };
         let scan_txn_id = scan_req.txn_id;
-        me.handle_mlme_scan_req(Some(&mut client), scan_req);
+        me.on_sme_scan(Some(&mut client), scan_req);
         assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
 
         // There should be two scheduled events, one by channel scheduler for scanned channel,
@@ -1126,7 +1126,7 @@ mod tests {
         let mut me = m.make_mlme();
         let mut client = make_client_station();
 
-        me.handle_mlme_scan_req(Some(&mut client), scan_req());
+        me.on_sme_scan(Some(&mut client), scan_req());
         assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
         // Verify no power state frame is sent
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
@@ -1151,7 +1151,7 @@ mod tests {
         client.start_lost_bss_counter(&mut me.ctx, TimeUnit::DEFAULT_BEACON_INTERVAL);
 
         // Send scan request to trigger channel switch
-        me.handle_mlme_scan_req(Some(&mut client), scan_req());
+        me.on_sme_scan(Some(&mut client), scan_req());
         assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
 
         // Verify that power state frame is sent
@@ -1304,7 +1304,7 @@ mod tests {
 
         // Verify ensure_on_channel. That is, scheduling scan request would not cause channel to be
         // switched right away, while frame is still being sent.
-        me.handle_mlme_scan_req(Some(&mut client), scan_req());
+        me.on_sme_scan(Some(&mut client), scan_req());
         assert_eq!(me.ctx.device.channel(), MAIN_CHANNEL);
     }
 
@@ -1367,7 +1367,7 @@ mod tests {
 
         // Verify ensure_on_channel. That is, scheduling scan request would not cause channel to be
         // switched right away, while frame is still being sent.
-        me.handle_mlme_scan_req(Some(&mut client), scan_req());
+        me.on_sme_scan(Some(&mut client), scan_req());
         assert_eq!(me.ctx.device.channel(), MAIN_CHANNEL);
     }
 
@@ -1394,7 +1394,7 @@ mod tests {
 
         // Verify no ensure_on_channel. That is, scheduling scan request would cause channel to be
         // switched right away.
-        me.handle_mlme_scan_req(Some(&mut client), scan_req());
+        me.on_sme_scan(Some(&mut client), scan_req());
         assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
     }
 
@@ -1428,7 +1428,7 @@ mod tests {
 
         // Verify no ensure_on_channel. That is, scheduling scan request would cause channel to be
         // switched right away.
-        me.handle_mlme_scan_req(Some(&mut client), scan_req());
+        me.on_sme_scan(Some(&mut client), scan_req());
         assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
     }
 
@@ -1456,7 +1456,7 @@ mod tests {
 
         // Verify ensure_on_channel. That is, scheduling scan request would not cause channel to be
         // switched right away, while frame is still being sent.
-        me.handle_mlme_scan_req(Some(&mut client), scan_req());
+        me.on_sme_scan(Some(&mut client), scan_req());
         assert_eq!(me.ctx.device.channel(), MAIN_CHANNEL);
     }
 
@@ -1494,7 +1494,7 @@ mod tests {
 
         // Verify no ensure_on_channel. That is, scheduling scan request would cause channel to be
         // switched right away.
-        me.handle_mlme_scan_req(Some(&mut client), scan_req());
+        me.on_sme_scan(Some(&mut client), scan_req());
         assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
     }
 
@@ -1729,7 +1729,7 @@ mod tests {
 
         // Verify ensure_on_channel. That is, scheduling scan request would not cause channel to be
         // switched right away, while frame is still being sent.
-        me.handle_mlme_scan_req(Some(&mut client), scan_req());
+        me.on_sme_scan(Some(&mut client), scan_req());
         assert_eq!(me.ctx.device.channel(), MAIN_CHANNEL);
     }
 
@@ -1745,7 +1745,7 @@ mod tests {
 
         // Verify no ensure_on_channel. That is, scheduling scan request would cause channel to be
         // switched right away.
-        me.handle_mlme_scan_req(Some(&mut client), scan_req());
+        me.on_sme_scan(Some(&mut client), scan_req());
         assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
     }
 

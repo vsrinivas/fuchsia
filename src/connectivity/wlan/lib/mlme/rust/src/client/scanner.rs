@@ -129,7 +129,7 @@ impl<'a> BoundScanner<'a> {
     ///
     /// If a scan request is in progress, or the new request has invalid argument (empty channel
     /// list or larger min channel time than max), then the request is rejected.
-    pub fn handle_mlme_scan_req<F, CL>(
+    pub fn on_sme_scan<F, CL>(
         &'a mut self,
         req: fidl_mlme::ScanRequest,
         build_channel_listener: F,
@@ -519,7 +519,7 @@ mod tests {
 
         scanner
             .bind(&mut ctx)
-            .handle_mlme_scan_req(
+            .on_sme_scan(
                 scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
@@ -548,11 +548,7 @@ mod tests {
         };
         scanner
             .bind(&mut ctx)
-            .handle_mlme_scan_req(
-                scan_req,
-                m.listener_state.create_channel_listener_fn(),
-                &mut m.chan_sched,
-            )
+            .on_sme_scan(scan_req, m.listener_state.create_channel_listener_fn(), &mut m.chan_sched)
             .expect("expect scan req accepted");
         let req_id = channel_scheduler::RequestId(1, ChannelListenerSource::Scanner);
         assert_eq!(
@@ -596,11 +592,7 @@ mod tests {
         };
         scanner
             .bind(&mut ctx)
-            .handle_mlme_scan_req(
-                scan_req,
-                m.listener_state.create_channel_listener_fn(),
-                &mut m.chan_sched,
-            )
+            .on_sme_scan(scan_req, m.listener_state.create_channel_listener_fn(), &mut m.chan_sched)
             .expect("expect scan req accepted");
         scanner.bind(&mut ctx).begin_requested_channel_time(chan(6));
 
@@ -640,14 +632,14 @@ mod tests {
 
         scanner
             .bind(&mut ctx)
-            .handle_mlme_scan_req(
+            .on_sme_scan(
                 scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
             )
             .expect("expect scan req accepted");
         let scan_req = fidl_mlme::ScanRequest { txn_id: 1338, ..scan_req() };
-        let result = scanner.bind(&mut ctx).handle_mlme_scan_req(
+        let result = scanner.bind(&mut ctx).on_sme_scan(
             scan_req,
             m.listener_state.create_channel_listener_fn(),
             &mut m.chan_sched,
@@ -670,7 +662,7 @@ mod tests {
         let mut scanner = Scanner::new(IFACE_MAC);
 
         let scan_req = fidl_mlme::ScanRequest { channel_list: Some(vec![]), ..scan_req() };
-        let result = scanner.bind(&mut ctx).handle_mlme_scan_req(
+        let result = scanner.bind(&mut ctx).on_sme_scan(
             scan_req,
             m.listener_state.create_channel_listener_fn(),
             &mut m.chan_sched,
@@ -697,7 +689,7 @@ mod tests {
             channel_list.push(i);
         }
         let scan_req = fidl_mlme::ScanRequest { channel_list: Some(channel_list), ..scan_req() };
-        let result = scanner.bind(&mut ctx).handle_mlme_scan_req(
+        let result = scanner.bind(&mut ctx).on_sme_scan(
             scan_req,
             m.listener_state.create_channel_listener_fn(),
             &mut m.chan_sched,
@@ -721,7 +713,7 @@ mod tests {
 
         let scan_req =
             fidl_mlme::ScanRequest { min_channel_time: 101, max_channel_time: 100, ..scan_req() };
-        let result = scanner.bind(&mut ctx).handle_mlme_scan_req(
+        let result = scanner.bind(&mut ctx).on_sme_scan(
             scan_req,
             m.listener_state.create_channel_listener_fn(),
             &mut m.chan_sched,
@@ -744,7 +736,7 @@ mod tests {
         let mut scanner = Scanner::new(IFACE_MAC);
 
         let scan_req = fidl_mlme::ScanRequest { ssid: vec![65; 33], ..scan_req() };
-        let result = scanner.bind(&mut ctx).handle_mlme_scan_req(
+        let result = scanner.bind(&mut ctx).on_sme_scan(
             scan_req,
             m.listener_state.create_channel_listener_fn(),
             &mut m.chan_sched,
@@ -770,7 +762,7 @@ mod tests {
 
         scanner
             .bind(&mut ctx)
-            .handle_mlme_scan_req(
+            .on_sme_scan(
                 scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
@@ -816,7 +808,7 @@ mod tests {
             banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
         let mut scanner = Scanner::new(IFACE_MAC);
 
-        let result = scanner.bind(&mut ctx).handle_mlme_scan_req(
+        let result = scanner.bind(&mut ctx).on_sme_scan(
             scan_req(),
             m.listener_state.create_channel_listener_fn(),
             &mut m.chan_sched,
@@ -842,7 +834,7 @@ mod tests {
 
         scanner
             .bind(&mut ctx)
-            .handle_mlme_scan_req(
+            .on_sme_scan(
                 scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
@@ -875,7 +867,7 @@ mod tests {
 
         scanner
             .bind(&mut ctx)
-            .handle_mlme_scan_req(
+            .on_sme_scan(
                 scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
@@ -939,7 +931,7 @@ mod tests {
 
         scanner
             .bind(&mut ctx)
-            .handle_mlme_scan_req(
+            .on_sme_scan(
                 scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
@@ -977,7 +969,7 @@ mod tests {
 
         scanner
             .bind(&mut ctx)
-            .handle_mlme_scan_req(
+            .on_sme_scan(
                 scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
@@ -1015,7 +1007,7 @@ mod tests {
 
         scanner
             .bind(&mut ctx)
-            .handle_mlme_scan_req(
+            .on_sme_scan(
                 scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
@@ -1054,7 +1046,7 @@ mod tests {
 
         scanner
             .bind(&mut ctx)
-            .handle_mlme_scan_req(
+            .on_sme_scan(
                 scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
@@ -1093,7 +1085,7 @@ mod tests {
 
         scanner
             .bind(&mut ctx)
-            .handle_mlme_scan_req(
+            .on_sme_scan(
                 scan_req(),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
