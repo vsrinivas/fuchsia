@@ -574,6 +574,18 @@ Every process is contained in a [job](#job).
 
 -   [Process Overview](/docs/concepts/objects/process.md)
 
+#### **Protocol** {#protocol}
+
+In [FIDL](#fidl), a protocol groups methods and events to describe how one
+process interacts with another.
+
+In [components v1](#components-v1), a component may access a protocol
+(called a "service" in v1) from its [environment](#environment) through its
+[namespace](#namespace) by naming the protocol in its services whitelist.
+
+In [components v2](#components-v2), a protocol is used and routed to other
+components as a [protocol capability](#protocol-capability).
+
 #### **Realm** {#realm}
 
 In [components v1](#components-v1), realm is synonymous to
@@ -613,21 +625,19 @@ synchronizes and serializes all requests.
 
 #### **Service** {#service}
 
-A service is an implementation of a [FIDL](#fidl) interface. Components can
-offer their creator a set of services, which the creator can either use directly
-or offer to other components.
+In [FIDL](#fidl), a service groups [protocols](#protocol) to describe how one
+process interacts with another.
 
-Services can also be obtained by interface name from a [Namespace](#namespace),
-which lets the component that created the namespace pick the implementation of
-the interface. Long-running services, such as [Scenic](#scenic), are typically
-obtained through a [Namespace](#namespace), which lets many clients connect to a
-common implementation.
+Services can be used and provided to other components by
+[routing](#capability-routing) [service capabilities](#service-capability).
+
+-   [Service overview](/docs/concepts/components/services.md)
 
 #### **Service capability** {#service-capability}
 
 A [capability](#capability) that permits communicating with a
 [service](#service) over a [channel](#channel) using a specified [FIDL](#fidl)
-protocol. The server end of the channel is held by the
+service. The server end of the channel is held by the
 [component instance](#component-instance) that provides the capability. The
 client end of the channel is given to the
 [component instance](#component-instance) that [uses](#use) the capability.
@@ -635,6 +645,19 @@ client end of the channel is given to the
 -   [Capability routing](#capability-routing)
 
 Service capability is a [components v2](#components-v2) concept.
+
+#### **Protocol capability** {#protocol-capability}
+
+A [capability](#capability) that permits communicating with a
+[protocol](#protocol) over a [channel](#channel) using a specified [FIDL](#fidl)
+protocol. The server end of the channel is held by the
+[component instance](#component-instance) that provides the capability. The
+client end of the channel is given to the
+[component instance](#component-instance) that [uses](#use) the capability.
+
+-   [Capability routing](#capability-routing)
+
+Protocol capability is a [components v2](#components-v2) concept.
 
 #### **Session** {#session}
 

@@ -6,6 +6,8 @@ toc:
   path: /docs/concepts/components/capabilities
 - title: "Service capabilities"
   path: /docs/concepts/components/capabilities/service.md
+- title: "Protocol capabilities"
+  path: /docs/concepts/components/capabilities/protocol.md
 - title: "Directory capabilities"
   path: /docs/concepts/components/capabilities/directory.md
 - title: "Storage capabilities"

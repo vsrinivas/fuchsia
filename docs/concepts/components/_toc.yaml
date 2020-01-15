@@ -24,6 +24,8 @@ toc:
     path: /docs/concepts/components/resolvers.md
   - title: "Runners"
     path: /docs/concepts/components/runners.md
+  - title: "Services"
+    path: /docs/concepts/components/services.md
   - title: "Shutdown"
     path: /docs/concepts/components/shutdown.md
   - title: "Work Scheduler"
