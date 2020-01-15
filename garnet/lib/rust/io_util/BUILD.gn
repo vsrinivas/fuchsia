@@ -21,7 +21,7 @@ rustc_library("io_util") {
   ]
 
   test_deps = [
-    "//src/storage/lib/pseudo-fs",
+    "//src/lib/storage/pseudo-fs",
     "//third_party/rust_crates:futures",
   ]
 }
