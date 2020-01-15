@@ -23,7 +23,6 @@ group("tests") {
     "tests",  # tests/ directory
     "//garnet/packages/prod:test_runner",
     "//garnet/packages/testing:run_test_component",
-    "//peridot/lib/sequential_futures:sequential_futures_tests",
     "//peridot/packages/tests:modular_test_harness",
     "//sdk/lib/modular/cpp:modular_cpp_tests",
     "//sdk/lib/modular/testing/cpp:modular_testing_cpp_tests",

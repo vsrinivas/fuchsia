@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/sequential_futures_lib_test"
-    }
-}
