@@ -88,7 +88,7 @@ zx_status_t QueryBootConfig(const zx::channel& svc_root, Configuration* out) {
   return ZX_OK;
 }
 
-zx_status_t SupportsVerfiedBoot(const zx::channel& svc_root) {
+zx_status_t SupportsVerifiedBoot(const zx::channel& svc_root) {
   Configuration config;
   if (zx_status_t status = QueryBootConfig(svc_root, &config); status != ZX_OK) {
     return status;
@@ -170,7 +170,7 @@ zx_status_t PartitionClient::Persist(abr::Data data) {
 
 zx_status_t Client::Create(fbl::unique_fd devfs_root, const zx::channel& svc_root,
                            std::unique_ptr<abr::Client>* out) {
-  if (zx_status_t status = SupportsVerfiedBoot(svc_root); status != ZX_OK) {
+  if (zx_status_t status = SupportsVerifiedBoot(svc_root); status != ZX_OK) {
     return status;
   }
 
