@@ -426,7 +426,7 @@ typedef struct fidl_epitaph {
 
 // This ordinal value is reserved for Epitaphs.
 enum {
-  kFidlOrdinalEpitaph = 0xFFFFFFFF,
+  kFidlOrdinalEpitaph = 0xFFFFFFFFFFFFFFFF,
 };
 
 // Assumptions.
