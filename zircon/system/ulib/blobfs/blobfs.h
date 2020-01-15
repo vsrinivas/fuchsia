@@ -146,8 +146,10 @@ class Blobfs : public TransactionManager, public UserPager {
 
   BlockDevice* Device() const { return block_device_.get(); }
 
-  // Returns an unique identifier for this instance.
-  uint64_t GetFsId() const { return fs_id_; }
+  // Returns an unique identifier for this instance. Each invocation returns a new
+  // handle that references the same kernel object, which is used as the identifier.
+  zx_status_t GetFsId(zx::event* out_fs_id) const;
+  uint64_t GetFsIdLegacy() const { return fs_id_legacy_; }
 
   using SyncCallback = fs::Vnode::SyncCallback;
   void Sync(SyncCallback closure);
@@ -252,7 +254,13 @@ class Blobfs : public TransactionManager, public UserPager {
   fzl::ResizeableVmoMapper info_mapping_;
   vmoid_t info_vmoid_ = {};
 
-  uint64_t fs_id_ = 0;
+  // A unique identifier for this filesystem instance.
+  zx::event fs_id_;
+
+  // The numerical version of fs_id is used by the old |fuchsia.io/DirectoryAdmin| protocol,
+  // which is being deprecated in favor of |fuchsia.fs/Query|. It is derived from |fs_id|
+  // by inspecting its koid.
+  uint64_t fs_id_legacy_ = 0;
 
   BlobfsMetrics metrics_ = {};
 

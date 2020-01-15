@@ -19,6 +19,8 @@
 
 namespace blobfs {
 
+class QueryService;
+
 // A wrapper class around a "Blobfs" object which additionally manages
 // external IPC connections.
 //
@@ -52,6 +54,7 @@ class Runner : public fs::ManagedVfs {
 
   async::Loop* loop_;
   std::unique_ptr<Blobfs> blobfs_;
+  fbl::RefPtr<QueryService> query_svc_;
 };
 
 }  // namespace blobfs

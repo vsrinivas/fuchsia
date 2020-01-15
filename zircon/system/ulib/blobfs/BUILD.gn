@@ -61,6 +61,7 @@ zx_library("blobfs") {
       "mount.cc",
       "pager/page-watcher.cc",
       "pager/user-pager.cc",
+      "query.cc",
       "runner.cc",
     ]
     public_deps += [
@@ -72,6 +73,7 @@ zx_library("blobfs") {
     ]
     deps += [
       "$zx/system/fidl/fuchsia-blobfs:llcpp",
+      "$zx/system/fidl/fuchsia-fs:llcpp",
       "$zx/system/fidl/fuchsia-io:llcpp",
       "$zx/system/ulib/async",
       "$zx/system/ulib/async:async-cpp",
@@ -81,6 +83,7 @@ zx_library("blobfs") {
       "$zx/system/ulib/async-loop:async-loop-default.static",
       "$zx/system/ulib/block-client",
       "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fidl-async:fidl-async-cpp",
       "$zx/system/ulib/fidl-utils",
       "$zx/system/ulib/fs/metrics:metrics",
       "$zx/system/ulib/fzl",

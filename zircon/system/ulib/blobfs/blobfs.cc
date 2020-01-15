@@ -433,7 +433,8 @@ void Blobfs::DeleteExtent(uint64_t start_block, uint64_t num_blocks,
 }
 
 zx_status_t Blobfs::CreateFsId() {
-  ZX_DEBUG_ASSERT(!fs_id_);
+  ZX_DEBUG_ASSERT(!fs_id_legacy_);
+  ZX_DEBUG_ASSERT(!fs_id_.is_valid());
   zx::event event;
   zx_status_t status = zx::event::create(0, &event);
   if (status != ZX_OK) {
@@ -445,8 +446,14 @@ zx_status_t Blobfs::CreateFsId() {
     return status;
   }
 
-  fs_id_ = info.koid;
+  fs_id_ = std::move(event);
+  fs_id_legacy_ = info.koid;
   return ZX_OK;
+}
+
+zx_status_t Blobfs::GetFsId(zx::event* out_fs_id) const {
+  ZX_DEBUG_ASSERT(fs_id_.is_valid());
+  return fs_id_.duplicate(ZX_RIGHTS_BASIC, out_fs_id);
 }
 
 typedef struct dircookie {

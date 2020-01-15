@@ -4,7 +4,11 @@
 
 #include "runner.h"
 
+#include <fuchsia/fs/llcpp/fidl.h>
+
 #include <fs/pseudo_dir.h>
+
+#include "query.h"
 
 namespace blobfs {
 
@@ -64,6 +68,10 @@ zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
     case ServeLayout::kExportDirectory:
       auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>();
       outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
+      auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+      outgoing->AddEntry("svc", svc_dir);
+      query_svc_ = fbl::MakeRefCounted<QueryService>(loop_->dispatcher(), blobfs_.get(), this);
+      svc_dir->AddEntry(::llcpp::fuchsia::fs::Query::Name, query_svc_);
       export_root = std::move(outgoing);
       break;
   }

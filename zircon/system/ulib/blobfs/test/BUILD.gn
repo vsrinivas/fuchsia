@@ -84,11 +84,13 @@ zx_test("blobfs-integration") {
     "integration/blobfs_integration_test.cc",
     "integration/integration_main.cc",
     "integration/mount_test.cc",
+    "integration/query_service_test.cc",
     "integration/superblock-test.cc",
   ]
   deps = [
     ":integration-fixtures",
     "$zx/system/fidl/fuchsia-blobfs:c",
+    "$zx/system/fidl/fuchsia-fs:llcpp",
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/blobfs",

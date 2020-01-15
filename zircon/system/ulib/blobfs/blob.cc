@@ -974,7 +974,7 @@ zx_status_t Blob::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
   info->block_size = kBlobfsBlockSize;
   info->max_filename_size = digest::kSha256HexLength;
   info->fs_type = VFS_TYPE_BLOBFS;
-  info->fs_id = blobfs_->GetFsId();
+  info->fs_id = blobfs_->GetFsIdLegacy();
   info->total_bytes = blobfs_->Info().data_block_count * blobfs_->Info().block_size;
   info->used_bytes = blobfs_->Info().alloc_block_count * blobfs_->Info().block_size;
   info->total_nodes = blobfs_->Info().inode_count;

@@ -8,6 +8,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 
 #include <string>
+#include <optional>
 
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
@@ -58,6 +59,16 @@ class FilesystemTest : public zxtest::Test {
 
 
  protected:
+  // Helper function for launching a filesystem and exposing it to tests. Including:
+  // - Parse the filesystem from |device_id|, assuming it is in |disk_format|.
+  // - Populate |export_root_| with the outgoing directory of the filesystem server.
+  // - Mount the data root directory at |mount_path| using the deprecated
+  //   |fuchsia.io/DirectoryAdmin| mounting utility. TODO(fxb/34530): This will be
+  //   replaced by process-local mounting.
+  // It does not register the filesystem with the |fuchsia.fshost/Registry|,
+  // as registration is generally meant for production filesystem instances.
+  zx_status_t MountInternal(fbl::unique_fd device_fd, const char* mount_path,
+                            disk_format_t disk_format, const init_options_t* init_options);
   zx_status_t CheckFs();
   virtual void CheckInfo() {}
 
@@ -66,6 +77,7 @@ class FilesystemTest : public zxtest::Test {
   std::string device_path_;
   bool read_only_ = false;
   bool mounted_ = false;
+  std::optional<llcpp::fuchsia::io::Directory::SyncClient> export_root_;
 };
 
 class FilesystemTestWithFvm : public FilesystemTest {

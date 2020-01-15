@@ -246,6 +246,8 @@ class Vfs {
   // request to the filesystem serving |handle| and awaits a response.
   // |deadline| is the deadline for waiting for response.
   static zx_status_t UnmountHandle(zx::channel handle, zx::time deadline);
+
+  bool IsTokenAssociatedWithVnode(zx::event token) FS_TA_EXCLUDES(vfs_lock_);
 #endif
 
  protected:

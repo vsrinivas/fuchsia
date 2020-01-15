@@ -8,6 +8,9 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fzl/fdio.h>
 #include <limits.h>
 
@@ -15,6 +18,8 @@
 #include <fs-management/fvm.h>
 #include <fvm/format.h>
 #include <zxtest/zxtest.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace {
 
@@ -56,7 +61,7 @@ void FilesystemTest::Mount() {
   fbl::unique_fd fd(open(device_path_.c_str(), flags));
   ASSERT_TRUE(fd);
 
-  mount_options_t options = default_mount_options;
+  init_options_t options = default_init_options;
   options.enable_journal = environment_->use_journal();
   options.enable_pager = environment_->use_pager();
 
@@ -66,8 +71,56 @@ void FilesystemTest::Mount() {
 
   // fd consumed by mount. By default, mount waits until the filesystem is
   // ready to accept commands.
-  ASSERT_OK(mount(fd.release(), mount_path(), format_type(), &options, launch_stdio_async));
+  ASSERT_OK(MountInternal(std::move(fd), mount_path(), format_type(), &options));
   mounted_ = true;
+}
+
+zx_status_t FilesystemTest::MountInternal(fbl::unique_fd device_fd, const char* mount_path,
+                                          disk_format_t disk_format,
+                                          const init_options_t* init_options) {
+  zx_status_t status;
+  zx::channel device;
+  status = fdio_get_service_handle(device_fd.release(), device.reset_and_get_address());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Launch the filesystem process.
+  zx::channel export_root;
+  status =
+      fs_init(device.release(), disk_format, init_options, export_root.reset_and_get_address());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Extract the handle to the root of the filesystem from the export root.
+  zx::channel data_root;
+  status = fs_root_handle(export_root.get(), data_root.reset_and_get_address());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Mount the data root on |mount_path|.
+  zx::channel mount_point, mount_point_server;
+  status = zx::channel::create(0, &mount_point, &mount_point_server);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fdio_open(mount_path, O_RDONLY | O_DIRECTORY | O_ADMIN, mount_point_server.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+  fio::DirectoryAdmin::SyncClient mount_client(std::move(mount_point));
+  auto resp = mount_client.Mount(std::move(data_root));
+  if (resp.status() != ZX_OK) {
+    return resp.status();
+  }
+  if (resp.value().s != ZX_OK) {
+    return resp.value().s;
+  }
+
+  export_root_ = fio::Directory::SyncClient(std::move(export_root));
+  return ZX_OK;
 }
 
 void FilesystemTest::Unmount() {

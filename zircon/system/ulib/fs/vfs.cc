@@ -342,6 +342,11 @@ zx_status_t Vfs::VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token, zx::e
   return ZX_OK;
 }
 
+bool Vfs::IsTokenAssociatedWithVnode(zx::event token) {
+  fbl::AutoLock lock(&vfs_lock_);
+  return TokenToVnode(std::move(token), nullptr) == ZX_OK;
+}
+
 zx_status_t Vfs::TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) {
   const auto& vnode_token = vnode_tokens_.find(GetTokenKoid(token));
   if (vnode_token == vnode_tokens_.end()) {
@@ -349,7 +354,9 @@ zx_status_t Vfs::TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  *out = vnode_token->get_vnode();
+  if (out) {
+    *out = vnode_token->get_vnode();
+  }
   return ZX_OK;
 }
 
