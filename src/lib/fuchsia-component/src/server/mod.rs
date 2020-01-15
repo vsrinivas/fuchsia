@@ -281,16 +281,15 @@ struct LaunchData {
 /// Not intended for direct use. Use the `add_component_proxy_service`
 /// function instead.
 #[doc(hidden)]
-pub struct ComponentProxy<O> {
+pub struct ComponentProxy<S: DiscoverableService> {
     launch_data: Option<LaunchData>,
     launched_app: Option<crate::client::App>,
-    service_name: &'static str,
-    _marker: PhantomData<O>,
+    _marker: PhantomData<S>,
 }
 
-impl<O> Service for ComponentProxy<O> {
-    type Output = O;
-    fn connect(&mut self, channel: zx::Channel) -> Option<O> {
+impl<S: DiscoverableService> Service for ComponentProxy<S> {
+    type Output = S;
+    fn connect(&mut self, channel: zx::Channel) -> Option<Self::Output> {
         let res = (|| {
             if let Some(LaunchData { component_url, arguments }) = self.launch_data.take() {
                 self.launched_app = Some(crate::client::launch(
@@ -300,7 +299,7 @@ impl<O> Service for ComponentProxy<O> {
                 )?);
             }
             if let Some(app) = self.launched_app.as_ref() {
-                app.pass_to_named_service(self.service_name, channel.into())?;
+                app.pass_to_named_service(S::SERVICE_NAME, channel.into())?;
             }
             Ok::<(), Error>(())
         })();
@@ -569,22 +568,20 @@ macro_rules! add_functions {
 
         /// Add a service to the `ServicesServer` that will launch a component
         /// upon request, proxying requests to the launched component.
-        pub fn add_component_proxy_service<O>(
+        pub fn add_component_proxy_service<S: DiscoverableService>(
             &mut self,
-            service_name: &'static str,
             component_url: String,
             arguments: Option<Vec<String>>,
         ) -> &mut Self
         where
-            ServiceObjTy: From<ComponentProxy<O>>,
-            ServiceObjTy: ServiceObjTrait<Output = O>,
+            ServiceObjTy: From<ComponentProxy<S>>,
+            ServiceObjTy: ServiceObjTrait<Output = S>,
         {
             self.add_service_at(
-                service_name,
+                S::SERVICE_NAME,
                 ComponentProxy {
                     launch_data: Some(LaunchData { component_url, arguments }),
                     launched_app: None,
-                    service_name,
                     _marker: PhantomData,
                 }
             )
