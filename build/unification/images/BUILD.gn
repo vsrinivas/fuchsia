@@ -336,6 +336,7 @@ aggregate_manifest("legacy-image") {
     ":driver.vim-display",
     ":driver.virtio",
     ":driver.virtio_block",
+    ":driver.virtio_console",
     ":driver.virtio_ethernet",
     ":driver.virtio_scsi",
     ":driver.xhci",
