@@ -163,7 +163,7 @@ int I2cHidbus::WorkerThreadNoIrq() {
 
       report_len = letoh16(*(uint16_t*)buf);
       if (report_len == 0x0) {
-        zxlogf(INFO, "i2c-hid reset detected\n");
+        zxlogf(TRACE, "i2c-hid reset detected\n");
         // Either host or device reset.
         i2c_pending_reset_ = false;
         i2c_reset_cnd_.Broadcast();
@@ -259,7 +259,7 @@ int I2cHidbus::WorkerThreadIrq() {
 
       report_len = letoh16(*(uint16_t*)buf);
       if (report_len == 0x0) {
-        zxlogf(INFO, "i2c-hid reset detected\n");
+        zxlogf(TRACE, "i2c-hid reset detected\n");
         // Either host or device reset.
         i2c_pending_reset_ = false;
         i2c_reset_cnd_.Broadcast();
