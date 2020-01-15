@@ -8,7 +8,9 @@
 #          --out_file <benchmark output file path> \
 #          --benchmark_label <benchmark label>
 
-while [ "$1" != "" ]; do
+set -o errexit -o nounset
+
+while [ $# != 0 ]; do
   case "$1" in
     --out_file)
       OUT_FILE="$2"
