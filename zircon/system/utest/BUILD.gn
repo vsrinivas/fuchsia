@@ -266,7 +266,6 @@ if (current_cpu != "") {
       "platform-bus",
       "policy",
       "property",
-      "qsort",
       "ramdisk",
       "register-state",
       "rtc-lib",
