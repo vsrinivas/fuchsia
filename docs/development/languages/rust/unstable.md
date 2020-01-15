@@ -67,10 +67,11 @@ below. This documentation must be checked in before the feature can be used.
 
 The current list of reviewers is as follows:
 
-- cramertj@google.com
+- bwb@google.com
 - etryzelaar@google.com
 - raggi@google.com
 - tkilbourn@google.com
+- tmandry@google.com
 
 ## Currently Used Features
 
