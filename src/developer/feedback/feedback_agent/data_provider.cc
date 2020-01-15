@@ -100,7 +100,7 @@ void DataProvider::GetData(GetDataCallback callback) {
 
   auto attachments =
       fit::join_promise_vector(GetAttachments(dispatcher_, services_, config_.attachment_allowlist,
-                                              kDataTimeout, &inspect_executor_))
+                                              kDataTimeout, cobalt_, &inspect_executor_))
           .and_then([](std::vector<fit::result<Attachment>>& attachments)
                         -> fit::result<std::vector<Attachment>> {
             std::vector<Attachment> ok_attachments;
@@ -168,7 +168,7 @@ void DataProvider::GetData(GetDataCallback callback) {
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
   after_timeout_.Acquire();
-  auto promise = TakeScreenshot(dispatcher_, services_, kScreenshotTimeout)
+  auto promise = TakeScreenshot(dispatcher_, services_, kScreenshotTimeout, cobalt_)
                      .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
                                    -> fit::result<Screenshot> {
                        Screenshot screenshot;

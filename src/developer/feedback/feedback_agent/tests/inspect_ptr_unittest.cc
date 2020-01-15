@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/feedback_agent/attachments/inspect_ptr.h"
 
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
@@ -14,6 +15,9 @@
 #include <string>
 #include <vector>
 
+#include "lib/sys/cpp/service_directory.h"
+#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -23,6 +27,8 @@
 namespace feedback {
 namespace {
 
+using testing::UnorderedElementsAreArray;
+
 class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
  public:
   CollectInspectDataTest()
@@ -30,7 +36,13 @@ class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
         collection_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         collection_executor_(collection_loop_.dispatcher()) {}
 
-  void SetUp() override { ASSERT_EQ(collection_loop_.StartThread("collection-thread"), ZX_OK); }
+  void SetUp() override {
+    ASSERT_EQ(collection_loop_.StartThread("collection-thread"), ZX_OK);
+
+    // Provide a default environment that can be overridden if services need to be injected.
+    environment_ =
+        CreateNewEnclosingEnvironment("inspect_test_app_environment_default", CreateServices());
+  }
 
   void TearDown() override {
     std::cout << "TearDown START" << std::endl << std::flush;
@@ -49,11 +61,17 @@ class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
   // Useful to guarantee there is a component within the environment that exposes Inspect data as
   // we are excluding system_objects paths from the Inspect discovery and the test component itself
   // only has a system_objects Inspect node.
-  void InjectInspectTestApp(const std::vector<std::string>& args = {}) {
+  void InjectInspectTestApp(const std::vector<std::string>& args = {},
+                            std::unique_ptr<sys::testing::EnvironmentServices> services = nullptr) {
+    if (!services) {
+      services = CreateServices();
+    }
+
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/inspect_test_app.cmx";
     launch_info.arguments = args;
-    environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment", CreateServices());
+    environment_ =
+        CreateNewEnclosingEnvironment("inspect_test_app_environment", std::move(services));
     environment_->CreateComponent(std::move(launch_info),
                                   inspect_test_app_controller_.NewRequest());
     bool ready = false;
@@ -61,11 +79,15 @@ class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
     RunLoopUntil([&ready] { return ready; });
   }
 
+  auto service_directory() { return environment_->service_directory(); }
+
   fit::result<fuchsia::mem::Buffer> CollectInspectData(const zx::duration timeout = zx::sec(1)) {
+    auto cobalt = std::make_shared<Cobalt>(dispatcher(), service_directory());
+
     fit::result<fuchsia::mem::Buffer> result;
     bool has_result = false;
     executor_.schedule_task(
-        feedback::CollectInspectData(dispatcher(), timeout, &collection_executor_)
+        feedback::CollectInspectData(dispatcher(), timeout, cobalt, &collection_executor_)
             .then([&result, &has_result](fit::result<fuchsia::mem::Buffer>& res) {
               result = std::move(res);
               has_result = true;
@@ -90,10 +112,10 @@ class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
 
  protected:
   async::Executor executor_;
-
- private:
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   fuchsia::sys::ComponentControllerPtr inspect_test_app_controller_;
+
+ private:
   async::Loop collection_loop_;
 
  protected:
@@ -178,19 +200,33 @@ TEST_F(CollectInspectDataTest, Fail_NoComponentExposesInspectData) {
 
 TEST_F(CollectInspectDataTest, Fail_InspectDiscoveryTimeout) {
   std::cout << "Fail_InspectDiscoveryTimeout START" << std::endl << std::flush;
+
+  std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();
+  StubCobaltLoggerFactory logger_factory;
+  services->AddService(logger_factory.GetHandler());
+
   // The test app exposes some Inspect data, but will be too busy to answer.
-  InjectInspectTestApp({"--busy"});
+  InjectInspectTestApp({"--busy"}, std::move(services));
 
   // The test will need to actually wait for the timeout so we don't put a value too high.
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData(/*timeout=*/zx::msec(50));
 
   ASSERT_TRUE(result.is_error());
+
+  // We don't control the loop so we need to make sure the Cobalt event is logged before checking
+  // its value.
+  RunLoopUntil([&logger_factory] { return logger_factory.Events().size() > 0u; });
+  EXPECT_THAT(logger_factory.Events(), UnorderedElementsAreArray({
+                                           CobaltEvent(TimedOutData::kInspect),
+                                       }));
+
   std::cout << "Fail_InspectDiscoveryTimeout END" << std::endl << std::flush;
 }
 
 TEST_F(CollectInspectDataTest, Fail_CallCollectTwice) {
   const zx::duration unused_timeout = zx::sec(1);
-  Inspect inspect(dispatcher(), &collection_executor_);
+  Inspect inspect(dispatcher(), std::make_shared<Cobalt>(dispatcher(), real_services()),
+                  &collection_executor_);
   executor_.schedule_task(inspect.Collect(unused_timeout));
   ASSERT_DEATH(inspect.Collect(unused_timeout),
                testing::HasSubstr("Collect() is not intended to be called twice"));

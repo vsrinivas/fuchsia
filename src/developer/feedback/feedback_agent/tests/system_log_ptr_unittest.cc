@@ -15,9 +15,13 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
+#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/feedback/utils/cobalt_event.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -26,9 +30,11 @@
 namespace feedback {
 namespace {
 
-class CollectSystemLogTest : public UnitTestFixture {
+using testing::UnorderedElementsAreArray;
+
+class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
  public:
-  CollectSystemLogTest() : executor_(dispatcher()) {}
+  CollectSystemLogTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
   void SetUpLogger(std::unique_ptr<StubLogger> logger) {
@@ -41,7 +47,8 @@ class CollectSystemLogTest : public UnitTestFixture {
   fit::result<fuchsia::mem::Buffer> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
     fit::result<fuchsia::mem::Buffer> result;
     executor_.schedule_task(
-        feedback::CollectSystemLog(dispatcher(), services(), timeout)
+        feedback::CollectSystemLog(dispatcher(), services(), timeout,
+                                   std::make_shared<Cobalt>(dispatcher(), services()))
             .then([&result](fit::result<fuchsia::mem::Buffer>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
@@ -118,6 +125,7 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
       BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
   });
   SetUpLogger(std::move(logger));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectSystemLog(log_collection_timeout);
 
@@ -131,6 +139,9 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
   // Then, we check that nothing crashes when the server tries to send the rest of the messages
   // after the connection has been lost.
   ASSERT_TRUE(RunLoopFor(logger_delay));
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          CobaltEvent(TimedOutData::kSystemLog),
+                                      }));
 }
 
 TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
@@ -201,7 +212,8 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   // set it arbitrary long.
   const zx::duration timeout = zx::sec(1);
   fit::result<void> result;
-  LogListener log_listener(dispatcher(), services());
+  LogListener log_listener(dispatcher(), services(),
+                           std::make_shared<Cobalt>(dispatcher(), services()));
   executor_.schedule_task(log_listener.CollectLogs(timeout).then(
       [&result](const fit::result<void>& res) { result = std::move(res); }));
   RunLoopFor(timeout);
@@ -222,7 +234,8 @@ TEST_F(LogListenerTest, Fail_CallCollectLogsTwice) {
   InjectServiceProvider(logger.get());
 
   const zx::duration unused_timeout = zx::sec(1);
-  LogListener log_listener(dispatcher(), services());
+  LogListener log_listener(dispatcher(), services(),
+                           std::make_shared<Cobalt>(dispatcher(), services()));
   executor_.schedule_task(log_listener.CollectLogs(unused_timeout));
   ASSERT_DEATH(log_listener.CollectLogs(unused_timeout),
                testing::HasSubstr("CollectLogs() is not intended to be called twice"));

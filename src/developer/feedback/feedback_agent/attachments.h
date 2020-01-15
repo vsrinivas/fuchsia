@@ -17,6 +17,8 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/utils/cobalt.h"
+
 namespace feedback {
 
 // Returns attachments useful to attach in feedback reports (crash or user feedback).
@@ -25,7 +27,7 @@ namespace feedback {
 // * |timeout| is per attachment.
 std::vector<fit::promise<fuchsia::feedback::Attachment>> GetAttachments(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const std::set<std::string>& allowlist, zx::duration timeout,
+    const std::set<std::string>& allowlist, zx::duration timeout, std::shared_ptr<Cobalt> cobalt,
     async::Executor* inspect_executor);
 
 // Adds the |annotations| as an extra JSON attachment to |attachments|.

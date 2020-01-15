@@ -15,6 +15,8 @@
 #include <memory>
 #include <mutex>
 
+#include "src/developer/feedback/utils/cobalt.h"
+
 namespace feedback {
 
 // Collects the Inspect data.
@@ -26,17 +28,20 @@ namespace feedback {
 // Requires "hub" in the features of the calling component's sandbox to access the hub.
 fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* timeout_dispatcher,
                                                       zx::duration timeout,
+                                                      std::shared_ptr<Cobalt> cobalt,
                                                       async::Executor* collection_executor);
 
 // Wrapper around the Inspect data collection to track the lifetime of the objects more easily.
 class Inspect {
  public:
-  Inspect(async_dispatcher_t* timeout_dispatcher, async::Executor* collection_executor);
+  Inspect(async_dispatcher_t* timeout_dispatcher, std::shared_ptr<Cobalt> cobalt,
+          async::Executor* collection_executor);
 
   fit::promise<fuchsia::mem::Buffer> Collect(zx::duration timeout);
 
  private:
   async_dispatcher_t* timeout_dispatcher_;
+  std::shared_ptr<Cobalt> cobalt_;
   async::Executor* collection_executor_;
   // Enforces the one-shot nature of Collect().
   bool has_called_collect_ = false;

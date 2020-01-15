@@ -17,6 +17,8 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/attachments/kernel_log_ptr.h"
+#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -25,6 +27,8 @@
 
 namespace feedback {
 namespace {
+
+using testing::UnorderedElementsAreArray;
 
 class CollectKernelLogTest : public sys::testing::TestWithEnvironment {
  public:
@@ -36,11 +40,13 @@ class CollectKernelLogTest : public sys::testing::TestWithEnvironment {
     fit::result<fuchsia::mem::Buffer> result;
     const zx::duration timeout(zx::sec(10));
     bool done = false;
-    executor_.schedule_task(CollectKernelLog(dispatcher(), environment_services_, timeout)
-                                .then([&result, &done](fit::result<fuchsia::mem::Buffer>& res) {
-                                  result = std::move(res);
-                                  done = true;
-                                }));
+    executor_.schedule_task(
+        CollectKernelLog(dispatcher(), environment_services_, timeout,
+                         std::make_shared<Cobalt>(dispatcher(), environment_services_))
+            .then([&result, &done](fit::result<fuchsia::mem::Buffer>& res) {
+              result = std::move(res);
+              done = true;
+            }));
     RunLoopUntil([&done] { return done; });
     return result;
   }
@@ -99,10 +105,35 @@ TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
 
 TEST_F(CollectKernelLogTest, Fail_CallGetLogTwice) {
   const zx::duration unused_timeout = zx::sec(1);
-  BootLog bootlog(dispatcher(), environment_services_);
+  BootLog bootlog(dispatcher(), environment_services_,
+                  std::make_shared<Cobalt>(dispatcher(), environment_services_));
   executor_.schedule_task(bootlog.GetLog(unused_timeout));
   ASSERT_DEATH(bootlog.GetLog(unused_timeout),
                testing::HasSubstr("GetLog() is not intended to be called twice"));
+}
+
+TEST_F(CollectKernelLogTest, Check_CobaltLogsTimeout) {
+  auto services = CreateServices();
+  StubCobaltLoggerFactory logger_factory;
+  services->AddService(logger_factory.GetHandler());
+
+  auto enclosing_environment = CreateNewEnclosingEnvironment(
+      "kernel_log_ptr_integration_test_environment", std::move(services));
+
+  // Set the timeout to 0 so kernel log collection always times out.
+  const zx::duration timeout = zx::sec(0);
+
+  BootLog bootlog(
+      dispatcher(), enclosing_environment->service_directory(),
+      std::make_shared<Cobalt>(dispatcher(), enclosing_environment->service_directory()));
+  executor_.schedule_task(bootlog.GetLog(timeout));
+
+  // We don't control the loop so we need to make sure the Cobalt event is logged before checking
+  // its value.
+  RunLoopUntil([&logger_factory] { return logger_factory.Events().size() > 0u; });
+  EXPECT_THAT(logger_factory.Events(), UnorderedElementsAreArray({
+                                           CobaltEvent(TimedOutData::kKernelLog),
+                                       }));
 }
 
 }  // namespace

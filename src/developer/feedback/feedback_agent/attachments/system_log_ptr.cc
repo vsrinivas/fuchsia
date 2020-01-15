@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -27,8 +28,10 @@ namespace feedback {
 
 fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatcher,
                                                     std::shared_ptr<sys::ServiceDirectory> services,
-                                                    zx::duration timeout) {
-  std::unique_ptr<LogListener> log_listener = std::make_unique<LogListener>(dispatcher, services);
+                                                    zx::duration timeout,
+                                                    std::shared_ptr<Cobalt> cobalt) {
+  std::unique_ptr<LogListener> log_listener =
+      std::make_unique<LogListener>(dispatcher, services, std::move(cobalt));
 
   return log_listener->CollectLogs(timeout).then(
       [log_listener = std::move(log_listener)](
@@ -54,8 +57,9 @@ fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatch
 }
 
 LogListener::LogListener(async_dispatcher_t* dispatcher,
-                         std::shared_ptr<sys::ServiceDirectory> services)
-    : dispatcher_(dispatcher), services_(services), binding_(this) {}
+                         std::shared_ptr<sys::ServiceDirectory> services,
+                         std::shared_ptr<Cobalt> cobalt)
+    : dispatcher_(dispatcher), services_(services), cobalt_(std::move(cobalt)), binding_(this) {}
 
 fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   FXL_CHECK(!has_called_collect_logs_) << "CollectLogs() is not intended to be called twice";
@@ -99,6 +103,7 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
     }
 
     FX_LOGS(ERROR) << "System log collection timed out";
+    cobalt_->LogOccurrence(TimedOutData::kSystemLog);
     done_.completer.complete_error();
   });
   const zx_status_t post_status = async::PostDelayedTask(

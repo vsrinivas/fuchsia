@@ -14,6 +14,7 @@
 
 #include <memory>
 
+#include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
 
@@ -24,7 +25,7 @@ namespace feedback {
 // fuchsia.ui.scenic.Scenic is expected to be in |services|.
 fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    zx::duration timeout);
+    zx::duration timeout, std::shared_ptr<Cobalt> cobalt);
 
 // Wraps around fuchsia::ui::scenic::ScenicPtr to handle establishing the connection, losing the
 // connection, waiting for the callback, enforcing a timeout, etc.
@@ -32,13 +33,15 @@ fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
 // TakeScreenshot() is expected to be called only once.
 class Scenic {
  public:
-  Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
+  Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+         std::shared_ptr<Cobalt> cobalt);
 
   fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(zx::duration timeout);
 
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
+  std::shared_ptr<Cobalt> cobalt_;
   // Enforces the one-shot nature of TakeScreenshot().
   bool has_called_take_screenshot_ = false;
 
