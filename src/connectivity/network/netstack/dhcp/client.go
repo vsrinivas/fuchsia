@@ -342,8 +342,9 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 		return Config{}, fmt.Errorf("stack.NewEndpoint(): %s", err)
 	}
 	defer ep.Close()
-	// TODO(NET-2441): Use SO_BINDTODEVICE instead of SO_REUSEPORT.
-	if err := ep.SetSockOpt(tcpip.ReusePortOption(1)); err != nil {
+	// BindToDevice allows us to have multiple DHCP clients listening to the same
+	// IP address and port at the same time so long as the nic is unique.
+	if err := ep.SetSockOpt(tcpip.BindToDeviceOption(info.NICID)); err != nil {
 		return Config{}, fmt.Errorf("SetSockOpt(ReusePortOption): %s", err)
 	}
 	if writeOpts.To.Addr == header.IPv4Broadcast {
