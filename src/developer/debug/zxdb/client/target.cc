@@ -71,9 +71,9 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddBool(ClientSettings::Thread::kDebugStepping,
                   ClientSettings::Thread::kDebugSteppingDescription, false);
 
-  schema->AddString(ClientSettings::Target::kVectorFormat,
-                    ClientSettings::Target::kVectorFormatDescription, "",
-                    ClientSettings::Target::GetVectorFormatOptions());
+  schema->AddString(
+      ClientSettings::Target::kVectorFormat, ClientSettings::Target::kVectorFormatDescription,
+      kVectorRegisterFormatStr_Double, ClientSettings::Target::GetVectorFormatOptions());
 
   return schema;
 }
