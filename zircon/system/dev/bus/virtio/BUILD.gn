@@ -4,18 +4,10 @@
 
 zx_driver("virtio") {
   sources = [
-    "input.cc",
-    "input_kbd.cc",
-    "input_touch.cc",
     "rng.cc",
     "virtio_driver.cc",
   ]
-  deps = [
-    ":common",
-    "$zx/system/banjo/ddk.protocol.hidbus",
-    "$zx/system/fidl/fuchsia-hardware-pty:c",  # for input
-    "$zx/system/ulib/hid",
-  ]
+  deps = [ ":common" ]
 }
 
 zx_driver("virtio_block") {
@@ -48,6 +40,22 @@ source_set("gpu_lib") {
     "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/image-format",
+  ]
+}
+
+zx_driver("virtio_input") {
+  sources = [
+    "input.cc",
+    "input_driver.cc",
+    "input_kbd.cc",
+    "input_touch.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/fidl/fuchsia-hardware-pty:c",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/hid",
   ]
 }
 
