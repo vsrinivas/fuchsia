@@ -7,7 +7,9 @@
 
 #include <stdint.h>
 
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "src/developer/debug/ipc/records.h"
@@ -29,6 +31,12 @@ struct BreakpointSettings {
     kProcess,  // Stop all threads of the process that hit the breakpoint.
     kAll       // Stop all debugged processes.
   };
+
+  // Converts between the StopMode enum and string values. These strings are the same ones used in
+  // the settings system. On failure, StopModeToString returns "<invalid>" on failure (never null),
+  // and StringToStopMode() returns nullopt.
+  static const char* StopModeToString(StopMode);
+  static std::optional<StopMode> StringToStopMode(std::string_view);
 
   // What kind of breakpoint implementation to use.
   debug_ipc::BreakpointType type = debug_ipc::BreakpointType::kSoftware;

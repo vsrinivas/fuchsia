@@ -8,6 +8,7 @@
 
 #include <algorithm>
 
+#include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/execution_scope.h"
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -23,6 +24,7 @@
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/nouns.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -45,6 +47,7 @@ struct SettingContext {
     kGlobal,
     kTarget,
     kThread,
+    kBreakpoint,
     kFilter,
   };
 
@@ -126,6 +129,10 @@ Err GetSettingContext(ConsoleContext* context, const Command& cmd, const std::st
     out->store = &context->session()->system().settings();
     out->explicit_store = true;
     out->level = SettingContext::Level::kGlobal;
+  } else if (cmd.HasNoun(Noun::kBreakpoint)) {
+    out->store = cmd.breakpoint() ? &cmd.breakpoint()->settings() : nullptr;
+    out->explicit_store = true;
+    out->level = SettingContext::Level::kBreakpoint;
   } else if (cmd.HasNoun(Noun::kFilter)) {
     out->store = cmd.filter() ? &cmd.filter()->settings() : nullptr;
     out->explicit_store = true;
@@ -397,13 +404,11 @@ Examples
 )";
 
 Err SetBool(SettingStore* store, const std::string& setting_name, const std::string& value) {
-  if (value == "0" || value == "false") {
-    store->SetBool(setting_name, false);
-  } else if (value == "1" || value == "true") {
-    store->SetBool(setting_name, true);
-  } else {
+  std::optional<bool> bool_val = StringToBool(value);
+  if (!bool_val)
     return Err("%s expects a boolean. See \"help set\" for valid values.", setting_name.data());
-  }
+
+  store->SetBool(setting_name, *bool_val);
   return Err();
 }
 
@@ -528,6 +533,11 @@ OutputBuffer FormatSetFeedback(ConsoleContext* console_context,
       int target_id = console_context->IdForTarget(cmd.target());
       int thread_id = console_context->IdForThread(cmd.thread());
       out.Append(fxl::StringPrintf(" for thread %d of process %d:\n", thread_id, target_id));
+      break;
+    }
+    case SettingContext::Level::kBreakpoint: {
+      out.Append(fxl::StringPrintf(" for breakpoint %d:\n",
+                                   console_context->IdForBreakpoint(cmd.breakpoint())));
       break;
     }
     case SettingContext::Level::kFilter: {

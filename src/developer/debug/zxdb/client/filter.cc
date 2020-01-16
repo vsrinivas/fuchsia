@@ -12,7 +12,7 @@ namespace zxdb {
 
 const char* ClientSettings::Filter::kPattern = "pattern";
 const char* ClientSettings::Filter::kPatternDescription =
-    R"( The filter to apply. Processes launched in the associated attached job will
+    R"(  The filter to apply. Processes launched in the associated attached job will
   have this substring matched against their process name.)";
 
 namespace {

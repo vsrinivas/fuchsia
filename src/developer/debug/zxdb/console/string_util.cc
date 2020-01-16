@@ -43,6 +43,16 @@ std::string GetRightArrow() {
   return "➔";
 }
 
+std::optional<bool> StringToBool(std::string_view s) {
+  if (s == "0" || s == "false")
+    return false;
+  else if (s == "1" || s == "true")
+    return true;
+  return std::nullopt;
+}
+
+const char* BoolToString(bool b) { return b ? "true" : "false"; }
+
 size_t UnicodeCharWidth(const std::string& str) {
   size_t result = 0;
 

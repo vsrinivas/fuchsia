@@ -170,11 +170,11 @@ TEST(CommandUtils, FormatBreakpoint) {
   system_observer->DidCreateBreakpoint(&breakpoint);
 
   // Formatting an empty breakpoint
-  EXPECT_EQ("Breakpoint 1 (Software) on Global, Enabled, Stop All, 0 addrs @ <no location>\n",
+  EXPECT_EQ("Breakpoint 1 (Software) on global, Enabled, Stop all, 0 addrs @ <no location>\n",
             FormatBreakpoint(&context, &breakpoint, false).AsString());
 
   // Should show no message for context.
-  EXPECT_EQ("Breakpoint 1 (Software) on Global, Enabled, Stop All, 0 addrs @ <no location>\n",
+  EXPECT_EQ("Breakpoint 1 (Software) on global, Enabled, Stop all, 0 addrs @ <no location>\n",
             FormatBreakpoint(&context, &breakpoint, true).AsString());
 
   // Provide settings.
@@ -183,10 +183,10 @@ TEST(CommandUtils, FormatBreakpoint) {
   breakpoint.set_settings(settings);
 
   // Format pending.
-  EXPECT_EQ("Breakpoint 1 (Software) on Global, Enabled, Stop All, 0 addrs @ foo.cc:21\n",
+  EXPECT_EQ("Breakpoint 1 (Software) on global, Enabled, Stop all, 0 addrs @ foo.cc:21\n",
             FormatBreakpoint(&context, &breakpoint, false).AsString());
   EXPECT_EQ(
-      "Breakpoint 1 (Software) on Global, Enabled, Stop All, 0 addrs @ foo.cc:21\n"
+      "Breakpoint 1 (Software) on global, Enabled, Stop all, 0 addrs @ foo.cc:21\n"
       "Pending: No matches for location, it will be pending library loads.\n",
       FormatBreakpoint(&context, &breakpoint, true).AsString());
 
@@ -196,7 +196,7 @@ TEST(CommandUtils, FormatBreakpoint) {
   breakpoint.set_locations(std::move(locs));
 
   // No source context.
-  EXPECT_EQ("Breakpoint 1 (Software) on Global, Enabled, Stop All, 1 addr @ foo.cc:21\n",
+  EXPECT_EQ("Breakpoint 1 (Software) on global, Enabled, Stop all, 1 addr @ foo.cc:21\n",
             FormatBreakpoint(&context, &breakpoint, false).AsString());
 
   // Provide 2 matched locations
@@ -204,7 +204,7 @@ TEST(CommandUtils, FormatBreakpoint) {
   locs.push_back(std::make_unique<MockBreakpointLocation>(nullptr));
   breakpoint.set_locations(std::move(locs));
 
-  EXPECT_EQ("Breakpoint 1 (Software) on Global, Enabled, Stop All, 2 addrs @ foo.cc:21\n",
+  EXPECT_EQ("Breakpoint 1 (Software) on global, Enabled, Stop all, 2 addrs @ foo.cc:21\n",
             FormatBreakpoint(&context, &breakpoint, false).AsString());
 
   system_observer->WillDestroyBreakpoint(&breakpoint);

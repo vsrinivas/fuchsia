@@ -132,7 +132,7 @@ OutputBuffer FormatSettingShort(ConsoleContext* context, const std::string& name
 OutputBuffer FormatSettingValue(ConsoleContext* context, const SettingValue& value) {
   switch (value.type()) {
     case SettingType::kBoolean: {
-      return value.get_bool() ? OutputBuffer("true") : OutputBuffer("false");
+      return OutputBuffer(BoolToString(value.get_bool()));
     }
     case SettingType::kInteger: {
       return fxl::StringPrintf("%d", value.get_int());

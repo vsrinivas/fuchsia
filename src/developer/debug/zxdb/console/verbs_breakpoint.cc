@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/console/format_context.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -24,8 +25,9 @@ namespace zxdb {
 namespace {
 
 constexpr int kStopSwitch = 1;
-constexpr int kEnableSwitch = 2;
+constexpr int kDisabledSwitch = 2;
 constexpr int kTypeSwitch = 3;
+constexpr int kOneShotSwitch = 4;
 
 // Validates that the current command has a breakpoint associated with it and no additional
 // arguments. Used for enable/disable/clear that do one thing to a breakpoint
@@ -107,16 +109,18 @@ Location arguments
 
 Options
 
-  --enable=[ true | false ]
-  -e [ true | false ]
+  --disabled
+  -d
+      Creates the breakpoint as initially disabled. Otherwise, it will be
+      enabled.
 
-      Controls whether the breakpoint is enabled or disabled. A disabled
-      breakpoint is never hit and hit counts are not incremented, but its
-      settings are preserved. Defaults to enabled (true).
+  --one-shot
+  -o
+      Creates a one-shot breakpoint. One-shot breakpoints are automatically
+      deleted after they are hit once.
 
   --stop=[ all | process | thread | none ]
   -s [ all | process | thread | none ]
-
       Controls what execution is stopped when the breakpoint is hit. By
       default all threads of all debugged process will be stopped ("all") when
       a breakpoint is hit. But it's possible to only stop the threads of the
@@ -128,7 +132,6 @@ Options
 
   --type=[ (software|s) | (hardware|h) | (watchpoint|w) ]  (default: software)
   -t [ (software|s) | (hardware|h) | (watchpoint|w) ]
-
       Defines what kind of breakpoint to use. Hardware registers require support
       from the architecture and are limited in quantity. Keep this in mind when
       using breakpoints that will expand to several locations.
@@ -181,11 +184,27 @@ Breakpoints on overloaded functions
   or by address. To get the addresses of each overload, use the command
   "sym-info FunctionName".
 
+Editing breakpoint attributes
+
+  Individual breakpoint attributes can be accessed with the "get" and "set"
+  commands. To list all attributes on the current breakpoint:
+
+    bp get
+
+  To get a specific value along with help for what the setting means list the
+  specific attribute:
+
+    bp get stop
+
+  And to set the attribute:
+
+    gp set stop = thread
+
 Other breakpoint commands
 
   "breakpoint" / "bp": List or select breakpoints.
   "clear": To delete breakpoints.
-  "disable": Disable a breakpoint off without deleting it.
+  "disable": Disable a breakpoint without deleting it.
   "enable": Enable a previously-disabled breakpoint.
 
 Examples
@@ -216,7 +235,7 @@ Examples
   frame 3 break 23
       Break at line 23 of the file referenced by frame 3.
 
-  break 32 --type h
+  break --type h 23
       Break at line 23 of the file referenced by the current frame and use a
       hardware breakpoint.
 )";
@@ -228,34 +247,24 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback callbac
   // Get existing settings (or defaults for new one).
   BreakpointSettings settings;
 
-  // Enable flag.
-  if (cmd.HasSwitch(kEnableSwitch)) {
-    std::string enable_str = cmd.GetSwitchValue(kEnableSwitch);
-    if (enable_str == "true") {
-      settings.enabled = true;
-    } else if (enable_str == "false") {
-      settings.enabled = false;
-    } else {
-      return Err("--enabled switch requires either \"true\" or \"false\" values.");
-    }
-  }
+  // Disabled flag.
+  if (cmd.HasSwitch(kDisabledSwitch))
+    settings.enabled = false;
+
+  // One-shot.
+  if (cmd.HasSwitch(kOneShotSwitch))
+    settings.one_shot = true;
 
   // Stop mode.
   if (cmd.HasSwitch(kStopSwitch)) {
-    std::string stop_str = cmd.GetSwitchValue(kStopSwitch);
-    if (stop_str == "all") {
-      settings.stop_mode = BreakpointSettings::StopMode::kAll;
-    } else if (stop_str == "process") {
-      settings.stop_mode = BreakpointSettings::StopMode::kProcess;
-    } else if (stop_str == "thread") {
-      settings.stop_mode = BreakpointSettings::StopMode::kThread;
-    } else if (stop_str == "none") {
-      settings.stop_mode = BreakpointSettings::StopMode::kNone;
-    } else {
+    auto stop_mode = BreakpointSettings::StringToStopMode(cmd.GetSwitchValue(kStopSwitch));
+    if (!stop_mode) {
       return Err(
-          "--stop switch requires \"all\", \"process\", \"thread\", "
-          "or \"none\".");
+          "--%s requires \"%s\", \"%s\", \"%s\", or \"%s\".", ClientSettings::Breakpoint::kStopMode,
+          ClientSettings::Breakpoint::kStopMode_All, ClientSettings::Breakpoint::kStopMode_Process,
+          ClientSettings::Breakpoint::kStopMode_Thread, ClientSettings::Breakpoint::kStopMode_None);
     }
+    settings.stop_mode = *stop_mode;
   }
 
   // Type.
@@ -420,6 +429,10 @@ const char kEnableHelp[] =
   It can be combined with an explicit breakpoint prefix to indicate a specific
   breakpoint to enable.
 
+  It is an alias for:
+
+    bp set enabled = true
+
 See also
 
   "help break": To create breakpoints.
@@ -461,6 +474,10 @@ const char kDisableHelp[] =
   It can be combined with an explicit breakpoint prefix to indicate a specific
   breakpoint to disable.
 
+  It is an alias for:
+
+    bp set enabled = false
+
 See also
 
   "help break": To create breakpoints.
@@ -493,13 +510,15 @@ Err DoDisable(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
-  SwitchRecord enable_switch(kEnableSwitch, true, "enable", 'e');
-  SwitchRecord stop_switch(kStopSwitch, true, "stop", 's');
+  SwitchRecord disabled_switch(kDisabledSwitch, false, "disabled", 'd');
+  SwitchRecord one_shot_switch(kOneShotSwitch, false, ClientSettings::Breakpoint::kOneShot, 'o');
+  SwitchRecord stop_switch(kStopSwitch, true, ClientSettings::Breakpoint::kStopMode, 's');
   SwitchRecord type_switch(kTypeSwitch, true, "type", 't');
 
   VerbRecord break_record(&DoBreak, &CompleteInputLocation, {"break", "b"}, kBreakShortHelp,
                           kBreakHelp, CommandGroup::kBreakpoint);
-  break_record.switches.push_back(enable_switch);
+  break_record.switches.push_back(disabled_switch);
+  break_record.switches.push_back(one_shot_switch);
   break_record.switches.push_back(stop_switch);
   break_record.switches.push_back(type_switch);
   (*verbs)[Verb::kBreak] = std::move(break_record);

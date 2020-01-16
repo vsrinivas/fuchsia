@@ -60,7 +60,7 @@ TEST_F(FormatSettingTest, ExecutionScope) {
       "\n"
       "Scope description\n"
       "\n"
-      "setting-scope = Global\n",
+      "setting-scope = global\n",
       out.AsString());
 
   // Target scope.

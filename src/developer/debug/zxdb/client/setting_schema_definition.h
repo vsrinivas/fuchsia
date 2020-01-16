@@ -61,6 +61,29 @@ struct ClientSettings {
     static const char* kDebugSteppingDescription;
   };
 
+  struct Breakpoint {
+    static const char* kLocation;
+    static const char* kLocationDescription;
+
+    static const char* kScope;
+    static const char* kScopeDescription;
+
+    static const char* kEnabled;
+    static const char* kEnabledDescription;
+
+    static const char* kOneShot;
+    static const char* kOneShotDescription;
+
+    static const char* kStopMode;
+    static const char* kStopModeDescription;
+
+    // Possible values for kStopMode.
+    static const char* kStopMode_None;
+    static const char* kStopMode_Thread;
+    static const char* kStopMode_Process;
+    static const char* kStopMode_All;
+  };
+
   struct Filter {
     static const char* kPattern;
     static const char* kPatternDescription;

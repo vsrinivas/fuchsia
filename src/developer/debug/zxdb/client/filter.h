@@ -53,8 +53,8 @@ class Filter : public ClientObject {
     explicit Settings(Filter* filter);
 
    protected:
-    virtual SettingValue GetStorageValue(const std::string& key) const override;
-    virtual Err SetStorageValue(const std::string& key, SettingValue value) override;
+    SettingValue GetStorageValue(const std::string& key) const override;
+    Err SetStorageValue(const std::string& key, SettingValue value) override;
 
    private:
     Filter* filter_;  // Object that owns us.

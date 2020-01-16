@@ -9,6 +9,7 @@
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
+#include "src/developer/debug/zxdb/client/setting_store.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -50,7 +51,27 @@ class Breakpoint : public ClientObject {
   virtual std::vector<const BreakpointLocation*> GetLocations() const = 0;
   virtual std::vector<BreakpointLocation*> GetLocations() = 0;
 
+  SettingStore& settings() { return settings_; }
+  static fxl::RefPtr<SettingSchema> GetSchema();
+
  private:
+  // Implements the SettingStore interface for the Breakpoint (uses composition instead of
+  // inheritance to keep the Breakpoint API simpler).
+  class Settings : public SettingStore {
+   public:
+    explicit Settings(Breakpoint* bp);
+
+   protected:
+    SettingValue GetStorageValue(const std::string& key) const override;
+    Err SetStorageValue(const std::string& key, SettingValue value) override;
+
+   private:
+    Breakpoint* bp_;  // Object that owns us.
+  };
+  friend Settings;
+
+  Settings settings_;
+
   fxl::WeakPtrFactory<Breakpoint> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Breakpoint);

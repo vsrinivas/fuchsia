@@ -68,6 +68,7 @@ static_library("client") {
     "breakpoint_location.cc",
     "breakpoint_location_impl.cc",
     "breakpoint_location_impl.h",
+    "breakpoint_settings.cc",
     "client_eval_context_impl.cc",
     "client_object.cc",
     "cloud_storage_symbol_server.cc",

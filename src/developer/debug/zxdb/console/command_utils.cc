@@ -230,7 +230,7 @@ std::string ThreadStateToString(debug_ipc::ThreadRecord::State state,
 std::string ExecutionScopeToString(const ConsoleContext* context, const ExecutionScope& scope) {
   switch (scope.type()) {
     case ExecutionScope::kSystem:
-      return "Global";
+      return "global";
     case ExecutionScope::kTarget:
       if (scope.target())
         return fxl::StringPrintf("pr %d", context->IdForTarget(scope.target()));
@@ -255,21 +255,6 @@ ExecutionScope ExecutionScopeForCommand(const Command& cmd) {
   return ExecutionScope();  // Everything else becomes global scope.
 }
 
-std::string BreakpointStopToString(BreakpointSettings::StopMode mode) {
-  switch (mode) {
-    case BreakpointSettings::StopMode::kNone:
-      return "None";
-    case BreakpointSettings::StopMode::kThread:
-      return "Thread";
-    case BreakpointSettings::StopMode::kProcess:
-      return "Process";
-    case BreakpointSettings::StopMode::kAll:
-      return "All";
-  }
-  FXL_NOTREACHED();
-  return std::string();
-}
-
 const char* BreakpointEnabledToString(bool enabled) { return enabled ? "Enabled" : "Disabled"; }
 
 std::string DescribeThread(const ConsoleContext* context, const Thread* thread) {
@@ -284,7 +269,7 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
   BreakpointSettings settings = breakpoint->GetSettings();
 
   std::string scope = ExecutionScopeToString(context, settings.scope);
-  std::string stop = BreakpointStopToString(settings.stop_mode);
+  std::string stop = BreakpointSettings::StopModeToString(settings.stop_mode);
   const char* enabled = BreakpointEnabledToString(settings.enabled);
   const char* type = BreakpointTypeToString(settings.type);
   OutputBuffer location = FormatInputLocations(settings.locations);

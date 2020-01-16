@@ -82,7 +82,6 @@ std::string ExecutionScopeToString(const ConsoleContext* context, const Executio
 // explicitly given. If no globa/target/thread context is explicitly given, defaults to the global.
 ExecutionScope ExecutionScopeForCommand(const Command& cmd);
 
-std::string BreakpointStopToString(BreakpointSettings::StopMode mode);
 const char* BreakpointEnabledToString(bool enabled);
 
 std::string DescribeThread(const ConsoleContext* context, const Thread* thread);

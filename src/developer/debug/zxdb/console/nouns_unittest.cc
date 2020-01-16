@@ -32,9 +32,8 @@ TEST_F(NounsTest, BreakpointList) {
 
   // Create a breakpoint with no settings.
   const char kExpectedNoSettings[] =
-      R"( # Scope  Stop Enabled Type     # Addrs Location
- 1 Global All  Enabled Software       0 <no location>
-)";
+      " # scope  stop enabled Type     # Addrs location\n"
+      " 1 global all  true    Software       0 <no location>\n";
   Breakpoint* bp = session().system().CreateNewBreakpoint();
   console.ProcessInputLine(kListBreakpointsLine);
   event = console.GetOutputEvent();
@@ -59,9 +58,8 @@ TEST_F(NounsTest, BreakpointList) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
-      R"( # Scope  Stop Enabled  Type     # Addrs Location
- 1 Global All  Disabled Software       0 Foo
-)",
+      " # scope  stop enabled Type     # Addrs location\n"
+      " 1 global all  false   Software       0 Foo\n",
       event.output.AsString());
 
   // Currently we don't test printing breakpoint locations since that requires
@@ -81,8 +79,7 @@ TEST_F(NounsTest, FilterTest) {
   console.ProcessInputLine("filter attach foo");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("\"filter\" may not be specified for this command.",
-            event.output.AsString());
+  ASSERT_EQ("\"filter\" may not be specified for this command.", event.output.AsString());
 
   console.ProcessInputLine("attach foobar");
   event = console.GetOutputEvent();

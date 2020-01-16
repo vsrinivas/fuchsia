@@ -16,6 +16,7 @@
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
@@ -600,8 +601,8 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
 
     row.push_back(OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%d", pair.first)));
     row.emplace_back(ExecutionScopeToString(context, settings.scope));
-    row.emplace_back(BreakpointStopToString(settings.stop_mode));
-    row.emplace_back(BreakpointEnabledToString(settings.enabled));
+    row.emplace_back(BreakpointSettings::StopModeToString(settings.stop_mode));
+    row.emplace_back(BoolToString(settings.enabled));
     row.emplace_back(BreakpointTypeToString(settings.type));
     row.emplace_back(fxl::StringPrintf("%zu", matched_locs.size()));
     row.push_back(FormatInputLocations(settings.locations));
@@ -626,9 +627,11 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
 
   OutputBuffer out;
   FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-               ColSpec(Align::kLeft, 0, "Scope"), ColSpec(Align::kLeft, 0, "Stop"),
-               ColSpec(Align::kLeft, 0, "Enabled"), ColSpec(Align::kLeft, 0, "Type"),
-               ColSpec(Align::kRight, 0, "# Addrs"), ColSpec(Align::kLeft, 0, "Location")},
+               ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kScope),
+               ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kStopMode),
+               ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kEnabled),
+               ColSpec(Align::kLeft, 0, "Type"), ColSpec(Align::kRight, 0, "# Addrs"),
+               ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kLocation)},
               rows, &out);
   Console::get()->Output(out);
 }
