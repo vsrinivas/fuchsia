@@ -15,7 +15,7 @@
 #include <task-utils/walker.h>
 
 #include "gtest/gtest.h"
-#include "src/developer/shell/lib/js_testing_utils.h"
+#include "src/developer/shell/josh/lib/js_testing_utils.h"
 #include "zx.h"
 
 namespace shell {

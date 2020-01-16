@@ -6,22 +6,6 @@ import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
-test("shell_tests_bin") {
-  deps = [
-    "//sdk/lib/fidl/cpp/test",
-    "//src/developer/shell/console:tests",
-    "//src/developer/shell/lib:tests",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-  ]
-
-  # Extra stack needed to avoid crashes when calling QuickJS functions
-  # with asan enabled.
-  ldflags = [ "-Wl,-z,stack-size=0x200000" ]
-}
-
 # Generate a manifest providing all of the .fidl.json files exported by the
 # core SDK (and any other FIDL files we might want).
 action("generate_fidl_json") {
@@ -65,9 +49,9 @@ test_package("shell_tests") {
   rootjob_svc = "//build"
   deps = [
     ":generate_fidl_json",
-    ":shell_tests_bin",
-    "//src/developer/shell/lib:js_libs",
-    "//src/developer/shell/lib:spawn_child_test_util",
+    "//src/developer/shell/josh:josh_tests_bin",
+    "//src/developer/shell/josh/lib:js_libs",
+    "//src/developer/shell/josh/lib:spawn_child_test_util",
   ]
 
   binaries = [
@@ -78,12 +62,12 @@ test_package("shell_tests") {
 
   tests = [
     {
-      name = "shell_tests_bin"
+      name = "josh_tests_bin"
       environments = basic_envs
     },
   ]
   extra = get_target_outputs(":generate_fidl_json") +
-          [ "$target_gen_dir/lib/libs.manifest" ]
+          [ "$target_gen_dir/josh/lib/libs.manifest" ]
 }
 
 group("tests") {
@@ -92,31 +76,14 @@ group("tests") {
   deps = [ ":shell_tests" ]
 }
 
-executable("bin") {
-  output_name = "josh"
-
-  sources = [ "main.cc" ]
-
-  deps = [
-    "//src/developer/shell/console",
-    "//src/developer/shell/lib",
-  ]
-
-  libs = [ "zircon" ]
-
-  # Extra stack needed to avoid crashes when calling QuickJS functions
-  # with asan enabled.
-  ldflags = [ "-Wl,-z,stack-size=0x200000" ]
-}
-
 # "josh" is Javascript Object SHell.  We can change the name later.
 package("josh") {
   # TODO(jeremymanson): This is only testonly because sdk:core is.  We should undo that.
   testonly = true
   deps = [
-    ":bin",
-    ":generate_fidl_json",
-    "//src/developer/shell/lib:js_libs",
+    "//src/developer/shell:generate_fidl_json",
+    "//src/developer/shell/josh:bin",
+    "//src/developer/shell/josh/lib:js_libs",
   ]
   binaries = [
     {
@@ -125,5 +92,5 @@ package("josh") {
     },
   ]
   extra = get_target_outputs(":generate_fidl_json") +
-          [ "$target_gen_dir/lib/libs.manifest" ]
+          [ "$target_gen_dir/josh/lib/libs.manifest" ]
 }

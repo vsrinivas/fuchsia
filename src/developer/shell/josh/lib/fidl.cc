@@ -11,8 +11,8 @@
 #include <set>
 #include <vector>
 
-#include "src/developer/shell/lib/qjs_util.h"
-#include "src/developer/shell/lib/zx.h"
+#include "src/developer/shell/josh/lib/qjs_util.h"
+#include "src/developer/shell/josh/lib/zx.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/wire_parser.h"
 #include "third_party/quickjs/quickjs.h"

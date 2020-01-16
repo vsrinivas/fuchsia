@@ -15,9 +15,9 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
-#include "src/developer/shell/lib/js_testing_utils.h"
-#include "src/developer/shell/lib/runtime.h"
-#include "src/developer/shell/lib/zx.h"
+#include "src/developer/shell/josh/lib/js_testing_utils.h"
+#include "src/developer/shell/josh/lib/runtime.h"
+#include "src/developer/shell/josh/lib/zx.h"
 #include "src/lib/fidl_codec/library_loader_test_data.h"
 
 namespace shell {

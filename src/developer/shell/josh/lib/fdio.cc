@@ -9,8 +9,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "src/developer/shell/lib/qjs_util.h"
-#include "src/developer/shell/lib/zx.h"
+#include "src/developer/shell/josh/lib/qjs_util.h"
+#include "src/developer/shell/josh/lib/zx.h"
 #include "third_party/quickjs/quickjs.h"
 
 namespace shell::fdio {

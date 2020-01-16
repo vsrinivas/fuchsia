@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_SHELL_LIB_RUNTIME_H_
-#define SRC_DEVELOPER_SHELL_LIB_RUNTIME_H_
+#ifndef SRC_DEVELOPER_SHELL_JOSH_LIB_RUNTIME_H_
+#define SRC_DEVELOPER_SHELL_JOSH_LIB_RUNTIME_H_
 
 #include <string>
 
@@ -58,4 +58,4 @@ class Context {
 
 }  // namespace shell
 
-#endif  // SRC_DEVELOPER_SHELL_LIB_RUNTIME_H_
+#endif  // SRC_DEVELOPER_SHELL_JOSH_LIB_RUNTIME_H_

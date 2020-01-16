@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_SHELL_LIB_ZX_H_
-#define SRC_DEVELOPER_SHELL_LIB_ZX_H_
+#ifndef SRC_DEVELOPER_SHELL_JOSH_LIB_ZX_H_
+#define SRC_DEVELOPER_SHELL_JOSH_LIB_ZX_H_
 
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -30,4 +30,4 @@ JSValue HandleCreate(JSContext *ctx, zx_handle_t handle, zx_obj_type_t type);
 
 }  // namespace shell
 
-#endif  // SRC_DEVELOPER_SHELL_LIB_ZX_H_
+#endif  // SRC_DEVELOPER_SHELL_JOSH_LIB_ZX_H_

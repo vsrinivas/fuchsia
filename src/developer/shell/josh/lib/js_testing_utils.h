@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_SHELL_LIB_JS_TESTING_UTILS_H_
-#define SRC_DEVELOPER_SHELL_LIB_JS_TESTING_UTILS_H_
+#ifndef SRC_DEVELOPER_SHELL_JOSH_LIB_JS_TESTING_UTILS_H_
+#define SRC_DEVELOPER_SHELL_JOSH_LIB_JS_TESTING_UTILS_H_
 
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include "src/developer/shell/lib/runtime.h"
+#include "src/developer/shell/josh/lib/runtime.h"
 #include "third_party/quickjs/quickjs.h"
 
 namespace shell {
@@ -53,4 +53,4 @@ class JsTest : public ::testing::Test {
 
 }  // namespace shell
 
-#endif  // SRC_DEVELOPER_SHELL_LIB_JS_TESTING_UTILS_H_
+#endif  // SRC_DEVELOPER_SHELL_JOSH_LIB_JS_TESTING_UTILS_H_

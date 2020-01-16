@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_SHELL_CONSOLE_CONSOLE_H_
-#define SRC_DEVELOPER_SHELL_CONSOLE_CONSOLE_H_
+#ifndef SRC_DEVELOPER_SHELL_JOSH_CONSOLE_CONSOLE_H_
+#define SRC_DEVELOPER_SHELL_JOSH_CONSOLE_CONSOLE_H_
 
 namespace shell {
 
@@ -12,4 +12,4 @@ int ConsoleMain(int argc, const char **argv);
 
 }  // namespace shell
 
-#endif  // SRC_DEVELOPER_SHELL_CONSOLE_CONSOLE_H_
+#endif  // SRC_DEVELOPER_SHELL_JOSH_CONSOLE_CONSOLE_H_

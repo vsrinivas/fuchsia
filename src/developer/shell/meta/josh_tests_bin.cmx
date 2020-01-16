@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/shell_tests_bin"
+        "binary": "test/josh_tests_bin"
     },
     "sandbox": {
         "services": [

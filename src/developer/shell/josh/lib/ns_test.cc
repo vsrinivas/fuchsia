@@ -12,8 +12,8 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "src/developer/shell/console/console.h"
-#include "src/developer/shell/lib/js_testing_utils.h"
+#include "src/developer/shell/josh/console/console.h"
+#include "src/developer/shell/josh/lib/js_testing_utils.h"
 
 namespace shell {
 

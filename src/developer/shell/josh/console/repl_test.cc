@@ -13,7 +13,7 @@
 
 #include "gtest/gtest.h"
 #include "li.h"
-#include "src/developer/shell/lib/runtime.h"
+#include "src/developer/shell/josh/lib/runtime.h"
 #include "src/lib/line_input/line_input.h"
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"

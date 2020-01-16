@@ -95,7 +95,7 @@ source_set("tests") {
     "//sdk/lib/fidl/cpp:test_support",
     "//sdk/lib/fidl/cpp/test",
     "//sdk/lib/sys/cpp",
-    "//src/developer/shell/console",
+    "//src/developer/shell/josh/console",
     "//src/lib/fidl_codec:json_for_test",
     "//src/lib/fxl",
     "//src/sys/component_index/fidl:index",

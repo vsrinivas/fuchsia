@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_SHELL_CONSOLE_REPL_H_
-#define SRC_DEVELOPER_SHELL_CONSOLE_REPL_H_
+#ifndef SRC_DEVELOPER_SHELL_JOSH_CONSOLE_REPL_H_
+#define SRC_DEVELOPER_SHELL_JOSH_CONSOLE_REPL_H_
 
 #include <string>
 
@@ -68,4 +68,4 @@ class Repl {
 };
 }  // namespace shell::repl
 
-#endif  // SRC_DEVELOPER_SHELL_CONSOLE_REPL_H_
+#endif  // SRC_DEVELOPER_SHELL_JOSH_CONSOLE_REPL_H_
