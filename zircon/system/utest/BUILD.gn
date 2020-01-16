@@ -229,7 +229,6 @@ if (current_cpu != "") {
       "ethernet",
       "events",
       "exception",
-      "fallback-rtc",
       "fidl",
       "fidl-coding-tables",
       "fidl-llcpp-interop",
