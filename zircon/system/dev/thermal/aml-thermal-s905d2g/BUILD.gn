@@ -18,11 +18,14 @@ zx_driver("aml-thermal-s905d2g") {
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.pwm",
     "$zx/system/banjo/ddk.protocol.scpi",
+    "$zx/system/banjo/ddk.protocol.thermal",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -32,6 +35,8 @@ zx_driver("aml-thermal-s905d2g") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+
+  deprecated_inhibit_driver_shlib_allowlist = true
 }
 
 zx_test("aml-thermal-s905d2g-test") {
@@ -52,6 +57,7 @@ zx_test("aml-thermal-s905d2g-test") {
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.pwm",
     "$zx/system/banjo/ddk.protocol.scpi",
+    "$zx/system/banjo/ddk.protocol.thermal",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/device-protocol-platform-device",

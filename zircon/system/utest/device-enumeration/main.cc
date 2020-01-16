@@ -150,7 +150,6 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:03:17/aml-gpu",
       "sys/platform/05:00:18/aml-usb-phy-v2",
-      "sys/platform/05:03:1e/cpu",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
@@ -187,6 +186,10 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "aml-secure-mem/aml-securemem",
       //"sys/platform/05:05:3/aml-uart/serial/bt-transport-uart/bcm-hci",
       "pwm-init",
+
+      // CPU Device.
+      "sys/platform/05:03:1e/component",
+      "class/cpu-ctrl/000",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

@@ -20,6 +20,7 @@
 #include <fbl/auto_call.h>
 
 namespace cpuctrl = llcpp::fuchsia::hardware::cpu::ctrl;
+namespace fuchsia_device = llcpp::fuchsia::device;
 
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
 
@@ -40,13 +41,13 @@ void usage(const char* cmd) {
   spaces[kCmdLen - 1] = '\0';    // Null terminate.
 
   fprintf(stderr, "\nInteract with the CPU\n");
-  fprintf(stderr, "\t%s help               Print this message and quit.\n", cmd);
-  fprintf(stderr, "\t%s list               List this system's performance domains\n", cmd);
-  fprintf(stderr,
-          "\t%s describe [domain]  Describes a given performance domain's performance states\n",
+  fprintf(stderr, "\t%s help                   Print this message and quit.\n", cmd);
+  fprintf(stderr, "\t%s list                   List this system's performance domains\n", cmd);
+  fprintf(stderr, "\t%s describe [domain]      Describes a given performance domain's performance states\n",
           cmd);
-  fprintf(stderr, "\t%s                    describes all domains if `domain` is omitted.\n",
+  fprintf(stderr, "\t%s                        describes all domains if `domain` is omitted.\n",
           spaces);
+  fprintf(stderr, "\t%s pstate domain state    Set the CPU's performance state.\n", cmd);
 }
 
 // Call `ListCb cb` with all the names of devices in kCpuDevicePath. Each of
@@ -128,6 +129,52 @@ void describe(const char* domain) {
   }
 }
 
+void set_performance_state(const char* domain, const char* pstate) {
+  if (strnlen(domain, 4) != 3) {
+    fprintf(stderr, "Domain must be 3 characters long (nnn)\n");
+    return;
+  }
+  char path[kMaxPathLen];
+  snprintf(path, kMaxPathLen, kCpuDeviceFormat, domain);
+
+  char* end;
+  long desired_state = strtol(pstate, &end, 10);
+  if (end == pstate || *end != '\0'  ||
+      desired_state < 0 || desired_state > MAX_DEVICE_PERFORMANCE_STATES) {
+    fprintf(stderr, "Bad pstate '%s', must be a positive integer between 0 and %u\n", pstate,
+                    MAX_DEVICE_PERFORMANCE_STATES);
+    return;
+  }
+
+  zx::channel channel_local, channel_remote;
+  zx_status_t st = zx::channel::create(0, &channel_local, &channel_remote);
+  if (st != ZX_OK) {
+    fprintf(stderr, "Failed to create channel pair, st = %d\n", st);
+    return;
+  }
+
+  st = fdio_service_connect(path, channel_remote.get());
+  if (st != ZX_OK) {
+    fprintf(stderr, "Failed to connect to service at '%s', st = %d\n", path, st);
+    return;
+  }
+
+  auto client = std::make_unique<fuchsia_device::Controller::SyncClient>(std::move(channel_local));
+
+  auto result = client->SetPerformanceState(static_cast<uint32_t>(desired_state));
+  if (!result.ok()) {
+    fprintf(stderr, "Failed to set pstate\n");
+    return;
+  }
+
+  if (result.status() != ZX_OK) {
+    fprintf(stderr, "Failed to set pstate, st = %d\n", result.status());
+    return;
+  }
+
+  printf("Set pstate for domain '%s' to %u\n", domain, result.value().out_state);
+}
+
 zx_status_t describe_all() {
   list(describe);
   return ZX_OK;
@@ -148,11 +195,19 @@ int main(int argc, char* argv[]) {
   } else if (!strncmp(subcmd, "list", 4)) {
     return list(print_performance_domain) == ZX_OK ? 0 : -1;
   } else if (!strncmp(subcmd, "describe", 8)) {
-    if (argc > 3) {
+    if (argc >= 3) {
       describe(argv[2]);
       return 0;
     } else {
       return describe_all() == ZX_OK ? 0 : -1;
+    }
+  } else if (!strncmp(subcmd, "pstate", 6)) {
+    if (argc >= 4) {
+      set_performance_state(argv[2], argv[3]);
+    } else {
+      fprintf(stderr, "pstate <domain> <pstate>\n");
+      usage(cmd);
+      return -1;
     }
   }
 
