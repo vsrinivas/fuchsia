@@ -72,6 +72,9 @@ class Namespace : public fuchsia::sys::Environment,
       fuchsia::sys::LaunchInfo launch_info,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) override;
 
+  // Adds the service to the service directory if it's whitelisted.
+  void MaybeAddComponentEventProvider();
+
   // Notifies a realms ComponentEventListener with the out/diagnostics directory for a component.
   void NotifyComponentDiagnosticsDirReady(const std::string& component_url,
                                           const std::string& component_name,

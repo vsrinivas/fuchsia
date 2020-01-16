@@ -1,0 +1,3 @@
+fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx
+fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx
+fuchsia-pkg://fuchsia.com/component_events_integration_tests#meta/component_events_integration_test.cmx

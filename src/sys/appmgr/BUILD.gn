@@ -203,6 +203,12 @@ config_data("appmgr_deprecated_ambient_replace_as_executable_allowlist") {
   outputs = [ "allowlist/deprecated_ambient_replace_as_executable.txt" ]
 }
 
+config_data("appmgr_component_event_provider_allowlist") {
+  for_pkg = "appmgr"
+  sources = [ "component_event_provider_allowlist.txt" ]
+  outputs = [ "allowlist/component_event_provider.txt" ]
+}
+
 group("unittests") {
   testonly = true
   public_deps = [

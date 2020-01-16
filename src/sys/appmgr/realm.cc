@@ -63,6 +63,7 @@ constexpr zx_status_t kComponentCreationFailed = -1;
 constexpr char kDeprecatedShellAllowlist[] = "allowlist/deprecated_shell.txt";
 constexpr char kDeprecatedAmbientReplaceAsExecAllowlist[] =
     "allowlist/deprecated_ambient_replace_as_executable.txt";
+constexpr char kComponentEventProviderAllowlist[] = "allowlist/component_event_provider.txt";
 
 using fuchsia::sys::TerminationReason;
 
@@ -872,6 +873,11 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
   fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
       default_namespace_, this, std::move(launch_info.additional_services), service_whitelist);
+
+  if (IsAllowedToConnectToComponentEventProvider(fp.ToString())) {
+    ns->MaybeAddComponentEventProvider();
+  }
+
   ns->set_component_url(launch_info.url);
   zx::channel svc = ns->OpenServicesAsDirectory();
   if (!svc) {
@@ -1049,6 +1055,12 @@ bool Realm::IsAllowedToUseDeprecatedAmbientReplaceAsExecutable(std::string ns_id
   }
   // Otherwise, enforce the allowlist.
   return deprecated_exec_allowlist.IsAllowed(ns_id);
+}
+
+bool Realm::IsAllowedToConnectToComponentEventProvider(std::string ns_id) {
+  Allowlist component_event_provider_allowlist(appmgr_config_dir_, kComponentEventProviderAllowlist,
+                                               Allowlist::kExpected);
+  return component_event_provider_allowlist.IsAllowed(ns_id);
 }
 
 void Realm::NotifyComponentStarted(const std::string& component_url,

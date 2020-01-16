@@ -70,9 +70,6 @@ std::vector<std::string> GetDefaultNamespaceServiceEntries() {
       fuchsia::process::Launcher::Name_,
       fuchsia::process::Resolver::Name_,
       fuchsia::sys::Environment::Name_,
-      // This service is currently only used by the archivist even if placed in all namespaces.
-      // TODO(fxb/43158): allow list for archivist.
-      fuchsia::sys::internal::ComponentEventProvider::Name_,
   };
 }
 

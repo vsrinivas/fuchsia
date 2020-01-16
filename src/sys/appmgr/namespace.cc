@@ -55,16 +55,6 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
         return ZX_OK;
       })));
 
-  if (services_->IsServiceWhitelisted(fuchsia::sys::internal::ComponentEventProvider::Name_)) {
-    services_->AddService(
-        fuchsia::sys::internal::ComponentEventProvider::Name_,
-        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-          // TODO(fxb/43158): allow-list for archivist.
-          return realm_->BindComponentEventProvider(
-              fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider>(
-                  std::move(channel)));
-        })));
-  }
   // WARNING! Do not add new services here! This makes services available in all
   // component namespaces ambiently without requiring proper routing between
   // realms, and this list should not be expanded.
@@ -147,6 +137,18 @@ void Namespace::NotifyComponentDiagnosticsDirReady(
     const std::string& component_id, fidl::InterfaceHandle<fuchsia::io::Directory> directory) {
   realm_->NotifyComponentDiagnosticsDirReady(component_url, component_name, component_id,
                                              std::move(directory));
+}
+
+void Namespace::MaybeAddComponentEventProvider() {
+  if (services_->IsServiceWhitelisted(fuchsia::sys::internal::ComponentEventProvider::Name_)) {
+    services_->AddService(
+        fuchsia::sys::internal::ComponentEventProvider::Name_,
+        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+          return realm_->BindComponentEventProvider(
+              fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider>(
+                  std::move(channel)));
+        })));
+  }
 }
 
 }  // namespace component
