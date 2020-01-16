@@ -45,6 +45,9 @@ struct BreakpointSettings {
   // What kind of breakpoint implementation to use.
   Type type = Type::kSoftware;
 
+  // Size in bytes for hardware breakpoints. Ignored for type == kSoftware.
+  uint32_t byte_size = 0;
+
   // Name that the creator of the breakpoint can set for easier debugging. Optional.
   std::string name;
 

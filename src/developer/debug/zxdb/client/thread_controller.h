@@ -103,15 +103,14 @@ class ThreadController {
 
   virtual ~ThreadController();
 
-  // Registers the thread with the controller. The controller will be owned
-  // by the thread (possibly indirectly) so the pointer will remain valid for the rest of the
-  // lifetime of the controller.
+  // Registers the thread with the controller. The controller will be owned by the thread (possibly
+  // indirectly) so the pointer will remain valid for the rest of the lifetime of the controller.
   //
   // The implementation should call SetThread() with the thread.
   //
   // When the implementation is ready, it will issue the given callback to run the thread. The
   // callback can be issued reentrantly from inside this function if the controller is ready
-  // synchronously.
+  // or fails synchronously.
   //
   // If the callback does not specify an error, the thread will be resumed when it is called. If the
   // callback has an error, it will be reported and the thread will remain stopped.

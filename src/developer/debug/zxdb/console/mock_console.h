@@ -32,6 +32,9 @@ class MockConsole : public Console {
   const OutputBuffer& output_buffer() { return output_buffer_; }
   Session* session() { return session_; }
 
+  // Returns true if there are any output events waiting to be read.
+  bool HasOutputEvent() const { return !output_queue_.empty(); }
+
   // Gets an output event that was the result of one call to Output() or Clear() on this console.
   // Output events will be returned in first-in, first-out order.
   //

@@ -21,13 +21,9 @@ class MockBreakpoint : public Breakpoint {
     locations_ = std::move(locs);
   }
 
-  // Synchronous version of SetSettings() below (the mock is always synchronous).
-  void set_settings(BreakpointSettings settings) { settings_ = std::move(settings); }
-
   // Breakpoint implementation.
   BreakpointSettings GetSettings() const override { return settings_; }
-  void SetSettings(const BreakpointSettings& settings,
-                   fit::callback<void(const Err&)> callback) override;
+  void SetSettings(const BreakpointSettings& settings) override;
   bool IsInternal() const override { return is_internal_; }
   std::vector<const BreakpointLocation*> GetLocations() const override;
   std::vector<BreakpointLocation*> GetLocations() override;

@@ -44,13 +44,14 @@ void UntilThreadController::InitWithThread(Thread* thread, fit::callback<void(co
   settings.one_shot = !threshold_frame_.is_valid();
 
   breakpoint_ = GetSystem()->CreateNewInternalBreakpoint()->GetWeakPtr();
-  // The breakpoint may post the callback asynchronously, so we can't be sure this class is still
-  // alive when this callback is issued, even though we destroy the breakpoint in the destructor.
-  breakpoint_->SetSettings(settings, [weak_this = weak_factory_.GetWeakPtr(),
-                                      cb = std::move(cb)](const Err& err) mutable {
-    if (weak_this)
-      weak_this->OnBreakpointSet(err, std::move(cb));
-  });
+  breakpoint_->SetSettings(settings);
+
+  if (breakpoint_->GetLocations().empty()) {
+    // Setting the breakpoint may have resolved to no locations and the breakpoint is now pending.
+    // For "until" this is not good because if the user does "until SomethingNonexistant" they would
+    // like to see the error rather than have the thread transparently continue without stopping.
+    cb(Err("Destination to run until matched no location."));
+  }
 }
 
 ThreadController::ContinueOp UntilThreadController::GetContinueOp() {
@@ -127,22 +128,5 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
 System* UntilThreadController::GetSystem() { return &thread()->session()->system(); }
 
 Target* UntilThreadController::GetTarget() { return thread()->GetProcess()->GetTarget(); }
-
-void UntilThreadController::OnBreakpointSet(const Err& err, fit::callback<void(const Err&)> cb) {
-  // This may get called after the thread stop in some cases so don't do anything important in this
-  // function. See OnThreadStop().
-  if (err.has_error()) {
-    // Breakpoint setting failed.
-    cb(err);
-  } else if (!breakpoint_ || breakpoint_->GetLocations().empty()) {
-    // Setting the breakpoint may have resolved to no locations and the breakpoint is now pending.
-    // For "until" this is not good because if the user does "until SomethingNonexistant" they would
-    // like to see the error rather than have the thread transparently continue without stopping.
-    cb(Err("Destination to run until matched no location."));
-  } else {
-    // Success, can continue the thread.
-    cb(Err());
-  }
-}
 
 }  // namespace zxdb

@@ -8,6 +8,7 @@
 namespace zxdb {
 
 class Breakpoint;
+class Err;
 
 class BreakpointObserver {
  public:
@@ -21,6 +22,21 @@ class BreakpointObserver {
   //
   // If needed the added breakpoint locations could be added to this call.
   virtual void OnBreakpointMatched(Breakpoint* breakpoint, bool user_requested) {}
+
+  // Breakpoints are installed asynchronously by the backend. If the backend fails to install (or
+  // remove) the breakpoint, this callback will be issued with the error. If the breakpoint applies
+  // to more than one location, some locations could have succeeded even in the presence of this
+  // error.
+  //
+  // These backend errors can occur at any time, not just when setting new settings, because new
+  // processes or dynamically loaded shared libraries can always be added that this breakpoint
+  // could apply to.
+  //
+  // This will get issued for all breakpoints including internal ones.
+  //
+  // The implementation should not delete the breakpoint from within this callback as other
+  // observers may need to be issued and the object will still be on the stack.
+  virtual void OnBreakpointUpdateFailure(Breakpoint* breakpoint, const Err& err) {}
 };
 
 }  // namespace zxdb

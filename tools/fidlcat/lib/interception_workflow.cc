@@ -133,13 +133,7 @@ void InterceptingThreadObserver::AddExitBreakpoint(zxdb::Thread* thread,
 void InterceptingThreadObserver::CreateNewBreakpoint(zxdb::Thread* thread,
                                                      zxdb::BreakpointSettings& settings) {
   zxdb::Breakpoint* breakpoint = workflow_->session_->system().CreateNewBreakpoint();
-
-  breakpoint->SetSettings(settings, [thread](const zxdb::Err& err) {
-    if (!err.ok()) {
-      FXL_LOG(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
-                     << ':' << thread->GetKoid() << ": Error in setting breakpoint: " << err.msg();
-    }
-  });
+  breakpoint->SetSettings(settings);
 }
 
 void InterceptingProcessObserver::DidCreateProcess(zxdb::Process* process, bool autoattached) {
@@ -164,8 +158,7 @@ InterceptionWorkflow::InterceptionWorkflow()
   session_->thread_observers().AddObserver(&thread_observer_);
 }
 
-InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session,
-                                           debug_ipc::MessageLoop* loop)
+InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session, debug_ipc::MessageLoop* loop)
     : session_(session),
       delete_session_(false),
       loop_(loop),
@@ -428,12 +421,7 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
       settings.scope = zxdb::ExecutionScope(process->GetTarget());
 
       zxdb::Breakpoint* breakpoint = session_->system().CreateNewBreakpoint();
-
-      breakpoint->SetSettings(settings, [](const zxdb::Err& err) {
-        if (!err.ok()) {
-          FXL_LOG(INFO) << "Error in setting breakpoints: " << err.msg();
-        }
-      });
+      breakpoint->SetSettings(settings);
     }
   }
 }

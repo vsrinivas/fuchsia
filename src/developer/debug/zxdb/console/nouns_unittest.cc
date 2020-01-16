@@ -50,8 +50,7 @@ TEST_F(NounsTest, BreakpointList) {
   BreakpointSettings in;
   in.enabled = false;
   in.locations.emplace_back(Identifier(IdentifierComponent("Foo")));
-  bp->SetSettings(in, [](const Err&) { debug_ipc::MessageLoop::Current()->QuitNow(); });
-  loop().Run();
+  bp->SetSettings(in);
 
   // List breakpoints now that there are settings.
   console.ProcessInputLine(kListBreakpointsLine);

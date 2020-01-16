@@ -138,9 +138,7 @@ Err Breakpoint::Settings::SetStorageValue(const std::string& key, SettingValue v
     FXL_NOTREACHED();
   }
 
-  // This code doesn't have a good way to communicate breakpoint set failures from this location.
-  // TODO(brettw) we may need a notification that the frontend can listen for and display.
-  bp_->SetSettings(settings, [](const Err&) {});
+  bp_->SetSettings(settings);
   return Err();
 }
 

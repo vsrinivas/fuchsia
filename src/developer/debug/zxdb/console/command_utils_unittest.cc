@@ -180,7 +180,7 @@ TEST(CommandUtils, FormatBreakpoint) {
   // Provide settings.
   BreakpointSettings settings;
   settings.locations.push_back(InputLocation(FileLine("foo.cc", 21)));
-  breakpoint.set_settings(settings);
+  breakpoint.SetSettings(settings);
 
   // Format pending.
   EXPECT_EQ("Breakpoint 1 pending @ foo.cc:21\n",
@@ -214,7 +214,7 @@ TEST(CommandUtils, FormatBreakpoint) {
   settings.scope = ExecutionScope(session.system().GetTargets()[0]);
   settings.stop_mode = BreakpointSettings::StopMode::kThread;
   settings.one_shot = true;
-  breakpoint.set_settings(settings);
+  breakpoint.SetSettings(settings);
   EXPECT_EQ(
       "Breakpoint 1 scope=\"pr 1\" stop=thread enabled=false type=write one-shot=true (2 addrs) @ "
       "foo.cc:21\n",

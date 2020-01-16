@@ -185,6 +185,7 @@ class ConsoleContext : public ProcessObserver,
 
   // BreakpointObserver implementation.
   void OnBreakpointMatched(Breakpoint* breakpoint, bool user_requested) override;
+  void OnBreakpointUpdateFailure(Breakpoint* breakpoint, const Err& err) override;
 
   // Returns the record for the given target, or null (+ assertion) if not
   // found. These pointers are not stable across target list changes.

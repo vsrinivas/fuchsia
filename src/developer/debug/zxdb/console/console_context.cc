@@ -758,6 +758,21 @@ void ConsoleContext::OnBreakpointMatched(Breakpoint* breakpoint, bool user_reque
   Console::get()->Output(out);
 }
 
+void ConsoleContext::OnBreakpointUpdateFailure(Breakpoint* breakpoint, const Err& err) {
+  Console* console = Console::get();
+  if (breakpoint->IsInternal()) {
+    // Although the user didn't explicitly set this breakpoint, they presumably were involved in
+    // some operation that caused it to be made. Notify of the error so they know it's not working.
+    console->Output(Err("Error updating internal breakpoint:\n" + err.msg()));
+  } else {
+    OutputBuffer out;
+    out.Append("Error updating ");
+    out.Append(FormatBreakpoint(this, breakpoint, false));
+    out.Append(err);
+    console->Output(out);
+  }
+}
+
 ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(int target_id) {
   return const_cast<TargetRecord*>(
       const_cast<const ConsoleContext*>(this)->GetTargetRecord(target_id));

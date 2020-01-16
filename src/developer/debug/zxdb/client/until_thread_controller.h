@@ -56,10 +56,6 @@ class UntilThreadController : public ThreadController {
   System* GetSystem();
   Target* GetTarget();
 
-  // Callback for when the breakpoint is set. The parameter is the continue callback from thread
-  // initialization.
-  void OnBreakpointSet(const Err& err, fit::callback<void(const Err&)> cb);
-
   std::vector<InputLocation> locations_;
 
   // Indicates the frame. This frame is compared to the current one according to the comparison_

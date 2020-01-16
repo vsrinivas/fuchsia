@@ -55,29 +55,15 @@ Err ValidateNoArgBreakpointModification(const Command& cmd, const char* command_
   return Err();
 }
 
-// Callback for when updating a breakpoint is done. This will output the error or a success
-// message describing the breakpoint.
-//
-// If non-null, the message_prefix is prepended to the description.
-void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint, const char* message_prefix,
-                                    const Err& err) {
-  if (!breakpoint)
-    return;  // Do nothing if the breakpoint is gone.
-
+// General output for Callback for when updating a breakpoint is done. This will output a
+// description of the breakpoint with a type-specific prefix.
+void CreateOrEditBreakpointComplete(Breakpoint* breakpoint, const char* message_prefix) {
   Console* console = Console::get();
-  if (err.has_error()) {
-    OutputBuffer out("Error setting breakpoint: ");
-    out.Append(err);
-    console->Output(out);
-    return;
-  }
 
   OutputBuffer out;
-  if (message_prefix) {
-    out.Append(message_prefix);
-    out.Append(" ");
-  }
-  out.Append(FormatBreakpoint(&console->context(), breakpoint.get(), true));
+  out.Append(message_prefix);
+  out.Append(" ");
+  out.Append(FormatBreakpoint(&console->context(), breakpoint, true));
 
   console->Output(out);
 }
@@ -239,7 +225,7 @@ Examples
       Break at line 23 of the file referenced by the current frame and use a
       hardware breakpoint.
 )";
-Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
+Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame, Noun::kBreakpoint});
   if (err.has_error())
     return err;
@@ -315,12 +301,10 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback callbac
     Breakpoint* breakpoint = context->session()->system().CreateNewBreakpoint();
     context->SetActiveBreakpoint(breakpoint);
 
-    breakpoint->SetSettings(settings, [breakpoint = breakpoint->GetWeakPtr(),
-                                       callback = std::move(callback)](const Err& err) mutable {
-      CreateOrEditBreakpointComplete(std::move(breakpoint), "Created", err);
-      if (callback)
-        callback(err);
-    });
+    breakpoint->SetSettings(settings);
+    CreateOrEditBreakpointComplete(breakpoint, "Created");
+    if (cb)
+      cb(err);
     return Err();
   }
 
@@ -331,7 +315,7 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback callbac
 
   EvalLocalInputLocation(
       GetEvalContextForCommand(cmd), cur_location, cmd.args()[0],
-      [settings, cb = std::move(callback)](ErrOr<std::vector<InputLocation>> locs) mutable {
+      [settings, cb = std::move(cb)](ErrOr<std::vector<InputLocation>> locs) mutable {
         if (locs.has_error()) {
           Console::get()->Output(locs.err());
           if (cb)
@@ -345,12 +329,10 @@ Err DoBreak(ConsoleContext* context, const Command& cmd, CommandCallback callbac
         context->SetActiveBreakpoint(breakpoint);
 
         settings.locations = locs.take_value();
-        breakpoint->SetSettings(settings, [breakpoint = breakpoint->GetWeakPtr(),
-                                           cb = std::move(cb)](const Err& err) mutable {
-          CreateOrEditBreakpointComplete(std::move(breakpoint), "Created", err);
-          if (cb)
-            cb(err);
-        });
+        breakpoint->SetSettings(settings);
+        CreateOrEditBreakpointComplete(breakpoint, "Created");
+        if (cb)
+          cb(Err());
       });
 
   return Err();
@@ -375,7 +357,7 @@ Err DoHardwareBreakpoint(ConsoleContext* context, const Command& cmd) {
   // We hack our way the command :)
   Command* cmd_ptr = const_cast<Command*>(&cmd);
   cmd_ptr->SetSwitch(kTypeSwitch, "hardware");
-  return DoBreak(context, *cmd_ptr);
+  return DoBreak(context, *cmd_ptr, [](const Err&) {});
 }
 
 // clear -------------------------------------------------------------------------------------------
@@ -455,10 +437,8 @@ Err DoEnable(ConsoleContext* context, const Command& cmd) {
   BreakpointSettings settings = cmd.breakpoint()->GetSettings();
   settings.enabled = true;
 
-  cmd.breakpoint()->SetSettings(
-      settings, [weak_bp = cmd.breakpoint()->GetWeakPtr()](const Err& err) {
-        CreateOrEditBreakpointComplete(std::move(weak_bp), "Enabled", err);
-      });
+  cmd.breakpoint()->SetSettings(settings);
+  CreateOrEditBreakpointComplete(cmd.breakpoint(), "Enabled");
   return Err();
 }
 
@@ -500,10 +480,8 @@ Err DoDisable(ConsoleContext* context, const Command& cmd) {
   BreakpointSettings settings = cmd.breakpoint()->GetSettings();
   settings.enabled = false;
 
-  cmd.breakpoint()->SetSettings(
-      settings, [weak_bp = cmd.breakpoint()->GetWeakPtr()](const Err& err) {
-        CreateOrEditBreakpointComplete(std::move(weak_bp), "Disabled", err);
-      });
+  cmd.breakpoint()->SetSettings(settings);
+  CreateOrEditBreakpointComplete(cmd.breakpoint(), "Disabled");
   return Err();
 }
 

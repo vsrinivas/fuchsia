@@ -28,12 +28,15 @@ class Breakpoint : public ClientObject {
   fxl::WeakPtr<Breakpoint> GetWeakPtr();
 
   // All of the settings, including the location, are stored in the BreakpointSettings object. This
-  // API is designed so all settings changes happen atomically. SetSettings() will always issue the
-  // callback, even if the breakpoint has been destroyed. If you need to reference the breakpoint
-  // object in the callback, get a weak pointer.
+  // API is designed so all settings changes happen atomically.
+  //
+  // The backend can fail to set the breakpoint for a variety of reasons (memory write failure, IPC
+  // failure, out of hardware breakpoints, etc.). If an async failure happens,
+  // BreakpointObserver::OnBreakpointUpdateFailure() will be called. These backend errors can occur
+  // at any time, not just when setting new settings, because new processese or dynamically loaded
+  // shared libraries can always be added that this breakpoint could apply to.
   virtual BreakpointSettings GetSettings() const = 0;
-  virtual void SetSettings(const BreakpointSettings& settings,
-                           fit::callback<void(const Err&)> callback) = 0;
+  virtual void SetSettings(const BreakpointSettings& settings) = 0;
 
   // Returns true if this is an internal breakpoint. Internal breakpoints are used to implement
   // other operations and are never exposed to the user.

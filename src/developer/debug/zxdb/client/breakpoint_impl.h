@@ -44,8 +44,7 @@ class BreakpointImpl : public Breakpoint,
 
   // Breakpoint implementation:
   BreakpointSettings GetSettings() const override;
-  void SetSettings(const BreakpointSettings& settings,
-                   fit::callback<void(const Err&)> callback) override;
+  void SetSettings(const BreakpointSettings& settings) override;
   bool IsInternal() const override;
   std::vector<const BreakpointLocation*> GetLocations() const override;
   std::vector<BreakpointLocation*> GetLocations() override;
@@ -74,9 +73,12 @@ class BreakpointImpl : public Breakpoint,
   // ThreadObserver.
   void WillDestroyThread(Thread* thread) override;
 
-  void SyncBackend(fit::callback<void(const Err&)> callback = {});
-  void SendBackendAddOrChange(fit::callback<void(const Err&)> callback);
-  void SendBackendRemove(fit::callback<void(const Err&)> callback);
+  void SyncBackend();
+  void SendBackendAddOrChange();
+  void SendBackendRemove();
+
+  void OnAddOrChangeComplete(const Err& err, debug_ipc::AddOrChangeBreakpointReply reply);
+  void OnRemoveComplete(const Err& err, debug_ipc::RemoveBreakpointReply reply);
 
   // Notification from BreakpointLocationImpl that the enabled state has changed and the breakpoint
   // state needs to be synced.

@@ -88,7 +88,7 @@ BreakpointImpl::~BreakpointImpl() {
   if (backend_installed_ && settings_.enabled) {
     // Breakpoint was installed and the process still exists.
     settings_.enabled = false;
-    SendBackendRemove(fit::callback<void(const Err&)>());
+    SendBackendRemove();
   }
 
   session()->target_observers().RemoveObserver(this);
@@ -99,8 +99,7 @@ BreakpointImpl::~BreakpointImpl() {
 
 BreakpointSettings BreakpointImpl::GetSettings() const { return settings_; }
 
-void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
-                                 fit::callback<void(const Err&)> callback) {
+void BreakpointImpl::SetSettings(const BreakpointSettings& settings) {
   settings_ = settings;
 
   bool changed = false;
@@ -119,7 +118,7 @@ void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
     registered_as_thread_observer_ = false;
   }
 
-  SyncBackend(std::move(callback));
+  SyncBackend();
 
   if (changed) {
     for (auto& observer : session()->breakpoint_observers())
@@ -234,23 +233,18 @@ void BreakpointImpl::WillDestroyThread(Thread* thread) {
   }
 }
 
-void BreakpointImpl::SyncBackend(fit::callback<void(const Err&)> callback) {
+void BreakpointImpl::SyncBackend() {
   bool has_locations = HasEnabledLocation();
 
   if (backend_installed_ && !has_locations) {
-    SendBackendRemove(std::move(callback));
+    SendBackendRemove();
   } else if (has_locations) {
-    SendBackendAddOrChange(std::move(callback));
-  } else {
-    // Backend doesn't know about it and we don't require anything.
-    if (callback) {
-      debug_ipc::MessageLoop::Current()->PostTask(
-          FROM_HERE, [callback = std::move(callback)]() mutable { callback(Err()); });
-    }
+    SendBackendAddOrChange();
   }
+  // Otherwise the backend doesn't know about it and we don't require anything.
 }
 
-void BreakpointImpl::SendBackendAddOrChange(fit::callback<void(const Err&)> callback) {
+void BreakpointImpl::SendBackendAddOrChange() {
   backend_installed_ = true;
 
   debug_ipc::AddOrChangeBreakpointRequest request;
@@ -295,61 +289,58 @@ void BreakpointImpl::SendBackendAddOrChange(fit::callback<void(const Err&)> call
   }
 
   session()->remote_api()->AddOrChangeBreakpoint(
-      request, [callback = std::move(callback), breakpoint = impl_weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) mutable {
-        // Be sure to issue the callback even if the breakpoint no longer exists.
-        if (err.has_error()) {
-          // Transport error. We don't actually know what state the agent is in since it never got
-          // the message. In general this means things were disconnected and the agent no longer
-          // exists, so mark the breakpoint disabled.
-          if (breakpoint) {
-            breakpoint->settings_.enabled = false;
-            breakpoint->backend_installed_ = false;
-          }
-          if (callback)
-            callback(err);
-        } else if (reply.status != 0) {
-          // Backend error. The protocol specifies that errors adding or changing will result in any
-          // existing breakpoints with that ID being removed. So mark the breakpoint disabled but
-          // keep the settings to the user can fix the problem from the current state if desired.
-          if (breakpoint) {
-            breakpoint->settings_.enabled = false;
-            breakpoint->backend_installed_ = false;
-          }
-          if (callback) {
-            std::stringstream ss;
-            ss << "Error setting breakpoint: " << debug_ipc::ZxStatusToString(reply.status);
-            if (reply.status == debug_ipc::kZxErrNoResources) {
-              ss << std::endl
-                 << "Is this a hardware breakpoint? Check \"sys-info\" to "
-                    "verify the amount available within the system.";
-            } else if (reply.status == debug_ipc::kZxErrNotSupported) {
-              ss << std::endl
-                 << "This kernel command-line flag \"kernel.enable-debugging-syscalls\" is\n"
-                    "likely not set.";
-            }
-            callback(Err(ss.str()));
-          }
-        } else {
-          // Success.
-          if (callback)
-            callback(Err());
-        }
+      request, [breakpoint = impl_weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
+        if (breakpoint)
+          breakpoint->OnAddOrChangeComplete(err, std::move(reply));
       });
 }
 
-void BreakpointImpl::SendBackendRemove(fit::callback<void(const Err&)> callback) {
+void BreakpointImpl::SendBackendRemove() {
   debug_ipc::RemoveBreakpointRequest request;
   request.breakpoint_id = backend_id_;
 
   session()->remote_api()->RemoveBreakpoint(
-      request, [callback = std::move(callback)](const Err& err,
-                                                debug_ipc::RemoveBreakpointReply reply) mutable {
-        if (callback)
-          callback(err);
+      request, [breakpoint = impl_weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::RemoveBreakpointReply reply) {
+        if (breakpoint)
+          breakpoint->OnRemoveComplete(err, std::move(reply));
       });
 
   backend_installed_ = false;
+}
+
+void BreakpointImpl::OnAddOrChangeComplete(const Err& input_err,
+                                           debug_ipc::AddOrChangeBreakpointReply reply) {
+  Err err = input_err;  // Could be a transport error.
+  if (err.ok() && reply.status != 0) {
+    // Transport succeeded but the backend failed.
+    std::stringstream ss;
+    ss << "System reported error " << reply.status << " ("
+       << debug_ipc::ZxStatusToString(reply.status) << ")";
+    if (reply.status == debug_ipc::kZxErrNoResources) {
+      ss << std::endl
+         << "Is this a hardware breakpoint? Check \"sys-info\" to "
+            "verify the amount available within the system.";
+    } else if (reply.status == debug_ipc::kZxErrNotSupported) {
+      ss << std::endl
+         << "This kernel command-line flag \"kernel.enable-debugging-syscalls\" is\n"
+            "likely not set.";
+    }
+    err = Err(ss.str());
+  }
+
+  if (err.has_error()) {
+    for (auto& observer : session()->breakpoint_observers())
+      observer.OnBreakpointUpdateFailure(this, err);
+  }
+}
+
+void BreakpointImpl::OnRemoveComplete(const Err& err, debug_ipc::RemoveBreakpointReply reply) {
+  if (err.has_error()) {
+    for (auto& observer : session()->breakpoint_observers())
+      observer.OnBreakpointUpdateFailure(this, err);
+  }
 }
 
 void BreakpointImpl::DidChangeLocation() { SyncBackend(); }

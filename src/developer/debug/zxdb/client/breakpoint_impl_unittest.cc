@@ -63,17 +63,6 @@ class BreakpointImplTest : public RemoteAPITest {
   BreakpointImplTest() = default;
   ~BreakpointImplTest() override = default;
 
-  // Emulates a synchronous call to SetSettings on a breakpoint.
-  Err SyncSetSettings(Breakpoint& bp, const BreakpointSettings& settings) {
-    Err out_err;
-    bp.SetSettings(settings, [&out_err](const Err& new_err) {
-      out_err = new_err;
-      MessageLoop::Current()->QuitNow();
-    });
-    loop().Run();
-    return out_err;
-  }
-
   BreakpointSink& sink() { return *sink_; }
 
  protected:
@@ -136,15 +125,13 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   in.locations.emplace_back(Identifier(IdentifierComponent(kFunctionName)));
 
   // Setting the disabled settings shouldn't update the backend.
-  Err err = SyncSetSettings(bp, in);
-  EXPECT_FALSE(err.has_error());
+  bp.SetSettings(in);
   EXPECT_EQ(0, observer_sink.notification_count);  // No calls because it matched no places.
   ASSERT_TRUE(sink().adds.empty());
 
   // Setting enabled settings with no processes should not update the backend.
   in.enabled = true;
-  err = SyncSetSettings(bp, in);
-  EXPECT_FALSE(err.has_error());
+  bp.SetSettings(in);
   EXPECT_EQ(0, observer_sink.notification_count);
   ASSERT_TRUE(sink().adds.empty());
 
@@ -227,8 +214,7 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   // Disabling should send the delete message.
   ASSERT_TRUE(sink().removes.empty());  // Should have none so far.
   in.enabled = false;
-  err = SyncSetSettings(bp, in);
-  EXPECT_FALSE(err.has_error());
+  bp.SetSettings(in);
   ASSERT_TRUE(sink().adds.empty());
   ASSERT_EQ(1u, sink().removes.size());
   EXPECT_EQ(out.breakpoint.id, sink().removes[0].breakpoint_id);
@@ -251,8 +237,7 @@ TEST_F(BreakpointImplTest, Address) {
   in.scope = ExecutionScope(target);
   in.locations.emplace_back(kAddress);
 
-  Err err = SyncSetSettings(bp, in);
-  EXPECT_FALSE(err.has_error());
+  bp.SetSettings(in);
 
   // Check the message was sent.
   ASSERT_EQ(1u, sink().adds.size());
@@ -278,8 +263,7 @@ TEST_F(BreakpointImplTest, Watchpoint) {
   in.scope = ExecutionScope(target);
   in.locations.emplace_back(kAddress);
 
-  Err err = SyncSetSettings(bp, in);
-  EXPECT_FALSE(err.has_error());
+  bp.SetSettings(in);
 
   // Check the message was sent.
   ASSERT_EQ(1u, sink().adds.size());

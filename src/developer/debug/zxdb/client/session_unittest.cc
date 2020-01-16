@@ -140,16 +140,6 @@ class SessionTest : public RemoteAPITest {
     existing_processes_.emplace_back(std::make_pair(std::string(name), koid));
   }
 
-  Err SyncSetSettings(Breakpoint* bp, const BreakpointSettings& settings) {
-    Err out_err;
-    bp->SetSettings(settings, [&out_err](const Err& new_err) {
-      out_err = new_err;
-      MessageLoop::Current()->QuitNow();
-    });
-    loop().Run();
-    return out_err;
-  }
-
  protected:
   std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() override {
     auto sink = std::make_unique<SessionSink>(this);
@@ -210,14 +200,14 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   BreakpointSettings bp_settings;
   bp_settings.enabled = true;
   bp_settings.locations.emplace_back(kAddress);
-  SyncSetSettings(bp_internal, bp_settings);
+  bp_internal->SetSettings(bp_settings);
 
   // Should have gotten the breakpoint registering itself.
   ASSERT_EQ(1u, sink()->set_breakpoint_ids().size());
 
   // Now make a user breakpoint at the same place, it should have registered.
   Breakpoint* bp_user = session().system().CreateNewBreakpoint();
-  SyncSetSettings(bp_user, bp_settings);
+  bp_user->SetSettings(bp_settings);
   ASSERT_EQ(2u, sink()->set_breakpoint_ids().size());
 
   // Do a notification with both breakpoints getting hit.
@@ -264,7 +254,7 @@ TEST_F(SessionTest, OneShotBreakpointDelete) {
   settings.enabled = true;
   settings.locations.emplace_back(kAddress);
   settings.one_shot = true;
-  SyncSetSettings(bp, settings);
+  bp->SetSettings(settings);
 
   // This will tell us if the breakpoint is deleted.
   fxl::WeakPtr<Breakpoint> weak_bp = bp->GetWeakPtr();

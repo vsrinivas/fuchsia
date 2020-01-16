@@ -9,11 +9,7 @@
 
 namespace zxdb {
 
-void MockBreakpoint::SetSettings(const BreakpointSettings& settings,
-                                 fit::callback<void(const Err&)> callback) {
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [callback = std::move(callback)]() mutable { callback(Err()); });
-}
+void MockBreakpoint::SetSettings(const BreakpointSettings& settings) { settings_ = settings; }
 
 std::vector<const BreakpointLocation*> MockBreakpoint::GetLocations() const {
   std::vector<const BreakpointLocation*> result;
