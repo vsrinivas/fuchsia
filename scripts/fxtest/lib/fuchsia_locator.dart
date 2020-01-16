@@ -23,7 +23,7 @@ class FuchsiaLocator {
   String get cwd => envReader.getCwd();
 
   /// The current build directory relative to its Fuchsia tree.
-  String get relativeBuildDir => buildDir.substring(fuchsiaDir.length);
+  String get relativeBuildDir => buildDir?.substring(fuchsiaDir.length);
 
   /// The standard way of writing the build directory (e.g., "//out/default").
   String get userFriendlyBuildDir =>

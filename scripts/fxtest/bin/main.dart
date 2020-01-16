@@ -98,6 +98,19 @@ Future<void> main(List<String> args) async {
   });
   setUpCleanExit();
 
+  if (testsConfig.flags.shouldRebuild) {
+    try {
+      formatter.update(TestInfo(wrapWith('> fx build', [green, styleBold])));
+      await rebuildFuchsia();
+    } on BuildException catch (e) {
+      formatter.update(FatalError(e.toString()));
+      exitCode = e.exitCode;
+      cmd.dispose();
+      endSigIntListener();
+      return;
+    }
+  }
+
   try {
     exitCode = await cmd.runTestSuite();
   } on Exception catch (err) {
@@ -106,7 +119,7 @@ Future<void> main(List<String> args) async {
   } finally {
     // Close all streams
     cmd.dispose();
-    safeExit();
+    endSigIntListener();
   }
 }
 
@@ -122,10 +135,10 @@ void setUpCleanExit() {
     }
     exitCode = 2;
     exit(exitCode);
-    safeExit();
+    endSigIntListener();
   });
 }
 
-void safeExit() {
+void endSigIntListener() {
   _sigIntSub?.cancel();
 }

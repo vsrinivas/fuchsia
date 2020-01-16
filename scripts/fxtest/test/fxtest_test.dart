@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:args/args.dart';
 import 'package:async/async.dart';
 import 'package:path/path.dart' as p;
 import 'package:fxtest/fxtest.dart';
@@ -469,6 +470,20 @@ void main() {
       // [FakeTestRunner] passes args through to its stdout, so we can check
       // that the args were in fact passed through by evaluating that
       expect(resultEvent.message, '--xyz');
+    });
+  });
+
+  group('flags are parsed correctly', () {
+    test('with --no-build', () {
+      ArgResults results = fxTestArgParser.parse(['--no-build']);
+      var testsConfig = TestsConfig.fromArgResults(results: results);
+      expect(testsConfig.flags.shouldRebuild, false);
+    });
+
+    test('with no --no-build', () {
+      ArgResults results = fxTestArgParser.parse(['']);
+      var testsConfig = TestsConfig.fromArgResults(results: results);
+      expect(testsConfig.flags.shouldRebuild, true);
     });
   });
 }

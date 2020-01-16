@@ -1,6 +1,20 @@
 import 'package:args/args.dart';
 import 'package:fxtest/fxtest.dart';
 
+/// Test-friendly wrapper so unit tests can use `fxTestArgParser` without
+/// having its environment-aware print statements blow up.
+String getFriendlyBuildDir() {
+  var buildDir = '//out/default';
+  try {
+    buildDir = FuchsiaLocator.shared.userFriendlyBuildDir;
+
+    // ignore: avoid_catching_errors
+  } on RangeError {
+    // pass
+  }
+  return buildDir;
+}
+
 final ArgParser fxTestArgParser = ArgParser()
   ..addMultiOption('testNames', abbr: 't')
   ..addFlag('help', abbr: 'h', defaultsTo: false, negatable: false)
@@ -17,7 +31,11 @@ final ArgParser fxTestArgParser = ArgParser()
       defaultsTo: false,
       negatable: false,
       help: 'If true, prints the contents of '
-          '`${FuchsiaLocator.shared.userFriendlyBuildDir}/tests.json`')
+          '`${getFriendlyBuildDir()}/tests.json`')
+  ..addFlag('build',
+      defaultsTo: true,
+      negatable: true,
+      help: 'If true, invokes `fx build` before running the test suite')
   ..addFlag('random',
       abbr: 'r',
       defaultsTo: false,

@@ -1,3 +1,12 @@
+class BuildException implements Exception {
+  final String buildHandle;
+  final int exitCode;
+  BuildException(this.buildHandle, [this.exitCode = 2]);
+  @override
+  String toString() => 'BuildException: Failed to run `$buildHandle` :: '
+      'Exit Code: $exitCode';
+}
+
 class FailFastException implements Exception {
   @override
   String toString() => 'FailFastException';

@@ -8,6 +8,12 @@ import 'package:meta/meta.dart';
 /// ongoing test progress.
 abstract class TestEvent {}
 
+/// An error so bad that test suite execution cannot continue.
+class FatalError extends TestEvent {
+  final String message;
+  FatalError(this.message);
+}
+
 class TestResult extends TestEvent {
   /// The standard system exit code for a test.
   final int exitCode;

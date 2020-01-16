@@ -18,8 +18,8 @@ class EnvReader {
   static Map<String, String> environment = Platform.environment;
   static String cwd = Directory.current.path;
 
-  String getEnv(String variableName) {
-    return environment[variableName];
+  String getEnv(String variableName, [String defaultValue]) {
+    return environment[variableName] ?? defaultValue;
   }
 
   String getCwd() {

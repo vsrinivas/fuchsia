@@ -13,12 +13,13 @@ class Flags {
   /// The maximum number of tests to run. If 0, all tests will be executed.
   final int limit;
   final bool allOutput;
+  final bool shouldRebuild;
 
   /// Extra tokens to be passed through to individual tests.
+  final bool shouldFailFast;
   final bool simpleOutput;
   final bool shouldOnlyRunDeviceTests;
   final bool shouldOnlyRunHostTests;
-  final bool shouldFailFast;
   final bool shouldPrintSkipped;
   final bool shouldRandomizeTestOrder;
   final bool shouldSilenceUnsupported;
@@ -34,6 +35,7 @@ class Flags {
     this.shouldFailFast = false,
     this.shouldPrintSkipped = false,
     this.shouldRandomizeTestOrder = false,
+    this.shouldRebuild = true,
     this.shouldSilenceUnsupported = false,
     this.warnSlowerThan = 0,
   });
@@ -49,6 +51,9 @@ class Flags {
       shouldOnlyRunDeviceTests: argResults['device'],
       shouldOnlyRunHostTests: argResults['host'],
       shouldPrintSkipped: argResults['skipped'],
+
+      // True (aka, yes rebuild) if `no-build` is missing or set to `False`
+      shouldRebuild: (argResults['build'] == null || argResults['build']),
       shouldRandomizeTestOrder: argResults['random'],
       shouldSilenceUnsupported: argResults['silenceunsupported'],
       warnSlowerThan: int.parse(argResults['warnslow'] ?? '0'),
