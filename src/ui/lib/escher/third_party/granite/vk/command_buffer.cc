@@ -812,11 +812,7 @@ void CommandBuffer::Blit(const ImagePtr& src_image, vk::Offset2D src_offset,
 }
 
 void CommandBuffer::SetShaderProgram(ShaderProgram* program, const SamplerPtr& immutable_sampler) {
-  // TODO(ES-83): checking the uid() isn't really necessary since we're using
-  // ref-counted pointers... a pointer comparison would be enough.  This is a
-  // general difference between Escher and the original Granite code; we should
-  // come up with a general design philosophy and stick to it.
-  if (current_program_ && current_program_->uid() == program->uid() && current_pipeline_layout_ &&
+  if (current_program_ == program && current_pipeline_layout_ &&
       current_pipeline_layout_->spec().immutable_sampler() == immutable_sampler) {
     return;
   }
