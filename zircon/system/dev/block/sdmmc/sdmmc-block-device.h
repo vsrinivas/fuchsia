@@ -100,8 +100,8 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
 
   // Visible for testing.
   zx_status_t Init() { return sdmmc_.Init(); }
-  zx_status_t StartWorkerThread();
   void StopWorkerThread();
+  void SetBlockInfo(uint32_t block_size, uint64_t block_count);
 
  private:
   void BlockComplete(BlockOperation* txn, zx_status_t status, trace_async_id_t async_id);
@@ -148,7 +148,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
 
   std::atomic<bool> dead_ = false;
 
-  block_info_t block_info_;
+  block_info_t block_info_{};
 
   bool is_sd_ = false;
 

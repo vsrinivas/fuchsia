@@ -463,4 +463,9 @@ zx_status_t SdmmcBlockDevice::WaitForTran() {
   }
 }
 
+void SdmmcBlockDevice::SetBlockInfo(uint32_t block_size, uint64_t block_count) {
+  block_info_.block_size = block_size;
+  block_info_.block_count = block_count;
+}
+
 }  // namespace sdmmc

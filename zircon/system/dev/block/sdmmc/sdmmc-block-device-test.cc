@@ -20,6 +20,7 @@ namespace sdmmc {
 class SdmmcBlockDeviceTest : public zxtest::Test {
  public:
   SdmmcBlockDeviceTest() : dut_(fake_ddk::kFakeParent, SdmmcDevice(sdmmc_.GetClient())) {
+    dut_.SetBlockInfo(FakeSdmmcDevice::kBlockSize, FakeSdmmcDevice::kBlockCount);
     for (size_t i = 0; i < (FakeSdmmcDevice::kBlockSize / sizeof(kTestData)); i++) {
       test_block_.insert(test_block_.end(), kTestData, kTestData + sizeof(kTestData));
     }
@@ -536,6 +537,7 @@ TEST_F(SdmmcBlockDeviceTest, CompleteTransactions) {
 
   {
     SdmmcBlockDevice dut(fake_ddk::kFakeParent, SdmmcDevice(sdmmc_.GetClient()));
+    dut.SetBlockInfo(FakeSdmmcDevice::kBlockSize, FakeSdmmcDevice::kBlockCount);
     EXPECT_OK(dut.AddDevice());
 
     fbl::AutoCall stop_threads([&]() { dut.StopWorkerThread(); });
