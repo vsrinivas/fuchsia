@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_UTIL_PSEUDO_DIR_SERVER_H_
-#define PERIDOT_LIB_UTIL_PSEUDO_DIR_SERVER_H_
+#ifndef SRC_MODULAR_LIB_PSEUDO_DIR_PSEUDO_DIR_SERVER_H_
+#define SRC_MODULAR_LIB_PSEUDO_DIR_PSEUDO_DIR_SERVER_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -70,4 +70,4 @@ class PseudoDirServer final {
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_UTIL_PSEUDO_DIR_SERVER_H_
+#endif  // SRC_MODULAR_LIB_PSEUDO_DIR_PSEUDO_DIR_SERVER_H_

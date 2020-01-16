@@ -106,7 +106,6 @@ source_set("lib") {
   ]
 
   deps = [
-    "//peridot/lib/util:pseudo_dir_utils",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.input",
@@ -122,6 +121,7 @@ source_set("lib") {
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:environment",
     "//src/modular/lib/modular_config",
+    "//src/modular/lib/pseudo_dir:pseudo_dir_utils",
     "//zircon/system/fidl/fuchsia-device-manager",
   ]
 

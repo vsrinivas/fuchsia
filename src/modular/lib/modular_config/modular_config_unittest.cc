@@ -10,12 +10,12 @@
 
 #include <thread>
 
-#include <peridot/lib/util/pseudo_dir_server.h>
-#include <peridot/lib/util/pseudo_dir_utils.h>
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
 #include <src/lib/files/unique_fd.h>
 #include <src/modular/lib/modular_config/modular_config_constants.h>
+#include <src/modular/lib/pseudo_dir/pseudo_dir_server.h>
+#include <src/modular/lib/pseudo_dir/pseudo_dir_utils.h>
 
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/split_string.h"

@@ -6,17 +6,11 @@ import("//build/package.gni")
 
 group("lib") {
   testonly = true
-  deps = [
-    ":peridot_lib_unittests",
-    "util",
-  ]
+  deps = [ ":peridot_lib_unittests" ]
 }
 
 executable("peridot_lib_unittests") {
   testonly = true
 
-  deps = [
-    "//peridot/lib/util:unittests",
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 }

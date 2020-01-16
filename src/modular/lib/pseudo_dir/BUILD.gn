@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("util") {
+group("pseudo_dir") {
   public_deps = [
     ":pseudo_dir_server",
     ":pseudo_dir_utils",
@@ -46,7 +46,7 @@ source_set("unittests") {
   ]
 
   deps = [
-    ":util",
+    ":pseudo_dir",
     "//garnet/public/lib/gtest",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",

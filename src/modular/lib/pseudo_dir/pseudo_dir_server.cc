@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/util/pseudo_dir_server.h"
+#include "src/modular/lib/pseudo_dir/pseudo_dir_server.h"
 
 #include <lib/async/cpp/task.h>
 

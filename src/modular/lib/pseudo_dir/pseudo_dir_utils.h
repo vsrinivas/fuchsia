@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_UTIL_PSEUDO_DIR_UTILS_H_
-#define PERIDOT_LIB_UTIL_PSEUDO_DIR_UTILS_H_
-
-#include <memory>
-#include <string>
+#ifndef SRC_MODULAR_LIB_PSEUDO_DIR_PSEUDO_DIR_UTILS_H_
+#define SRC_MODULAR_LIB_PSEUDO_DIR_PSEUDO_DIR_UTILS_H_
 
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
+
+#include <memory>
+#include <string>
 
 namespace modular {
 
@@ -20,4 +20,4 @@ std::unique_ptr<vfs::PseudoDir> MakeFilePathWithContents(const std::string& file
 
 };  // namespace modular
 
-#endif  // PERIDOT_LIB_UTIL_PSEUDO_DIR_UTILS_H_
+#endif  // SRC_MODULAR_LIB_PSEUDO_DIR_PSEUDO_DIR_UTILS_H_

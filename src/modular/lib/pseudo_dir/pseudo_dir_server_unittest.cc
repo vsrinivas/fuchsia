@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/util/pseudo_dir_server.h"
+#include "src/modular/lib/pseudo_dir/pseudo_dir_server.h"
+
+#include <lib/gtest/real_loop_fixture.h>
 
 #include <gtest/gtest.h>
-#include <lib/gtest/real_loop_fixture.h>
-#include <peridot/lib/util/pseudo_dir_utils.h>
 #include <src/lib/files/directory.h>
 #include <src/lib/files/file.h>
+#include <src/modular/lib/pseudo_dir/pseudo_dir_utils.h>
 
 namespace modular {
 namespace {

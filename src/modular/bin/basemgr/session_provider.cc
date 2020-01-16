@@ -8,7 +8,7 @@
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
-#include <peridot/lib/util/pseudo_dir_utils.h>
+#include <src/modular/lib/pseudo_dir/pseudo_dir_utils.h>
 
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/modular_config/modular_config.h"
