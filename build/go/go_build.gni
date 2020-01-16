@@ -51,6 +51,9 @@ declare_args() {
 #   carchive (optional, default: false)
 #     Whether to build this target as a C archive.
 #
+#   gcflags (optional)
+#     List of go compiler flags to pass.
+#
 #   tags (optional)
 #     List of go build tags to include in the build.
 #
@@ -65,24 +68,13 @@ template("go_build") {
   main_target_name = target_name
   is_test = defined(invoker.test) && invoker.test
 
-  # Detect whether we're building with a fuzzer toolchain config. For
-  # example, when go_fuzzer() compiles the Go fuzz target to be linked
-  # into the fuzzer() executable, and fx set --fuzz-with is in use.
-  is_fuzzer = false
-  foreach(config, toolchain_variant.configs) {
-    if (config == "//build/config/sanitizers:fuzzer") {
-      is_fuzzer = true
-    }
-  }
-
-  # Aside from the fuzzer case, variants don't have any effect for Go
-  # builds.  But dependencies from other targets in variant toolchains
-  # could lead to building the same Go target identically in multiple
-  # toolchains.  The expectation with executable-like targets is that they
-  # do their own variant selection and thus always only build one way.
-  # Since Go isn't doing variant selection, instead redirect from variants
-  # to the base toolchain so the target is only built one way.
-  if (!is_fuzzer && toolchain_variant.name != "") {
+  # Variants don't have any effect for Go builds. But dependencies from other
+  # targets in variant toolchains could lead to building the same Go target
+  # identically in multiple toolchains. The expectation with executable-like
+  # targets is that they do their own variant selection and thus always only
+  # build one way. Since Go isn't doing variant selection, instead redirect from
+  # variants to the base toolchain so the target is only built one way.
+  if (toolchain_variant.name != "") {
     if (is_host && !is_test) {
       # This target might be referenced by compiled_action(), which expects to
       # find the binary in $host_toolchain's root_out_dir and host_toolchain
@@ -233,12 +225,21 @@ template("go_build") {
           tag,
         ]
       }
-      if (is_fuzzer) {
+
+      # Go compiler flags
+      gcflags = []
+
+      if (defined(invoker.gcflags)) {
+        gcflags += invoker.gcflags
+      }
+
+      foreach(gcflag, gcflags) {
         args += [
-          "--tag=libfuzzer",
-          "--gcflags=all=-d=libfuzzer",
+          "--gcflag",
+          gcflag,
         ]
       }
+
       if (carchive) {
         args += [ "--buildmode=c-archive" ]
       }
