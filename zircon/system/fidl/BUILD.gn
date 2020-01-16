@@ -74,7 +74,6 @@ group("fidl") {
     "fuchsia-ldsvc",
     "fuchsia-logger",
     "fuchsia-mem",
-    "fuchsia-metricbroker",
     "fuchsia-minfs",
     "fuchsia-nand",
     "fuchsia-net",

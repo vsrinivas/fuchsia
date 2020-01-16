@@ -2,8 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/fidl_alias.gni")
+import("//build/fidl/fidl.gni")
 
-fidl_alias("fuchsia-metricbroker") {
+fidl("fuchsia.metricbroker") {
   sdk_category = "partner"
+  api = "fuchsia.metricbroker.api"
+
+  sources = [ "broker.fidl" ]
+
+  public_deps = [ "//zircon/system/fidl/fuchsia-mem" ]
 }
