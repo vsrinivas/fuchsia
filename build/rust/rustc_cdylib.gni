@@ -1,0 +1,126 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_artifact.gni")
+
+# Defines a Rust cdylib library
+#
+# Parameters
+#
+#   name
+#     Name of the crate as defined in its manifest file. If not specified, it is
+#     assumed to be the same as the target name.
+#
+#   version
+#     Semver version of the crate as seen on crates.io.
+#
+#   deps (optional)
+#     List of rust_library GN targets on which this crate depends.
+#     Third party crates can be included through paths like
+#     "//third_party/rust_crates:<cratename>",
+#
+#   test_deps (optional)
+#     List of rust_library GN targets on which this crate's tests depend.
+#
+#   non_rust_deps (optional)
+#     List of non-rust_library GN targets on which this crate depends.
+#
+#   with_unit_tests (optional)
+#     Builds unit tests associated with the binary. This will create a
+#     `<name>-bin-unit-test` test file in the output directory.
+#
+#   source_root (optional)
+#     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
+#     This defaults to `./src/main.rs` for binaries and `./src/lib.rs` for libraries,
+#     and should only be changed when absolutely necessary
+#     (such as in the case of generated code).
+#
+#   output_name (optional)
+#     Name of the output file.
+#
+#   with_lto (optional)
+#     Force LTO to be enabled/disabled for the binary. Values are "none", "thin" and
+#     "fat". This value takes precedence over GN args or the default value for the
+#     type of build (debug or release).
+#
+#   features (optional)
+#     A list of conditional compilation flags to enable. This can be used to set features for crates
+#     built in-tree which are also published to crates.io. This would be passed to rustc as
+#     '--cfg feature=XXX'
+#
+# Example of usage:
+#
+#   rustc_cdylib("foo") {
+#     deps = [
+#       "//garnet/public/rust/bar",
+#       "//third_party/rust_crates:clap",
+#       "//third_party/rust_crates:serde",
+#       "//third_party/rust_crates:slab",
+#     ]
+#     with_unit_tests = true
+#   }
+template("rustc_cdylib") {
+  forward_variables_from(invoker, [ "visibility" ])
+
+  rustc_target = "_${target_name}_rustc_artifact"
+  group_target = "${target_name}"
+
+  if (defined(invoker.name)) {
+    rustc_artifact_name = invoker.name
+  } else {
+    rustc_artifact_name = target_name
+  }
+
+  rustc_artifact(rustc_target) {
+    forward_variables_from(invoker,
+                           [
+                             "version",
+                             "deps",
+                             "edition",
+                             "non_rust_deps",
+                             "with_unit_tests",
+                             "output_name",
+                             "source_root",
+                             "with_lto",
+                             "testonly",
+                             "features",
+                           ])
+    name = rustc_artifact_name
+    type = "cdylib"
+  }
+
+  public_hdrs = []
+  if (defined(invoker.public)) {
+    public_hdrs += invoker.public
+  }
+
+  header_target = "_${target_name}_cdylib_headers"
+
+  source_set(header_target) {
+    public = public_hdrs
+    visibility = [ ":$group_target" ]
+    deps = []
+    if (defined(invoker.non_rust_deps)) {
+      # TODO(43781): This allows propagating non rust dependencies through a
+      # single level of indirection, but does not handle propagating
+      # dependencies through an intermediate Rust target.
+      deps += invoker.non_rust_deps
+    }
+  }
+
+  group(target_name) {
+    public_deps = [
+      ":$header_target",
+      ":$rustc_target",
+    ]
+  }
+
+  if (defined(invoker.with_unit_tests) && invoker.with_unit_tests) {
+    test_target_name = "${target_name}_test"
+    group(test_target_name) {
+      testonly = true
+      public_deps = [ ":${rustc_target}_test" ]
+    }
+  }
+}

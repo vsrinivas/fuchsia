@@ -240,6 +240,9 @@ set_defaults("rust_library") {
 set_defaults("rust_proc_macro") {
   configs = default_shared_library_configs
 }
+set_defaults("rust_cdylib") {
+  configs = default_shared_library_configs
+}
 set_defaults("loadable_module") {
   configs = default_shared_library_configs
 }

@@ -132,7 +132,7 @@ template("rustc_artifact") {
 
   # BEGIN invoker.type -> type {{{
   assert(defined(invoker.type),
-         "Must specify an artifact type (bin/lib/staticlib/proc-macro)")
+         "Must specify an artifact type (bin/lib/staticlib/cdylib/proc-macro)")
   type = invoker.type
 
   # bin: executable binary application
@@ -141,8 +141,8 @@ template("rustc_artifact") {
   # proc-macro: a procedural macro (such as a custom-derive)
   assert(
       type == "bin" || type == "lib" || type == "staticlib" ||
-          type == "proc-macro",
-      "Artifact type must be one of: \"bin\", \"lib\", \"staticlib\", or \"proc-macro\"")
+          type == "cdylib" || type == "proc-macro",
+      "Artifact type must be one of: \"bin\", \"lib\", \"cdylib\", \"staticlib\", or \"proc-macro\"")
   if (type == "lib") {
     # For now, lib == rlib, but this could change in future versions of rustc.
     # If/when this changes, we will likely want to transition manually rather
@@ -247,6 +247,10 @@ template("rustc_artifact") {
     prefix = "lib"
     extension = ".rlib"
     root_file_default = "src/lib.rs"
+  } else if (type == "cdylib") {
+    prefix = "lib"
+    extension = ".so"
+    root_file_default = "src/lib.rs"
   } else if (type == "staticlib") {
     prefix = "lib"
     extension = ".a"
@@ -268,6 +272,8 @@ template("rustc_artifact") {
   if (type == "bin") {
     output_file_dir = root_out_dir
   } else if (type == "staticlib") {
+    output_file_dir = root_out_dir
+  } else if (type == "cdylib") {
     output_file_dir = root_out_dir
   } else {
     output_file_dir = first_party_crate_root
@@ -502,7 +508,7 @@ template("rustc_artifact") {
         output_name = output_filename
         rustflags = rflags
       }
-    } else if (type == "proc-macro") {  # or cdylib, if we used those
+    } else if (type == "proc-macro") {
       rust_proc_macro(build_target_name) {
         forward_variables_from(invoker, [ "testonly" ])
         crate_root = root_file
@@ -520,6 +526,22 @@ template("rustc_artifact") {
         output_name = output_filename
         rustflags = rflags
         complete_static_lib = true
+      }
+    } else if (type == "cdylib") {
+      shared_library(build_target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        crate_root = root_file
+        crate_name = crate_name
+        crate_type = "cdylib"
+        deps = build_target_deps
+        output_name = output_filename
+        public_deps = non_rust_deps
+        rflags += [
+          # needs DT_SONAME inserted into elf file which
+          # rust doesn't do automatically
+          "-Clink-arg=--soname=lib${crate_name}.so",
+        ]
+        rustflags = rflags
       }
     } else {
       assert(

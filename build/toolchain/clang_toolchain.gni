@@ -140,9 +140,8 @@ template("clang_toolchain") {
       command_launcher = compiler_prefix
       depsformat = "gcc"
       description = "CC {{output}}"
-      outputs = [
-        "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o",
-      ]
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
     }
 
     tool("cxx") {
@@ -151,9 +150,8 @@ template("clang_toolchain") {
       command_launcher = compiler_prefix
       depsformat = "gcc"
       description = "CXX {{output}}"
-      outputs = [
-        "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o",
-      ]
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
     }
 
     tool("asm") {
@@ -162,9 +160,8 @@ template("clang_toolchain") {
       command_launcher = compiler_prefix
       depsformat = "gcc"
       description = "ASM {{output}}"
-      outputs = [
-        "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o",
-      ]
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
     }
 
     tool("objc") {
@@ -173,9 +170,8 @@ template("clang_toolchain") {
       command_launcher = compiler_prefix
       depsformat = "gcc"
       description = "OBJC {{output}}"
-      outputs = [
-        "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o",
-      ]
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
     }
 
     tool("objcxx") {
@@ -184,9 +180,8 @@ template("clang_toolchain") {
       command_launcher = compiler_prefix
       depsformat = "gcc"
       description = "OBJCXX {{output}}"
-      outputs = [
-        "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
-      ]
+      outputs =
+          [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
     }
 
     tool("rust_bin") {
@@ -205,9 +200,7 @@ template("clang_toolchain") {
       command += "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
-      outputs = [
-        outfile,
-      ]
+      outputs = [ outfile ]
 
       # TODO: enable this once Ninja supports multiple outputs with depfile:
       #   https://github.com/ninja-build/ninja/pull/1534
@@ -239,9 +232,8 @@ template("clang_toolchain") {
       depfile = "{{output}}.d"
       command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
-      outputs = [
-        "{{output_dir}}/lib{{target_output_name}}{{output_extension}}",
-      ]
+      outputs =
+          [ "{{output_dir}}/lib{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{target_out_dir}}"
       default_output_extension = ".rlib"
     }
@@ -251,11 +243,30 @@ template("clang_toolchain") {
       depfile = "{{output}}.d"
       command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
-      outputs = [
-        "{{output_dir}}/{{target_output_name}}{{output_extension}}",
-      ]
+
+      # TODO: enable this once Ninja supports multiple outputs with depfile:
+      #   https://github.com/ninja-build/ninja/pull/1534
+      #if (outfile != unstripped_outfile) {
+      #  outputs += [ unstripped_outfile ]
+      #}
+      #if (output_breakpad_syms && current_os == "fuchsia") {
+      #  outputs += [ "$outfile.sym" ]
+      #  command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
+      #}
+      outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{target_out_dir}}"
       default_output_extension = ".a"
+      output_prefix = "lib"
+    }
+
+    tool("rust_cdylib") {
+      pool = "//build/rust:pool($default_toolchain)"
+      depfile = "{{output}}.d"
+      command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      description = "RUST {{output}}"
+      outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
+      default_output_dir = "{{target_out_dir}}"
+      default_output_extension = ".so"
       output_prefix = "lib"
     }
 
@@ -280,9 +291,7 @@ template("clang_toolchain") {
         default_output_extension = ".so"
       }
       output_prefix = "lib"
-      outputs = [
-        outfile,
-      ]
+      outputs = [ outfile ]
 
       # TODO: enable this once Ninja supports multiple outputs with depfile:
       #   https://github.com/ninja-build/ninja/pull/1534
@@ -314,9 +323,7 @@ template("clang_toolchain") {
       depfile = "{{output}}.d"
       command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
-      outputs = [
-        "{{output_dir}}/{{target_output_name}}{{output_extension}}",
-      ]
+      outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{root_out_dir}}"
       if (invoker.toolchain_os == "mac") {
         default_output_extension = ".dylib"
@@ -332,9 +339,7 @@ template("clang_toolchain") {
           "rm -f {{output}} && $ar {{arflags}} rcsD {{output}} @\"$rspfile\""
       description = "AR {{output}}"
       rspfile_content = "{{inputs}}"
-      outputs = [
-        "{{output_dir}}/{{target_output_name}}{{output_extension}}",
-      ]
+      outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{target_out_dir}}"
       default_output_extension = ".a"
       output_prefix = "lib"
@@ -361,9 +366,7 @@ template("clang_toolchain") {
       description = "SOLINK $outfile"
       default_output_dir = "{{root_out_dir}}"
       output_prefix = "lib"
-      outputs = [
-        outfile,
-      ]
+      outputs = [ outfile ]
       if (outfile != unstripped_outfile) {
         outputs += [ unstripped_outfile ]
       }

@@ -367,8 +367,8 @@ def strip_binary_manifest(
             # Every binary should have a build ID, except for test cases
             # specifically testing missing-build-ID or missing-PT_NOTE cases.
             # Those will have 'test' in the name.
-            assert 'test' in os.path.basename(debug.filename), (
-                "'%s' has no build ID" % debug.filename)
+            assert 'test' in os.path.basename(
+                debug.filename), ("'%s' has no build ID" % debug.filename)
 
     return stripped_manifest, debug_list, new_output
 

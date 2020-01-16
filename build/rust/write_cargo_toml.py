@@ -116,7 +116,7 @@ def main():
         "--crate-type",
         help="Type of crate to build",
         required=True,
-        choices=["bin", "rlib", "staticlib", "proc-macro"])
+        choices=["bin", "rlib", "staticlib", "cdylib", "proc-macro"])
     parser.add_argument(
         "--lto",
         help="Add lto options to crate",

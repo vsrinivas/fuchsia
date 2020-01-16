@@ -1,0 +1,20 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("lib") {
+  sources = [
+    "lib.c",
+    "lib.h",
+  ]
+
+  public_deps = [ "//examples/rust/cdylib/rust:crust-shared" ]
+}
+
+executable("bin") {
+  output_name = "crust-shared"
+
+  sources = [ "crust.c" ]
+
+  deps = [ ":lib" ]
+}
