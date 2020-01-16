@@ -45,7 +45,6 @@ group("uapp") {
     "nand-loader",
     "nand-util",
     "psutils",
-    "run-vc",
     "serial-test",
     "spawn",
     "spiutil",
