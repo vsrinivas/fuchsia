@@ -94,6 +94,17 @@ template("zircon_library") {
     library_public_deps -= [ "//zircon/public/lib/driver" ]
     library_public_deps += [ "//src/devices:driver" ]
   }
+  # Update reference to uboringssl, which really only forwards to boringssl.
+  if (library_deps + [ "//zircon/public/lib/uboringssl" ] -
+      [ "//zircon/public/lib/uboringssl" ] != library_deps) {
+    library_deps -= [ "//zircon/public/lib/uboringssl" ]
+    library_deps += [ "//zircon/public/lib/boringssl" ]
+  }
+  if (library_public_deps + [ "//zircon/public/lib/uboringssl" ] -
+      [ "//zircon/public/lib/uboringssl" ] != library_public_deps) {
+    library_public_deps -= [ "//zircon/public/lib/uboringssl" ]
+    library_public_deps += [ "//zircon/public/lib/boringssl" ]
+  }
 
   is_prebuilt = defined(invoker.libs)
 
