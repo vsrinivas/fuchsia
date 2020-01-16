@@ -2,12 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_executable("ping") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("ping") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ping.cc" ]
   deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/inet6",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zircon",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/inet6",
+    "//zircon/public/lib/pretty",
   ]
+}
+
+migrated_manifest("ping-manifest") {
+  deps = [ ":ping" ]
 }

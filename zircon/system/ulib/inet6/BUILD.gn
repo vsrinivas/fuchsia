@@ -3,6 +3,11 @@
 # found in the LICENSE file.
 
 zx_library("inet6") {
+  sdk = "source"
+  sdk_headers = [
+    "inet6/inet6.h",
+    "inet6/netifc.h",
+  ]
   sources = [
     "checksum.c",
     "eth-client.c",
@@ -20,8 +25,9 @@ zx_library("inet6") {
 }
 
 zx_library("netifc-discover") {
+  sdk = "source"
+  sdk_headers = [ "inet6/netifc-discover.h" ]
   sources = [ "netifc-discover.cc" ]
-
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device:llcpp",

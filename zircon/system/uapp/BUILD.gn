@@ -44,7 +44,6 @@ group("uapp") {
     "mutex_pi_exerciser",
     "nand-loader",
     "nand-util",
-    "ping",
     "psutils",
     "run-vc",
     "serial-test",

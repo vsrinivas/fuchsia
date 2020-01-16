@@ -88,6 +88,7 @@ group("ulib") {
     "image-format",
     "image-format:image-format-llcpp",
     "inet6",
+    "inet6:netifc-discover",
     "inspect",
     "inspector",
     "intel-hda",
