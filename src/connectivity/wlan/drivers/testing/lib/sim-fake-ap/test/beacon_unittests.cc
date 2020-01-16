@@ -53,18 +53,18 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
 
   // No-op StationIfc methods
 
-  void Rx(const simulation::SimFrame* frame) override;
+  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override;
 };
 
 // When we receive a beacon, just add it to our list of received beacons for later validation
-void BeaconTest::Rx(const simulation::SimFrame* frame) {
+void BeaconTest::Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
   auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
   ASSERT_EQ(mgmt_frame->MgmtFrameType(), simulation::SimManagementFrame::FRAME_TYPE_BEACON);
 
   auto beacon_frame = static_cast<const simulation::SimBeaconFrame*>(mgmt_frame);
-  beacons_received_.emplace_back(env_.GetTime(), beacon_frame->channel_, beacon_frame->ssid_,
+  beacons_received_.emplace_back(env_.GetTime(), channel, beacon_frame->ssid_,
                                  beacon_frame->bssid_);
 }
 

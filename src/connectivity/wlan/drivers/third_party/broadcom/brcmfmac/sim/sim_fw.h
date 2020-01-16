@@ -202,9 +202,9 @@ class SimFirmware {
   void DisassocStart(brcmf_scb_val_le* scb_val);
 
   // Handlers for events from hardware
-  void Rx(const simulation::SimFrame* frame);
+  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel);
 
-  void RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame);
+  void RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame, const wlan_channel_t& channel);
 
   void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                 const common::MacAddr& bssid);

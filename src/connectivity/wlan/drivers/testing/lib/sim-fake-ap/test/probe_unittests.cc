@@ -42,12 +42,12 @@ class ProbeTest : public ::testing::Test, public simulation::StationIfc {
 
  private:
   // StationIfc methods
-  void Rx(const simulation::SimFrame* frame) override;
+  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override;
 
   void ReceiveNotification(void* payload) override;
 };
 
-void ProbeTest::Rx(const simulation::SimFrame* frame) {
+void ProbeTest::Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
   auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
@@ -57,8 +57,8 @@ void ProbeTest::Rx(const simulation::SimFrame* frame) {
   }
 
   probe_resp_count_++;
+  channel_resp_list_.push_back(channel);
   auto probe_resp_frame = static_cast<const simulation::SimProbeRespFrame*>(mgmt_frame);
-  channel_resp_list_.push_back(probe_resp_frame->channel_);
   bssid_resp_list_.push_back(probe_resp_frame->src_addr_);
   ssid_resp_list_.push_back(probe_resp_frame->ssid_);
 }
@@ -88,8 +88,8 @@ TEST_F(ProbeTest, DifferentChannel) {
       .primary = 11, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
 
   auto handler = new std::function<void()>;
-  simulation::SimProbeReqFrame probe_req_frame(this, kWrongChannel, kClientMacAddr);
-  *handler = std::bind(&simulation::Environment::Tx, &env_, &probe_req_frame);
+  simulation::SimProbeReqFrame probe_req_frame(this, kClientMacAddr);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, &probe_req_frame, kWrongChannel);
   env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
 
   env_.Run();
@@ -108,16 +108,16 @@ TEST_F(ProbeTest, DifferentChannel) {
    */
 TEST_F(ProbeTest, TwoApsBasicUse) {
   auto handler = new std::function<void()>;
-  simulation::SimProbeReqFrame chan1_frame(this, kAp1Channel, kClientMacAddr);
-  *handler = std::bind(&simulation::Environment::Tx, &env_, &chan1_frame);
+  simulation::SimProbeReqFrame chan1_frame(this, kClientMacAddr);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, &chan1_frame, kAp1Channel);
   env_.ScheduleNotification(this, zx::usec(100), static_cast<void*>(handler));
 
   env_.Run();
   EXPECT_EQ(probe_resp_count_, 1U);
 
   handler = new std::function<void()>;
-  simulation::SimProbeReqFrame chan2_frame(this, kAp2Channel, kClientMacAddr);
-  *handler = std::bind(&simulation::Environment::Tx, &env_, &chan2_frame);
+  simulation::SimProbeReqFrame chan2_frame(this, kClientMacAddr);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, &chan2_frame, kAp2Channel);
   env_.ScheduleNotification(this, zx::usec(200), static_cast<void*>(handler));
 
   env_.Run();

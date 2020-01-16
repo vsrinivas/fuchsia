@@ -62,7 +62,7 @@ class Environment {
   void Run();
 
   // Send a frame into the simulated environment.
-  void Tx(const SimFrame* frame);
+  void Tx(const SimFrame* frame, const wlan_channel_t& channel);
 
   // Ask for a future notification, time is relative to current time. If 'id' is non-null, it will
   // be given a unique identifier for reference in future notification-related operations.

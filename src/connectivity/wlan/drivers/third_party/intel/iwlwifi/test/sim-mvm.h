@@ -36,7 +36,7 @@ class SimMvm : public ::wlan::simulation::StationIfc {
   zx_status_t SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait);
 
   // StationIfc operations
-  void Rx(const simulation::SimFrame* frame) override {}
+  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override {}
   void ReceiveNotification(void* payload) override {}
 
  private:

@@ -20,7 +20,7 @@ class SimManagementFrame;
 class StationIfc {
  public:
   // Handler for different frames.
-  virtual void Rx(const SimFrame* frame) = 0;
+  virtual void Rx(const SimFrame* frame, const wlan_channel_t& channel) = 0;
 
   // Receive notification of a simulation event
   virtual void ReceiveNotification(void* payload) = 0;

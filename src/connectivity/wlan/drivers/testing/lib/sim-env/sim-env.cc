@@ -24,10 +24,10 @@ void Environment::Run() {
   }
 }
 
-void Environment::Tx(const SimFrame* frame) {
+void Environment::Tx(const SimFrame* frame, const wlan_channel_t& channel) {
   for (auto sta : stations_) {
     if (sta != frame->sender_) {
-      sta->Rx(frame);
+      sta->Rx(frame, channel);
     }
   }
 }

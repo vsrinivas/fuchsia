@@ -71,7 +71,7 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
 
  private:
   // StationIfc methods - by default, do nothing. These can/will be overridden by superclasses.
-  void Rx(const simulation::SimFrame* frame) override {}
+  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override {}
   void ReceiveNotification(void* payload) override {}
 
   // Contrived pointer used as a stand-in for the (opaque) parent device

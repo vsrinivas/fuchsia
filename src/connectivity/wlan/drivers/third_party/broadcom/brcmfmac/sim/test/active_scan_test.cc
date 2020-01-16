@@ -51,7 +51,7 @@ class ActiveScanTest : public SimTest {
  private:
   // StationIfc methods
   void ReceiveNotification(void* payload) override;
-  void Rx(const simulation::SimFrame* frame) override;
+  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override;
 
   // This is the interface we will use for our single client interface
   std::unique_ptr<SimInterface> client_ifc_;
@@ -126,7 +126,7 @@ void ActiveScanTest::GetFirwarePfnMac() {
     sim->sim_fw->IovarsGet("pfn_macaddr", sim_fw_pfn_mac_->byte, ETH_ALEN);
 }
 
-void ActiveScanTest::Rx(const simulation::SimFrame* frame) {
+void ActiveScanTest::Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) {
   GetFirwarePfnMac();
 
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);

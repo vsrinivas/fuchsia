@@ -37,7 +37,8 @@ class SimStation : public wlan::simulation::StationIfc {
   }
 
   // StationIfc methods
-  void Rx(const simulation::SimFrame* frame) override {
+  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override {
+    checkChannel(channel);
     switch (frame->FrameType()) {
       case simulation::SimFrame::FRAME_TYPE_MGMT: {
         auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
@@ -54,7 +55,6 @@ class SimStation : public wlan::simulation::StationIfc {
     switch (mgmt_frame->MgmtFrameType()) {
       case simulation::SimManagementFrame::FRAME_TYPE_BEACON: {
         auto beacon_frame = static_cast<const simulation::SimBeaconFrame*>(mgmt_frame);
-        checkChannel(beacon_frame->channel_);
         checkSsid(beacon_frame->ssid_);
         EXPECT_EQ(beacon_frame->bssid_, kDefaultBssid);
         beacon_seen_ = true;
@@ -62,15 +62,12 @@ class SimStation : public wlan::simulation::StationIfc {
       }
 
       case simulation::SimManagementFrame::FRAME_TYPE_PROBE_REQ: {
-        auto probe_req_frame = static_cast<const simulation::SimProbeReqFrame*>(mgmt_frame);
-        checkChannel(probe_req_frame->channel_);
         probe_req_seen_ = true;
         break;
       }
 
       case simulation::SimManagementFrame::FRAME_TYPE_PROBE_RESP: {
         auto probe_resp_frame = static_cast<const simulation::SimProbeRespFrame*>(mgmt_frame);
-        checkChannel(probe_resp_frame->channel_);
         checkSsid(probe_resp_frame->ssid_);
         probe_resp_seen_ = true;
         break;
@@ -78,7 +75,6 @@ class SimStation : public wlan::simulation::StationIfc {
 
       case simulation::SimManagementFrame::FRAME_TYPE_ASSOC_REQ: {
         auto assoc_req_frame = static_cast<const simulation::SimAssocReqFrame*>(mgmt_frame);
-        checkChannel(assoc_req_frame->channel_);
         EXPECT_EQ(assoc_req_frame->bssid_, kDefaultBssid);
         assoc_req_seen_ = true;
         break;
@@ -86,7 +82,6 @@ class SimStation : public wlan::simulation::StationIfc {
 
       case simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP: {
         auto assoc_resp_frame = static_cast<const simulation::SimAssocRespFrame*>(mgmt_frame);
-        checkChannel(assoc_resp_frame->channel_);
         EXPECT_EQ(assoc_resp_frame->status_, kDefaultAssocStatus);
         assoc_resp_seen_ = true;
         break;
@@ -94,7 +89,6 @@ class SimStation : public wlan::simulation::StationIfc {
 
       case simulation::SimManagementFrame::FRAME_TYPE_DISASSOC_REQ: {
         auto disassoc_req_frame = static_cast<const simulation::SimDisassocReqFrame*>(mgmt_frame);
-        checkChannel(disassoc_req_frame->channel_);
         EXPECT_EQ(disassoc_req_frame->reason_, kDefaultDisassocReason);
         disassoc_req_seen_ = true;
         break;
@@ -141,56 +135,52 @@ RxTest::~RxTest() {
 }
 
 TEST_F(RxTest, BeaconTest) {
-  simulation::SimBeaconFrame beacon_frame(&stations_[0], kDefaultChannel, kDefaultSsid,
-                                          kDefaultBssid);
-  env_.Tx(&beacon_frame);
+  simulation::SimBeaconFrame beacon_frame(&stations_[0], kDefaultSsid, kDefaultBssid);
+  env_.Tx(&beacon_frame, kDefaultChannel);
   EXPECT_EQ(stations_[0].beacon_seen_, false);
   EXPECT_EQ(stations_[1].beacon_seen_, true);
   EXPECT_EQ(stations_[2].beacon_seen_, true);
 }
 
 TEST_F(RxTest, AssocReqTest) {
-  simulation::SimAssocReqFrame assoc_req_frame(&stations_[1], kDefaultChannel,
-                                               stations_[1].mac_addr_, kDefaultBssid);
-  env_.Tx(&assoc_req_frame);
+  simulation::SimAssocReqFrame assoc_req_frame(&stations_[1], stations_[1].mac_addr_,
+                                               kDefaultBssid);
+  env_.Tx(&assoc_req_frame, kDefaultChannel);
   EXPECT_EQ(stations_[0].assoc_req_seen_, true);
   EXPECT_EQ(stations_[1].assoc_req_seen_, false);
   EXPECT_EQ(stations_[2].assoc_req_seen_, true);
 }
 
 TEST_F(RxTest, AssocRespTest) {
-  simulation::SimAssocRespFrame assoc_resp_frame(&stations_[2], kDefaultChannel,
-                                                 stations_[2].mac_addr_, stations_[0].mac_addr_,
-                                                 kDefaultAssocStatus);
-  env_.Tx(&assoc_resp_frame);
+  simulation::SimAssocRespFrame assoc_resp_frame(&stations_[2], stations_[2].mac_addr_,
+                                                 stations_[0].mac_addr_, kDefaultAssocStatus);
+  env_.Tx(&assoc_resp_frame, kDefaultChannel);
   EXPECT_EQ(stations_[0].assoc_resp_seen_, true);
   EXPECT_EQ(stations_[1].assoc_resp_seen_, true);
   EXPECT_EQ(stations_[2].assoc_resp_seen_, false);
 }
 
 TEST_F(RxTest, ProbeReqTest) {
-  simulation::SimProbeReqFrame probe_req_frame(&stations_[1], kDefaultChannel,
-                                               stations_[1].mac_addr_);
-  env_.Tx(&probe_req_frame);
+  simulation::SimProbeReqFrame probe_req_frame(&stations_[1], stations_[1].mac_addr_);
+  env_.Tx(&probe_req_frame, kDefaultChannel);
   EXPECT_EQ(stations_[0].probe_req_seen_, true);
   EXPECT_EQ(stations_[1].probe_req_seen_, false);
   EXPECT_EQ(stations_[2].probe_req_seen_, true);
 }
 
 TEST_F(RxTest, ProbeRespTest) {
-  simulation::SimProbeRespFrame probe_resp_frame(
-      &stations_[2], kDefaultChannel, stations_[2].mac_addr_, stations_[0].mac_addr_, kDefaultSsid);
-  env_.Tx(&probe_resp_frame);
+  simulation::SimProbeRespFrame probe_resp_frame(&stations_[2], stations_[2].mac_addr_,
+                                                 stations_[0].mac_addr_, kDefaultSsid);
+  env_.Tx(&probe_resp_frame, kDefaultChannel);
   EXPECT_EQ(stations_[0].probe_resp_seen_, true);
   EXPECT_EQ(stations_[1].probe_resp_seen_, true);
   EXPECT_EQ(stations_[2].probe_resp_seen_, false);
 }
 
 TEST_F(RxTest, DisassocReqTest) {
-  simulation::SimDisassocReqFrame disassoc_req_frame(&stations_[2], kDefaultChannel,
-                                                     stations_[2].mac_addr_, stations_[0].mac_addr_,
-                                                     kDefaultDisassocReason);
-  env_.Tx(&disassoc_req_frame);
+  simulation::SimDisassocReqFrame disassoc_req_frame(
+      &stations_[2], stations_[2].mac_addr_, stations_[0].mac_addr_, kDefaultDisassocReason);
+  env_.Tx(&disassoc_req_frame, kDefaultChannel);
   EXPECT_EQ(stations_[0].disassoc_req_seen_, true);
   EXPECT_EQ(stations_[1].disassoc_req_seen_, true);
   EXPECT_EQ(stations_[2].disassoc_req_seen_, false);

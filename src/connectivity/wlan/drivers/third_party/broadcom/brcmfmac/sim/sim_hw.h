@@ -25,7 +25,8 @@
 
 namespace wlan::brcmfmac {
 
-using RxHandler = std::function<void(const simulation::SimFrame* frame)>;
+using RxHandler =
+    std::function<void(const simulation::SimFrame* frame, const wlan_channel_t& channel)>;
 
 class SimHardware : public simulation::StationIfc {
  public:
@@ -51,7 +52,7 @@ class SimHardware : public simulation::StationIfc {
   void CancelCallback(uint64_t id);
 
   // StationIfc methods
-  void Rx(const simulation::SimFrame* frame) override;
+  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override;
   void ReceiveNotification(void* payload) override;
 
   // Operations that are forwarded to the environment

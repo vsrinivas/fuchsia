@@ -25,7 +25,7 @@ class EventTest : public ::testing::Test, public simulation::StationIfc {
   ~EventTest() { env_.RemoveStation(this); }
 
   // StationIfc methods
-  void Rx(const simulation::SimFrame* frame) override {}
+  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override {}
   void ReceiveNotification(void* payload) override {
     auto notification = static_cast<EventNotification*>(payload);
     notification->callback(this, notification->value);

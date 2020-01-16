@@ -32,8 +32,8 @@ void FakeAp::EnableBeacon(zx::duration beacon_period) {
   }
 
   // First beacon is sent out immediately
-  SimBeaconFrame beacon_frame(this, chan_, ssid_, bssid_);
-  environment_->Tx(&beacon_frame);
+  SimBeaconFrame beacon_frame(this, ssid_, bssid_);
+  environment_->Tx(&beacon_frame, chan_);
 
   beacon_state_.is_beaconing = true;
   beacon_state_.beacon_interval = beacon_period;
@@ -58,9 +58,9 @@ void FakeAp::ScheduleProbeResp(const common::MacAddr& dst) {
   environment_->ScheduleNotification(this, probe_resp_interval_, static_cast<void*>(handler));
 }
 
-void FakeAp::Rx(const SimFrame* frame) {
+void FakeAp::Rx(const SimFrame* frame, const wlan_channel_t& channel) {
   // Make sure we heard it
-  if (!CanReceiveChannel(frame->channel_)) {
+  if (!CanReceiveChannel(channel)) {
     return;
   }
 
@@ -140,11 +140,11 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
 
 zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason) {
   // Make sure the client is already associated
-  SimDisassocReqFrame disassoc_req_frame(this, chan_, bssid_, sta_mac, reason);
+  SimDisassocReqFrame disassoc_req_frame(this, bssid_, sta_mac, reason);
   for (auto client : clients_) {
     if (client == sta_mac) {
       // Client is already associated
-      environment_->Tx(&disassoc_req_frame);
+      environment_->Tx(&disassoc_req_frame, chan_);
       clients_.remove(sta_mac);
       return ZX_OK;
     }
@@ -155,19 +155,19 @@ zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason)
 
 void FakeAp::HandleBeaconNotification() {
   ZX_ASSERT(beacon_state_.is_beaconing);
-  SimBeaconFrame beacon_frame(this, chan_, ssid_, bssid_);
-  environment_->Tx(&beacon_frame);
+  SimBeaconFrame beacon_frame(this, ssid_, bssid_);
+  environment_->Tx(&beacon_frame, chan_);
   ScheduleNextBeacon();
 }
 
 void FakeAp::HandleAssocRespNotification(uint16_t status, common::MacAddr dst) {
-  SimAssocRespFrame assoc_resp_frame(this, chan_, bssid_, dst, status);
-  environment_->Tx(&assoc_resp_frame);
+  SimAssocRespFrame assoc_resp_frame(this, bssid_, dst, status);
+  environment_->Tx(&assoc_resp_frame, chan_);
 }
 
 void FakeAp::HandleProbeRespNotification(common::MacAddr dst) {
-  SimProbeRespFrame probe_resp_frame(this, chan_, bssid_, dst, ssid_);
-  environment_->Tx(&probe_resp_frame);
+  SimProbeRespFrame probe_resp_frame(this, bssid_, dst, ssid_);
+  environment_->Tx(&probe_resp_frame, chan_);
 }
 
 void FakeAp::ReceiveNotification(void* payload) {

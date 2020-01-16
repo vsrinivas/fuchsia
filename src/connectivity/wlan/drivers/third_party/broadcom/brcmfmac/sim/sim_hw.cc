@@ -31,12 +31,12 @@ static bool ChannelsMatch(const wlan_channel_t& c1, const wlan_channel_t& c2) {
   return (c1.primary == c2.primary) && (c1.cbw == c2.cbw) && (c1.secondary80 == c2.secondary80);
 }
 
-void SimHardware::Rx(const simulation::SimFrame* frame) {
-  if (!rx_enabled_ || !ChannelsMatch(frame->channel_, channel_))
+void SimHardware::Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) {
+  if (!rx_enabled_ || !ChannelsMatch(channel, channel_))
     return;
 
   // Simply transfer frame to firmware.
-  event_handlers_.rx_handler(frame);
+  event_handlers_.rx_handler(frame, channel);
 }
 
 // For now, all sim-env notifications are simple callbacks. If we need something more flexible
@@ -75,6 +75,6 @@ void SimHardware::RequestCallback(std::function<void()>* callback, zx::duration 
 
 void SimHardware::CancelCallback(uint64_t id) { env_->CancelNotification(this, id); }
 
-void SimHardware::Tx(const simulation::SimFrame* frame) { env_->Tx(frame); }
+void SimHardware::Tx(const simulation::SimFrame* frame) { env_->Tx(frame, channel_); }
 
 }  // namespace wlan::brcmfmac
