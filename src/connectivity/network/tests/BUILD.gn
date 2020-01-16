@@ -53,6 +53,7 @@ rustc_test("netstack_cobalt_integration_test") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test-rustc",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/connectivity/network/netstack:networking_metrics_rustlib",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

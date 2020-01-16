@@ -5,96 +5,115 @@
 use anyhow::Context as _;
 
 #[fuchsia_async::run_singlethreaded(test)]
-// TODO(43614): Deflake and re-enable this test.
-#[ignore]
 async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     // NB: netstack aggregates observations and logs them to cobalt once per minute.  We wait for
     // calls to LogCobaltEvents to be made, so this test takes about 180 seconds to run at the time
     // of writing. If you're modifying this test and have the ability to change the netstack
     // implementation, reducing that log period will improve the cycle time of this test.
 
+    // netstack is launched here so that watch_logs(networking_metrics::PROJECT_ID, ...)
+    // can be called before the first socket is created.
+    let netstack =
+        fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()
+            .context("failed to connect to netstack")?;
+    let interfaces = netstack.list_interfaces().await?;
+    assert_eq!(interfaces.len(), 1);
+
     let logger_querier = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_cobalt_test::LoggerQuerierMarker,
     >()
     .context("failed to connect to cobalt logger querier")?;
-    let address = "127.0.0.1:8080";
+    let watch_for_bind = logger_querier.watch_logs(
+        networking_metrics::PROJECT_ID,
+        fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
+    );
 
-    // NB: Creating a socket here also causes netstack to be launched.
+    let address = "127.0.0.1:8080";
     let s1 = std::net::TcpListener::bind(&address).context("failed to bind to localhost")?;
 
-    let (events, _more) = logger_querier
-        .watch_logs(
-            networking_metrics::PROJECT_ID,
-            fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
-        )
+    let (events_post_bind, _more) = watch_for_bind
         .await
-        .context("failed to call query_logger")?
+        .context("failed to call watch_logs")?
         // fidl_fuchsia_cobalt::QueryError doesn't implement thiserror::Error.
         .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
 
-    let socket_count_max_events =
-        events_with_id(&events, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID);
-    assert_eq!(socket_count_max_events.len(), 1);
-    assert_eq!(socket_count_max_events[0].count, 1);
-
-    let sockets_created_events =
-        events_with_id(&events, networking_metrics::SOCKETS_CREATED_METRIC_ID);
-    assert_eq!(sockets_created_events.len(), 1);
-    assert_eq!(sockets_created_events[0].count, 1);
-    let sockets_destroyed_events =
-        events_with_id(&events, networking_metrics::SOCKETS_DESTROYED_METRIC_ID);
-    assert_eq!(sockets_destroyed_events.len(), 1);
-    assert_eq!(sockets_destroyed_events[0].count, 0);
+    let watch_for_accept = logger_querier.watch_logs(
+        networking_metrics::PROJECT_ID,
+        fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
+    );
 
     let s2 = std::net::TcpStream::connect(&address)?;
     let (s3, _sockaddr) = s1.accept()?;
 
-    let (events, _more) = logger_querier
-        .watch_logs(
-            networking_metrics::PROJECT_ID,
-            fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
-        )
+    let (events_post_accept, _more) = watch_for_accept
         .await
-        .context("failed to call query_logger")?
+        .context("failed to call watch_logs")?
         .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
+
+    let watch_for_first_drop = logger_querier.watch_logs(
+        networking_metrics::PROJECT_ID,
+        fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
+    );
+    std::mem::drop(s1);
+    std::mem::drop(s2);
+
+    let (events_post_first_drop, _more) = watch_for_first_drop
+        .await
+        .context("failed to call watch_logs")?
+        .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
+
+    let watch_for_final_drop = logger_querier.watch_logs(
+        networking_metrics::PROJECT_ID,
+        fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
+    );
+    std::mem::drop(s3);
+
+    let (events_post_final_drop, _more) = watch_for_final_drop
+        .await
+        .context("failed to call watch_logs")?
+        .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
+
+    let socket_count_max_events =
+        events_with_id(&events_post_bind, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID);
+    assert_eq!(socket_count_max_events.len(), 1);
+    assert_eq!(socket_count_max_events[0].count, 1);
+
+    let sockets_created_events =
+        events_with_id(&events_post_bind, networking_metrics::SOCKETS_CREATED_METRIC_ID);
+    assert_eq!(sockets_created_events.len(), 1);
+    assert_eq!(sockets_created_events[0].count, 1);
+    let sockets_destroyed_events =
+        events_with_id(&events_post_bind, networking_metrics::SOCKETS_DESTROYED_METRIC_ID);
+    assert_eq!(sockets_destroyed_events.len(), 1);
+    assert_eq!(sockets_destroyed_events[0].count, 0);
 
     assert_eq!(
         // We think this i64 suffix is necessary because rustc assigns this constant a type before unifying
         // it with the type of the events_with_id expression below; this may be fixed when
         // https://github.com/rust-lang/rust/issues/57009 is fixed and should be reevaluated then.
         3i64,
-        events_with_id(&events, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
+        events_with_id(&events_post_accept, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
             .max()
             .expect("expect at least one socket count max event"),
         "events:\n{}\n",
-        display_events(&events),
+        display_events(&events_post_accept),
     );
 
     // The stack sees both the client and server side of the TCP connection.
     // Hence we see the TCP stats below accounting for both sides.
-    let tcp_connections_established_events =
-        events_with_id(&events, networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID);
+    let tcp_connections_established_events = events_with_id(
+        &events_post_accept,
+        networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID,
+    );
     assert_eq!(tcp_connections_established_events.len(), 1);
     assert_eq!(tcp_connections_established_events[0].count, 2);
-
-    std::mem::drop(s1);
-    std::mem::drop(s2);
-
-    let (events, _more) = logger_querier
-        .watch_logs(
-            networking_metrics::PROJECT_ID,
-            fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
-        )
-        .await
-        .context("failed to call query_logger")?
-        .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
 
     assert_eq!(
         // https://github.com/rust-lang/rust/issues/57009
         2i64,
-        events_with_id(&events, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
+        events_with_id(&events_post_first_drop, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
             .sum()
@@ -111,106 +130,105 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
 
     assert_eq!(
         EXPECTED_PACKET_COUNT,
-        events_with_id(&events, networking_metrics::PACKETS_SENT_METRIC_ID)
+        events_with_id(&events_post_first_drop, networking_metrics::PACKETS_SENT_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
             .max()
             .expect("expected at least one event with PACKETS_SENT_METRIC_ID"),
         "packets sent. events:\n{}\n",
-        display_events(&events),
+        display_events(&events_post_first_drop),
     );
     assert_eq!(
         EXPECTED_PACKET_COUNT,
-        events_with_id(&events, networking_metrics::PACKETS_RECEIVED_METRIC_ID)
+        events_with_id(&events_post_first_drop, networking_metrics::PACKETS_RECEIVED_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
             .max()
             .expect("expected at least one event with PACKETS_RECEIVED_METRIC_ID"),
         "packets received. events:\n{}\n",
-        display_events(&events),
+        display_events(&events_post_first_drop),
     );
     assert_eq!(
         EXPECTED_PACKET_COUNT * EXPECTED_SENT_PACKET_SIZE,
-        events_with_id(&events, networking_metrics::BYTES_SENT_METRIC_ID)
+        events_with_id(&events_post_first_drop, networking_metrics::BYTES_SENT_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
             .max()
             .expect("expected at least one event with BYTES_SENT_METRIC_ID"),
         "bytes sent. events:\n{}\n",
-        display_events(&events),
+        display_events(&events_post_first_drop),
     );
     assert_eq!(
         EXPECTED_PACKET_COUNT * EXPECTED_RECEIVED_PACKET_SIZE,
-        events_with_id(&events, networking_metrics::BYTES_RECEIVED_METRIC_ID)
+        events_with_id(&events_post_first_drop, networking_metrics::BYTES_RECEIVED_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
             .max()
             .expect("expected at least one event with BYTES_RECEIVED_METRIC_ID"),
         "bytes received. events:\n{}\n",
-        display_events(&events),
+        display_events(&events_post_first_drop),
     );
 
     assert_eq!(
         // https://github.com/rust-lang/rust/issues/57009
         2i64,
-        events_with_id(&events, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
+        events_with_id(&events_post_first_drop, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
             .sum(),
         "sockets destroyed. events:\n{}\n",
-        display_events(&events),
+        display_events(&events_post_first_drop),
     );
-
-    std::mem::drop(s3);
-
-    let (events, _more) = logger_querier
-        .watch_logs(
-            networking_metrics::PROJECT_ID,
-            fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
-        )
-        .await
-        .context("failed to call query_logger")?
-        .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
 
     assert_eq!(
         // https://github.com/rust-lang/rust/issues/57009
         1i64,
-        events_with_id(&events, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
+        events_with_id(&events_post_final_drop, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
             .sum(),
         "socket count max. events:\n{}\n",
-        display_events(&events),
+        display_events(&events_post_final_drop),
     );
 
     assert_eq!(
         // https://github.com/rust-lang/rust/issues/57009
         1i64,
-        events_with_id(&events, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
+        events_with_id(&events_post_final_drop, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
             .sum(),
         "sockets destroyed. events:\n{}\n",
-        display_events(&events)
+        display_events(&events_post_final_drop)
     );
     // We expect only the server-side to be closed at this point.
     // The client-side TCP connection would not be closed as yet, because we do
     // not want to wait for TCP TIME-WAIT interval in this test.
     // TODO(gvisor.dev/issue/1400) There is currently no way the client can avoid
     // getting into time-wait on close.
-    let tcp_connections_established_events =
-        events_with_id(&events, networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID);
+    let tcp_connections_established_events = events_with_id(
+        &events_post_final_drop,
+        networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID,
+    );
     assert_eq!(tcp_connections_established_events.len(), 1);
-    assert_eq!(tcp_connections_established_events[0].count, 1);
-    let tcp_connections_closed_events =
-        events_with_id(&events, networking_metrics::TCP_CONNECTIONS_CLOSED_METRIC_ID);
+
+    // TODO(http://gvisor.dev/issue/1579): restore to 1 if upstream's behavior changes
+    assert_eq!(tcp_connections_established_events[0].count, 0);
+    let tcp_connections_closed_events = events_with_id(
+        &events_post_final_drop,
+        networking_metrics::TCP_CONNECTIONS_CLOSED_METRIC_ID,
+    );
     assert_eq!(tcp_connections_closed_events.len(), 1);
     assert_eq!(tcp_connections_closed_events[0].count, 1);
-    let tcp_connections_reset_events =
-        events_with_id(&events, networking_metrics::TCP_CONNECTIONS_RESET_METRIC_ID);
+    let tcp_connections_reset_events = events_with_id(
+        &events_post_final_drop,
+        networking_metrics::TCP_CONNECTIONS_RESET_METRIC_ID,
+    );
     assert_eq!(tcp_connections_reset_events[0].count, 0);
-    let tcp_connections_timed_out_events =
-        events_with_id(&events, networking_metrics::TCP_CONNECTIONS_TIMED_OUT_METRIC_ID);
+    let tcp_connections_timed_out_events = events_with_id(
+        &events_post_final_drop,
+        networking_metrics::TCP_CONNECTIONS_TIMED_OUT_METRIC_ID,
+    );
     assert_eq!(tcp_connections_timed_out_events[0].count, 0);
 
     Ok(())
