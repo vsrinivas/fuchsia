@@ -4,6 +4,7 @@
 
 #include "qmi-usb-transport.h"
 
+#include <endian.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
@@ -17,7 +18,6 @@
 
 #include <ddk/debug.h>
 #include <ddktl/fidl.h>
-#include <endian.h>
 
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE
@@ -95,7 +95,8 @@ zx_status_t Device::HandleArpReq(const ArpFrame& arp_frame) {
   if (eth_ifc_ptr_ && eth_ifc_ptr_->is_valid()) {
     // TODO (jiamingw): Log arp response.
     zxlogf(INFO, "qmi-usb-transport: Replying Arp Msg\n");
-    eth_ifc_ptr_->Recv(reinterpret_cast<const uint8_t*>(&eth_arp_resp), kArpSize + kEthFrameHdrSize, 0);
+    eth_ifc_ptr_->Recv(reinterpret_cast<const uint8_t*>(&eth_arp_resp), kArpSize + kEthFrameHdrSize,
+                       0);
   }
 
   return ZX_OK;
@@ -597,8 +598,7 @@ static int qmi_transport_thread(void* ctx) {
 
 void Device::GenInboundEthFrameHdr(EthFrameHdr* eth_frame_hdr) {
   // Dest mac addr.
-  std::copy(eth_dst_mac_addr_->begin(), eth_dst_mac_addr_->end(),
-            eth_frame_hdr->dst_mac_addr);
+  std::copy(eth_dst_mac_addr_->begin(), eth_dst_mac_addr_->end(), eth_frame_hdr->dst_mac_addr);
   // Src mac addr.
   std::copy(&kFakeMacAddr[0], &kFakeMacAddr[kMacAddrLen], eth_frame_hdr->src_mac_addr);
   // Ethertype.
@@ -823,10 +823,14 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   uint16_t intr_max_packet = 0;
   uint16_t bulk_max_packet = 0;
 
-  usb_descriptor_header_t* desc = usb_desc_iter_next(&iter);
-  while (desc) {
+  usb_descriptor_header_t* desc;
+  while ((desc = usb_desc_iter_peek(&iter)) != NULL) {
     if (desc->bDescriptorType == USB_DT_ENDPOINT) {
-      usb_endpoint_descriptor_t* endp = reinterpret_cast<usb_endpoint_descriptor_t*>(desc);
+      usb_endpoint_descriptor_t* endp = reinterpret_cast<usb_endpoint_descriptor_t*>(
+          usb_desc_iter_get_structure(&iter, sizeof(usb_endpoint_descriptor_t)));
+      if (endp == NULL) {
+        break;
+      }
       if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
         if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
           bulk_out_addr = endp->bEndpointAddress;
@@ -841,7 +845,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         }
       }
     }
-    desc = usb_desc_iter_next(&iter);
+    usb_desc_iter_advance(&iter);
   }
   usb_desc_iter_release(&iter);
 

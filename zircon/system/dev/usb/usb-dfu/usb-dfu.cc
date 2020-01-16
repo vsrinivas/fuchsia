@@ -234,20 +234,26 @@ zx_status_t Dfu::Create(zx_device_t* parent) {
 
   // Look for the DFU Functional Descriptor.
   usb_dfu_func_desc_t func_desc = {};
-  usb_descriptor_header_t* header = usb_desc_iter_next(&iter);
-  while (header) {
+  usb_descriptor_header_t* header;
+  while ((header = usb_desc_iter_peek(&iter)) != nullptr) {
     if (header->bDescriptorType == USB_DFU_CS_FUNCTIONAL) {
       if (header->bLength < sizeof(func_desc)) {
         zxlogf(ERROR, "DFU func desc should be at least %lu long, got %u\n", sizeof(func_desc),
                header->bLength);
       } else {
-        memcpy(&func_desc, header, sizeof(func_desc));
-        zxlogf(TRACE, "DFU func desc bmAttributes %u wDetachTimeOut %u wTransferSize %u\n",
-               func_desc.bmAttributes, func_desc.wDetachTimeOut, func_desc.wTransferSize);
-        break;
+        usb_dfu_func_desc_t* desc =
+            (usb_dfu_func_desc_t*)usb_desc_iter_get_structure(&iter, sizeof(func_desc));
+        if (desc == nullptr) {
+          zxlogf(ERROR, "DFU func desc invalid");
+        } else {
+          func_desc = *desc;
+          zxlogf(TRACE, "DFU func desc bmAttributes %u wDetachTimeOut %u wTransferSize %u\n",
+                 func_desc.bmAttributes, func_desc.wDetachTimeOut, func_desc.wTransferSize);
+          break;
+        }
       }
     }
-    header = usb_desc_iter_next(&iter);
+    usb_desc_iter_advance(&iter);
   }
   usb_desc_iter_release(&iter);
 

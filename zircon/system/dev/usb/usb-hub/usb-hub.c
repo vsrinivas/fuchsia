@@ -481,10 +481,11 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
   }
 
   usb_ss_ep_comp_descriptor_t* ss_comp_desc = NULL;
-  usb_descriptor_header_t* desc = usb_desc_iter_next(&iter);
+  usb_descriptor_header_t* desc = usb_desc_iter_peek(&iter);
   if (desc && desc->bDescriptorType == USB_DT_SS_EP_COMPANION) {
-    ss_comp_desc = (usb_ss_ep_comp_descriptor_t*)desc;
+    ss_comp_desc = usb_desc_iter_get_structure(&iter, sizeof(usb_ss_ep_comp_descriptor_t));
   }
+  usb_desc_iter_advance(&iter);
 
   uint8_t ep_addr = endp->bEndpointAddress;
   uint16_t max_packet_size = usb_ep_max_packet(endp);

@@ -113,34 +113,21 @@ __EXPORT void usb_desc_iter_release(usb_desc_iter_t* iter) {
 // resets iterator to the beginning
 __EXPORT void usb_desc_iter_reset(usb_desc_iter_t* iter) { iter->current = iter->desc; }
 
-// gets the current descriptor pointed by the iterator and then increase the iterator to the next
-// iterator. This function only make sures the returned structure if not NULL is a valid
-// usb_descriptor_header_t structure. User should not try to convert the returned value to a
-// specific usb descriptor structure without checking the boundary. As a result, user is
-// recommended to use a pattern like the following to replace usb_desc_iter_next:
-//
-// auto desc = usb_desc_iter_get_structure(&iter, ...);
-// usb_desc_iter_advance(&iter);
-// if (desc != NULL) {...}
-//
-// bug: 43986
-__EXPORT usb_descriptor_header_t* usb_desc_iter_next(usb_desc_iter_t* iter) {
+// increase the iterator to the next descriptor. If the current descriptor is not a valid descriptor
+// header structure, returns false, otherwise, returns true. The iterator would not be increased
+// if false is returned and user is expected to handle the error case and end the descriptor
+// parsing.
+__EXPORT bool usb_desc_iter_advance(usb_desc_iter_t* iter) {
   usb_descriptor_header_t* header = usb_desc_iter_peek(iter);
   if (!header)
-    return NULL;
+    return false;
   iter->current += header->bLength;
-  return header;
+  return true;
 }
 
-// increase the iterator to the next descriptor
-__EXPORT bool usb_desc_iter_advance(usb_desc_iter_t* iter) {
-  if (usb_desc_iter_next(iter) != NULL) {
-    return true;
-  }
-  return false;
-}
-
-// returns the next descriptor without incrementing the iterator
+// returns the descriptor header structure currently pointed by the iterator. If the current
+// iterator does not point to a valid descriptor header structure, NULL would be returned and user
+// is expected to handle the error case and end the descriptor parsing.
 __EXPORT usb_descriptor_header_t* usb_desc_iter_peek(usb_desc_iter_t* iter) {
   uint8_t* end;
   if (!safe_add(iter->current, sizeof(usb_descriptor_header_t), &end)) {
@@ -159,7 +146,9 @@ __EXPORT usb_descriptor_header_t* usb_desc_iter_peek(usb_desc_iter_t* iter) {
   return header;
 }
 
-// returns the expected structure with structure size currently pointed by the iterator.
+// returns the expected structure with structure size currently pointed by the iterator. If the
+// length of descriptor buffer current pointed by the iterator is not enough to hold the structure,
+// NULL would be returned, user is expected to handle the error case.
 __EXPORT void* usb_desc_iter_get_structure(usb_desc_iter_t* iter, size_t structure_size) {
   uint8_t* start = (uint8_t*)iter->current;
   uint8_t* end = 0;

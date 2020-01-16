@@ -79,38 +79,6 @@ class UsbLibTest : public zxtest::Test {
   size_t descriptor_length_ = 0;
 };
 
-TEST_F(UsbLibTest, TestUsbDescIterNextNormal) {
-  usb_desc_iter_t iter;
-  SetDescriptors((void*)&kTestDescriptorHeader);
-  SetDescriptorLength(sizeof(kTestDescriptorHeader));
-  ASSERT_OK(usb_desc_iter_init(GetUsbProto(), &iter));
-  auto desc = usb_desc_iter_next(&iter);
-  ASSERT_EQ(memcmp(desc, &kTestDescriptorHeader, sizeof(kTestDescriptorHeader)), 0);
-  ASSERT_EQ(nullptr, usb_desc_iter_next(&iter));
-  usb_desc_iter_release(&iter);
-}
-
-TEST_F(UsbLibTest, TestUsbDescIterNextOverflow) {
-  usb_desc_iter_t iter;
-  usb_descriptor_header_t desc = kTestDescriptorHeader;
-  // Length is invalid and longer than the actual length.
-  desc.bLength++;
-  SetDescriptors((void*)&desc);
-  SetDescriptorLength(sizeof(desc));
-  ASSERT_OK(usb_desc_iter_init(GetUsbProto(), &iter));
-  ASSERT_EQ(nullptr, usb_desc_iter_next(&iter));
-  usb_desc_iter_release(&iter);
-}
-
-TEST_F(UsbLibTest, TestUsbDescIterNextHeaderTooShort) {
-  usb_desc_iter_t iter;
-  SetDescriptors((void*)&kTestDescriptorHeader);
-  SetDescriptorLength(sizeof(kTestDescriptorHeader) - 1);
-  ASSERT_OK(usb_desc_iter_init(GetUsbProto(), &iter));
-  ASSERT_EQ(nullptr, usb_desc_iter_next(&iter));
-  usb_desc_iter_release(&iter);
-}
-
 TEST_F(UsbLibTest, TestUsbDescIterPeekNormal) {
   usb_desc_iter_t iter;
   SetDescriptors((void*)&kTestDescriptorHeader);
@@ -118,7 +86,6 @@ TEST_F(UsbLibTest, TestUsbDescIterPeekNormal) {
   ASSERT_OK(usb_desc_iter_init(GetUsbProto(), &iter));
   auto desc = usb_desc_iter_peek(&iter);
   ASSERT_EQ(memcmp(desc, &kTestDescriptorHeader, sizeof(kTestDescriptorHeader)), 0);
-  ASSERT_EQ(desc, usb_desc_iter_next(&iter));
   usb_desc_iter_release(&iter);
 }
 
@@ -153,9 +120,10 @@ TEST_F(UsbLibTest, TestUsbDescClone) {
   ASSERT_OK(usb_desc_iter_clone(&src, &dest));
   // This should not affect dest.
   usb_desc_iter_release(&src);
-  auto desc = usb_desc_iter_next(&dest);
+  auto desc = usb_desc_iter_peek(&dest);
   ASSERT_EQ(memcmp(desc, &kTestDescriptorHeader, sizeof(kTestDescriptorHeader)), 0);
-  ASSERT_EQ(nullptr, usb_desc_iter_next(&dest));
+  ASSERT_TRUE(usb_desc_iter_advance(&dest));
+  ASSERT_EQ(nullptr, usb_desc_iter_peek(&dest));
   usb_desc_iter_release(&dest);
 }
 
@@ -167,9 +135,10 @@ TEST_F(UsbLibTest, TestUsbDescAdvanceReset) {
   ASSERT_TRUE(usb_desc_iter_advance(&iter));
   ASSERT_FALSE(usb_desc_iter_advance(&iter));
   usb_desc_iter_reset(&iter);
-  auto desc = usb_desc_iter_next(&iter);
+  auto desc = usb_desc_iter_peek(&iter);
+  ASSERT_TRUE(usb_desc_iter_advance(&iter));
   ASSERT_EQ(memcmp(desc, &kTestDescriptorHeader, sizeof(kTestDescriptorHeader)), 0);
-  ASSERT_EQ(nullptr, usb_desc_iter_next(&iter));
+  ASSERT_EQ(nullptr, usb_desc_iter_peek(&iter));
   usb_desc_iter_release(&iter);
 }
 

@@ -162,15 +162,20 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_d
   while ((header = usb_desc_iter_peek(iter)) != NULL &&
          header->bDescriptorType == USB_VIDEO_CS_INTERFACE &&
          num_frame_descs_found < want_num_frame_descs) {
-    usb_video_vc_desc_header* format_desc = (usb_video_vc_desc_header*)header;
-    if (format_desc->bDescriptorSubtype != want_frame_type) {
+    usb_video_vc_desc_header* format_desc = reinterpret_cast<usb_video_vc_desc_header*>(
+        usb_desc_iter_get_structure(iter, sizeof(usb_video_vc_desc_header)));
+    if (format_desc == NULL || format_desc->bDescriptorSubtype != want_frame_type) {
       break;
     }
 
     switch (format_desc->bDescriptorSubtype) {
       case USB_VIDEO_VS_FRAME_UNCOMPRESSED:
       case USB_VIDEO_VS_FRAME_MJPEG: {
-        usb_video_vs_frame_desc* desc = (usb_video_vs_frame_desc*)header;
+        usb_video_vs_frame_desc* desc = reinterpret_cast<usb_video_vs_frame_desc*>(
+            usb_desc_iter_get_structure(iter, sizeof(usb_video_vs_frame_desc)));
+        if (desc == NULL) {
+          break;
+        }
 
         // Intervals are specified in 100 ns units.
         double framesPerSec = 1 / (desc->dwDefaultFrameInterval * 100 / 1e9);
@@ -197,7 +202,7 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_d
         zxlogf(ERROR, "unhandled frame type: %u\n", format_desc->bDescriptorSubtype);
         return ZX_ERR_NOT_SUPPORTED;
     }
-    header = usb_desc_iter_next(iter);
+    usb_desc_iter_advance(iter);
     num_frame_descs_found++;
   }
   if (num_frame_descs_found != want_num_frame_descs) {

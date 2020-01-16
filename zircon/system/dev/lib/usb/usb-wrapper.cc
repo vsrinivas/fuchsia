@@ -118,7 +118,8 @@ DescriptorList::const_iterator DescriptorList::cend() const {
 
 void DescriptorList::iterator::ReadHeader(usb_desc_iter_t* iter,
                                           const usb_descriptor_header_t** out) {
-  const usb_descriptor_header_t* ptr = usb_desc_iter_next(iter);
+  const usb_descriptor_header_t* ptr = usb_desc_iter_peek(iter);
+  usb_desc_iter_advance(iter);
   if (ptr && ptr->bDescriptorType != USB_DT_INTERFACE) {
     *out = ptr;
   } else {
