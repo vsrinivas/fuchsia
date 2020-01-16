@@ -14,13 +14,13 @@ struct Command<'a> {
 async fn test_cli(commands: Vec<Command<'_>>) {
     let mut fs = fuchsia_component::server::ServiceFs::new_local();
     fs.add_proxy_service::<fidl_fuchsia_stash::StoreMarker, _>()
-        .add_component_proxy_service::<fidl_fuchsia_net_dhcp::Server_Marker>(
+        .add_component_proxy_service::<fidl_fuchsia_net_dhcp::Server_Marker, _>(
         fuchsia_component::fuchsia_single_component_package_url!("dhcpd").to_string(),
         Some(vec!["--test".to_string()]),
     );
     let env =
         fs.create_salted_nested_environment("test_cli").expect("failed to create environment");
-    let fs = fs.for_each_concurrent(None, |_incoming| async {}).fuse();
+    let fs = fs.for_each_concurrent(None, |()| async move {});
     futures::pin_mut!(fs);
 
     for Command { args, expected_stdout, expected_stderr } in commands {

@@ -281,14 +281,14 @@ struct LaunchData {
 /// Not intended for direct use. Use the `add_component_proxy_service`
 /// function instead.
 #[doc(hidden)]
-pub struct ComponentProxy<S: DiscoverableService> {
+pub struct ComponentProxy<S: DiscoverableService, O> {
     launch_data: Option<LaunchData>,
     launched_app: Option<crate::client::App>,
-    _marker: PhantomData<S>,
+    _marker: PhantomData<(S, O)>,
 }
 
-impl<S: DiscoverableService> Service for ComponentProxy<S> {
-    type Output = S;
+impl<S: DiscoverableService, O> Service for ComponentProxy<S, O> {
+    type Output = O;
     fn connect(&mut self, channel: zx::Channel) -> Option<Self::Output> {
         let res = (|| {
             if let Some(LaunchData { component_url, arguments }) = self.launch_data.take() {
@@ -568,14 +568,14 @@ macro_rules! add_functions {
 
         /// Add a service to the `ServicesServer` that will launch a component
         /// upon request, proxying requests to the launched component.
-        pub fn add_component_proxy_service<S: DiscoverableService>(
+        pub fn add_component_proxy_service<S: DiscoverableService, O>(
             &mut self,
             component_url: String,
             arguments: Option<Vec<String>>,
         ) -> &mut Self
         where
-            ServiceObjTy: From<ComponentProxy<S>>,
-            ServiceObjTy: ServiceObjTrait<Output = S>,
+            ServiceObjTy: From<ComponentProxy<S, O>>,
+            ServiceObjTy: ServiceObjTrait<Output = O>,
         {
             self.add_service_at(
                 S::SERVICE_NAME,
