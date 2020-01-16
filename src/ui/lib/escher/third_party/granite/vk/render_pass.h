@@ -32,10 +32,6 @@
 
 #include <vulkan/vulkan.hpp>
 
-// TODO(ES-83): maybe move to .cc file, along with definitions of SubpassHas*().
-#include "src/lib/fxl/logging.h"
-#include "src/ui/lib/escher/util/image_utils.h"
-
 namespace escher {
 namespace impl {
 
@@ -149,18 +145,6 @@ inline const vk::AttachmentReference& RenderPass::GetInputAttachmentForSubpass(
   FXL_DCHECK(subpass < subpasses_.size());
   FXL_DCHECK(index < subpasses_[subpass].num_input_attachments);
   return subpasses_[subpass].input_attachments[index];
-}
-
-inline bool RenderPass::SubpassHasDepth(uint32_t subpass) const {
-  FXL_DCHECK(subpass < subpasses_.size());
-  return subpasses_[subpass].depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED &&
-         image_utils::IsDepthFormat(depth_stencil_format_);
-}
-
-inline bool RenderPass::SubpassHasStencil(uint32_t subpass) const {
-  FXL_DCHECK(subpass < subpasses_.size());
-  return subpasses_[subpass].depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED &&
-         image_utils::IsStencilFormat(depth_stencil_format_);
 }
 
 }  // namespace impl

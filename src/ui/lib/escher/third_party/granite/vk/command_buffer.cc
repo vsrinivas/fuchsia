@@ -31,6 +31,7 @@
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/util/bit_ops.h"
 #include "src/ui/lib/escher/util/hasher.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/impl/descriptor_set_allocator.h"
 #include "src/ui/lib/escher/vk/impl/framebuffer.h"

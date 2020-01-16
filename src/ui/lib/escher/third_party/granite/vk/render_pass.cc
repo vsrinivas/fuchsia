@@ -25,6 +25,7 @@
 
 #include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
 
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/util/bit_ops.h"
@@ -727,6 +728,18 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   render_pass_create_info.pDependencies =
       vk_subpass_dependencies.empty() ? nullptr : vk_subpass_dependencies.data();
   render_pass_ = ESCHER_CHECKED_VK_RESULT(vk_device().createRenderPass(render_pass_create_info));
+}
+
+bool RenderPass::SubpassHasDepth(uint32_t subpass) const {
+  FXL_DCHECK(subpass < subpasses_.size());
+  return subpasses_[subpass].depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED &&
+         image_utils::IsDepthFormat(depth_stencil_format_);
+}
+
+bool RenderPass::SubpassHasStencil(uint32_t subpass) const {
+  FXL_DCHECK(subpass < subpasses_.size());
+  return subpasses_[subpass].depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED &&
+         image_utils::IsStencilFormat(depth_stencil_format_);
 }
 
 RenderPass::~RenderPass() { vk_device().destroyRenderPass(render_pass_); }
