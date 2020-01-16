@@ -8,6 +8,11 @@
 //! disallows use of the zx_process_create syscall, which process_builder uses. Processes that use
 //! process_builder normally run in the root job, so we need a similar environment for the test.
 //!
+//! Note that any Rust test using this runner will usually need the `--force-run-in-process` flag
+//! passed to the test binary. This ensures that each unit test is run in the custom environment
+//! we create, not a generic subprocess of it. The drawback is that should_panic tests are NOT
+//! supported with this flag.
+//!
 //! This approach is a temporary hack. It relies on the fact that the root job is available on
 //! certain builds and to v1 test components through the fuchsia.boot.RootJob service.
 //!
@@ -65,6 +70,9 @@ async fn main() -> Result<(), Error> {
     }
 
     // Provide the test process with a namespace containing only /pkg and a more limited /svc.
+    //
+    // We also clone stdout and stderr, but leave stdin as null. This is to test that "cloning"
+    // a null stdio works when spawning processes (see bug 35902).
     let svc_str = CString::new("/svc")?;
     let pkg_str = CString::new("/pkg")?;
     let pkg_dir = fs::File::open("/pkg")?;
@@ -88,7 +96,8 @@ async fn main() -> Result<(), Error> {
     let argv: Vec<CString> =
         args.into_iter().skip(1).map(CString::new).collect::<Result<_, _>>()?;
     let argv_ref: Vec<&CStr> = argv.iter().map(|a| &**a).collect();
-    let options = fdio::SpawnOptions::CLONE_ALL & !fdio::SpawnOptions::CLONE_NAMESPACE
+    let options = fdio::SpawnOptions::CLONE_ALL
+        & !fdio::SpawnOptions::CLONE_NAMESPACE
         & !fdio::SpawnOptions::CLONE_STDIO;
     let process =
         fdio::spawn_etc(&root_job, options, argv_ref[0], argv_ref.as_slice(), None, &mut actions)

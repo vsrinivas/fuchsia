@@ -228,6 +228,7 @@ impl ElfVmar {
     }
 }
 
+// These must not be longer than zx::sys::ZX_MAX_NAME_LEN.
 const VMO_NAME_UNKNOWN: &[u8] = b"<unknown ELF>";
 const VMO_NAME_PREFIX_BSS: &[u8] = b"bss:";
 const VMO_NAME_PREFIX_DATA: &[u8] = b"data:";
@@ -322,12 +323,5 @@ mod tests {
             max_vmo_name.to_bytes()
         );
         Ok(())
-    }
-
-    #[test]
-    #[should_panic(expected = "MAX_LEN")]
-    fn test_vmo_name_with_prefix_too_long() {
-        let empty_vmo_name = CStr::from_bytes_with_nul(b"\0").unwrap();
-        vmo_name_with_prefix(&empty_vmo_name, b"a_really_long_prefix_that_is_too_long");
     }
 }

@@ -8,7 +8,9 @@
     },
     "program": {
         "args": [
-            "/pkg/test/process_builder_tests"
+            "/pkg/test/process_builder_tests",
+            "-Zunstable-options",
+            "--force-run-in-process"
         ],
         "binary": "bin/root_job_test_runner"
     },

@@ -9,7 +9,10 @@
     },
     "program": {
         "args": [
-            "/pkg/test/component_manager_boot_env_tests"
+            "/pkg/test/component_manager_boot_env_tests",
+            "-Zunstable-options",
+            "--exclude-should-panic",
+            "--force-run-in-process"
         ],
         "binary": "bin/root_job_test_runner"
     },
