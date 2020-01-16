@@ -574,7 +574,7 @@ mod tests {
     }
 
     fn create_clean_pre_auth_manager() -> Arc<dyn pre_auth::Manager> {
-        Arc::new(pre_auth::InMemoryManager::new(pre_auth::State::NoEnrollments))
+        Arc::new(pre_auth::InMemoryManager::create(pre_auth::State::NoEnrollments))
     }
 
     #[test]
@@ -758,7 +758,7 @@ mod tests {
     fn test_unlock_uninitialized_account() {
         let location = TempLocation::new();
         let pre_auth_manager =
-            Arc::new(pre_auth::InMemoryManager::new(TEST_PRE_AUTH_SINGLE.clone()));
+            Arc::new(pre_auth::InMemoryManager::create(TEST_PRE_AUTH_SINGLE.clone()));
         request_stream_test(
             location.to_persistent_lifetime(),
             pre_auth_manager,
@@ -777,7 +777,7 @@ mod tests {
         // before attempting to read the account from disk.
         let location = TempLocation::new();
         let pre_auth_manager =
-            Arc::new(pre_auth::InMemoryManager::new(TEST_PRE_AUTH_SINGLE.clone()));
+            Arc::new(pre_auth::InMemoryManager::create(TEST_PRE_AUTH_SINGLE.clone()));
         request_stream_test(
             location.to_persistent_lifetime(),
             pre_auth_manager,

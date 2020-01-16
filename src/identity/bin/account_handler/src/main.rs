@@ -108,7 +108,7 @@ fn create_pre_auth_manager(
     id: &LocalAccountId,
 ) -> Result<Arc<dyn pre_auth::Manager>, AccountManagerError> {
     if lifetime == &AccountLifetime::Ephemeral {
-        Ok(Arc::new(pre_auth::InMemoryManager::new(pre_auth::State::NoEnrollments)))
+        Ok(Arc::new(pre_auth::InMemoryManager::create(pre_auth::State::NoEnrollments)))
     } else {
         let store_name = format!("account_handler/{}", &id.to_canonical_string());
         Ok(Arc::new(pre_auth::StashManager::create(&store_name)?))

@@ -140,7 +140,7 @@ pub struct InMemoryManager {
 
 impl InMemoryManager {
     /// Create an in-memory manager with a pre-set initial state.
-    pub fn new(initial_state: State) -> Self {
+    pub fn create(initial_state: State) -> Self {
         Self { state: Mutex::new(initial_state) }
     }
 }
@@ -186,7 +186,7 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn in_memory_basic() -> Result<(), AccountManagerError> {
-        let manager = InMemoryManager::new(State::NoEnrollments);
+        let manager = InMemoryManager::create(State::NoEnrollments);
         assert_eq!(manager.get().await?, State::NoEnrollments);
         manager.put(&*TEST_STATE).await?;
         assert_eq!(manager.get().await?, *TEST_STATE);
