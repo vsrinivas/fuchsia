@@ -40,30 +40,6 @@ enum struct CodingContext {
   kOutsideEnvelope,
 };
 
-enum struct CodingNeeded {
-  // There is interesting coding information about the location of
-  // pointers, allocations, or handles for this type.
-  kAlways,
-
-  // The type contains no pointers or handles. However, we should generate
-  // corresponding coding information when it is wrapped in an envelope,
-  // to support encoding/decoding of xunions and tables.
-  kEnvelopeOnly,
-};
-
-namespace {
-
-CodingNeeded WhichCodingNeeded(CodingContext context, CodingNeeded coding_needed) {
-  switch (context) {
-    case CodingContext::kInsideEnvelope:
-      return CodingNeeded::kAlways;
-    case CodingContext::kOutsideEnvelope:
-      return coding_needed;
-  }
-}
-
-}  // namespace
-
 struct Type;
 struct StructType;
 
@@ -144,20 +120,19 @@ struct Type {
     kVector,
   };
 
-  Type(Kind kind, std::string coded_name, uint32_t size, CodingNeeded coding_needed)
+  Type(Kind kind, std::string coded_name, uint32_t size, bool coding_needed)
       : kind(kind), coded_name(std::move(coded_name)), size(size), coding_needed(coding_needed) {}
 
   const Kind kind;
   const std::string coded_name;
   uint32_t size;
-  const CodingNeeded coding_needed;
+  const bool coding_needed;
 };
 
 struct PrimitiveType : public Type {
   PrimitiveType(std::string name, types::PrimitiveSubtype subtype, uint32_t size,
                 CodingContext context)
-      : Type(Kind::kPrimitive, std::move(name), size,
-             WhichCodingNeeded(context, CodingNeeded::kEnvelopeOnly)),
+      : Type(Kind::kPrimitive, std::move(name), size, context == CodingContext::kInsideEnvelope),
         subtype(subtype) {}
 
   const types::PrimitiveSubtype subtype;
@@ -166,7 +141,7 @@ struct PrimitiveType : public Type {
 struct EnumType : public Type {
   EnumType(std::string name, types::PrimitiveSubtype subtype, uint32_t size,
            std::vector<uint64_t> members, std::string qname)
-      : Type(Kind::kEnum, std::move(name), size, CodingNeeded::kAlways),
+      : Type(Kind::kEnum, std::move(name), size, true),
         subtype(subtype),
         members(std::move(members)),
         qname(std::move(qname)) {}
@@ -179,7 +154,7 @@ struct EnumType : public Type {
 struct BitsType : public Type {
   BitsType(std::string name, types::PrimitiveSubtype subtype, uint32_t size, uint64_t mask,
            std::string qname)
-      : Type(Kind::kBits, std::move(name), size, CodingNeeded::kAlways),
+      : Type(Kind::kBits, std::move(name), size, true),
         subtype(subtype),
         mask(mask),
         qname(std::move(qname)) {}
@@ -191,7 +166,7 @@ struct BitsType : public Type {
 
 struct HandleType : public Type {
   HandleType(std::string name, types::HandleSubtype subtype, types::Nullability nullability)
-      : Type(Kind::kHandle, std::move(name), 4u, CodingNeeded::kAlways),
+      : Type(Kind::kHandle, std::move(name), 4u, true),
         subtype(subtype),
         nullability(nullability) {}
 
@@ -201,16 +176,14 @@ struct HandleType : public Type {
 
 struct ProtocolHandleType : public Type {
   ProtocolHandleType(std::string name, types::Nullability nullability)
-      : Type(Kind::kProtocolHandle, std::move(name), 4u, CodingNeeded::kAlways),
-        nullability(nullability) {}
+      : Type(Kind::kProtocolHandle, std::move(name), 4u, true), nullability(nullability) {}
 
   const types::Nullability nullability;
 };
 
 struct RequestHandleType : public Type {
   RequestHandleType(std::string name, types::Nullability nullability)
-      : Type(Kind::kRequestHandle, std::move(name), 4u, CodingNeeded::kAlways),
-        nullability(nullability) {}
+      : Type(Kind::kRequestHandle, std::move(name), 4u, true), nullability(nullability) {}
 
   const types::Nullability nullability;
 };
@@ -220,7 +193,7 @@ struct StructPointerType;
 struct StructType : public Type {
   StructType(std::string name, std::vector<StructField> fields, uint32_t size,
              uint32_t max_out_of_line, bool contains_union, std::string qname)
-      : Type(Kind::kStruct, std::move(name), size, CodingNeeded::kAlways),
+      : Type(Kind::kStruct, std::move(name), size, true),
         max_out_of_line(max_out_of_line),
         contains_union(contains_union),
         fields(std::move(fields)),
@@ -235,7 +208,7 @@ struct StructType : public Type {
 
 struct StructPointerType : public Type {
   StructPointerType(std::string name, const Type* type, const uint32_t pointer_size)
-      : Type(Kind::kStructPointer, std::move(name), pointer_size, CodingNeeded::kAlways),
+      : Type(Kind::kStructPointer, std::move(name), pointer_size, true),
         element_type(static_cast<const StructType*>(type)) {
     assert(type->kind == Type::Kind::kStruct);
   }
@@ -248,7 +221,7 @@ struct UnionPointerType;
 struct UnionType : public Type {
   UnionType(std::string name, std::vector<UnionField> members, uint32_t data_offset, uint32_t size,
             std::string qname)
-      : Type(Kind::kUnion, std::move(name), size, CodingNeeded::kAlways),
+      : Type(Kind::kUnion, std::move(name), size, true),
         members(std::move(members)),
         data_offset(data_offset),
         qname(std::move(qname)) {}
@@ -261,7 +234,7 @@ struct UnionType : public Type {
 
 struct UnionPointerType : public Type {
   UnionPointerType(std::string name, const Type* type, const uint32_t pointer_size)
-      : Type(Kind::kUnionPointer, std::move(name), pointer_size, CodingNeeded::kAlways),
+      : Type(Kind::kUnionPointer, std::move(name), pointer_size, true),
         element_type(static_cast<const UnionType*>(type)) {
     assert(type->kind == Type::Kind::kUnion);
   }
@@ -271,7 +244,7 @@ struct UnionPointerType : public Type {
 
 struct TableType : public Type {
   TableType(std::string name, std::vector<TableField> fields, uint32_t size, std::string qname)
-      : Type(Kind::kTable, std::move(name), size, CodingNeeded::kAlways),
+      : Type(Kind::kTable, std::move(name), size, true),
         fields(std::move(fields)),
         qname(std::move(qname)) {}
 
@@ -282,7 +255,7 @@ struct TableType : public Type {
 struct XUnionType : public Type {
   XUnionType(std::string name, std::vector<XUnionField> fields, std::string qname,
              types::Nullability nullability, types::Strictness strictness)
-      : Type(Kind::kXUnion, std::move(name), 24u, CodingNeeded::kAlways),
+      : Type(Kind::kXUnion, std::move(name), 24u, true),
         fields(std::move(fields)),
         qname(std::move(qname)),
         nullability(nullability),
@@ -310,7 +283,7 @@ struct XUnionType : public Type {
 struct MessageType : public Type {
   MessageType(std::string name, std::vector<StructField> fields, uint32_t size,
               uint32_t max_out_of_line, bool contains_union, std::string qname)
-      : Type(Kind::kMessage, std::move(name), size, CodingNeeded::kAlways),
+      : Type(Kind::kMessage, std::move(name), size, true),
         max_out_of_line(max_out_of_line),
         contains_union(contains_union),
         fields(std::move(fields)),
@@ -325,7 +298,7 @@ struct MessageType : public Type {
 struct ProtocolType : public Type {
   explicit ProtocolType(std::vector<std::unique_ptr<MessageType>> messages_during_compile)
       // N.B. ProtocolTypes are never used in the eventual coding table generation.
-      : Type(Kind::kProtocol, "", 0, CodingNeeded::kEnvelopeOnly),
+      : Type(Kind::kProtocol, "", 0, false),
         messages_during_compile(std::move(messages_during_compile)) {}
 
   // Note: the messages are moved from the protocol type into the
@@ -341,7 +314,7 @@ struct ArrayType : public Type {
   ArrayType(std::string name, const Type* element_type, uint32_t array_size, uint32_t element_size,
             CodingContext context)
       : Type(Kind::kArray, std::move(name), array_size,
-             WhichCodingNeeded(context, element_type->coding_needed)),
+             context == CodingContext::kInsideEnvelope || element_type->coding_needed),
         element_type(element_type),
         element_size(element_size) {}
 
@@ -351,7 +324,7 @@ struct ArrayType : public Type {
 
 struct StringType : public Type {
   StringType(std::string name, uint32_t max_size, types::Nullability nullability)
-      : Type(Kind::kString, std::move(name), 16u, CodingNeeded::kAlways),
+      : Type(Kind::kString, std::move(name), 16u, true),
         max_size(max_size),
         nullability(nullability) {}
 
@@ -362,7 +335,7 @@ struct StringType : public Type {
 struct VectorType : public Type {
   VectorType(std::string name, const Type* element_type, uint32_t max_count, uint32_t element_size,
              types::Nullability nullability)
-      : Type(Kind::kVector, std::move(name), 16u, CodingNeeded::kAlways),
+      : Type(Kind::kVector, std::move(name), 16u, true),
         element_type(element_type),
         max_count(max_count),
         element_size(element_size),

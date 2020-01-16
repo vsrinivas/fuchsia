@@ -397,7 +397,7 @@ void TablesGenerator::Generate(const coded::VectorType& vector_type) {
 }
 
 void TablesGenerator::Generate(const coded::Type* type) {
-  if (type && type->coding_needed == coded::CodingNeeded::kAlways) {
+  if (type && type->coding_needed) {
     Emit(&tables_file_, "&");
     Emit(&tables_file_, NameTable(CodedNameForEnvelope(type)));
   } else {
@@ -556,7 +556,7 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
   // These are composed in an ad-hoc way in FIDL source, hence we generate "static" coding tables
   // local to the translation unit.
   for (const auto& coded_type : coded_types_generator->coded_types()) {
-    if (coded_type->coding_needed == coded::CodingNeeded::kEnvelopeOnly)
+    if (!coded_type->coding_needed)
       continue;
 
     switch (coded_type->kind) {

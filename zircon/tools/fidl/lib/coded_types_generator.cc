@@ -14,8 +14,7 @@ std::vector<const coded::Type*> CodedTypesGenerator::AllCodedTypes() const {
 
   for (const auto& coded_type : coded_types_) {
     assert(coded_type.get());
-
-    if (coded_type->coding_needed == coded::CodingNeeded::kEnvelopeOnly)
+    if (!coded_type->coding_needed)
       continue;
 
     coded_types.push_back(coded_type.get());
@@ -36,17 +35,21 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
   switch (type->kind) {
     case flat::Type::Kind::kArray: {
       auto array_type = static_cast<const flat::ArrayType*>(type);
-      auto iter = array_type_map_.find(WithContext(context, array_type));
-      if (iter != array_type_map_.end())
-        return iter->second;
       auto coded_element_type = CompileType(array_type->element_type,
                                             coded::CodingContext::kOutsideEnvelope, wire_format);
+      bool coding_needed =
+          (context == coded::CodingContext::kInsideEnvelope) || coded_element_type->coding_needed;
+
+      auto iter = array_type_map_.find(std::make_pair(coding_needed, array_type));
+      if (iter != array_type_map_.end())
+        return iter->second;
+
       uint32_t array_size = array_type->typeshape(wire_format).InlineSize();
       uint32_t element_size = array_type->element_type->typeshape(wire_format).InlineSize();
       auto name = NameCodedArray(coded_element_type->coded_name, array_size, wire_format);
       auto coded_array_type = std::make_unique<coded::ArrayType>(
           std::move(name), coded_element_type, array_size, element_size, context);
-      array_type_map_[WithContext(context, array_type)] = coded_array_type.get();
+      array_type_map_[std::make_pair(coding_needed, array_type)] = coded_array_type.get();
       coded_types_.push_back(std::move(coded_array_type));
       return coded_types_.back().get();
     }
@@ -108,14 +111,16 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
     }
     case flat::Type::Kind::kPrimitive: {
       auto primitive_type = static_cast<const flat::PrimitiveType*>(type);
-      auto iter = primitive_type_map_.find(WithContext(context, primitive_type));
+      auto iter = primitive_type_map_.find(
+          std::make_pair(context == coded::CodingContext::kInsideEnvelope, primitive_type));
       if (iter != primitive_type_map_.end())
         return iter->second;
       auto name = NameFlatName(primitive_type->name);
       auto coded_primitive_type = std::make_unique<coded::PrimitiveType>(
           std::move(name), primitive_type->subtype,
           primitive_type->typeshape(wire_format).InlineSize(), context);
-      primitive_type_map_[WithContext(context, primitive_type)] = coded_primitive_type.get();
+      primitive_type_map_[std::make_pair(context == coded::CodingContext::kInsideEnvelope,
+                                         primitive_type)] = coded_primitive_type.get();
       coded_types_.push_back(std::move(coded_primitive_type));
       return coded_types_.back().get();
     }
@@ -288,7 +293,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
                 coded_message->coded_name + "_" + std::string(parameter.name.data());
             auto coded_parameter_type = CompileType(
                 parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope, wire_format);
-            if (coded_parameter_type->coding_needed == coded::CodingNeeded::kAlways) {
+            if (coded_parameter_type->coding_needed) {
               request_fields.emplace_back(
                   coded_parameter_type, parameter.typeshape(wire_format).InlineSize(),
                   parameter.fieldshape(wire_format).Offset(),
@@ -330,7 +335,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
         std::string member_name = coded_struct->coded_name + "_" + std::string(member.name.data());
         auto coded_member_type = CompileType(member.type_ctor->type,
                                              coded::CodingContext::kOutsideEnvelope, wire_format);
-        if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
+        if (coded_member_type->coding_needed) {
           [[maybe_unused]] auto is_primitive =
               coded_member_type->kind == coded::Type::Kind::kPrimitive;
           assert(!is_primitive && "No primitive in struct coding table!");
@@ -384,7 +389,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
                 CompileType(member.maybe_used->type_ctor->type,
                             coded::CodingContext::kInsideEnvelope, wire_format);
             const coded::Type* member_type = [&]() -> const coded::Type* {
-              if (coded_member_type->coding_needed != coded::CodingNeeded::kAlways)
+              if (!coded_member_type->coding_needed)
                 return nullptr;
 
               if (coded_member_type->kind == coded::Type::Kind::kPrimitive)

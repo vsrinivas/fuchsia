@@ -14,29 +14,6 @@
 
 namespace fidl {
 
-template <typename T>
-struct WithContext {
-  WithContext(coded::CodingContext c, T* t) : context(c), type(t) {}
-
-  const coded::CodingContext context;
-  const T* type;
-};
-
-template <typename T>
-struct WithContextCompare {
-  bool operator()(const WithContext<T>& lhs, const WithContext<T>& rhs) const {
-    flat::PtrCompare<T> comparator;
-    bool a_less_b = comparator(lhs.type, rhs.type);
-    bool b_less_a = comparator(rhs.type, lhs.type);
-    if (!a_less_b && !b_less_a) {
-      // types are equivalent
-      return lhs.context < rhs.context;
-    } else {
-      return a_less_b;
-    }
-  }
-};
-
 class CodedTypesGenerator {
  public:
   explicit CodedTypesGenerator(const flat::Library* library) : library_(library) {}
@@ -66,17 +43,32 @@ class CodedTypesGenerator {
   template <typename FlatType, typename CodedType>
   using TypeMap = std::map<const FlatType*, const CodedType*, flat::PtrCompare<const FlatType>>;
 
+  template <typename T, typename P = const T*>
+  struct MaybeCodedTypeCompare {
+    bool operator()(const std::pair<bool, P>& lhs, const std::pair<bool, P>& rhs) const {
+      flat::PtrCompare<T> comparator;
+      bool a_less_b = comparator(lhs.second, rhs.second);
+      bool b_less_a = comparator(rhs.second, lhs.second);
+      if (!a_less_b && !b_less_a) {
+        // types are equivalent
+        return lhs.first < rhs.first;
+      } else {
+        return a_less_b;
+      }
+    }
+  };
+
   template <typename FlatType, typename CodedType>
-  using ContextTypeMap = std::map<const WithContext<const FlatType>, const CodedType*,
-                                  WithContextCompare<const FlatType>>;
+  using MaybeCodedTypeMap = std::map<const std::pair<bool, const FlatType*>, const CodedType*,
+                                     MaybeCodedTypeCompare<FlatType>>;
 
   // All flat::Types and flat::Names here are owned by library_, and
   // all coded::Types by the named_coded_types_ map or the coded_types_ vector.
-  ContextTypeMap<flat::PrimitiveType, coded::PrimitiveType> primitive_type_map_;
+  MaybeCodedTypeMap<flat::PrimitiveType, coded::PrimitiveType> primitive_type_map_;
   TypeMap<flat::HandleType, coded::HandleType> handle_type_map_;
   TypeMap<flat::RequestHandleType, coded::RequestHandleType> request_type_map_;
   TypeMap<flat::IdentifierType, coded::ProtocolHandleType> protocol_type_map_;
-  ContextTypeMap<flat::ArrayType, coded::ArrayType> array_type_map_;
+  MaybeCodedTypeMap<flat::ArrayType, coded::ArrayType> array_type_map_;
   TypeMap<flat::VectorType, coded::VectorType> vector_type_map_;
   TypeMap<flat::StringType, coded::StringType> string_type_map_;
   TypeMap<flat::IdentifierType, coded::XUnionType> xunion_type_map_;
