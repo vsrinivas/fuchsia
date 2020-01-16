@@ -66,19 +66,12 @@ async fn echo_interposer_test() -> Result<(), Error> {
 
     let breakpoint_system =
         test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
-    let receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
-
-    breakpoint_system.start_component_manager().await?;
-
-    // Wait for echo_looper to attempt to connect to the Echo service
-    let invocation = receiver
-        .wait_until_component_capability("./echo_looper:0", "/svc/fidl.examples.routing.echo.Echo")
-        .await?;
 
     // Setup the interposer
     let (interposer, mut rx) = EchoInterposer::new();
-    invocation.interpose(interposer).await?;
-    invocation.resume().await?;
+    breakpoint_system.install_interposer(interposer).await?;
+
+    breakpoint_system.start_component_manager().await?;
 
     // Ensure that the string "Interposed: Hippos rule!" is sent 10 times as a response
     // from server to client.

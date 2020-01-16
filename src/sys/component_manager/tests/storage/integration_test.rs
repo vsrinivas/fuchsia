@@ -80,6 +80,11 @@ async fn storage_from_collection() -> Result<(), Error> {
         .await?;
     let bind_receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
+    // The root component connects to the Trigger capability to start the dynamic child.
+    // Inject the Trigger capability upon request.
+    let trigger_capability = TriggerCapability::new();
+    breakpoint_system.install_injector(trigger_capability).await?;
+
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be started
@@ -108,13 +113,7 @@ async fn storage_from_collection() -> Result<(), Error> {
 
     check_storage(memfs_path.clone(), data_path, "coll:storage_user:1").await?;
 
-    // The root component connects to the Trigger service to start the dynamic child
-    let trigger_capability = TriggerCapability::new();
-    let invocation = bind_receiver
-        .wait_until_framework_capability(".", "/svc/fidl.test.components.Trigger", Some("."))
-        .await?;
-    invocation.inject(trigger_capability).await?;
-    invocation.resume().await?;
+    drop(bind_receiver);
 
     // Expect the dynamic child to be destroyed
     let invocation = receiver.expect_exact::<PostDestroyInstance>("./coll:storage_user:1").await?;

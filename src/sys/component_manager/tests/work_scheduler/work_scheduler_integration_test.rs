@@ -30,22 +30,14 @@ async fn basic_work_scheduler_test() -> Result<(), Error> {
     let breakpoint_system =
         test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
     let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
-    let route_receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
+
+    let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
+    breakpoint_system.install_injector(work_scheduler_dispatch_reporter.clone()).await?;
 
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
     let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
-    invocation.resume().await?;
-
-    let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-
-    // Wait until `.` connects to `WorkSchedulerDispatchReporter` and inject
-    // the capability from here.
-    let invocation = route_receiver
-        .wait_until_framework_capability(".", WORK_SCHEDULER_DISPATCH_REPORTER, Some("."))
-        .await?;
-    invocation.inject(work_scheduler_dispatch_reporter.clone()).await?;
     invocation.resume().await?;
 
     let dispatched_event = work_scheduler_dispatch_reporter
@@ -66,15 +58,14 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
         test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
     let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
 
+    let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
+    breakpoint_system.install_injector(work_scheduler_dispatch_reporter.clone()).await?;
+
     breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
     let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
     invocation.resume().await?;
-
-    let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-
-    let route_receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
     // `/worker_sibling:0` has started.
     let invocation = receiver.expect_exact::<BeforeStartInstance>("./worker_sibling:0").await?;
@@ -82,18 +73,6 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
 
     // We no longer need to track `StartInstance` events.
     drop(receiver);
-
-    // Wait until `/worker_child:0` connects to `WorkSchedulerDispatchReporter`
-    // and inject the capability from here.
-    let invocation = route_receiver
-        .wait_until_framework_capability(
-            "./worker_child:0",
-            WORK_SCHEDULER_DISPATCH_REPORTER,
-            Some("./worker_child:0"),
-        )
-        .await?;
-    invocation.inject(work_scheduler_dispatch_reporter.clone()).await?;
-    invocation.resume().await?;
 
     let dispatched_event = work_scheduler_dispatch_reporter
         .wait_for_dispatched(std::time::Duration::from_secs(10))

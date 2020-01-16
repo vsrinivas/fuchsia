@@ -56,6 +56,52 @@ impl BreakpointSystemClient {
         Ok(EventSink::soak_async(receiver))
     }
 
+    // This is a convenience method that sets a breakpoint on the the `RouteCapability`,
+    // spawns a new task, and injects the service provided by the injector if requested
+    // by the invocation.
+    pub async fn install_injector<I: 'static>(&self, injector: Arc<I>) -> Result<(), Error>
+    where
+        I: Injector,
+    {
+        let receiver = self.set_breakpoints(vec![RouteCapability::TYPE]).await?;
+        fasync::spawn(async move {
+            loop {
+                let invocation =
+                    receiver.wait_until_type::<RouteCapability>().await.expect("Type mismatch");
+
+                if invocation.capability_id == injector.capability_path() {
+                    invocation.inject(injector.clone()).await.expect("injection failed");
+                }
+
+                invocation.resume().await.expect("resumption failed");
+            }
+        });
+        Ok(())
+    }
+
+    // This is a convenience method that sets a breakpoint on the the `RouteCapability`,
+    // spawns a new task, and interposes the service provided by the interposer if requested
+    // by the invocation.
+    pub async fn install_interposer<I: 'static>(&self, interposer: Arc<I>) -> Result<(), Error>
+    where
+        I: Interposer,
+    {
+        let receiver = self.set_breakpoints(vec![RouteCapability::TYPE]).await?;
+        fasync::spawn(async move {
+            loop {
+                let invocation =
+                    receiver.wait_until_type::<RouteCapability>().await.expect("Type mismatch");
+
+                if invocation.capability_id == interposer.capability_path() {
+                    invocation.interpose(interposer.clone()).await.expect("injection failed");
+                }
+
+                invocation.resume().await.expect("resumption failed");
+            }
+        });
+        Ok(())
+    }
+
     pub async fn start_component_manager(&self) -> Result<(), Error> {
         self.proxy.start_component_tree().await.context("could not start component tree")?;
         Ok(())
@@ -210,7 +256,7 @@ impl Handler for fbreak::Invocation {
 ///
 /// Client <---> Injector
 #[async_trait]
-pub trait Injector: Sync + Send {
+pub trait Injector: Send + Sync {
     type Marker: ServiceMarker;
 
     /// This function will be run in a spawned task when a client attempts
@@ -220,6 +266,10 @@ pub trait Injector: Sync + Send {
         self: Arc<Self>,
         mut request_stream: <<Self as Injector>::Marker as ServiceMarker>::RequestStream,
     );
+
+    fn capability_path(&self) -> String {
+        format!("/svc/{}", Self::Marker::NAME)
+    }
 }
 
 /// An Interposer allows a test to sit between a service and a client
@@ -227,7 +277,7 @@ pub trait Injector: Sync + Send {
 ///
 /// Client <---> Interposer <---> Service
 #[async_trait]
-pub trait Interposer: Sync + Send {
+pub trait Interposer: Send + Sync {
     type Marker: ServiceMarker;
 
     /// This function will be run asynchronously when a client attempts
@@ -239,6 +289,10 @@ pub trait Interposer: Sync + Send {
         mut request_stream: <<Self as Interposer>::Marker as ServiceMarker>::RequestStream,
         to_service: <<Self as Interposer>::Marker as ServiceMarker>::Proxy,
     );
+
+    fn capability_path(&self) -> String {
+        format!("/svc/{}", Self::Marker::NAME)
+    }
 }
 
 /// A protocol that allows routing capabilities over FIDL.

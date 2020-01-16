@@ -28,7 +28,6 @@ impl TestRunner {
     async fn start(
         root_component_url: &str,
         num_eager_static_components: i32,
-        reporter_moniker: &str,
         event_types: Vec<fbreak::EventType>,
     ) -> Result<(TestRunner, InvocationReceiverClient), Error> {
         assert!(
@@ -51,13 +50,14 @@ impl TestRunner {
                 .expect("breakpoint system failed to connect");
             let start_receiver =
                 breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
-            let route_receiver =
-                breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
             // Register for events which are required by this test runner.
             // TODO(xbhatnag): There may be problems here if event_types contains
             // StartInstance or RouteFrameworkCapability
             let receiver = breakpoint_system.set_breakpoints(event_types).await?;
+
+            // Inject HubReportCapability wherever it's requested.
+            breakpoint_system.install_injector(hub_report_capability.clone()).await?;
 
             // Unblock component manager
             breakpoint_system.start_component_manager().await?;
@@ -69,18 +69,6 @@ impl TestRunner {
             for _ in 1..=(num_eager_static_components - 1) {
                 start_receiver.expect_type::<BeforeStartInstance>().await?.resume().await?;
             }
-
-            // Inject HubTestHook as a scoped framework capability
-            let invocation = route_receiver
-                .wait_until_framework_capability(
-                    reporter_moniker,
-                    HUB_REPORT_SERVICE,
-                    Some(reporter_moniker),
-                )
-                .await?;
-
-            invocation.inject(hub_report_capability.clone()).await?;
-            invocation.resume().await?;
 
             // Return the receiver to be used later
             (breakpoint_system, receiver)
@@ -207,7 +195,6 @@ async fn advanced_routing() -> Result<(), Error> {
     let (test_runner, _) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/advanced_routing_echo_realm.cm",
         3,
-        "./reporter:0",
         vec![],
     )
     .await?;
@@ -322,7 +309,6 @@ async fn used_service_test() -> Result<(), Error> {
     let (test_runner, _) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/used_service_echo_realm.cm",
         3,
-        "./reporter:0",
         vec![],
     )
     .await?;
@@ -362,7 +348,6 @@ async fn dynamic_child_test() -> Result<(), Error> {
     let (test_runner, receiver) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/dynamic_child_reporter.cm",
         1,
-        ".",
         vec![PreDestroyInstance::TYPE, StopInstance::TYPE, PostDestroyInstance::TYPE],
     )
     .await?;
@@ -488,7 +473,6 @@ async fn visibility_test() -> Result<(), Error> {
     let (test_runner, _) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/visibility_reporter.cm",
         1,
-        ".",
         vec![],
     )
     .await?;
