@@ -13,6 +13,7 @@ group("lib") {
     ":services",
     "app_driver",
     "async",
+    "base64url",
     "common",
     "device_info",
     "entity",
@@ -39,6 +40,7 @@ executable("modular_lib_unittests") {
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/async/cpp:unittests",
+    "//src/modular/lib/base64url:unittests",
     "//src/modular/lib/entity/cpp:unittests",
     "//src/modular/lib/fidl:unittests",
     "//src/modular/lib/modular_config:unittests",

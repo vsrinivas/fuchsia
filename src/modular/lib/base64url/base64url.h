@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_BASE64URL_BASE64URL_H_
-#define PERIDOT_LIB_BASE64URL_BASE64URL_H_
+#ifndef SRC_MODULAR_LIB_BASE64URL_BASE64URL_H_
+#define SRC_MODULAR_LIB_BASE64URL_BASE64URL_H_
 
 #include <string>
 
@@ -21,4 +21,4 @@ bool Base64UrlDecode(fxl::StringView input, std::string* output);
 
 }  // namespace base64url
 
-#endif  // PERIDOT_LIB_BASE64URL_BASE64URL_H_
+#endif  // SRC_MODULAR_LIB_BASE64URL_BASE64URL_H_

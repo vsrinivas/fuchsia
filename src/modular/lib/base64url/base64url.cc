@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/base64url/base64url.h"
+#include "src/modular/lib/base64url/base64url.h"
 
 #include "src/lib/fxl/logging.h"
 #include "third_party/modp_b64/modp_b64.h"

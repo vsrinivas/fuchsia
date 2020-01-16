@@ -4,8 +4,7 @@
 
 visibility = [
   "//src/modular/bin/*",
-  "//peridot/lib/*",
-  "//src/ledger/*",
+  "//src/modular/lib/*",
 ]
 
 source_set("base64url") {

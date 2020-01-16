@@ -85,11 +85,11 @@ source_set("session_storage_xdr") {
 
   deps = [
     ":annotation_xdr",
-    "//peridot/lib/base64url",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//src/ledger/fidl/fuchsia.ledger",
     "//src/lib/fsl",
+    "//src/modular/lib/base64url",
     "//src/modular/lib/fidl:json_xdr",
   ]
 }
@@ -171,9 +171,9 @@ source_set("annotation_xdr") {
   ]
 
   deps = [
-    "//peridot/lib/base64url",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fsl",
+    "//src/modular/lib/base64url",
     "//src/modular/lib/fidl:json_xdr",
   ]
 }
