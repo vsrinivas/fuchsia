@@ -28,8 +28,8 @@ async fn handle_target_request(
             responder.send(&mut Ok(media_sessions.get_supported_notification_events()))?;
         }
         TargetHandlerRequest::GetPlayStatus { responder } => {
-            let mut response = media_sessions.get_active_session().map_or_else(
-                |_| Err(TargetAvcError::RejectedNoAvailablePlayers),
+            let mut response = media_sessions.get_active_session().map_or(
+                Err(TargetAvcError::RejectedNoAvailablePlayers),
                 |state| {
                     let play_status = state.session_info().get_play_status().clone();
                     Ok(play_status.into())
@@ -38,8 +38,8 @@ async fn handle_target_request(
             responder.send(&mut response)?;
         }
         TargetHandlerRequest::GetMediaAttributes { responder } => {
-            let mut response = media_sessions.get_active_session().map_or_else(
-                |_| Err(TargetAvcError::RejectedNoAvailablePlayers),
+            let mut response = media_sessions.get_active_session().map_or(
+                Err(TargetAvcError::RejectedNoAvailablePlayers),
                 |state| {
                     let media_attributes = state.session_info().get_media_info().clone();
                     Ok(media_attributes.into())
@@ -57,15 +57,16 @@ async fn handle_target_request(
         }
         TargetHandlerRequest::ListPlayerApplicationSettingAttributes { responder } => {
             // Send back the static list of Media supported PlayerApplicationSettingAttributes.
-            let mut response = media_sessions.get_active_session().map_or_else(
-                |_| Err(TargetAvcError::RejectedNoAvailablePlayers),
-                |state| Ok(state.get_supported_player_application_setting_attributes()),
-            );
+            let mut response = media_sessions
+                .get_active_session()
+                .map_or(Err(TargetAvcError::RejectedNoAvailablePlayers), |state| {
+                    Ok(state.get_supported_player_application_setting_attributes())
+                });
             responder.send(&mut response)?;
         }
         TargetHandlerRequest::GetPlayerApplicationSettings { attribute_ids, responder } => {
-            let mut response = media_sessions.get_active_session().map_or_else(
-                |_| Err(TargetAvcError::RejectedNoAvailablePlayers),
+            let mut response = media_sessions.get_active_session().map_or(
+                Err(TargetAvcError::RejectedNoAvailablePlayers),
                 |state| {
                     state
                         .session_info()
@@ -85,8 +86,8 @@ async fn handle_target_request(
             }
         }
         TargetHandlerRequest::GetNotification { event_id, responder } => {
-            let mut response = media_sessions.get_active_session().map_or_else(
-                |_| Err(TargetAvcError::RejectedNoAvailablePlayers),
+            let mut response = media_sessions.get_active_session().map_or(
+                Err(TargetAvcError::RejectedNoAvailablePlayers),
                 |state| {
                     let notification = state.session_info().get_notification_value(&event_id);
                     notification.map(|n| n.into())

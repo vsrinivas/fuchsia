@@ -121,38 +121,23 @@ mod tests {
     use super::*;
 
     use crate::media::media_types::ValidPlayerApplicationSettings;
+    use crate::tests::generate_empty_watch_notification;
 
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_avrcp::{
-        self as fidl_avrcp, TargetHandlerMarker, TargetHandlerRequest, TargetHandlerRequestStream,
-        TargetHandlerWatchNotificationResponder,
-    };
+    use fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, TargetHandlerMarker};
     use fuchsia_async as fasync;
-    use futures::stream::TryStreamExt;
-
-    async fn handle_watch_notifications<F>(mut stream: TargetHandlerRequestStream, test_fn: F)
-    where
-        F: Fn(TargetHandlerWatchNotificationResponder) -> (),
-    {
-        while let Some(request) = stream.try_next().await.expect("Should work") {
-            if let TargetHandlerRequest::WatchNotification { responder, .. } = request {
-                // Exercise the test when we get the request.
-                test_fn(responder);
-                return;
-            }
-        }
-    }
 
     #[fasync::run_singlethreaded]
     #[test]
     /// Tests the comparison of `Notification` values works as intended.
-    async fn test_notification_value_changed() {
-        let (proxy, stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+    async fn test_notification_value_changed() -> Result<(), Error> {
+        let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()
             .expect("Couldn't create proxy and stream");
 
-        // Set up the listener that runs the test when the request has been received.
-        fasync::spawn(handle_watch_notifications(stream, |responder| {
-            let mut prev_value: Notification = Default::default();
+        let (result_fut, responder) =
+            generate_empty_watch_notification(&mut proxy, &mut stream).await?;
+        {
+            let mut prev_value = Notification::default();
             prev_value.status = Some(fidl_avrcp::PlaybackStatus::Stopped);
             prev_value.track_id = Some(999);
             prev_value.pos = Some(12345);
@@ -164,7 +149,7 @@ mod tests {
             ));
             let data = NotificationData::new(prev_value, 0, responder);
 
-            let mut curr_value: Notification = Default::default();
+            let mut curr_value = Notification::default();
             curr_value.status = Some(fidl_avrcp::PlaybackStatus::Playing);
             curr_value.track_id = Some(800);
             curr_value.pos = Some(12345);
@@ -204,22 +189,126 @@ mod tests {
                 &curr_value,
             );
             assert!(res5.is_err());
-        }));
-        let notif: Notification = Default::default();
-        let _ = proxy
-            .watch_notification(fidl_avrcp::NotificationEvent::TrackChanged, notif.into(), 0)
-            .await;
+        }
 
-        // TODO(aniramakri): NotificationData is getting dropped, and attempting to send.
+        assert!(result_fut.await.is_ok());
+        Ok(())
     }
 
+    #[fasync::run_singlethreaded]
     #[test]
-    /// Tests sending response over responder successfully consumes and replaces inner responder.
-    // TODO(42623): Write test for this. Need to mock the channel.
-    fn test_update_responder_success() {}
+    /// Tests sending response with a changed value successfully sends over the responder.
+    async fn test_update_responder_changed_value_success() -> Result<(), Error> {
+        let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+            .expect("Couldn't create proxy and stream");
 
+        let (result_fut, responder) =
+            generate_empty_watch_notification(&mut proxy, &mut stream).await?;
+
+        {
+            // Create the data with responder.
+            let curr_value = Notification::default();
+            let data = NotificationData::new(curr_value, 0, responder);
+
+            // Send an update over the responder with a changed value. Should succeed.
+            let changed_value = Notification {
+                status: Some(fidl_avrcp::PlaybackStatus::Paused),
+                ..Notification::default()
+            };
+            let result = data
+                .update_responder(
+                    &fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
+                    Ok(changed_value),
+                )
+                .expect("Updating the responder should succeed");
+            assert!(result.is_none());
+        }
+
+        // The response should be the changed_value.
+        let expected = Notification {
+            status: Some(fidl_avrcp::PlaybackStatus::Paused),
+            ..Notification::default()
+        };
+        assert_eq!(
+            Ok(expected),
+            result_fut.await.expect("FIDL call should work").map(|v| v.into())
+        );
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
     #[test]
-    /// Tests sending response over responder successfully consumes and replaces inner responder.
-    // TODO(42623): Write test for this. Need to mock the channel.
-    fn test_update_responder_error() {}
+    /// Tests sending response with an unchanged value does not send/consume the responder.
+    /// Instead, it should return itself, with the unchanged responder.
+    async fn test_update_responder_same_value_success() -> Result<(), Error> {
+        let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+            .expect("Couldn't create proxy and stream");
+
+        let (result_fut, responder) =
+            generate_empty_watch_notification(&mut proxy, &mut stream).await?;
+
+        {
+            // Create the data with responder.
+            let curr_value = Notification::default();
+            let data = NotificationData::new(curr_value, 0, responder);
+
+            // Send an update over the responder with the same value.
+            // Should return Some(Self).
+            let same_value = Notification::default();
+            let result = data
+                .update_responder(
+                    &fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
+                    Ok(same_value),
+                )
+                .expect("Should work");
+            assert!(result.is_some());
+        }
+
+        // The response should be the original (unchanged) value.
+        // This is because the reply over the responder is never sent and is instead
+        // dropped at the end of the closure. Drop is impl'd for NotificationData, which
+        // sends the current value.
+        let expected = Notification::default();
+        assert_eq!(
+            Ok(expected),
+            result_fut.await.expect("FIDL call should work").map(|v| v.into())
+        );
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    /// Tests sending an error response sends & consumes the responder.
+    async fn test_update_responder_with_error() -> Result<(), Error> {
+        let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+            .expect("Couldn't create proxy and stream");
+
+        let (result_fut, responder) =
+            generate_empty_watch_notification(&mut proxy, &mut stream).await?;
+
+        {
+            // Create the data with responder.
+            let curr_value = Notification::default();
+            let data = NotificationData::new(curr_value, 0, responder);
+
+            // Send an update over the responder with an error value.
+            // Should successfully send over the responder, and consume it.
+            let result = data
+                .update_responder(
+                    &fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
+                    Err(fidl_avrcp::TargetAvcError::RejectedAddressedPlayerChanged),
+                )
+                .expect("Error should successfully send over responder");
+            assert!(result.is_none());
+        }
+
+        // The response should be the error.
+        let expected: Result<fidl_avrcp::Notification, String> =
+            Err("RejectedAddressedPlayerChanged".to_string());
+        assert_eq!(
+            expected,
+            result_fut.await.expect("FIDL call should work").map_err(|e| format!("{:?}", e))
+        );
+        Ok(())
+    }
 }

@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/bt-avrcp-target-unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

@@ -24,7 +24,7 @@ async fn main() -> Result<(), Error> {
     let media_state: Arc<MediaSessions> = Arc::new(MediaSessions::create());
 
     let watch_media_sessions_fut = media_state.watch();
-    let avrcp_requests_fut = process_avrcp_requests(media_state);
+    let avrcp_requests_fut = process_avrcp_requests(media_state.clone());
 
     try_join!(watch_media_sessions_fut, avrcp_requests_fut).map(|_| ())
 }

@@ -260,7 +260,7 @@ impl SessionInfo {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use anyhow::{format_err, Error};
     use fidl::encoding::Decodable as FidlDecodable;
@@ -270,7 +270,7 @@ mod tests {
     use fuchsia_async as fasync;
     use futures::stream::TryStreamExt;
 
-    fn create_metadata() -> fidl_media_types::Metadata {
+    pub(crate) fn create_metadata() -> fidl_media_types::Metadata {
         let mut metadata = fidl_media_types::Metadata::new_empty();
         let mut property1 = fidl_media_types::Property::new_empty();
         property1.label = fidl_media_types::METADATA_LABEL_TITLE.to_string();
@@ -280,7 +280,7 @@ mod tests {
         metadata
     }
 
-    fn create_player_status() -> fidl_media::PlayerStatus {
+    pub(crate) fn create_player_status() -> fidl_media::PlayerStatus {
         let mut player_status = fidl_media::PlayerStatus::new_empty();
 
         let mut timeline_fn = fidl_media_types::TimelineFunction::new_empty();
