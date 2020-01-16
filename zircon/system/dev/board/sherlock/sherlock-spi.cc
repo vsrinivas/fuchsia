@@ -108,6 +108,7 @@ zx_status_t Sherlock::SpiInit() {
   gpio_impl_.SetAltFunction(T931_GPIOC(0), 5);  // MOSI
   gpio_impl_.SetAltFunction(T931_GPIOC(1), 5);  // MISO
   gpio_impl_.ConfigOut(GPIO_SPICC0_SS0, 1);     // SS0
+  gpio_impl_.ConfigIn(T931_GPIOC(3), GPIO_PULL_DOWN);  // SCLK
   gpio_impl_.SetAltFunction(T931_GPIOC(3), 5);  // SCLK
 
   // TODO(ZX-4230): fix this clock enable block when the clock driver can handle the dividers
