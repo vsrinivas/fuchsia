@@ -243,7 +243,6 @@ if (current_cpu != "") {
       "hid",
       "hypervisor",
       "kcounter",
-      "kernel-clocks",
       "kernel-cmdline:test",
       "kernel-unittests",
       "loader-service",
