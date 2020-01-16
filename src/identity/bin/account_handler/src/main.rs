@@ -18,6 +18,8 @@ mod pre_auth;
 mod stored_account;
 
 #[cfg(test)]
+mod fake_authenticator;
+#[cfg(test)]
 mod test_util;
 
 use crate::account_handler::AccountHandler;

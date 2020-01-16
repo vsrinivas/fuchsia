@@ -14,6 +14,7 @@ rustc_binary("bin") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
+    "//sdk/fidl/fuchsia.identity.authentication:fuchsia.identity.authentication-rustc",
     "//sdk/fidl/fuchsia.identity.external:fuchsia.identity.external-rustc",
     "//sdk/fidl/fuchsia.identity.keys:fuchsia.identity.keys-rustc",
     "//sdk/fidl/fuchsia.kms:fuchsia.kms-rustc",
