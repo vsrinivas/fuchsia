@@ -254,7 +254,6 @@ if (current_cpu != "") {
       "minfs-micro-benchmark",
       "mt8167-thermal",
       "noop-fuzzer",
-      "perftest",
       "platform-bus",
       "policy",
       "ramdisk",

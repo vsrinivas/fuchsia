@@ -2,7 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("perftest") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("perftest") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "perf-test"
   sources = [
     "clock-test.cc",
@@ -19,20 +36,23 @@ zx_test("perftest") {
     "timer-test.cc",
   ]
   deps = [
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/async-loop",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/perftest",
-    "$zx/system/ulib/trace",
-    "$zx/system/ulib/trace-engine",
-    "$zx/system/ulib/trace-provider:trace-provider-with-fdio",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/perftest",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-engine",
+    "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
   ]
+}
+
+migrated_manifest("perftest-manifest") {
+  deps = [ ":perftest" ]
 }
