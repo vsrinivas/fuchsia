@@ -24,7 +24,7 @@ use crate::bluetooth::types::{
 };
 
 use crate::common_utils::common::{
-    parse_identifier, parse_max_bytes, parse_offset, parse_service_identifier,
+    parse_identifier, parse_max_bytes, parse_offset, parse_psm, parse_service_identifier,
     parse_u64_identifier, parse_write_value,
 };
 
@@ -463,6 +463,12 @@ async fn profile_server_method_to_fidl(
         }
         "ProfileServerCleanup" => {
             let result = facade.cleanup().await?;
+            Ok(to_value(result)?)
+        }
+        "ProfileServerConnectL2cap" => {
+            let id = parse_identifier(args.clone())?;
+            let psm = parse_psm(args)?;
+            let result = facade.connect_l2cap(id, psm as u16).await?;
             Ok(to_value(result)?)
         }
         "ProfileServerRemoveService" => {

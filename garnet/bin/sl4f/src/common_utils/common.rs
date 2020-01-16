@@ -75,6 +75,10 @@ pub fn parse_max_bytes(args_raw: Value) -> Result<u64, Error> {
     parse_arg!(args_raw, as_u64, "max_bytes").map_err(Into::into)
 }
 
+pub fn parse_psm(args_raw: Value) -> Result<u64, Error> {
+    parse_arg!(args_raw, as_u64, "psm").map_err(Into::into)
+}
+
 pub fn parse_write_value(args_raw: Value) -> Result<Vec<u8>, Error> {
     let arr = parse_arg!(args_raw, as_array, "write_value")?;
     let mut vector: Vec<u8> = Vec::new();

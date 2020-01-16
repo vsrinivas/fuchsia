@@ -662,6 +662,24 @@ impl ProfileServerFacade {
         Ok(())
     }
 
+    pub async fn connect_l2cap(&self, id: String, psm: u16) -> Result<(), Error> {
+        let tag = "ProfileServerFacade::connect_l2cap";
+        let connect_l2cap_future = match &self.inner.read().profile_server_proxy {
+            Some(server) => server.connect_l2cap(&id, psm),
+            None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
+        };
+
+        let connect_l2cap_future = async {
+            let result = connect_l2cap_future.await;
+            if let Err(err) = result {
+                fx_log_err!("Failed connect_l2cap with: {:?}", err);
+            };
+        };
+        fasync::spawn(connect_l2cap_future);
+
+        Ok(())
+    }
+
     /// Cleanup any Profile Server related objects.
     pub async fn cleanup(&self) -> Result<(), Error> {
         let tag = "ProfileServerFacade::cleanup";
