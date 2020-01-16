@@ -8,22 +8,14 @@ zx_driver("virtio") {
     "input_kbd.cc",
     "input_touch.cc",
     "rng.cc",
-    "socket.cc",
     "virtio_driver.cc",
   ]
   deps = [
     ":common",
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/fidl/fuchsia-hardware-pty:c",  # for input
-    "$zx/system/fidl/fuchsia-hardware-vsock:c",
-    "$zx/system/ulib/async:async-cpp",  # for socket
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/hid",
   ]
-
-  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  deprecated_inhibit_driver_shlib_allowlist = true
 }
 
 zx_driver("virtio_block") {
@@ -109,6 +101,24 @@ source_set("scsi_lib") {
     "$zx/system/dev/lib/scsi",
     "$zx/system/ulib/ddktl",
   ]
+}
+
+zx_driver("virtio_socket") {
+  sources = [
+    "socket.cc",
+    "socket_driver.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/fidl/fuchsia-hardware-vsock:c",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/ddktl",
+  ]
+
+  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+  deprecated_inhibit_driver_shlib_allowlist = true
 }
 
 source_set("common") {

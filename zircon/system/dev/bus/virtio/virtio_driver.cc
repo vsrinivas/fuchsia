@@ -24,7 +24,6 @@
 #include "driver_utils.h"
 #include "input.h"
 #include "rng.h"
-#include "socket.h"
 
 static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
   zx_status_t status;
@@ -48,8 +47,6 @@ static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
       return CreateAndBind<virtio::RngDevice>(ctx, bus_device);
     case VIRTIO_DEV_TYPE_INPUT:
       return CreateAndBind<virtio::InputDevice>(ctx, bus_device);
-    case VIRTIO_DEV_TYPE_SOCKET:
-      return CreateAndBind<virtio::SocketDevice>(ctx, bus_device);
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -68,5 +65,4 @@ BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, VIRTIO_PCI_VENDOR_ID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_ENTROPY),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_ENTROPY),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_INPUT),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_SOCKET), BI_ABORT(), ZIRCON_DRIVER_END(virtio)
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_INPUT), BI_ABORT(), ZIRCON_DRIVER_END(virtio)

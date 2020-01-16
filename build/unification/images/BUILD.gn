@@ -337,6 +337,7 @@ aggregate_manifest("legacy-image") {
     ":driver.virtio_ethernet",
     ":driver.virtio_gpu",
     ":driver.virtio_scsi",
+    ":driver.virtio_socket",
     ":driver.xhci",
     ":driver.zxcrypt",
     ":test.sys.usb-device-test",
