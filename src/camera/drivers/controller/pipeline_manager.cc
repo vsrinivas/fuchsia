@@ -197,7 +197,6 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
   // Here at top level we check what type of input stream do we have to deal with
   switch (info->node.input_stream_type) {
     case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
-      fbl::AutoLock lock(&full_resolution_stream_lock_);
       if (full_resolution_stream_) {
         // If the same stream is requested again, we return failure.
         if (HasStreamType(full_resolution_stream_->configured_streams(),
@@ -223,7 +222,6 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
     }
 
     case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
-      fbl::AutoLock lock(&downscaled_resolution_stream_lock_);
       if (downscaled_resolution_stream_) {
         // If the same stream is requested again, we return failure.
         if (HasStreamType(downscaled_resolution_stream_->configured_streams(),
@@ -296,7 +294,6 @@ void PipelineManager::DisconnectStream(ProcessNode* graph_head,
 
     switch (input_stream_type) {
       case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
-        fbl::AutoLock lock(&full_resolution_stream_lock_);
         ZX_ASSERT_MSG(full_resolution_stream_ != nullptr, "FR node is null");
         if (full_resolution_stream_->configured_streams().size() == 1) {
           full_resolution_stream_ = nullptr;
@@ -307,7 +304,6 @@ void PipelineManager::DisconnectStream(ProcessNode* graph_head,
         break;
       }
       case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
-        fbl::AutoLock lock(&downscaled_resolution_stream_lock_);
         ZX_ASSERT_MSG(downscaled_resolution_stream_ != nullptr, "DS node is null");
         if (downscaled_resolution_stream_->configured_streams().size() == 1) {
           downscaled_resolution_stream_ = nullptr;
@@ -347,13 +343,11 @@ void PipelineManager::OnClientStreamDisconnect(
   ProcessNode* graph_head = nullptr;
   switch (input_stream_type) {
     case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
-      fbl::AutoLock lock(&full_resolution_stream_lock_);
       ZX_ASSERT_MSG(full_resolution_stream_ != nullptr, "FR node is null");
       graph_head = full_resolution_stream_.get();
       break;
     }
     case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
-      fbl::AutoLock lock(&downscaled_resolution_stream_lock_);
       ZX_ASSERT_MSG(downscaled_resolution_stream_ != nullptr, "DS node is null");
       graph_head = downscaled_resolution_stream_.get();
       break;

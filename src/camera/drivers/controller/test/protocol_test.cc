@@ -452,6 +452,10 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     pipeline_manager_->OnClientStreamDisconnect(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
                                                 stream_type_ds);
     RunLoopUntilIdle();
+
+    while (pipeline_manager_->full_resolution_stream() != nullptr) {
+      RunLoopUntilIdle();
+    }
   }
 
   void TestGdcConfigLoading() {

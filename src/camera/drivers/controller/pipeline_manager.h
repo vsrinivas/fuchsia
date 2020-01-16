@@ -80,14 +80,8 @@ class PipelineManager {
       StreamCreationData* info, const InternalConfigNode& current_internal_node,
       ProcessNode* graph_head);
 
-  ProcessNode* full_resolution_stream() {
-    fbl::AutoLock lock(&full_resolution_stream_lock_);
-    return full_resolution_stream_.get();
-  }
-  ProcessNode* downscaled_resolution_stream() {
-    fbl::AutoLock lock(&downscaled_resolution_stream_lock_);
-    return downscaled_resolution_stream_.get();
-  }
+  ProcessNode* full_resolution_stream() { return full_resolution_stream_.get(); }
+  ProcessNode* downscaled_resolution_stream() { return downscaled_resolution_stream_.get(); }
 
  private:
   fit::result<std::unique_ptr<InputNode>, zx_status_t> ConfigureStreamPipelineHelper(
@@ -96,20 +90,13 @@ class PipelineManager {
   // Lock to guard |event_queue_|.
   fbl::Mutex event_queue_lock_;
 
-  // Lock to guard the graph heads which are accessed in two different loops.
-  // 1. Loop servicing HAL protocol.
-  // 2. Loop servicing Stream protocol.
-  fbl::Mutex full_resolution_stream_lock_;
-  fbl::Mutex downscaled_resolution_stream_lock_;
-
   zx_device_t* device_;
   async_dispatcher_t* dispatcher_;
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;
   ControllerMemoryAllocator memory_allocator_;
-  std::unique_ptr<ProcessNode> full_resolution_stream_ __TA_GUARDED(full_resolution_stream_lock_);
-  std::unique_ptr<ProcessNode> downscaled_resolution_stream_
-      __TA_GUARDED(downscaled_resolution_stream_lock_);
+  std::unique_ptr<ProcessNode> full_resolution_stream_;
+  std::unique_ptr<ProcessNode> downscaled_resolution_stream_;
   std::queue<async::TaskClosure> event_queue_ __TA_GUARDED(event_queue_lock_);
 };
 
