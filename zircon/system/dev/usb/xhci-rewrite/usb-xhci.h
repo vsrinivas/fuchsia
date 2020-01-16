@@ -181,7 +181,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // Returns the value in the CAPLENGTH register
   uint8_t CapLength() const { return cap_length_; }
 
-  uint8_t DeviceIdToSlotId(uint8_t device_id) const { return device_id + 1; }
+  uint8_t DeviceIdToSlotId(uint8_t device_id) const { return static_cast<uint8_t>(device_id + 1); }
 
   void SetDeviceInformation(uint8_t slot, uint8_t port, const std::optional<HubInfo>& hub);
 
@@ -567,12 +567,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   sync_completion_t init_complete_;
 
   std::optional<thrd_t> init_thread_;
-};
-
-// Shared mutable state that can be shared between multiple stages of a promise
-template <typename T>
-struct SharedAsyncState : public fbl::RefCounted<SharedAsyncState<T>> {
-  T state;
 };
 
 }  // namespace usb_xhci
