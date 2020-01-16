@@ -71,6 +71,7 @@ enum Error : int32 {
     CLOSED = 6;
 };
 
+[Discoverable]
 protocol Device {
     /// Opens the Spinel connection and performs initialization.
     ///
@@ -124,20 +125,66 @@ protocol Device {
     ///
     /// Calling this method while the device is closed will cause
     /// the frame to be dropped and `->OnError()` to emit `Error::CLOSED`.
-    SendFrame(bytes:MAX_FRAME_SIZE data) -> ();
+    ///
+    /// See `->OnReadyForSendFrames()` for flow-control considerations.
+    SendFrame(bytes:MAX_FRAME_SIZE data);
 
-    /// Indicates the that the caller is ready for `->OnReceiveFrame()` to
-    /// be called. It must be called once before each received frame.
-    ReadyToReceiveFrame();
+    /// Increases the number of additional frames that the caller is
+    /// currently ready to receive, as a method of inbound flow-control.
+    ///
+    /// The caller can use this method to regulate the speed at which
+    /// inbound frames are handled. This method should be called periodically
+    /// to ensure low-latency frame delivery.
+    ///
+    /// Calling this method with a non-zero value indicates to the
+    /// receiver that the caller is ready to receive the specified
+    /// additional number of frames.
+    ///
+    /// This method SHOULD NOT be called with a value of zero. If the
+    /// receiver gets this call with a value of zero, it MUST be ignored.
+    ///
+    /// Frames will not be received until this method is first called
+    /// with a non-zero value. Once received, the receiver will limit
+    /// the number of subsequent frames emitted via `->OnReceiveFrame()`
+    /// to the given number of frames.
+    ///
+    /// Calling this method while the device is closed will do nothing.
+    ///
+    /// A reasonable usage pattern would be to first call this method
+    /// with a value of 4, calling it again with a value of 2 after
+    /// every second received inbound frame.
+    ///
+    /// Outbound flow control is similarly accomplished via `->OnReadyForSendFrames()`.
+    ReadyToReceiveFrames(uint32 number_of_frames);
+
+    /// Increases the number of additional frames that the Device is currently
+    /// ready to receive, as a method of outbound flow-control.
+    ///
+    /// The Device uses this callback to regulate the speed at which
+    /// outbound frames are sent to it. This callback will be called
+    /// periodically to ensure low-latency frame delivery.
+    ///
+    /// When this callback is invoked with a non-zero value, the device
+    /// is indicating that it is ready to receive the specified number
+    /// of additional frames.
+    ///
+    /// This callback SHOULD NOT be invoked with a value of zero, and if
+    /// a zero value is received via this callback it MUST be ignored.
+    ///
+    /// Frames MUST NOT be sent until this callback is first called
+    /// with a non-zero value.
+    ///
+    /// A reasonable usage pattern would be for the device to first
+    /// invoke this callback with a value of 4, invoking it again with
+    /// a value of 2 after every second received outbound frame.
+    ///
+    /// Inbound flow control is similarly accomplished via `ReadyToReceiveFrames()`.
+    -> OnReadyForSendFrames(uint32 number_of_frames);
 
     /// The callback used to pass incoming Spinel frames to the LoWPAN
     /// host stack.
     ///
-    /// This method will not be called until `ReadyToReceiveFrame()`
-    /// was called beforehand. There is a strict relationship of
-    /// one call to `ReadyToReceiveFrame()` to one call to `->OnReceiveFrame()`.
-    ///
-    /// See `ReadyToReceiveFrame()` for flow-control considerations.
+    /// See `ReadyToReceiveFrames()` for flow-control considerations.
     -> OnReceiveFrame(bytes:MAX_FRAME_SIZE data);
 
     /// The callback used to indicate that an error has occurred.
