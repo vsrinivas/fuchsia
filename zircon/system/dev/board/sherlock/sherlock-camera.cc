@@ -288,6 +288,9 @@ static const zx_bind_inst_t gdc_match[] = {
 static const zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
+static const zx_bind_inst_t buttons_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BUTTONS),
+};
 static const device_component_part_t isp_component[] = {
     {countof(root_match), root_match},
     {countof(isp_match), isp_match},
@@ -300,10 +303,15 @@ static const device_component_part_t sysmem_component[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
+static const device_component_part_t buttons_component[] = {
+    {countof(root_match), root_match},
+    {countof(buttons_match), buttons_match},
+};
 static const device_component_t camera_controller_components[] = {
     {countof(isp_component), isp_component},
     {countof(gdc_component), gdc_component},
     {countof(sysmem_component), sysmem_component},
+    {countof(buttons_component), buttons_component},
 };
 
 constexpr pbus_mmio_t mipi_mmios[] = {

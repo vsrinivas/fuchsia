@@ -5,6 +5,7 @@
 #include "controller-device.h"
 
 #include <lib/fidl/cpp/binding.h>
+#include <lib/sync/completion.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/threads.h>
@@ -25,6 +26,7 @@ enum {
   COMPONENT_ISP,
   COMPONENT_GDC,
   COMPONENT_SYSMEM,
+  COMPONENT_BUTTONS,
   COMPONENT_COUNT,
 };
 }  // namespace
@@ -66,7 +68,6 @@ zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
     controller_ = std::make_unique<ControllerImpl>(
         parent(), std::move(control_interface), controller_loop_.dispatcher(), isp_, gdc_,
         [this] { controller_ = nullptr; }, std::move(sysmem_allocator));
-
     return ZX_OK;
   }
   return ZX_ERR_INTERNAL;
@@ -76,6 +77,48 @@ void ControllerDevice::ShutDown() { controller_loop_.Shutdown(); }
 
 zx_status_t ControllerDevice::StartThread() {
   return controller_loop_.StartThread("camera-controller-loop", &loop_thread_);
+}
+
+zx_status_t ControllerDevice::RegisterMicButtonNotification() {
+  auto status =
+      buttons_.GetChannel(buttons_client_.NewRequest(controller_loop_.dispatcher()).TakeChannel());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  buttons_client_.set_error_handler([this](zx_status_t status) {
+    FX_PLOGST(ERROR, kTag, status) << "Buttons protocol disconnected";
+    controller_ = nullptr;
+  });
+
+  zx_status_t register_status = ZX_ERR_BAD_STATE;
+  sync_completion_t completion;
+
+  buttons_client_->RegisterNotify(
+      (1u << static_cast<uint8_t>(fuchsia::buttons::ButtonType::MUTE)),
+      [&register_status, &completion](fuchsia::buttons::Buttons_RegisterNotify_Result status) {
+        register_status = status.err();
+        sync_completion_signal(&completion);
+      });
+
+  buttons_client_.events().OnNotify = [this](fuchsia::buttons::ButtonType type, bool pressed) {
+    if (controller_) {
+      ZX_ASSERT_MSG(type == fuchsia::buttons::ButtonType::MUTE,
+                    "Unknown button type event notification");
+      if (pressed) {
+        controller_->DisableStreaming();
+        return;
+      }
+      controller_->EnableStreaming();
+    }
+  };
+
+  sync_completion_wait(&completion, ZX_TIME_INFINITE);
+  if (register_status != ZX_OK) {
+    FX_LOGST(ERROR, kTag) << "Error registering for mic button notification " << register_status;
+    return register_status;
+  }
+  return ZX_OK;
 }
 
 // static
@@ -112,14 +155,28 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
     return ZX_ERR_NO_RESOURCES;
   }
 
+  ddk::ButtonsProtocolClient buttons(components[COMPONENT_BUTTONS]);
+  if (!buttons.is_valid()) {
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_BUTTONS not available\n", __func__);
+    return ZX_ERR_NO_RESOURCES;
+  }
+
   auto controller = std::make_unique<ControllerDevice>(
-      parent, components[COMPONENT_ISP], components[COMPONENT_GDC], components[COMPONENT_SYSMEM]);
+      parent, components[COMPONENT_ISP], components[COMPONENT_GDC], components[COMPONENT_SYSMEM],
+      components[COMPONENT_BUTTONS]);
 
   auto status = controller->StartThread();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not start loop thread\n", __func__);
     return status;
   }
+
+  status = controller->RegisterMicButtonNotification();
+  if (status != ZX_OK) {
+    FX_PLOGST(ERROR, kTag, status) << "Failed to register for mic button notification";
+    return status;
+  }
+
   *out = std::move(controller);
   return ZX_OK;
 }

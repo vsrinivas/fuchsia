@@ -47,6 +47,11 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
     internal_configs_ = SherlockInternalConfigs();
   }
 
+  // Enable/Disable Streaming
+  void EnableStreaming() override;
+
+  void DisableStreaming() override;
+
  private:
   // Device FIDL implementation
 
@@ -67,11 +72,6 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   void CreateStream(uint32_t config_index, uint32_t stream_index, uint32_t image_format_index,
                     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
                     fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) override;
-
-  // Enable/Disable Streaming
-  void EnableStreaming() override;
-
-  void DisableStreaming() override;
 
   void GetDeviceInfo(GetDeviceInfoCallback callback) override;
 
