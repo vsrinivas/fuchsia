@@ -15,6 +15,12 @@ enum StreamType : uint8 {
     SCALAR = 3;
 };
 
+[Layout = "ddk-callback"]
+protocol IspStreamShutdownCallback {
+    // This is called by the ISP after completing all cleanup of a stream.
+    ShutdownComplete(zx.status status);
+};
+
 [Layout = "ddk-protocol"]
 protocol OutputStream {
     // Starts the streaming of frames.
