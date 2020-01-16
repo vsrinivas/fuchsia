@@ -9,8 +9,7 @@ group("interactive_minimal") {
   testonly = true
   public_deps = [
     "//garnet/packages/config:shortcut",
-    "//garnet/packages/prod:scenic",
-    "//garnet/packages/products:interactive_base",
+    "//garnet/packages/products:base_with_mdns",
     "//src/fonts",
     "//src/ui/a11y",
   ]
@@ -86,7 +85,7 @@ group("base") {
   ]
 }
 
-group("interactive_base") {
+group("base_with_mdns") {
   testonly = true
   public_deps = [
     "//garnet/packages/products:base",
