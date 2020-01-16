@@ -19,6 +19,8 @@ common_files = [
   "vulkan_framebuffer.h",
   "vulkan_graphics_pipeline.cc",
   "vulkan_graphics_pipeline.h",
+  "vulkan_image_view.cc",
+  "vulkan_image_view.h",
   "vulkan_instance.cc",
   "vulkan_instance.h",
   "vulkan_layer.cc",

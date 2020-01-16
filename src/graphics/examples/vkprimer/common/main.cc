@@ -12,6 +12,7 @@
 #include "vulkan_command_pool.h"
 #include "vulkan_framebuffer.h"
 #include "vulkan_graphics_pipeline.h"
+#include "vulkan_image_view.h"
 #include "vulkan_instance.h"
 #include "vulkan_layer.h"
 #include "vulkan_logical_device.h"
@@ -27,6 +28,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #endif
+
+#define OFFSCREEN 0
 
 bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync,
                const VulkanSwapchain& swap_chain, const VulkanCommandBuffers& command_buffers);
@@ -88,12 +91,16 @@ int main() {
     RTN_MSG(1, "Logical Device Initialization Failed.\n");
   }
 
+#if OFFSCREEN
+  auto offscreen_image_view = std::make_shared<VulkanImageView>(logical_device);
+#else
   // SWAP CHAIN
   auto swap_chain =
       std::make_shared<VulkanSwapchain>(physical_device.phys_device(), logical_device, surface);
   if (!swap_chain->Init()) {
     RTN_MSG(1, "Swap Chain Initialization Failed.\n");
   }
+#endif
 
   // RENDER PASS
   auto render_pass = std::make_shared<VulkanRenderPass>(logical_device, swap_chain->image_format());
