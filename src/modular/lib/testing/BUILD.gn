@@ -229,8 +229,8 @@ source_set("ledger_repository_for_testing") {
   ]
 
   public_deps = [
-    "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.modular",
+    "//src/modular/lib/scoped_tmpfs",
   ]
 }
 

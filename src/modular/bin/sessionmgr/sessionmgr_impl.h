@@ -20,7 +20,6 @@
 #include <lib/fit/function.h>
 #include <lib/sys/inspect/cpp/component.h>
 
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/module_resolver/local_module_resolver.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_service_index.h"
@@ -34,6 +33,7 @@
 #include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/fidl/view_host.h"
 #include "src/modular/lib/module_manifest/module_facet_reader.h"
+#include "src/modular/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace modular {
 

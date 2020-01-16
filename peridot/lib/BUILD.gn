@@ -10,7 +10,6 @@ group("lib") {
     ":peridot_lib_unittests",
     "ledger_client",
     "rng",
-    "scoped_tmpfs",
     "util",
   ]
 }
@@ -21,7 +20,6 @@ executable("peridot_lib_unittests") {
   deps = [
     "//peridot/lib/ledger_client:unittests",
     "//peridot/lib/rng:unittests",
-    "//peridot/lib/scoped_tmpfs:unittests",
     "//peridot/lib/util:unittests",
     "//src/lib/fxl/test:gtest_main",
   ]

@@ -14,13 +14,13 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/gtest/real_loop_fixture.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/substitute.h"
+#include "src/modular/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace {
 

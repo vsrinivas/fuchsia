@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/modular/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 #include <fcntl.h>
 #include <unistd.h>
