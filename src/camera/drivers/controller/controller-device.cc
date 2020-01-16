@@ -25,6 +25,7 @@ namespace {
 enum {
   COMPONENT_ISP,
   COMPONENT_GDC,
+  COMPONENT_GE2D,
   COMPONENT_SYSMEM,
   COMPONENT_BUTTONS,
   COMPONENT_COUNT,
@@ -66,7 +67,7 @@ zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
 
   if (control_interface.is_valid()) {
     controller_ = std::make_unique<ControllerImpl>(
-        parent(), std::move(control_interface), controller_loop_.dispatcher(), isp_, gdc_,
+        parent(), std::move(control_interface), controller_loop_.dispatcher(), isp_, gdc_, ge2d_,
         [this] { controller_ = nullptr; }, std::move(sysmem_allocator));
     return ZX_OK;
   }
@@ -143,6 +144,12 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
     return ZX_ERR_NO_RESOURCES;
   }
 
+  ddk::Ge2dProtocolClient ge2d(components[COMPONENT_GE2D]);
+  if (!ge2d.is_valid()) {
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_GE2D not available\n", __func__);
+    return ZX_ERR_NO_RESOURCES;
+  }
+
   ddk::IspProtocolClient isp(components[COMPONENT_ISP]);
   if (!isp.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_ISP not available\n", __func__);
@@ -162,8 +169,8 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
   }
 
   auto controller = std::make_unique<ControllerDevice>(
-      parent, components[COMPONENT_ISP], components[COMPONENT_GDC], components[COMPONENT_SYSMEM],
-      components[COMPONENT_BUTTONS]);
+      parent, components[COMPONENT_ISP], components[COMPONENT_GDC], components[COMPONENT_GE2D],
+      components[COMPONENT_SYSMEM], components[COMPONENT_BUTTONS]);
 
   auto status = controller->StartThread();
   if (status != ZX_OK) {

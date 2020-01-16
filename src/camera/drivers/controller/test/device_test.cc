@@ -30,7 +30,7 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
     ddk_->SetProtocols(std::move(protocols));
     controller_device_ = std::make_unique<ControllerDevice>(
         fake_ddk::kFakeParent, fake_ddk::kFakeParent, fake_ddk::kFakeParent, fake_ddk::kFakeParent,
-        fake_ddk::kFakeParent);
+        fake_ddk::kFakeParent, fake_ddk::kFakeParent);
   }
 
   void TearDown() override {

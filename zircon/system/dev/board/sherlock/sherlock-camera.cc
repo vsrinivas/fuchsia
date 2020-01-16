@@ -285,6 +285,9 @@ static const zx_bind_inst_t isp_match[] = {
 static const zx_bind_inst_t gdc_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GDC),
 };
+static const zx_bind_inst_t ge2d_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GE2D),
+};
 static const zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
@@ -299,6 +302,10 @@ static const device_component_part_t gdc_component[] = {
     {countof(root_match), root_match},
     {countof(gdc_match), gdc_match},
 };
+static const device_component_part_t ge2d_component[] = {
+    {countof(root_match), root_match},
+    {countof(ge2d_match), ge2d_match},
+};
 static const device_component_part_t sysmem_component[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
@@ -308,9 +315,8 @@ static const device_component_part_t buttons_component[] = {
     {countof(buttons_match), buttons_match},
 };
 static const device_component_t camera_controller_components[] = {
-    {countof(isp_component), isp_component},
-    {countof(gdc_component), gdc_component},
-    {countof(sysmem_component), sysmem_component},
+    {countof(isp_component), isp_component},         {countof(gdc_component), gdc_component},
+    {countof(gdc_component), ge2d_component},        {countof(sysmem_component), sysmem_component},
     {countof(buttons_component), buttons_component},
 };
 

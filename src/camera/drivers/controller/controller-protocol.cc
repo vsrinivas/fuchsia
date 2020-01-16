@@ -16,9 +16,12 @@ constexpr auto kTag = "camera_controller";
 ControllerImpl::ControllerImpl(zx_device_t* device,
                                fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
                                async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp,
-                               const ddk::GdcProtocolClient& gdc, fit::closure on_connection_closed,
+                               const ddk::GdcProtocolClient& gdc,
+                               const ddk::Ge2dProtocolClient& ge2d,
+                               fit::closure on_connection_closed,
                                fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-    : binding_(this), pipeline_manager_(device, dispatcher, isp, gdc, std::move(sysmem_allocator)) {
+    : binding_(this),
+      pipeline_manager_(device, dispatcher, isp, gdc, ge2d, std::move(sysmem_allocator)) {
   binding_.set_error_handler(
       [occ = std::move(on_connection_closed)](zx_status_t status) { occ(); });
   binding_.Bind(std::move(control), dispatcher);

@@ -27,6 +27,7 @@
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/gdc.h>
+#include <ddktl/protocol/ge2d.h>
 #include <ddktl/protocol/isp.h>
 #include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_lock.h>
@@ -44,10 +45,11 @@ class ControllerDevice : public ControllerDeviceType,
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerDevice);
   explicit ControllerDevice(zx_device_t* parent, zx_device_t* isp, zx_device_t* gdc,
-                            zx_device_t* sysmem, zx_device_t* buttons)
+                            zx_device_t* ge2d, zx_device_t* sysmem, zx_device_t* buttons)
       : ControllerDeviceType(parent),
         isp_(isp),
         gdc_(gdc),
+        ge2d_(ge2d),
         buttons_(buttons),
         controller_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         sysmem_(sysmem) {}
@@ -92,6 +94,7 @@ class ControllerDevice : public ControllerDeviceType,
 
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;
+  ddk::Ge2dProtocolClient ge2d_;
   ddk::ButtonsProtocolClient buttons_;
   fuchsia::buttons::ButtonsPtr buttons_client_;
   async::Loop controller_loop_;

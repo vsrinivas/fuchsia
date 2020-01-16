@@ -13,6 +13,7 @@
 #include <fbl/auto_call.h>
 
 #include "fake_gdc.h"
+#include "fake_ge2d.h"
 #include "fake_isp.h"
 #include "lib/fit/result.h"
 #include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"
@@ -49,8 +50,10 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
                                        &controller_frame_processing_thread_));
     isp_ = fake_isp_.client();
     gdc_ = fake_gdc_.client();
-    pipeline_manager_ = std::make_unique<PipelineManager>(
-        fake_ddk::kFakeParent, loop_.dispatcher(), isp_, gdc_, std::move(sysmem_allocator1_));
+    ge2d_ = fake_ge2d_.client();
+    pipeline_manager_ =
+        std::make_unique<PipelineManager>(fake_ddk::kFakeParent, loop_.dispatcher(), isp_, gdc_,
+                                          ge2d_, std::move(sysmem_allocator1_));
     internal_config_info_ = SherlockInternalConfigs();
   }
 
@@ -672,6 +675,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
   FakeIsp fake_isp_;
   FakeGdc fake_gdc_;
+  FakeGe2d fake_ge2d_;
   async::Loop loop_;
   thrd_t controller_frame_processing_thread_;
   fuchsia::camera2::hal::ControllerSyncPtr camera_client_;
@@ -681,6 +685,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator2_;
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;
+  ddk::Ge2dProtocolClient ge2d_;
   InternalConfigs internal_config_info_;
 };
 

@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/binding.h>
 
 #include <ddktl/protocol/gdc.h>
+#include <ddktl/protocol/ge2d.h>
 #include <ddktl/protocol/isp.h>
 
 #include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
@@ -35,7 +36,8 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   ControllerImpl(zx_device_t* device,
                  fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
                  async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp,
-                 const ddk::GdcProtocolClient& gdc, fit::closure on_connection_closed,
+                 const ddk::GdcProtocolClient& gdc, const ddk::Ge2dProtocolClient& ge2d,
+                 fit::closure on_connection_closed,
                  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
 
   zx_status_t GetInternalConfiguration(uint32_t config_index, InternalConfigInfo** internal_config);

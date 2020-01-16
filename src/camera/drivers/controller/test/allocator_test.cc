@@ -35,8 +35,9 @@ class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
                                        &controller_frame_processing_thread_));
     controller_memory_allocator_ =
         std::make_unique<ControllerMemoryAllocator>(std::move(sysmem_allocator_));
-    pipeline_manager_ = std::make_unique<PipelineManager>(
-        fake_ddk::kFakeParent, loop_.dispatcher(), isp_, gdc_, std::move(sysmem_allocator1_));
+    pipeline_manager_ =
+        std::make_unique<PipelineManager>(fake_ddk::kFakeParent, loop_.dispatcher(), isp_, gdc_,
+                                          ge2d_, std::move(sysmem_allocator1_));
   }
 
   void TearDown() override {
@@ -53,6 +54,7 @@ class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator1_;
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;
+  ddk::Ge2dProtocolClient ge2d_;
 };
 
 // Validate FR --> GDC1 --> OutputStreamMLDS

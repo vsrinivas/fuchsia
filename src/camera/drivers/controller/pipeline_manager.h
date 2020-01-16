@@ -32,11 +32,13 @@ class PipelineManager {
  public:
   PipelineManager(zx_device_t* device, async_dispatcher_t* dispatcher,
                   const ddk::IspProtocolClient& isp, const ddk::GdcProtocolClient& gdc,
+                  const ddk::Ge2dProtocolClient& ge2d,
                   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
       : device_(device),
         dispatcher_(dispatcher),
         isp_(isp),
         gdc_(gdc),
+        ge2d_(ge2d),
         memory_allocator_(std::move(sysmem_allocator)) {}
 
   zx_status_t ConfigureStreamPipeline(StreamCreationData* info,
@@ -98,6 +100,7 @@ class PipelineManager {
   async_dispatcher_t* dispatcher_;
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;
+  ddk::Ge2dProtocolClient ge2d_;
   ControllerMemoryAllocator memory_allocator_;
   std::unique_ptr<ProcessNode> full_resolution_stream_;
   std::unique_ptr<ProcessNode> downscaled_resolution_stream_;
