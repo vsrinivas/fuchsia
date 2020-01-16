@@ -92,15 +92,27 @@ void* arch_thread_get_blocked_fp(thread_t* t) {
   return (void*)frame->rbp;
 }
 
-__NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(thread_t* oldthread,
-                                                                            thread_t* newthread) {
-  x86_extended_register_context_switch(oldthread, newthread);
+__NO_SAFESTACK static void x86_aspace_context_switch(thread_t* oldthread, thread_t* newthread) {
+  auto* const percpu = x86_get_percpu();
+  // Flush Indirect Branch Predictor State, if:
+  // 1) We are switching from a user address space to another user address space OR
+  // 2) We are switching from the kernel address space to a user address space and the
+  //    new user address space is not the same as the last user address space that ran
+  //    on this core.
+  // TODO(fxb/39621): Handle aspace* reuse.
+  if (x86_cpu_should_ibpb_on_ctxt_switch() &&
+      (((oldthread->aspace && newthread->aspace) && (oldthread->aspace != newthread->aspace)) ||
+      ((!oldthread->aspace && newthread->aspace) && (percpu->last_user_aspace != newthread->aspace)))) {
+    MsrAccess msr;
+    x86_cpu_ibpb(&msr);
+  }
+  if (oldthread->aspace && !newthread->aspace) {
+    percpu->last_user_aspace = oldthread->aspace;
+  }
+}
 
-  x86_debug_state_context_switch(oldthread, newthread);
-
-  // set the tss SP0 value to point at the top of our stack
-  x86_set_tss_sp(newthread->stack.top);
-
+__NO_SAFESTACK __attribute__((target("fsgsbase"))) static void x86_segment_selector_context_switch(
+    thread_t* oldthread, thread_t* newthread) {
   // Save the user fs_base register value.  The new rdfsbase instruction is much faster than reading
   // the MSR, so use the former in preference.
   if (likely(g_x86_feature_fsgsbase)) {
@@ -135,40 +147,40 @@ __NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(thre
     // but still faster than using the KERNEL_GS_BASE MSRs.
     __asm__ __volatile__(
         "swapgs\n"
-        "rdgsbase %[old_value]\n"
-        "wrgsbase %[new_value]\n"
+        "rdgsbase %[old_gsbase]\n"
+        "wrgsbase %[new_gsbase]\n"
         "swapgs\n"
-        : [ old_value ] "=&r"(oldthread->arch.gs_base)
-        : [ new_value ] "r"(newthread->arch.gs_base));
-
-    _writefsbase_u64(newthread->arch.fs_base);
+        "wrfsbase %[new_fsbase]\n"
+        : [ old_gsbase ] "=&r"(oldthread->arch.gs_base)
+        : [ new_gsbase ] "r"(newthread->arch.gs_base), [ new_fsbase ] "r"(newthread->arch.fs_base));
   } else {
     oldthread->arch.gs_base = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
     write_msr(X86_MSR_IA32_FS_BASE, newthread->arch.fs_base);
     write_msr(X86_MSR_IA32_KERNEL_GS_BASE, newthread->arch.gs_base);
   }
+}
+
+// The target fsgsbase attribute allows the compiler to make use of fsgsbase instructions.  While
+// this function does not use fsgsbase instructions directly, it calls
+// |x86_segment_selector_context_switch|, which does.  By adding the attribute here, we enable the
+// compiler to inline |x86_segment_selector_context_switch| into this function.
+__NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(thread_t* oldthread,
+                                                                            thread_t* newthread) {
+  // set the tss SP0 value to point at the top of our stack
+  x86_set_tss_sp(newthread->stack.top);
+
+  x86_extended_register_context_switch(oldthread, newthread);
+
+  x86_debug_state_context_switch(oldthread, newthread);
+
+  x86_segment_selector_context_switch(oldthread, newthread);
 
 #if __has_feature(safe_stack)
   oldthread->arch.unsafe_sp = x86_read_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET);
   x86_write_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET, newthread->arch.unsafe_sp);
 #endif
 
-  auto* const percpu = x86_get_percpu();
-  // Flush Indirect Branch Predictor State, if:
-  // 1) We are switching from a user address space to another user address space OR
-  // 2) We are switching from the kernel address space to a user address space and the
-  //    new user address space is not the same as the last user address space that ran
-  //    on this core.
-  // TODO(fxb/39621): Handle aspace* reuse.
-  if (x86_cpu_should_ibpb_on_ctxt_switch() &&
-      (((oldthread->aspace && newthread->aspace) && (oldthread->aspace != newthread->aspace)) ||
-      ((!oldthread->aspace && newthread->aspace) && (percpu->last_user_aspace != newthread->aspace)))) {
-    MsrAccess msr;
-    x86_cpu_ibpb(&msr);
-  }
-  if (oldthread->aspace && !newthread->aspace) {
-    percpu->last_user_aspace = oldthread->aspace;
-  }
+  x86_aspace_context_switch(oldthread, newthread);
 
   x86_64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
 }

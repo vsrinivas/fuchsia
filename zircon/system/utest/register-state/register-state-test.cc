@@ -16,7 +16,7 @@ static pthread_barrier_t g_barrier;
 // Returns whether the CPU supports the {rd,wr}{fs,gs}base instructions.
 static bool x86_feature_fsgsbase() {
   uint32_t eax, ebx, ecx, edx;
-  __cpuid(7, eax, ebx, ecx, edx);
+  __cpuid_count(7, 0, eax, ebx, ecx, edx);
   return ebx & bit_FSGSBASE;
 }
 
@@ -121,6 +121,18 @@ TEST(RegisterStateTest, SegmentSelectorsZeroedOnInterrupt) {
   EXPECT_EQ(get_gs(), 0);
 }
 
+__attribute__((target("fsgsbase"))) static uintptr_t read_gs_base() { return _readgsbase_u64(); }
+
+__attribute__((target("fsgsbase"))) static uintptr_t read_fs_base() { return _readfsbase_u64(); }
+
+__attribute__((target("fsgsbase"))) static void write_gs_base(uintptr_t gs_base) {
+  return _writegsbase_u64(gs_base);
+}
+
+__attribute__((target("fsgsbase"))) static void write_fs_base(uintptr_t fs_base) {
+  return _writefsbase_u64(fs_base);
+}
+
 // Test that the kernel also resets the segment selector registers on a
 // context switch, to avoid leaking their values and to match what happens
 // on an interrupt.
@@ -128,6 +140,22 @@ TEST(RegisterStateTest, SegmentSelectorsZeroedOnContextSwitch) {
   set_ds(1);
   set_es(1);
   set_gs(1);
+
+  uintptr_t orig_fs_base = 0;
+  if (x86_feature_fsgsbase()) {
+    // libc uses fs_base so we must save its original value before setting it.  Also, once we've set
+    // it, we must be very careful to not call any code that might use fs_base (transitively) until
+    // we have restored the original value.
+    orig_fs_base = read_fs_base();
+
+    set_gs(1);
+    write_gs_base(1);
+    set_fs(1);
+    write_fs_base(1);
+
+    // Now that we've set fs_base, we must not touch any TLS (thread-local storage) call anything
+    // that might touch TLS until we have stored the original value.
+  }
 
   // Sleep repeatedly until the segment selector registers have been cleared.
   //
@@ -143,14 +171,33 @@ TEST(RegisterStateTest, SegmentSelectorsZeroedOnContextSwitch) {
   // the segment selector registers. Keep the sleep duration short to reduce
   // the chance of that happening.
   zx_duration_t duration = ZX_MSEC(1);
+  zx_status_t status = ZX_OK;
   while (get_gs() == 1 && duration < ZX_SEC(10)) {
-    EXPECT_OK(zx_nanosleep(zx_deadline_after(duration)));
+    status = zx_nanosleep(zx_deadline_after(duration));
+    if (status != ZX_OK) {
+      break;
+    }
     duration *= 2;
   }
 
+  if (x86_feature_fsgsbase()) {
+    // Save gs_base and fs_base.  We'll verify they are 0 after we've restored the original fs_base.
+    uintptr_t gs_base = read_gs_base();
+    uintptr_t fs_base = read_fs_base();
+    // Restore fs_base.
+    write_fs_base(orig_fs_base);
+
+    // See that gs_base and fs_base are preserved across a context switch.
+    EXPECT_EQ(gs_base, 1);
+    EXPECT_EQ(fs_base, 1);
+  }
+  ASSERT_OK(status);
+
+  // See that ds, es, gs, and fs are cleared by a context switch.
   EXPECT_EQ(get_ds(), 0);
   EXPECT_EQ(get_es(), 0);
   EXPECT_EQ(get_gs(), 0);
+  EXPECT_EQ(get_fs(), 0);
 }
 
 #endif
