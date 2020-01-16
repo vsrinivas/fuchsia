@@ -33,6 +33,15 @@ const char* ClientSettings::Breakpoint::kOneShotDescription =
     R"(  Whether this breakpoint is one-shot. One-shot breakpoints are automatically
   deleted when hit.)";
 
+const char* ClientSettings::Breakpoint::kType = "type";
+const char* ClientSettings::Breakpoint::kTypeDescription =
+    "  Type of breakpoint. Possible values are:\n\n" BREAKPOINT_TYPE_HELP("    ");
+
+const char* ClientSettings::Breakpoint::kType_Software = "software";
+const char* ClientSettings::Breakpoint::kType_Hardware = "execute";
+const char* ClientSettings::Breakpoint::kType_ReadWrite = "read-write";
+const char* ClientSettings::Breakpoint::kType_Write = "write";
+
 const char* ClientSettings::Breakpoint::kStopMode = "stop";
 const char* ClientSettings::Breakpoint::kStopModeDescription =
     R"(  What to stop when this breakpoint is hit. Possible values are:
@@ -69,6 +78,11 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddBool(ClientSettings::Breakpoint::kOneShot,
                   ClientSettings::Breakpoint::kOneShotDescription, false);
   schema->AddString(
+      ClientSettings::Breakpoint::kType, ClientSettings::Breakpoint::kTypeDescription,
+      ClientSettings::Breakpoint::kType_Software,
+      {ClientSettings::Breakpoint::kType_Software, ClientSettings::Breakpoint::kType_Hardware,
+       ClientSettings::Breakpoint::kType_ReadWrite, ClientSettings::Breakpoint::kType_Write});
+  schema->AddString(
       ClientSettings::Breakpoint::kStopMode, ClientSettings::Breakpoint::kStopModeDescription,
       ClientSettings::Breakpoint::kStopMode_All,
       {ClientSettings::Breakpoint::kStopMode_None, ClientSettings::Breakpoint::kStopMode_Thread,
@@ -92,6 +106,8 @@ SettingValue Breakpoint::Settings::GetStorageValue(const std::string& key) const
     return SettingValue(settings.enabled);
   } else if (key == ClientSettings::Breakpoint::kOneShot) {
     return SettingValue(settings.one_shot);
+  } else if (key == ClientSettings::Breakpoint::kType) {
+    return SettingValue(BreakpointSettings::TypeToString(settings.type));
   }
   FXL_NOTREACHED();
   return SettingValue();
@@ -113,6 +129,11 @@ Err Breakpoint::Settings::SetStorageValue(const std::string& key, SettingValue v
     settings.enabled = value.get_bool();
   } else if (key == ClientSettings::Breakpoint::kOneShot) {
     settings.one_shot = value.get_bool();
+  } else if (key == ClientSettings::Breakpoint::kType) {
+    std::optional<BreakpointSettings::Type> type =
+        BreakpointSettings::StringToType(value.get_string());
+    FXL_DCHECK(type);  // Schema should have validated the input.
+    settings.type = *type;
   } else {
     FXL_NOTREACHED();
   }

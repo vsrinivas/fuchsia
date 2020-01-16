@@ -19,8 +19,7 @@ TEST_F(VerbsBreakpointTest, Break) {
 
   auto event = console().GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Created Breakpoint 1 (Software) on global, Enabled, Stop all, 1 addr @ 0x1234\n",
-            event.output.AsString());
+  EXPECT_EQ("Created Breakpoint 1 @ 0x1234\n", event.output.AsString());
 
   // Make a new process that's not running and then a breakpoint.
   console().ProcessInputLine("process new");
@@ -30,9 +29,10 @@ TEST_F(VerbsBreakpointTest, Break) {
   // It should give a pending message.
   event = console().GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ(
-      "Created Breakpoint 2 (Software) on global, Enabled, Stop all, 0 addrs @ SomePendingFunc\n"
-      "Pending: No matches for location, it will be pending library loads.\n",
+  EXPECT_EQ(
+      "Created Breakpoint 2 @ SomePendingFunc\n"
+      "Pending: No current matches for location. It will be matched against new\n"
+      "         processes and shared libraries.\n",
       event.output.AsString());
 }
 

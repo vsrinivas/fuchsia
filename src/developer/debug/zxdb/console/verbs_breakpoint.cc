@@ -130,12 +130,12 @@ Options
       If "none" is specified, any threads hitting the breakpoint will
       immediately resume, but the hit count will continue to accumulate.
 
-  --type=[ (software|s) | (hardware|h) | (watchpoint|w) ]  (default: software)
-  -t [ (software|s) | (hardware|h) | (watchpoint|w) ]
-      Defines what kind of breakpoint to use. Hardware registers require support
-      from the architecture and are limited in quantity. Keep this in mind when
-      using breakpoints that will expand to several locations.
+  --type=<type>
+  -t <type>
+      The type of the breakpoint. Defaults to "software". Possible values are:
 
+)" BREAKPOINT_TYPE_HELP("      ")
+            R"(
 Scoping to processes and threads
 
   Explicit context can be provided to scope a breakpoint to a single process
@@ -191,14 +191,14 @@ Editing breakpoint attributes
 
     bp get
 
-  To get a specific value along with help for what the setting means list the
+  To get a specific value along with help for what the setting means, give the
   specific attribute:
 
     bp get stop
 
   And to set the attribute:
 
-    gp set stop = thread
+    bp set stop = thread
 
 Other breakpoint commands
 

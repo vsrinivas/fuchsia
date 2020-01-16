@@ -77,6 +77,31 @@ class Breakpoint : public ClientObject {
   FXL_DISALLOW_COPY_AND_ASSIGN(Breakpoint);
 };
 
+// We want to display the menu of types in various places. This macro expands to that. The "indent"
+// string is prepended to every line so the left can be indented as needed for the user.
+// clang-format off
+#define BREAKPOINT_TYPE_HELP(indent)                                                     \
+    indent "software\n"                                                                  \
+    indent "    Software execution breakpoint. This is a \"normal\" breakpoint where\n"  \
+    indent "    the instruction in memory is replaced with an explicit \"break\"\n"      \
+    indent "    instruction.\n"                                                          \
+           "\n"                                                                          \
+    indent "execute\n"                                                                   \
+    indent "    Hardware execution breakpoint. This sets a CPU register to stop\n"       \
+    indent "    execution when the address is executed. The advantages are that\n"       \
+    indent "    this can be done without modifying memory and that per-thread\n"         \
+    indent "    breakpoints are more efficient. The disadvantage is that there\n"        \
+    indent "    are a limited number of hardware breakpoints.\n"                         \
+           "\n"                                                                          \
+    indent "read-write\n"                                                                \
+    indent "    Hardware read/write breakpoint. Sets a CPU register to break\n"          \
+    indent "    whenever the data at the address is read or written.\n"                  \
+           "\n"                                                                          \
+    indent "write\n"                                                                     \
+    indent "    Hardware write breakpoint. Sets a CPU register to break whenever\n"      \
+    indent "    the data at the address is written.\n"
+// clang-format on
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BREAKPOINT_H_

@@ -249,11 +249,12 @@ enum class Stop : uint32_t {
 // NOTE: read-only could be added in the future as arm64 supports them. They're not added today as
 //       x64 does not support them and presenting a common platform is cleaner for now.
 enum class BreakpointType : uint32_t {
-  kSoftware,
-  kHardware,
-  kReadWrite,
-  kWrite,
-  kLast,
+  kSoftware = 0,  // Software code execution.
+  kHardware,      // Hardware code execution.
+  kReadWrite,     // Hardware read/write.
+  kWrite,         // Hardware write.
+
+  kLast,  // Not a real type, end marker.
 };
 const char* BreakpointTypeToString(BreakpointType);
 

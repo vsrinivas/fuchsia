@@ -32,14 +32,18 @@ struct BreakpointSettings {
     kAll       // Stop all debugged processes.
   };
 
-  // Converts between the StopMode enum and string values. These strings are the same ones used in
-  // the settings system. On failure, StopModeToString returns "<invalid>" on failure (never null),
-  // and StringToStopMode() returns nullopt.
+  using Type = debug_ipc::BreakpointType;
+
+  // Converts between the StopMode/Type enums and string values. These strings are the same ones
+  // used in the settings system. On failure, *ToString returns "<invalid>" on failure (never
+  // null), and StringTo*() returns nullopt.
   static const char* StopModeToString(StopMode);
   static std::optional<StopMode> StringToStopMode(std::string_view);
+  static const char* TypeToString(Type);
+  static std::optional<Type> StringToType(std::string_view);
 
   // What kind of breakpoint implementation to use.
-  debug_ipc::BreakpointType type = debug_ipc::BreakpointType::kSoftware;
+  Type type = Type::kSoftware;
 
   // Name that the creator of the breakpoint can set for easier debugging. Optional.
   std::string name;

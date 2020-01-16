@@ -38,4 +38,36 @@ std::optional<BreakpointSettings::StopMode> BreakpointSettings::StringToStopMode
   return std::nullopt;
 }
 
+// static
+const char* BreakpointSettings::TypeToString(BreakpointSettings::Type t) {
+  switch (t) {
+    case BreakpointSettings::Type::kSoftware:
+      return ClientSettings::Breakpoint::kType_Software;
+    case BreakpointSettings::Type::kHardware:
+      return ClientSettings::Breakpoint::kType_Hardware;
+    case BreakpointSettings::Type::kReadWrite:
+      return ClientSettings::Breakpoint::kType_ReadWrite;
+    case BreakpointSettings::Type::kWrite:
+      return ClientSettings::Breakpoint::kType_Write;
+    case BreakpointSettings::Type::kLast:
+      break;  // Not valid.
+  }
+  FXL_NOTREACHED();
+  return "<invalid>";
+}
+
+// static
+std::optional<BreakpointSettings::Type> BreakpointSettings::StringToType(std::string_view value) {
+  if (value == ClientSettings::Breakpoint::kType_Software) {
+    return BreakpointSettings::Type::kSoftware;
+  } else if (value == ClientSettings::Breakpoint::kType_Hardware) {
+    return BreakpointSettings::Type::kHardware;
+  } else if (value == ClientSettings::Breakpoint::kType_ReadWrite) {
+    return BreakpointSettings::Type::kReadWrite;
+  } else if (value == ClientSettings::Breakpoint::kType_Write) {
+    return BreakpointSettings::Type::kWrite;
+  }
+  return std::nullopt;
+}
+
 }  // namespace zxdb

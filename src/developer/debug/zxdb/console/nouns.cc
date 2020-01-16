@@ -603,8 +603,13 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
     row.emplace_back(ExecutionScopeToString(context, settings.scope));
     row.emplace_back(BreakpointSettings::StopModeToString(settings.stop_mode));
     row.emplace_back(BoolToString(settings.enabled));
-    row.emplace_back(BreakpointTypeToString(settings.type));
-    row.emplace_back(fxl::StringPrintf("%zu", matched_locs.size()));
+    row.emplace_back(BreakpointSettings::TypeToString(settings.type));
+
+    if (matched_locs.empty())
+      row.emplace_back(Syntax::kWarning, "pending");
+    else
+      row.emplace_back(fxl::StringPrintf("%zu", matched_locs.size()));
+
     row.push_back(FormatInputLocations(settings.locations));
 
     if (include_locations) {
@@ -630,7 +635,8 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
                ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kScope),
                ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kStopMode),
                ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kEnabled),
-               ColSpec(Align::kLeft, 0, "Type"), ColSpec(Align::kRight, 0, "# Addrs"),
+               ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kType),
+               ColSpec(Align::kRight, 0, "#addrs"),
                ColSpec(Align::kLeft, 0, ClientSettings::Breakpoint::kLocation)},
               rows, &out);
   Console::get()->Output(out);

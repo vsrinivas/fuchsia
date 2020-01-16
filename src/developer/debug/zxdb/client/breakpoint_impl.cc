@@ -274,18 +274,19 @@ void BreakpointImpl::SendBackendAddOrChange(fit::callback<void(const Err&)> call
       }
 
       switch (settings_.type) {
-        case debug_ipc::BreakpointType::kSoftware:
-        case debug_ipc::BreakpointType::kHardware:
+        case BreakpointSettings::Type::kSoftware:
+        case BreakpointSettings::Type::kHardware: {
           addition.address = pair.second.address();
           break;
-        // TODO: This should either the variable size or some way to determine it.
-        case debug_ipc::BreakpointType::kReadWrite:
-        case debug_ipc::BreakpointType::kWrite: {
+        }
+        case BreakpointSettings::Type::kReadWrite:
+        case BreakpointSettings::Type::kWrite: {
+          // TODO(bug 44196): This should have a way for the user to specify the size.
           uint64_t address = pair.second.address();
           addition.address_range = {address, address + 4};
           break;
         }
-        case debug_ipc::BreakpointType::kLast:
+        case BreakpointSettings::Type::kLast:
           FXL_NOTREACHED();
           break;
       }

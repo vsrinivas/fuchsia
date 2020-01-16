@@ -268,24 +268,54 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
                               bool show_context) {
   BreakpointSettings settings = breakpoint->GetSettings();
 
-  std::string scope = ExecutionScopeToString(context, settings.scope);
-  std::string stop = BreakpointSettings::StopModeToString(settings.stop_mode);
-  const char* enabled = BreakpointEnabledToString(settings.enabled);
-  const char* type = BreakpointTypeToString(settings.type);
-  OutputBuffer location = FormatInputLocations(settings.locations);
+  OutputBuffer result("Breakpoint ");
+  result.Append(Syntax::kSpecial, fxl::StringPrintf("%d ", context->IdForBreakpoint(breakpoint)));
+
+  // Most breakpoints are simple global software breakpoints. To keep things easier to follow,
+  // only show values that aren't the default.
+  if (settings.scope.type() != ExecutionScope::kSystem) {
+    result.Append(Syntax::kVariable, ClientSettings::Breakpoint::kScope);
+    result.Append(std::string("=\"") + ExecutionScopeToString(context, settings.scope) + "\" ");
+  }
+
+  if (settings.stop_mode != BreakpointSettings::StopMode::kAll) {
+    result.Append(Syntax::kVariable, ClientSettings::Breakpoint::kStopMode);
+    result.Append(std::string("=") + BreakpointSettings::StopModeToString(settings.stop_mode) +
+                  " ");
+  }
+
+  if (!settings.enabled) {
+    result.Append(Syntax::kVariable, ClientSettings::Breakpoint::kEnabled);
+    result.Append(std::string("=") + BoolToString(settings.enabled) + " ");
+  }
+
+  if (settings.type != BreakpointSettings::Type::kSoftware) {
+    result.Append(Syntax::kVariable, ClientSettings::Breakpoint::kType);
+    result.Append(std::string("=") + BreakpointSettings::TypeToString(settings.type) + " ");
+  }
+
+  if (settings.one_shot) {
+    result.Append(Syntax::kVariable, ClientSettings::Breakpoint::kOneShot);
+    result.Append(std::string("=") + BoolToString(settings.one_shot) + " ");
+  }
+
+  bool show_location_details = !settings.locations.empty() && show_context;
 
   size_t matched_locs = breakpoint->GetLocations().size();
-  const char* locations_str = matched_locs == 1 ? "addr" : "addrs";
-
-  OutputBuffer result("Breakpoint ");
-  result.Append(Syntax::kSpecial, fxl::StringPrintf("%d", context->IdForBreakpoint(breakpoint)));
-  result.Append(fxl::StringPrintf(" (%s) on %s, %s, Stop %s, %zu %s @ ", type, scope.c_str(),
-                                  enabled, stop.c_str(), matched_locs, locations_str));
-
-  result.Append(std::move(location));
+  if (matched_locs == 0) {
+    // When more details are being shown below, don't duplicate the "pending" warning.
+    if (!show_location_details)
+      result.Append(Syntax::kWarning, "pending ");
+    result.Append("@ ");
+  } else if (matched_locs == 1) {
+    result.Append("@ ");
+  } else {
+    result.Append(fxl::StringPrintf("(%zu addrs) @ ", matched_locs));
+  }
+  result.Append(FormatInputLocations(settings.locations));
   result.Append("\n");
 
-  if (!settings.locations.empty() && show_context) {
+  if (show_location_details) {
     // Append the source code location.
     //
     // There is a question of how to show the breakpoint enabled state. The breakpoint has a main
@@ -308,7 +338,9 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
     } else {
       // When the breakpoint resolved to nothing, warn the user, they may have made a typo.
       result.Append(Syntax::kWarning, "Pending");
-      result.Append(": No matches for location, it will be pending library loads.\n");
+      result.Append(
+          ": No current matches for location. It will be matched against new\n"
+          "         processes and shared libraries.\n");
     }
   }
   return result;

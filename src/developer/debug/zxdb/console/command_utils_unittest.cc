@@ -170,11 +170,11 @@ TEST(CommandUtils, FormatBreakpoint) {
   system_observer->DidCreateBreakpoint(&breakpoint);
 
   // Formatting an empty breakpoint
-  EXPECT_EQ("Breakpoint 1 (Software) on global, Enabled, Stop all, 0 addrs @ <no location>\n",
+  EXPECT_EQ("Breakpoint 1 pending @ <no location>\n",
             FormatBreakpoint(&context, &breakpoint, false).AsString());
 
   // Should show no message for context.
-  EXPECT_EQ("Breakpoint 1 (Software) on global, Enabled, Stop all, 0 addrs @ <no location>\n",
+  EXPECT_EQ("Breakpoint 1 pending @ <no location>\n",
             FormatBreakpoint(&context, &breakpoint, true).AsString());
 
   // Provide settings.
@@ -183,11 +183,12 @@ TEST(CommandUtils, FormatBreakpoint) {
   breakpoint.set_settings(settings);
 
   // Format pending.
-  EXPECT_EQ("Breakpoint 1 (Software) on global, Enabled, Stop all, 0 addrs @ foo.cc:21\n",
+  EXPECT_EQ("Breakpoint 1 pending @ foo.cc:21\n",
             FormatBreakpoint(&context, &breakpoint, false).AsString());
   EXPECT_EQ(
-      "Breakpoint 1 (Software) on global, Enabled, Stop all, 0 addrs @ foo.cc:21\n"
-      "Pending: No matches for location, it will be pending library loads.\n",
+      "Breakpoint 1 @ foo.cc:21\n"
+      "Pending: No current matches for location. It will be matched against new\n"
+      "         processes and shared libraries.\n",
       FormatBreakpoint(&context, &breakpoint, true).AsString());
 
   // Provide matched location. The formatting doesn't use the Process so we provide a null one.
@@ -196,7 +197,7 @@ TEST(CommandUtils, FormatBreakpoint) {
   breakpoint.set_locations(std::move(locs));
 
   // No source context.
-  EXPECT_EQ("Breakpoint 1 (Software) on global, Enabled, Stop all, 1 addr @ foo.cc:21\n",
+  EXPECT_EQ("Breakpoint 1 @ foo.cc:21\n",
             FormatBreakpoint(&context, &breakpoint, false).AsString());
 
   // Provide 2 matched locations
@@ -204,8 +205,20 @@ TEST(CommandUtils, FormatBreakpoint) {
   locs.push_back(std::make_unique<MockBreakpointLocation>(nullptr));
   breakpoint.set_locations(std::move(locs));
 
-  EXPECT_EQ("Breakpoint 1 (Software) on global, Enabled, Stop all, 2 addrs @ foo.cc:21\n",
+  EXPECT_EQ("Breakpoint 1 (2 addrs) @ foo.cc:21\n",
             FormatBreakpoint(&context, &breakpoint, false).AsString());
+
+  // Set all the options to non-defaults.
+  settings.type = BreakpointSettings::Type::kWrite;
+  settings.enabled = false;
+  settings.scope = ExecutionScope(session.system().GetTargets()[0]);
+  settings.stop_mode = BreakpointSettings::StopMode::kThread;
+  settings.one_shot = true;
+  breakpoint.set_settings(settings);
+  EXPECT_EQ(
+      "Breakpoint 1 scope=\"pr 1\" stop=thread enabled=false type=write one-shot=true (2 addrs) @ "
+      "foo.cc:21\n",
+      FormatBreakpoint(&context, &breakpoint, false).AsString());
 
   system_observer->WillDestroyBreakpoint(&breakpoint);
 }

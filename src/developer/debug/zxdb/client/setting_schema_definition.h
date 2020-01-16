@@ -74,6 +74,15 @@ struct ClientSettings {
     static const char* kOneShot;
     static const char* kOneShotDescription;
 
+    static const char* kType;
+    static const char* kTypeDescription;
+
+    // Possible values for kType.
+    static const char* kType_Software;
+    static const char* kType_Hardware;
+    static const char* kType_ReadWrite;
+    static const char* kType_Write;
+
     static const char* kStopMode;
     static const char* kStopModeDescription;
 
