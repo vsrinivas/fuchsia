@@ -961,7 +961,8 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
 
   ping::Temper_Config0::Get()
       .ReadFrom(&isp_mmio_local_)
-      .set_enable(0x1)
+      .set_enable(0x0)  // TODO(jsasinowski) Evaluate whether disabling temper here helps with
+                        // memory corruption issues.
       .set_temper2_mode(0)
       .WriteTo(&isp_mmio_local_);
 
