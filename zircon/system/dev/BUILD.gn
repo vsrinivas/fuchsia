@@ -9,7 +9,6 @@ group("dev") {
     "$zx/system/ulib/ddktl:ddktl-test",
     "$zx/third_party/dev/ethernet/e1000",
     "audio",
-    "backlight",
     "block",
     "bluetooth",
     "board",
