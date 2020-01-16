@@ -263,7 +263,6 @@ if (current_cpu != "") {
       "policy",
       "ramdisk",
       "register-state",
-      "rtc-lib",
       "runtests-utils",
       "service:test",
       "stdio",
