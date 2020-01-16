@@ -195,5 +195,59 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
   EXPECT_NE(processor.ProcessInPlace(0, nullptr), ZX_OK);
 }
 
+TEST_F(EffectsProcessorTest, ReportBlockSize) {
+  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"block_size_3", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                               3,
+                                               TEST_EFFECTS_ACTION_ADD,
+                                               1.0}));
+  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"block_size_5", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                               5,
+                                               TEST_EFFECTS_ACTION_ADD,
+                                               2.0}));
+  ASSERT_EQ(ZX_OK,
+            test_effects()->add_effect({{"block_size_any", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                         FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                        TEST_EFFECTS_ACTION_ASSIGN,
+                                        12.0}));
+  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"block_size_1", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                               FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
+                                               TEST_EFFECTS_ACTION_ADD,
+                                               4.0}));
+
+  // Needed to use |CreateEffectByName| since the effect names are cached at loader creation time.
+  RecreateLoader();
+
+  // Create processor and verify default block_size.
+  EffectsProcessor processor;
+  EXPECT_EQ(1u, processor.block_size());
+
+  // Add an effect and observe a change in block_size.
+  Effect effect1 = effects_loader()->CreateEffectByName("block_size_3", 1, 1, 1, {});
+  ASSERT_TRUE(effect1);
+  processor.AddEffect(std::move(effect1));
+  EXPECT_EQ(3u, processor.block_size());
+
+  // Add another effect and observe a change in block_size (lcm(3,5)
+  Effect effect2 = effects_loader()->CreateEffectByName("block_size_5", 1, 1, 1, {});
+  ASSERT_TRUE(effect2);
+  processor.AddEffect(std::move(effect2));
+  EXPECT_EQ(15u, processor.block_size());
+
+  // Add some final effects that should not change block_size.
+  Effect effect3 = effects_loader()->CreateEffectByName("block_size_any", 1, 1, 1, {});
+  ASSERT_TRUE(effect3);
+  processor.AddEffect(std::move(effect3));
+  EXPECT_EQ(15u, processor.block_size());
+
+  Effect effect4 = effects_loader()->CreateEffectByName("block_size_1", 1, 1, 1, {});
+  ASSERT_TRUE(effect4);
+  processor.AddEffect(std::move(effect4));
+  EXPECT_EQ(15u, processor.block_size());
+}
+
 }  // namespace
 }  // namespace media::audio

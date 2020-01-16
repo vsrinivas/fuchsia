@@ -6,9 +6,16 @@
 
 #include <lib/trace/event.h>
 
+#include <numeric>
+
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
+namespace {
+
+uint32_t ComputeMinBlockSize(uint32_t a, uint32_t b) { return std::lcm(a, b); }
+
+}  // namespace
 
 // Insert an effect instance at the end of the chain.
 zx_status_t EffectsProcessor::AddEffect(Effect e) {
@@ -25,6 +32,11 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
   if (params.channels_in != params.channels_out) {
     FX_LOGS(ERROR) << "Can't add effect; only in-place effects are currently supported.";
     return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (params.block_size_frames != FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY &&
+      params.block_size_frames != block_size_) {
+    block_size_ = ComputeMinBlockSize(block_size_, params.block_size_frames);
   }
 
   if (effects_chain_.empty()) {

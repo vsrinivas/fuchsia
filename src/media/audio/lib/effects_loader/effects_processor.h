@@ -59,6 +59,10 @@ class EffectsProcessor {
   // Returns 0 if this processor has no effects.
   [[nodiscard]] uint32_t channels_out() const { return channels_out_; }
 
+  // Returns the required block size (in frames) for this processor. Calls to |ProcessInPlace| must
+  // provide frames in multiples of |block_size()|.
+  [[nodiscard]] uint32_t block_size() const { return block_size_; }
+
   [[nodiscard]] auto begin() { return effects_chain_.begin(); }
   [[nodiscard]] auto end() { return effects_chain_.end(); }
   [[nodiscard]] auto cbegin() const { return effects_chain_.cbegin(); }
@@ -75,6 +79,7 @@ class EffectsProcessor {
   std::vector<Effect> effects_chain_;
   uint32_t channels_in_ = 0;
   uint32_t channels_out_ = 0;
+  uint32_t block_size_ = 1;
 };
 
 }  // namespace media::audio
