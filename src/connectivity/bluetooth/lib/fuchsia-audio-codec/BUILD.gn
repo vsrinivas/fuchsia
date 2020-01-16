@@ -7,8 +7,8 @@ import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_library("fuchsia-audio-encoder") {
-  name = "fuchsia_audio_encoder"
+rustc_library("fuchsia-audio-codec") {
+  name = "fuchsia_audio_codec"
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
@@ -38,13 +38,21 @@ rustc_library("fuchsia-audio-encoder") {
   ]
 }
 
-test_package("fuchsia-audio-encoder-tests") {
-  deps = [ ":fuchsia-audio-encoder_test" ]
+test_package("fuchsia-audio-codec-tests") {
+  deps = [ ":fuchsia-audio-codec_test" ]
 
   tests = [
     {
-      name = "fuchsia_audio_encoder_lib_test"
+      name = "fuchsia_audio_codec_lib_test"
       environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//src/media/stream_processors/test/audio_decoder_test/test_data/s16le44100mono.sbc")
+      dest = "s16le44100mono.sbc"
     },
   ]
 }

@@ -14,10 +14,10 @@ group("lib") {
     "bt-fidl-mocks:tests",
     "fidl",
     "fidl:tests",
+    "fuchsia-audio-codec",
+    "fuchsia-audio-codec:fuchsia-audio-codec-tests",
     "fuchsia-audio-device-output",
     "fuchsia-audio-device-output:fuchsia-audio-device-output-tests",
-    "fuchsia-audio-encoder",
-    "fuchsia-audio-encoder:fuchsia-audio-encoder-tests",
     "fuchsia-bluetooth",
     "fuchsia-bluetooth:tests",
   ]

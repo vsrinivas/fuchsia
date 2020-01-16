@@ -8,7 +8,7 @@
         }
     },
     "program": {
-        "binary": "test/fuchsia_audio_encoder_lib_test"
+        "binary": "test/fuchsia_audio_codec_lib_test"
     },
     "sandbox": {
         "services": [

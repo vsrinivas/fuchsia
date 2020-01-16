@@ -9,7 +9,7 @@ use fidl_fuchsia_media::{
     AudioFormat, AudioUncompressedFormat, DomainFormat, EncoderSettings, PcmFormat, SbcAllocation,
     SbcBlockCount, SbcChannelMode, SbcEncoderSettings, SbcSubBands,
 };
-use fuchsia_audio_encoder::{encoder::EncodedStream, Encoder};
+use fuchsia_audio_codec::{StreamProcessor, StreamProcessorOutputStream};
 use futures::{
     io::AsyncWrite,
     stream::BoxStream,
@@ -87,9 +87,9 @@ pub struct EncodedStreamSbc {
     /// The input media stream
     source: BoxStream<'static, fuchsia_audio_device_output::Result<Vec<u8>>>,
     /// The underlying encoder object
-    encoder: Encoder,
+    encoder: StreamProcessor,
     /// The underlying encoder stream
-    encoded_stream: EncodedStream,
+    encoded_stream: StreamProcessorOutputStream,
     /// Bytes that have been sent to the encoder and not flushed.
     unflushed_bytecount: usize,
     /// Bytes that are buffered to send to the encoder
@@ -116,8 +116,8 @@ impl EncodedStreamSbc {
         let pcm_input_format = DomainFormat::Audio(AudioFormat::Uncompressed(
             AudioUncompressedFormat::Pcm(input_format),
         ));
-        let mut encoder = Encoder::create(pcm_input_format, sbc_encoder_settings)?;
-        let encoded_stream = encoder.take_encoded_stream()?;
+        let mut encoder = StreamProcessor::create_encoder(pcm_input_format, sbc_encoder_settings)?;
+        let encoded_stream = encoder.take_output_stream()?;
 
         Ok(Self {
             source,

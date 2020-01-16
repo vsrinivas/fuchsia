@@ -112,13 +112,13 @@ impl Stream for OutputQueue {
     }
 }
 
-/// Index of an input buffer to be shared between the Encoder and the StreamProcesor.
+/// Index of an input buffer to be shared between the client and the StreamProcessor.
 #[derive(PartialEq, Eq, Hash, Clone)]
 struct InputBufferIndex(u32);
 
-/// The EncoderInner handles the events that come from the StreamProcessor, mostly related to setup
+/// The StreamProcessorInner handles the events that come from the StreamProcessor, mostly related to setup
 /// of the buffers and handling the output packets as they arrive.
-struct EncoderInner {
+struct StreamProcessorInner {
     /// The proxy to the stream processor.
     processor: StreamProcessorProxy,
     /// The event stream from the StreamProcessor.  We handle these internally.
@@ -129,12 +129,12 @@ struct EncoderInner {
     input_packet_size: u64,
     /// The set of input buffers that are available for writing by the client, without the one
     /// possibly being used by the input_cursor.
-    encoder_owned: HashSet<InputBufferIndex>,
+    client_owned: HashSet<InputBufferIndex>,
     /// A cursor on the next input buffer location to be written to when new input data arrives.
     input_cursor: Option<(InputBufferIndex, u64)>,
-    /// A set of wakers waiting for the Encoder to be writable.
+    /// A set of wakers waiting for the client to be writable.
     input_wakers: Vec<Waker>,
-    /// The encoded data - a set of output buffers that will be written by the server.
+    /// The encoded/decoded data - a set of output buffers that will be written by the server.
     output_buffers: Vec<zx::Vmo>,
     /// The size of each output packet
     output_packet_size: u64,
@@ -143,7 +143,7 @@ struct EncoderInner {
     output_queue: Mutex<OutputQueue>,
 }
 
-impl EncoderInner {
+impl StreamProcessorInner {
     /// Handles an event from the StreamProcessor. A number of these events come on stream start to
     /// setup the input and output buffers, and from then on the output packets and end of stream
     /// marker, and the input packets are marked as usable after they are processed.
@@ -164,7 +164,7 @@ impl EncoderInner {
                     // TODO(41553): look into letting sysmem allocate these buffers
                     let (stream_buffer, vmo) = make_buffer(self.input_packet_size, 1, idx)?;
                     self.input_buffers.insert(InputBufferIndex(idx), vmo);
-                    self.encoder_owned.insert(InputBufferIndex(idx));
+                    self.client_owned.insert(InputBufferIndex(idx));
                     self.processor.add_input_buffer(stream_buffer)?;
                 }
                 self.setup_input_cursor();
@@ -178,7 +178,7 @@ impl EncoderInner {
                 let mut settings = output_config.buffer_constraints.default_settings;
                 // We just accept the new output constraints and rebuild our buffers.
                 // This is always set to zero in the defaults. We only have one buffer lifetime for
-                // this encoder.
+                // this client.
                 settings.buffer_lifetime_ordinal = 1;
 
                 self.processor.set_output_buffer_settings(settings.into())?;
@@ -199,7 +199,7 @@ impl EncoderInner {
                 free_input_packet:
                     PacketHeader { buffer_lifetime_ordinal: Some(_ord), packet_index: Some(idx) },
             } => {
-                self.encoder_owned.insert(InputBufferIndex(idx));
+                self.client_owned.insert(InputBufferIndex(idx));
                 self.setup_input_cursor();
             }
             StreamProcessorEvent::OnOutputEndOfStream { .. } => {
@@ -220,7 +220,7 @@ impl EncoderInner {
                 Poll::Pending => return Ok(processed),
                 Poll::Ready(Some(Err(e))) => return Err(e.into()),
                 Poll::Ready(Some(Ok(event))) => self.handle_event(event)?,
-                Poll::Ready(None) => return Err(format_err!("Encoder disconnected")),
+                Poll::Ready(None) => return Err(format_err!("Client disconnected")),
             }
             processed = processed + 1;
         }
@@ -233,11 +233,11 @@ impl EncoderInner {
             // Nothing to be done
             return;
         }
-        let next_idx = match self.encoder_owned.iter().cloned().next() {
+        let next_idx = match self.client_owned.iter().cloned().next() {
             None => return,
             Some(idx) => idx,
         };
-        self.encoder_owned.take(&next_idx).unwrap();
+        self.client_owned.take(&next_idx).unwrap();
         self.input_cursor = Some((next_idx, 0));
         self.input_wakers.drain(..).for_each(|w| w.wake_by_ref());
     }
@@ -256,14 +256,6 @@ impl EncoderInner {
         self.processor.recycle_output_packet(packet.header.into())?;
         Ok(output)
     }
-}
-
-/// Struct representing a CodecFactory Encoder.
-/// Input sent to the encoder via `Encoder::write` is queued for delivery, and delivered
-/// whenever a buffer is full or `Encoder::flush` is called.  Encoded output can be retrieved using
-/// an `EncodedStream` from `Encoder::take_encoded_stream`.
-pub struct Encoder {
-    inner: Arc<RwLock<EncoderInner>>,
 }
 
 fn make_buffer(
@@ -289,20 +281,48 @@ fn make_buffer(
     ))
 }
 
-/// An EncodedStream is a Stream of encoded data from an Encoder.
-/// Returned from `Encoder::take_encoded_stream`.
-pub struct EncodedStream {
-    inner: Arc<RwLock<EncoderInner>>,
+/// Struct representing a CodecFactory .
+/// Input sent to the encoder via `StreamProcessor::write` is queued for delivery, and delivered
+/// whenever a buffer is full or `StreamProcessor::flush` is called.  Output can be retrieved using
+/// an `StreamProcessorStream` from `StreamProcessor::take_output_stream`.
+pub struct StreamProcessor {
+    inner: Arc<RwLock<StreamProcessorInner>>,
 }
 
-impl Encoder {
-    /// Create a new Encoder, with the given `input_domain` and `encoder_settings`.  See
+/// An StreamProcessorStream is a Stream of processed data from a stream processor.
+/// Returned from `StreamProcessor::take_output_stream`.
+pub struct StreamProcessorOutputStream {
+    inner: Arc<RwLock<StreamProcessorInner>>,
+}
+
+impl StreamProcessor {
+    /// Create a new StreamProcessor, given the connection to the stream processor and it's
+    /// event stream.
+    fn create(processor: StreamProcessorProxy) -> Self {
+        let events = processor.take_event_stream();
+        Self {
+            inner: Arc::new(RwLock::new(StreamProcessorInner {
+                processor,
+                events,
+                input_buffers: HashMap::new(),
+                input_packet_size: 0,
+                client_owned: HashSet::new(),
+                input_cursor: None,
+                input_wakers: Vec::new(),
+                output_buffers: Vec::new(),
+                output_packet_size: 0,
+                output_queue: Default::default(),
+            })),
+        }
+    }
+
+    /// Create a new StreamProcessor encoder, with the given `input_domain` and `encoder_settings`.  See
     /// stream_processor.fidl for descriptions of these parameters.  This is only meant for audio
     /// encoding.
-    pub fn create(
+    pub fn create_encoder(
         input_domain: DomainFormat,
         encoder_settings: EncoderSettings,
-    ) -> Result<Encoder, Error> {
+    ) -> Result<StreamProcessor, Error> {
         let format_details = FormatDetails {
             domain: Some(input_domain),
             encoder_settings: Some(encoder_settings),
@@ -316,60 +336,85 @@ impl Encoder {
         let encoder_params =
             CreateEncoderParams { input_details: Some(format_details), require_hw: Some(false) };
 
-        let encoder_svc = fuchsia_component::client::connect_to_service::<CodecFactoryMarker>()
+        let codec_svc = fuchsia_component::client::connect_to_service::<CodecFactoryMarker>()
             .context("Failed to connect to Codec Factory")?;
 
         let (stream_processor_client, stream_processor_serverend) =
             fidl::endpoints::create_endpoints()?;
         let processor = stream_processor_client.into_proxy()?;
 
-        encoder_svc.create_encoder(encoder_params, stream_processor_serverend)?;
+        codec_svc.create_encoder(encoder_params, stream_processor_serverend)?;
 
-        let events = processor.take_event_stream();
-
-        let encoder = Encoder {
-            inner: Arc::new(RwLock::new(EncoderInner {
-                processor,
-                events,
-                input_buffers: HashMap::new(),
-                input_packet_size: 0,
-                encoder_owned: HashSet::new(),
-                input_cursor: None,
-                input_wakers: Vec::new(),
-                output_buffers: Vec::new(),
-                output_packet_size: 0,
-                output_queue: Default::default(),
-            })),
-        };
-
-        Ok(encoder)
+        Ok(StreamProcessor::create(processor))
     }
 
-    /// Take a stream object which will produce the output of the encoder.
-    /// Only one EncodedStream object can exist at a time, and this will return an Error if it is
+    /// Create a new StreamProcessor decoder, with the given `mime_type` and optional `oob_bytes`.  See
+    /// stream_processor.fidl for descriptions of these parameters.  This is only meant for audio
+    /// decoding.
+    pub fn create_decoder(
+        mime_type: &str,
+        oob_bytes: Option<Vec<u8>>,
+    ) -> Result<StreamProcessor, Error> {
+        let format_details = FormatDetails {
+            mime_type: Some(mime_type.to_string()),
+            oob_bytes: oob_bytes,
+            format_details_version_ordinal: Some(1),
+            encoder_settings: None,
+            domain: None,
+            pass_through_parameters: None,
+            timebase: None,
+        };
+
+        let decoder_params = CreateDecoderParams {
+            input_details: Some(format_details),
+            promise_separate_access_units_on_input: Some(false),
+            require_can_stream_bytes_input: Some(false),
+            require_can_find_start: Some(false),
+            require_can_re_sync: Some(false),
+            require_report_all_detected_errors: Some(false),
+            require_hw: Some(false),
+            permit_lack_of_split_header_handling: Some(true),
+            secure_output_mode: None,
+            secure_input_mode: None,
+        };
+
+        let codec_svc = fuchsia_component::client::connect_to_service::<CodecFactoryMarker>()
+            .context("Failed to connect to Codec Factory")?;
+
+        let (stream_processor_client, stream_processor_serverend) =
+            fidl::endpoints::create_endpoints()?;
+        let processor = stream_processor_client.into_proxy()?;
+
+        codec_svc.create_decoder(decoder_params, stream_processor_serverend)?;
+
+        Ok(StreamProcessor::create(processor))
+    }
+
+    /// Take a stream object which will produce the output of the processor.
+    /// Only one StreamProcessorOutputStream object can exist at a time, and this will return an Error if it is
     /// already taken.
-    pub fn take_encoded_stream(&mut self) -> Result<EncodedStream, Error> {
+    pub fn take_output_stream(&mut self) -> Result<StreamProcessorOutputStream, Error> {
         {
             let read = self.inner.read();
             let mut lock = read.output_queue.lock();
             if let Listener::None = lock.listener {
                 lock.listener = Listener::New;
             } else {
-                return Err(format_err!("Encoded stream already taken"));
+                return Err(format_err!("Output stream already taken"));
             }
         }
-        Ok(EncodedStream { inner: self.inner.clone() })
+        Ok(StreamProcessorOutputStream { inner: self.inner.clone() })
     }
 
     /// Returns a future that will wait on any events from the underlying StreamProcessor.
     /// This is not necessary in normal operation, as StreamProcessor events are also processed
-    /// when writing to the Encoder (using AsyncWrite) and reading from the EncoderStream.
-    pub fn process_events(&self) -> EncoderProcess {
-        EncoderProcess { inner: self.inner.clone() }
+    /// when writing to the client (using AsyncWrite) and reading from the StreamProcessorOutputStream.
+    pub fn process_events(&self) -> StreamProcessorProcess {
+        StreamProcessorProcess { inner: self.inner.clone() }
     }
 
-    /// Deliver input to the encoder.  Returns the number of bytes delivered to the encoder.
-    fn send_to_encoder(&mut self, bytes: &[u8]) -> Result<usize, io::Error> {
+    /// Deliver input to the stream processor.  Returns the number of bytes delivered.
+    fn send_to_input(&mut self, bytes: &[u8]) -> Result<usize, io::Error> {
         let mut bytes_idx = 0;
         while bytes.len() > bytes_idx {
             {
@@ -438,7 +483,7 @@ impl Encoder {
         Ok(())
     }
 
-    /// Test whether it is possible to write to the Encoder. If there are no input buffers
+    /// Test whether it is possible to write to the StreamProcessor. If there are no input buffers
     /// available, returns Poll::Pending and arranges for the current task to receive a
     /// notification when an input buffer becomes available or the encoder is closed.
     fn poll_writable(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
@@ -468,13 +513,13 @@ impl Encoder {
     }
 }
 
-/// Returned by `Encoder::process_events()`. Rarely used in normal operation, as delivering data to
-/// the Encoder and reading from the EncodedStream will process events.
-pub struct EncoderProcess {
-    inner: Arc<RwLock<EncoderInner>>,
+/// Returned by `StreamProcessorProcess::process_events()`. Rarely used in normal operation, as delivering data to
+/// the stream processor and reading from the StreamProcessorStream will process events.
+pub struct StreamProcessorProcess {
+    inner: Arc<RwLock<StreamProcessorInner>>,
 }
 
-impl Future for EncoderProcess {
+impl Future for StreamProcessorProcess {
     type Output = Result<usize, Error>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -486,14 +531,14 @@ impl Future for EncoderProcess {
     }
 }
 
-impl AsyncWrite for Encoder {
+impl AsyncWrite for StreamProcessor {
     fn poll_write(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
         ready!(self.poll_writable(cx))?;
-        match self.send_to_encoder(buf) {
+        match self.send_to_input(buf) {
             Ok(written) => Poll::Ready(Ok(written)),
             Err(e) => Poll::Ready(Err(e.into())),
         }
@@ -508,7 +553,7 @@ impl AsyncWrite for Encoder {
     }
 }
 
-impl Stream for EncodedStream {
+impl Stream for StreamProcessorOutputStream {
     type Item = Result<Vec<u8>, Error>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -529,7 +574,7 @@ impl Stream for EncodedStream {
     }
 }
 
-impl FusedStream for EncodedStream {
+impl FusedStream for StreamProcessorOutputStream {
     fn is_terminated(&self) -> bool {
         self.inner.read().output_queue.lock().ended
     }
@@ -540,13 +585,14 @@ mod tests {
     use super::*;
 
     use byteorder::{ByteOrder, NativeEndian};
-    use fuchsia_async::{self as fasync, TimeoutExt};
-    use fuchsia_zircon::Duration;
-    use futures::io::AsyncWriteExt;
+    use fuchsia_async::{self as fasync};
+    use futures::{future, io::AsyncWriteExt};
     use futures_test::task::new_count_waker;
     use hex;
     use mundane::hash::{Digest, Hasher, Sha256};
-    use std::io::Write;
+    use std::fs::File;
+    use std::io::{Read, Write};
+
     use stream_processor_test::ExpectedDigest;
 
     const PCM_SAMPLE_SIZE: usize = 2;
@@ -630,8 +676,6 @@ mod tests {
         }
     }
 
-    const TIMEOUT: Duration = Duration::from_millis(250);
-
     #[test]
     fn encode_sbc() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
@@ -662,13 +706,13 @@ mod tests {
             AudioUncompressedFormat::Pcm(pcm_format),
         ));
 
-        let mut encoder =
-            Encoder::create(input_domain, sbc_encoder_settings).expect("to create Encoder");
+        let mut encoder = StreamProcessor::create_encoder(input_domain, sbc_encoder_settings)
+            .expect("to create Encoder");
 
-        let mut encoded_stream = encoder.take_encoded_stream().expect("Stream shouldn't be taken");
+        let mut encoded_stream = encoder.take_output_stream().expect("Stream should be taken");
 
         // Shouldn't be able to take the stream twice
-        assert!(encoder.take_encoded_stream().is_err());
+        assert!(encoder.take_output_stream().is_err());
 
         // Polling the encoded stream before the encoder has started up should wake it when
         // output starts happening, set up the poll here.
@@ -686,10 +730,7 @@ mod tests {
         let packet_size = pcm_audio.frame_size() * frames_per_packet;
 
         for frames in pcm_audio.buffer.as_slice().chunks(packet_size) {
-            let written_fut = encoder.write(&frames);
-
-            let mut written_fut = written_fut
-                .on_timeout(fasync::Time::after(TIMEOUT), || panic!("Encoder write timed out"));
+            let mut written_fut = encoder.write(&frames);
 
             let written_bytes =
                 exec.run_singlethreaded(&mut written_fut).expect("to write to encoder");
@@ -707,13 +748,14 @@ mod tests {
         let mut processed_events = 0;
         // 2 encoder events that happen before Output is guaranteed: OnOutputConstraints, OnOutputPacket
         while processed_events < 2 {
-            let mut process_fut = encoder
-                .process_events()
-                .on_timeout(fasync::Time::after(TIMEOUT), || panic!("Encoder wait too long"));
+            let mut process_fut = encoder.process_events();
             let process_result = exec.run_singlethreaded(&mut process_fut);
             assert!(process_result.is_ok());
             processed_events += process_result.unwrap();
         }
+
+        // wait until all pending data from other side has come through
+        let _ = exec.run_until_stalled(&mut future::pending::<()>());
 
         assert_eq!(encoder_fut_wake_count.get(), 1);
 
@@ -721,11 +763,7 @@ mod tests {
         let mut encoded = Vec::new();
 
         loop {
-            let encoded_fut = encoded_stream.next();
-
-            let mut encoded_fut = encoded_fut.on_timeout(fasync::Time::after(TIMEOUT), || {
-                panic!("Encoder processing timed out")
-            });
+            let mut encoded_fut = encoded_stream.next();
 
             match exec.run_singlethreaded(&mut encoded_fut) {
                 Some(Ok(enc_data)) => {
@@ -751,6 +789,108 @@ mod tests {
         assert_eq!(6110, encoded.len(), "Encoded size should be equal");
 
         let validated = hash_validator.validate(encoded.as_slice());
+        assert!(validated.is_ok(), "Failed hash: {:?}", validated);
+    }
+
+    #[test]
+    fn decode_sbc() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        const SBC_TEST_FILE: &str = "/pkg/data/s16le44100mono.sbc";
+        const SBC_FRAME_SIZE: usize = 72;
+        const INPUT_FRAMES: usize = 23;
+
+        let mut sbc_data = Vec::new();
+        File::open(SBC_TEST_FILE)
+            .expect("open test file")
+            .read_to_end(&mut sbc_data)
+            .expect("read test file");
+
+        // SBC codec info corresponding to Mono reference stream.
+        let oob_data = Some([0x82, 0x00, 0x00, 0x00].to_vec());
+        let mut decoder =
+            StreamProcessor::create_decoder("audio/sbc", oob_data).expect("to create decoder");
+
+        let mut decoded_stream = decoder.take_output_stream().expect("Stream should be taken");
+
+        // Shouldn't be able to take the stream twice
+        assert!(decoder.take_output_stream().is_err());
+
+        // Polling the decoded stream before the decoder has started up should wake it when
+        // output starts happening, set up the poll here.
+        let decoded_fut = decoded_stream.next();
+
+        let (waker, decoder_fut_wake_count) = new_count_waker();
+        let mut counting_ctx = Context::from_waker(&waker);
+
+        fasync::pin_mut!(decoded_fut);
+        assert!(decoded_fut.poll(&mut counting_ctx).is_pending());
+
+        let mut frames_sent = 0;
+
+        let frames_per_packet: usize = 1; // Randomly chosen by fair d10 roll.
+        let packet_size = SBC_FRAME_SIZE * frames_per_packet;
+
+        for frames in sbc_data.as_slice().chunks(packet_size) {
+            let mut written_fut = decoder.write(&frames);
+
+            let written_bytes =
+                exec.run_singlethreaded(&mut written_fut).expect("to write to decoder");
+
+            assert_eq!(frames.len(), written_bytes);
+            frames_sent += frames.len() / SBC_FRAME_SIZE;
+        }
+
+        decoder.close().expect("stream should always be closable");
+
+        assert_eq!(INPUT_FRAMES, frames_sent);
+
+        // After the decoder runs, the decoded future should have been woken once the output
+        // started.
+        let mut processed_events = 0;
+        // 2 decoder events that happen before Output is guaranteed: OnOutputConstraints, OnOutputPacket
+        while processed_events < 2 {
+            let mut process_fut = decoder.process_events();
+            let process_result = exec.run_singlethreaded(&mut process_fut);
+            assert!(process_result.is_ok());
+            processed_events += process_result.unwrap();
+        }
+
+        // wait until all pending data from other side has come through
+        let _ = exec.run_until_stalled(&mut future::pending::<()>());
+
+        assert_eq!(decoder_fut_wake_count.get(), 1);
+
+        // Get data from the output now.
+        let mut decoded = Vec::new();
+
+        loop {
+            let mut decoded_fut = decoded_stream.next();
+
+            match exec.run_singlethreaded(&mut decoded_fut) {
+                Some(Ok(dec_data)) => {
+                    assert!(!dec_data.is_empty());
+                    decoded.extend_from_slice(&dec_data);
+                }
+                Some(Err(e)) => {
+                    panic!("Unexpected error when polling decoded data: {}", e);
+                }
+                None => {
+                    break;
+                }
+            }
+        }
+
+        // Match the decoded data to the known hash.
+        let expected_digest = ExpectedDigest::new(
+            "Pcm: 44.1kHz/16bit/Mono",
+            "03b47b3ec7f7dcb41456c321377c61984966ea308b853d385194683e13f9836b",
+        );
+        let hash_validator = BytesValidator { output_file: None, expected_digest };
+
+        assert_eq!(512 * INPUT_FRAMES, decoded.len(), "Decoded size should be equal");
+
+        let validated = hash_validator.validate(decoded.as_slice());
         assert!(validated.is_ok(), "Failed hash: {:?}", validated);
     }
 }

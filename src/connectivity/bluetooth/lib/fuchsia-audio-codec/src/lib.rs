@@ -4,16 +4,16 @@
 
 /*!
 
-Provides an asynchronous wrapper around the StreamProcesor API to encode audio packets.
+Provides an asynchronous wrapper around the StreamProcessor API to encode/decode audio packets.
 
-The main object to use is the Encoder, which is created with the input audio parameters and the
-encoder settings to provide to the StreamProcessor for the encoding parameters. The `input_domain`
+The main object to use is the StreamProcessor with either the `create_encoder` or `create_decoder` methods which are passed the input audio parameters and the
+encoder settings to provide to the StreamProcessor for the encoder case. The `input_domain`
 can be found as `fidl_fuchsia_media::DomainFormat` and it must be one of the Audio formats. The
 `encoder_settings` is found as `fidl_fuchsia_media::EncoderSettings`.
 
-After creating the encoder, audio input data can be provided either by using the Encoder as an
-`AsyncWrite` provider.  The resulting encoded audio is provided via the output stream which can
-be acquired via the `Encoder::take_encoded_stream` call.
+After creating the encoder/decoder, audio input data can be provided either by using the StreamProcessor as an
+`AsyncWrite` provider.  The resulting audio is provided via the output stream which can
+be acquired via the `StreamProcessor::take_output_stream` call.
 
 # Example
 
@@ -40,7 +40,7 @@ let sbc_encoder_settings = EncoderSettings::Sbc(SbcEncoderSettings {
 let mut raw_audio = Vec::new();
 File::open("sample.wav")?.read_to_end(&mut raw_audio)?;
 
-let encoder = Encoder::create(pcm_format, sbc_encoder_settings);
+let encoder = StreamProcessor::create_encoder(pcm_format, sbc_encoder_settings);
 
 // 44 bytes offset skips the RIFF header in the wav file.
 // Delivering 16 audio frames at once that are 2 bytes each
@@ -62,13 +62,12 @@ output_file.close()?;
 
 ```
 
-The encoded stream will begin producing data as soon as the StreamProcessor starts providing it -
-the writing of the uncompressed data and the reading of the encoded stream can happen on separate
+The output stream will begin producing data as soon as the StreamProcessor starts providing it -
+the writing of the uncompressed data and the reading of the output stream can happen on separate
 tasks.
 
 */
 
 /// Interface to CodecFactory
-pub mod encoder;
-
-pub use encoder::Encoder;
+pub mod stream_processor;
+pub use stream_processor::{StreamProcessor, StreamProcessorOutputStream};
