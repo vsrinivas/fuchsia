@@ -239,13 +239,18 @@ def compare_summaries(reference, current):
             current_libs = current_objects.get_file(name).libs
             if current_libs == reference_libs:
                 continue
-            match = False
             for lib in reference_libs - current_libs:
+                match = False
                 report(type, True, 'shared library removed from ' + name +
                        ': ' + lib)
             for lib in current_libs - reference_libs:
-                report(type, True, 'shared library added to ' + name + ': ' +
-                       lib)
+                if lib == 'libc++abi.so.1':
+                    is_error = False
+                else:
+                    is_error = True
+                    match = False
+                report(type, is_error, 'shared library added to ' + name +
+                       ': ' + lib)
 
     return match
 
