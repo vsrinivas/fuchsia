@@ -33,7 +33,7 @@ async fn do_get(get_arg: Get, server: Server_Proxy) -> Result<(), Error> {
                 .await?
                 .map_err(|e| fuchsia_zircon::Status::from_raw(e))
                 .with_context(|| format!("get_option({:?}) failed", name))?;
-            println!("{:?}", res);
+            println!("{:#?}", res);
         }
         GetArg::Parameter(ParameterArg { name }) => {
             let res = server
@@ -41,7 +41,7 @@ async fn do_get(get_arg: Get, server: Server_Proxy) -> Result<(), Error> {
                 .await?
                 .map_err(|e| fuchsia_zircon::Status::from_raw(e))
                 .with_context(|| format!("get_parameter({:?}) failed", name))?;
-            println!("{:?}", res);
+            println!("{:#?}", res);
         }
     };
     Ok(())
@@ -76,7 +76,7 @@ async fn do_list(list_arg: List, server: Server_Proxy) -> Result<(), Error> {
                 .map_err(|e| fuchsia_zircon::Status::from_raw(e))
                 .with_context(|| "list_options() failed")?;
 
-            println!("{:?}", res);
+            println!("{:#?}", res);
         }
         ListArg::Parameter(ParameterToken {}) => {
             let res = server
@@ -84,7 +84,7 @@ async fn do_list(list_arg: List, server: Server_Proxy) -> Result<(), Error> {
                 .await?
                 .map_err(|e| fuchsia_zircon::Status::from_raw(e))
                 .with_context(|| "list_parameters() failed")?;
-            println!("{:?}", res);
+            println!("{:#?}", res);
         }
     };
     Ok(())

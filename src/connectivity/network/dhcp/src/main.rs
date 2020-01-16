@@ -15,7 +15,7 @@ use {
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as fx_syslog, fx_log_err, fx_log_info},
-    fuchsia_zircon::{DurationNum, Status},
+    fuchsia_zircon::DurationNum,
     futures::{Future, StreamExt, TryFutureExt, TryStreamExt},
     std::{
         cell::RefCell,
@@ -64,14 +64,11 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::Server);
     fs.take_and_serve_directory_handle()?;
-    let server_dispatcher = RefCell::new(CannedDispatcher {});
     let admin_fut = fs
         .then(|incoming_service| async {
             match incoming_service {
                 IncomingService::Server(stream) => {
-                    run_server(stream, &server_dispatcher)
-                        .inspect_err(|e| log::info!("{:?}", e))
-                        .await?;
+                    run_server(stream, &server).inspect_err(|e| log::info!("{:?}", e)).await?;
                     Ok(())
                 }
             }
@@ -140,48 +137,6 @@ fn define_lease_expiration_handler_future<'a>(
         .try_collect::<()>()
 }
 
-// CannedDispatcher will be moved to the tests module once Server implements ServerDispatcher. In
-// the meantime, this struct provides a fake implementation of ServerDispatcher.
-struct CannedDispatcher {}
-
-impl ServerDispatcher for CannedDispatcher {
-    fn dispatch_get_option(
-        &self,
-        _code: fidl_fuchsia_net_dhcp::OptionCode,
-    ) -> Result<fidl_fuchsia_net_dhcp::Option_, Status> {
-        Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
-            addr: [0, 0, 0, 0],
-        }))
-    }
-    fn dispatch_get_parameter(
-        &self,
-        _name: fidl_fuchsia_net_dhcp::ParameterName,
-    ) -> Result<fidl_fuchsia_net_dhcp::Parameter, Status> {
-        Ok(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
-            default: None,
-            max: None,
-        }))
-    }
-    fn dispatch_set_option(
-        &mut self,
-        _value: fidl_fuchsia_net_dhcp::Option_,
-    ) -> Result<(), Status> {
-        Ok(())
-    }
-    fn dispatch_set_parameter(
-        &mut self,
-        _value: fidl_fuchsia_net_dhcp::Parameter,
-    ) -> Result<(), Status> {
-        Ok(())
-    }
-    fn dispatch_list_options(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Option_>, Status> {
-        Ok(vec![])
-    }
-    fn dispatch_list_parameters(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>, Status> {
-        Ok(vec![])
-    }
-}
-
 async fn run_server<S: ServerDispatcher>(
     stream: fidl_fuchsia_net_dhcp::Server_RequestStream,
     server: &RefCell<S>,
@@ -220,6 +175,50 @@ async fn run_server<S: ServerDispatcher>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct CannedDispatcher {}
+
+    impl ServerDispatcher for CannedDispatcher {
+        fn dispatch_get_option(
+            &self,
+            _code: fidl_fuchsia_net_dhcp::OptionCode,
+        ) -> Result<fidl_fuchsia_net_dhcp::Option_, fuchsia_zircon::Status> {
+            Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
+                addr: [0, 0, 0, 0],
+            }))
+        }
+        fn dispatch_get_parameter(
+            &self,
+            _name: fidl_fuchsia_net_dhcp::ParameterName,
+        ) -> Result<fidl_fuchsia_net_dhcp::Parameter, fuchsia_zircon::Status> {
+            Ok(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
+                default: None,
+                max: None,
+            }))
+        }
+        fn dispatch_set_option(
+            &mut self,
+            _value: fidl_fuchsia_net_dhcp::Option_,
+        ) -> Result<(), fuchsia_zircon::Status> {
+            Ok(())
+        }
+        fn dispatch_set_parameter(
+            &mut self,
+            _value: fidl_fuchsia_net_dhcp::Parameter,
+        ) -> Result<(), fuchsia_zircon::Status> {
+            Ok(())
+        }
+        fn dispatch_list_options(
+            &self,
+        ) -> Result<Vec<fidl_fuchsia_net_dhcp::Option_>, fuchsia_zircon::Status> {
+            Ok(vec![])
+        }
+        fn dispatch_list_parameters(
+            &self,
+        ) -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>, fuchsia_zircon::Status> {
+            Ok(vec![])
+        }
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn get_option_with_subnet_mask_returns_subnet_mask() -> Result<(), Error> {

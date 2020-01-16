@@ -4,8 +4,14 @@
 
 use futures::{FutureExt, StreamExt};
 
+struct Command<'a> {
+    args: Vec<&'a str>,
+    expected_stdout: &'a str,
+    expected_stderr: &'a str,
+}
+
 #[cfg(test)]
-async fn test_cli(args: Vec<&str>, expected_stdout: &str) {
+async fn test_cli(commands: Vec<Command<'_>>) {
     let mut fs = fuchsia_component::server::ServiceFs::new_local();
     fs.add_proxy_service::<fidl_fuchsia_stash::StoreMarker, _>()
         .add_component_proxy_service::<fidl_fuchsia_net_dhcp::Server_Marker>(
@@ -14,58 +20,204 @@ async fn test_cli(args: Vec<&str>, expected_stdout: &str) {
     );
     let env =
         fs.create_salted_nested_environment("test_cli").expect("failed to create environment");
-    let output = fuchsia_component::client::AppBuilder::new(
-        fuchsia_component::fuchsia_single_component_package_url!("dhcpd-cli"),
-    )
-    .args(args)
-    .output(env.launcher())
-    .expect("failed to launch dhcpd-cli");
-    let fs = fs.for_each_concurrent(None, |_incoming| async {});
+    let fs = fs.for_each_concurrent(None, |_incoming| async {}).fuse();
+    futures::pin_mut!(fs);
 
-    let output = futures::select! {
-        () = fs.fuse() => panic!("request stream terminated"),
-        output = output.fuse() => output.expect("dhcpd-cli terminated with error"),
-    };
-    let stdout = std::str::from_utf8(&output.stdout).expect("failed to get stdout");
-    let stderr = std::str::from_utf8(&output.stderr).expect("failed to get stderr");
-    assert_eq!(stderr, "");
-    assert_eq!(stdout, expected_stdout);
+    for Command { args, expected_stdout, expected_stderr } in commands {
+        let output = fuchsia_component::client::AppBuilder::new(
+            fuchsia_component::fuchsia_single_component_package_url!("dhcpd-cli"),
+        )
+        .args(args)
+        .output(env.launcher())
+        .expect("failed to launch dhcpd-cli");
+
+        let output = futures::select! {
+            () = fs => panic!("request stream terminated"),
+            output = output.fuse() => output.expect("dhcpd-cli terminated with error"),
+        };
+        let stdout = std::str::from_utf8(&output.stdout).expect("failed to get stdout");
+        let stderr = std::str::from_utf8(&output.stderr).expect("failed to get stderr");
+        assert_eq!(stderr, expected_stderr);
+        assert_eq!(stdout, expected_stdout);
+    }
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_get_option_subnet() {
-    test_cli(
-        vec!["get", "option", "subnet-mask"],
-        "SubnetMask(Ipv4Address { addr: [0, 0, 0, 0] })\n",
-    )
+    test_cli(vec![Command {
+        args: vec!["get", "option", "subnet-mask"],
+        expected_stdout: "",
+        expected_stderr: r#"Error: get_option(SubnetMask(SubnetMask { mask: None })) failed
+
+Caused by:
+    NOT_FOUND
+"#,
+    }])
     .await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_get_parameter_lease() {
-    test_cli(
-        vec!["get", "parameter", "lease-length"],
-        "Lease(LeaseLength { default: None, max: None })\n",
-    )
+    test_cli(vec![Command {
+        args: vec!["get", "parameter", "lease-length"],
+        expected_stdout: r#"Lease(
+    LeaseLength {
+        default: Some(
+            86400,
+        ),
+        max: Some(
+            86400,
+        ),
+    },
+)
+"#,
+        expected_stderr: "",
+    }])
     .await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_set_option_subnet() {
-    test_cli(vec!["set", "option", "subnet-mask", "--mask", "255.255.255.0"], "").await
+    test_cli(vec![Command {
+        args: vec!["set", "option", "subnet-mask", "--mask", "255.255.255.0"],
+        expected_stdout: "",
+        expected_stderr: "",
+    }])
+    .await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_set_parameter_lease() {
-    test_cli(vec!["set", "parameter", "lease-length", "--default", "42"], "").await
+    test_cli(vec![Command {
+        args: vec!["set", "parameter", "lease-length", "--default", "42"],
+        expected_stdout: "",
+        expected_stderr: "",
+    }])
+    .await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_list_option() {
-    test_cli(vec!["list", "option"], "[]\n").await
+    test_cli(vec![
+        Command {
+            args: vec!["set", "option", "subnet-mask", "--mask", "255.255.255.0"],
+            expected_stdout: "",
+            expected_stderr: "",
+        },
+        Command {
+            args: vec!["list", "option"],
+            expected_stdout: r#"[
+    SubnetMask(
+        Ipv4Address {
+            addr: [
+                255,
+                255,
+                255,
+                0,
+            ],
+        },
+    ),
+]
+"#,
+            expected_stderr: "",
+        },
+    ])
+    .await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_list_parameter() {
-    test_cli(vec!["list", "parameter"], "[]\n").await
+    test_cli(vec![Command {
+        args: vec!["list", "parameter"],
+        expected_stdout: r#"[
+    IpAddrs(
+        [
+            Ipv4Address {
+                addr: [
+                    192,
+                    168,
+                    0,
+                    1,
+                ],
+            },
+        ],
+    ),
+    AddressPool(
+        AddressPool {
+            network_id: Some(
+                Ipv4Address {
+                    addr: [
+                        192,
+                        168,
+                        0,
+                        0,
+                    ],
+                },
+            ),
+            broadcast: Some(
+                Ipv4Address {
+                    addr: [
+                        192,
+                        168,
+                        0,
+                        128,
+                    ],
+                },
+            ),
+            mask: Some(
+                Ipv4Address {
+                    addr: [
+                        255,
+                        255,
+                        255,
+                        128,
+                    ],
+                },
+            ),
+            pool_range_start: Some(
+                Ipv4Address {
+                    addr: [
+                        192,
+                        168,
+                        0,
+                        0,
+                    ],
+                },
+            ),
+            pool_range_stop: Some(
+                Ipv4Address {
+                    addr: [
+                        192,
+                        168,
+                        0,
+                        0,
+                    ],
+                },
+            ),
+        },
+    ),
+    Lease(
+        LeaseLength {
+            default: Some(
+                86400,
+            ),
+            max: Some(
+                86400,
+            ),
+        },
+    ),
+    PermittedMacs(
+        [],
+    ),
+    StaticallyAssignedAddrs(
+        [],
+    ),
+    ArpProbe(
+        false,
+    ),
+]
+"#,
+        expected_stderr: "",
+    }])
+    .await
 }
