@@ -13,7 +13,6 @@ group("uapp") {
     "blobfs-load-generator",
     "clock",
     "clock:clkctl",
-    "cpuctl",
     "disk-inspect",
     "disk-pave",
     "display-test",
