@@ -15,12 +15,13 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
-test("biotime") {
+test("biotime-test") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # Remove when converting this file to proper GN build idioms.
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "biotime-test.cc" ]
+  output_name = "biotime-test"
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -30,6 +31,6 @@ test("biotime") {
   ]
 }
 
-migrated_manifest("biotime-manifest") {
-  deps = [ ":biotime" ]
+migrated_manifest("biotime-test-manifest") {
+  deps = [ ":biotime-test" ]
 }

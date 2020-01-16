@@ -7,7 +7,6 @@ group("uapp") {
   deps = [
     "$zx/system/dev/test/ddk-schedule-work:ddk-schedule-work-perf",
     "$zx/system/ulib/driver-info:driverinfo",
-    "biotime",
     "blktest",
     "blobfs",
     "blobfs-load-generator",

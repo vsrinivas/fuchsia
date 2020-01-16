@@ -44,7 +44,6 @@ group("images") {
 
 aggregate_manifest("legacy-image") {
   deps = [
-    ":bin.biotime",
     ":bin.blktest",
     ":bin.blobfs-load-generator",
     ":bin.clkctl",
@@ -1324,7 +1323,7 @@ aggregate_manifest("migrated-image") {
 
     # Please uncomment and update to //zircon/whatever below, but keep these
     # unsorted to avoid trivial rebase collisions.
-    #":bin.biotime",
+    "//zircon/system/uapp/biotime:biotime-manifest",
     #":bin.blktest",
     #":bin.blobfs-load-generator",
     #":bin.clkctl",
@@ -2066,7 +2065,7 @@ aggregate_manifest("migrated-aux") {
     #":test.sys.backtrace-request-integration-test",
     #":test.sys.backtrace-request-test",
     #":test.sys.backtrace-test-test",
-    "//zircon/system/utest/biotime:biotime-manifest",
+    "//zircon/system/utest/biotime:biotime-test-manifest",
     #":test.sys.bitmap-test",
     #":test.sys.blobfs-bench-test",
     #":test.sys.blockcore",
@@ -2514,7 +2513,7 @@ aggregate_manifest("migrated-tests") {
     #":test.sys.backtrace-request-integration-test",
     #":test.sys.backtrace-request-test",
     #":test.sys.backtrace-test-test",
-    "//zircon/system/utest/biotime:biotime-manifest",
+    "//zircon/system/utest/biotime:biotime-test-manifest",
     #":test.sys.bitmap-test",
     #":test.sys.blobfs-bench-test",
     #":test.sys.blockcore",
