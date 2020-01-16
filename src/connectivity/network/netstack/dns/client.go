@@ -399,6 +399,10 @@ func (conf *clientConfig) nameList(name string) []string {
 	return names
 }
 
+// GetServersCache returns a list of tcpip.FullAddress to DNS servers.
+//
+// The expiring servers will be at the front of the list, followed by
+// the runtime and default servers. The list will be deduplicated.
 func (c *Client) GetServersCache() []tcpip.FullAddress {
 	// If we already have a populated cache, return it.
 	c.config.mu.RLock()
@@ -436,15 +440,28 @@ func (c *Client) GetServersCache() []tcpip.FullAddress {
 		return cache
 	}
 
-	for _, serverLists := range [][]*[]tcpip.Address{{&c.config.mu.defaultServers}, c.config.mu.runtimeServers} {
+	have := make(map[tcpip.FullAddress]struct{})
+
+	for s := range c.config.mu.expiringServers {
+		// We don't check if s is already in have since c.config.mu.expiringServers
+		// is a map - we will not see the same key twice.
+		have[s] = struct{}{}
+		cache = append(cache, s)
+	}
+
+	for _, serverLists := range [][]*[]tcpip.Address{c.config.mu.runtimeServers, {&c.config.mu.defaultServers}} {
 		for _, serverList := range serverLists {
 			for _, server := range *serverList {
-				cache = append(cache, tcpip.FullAddress{Addr: server, Port: defaultDNSPort})
+				s := tcpip.FullAddress{Addr: server, Port: defaultDNSPort}
+				if _, ok := have[s]; ok {
+					// cache already has s in it, do not duplicate it.
+					continue
+				}
+
+				have[s] = struct{}{}
+				cache = append(cache, s)
 			}
 		}
-	}
-	for s := range c.config.mu.expiringServers {
-		cache = append(cache, s)
 	}
 
 	c.config.mu.serversCache = cache

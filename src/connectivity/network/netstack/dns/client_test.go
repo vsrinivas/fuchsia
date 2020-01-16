@@ -93,6 +93,107 @@ func containsAddress(list []tcpip.Address, item tcpip.Address) bool {
 	return false
 }
 
+func TestGetServersCacheNoDuplicates(t *testing.T) {
+	addr3 := addr3
+	addr3.Port = defaultDNSPort
+	addr4WithPort := addr4
+	addr4WithPort.Port = defaultDNSPort
+
+	// We set stack.Stack to nil since thats not what we are testing here.
+	c := NewClient(nil)
+
+	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2, addr2, addr3, addr4, addr8}, longLifetime)
+	runtimeServers1 := []tcpip.Address{addr5.Addr, addr5.Addr, addr6.Addr, addr7.Addr}
+	runtimeServers2 := []tcpip.Address{addr6.Addr, addr7.Addr, addr8.Addr, addr9.Addr}
+	c.SetRuntimeServers([]*[]tcpip.Address{&runtimeServers1, &runtimeServers2})
+	c.SetDefaultServers([]tcpip.Address{addr3.Addr, addr9.Addr, addr10.Addr, addr10.Addr})
+	servers := c.GetServersCache()
+	if !containsFullAddress(servers, addr1) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
+	}
+	if !containsFullAddress(servers, addr2) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
+	}
+	if !containsFullAddress(servers, addr3) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
+	}
+	if !containsFullAddress(servers, addr4WithPort) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr4WithPort, servers)
+	}
+	if !containsFullAddress(servers, addr5) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr5, servers)
+	}
+	if !containsFullAddress(servers, addr6) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr6, servers)
+	}
+	if !containsFullAddress(servers, addr7) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr7, servers)
+	}
+	if !containsFullAddress(servers, addr8) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr8, servers)
+	}
+	if !containsFullAddress(servers, addr9) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr9, servers)
+	}
+	if !containsFullAddress(servers, addr10) {
+		t.Errorf("expected %+v to be in the server cache, got = %+v", addr10, servers)
+	}
+	if l := len(servers); l != 10 {
+		t.Errorf("got len(servers) = %d, want = 10; servers = %+v", l, servers)
+	}
+}
+
+func TestGetServersCacheOrdering(t *testing.T) {
+	addr4WithPort := addr4
+	addr4WithPort.Port = defaultDNSPort
+
+	// We set stack.Stack to nil since thats not what we are testing here.
+	c := NewClient(nil)
+
+	c.UpdateExpiringServers([]tcpip.FullAddress{addr1, addr2, addr3, addr4}, longLifetime)
+	runtimeServers1 := []tcpip.Address{addr5.Addr, addr6.Addr}
+	runtimeServers2 := []tcpip.Address{addr7.Addr, addr8.Addr}
+	c.SetRuntimeServers([]*[]tcpip.Address{&runtimeServers1, &runtimeServers2})
+	c.SetDefaultServers([]tcpip.Address{addr9.Addr, addr10.Addr})
+	servers := c.GetServersCache()
+	expiringServers := servers[:4]
+	runtimeServers := servers[4:8]
+	defaultServers := servers[8:]
+	if !containsFullAddress(expiringServers, addr1) {
+		t.Errorf("expected %+v to be in the expiring server cache, got = %+v", addr1, expiringServers)
+	}
+	if !containsFullAddress(expiringServers, addr2) {
+		t.Errorf("expected %+v to be in the expiring server cache, got = %+v", addr2, expiringServers)
+	}
+	if !containsFullAddress(expiringServers, addr3) {
+		t.Errorf("expected %+v to be in the expiring server cache, got = %+v", addr3, expiringServers)
+	}
+	if !containsFullAddress(expiringServers, addr4WithPort) {
+		t.Errorf("expected %+v to be in the expiring server cache, got = %+v", addr4WithPort, expiringServers)
+	}
+	if !containsFullAddress(runtimeServers, addr5) {
+		t.Errorf("expected %+v to be in the runtime server cache, got = %+v", addr5, runtimeServers)
+	}
+	if !containsFullAddress(runtimeServers, addr6) {
+		t.Errorf("expected %+v to be in the runtime server cache, got = %+v", addr6, runtimeServers)
+	}
+	if !containsFullAddress(runtimeServers, addr7) {
+		t.Errorf("expected %+v to be in the runtime server cache, got = %+v", addr7, runtimeServers)
+	}
+	if !containsFullAddress(runtimeServers, addr8) {
+		t.Errorf("expected %+v to be in the runtime server cache, got = %+v", addr8, runtimeServers)
+	}
+	if !containsFullAddress(defaultServers, addr9) {
+		t.Errorf("expected %+v to be in the default server cache, got = %+v", addr9, defaultServers)
+	}
+	if !containsFullAddress(defaultServers, addr10) {
+		t.Errorf("expected %+v to be in the default server cache, got = %+v", addr10, defaultServers)
+	}
+	if l := len(servers); l != 10 {
+		t.Errorf("got len(servers) = %d, want = 10; servers = %+v", l, servers)
+	}
+}
+
 func TestRemoveAllServersWithNIC(t *testing.T) {
 	addr3 := addr3
 	addr3.NIC = addr4.NIC
