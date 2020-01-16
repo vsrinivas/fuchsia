@@ -10,7 +10,7 @@
         "features": [
           "isolated-persistent-storage",
           "shell-commands",
-          "system-temp"
+          "isolated-temp"
         ],
         "services": [
             "fuchsia.process.Launcher",
