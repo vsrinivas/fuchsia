@@ -6,8 +6,6 @@
 #define ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_THERMAL_H_
 
 #include <fuchsia/hardware/thermal/c/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/fidl-utils/bind.h>
 #include <threads.h>
 
@@ -17,7 +15,7 @@
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/thermal.h>
+#include <ddktl/protocol/empty-protocol.h>
 
 #include "aml-cpufreq.h"
 #include "aml-tsensor.h"
@@ -28,7 +26,7 @@ namespace thermal {
 class AmlThermal;
 using DeviceType = ddk::Device<AmlThermal, ddk::UnbindableNew, ddk::Messageable>;
 
-class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, ddk::base_protocol> {
+class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlThermal);
   AmlThermal(zx_device_t* device, std::unique_ptr<thermal::AmlTSensor> tsensor,
@@ -39,8 +37,7 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
         tsensor_(std::move(tsensor)),
         voltage_regulator_(std::move(voltage_regulator)),
         cpufreq_scaling_(std::move(cpufreq_scaling)),
-        thermal_config_(std::move(thermal_config)),
-        loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+        thermal_config_(std::move(thermal_config)) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* device);
 
@@ -48,9 +45,6 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-
-  // Implements ZX_PROTOCOL_THERMAL
-  zx_status_t ThermalConnect(zx::channel ch);
 
   // For testing
  protected:
@@ -92,13 +86,10 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
   int ThermalNotificationThread();
   zx_status_t NotifyThermalDaemon();
 
-  zx_status_t StartConnectDispatchThread();
-
   std::unique_ptr<thermal::AmlTSensor> tsensor_;
   std::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator_;
   std::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling_;
   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_;
-  async::Loop loop_;
 };
 }  // namespace thermal
 

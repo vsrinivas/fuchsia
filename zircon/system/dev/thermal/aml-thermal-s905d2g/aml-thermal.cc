@@ -172,13 +172,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = thermal_device->StartConnectDispatchThread();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-thermal: Could not start connect dispatcher thread, st = %d\n", status);
-    return status;
-  }
-
-  status = thermal_device->DdkAdd("thermal", 0, nullptr, 0, ZX_PROTOCOL_THERMAL);
+  status = thermal_device->DdkAdd("thermal");
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-thermal: Could not create thermal device: %d\n", status);
     return status;
@@ -207,21 +201,6 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   // devmgr is now in charge of the memory for dev.
   __UNUSED auto ptr = thermal_device.release();
   return ZX_OK;
-}
-
-zx_status_t AmlThermal::StartConnectDispatchThread() { return loop_.StartThread(); }
-
-zx_status_t AmlThermal::ThermalConnect(zx::channel chan) {
-  zx_status_t st =
-      fidl_bind(loop_.dispatcher(), chan.release(),
-                reinterpret_cast<fidl_dispatch_t*>(fuchsia_hardware_thermal_Device_dispatch), this,
-                &fidl_ops);
-
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "Failed to start FIDL dispatcher, st = %d\n", st);
-  }
-
-  return st;
 }
 
 zx_status_t AmlThermal::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {

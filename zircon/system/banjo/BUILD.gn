@@ -68,7 +68,6 @@ group("banjo") {
     "ddk.protocol.sysmem",
     "ddk.protocol.tee",
     "ddk.protocol.test",
-    "ddk.protocol.thermal",
     "ddk.protocol.usb",
     "ddk.protocol.usb.bus",
     "ddk.protocol.usb.composite",

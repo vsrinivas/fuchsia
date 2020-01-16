@@ -55,7 +55,6 @@ if (current_cpu != "") {
       "$zx/system/dev/clk/msm8x53-clk:msm8x53-clk-test",
       "$zx/system/dev/clk/syn-clk:syn-clk-test",
       "$zx/system/dev/codec/alc5663:test",
-      "$zx/system/dev/cpu/aml-cpu:aml-cpu-test",
       "$zx/system/dev/display/aml-canvas:aml-canvas-test",
       "$zx/system/dev/display/astro-display:astro-display-test",
       "$zx/system/dev/display/display/test",

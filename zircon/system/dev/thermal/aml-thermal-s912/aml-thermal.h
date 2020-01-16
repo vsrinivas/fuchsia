@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
+#include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/scpi.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
@@ -10,15 +15,7 @@
 
 #include <utility>
 
-#include <ddk/device.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/scpi.h>
-#include <ddktl/protocol/thermal.h>
-
-#ifndef ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S912_AML_THERMAL_H_
-#define ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S912_AML_THERMAL_H_
+#pragma once
 
 namespace {
 
@@ -40,7 +37,7 @@ class AmlThermal;
 using DeviceType = ddk::Device<AmlThermal, ddk::Messageable, ddk::UnbindableNew>;
 
 // AmlThermal implements the s912 AmLogic thermal driver.
-class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, ddk::base_protocol> {
+class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL> {
  public:
   AmlThermal(zx_device_t* device, const gpio_protocol_t& fan0_gpio_proto,
              const gpio_protocol_t& fan1_gpio_proto, const scpi_protocol_t& scpi_proto,
@@ -63,9 +60,6 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
-
-  // Implements ZX_PROTOCOL_THERMAL
-  zx_status_t ThermalConnect(zx::channel ch);
 
   // Visible for testing.
   zx_status_t GetInfo(fidl_txn_t* txn);
@@ -130,5 +124,3 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
 };
 
 }  // namespace thermal
-
-#endif  // ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S912_AML_THERMAL_H_
