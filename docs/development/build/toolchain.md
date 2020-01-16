@@ -49,11 +49,11 @@ git clone https://github.com/llvm/llvm-project ${LLVM_SRCDIR}
 ### Fuchsia SDK
 
 Before building the runtime libraries that are built along with the
-toolchain, you need a Fuchsia SDK. We expect that the SDK is located in
+toolchain, you need a Fuchsia SDK. The SDK must be located in
 the directory pointed to by the `${SDK_DIR}` variable:
 
 ```bash
-SDK_DIR=${HOME}/fuchsia/sdk
+SDK_DIR=${HOME}/fuchsia-sdk
 ```
 
 To download the latest SDK, you can use the following:
@@ -62,10 +62,29 @@ To download the latest SDK, you can use the following:
 cipd install fuchsia/sdk/core/linux-amd64 latest -root ${SDK_DIR}
 ```
 
+### Sysroot for Linux
+
+To include compiler runtimes and C++ library for Linux, download the sysroot
+for both `arm64` and `x64`. Both sysroots must be located in
+the directory pointed by the `${SYSROOT_DIR}` variable.
+
+```bash
+SYSROOT_DIR=${HOME}/fuchsia-sysroot/
+```
+
+To download the latest sysroots, you can use the following:
+
+```bash
+cipd install fuchsia/sysroot/linux-arm64 latest -root ${SYSROOT_DIR}/linux-arm64
+cipd install fuchsia/sysroot/linux-amd64 latest -root ${SYSROOT_DIR}/linux-x64
+```
+
 ## Building Clang
 
 The Clang CMake build system supports bootstrap (aka multi-stage)
 builds. We use two-stage bootstrap build for the Fuchsia Clang compiler.
+However, for toolchain related development it is recommended to use
+the [single-stage build](#single-stage-build).
 
 The first stage compiler is a host-only compiler with some options set
 needed for the second stage. The second stage compiler is the fully
@@ -98,8 +117,8 @@ the correct host triple. For example, to build the runtimes for
 would use:
 
 ```bash
-  -DSTAGE2_LINUX_x86_64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
-  -DSTAGE2_LINUX_aarch64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-arm64 \
+  -DSTAGE2_LINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-x64 \
+  -DSTAGE2_LINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
 ```
 
 To install the compiler just built into `/usr/local`, you can use the
@@ -271,7 +290,7 @@ To verify your compiler is available on Goma, you can set
 `GOMA_USE_LOCAL=0 GOMA_FALLBACK=0` environment variables. If the
 compiler is not available, you will see an error.
 
-### Fuchsia Configuration
+### Fuchsia configuration {#single-stage-build}
 
 When developing Clang for Fuchsia, you can also use the cache file to
 test the Fuchsia configuration, but run only the second stage, with LTO
@@ -285,13 +304,20 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_LTO=OFF \
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
-  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
-  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-arm64 \
+  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-x64 \
+  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
   -DFUCHSIA_SDK=${SDK_DIR} \
+  -DCMAKE_INSTALL_PREFIX='' \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
   ${LLVM_SRCDIR}/llvm
 ninja distribution
 ```
+
+Note: Due to a [bug in Clang](https://bugs.llvm.org/show_bug.cgi?id=44097),
+builds with assertions enabled might crash while building Fuchsia. As a
+workaround, you can disable Clang assertions by setting
+`-DLLVM_ENABLE_ASSERTIONS=OFF`.
+
 
 With Goma for even faster turnaround time:
 
@@ -307,9 +333,10 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_LTO=OFF \
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
-  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-x64 \
-  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${FUCHSIA}/prebuilt/third_party/sysroot/linux-arm64 \
+  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-x64 \
+  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
   -DFUCHSIA_SDK=${SDK_DIR} \
+  -DCMAKE_INSTALL_PREFIX='' \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
   ${LLVM_SRCDIR}/llvm
 ninja distribution -j${JOBS}
@@ -333,25 +360,28 @@ You can start building test binaries right away by using the Clang in
 `${LLVM_OBJDIR}/bin/`, or in
 `${LLVM_OBJDIR}/tools/clang/stage2-bins/bin/` (depending on whether you
 did the two-stage build or the single-stage build, the binaries will be
-in a different location). However, if you want to use your Clang to
-build Fuchsia, you will need to set some more arguments/variables.
+in a different location).
 
-If you are only interested in building Zircon, set the following
-GN build arguments:
+If you want to use your Clang to build Fuchsia, you will need to do a few more things:
+
+First you will need to install the stripped version of Clang in the directory
+pointed by the `${CLANG_DIR}` variable:
 
 ```bash
-gn gen build-zircon --args='variants = [ "clang" ] clang_tool_dir = ${CLANG_DIR}'
+env DESTDIR=${CLANG_DIR} ninja install-distribution-stripped
 ```
 
-`${CLANG_DIR}` is the path to the `bin` directory for your Clang build,
-e.g. `${LLVM_OBJDIR}/bin/`.
+After that, copy some required files from the Fuchsia prebuilt into the Clang
+install directory:
 
-Note: that trailing slash is important.
+```bash
+cp -f ${FUCHSIA}/prebuilt/third_party/clang/linux-x64/lib/runtime.json ${CLANG_DIR}/lib
+cp -f ${FUCHSIA}/prebuilt/third_party/clang/linux-x64/lib/aarch64-fuchsia.manifest ${CLANG_DIR}/lib
+cp -f ${FUCHSIA}/prebuilt/third_party/clang/linux-x64/lib/x86_64-fuchsia.manifest ${CLANG_DIR}/lib
+```
 
-Then run `fx build-zircon` as usual.
-
-For layers-above-Zircon, it should be sufficient to pass
-`--args clang_prefix="${CLANG_DIR}"` to `fx set`, then run `fx build` as usual.
+Finally, pass `--args clang_prefix="${CLANG_DIR}"` to `fx set` command and run
+`fx build`.
 
 ### Building Fuchsia with custom Clang on bots (Googlers only)
 
