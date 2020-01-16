@@ -146,7 +146,7 @@ impl Authenticated {
         let rsna_link_state = match (s_rsne.as_ref(), rsn_cfg) {
             (Some(s_rsne_bytes), Some(a_rsn)) => {
                 let authenticator = new_authenticator_from_rsne(
-                    ctx.device_info.addr,
+                    ctx.device_info.mac_addr,
                     r_sta.addr,
                     s_rsne_bytes,
                     a_rsn,

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{DeviceInfo, MacAddr},
+    crate::MacAddr,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     std::convert::TryInto,
     wlan_common::{
@@ -152,9 +152,10 @@ pub fn wpa1_cipher() -> Cipher {
     cipher::Cipher { oui: Oui::MSFT, suite_type: cipher::TKIP }
 }
 
-pub fn fake_device_info(addr: MacAddr) -> DeviceInfo {
-    DeviceInfo {
-        addr,
+pub fn fake_device_info(mac_addr: MacAddr) -> fidl_mlme::DeviceInfo {
+    fidl_mlme::DeviceInfo {
+        mac_addr,
+        role: fidl_mlme::MacRole::Client,
         bands: vec![
             fake_2ghz_band_capabilities_vht(),
             fake_band_capabilities_5ghz_vht(ChanWidthSet::TWENTY_FORTY),
@@ -163,15 +164,15 @@ pub fn fake_device_info(addr: MacAddr) -> DeviceInfo {
     }
 }
 
-pub fn fake_device_info_ht(chanwidth: ChanWidthSet) -> DeviceInfo {
-    DeviceInfo {
+pub fn fake_device_info_ht(chanwidth: ChanWidthSet) -> fidl_mlme::DeviceInfo {
+    fidl_mlme::DeviceInfo {
         bands: vec![fake_5ghz_band_capabilities_ht_cbw(chanwidth)],
         ..fake_device_info([0; 6])
     }
 }
 
-pub fn fake_device_info_vht(chanwidth: ChanWidthSet) -> DeviceInfo {
-    DeviceInfo {
+pub fn fake_device_info_vht(chanwidth: ChanWidthSet) -> fidl_mlme::DeviceInfo {
+    fidl_mlme::DeviceInfo {
         bands: vec![fake_band_capabilities_5ghz_vht(chanwidth)],
         ..fake_device_info([0; 6])
     }

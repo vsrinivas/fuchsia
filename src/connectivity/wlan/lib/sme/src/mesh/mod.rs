@@ -5,10 +5,10 @@
 use {
     crate::{
         clone_utils, phy_selection::get_device_band_info, responder::Responder, sink::MlmeSink,
-        timer::TimedEvent, DeviceInfo, MlmeRequest,
+        timer::TimedEvent, MlmeRequest,
     },
     fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
+    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
     futures::channel::{mpsc, oneshot},
     log::error,
     std::mem,

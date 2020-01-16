@@ -192,14 +192,8 @@ fn create_sme<S>(
 where
     S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static,
 {
-    let role = device_info.role;
-    let device_info = wlan_sme::DeviceInfo {
-        addr: device_info.mac_addr,
-        bands: clone_utils::clone_bands(&device_info.bands),
-        driver_features: device_info.driver_features.clone(),
-    };
-
-    match role {
+    let device_info = clone_utils::clone_device_info(device_info);
+    match device_info.role {
         fidl_mlme::MacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();
             let fut = station::client::serve(

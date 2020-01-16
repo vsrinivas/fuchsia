@@ -890,7 +890,7 @@ mod tests {
     use crate::client::{info::InfoReporter, inspect, rsn::Rsna, InfoEvent, InfoSink, TimeStream};
     use crate::test_utils::make_wpa1_ie;
 
-    use crate::{test_utils, timer, DeviceInfo, InfoStream, MlmeStream, Ssid};
+    use crate::{test_utils, timer, InfoStream, MlmeStream, Ssid};
 
     #[test]
     fn associate_happy_path_unprotected() {
@@ -1847,7 +1847,7 @@ mod tests {
         MlmeEvent::EapolInd {
             ind: fidl_mlme::EapolIndication {
                 src_addr: bssid,
-                dst_addr: fake_device_info().addr,
+                dst_addr: fake_device_info().mac_addr,
                 data,
             },
         }
@@ -1923,7 +1923,7 @@ mod tests {
 
     fn expect_eapol_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Eapol(req))) => {
-            assert_eq!(req.src_addr, fake_device_info().addr);
+            assert_eq!(req.src_addr, fake_device_info().mac_addr);
             assert_eq!(req.dst_addr, bssid);
             assert_eq!(req.data, Vec::<u8>::from(test_utils::eapol_key_frame()));
         });
@@ -2206,7 +2206,7 @@ mod tests {
         fidl_mlme::BssDescription { bssid, ..fake_unprotected_bss_description(ssid) }
     }
 
-    fn fake_device_info() -> DeviceInfo {
+    fn fake_device_info() -> fidl_mlme::DeviceInfo {
         test_utils::fake_device_info([0, 1, 2, 3, 4, 5])
     }
 

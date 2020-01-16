@@ -19,7 +19,7 @@ use wlan_inspect;
 use wlan_sme::client::{
     BssDiscoveryResult, BssInfo, ConnectResult, ConnectionAttemptId, InfoEvent, ScanTxnId,
 };
-use wlan_sme::{self as sme, client as client_sme, DeviceInfo, InfoStream};
+use wlan_sme::{self as sme, client as client_sme, InfoStream};
 
 use crate::stats_scheduler::StatsRequest;
 use crate::telemetry;
@@ -40,7 +40,7 @@ struct ConnectionTimes {
 pub async fn serve<S>(
     cfg: sme::Config,
     proxy: MlmeProxy,
-    device_info: DeviceInfo,
+    device_info: fidl_mlme::DeviceInfo,
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     stats_requests: S,

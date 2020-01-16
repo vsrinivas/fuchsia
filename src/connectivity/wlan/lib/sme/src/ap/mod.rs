@@ -20,10 +20,10 @@ use {
         responder::Responder,
         sink::MlmeSink,
         timer::{self, EventId, TimedEvent, Timer},
-        DeviceInfo, MacAddr, MlmeRequest, Ssid,
+        MacAddr, MlmeRequest, Ssid,
     },
     anyhow::format_err,
-    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
+    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
     futures::channel::{mpsc, oneshot},
     log::{debug, error, info, warn},
     std::collections::HashMap,
@@ -799,11 +799,11 @@ mod tests {
 
         let mut receiver = sme.on_stop_command();
         assert_variant!(
-            mlme_stream.try_next(),
-            Ok(Some(MlmeRequest::Deauthenticate(deauth_req))) => {
-                assert_eq!(deauth_req.peer_sta_address, client.addr);
-                assert_eq!(deauth_req.reason_code, fidl_mlme::ReasonCode::StaLeaving);
-            });
+        mlme_stream.try_next(),
+        Ok(Some(MlmeRequest::Deauthenticate(deauth_req))) => {
+            assert_eq!(deauth_req.peer_sta_address, client.addr);
+            assert_eq!(deauth_req.reason_code, fidl_mlme::ReasonCode::StaLeaving);
+        });
 
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Stop(stop_req))) => {
             assert_eq!(stop_req.ssid, SSID.to_vec());

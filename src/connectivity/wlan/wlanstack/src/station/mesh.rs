@@ -22,7 +22,7 @@ use {
         task::Poll,
     },
     void::Void,
-    wlan_sme::{mesh as mesh_sme, timer::TimeEntry, DeviceInfo},
+    wlan_sme::{mesh as mesh_sme, timer::TimeEntry},
 };
 
 pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::MeshSmeMarker>;
@@ -30,7 +30,7 @@ type Sme = mesh_sme::MeshSme;
 
 pub async fn serve<S>(
     proxy: MlmeProxy,
-    device_info: DeviceInfo,
+    device_info: fidl_mlme::DeviceInfo,
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     stats_requests: S,

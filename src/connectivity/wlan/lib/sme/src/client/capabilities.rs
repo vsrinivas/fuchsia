@@ -74,7 +74,7 @@ pub(crate) fn derive_join_channel_and_capabilities(
     bss_channel: Channel,
     user_cbw: Option<Cbw>,
     bss_rates: &[u8],
-    device_info: &crate::DeviceInfo,
+    device_info: &fidl_mlme::DeviceInfo,
 ) -> Result<(Channel, ClientCapabilities), Error> {
     // Step 1 - Extract iface capabilities for this particular band we are joining
     let band_info = get_device_band_info(&device_info, bss_channel.primary)

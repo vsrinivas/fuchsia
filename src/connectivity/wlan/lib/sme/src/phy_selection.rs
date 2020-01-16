@@ -11,8 +11,6 @@ use wlan_common::{
     RadioConfig,
 };
 
-use crate::DeviceInfo;
-
 fn convert_chanwidth_to_cbw(chan_width_set: ChanWidthSet) -> fidl_common::Cbw {
     if chan_width_set == ChanWidthSet::TWENTY_ONLY {
         fidl_common::Cbw::Cbw20
@@ -82,7 +80,7 @@ fn get_band_id(primary_chan: u8) -> fidl_common::Band {
 }
 
 pub fn get_device_band_info(
-    device_info: &DeviceInfo,
+    device_info: &fidl_mlme::DeviceInfo,
     channel: u8,
 ) -> Option<&fidl_mlme::BandCapabilities> {
     let target = get_band_id(channel);
@@ -92,7 +90,7 @@ pub fn get_device_band_info(
 /// Derive PHY and CBW for Client role
 pub fn derive_phy_cbw(
     bss: &fidl_mlme::BssDescription,
-    device_info: &DeviceInfo,
+    device_info: &fidl_mlme::DeviceInfo,
     radio_cfg: &RadioConfig,
 ) -> (fidl_common::Phy, fidl_common::Cbw) {
     let band_cap = match get_device_band_info(device_info, bss.chan.primary) {
@@ -157,7 +155,7 @@ pub fn derive_phy_cbw(
 
 /// Derive PHY to use for AP or Mesh role. Input config_phy and chan are required to be valid.
 pub fn derive_phy_cbw_for_ap(
-    device_info: &DeviceInfo,
+    device_info: &fidl_mlme::DeviceInfo,
     config_phy: &Phy,
     chan: &Channel,
 ) -> (Phy, Cbw) {

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::format_err;
-use fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy};
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use futures::channel::mpsc;
 use futures::prelude::*;
@@ -15,7 +15,7 @@ use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_common::RadioConfig;
-use wlan_sme::{ap as ap_sme, DeviceInfo};
+use wlan_sme::ap as ap_sme;
 
 use crate::stats_scheduler::StatsRequest;
 
@@ -24,7 +24,7 @@ type Sme = ap_sme::ApSme;
 
 pub async fn serve<S>(
     proxy: MlmeProxy,
-    device_info: DeviceInfo,
+    device_info: fidl_mlme::DeviceInfo,
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     stats_requests: S,

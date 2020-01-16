@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::format_err;
-use fidl_fuchsia_wlan_mlme::BssDescription;
+use fidl_fuchsia_wlan_mlme::{BssDescription, DeviceInfo};
 
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use wlan_common::bss::BssDescriptionExt;
@@ -13,7 +13,7 @@ use wlan_common::organization::Oui;
 use wlan_rsn::{self, nonce::NonceReader, NegotiatedProtection, ProtectionInfo};
 
 use super::rsn::{compute_psk, Rsna};
-use crate::{client::protection::Protection, DeviceInfo};
+use crate::client::protection::Protection;
 
 /// According to the WiFi Alliance WPA standard (2004), only TKIP support is required. We allow
 /// CCMP if the AP requests it.
@@ -47,9 +47,9 @@ pub fn get_legacy_wpa_association(
     let supplicant = wlan_rsn::Supplicant::new_wpa_personal(
         // Note: There should be one Reader per device, not per SME.
         // Follow-up with improving on this.
-        NonceReader::new(&device_info.addr[..])?,
+        NonceReader::new(&device_info.mac_addr[..])?,
         psk,
-        device_info.addr,
+        device_info.mac_addr,
         ProtectionInfo::LegacyWpa(s_wpa),
         bss.bssid,
         ProtectionInfo::LegacyWpa(a_wpa),

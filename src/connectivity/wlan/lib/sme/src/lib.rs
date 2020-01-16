@@ -13,7 +13,6 @@ mod sink;
 pub mod test_utils;
 pub mod timer;
 
-use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use futures::channel::mpsc;
 
@@ -39,12 +38,6 @@ impl Config {
         self.wpa1_supported = true;
         self
     }
-}
-
-pub struct DeviceInfo {
-    pub addr: [u8; 6],
-    pub bands: Vec<fidl_mlme::BandCapabilities>,
-    pub driver_features: Vec<fidl_common::DriverFeature>,
 }
 
 #[derive(Debug)]

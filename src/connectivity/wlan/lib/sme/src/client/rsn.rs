@@ -3,13 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        client::{protection::Protection, InvalidPasswordArgError},
-        DeviceInfo,
-    },
+    crate::client::{protection::Protection, InvalidPasswordArgError},
     anyhow::{ensure, format_err},
     eapol,
-    fidl_fuchsia_wlan_mlme::BssDescription,
+    fidl_fuchsia_wlan_mlme::{BssDescription, DeviceInfo},
     fidl_fuchsia_wlan_sme as fidl_sme,
     std::boxed::Box,
     wlan_common::ie::rsn::{
@@ -111,9 +108,9 @@ pub fn get_rsna(
     let supplicant = wlan_rsn::Supplicant::new_wpa_personal(
         // Note: There should be one Reader per device, not per SME.
         // Follow-up with improving on this.
-        NonceReader::new(&device_info.addr[..])?,
+        NonceReader::new(&device_info.mac_addr[..])?,
         psk,
-        device_info.addr,
+        device_info.mac_addr,
         ProtectionInfo::Rsne(s_rsne),
         bss.bssid,
         ProtectionInfo::Rsne(a_rsne),
