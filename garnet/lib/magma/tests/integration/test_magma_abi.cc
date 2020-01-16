@@ -472,6 +472,12 @@ class TestConnection {
     EXPECT_NE(0u, vendor_id);
   }
 
+  void GetMinimumMappableAddressImported() {
+    uint64_t address;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_query2(device_, MAGMA_QUERY_MINIMUM_MAPPABLE_ADDRESS, &address));
+  }
+
   void QueryReturnsBufferImported() {
     uint32_t handle_out = 0;
     // Drivers shouldn't allow this value to be queried through this entrypoint.
@@ -531,6 +537,11 @@ TEST(MagmaAbi, DeviceId) {
 TEST(MagmaAbi, VendorId) {
   TestConnection test;
   test.GetVendorIdImported();
+}
+
+TEST(MagmaAbi, MinimumMappableAddress) {
+  TestConnection test;
+  test.GetMinimumMappableAddressImported();
 }
 
 TEST(MagmaAbi, QueryReturnsBuffer) {

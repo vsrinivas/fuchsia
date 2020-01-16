@@ -19,6 +19,7 @@ extern "C" {
 // TODO(MA-518): remove this
 #define MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED 2
 #define MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED 3
+#define MAGMA_QUERY_MINIMUM_MAPPABLE_ADDRESS 4
 
 // All vendor-specific queries IDs that can be passed to magma_query must be >=
 // MAGMA_QUERY_VENDOR_PARAM_0.

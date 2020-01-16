@@ -16,6 +16,7 @@
 #include <ddk/protocol/platform/device.h>
 
 #include "magma_util/macros.h"
+#include "platform_buffer.h"
 #include "platform_logger.h"
 #include "platform_trace.h"
 #include "platform_trace_provider.h"
