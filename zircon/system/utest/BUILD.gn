@@ -254,7 +254,6 @@ if (current_cpu != "") {
       "memfs",
       "mexec",
       "minfs-micro-benchmark",
-      "msd",
       "mt8167-thermal",
       "noop-fuzzer",
       "perftest",
