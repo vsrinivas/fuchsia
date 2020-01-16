@@ -459,7 +459,10 @@ void VectorType::Visit(TypeVisitor* visitor) const { visitor->VisitVectorType(th
 
 std::string TableType::Name() const { return table_definition_.name(); }
 
-size_t TableType::InlineSize() const { return table_definition_.size(); }
+size_t TableType::InlineSize() const {
+  // A table is always implemented as a size + a pointer.
+  return 2 * sizeof(uint64_t);
+}
 
 std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   uint64_t member_count = 0;

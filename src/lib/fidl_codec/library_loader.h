@@ -159,8 +159,6 @@ class UnionMember {
   const Union& union_definition() const { return union_definition_; }
   bool reserved() const { return reserved_; }
   const std::string& name() const { return name_; }
-  uint64_t offset() const { return offset_; }
-  uint64_t size() const { return size_; }
   Ordinal32 ordinal() const { return ordinal_; }
   const Type* type() const { return type_.get(); }
 
@@ -168,8 +166,6 @@ class UnionMember {
   const Union& union_definition_;
   const bool reserved_;
   const std::string name_;
-  const uint64_t offset_;
-  const uint64_t size_;
   const Ordinal32 ordinal_;
   std::unique_ptr<Type> type_;
 };
@@ -275,14 +271,12 @@ class TableMember {
   bool reserved() const { return reserved_; }
   const std::string& name() const { return name_; }
   Ordinal32 ordinal() const { return ordinal_; }
-  uint64_t size() const { return size_; }
   const Type* type() const { return type_.get(); }
 
  private:
   const bool reserved_;
   const std::string name_;
   const Ordinal32 ordinal_;
-  const uint64_t size_;
   std::unique_ptr<Type> type_;
 };
 

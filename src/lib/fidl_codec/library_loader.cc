@@ -101,12 +101,6 @@ UnionMember::UnionMember(const Union& union_definition, Library* enclosing_libra
       name_(reserved_ ? "<reserved>"
                       : enclosing_library->ExtractString(json_definition, "union member",
                                                          "<unknown>", "name")),
-      offset_(reserved_ ? 0
-                        : enclosing_library->ExtractUint64(json_definition, "union member", name_,
-                                                           "offset")),
-      size_(reserved_
-                ? 0
-                : enclosing_library->ExtractUint64(json_definition, "union member", name_, "size")),
       ordinal_(for_xunion ? enclosing_library->ExtractUint32(json_definition, "union member", name_,
                                                              "ordinal")
                           : (json_definition->HasMember("xunion_ordinal")
@@ -115,7 +109,7 @@ UnionMember::UnionMember(const Union& union_definition, Library* enclosing_libra
                                  : 0)),
       type_(reserved_ ? std::make_unique<RawType>(0)
                       : enclosing_library->ExtractType(json_definition, "union member", name_,
-                                                       "type", size_)) {}
+                                                       "type", 0)) {}
 
 UnionMember::~UnionMember() = default;
 
@@ -250,12 +244,9 @@ TableMember::TableMember(Library* enclosing_library, const rapidjson::Value* jso
                       : enclosing_library->ExtractString(json_definition, "table member",
                                                          "<unknown>", "name")),
       ordinal_(enclosing_library->ExtractUint32(json_definition, "table member", name_, "ordinal")),
-      size_(reserved_
-                ? 0
-                : enclosing_library->ExtractUint64(json_definition, "table member", name_, "size")),
       type_(reserved_ ? std::make_unique<RawType>(0)
                       : enclosing_library->ExtractType(json_definition, "table member", name_,
-                                                       "type", size_)) {}
+                                                       "type", 0)) {}
 
 TableMember::~TableMember() = default;
 
