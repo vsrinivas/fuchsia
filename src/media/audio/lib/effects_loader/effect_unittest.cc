@@ -16,6 +16,7 @@ class EffectTest : public testing::EffectsLoaderTestBase {};
 TEST_F(EffectTest, MoveEffect) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                               FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                1.0}));
   Effect effect1 = effects_loader()->CreateEffect(0, 1, 1, 1, {});

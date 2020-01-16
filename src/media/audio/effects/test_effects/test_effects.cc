@@ -34,6 +34,7 @@ class TestEffect {
     return channels_out_ == FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN ? channels_in_
                                                                       : channels_out_;
   }
+  uint32_t block_size_frames() const { return g_effects[effect_id()].block_size_frames; }
   std::string_view config() const { return config_; }
   size_t flush_count() const { return flush_count_; }
 
@@ -43,9 +44,11 @@ class TestEffect {
   }
 
   bool GetParameters(fuchsia_audio_effects_parameters* params) const {
+    memset(params, 0, sizeof(*params));
     params->frame_rate = frame_rate();
     params->channels_in = channels_in();
     params->channels_out = channels_out();
+    params->block_size_frames = block_size_frames();
     params->signal_latency_frames = 0;
     params->suggested_frames_per_buffer = 0;
     return true;

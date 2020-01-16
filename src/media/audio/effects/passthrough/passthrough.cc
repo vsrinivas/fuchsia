@@ -73,9 +73,11 @@ bool passthrough_get_parameters(fuchsia_audio_effects_handle_t effects_handle,
 
   auto effect = reinterpret_cast<EffectPass*>(effects_handle);
 
+  memset(effect_params, 0, sizeof(*effect_params));
   effect_params->frame_rate = effect->frame_rate_;
   effect_params->channels_in = effect->channels_;
   effect_params->channels_out = effect->channels_;
+  effect_params->block_size_frames = FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY;
   effect_params->signal_latency_frames = 0;
   effect_params->suggested_frames_per_buffer = 0;
 

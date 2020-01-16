@@ -20,6 +20,7 @@ class EffectsProcessorTest : public testing::EffectsLoaderTestBase {};
 TEST_F(EffectsProcessorTest, CreateDelete) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                               FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                1.0}));
 
@@ -67,6 +68,7 @@ TEST_F(EffectsProcessorTest, CreateDelete) {
 TEST_F(EffectsProcessorTest, AddEffectWithMismatchedChannelConfig) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                               FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                1.0}));
   Effect single_channel_effect1 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
@@ -97,21 +99,25 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
   ASSERT_EQ(ZX_OK,
             test_effects()->add_effect({{"increment_by_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                          FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
                                         TEST_EFFECTS_ACTION_ADD,
                                         1.0}));
   ASSERT_EQ(ZX_OK,
             test_effects()->add_effect({{"increment_by_2.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                          FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
                                         TEST_EFFECTS_ACTION_ADD,
                                         2.0}));
   ASSERT_EQ(ZX_OK,
             test_effects()->add_effect({{"assign_to_12.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                          FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
                                         TEST_EFFECTS_ACTION_ASSIGN,
                                         12.0}));
   ASSERT_EQ(ZX_OK,
             test_effects()->add_effect({{"increment_by_4.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                          FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                        FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
                                         TEST_EFFECTS_ACTION_ADD,
                                         4.0}));
 

@@ -55,6 +55,7 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
   // Create an effect we can load.
   ASSERT_EQ(ZX_OK, test_effects_->add_effect({{"add_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                              FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
                                               TEST_EFFECTS_ACTION_ADD,
                                               1.0}));
 
