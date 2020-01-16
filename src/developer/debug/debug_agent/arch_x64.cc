@@ -363,7 +363,7 @@ WatchpointInstallationResult ArchProvider::InstallWatchpoint(const zx::thread& t
   DEBUG_LOG(Archx64) << "Before installing watchpoint for range " << range.ToString() << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  auto result = SetupWatchpoint(&debug_regs, range);
+  auto result = SetupWatchpoint(&debug_regs, range, debug_ipc::BreakpointType::kWrite);
   if (result.status != ZX_OK)
     return WatchpointInstallationResult(result.status);
 

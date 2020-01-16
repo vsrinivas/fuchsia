@@ -246,10 +246,11 @@ enum class Stop : uint32_t {
   kNone      // Don't stop anything but accumulate hit counts.
 };
 
+// NOTE: read-only could be added in the future as arm64 supports them. They're not added today as
+//       x64 does not support them and presenting a common platform is cleaner for now.
 enum class BreakpointType : uint32_t {
   kSoftware,
   kHardware,
-  kRead,
   kReadWrite,
   kWrite,
   kLast,

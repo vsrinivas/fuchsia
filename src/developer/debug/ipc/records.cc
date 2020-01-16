@@ -132,8 +132,6 @@ const char* BreakpointTypeToString(BreakpointType type) {
       return "Software";
     case BreakpointType::kHardware:
       return "Hardware";
-    case BreakpointType::kRead:
-      return "Read";
     case BreakpointType::kReadWrite:
       return "ReadWrite";
     case BreakpointType::kWrite:
@@ -148,8 +146,7 @@ const char* BreakpointTypeToString(BreakpointType type) {
 
 bool IsWatchpointType(debug_ipc::BreakpointType type) {
   // clang-format off
-  return type == BreakpointType::kRead ||
-         type == BreakpointType::kReadWrite ||
+  return type == BreakpointType::kReadWrite ||
          type == BreakpointType::kWrite;
   // clang-format on
 }

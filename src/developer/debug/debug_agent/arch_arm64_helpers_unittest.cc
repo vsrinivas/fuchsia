@@ -831,53 +831,53 @@ TEST(ArmHelpers_SettingWatchpoints, DifferentTypes) {
   EXPECT_TRUE(CheckLengths(regs, {1, 0, 0, 0}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
 
-  ASSERT_TRUE(Check(&regs, kAddress2, 2, debug_ipc::BreakpointType::kRead,
+  ASSERT_TRUE(Check(&regs, kAddress2, 2, debug_ipc::BreakpointType::kReadWrite,
                     CreateResult(ZX_OK, {kAddress2, kAddress2 + 2}, 1), 0x3));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, 0, 0}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 0, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 0, 0}));
-  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, 0, 0}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kReadWrite, 0, 0}));
 
   ASSERT_TRUE(Check(&regs, kAddress3, 4, debug_ipc::BreakpointType::kReadWrite,
                     CreateResult(ZX_OK, {kAddress3, kAddress3 + 4}, 2), 0xf));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, 0}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 0}));
-  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, kReadWrite, 0}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kReadWrite, kReadWrite, 0}));
 
-  ASSERT_TRUE(Check(&regs, kAddress4, 8, debug_ipc::BreakpointType::kRead,
+  ASSERT_TRUE(Check(&regs, kAddress4, 8, debug_ipc::BreakpointType::kReadWrite,
                     CreateResult(ZX_OK, {kAddress4, kAddress4 + 8}, 3), 0xff));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
-  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, kReadWrite, kRead}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kReadWrite, kReadWrite, kReadWrite}));
 
   ASSERT_TRUE(Check(&regs, kAddress5, 8, debug_ipc::BreakpointType::kWrite,
                     CreateResult(ZX_ERR_NO_RESOURCES)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
-  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, kReadWrite, kRead}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kReadWrite, kReadWrite, kReadWrite}));
 
   ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress3, kAddress3 + 4}, kWatchpointCount), ZX_OK);
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, 0, kAddress4}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 0, 1}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 0, 8}));
-  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, 0, kRead}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kReadWrite, 0, kReadWrite}));
 
   ASSERT_TRUE(Check(&regs, kAddress5, 8, debug_ipc::BreakpointType::kWrite,
                     CreateResult(ZX_OK, {kAddress5, kAddress5 + 8}, 2), 0xff));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress5, kAddress4}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 8, 8}));
-  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, kWrite, kRead}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kReadWrite, kWrite, kReadWrite}));
 
   ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress3, kAddress3 + 4}, kWatchpointCount),
                ZX_ERR_NOT_FOUND);
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress5, kAddress4}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 8, 8}));
-  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, kWrite, kRead}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kReadWrite, kWrite, kReadWrite}));
 }
 
 }  // namespace

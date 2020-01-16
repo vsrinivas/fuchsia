@@ -411,9 +411,24 @@ bool CheckLengths(const zx_thread_state_debug_regs_t& regs, std::vector<uint64_t
   return !has_errors;
 }
 
+bool CheckTypes(const zx_thread_state_debug_regs_t& regs, std::vector<uint32_t> rws) {
+  FXL_DCHECK(rws.size() == 4u);
+  bool has_errors = false;
+  for (int i = 0; i < 4; i++) {
+    uint32_t rw = GetWatchpointRW(regs.dr7, i);
+    if (rw != rws[i]) {
+      ADD_FAILURE() << "Slot RW" << i << ": Expected " << rws[i] << ", got: " << rw;
+      has_errors = true;
+    }
+  }
+
+  return !has_errors;
+}
+
 bool CheckSetup(zx_thread_state_debug_regs_t* regs, uint64_t address, uint64_t size,
-                WatchpointInstallationResult expected) {
-  WatchpointInstallationResult result = SetupWatchpoint(regs, {address, address + size});
+                WatchpointInstallationResult expected,
+                debug_ipc::BreakpointType type = debug_ipc::BreakpointType::kWrite) {
+  WatchpointInstallationResult result = SetupWatchpoint(regs, {address, address + size}, type);
   if (result.status != expected.status) {
     ADD_FAILURE() << "Status failed. Expected: " << zx_status_get_string(expected.status)
                   << ", got: " << zx_status_get_string(result.status);
@@ -440,6 +455,9 @@ bool CheckSetupWithReset(zx_thread_state_debug_regs_t* regs, uint64_t address, u
   *regs = {};
   return CheckSetup(regs, address, size, expected);
 }
+
+constexpr uint32_t kWrite = 0b1;
+constexpr uint32_t kReadWrite = 0b11;
 
 }  // namespace
 
@@ -477,38 +495,47 @@ TEST(x64Helpers_SettingWatchpoints, SetupMany) {
   ASSERT_TRUE(CheckSetup(&regs, kAddress1, 1, CreateResult(ZX_OK, {kAddress1, kAddress1 + 1}, 0)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, 0, 0, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
 
   ASSERT_TRUE(CheckSetup(&regs, kAddress1, 1, CreateResult(ZX_ERR_ALREADY_BOUND)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, 0, 0, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
 
   ASSERT_TRUE(CheckSetup(&regs, kAddress2, 2, CreateResult(ZX_OK, {kAddress2, kAddress2 + 2}, 1)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, 0, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 1, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, 0, 0}));
 
   ASSERT_TRUE(CheckSetup(&regs, kAddress3, 4, CreateResult(ZX_OK, {kAddress3, kAddress3 + 4}, 2)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, 0}));
 
   ASSERT_TRUE(CheckSetup(&regs, kAddress4, 8, CreateResult(ZX_OK, {kAddress4, kAddress4 + 8}, 3)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, kWrite}));
 
   ASSERT_TRUE(CheckSetup(&regs, kAddress5, 8, CreateResult(ZX_ERR_NO_RESOURCES)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, kWrite}));
 
   ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress3, kAddress3 + 4}), ZX_OK);
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, 0, kAddress4}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 1, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, 0, kWrite}));
 
   ASSERT_TRUE(CheckSetup(&regs, kAddress5, 8, CreateResult(ZX_OK, {kAddress5, kAddress5 + 8}, 2)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress5, kAddress4}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 8, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, kWrite}));
 
   ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress3, kAddress3 + 4}), ZX_ERR_NOT_FOUND);
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress5, kAddress4}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 8, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, kWrite}));
 }
 
 // clang-format off
@@ -678,59 +705,132 @@ TEST(x64Helpers_SettingWatchpoints, RangeIsDifferentWatchpoint) {
   ASSERT_TRUE(CheckSetup(&regs, kAddress, 1, CreateResult(ZX_OK, {kAddress, kAddress + 1}, 0)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress, 0, 0, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
 
   ASSERT_TRUE(CheckSetup(&regs, kAddress, 1, CreateResult(ZX_ERR_ALREADY_BOUND)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress, 0, 0, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
 
   ASSERT_TRUE(CheckSetup(&regs, kAddress, 2, CreateResult(ZX_OK, {kAddress, kAddress + 2}, 1)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress, kAddress, 0, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 1, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, 0, 0}));
 
   ASSERT_TRUE(CheckSetup(&regs, kAddress, 2, CreateResult(ZX_ERR_ALREADY_BOUND)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress, kAddress, 0, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 1, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, 0, 0}));
 
   ASSERT_TRUE(CheckSetup(&regs, kAddress, 4, CreateResult(ZX_OK, {kAddress, kAddress + 4}, 2)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress, kAddress, kAddress, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, 0}));
 
   ASSERT_TRUE(CheckSetup(&regs, kAddress, 4, CreateResult(ZX_ERR_ALREADY_BOUND)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress, kAddress, kAddress, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, 0}));
 
   ASSERT_TRUE(CheckSetup(&regs, kAddress, 8, CreateResult(ZX_OK, {kAddress, kAddress + 8}, 3)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress, kAddress, kAddress, kAddress}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, kWrite}));
 
   // Deleting is by range too.
   ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress, kAddress + 2}), ZX_OK);
   EXPECT_TRUE(CheckAddresses(regs, {kAddress, 0, kAddress, kAddress}));
   EXPECT_TRUE(CheckLengths(regs, {1, 1, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, kWrite, kWrite}));
 
   ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress, kAddress + 2}), ZX_ERR_NOT_FOUND);
   EXPECT_TRUE(CheckAddresses(regs, {kAddress, 0, kAddress, kAddress}));
   EXPECT_TRUE(CheckLengths(regs, {1, 1, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, kWrite, kWrite}));
 
   ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress, kAddress + 1}), ZX_OK);
   EXPECT_TRUE(CheckAddresses(regs, {0, 0, kAddress, kAddress}));
   EXPECT_TRUE(CheckLengths(regs, {1, 1, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {0, 0, kWrite, kWrite}));
 
   ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress, kAddress + 1}), ZX_ERR_NOT_FOUND);
   EXPECT_TRUE(CheckAddresses(regs, {0, 0, kAddress, kAddress}));
   EXPECT_TRUE(CheckLengths(regs, {1, 1, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {0, 0, kWrite, kWrite}));
 
   ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress, kAddress + 8}), ZX_OK);
   EXPECT_TRUE(CheckAddresses(regs, {0, 0, kAddress, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 1, 4, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {0, 0, kWrite, 0}));
 
   ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress, kAddress + 8}), ZX_ERR_NOT_FOUND);
   EXPECT_TRUE(CheckAddresses(regs, {0, 0, kAddress, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 1, 4, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {0, 0, kWrite, 0}));
 
   ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress, kAddress + 4}), ZX_OK);
   EXPECT_TRUE(CheckAddresses(regs, {0, 0, 0, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {0, 0, 0, 0}));
+}
+
+TEST(x64Helpers_SettingWatchpoints, DifferentTypes) {
+  zx_thread_state_debug_regs_t regs = {};
+
+  // Always aligned address.
+  constexpr uint64_t kAddress1 = 0x10000;
+  constexpr uint64_t kAddress2 = 0x20000;
+  constexpr uint64_t kAddress3 = 0x30000;
+  constexpr uint64_t kAddress4 = 0x40000;
+  constexpr uint64_t kAddress5 = 0x50000;
+
+  ASSERT_TRUE(CheckSetup(&regs, kAddress1, 1, CreateResult(ZX_OK, {kAddress1, kAddress1 + 1}, 0),
+                         debug_ipc::BreakpointType::kReadWrite));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, 0, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kReadWrite, 0, 0, 0}));
+
+  ASSERT_TRUE(CheckSetup(&regs, kAddress1, 1, CreateResult(ZX_ERR_ALREADY_BOUND)));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, 0, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kReadWrite, 0, 0, 0}));
+
+  ASSERT_TRUE(CheckSetup(&regs, kAddress2, 2, CreateResult(ZX_OK, {kAddress2, kAddress2 + 2}, 1),
+                         debug_ipc::BreakpointType::kWrite));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 1, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kReadWrite, kWrite, 0, 0}));
+
+  ASSERT_TRUE(CheckSetup(&regs, kAddress3, 4, CreateResult(ZX_OK, {kAddress3, kAddress3 + 4}, 2),
+                         debug_ipc::BreakpointType::kReadWrite));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 1}));
+  EXPECT_TRUE(CheckTypes(regs, {kReadWrite, kWrite, kReadWrite, 0}));
+
+  ASSERT_TRUE(CheckSetup(&regs, kAddress4, 8, CreateResult(ZX_OK, {kAddress4, kAddress4 + 8}, 3)));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kReadWrite, kWrite, kReadWrite, kWrite}));
+
+  ASSERT_TRUE(CheckSetup(&regs, kAddress5, 8, CreateResult(ZX_ERR_NO_RESOURCES)));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kReadWrite, kWrite, kReadWrite, kWrite}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress3, kAddress3 + 4}), ZX_OK);
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, 0, kAddress4}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 1, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kReadWrite, kWrite, 0, kWrite}));
+
+  ASSERT_TRUE(CheckSetup(&regs, kAddress5, 8, CreateResult(ZX_OK, {kAddress5, kAddress5 + 8}, 2)));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress5, kAddress4}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 8, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kReadWrite, kWrite, kWrite, kWrite}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress3, kAddress3 + 4}), ZX_ERR_NOT_FOUND);
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress5, kAddress4}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 8, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kReadWrite, kWrite, kWrite, kWrite}));
 }
 
 }  // namespace arch

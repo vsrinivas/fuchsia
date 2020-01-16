@@ -127,7 +127,6 @@ zx_status_t Breakpoint::SetSettings(debug_ipc::BreakpointType type,
     case debug_ipc::BreakpointType::kHardware:
       return SetBreakpointLocations(settings);
     // TODO(donosoc): Add the R/RW support.
-    case debug_ipc::BreakpointType::kRead:
     case debug_ipc::BreakpointType::kReadWrite:
       return ZX_ERR_NOT_SUPPORTED;
     case debug_ipc::BreakpointType::kWrite:

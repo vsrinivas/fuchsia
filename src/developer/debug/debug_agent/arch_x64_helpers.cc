@@ -264,92 +264,125 @@ namespace {
 //
 // The following functions translate between the both.
 
-// clang-format off
 inline uint64_t x86LenToLength(uint64_t len) {
+  // clang-format off
   switch (len) {
     case 0: return 1;
     case 1: return 2;
     case 2: return 8;
     case 3: return 4;
   }
+  // clang-format on
 
   FXL_NOTREACHED() << "Invalid len: " << len;
   return 0;
 }
 
 inline uint64_t LengthTox86Length(uint64_t len) {
+  // clang-format off
   switch (len) {
     case 1: return 0;
     case 2: return 1;
     case 8: return 2;
     case 4: return 3;
   }
+  // clang-format on
 
   FXL_NOTREACHED() << "Invalid len: " << len;
   return 0;
 }
-// clang-format on
 
-void SetWatchpointFlags(uint64_t* dr7, int slot, bool active, uint64_t size) {
+void SetWatchpointFlags(uint64_t* dr7, int slot, bool active, uint64_t size,
+                        debug_ipc::BreakpointType type) {
+  uint32_t rw_value = 0;
+  if (type == debug_ipc::BreakpointType::kWrite) {
+    rw_value = 0b1;
+  } else if (type == debug_ipc::BreakpointType::kReadWrite) {
+    rw_value = 0b11;
+  }
+
+  // clang-format off
   switch (slot) {
     case 0: {
       X86_DBG_CONTROL_L0_SET(dr7, active ? 1 : 0);
-      X86_DBG_CONTROL_RW0_SET(dr7, 1);
+      X86_DBG_CONTROL_RW0_SET(dr7, rw_value);
       X86_DBG_CONTROL_LEN0_SET(dr7, size ? LengthTox86Length(size) : 0);
       return;
     }
     case 1: {
       X86_DBG_CONTROL_L1_SET(dr7, active ? 1 : 0);
-      X86_DBG_CONTROL_RW1_SET(dr7, 1);
+      X86_DBG_CONTROL_RW1_SET(dr7, rw_value);
       X86_DBG_CONTROL_LEN1_SET(dr7, size ? LengthTox86Length(size) : 0);
       return;
     }
     case 2: {
       X86_DBG_CONTROL_L2_SET(dr7, active ? 1 : 0);
-      X86_DBG_CONTROL_RW2_SET(dr7, 1);
+      X86_DBG_CONTROL_RW2_SET(dr7, rw_value);
       X86_DBG_CONTROL_LEN2_SET(dr7, size ? LengthTox86Length(size) : 0);
       return;
     }
     case 3: {
       X86_DBG_CONTROL_L3_SET(dr7, active ? 1 : 0);
-      X86_DBG_CONTROL_RW3_SET(dr7, 1);
+      X86_DBG_CONTROL_RW3_SET(dr7, rw_value);
       X86_DBG_CONTROL_LEN3_SET(dr7, size ? LengthTox86Length(size) : 0);
       return;
     }
   }
+  // clang-format on
 
   FXL_NOTREACHED() << "Invalid slot: " << slot;
 }
 
 }  // namespace
 
-// clang-format off
 uint64_t GetWatchpointLength(uint64_t dr7, int slot) {
+  // clang-format off
   switch (slot) {
     case 0: return x86LenToLength(X86_DBG_CONTROL_LEN0_GET(dr7));
     case 1: return x86LenToLength(X86_DBG_CONTROL_LEN1_GET(dr7));
     case 2: return x86LenToLength(X86_DBG_CONTROL_LEN2_GET(dr7));
     case 3: return x86LenToLength(X86_DBG_CONTROL_LEN3_GET(dr7));
   }
+  // clang-format on
+
+  FXL_NOTREACHED() << "Invalid slot: " << slot;
+  return -1;
+}
+
+uint32_t GetWatchpointRW(uint64_t dr7, int slot) {
+  // clang-format off
+  switch (slot) {
+    case 0: return X86_DBG_CONTROL_RW0_GET(dr7);
+    case 1: return X86_DBG_CONTROL_RW1_GET(dr7);
+    case 2: return X86_DBG_CONTROL_RW2_GET(dr7);
+    case 3: return X86_DBG_CONTROL_RW3_GET(dr7);
+  }
+  // clang-format on
 
   FXL_NOTREACHED() << "Invalid slot: " << slot;
   return -1;
 }
 
 uint64_t WatchpointAddressAlign(const debug_ipc::AddressRange& range) {
+  // clang-format off
   switch (range.size()) {
     case 1: return range.begin();
     case 2: return range.begin() & (uint64_t)(~0b1);
     case 4: return range.begin() & (uint64_t)(~0b11);
     case 8: return range.begin() & (uint64_t)(~0b111);
   }
+  // clang-format on
 
   return 0;
 }
 // clang-format on
 
 WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* debug_regs,
-                                             const debug_ipc::AddressRange& range) {
+                                             const debug_ipc::AddressRange& range,
+                                             debug_ipc::BreakpointType type) {
+  if (!debug_ipc::IsWatchpointType(type))
+    return CreateResult(ZX_ERR_INVALID_ARGS);
+
   // Create an aligned range that will cover the watchpoint.
   auto aligned_range = AlignRange(range);
   if (!aligned_range.has_value())
@@ -378,7 +411,7 @@ WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* debug
 
   // We found a slot, we bind the watchpoint.
   debug_regs->dr[slot] = address;
-  SetWatchpointFlags(&debug_regs->dr7, slot, true, size);
+  SetWatchpointFlags(&debug_regs->dr7, slot, true, size, type);
 
   return CreateResult(ZX_OK, aligned_range.value(), slot);
 }
@@ -401,7 +434,7 @@ zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t* debug_regs,
 
     // Clear this breakpoint.
     debug_regs->dr[slot] = 0;
-    SetWatchpointFlags(&debug_regs->dr7, slot, false, 0);
+    SetWatchpointFlags(&debug_regs->dr7, slot, false, 0, debug_ipc::BreakpointType::kLast);
     return ZX_OK;
   }
 

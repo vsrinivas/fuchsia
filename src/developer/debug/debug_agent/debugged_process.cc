@@ -444,7 +444,6 @@ zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address
       return RegisterSoftwareBreakpoint(bp, address);
     case debug_ipc::BreakpointType::kHardware:
       return RegisterHardwareBreakpoint(bp, address);
-    case debug_ipc::BreakpointType::kRead:
     case debug_ipc::BreakpointType::kReadWrite:
     case debug_ipc::BreakpointType::kWrite:
       FXL_NOTREACHED() << "Watchpoints are registered through RegisterWatchpoint.";
@@ -467,7 +466,6 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
       return UnregisterSoftwareBreakpoint(bp, address);
     case debug_ipc::BreakpointType::kHardware:
       return UnregisterHardwareBreakpoint(bp, address);
-    case debug_ipc::BreakpointType::kRead:
     case debug_ipc::BreakpointType::kReadWrite:
     case debug_ipc::BreakpointType::kWrite:
       FXL_NOTREACHED() << "Watchpoints are unregistered through UnregisterWatchpoint.";

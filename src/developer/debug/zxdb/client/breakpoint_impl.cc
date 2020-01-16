@@ -279,7 +279,6 @@ void BreakpointImpl::SendBackendAddOrChange(fit::callback<void(const Err&)> call
           addition.address = pair.second.address();
           break;
         // TODO: This should either the variable size or some way to determine it.
-        case debug_ipc::BreakpointType::kRead:
         case debug_ipc::BreakpointType::kReadWrite:
         case debug_ipc::BreakpointType::kWrite: {
           uint64_t address = pair.second.address();
