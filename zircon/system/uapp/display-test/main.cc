@@ -274,6 +274,10 @@ zx_status_t capture_setup() {
 
   // First make sure capture is supported on this platform
   auto support_resp = dc->IsCaptureSupported();
+  if (!support_resp.ok()) {
+    printf("%s: %s\n", __func__, support_resp.error());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   if (!support_resp.value().result.response().supported) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -614,7 +618,7 @@ Platforms GetPlatform() {
   }
   if (strstr(result.value().name.data(), "astro") ||
       strstr(result.value().name.data(), "sherlock") ||
-      strstr(result.value().name.data(), "vim2")) {
+      strstr(result.value().name.data(), "vim2") || strstr(result.value().name.data(), "nelson")) {
     return AMLOGIC_PLATFORM;
   }
   if (strstr(result.value().name.data(), "cleo") ||
