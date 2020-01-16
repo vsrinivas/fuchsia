@@ -201,22 +201,9 @@ static bool start_thread(zxr_thread_entry_t entry, void* arg, zxr_thread_t* thre
   return starter.CreateThread(thread_out, thread_h) && starter.StartThread(entry, arg);
 }
 
-static bool start_and_kill_thread(zxr_thread_entry_t entry, void* arg) {
-  zxr_thread_t thread;
-  zx_handle_t thread_h;
-  ASSERT_TRUE(start_thread(entry, arg, &thread, &thread_h));
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-  ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
-  ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
-  zxr_thread_destroy(&thread);
-  ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-  return true;
-}
-
 // Wait for |thread| to enter blocked state |reason|.
 // We wait forever and let Unittest's watchdog handle errors.
-
-static bool wait_thread_blocked(zx_handle_t thread, uint32_t reason) {
+static bool wait_thread_blocked(zx_handle_t thread, zx_thread_state_t reason) {
   while (true) {
     zx_info_thread_t info;
     ASSERT_TRUE(get_thread_info(thread, &info));
@@ -224,6 +211,21 @@ static bool wait_thread_blocked(zx_handle_t thread, uint32_t reason) {
       break;
     zx_nanosleep(zx_deadline_after(THREAD_BLOCKED_WAIT_DURATION));
   }
+  return true;
+}
+
+static bool start_and_kill_thread_in_state(zxr_thread_entry_t entry, void* arg,
+                                           zx_thread_state_t state) {
+  zxr_thread_t thread;
+  zx_handle_t thread_h;
+  ASSERT_TRUE(start_thread(entry, arg, &thread, &thread_h));
+
+  ASSERT_TRUE(wait_thread_blocked(thread_h, state));
+
+  ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
+  ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
+  zxr_thread_destroy(&thread);
+  ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
   return true;
 }
 
@@ -370,7 +372,21 @@ static bool TestThreadStartWithZeroInstructionPointer() {
 static bool TestKillBusyThread() {
   BEGIN_TEST;
 
-  ASSERT_TRUE(start_and_kill_thread(threads_test_busy_fn, NULL));
+  zxr_thread_t thread;
+  zx_handle_t thread_h;
+
+  std::atomic<int> p = 0;
+  ASSERT_TRUE(start_thread(threads_test_atomic_store, &p, &thread, &thread_h));
+
+  // Wait for the thread to begin executing.
+  while (p.load() == 0) {
+    zx_nanosleep(zx_deadline_after(THREAD_BLOCKED_WAIT_DURATION));
+  }
+
+  ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
+  ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
+  zxr_thread_destroy(&thread);
+  ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 
   END_TEST;
 }
@@ -378,7 +394,8 @@ static bool TestKillBusyThread() {
 static bool TestKillSleepThread() {
   BEGIN_TEST;
 
-  ASSERT_TRUE(start_and_kill_thread(threads_test_infinite_sleep_fn, NULL));
+  ASSERT_TRUE(start_and_kill_thread_in_state(threads_test_infinite_sleep_fn, nullptr,
+                                             ZX_THREAD_STATE_BLOCKED_SLEEPING));
 
   END_TEST;
 }
@@ -388,7 +405,8 @@ static bool TestKillWaitThread() {
 
   zx_handle_t event;
   ASSERT_EQ(zx_event_create(0, &event), ZX_OK);
-  ASSERT_TRUE(start_and_kill_thread(threads_test_infinite_wait_fn, &event));
+  ASSERT_TRUE(start_and_kill_thread_in_state(threads_test_infinite_wait_fn, &event,
+                                             ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
   ASSERT_EQ(zx_handle_close(event), ZX_OK);
 
   END_TEST;
@@ -619,7 +637,7 @@ static bool TestSuspendSleeping() {
   zx_handle_t thread_h;
   ASSERT_TRUE(start_thread(threads_test_sleep_fn, (void*)sleep_deadline, &thread, &thread_h));
 
-  zx_nanosleep(sleep_deadline - ZX_MSEC(50));
+  ASSERT_TRUE(wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_SLEEPING));
 
   // Suspend the thread.
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
@@ -716,7 +734,8 @@ static bool TestSuspendPortCall() {
   zx_handle_t thread_h;
   ASSERT_TRUE(start_thread(threads_test_port_fn, port, &thread, &thread_h));
 
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  ASSERT_TRUE(wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_PORT));
+
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_task_suspend_token(thread_h, &suspend_token), ZX_OK);
 
@@ -1115,17 +1134,25 @@ class RegisterReadSetup {
 
   zx_handle_t thread_handle() const { return thread_handle_; }
 
-  // Pass the thread function to run and the parameter to pass to it.
-  bool Init(ThreadFunc thread_func, RegisterStruct* state) {
+  // Run |thread_func| with |state|.  Once the thread reaches |expected_pc|, return, leaving the
+  // thread suspended.
+  bool RunUntil(ThreadFunc thread_func, RegisterStruct* state, uintptr_t expected_pc) {
     BEGIN_HELPER;
 
     ASSERT_TRUE(start_thread((void (*)(void*))thread_func, state, &thread_, &thread_handle_));
 
-    // Allow some time for the thread to begin execution and reach the
-    // instruction that spins.
-    ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK);
-
-    ASSERT_TRUE(Suspend());
+    while (true) {
+      ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(1))), ZX_OK);
+      ASSERT_TRUE(Suspend());
+      zx_thread_state_general_regs_t regs;
+      ASSERT_EQ(
+          zx_thread_read_state(thread_handle_, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
+          ZX_OK);
+      if (regs.REG_PC == expected_pc) {
+        break;
+      }
+      ASSERT_TRUE(Resume());
+    }
 
     END_HELPER;
   }
@@ -1148,10 +1175,11 @@ static bool TestReadingGeneralRegisterState() {
 
   zx_thread_state_general_regs_t gen_regs_expected;
   general_regs_fill_test_values(&gen_regs_expected);
-  gen_regs_expected.REG_PC = (uintptr_t)spin_with_general_regs_spin_address;
+  gen_regs_expected.REG_PC = (uintptr_t)spin_address;
 
   RegisterReadSetup<zx_thread_state_general_regs_t> setup;
-  ASSERT_TRUE(setup.Init(&spin_with_general_regs, &gen_regs_expected));
+  ASSERT_TRUE(setup.RunUntil(&spin_with_general_regs, &gen_regs_expected,
+                             reinterpret_cast<uintptr_t>(&spin_address)));
 
   zx_thread_state_general_regs_t regs;
   ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_GENERAL_REGS, &regs,
@@ -1169,7 +1197,8 @@ static bool TestReadingFpRegisterState() {
   fp_regs_fill_test_values(&fp_regs_expected);
 
   RegisterReadSetup<zx_thread_state_fp_regs_t> setup;
-  ASSERT_TRUE(setup.Init(&spin_with_fp_regs, &fp_regs_expected));
+  ASSERT_TRUE(setup.RunUntil(&spin_with_fp_regs, &fp_regs_expected,
+                             reinterpret_cast<uintptr_t>(&spin_address)));
 
   zx_thread_state_fp_regs_t regs;
   ASSERT_EQ(
@@ -1187,7 +1216,8 @@ static bool TestReadingVectorRegisterState() {
   vector_regs_fill_test_values(&vector_regs_expected);
 
   RegisterReadSetup<zx_thread_state_vector_regs_t> setup;
-  ASSERT_TRUE(setup.Init(&spin_with_vector_regs, &vector_regs_expected));
+  ASSERT_TRUE(setup.RunUntil(&spin_with_vector_regs, &vector_regs_expected,
+                             reinterpret_cast<uintptr_t>(&spin_address)));
 
   zx_thread_state_vector_regs_t regs;
   ASSERT_EQ(
@@ -1217,10 +1247,13 @@ class RegisterWriteSetup {
   bool Init() {
     BEGIN_HELPER;
 
-    ASSERT_TRUE(start_thread(threads_test_busy_fn, nullptr, &thread_, &thread_handle_));
-    // Allow some time for the thread to begin execution and reach the
-    // instruction that spins.
-    ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK);
+    ASSERT_TRUE(start_thread(threads_test_atomic_store, &p_, &thread_, &thread_handle_));
+
+    // Wait for the thread to begin executing.
+    while (p_.load() == 0) {
+      zx_nanosleep(zx_deadline_after(THREAD_BLOCKED_WAIT_DURATION));
+    }
+
     ASSERT_TRUE(suspend_thread_synchronous(thread_handle_, &suspend_token_));
 
     END_HELPER;
@@ -1268,6 +1301,7 @@ class RegisterWriteSetup {
   }
 
  private:
+  std::atomic<int> p_ = 0;
   zxr_thread_t thread_;
   zx_handle_t thread_handle_ = ZX_HANDLE_INVALID;
   zx_handle_t suspend_token_ = ZX_HANDLE_INVALID;
@@ -1454,9 +1488,8 @@ static bool TestNoncanonicalRipAddress() {
   zx_handle_t thread_handle;
   ASSERT_TRUE(start_thread(threads_test_wait_fn, &event, &thread, &thread_handle));
 
-  // Allow some time for the thread to begin execution and block inside
-  // the syscall.
-  ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK);
+  // Wait until the thread has entered the syscall.
+  ASSERT_TRUE(wait_thread_blocked(thread_handle, ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
 
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
   ASSERT_TRUE(suspend_thread_synchronous(thread_handle, &suspend_token));
@@ -1584,7 +1617,8 @@ static bool TestWriteReadDebugRegisterState() {
   // 6. Read the state and compare it.
 
   RegisterReadSetup<zx_thread_state_debug_regs_t> setup;
-  ASSERT_TRUE(setup.Init(&spin_with_debug_regs, &debug_regs_to_write));
+  ASSERT_TRUE(setup.RunUntil(&spin_with_debug_regs, &debug_regs_to_write,
+                             reinterpret_cast<uintptr_t>(&spin_address)));
 
   // Write the test values to the debug registers.
   ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
@@ -1593,8 +1627,6 @@ static bool TestWriteReadDebugRegisterState() {
 
   // Resume and re-suspend the thread.
   ASSERT_TRUE(setup.Resume());
-  // Allow some time for the thread to execute again and spin for a bit.
-  ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK);
   ASSERT_TRUE(setup.Suspend());
 
   // Get the current debug state of the suspended thread.
@@ -1609,7 +1641,8 @@ static bool TestWriteReadDebugRegisterState() {
   // We get how many breakpoints we have.
   zx_thread_state_debug_regs_t actual_regs = {};
   RegisterReadSetup<zx_thread_state_debug_regs_t> setup;
-  ASSERT_TRUE(setup.Init(&spin_with_debug_regs, &actual_regs));
+  ASSERT_TRUE(setup.RunUntil(&spin_with_debug_regs, &actual_regs,
+                             reinterpret_cast<uintptr_t>(&spin_address)));
 
   ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &actual_regs,
                                  sizeof(actual_regs)),
@@ -1647,7 +1680,8 @@ static bool TestDebugRegistersValidation() {
 #if defined(__x86_64__)
   zx_thread_state_debug_regs_t debug_regs = {};
   RegisterReadSetup<zx_thread_state_debug_regs_t> setup;
-  ASSERT_TRUE(setup.Init(&spin_with_debug_regs, &debug_regs));
+  ASSERT_TRUE(setup.RunUntil(&spin_with_debug_regs, &debug_regs,
+                             reinterpret_cast<uintptr_t>(&spin_address)));
 
   // Writing all 0s should work and should mask values.
   ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
@@ -1699,7 +1733,8 @@ static bool TestDebugRegistersValidation() {
   zx_thread_state_debug_regs_t debug_regs = {};
   zx_thread_state_debug_regs_t actual_regs = {};
   RegisterReadSetup<zx_thread_state_debug_regs_t> setup;
-  ASSERT_TRUE(setup.Init(&spin_with_debug_regs, &actual_regs));
+  ASSERT_TRUE(setup.RunUntil(&spin_with_debug_regs, &actual_regs,
+                             reinterpret_cast<uintptr_t>(&spin_address)));
 
   // We read the initial state to know how many HW breakpoints we have.
   ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &actual_regs,

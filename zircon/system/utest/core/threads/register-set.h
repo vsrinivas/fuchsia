@@ -51,14 +51,13 @@ bool debug_regs_expect_eq(const char* file, int line, const zx_thread_state_debu
 // The functions below are assembly.
 __BEGIN_CDECLS
 
-// This function sets the registers to the state specified by |regs| and
-// then spins, executing a single-instruction infinite loop whose address
-// is |spin_address|.
+// These function set the registers to the state specified by |regs|, then branch to
+// |spin_address|, a single-instruction infinite loop whose address is |spin_address|.
 void spin_with_general_regs(zx_thread_state_general_regs_t* regs);
-void spin_with_general_regs_spin_address();
 void spin_with_fp_regs(zx_thread_state_fp_regs_t* regs);
 void spin_with_vector_regs(zx_thread_state_vector_regs_t* regs);
 void spin_with_debug_regs(zx_thread_state_debug_regs_t* regs);
+void spin_address();
 
 // These assembly code routine saves the registers into a corresponding
 // structure pointed to by the stack pointer, and then calls zx_thread_exit().

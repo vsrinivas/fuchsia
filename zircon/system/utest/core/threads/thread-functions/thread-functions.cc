@@ -51,14 +51,6 @@ void threads_test_wait_break_infinite_sleep_fn(void* arg) {
   zx_nanosleep(ZX_TIME_INFINITE);
 }
 
-void threads_test_busy_fn(void* arg) {
-  volatile uint64_t i = 0u;
-  while (true) {
-    ++i;
-  }
-  __builtin_trap();
-}
-
 void threads_test_infinite_sleep_fn(void* arg) {
   zx_nanosleep(ZX_TIME_INFINITE);
   __builtin_trap();

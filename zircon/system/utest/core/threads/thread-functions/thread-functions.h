@@ -22,9 +22,6 @@ void threads_test_wait_detach_fn(void* arg);
 // infinitely.
 void threads_test_wait_break_infinite_sleep_fn(void* arg);
 
-// This thread function busyloops forever. The arg is ignored.
-void threads_test_busy_fn(void* arg);
-
 // This thread function sleeps forever. The arg is ignored.
 void threads_test_infinite_sleep_fn(void* arg);
 

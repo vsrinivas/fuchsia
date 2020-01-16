@@ -284,6 +284,17 @@ bool debug_regs_expect_eq(const char* file, int line, const zx_thread_state_debu
 }
 
 // Spin Functions --------------------------------------------------------------------------------
+#if defined(__x86_64__)
+__asm__(
+    ".global spin_address\n"
+    "spin_address:\n"
+    "jmp spin_address\n");
+#elif defined(__aarch64__)
+__asm__(
+    ".global spin_address\n"
+    "spin_address:\n"
+    "b spin_address\n");
+#endif
 
 // spin_with_general_regs() function.
 #if defined(__x86_64__)
@@ -334,9 +345,9 @@ __asm__(
     "movq 8*14(%rdi), %r14\n"
     "movq 8*15(%rdi), %r15\n"
     "movq 8*5(%rdi), %rdi\n"
-    ".global spin_with_general_regs_spin_address\n"
-    "spin_with_general_regs_spin_address:\n"
-    "jmp spin_with_general_regs_spin_address\n"
+
+    ".global spin_address\n"
+    "jmp spin_address\n"
     ".popsection\n");
 #elif defined(__aarch64__)
 static_assert(offsetof(zx_thread_state_general_regs_t, r[0]) == 8 * 0, "");
@@ -374,9 +385,9 @@ __asm__(
     "ldp x28, x29, [x0, #8*28]\n"
     "ldr x30, [x0, #8*30]\n"
     "ldp x0, x1, [x0]\n"
-    ".global spin_with_general_regs_spin_address\n"
-    "spin_with_general_regs_spin_address:\n"
-    "b spin_with_general_regs_spin_address\n"
+
+    ".global spin_address\n"
+    "b spin_address\n"
     ".popsection\n");
 #else
 #error Unsupported architecture
@@ -411,8 +422,8 @@ __asm__(
     "movq 16*6(%rdi), %mm6\n"
     "movq 16*7(%rdi), %mm7\n"
 
-    "spin_with_fp_regs_spin_address:\n"
-    "jmp spin_with_fp_regs_spin_address\n"
+    ".global spin_address\n"
+    "jmp spin_address\n"
     ".popsection\n");
 #elif defined(__aarch64__)
 // Just spins and does nothing. ARM64 doesn't define a separate FP state, but doing this allows the
@@ -424,8 +435,8 @@ __asm__(
 
     // Do nothing.
 
-    "spin_with_fp_regs_spin_address:\n"
-    "b spin_with_fp_regs_spin_address\n"
+    ".global spin_address\n"
+    "b spin_address\n"
     ".popsection\n");
 #else
 #error Unsupported architecture
@@ -457,8 +468,8 @@ __asm__(
     "movdqu 64*14(%rdi), %xmm14\n"
     "movdqu 64*15(%rdi), %xmm15\n"
 
-    "spin_with_vector_regs_spin_address:\n"
-    "jmp spin_with_vector_regs_spin_address\n"
+    ".global spin_address\n"
+    "jmp spin_address\n"
     ".popsection\n");
 #elif defined(__aarch64__)
 static_assert(offsetof(zx_thread_state_vector_regs_t, fpcr) == 0, "");
@@ -495,8 +506,8 @@ __asm__(
     "ldp q28, q29, [x0, #(14 * 32)]\n"
     "ldp q30, q31, [x0, #(15 * 32)]\n"
 
-    "spin_with_vector_regs_spin_address:\n"
-    "b spin_with_vector_regs_spin_address\n"
+    ".global spin_address\n"
+    "b spin_address\n"
     ".popsection\n");
 #else
 #error Unsupported architecture
@@ -518,9 +529,8 @@ __asm__(
     // The register state will be set through syscalls because setting the debug registers
     // is a privileged instruction.
 
-    ".global spin_with_debug_regs_spin_address\n"
-    "spin_with_debug_regs_spin_address:\n"
-    "jmp spin_with_debug_regs_spin_address\n"
+    ".global spin_address\n"
+    "jmp spin_address\n"
     ".popsection\n");
 #elif defined(__aarch64__)
 __asm__(
@@ -532,8 +542,8 @@ __asm__(
     // The register state will be set through syscalls because setting the debug registers
     // is a privileged instruction.
 
-    "spin_with_debug_regs_spin_address:\n"
-    "b spin_with_debug_regs_spin_address\n"
+    ".global spin_address\n"
+    "b spin_address\n"
     ".popsection\n");
 #else
 #error Unsupported architecture
