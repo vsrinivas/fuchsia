@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define HAS_DEVICE_TREE 1
+#define HAS_DEVICE_TREE 0
 
 static const zbi_mem_range_t mem_config[] = {
     {
-        .paddr = 0,
+        .paddr = 0x02000000,
         .length = 0x20000000,  // 512M
         .type = ZBI_MEM_RANGE_RAM,
     },
