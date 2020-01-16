@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/fuzzer.gni")
+
 zx_library("tftp") {
   sdk = "static"
   sdk_headers = [ "tftp/tftp.h" ]
@@ -33,6 +35,18 @@ if (!is_kernel) {
       "$zx/system/ulib/tftp",
       "$zx/system/ulib/unittest",
     ]
+  }
+
+  fuzzer("tftp-fuzzer") {
+    sources = [
+      "tftp-fuzztest.cc",
+    ]
+    deps = [
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/tftp",
+    ]
+    include_dirs = [ ".." ]
   }
 
   zx_host_tool("tftp-example") {

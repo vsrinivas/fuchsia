@@ -196,6 +196,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/test-exceptions/test",
       "$zx/system/ulib/test-utils/test",
       "$zx/system/ulib/tftp:tftp-test",
+      "$zx/system/ulib/tftp:tftp-fuzzer",
       "$zx/system/ulib/trace-engine:tests",
       "$zx/system/ulib/trace-provider:tests",
       "$zx/system/ulib/trace-reader:tests",
