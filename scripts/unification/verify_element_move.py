@@ -190,6 +190,14 @@ def report(manifest, is_error, message):
     print('%s%s%s' % (type.ljust(10), manifest.ljust(8), message))
 
 
+def print_size(value):
+    for unit in ['B', 'K', 'M', 'G']:
+        if abs(value) < 1024.0:
+            return '%3.1f%s' % (value, unit)
+        value /= 1024.0
+    return '%.1f%s' % (value, 'T')
+
+
 def compare_summaries(reference, current):
     '''Compares summaries for two states of the build.'''
     match = True
@@ -222,7 +230,8 @@ def compare_summaries(reference, current):
                 is_error = True
             report(type, is_error, 'size change for ' + name + ': ' +
                    ('+' if is_diff_positive else '-') +
-                   str(abs(diff_percentage)) + '%')
+                   str(abs(diff_percentage)) + '% (' +
+                   print_size(current_size) + ')')
 
         # Linking changes.
         for name in reference_names & current_names:
