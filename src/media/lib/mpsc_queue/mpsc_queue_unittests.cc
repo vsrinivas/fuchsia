@@ -153,3 +153,15 @@ TEST(BlockingMpscQueueTest, ManyThreads) {
     }
   }
 }
+
+TEST(BlockingMpscQueueTest, Signaled) {
+  BlockingMpscQueue<int> under_test;
+
+  EXPECT_FALSE(under_test.Signaled());
+
+  under_test.Push(0);
+  EXPECT_TRUE(under_test.Signaled());
+
+  under_test.WaitForElement();
+  EXPECT_FALSE(under_test.Signaled());
+}

@@ -148,11 +148,21 @@ class BlockingMpscQueue {
   // This should only be called on the consumer thread.
   std::optional<T> WaitForElement() {
     std::optional<T> element;
+
     while (should_wait_ && !(element = queue_.Pop())) {
       should_wait_event_.wait_one(ZX_EVENT_SIGNALED, zx::time(ZX_TIME_INFINITE), nullptr);
     }
 
+    should_wait_event_.signal(ZX_EVENT_SIGNALED, 0);
+
     return element;
+  }
+
+  // Returns true if queue has been pushed to but WaitForElement has not yet been called
+  bool Signaled() {
+    zx_signals_t signals = 0;
+    should_wait_event_.wait_one(0, zx::time{}, &signals);
+    return signals & ZX_EVENT_SIGNALED;
   }
 
  private:
