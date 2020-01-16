@@ -23,55 +23,52 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         fidl_fuchsia_cobalt_test::LoggerQuerierMarker,
     >()
     .context("failed to connect to cobalt logger querier")?;
-    let watch_for_bind = logger_querier.watch_logs(
-        networking_metrics::PROJECT_ID,
-        fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
-    );
 
-    let address = "127.0.0.1:8080";
-    let s1 = std::net::TcpListener::bind(&address).context("failed to bind to localhost")?;
+    async fn capture_log_events<T, F: FnOnce() -> Result<T, anyhow::Error>>(
+        logger_querier: &fidl_fuchsia_cobalt_test::LoggerQuerierProxy,
+        func: F,
+    ) -> Result<(T, Vec<fidl_fuchsia_cobalt::CobaltEvent>), anyhow::Error> {
+        let watch = logger_querier.watch_logs(
+            networking_metrics::PROJECT_ID,
+            fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
+        );
+        let res = func()?;
+        let (events, _more) = watch
+            .await
+            .context("failed to call watch_logs")?
+            // fidl_fuchsia_cobalt::QueryError doesn't implement thiserror::Error.
+            .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
+        Ok((res, events))
+    }
 
-    let (events_post_bind, _more) = watch_for_bind
-        .await
-        .context("failed to call watch_logs")?
-        // fidl_fuchsia_cobalt::QueryError doesn't implement thiserror::Error.
-        .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
+    let (s1, events_post_bind) = capture_log_events(&logger_querier, move || {
+        // Use port zero to allow the system to assign a port.
+        std::net::TcpListener::bind("127.0.0.1:0").context("failed to bind to localhost")
+    })
+    .await?;
 
-    let watch_for_accept = logger_querier.watch_logs(
-        networking_metrics::PROJECT_ID,
-        fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
-    );
+    let address = s1.local_addr().context("failed to get local address")?;
 
-    let s2 = std::net::TcpStream::connect(&address)?;
-    let (s3, _sockaddr) = s1.accept()?;
+    let s1ref = &s1;
+    let ((s2, s3), events_post_accept) = capture_log_events(&logger_querier, move || {
+        let s2 = std::net::TcpStream::connect(address)?;
+        let (s3, _sockaddr) = s1ref.accept()?;
+        Ok((s2, s3))
+    })
+    .await?;
 
-    let (events_post_accept, _more) = watch_for_accept
-        .await
-        .context("failed to call watch_logs")?
-        .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
+    let ((), events_post_first_drop) = capture_log_events(&logger_querier, move || {
+        let () = std::mem::drop(s1);
+        let () = std::mem::drop(s2);
+        Ok(())
+    })
+    .await?;
 
-    let watch_for_first_drop = logger_querier.watch_logs(
-        networking_metrics::PROJECT_ID,
-        fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
-    );
-    std::mem::drop(s1);
-    std::mem::drop(s2);
-
-    let (events_post_first_drop, _more) = watch_for_first_drop
-        .await
-        .context("failed to call watch_logs")?
-        .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
-
-    let watch_for_final_drop = logger_querier.watch_logs(
-        networking_metrics::PROJECT_ID,
-        fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
-    );
-    std::mem::drop(s3);
-
-    let (events_post_final_drop, _more) = watch_for_final_drop
-        .await
-        .context("failed to call watch_logs")?
-        .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
+    let ((), events_post_final_drop) = capture_log_events(&logger_querier, move || {
+        let () = std::mem::drop(s3);
+        Ok(())
+    })
+    .await?;
 
     let socket_count_max_events =
         events_with_id(&events_post_bind, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID);
