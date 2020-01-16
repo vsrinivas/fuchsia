@@ -2,7 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("sanitizer") {
+group("sanitizer") {
+  testonly = true
+  deps = [ ":sanitizer-utils" ]
+}
+
+zx_test("sanitizer-utils") {
   test_group = "libc"
   sources = [ "sanitizer-utils.cc" ]
   deps = [

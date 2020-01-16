@@ -265,7 +265,6 @@ if (current_cpu != "") {
       "register-state",
       "rtc-lib",
       "runtests-utils",
-      "sanitizer",
       "service:test",
       "stdio",
       "svchost",
