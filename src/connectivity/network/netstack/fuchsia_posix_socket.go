@@ -720,7 +720,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 					// registered until the end of the function.
 					var err error
 					eps.incoming.mu.Lock()
-					if !eps.incoming.mu.asserted {
+					if !eps.incoming.mu.asserted && eps.endpoint.ep.Readiness(waiter.EventIn) != 0 {
 						err = eps.local.Handle().SignalPeer(0, zxsocket.SignalIncoming)
 						eps.incoming.mu.asserted = true
 					}
