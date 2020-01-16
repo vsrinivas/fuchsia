@@ -95,7 +95,7 @@ class StreamProviderTest : public testing::TestWithParam<StreamProvider::Source>
 };
 
 // Read and validate frames from each provider type.
-TEST_P(StreamProviderTest, ValidateFrames) {
+TEST_P(StreamProviderTest, DISABLED_ValidateFrames) {
   // Pick something large enough that it's likely larger than any internal ring buffers, but small
   // enough that the test completes relatively quickly.
   constexpr auto kFramesToCheck = 42u;
