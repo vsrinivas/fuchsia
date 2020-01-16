@@ -255,7 +255,6 @@ if (current_cpu != "") {
       "noop-fuzzer",
       "platform-bus",
       "policy",
-      "ramdisk",
       "register-state",
       "runtests-utils",
       "service:test",
