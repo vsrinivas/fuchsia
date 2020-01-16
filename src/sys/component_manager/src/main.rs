@@ -17,7 +17,10 @@ use {
         },
         startup,
     },
-    fuchsia_async as fasync, fuchsia_trace_provider as trace_provider,
+    fuchsia_async as fasync,
+    fuchsia_runtime::{job_default, process_self},
+    fuchsia_trace_provider as trace_provider,
+    fuchsia_zircon::JobCriticalOptions,
     log::*,
     std::{panic, process, sync::Arc},
 };
@@ -32,6 +35,15 @@ fn main() -> Result<(), Error> {
         println!("Panic in component_manager, aborting process.");
         process::abort();
     }));
+
+    // Set ourselves as critical to our job. If we do not fail gracefully, our
+    // job will be killed.
+    if let Err(err) =
+        job_default().set_critical(JobCriticalOptions::RETCODE_NONZERO, &process_self())
+    {
+        panic!("Component manager failed to set itself as critical: {:?}", err);
+    }
+
     klog::KernelLogger::init();
     let args = match startup::Arguments::from_args() {
         Ok(args) => args,
