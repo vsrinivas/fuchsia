@@ -86,7 +86,6 @@ source_set("magma_platform_tests") {
   sources = [
     "test_platform_connection.cc",
     "test_platform_event.cc",
-    "test_platform_futex.cc",
     "test_platform_handle.cc",
     "test_platform_logger.cc",
     "test_platform_mmio.cc",
@@ -101,7 +100,6 @@ source_set("magma_platform_tests") {
     "$magma_build_root/src/magma_util/platform:connection",
     "$magma_build_root/src/magma_util/platform:connection_client",
     "$magma_build_root/src/magma_util/platform:event",
-    "$magma_build_root/src/magma_util/platform:futex",
     "$magma_build_root/src/magma_util/platform:handle",
     "$magma_build_root/src/magma_util/platform:logger",
     "$magma_build_root/src/magma_util/platform:port",

@@ -122,17 +122,6 @@ source_set("device") {
   ]
 }
 
-source_set("futex") {
-  configs += [ "..:platform_include_config" ]
-
-  sources = [ "zircon_platform_futex.cc" ]
-
-  deps = [
-    "$magma_build_root/src/magma_util",
-    "$zircon_build_root/public/lib/zx",
-  ]
-}
-
 source_set("connection_client") {
   configs += [ "..:platform_include_config" ]
 

@@ -197,16 +197,6 @@ group("random") {
   deps = [ "zircon:random" ]
 }
 
-source_set("futex") {
-  public_configs = [ ":platform_include_config" ]
-
-  sources = [ "platform_futex.h" ]
-
-  deps = [ "zircon:futex" ]
-
-  allow_circular_includes_from = [ "zircon:futex" ]
-}
-
 source_set("connection_client_header") {
   public_configs = [ ":platform_include_config" ]
 
