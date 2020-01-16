@@ -6,17 +6,7 @@ group("util") {
   public_deps = [
     ":pseudo_dir_server",
     ":pseudo_dir_utils",
-    ":string_escape",
   ]
-}
-
-source_set("string_escape") {
-  sources = [
-    "string_escape.cc",
-    "string_escape.h",
-  ]
-
-  public_deps = [ "//src/lib/fxl" ]
 }
 
 source_set("pseudo_dir_utils") {
@@ -53,7 +43,6 @@ source_set("unittests") {
   sources = [
     "pseudo_dir_server_unittest.cc",
     "pseudo_dir_utils_unittest.cc",
-    "string_escape_unittest.cc",
   ]
 
   deps = [

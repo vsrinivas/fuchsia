@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_UTIL_STRING_ESCAPE_H_
-#define PERIDOT_LIB_UTIL_STRING_ESCAPE_H_
+#ifndef SRC_MODULAR_LIB_STRING_ESCAPE_STRING_ESCAPE_H_
+#define SRC_MODULAR_LIB_STRING_ESCAPE_STRING_ESCAPE_H_
 
 #include <vector>
 
@@ -35,4 +35,4 @@ std::vector<fxl::StringView> SplitEscapedString(fxl::StringView input, char spli
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_UTIL_STRING_ESCAPE_H_
+#endif  // SRC_MODULAR_LIB_STRING_ESCAPE_STRING_ESCAPE_H_

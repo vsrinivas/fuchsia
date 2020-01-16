@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/util/string_escape.h"
+#include "src/modular/lib/string_escape/string_escape.h"
 
 using fxl::StringView;
 

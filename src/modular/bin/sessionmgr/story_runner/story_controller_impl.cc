@@ -26,7 +26,6 @@
 #include <utility>
 #include <vector>
 
-#include "peridot/lib/util/string_escape.h"
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
@@ -52,6 +51,7 @@
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/ledger_client/operations.h"
+#include "src/modular/lib/string_escape/string_escape.h"
 
 namespace modular {
 

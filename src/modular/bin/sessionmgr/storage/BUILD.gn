@@ -28,9 +28,9 @@ source_set("constants_and_utils") {
   ]
 
   deps = [
-    "//peridot/lib/util",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//src/modular/lib/string_escape",
   ]
 
   public_deps = [

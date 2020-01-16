@@ -1,0 +1,25 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("string_escape") {
+  sources = [
+    "string_escape.cc",
+    "string_escape.h",
+  ]
+
+  public_deps = [ "//src/lib/fxl" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [ "string_escape_unittest.cc" ]
+
+  deps = [
+    ":string_escape",
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest",
+  ]
+}
