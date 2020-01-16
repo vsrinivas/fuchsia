@@ -119,9 +119,9 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   cleanup.cancel();
 }
 
-void ControllerImpl::EnableStreaming() {}
+void ControllerImpl::EnableStreaming() { pipeline_manager_.StartStreaming(); }
 
-void ControllerImpl::DisableStreaming() {}
+void ControllerImpl::DisableStreaming() { pipeline_manager_.StopStreaming(); }
 
 void ControllerImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
   fuchsia::camera2::DeviceInfo camera_device_info;

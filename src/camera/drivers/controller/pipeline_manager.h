@@ -8,6 +8,7 @@
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 
+#include <map>
 #include <vector>
 
 #include "fbl/macros.h"
@@ -83,6 +84,9 @@ class PipelineManager {
   ProcessNode* full_resolution_stream() { return full_resolution_stream_.get(); }
   ProcessNode* downscaled_resolution_stream() { return downscaled_resolution_stream_.get(); }
 
+  void StopStreaming();
+  void StartStreaming();
+
  private:
   fit::result<std::unique_ptr<InputNode>, zx_status_t> ConfigureStreamPipelineHelper(
       StreamCreationData* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
@@ -98,6 +102,7 @@ class PipelineManager {
   std::unique_ptr<ProcessNode> full_resolution_stream_;
   std::unique_ptr<ProcessNode> downscaled_resolution_stream_;
   std::queue<async::TaskClosure> event_queue_ __TA_GUARDED(event_queue_lock_);
+  std::map<fuchsia::camera2::CameraStreamType, OutputNode*> output_nodes_info_;
 };
 
 }  // namespace camera

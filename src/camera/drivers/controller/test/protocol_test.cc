@@ -627,6 +627,49 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(fake_gdc_.frame_released());
   }
 
+  void TestEnabledDisableStreaming() {
+    fuchsia::camera2::StreamPtr stream_ds;
+    fuchsia::camera2::StreamPtr stream_fr;
+
+    auto stream_type_ds = kStreamTypeDS | kStreamTypeML;
+    auto stream_type_fr = kStreamTypeFR | kStreamTypeML;
+
+    auto result_fr = SetupStream(kMonitorConfig, stream_type_fr, stream_fr);
+    ASSERT_EQ(ZX_OK, result_fr.error());
+
+    auto result_ds = SetupStream(kMonitorConfig, stream_type_ds, stream_ds);
+    ASSERT_EQ(ZX_OK, result_ds.error());
+
+    // Start streaming.
+    stream_fr->Start();
+    stream_ds->Start();
+    RunLoopUntilIdle();
+
+    auto fr_head_node = pipeline_manager_->full_resolution_stream();
+    auto fr_ml_output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
+    auto gdc_node = static_cast<GdcNode*>(fr_head_node->child_nodes().at(1).get());
+    auto ds_ml_output_node = static_cast<OutputNode*>(gdc_node->child_nodes().at(0).get());
+
+    EXPECT_TRUE(fr_head_node->enabled());
+    EXPECT_TRUE(fr_ml_output_node->enabled());
+    EXPECT_TRUE(gdc_node->enabled());
+    EXPECT_TRUE(ds_ml_output_node->enabled());
+
+    pipeline_manager_->StopStreaming();
+
+    EXPECT_FALSE(fr_head_node->enabled());
+    EXPECT_FALSE(fr_ml_output_node->enabled());
+    EXPECT_FALSE(gdc_node->enabled());
+    EXPECT_FALSE(ds_ml_output_node->enabled());
+
+    pipeline_manager_->StartStreaming();
+
+    EXPECT_TRUE(fr_head_node->enabled());
+    EXPECT_TRUE(fr_ml_output_node->enabled());
+    EXPECT_TRUE(gdc_node->enabled());
+    EXPECT_TRUE(ds_ml_output_node->enabled());
+  }
+
   FakeIsp fake_isp_;
   FakeGdc fake_gdc_;
   async::Loop loop_;
@@ -682,6 +725,8 @@ TEST_F(ControllerProtocolTest, TestOutputNode) { TestOutputNode(); }
 TEST_F(ControllerProtocolTest, TestGdcNode) { TestGdcNode(); }
 
 TEST_F(ControllerProtocolTest, TestReleaseAfterStopStreaming) { TestReleaseAfterStopStreaming(); }
+
+TEST_F(ControllerProtocolTest, TestEnabledDisableStreaming) { TestEnabledDisableStreaming(); }
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {
 #ifdef INTERNAL_ACCESS

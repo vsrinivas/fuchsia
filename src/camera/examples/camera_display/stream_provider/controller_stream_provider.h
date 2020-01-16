@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_CONTROLLER_STREAM_PROVIDER_H_
-#define SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_CONTROLLER_STREAM_PROVIDER_H_
+#ifndef SRC_CAMERA_EXAMPLES_CAMERA_DISPLAY_STREAM_PROVIDER_CONTROLLER_STREAM_PROVIDER_H_
+#define SRC_CAMERA_EXAMPLES_CAMERA_DISPLAY_STREAM_PROVIDER_CONTROLLER_STREAM_PROVIDER_H_
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
@@ -24,11 +24,10 @@ class ControllerStreamProvider : public StreamProvider {
   virtual std::string GetName() override { return "fuchsia.camera2.Controller service"; }
 
  private:
-  bool streaming_ = false;
   fuchsia::camera2::hal::ControllerSyncPtr controller_;
   fuchsia::sysmem::AllocatorSyncPtr allocator_;
   std::map<uint32_t, fuchsia::sysmem::BufferCollectionSyncPtr> buffer_collections_;
   fidl::VectorPtr<fuchsia::camera2::hal::Config> configs_;
 };
 
-#endif  // SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_CONTROLLER_STREAM_PROVIDER_H_
+#endif  // SRC_CAMERA_EXAMPLES_CAMERA_DISPLAY_STREAM_PROVIDER_CONTROLLER_STREAM_PROVIDER_H_

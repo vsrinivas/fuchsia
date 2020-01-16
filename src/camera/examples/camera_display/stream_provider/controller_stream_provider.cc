@@ -23,12 +23,6 @@ static constexpr uint32_t kMlDsStream = 1;
 static constexpr uint32_t kMonitoringStream = 2;
 
 ControllerStreamProvider::~ControllerStreamProvider() {
-  if (controller_ && streaming_) {
-    zx_status_t status = controller_->DisableStreaming();
-    if (status != ZX_OK) {
-      FX_PLOGS(WARNING, status) << "Failed to stop streaming via the controller";
-    }
-  }
   for (auto& buffer_collection : buffer_collections_) {
     if (buffer_collection.second) {
       zx_status_t status = buffer_collection.second->Close();
@@ -88,13 +82,6 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
     FX_PLOGS(ERROR, status_return) << "Failed to get configs";
     return nullptr;
   }
-
-  // Immediately enable streaming.
-  status = provider->controller_->EnableStreaming();
-  if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "Failed to start streaming via the controller";
-  }
-  provider->streaming_ = true;
 
   return std::move(provider);
 }

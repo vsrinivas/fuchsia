@@ -46,7 +46,7 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
 }
 
 void ProcessNode::OnStartStreaming() {
-  if (!enabled_) {
+  if (!shutdown_requested_ && !enabled_) {
     enabled_ = true;
     parent_node_->OnStartStreaming();
   }
@@ -62,7 +62,7 @@ bool ProcessNode::AllChildNodesDisabled() {
 }
 
 void ProcessNode::OnStopStreaming() {
-  if (enabled_) {
+  if (!shutdown_requested_ && enabled_) {
     if (AllChildNodesDisabled()) {
       enabled_ = false;
       parent_node_->OnStopStreaming();

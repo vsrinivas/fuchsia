@@ -54,11 +54,14 @@ fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
         // TODO(braval): Handle already configured nodes
         return result;
       }
+      output_nodes_info_[info->stream_config->properties.stream_type()] = result.value();
       break;
     }
+      // clang-format off
     default: {
       return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
+      // clang-format on
   }
   return result;
 }
@@ -291,6 +294,7 @@ void PipelineManager::DisconnectStream(ProcessNode* graph_head,
                                        fuchsia::camera2::CameraStreamType stream_to_disconnect) {
   auto shutdown_callback = [this, input_stream_type, stream_to_disconnect]() {
     ProcessNode* graph_head = nullptr;
+    output_nodes_info_.erase(stream_to_disconnect);
 
     switch (input_stream_type) {
       case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
@@ -315,6 +319,7 @@ void PipelineManager::DisconnectStream(ProcessNode* graph_head,
       }
       default: {
         ZX_ASSERT_MSG(false, "Invalid input stream type\n");
+        break;
       }
     }
   };
@@ -354,10 +359,26 @@ void PipelineManager::OnClientStreamDisconnect(
     }
     default: {
       ZX_ASSERT_MSG(false, "Invalid input stream type\n");
-      return;
+      break;
     }
   }
   DisconnectStream(graph_head, input_stream_type, stream_to_disconnect);
+}
+
+void PipelineManager::StopStreaming() {
+  for (auto output_node_info : output_nodes_info_) {
+    if (output_node_info.second) {
+      output_node_info.second->client_stream()->Stop();
+    }
+  }
+}
+
+void PipelineManager::StartStreaming() {
+  for (auto output_node_info : output_nodes_info_) {
+    if (output_node_info.second) {
+      output_node_info.second->client_stream()->Start();
+    }
+  }
 }
 
 }  // namespace camera
