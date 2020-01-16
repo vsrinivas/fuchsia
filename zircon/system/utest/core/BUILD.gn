@@ -27,6 +27,7 @@ core_tests = [
   "memory-mapping",
   "object-child",
   "object-info",
+  "object-wait",
   "pager",
   "port",
   "process",

@@ -165,8 +165,7 @@ typedef uint64_t zx_koid_t;
 #define ZX_KOID_FIRST   ((uint64_t) 1024)
 
 // Maximum number of wait items allowed for zx_object_wait_many()
-// TODO(ZX-1349) Re-lower this.
-#define ZX_WAIT_MANY_MAX_ITEMS ((size_t)16)
+#define ZX_WAIT_MANY_MAX_ITEMS ((size_t)64)
 
 // Structure for zx_object_wait_many():
 typedef struct zx_wait_item {

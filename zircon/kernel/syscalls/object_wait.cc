@@ -27,11 +27,9 @@
 
 #define LOCAL_TRACE 0
 
-// TODO(ZX-1349) Re-lower this to 8.
-constexpr uint32_t kMaxWaitHandleCount = 16u;
+constexpr uint32_t kMaxWaitHandleCount = ZX_WAIT_MANY_MAX_ITEMS;
 
-// ensure public headers agree
-static_assert(ZX_WAIT_MANY_MAX_ITEMS == kMaxWaitHandleCount, "");
+static_assert(ZX_WAIT_MANY_MAX_ITEMS == ZX_CHANNEL_MAX_MSG_HANDLES);
 
 // zx_status_t zx_object_wait_one
 zx_status_t sys_object_wait_one(zx_handle_t handle_value, zx_signals_t signals, zx_time_t deadline,
@@ -117,7 +115,16 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
   if (user_items.copy_array_from_user(items, count) != ZX_OK)
     return ZX_ERR_INVALID_ARGS;
 
-  WaitStateObserver wait_state_observers[kMaxWaitHandleCount];
+  // WaitStateObserver is heavier than it looks so make sure we know how
+  // much stack InlineArray is going to use, given limited kernel stack size.
+  static_assert(sizeof(WaitStateObserver) * 8 < 640);
+
+  fbl::AllocChecker ac;
+  fbl::InlineArray<WaitStateObserver, 8u> wait_state_observers(&ac, count);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
   Event event;
 
   // We may need to unwind (which can be done outside the lock).

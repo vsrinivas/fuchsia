@@ -51,7 +51,7 @@ process.  (For example, a Channel ceases asserting **ZX_CHANNEL_READABLE**
 once the last message in its queue is read).
 
 The maximum number of items that may be waited upon is **ZX_WAIT_MANY_MAX_ITEMS**,
-which is 8.  To wait on more things at once use [Ports](/docs/concepts/objects/port.md).
+which is 64.  To wait on more objects at once use [Ports](/docs/concepts/objects/port.md).
 
 ## RIGHTS
 
