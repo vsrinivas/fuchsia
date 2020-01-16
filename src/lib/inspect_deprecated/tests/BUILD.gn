@@ -20,7 +20,6 @@ executable("bin") {
     "vmo_reader_unittest.cc",
   ]
   deps = [
-    "//peridot/lib/rng:testing",
     "//src/lib/callback",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",

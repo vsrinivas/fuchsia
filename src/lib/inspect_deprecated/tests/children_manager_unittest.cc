@@ -19,7 +19,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/rng/test_random.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -42,10 +41,9 @@ fit::closure SetWhenCalled(bool* value) {
   return [value] { *value = true; };
 }
 
-bool NextBool(rng::Random* random) {
-  auto bit_generator = random->NewBitGenerator<bool>();
-  return bool(std::uniform_int_distribution(0, 1)(bit_generator));
-}
+using Random = std::independent_bits_engine<std::mt19937_64, 1, bool>;
+
+bool NextBool(Random* random) { return (*random)(); }
 
 struct Table {
   std::map<std::string, std::unique_ptr<Table>> children;
@@ -109,7 +107,7 @@ std::set<std::vector<std::string>> CompleteTableDescription(int depth) {
 
 class Element final : public inspect_deprecated::ChildrenManager {
  public:
-  Element(async::TestLoop* test_loop, rng::Random* random, Table* table,
+  Element(async::TestLoop* test_loop, Random* random, Table* table,
           inspect_deprecated::Node inspect_node)
       : random_(random),
         test_loop_(test_loop),
@@ -269,7 +267,7 @@ class Element final : public inspect_deprecated::ChildrenManager {
     }
   }
 
-  rng::Random* random_;
+  Random* random_;
   async::TestLoop* test_loop_;
   Table* table_;
   inspect_deprecated::Node inspect_node_;
@@ -299,7 +297,7 @@ enum class Activity {
 //   (2) The application is asynchronous.
 class Application final {
  public:
-  Application(async::TestLoop* loop, rng::Random* random,
+  Application(async::TestLoop* loop, Random* random,
               inspect_deprecated::Node* application_inspect_node,
               const std::set<std::vector<std::string>>& table_description)
       : loop_(loop),
@@ -390,7 +388,7 @@ class Application final {
 
  private:
   async::TestLoop* loop_;
-  rng::Random* random_;
+  Random* random_;
   inspect_deprecated::Node* application_inspect_node_;
 
   // Representative of the application's persistent data on disk, the set of
@@ -407,7 +405,7 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
  public:
   ChildrenManagerTest()
       : executor_(dispatcher()),
-        random_(test_loop().initial_state()),
+        random_(std::mt19937_64(test_loop().initial_state())),
         top_level_node_(inspect_deprecated::Node(kTestTopLevelNodeName)) {
     elements_node_ = top_level_node_.CreateChild(kElementsInspectPathComponent);
   }
@@ -430,7 +428,7 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
   ::testing::AssertionResult ReadWithReaderAPI(inspect_deprecated::ObjectHierarchy* hierarchy);
 
   async::Executor executor_;
-  rng::TestRandom random_;
+  Random random_;
   inspect_deprecated::Node top_level_node_;
   inspect_deprecated::Node elements_node_;
 };
