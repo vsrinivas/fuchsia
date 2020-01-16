@@ -114,6 +114,7 @@ mod tests {
         }
     }
 
+    /// Tests that an error is raised if end_time < start_time.
     #[fasync::run_singlethreaded(test)]
     async fn test_log_session_launch_time_swap_start_end_time() {
         let (logger_proxy, _logger_server) =

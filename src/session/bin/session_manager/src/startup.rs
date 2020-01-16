@@ -169,7 +169,7 @@ mod tests {
         realm_proxy
     }
 
-    /// Tests that setting the session calls the appropriate realm methods, in the appropriate
+    /// Tests that setting the session calls the appropriate realm methods in the appropriate
     /// order.
     #[fasync::run_singlethreaded(test)]
     async fn set_session_test() {
