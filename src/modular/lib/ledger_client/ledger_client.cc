@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LtICENSE file.
 
-#include "peridot/lib/ledger_client/ledger_client.h"
+#include "src/modular/lib/ledger_client/ledger_client.h"
 
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <algorithm>
 
-#include "peridot/lib/ledger_client/page_client.h"
-#include "peridot/lib/ledger_client/types.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/clone.h"
+#include "src/modular/lib/ledger_client/page_client.h"
+#include "src/modular/lib/ledger_client/types.h"
 
 namespace modular {
 

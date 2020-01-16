@@ -11,9 +11,6 @@
 #include <lib/zx/eventpair.h>
 #include <zircon/status.h>
 
-#include "peridot/lib/ledger_client/constants.h"
-#include "peridot/lib/ledger_client/ledger_client.h"
-#include "peridot/lib/ledger_client/page_id.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
@@ -36,6 +33,9 @@
 #include "src/modular/lib/device_info/device_info.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/json_xdr.h"
+#include "src/modular/lib/ledger_client/constants.h"
+#include "src/modular/lib/ledger_client/ledger_client.h"
+#include "src/modular/lib/ledger_client/page_id.h"
 #include "src/modular/lib/module_manifest/module_facet_reader_impl.h"
 
 namespace modular {

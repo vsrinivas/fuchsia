@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
-#define PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
+#ifndef SRC_MODULAR_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
+#define SRC_MODULAR_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
 
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -12,8 +12,8 @@
 #include <array>
 #include <string>
 
-#include "peridot/lib/ledger_client/types.h"
 #include "src/lib/fxl/macros.h"
+#include "src/modular/lib/ledger_client/types.h"
 
 namespace modular {
 
@@ -147,4 +147,4 @@ void GetEntries(fuchsia::ledger::PageSnapshot* snapshot,
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
+#endif  // SRC_MODULAR_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_

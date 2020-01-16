@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_LEDGER_CLIENT_PROMISE_H_
-#define PERIDOT_LIB_LEDGER_CLIENT_PROMISE_H_
+#ifndef SRC_MODULAR_LIB_LEDGER_CLIENT_PROMISE_H_
+#define SRC_MODULAR_LIB_LEDGER_CLIENT_PROMISE_H_
 
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/fit/bridge.h>
@@ -76,4 +76,4 @@ class PageSnapshotPromise {
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_LEDGER_CLIENT_PROMISE_H_
+#endif  // SRC_MODULAR_LIB_LEDGER_CLIENT_PROMISE_H_

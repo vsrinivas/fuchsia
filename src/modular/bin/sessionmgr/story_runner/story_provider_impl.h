@@ -24,9 +24,6 @@
 #include <memory>
 #include <set>
 
-#include "peridot/lib/ledger_client/ledger_client.h"
-#include "peridot/lib/ledger_client/page_client.h"
-#include "peridot/lib/ledger_client/types.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
@@ -37,6 +34,9 @@
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/fidl/proxy.h"
+#include "src/modular/lib/ledger_client/ledger_client.h"
+#include "src/modular/lib/ledger_client/page_client.h"
+#include "src/modular/lib/ledger_client/types.h"
 #include "src/modular/lib/module_manifest/module_facet_reader.h"
 
 namespace modular {
@@ -87,9 +87,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   const ComponentContextInfo& component_context_info() { return component_context_info_; }
 
   // Called by StoryControllerImpl.
-  AgentServicesFactory* agent_services_factory() {
-    return agent_services_factory_;
-  }
+  AgentServicesFactory* agent_services_factory() { return agent_services_factory_; }
 
   // Called by StoryControllerImpl.
   fuchsia::app::discover::DiscoverRegistry* discover_registry() { return discover_registry_; }
@@ -273,12 +271,12 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   const ComponentContextInfo component_context_info_;
 
-  AgentServicesFactory* const agent_services_factory_;                            // Not owned.
-  fuchsia::app::discover::DiscoverRegistry* const discover_registry_;             // Not owned.
-  fuchsia::modular::ModuleResolver* const module_resolver_;                       // Not owned.
-  EntityProviderRunner* const entity_provider_runner_;                            // Not owned.
-  modular::ModuleFacetReader* const module_facet_reader_;                         // Not owned.
-  PresentationProvider* const presentation_provider_;                             // Not owned.
+  AgentServicesFactory* const agent_services_factory_;                 // Not owned.
+  fuchsia::app::discover::DiscoverRegistry* const discover_registry_;  // Not owned.
+  fuchsia::modular::ModuleResolver* const module_resolver_;            // Not owned.
+  EntityProviderRunner* const entity_provider_runner_;                 // Not owned.
+  modular::ModuleFacetReader* const module_facet_reader_;              // Not owned.
+  PresentationProvider* const presentation_provider_;                  // Not owned.
 
   // When a story gets created, or when it gets focused on this device, we write
   // a record of the current context in the story page. So we need to watch the

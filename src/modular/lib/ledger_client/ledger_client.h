@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_LEDGER_CLIENT_LEDGER_CLIENT_H_
-#define PERIDOT_LIB_LEDGER_CLIENT_LEDGER_CLIENT_H_
+#ifndef SRC_MODULAR_LIB_LEDGER_CLIENT_LEDGER_CLIENT_H_
+#define SRC_MODULAR_LIB_LEDGER_CLIENT_LEDGER_CLIENT_H_
 
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
@@ -14,10 +14,10 @@
 #include <memory>
 #include <vector>
 
-#include "peridot/lib/ledger_client/types.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/lib/async/cpp/operation.h"
+#include "src/modular/lib/ledger_client/types.h"
 
 namespace modular {
 
@@ -115,4 +115,4 @@ class LedgerClient::ConflictResolverImpl : fuchsia::ledger::ConflictResolver {
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_LEDGER_CLIENT_LEDGER_CLIENT_H_
+#endif  // SRC_MODULAR_LIB_LEDGER_CLIENT_LEDGER_CLIENT_H_

@@ -10,12 +10,12 @@
 #include <unordered_set>
 
 #include "fuchsia/ledger/cpp/fidl.h"
-#include "peridot/lib/ledger_client/operations.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage_xdr.h"
 #include "src/modular/lib/fidl/clone.h"
+#include "src/modular/lib/ledger_client/operations.h"
 
 namespace modular {
 

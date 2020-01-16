@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_LEDGER_CLIENT_PAGE_ID_H_
-#define PERIDOT_LIB_LEDGER_CLIENT_PAGE_ID_H_
-
-#include <string>
+#ifndef SRC_MODULAR_LIB_LEDGER_CLIENT_PAGE_ID_H_
+#define SRC_MODULAR_LIB_LEDGER_CLIENT_PAGE_ID_H_
 
 #include <fuchsia/ledger/cpp/fidl.h>
+
+#include <string>
 
 namespace modular {
 
@@ -21,4 +21,4 @@ fuchsia::ledger::PageId MakePageId(const std::string& value);
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_LEDGER_CLIENT_PAGE_ID_H_
+#endif  // SRC_MODULAR_LIB_LEDGER_CLIENT_PAGE_ID_H_

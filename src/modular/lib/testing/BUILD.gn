@@ -185,10 +185,10 @@ source_set("test_with_ledger") {
   public_deps = [
     ":ledger_repository_for_testing",
     "//garnet/public/lib/gtest",
-    "//peridot/lib/ledger_client:page_client",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/modular/lib/ledger_client:page_client",
     "//third_party/googletest:gtest",
   ]
 }
@@ -217,7 +217,6 @@ source_set("ledger_repository_for_testing") {
   ]
 
   deps = [
-    "//peridot/lib/ledger_client:constants",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/ledger/fidl/fuchsia.ledger",
@@ -226,6 +225,7 @@ source_set("ledger_repository_for_testing") {
     "//src/lib/fxl",
     "//src/modular/lib/common:teardown",
     "//src/modular/lib/fidl:app_client",
+    "//src/modular/lib/ledger_client:constants",
   ]
 
   public_deps = [

@@ -11,10 +11,10 @@
 
 #include <map>
 
-#include "peridot/lib/ledger_client/ledger_client.h"
-#include "peridot/lib/ledger_client/page_client.h"
-#include "peridot/lib/ledger_client/page_id.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/ledger_client/ledger_client.h"
+#include "src/modular/lib/ledger_client/page_client.h"
+#include "src/modular/lib/ledger_client/page_id.h"
 
 using fuchsia::modular::LinkPath;
 using fuchsia::modular::LinkPathPtr;

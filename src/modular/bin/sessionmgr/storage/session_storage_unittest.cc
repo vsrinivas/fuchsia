@@ -10,11 +10,11 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/ledger_client/page_id.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/ledger_client/page_id.h"
 #include "src/modular/lib/testing/test_with_ledger.h"
 #include "zircon/system/public/zircon/errors.h"
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_LEDGER_CLIENT_CONSTANTS_H_
-#define PERIDOT_LIB_LEDGER_CLIENT_CONSTANTS_H_
+#ifndef SRC_MODULAR_LIB_LEDGER_CLIENT_CONSTANTS_H_
+#define SRC_MODULAR_LIB_LEDGER_CLIENT_CONSTANTS_H_
 
 namespace modular {
 
@@ -11,4 +11,4 @@ inline constexpr char kLedgerAppUrl[] = "fuchsia-pkg://fuchsia.com/ledger#meta/l
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_LEDGER_CLIENT_CONSTANTS_H_
+#endif  // SRC_MODULAR_LIB_LEDGER_CLIENT_CONSTANTS_H_

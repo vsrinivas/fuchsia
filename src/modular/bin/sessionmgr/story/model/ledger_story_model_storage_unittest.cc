@@ -11,10 +11,10 @@
 #include <lib/fit/single_threaded_executor.h>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/ledger_client/ledger_client.h"
-#include "peridot/lib/ledger_client/page_id.h"
 #include "src/modular/bin/sessionmgr/story/model/apply_mutations.h"
 #include "src/modular/bin/sessionmgr/story/model/testing/mutation_matchers.h"
+#include "src/modular/lib/ledger_client/ledger_client.h"
+#include "src/modular/lib/ledger_client/page_id.h"
 #include "src/modular/lib/testing/test_with_ledger.h"
 
 using fuchsia::modular::StoryState;

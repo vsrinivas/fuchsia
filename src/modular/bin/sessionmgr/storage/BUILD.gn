@@ -61,19 +61,19 @@ source_set("session_storage") {
 
   deps = [
     ":session_storage_xdr",
-    "//peridot/lib/ledger_client:operations",
     "//src/lib/uuid",
     "//src/modular/bin/sessionmgr/storage:constants_and_utils",
     "//src/modular/lib/fidl:clone",
+    "//src/modular/lib/ledger_client:operations",
   ]
 
   public_deps = [
     ":story_storage",
-    "//peridot/lib/ledger_client:page_client",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//src/modular/bin/sessionmgr:annotations",
     "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/ledger_client:page_client",
   ]
 }
 
@@ -120,16 +120,16 @@ source_set("story_storage") {
 
   deps = [
     ":story_storage_xdr",
-    "//peridot/lib/ledger_client:operations",
     "//sdk/fidl/fuchsia.modular",
     "//src/ledger/fidl/fuchsia.ledger",
     "//src/modular/bin/sessionmgr/storage:constants_and_utils",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/fidl:clone",
+    "//src/modular/lib/ledger_client:operations",
   ]
   public_deps = [
-    "//peridot/lib/ledger_client:page_client",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//src/modular/lib/ledger_client:page_client",
   ]
 }
 

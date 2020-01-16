@@ -16,15 +16,13 @@ source_set("agent_runner") {
 
   public_deps = [
     ":public",
-    "//peridot/lib/ledger_client:page_client",
     "//sdk/lib/sys/inspect/cpp",
     "//src/modular/bin/sessionmgr:agent_services_factory",
+    "//src/modular/lib/ledger_client:page_client",
   ]
 
   deps = [
     "//garnet/public/lib/json",
-    "//peridot/lib/ledger_client:page_client",
-    "//peridot/lib/ledger_client:types",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
@@ -42,6 +40,8 @@ source_set("agent_runner") {
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/fidl:json_xdr",
+    "//src/modular/lib/ledger_client:page_client",
+    "//src/modular/lib/ledger_client:types",
   ]
 }
 
@@ -54,7 +54,6 @@ executable("agent_runner_unittest") {
     ":agent_runner",
     ":public",
     "//garnet/public/lib/svc/cpp",
-    "//peridot/lib/ledger_client:page_client",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.sys",
@@ -65,6 +64,7 @@ executable("agent_runner_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr/entity_provider_runner",
     "//src/modular/lib/fidl:array_to_string",
+    "//src/modular/lib/ledger_client:page_client",
     "//src/modular/lib/testing:mock_base",
     "//src/modular/lib/testing:test_with_ledger",
     "//src/modular/tests:fuchsia.testing.modular",

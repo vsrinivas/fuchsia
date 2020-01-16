@@ -10,7 +10,7 @@
 
 #include <memory>
 
-#include "peridot/lib/ledger_client/ledger_client.h"
+#include "src/modular/lib/ledger_client/ledger_client.h"
 #include "src/modular/lib/testing/ledger_repository_for_testing.h"
 
 namespace modular_testing {

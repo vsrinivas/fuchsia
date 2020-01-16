@@ -9,9 +9,9 @@
 #include <lib/fit/scope.h>
 #include <lib/fit/sequencer.h>
 
-#include "peridot/lib/ledger_client/page_client.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/story/model/story_model_storage.h"
+#include "src/modular/lib/ledger_client/page_client.h"
 
 namespace modular {
 

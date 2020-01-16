@@ -27,9 +27,6 @@
 #include <string>
 #include <vector>
 
-#include "peridot/lib/ledger_client/ledger_client.h"
-#include "peridot/lib/ledger_client/page_client.h"
-#include "peridot/lib/ledger_client/types.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
@@ -41,6 +38,9 @@
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
+#include "src/modular/lib/ledger_client/ledger_client.h"
+#include "src/modular/lib/ledger_client/page_client.h"
+#include "src/modular/lib/ledger_client/types.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {

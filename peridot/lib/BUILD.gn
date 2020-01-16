@@ -8,7 +8,6 @@ group("lib") {
   testonly = true
   deps = [
     ":peridot_lib_unittests",
-    "ledger_client",
     "rng",
     "util",
   ]
@@ -18,7 +17,6 @@ executable("peridot_lib_unittests") {
   testonly = true
 
   deps = [
-    "//peridot/lib/ledger_client:unittests",
     "//peridot/lib/rng:unittests",
     "//peridot/lib/util:unittests",
     "//src/lib/fxl/test:gtest_main",

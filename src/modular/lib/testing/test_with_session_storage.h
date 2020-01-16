@@ -7,9 +7,9 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include "peridot/lib/ledger_client/page_id.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
+#include "src/modular/lib/ledger_client/page_id.h"
 #include "src/modular/lib/testing/test_with_ledger.h"
 
 namespace modular_testing {

@@ -63,9 +63,6 @@ source_set("sessionmgr_lib") {
     ":presentation_provider",
     ":session_ctl",
     ":startup_agent_launcher",
-    "//peridot/lib/ledger_client:constants",
-    "//peridot/lib/ledger_client:operations",
-    "//peridot/lib/ledger_client:types",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
@@ -93,6 +90,9 @@ source_set("sessionmgr_lib") {
     "//src/modular/lib/fidl:environment",
     "//src/modular/lib/fidl:json_xdr",
     "//src/modular/lib/fidl:view_host",
+    "//src/modular/lib/ledger_client:constants",
+    "//src/modular/lib/ledger_client:operations",
+    "//src/modular/lib/ledger_client:types",
     "//src/modular/lib/modular_config:modular_config",
     "//src/modular/lib/module_manifest:module_facet_reader_impl",
   ]
@@ -146,9 +146,6 @@ source_set("component_context") {
   ]
 
   deps = [
-    "//peridot/lib/ledger_client:operations",
-    "//peridot/lib/ledger_client:page_client",
-    "//peridot/lib/ledger_client:types",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/sys/inspect/cpp",
     "//src/ledger/fidl/fuchsia.ledger",
@@ -161,6 +158,9 @@ source_set("component_context") {
     "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/fidl:json_xdr",
+    "//src/modular/lib/ledger_client:operations",
+    "//src/modular/lib/ledger_client:page_client",
+    "//src/modular/lib/ledger_client:types",
   ]
 }
 
@@ -171,9 +171,6 @@ source_set("focus") {
   ]
 
   deps = [
-    "//peridot/lib/ledger_client:operations",
-    "//peridot/lib/ledger_client:page_client",
-    "//peridot/lib/ledger_client:types",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
@@ -186,6 +183,9 @@ source_set("focus") {
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:json_xdr",
+    "//src/modular/lib/ledger_client:operations",
+    "//src/modular/lib/ledger_client:page_client",
+    "//src/modular/lib/ledger_client:types",
   ]
 }
 

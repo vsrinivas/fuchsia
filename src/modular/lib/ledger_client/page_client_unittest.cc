@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/ledger_client/page_client.h"
+#include "src/modular/lib/ledger_client/page_client.h"
 
 #include <memory>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/ledger_client/ledger_client.h"
-#include "peridot/lib/ledger_client/page_id.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/ledger_client/ledger_client.h"
+#include "src/modular/lib/ledger_client/page_id.h"
 #include "src/modular/lib/testing/test_with_ledger.h"
 
 namespace modular_testing {
