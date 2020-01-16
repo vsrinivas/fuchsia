@@ -113,6 +113,9 @@ class Bind {
                                         void* protocol);
 
   // Internal fake implementation of ddk functionality.
+  virtual zx_status_t DeviceRebind(zx_device_t* device);
+
+  // Internal fake implementation of ddk functionality.
   virtual const char* DeviceGetName(zx_device_t* device);
 
   // Internal fake implementation of ddk functionality.
@@ -125,6 +128,7 @@ class Bind {
   bool bad_device_ = false;
   bool add_called_ = false;
   bool remove_called_ = false;
+  bool rebind_called_ = false;
   sync_completion_t remove_called_sync_;
   bool make_visible_called_ = false;
   bool suspend_complete_called_ = false;

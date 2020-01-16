@@ -192,6 +192,14 @@ zx_status_t Bind::DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t Bind::DeviceRebind(zx_device_t* device) {
+  if (device != kFakeDevice) {
+    bad_device_ = true;
+  }
+  rebind_called_ = true;
+  return ZX_OK;
+}
+
 const char* Bind::DeviceGetName(zx_device_t* device) {
   if (device != kFakeParent) {
     bad_device_ = true;
@@ -325,6 +333,14 @@ zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw
   *fw = ZX_HANDLE_INVALID;
   *size = fake_ddk::kFakeFWSize;
   return ZX_OK;
+}
+
+__EXPORT
+zx_status_t device_rebind(zx_device_t* device) {
+  if (!fake_ddk::Bind::Instance()) {
+    return ZX_OK;
+  }
+  return fake_ddk::Bind::Instance()->DeviceRebind(device);
 }
 
 extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {
