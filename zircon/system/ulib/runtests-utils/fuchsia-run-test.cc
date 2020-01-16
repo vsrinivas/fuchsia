@@ -440,6 +440,11 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
     return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0, 0);
   }
 
+  zx::time deadline = zx::time::infinite();
+  if (timeout_msec) {
+    deadline = zx::deadline_after(zx::msec(timeout_msec));
+  }
+
   // Tee output.
   if (output_filename != nullptr) {
     FILE* output_file = fopen(output_filename, "w");
@@ -448,25 +453,39 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
               strerror(errno));
       return std::make_unique<Result>(test_name, FAILED_DURING_IO, 0, 0);
     }
+    if (timeout_msec) {
+      // If we have a timeout, we want non-blocking reads.
+      // This will trigger the EAGAIN code path in the read loop.
+      int flags = fcntl(fds[0].get(), F_GETFL, 0);
+      fcntl(fds[0].get(), F_SETFL, flags | O_NONBLOCK);
+    }
     char buf[1024];
     ssize_t bytes_read = 0;
-    while ((bytes_read = read(fds[0].get(), buf, sizeof(buf))) > 0) {
-      fwrite(buf, 1, bytes_read, output_file);
-      fwrite(buf, 1, bytes_read, stdout);
+    while ((bytes_read = read(fds[0].get(), buf, sizeof(buf))) != 0) {
+      if (bytes_read > 0) {
+        fwrite(buf, 1, bytes_read, output_file);
+        fwrite(buf, 1, bytes_read, stdout);
+      } else if (errno == EAGAIN) {
+        const zx::time now = zx::clock::get_monotonic();
+        if (now > deadline) {
+          break;
+        }
+        const zx::duration sleep_for = std::min(zx::msec(100), deadline - now);
+        zx::nanosleep(zx::deadline_after(sleep_for));
+      } else {
+        fprintf(stderr, "Failed to read test process' output: %s\n", strerror(errno));
+        break;
+      }
     }
     fflush(stdout);
     fflush(stderr);
     fflush(output_file);
     if (fclose(output_file)) {
-      fprintf(stderr, "FAILURE:  Could not close %s: %s", output_filename, strerror(errno));
+      fprintf(stderr, "FAILURE: Could not close %s: %s\n", output_filename, strerror(errno));
       return std::make_unique<Result>(test_name, FAILED_DURING_IO, 0, 0);
     }
   }
 
-  zx::time deadline = zx::time::infinite();
-  if (timeout_msec) {
-    deadline = zx::deadline_after(zx::msec(timeout_msec));
-  }
   status = process.wait_one(ZX_PROCESS_TERMINATED, deadline, nullptr);
   const zx::time end_time = zx::clock::get_monotonic();
   const int64_t duration_milliseconds = (end_time - start_time).to_msecs();

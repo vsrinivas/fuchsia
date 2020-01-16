@@ -334,6 +334,14 @@ bool RunTestTimeout() {
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
 
+  // Still works if output file set.
+  ScopedTestDir test_dir;
+  fbl::String output_filename = JoinPath(test_dir.path(), "test-inf-loop.out");
+  result = RunTest(inf_loop_argv, nullptr, output_filename.c_str(), inf_loop_name.c_str(), 1);
+  EXPECT_STR_EQ(inf_loop_argv[0], result->name.c_str());
+  EXPECT_EQ(TIMED_OUT, result->launch_status);
+  EXPECT_EQ(0, result->return_code);
+
   END_TEST;
 }
 
