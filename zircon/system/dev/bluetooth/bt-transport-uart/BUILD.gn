@@ -2,15 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("bt-transport-uart") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("bt-transport-uart") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "bt-transport-uart.c" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.bt.hci",
-    "$zx/system/banjo/ddk.protocol.serial",
-    "$zx/system/banjo/ddk.protocol.serialimpl.async",
-    "$zx/system/fidl/fuchsia-hardware-serial:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/sync",
+    "//zircon/system/banjo/ddk.protocol.bt.hci",
+    "//zircon/system/banjo/ddk.protocol.serial",
+    "//zircon/system/banjo/ddk.protocol.serialimpl.async",
+    "//zircon/system/fidl/fuchsia-hardware-serial:c",
   ]
+}
+
+migrated_manifest("bt-transport-uart-manifest") {
+  deps = [ ":bt-transport-uart" ]
 }
