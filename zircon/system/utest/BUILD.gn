@@ -258,7 +258,6 @@ if (current_cpu != "") {
       "service:test",
       "stdio",
       "svchost",
-      "sysconf",
       "sysinfo",
       "sysmem",
       "task-utils",
