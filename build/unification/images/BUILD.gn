@@ -334,6 +334,7 @@ aggregate_manifest("legacy-image") {
     ":driver.virtio_ethernet",
     ":driver.virtio_gpu",
     ":driver.virtio_input",
+    ":driver.virtio_rng",
     ":driver.virtio_scsi",
     ":driver.virtio_socket",
     ":driver.xhci",

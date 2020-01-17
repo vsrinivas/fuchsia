@@ -3,10 +3,7 @@
 # found in the LICENSE file.
 
 zx_driver("virtio") {
-  sources = [
-    "rng.cc",
-    "virtio_driver.cc",
-  ]
+  sources = [ "virtio_driver.cc" ]
   deps = [ ":common" ]
 }
 
@@ -88,6 +85,17 @@ zx_driver("virtio_ethernet") {
     ":common",
     "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/dev/lib/dev-operation",
+    "$zx/system/ulib/ddktl",
+  ]
+}
+
+zx_driver("virtio_rng") {
+  sources = [
+    "rng.cc",
+    "rng_driver.cc",
+  ]
+  deps = [
+    ":common",
     "$zx/system/ulib/ddktl",
   ]
 }

@@ -12,6 +12,7 @@ group("bus") {
     "virtio:virtio_ethernet",
     "virtio:virtio_gpu",
     "virtio:virtio_input",
+    "virtio:virtio_rng",
     "virtio:virtio_scsi",
     "virtio:virtio_socket",
   ]
