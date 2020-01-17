@@ -75,6 +75,8 @@ use {
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["component_manager_sfw"])?;
+
     let args = match startup::Arguments::from_args() {
         Ok(args) => args,
         Err(err) => {
