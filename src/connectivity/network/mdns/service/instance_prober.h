@@ -31,6 +31,13 @@ class InstanceProber : public Prober {
  private:
   std::string instance_full_name_;
   inet::IpPort port_;
+
+ public:
+  // Disallow copy, assign and move.
+  InstanceProber(const InstanceProber&) = delete;
+  InstanceProber(InstanceProber&&) = delete;
+  InstanceProber& operator=(const InstanceProber&) = delete;
+  InstanceProber& operator=(InstanceProber&&) = delete;
 };
 
 }  // namespace mdns

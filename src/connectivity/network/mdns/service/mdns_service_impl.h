@@ -15,7 +15,6 @@
 
 #include "src/connectivity/network/mdns/service/config.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace mdns {
@@ -202,7 +201,12 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
   std::unordered_map<std::string, std::unique_ptr<Mdns::Publisher>>
       publishers_by_instance_full_name_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(MdnsServiceImpl);
+ public:
+  // Disallow copy, assign and move.
+  MdnsServiceImpl(const MdnsServiceImpl&) = delete;
+  MdnsServiceImpl(MdnsServiceImpl&&) = delete;
+  MdnsServiceImpl& operator=(const MdnsServiceImpl&) = delete;
+  MdnsServiceImpl& operator=(MdnsServiceImpl&&) = delete;
 };
 
 }  // namespace mdns

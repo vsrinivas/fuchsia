@@ -70,6 +70,13 @@ class PacketReader {
   std::vector<uint8_t> packet_;
   size_t packet_size_;
   size_t bytes_consumed_ = 0;
+
+ public:
+  // Disallow copy, assign and move.
+  PacketReader(const PacketReader&) = delete;
+  PacketReader(PacketReader&&) = delete;
+  PacketReader& operator=(const PacketReader&) = delete;
+  PacketReader& operator=(PacketReader&&) = delete;
 };
 
 }  // namespace mdns

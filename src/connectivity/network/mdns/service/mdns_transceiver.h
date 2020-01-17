@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "src/connectivity/network/mdns/service/mdns_interface_transceiver.h"
-#include "src/lib/fxl/macros.h"
 
 namespace mdns {
 
@@ -72,7 +71,12 @@ class MdnsTransceiver {
   std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>>
       interface_transceivers_by_address_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(MdnsTransceiver);
+ public:
+  // Disallow copy, assign and move.
+  MdnsTransceiver(const MdnsTransceiver&) = delete;
+  MdnsTransceiver(MdnsTransceiver&&) = delete;
+  MdnsTransceiver& operator=(const MdnsTransceiver&) = delete;
+  MdnsTransceiver& operator=(MdnsTransceiver&&) = delete;
 };
 
 }  // namespace mdns

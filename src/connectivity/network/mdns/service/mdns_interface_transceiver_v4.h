@@ -26,6 +26,13 @@ class MdnsInterfaceTransceiverV4 : public MdnsInterfaceTransceiver {
   int SetOptionFamilySpecific() override;
   int Bind() override;
   int SendTo(const void* buffer, size_t size, const inet::SocketAddress& address) override;
+
+ public:
+  // Disallow copy, assign and move.
+  MdnsInterfaceTransceiverV4(const MdnsInterfaceTransceiverV4&) = delete;
+  MdnsInterfaceTransceiverV4(MdnsInterfaceTransceiverV4&&) = delete;
+  MdnsInterfaceTransceiverV4& operator=(const MdnsInterfaceTransceiverV4&) = delete;
+  MdnsInterfaceTransceiverV4& operator=(MdnsInterfaceTransceiverV4&&) = delete;
 };
 
 }  // namespace mdns

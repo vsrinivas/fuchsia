@@ -19,7 +19,6 @@
 #include "src/connectivity/network/mdns/service/dns_message.h"
 #include "src/connectivity/network/mdns/service/mdns_agent.h"
 #include "src/connectivity/network/mdns/service/mdns_transceiver.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/inet/socket_address.h"
 
 namespace mdns {
@@ -303,7 +302,12 @@ class Mdns : public MdnsAgent::Host {
 #define DALLOW_AGENT_REMOVAL() (prohibit_agent_removal_ = false)
 #endif  // NDEBUG
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Mdns);
+ public:
+  // Disallow copy, assign and move.
+  Mdns(const Mdns&) = delete;
+  Mdns(Mdns&&) = delete;
+  Mdns& operator=(const Mdns&) = delete;
+  Mdns& operator=(Mdns&&) = delete;
 };
 
 }  // namespace mdns

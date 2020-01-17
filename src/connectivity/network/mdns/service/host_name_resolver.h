@@ -41,6 +41,13 @@ class HostNameResolver : public MdnsAgent {
   Mdns::ResolveHostNameCallback callback_;
   inet::IpAddress v4_address_;
   inet::IpAddress v6_address_;
+
+ public:
+  // Disallow copy, assign and move.
+  HostNameResolver(const HostNameResolver&) = delete;
+  HostNameResolver(HostNameResolver&&) = delete;
+  HostNameResolver& operator=(const HostNameResolver&) = delete;
+  HostNameResolver& operator=(HostNameResolver&&) = delete;
 };
 
 }  // namespace mdns

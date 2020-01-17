@@ -88,6 +88,13 @@ class InstanceRequestor : public MdnsAgent {
   std::unordered_map<std::string, TargetInfo> target_infos_by_full_name_;
   zx::duration query_delay_;
   std::shared_ptr<DnsQuestion> question_;
+
+ public:
+  // Disallow copy, assign and move.
+  InstanceRequestor(const InstanceRequestor&) = delete;
+  InstanceRequestor(InstanceRequestor&&) = delete;
+  InstanceRequestor& operator=(const InstanceRequestor&) = delete;
+  InstanceRequestor& operator=(InstanceRequestor&&) = delete;
 };
 
 }  // namespace mdns

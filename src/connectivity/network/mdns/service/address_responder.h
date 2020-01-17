@@ -29,6 +29,13 @@ class AddressResponder : public MdnsAgent {
 
  private:
   std::string host_full_name_;
+
+ public:
+  // Disallow copy, assign and move.
+  AddressResponder(const AddressResponder&) = delete;
+  AddressResponder(AddressResponder&&) = delete;
+  AddressResponder& operator=(const AddressResponder&) = delete;
+  AddressResponder& operator=(AddressResponder&&) = delete;
 };
 
 }  // namespace mdns

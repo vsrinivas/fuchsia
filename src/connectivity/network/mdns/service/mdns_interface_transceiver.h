@@ -15,7 +15,6 @@
 #include "src/connectivity/network/mdns/service/reply_address.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/inet/ip_address.h"
 #include "src/lib/inet/socket_address.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -134,7 +133,12 @@ class MdnsInterfaceTransceiver {
   uint64_t messages_sent_ = 0;
   uint64_t bytes_sent_ = 0;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(MdnsInterfaceTransceiver);
+ public:
+  // Disallow copy, assign and move.
+  MdnsInterfaceTransceiver(const MdnsInterfaceTransceiver&) = delete;
+  MdnsInterfaceTransceiver(MdnsInterfaceTransceiver&&) = delete;
+  MdnsInterfaceTransceiver& operator=(const MdnsInterfaceTransceiver&) = delete;
+  MdnsInterfaceTransceiver& operator=(MdnsInterfaceTransceiver&&) = delete;
 };
 
 }  // namespace mdns

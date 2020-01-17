@@ -124,6 +124,13 @@ class ResourceRenewer : public MdnsAgent {
 
   std::unordered_set<std::unique_ptr<Entry>, Hash, Equals> entries_;
   std::priority_queue<Entry*, std::vector<Entry*>, LaterScheduleTime> schedule_;
+
+ public:
+  // Disallow copy, assign and move.
+  ResourceRenewer(const ResourceRenewer&) = delete;
+  ResourceRenewer(ResourceRenewer&&) = delete;
+  ResourceRenewer& operator=(const ResourceRenewer&) = delete;
+  ResourceRenewer& operator=(ResourceRenewer&&) = delete;
 };
 
 }  // namespace mdns

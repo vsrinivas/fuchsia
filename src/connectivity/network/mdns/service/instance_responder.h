@@ -79,6 +79,13 @@ class InstanceResponder : public MdnsAgent {
   Mdns::Publisher* publisher_;
   std::vector<std::string> subtypes_;
   zx::duration announcement_interval_ = kInitialAnnouncementInterval;
+
+ public:
+  // Disallow copy, assign and move.
+  InstanceResponder(const InstanceResponder&) = delete;
+  InstanceResponder(InstanceResponder&&) = delete;
+  InstanceResponder& operator=(const InstanceResponder&) = delete;
+  InstanceResponder& operator=(InstanceResponder&&) = delete;
 };
 
 }  // namespace mdns

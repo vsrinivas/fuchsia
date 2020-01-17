@@ -26,6 +26,13 @@ class AddressProber : public Prober {
   const std::string& ResourceName() override;
 
   void SendProposedResources(MdnsResourceSection section) override;
+
+ public:
+  // Disallow copy, assign and move.
+  AddressProber(const AddressProber&) = delete;
+  AddressProber(AddressProber&&) = delete;
+  AddressProber& operator=(const AddressProber&) = delete;
+  AddressProber& operator=(AddressProber&&) = delete;
 };
 
 }  // namespace mdns

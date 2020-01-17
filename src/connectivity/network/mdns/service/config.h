@@ -68,6 +68,13 @@ class Config {
   std::optional<bool> perform_host_name_probe_;
   std::vector<Publication> publications_;
   MdnsAddresses addresses_;
+
+ public:
+  // Disallow copy, assign and move.
+  Config(const Config&) = delete;
+  Config(Config&&) = delete;
+  Config& operator=(const Config&) = delete;
+  Config& operator=(Config&&) = delete;
 };
 
 }  // namespace mdns

@@ -84,6 +84,13 @@ class PacketWriter {
   std::vector<uint8_t> packet_;
   size_t position_ = 0;
   std::unordered_map<std::string, size_t> positions_by_label_;
+
+ public:
+  // Disallow copy, assign and move.
+  PacketWriter(const PacketWriter&) = delete;
+  PacketWriter(PacketWriter&&) = delete;
+  PacketWriter& operator=(const PacketWriter&) = delete;
+  PacketWriter& operator=(PacketWriter&&) = delete;
 };
 
 }  // namespace mdns

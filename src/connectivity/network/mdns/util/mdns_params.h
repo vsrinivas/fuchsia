@@ -8,7 +8,6 @@
 #include <string>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/macros.h"
 
 namespace mdns {
 
@@ -51,7 +50,12 @@ class MdnsParams {
   std::vector<std::string> text_;
   std::vector<std::string> announce_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(MdnsParams);
+ public:
+  // Disallow copy, assign and move.
+  MdnsParams(const MdnsParams&) = delete;
+  MdnsParams(MdnsParams&&) = delete;
+  MdnsParams& operator=(const MdnsParams&) = delete;
+  MdnsParams& operator=(MdnsParams&&) = delete;
 };
 
 }  // namespace mdns
