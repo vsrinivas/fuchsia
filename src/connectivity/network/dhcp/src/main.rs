@@ -64,16 +64,15 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::Server);
     fs.take_and_serve_directory_handle()?;
-    let admin_fut = fs
-        .then(|incoming_service| async {
+    let admin_fut =
+        fs.then(futures::future::ok).try_for_each_concurrent(None, |incoming_service| async {
             match incoming_service {
                 IncomingService::Server(stream) => {
                     run_server(stream, &server).inspect_err(|e| log::info!("{:?}", e)).await?;
                     Ok(())
                 }
             }
-        })
-        .try_for_each_concurrent(None, |()| futures::future::ok(()));
+        });
 
     if args.test_only || !server.borrow().is_serving() {
         fx_log_info!("starting server in test only mode");
