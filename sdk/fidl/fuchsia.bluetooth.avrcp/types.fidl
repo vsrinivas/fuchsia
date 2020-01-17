@@ -32,15 +32,15 @@ enum TargetPassthroughError {
 /// Status codes for AVRCP specific AV/C commands.
 /// Defined in AVRCP 1.6.2 section 6.15.3, Table 6.49.
 /// Style note: named exactly as they are in Table 6.49 with the "REJECTED_" prefix.
-enum TargetAvcError {
-    REJECTED_INVALID_COMMAND = 0;
-    REJECTED_INVALID_PARAMETER = 1;
-    REJECTED_PARAMETER_CONTENT_ERROR = 2;
-    REJECTED_INTERNAL_ERROR = 3;
-    REJECTED_UID_CHANGED = 5;
-    REJECTED_INVALID_PLAYER_ID = 11;
-    REJECTED_NO_AVAILABLE_PLAYERS = 15;
-    REJECTED_ADDRESSED_PLAYER_CHANGED = 16;
+enum TargetAvcError : uint32 {
+    REJECTED_INVALID_COMMAND = 0x00;
+    REJECTED_INVALID_PARAMETER = 0x01;
+    REJECTED_PARAMETER_CONTENT_ERROR = 0x02;
+    REJECTED_INTERNAL_ERROR = 0x03;
+    REJECTED_UID_CHANGED = 0x05;
+    REJECTED_INVALID_PLAYER_ID = 0x11;
+    REJECTED_NO_AVAILABLE_PLAYERS = 0x15;
+    REJECTED_ADDRESSED_PLAYER_CHANGED = 0x16;
 };
 
 /// The maximum number of Notification Event IDs that can be supported by the TG.
