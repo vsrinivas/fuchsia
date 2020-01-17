@@ -53,11 +53,6 @@ constexpr char kStreamRampDurationSwitch[] = "rampdur";
 constexpr char kStreamRampTargetGainSwitch[] = "endgain";
 constexpr char kStreamRampTargetGainDefaultDb[] = "-75.0";
 
-constexpr char kSystemGainSwitch[] = "sgain";
-constexpr char kSystemGainDefaultDb[] = "-12.0";
-constexpr char kSystemMuteSwitch[] = "smute";
-constexpr char kSystemMuteDefault[] = "1";
-
 constexpr char kDeviceSettingsSwitch[] = "settings";
 constexpr char kDeviceSettingsDefault[] = "0";
 
@@ -143,16 +138,6 @@ void usage(const char* prog_name) {
          kStreamRampTargetGainSwitch, kStreamRampSwitch);
   printf("\t--%s=<DURATION_MS>\tSet a specific ramp duration in milliseconds. Implies '--%s'\n",
          kStreamRampDurationSwitch, kStreamRampSwitch);
-
-  printf("\n\t  By default, System Gain and Mute are unchanged\n");
-  printf("\t--%s[=<GAIN_DB>]\tSet System Gain (dB in [%.1f, 0.0]; %s if only '--%s' is provided)\n",
-         kSystemGainSwitch, fuchsia::media::audio::MUTED_GAIN_DB, kSystemGainDefaultDb,
-         kSystemGainSwitch);
-  printf(
-      "\t--%s[=<0|1>]\t\tSet System Mute (0=Unmute or 1=Mute; Mute if only "
-      "'--%s' is provided)\n",
-      kSystemMuteSwitch, kSystemMuteSwitch);
-  printf("\t  Note: changes to System Gain/Mute persist after playback\n");
 
   printf("\n\t  By default, changes to audio device settings are persisted\n");
   printf("\t--%s[=<0|1>]\tEnable/disable creation/update of device settings\n",
@@ -320,27 +305,6 @@ int main(int argc, const char** argv) {
       }
     }
     media_app.set_ramp_duration_nsec(ramp_duration_nsec);
-  }
-
-  // Handle system gain and system mute
-  if (command_line.HasOption(kSystemGainSwitch)) {
-    std::string system_gain_str;
-    command_line.GetOptionValue(kSystemGainSwitch, &system_gain_str);
-    if (system_gain_str == "") {
-      system_gain_str = kSystemGainDefaultDb;
-    }
-
-    media_app.set_system_gain(std::stof(system_gain_str));
-  }
-
-  if (command_line.HasOption(kSystemMuteSwitch)) {
-    std::string system_mute_str;
-    command_line.GetOptionValue(kSystemMuteSwitch, &system_mute_str);
-    if (system_mute_str == "") {
-      system_mute_str = kSystemMuteDefault;
-    }
-
-    media_app.set_system_mute(fxl::StringToNumber<uint32_t>(system_mute_str) != 0);
   }
 
   // Handle device settings

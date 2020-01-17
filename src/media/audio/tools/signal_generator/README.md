@@ -22,8 +22,6 @@ AudioRenderer, and GainControl FIDL protocols.
       [--ramp]
       [--endgain=<TARGET_GAIN_DB>]
       [--rampdur=<RAMP_DURATION_MSEC>]
-      [--sgain=<SYSTEM_GAIN_DB>]
-      [--smute[=<0|1>]]
       [--settings<=ENABLED>]
       [--help | --?]
 
@@ -63,11 +61,6 @@ These optional parameters are interpreted as follows:
     --endgain=<GAIN_DB>     Set a different ramp target gain (dB). Implies '--ramp'
     --rampdur=<DURATION_MS> Set a specific ramp duration in milliseconds. Implies '--ramp'
 
-      By default, System Gain and Mute are unchanged
-    --sgain[=<GAIN_DB>]     Set System Gain (dB in [-160.0, 0.0]; -12.0 if only '--sgain' is provided)
-    --smute[=<0|1>]         Set System Mute (0=Unmute or 1=Mute; Mute if only '--smute' is provided)
-                            Note: changes to System Gain/Mute persist after playback
-
       By default, changes to audio device settings are persisted
     --settings[=<0|1>]      Enable/disable creation/update of device settings
                             (0=Disable, 1=Enable; 0 is default if only '--settings' is provided)
@@ -76,9 +69,5 @@ These optional parameters are interpreted as follows:
 
 ### IMPORTANT NOTE
 
-Developers can use this tool to manipulate a few important systemwide audio settings: system
-("master") gain/mute, audio output routing, and systemwide creation/update of settings files for
-audio input and output devices. Changes to these settings affect all audio on the system and
-continue to have effect even after the signal_generator tool exits. Only use the '--sgain',
-'--smute', or '--settings' flags when you intend to change the system state in a
-persistent, "sticky" way.
+Developers can use this tool to enable/disable systemwide creation/update of settings
+files for audio input and output devices. This change persists beyond the invocation.

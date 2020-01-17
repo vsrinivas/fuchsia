@@ -68,15 +68,6 @@ class MediaApp {
   void set_ramp_duration_nsec(zx_duration_t duration_nsec) { ramp_duration_nsec_ = duration_nsec; }
   void set_ramp_target_gain_db(float gain_db) { ramp_target_gain_db_ = gain_db; }
 
-  void set_system_gain(float gain_db) {
-    set_system_gain_ = true;
-    system_gain_db_ = gain_db;
-  }
-  void set_system_mute(bool system_mute) {
-    set_system_mute_ = true;
-    system_mute_ = system_mute;
-  }
-
   void set_device_settings(bool settings_enabled) {
     set_device_settings_ = true;
     settings_enabled_ = settings_enabled;
@@ -164,11 +155,6 @@ class MediaApp {
   bool ramp_stream_gain_ = false;
   float ramp_target_gain_db_ = 0.0;
   zx_duration_t ramp_duration_nsec_;
-
-  bool set_system_gain_ = false;
-  float system_gain_db_;
-  bool set_system_mute_ = false;
-  bool system_mute_ = false;
 
   bool set_device_settings_ = false;
   bool settings_enabled_ = true;

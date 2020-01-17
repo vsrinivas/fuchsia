@@ -120,8 +120,6 @@ bool MediaApp::ParameterRangeChecks() {
   stream_gain_db_ = fbl::clamp<float>(stream_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB,
                                       fuchsia::media::audio::MAX_GAIN_DB);
 
-  system_gain_db_ = fbl::clamp<float>(system_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB, 0.0f);
-
   return ret_val;
 }
 
@@ -205,15 +203,7 @@ void MediaApp::DisplayConfigurationSettings() {
     printf(", having set the PTS continuity threshold to %f seconds",
            pts_continuity_threshold_secs_);
   }
-  if (set_system_gain_ || set_system_mute_) {
-    printf(", after setting ");
-  }
-  if (set_system_gain_) {
-    printf("System Gain to %.3f dB%s", system_gain_db_, set_system_mute_ ? " and " : "");
-  }
-  if (set_system_mute_) {
-    printf("System Mute to %s", system_mute_ ? "TRUE" : "FALSE");
-  }
+
   printf(".\n\n");
 }
 
@@ -231,14 +221,6 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
   // Audio interface is needed to create AudioRenderer, set routing policy and set system gain/mute.
   fuchsia::media::AudioPtr audio;
   app_context->svc()->Connect(audio.NewRequest());
-
-  if (set_system_gain_) {
-    audio->SetSystemGain(system_gain_db_);
-  }
-
-  if (set_system_mute_) {
-    audio->SetSystemMute(system_mute_);
-  }
 
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_renderer_.set_error_handler([this](zx_status_t status) {
