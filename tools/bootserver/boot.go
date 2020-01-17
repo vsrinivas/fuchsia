@@ -11,9 +11,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"path/filepath"
 	"sort"
+	"sync"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
@@ -71,6 +75,88 @@ var transferOrder = map[string]int{
 	kernelNetsvcName:         13,
 }
 
+func downloadImages(imgs []Image) ([]Image, func() error, error) {
+	var newImgs []Image
+	// Copy each in a goroutine for efficiency's sake.
+	errs := make(chan error, len(imgs))
+	var mux sync.Mutex
+	var wg sync.WaitGroup
+	for _, img := range imgs {
+		wg.Add(1)
+		go func(img Image) {
+			defer wg.Done()
+			if img.Reader != nil {
+				f, err := downloadAndOpenImage(img.Name, img)
+				if err != nil {
+					errs <- err
+					return
+				}
+				fi, err := f.Stat()
+				if err != nil {
+					f.Close()
+					errs <- err
+					return
+				}
+				mux.Lock()
+				newImgs = append(newImgs, Image{
+					Name:   img.Name,
+					Reader: f,
+					Size:   fi.Size(),
+					Args:   img.Args,
+				})
+				mux.Unlock()
+			}
+		}(img)
+	}
+	wg.Wait()
+
+	closeFunc := func() error { return closeImages(newImgs) }
+	select {
+	case err := <-errs:
+		closeImages(newImgs)
+		return nil, closeFunc, err
+	default:
+		return newImgs, closeFunc, nil
+	}
+}
+
+func downloadAndOpenImage(dest string, img Image) (*os.File, error) {
+	f, ok := img.Reader.(*os.File)
+	if ok {
+		return f, nil
+	}
+
+	// If the file already exists at dest, just open and return the file instead of downloading again.
+	// This will avoid duplicate downloads from catalyst (which calls the bootserver tool) and botanist.
+	if _, err := os.Stat(dest); !os.IsNotExist(err) {
+		return os.Open(dest)
+	}
+
+	f, err := os.Create(dest)
+	if err != nil {
+		return nil, err
+	}
+
+	// Log progress to avoid hitting I/O timeout in case of slow transfers.
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	go func() {
+		for range ticker.C {
+			log.Printf("transferring %s...\n", filepath.Base(dest))
+		}
+	}()
+
+	if _, err := io.Copy(f, iomisc.ReaderAtToReader(img.Reader)); err != nil {
+		f.Close()
+		return nil, fmt.Errorf("failed to copy image %q to %q: %v", img.Name, dest, err)
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return nil, err
+	}
+	return f, nil
+}
+
 // Boot prepares and boots a device at the given IP address.
 func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string, signers []ssh.Signer) error {
 	var files []*netsvcFile
@@ -86,6 +172,14 @@ func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string
 		}
 		files = append(files, cmdlineFile)
 	}
+
+	// This is needed because imgs from GCS are compressed and we cannot get the correct size of the uncompressed images, so we have to download them first.
+	// TODO(ihuh): We should enable this step as a command line option.
+	imgs, closeFunc, err := downloadImages(imgs)
+	if err != nil {
+		return err
+	}
+	defer closeFunc()
 
 	for _, img := range imgs {
 		for _, arg := range img.Args {

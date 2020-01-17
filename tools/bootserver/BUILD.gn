@@ -12,6 +12,7 @@ go_library("bootserver_lib") {
     "//third_party/golibs:cloud.google.com/go/storage",
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/build",
+    "//tools/lib/iomisc",
     "//tools/lib/logger",
     "//tools/lib/retry",
     "//tools/net/netboot",
