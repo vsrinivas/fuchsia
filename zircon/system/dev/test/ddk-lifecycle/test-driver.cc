@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
@@ -103,7 +104,9 @@ void TestLifecycleDriver::RemoveChild(uint64_t id, RemoveChildCompleter::Sync co
     }
   }
   if (!found) {
+    zxlogf(ERROR, "Could not find child: id %lu\n", id);
     completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
   }
   completer.ReplySuccess();
 }
@@ -118,7 +121,9 @@ void TestLifecycleDriver::CompleteChildInit(uint64_t id,
     }
   }
   if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to complete child init: id %lu\n", id);
     completer.ReplyError(status);
+    return;
   }
   completer.ReplySuccess();
 }

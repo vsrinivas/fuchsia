@@ -4,6 +4,7 @@
 
 #include "test-driver-child.h"
 
+#include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_counted.h>
@@ -51,6 +52,7 @@ void TestLifecycleDriverChild::DdkUnbindNew(ddk::UnbindTxn txn) {
 
 zx_status_t TestLifecycleDriverChild::CompleteInit() {
   if (!init_txn_) {
+    zxlogf(ERROR, "Child does not have a pending init txn");
     return ZX_ERR_BAD_STATE;
   }
   init_txn_->Reply(init_status_);
