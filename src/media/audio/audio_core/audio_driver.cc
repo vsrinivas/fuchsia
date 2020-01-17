@@ -97,7 +97,7 @@ void AudioDriver::Cleanup() {
   TRACE_DURATION("audio", "AudioDriver::Cleanup");
   // TODO(MTWN-385): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
-  fbl::RefPtr<RingBuffer> ring_buffer;
+  std::shared_ptr<RingBuffer> ring_buffer;
   {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
     ring_buffer = std::move(ring_buffer_);

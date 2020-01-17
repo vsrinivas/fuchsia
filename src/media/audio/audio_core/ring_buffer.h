@@ -8,15 +8,16 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
+#include <memory>
 
 namespace media::audio {
 
-class RingBuffer : public fbl::RefCounted<RingBuffer> {
+class RingBuffer {
  public:
-  static fbl::RefPtr<RingBuffer> Create(zx::vmo vmo, uint32_t frame_size, uint32_t frame_count,
-                                        bool input);
+  static std::shared_ptr<RingBuffer> Create(zx::vmo vmo, uint32_t frame_size, uint32_t frame_count,
+                                            bool input);
+
+  RingBuffer(fzl::VmoMapper vmo_mapper, uint32_t frame_size, uint32_t frame_count);
 
   uint64_t size() const { return vmo_mapper_.size(); }
   uint32_t frames() const { return frames_; }
@@ -24,13 +25,6 @@ class RingBuffer : public fbl::RefCounted<RingBuffer> {
   uint8_t* virt() const { return reinterpret_cast<uint8_t*>(vmo_mapper_.start()); }
 
  private:
-  friend class fbl::RefPtr<RingBuffer>;
-
-  RingBuffer() {}
-  ~RingBuffer() {}
-
-  zx_status_t Init(zx::vmo vmo, uint32_t frame_size, uint32_t frame_count, bool input);
-
   fzl::VmoMapper vmo_mapper_;
   uint32_t frames_ = 0;
   uint32_t frame_size_ = 0;
