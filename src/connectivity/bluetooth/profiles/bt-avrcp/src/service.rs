@@ -432,13 +432,30 @@ where
                     }
                 }
             }
-            PeerManagerRequest::SetAbsoluteVolumeHandler { .. } => {}
+            PeerManagerRequest::SetAbsoluteVolumeHandler { handler, responder, peer_id: _ } => {
+                match handler.into_proxy() {
+                    Ok(absolute_volume_handler) => {
+                        let (response, register_absolute_volume_handler_request) =
+                            ServiceRequest::new_register_absolute_volume_handler_request(
+                                absolute_volume_handler,
+                            );
+                        sender.try_send(register_absolute_volume_handler_request)?;
+                        match response.into_future().await? {
+                            Ok(_) => responder.send(&mut Ok(()))?,
+                            Err(_) => {
+                                responder.send(&mut Err(zx::Status::ALREADY_BOUND.into_raw()))?
+                            }
+                        }
+                    }
+                    Err(_) => responder.send(&mut Err(zx::Status::INVALID_ARGS.into_raw()))?,
+                };
+            }
             PeerManagerRequest::RegisterTargetHandler { handler, responder } => {
                 match handler.into_proxy() {
                     Ok(target_handler) => {
-                        let (response, rthr) =
+                        let (response, register_target_handler_request) =
                             ServiceRequest::new_register_target_handler_request(target_handler);
-                        sender.try_send(rthr)?;
+                        sender.try_send(register_target_handler_request)?;
                         match response.into_future().await? {
                             Ok(_) => responder.send(&mut Ok(()))?,
                             Err(_) => {

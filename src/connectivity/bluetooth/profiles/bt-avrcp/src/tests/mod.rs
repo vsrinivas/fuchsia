@@ -66,6 +66,140 @@ impl ProfileService for MockProfileService {
     }
 }
 
+fn spawn_peer_manager() -> Result<PeerManagerProxy, Error> {
+    let (client_sender, service_request_receiver) = mpsc::channel(2);
+    let profile_service = MockProfileService { fake_events: Mutex::new(Some(VecDeque::new())) };
+
+    let mut peer_manager = PeerManager::new(Box::new(profile_service), service_request_receiver)
+        .expect("unable to create peer manager");
+
+    let (peer_manager_client, peer_manager_client_stream): (
+        PeerManagerProxy,
+        PeerManagerRequestStream,
+    ) = create_fidl_endpoints::<PeerManagerMarker>()?;
+
+    fasync::spawn(async move {
+        let _ = service::avrcp_client_stream_handler(
+            peer_manager_client_stream,
+            client_sender.clone(),
+            &service::spawn_avrcp_client_controller,
+        )
+        .await;
+    });
+
+    fasync::spawn(async move {
+        let _ = peer_manager.run().await;
+    });
+
+    Ok(peer_manager_client)
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn target_delegate_target_handler_already_bound_test() -> Result<(), Error> {
+    let peer_manager_client = spawn_peer_manager()?;
+
+    // create an target volume handler.
+    let (target_client_end_1, target_server_end_1) =
+        create_endpoints::<TargetHandlerMarker>().expect("Error creating TargetHandler endpoint");
+
+    // first set should succeed
+    assert_eq!(
+        peer_manager_client
+            .register_target_handler(target_client_end_1)
+            .await
+            .expect("unexpected FIDL error"),
+        Ok(())
+    );
+
+    // drop the first one. the remote should drop handler when it notices the handle has be closed.
+    drop(target_server_end_1);
+
+    // create an new target handler.
+    let (target_client_end_2, target_server_end_2) =
+        create_endpoints::<TargetHandlerMarker>().expect("Error creating TargeteHandler endpoint");
+
+    // should succeed if the previous handler was dropped.
+    assert_eq!(
+        peer_manager_client
+            .register_target_handler(target_client_end_2)
+            .await
+            .expect("unexpected FIDL error"),
+        Ok(())
+    );
+
+    // create an new target handler.
+    let (target_client_end_3, target_server_end_3) =
+        create_endpoints::<TargetHandlerMarker>().expect("Error creating TargetHandler endpoint");
+
+    // should fail since the target handler is already set.
+    assert_eq!(
+        peer_manager_client
+            .register_target_handler(target_client_end_3)
+            .await
+            .expect("unexpected FIDL error"),
+        Err(zx::Status::ALREADY_BOUND.into_raw())
+    );
+
+    drop(target_server_end_2);
+    drop(target_server_end_3);
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error> {
+    let peer_manager_client = spawn_peer_manager()?;
+
+    // create an absolute volume handler.
+    let (absolute_volume_client_end_1, absolute_volume_server_end_1) =
+        create_endpoints::<AbsoluteVolumeHandlerMarker>()
+            .expect("Error creating AbsoluteVolumeHandler endpoint");
+
+    // first set should succeed
+    assert_eq!(
+        peer_manager_client
+            .set_absolute_volume_handler("", absolute_volume_client_end_1)
+            .await
+            .expect("unexpected FIDL error"),
+        Ok(())
+    );
+
+    // drop the first one. the remote should drop handler when it notices the handle has be closed.
+    drop(absolute_volume_server_end_1);
+
+    // create an new absolute volume handler.
+    let (absolute_volume_client_end_2, absolute_volume_server_end_2) =
+        create_endpoints::<AbsoluteVolumeHandlerMarker>()
+            .expect("Error creating AbsoluteVolumeHandler endpoint");
+
+    // should succeed if the previous handler was dropped.
+    assert_eq!(
+        peer_manager_client
+            .set_absolute_volume_handler("", absolute_volume_client_end_2)
+            .await
+            .expect("unexpected FIDL error"),
+        Ok(())
+    );
+
+    // create an new absolute volume handler.
+    let (absolute_volume_client_end_3, absolute_volume_server_end_3) =
+        create_endpoints::<AbsoluteVolumeHandlerMarker>()
+            .expect("Error creating AbsoluteVolumeHandler endpoint");
+
+    // should fail since the volume handler is already set.
+    assert_eq!(
+        peer_manager_client
+            .set_absolute_volume_handler("", absolute_volume_client_end_3)
+            .await
+            .expect("unexpected FIDL error"),
+        Err(zx::Status::ALREADY_BOUND.into_raw())
+    );
+
+    drop(absolute_volume_server_end_2);
+    drop(absolute_volume_server_end_3);
+
+    Ok(())
+}
+
 // Integration test of the peer manager and the FIDL front end with a mock BDEDR backend an
 // emulated remote peer. Validates we can get a controller to a device we discovered, we can send
 // commands on that controller, and that we can send responses and have them be dispatched back as

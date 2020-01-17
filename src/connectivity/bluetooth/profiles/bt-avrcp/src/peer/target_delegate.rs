@@ -25,36 +25,6 @@ struct TargetDelegateInner {
     absolute_volume_handler: Option<AbsoluteVolumeHandlerProxy>,
 }
 
-#[derive(Debug)]
-#[must_use = "it's required that you remove the handler when you are done with it"]
-pub struct TargetHandlerRemoveHandle {
-    inner: Arc<Mutex<TargetDelegateInner>>,
-}
-
-impl TargetHandlerRemoveHandle {
-    /// Removes the current target handler, if any.
-    pub fn remove_target_handler(self) {
-        let mut inner_guard = self.inner.lock();
-        inner_guard.target_handler = None;
-    }
-}
-
-#[derive(Debug)]
-#[must_use = "it's required that you remove the handler when you are done with it"]
-#[allow(dead_code)]
-pub struct AbsoluteVolumeHandlerRemoveHandle {
-    inner: Arc<Mutex<TargetDelegateInner>>,
-}
-
-impl AbsoluteVolumeHandlerRemoveHandle {
-    /// Removes the current handler
-    #[allow(dead_code)]
-    pub fn remove_absolute_volume_handler(self) {
-        let mut inner_guard = self.inner.lock();
-        inner_guard.absolute_volume_handler = None;
-    }
-}
-
 impl TargetDelegate {
     pub fn new() -> TargetDelegate {
         TargetDelegate {
@@ -68,30 +38,45 @@ impl TargetDelegate {
     /// Sets the target delegate. Returns true if successful. Resets any pending registered
     /// notifications.
     /// If the target is already set to some value this method does not replace it and returns false
-    pub fn set_target_handler(
-        &self,
-        target_handler: TargetHandlerProxy,
-    ) -> Result<TargetHandlerRemoveHandle, Error> {
+    pub fn set_target_handler(&self, target_handler: TargetHandlerProxy) -> Result<(), Error> {
         let mut inner_guard = self.inner.lock();
         if inner_guard.target_handler.is_some() {
             return Err(Error::TargetBound);
         }
 
+        let target_handler_event_stream = target_handler.take_event_stream();
+        // We were able to set the target delegate so spawn a task to watch for it
+        // to close.
+        let inner_ref = self.inner.clone();
+        fasync::spawn(async move {
+            let _ = target_handler_event_stream.map(|_| ()).collect::<()>().await;
+            inner_ref.lock().target_handler = None;
+        });
+
         inner_guard.target_handler = Some(target_handler);
-        Ok(TargetHandlerRemoveHandle { inner: self.inner.clone() })
+        Ok(())
     }
 
-    #[allow(dead_code)]
     pub fn set_absolute_volume_handler(
         &self,
         absolute_volume_handler: AbsoluteVolumeHandlerProxy,
-    ) -> Result<AbsoluteVolumeHandlerRemoveHandle, Error> {
+    ) -> Result<(), Error> {
         let mut inner_guard = self.inner.lock();
         if inner_guard.absolute_volume_handler.is_some() {
             return Err(Error::TargetBound);
         }
+
+        let volume_event_stream = absolute_volume_handler.take_event_stream();
+        // We were able to set the target delegate so spawn a task to watch for it
+        // to close.
+        let inner_ref = self.inner.clone();
+        fasync::spawn(async move {
+            let _ = volume_event_stream.map(|_| ()).collect::<()>().await;
+            inner_ref.lock().absolute_volume_handler = None;
+        });
+
         inner_guard.absolute_volume_handler = Some(absolute_volume_handler);
-        Ok(AbsoluteVolumeHandlerRemoveHandle { inner: self.inner.clone() })
+        Ok(())
     }
 
     pub async fn send_passthrough_command(

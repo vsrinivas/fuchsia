@@ -10,7 +10,8 @@ use {
     },
     fidl::encoding::Decodable as FidlDecodable,
     fidl_fuchsia_bluetooth_avrcp::{
-        AvcPanelCommand, MediaAttributes, PlayStatus, TargetHandlerProxy,
+        AbsoluteVolumeHandlerProxy, AvcPanelCommand, MediaAttributes, PlayStatus,
+        TargetHandlerProxy,
     },
     fidl_fuchsia_bluetooth_bredr::PSM_AVCTP,
     fuchsia_async as fasync,
@@ -59,6 +60,12 @@ pub enum ServiceRequest {
     /// Request for a `Controller` given a `peer_id`.
     Controller { peer_id: PeerId, reply: oneshot::Sender<Controller> },
 
+    /// Request to set the current volume handler. Returns an error if one is already set.
+    RegisterAbsoluteVolumeHandler {
+        absolute_volume_handler: AbsoluteVolumeHandlerProxy,
+        reply: oneshot::Sender<Result<(), Error>>,
+    },
+
     /// Request to set the current target handler. Returns an error if one is already set.
     RegisterTargetHandler {
         target_handler: TargetHandlerProxy,
@@ -79,6 +86,19 @@ impl ServiceRequest {
     ) -> (oneshot::Receiver<Result<(), Error>>, ServiceRequest) {
         let (sender, receiver) = oneshot::channel();
         (receiver, ServiceRequest::RegisterTargetHandler { target_handler, reply: sender })
+    }
+
+    pub fn new_register_absolute_volume_handler_request(
+        absolute_volume_handler: AbsoluteVolumeHandlerProxy,
+    ) -> (oneshot::Receiver<Result<(), Error>>, ServiceRequest) {
+        let (sender, receiver) = oneshot::channel();
+        (
+            receiver,
+            ServiceRequest::RegisterAbsoluteVolumeHandler {
+                absolute_volume_handler,
+                reply: sender,
+            },
+        )
     }
 }
 
@@ -180,23 +200,12 @@ impl PeerManager {
                 let _ = reply.send(peer_controller);
             }
             ServiceRequest::RegisterTargetHandler { target_handler, reply } => {
-                let target_event_stream = target_handler.take_event_stream();
-
-                // set the target handler. returns an error if one is already set.
-                match self.target_delegate.set_target_handler(target_handler) {
-                    Err(e) => {
-                        let _ = reply.send(Err(e));
-                    }
-                    Ok(remove_handle) => {
-                        // We were able to set the target delegate so spawn a task to watch for it
-                        // to close.
-                        fasync::spawn(async move {
-                            let _ = target_event_stream.map(|_| ()).collect::<()>().await;
-                            remove_handle.remove_target_handler();
-                        });
-                        let _ = reply.send(Ok(()));
-                    }
-                }
+                let _ = reply.send(self.target_delegate.set_target_handler(target_handler));
+            }
+            ServiceRequest::RegisterAbsoluteVolumeHandler { absolute_volume_handler, reply } => {
+                let _ = reply.send(
+                    self.target_delegate.set_absolute_volume_handler(absolute_volume_handler),
+                );
             }
         }
     }
