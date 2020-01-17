@@ -136,4 +136,23 @@ TEST(BitfieldTest, AssignMultipleValuesThenRead) {
   ASSERT_EQ(rights.raw_value, 9);
 }
 
+union ByteBitfield {
+  uint8_t value = 0;
+  fbl::BitFieldMember<uint8_t, 0, 4> low_nibble;
+  fbl::BitFieldMember<uint8_t, 7, 1> high_bit;
+};
+
+TEST(BitfieldTest, ReadWriteUint8) {
+  ByteBitfield byte;
+  ASSERT_EQ(byte.value, 0);
+
+  byte.value = 0xFC;
+  ASSERT_EQ(byte.low_nibble, 0x0C);
+  ASSERT_EQ(byte.high_bit, 1);
+
+  byte.high_bit = 0;
+  byte.low_nibble = 0x05;
+  ASSERT_EQ(byte.value, 0x75);
+}
+
 }  // namespace

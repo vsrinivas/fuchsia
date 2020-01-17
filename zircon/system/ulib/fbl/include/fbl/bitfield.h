@@ -80,7 +80,7 @@ class BitFieldMember {
     // [class.union] permits "inspection" of non-active members so long as
     // the union follows other rules which we already rely on to read the value
     // of the bitfield and compute a new value.
-    T temp = (value_ & ~Mask) | (new_value << Offset);
+    T temp = static_cast<T>((value_ & ~Mask) | (new_value << Offset));
     // Now that we have a new value, we need to write it to the underlying
     // storage. Since |value_| may not be the active union member we can't
     // assign directly but we can std::memcpy() into the storage holding the
