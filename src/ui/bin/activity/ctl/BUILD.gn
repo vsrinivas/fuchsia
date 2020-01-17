@@ -14,6 +14,7 @@ executable("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.ui.activity",
+    "//sdk/fidl/fuchsia.ui.activity.control",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",

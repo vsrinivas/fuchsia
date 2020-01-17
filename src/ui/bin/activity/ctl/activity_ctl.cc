@@ -3,17 +3,21 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
+#include <fuchsia/ui/activity/control/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
+#include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/cmdline/args_parser.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/zx/clock.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <memory>
+#include <random>
 #include <variant>
 
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -118,7 +122,8 @@ class ActivityCtl {
               async_dispatcher_t* dispatcher, fit::closure quit_callback)
       : context_(std::move(startup_context)),
         quit_callback_(std::move(quit_callback)),
-        dispatcher_(dispatcher) {}
+        dispatcher_(dispatcher),
+        random_(zx::clock::get_monotonic().get()) {}
 
   zx_status_t RunCommand(Command cmd, std::vector<std::string> args) {
     switch (cmd) {
@@ -152,7 +157,7 @@ class ActivityCtl {
   };
 
   void ForceState(fuchsia::ui::activity::State state) {
-    control_conn_ = context_->svc()->Connect<fuchsia::ui::activity::Control>();
+    control_conn_ = context_->svc()->Connect<fuchsia::ui::activity::control::Control>();
     (*control_conn_)->SetState(state);
     async::PostTask(dispatcher_, std::move(quit_callback_));
   }
@@ -167,7 +172,8 @@ class ActivityCtl {
     fuchsia::ui::activity::GenericActivity generic;
     fuchsia::ui::activity::DiscreteActivity activity;
     activity.set_generic(std::move(generic));
-    (*tracker_conn_)->ReportDiscreteActivity(std::move(activity), async::Now(dispatcher_).get());
+    (*tracker_conn_)
+        ->ReportDiscreteActivity(std::move(activity), async::Now(dispatcher_).get(), []() {});
     async::PostTask(dispatcher_, std::move(quit_callback_));
   }
 
@@ -176,19 +182,20 @@ class ActivityCtl {
     fuchsia::ui::activity::GenericActivity generic;
     fuchsia::ui::activity::OngoingActivity activity;
     activity.set_generic(std::move(generic));
+    uint64_t id = static_cast<uint64_t>(random_());
     (*tracker_conn_)
-        ->StartOngoingActivity(std::move(activity), async::Now(dispatcher_).get(),
-                               [](uint64_t id) { printf("Activity ID: %lu\n", id); });
+        ->StartOngoingActivity(id, std::move(activity), async::Now(dispatcher_).get(), []() {});
   }
 
  private:
   std::optional<fidl::InterfacePtr<fuchsia::ui::activity::Provider>> provider_conn_;
   std::optional<fidl::InterfacePtr<fuchsia::ui::activity::Tracker>> tracker_conn_;
-  std::optional<fidl::InterfacePtr<fuchsia::ui::activity::Control>> control_conn_;
+  std::optional<fidl::InterfacePtr<fuchsia::ui::activity::control::Control>> control_conn_;
   LoggingListener listener_;
   std::unique_ptr<sys::ComponentContext> context_;
   fit::closure quit_callback_;
   async_dispatcher_t* dispatcher_;
+  std::default_random_engine random_;
 };
 
 }  // namespace activity_ctl
