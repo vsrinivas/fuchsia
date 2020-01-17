@@ -3,6 +3,13 @@
 # found in the LICENSE file.
 
 zx_library("gpt") {
+  sdk = "source"
+  sdk_headers = [
+    "gpt/c/gpt.h",
+    "gpt/cros.h",
+    "gpt/gpt.h",
+    "gpt/guid.h",
+  ]
   sources = [
     "cros.cc",
     "gpt.cc",

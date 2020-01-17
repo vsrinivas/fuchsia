@@ -7,6 +7,12 @@ zx_library("transaction") {
   sources = []
   static = true
 
+  sdk = "source"
+  sdk_headers = [
+    "fs/transaction/writeback.h",
+    "fs/transaction/block_transaction.h",
+  ]
+
   sources = [ "block_transaction.cc" ]
 
   public_deps = [

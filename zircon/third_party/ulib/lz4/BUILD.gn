@@ -9,6 +9,11 @@ lz4_lib = "$zx/../third_party/lz4/lib"
 
 zx_library("lz4") {
   host = true
+  sdk = "source"
+  sdk_headers = [
+    "lz4/lz4.h",
+    "lz4/lz4frame.h",
+  ]
   sources = [
     "$lz4_lib/lz4.c",
     "$lz4_lib/lz4frame.c",

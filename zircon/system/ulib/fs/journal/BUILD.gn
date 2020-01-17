@@ -5,6 +5,21 @@
 import("$zx_build/public/gn/fuzzer.gni")
 
 zx_library("journal") {
+  sdk = "source"
+  sdk_headers = [
+    "fs/journal/background_executor.h",
+    "fs/journal/inspector_journal.h",
+    "fs/journal/format.h",
+    "fs/journal/initializer.h",
+    "fs/journal/header_view.h",
+    "fs/journal/data_streamer.h",
+    "fs/journal/superblock.h",
+    "fs/journal/replay.h",
+    "fs/journal/internal/inspector_parser.h",
+    "fs/journal/internal/journal_writer.h",
+    "fs/journal/internal/operation_tracker.h",
+    "fs/journal/journal.h",
+  ]
   host = true
   sources = [
     "header_view.cc",

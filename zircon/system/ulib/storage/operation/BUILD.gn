@@ -7,6 +7,13 @@ zx_library("operation") {
   sources = []
   static = true
 
+  sdk = "source"
+  sdk_headers = [
+    "storage/operation/unbuffered_operations_builder.h",
+    "storage/operation/operation.h",
+    "storage/operation/buffered_operation.h",
+  ]
+
   if (is_fuchsia) {
     sources += [
       "buffered_operation.cc",

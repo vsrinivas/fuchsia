@@ -35,6 +35,13 @@ config("zstd-config") {
 
 zx_library("zstd") {
   host = true
+
+  # Exported as a static library as the config above cannot be conveyed via the
+  # exporting mechanism but is absolutely necessary in order to properly compile
+  # this library.
+  sdk = "static"
+  sdk_headers = [ "zstd/zstd.h" ]
+
   sources = [
     "$zstd/lib/common/debug.c",
     "$zstd/lib/common/entropy_common.c",

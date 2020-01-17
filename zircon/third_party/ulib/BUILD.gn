@@ -12,5 +12,6 @@ group("ulib") {
     "lz4",
     "ngunwind",
     "safemath",
+    "zstd",
   ]
 }

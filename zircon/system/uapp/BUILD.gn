@@ -46,7 +46,6 @@ group("uapp") {
     "serial-test",
     "spawn",
     "spiutil",
-    "storage-metrics",
     "syscall-check",
     "tee-test",
     "thermal-cli",
