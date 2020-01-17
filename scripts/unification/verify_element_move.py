@@ -244,7 +244,10 @@ def compare_summaries(reference, current):
                 report(type, True, 'shared library removed from ' + name +
                        ': ' + lib)
             for lib in current_libs - reference_libs:
-                if lib == 'libc++abi.so.1':
+                if (lib == 'libc++abi.so.1' or
+                    lib == 'libdevmgr-launcher.so' or
+                    lib == 'libdevmgr-integration-test.so' or
+                    lib == 'libdriver-integration-test.so'):
                     is_error = False
                 else:
                     is_error = True
