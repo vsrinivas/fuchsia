@@ -60,8 +60,8 @@ def main():
     parser = argparse.ArgumentParser('Determines whether libraries can be '
                                      'moved out of the ZN build')
     parser.add_argument('--build-dir',
-                        help='Path to the GN build dir',
-                        required=True)
+                        help='Path to the ZN build dir',
+                        default=os.path.join(FUCHSIA_ROOT, 'out', 'default.zircon'))
     type = parser.add_mutually_exclusive_group(required=True)
     type.add_argument('--banjo',
                       help='Inspect Banjo libraries',

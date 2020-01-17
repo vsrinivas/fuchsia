@@ -6,6 +6,7 @@
 import argparse
 import fileinput
 import json
+import operator
 import os
 import re
 import subprocess
@@ -37,6 +38,19 @@ BINARY_TYPES = {
     Type.EXECUTABLE: 'executable',
     Type.TEST: 'test',
     Type.TEST_DRIVER: 'driver_module',
+}
+
+TARGET_SCORES = {
+    Type.DRIVER: 1,
+    Type.EXECUTABLE: 1,
+    Type.TEST: 1,
+    Type.TEST_DRIVER: 1,
+    'banjo_library': 100,
+    'fidl_library': 100,
+    'config': 1000,
+    'fuzzer': 1000,
+    'zx_library': 1000,
+    'zx_host_tool': 1000,
 }
 
 
@@ -140,7 +154,6 @@ def transform_build_file(build):
         if starting_type in Type.all():
             sys.stdout.write('  configs += [ "//build/unification/config:zircon-migrated" ]\n')
 
-
     # Third pass: add manifest targets at the end of the file.
     with open(build, 'a') as build_file:
         for binary in binaries:
@@ -155,6 +168,17 @@ def transform_build_file(build):
     run_command([FX, 'format-code', '--files=' + build])
 
     return 0
+
+
+def score_file(path):
+    total = 0
+    with open(os.path.join(FUCHSIA_ROOT, 'zircon', 'system', path, 'BUILD.gn'), 'r') as build_file:
+        content = build_file.read()
+        for word, score in TARGET_SCORES.iteritems():
+            instances = len(re.findall(r'^\s*' + word + '\(', content, re.MULTILINE))
+            total += instances * score
+    return total
+
 
 
 def main():
@@ -177,6 +201,9 @@ def main():
     list_parser.add_argument('--build-dir',
                              help='path to the ZN build dir',
                              default=os.path.join(FUCHSIA_ROOT, 'out', 'default.zircon'))
+    list_parser.add_argument('--sorted',
+                             help='whether to sort the list by decreasing difficulty',
+                             action='store_true')
     list_parser.set_defaults(func=run_list)
 
     args = parser.parse_args()
@@ -247,7 +274,7 @@ def run_convert(args):
 
 
 def run_list(args):
-    targets = set()
+    scores = {}
     for arch in ['arm64', 'x64']:
         manifest_path = os.path.join(args.build_dir,
                                      'legacy_unification-%s.json' % arch)
@@ -264,9 +291,15 @@ def run_list(args):
             if not label.startswith('//system'):
                 continue
             label = label[len('//system/'):]
-            targets.add(label)
-    for target in sorted(targets):
-        print(target)
+            score = score_file(label) if args.sorted else 0
+            scores.setdefault(score, set()).add(label)
+    for score, labels in sorted(scores.items(),
+                                key=operator.itemgetter(0),
+                                reverse=True):
+        for label in sorted(labels):
+            print(label)
+        if args.sorted:
+            print('-------------------------------------')
 
 
 if __name__ == '__main__':

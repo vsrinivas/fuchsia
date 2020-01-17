@@ -303,7 +303,9 @@ def main():
     if args.reference:
         with open(args.reference, 'r') as input_file:
             reference = Summary.from_json(input_file)
-            if not compare_summaries(reference, summary):
+            if compare_summaries(reference, summary):
+                print('<none>')
+            else:
                 print('Error: summaries do not match!')
                 return 1
 
