@@ -110,7 +110,9 @@ class ArchProvider {
   virtual zx_status_t InstallHWBreakpoint(const zx::thread&, uint64_t address);
   virtual zx_status_t UninstallHWBreakpoint(const zx::thread&, uint64_t address);
 
-  virtual WatchpointInstallationResult InstallWatchpoint(const zx::thread&,
+  // NOTE: AddressRange is what is used to differentiate watchpoints, not |type|.
+  virtual WatchpointInstallationResult InstallWatchpoint(debug_ipc::BreakpointType type,
+                                                         const zx::thread&,
                                                          const debug_ipc::AddressRange&);
   virtual zx_status_t UninstallWatchpoint(const zx::thread&, const debug_ipc::AddressRange&);
 

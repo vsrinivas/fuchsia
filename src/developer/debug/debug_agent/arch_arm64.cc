@@ -355,8 +355,16 @@ zx_status_t ArchProvider::UninstallHWBreakpoint(const zx::thread& thread, uint64
   return WriteDebugState(thread, debug_regs);
 }
 
-WatchpointInstallationResult ArchProvider::InstallWatchpoint(const zx::thread& thread,
+WatchpointInstallationResult ArchProvider::InstallWatchpoint(debug_ipc::BreakpointType type,
+                                                             const zx::thread& thread,
                                                              const debug_ipc::AddressRange& range) {
+  if (!debug_ipc::IsWatchpointType(type))
+    return WatchpointInstallationResult(ZX_ERR_INVALID_ARGS);
+
+  // Read is not yet supported in arm64 installation.
+  if (type == debug_ipc::BreakpointType::kReadWrite)
+    return WatchpointInstallationResult(ZX_ERR_NOT_SUPPORTED);
+
   zx_thread_state_debug_regs_t debug_regs;
   if (zx_status_t status = ReadDebugState(thread, &debug_regs); status != ZX_OK)
     return WatchpointInstallationResult(status);

@@ -29,8 +29,9 @@ class TestArchProvider : public MockArchProvider {
   }
 
   arch::WatchpointInstallationResult InstallWatchpoint(
-      const zx::thread& thread, const debug_ipc::AddressRange& range) override {
-    return ArchProvider::InstallWatchpoint(thread, range);
+      debug_ipc::BreakpointType type, const zx::thread& thread,
+      const debug_ipc::AddressRange& range) override {
+    return ArchProvider::InstallWatchpoint(type, thread, range);
   }
 
   zx_status_t UninstallWatchpoint(const zx::thread& thread,
@@ -85,12 +86,13 @@ TEST(ArchArm64, SetupWatchpoint) {
   const debug_ipc::AddressRange kRange5 = {0x100, 0x105};
   const debug_ipc::AddressRange kRange6 = {0x200, 0x201};
 
-  auto install = arch_provider.InstallWatchpoint(thread, kRange1);
+  auto install =
+      arch_provider.InstallWatchpoint(debug_ipc::BreakpointType::kWrite, thread, kRange1);
   ASSERT_ZX_EQ(install.status, ZX_OK);
   EXPECT_EQ(install.installed_range, kRange1);
   EXPECT_EQ(install.slot, 0);
 
-  install = arch_provider.InstallWatchpoint(thread, kRange2);
+  install = arch_provider.InstallWatchpoint(debug_ipc::BreakpointType::kWrite, thread, kRange2);
   ASSERT_ZX_EQ(install.status, ZX_OK);
   EXPECT_EQ(install.installed_range, kRange2);
   EXPECT_EQ(install.slot, 1);
@@ -99,13 +101,13 @@ TEST(ArchArm64, SetupWatchpoint) {
   ASSERT_TRUE(CheckLengths(regs, {1, 2, 0, 0}));
   ASSERT_TRUE(CheckTypes(regs, {kWrite, kWrite, 0, 0}));
 
-  install = arch_provider.InstallWatchpoint(thread, kRange2);
+  install = arch_provider.InstallWatchpoint(debug_ipc::BreakpointType::kWrite, thread, kRange2);
   ASSERT_ZX_EQ(install.status, ZX_ERR_ALREADY_BOUND);
 
-  install = arch_provider.InstallWatchpoint(thread, kRange5);
+  install = arch_provider.InstallWatchpoint(debug_ipc::BreakpointType::kWrite, thread, kRange5);
   ASSERT_ZX_EQ(install.status, ZX_ERR_OUT_OF_RANGE);
 
-  install = arch_provider.InstallWatchpoint(thread, kRange3);
+  install = arch_provider.InstallWatchpoint(debug_ipc::BreakpointType::kWrite, thread, kRange3);
   ASSERT_ZX_EQ(install.status, ZX_OK);
   EXPECT_EQ(install.installed_range, kRange3);
   EXPECT_EQ(install.slot, 2);
@@ -114,7 +116,7 @@ TEST(ArchArm64, SetupWatchpoint) {
   ASSERT_TRUE(CheckLengths(regs, {1, 2, 4, 0}));
   ASSERT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, 0}));
 
-  install = arch_provider.InstallWatchpoint(thread, kRange4);
+  install = arch_provider.InstallWatchpoint(debug_ipc::BreakpointType::kWrite, thread, kRange4);
   ASSERT_ZX_EQ(install.status, ZX_OK);
   EXPECT_EQ(install.installed_range, kRange4);
   EXPECT_EQ(install.slot, 3);
@@ -123,7 +125,7 @@ TEST(ArchArm64, SetupWatchpoint) {
   ASSERT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
   ASSERT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, kWrite}));
 
-  install = arch_provider.InstallWatchpoint(thread, kRange6);
+  install = arch_provider.InstallWatchpoint(debug_ipc::BreakpointType::kWrite, thread, kRange6);
   ASSERT_ZX_EQ(install.status, ZX_ERR_NO_RESOURCES);
 
   // Removing.

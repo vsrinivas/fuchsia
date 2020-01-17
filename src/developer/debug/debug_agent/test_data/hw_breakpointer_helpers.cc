@@ -381,8 +381,10 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
 
   wp->dbgwvr = aligned_address;
 
+  uint32_t lsc = 0b01;
+
   ARM64_DBGWCR_E_SET(&wp->dbgwcr, 1);
-  ARM64_DBGWCR_LSC_SET(&wp->dbgwcr, 0b10);
+  ARM64_DBGWCR_LSC_SET(&wp->dbgwcr, lsc);
   ARM64_DBGWCR_BAS_SET(&wp->dbgwcr, bas);
 
   if (extra_bas) {
@@ -391,7 +393,7 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length) {
     wp->dbgwvr = extra_address;
 
     ARM64_DBGWCR_E_SET(&wp->dbgwcr, 1);
-    ARM64_DBGWCR_LSC_SET(&wp->dbgwcr, 0b10);
+    ARM64_DBGWCR_LSC_SET(&wp->dbgwcr, lsc);
     ARM64_DBGWCR_BAS_SET(&wp->dbgwcr, extra_bas);
   }
 

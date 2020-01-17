@@ -15,6 +15,12 @@ namespace {
 
 class MockProcessArchProvider : public MockArchProvider {
  public:
+  struct Installation {
+    zx_koid_t thread_koid;
+    debug_ipc::AddressRange address_range;
+    debug_ipc::BreakpointType type;
+  };
+
   zx_status_t InstallHWBreakpoint(const zx::thread& thread, uint64_t address) override {
     installs_.push_back({thread.get(), address});
     return ZX_OK;
@@ -26,8 +32,9 @@ class MockProcessArchProvider : public MockArchProvider {
   }
 
   arch::WatchpointInstallationResult InstallWatchpoint(
-      const zx::thread& thread, const debug_ipc::AddressRange& range) override {
-    wp_installs_.push_back({thread.get(), range});
+      debug_ipc::BreakpointType type, const zx::thread& thread,
+      const debug_ipc::AddressRange& range) override {
+    wp_installs_.push_back({thread.get(), range, type});
     return arch::WatchpointInstallationResult(ZX_OK, range, 0);
   }
 
@@ -40,9 +47,7 @@ class MockProcessArchProvider : public MockArchProvider {
   const std::vector<std::pair<zx_koid_t, uint64_t>>& installs() const { return installs_; }
   const std::vector<std::pair<zx_koid_t, uint64_t>>& uninstalls() const { return uninstalls_; }
 
-  const std::vector<std::pair<zx_koid_t, debug_ipc::AddressRange>>& wp_installs() const {
-    return wp_installs_;
-  }
+  const std::vector<Installation>& wp_installs() const { return wp_installs_; }
   const std::vector<std::pair<zx_koid_t, debug_ipc::AddressRange>>& wp_uninstalls() const {
     return wp_uninstalls_;
   }
@@ -51,7 +56,7 @@ class MockProcessArchProvider : public MockArchProvider {
   std::vector<std::pair<zx_koid_t, uint64_t>> installs_;
   std::vector<std::pair<zx_koid_t, uint64_t>> uninstalls_;
 
-  std::vector<std::pair<zx_koid_t, debug_ipc::AddressRange>> wp_installs_;
+  std::vector<Installation> wp_installs_;
   std::vector<std::pair<zx_koid_t, debug_ipc::AddressRange>> wp_uninstalls_;
 };
 

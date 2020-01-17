@@ -354,8 +354,12 @@ zx_status_t ArchProvider::UninstallHWBreakpoint(const zx::thread& thread, uint64
   return WriteDebugState(thread, debug_regs);
 }
 
-WatchpointInstallationResult ArchProvider::InstallWatchpoint(const zx::thread& thread,
+WatchpointInstallationResult ArchProvider::InstallWatchpoint(debug_ipc::BreakpointType type,
+                                                             const zx::thread& thread,
                                                              const debug_ipc::AddressRange& range) {
+  if (!debug_ipc::IsWatchpointType(type))
+    return WatchpointInstallationResult(ZX_ERR_INVALID_ARGS);
+
   zx_thread_state_debug_regs_t debug_regs;
   if (zx_status_t status = ReadDebugState(thread, &debug_regs); status != ZX_OK)
     return WatchpointInstallationResult(status);
@@ -363,7 +367,7 @@ WatchpointInstallationResult ArchProvider::InstallWatchpoint(const zx::thread& t
   DEBUG_LOG(Archx64) << "Before installing watchpoint for range " << range.ToString() << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  auto result = SetupWatchpoint(&debug_regs, range, debug_ipc::BreakpointType::kWrite);
+  auto result = SetupWatchpoint(&debug_regs, range, type);
   if (result.status != ZX_OK)
     return WatchpointInstallationResult(result.status);
 
