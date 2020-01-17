@@ -168,7 +168,6 @@ enum RepeatStatusMode : uint8 {
     SINGLE_TRACK_REPEAT = 0x02;
     ALL_TRACK_REPEAT = 0x03;
     GROUP_REPEAT = 0x04;
-    RESERVED = 0xFF;
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
@@ -176,7 +175,6 @@ enum ShuffleMode : uint8 {
     OFF = 0x01;
     ALL_TRACK_SHUFFLE = 0x02;
     GROUP_SHUFFLE = 0x03;
-    RESERVED = 0xFF;
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
@@ -184,7 +182,6 @@ enum ScanMode : uint8 {
     OFF = 0x01;
     ALL_TRACK_SCAN = 0x02;
     GROUP_SCAN = 0x03;
-    RESERVED = 0xFF;
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).

@@ -76,7 +76,6 @@ pub_decodable_enum!(
         SingleTrackRepeat => 0x02,
         AllTrackRepeat => 0x03,
         GroupRepeat => 0x04,
-        Reserved => 0xFF,
     }
 );
 
@@ -87,7 +86,6 @@ impl From<fidl_avrcp::RepeatStatusMode> for RepeatStatusMode {
             fidl_avrcp::RepeatStatusMode::SingleTrackRepeat => RepeatStatusMode::SingleTrackRepeat,
             fidl_avrcp::RepeatStatusMode::AllTrackRepeat => RepeatStatusMode::AllTrackRepeat,
             fidl_avrcp::RepeatStatusMode::GroupRepeat => RepeatStatusMode::GroupRepeat,
-            fidl_avrcp::RepeatStatusMode::Reserved => RepeatStatusMode::Reserved,
         }
     }
 }
@@ -99,7 +97,6 @@ impl From<RepeatStatusMode> for fidl_avrcp::RepeatStatusMode {
             RepeatStatusMode::SingleTrackRepeat => fidl_avrcp::RepeatStatusMode::SingleTrackRepeat,
             RepeatStatusMode::AllTrackRepeat => fidl_avrcp::RepeatStatusMode::AllTrackRepeat,
             RepeatStatusMode::GroupRepeat => fidl_avrcp::RepeatStatusMode::GroupRepeat,
-            RepeatStatusMode::Reserved => fidl_avrcp::RepeatStatusMode::Reserved,
         }
     }
 }
@@ -109,7 +106,6 @@ pub_decodable_enum!(
         Off => 0x01,
         AllTrackShuffle => 0x02,
         GroupShuffle => 0x03,
-        Reserved => 0xFF,
     }
 );
 
@@ -119,7 +115,6 @@ impl From<fidl_avrcp::ShuffleMode> for ShuffleMode {
             fidl_avrcp::ShuffleMode::Off => ShuffleMode::Off,
             fidl_avrcp::ShuffleMode::AllTrackShuffle => ShuffleMode::AllTrackShuffle,
             fidl_avrcp::ShuffleMode::GroupShuffle => ShuffleMode::GroupShuffle,
-            fidl_avrcp::ShuffleMode::Reserved => ShuffleMode::Reserved,
         }
     }
 }
@@ -130,7 +125,6 @@ impl From<ShuffleMode> for fidl_avrcp::ShuffleMode {
             ShuffleMode::Off => fidl_avrcp::ShuffleMode::Off,
             ShuffleMode::AllTrackShuffle => fidl_avrcp::ShuffleMode::AllTrackShuffle,
             ShuffleMode::GroupShuffle => fidl_avrcp::ShuffleMode::GroupShuffle,
-            ShuffleMode::Reserved => fidl_avrcp::ShuffleMode::Reserved,
         }
     }
 }
@@ -140,7 +134,6 @@ pub_decodable_enum!(
         Off => 0x01,
         AllTrackScan => 0x02,
         GroupScan => 0x03,
-        Reserved => 0xFF,
     }
 );
 
@@ -150,7 +143,6 @@ impl From<fidl_avrcp::ScanMode> for ScanMode {
             fidl_avrcp::ScanMode::Off => ScanMode::Off,
             fidl_avrcp::ScanMode::AllTrackScan => ScanMode::AllTrackScan,
             fidl_avrcp::ScanMode::GroupScan => ScanMode::GroupScan,
-            fidl_avrcp::ScanMode::Reserved => ScanMode::Reserved,
         }
     }
 }
@@ -161,7 +153,6 @@ impl From<ScanMode> for fidl_avrcp::ScanMode {
             ScanMode::Off => fidl_avrcp::ScanMode::Off,
             ScanMode::AllTrackScan => fidl_avrcp::ScanMode::AllTrackScan,
             ScanMode::GroupScan => fidl_avrcp::ScanMode::GroupScan,
-            ScanMode::Reserved => fidl_avrcp::ScanMode::Reserved,
         }
     }
 }
