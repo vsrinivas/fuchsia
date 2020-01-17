@@ -1100,6 +1100,14 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   uint32_t coded_height = fbl::round_up(params->hw_height, 2u);
   uint32_t stride = fbl::round_up(params->hw_width, 32u);
 
+  // Support up to 4kx2k, the hardware limit.
+  constexpr uint32_t kMaxWidth = 4096, kMaxHeight = 2176;
+  if (coded_width > kMaxWidth || coded_height > kMaxHeight) {
+    DECODE_ERROR("Invalid stream size %dx%d\n", coded_width, coded_height);
+    CallErrorHandler();
+    return false;
+  }
+
   // If !is_current_output_buffer_collection_usable_, then we don't support dynamic dimensions.
   bool buffers_allocated = !!frames_[0]->frame || !!frames_[0]->on_deck_frame;
   // For VP9 we have kMinFrames and kMaxFrames as the min/max bounds on # of frames the decoder is

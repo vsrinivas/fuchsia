@@ -581,8 +581,8 @@ class TestVP9 {
     video.reset();
   }
 
-  static void DecodeMalformed(const char* input_filename, uint32_t modification_offset,
-                              uint8_t modification_value) {
+  static void DecodeMalformed(const char* input_filename,
+                              const std::vector<std::pair<uint32_t, uint8_t>>& modifications) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
@@ -631,7 +631,9 @@ class TestVP9 {
     auto aml_data = ConvertIvfToAmlV(test_ivf->ptr, test_ivf->size);
     // Arbitrary modifications to an AMLV header shouldn't happen in production code,
     // because the driver is what creates that. The rest is fair game, though.
-    aml_data[modification_offset] = modification_value;
+    for (auto& mod : modifications) {
+      aml_data[mod.first] = mod.second;
+    }
     EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(aml_data.data(), aml_data.size()));
     EXPECT_EQ(std::future_status::ready,
               first_wait_valid.get_future().wait_for(std::chrono::seconds(1)));
@@ -694,5 +696,17 @@ TEST(VP9, DecodeMultiInstanceWithInitializationFault) { TestVP9::DecodeMultiInst
 TEST(VP9, DecodeMalformedHang) {
   // Numbers are essentially random, but picked to ensure the decoder would
   // normally hang. The offset should be >= 16 to avoid hitting the AMLV header.
-  TestVP9::DecodeMalformed("video_test_data/test-25fps.vp9", 17, 10);
+  TestVP9::DecodeMalformed("video_test_data/test-25fps.vp9", {{17, 10}});
+}
+
+TEST(VP9, DecodeMalformedLarge) {
+  constexpr uint32_t kAmlVHeaderSize = 16;
+  // Modify bits [12, 15] of the width to 0xf (and keep colorspace the same at 0x0).
+  // The width should now be 0xf13f.
+  constexpr uint32_t kWidthModificationOffset = kAmlVHeaderSize + 4;
+  // Modify bits [12, 15] of the height to 0xf (and keep the width the same, since its low 4 bits
+  // are already 0xf). The height should now be 0xf0ef.
+  constexpr uint32_t kHeightModificationOffset = kAmlVHeaderSize + 6;
+  TestVP9::DecodeMalformed("video_test_data/test-25fps.vp9",
+                           {{kWidthModificationOffset, 0x0f}, {kHeightModificationOffset, 0xff}});
 }
