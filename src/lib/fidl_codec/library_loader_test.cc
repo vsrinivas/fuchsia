@@ -182,8 +182,8 @@ TEST(LibraryLoader, InspectTypes) {
   EXPECT_EQ(
       "struct NullableXUnion {\n"
       "  union test.fidlcodec.examples/IntStructXunion {\n"
-      "    857525967: int32 variant_i;\n"
-      "    1873891383: struct test.fidlcodec.examples/TwoStringStruct {\n"
+      "    1: int32 variant_i;\n"
+      "    2: struct test.fidlcodec.examples/TwoStringStruct {\n"
       "      string value1;\n"
       "      string value2;\n"
       "    } variant_tss;\n"

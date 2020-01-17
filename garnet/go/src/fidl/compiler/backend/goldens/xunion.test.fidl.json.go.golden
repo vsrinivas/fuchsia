@@ -35,23 +35,23 @@ func (msg *StructWithNullableXUnion) Marshaler() _bindings.Marshaler {
 type I_olderSimpleUnionTag uint64
 const (
 	OlderSimpleUnion_unknownData = 0  // 0x00000000
-	OlderSimpleUnionI = 1026732503 // 0x3d32b1d7
-	OlderSimpleUnionF = 1362546558 // 0x5136cf7e
+	OlderSimpleUnionI = 1 // 0x00000001
+	OlderSimpleUnionF = 2 // 0x00000002
 )
 
 
 type OlderSimpleUnion struct {
 	I_olderSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	I int64  `fidl:"1026732503" fidl_hashed_ord:"1026732503" fidl_explicit_ord:"1"`
-	F float32  `fidl:"1362546558" fidl_hashed_ord:"1362546558" fidl_explicit_ord:"2"`
+	I int64  `fidl:"1" fidl_hashed_ord:"1026732503" fidl_explicit_ord:"1"`
+	F float32  `fidl:"2" fidl_hashed_ord:"1362546558" fidl_explicit_ord:"2"`
 }
 
 func (_m *OlderSimpleUnion) Which() I_olderSimpleUnionTag {
 	switch _m.I_olderSimpleUnionTag {
-	case 1026732503:
+	case 1:
 		return OlderSimpleUnionI
-	case 1362546558:
+	case 2:
 		return OlderSimpleUnionF
 	default:
 		return OlderSimpleUnion_unknownData
@@ -88,27 +88,27 @@ func OlderSimpleUnionWithF(f float32) OlderSimpleUnion {
 type I_newerSimpleUnionTag uint64
 const (
 	NewerSimpleUnion_unknownData = 0  // 0x00000000
-	NewerSimpleUnionI = 693944286 // 0x295cbfde
-	NewerSimpleUnionS = 473666119 // 0x1c3b9247
-	NewerSimpleUnionV = 1815655055 // 0x6c38b28f
+	NewerSimpleUnionI = 1 // 0x00000001
+	NewerSimpleUnionS = 2 // 0x00000002
+	NewerSimpleUnionV = 3 // 0x00000003
 )
 
 
 type NewerSimpleUnion struct {
 	I_newerSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	I int64  `fidl:"693944286" fidl_hashed_ord:"693944286" fidl_explicit_ord:"1"`
-	S string  `fidl:"473666119," fidl_hashed_ord:"473666119" fidl_explicit_ord:"2"`
-	V []string  `fidl:"1815655055,," fidl_hashed_ord:"1815655055" fidl_explicit_ord:"3"`
+	I int64  `fidl:"1" fidl_hashed_ord:"693944286" fidl_explicit_ord:"1"`
+	S string  `fidl:"2," fidl_hashed_ord:"473666119" fidl_explicit_ord:"2"`
+	V []string  `fidl:"3,," fidl_hashed_ord:"1815655055" fidl_explicit_ord:"3"`
 }
 
 func (_m *NewerSimpleUnion) Which() I_newerSimpleUnionTag {
 	switch _m.I_newerSimpleUnionTag {
-	case 693944286:
+	case 1:
 		return NewerSimpleUnionI
-	case 473666119:
+	case 2:
 		return NewerSimpleUnionS
-	case 1815655055:
+	case 3:
 		return NewerSimpleUnionV
 	default:
 		return NewerSimpleUnion_unknownData
@@ -155,17 +155,17 @@ func NewerSimpleUnionWithV(v []string) NewerSimpleUnion {
 
 type I_strictSimpleXUnionTag uint64
 const (
-	StrictSimpleXUnionI = 1851697276 // 0x6e5ea87c
-	StrictSimpleXUnionF = 855207063 // 0x32f96c97
-	StrictSimpleXUnionS = 850602487 // 0x32b329f7
+	StrictSimpleXUnionI = 1 // 0x00000001
+	StrictSimpleXUnionF = 2 // 0x00000002
+	StrictSimpleXUnionS = 3 // 0x00000003
 )
 
 
 type StrictSimpleXUnion struct {
 	I_strictSimpleXUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I int32  `fidl:"1851697276" fidl_hashed_ord:"1851697276" fidl_explicit_ord:"1"`
-	F float32  `fidl:"855207063" fidl_hashed_ord:"855207063" fidl_explicit_ord:"2"`
-	S string  `fidl:"850602487," fidl_hashed_ord:"850602487" fidl_explicit_ord:"3"`
+	I int32  `fidl:"1" fidl_hashed_ord:"1851697276" fidl_explicit_ord:"1"`
+	F float32  `fidl:"2" fidl_hashed_ord:"855207063" fidl_explicit_ord:"2"`
+	S string  `fidl:"3," fidl_hashed_ord:"850602487" fidl_explicit_ord:"3"`
 }
 
 func (_m *StrictSimpleXUnion) Which() I_strictSimpleXUnionTag {
@@ -213,19 +213,19 @@ func StrictSimpleXUnionWithS(s string) StrictSimpleXUnion {
 type I_xUnionContainingEmptyStructTag uint64
 const (
 	XUnionContainingEmptyStruct_unknownData = 0  // 0x00000000
-	XUnionContainingEmptyStructEmpty = 424858069 // 0x1952d1d5
+	XUnionContainingEmptyStructEmpty = 1 // 0x00000001
 )
 
 
 type XUnionContainingEmptyStruct struct {
 	I_xUnionContainingEmptyStructTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	Empty Empty  `fidl:"424858069" fidl_hashed_ord:"424858069" fidl_explicit_ord:"1"`
+	Empty Empty  `fidl:"1" fidl_hashed_ord:"424858069" fidl_explicit_ord:"1"`
 }
 
 func (_m *XUnionContainingEmptyStruct) Which() I_xUnionContainingEmptyStructTag {
 	switch _m.I_xUnionContainingEmptyStructTag {
-	case 424858069:
+	case 1:
 		return XUnionContainingEmptyStructEmpty
 	default:
 		return XUnionContainingEmptyStruct_unknownData
@@ -250,13 +250,13 @@ func XUnionContainingEmptyStructWithEmpty(empty Empty) XUnionContainingEmptyStru
 
 type I_strictBoundedXUnionTag uint64
 const (
-	StrictBoundedXUnionV = 2024555624 // 0x78ac4468
+	StrictBoundedXUnionV = 1 // 0x00000001
 )
 
 
 type StrictBoundedXUnion struct {
 	I_strictBoundedXUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	V []uint8  `fidl:"2024555624,10" fidl_hashed_ord:"2024555624" fidl_explicit_ord:"1"`
+	V []uint8  `fidl:"1,10" fidl_hashed_ord:"2024555624" fidl_explicit_ord:"1"`
 }
 
 func (_m *StrictBoundedXUnion) Which() I_strictBoundedXUnionTag {
@@ -282,23 +282,23 @@ func StrictBoundedXUnionWithV(v []uint8) StrictBoundedXUnion {
 type I_explicitXUnionTag uint64
 const (
 	ExplicitXUnion_unknownData = 0  // 0x00000000
-	ExplicitXUnionI = 625512649 // 0x254890c9
-	ExplicitXUnionF = 182552961 // 0x0ae18981
+	ExplicitXUnionI = 1 // 0x00000001
+	ExplicitXUnionF = 4 // 0x00000004
 )
 
 
 type ExplicitXUnion struct {
 	I_explicitXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	I int64  `fidl:"625512649" fidl_hashed_ord:"625512649" fidl_explicit_ord:"1"`
-	F float32  `fidl:"182552961" fidl_hashed_ord:"182552961" fidl_explicit_ord:"4"`
+	I int64  `fidl:"1" fidl_hashed_ord:"625512649" fidl_explicit_ord:"1"`
+	F float32  `fidl:"4" fidl_hashed_ord:"182552961" fidl_explicit_ord:"4"`
 }
 
 func (_m *ExplicitXUnion) Which() I_explicitXUnionTag {
 	switch _m.I_explicitXUnionTag {
-	case 625512649:
+	case 1:
 		return ExplicitXUnionI
-	case 182552961:
+	case 4:
 		return ExplicitXUnionF
 	default:
 		return ExplicitXUnion_unknownData

@@ -23,7 +23,6 @@ namespace name {
 
 struct BasicStruct;
 
-extern "C" const fidl_type_t test_name_BasicStructTable;
 extern "C" const fidl_type_t v1_test_name_BasicStructTable;
 
 struct BasicStruct {
@@ -32,6 +31,7 @@ struct BasicStruct {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr bool HasPointer = true;
 
   uint32_t x = {};
 

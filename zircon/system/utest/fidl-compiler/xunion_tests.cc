@@ -344,13 +344,13 @@ xunion Foo {
   ASSERT_EQ(xunion->members.size(), 3);
   EXPECT_EQ(xunion->members[0].explicit_ordinal->value, 1);
   EXPECT_EQ(xunion->members[0].maybe_used->hashed_ordinal->value, 0x1b269e3);
-  EXPECT_EQ(xunion->members[0].write_ordinal()->value, 0x1b269e3);
+  EXPECT_EQ(xunion->members[0].write_ordinal()->value, 1);
   EXPECT_EQ(xunion->members[1].explicit_ordinal->value, 2);
   EXPECT_EQ(xunion->members[1].maybe_used->hashed_ordinal->value, 0x2a293370);
-  EXPECT_EQ(xunion->members[1].write_ordinal()->value, 0x2a293370);
+  EXPECT_EQ(xunion->members[1].write_ordinal()->value, 2);
   EXPECT_EQ(xunion->members[2].explicit_ordinal->value, 3);
   EXPECT_EQ(xunion->members[2].maybe_used->hashed_ordinal->value, 0x64af3380);
-  EXPECT_EQ(xunion->members[2].write_ordinal()->value, 0x64af3380);
+  EXPECT_EQ(xunion->members[2].write_ordinal()->value, 3);
 
   END_TEST;
 }
@@ -372,13 +372,13 @@ xunion Foo {
   ASSERT_EQ(xunion->members.size(), 3);
   EXPECT_EQ(xunion->members[0].explicit_ordinal->value, 1);
   EXPECT_EQ(xunion->members[0].maybe_used->hashed_ordinal->value, 0x1b269e3);
-  EXPECT_EQ(xunion->members[0].write_ordinal()->value, 0x1b269e3);
+  EXPECT_EQ(xunion->members[0].write_ordinal()->value, 1);
   EXPECT_EQ(xunion->members[1].explicit_ordinal->value, 2);
   EXPECT_EQ(xunion->members[1].maybe_used->hashed_ordinal->value, 0x2a293370);
-  EXPECT_EQ(xunion->members[1].write_ordinal()->value, 0x2a293370);
+  EXPECT_EQ(xunion->members[1].write_ordinal()->value, 2);
   EXPECT_EQ(xunion->members[2].explicit_ordinal->value, 3);
   EXPECT_EQ(xunion->members[2].maybe_used->hashed_ordinal->value, 0x64af3380);
-  EXPECT_EQ(xunion->members[2].write_ordinal()->value, 0x64af3380);
+  EXPECT_EQ(xunion->members[2].write_ordinal()->value, 3);
 
   END_TEST;
 }

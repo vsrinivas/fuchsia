@@ -74,9 +74,9 @@ class StrictSimpleXUnion final {
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
-    kI = 1851697276,  // 0x6e5ea87c
-    kF = 855207063,  // 0x32f96c97
-    kS = 850602487,  // 0x32b329f7
+    kI = 1,  // 0x1
+    kF = 2,  // 0x2
+    kS = 3,  // 0x3
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -183,7 +183,7 @@ class StrictBoundedXUnion final {
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
-    kV = 2024555624,  // 0x78ac4468
+    kV = 1,  // 0x1
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -265,8 +265,8 @@ class OlderSimpleUnion final {
   kUnknown = 0,
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
   
-    kI = 1026732503,  // 0x3d32b1d7
-    kF = 1362546558,  // 0x5136cf7e
+    kI = 1,  // 0x1
+    kF = 2,  // 0x2
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -557,9 +557,9 @@ class NewerSimpleUnion final {
   kUnknown = 0,
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
   
-    kI = 693944286,  // 0x295cbfde
-    kS = 473666119,  // 0x1c3b9247
-    kV = 1815655055,  // 0x6c38b28f
+    kI = 1,  // 0x1
+    kS = 2,  // 0x2
+    kV = 3,  // 0x3
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -681,8 +681,8 @@ class ExplicitXUnion final {
   kUnknown = 0,
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
   
-    kI = 625512649,  // 0x254890c9
-    kF = 182552961,  // 0xae18981
+    kI = 1,  // 0x1
+    kF = 4,  // 0x4
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -808,7 +808,7 @@ class XUnionContainingEmptyStruct final {
   kUnknown = 0,
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
   
-    kEmpty = 424858069,  // 0x1952d1d5
+    kEmpty = 1,  // 0x1
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 

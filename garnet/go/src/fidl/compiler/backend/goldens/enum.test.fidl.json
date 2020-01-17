@@ -23,6 +23,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "1",
+            "expression": "1",
             "literal": {
               "kind": "numeric",
               "value": "1",
@@ -39,6 +41,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "2",
+            "expression": "2",
             "literal": {
               "kind": "numeric",
               "value": "2",
@@ -67,6 +71,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "1",
+            "expression": "1",
             "literal": {
               "kind": "numeric",
               "value": "1",
@@ -83,6 +89,8 @@
           },
           "value": {
             "kind": "literal",
+            "value": "2",
+            "expression": "2",
             "literal": {
               "kind": "numeric",
               "value": "2",

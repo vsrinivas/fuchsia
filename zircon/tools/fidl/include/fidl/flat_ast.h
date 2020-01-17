@@ -1080,11 +1080,10 @@ struct XUnionMember : public Object {
   XUnionMember(std::unique_ptr<raw::Ordinal32> explicit_ordinal,
                std::unique_ptr<raw::Ordinal32> hashed_ordinal,
                std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
-               std::unique_ptr<raw::AttributeList> attributes, bool using_explicit_ordinal = false)
+               std::unique_ptr<raw::AttributeList> attributes)
       : explicit_ordinal(std::move(explicit_ordinal)),
         maybe_used(std::make_unique<Used>(std::move(hashed_ordinal), std::move(type_ctor), name,
-                                          std::move(attributes))),
-        using_explicit_ordinal(using_explicit_ordinal) {}
+                                          std::move(attributes))) {}
   XUnionMember(std::unique_ptr<raw::Ordinal32> explicit_ordinal, SourceSpan span)
       : explicit_ordinal(std::move(explicit_ordinal)), span(span) {}
 
@@ -1095,19 +1094,9 @@ struct XUnionMember : public Object {
 
   std::unique_ptr<Used> maybe_used;
 
-  // Indicates whether this xunion member should be writing explicit ordinals
-  // on the wire. The xunions for which this is true are tracked in the explicit_ordinal_xunions
-  // map in flat_ast.cc
-  bool using_explicit_ordinal;
-
   std::any AcceptAny(VisitorAny* visitor) const override;
 
-  const std::unique_ptr<raw::Ordinal32>& write_ordinal() const {
-    if (!maybe_used) {
-      return explicit_ordinal;
-    }
-    return using_explicit_ordinal ? explicit_ordinal : maybe_used->hashed_ordinal;
-  }
+  const std::unique_ptr<raw::Ordinal32>& write_ordinal() const { return explicit_ordinal; }
 };
 
 struct XUnion final : public TypeDecl {

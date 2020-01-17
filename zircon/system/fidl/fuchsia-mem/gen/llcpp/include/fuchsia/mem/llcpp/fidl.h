@@ -38,8 +38,8 @@ struct Data {
   Data() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   enum class Tag : fidl_xunion_tag_t {
-    kBytes = 835814982,  // 0x31d18646
-    kBuffer = 1925873109,  // 0x72ca7dd5
+    kBytes = 1,  // 0x1
+    kBuffer = 2,  // 0x2
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -108,8 +108,8 @@ struct Data {
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
-    kBytes = 835814982,  // 0x31d18646
-    kBuffer = 1925873109,  // 0x72ca7dd5
+    kBytes = 1,  // 0x1
+    kBuffer = 2,  // 0x2
   };
 
   Ordinal ordinal() const {

@@ -12,9 +12,9 @@ import (
 
 
 type BasicStruct struct {
-	_ struct{} `fidl:"s,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
-	X uint32`fidl:"0" fidl_offset_v1:"0" fidl_offset_v1_no_ee:"0"`
-	Y string`fidl:"8," fidl_offset_v1:"8" fidl_offset_v1_no_ee:"8"`
+	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	X uint32`fidl:"0" fidl_offset_v1:"0"`
+	Y string`fidl:"8," fidl_offset_v1:"8"`
 }
 
 var _mBasicStruct = _bindings.CreateLazyMarshaler(BasicStruct{})

@@ -108,6 +108,16 @@ service.test.fidl.json.rs.golden
 service.test.fidl.json.syz.txt.golden
 service.test.fidl.json_test_base.h.golden
 service.test.fidl.tables.c.golden
+struct_inline.test.fidl.json
+struct_inline.test.fidl.json.cc.golden
+struct_inline.test.fidl.json.go.golden
+struct_inline.test.fidl.json.h.golden
+struct_inline.test.fidl.json.llcpp.cc.golden
+struct_inline.test.fidl.json.llcpp.h.golden
+struct_inline.test.fidl.json.rs.golden
+struct_inline.test.fidl.json.syz.txt.golden
+struct_inline.test.fidl.json_test_base.h.golden
+struct_inline.test.fidl.tables.c.golden
 tables.test.fidl.json
 tables.test.fidl.json.cc.golden
 tables.test.fidl.json.go.golden

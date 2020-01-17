@@ -1910,10 +1910,10 @@ struct DirectoryWatchedEvent {
   DirectoryWatchedEvent() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   enum class Tag : fidl_xunion_tag_t {
-    kExisting = 1263581438,  // 0x4b50b8fe
-    kIdle = 1234379794,  // 0x49932412
-    kAdded = 1712492072,  // 0x66128e28
-    kRemoved = 91294460,  // 0x5710afc
+    kExisting = 1,  // 0x1
+    kIdle = 2,  // 0x2
+    kAdded = 3,  // 0x3
+    kRemoved = 4,  // 0x4
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -2034,10 +2034,10 @@ struct DirectoryWatchedEvent {
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
-    kExisting = 1263581438,  // 0x4b50b8fe
-    kIdle = 1234379794,  // 0x49932412
-    kAdded = 1712492072,  // 0x66128e28
-    kRemoved = 91294460,  // 0x5710afc
+    kExisting = 1,  // 0x1
+    kIdle = 2,  // 0x2
+    kAdded = 3,  // 0x3
+    kRemoved = 4,  // 0x4
   };
 
   Ordinal ordinal() const {
@@ -3147,15 +3147,15 @@ struct Representation {
   Representation() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   enum class Tag : fidl_xunion_tag_t {
-    kConnector = 1071926213,  // 0x3fe44bc5
-    kDirectory = 1691175305,  // 0x64cd4989
-    kFile = 1881902475,  // 0x702b8d8b
-    kMemory = 1844477091,  // 0x6df07ca3
-    kPosixSocket = 220595477,  // 0xd260515
-    kPipe = 439014286,  // 0x1a2ad38e
-    kDebuglog = 718851311,  // 0x2ad8ccef
-    kDevice = 1049166327,  // 0x3e8901f7
-    kTty = 1598881365,  // 0x5f4cfe55
+    kConnector = 1,  // 0x1
+    kDirectory = 2,  // 0x2
+    kFile = 3,  // 0x3
+    kMemory = 4,  // 0x4
+    kPosixSocket = 5,  // 0x5
+    kPipe = 6,  // 0x6
+    kDebuglog = 7,  // 0x7
+    kDevice = 8,  // 0x8
+    kTty = 9,  // 0x9
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -3388,15 +3388,15 @@ struct Representation {
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
-    kConnector = 1071926213,  // 0x3fe44bc5
-    kDirectory = 1691175305,  // 0x64cd4989
-    kFile = 1881902475,  // 0x702b8d8b
-    kMemory = 1844477091,  // 0x6df07ca3
-    kPosixSocket = 220595477,  // 0xd260515
-    kPipe = 439014286,  // 0x1a2ad38e
-    kDebuglog = 718851311,  // 0x2ad8ccef
-    kDevice = 1049166327,  // 0x3e8901f7
-    kTty = 1598881365,  // 0x5f4cfe55
+    kConnector = 1,  // 0x1
+    kDirectory = 2,  // 0x2
+    kFile = 3,  // 0x3
+    kMemory = 4,  // 0x4
+    kPosixSocket = 5,  // 0x5
+    kPipe = 6,  // 0x6
+    kDebuglog = 7,  // 0x7
+    kDevice = 8,  // 0x8
+    kTty = 9,  // 0x9
   };
 
   Ordinal ordinal() const {

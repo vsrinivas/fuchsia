@@ -163,18 +163,6 @@ const std::set<std::pair<std::string, std::string_view>> allowed_simple_unions{{
     {"fuchsia.io", "NodeInfo"},
 }};
 
-// This map is added to enable the migration of xunions to use the explicit ordinal
-// syntax in FIDL files
-//   - xunions using hashed ordinals need to continue using hashed ordinals after the
-//     FIDL file migration
-//   - however, xunions which were already using explicit ordinals *before* the FIDL
-//     format change need to continue using explicit ordinals. these xunions are
-//     tracked in this map and this data is propagated through to the xunion members and
-//     into the fidlc output (JSON IR/coding tables)
-const std::set<std::pair<std::string, std::string_view>> explicit_ordinal_xunions{{
-    {"fuchsia.ledger.cloud", "DeviceEntry"},
-}};
-
 bool IsSimple(const Type* type, const TypeShape& typeshape, ErrorReporter* error_reporter) {
   switch (type->kind) {
     case Type::Kind::kVector: {
@@ -1845,8 +1833,6 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
   assert(!xunion_declaration->members.empty() && "unions must have at least one member");
   auto xunion_name =
       std::pair<std::string, std::string_view>(LibraryName(this, "."), name.name_part());
-  bool should_write_explicit =
-      explicit_ordinal_xunions.find(xunion_name) != explicit_ordinal_xunions.end();
   std::vector<XUnion::Member> members;
   for (auto& member : xunion_declaration->members) {
     auto explicit_ordinal = std::move(member->ordinal);
@@ -1872,8 +1858,7 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
       }
 
       members.emplace_back(std::move(explicit_ordinal), std::move(hashed_ordinal),
-                           std::move(type_ctor), span, std::move(member->maybe_used->attributes),
-                           should_write_explicit);
+                           std::move(type_ctor), span, std::move(member->maybe_used->attributes));
     } else {
       members.emplace_back(std::move(explicit_ordinal), member->span());
     }

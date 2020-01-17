@@ -177,7 +177,7 @@
       },
       "members": [
         {
-          "ordinal": 1056421836,
+          "ordinal": 1,
           "explicit_ordinal": 1,
           "hashed_ordinal": 1056421836,
           "reserved": false,
@@ -195,7 +195,7 @@
           "offset": 0
         },
         {
-          "ordinal": 1911600824,
+          "ordinal": 2,
           "explicit_ordinal": 2,
           "hashed_ordinal": 1911600824,
           "reserved": false,
@@ -234,7 +234,7 @@
       },
       "members": [
         {
-          "ordinal": 215696753,
+          "ordinal": 1,
           "explicit_ordinal": 1,
           "hashed_ordinal": 215696753,
           "reserved": false,
@@ -252,7 +252,7 @@
           "offset": 0
         },
         {
-          "ordinal": 2063855467,
+          "ordinal": 2,
           "explicit_ordinal": 2,
           "hashed_ordinal": 2063855467,
           "reserved": false,

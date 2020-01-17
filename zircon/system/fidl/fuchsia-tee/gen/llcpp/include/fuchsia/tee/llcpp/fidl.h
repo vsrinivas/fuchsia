@@ -431,9 +431,9 @@ struct Parameter {
   Parameter() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   enum class Tag : fidl_xunion_tag_t {
-    kNone = 614881370,  // 0x24a6585a
-    kBuffer = 526330047,  // 0x1f5f28bf
-    kValue = 483243862,  // 0x1ccdb756
+    kNone = 1,  // 0x1
+    kBuffer = 2,  // 0x2
+    kValue = 3,  // 0x3
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -520,9 +520,9 @@ struct Parameter {
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
-    kNone = 614881370,  // 0x24a6585a
-    kBuffer = 526330047,  // 0x1f5f28bf
-    kValue = 483243862,  // 0x1ccdb756
+    kNone = 1,  // 0x1
+    kBuffer = 2,  // 0x2
+    kValue = 3,  // 0x3
   };
 
   Ordinal ordinal() const {
