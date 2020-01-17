@@ -121,6 +121,9 @@ func Main() {
 	if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, tcp.SACKEnabled(true)); err != nil {
 		syslog.Fatalf("method SetTransportProtocolOption(%v, tcp.SACKEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
 	}
+	if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, tcp.DelayEnabled(true)); err != nil {
+		syslog.Fatalf("method SetTransportProtocolOption(%v, tcp.DelayEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
+	}
 
 	arena, err := eth.NewArena()
 	if err != nil {
