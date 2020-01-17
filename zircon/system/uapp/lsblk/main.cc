@@ -98,7 +98,6 @@ static int cmd_list_blk(void) {
   blkinfo_t info;
   const char* type;
   printf("%-3s %-4s %-16s %-20s %-6s %s\n", "ID", "SIZE", "TYPE", "LABEL", "FLAGS", "DEVICE");
-  char flags[20] = {0};
 
   while ((de = readdir(dir)) != NULL) {
     if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
@@ -140,6 +139,7 @@ static int cmd_list_blk(void) {
     } else {
       info.label[0] = '\0';
     }
+    char flags[20] = {0};
     if (block_info.flags & BLOCK_FLAG_READONLY) {
       strlcat(flags, "RO ", sizeof(flags));
     }
