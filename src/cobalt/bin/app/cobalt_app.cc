@@ -12,30 +12,17 @@
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
-#include "third_party/cobalt/src/logger/internal_metrics_config.cb.h"
-#include "third_party/cobalt/src/observation_store/file_observation_store.h"
-#include "third_party/cobalt/src/observation_store/memory_observation_store.h"
-#include "third_party/cobalt/src/uploader/upload_scheduler.h"
 
 namespace cobalt {
 
 namespace http = ::fuchsia::net::oldhttp;
 
-using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
-using encoder::ShippingManager;
-using encoder::UploadScheduler;
-using lib::clearcut::ClearcutUploader;
 using logger::ProjectContextFactory;
-using observation_store::FileObservationStore;
-using observation_store::MemoryObservationStore;
-using observation_store::ObservationStore;
 using util::PosixFileSystem;
 using utils::FuchsiaHTTPClient;
 
 const size_t kMaxBytesPerEnvelope = 512 * 1024;  // 0.5 MiB.
-
-constexpr char kClearcutEndpoint[] = "https://play.googleapis.com/staging/log";
 
 constexpr char kMetricsRegistryPath[] = "/pkg/data/global_metrics_registry.pb";
 
@@ -48,22 +35,6 @@ constexpr char kLocalLogFilePath[] = "/data/cobalt_observations.pb";
 const size_t kClearcutMaxRetries = 5;
 
 namespace {
-std::unique_ptr<ObservationStore> NewObservationStore(
-    size_t max_bytes_per_event, size_t max_bytes_per_envelope, size_t max_bytes_total,
-    std::string root_directory, const std::string& name_prefix, bool use_memory_observation_store) {
-  std::unique_ptr<ObservationStore> store;
-  if (use_memory_observation_store) {
-    store.reset(
-        new MemoryObservationStore(max_bytes_per_event, max_bytes_per_envelope, max_bytes_total));
-  } else {
-    store.reset(new FileObservationStore(max_bytes_per_event, max_bytes_per_envelope,
-                                         max_bytes_total, std::make_unique<PosixFileSystem>(),
-                                         std::move(root_directory),
-                                         name_prefix + " FileObservationStore"));
-  }
-
-  return store;
-}
 
 std::string ReadGlobalMetricsRegistryBytes(const std::string& global_metrics_registry_path) {
   std::ifstream registry_file_stream;
@@ -86,82 +57,90 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
                      bool start_event_aggregator_worker, bool use_memory_observation_store,
                      size_t max_bytes_per_observation_store, const std::string& product_name,
                      const std::string& board_name, const std::string& version)
-    : system_data_(product_name, board_name, configuration_data_.GetReleaseStage(), version),
-      context_(std::move(context)),
+    : context_(std::move(context)),
       system_clock_(FuchsiaSystemClock(context_.get())),
       network_wrapper_(dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
                        [this] { return context_->svc()->Connect<http::HttpService>(); }),
-      // TODO(pesk): Observations for UniqueActives reports are of comparable
-      // size to the events logged for them, so it makes sense to use
-      // MAX_BYTES_PER_EVENT as the value of max_bytes_per_observation.
-      // Revisit this as we add more non-immediate report types.
-      observation_store_(NewObservationStore(fuchsia::cobalt::MAX_BYTES_PER_EVENT,
-                                             kMaxBytesPerEnvelope, max_bytes_per_observation_store,
-                                             kObservationStorePath, "V1",
-                                             use_memory_observation_store)),
-      timer_manager_(dispatcher),
-      local_aggregate_proto_store_(kLocalAggregateProtoStorePath,
-                                   std::make_unique<PosixFileSystem>()),
-      obs_history_proto_store_(kObsHistoryProtoStorePath, std::make_unique<PosixFileSystem>()),
-      logger_encoder_(getClientSecret(), &system_data_) {
+      timer_manager_(dispatcher) {
   auto global_project_context_factory =
       std::make_shared<ProjectContextFactory>(ReadGlobalMetricsRegistryBytes(kMetricsRegistryPath));
 
-  auto envs = configuration_data_.GetBackendEnvironments();
-  encoder::ClearcutV1ShippingManager* clearcut_shipping_manager = nullptr;
-  if (std::find(envs.begin(), envs.end(), config::Environment::LOCAL) != envs.end()) {
-    FXL_CHECK(envs.size() == 1) << "Only one backend environment is supported if one is LOCAL.";
-    encrypt_to_analyzer_ = util::EncryptedMessageMaker::MakeUnencrypted();
-    FX_LOGS(INFO) << "Writing the Cobalt observations to: " << kLocalLogFilePath;
-    shipping_manager_ = std::make_unique<encoder::LocalShippingManager>(
-        observation_store_.get(), kLocalLogFilePath, std::make_unique<PosixFileSystem>());
-  } else {
-    encrypt_to_analyzer_ = util::EncryptedMessageMaker::MakeForObservations(
-                               ReadPublicKeyPem(configuration_data_.AnalyzerPublicKeyPath()))
-                               .ValueOrDie();
-    clearcut_shipping_manager = new encoder::ClearcutV1ShippingManager(
-        UploadScheduler(target_interval, min_interval, initial_interval), observation_store_.get(),
-        encrypt_to_analyzer_.get(),
-        std::make_unique<ClearcutUploader>(
-            kClearcutEndpoint, std::make_unique<FuchsiaHTTPClient>(&network_wrapper_, dispatcher)),
-        nullptr, kClearcutMaxRetries, configuration_data_.GetApiKey());
-    shipping_manager_ = std::unique_ptr<encoder::ShippingManager>(clearcut_shipping_manager);
-    // TODO(camrdale): remove this once the log source transition is complete.
-    for (const auto& backend_environment : configuration_data_.GetBackendEnvironments()) {
-      auto encrypt_to_shuffler =
-          util::EncryptedMessageMaker::MakeForEnvelopes(
-              ReadPublicKeyPem(configuration_data_.ShufflerPublicKeyPath(backend_environment)))
-              .ValueOrDie();
-      clearcut_shipping_manager->AddClearcutDestination(
-          encrypt_to_shuffler.get(), configuration_data_.GetLogSourceId(backend_environment));
-      encrypt_to_shufflers_.emplace_back(std::move(encrypt_to_shuffler));
+  std::unique_ptr<TargetPipelineInterface> target_pipeline;
+  std::vector<std::unique_ptr<TargetPipelineInterface>> extra_pipelines;
+
+  // |target_pipeline| is the primary pipeline used for sending data to cobalt. In particular, it is
+  // the source of the encryption key for the analyzer, as well as determining the destination for
+  // generated observations (Either clearcut, or the local filesystem)
+  //
+  // |extra_pipelines| is used to send observations to a different clearcut log source (e.g. PROD
+  // and DEV). It is important to understand that extra pipelines cannot change which http client
+  // will be used, or which clearcut endpoint will be used (it will be sent to the same endpoint
+  // with the same http client as target_pipeline), or how the individual observations are encrypted
+  // (It will use the same analyzer encryption key from the target_pipeline).
+  //
+  // TODO(camrdale) Remove extra_pipelines once they are no longer necessary.
+  for (const auto& backend_environment : configuration_data_.GetBackendEnvironments()) {
+    if (target_pipeline == nullptr) {
+      if (backend_environment == system_data::Environment::LOCAL) {
+        target_pipeline = std::make_unique<LocalPipeline>();
+      } else {
+        target_pipeline = std::make_unique<TargetPipeline>(
+            backend_environment,
+            ReadPublicKeyPem(configuration_data_.ShufflerPublicKeyPath(backend_environment)),
+            ReadPublicKeyPem(configuration_data_.AnalyzerPublicKeyPath()),
+            std::make_unique<FuchsiaHTTPClient>(&network_wrapper_, dispatcher),
+            kClearcutMaxRetries);
+      }
+    } else {
+      extra_pipelines.emplace_back(std::make_unique<ExtraPipeline>(
+          backend_environment,
+          ReadPublicKeyPem(configuration_data_.ShufflerPublicKeyPath(backend_environment))));
     }
   }
-  observation_writer_ = std::make_unique<logger::ObservationWriter>(
-      observation_store_.get(), shipping_manager_.get(), encrypt_to_analyzer_.get());
 
-  // Construct an EventAggregatorManager using default values for the snapshot
-  // intervals.
-  event_aggregator_manager_ = std::make_unique<local_aggregation::EventAggregatorManager>(
-      &logger_encoder_, observation_writer_.get(), &local_aggregate_proto_store_,
-      &obs_history_proto_store_, event_aggregator_backfill_days);
-
-  controller_impl_ = std::make_unique<CobaltControllerImpl>(dispatcher, shipping_manager_.get(),
-                                                            event_aggregator_manager_.get(),
-                                                            observation_store_.get());
-
-  undated_event_manager_ = std::make_shared<logger::UndatedEventManager>(
-      &logger_encoder_, event_aggregator_manager_->GetEventAggregator(), observation_writer_.get(),
-      &system_data_);
-
-  // Create internal Logger and pass a pointer to objects which use it.
-  internal_logger_ = NewInternalLogger(global_project_context_factory, logger::kCustomerName,
-                                       logger::kProjectName);
-
-  observation_store_->ResetInternalMetrics(internal_logger_.get());
-  if (clearcut_shipping_manager != nullptr) {
-    clearcut_shipping_manager->ResetInternalMetrics(internal_logger_.get());
+  auto internal_project_context = global_project_context_factory->NewProjectContext(
+      logger::kCustomerName, logger::kProjectName);
+  if (!internal_project_context) {
+    FX_LOGS(ERROR) << "The CobaltRegistry bundled with Cobalt does not "
+                      "include the expected internal metrics project. "
+                      "Cobalt-measuring-Cobalt will be disabled.";
   }
+
+  CobaltConfig cfg = {
+      .product_name = product_name,
+      .board_name_suggestion = board_name,
+      .version = version,
+      .release_stage = configuration_data_.GetReleaseStage(),
+
+      .file_system = std::make_unique<PosixFileSystem>(),
+      .use_memory_observation_store = false,
+      .max_bytes_per_event = fuchsia::cobalt::MAX_BYTES_PER_EVENT,
+      .max_bytes_per_envelope = kMaxBytesPerEnvelope,
+      .max_bytes_total = max_bytes_per_observation_store,
+      .observation_store_directory = kObservationStorePath,
+
+      .local_aggregate_proto_store_path = kLocalAggregateProtoStorePath,
+      .obs_history_proto_store_path = kObsHistoryProtoStorePath,
+
+      .target_interval = target_interval,
+      .min_interval = min_interval,
+      .initial_interval = initial_interval,
+
+      .target_pipeline = std::move(target_pipeline),
+      .extra_pipelines = std::move(extra_pipelines),
+
+      .local_shipping_manager_path = kLocalLogFilePath,
+
+      .api_key = configuration_data_.GetApiKey(),
+      .client_secret = getClientSecret(),
+      .internal_logger_project_context = std::move(internal_project_context),
+
+      .local_aggregation_backfill_days = event_aggregator_backfill_days,
+
+      .validated_clock = &system_clock_,
+  };
+
+  cobalt_service_ = std::make_unique<CobaltService>(std::move(cfg));
 
   auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   FX_LOGS(INFO) << "Waiting for the system clock to become accurate at: "
@@ -172,31 +151,25 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
                   << std::put_time(std::localtime(&current_time), "%F %T %z");
 
     auto system_clock = std::make_unique<util::SystemClock>();
-    undated_event_manager_->Flush(system_clock.get(), internal_logger_.get());
-    undated_event_manager_.reset();
 
-    // Now that the clock is accurate, start workers that need an accurate clock.
-    if (start_event_aggregator_worker) {
-      event_aggregator_manager_->Start(std::move(system_clock));
-    }
+    // Now that the clock is accurate, notify CobaltService.
+    cobalt_service_->SystemClockIsAccurate(std::move(system_clock), start_event_aggregator_worker);
   });
 
-  // Start workers.
-  shipping_manager_->Start();
-
   // Create LoggerFactory.
-  logger_factory_impl_.reset(new LoggerFactoryImpl(
-      std::move(global_project_context_factory), getClientSecret(), &timer_manager_,
-      &logger_encoder_, observation_writer_.get(), event_aggregator_manager_->GetEventAggregator(),
-      &system_clock_, undated_event_manager_, internal_logger_.get(), &system_data_));
+  logger_factory_impl_.reset(new LoggerFactoryImpl(std::move(global_project_context_factory),
+                                                   &timer_manager_, cobalt_service_.get()));
 
   context_->outgoing()->AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));
 
   // Create SystemDataUpdater
-  system_data_updater_impl_.reset(new SystemDataUpdaterImpl(&system_data_, kSystemDataCachePrefix));
+  system_data_updater_impl_.reset(
+      new SystemDataUpdaterImpl(cobalt_service_->system_data(), kSystemDataCachePrefix));
   context_->outgoing()->AddPublicService(
       system_data_updater_bindings_.GetHandler(system_data_updater_impl_.get()));
+
+  controller_impl_ = std::make_unique<CobaltControllerImpl>(dispatcher, cobalt_service_.get());
 
   // Add other bindings.
   context_->outgoing()->AddPublicService(controller_bindings_.GetHandler(controller_impl_.get()));
@@ -206,21 +179,6 @@ ClientSecret CobaltApp::getClientSecret() {
   // TODO(rudominer): Generate a client secret only once, store it
   // persistently and reuse it in future instances.
   return ClientSecret::GenerateNewSecret();
-}
-
-std::unique_ptr<logger::Logger> CobaltApp::NewInternalLogger(
-    const std::shared_ptr<logger::ProjectContextFactory> global_project_context_factory,
-    const std::string& customer_name, const std::string& project_name) {
-  auto internal_project_context = global_project_context_factory->NewProjectContext(
-      logger::kCustomerName, logger::kProjectName);
-  if (!internal_project_context) {
-    FX_LOGS(ERROR) << "The CobaltRegistry bundled with Cobalt does not "
-                      "include the expected internal metrics project. "
-                      "Cobalt-measuring-Cobalt will be disabled.";
-  }
-  return std::make_unique<logger::Logger>(std::move(internal_project_context), &logger_encoder_,
-                                          event_aggregator_manager_->GetEventAggregator(),
-                                          observation_writer_.get(), &system_data_);
 }
 
 }  // namespace cobalt
