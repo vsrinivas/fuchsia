@@ -23,13 +23,13 @@ group("tests") {
     "tests",  # tests/ directory
     "//garnet/packages/prod:test_runner",
     "//garnet/packages/testing:run_test_component",
-    "//peridot/packages/tests:modular_test_harness",
     "//sdk/lib/modular/cpp:modular_cpp_tests",
     "//sdk/lib/modular/testing/cpp:modular_testing_cpp_tests",
     "//src/modular/bin/basemgr:auto_login_base_shell_test",
     "//src/modular/bin/basemgr:basemgr_unittests",
     "//src/modular/bin/basemgr/intl_property_provider_impl:intl_property_provider_impl_tests",
     "//src/modular/bin/basemgr_launcher:basemgr_launcher_tests",
+    "//src/modular/bin/modular_test_harness:tests",
     "//src/modular/bin/module_resolver:module_resolver_unittests",
     "//src/modular/bin/module_resolver_rs:module_resolver_rs_tests",
     "//src/modular/bin/sessionctl:sessionctl_unittests",
@@ -41,6 +41,7 @@ group("tests") {
     "//src/modular/bin/sessionmgr/story/model:story_model_unittests",
     "//src/modular/bin/sessionmgr/story_runner:story_runner_unittests",
     "//src/modular/bundles:integration_testing",
+    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture_test",
     "//src/modular/tests/modular_config:test_config",
   ]
 }
