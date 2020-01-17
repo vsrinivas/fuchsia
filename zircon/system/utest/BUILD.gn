@@ -33,7 +33,6 @@ if (current_cpu != "") {
       "$zx/system/dev/audio/lib/simple-audio-stream:sa-unittest",
       "$zx/system/dev/block/ahci:ahci-unittest",
       "$zx/system/dev/block/aml-sd-emmc:aml-sd-emmc-test",
-      "$zx/system/dev/block/core:core-unittest",
       "$zx/system/dev/block/ftl/test",
       "$zx/system/dev/block/fvm/test",
       "$zx/system/dev/block/gpt:gpt-device-test",

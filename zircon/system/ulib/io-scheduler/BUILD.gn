@@ -5,14 +5,15 @@
 zx_library("io-scheduler") {
   sdk = "source"
   sdk_headers = [
+    "io-scheduler/io-scheduler.h",
     "io-scheduler/queue.h",
-    "io-scheduler/stream.h",
-    "io-scheduler/worker.h",
     "io-scheduler/scheduler-client.h",
     "io-scheduler/stream-op.h",
-    "io-scheduler/io-scheduler.h",
+    "io-scheduler/stream.h",
+    "io-scheduler/worker.h",
   ]
   static = true
+  defines = [ "_ALL_SOURCE" ]
   sources = [
     "queue.cc",
     "scheduler.cc",

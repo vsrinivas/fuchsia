@@ -44,8 +44,6 @@ class BlockDevice;
 
 namespace {
 
-uint32_t block_operation(const block_op_t* op) { return op->command & BLOCK_OP_MASK; }
-
 using storage_metrics::BlockDeviceMetrics;
 using BlockDeviceType =
     ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::Messageable, ddk::UnbindableNew,

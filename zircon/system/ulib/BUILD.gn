@@ -92,6 +92,7 @@ group("ulib") {
     "inspect",
     "inspector",
     "intel-hda",
+    "io-scheduler",
     "keysafe",
     "kms-stateless",
     "launchpad",

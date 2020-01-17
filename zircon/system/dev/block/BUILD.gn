@@ -8,7 +8,6 @@ group("block") {
     "aml-sd-emmc",
     "as370-sdhci",
     "bootpart",
-    "core",
     "ftl",
     "fvm",
     "gpt",
