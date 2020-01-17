@@ -2,18 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("loader-service") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("loader-service") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "unit-test.cc" ]
 
   deps = [
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/fidl/fuchsia-ldsvc:llcpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl-async",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/loader-service",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/loader-service",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
+    "//zircon/system/fidl/fuchsia-ldsvc:llcpp",
   ]
+}
+
+migrated_manifest("loader-service-manifest") {
+  deps = [ ":loader-service" ]
 }
