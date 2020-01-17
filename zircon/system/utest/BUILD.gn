@@ -253,7 +253,6 @@ if (current_cpu != "") {
       "noop-fuzzer",
       "platform-bus",
       "policy",
-      "register-state",
       "runtests-utils",
       "service:test",
       "stdio",
