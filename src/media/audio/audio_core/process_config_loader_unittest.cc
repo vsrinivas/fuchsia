@@ -217,6 +217,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
             "inputs": [
               {
                 "streams": [],
+                "loopback": true,
                 "effects": [
                   {
                     "lib": "libfoo2.so",
@@ -294,6 +295,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("{\"a\":123,\"b\":456}", effect.effect_config);
     }
     ASSERT_EQ(1u, mix_group.inputs.size());
+    ASSERT_FALSE(mix_group.loopback);
   }
 
   const auto& mix = root.inputs[0];
@@ -309,6 +311,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("", effect.effect_config);
     }
     ASSERT_EQ(2u, mix_group.inputs.size());
+    ASSERT_TRUE(mix_group.loopback);
   }
 
   {  // output mix_group 1
@@ -329,6 +332,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("effect2", effect.effect_name);
       EXPECT_EQ("{\"arg1\":55,\"arg2\":3.14}", effect.effect_config);
     }
+    ASSERT_FALSE(mix_group.loopback);
   }
 
   {  // output mix_group 2
@@ -343,6 +347,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("baz", effect.effect_name);
       EXPECT_EQ("{\"string_param\":\"some string value\"}", effect.effect_config);
     }
+    ASSERT_FALSE(mix_group.loopback);
   }
 }
 
@@ -376,6 +381,52 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithUnknownKeys) {
   })JSON";
   ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithExtraKeys.data(),
                                kConfigWithExtraKeys.size()));
+
+  ASSERT_DEATH(ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename), "");
+}
+
+TEST(ProcessConfigLoaderTest, RejectConfigWithMultipleLoopbackStages) {
+  static const std::string kConfigWithVolumeCurve =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "routing_policy": {
+      "device_profiles": [
+        {
+          "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+          "supported_output_stream_types": [
+            "media",
+            "interruption",
+            "background",
+            "communications",
+            "system_agent"
+          ],
+          "eligible_for_loopback": true,
+          "pipeline": {
+            "inputs": [
+              {
+                "streams": [ "media", "interruption", "background", "system_agent" ],
+                "loopback": true
+              }, {
+                "streams": [ "communications" ],
+                "loopback": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithVolumeCurve.data(),
+                               kConfigWithVolumeCurve.size()));
 
   ASSERT_DEATH(ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename), "");
 }

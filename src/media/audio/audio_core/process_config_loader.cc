@@ -30,12 +30,28 @@ static constexpr char kJsonKeyConfig[] = "config";
 static constexpr char kJsonKeyStreams[] = "streams";
 static constexpr char kJsonKeyInputs[] = "inputs";
 static constexpr char kJsonKeyEffects[] = "effects";
+static constexpr char kJsonKeyLoopback[] = "loopback";
 static constexpr char kJsonKeyRoutingPolicy[] = "routing_policy";
 static constexpr char kJsonKeyDeviceProfiles[] = "device_profiles";
 static constexpr char kJsonKeyDeviceId[] = "device_id";
 static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_stream_types";
 static constexpr char kJsonKeyEligibleForLoopback[] = "eligible_for_loopback";
 static constexpr char kJsonKeyIndependentVolumeControl[] = "independent_volume_control";
+
+void CountLoopbackStages(const PipelineConfig::MixGroup& mix_group, uint32_t* count) {
+  if (mix_group.loopback) {
+    ++*count;
+  }
+  for (const auto& input : mix_group.inputs) {
+    CountLoopbackStages(input, count);
+  }
+}
+
+uint32_t CountLoopbackStages(const PipelineConfig::MixGroup& root) {
+  uint32_t count = 0;
+  CountLoopbackStages(root, &count);
+  return count;
+}
 
 rapidjson::SchemaDocument LoadProcessConfigSchema() {
   rapidjson::Document schema_doc;
@@ -136,6 +152,14 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
       mix_group.inputs.push_back(ParseMixGroupFromJsonObject(input));
     }
   }
+
+  it = value.FindMember(kJsonKeyLoopback);
+  if (it != value.MemberEnd()) {
+    FX_CHECK(it->value.IsBool());
+    mix_group.loopback = it->value.GetBool();
+  } else {
+    mix_group.loopback = false;
+  }
   return mix_group;
 }
 
@@ -194,10 +218,17 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
   PipelineConfig pipeline_config;
   if (pipeline_it != value.MemberEnd()) {
     FX_CHECK(pipeline_it->value.IsObject());
-    pipeline_config = PipelineConfig(ParseMixGroupFromJsonObject(pipeline_it->value));
+    auto root = ParseMixGroupFromJsonObject(pipeline_it->value);
+    auto loopback_stages = CountLoopbackStages(root);
+    FX_CHECK(loopback_stages <= 1);
+    if (loopback_stages == 0) {
+      root.loopback = true;
+    }
+    pipeline_config = PipelineConfig(std::move(root));
   } else {
     pipeline_config = PipelineConfig::Default();
   }
+
   return {device_id, RoutingConfig::DeviceProfile(
                          eligible_for_loopback, std::move(supported_output_stream_types),
                          independent_volume_control, std::move(pipeline_config))};

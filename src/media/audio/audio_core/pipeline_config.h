@@ -34,6 +34,7 @@ class PipelineConfig {
     std::vector<fuchsia::media::AudioRenderUsage> input_streams;
     std::vector<Effect> effects;
     std::vector<MixGroup> inputs;
+    bool loopback;
   };
 
   static PipelineConfig Default() {
@@ -46,6 +47,7 @@ class PipelineConfig {
         fuchsia::media::AudioRenderUsage::SYSTEM_AGENT,
         fuchsia::media::AudioRenderUsage::COMMUNICATION,
     };
+    config.root_.loopback = true;
     return config;
   }
 

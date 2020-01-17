@@ -42,7 +42,14 @@
         "inputs": {
           "type": "array",
           "items": { "$ref": "#/definitions/mix_group" }
-        }
+        },
+
+        // If |true|, then the output from this mix group (including applied effects) will be the
+        // stream used as the loopback for the pipeline.
+        //
+        // Only a single mix group in a pipeline may set this to true; defaults to false if
+        // unspecified.
+        "loopback": "bool"
       },
       "additionalProperties": false
     },
