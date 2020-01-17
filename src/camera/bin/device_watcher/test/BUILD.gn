@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("test") {
+  testonly = true
+
+  output_name = "device_watcher_test"
+
+  sources = [ "test.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.camera3",
+    "//sdk/lib/sys/cpp",
+    "//src/camera/bin/device_watcher",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/testing/loop_fixture",
+  ]
+}

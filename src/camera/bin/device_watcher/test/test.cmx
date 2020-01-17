@@ -1,0 +1,19 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.camera3.DeviceWatcher": "fuchsia-pkg://fuchsia.com/camera_device_watcher#meta/manifest.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/device_watcher_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.camera3.DeviceWatcher",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

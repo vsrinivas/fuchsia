@@ -11,6 +11,7 @@ group("camera") {
   testonly = true
   deps = [
     ":camera_manager",
+    "bin",
     "calibration",
     "drivers",
     "lib",
@@ -24,13 +25,12 @@ group("camera_manager") {
 group("tests") {
   testonly = true
 
-  # Unit test dependencies should be caught in the camera_test package, below.
-  # Some integration tests, such as the camera_manager2, need to explicitly
-  # depend on the service they need to test. In that case, a group should be
-  # created that includes the test and the
-  #
+  # Build dependencies should be captured in the "camera_tests" target below. Cross-package
+  # dependencies must be included in this target due to transitively included packages being
+  # ignored. See fxb/44251 for details.
   deps = [
     ":camera_tests",
+    "bin",
     "camera_manager2:tests",
     "examples/camera_display",
     "simple_camera/simple_camera_lib:simple_camera_lib_tests",
@@ -39,6 +39,7 @@ group("tests") {
 
 test_package("camera_tests") {
   deps = [
+    "//src/camera/bin/device_watcher/test",
     "//src/camera/calibration/algorithms/test:algorithms_test",
     "//src/camera/calibration/factory_protocol/test:factory_protocol_test",
     "//src/camera/camera_manager2/test:buffer_leak_test",
@@ -208,6 +209,11 @@ test_package("camera_tests") {
       name = "factory_protocol_test"
       manifest = "//src/camera/calibration/factory_protocol/test/meta/factory_protocol_test.cmx"
       environments = [ sherlock_env ]
+    },
+    {
+      name = "device_watcher_test"
+      manifest = "//src/camera/bin/device_watcher/test/test.cmx"
+      environments = basic_envs
     },
 
     # Put additional camera tests here
