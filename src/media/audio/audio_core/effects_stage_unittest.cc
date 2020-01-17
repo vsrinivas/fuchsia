@@ -8,6 +8,7 @@
 
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/process_config.h"
+#include "src/media/audio/audio_core/testing/fake_stream.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/effects_loader/testing/test_effects.h"
@@ -30,6 +31,7 @@ class EffectsStageTest : public testing::ThreadingModelFixture {
     ThreadingModelFixture::SetUp();
     test_effects_ = testing::OpenTestEffectsExt();
     ASSERT_TRUE(test_effects_);
+    test_effects_->clear_effects();
   }
 
   // Views the memory at |ptr| as a std::array of |N| elements of |T|. If |offset| is provided, it
@@ -81,6 +83,51 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
 
   auto& arr = as_array<float, 480>(buf->payload());
   EXPECT_THAT(arr, Each(FloatEq(2.0f)));
+}
+
+TEST_F(EffectsStageTest, BlockAlignRequests) {
+  // Create a source stream.
+  auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+
+  // Create an effect we can load.
+  const uint32_t kBlockSize = 128;
+  ASSERT_EQ(ZX_OK, test_effects_->add_effect({{"add_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
+                                               FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
+                                              kBlockSize,
+                                              TEST_EFFECTS_ACTION_ADD,
+                                              1.0}));
+
+  // Create the effects stage.
+  std::vector<PipelineConfig::Effect> effects;
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "add_1.0",
+      .effect_config = "",
+  });
+  auto effects_stage = EffectsStage::Create(effects, stream);
+
+  EXPECT_EQ(effects_stage->block_size(), kBlockSize);
+
+  {
+    // Ask for 1 frame; expect to get a full block.
+    auto buffer = effects_stage->LockBuffer(zx::time(0), 0, 1);
+    EXPECT_EQ(buffer->start().Floor(), 0u);
+    EXPECT_EQ(buffer->length().Floor(), kBlockSize);
+  }
+
+  {
+    // Ask for subsequent frames; expect the same block still.
+    auto buffer = effects_stage->LockBuffer(zx::time(0), kBlockSize / 2, kBlockSize / 2);
+    EXPECT_EQ(buffer->start().Floor(), 0u);
+    EXPECT_EQ(buffer->length().Floor(), kBlockSize);
+  }
+
+  {
+    // Ask for the second block
+    auto buffer = effects_stage->LockBuffer(zx::time(0), kBlockSize, kBlockSize);
+    EXPECT_EQ(buffer->start().Floor(), kBlockSize);
+    EXPECT_EQ(buffer->length().Floor(), kBlockSize);
+  }
 }
 
 }  // namespace

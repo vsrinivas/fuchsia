@@ -40,6 +40,14 @@ class MultiLibEffectsLoader {
   std::vector<Holder> holders_;
 };
 
+std::pair<int64_t, uint32_t> AlignBufferRequest(int64_t frame, uint32_t length,
+                                                uint32_t alignment) {
+  auto mask = ~(alignment - 1);
+  auto aligned_frame = frame & mask;
+  auto aligned_length = (length + alignment - 1) & mask;
+  return {aligned_frame, aligned_length};
+}
+
 }  // namespace
 
 // static
@@ -73,13 +81,24 @@ std::shared_ptr<EffectsStage> EffectsStage::Create(
 
 std::optional<Stream::Buffer> EffectsStage::LockBuffer(zx::time ref_time, int64_t frame,
                                                        uint32_t frame_count) {
-  auto buffer = source_->LockBuffer(ref_time, frame, frame_count);
-  if (buffer) {
-    auto num_frames = buffer->length().Floor();
-    auto payload = static_cast<float*>(buffer->payload());
+  // If we have a partially consumed block, return that here.
+  if (current_block_ && frame >= current_block_->start() && frame < current_block_->end()) {
+    return current_block_;
+  }
+
+  // New frames are requested. Block-align the start frame and length.
+  auto [aligned_first_frame, aligned_frame_count] =
+      AlignBufferRequest(frame, frame_count, effects_processor_->block_size());
+  current_block_ = source_->LockBuffer(ref_time, aligned_first_frame, aligned_frame_count);
+  if (current_block_) {
+    auto num_frames = current_block_->length().Floor();
+    FX_CHECK(num_frames == aligned_frame_count);
+    FX_CHECK(current_block_->start().Floor() == aligned_first_frame);
+
+    auto payload = static_cast<float*>(current_block_->payload());
     effects_processor_->ProcessInPlace(num_frames, payload);
   }
-  return buffer;
+  return current_block_;
 }
 
 }  // namespace media::audio

@@ -25,6 +25,8 @@ class EffectsStage : public Stream {
         source_(std::move(source)),
         effects_processor_(std::move(effects_processor)) {}
 
+  uint32_t block_size() const { return effects_processor_->block_size(); }
+
   // |media::audio::Stream|
   std::optional<Stream::Buffer> LockBuffer(zx::time ref_time, int64_t frame,
                                            uint32_t frame_count) override;
@@ -46,6 +48,7 @@ class EffectsStage : public Stream {
  private:
   std::shared_ptr<Stream> source_;
   std::unique_ptr<EffectsProcessor> effects_processor_;
+  std::optional<Stream::Buffer> current_block_;
 };
 
 }  // namespace media::audio
