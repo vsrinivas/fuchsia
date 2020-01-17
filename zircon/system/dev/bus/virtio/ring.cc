@@ -14,6 +14,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <fbl/algorithm.h>
+
 #include "device.h"
 #include "trace.h"
 
