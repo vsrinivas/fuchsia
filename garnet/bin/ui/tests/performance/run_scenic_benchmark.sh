@@ -15,6 +15,8 @@
 # See renderer_params.cc for more arguments.
 #
 
+set -o errexit -o nounset
+
 # By default, there is no flutter app name (process_gfx_trace.go interprets
 # the empty string as no flutter app).
 FLUTTER_APP_NAMES=''
@@ -36,7 +38,7 @@ DURATION=10
 # Buffer size
 BUFFER_SIZE=12
 
-while [ "$1" != "" ]; do
+while [ $# != 0 ]; do
   case "$1" in
     --out_file)
       OUT_FILE="$2"
@@ -104,11 +106,11 @@ TRACE_FILE="/tmp/trace-${DATE}.json"
 
 kill_processes() {
   echo "== $BENCHMARK_LABEL: Killing processes..."
-  killall root_presenter*
-  killall scenic*
-  killall basemgr*
-  killall flutter*
-  killall present_view*
+  killall root_presenter* || true
+  killall scenic* || true
+  killall basemgr* || true
+  killall flutter* || true
+  killall present_view* || true
 }
 
 kill_processes

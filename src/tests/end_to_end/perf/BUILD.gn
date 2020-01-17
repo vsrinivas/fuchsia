@@ -84,6 +84,7 @@ group("package_deps") {
     "//src/ui/examples:standalone_app",
     "//src/ui/examples:tile_view",
     "//src/ui/tools:present_view",
+    "//src/ui/tools:set_renderer_params",
 
     # These are used by the test runner in peridot/tests/benchmarks/,
     # used by the peridot-perf and fuchsia-perfcompare builders.
