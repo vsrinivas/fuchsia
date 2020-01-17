@@ -56,11 +56,6 @@ std::string BlockTypeToString(BlockType type) {
   }
 }
 
-// Returns the logical block accessed from the "direct" structure within an inode.
-blk_t LogicalBlockDirect(blk_t direct) {
-  ZX_DEBUG_ASSERT(direct < kMinfsDirect);
-  return direct;
-}
 // Returns the logical block accessed from the "indirect" structure within an inode.
 // |direct| refers to the index within the indirect block.
 blk_t LogicalBlockIndirect(blk_t indirect, blk_t direct = 0) {
