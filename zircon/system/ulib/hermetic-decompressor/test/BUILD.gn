@@ -2,9 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/fuzzer.gni")
+
 group("test") {
   testonly = true
-  deps = [ ":hermetic-decompressor" ]
+  deps = [
+    ":hermetic-decompressor",
+    ":hermetic-decompressor-fuzzer",
+  ]
 }
 
 zx_test("hermetic-decompressor") {
@@ -14,5 +19,15 @@ zx_test("hermetic-decompressor") {
     "$zx/system/ulib/zxtest",
     "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/zstd",
+  ]
+}
+
+fuzzer("hermetic-decompressor-fuzzer") {
+  sources = [
+    "fuzz.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/hermetic-decompressor",
+    "$zx/system/ulib/zx",
   ]
 }
